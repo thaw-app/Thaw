@@ -115,6 +115,10 @@ final class MenuBarOverlayPanel: NSPanel, @unchecked Sendable {
     /// Retry task for show() when it fails due to unsettled Window Server.
     private var showRetryTask: Task<Void, Never>?
 
+    /// Delayed confirmation that a space switch actually re-homed the
+    /// panel; only the latest switch's confirmation is kept.
+    private var spaceSwitchConfirmationTask: Task<Void, Never>?
+
     /// The shared app state.
     private(set) weak var appState: AppState?
 
@@ -177,6 +181,7 @@ final class MenuBarOverlayPanel: NSPanel, @unchecked Sendable {
             .sink { [weak self] _ in
                 self?.isMissionControlActive = false
                 self?.needsShow = true
+                self?.schedulePostSwitchConfirmation()
             }
             .store(in: &c)
 
@@ -273,10 +278,17 @@ final class MenuBarOverlayPanel: NSPanel, @unchecked Sendable {
         Timer.publish(every: 60, tolerance: 10, on: .main, in: .default)
             .autoconnect()
             .sink { [weak self] _ in
-                guard let self, self.isOnActiveSpace else {
+                guard let self else {
                     return
                 }
-                self.insertUpdateFlag(.applicationMenuFrame)
+                if isOnActiveSpace {
+                    insertUpdateFlag(.applicationMenuFrame)
+                } else if isStrandedOnInactiveSpace() {
+                    // Self-heal a missed or raced space migration; without
+                    // this a stranded panel would stay invisible until the
+                    // next space switch.
+                    needsShow = true
+                }
             }
             .store(in: &c)
 
@@ -441,6 +453,17 @@ final class MenuBarOverlayPanel: NSPanel, @unchecked Sendable {
         )
 
         updateWindowLevel()
+
+        // The panel is pinned to the space it was last ordered in on (see
+        // `isStrandedOnInactiveSpace`). Re-fronting an onscreen window does
+        // not re-home it, so after the owning display has switched spaces
+        // the panel must be ordered out first; the fresh order below then
+        // joins the display's current space. A stranded panel is invisible
+        // by definition, so this cannot flicker. (#794)
+        if isStrandedOnInactiveSpace() {
+            orderOut(nil)
+        }
+
         alphaValue = 0
         setFrame(newFrame, display: true)
         orderFrontRegardless()
@@ -449,6 +472,63 @@ final class MenuBarOverlayPanel: NSPanel, @unchecked Sendable {
 
         if !appState.menuBarManager.isMenuBarHiddenBySystem {
             alphaValue = 1
+        }
+    }
+
+    /// Returns a Boolean value that indicates whether the panel is anchored
+    /// to a space other than the current space of its owning display.
+    ///
+    /// Overlay panels are `.stationary` and deliberately do not carry
+    /// `.moveToActiveSpace`: that flag re-homes the panel on every order-in,
+    /// and during a fullscreen transition it resolves against the global
+    /// active space, relocating the panel onto a different display entirely
+    /// (the fullscreen drift fixed in a078c0b2). The cost of pinning the
+    /// panel is that a space switch strands it on the previous space, where
+    /// an order-front is a no-op — the window server considers an onscreen
+    /// window already placed. When stranded, `show()` orders the panel out
+    /// before re-ordering it, so the fresh order joins the display's
+    /// current space.
+    private func isStrandedOnInactiveSpace() -> Bool {
+        let windowID = CGWindowID(windowNumber)
+        guard windowID != 0 else {
+            // Never ordered — the fresh order in `show()` will place it.
+            return true
+        }
+        guard let currentSpace = SpaceInfo.currentSpace(for: owningScreen.displayID) else {
+            // No per-display space info — assume the panel is where it is.
+            return false
+        }
+        return Self.isStranded(
+            panelSpaces: Bridging.getSpaceList(for: windowID),
+            currentSpace: currentSpace.spaceID
+        )
+    }
+
+    /// The pure decision behind `isStrandedOnInactiveSpace`, so it can be
+    /// exercised without a live window server connection. The panel is
+    /// stranded when it does not sit on the current space of its owning
+    /// display, which is also the case for a panel that was never ordered.
+    static func isStranded(panelSpaces: [CGSSpaceID], currentSpace: CGSSpaceID?) -> Bool {
+        guard let currentSpace else {
+            return false
+        }
+        return !panelSpaces.contains(currentSpace)
+    }
+
+    /// Schedules one delayed re-check of the stranded-panel migration after
+    /// a space switch.
+    ///
+    /// A CGS space read can lag the switch itself: when it still reports the
+    /// previous space, `show()` skips the order-out and re-fronting an
+    /// onscreen panel is a no-op, leaving the panel invisible until the
+    /// housekeeping timer (60 s ± 10 s). Re-check shortly after the switch
+    /// settles instead; only the latest confirmation is kept. (#987 review)
+    private func schedulePostSwitchConfirmation() {
+        spaceSwitchConfirmationTask?.cancel()
+        spaceSwitchConfirmationTask = Task { [weak self] in
+            try? await Task.sleep(for: .milliseconds(1500))
+            guard !Task.isCancelled else { return }
+            await MainActor.run { self?.needsShow = true }
         }
     }
 
@@ -477,6 +557,8 @@ final class MenuBarOverlayPanel: NSPanel, @unchecked Sendable {
     override func close() {
         showRetryTask?.cancel()
         showRetryTask = nil
+        spaceSwitchConfirmationTask?.cancel()
+        spaceSwitchConfirmationTask = nil
         // Cancel all pending update tasks to prevent memory leaks
         updateTaskContext.cancelAllTasks()
         menuBarManagerObservationTask?.cancel()
