@@ -29,6 +29,18 @@ extension MenuBarItemManager {
             }
         }
 
+        /// Rebuilds the same logical side against a freshly enumerated
+        /// destination window. The plan retains its original identity while
+        /// event construction uses the newest record for that identity.
+        func replacingTarget(with item: MenuBarItem) -> Self {
+            switch self {
+            case .leftOfItem:
+                .leftOfItem(item)
+            case .rightOfItem:
+                .rightOfItem(item)
+            }
+        }
+
         /// Returns the drag point for placing an item relative to the target bounds.
         ///
         /// Targets parked beyond the display's left edge use their vertical
@@ -183,25 +195,91 @@ extension MenuBarItemManager {
         _ candidate: MenuBarItem,
         expected: MenuBarItem
     ) -> Bool {
-        guard
-            candidate.windowID == expected.windowID,
-            candidate.ownerPID == expected.ownerPID,
-            candidate.tag.matchesIgnoringWindowID(expected.tag)
-        else {
-            return false
-        }
-        if let expectedSourcePID = expected.sourcePID {
-            return candidate.sourcePID == expectedSourcePID
-        }
-        return true
+        candidate.windowID == expected.windowID
+            && candidate.ownerPID == expected.ownerPID
+            && candidate.sourcePID == expected.sourcePID
+            && candidate.tag == expected.tag
     }
 
-    static nonisolated func currentMoveEndpoint(
+    /// Fresh source and destination records from one coherent WindowServer
+    /// snapshot.
+    nonisolated struct CurrentMoveEndpoints: Equatable {
+        let source: MenuBarItem
+        let target: MenuBarItem
+        let snapshot: [MenuBarItem]
+
+        func destination(matching planned: MoveDestination) -> MoveDestination {
+            planned.replacingTarget(with: target)
+        }
+    }
+
+    nonisolated enum MoveEndpointResolutionError: Error, Equatable {
+        case missingSource
+        case missingDestination
+        case recycledSource
+        case recycledDestination
+    }
+
+    static nonisolated func currentMoveEndpoints(
         in items: [MenuBarItem],
-        expected: MenuBarItem
-    ) -> MenuBarItem? {
-        let matches = items.filter { moveEndpointIsCurrent($0, expected: expected) }
-        return matches.count == 1 ? matches[0] : nil
+        expectedSource: MenuBarItem,
+        expectedDestination: MenuBarItem
+    ) -> Result<CurrentMoveEndpoints, MoveEndpointResolutionError> {
+        func resolve(
+            _ expected: MenuBarItem,
+            missing: MoveEndpointResolutionError,
+            recycled: MoveEndpointResolutionError
+        ) -> Result<MenuBarItem, MoveEndpointResolutionError> {
+            let sameID = items.filter { $0.windowID == expected.windowID }
+            guard !sameID.isEmpty else {
+                return .failure(missing)
+            }
+            let exact = sameID.filter { moveEndpointIsCurrent($0, expected: expected) }
+            guard exact.count == 1 else {
+                return .failure(recycled)
+            }
+            return .success(exact[0])
+        }
+
+        let source: MenuBarItem
+        switch resolve(expectedSource, missing: .missingSource, recycled: .recycledSource) {
+        case let .success(item):
+            source = item
+        case let .failure(error):
+            return .failure(error)
+        }
+
+        let target: MenuBarItem
+        switch resolve(expectedDestination, missing: .missingDestination, recycled: .recycledDestination) {
+        case let .success(item):
+            target = item
+        case let .failure(error):
+            return .failure(error)
+        }
+
+        guard source.windowID != target.windowID else {
+            return .failure(.recycledDestination)
+        }
+        return .success(CurrentMoveEndpoints(source: source, target: target, snapshot: items))
+    }
+
+    static nonisolated func endpointsHaveCorrectPosition(
+        _ endpoints: CurrentMoveEndpoints,
+        for destination: MoveDestination
+    ) -> Bool {
+        guard let indices = moveEndpointIndices(
+            in: endpoints.snapshot,
+            sourceWindowID: endpoints.source.windowID,
+            destinationWindowID: endpoints.target.windowID
+        ) else {
+            return false
+        }
+        return switch destination {
+        case .leftOfItem:
+            indices.source == indices.destination - 1
+        case .rightOfItem:
+            indices.source == indices.destination + 1
+        }
     }
 
     /// Serializes complete move transactions app-wide. Serializing only event
@@ -214,6 +292,10 @@ extension MenuBarItemManager {
 
     private static let moveGateTimeout: Duration = .seconds(15)
 
+    /// User activity can defer one move without retaining the app-wide move
+    /// permit indefinitely.
+    static nonisolated let moveInputPauseLimit: Duration = .seconds(2)
+
     /// Runs a caller's gate-owned completion hook before another move can enter.
     static func performMoveGateExitActions(
         didFinishWhileHoldingGate: (@MainActor () -> Void)?,
@@ -221,6 +303,35 @@ extension MenuBarItemManager {
     ) {
         didFinishWhileHoldingGate?()
         releaseGate()
+    }
+
+    /// Performs admission work before acquiring the app-wide move gate.
+    /// Nested recovery moves already own the gate and enter directly.
+    static func performWithMoveGate(
+        timeout: Duration = moveGateTimeout,
+        timeoutProvider: (@MainActor () throws -> Duration)? = nil,
+        waitBeforeGate: @MainActor () async throws -> Void = {},
+        didFinishWhileHoldingGate: (@MainActor () -> Void)? = nil,
+        operation: @MainActor () async throws -> Void
+    ) async throws {
+        if holdsMoveGate {
+            try await operation()
+            return
+        }
+
+        try await waitBeforeGate()
+        try await moveGate.wait(timeout: timeoutProvider?() ?? timeout)
+        defer {
+            performMoveGateExitActions(
+                didFinishWhileHoldingGate: didFinishWhileHoldingGate,
+                releaseGate: {
+                    Task.detached { await moveGate.signal() }
+                }
+            )
+        }
+        try await $holdsMoveGate.withValue(true) {
+            try await operation()
+        }
     }
 
     /// Returns the default timeout for move operations associated
@@ -389,16 +500,45 @@ extension MenuBarItemManager {
         return bounds
     }
 
+    /// Re-enumerates both planned endpoints with source ownership resolved and
+    /// returns fresh records from the same snapshot.
+    private func resolveCurrentMoveEndpoints(
+        source expectedSource: MenuBarItem,
+        destination expectedDestination: MenuBarItem,
+        on displayID: CGDirectDisplayID
+    ) async throws -> CurrentMoveEndpoints {
+        let items = await MenuBarItem.getMenuBarItems(
+            on: displayID,
+            option: .activeSpace,
+            resolveSourcePID: true
+        ).filter { !$0.isSystemClone }
+        switch Self.currentMoveEndpoints(
+            in: items,
+            expectedSource: expectedSource,
+            expectedDestination: expectedDestination
+        ) {
+        case let .success(endpoints):
+            return endpoints
+        case .failure(.missingSource):
+            throw EventError.missingItemBounds(expectedSource)
+        case .failure(.missingDestination):
+            throw EventError.missingDestinationBounds(expectedDestination)
+        case .failure(.recycledDestination):
+            throw EventError.staleDestination(expectedSource)
+        case .failure(.recycledSource):
+            throw EventError.moveSuperseded(expectedSource)
+        }
+    }
+
     /// Returns the target points for creating the events needed to
     /// move a menu bar item to the given destination.
     private nonisolated func getTargetPoints(
         forMoving item: MenuBarItem,
         to destination: MoveDestination,
+        itemBounds: CGRect,
+        targetBounds: CGRect,
         on displayID: CGDirectDisplayID
-    ) async throws -> (start: CGPoint, end: CGPoint) {
-        let itemBounds = try exactMoveBounds(for: item)
-        let targetBounds = try exactMoveBounds(for: destination.targetItem, isDestination: true)
-
+    ) -> (start: CGPoint, end: CGPoint) {
         let start = destination.targetPoint(
             in: targetBounds,
             on: CGDisplayBounds(displayID)
@@ -442,27 +582,12 @@ extension MenuBarItemManager {
         for destination: MoveDestination,
         on displayID: CGDirectDisplayID
     ) async throws -> Bool {
-        // Not `.onScreen`: an item moved into a collapsed section is parked
-        // offscreen, and that is a landing we still have to be able to confirm.
-        let items = await MenuBarItem.getMenuBarItems(
-            on: displayID,
-            option: .activeSpace,
-            resolveSourcePID: false
-        ).filter { !$0.isSystemClone }
-        guard let indices = Self.moveEndpointIndices(
-            in: items,
-            sourceWindowID: item.windowID,
-            destinationWindowID: destination.targetItem.windowID
-        ) else {
-            // One endpoint no longer enumerates on this display's active
-            // space, or equal-X geometry makes its order ambiguous.
-            return false
-        }
-
-        return switch destination {
-        case .leftOfItem: indices.source == indices.destination - 1
-        case .rightOfItem: indices.source == indices.destination + 1
-        }
+        let endpoints = try await resolveCurrentMoveEndpoints(
+            source: item,
+            destination: destination.targetItem,
+            on: displayID
+        )
+        return Self.endpointsHaveCorrectPosition(endpoints, for: destination)
     }
 
     /// Waits for a menu bar item to respond to a series of previously
@@ -527,8 +652,7 @@ extension MenuBarItemManager {
         item: MenuBarItem,
         destination: MoveDestination,
         on displayID: CGDirectDisplayID,
-        warpCursorAfter: Bool = true,
-        releaseGuard: PressReleaseGuard? = nil
+        warpCursorAfter: Bool = true
     ) async throws -> Duration {
         var acquiredSemaphore = false
         do {
@@ -550,10 +674,26 @@ extension MenuBarItemManager {
             }
         }
 
+        // Event-transport admission can take seconds. Resolve both exact
+        // identities again before using any endpoint geometry.
+        let initialEndpoints = try await resolveCurrentMoveEndpoints(
+            source: item,
+            destination: destination.targetItem,
+            on: displayID
+        )
+        let initialDestination = initialEndpoints.destination(matching: destination)
+        let initialTargetPoints = getTargetPoints(
+            forMoving: initialEndpoints.source,
+            to: initialDestination,
+            itemBounds: initialEndpoints.source.bounds,
+            targetBounds: initialEndpoints.target.bounds,
+            on: displayID
+        )
+
         // Fast-fail if the target process is dead. CGEvent.tapCreateForPid
         // silently produces an invalid Mach port for dead PIDs, causing every
         // scrombleEvent to time out and burn the full 3.5 s semaphore budget.
-        let eventPID = getEventPID(for: item)
+        let eventPID = getEventPID(for: initialEndpoints.source)
         if kill(eventPID, 0) == -1, errno == ESRCH {
             MenuBarItemManager.diagLog.error("postMoveEvents: target PID \(eventPID) for \(item.logString) is dead; skipping move")
             throw EventError.cannotComplete
@@ -574,10 +714,6 @@ extension MenuBarItemManager {
             throw EventError.ownerUnresponsive(item)
         }
 
-        let itemBounds = try exactMoveBounds(for: item)
-        var itemOrigin = itemBounds.origin
-        let targetPoints = try await getTargetPoints(forMoving: item, to: destination, on: displayID)
-
         // Press and release at the *destination* (targetPoints.start == .end
         // == the target edge) with the moved item's window ID stamped on the
         // press, relying on the owner to relocate its item to the press
@@ -586,40 +722,15 @@ extension MenuBarItemManager {
         // second teleported it. A drag-gesture geometry was trialled behind
         // a setting to remove that warm-up and did not fix it, so it was
         // withdrawn; the warm-up attempt remains an open problem.
-        let eventLocations = Self.moveEventLocations(
-            targetPoints: targetPoints,
+        let initialEventLocations = Self.moveEventLocations(
+            targetPoints: initialTargetPoints,
             faithfulDragStart: nil
         )
-        let pressPoint = eventLocations.press
 
         // Capture mouse location only when this call owns the cursor warp.
         // When called from move(), the outer move() handles the single warp
         // at the end of all attempts so the cursor doesn't oscillate per attempt.
         let mouseLocation: CGPoint? = warpCursorAfter ? try getMouseLocation() : nil
-        let source = try getEventSource()
-
-        try permitLocalEvents()
-
-        guard
-            let mouseDown = CGEvent.menuBarItemEvent(
-                item: item,
-                source: source,
-                type: .move(.mouseDown),
-                location: pressPoint
-            ),
-            let mouseUp = CGEvent.menuBarItemEvent(
-                item: destination.targetItem,
-                source: source,
-                type: .move(.mouseUp),
-                location: eventLocations.release
-            )
-        else {
-            throw EventError.eventCreationFailure(item)
-        }
-
-        var timeout = getMoveOperationTimeout(for: item)
-        MenuBarItemManager.diagLog.debug("Move operation timeout: \(timeout)")
-
         lastMoveOperationTimestamp = .now
         // Skip the warp when the target is offscreen (negative-X items in
         // hidden/always-hidden on notch displays). CGWarpMouseCursorPosition
@@ -628,7 +739,7 @@ extension MenuBarItemManager {
         // there. The 20ms eventSleep that follows the warp is only needed
         // when slow apps have to register the tracking events before the
         // mouseDown; irrelevant offscreen.
-        let warpPoint = pressPoint
+        let warpPoint = initialEventLocations.press
         let warpIsOnScreen = NSScreen.screens.contains {
             CGDisplayBounds($0.displayID).contains(warpPoint)
         }
@@ -673,48 +784,133 @@ extension MenuBarItemManager {
             lastMoveOperationTimestamp = .now
         }
 
+        // The cursor-registration wait is the final intentional await before
+        // the press. Re-resolve and construct the events from fresh records.
+        let endpoints = try await resolveCurrentMoveEndpoints(
+            source: item,
+            destination: destination.targetItem,
+            on: displayID
+        )
+        let liveItem = endpoints.source
+        let liveDestination = endpoints.destination(matching: destination)
+        let itemBounds = liveItem.bounds
+        var itemOrigin = itemBounds.origin
+        let targetPoints = getTargetPoints(
+            forMoving: liveItem,
+            to: liveDestination,
+            itemBounds: itemBounds,
+            targetBounds: endpoints.target.bounds,
+            on: displayID
+        )
+        let eventLocations = Self.moveEventLocations(
+            targetPoints: targetPoints,
+            faithfulDragStart: nil
+        )
+        if warpIsOnScreen, eventLocations.press != warpPoint {
+            MouseHelpers.warpCursor(to: eventLocations.press)
+        }
+        let source = try getEventSource()
+        try permitLocalEvents()
+        guard
+            let mouseDown = CGEvent.menuBarItemEvent(
+                item: liveItem,
+                source: source,
+                type: .move(.mouseDown),
+                location: eventLocations.press
+            ),
+            let mouseUp = CGEvent.menuBarItemEvent(
+                item: endpoints.target,
+                source: source,
+                type: .move(.mouseUp),
+                location: eventLocations.release
+            )
+        else {
+            throw EventError.eventCreationFailure(liveItem)
+        }
+
+        var timeout = getMoveOperationTimeout(for: liveItem)
+        MenuBarItemManager.diagLog.debug("Move operation timeout: \(timeout)")
+        let releaseGuard = makePressReleaseGuard(
+            for: liveItem,
+            mouseUp: mouseUp,
+            eventPID: eventPID
+        )
+
         // From here the press may be down; a deadline guard posts a matching
         // release even if the async attempt stops making progress.
-        releaseGuard?.arm()
+        releaseGuard.arm()
         do {
             try await scrombleEvent(
                 mouseDown,
-                item: item,
+                item: liveItem,
                 timeout: timeout
             )
             itemOrigin = try await waitForMoveEventResponse(
-                from: item,
+                from: liveItem,
                 initialOrigin: itemOrigin,
                 timeout: timeout
             )
+
+            // Reflow after the opening press can move the target edge. Release
+            // against a newly resolved exact endpoint rather than stale bounds.
+            let releaseEndpoints = try await resolveCurrentMoveEndpoints(
+                source: item,
+                destination: destination.targetItem,
+                on: displayID
+            )
+            let releaseDestination = releaseEndpoints.destination(matching: destination)
+            let releasePoints = getTargetPoints(
+                forMoving: releaseEndpoints.source,
+                to: releaseDestination,
+                itemBounds: releaseEndpoints.source.bounds,
+                targetBounds: releaseEndpoints.target.bounds,
+                on: displayID
+            )
+            guard let liveMouseUp = CGEvent.menuBarItemEvent(
+                item: releaseEndpoints.target,
+                source: source,
+                type: .move(.mouseUp),
+                location: releasePoints.end
+            ) else {
+                throw EventError.eventCreationFailure(releaseEndpoints.source)
+            }
             try await scrombleEvent(
-                mouseUp,
-                item: item,
+                liveMouseUp,
+                item: releaseEndpoints.source,
                 timeout: timeout,
                 repeating: 2 // Double mouse up prevents invalid item state.
             )
+            releaseGuard.recordReleaseAttempt(delivered: true)
             itemOrigin = try await waitForMoveEventResponse(
-                from: item,
+                from: releaseEndpoints.source,
                 initialOrigin: itemOrigin,
                 timeout: timeout
             )
         } catch {
+            let attemptError = error
             do {
                 MenuBarItemManager.diagLog.warning("Move events failed, posting fallback")
                 try await scrombleEvent(
                     mouseUp,
-                    item: item,
+                    item: liveItem,
                     timeout: .milliseconds(100), // Fixed timeout for fallback.
                     repeating: 2 // Double mouse up prevents invalid item state.
                 )
-            } catch {
-                // Catch this for logging purposes only. We want to propagate
-                // the original error.
-                MenuBarItemManager.diagLog.error("Fallback failed with error: \(error)")
+                releaseGuard.recordReleaseAttempt(delivered: true)
+            } catch let fallbackError {
+                // Keep the guard armed so its independent raw post remains
+                // the final release path.
+                MenuBarItemManager.diagLog.error("Fallback failed with error: \(fallbackError)")
             }
             timeout = Self.nextMoveOperationTimeout(after: timeout, outcome: .ownerDidNotRespond)
-            updateMoveOperationTimeout(timeout, for: item)
-            throw error
+            updateMoveOperationTimeout(timeout, for: liveItem)
+            if releaseGuard.didFire {
+                throw EventError.moveTimedOut(item)
+            }
+            throw attemptError
+        }
+        guard !releaseGuard.didFire else {
+            throw EventError.moveTimedOut(item)
         }
         return timeout
     }
@@ -723,7 +919,7 @@ extension MenuBarItemManager {
     /// Items in this state are stuck and cannot be interacted with normally.
     private nonisolated func isItemBlocked(_ item: MenuBarItem) async -> Bool {
         do {
-            let bounds = try await getCurrentBounds(for: item)
+            let bounds = try exactMoveBounds(for: item)
             // x=-1 is the sentinel value macOS uses for "blocked" items
             return bounds.origin.x == -1
         } catch {
@@ -890,44 +1086,79 @@ extension MenuBarItemManager {
     /// progress. A dangling press can turn the user's next real click into the
     /// end of a drag, including a drag that removes the status item.
     final nonisolated class PressReleaseGuard: Sendable {
+        typealias Scheduler = @Sendable (
+            _ deadline: Duration,
+            _ action: @escaping @Sendable () -> Void
+        ) -> Void
+
+        enum State: Equatable {
+            case idle
+            case armed
+            case releaseConfirmed
+            case fired
+        }
+
         private nonisolated struct Status {
-            var isArmed = false
-            var didFire = false
+            var state = State.idle
         }
 
         private let status = OSAllocatedUnfairLock(initialState: Status())
         private let deadline: Duration
-        private let events: PressReleaseEvents
         private let item: MenuBarItem
+        private let scheduler: Scheduler
+        private let postSafetyRelease: @Sendable () -> Void
 
         init(deadline: Duration, events: PressReleaseEvents, item: MenuBarItem) {
             self.deadline = deadline
-            self.events = events
             self.item = item
+            scheduler = { deadline, action in
+                let milliseconds = max(1, Int(deadline.milliseconds))
+                DispatchQueue.global(qos: .userInitiated).asyncAfter(
+                    deadline: .now() + .milliseconds(milliseconds),
+                    execute: action
+                )
+            }
+            postSafetyRelease = {
+                events.mouseUp.post(to: .sessionEventTap)
+                events.mouseUp.post(to: .pid(events.pid))
+            }
+        }
+
+        /// Test seam for driving the watchdog without sleeping or posting a
+        /// real Core Graphics event.
+        init(
+            deadline: Duration,
+            item: MenuBarItem,
+            scheduler: @escaping Scheduler,
+            postSafetyRelease: @escaping @Sendable () -> Void
+        ) {
+            self.deadline = deadline
+            self.item = item
+            self.scheduler = scheduler
+            self.postSafetyRelease = postSafetyRelease
         }
 
         func arm() {
             let armed = status.withLock { status -> Bool in
-                guard !status.isArmed, !status.didFire else {
+                guard status.state == .idle else {
                     return false
                 }
-                status.isArmed = true
+                status.state = .armed
                 return true
             }
             guard armed else {
                 return
             }
             let status = status
-            let events = events
             let item = item
             let milliseconds = max(1, Int(deadline.milliseconds))
-            DispatchQueue.global(qos: .userInitiated).asyncAfter(deadline: .now() + .milliseconds(milliseconds)) {
+            let postSafetyRelease = postSafetyRelease
+            scheduler(deadline) {
                 let fires = status.withLock { status -> Bool in
-                    guard status.isArmed else {
+                    guard status.state == .armed else {
                         return false
                     }
-                    status.isArmed = false
-                    status.didFire = true
+                    status.state = .fired
                     return true
                 }
                 guard fires else {
@@ -936,44 +1167,42 @@ extension MenuBarItemManager {
                 MenuBarItemManager.diagLog.warning(
                     "Press on \(item.logString) outlived its \(milliseconds) ms deadline; releasing it"
                 )
-                events.mouseUp.post(to: .sessionEventTap)
-                events.mouseUp.post(to: .pid(events.pid))
+                postSafetyRelease()
             }
         }
 
         var didFire: Bool {
-            status.withLock(\.didFire)
+            status.withLock { $0.state == .fired }
         }
 
-        func disarm() {
-            status.withLock { $0.isArmed = false }
+        var state: State {
+            status.withLock(\.state)
+        }
+
+        /// Cancels the independent safety post only after an acknowledged
+        /// mouse-up. A failed normal or fallback release leaves it armed.
+        func recordReleaseAttempt(delivered: Bool) {
+            guard delivered else {
+                return
+            }
+            status.withLock { status in
+                guard status.state == .armed else {
+                    return
+                }
+                status.state = .releaseConfirmed
+            }
         }
     }
 
     /// Builds the independent safety release for one attempt.
     private func makePressReleaseGuard(
         for item: MenuBarItem,
-        destination: MoveDestination,
-        on displayID: CGDirectDisplayID
-    ) async -> PressReleaseGuard? {
-        guard
-            let targetBounds = try? exactMoveBounds(for: destination.targetItem, isDestination: true),
-            let source = try? getEventSource(),
-            let mouseUp = CGEvent.menuBarItemEvent(
-                item: destination.targetItem,
-                source: source,
-                type: .move(.mouseUp),
-                location: destination.targetPoint(in: targetBounds, on: CGDisplayBounds(displayID))
-            )
-        else {
-            MenuBarItemManager.diagLog.warning(
-                "No release event could be built for \(item.logString); the press runs unguarded"
-            )
-            return nil
-        }
+        mouseUp: CGEvent,
+        eventPID: pid_t
+    ) -> PressReleaseGuard {
         return PressReleaseGuard(
             deadline: Self.pressReleaseDeadline(for: getMoveOperationTimeout(for: item)),
-            events: PressReleaseEvents(mouseUp: mouseUp, pid: getEventPID(for: item)),
+            events: PressReleaseEvents(mouseUp: mouseUp, pid: eventPID),
             item: item
         )
     }
@@ -992,44 +1221,72 @@ extension MenuBarItemManager {
         skipInputPause: Bool = false,
         options: MoveOptions = .init()
     ) async throws {
-        // Serialize the whole move, including retries and verification. A
-        // nested recovery move inherits task-local ownership and cannot wait
-        // on itself.
+        // Admission waits for a bounded input lull before taking the app-wide
+        // permit. Nested recovery moves already own the gate.
         if !Self.holdsMoveGate {
-            let waitStartedAt = ContinuousClock.now
             do {
-                try await Self.moveGate.wait(timeout: Self.moveGateTimeout)
+                try await Self.performWithMoveGate(
+                    waitBeforeGate: {
+                        guard !skipInputPause else {
+                            return
+                        }
+                        let waitTask = Task(timeout: Self.moveInputPauseLimit) {
+                            try await self.waitForUserToPauseInput(
+                                for: options.requiredInputPause,
+                                timeout: options.inputPauseTimeout,
+                                shouldContinue: options.shouldProceed
+                            )
+                        }
+                        do {
+                            switch try await waitTask.value {
+                            case .paused:
+                                break
+                            case .timedOut:
+                                throw EventError.inputPauseTimedOut(item)
+                            case .superseded:
+                                throw EventError.moveSuperseded(item)
+                            }
+                        } catch let error as EventError {
+                            throw error
+                        } catch {
+                            MenuBarItemManager.diagLog.debug(
+                                "move: input did not pause within \(Self.moveInputPauseLimit) for \(item.logString)"
+                            )
+                            throw EventError.cannotComplete
+                        }
+                    },
+                    didFinishWhileHoldingGate: options.didFinishWhileHoldingGate,
+                    operation: {
+                        // Input can resume while queued. Recheck once without
+                        // waiting while the gate is held.
+                        if !skipInputPause {
+                            let pauseMs = max(
+                                0,
+                                (Defaults.object(forKey: .inputPauseThresholdMs) as? Int)
+                                    ?? Defaults.DefaultValue.inputPauseThresholdMs
+                            )
+                            guard self.hasUserPausedInput(for: .milliseconds(pauseMs)) else {
+                                throw EventError.cannotComplete
+                            }
+                        }
+                        var nestedOptions = options
+                        nestedOptions.didFinishWhileHoldingGate = nil
+                        try await self.move(
+                            item: item,
+                            to: destination,
+                            on: displayID,
+                            skipInputPause: true,
+                            options: nestedOptions
+                        )
+                    }
+                )
             } catch is SimpleSemaphore.TimeoutError {
                 MenuBarItemManager.diagLog.error(
                     "move: another move has held the bar for \(Self.moveGateTimeout); giving up on \(item.logString)"
                 )
                 throw EventError.moveEngineBusy(item)
             }
-            defer {
-                Self.performMoveGateExitActions(
-                    didFinishWhileHoldingGate: options.didFinishWhileHoldingGate,
-                    releaseGate: {
-                        Task.detached { await Self.moveGate.signal() }
-                    }
-                )
-            }
-            let waited = ContinuousClock.now - waitStartedAt
-            if waited > .milliseconds(100) {
-                MenuBarItemManager.diagLog.debug(
-                    "move: waited \(Int(waited.milliseconds)) ms for another move to finish before moving \(item.logString)"
-                )
-            }
-            return try await Self.$holdsMoveGate.withValue(true) {
-                var nestedOptions = options
-                nestedOptions.didFinishWhileHoldingGate = nil
-                return try await move(
-                    item: item,
-                    to: destination,
-                    on: displayID,
-                    skipInputPause: skipInputPause,
-                    options: nestedOptions
-                )
-            }
+            return
         }
 
         // Evaluate once, only after the transaction owns the gate. A caller
@@ -1103,40 +1360,16 @@ extension MenuBarItemManager {
             Bridging.getActiveMenuBarDisplayID() ?? CGMainDisplayID()
         }
 
-        // The plan may have waited behind another move. Resolve both endpoints
-        // again on the selected display and require the same window, owner,
-        // stable tag, and resolved source. A same-tag replacement needs a new
-        // plan; it is never a silent transport fallback.
-        let liveEndpoints = await MenuBarItem.getMenuBarItems(
-            on: resolvedDisplayID,
-            option: .activeSpace,
-            resolveSourcePID: true
-        ).filter { !$0.isSystemClone }
-        guard Self.currentMoveEndpoint(in: liveEndpoints, expected: item) != nil else {
-            throw EventError.missingItemBounds(item)
-        }
-        guard Self.currentMoveEndpoint(
-            in: liveEndpoints,
-            expected: destination.targetItem
-        ) != nil else {
-            throw EventError.missingDestinationBounds(destination.targetItem)
-        }
-
-        if !skipInputPause {
-            let inputPauseResult = try await waitForUserToPauseInput(
-                for: options.requiredInputPause,
-                timeout: options.inputPauseTimeout,
-                shouldContinue: options.shouldProceed
-            )
-            switch inputPauseResult {
-            case .paused:
-                break
-            case .timedOut:
-                throw EventError.inputPauseTimedOut(item)
-            case .superseded:
-                throw EventError.moveSuperseded(item)
-            }
-        }
+        // The plan may have waited behind another move (admission, gate
+        // waiting). Resolve both endpoints again on the selected display and
+        // require the same window, owner, stable tag, and resolved source.
+        // A same-tag replacement needs a new plan; it is never a silent
+        // transport fallback.
+        _ = try await resolveCurrentMoveEndpoints(
+            source: item,
+            destination: destination.targetItem,
+            on: resolvedDisplayID
+        )
         guard options.shouldProceed?() ?? true else {
             throw EventError.moveSuperseded(item)
         }
@@ -1226,7 +1459,6 @@ extension MenuBarItemManager {
                 MenuBarItemManager.diagLog.debug("move: superseded before attempt \(n) for \(item.logString)")
                 throw EventError.moveSuperseded(item)
             }
-            var releaseGuard: PressReleaseGuard?
             do {
                 if try await itemHasCorrectPosition(item: item, for: destination, on: resolvedDisplayID) {
                     // On the first iteration trust the position match
@@ -1246,22 +1478,12 @@ extension MenuBarItemManager {
                     attemptMouseLocation = try getMouseLocation()
                     MouseHelpers.hideCursor(watchdogTimeout: options.watchdogTimeout ?? .seconds(2))
                 }
-                releaseGuard = await makePressReleaseGuard(
-                    for: item,
-                    destination: destination,
-                    on: resolvedDisplayID
-                )
                 let attemptTimeout = try await postMoveEvents(
                     item: item,
                     destination: destination,
                     on: resolvedDisplayID,
-                    warpCursorAfter: false, // move() owns the single warp in its defer
-                    releaseGuard: releaseGuard
+                    warpCursorAfter: false // move() owns the single warp in its defer
                 )
-                releaseGuard?.disarm()
-                guard releaseGuard?.didFire != true else {
-                    throw EventError.moveTimedOut(item)
-                }
                 // postMoveEvents only returns without throwing when both
                 // waitForMoveEventResponse calls observed origin changes,
                 // i.e. our drag actually displaced the item.
@@ -1351,13 +1573,6 @@ extension MenuBarItemManager {
                     continue
                 }
             } catch {
-                releaseGuard?.disarm()
-                if releaseGuard?.didFire == true {
-                    MenuBarItemManager.diagLog.warning(
-                        "Attempt \(n): the press on \(item.logString) outlived its deadline and was released"
-                    )
-                    throw EventError.moveTimedOut(item)
-                }
                 // missingItemBounds is definitive: getCurrentBounds already
                 // refreshed the on-screen items and re-matched by tag before
                 // throwing, so the item's window is genuinely gone (transient

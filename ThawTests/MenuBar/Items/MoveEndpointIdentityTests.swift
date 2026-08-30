@@ -35,7 +35,6 @@ struct MoveEndpointIdentityTests {
         let replacement = item(windowID: 41, x: 100, title: "Item")
 
         #expect(!MenuBarItemManager.moveEndpointIsCurrent(replacement, expected: expected))
-        #expect(MenuBarItemManager.currentMoveEndpoint(in: [replacement], expected: expected) == nil)
     }
 
     @Test("A recycled window owned by another process is rejected")
@@ -52,6 +51,42 @@ struct MoveEndpointIdentityTests {
         let changed = item(windowID: 40, x: 100, sourcePID: 82, title: "Item")
 
         #expect(!MenuBarItemManager.moveEndpointIsCurrent(changed, expected: expected))
+    }
+
+    @Test("The exact resolver returns fresh endpoint geometry")
+    func exactResolverReturnsFreshRecords() throws {
+        let source = item(windowID: 40, x: 100, title: "Source")
+        let target = item(windowID: 42, x: 300, title: "Target")
+        let movedSource = item(windowID: 40, x: 180, title: "Source")
+        let movedTarget = item(windowID: 42, x: 360, title: "Target")
+
+        let endpoints = try MenuBarItemManager.currentMoveEndpoints(
+            in: [movedTarget, movedSource],
+            expectedSource: source,
+            expectedDestination: target
+        ).get()
+
+        #expect(endpoints.source.bounds.minX == 180)
+        #expect(endpoints.target.bounds.minX == 360)
+    }
+
+    @Test("A recycled source or anchor stops the transaction")
+    func recycledEndpointStopsTransaction() {
+        let source = item(windowID: 40, x: 100, title: "Source")
+        let target = item(windowID: 42, x: 300, title: "Target")
+        let recycledSource = item(windowID: 40, x: 180, ownerPID: 999, title: "Source")
+        let recycledTarget = item(windowID: 42, x: 120, sourcePID: 999, title: "Target")
+
+        #expect(MenuBarItemManager.currentMoveEndpoints(
+            in: [recycledSource, target],
+            expectedSource: source,
+            expectedDestination: target
+        ) == .failure(.recycledSource))
+        #expect(MenuBarItemManager.currentMoveEndpoints(
+            in: [source, recycledTarget],
+            expectedSource: source,
+            expectedDestination: target
+        ) == .failure(.recycledDestination))
     }
 
     @Test("Exact endpoints produce deterministic ordinal positions")
