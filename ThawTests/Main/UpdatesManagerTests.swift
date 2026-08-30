@@ -31,12 +31,21 @@ struct UpdatesManagerTests {
         return manager
     }
 
+    /// Read back through ``UpdatesManager/storedUpdateChannel(on:)`` rather
+    /// than `updateChannel`, whose getter withholds alpha from a system that
+    /// still has a shipping build to run. The alert only appears past that
+    /// line, but the machine running the tests need not be.
     @Test("Accepting the alert subscribes to alpha")
     func acceptingTheAlertSubscribesToAlpha() throws {
         try withScratchDefaults { _ in
             let manager = manager { _ in }
             manager.checkForAlphaUpdateAfterCompatibilityWarning()
-            #expect(manager.updateChannel == .alpha)
+            let unsupported = OperatingSystemVersion(
+                majorVersion: MacOSCompatibilityWarning.firstUnsupportedMajorVersion,
+                minorVersion: 0,
+                patchVersion: 0
+            )
+            #expect(UpdatesManager.storedUpdateChannel(on: unsupported) == .alpha)
         }
     }
 
