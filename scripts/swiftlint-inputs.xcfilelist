@@ -105,6 +105,7 @@ $(SRCROOT)/Thaw/MenuBar/MenuBarItems/MenuBarLiveRefreshPolicy.swift
 $(SRCROOT)/Thaw/MenuBar/MenuBarItems/MenuBarSpacer.swift
 $(SRCROOT)/Thaw/MenuBar/MenuBarItems/MenuBarSpacerManager.swift
 $(SRCROOT)/Thaw/MenuBar/MenuBarItems/PendingLedger.swift
+$(SRCROOT)/Thaw/MenuBar/MenuBarItems/SourcePIDSeedStore.swift
 $(SRCROOT)/Thaw/MenuBar/MenuBarItems/StaleIdentifierLedger.swift
 $(SRCROOT)/Thaw/MenuBar/MenuBarManager.swift
 $(SRCROOT)/Thaw/MenuBar/MenuBarSection.swift
