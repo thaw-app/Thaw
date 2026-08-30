@@ -37,6 +37,13 @@ final class UpdatesManager: NSObject {
     @ObservationIgnored
     private var isCheckingAfterCompatibilityWarning = false
 
+    /// Opens a URL on the user's behalf.
+    ///
+    /// Injectable so a test can watch the compatibility alert's fallback fire
+    /// without handing the running system a browser window.
+    @ObservationIgnored
+    var openURL: @MainActor (URL) -> Void = { NSWorkspace.shared.open($0) }
+
     /// Storage for internal observers.
     @ObservationIgnored
     private var cancellables = Set<AnyCancellable>()
@@ -213,11 +220,13 @@ final class UpdatesManager: NSObject {
     /// or the releases page, which is where the promise lands while the feed
     /// still carries no alpha item.
     func checkForAlphaUpdateAfterCompatibilityWarning() {
+        beginCompatibilityCheck()
         #if DEBUG
-            // Checking for updates hangs in debug mode.
-            NSWorkspace.shared.open(Constants.releasesURL)
+            // Checking for updates hangs in debug mode, so the promise is
+            // answered here rather than by a check that never runs.
+            updateChannel = .alpha
+            resolveCompatibilityCheckWithReleasesPage()
         #else
-            isCheckingAfterCompatibilityWarning = true
             // Order matters: storing the channel schedules the one background
             // check this needs, and that task only checks once the updater is
             // running. Asking again here would open a second session Sparkle
@@ -233,12 +242,41 @@ final class UpdatesManager: NSObject {
     /// A check that finds nothing also aborts with `SUNoUpdateError`, and one
     /// that never reaches the feed only aborts, so both endings call this and
     /// the flag decides which of them arrived first.
-    private func resolveCompatibilityCheckWithReleasesPage() {
+    /// Arms the promise the compatibility alert just made, so that whichever
+    /// way the check ends, the ending is recognized as this one's.
+    func beginCompatibilityCheck() {
+        isCheckingAfterCompatibilityWarning = true
+    }
+
+    func resolveCompatibilityCheckWithReleasesPage() {
         guard isCheckingAfterCompatibilityWarning else {
             return
         }
         isCheckingAfterCompatibilityWarning = false
-        NSWorkspace.shared.open(Constants.releasesURL)
+        openURL(Constants.releasesURL)
+    }
+
+    /// Whether a scheduled update should be shown now rather than deferred.
+    ///
+    /// The compatibility alert asked for its check on the user's behalf, so
+    /// its result is shown rather than deferred to a notification they may
+    /// never have granted.
+    func shouldShowScheduledUpdate(inImmediateFocus immediateFocus: Bool, appIsActive: Bool) -> Bool {
+        if isCheckingAfterCompatibilityWarning {
+            return true
+        }
+        return appIsActive ? immediateFocus : false
+    }
+
+    /// Whether an update being shown should also be announced by notification,
+    /// closing the compatibility check on the way.
+    ///
+    /// The update window itself answers the alert, so a notification beside it
+    /// would say the same thing twice.
+    func shouldNotifyAboutUpdate(userInitiated: Bool) -> Bool {
+        let answersCompatibilityWarning = isCheckingAfterCompatibilityWarning
+        isCheckingAfterCompatibilityWarning = false
+        return !userInitiated && !answersCompatibilityWarning
     }
 }
 
@@ -286,17 +324,7 @@ extension UpdatesManager: @MainActor SPUStandardUserDriverDelegate {
         _: SUAppcastItem,
         andInImmediateFocus immediateFocus: Bool
     ) -> Bool {
-        // The compatibility alert asked for this check on the user's behalf,
-        // so its result is shown rather than deferred to a notification they
-        // may never have granted.
-        if isCheckingAfterCompatibilityWarning {
-            return true
-        }
-        if NSApp.isActive {
-            return immediateFocus
-        } else {
-            return false
-        }
+        shouldShowScheduledUpdate(inImmediateFocus: immediateFocus, appIsActive: NSApp.isActive)
     }
 
     func standardUserDriverWillHandleShowingUpdate(
@@ -304,20 +332,14 @@ extension UpdatesManager: @MainActor SPUStandardUserDriverDelegate {
         forUpdate update: SUAppcastItem,
         state: SPUUserUpdateState
     ) {
-        // The update window itself answers the compatibility alert, so a
-        // notification beside it would say the same thing twice.
-        let answersCompatibilityWarning = isCheckingAfterCompatibilityWarning
-        isCheckingAfterCompatibilityWarning = false
-        guard let appState else {
+        guard shouldNotifyAboutUpdate(userInitiated: state.userInitiated), let appState else {
             return
         }
-        if !state.userInitiated, !answersCompatibilityWarning {
-            appState.userNotificationManager.addRequest(
-                with: .updateCheck,
-                title: String(localized: "A new update is available"),
-                body: String(localized: "Version \(update.displayVersionString) (\(update.versionString)) is now available")
-            )
-        }
+        appState.userNotificationManager.addRequest(
+            with: .updateCheck,
+            title: String(localized: "A new update is available"),
+            body: String(localized: "Version \(update.displayVersionString) (\(update.versionString)) is now available")
+        )
     }
 
     func standardUserDriverDidReceiveUserAttention(forUpdate _: SUAppcastItem) {
