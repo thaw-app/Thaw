@@ -1966,11 +1966,24 @@ extension MenuBarItemManager {
                 items: &allFreshItemsCopy,
                 hiddenControlItemWindowID: hiddenWID,
                 alwaysHiddenControlItemWindowID: alwaysHiddenWID
-            ), freshControl.canRepositionControlItems,
-            let ahItem = freshControl.alwaysHidden
+            ), freshControl.canRepositionControlItems
             else {
                 abandonApply(
                     reason: "control items degraded before moving AH_ctrl",
+                    items: allFreshItems
+                )
+                return
+            }
+            // Post-#991 a nil here no longer means "resolution degraded": the
+            // pair recovers the divider from its own window when it merely
+            // dropped out of the enumerated list. Nil now means the window
+            // server no longer knows the authoritative ID at all — the status
+            // item was torn down or the section was disabled mid-apply — and
+            // every per-item destination below anchors on the divider, so the
+            // apply must not continue on it.
+            guard let ahItem = freshControl.alwaysHidden else {
+                abandonApply(
+                    reason: "always-hidden divider unresolved before moving AH_ctrl",
                     items: allFreshItems
                 )
                 return
