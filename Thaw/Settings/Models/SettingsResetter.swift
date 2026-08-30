@@ -67,6 +67,7 @@ extension AppSettings {
         advanced.enableDiagnosticLogging = Defaults.DefaultValue.enableDiagnosticLogging
         advanced.enableMenuBarItemOverflow = Defaults.DefaultValue.enableMenuBarItemOverflow
         advanced.useThawBarOnNotchOverflow = Defaults.DefaultValue.useThawBarOnNotchOverflow
+        advanced.automaticArrangementEnabled = Defaults.DefaultValue.automaticArrangementEnabled
         advanced.useAXClickDelivery = Defaults.DefaultValue.useAXClickDelivery
         advanced.searchSectionOrder = AdvancedSettings.sanitizedSearchSectionOrder(
             from: Defaults.DefaultValue.searchSectionOrder
@@ -74,6 +75,7 @@ extension AppSettings {
         advanced.searchIncludeVisible = Defaults.DefaultValue.searchIncludeVisible
         advanced.searchIncludeHidden = Defaults.DefaultValue.searchIncludeHidden
         advanced.searchIncludeAlwaysHidden = Defaults.DefaultValue.searchIncludeAlwaysHidden
+        advanced.moveCursorToRevealedItem = Defaults.DefaultValue.moveCursorToRevealedItem
     }
 
     /// Resets Hotkeys settings to their default values.

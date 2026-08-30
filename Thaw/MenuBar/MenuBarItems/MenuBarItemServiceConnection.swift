@@ -21,9 +21,6 @@ extension MenuBarItemService {
         /// The connection's underlying session.
         private let session: Session
 
-        /// The connection's target queue.
-        private let queue: DispatchQueue
-
         /// The connection's diagnostic logger.
         private let diagLog: DiagLog
 
@@ -36,7 +33,6 @@ extension MenuBarItemService {
             )
             let diagLog = DiagLog(category: "MenuBarItemService.Connection")
             self.session = Session(queue: queue, diagLog: diagLog)
-            self.queue = queue
             self.diagLog = diagLog
         }
 
@@ -74,21 +70,6 @@ extension MenuBarItemService {
             }
         }
 
-        /// Returns the source process identifier for the given window.
-        func sourcePID(for window: WindowInfo) async -> pid_t? {
-            let response = await session.sendAsync(request: .sourcePID(window))
-            guard let response else {
-                diagLog.error("Source PID request returned nil")
-                return nil
-            }
-            if case let .sourcePID(pid) = response {
-                return pid
-            } else {
-                diagLog.error("Source PID request returned invalid response \(String(describing: response))")
-                return nil
-            }
-        }
-
         /// Returns the source process identifiers for the given windows in a
         /// single batch XPC request, avoiding concurrent thread explosion
         /// in the XPC service.
@@ -114,9 +95,17 @@ extension MenuBarItemService {
     /// A wrapper around an XPC session.
     private final nonisolated class Session: Sendable {
         /// A session's underlying storage.
+        ///
+        /// Self-locking: every access to the stored session, including the
+        /// invalidation fired by the XPC cancellation handler on an
+        /// arbitrary thread, goes through `sessionLock`. The cancellation
+        /// handler previously wrote `session = nil` outside the lock that
+        /// guarded every other access, racing `getSession`, and a stale
+        /// handler could nil out a newer session created after the one it
+        /// belonged to.
         private final nonisolated class Storage: @unchecked Sendable {
             private let name = MenuBarItemService.name
-            private var session: XPCSession?
+            private let sessionLock = OSAllocatedUnfairLock<XPCSession?>(initialState: nil)
             private let queue: DispatchQueue
             private let diagLog: DiagLog
 
@@ -126,54 +115,81 @@ extension MenuBarItemService {
             }
 
             func getSession() throws -> XPCSession {
-                if let session {
-                    return session
-                }
-                diagLog.debug("getOrCreateSession: creating new XPC session for service '\(self.name)'")
-                let session = try XPCSession(xpcService: name, options: .inactive) { [weak self] error in
-                    guard let self else {
-                        return
+                try sessionLock.withLock { session in
+                    if let session {
+                        return session
                     }
-                    diagLog.warning("Session was cancelled with error \(error.localizedDescription)")
-                    self.session = nil
+                    diagLog.debug("getOrCreateSession: creating new XPC session for service '\(self.name)'")
+                    // Box so the cancellation handler can identify the session
+                    // it belongs to: the handler is passed to the initializer,
+                    // before the created instance exists to capture.
+                    let createdSession = OSAllocatedUnfairLock<XPCSession?>(initialState: nil)
+                    let newSession = try XPCSession(xpcService: name, options: .inactive) { [weak self] error in
+                        self?.handleCancellation(error, of: createdSession)
+                    }
+                    // Same-team peer validation can never pass in a build signed
+                    // without a team identifier (ad-hoc/personal builds) — every
+                    // send would fail with "Peer forbidden (code signing)".
+                    // Mirrors the teamless fallback in the service's Listener.
+                    if CodeSigningInfo.processTeamIdentifier != nil {
+                        newSession.setPeerRequirement(.isFromSameTeam())
+                    } else {
+                        diagLog.notice("getOrCreateSession: no team identifier (ad-hoc build), skipping peer requirement")
+                    }
+                    newSession.setTargetQueue(queue)
+                    // Populated before activate(): a session cancelled right
+                    // after activation would otherwise race the box write,
+                    // find it empty, and leave the dead session stored. If
+                    // activate() throws, the handler firing against the
+                    // populated box is a no-op — nothing was stored to drop.
+                    createdSession.withLock { $0 = newSession }
+                    try newSession.activate()
+                    diagLog.debug("getOrCreateSession: XPC session activated successfully")
+                    session = newSession
+                    return newSession
                 }
-                // Same-team peer validation can never pass in a build signed
-                // without a team identifier (ad-hoc/personal builds) — every
-                // send would fail with "Peer forbidden (code signing)".
-                // Mirrors the teamless fallback in the service's Listener.
-                if CodeSigningInfo.processTeamIdentifier != nil {
-                    session.setPeerRequirement(.isFromSameTeam())
-                } else {
-                    diagLog.notice("getOrCreateSession: no team identifier (ad-hoc build), skipping peer requirement")
+            }
+
+            /// Handles the XPC cancellation callback for the session stored
+            /// in `sessionBox`. Arrives on an arbitrary thread.
+            private func handleCancellation(
+                _ error: XPCRichError,
+                of sessionBox: OSAllocatedUnfairLock<XPCSession?>
+            ) {
+                diagLog.warning("Session was cancelled with error \(error.localizedDescription)")
+                invalidate(sessionBox.withLock { $0 })
+            }
+
+            /// Drops the stored session if it is the one the cancellation
+            /// handler fired for; a session created afterwards stays.
+            private func invalidate(_ cancelledSession: XPCSession?) {
+                guard let cancelledSession else {
+                    return
                 }
-                session.setTargetQueue(queue)
-                try session.activate()
-                diagLog.debug("getOrCreateSession: XPC session activated successfully")
-                self.session = session
-                return session
+                sessionLock.withLock { session in
+                    if session === cancelledSession {
+                        session = nil
+                    }
+                }
             }
 
             func cancel(reason: String) {
-                guard let session = session.take() else {
+                guard let session = sessionLock.withLock({ $0.take() }) else {
                     return
                 }
                 session.cancel(reason: reason)
             }
         }
 
-        /// Protected storage for the underlying XPC session.
-        private let storage: OSAllocatedUnfairLock<Storage>
-
-        /// The session's target queue.
-        private let queue: DispatchQueue
+        /// The underlying XPC session storage, which synchronizes internally.
+        private let storage: Storage
 
         /// The session's diagnostic logger.
         private let diagLog: DiagLog
 
         /// Creates a new session.
         init(queue: DispatchQueue, diagLog: DiagLog) {
-            self.storage = OSAllocatedUnfairLock(initialState: Storage(queue: queue, diagLog: diagLog))
-            self.queue = queue
+            self.storage = Storage(queue: queue, diagLog: diagLog)
             self.diagLog = diagLog
         }
 
@@ -183,7 +199,7 @@ extension MenuBarItemService {
 
         /// Cancels the session.
         func cancel(reason: String) {
-            storage.withLock { $0.cancel(reason: reason) }
+            storage.cancel(reason: reason)
         }
 
         /// Sends the given request to the service asynchronously and returns the response.
@@ -197,7 +213,7 @@ extension MenuBarItemService {
         func sendAsync(request: Request) async -> Response? {
             let xpcSession: XPCSession
             do {
-                xpcSession = try storage.withLock { try $0.getSession() }
+                xpcSession = try storage.getSession()
             } catch {
                 diagLog.error("Failed to get or create XPC session: \(error)")
                 return nil

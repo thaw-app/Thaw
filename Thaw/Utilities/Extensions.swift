@@ -567,7 +567,7 @@ nonisolated extension CGImage {
 
 // MARK: - Collection where Element == MenuBarItem
 
-extension Collection<MenuBarItem> {
+nonisolated extension Collection<MenuBarItem> {
     /// Returns the first index where the menu bar item matching the specified
     /// tag appears in the collection.
     func firstIndex(matching tag: MenuBarItemTag) -> Index? {
@@ -1052,7 +1052,7 @@ extension Publisher {
 
 // MARK: - RangeReplaceableCollection where Element == MenuBarItem
 
-extension RangeReplaceableCollection where Element == MenuBarItem {
+nonisolated extension RangeReplaceableCollection where Element == MenuBarItem {
     /// Removes and returns the first menu bar item that matches
     /// the specified tag.
     mutating func removeFirst(matching tag: MenuBarItemTag) -> MenuBarItem? {
@@ -1065,10 +1065,21 @@ extension RangeReplaceableCollection where Element == MenuBarItem {
 
 // MARK: - Sequence where Element == MenuBarItem
 
-extension Sequence<MenuBarItem> {
+nonisolated extension Sequence<MenuBarItem> {
     /// Returns the first menu bar item that matches the specified tag.
     func first(matching tag: MenuBarItemTag) -> MenuBarItem? {
         first { $0.tag == tag }
+    }
+
+    /// Returns the first menu bar item whose tag matches ignoring windowID
+    /// and whose effective PID (sourcePID, falling back to ownerPID)
+    /// matches the given PID.
+    ///
+    /// This is the identity check for re-finding an item across window
+    /// list snapshots: windowIDs churn between fetches, so identity rests
+    /// on the tag plus the process that created the item.
+    func first(matchingTag tag: MenuBarItemTag, pid: pid_t) -> MenuBarItem? {
+        first { $0.tag.matchesIgnoringWindowID(tag) && ($0.sourcePID ?? $0.ownerPID) == pid }
     }
 }
 

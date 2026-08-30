@@ -74,6 +74,95 @@ struct PrunedSectionOrderTests {
         #expect(pruned["hidden"] == entries)
     }
 
+    // MARK: Localized display-name ghosts (#949)
+
+    /// The #949 reporter's exact pair: an en-GB machine minted
+    /// `Control Centre:WiFi` while the bundle ID read nil, and counting it
+    /// as a real owner deleted the genuine `com.apple.controlcenter:WiFi`
+    /// as a provisional duplicate on every load. The ghost must be the one
+    /// that goes.
+    @Test("A localized ghost never deletes its genuine Control Center twin")
+    func localizedGhostDoesNotDeleteGenuineTwin() {
+        let ghost = "Control Centre:WiFi"
+        let genuine = "com.apple.controlcenter:WiFi"
+
+        let pruned = LayoutSolver.prunedSectionOrder(["visible": [ghost, genuine]])
+        #expect(pruned["visible"] == [genuine])
+    }
+
+    /// `Control Centre:Thaw.ControlItem.Visible` is a mis-tagged chevron;
+    /// nothing live carries a control item title outside Thaw's namespace.
+    @Test("A localized ghost of a Thaw control item is dropped")
+    func localizedGhostOfControlItemIsDropped() {
+        let ghost = "Control Centre:Thaw.ControlItem.Visible"
+        let genuine = "com.stonerl.Thaw:Thaw.ControlItem.Visible"
+
+        let pruned = LayoutSolver.prunedSectionOrder(["visible": [ghost, genuine]])
+        #expect(pruned["visible"] == [genuine])
+    }
+
+    /// A display-name namespace with no canonical twin may be the only
+    /// identity a bundle-ID-less app ever got; deleting it would lose the
+    /// user's placement.
+    @Test("A display-name entry without a twin survives")
+    func displayNameEntryWithoutTwinSurvives() {
+        let entries = ["Docker Desktop:Item-0", "com.if.Amphetamine:Amphetamine"]
+
+        let pruned = LayoutSolver.prunedSectionOrder(["hidden": entries])
+        #expect(pruned["hidden"] == entries)
+    }
+
+    /// Some languages localize Control Center without any whitespace
+    /// (German: Kontrollzentrum), which the whitespace heuristic cannot
+    /// see. The caller passes the live localized name as an alias so the
+    /// classification stays locale-independent for the current locale.
+    @Test("A whitespace-free localized alias is recognized via the alias set")
+    func whitespaceFreeAliasIsRecognized() {
+        let ghost = "Kontrollzentrum:WiFi"
+        let genuine = "com.apple.controlcenter:WiFi"
+
+        let withAlias = LayoutSolver.prunedSectionOrder(
+            ["visible": [ghost, genuine]],
+            displayNameAliases: ["Kontrollzentrum"]
+        )
+        #expect(withAlias["visible"] == [genuine])
+    }
+
+    /// The #949 follow-up logs carried `Control Centre:Alcove` next to
+    /// `com.henrikruscon.Alcove:Alcove` — a third-party twin, reachable
+    /// only through the claimed-title rule since the genuine Control
+    /// Center entries had already been deleted by the pre-fix pruner.
+    @Test("A localized ghost of a real owner's item is dropped")
+    func localizedGhostOfRealOwnerIsDropped() {
+        let ghost = "Control Centre:Alcove"
+        let genuine = "com.henrikruscon.Alcove:Alcove"
+
+        let pruned = LayoutSolver.prunedSectionOrder(["hidden": [ghost, genuine]])
+        #expect(pruned["hidden"] == [genuine])
+    }
+
+    /// Every owner has an Item-0, so a generic title claimed by a real
+    /// owner is no evidence of a twin. The display-name entry stays.
+    @Test("A generic title never counts as a claimed-title twin")
+    func genericTitleIsNotAClaimedTitleTwin() {
+        let entries = ["Docker Desktop:Item-0", "org.openvpn.client.app:Item-0"]
+
+        let pruned = LayoutSolver.prunedSectionOrder(["hidden": entries])
+        #expect(pruned["hidden"] == entries)
+    }
+
+    /// The ghost and its twin need not share a section — the ghost was
+    /// filed wherever the item sat when the bundle ID failed to read.
+    @Test("The localized ghost is dropped across section boundaries")
+    func localizedGhostDroppedAcrossSections() {
+        let pruned = LayoutSolver.prunedSectionOrder([
+            "visible": ["com.apple.controlcenter:Battery"],
+            "hidden": ["Control Centre:Battery"],
+        ])
+        #expect(pruned["visible"] == ["com.apple.controlcenter:Battery"])
+        #expect(pruned["hidden"] == [])
+    }
+
     // MARK: Volatile-title accumulation (#815)
 
     /// A LyricsX layout accumulated one entry per lyric ever displayed. All

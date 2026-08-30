@@ -224,11 +224,11 @@ nonisolated extension Defaults {
         // MARK: Hidden Diagnostic Flags
 
         static let inputPauseThresholdMs = 50
-        static let bulkApplyIdleThresholdMs = 0
+        static let bulkApplyIdleThresholdMs = 300
         static let bulkApplyIdleWaitCapMs = 2000
-        static let enforceConcealedSectionOrder = true
+        static let enforceConcealedSectionOrder = false
         static let automaticArrangementEnabled = true
-        static let postMoveEventsToWindowOwner = false
+        static let postMoveEventsToWindowOwner = true
         static let discardStrayMoveEvents = true
         static let failFastOnEventWindowMismatch = false
         static let axMessagingTimeout = SharedConstants.axMessagingTimeout
@@ -303,6 +303,11 @@ nonisolated extension Defaults {
         // MARK: Menu Bar Item Custom Names
 
         case menuBarItemCustomNames = "MenuBarItemCustomNames"
+
+        /// The name each item last resolved to, used to label items during
+        /// the window before source-PID resolution lands. Managed by
+        /// ``MenuBarItemNameMemory``; not exposed in Settings.
+        case menuBarItemResolvedNames = "MenuBarItemResolvedNames"
 
         // MARK: Internal (Event Delivery)
 
@@ -394,10 +399,12 @@ nonisolated extension Defaults {
         /// the bar is idle — the common case — and avoids the collision
         /// entirely when it isn't.
         ///
-        /// 0 disables the gate, which is the default: the per-move pause is
-        /// the historical behaviour and this must not change it silently.
+        /// 300 ms is the default: a batch dispatched mid-interaction contests
+        /// the pointer for its whole length, and waiting for one real lull up
+        /// front costs nothing on an idle bar. Set 0 to disable the gate and
+        /// fall back to the per-move pause alone.
         ///
-        /// Hidden diagnostic flag; not exposed in Settings. Default: 0.
+        /// Hidden diagnostic flag; not exposed in Settings. Default: 300.
         case bulkApplyIdleThresholdMs = "bulkApplyIdleThresholdMs"
 
         /// Maximum milliseconds an automatic bulk apply waits for the idle
@@ -426,11 +433,13 @@ nonisolated extension Defaults {
         /// membership, shortening batches on exactly the bars where long
         /// batches hurt most.
         ///
-        /// True by default: order within concealed sections is what the
-        /// saved layout describes, and dropping it silently would change
-        /// what "restore my layout" means.
+        /// False by default: on a well-populated hidden section the ordering
+        /// moves are the bulk of a batch and none of their results are
+        /// visible, so surrendering them is what keeps batches short enough
+        /// not to fight the user. Set true to restore order as well as
+        /// membership inside the concealed sections.
         ///
-        /// Hidden diagnostic flag; not exposed in Settings. Default: true.
+        /// Hidden diagnostic flag; not exposed in Settings. Default: false.
         case enforceConcealedSectionOrder = "enforceConcealedSectionOrder"
 
         /// Whether Thaw rearranges the bar on its own initiative.
@@ -461,19 +470,22 @@ nonisolated extension Defaults {
         /// the window, and on 26 targets a process that does not own the
         /// window being dragged.
         ///
-        /// Two consequences this flag is meant to test. Moves that fail with
-        /// `itemResponseTimeout` may be failing because the events go to the
-        /// wrong process (#900, #923, and the notch-overflow ejections in
-        /// #924). And an item whose owning app never resolved need not be
+        /// Two consequences, both confirmed by the rc.3 test build. Moves
+        /// that failed with `itemResponseTimeout` were failing because the
+        /// events went to the wrong process (#900, #923, and the
+        /// notch-overflow ejections in #924). And an item whose owning app
+        /// never resolved need not be
         /// immovable at all: with the host as the target, the move does not
         /// require knowing who owns the item, so
         /// ``MenuBarItem/ImmovabilityReason/unresolvedControlCenterPlaceholder``
-        /// stops applying while this is on — the premise of that gate is
-        /// exactly what is under test.
+        /// stops applying while this is on, which is now the shipping
+        /// posture.
         ///
-        /// Off by default: this changes where every synthetic event goes.
+        /// On by default: on macOS 26 the window's owner is the process that
+        /// actually receives the drag, and addressing it is what lets a
+        /// Control Center slot with no resolved owner move at all.
         ///
-        /// Hidden diagnostic flag; not exposed in Settings. Default: false.
+        /// Hidden diagnostic flag; not exposed in Settings. Default: true.
         case postMoveEventsToWindowOwner = "postMoveEventsToWindowOwner"
 
         /// Whether stray echoes of synthetic move events are discarded

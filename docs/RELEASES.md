@@ -127,10 +127,65 @@ real release.
 
 ## Channels
 
-Stable, beta, and alpha all use the same feed host and updates releases. The
-appcast marks non-stable items with `sparkle:channel`. Tag suffixes map to
-channels in the release workflow (`-beta` / `-rc` → beta, `-alpha` / `-nightly`
-→ alpha).
+All three channels share one appcast, served from the feed host named by
+`SUFeedURL`. Stable items carry no `sparkle:channel`; beta and alpha items are
+tagged with theirs. Tag suffixes map to channels in the release workflow
+(`-beta` / `-rc` → beta, `-alpha` / `-nightly` → alpha), and the `channel`
+input overrides the inference when a tag needs to go somewhere its suffix does
+not imply.
+
+Subscribers pick one channel in Settings › About. All three read the same
+`SUFeedURL`; the appcast's `sparkle:channel` tags do the sorting.
+
+| Subscriber | Receives |
+| --- | --- |
+| Stable | items with no `sparkle:channel` |
+| Beta | untagged items, plus `beta` |
+| Alpha | untagged items, plus `alpha`, never `beta` |
+
+Beta is cumulative with stable, and that is not a choice: Sparkle's
+`allowedChannels` only widens what an updater accepts. An item with no
+`sparkle:channel` is on the default channel, and per `SPUUpdaterDelegate`,
+"the default channel is always included in the allowed set." No delegate
+return value keeps stable releases away from a subscriber.
+
+Alpha is only selectable on the macOS the rewrite targets. The threshold is
+`MacOSCompatibilityWarning.firstUnsupportedMajorVersion`, shared with the
+startup warning whose alert tells the user that support for that macOS arrives
+through this channel — so the release that raises the warning is the release
+that reveals the channel. On earlier systems alpha is absent from the picker,
+and a stored alpha selection is not honored, which keeps a user who moves back
+to a supported macOS from sitting on a feed that will never offer them
+anything.
+
+Alpha carries the rewritten app built against the next macOS: a different
+product line, not a riskier build of this one. It still shares the feed,
+because Sparkle offers the newest item a subscriber is allowed to see, and a
+3.x alpha item outranks anything the 2.x line can publish. An alpha subscriber
+does see the stable items; they simply never win. This holds only while stable
+stays behind alpha in version order, which is why no further 2.x stable
+release can be numbered above the alpha line.
+
+Alpha items are tagged `sparkle:channel` = `alpha`, so beta subscribers never
+see them: beta allows `beta` and the default, not `alpha`. The two tracks run
+in parallel rather than one containing the other.
+
+Cross-version safety does not rely on any of that. `generate_appcast` derives
+`sparkle:minimumSystemVersion` from each build's deployment target, so the 3.x
+items carry `27.0` and Sparkle skips them on macOS 26 — including later, when
+3.0 goes final and drops its channel tag to become the default.
+
+Promotion between stable and beta stays cheap, because they share a feed: to
+move a build from beta to stable, drop its `sparkle:channel` rather than
+publishing a second item for the same version. Beta subscribers already have
+that build and are offered nothing; stable subscribers pick it up. Two items
+sharing a version and differing only by channel is the case to avoid — it also
+reaches the mirrored legacy appcast.
+
+Switching *away* from alpha does not roll a user back. The alpha app's version
+line is ahead of the shipping app's, so the stable feed offers nothing newer
+and Sparkle stays put. Returning to the shipping app is a reinstall, which is
+worth saying wherever alpha is advertised.
 
 ## Legacy installs
 

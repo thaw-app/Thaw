@@ -411,6 +411,21 @@ nonisolated extension MenuBarItemTag.Namespace {
         uuidCache.withLock { $0 = $0.filter { validWindowIDs.contains($0.key) } }
     }
 
+    /// The canonicalized bundle identifier for the app, recovering a
+    /// transiently nil `bundleIdentifier` through the bundle URL.
+    ///
+    /// `bundleIdentifier` can read nil for an app that has one (login and
+    /// launch races), and the name fallbacks below the callers mint
+    /// localized display names for system processes: an en-GB machine
+    /// wrote `Control Centre:WiFi` that way, persisted it, and the ghost
+    /// then shadowed the canonical `com.apple.controlcenter:WiFi` in the
+    /// saved order (#949).
+    private static func canonicalBundleIdentifier(of app: NSRunningApplication) -> String? {
+        let bundleID = app.bundleIdentifier
+            ?? app.bundleURL.flatMap { Bundle(url: $0)?.bundleIdentifier }
+        return bundleID.map(Self.canonicalBundleID)
+    }
+
     /// Creates a namespace without checks.
     ///
     /// This initializer does not perform validity checks on its parameters.
@@ -420,13 +435,9 @@ nonisolated extension MenuBarItemTag.Namespace {
         // Most apps have a bundle ID, but we should be able to handle apps
         // that don't. We should also be able to handle daemons and helpers,
         // which are more likely not to have a bundle ID.
-        //
-        // Use the name of the owning process as a fallback. The non-localized
-        // name seems less likely to change, so let's prefer it as a (somewhat)
-        // stable identifier.
         if let app = itemWindow.owningApplication {
             self = .optional(
-                app.bundleIdentifier.map(Self.canonicalBundleID) ?? itemWindow.ownerName ?? app.localizedName
+                Self.canonicalBundleIdentifier(of: app) ?? itemWindow.ownerName ?? app.localizedName
             )
         } else {
             self = .optional(itemWindow.ownerName)
@@ -462,13 +473,13 @@ nonisolated extension MenuBarItemTag.Namespace {
         // name that reached this point did so because no bundle ID was
         // available to canonicalise.
         if let sourcePID, let app = NSRunningApplication(processIdentifier: sourcePID) {
-            self = .optional(app.bundleIdentifier.map(Self.canonicalBundleID) ?? app.localizedName)
+            self = .optional(Self.canonicalBundleIdentifier(of: app) ?? app.localizedName)
         } else if let app = itemWindow.owningApplication {
             // Fallback: use the owning application's bundle ID or name.
             // This covers cases where the source PID doesn't resolve
             // (e.g. helper processes) but the owner is known.
             self = .optional(
-                app.bundleIdentifier.map(Self.canonicalBundleID) ?? itemWindow.ownerName ?? app.localizedName
+                Self.canonicalBundleIdentifier(of: app) ?? itemWindow.ownerName ?? app.localizedName
             )
         } else if let ownerName = itemWindow.ownerName {
             // Last resort: use the process name as a stable identifier.

@@ -189,9 +189,10 @@ struct AboutSettingsPane: View {
         HStack {
             Text("Update channel")
             Spacer()
-            Picker("Update channel", selection: $updatesManager.allowsBetaUpdates) {
-                Text("Stable").tag(false)
-                Text("Development").tag(true)
+            Picker("Update channel", selection: $updatesManager.updateChannel) {
+                ForEach(UpdateChannel.availableCases(on: ProcessInfo.processInfo.operatingSystemVersion)) { channel in
+                    Text(channel.localized).tag(channel)
+                }
             }
             .pickerStyle(.segmented)
             .labelsHidden()

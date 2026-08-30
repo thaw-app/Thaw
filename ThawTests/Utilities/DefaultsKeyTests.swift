@@ -39,19 +39,19 @@ struct DefaultsKeyTests {
     @Test("Hidden flag default values are unchanged")
     func hiddenFlagDefaultValuesAreUnchanged() {
         #expect(Defaults.DefaultValue.inputPauseThresholdMs == 50)
-        // 0 keeps the bulk idle gate off: enabling it by default would
-        // change when every automatic apply starts.
-        #expect(Defaults.DefaultValue.bulkApplyIdleThresholdMs == 0)
+        // 300 arms the bulk idle gate: a batch dispatched mid-interaction
+        // contests the pointer for its whole length.
+        #expect(Defaults.DefaultValue.bulkApplyIdleThresholdMs == 300)
         #expect(Defaults.DefaultValue.bulkApplyIdleWaitCapMs == 2000)
-        // True: order within concealed sections is what the saved layout
-        // describes, and dropping it would change what restore means.
-        #expect(Defaults.DefaultValue.enforceConcealedSectionOrder == true)
+        // False: ordering moves inside concealed sections are invisible and
+        // dominate long batches, so membership alone is restored.
+        #expect(Defaults.DefaultValue.enforceConcealedSectionOrder == false)
         // True keeps Thaw arranging on its own initiative; false is the
         // manual-only escape hatch.
         #expect(Defaults.DefaultValue.automaticArrangementEnabled == true)
-        // False: routing events to the window's owner changes where every
-        // synthetic event goes, so it stays opt-in.
-        #expect(Defaults.DefaultValue.postMoveEventsToWindowOwner == false)
+        // True: on macOS 26 the window's owner is the process that receives
+        // the drag, and it is what lets an unresolved slot move at all.
+        #expect(Defaults.DefaultValue.postMoveEventsToWindowOwner == true)
         #expect(Defaults.DefaultValue.discardStrayMoveEvents == true)
         #expect(Defaults.DefaultValue.failFastOnEventWindowMismatch == false)
         #expect(Defaults.DefaultValue.axMessagingTimeout == 1.0)

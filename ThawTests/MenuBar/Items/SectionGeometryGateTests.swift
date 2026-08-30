@@ -352,7 +352,7 @@ struct SectionGeometryApplyGateTests {
 
             let didApply = await manager.applySavedLayout(
                 items: items,
-                previousWindowIDs: [Self.departedWindowID],
+                previousCycle: .init(windowIDs: [Self.departedWindowID]),
                 controlItems: collapsed
             )
 
@@ -378,7 +378,7 @@ struct SectionGeometryApplyGateTests {
 
             let didApply = await manager.applySavedLayout(
                 items: items,
-                previousWindowIDs: [Self.departedWindowID],
+                previousCycle: .init(windowIDs: [Self.departedWindowID]),
                 controlItems: healthy
             )
 
@@ -414,12 +414,12 @@ struct SectionGeometryApplyGateTests {
 
             let blocked = await manager.applySavedLayout(
                 items: items,
-                previousWindowIDs: [Self.departedWindowID],
+                previousCycle: .init(windowIDs: [Self.departedWindowID]),
                 controlItems: healthy
             )
             let retried = await manager.applySavedLayout(
                 items: items,
-                previousWindowIDs: [Self.departedWindowID],
+                previousCycle: .init(windowIDs: [Self.departedWindowID]),
                 controlItems: healthy,
                 bypassMoveCooldown: true
             )

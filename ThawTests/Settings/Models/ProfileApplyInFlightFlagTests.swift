@@ -75,11 +75,13 @@ struct ProfileApplyInFlightFlagTests {
         let manager = MenuBarItemManager()
 
         await manager.applyProfileLayout(
-            pinnedHidden: [],
-            pinnedAlwaysHidden: [],
-            sectionOrder: makeOrder(),
-            itemSectionMap: [:],
-            itemOrder: [:]
+            MenuBarItemManager.ProfileLayoutSpec(
+                pinnedHidden: [],
+                pinnedAlwaysHidden: [],
+                sectionOrder: makeOrder(),
+                itemSectionMap: [:],
+                itemOrder: [:]
+            )
         )
 
         #expect(!manager.isApplyingProfileLayout)

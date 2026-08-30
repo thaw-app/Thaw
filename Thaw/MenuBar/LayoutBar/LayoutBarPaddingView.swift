@@ -229,6 +229,56 @@ final class LayoutBarPaddingView: NSView {
                 await appState.itemManager.cacheItemsRegardless(skipRecentMoveCheck: true)
                 await appState.imageCache.updateCacheWithoutChecks(sections: MenuBarSection.Name.allCases)
             }
+
+            // Refuse a drag whose destination is one of Thaw's own section
+            // dividers while that divider is parked offscreen (#923). A
+            // collapsed section expands its control item into a spacer whose
+            // leading edge is far offscreen, so .leftOfItem(AH_ctrl) targets
+            // a click point around minX -9189. The synthetic drag yanks the
+            // item offscreen and macOS snaps it straight back, every attempt,
+            // until the budget runs out and the user sees a generic
+            // "operation could not be completed" alert. The apply path already
+            // skips divider moves in this state (#899/#978); the editor drag
+            // was the one caller that still handed the parked divider to
+            // move() directly. Bail out with an actionable message instead of
+            // burning eight attempts.
+            let targetItem = destination.targetItem
+            if targetItem.isControlItem {
+                let screenFrames = NSScreen.screens.map { CGDisplayBounds($0.displayID) }
+                // The destination comes from the frozen arranged views, whose
+                // bounds were captured before the drag began. A divider that
+                // parked in between would still read as on screen, so the
+                // refusal asks the window server where it is now. A window the
+                // server cannot answer for is refused too: this gate exists to
+                // keep a stranded divider away from move(), and a stale
+                // snapshot is no evidence that the divider is reachable.
+                let targetBounds = Bridging.getWindowBounds(for: targetItem.windowID)
+                let isReachable = targetBounds.map {
+                    LayoutSolver.isOnScreen(bounds: $0, screenFrames: screenFrames)
+                } ?? false
+                if !isReachable {
+                    watchdogTask.cancel()
+                    Self.diagLog.warning(
+                        "Skipping drag of \(item.logString): destination divider \(targetItem.logString) is parked offscreen (\(targetBounds.map { "minX=\($0.minX)" } ?? "no window bounds")); section is collapsed"
+                    )
+                    await appState.itemManager.cacheItemsRegardless(skipRecentMoveCheck: true)
+                    await MainActor.run {
+                        self.isStabilizing = false
+                        self.showOverlay(false)
+                        self.container.canSetArrangedViews = true
+                        if sourceContainer !== self.container {
+                            sourceContainer?.canSetArrangedViews = true
+                        }
+                        let alert = NSAlert()
+                        alert.alertStyle = .warning
+                        alert.messageText = String(localized: "Couldn't move \(item.displayName) right now.")
+                        alert.informativeText = String(localized: "The \(container.section.displayString) section is collapsed, so its divider is offscreen. Open the section and try dragging the item again.")
+                        alert.runModal()
+                    }
+                    return
+                }
+            }
+
             do {
                 try await appState.itemManager.move(
                     item: item,
@@ -236,15 +286,25 @@ final class LayoutBarPaddingView: NSView {
                     skipInputPause: true,
                     watchdogTimeout: MenuBarItemManager.layoutWatchdogTimeout
                 )
+                // Record the user move before stabilization so the save
+                // gate's cooldown exemption is armed when stabilizePlacement's
+                // own cache pass reaches it. Recording it only after stabilize
+                // returned meant the first cache pass inside stabilize hit
+                // the 5s move cooldown with no user-move exemption, so the
+                // save was skipped; by the time the exemption armed, the
+                // mid-transition cache gate had re-armed and no accepting
+                // pass coincided with the cooldown window. The drag never
+                // saved (#983). move() threw no error, so the user's drag
+                // did land; the rescue-and-retry catch block below still
+                // owns the case where macOS didn't settle it.
+                appState.itemManager.recordExternalMoveOperation()
                 appState.itemManager.removeTemporarilyShownItemFromCache(with: item.tag)
-                if await stabilizePlacement(
+                _ = await stabilizePlacement(
                     of: item,
                     to: destination,
                     expectedSection: container.section,
                     appState: appState
-                ) {
-                    appState.itemManager.recordExternalMoveOperation()
-                }
+                )
             } catch MenuBarItemManager.EventError.menuTrackingActive {
                 // A menu bar item's menu (Wi-Fi picker, input method panel,
                 // etc.) was open and the move was deferred to avoid tearing
@@ -301,15 +361,17 @@ final class LayoutBarPaddingView: NSView {
                             skipInputPause: true,
                             watchdogTimeout: MenuBarItemManager.layoutWatchdogTimeout
                         )
+                        // Same #983 reorder as the primary path: arm the
+                        // save-gate user-move exemption before stabilize so
+                        // its cache pass can persist the retry.
+                        appState.itemManager.recordExternalMoveOperation()
                         appState.itemManager.removeTemporarilyShownItemFromCache(with: item.tag)
-                        if await stabilizePlacement(
+                        _ = await stabilizePlacement(
                             of: item,
                             to: destination,
                             expectedSection: container.section,
                             appState: appState
-                        ) {
-                            appState.itemManager.recordExternalMoveOperation()
-                        }
+                        )
                     } catch MenuBarItemManager.EventError.menuTrackingActive {
                         // Same deferral the outer catch handles: the user
                         // opened a menu bar item's menu while the retry was
