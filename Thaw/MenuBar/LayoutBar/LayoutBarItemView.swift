@@ -398,8 +398,26 @@ final class LayoutBarItemView: LayoutBarArrangedView {
         return CGSize(width: width, height: height)
     }
 
+    /// The icon of the app that put this item on the bar, or `nil` when the
+    /// owner can only name Control Center.
+    ///
+    /// On macOS 26 every Control Center slot reports Control Center as its
+    /// owner, so an unresolved placeholder would take Control Center's icon
+    /// through the fallback. That is wrong on its face, and caching it as a
+    /// resolved icon also retires the retry below for the owner that shows
+    /// up once the source PID is known.
+    private static func resolvedAppIcon(for item: MenuBarItem) -> NSImage? {
+        if let icon = item.sourceApplication?.icon {
+            return icon
+        }
+        guard item.immovabilityReason != .unresolvedControlCenterPlaceholder else {
+            return nil
+        }
+        return item.owningApplication?.icon
+    }
+
     private static func makePlaceholderImage(for item: MenuBarItem) -> (NSImage?, Bool) {
-        if let icon = item.sourceApplication?.icon ?? item.owningApplication?.icon {
+        if let icon = resolvedAppIcon(for: item) {
             return (icon, true)
         }
         return (
@@ -439,7 +457,7 @@ final class LayoutBarItemView: LayoutBarArrangedView {
         // resolution surfaces. One lookup per resolution; the flag stops
         // repeat work once an icon is in hand.
         if !placeholderResolvedFromApp,
-           let icon = item.sourceApplication?.icon ?? item.owningApplication?.icon
+           let icon = Self.resolvedAppIcon(for: item)
         {
             self.placeholderImage = icon
             placeholderResolvedFromApp = true

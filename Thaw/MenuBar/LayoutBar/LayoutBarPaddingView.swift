@@ -245,10 +245,15 @@ final class LayoutBarPaddingView: NSView {
             let targetItem = destination.targetItem
             if targetItem.isControlItem {
                 let screenFrames = NSScreen.screens.map { CGDisplayBounds($0.displayID) }
-                if !LayoutSolver.isOnScreen(bounds: targetItem.bounds, screenFrames: screenFrames) {
+                // The destination comes from the frozen arranged views, whose
+                // bounds were captured before the drag began. A divider that
+                // parked in between would still read as on screen, so the
+                // refusal asks the window server where it is now.
+                let targetBounds = targetItem.liveBounds
+                if !LayoutSolver.isOnScreen(bounds: targetBounds, screenFrames: screenFrames) {
                     watchdogTask.cancel()
                     Self.diagLog.warning(
-                        "Skipping drag of \(item.logString): destination divider \(targetItem.logString) is parked offscreen (minX=\(targetItem.bounds.minX)); section is collapsed"
+                        "Skipping drag of \(item.logString): destination divider \(targetItem.logString) is parked offscreen (minX=\(targetBounds.minX)); section is collapsed"
                     )
                     await appState.itemManager.cacheItemsRegardless(skipRecentMoveCheck: true)
                     await MainActor.run {
