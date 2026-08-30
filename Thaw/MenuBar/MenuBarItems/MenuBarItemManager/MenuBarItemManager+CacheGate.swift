@@ -11,7 +11,23 @@ import Cocoa
 // MARK: - Cache Gate
 
 extension MenuBarItemManager {
-    enum LayoutResetTarget: Sendable {
+    /// Records whether one specific cache attempt actually observed the menu
+    /// bar. Layout-editor moves use this to distinguish an accepted cache pass
+    /// from one dropped by ``CacheGate`` while another pass was in flight.
+    @MainActor
+    final class CacheAttempt {
+        private(set) var didCompleteCycle = false
+
+        func recordCompletion(
+            cyclesAtEntry: Int,
+            cyclesAtExit: Int,
+            snapshotRemainedCurrent: Bool = true
+        ) {
+            didCompleteCycle = cyclesAtExit > cyclesAtEntry && snapshotRemainedCurrent
+        }
+    }
+
+    enum LayoutResetTarget {
         case visible
         case hidden
         case alwaysHidden
