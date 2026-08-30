@@ -82,4 +82,51 @@ struct MoveFailureDiagnosticReportTests {
 
         #expect(try String(contentsOf: url, encoding: .utf8) == report.text)
     }
+
+    @Test("Automatic reports do not overwrite a same-second report")
+    func automaticReportNamesDoNotCollide() throws {
+        let directory = FileManager.default.temporaryDirectory
+            .appendingPathComponent(UUID().uuidString, isDirectory: true)
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let report = MoveFailureDiagnosticReport(
+            text: "failure\n",
+            suggestedFileName: "\(Constants.displayName)-move-diagnostic-2026-08-30-120000.txt"
+        )
+
+        let first = try report.writeToAutomaticReports(in: directory)
+        let second = try report.writeToAutomaticReports(in: directory)
+
+        #expect(first != second)
+        #expect(first.lastPathComponent == report.suggestedFileName)
+        #expect(second.lastPathComponent.hasSuffix("-2.txt"))
+        #expect(try String(contentsOf: first, encoding: .utf8) == report.text)
+        #expect(try String(contentsOf: second, encoding: .utf8) == report.text)
+    }
+
+    @Test("Pruning keeps only the newest automatic reports")
+    func automaticReportPruning() throws {
+        let fileManager = FileManager.default
+        let directory = fileManager.temporaryDirectory
+            .appendingPathComponent(UUID().uuidString, isDirectory: true)
+        try fileManager.createDirectory(at: directory, withIntermediateDirectories: true)
+        defer { try? fileManager.removeItem(at: directory) }
+
+        let prefix = "\(Constants.displayName)-move-diagnostic-"
+        let reportNames = (0 ..< 4).map { "\(prefix)\($0).txt" }
+        for (index, name) in reportNames.enumerated() {
+            let url = directory.appendingPathComponent(name)
+            try "report \(index)".write(to: url, atomically: true, encoding: .utf8)
+            try fileManager.setAttributes(
+                [.modificationDate: Date(timeIntervalSince1970: TimeInterval(index))],
+                ofItemAtPath: url.path
+            )
+        }
+        let unrelated = directory.appendingPathComponent("notes.txt")
+        try "keep".write(to: unrelated, atomically: true, encoding: .utf8)
+
+        MoveFailureDiagnosticReport.pruneAutomaticReports(in: directory, keeping: 2)
+
+        let remaining = try fileManager.contentsOfDirectory(atPath: directory.path)
+        #expect(Set(remaining) == Set([reportNames[2], reportNames[3], unrelated.lastPathComponent]))
+    }
 }

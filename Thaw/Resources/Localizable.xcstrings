@@ -3857,6 +3857,9 @@
         }
       }
     },
+    "A diagnostic report was saved to %@." : {
+
+    },
     "A new update is available" : {
       "comment" : "Title of a notification when a new update is available.",
       "localizations" : {

@@ -1556,6 +1556,29 @@ extension MenuBarItemManager {
         // as an order of record (#900).
         var unenactedMoveCount = 0
 
+        /// Automatic saved-layout restores and profile re-sorts report only
+        /// definitive failures. User-invoked profile applies already have
+        /// their own immediate UI and do not use this background channel.
+        func enqueueApplyMoveFailure(
+            _ error: any Error,
+            item: MenuBarItem,
+            destination: MoveDestination?,
+            expectedSection: MenuBarSection.Name?
+        ) {
+            guard automatic else { return }
+            let failureSource = switch source {
+            case .profile: "the active profile"
+            case .savedOrder: "the saved layout"
+            }
+            enqueueAutomaticMoveFailureReport(
+                of: item,
+                to: destination,
+                expectedSection: expectedSection,
+                error: error,
+                source: failureSource
+            )
+        }
+
         /// Every abandon exits the same way: the abandoned remainder is one
         /// more unenacted move, the outcome feeds the circuit breaker, and
         /// in-flight profile state is torn down before the deferred cache
@@ -1910,6 +1933,12 @@ extension MenuBarItemManager {
                                         failureLedger.recordFailure(for: hItem, kind: Self.failureKind(of: error))
                                     }
                                     MenuBarItemManager.diagLog.error("Profile layout: failed to move H_ctrl: \(error)")
+                                    enqueueApplyMoveFailure(
+                                        error,
+                                        item: hItem,
+                                        destination: dest,
+                                        expectedSection: nil
+                                    )
                                 }
                             }
                         }
@@ -1986,9 +2015,11 @@ extension MenuBarItemManager {
                     .compactMap { offenders[$0] }
                     .sorted { $0.bounds.minX > $1.bounds.minX }
 
-                for (item, dest) in toConceal.map({ ($0, MoveDestination.leftOfItem(hItem)) })
-                    + toReveal.map({ ($0, MoveDestination.rightOfItem(hItem)) })
-                {
+                for (item, dest, expectedSection) in toConceal.map({
+                    ($0, MoveDestination.leftOfItem(hItem), MenuBarSection.Name.hidden)
+                }) + toReveal.map({
+                    ($0, MoveDestination.rightOfItem(hItem), MenuBarSection.Name.visible)
+                }) {
                     if Task.isCancelled {
                         break
                     }
@@ -2040,6 +2071,12 @@ extension MenuBarItemManager {
                             }
                             MenuBarItemManager.diagLog.error(
                                 "Profile layout: failed to move \(item.logString) across the H_ctrl boundary: \(error)"
+                            )
+                            enqueueApplyMoveFailure(
+                                error,
+                                item: item,
+                                destination: dest,
+                                expectedSection: expectedSection
                             )
                         }
                     }
@@ -2240,6 +2277,12 @@ extension MenuBarItemManager {
                     }
                     unenactedMoveCount += 1
                     MenuBarItemManager.diagLog.error("Profile layout: failed to move AH_ctrl: \(error)")
+                    enqueueApplyMoveFailure(
+                        error,
+                        item: ahItem,
+                        destination: dest,
+                        expectedSection: nil
+                    )
                 }
             }
 
@@ -2354,6 +2397,12 @@ extension MenuBarItemManager {
                             MenuBarItemManager.diagLog.error(
                                 "Profile layout: per-item move to AH failed for \(uid): \(error)"
                             )
+                            enqueueApplyMoveFailure(
+                                error,
+                                item: item,
+                                destination: .leftOfItem(ahItem),
+                                expectedSection: .alwaysHidden
+                            )
                         }
                     }
 
@@ -2395,6 +2444,12 @@ extension MenuBarItemManager {
                             unenactedMoveCount += 1
                             MenuBarItemManager.diagLog.error(
                                 "Profile layout: per-item move to hidden failed for \(uid): \(error)"
+                            )
+                            enqueueApplyMoveFailure(
+                                error,
+                                item: item,
+                                destination: .rightOfItem(ahItem),
+                                expectedSection: .hidden
                             )
                         }
                     }
@@ -2643,6 +2698,12 @@ extension MenuBarItemManager {
                 }
                 MenuBarItemManager.diagLog.error(
                     "Profile layout: failed to move \(planned.uid): \(error)"
+                )
+                enqueueApplyMoveFailure(
+                    error,
+                    item: item,
+                    destination: dest,
+                    expectedSection: fallbackSection
                 )
                 if Self.moveBatchShouldAbandon(consecutiveFailures: consecutiveMoveFailures) {
                     unenactedMoveCount += plannedMoves.count - plannedIndex - 1

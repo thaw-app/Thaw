@@ -406,6 +406,13 @@ extension MenuBarItemManager {
                 MenuBarItemManager.diagLog.error(
                     "Notch overflow rebalance: failed to eject \(item.logString): \(error)"
                 )
+                await reportAutomaticMoveFailure(
+                    of: item,
+                    to: .leftOfItem(controlItems.hidden),
+                    expectedSection: .hidden,
+                    error: error,
+                    source: "notch overflow management"
+                )
             }
         }
         if didFailAcceptedMove {

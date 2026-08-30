@@ -24,11 +24,11 @@ nonisolated struct MoveFailureDiagnosticReport {
         /// The item that did not move.
         let item: MenuBarItem
 
-        /// Where it was supposed to go.
-        let destination: MenuBarItemManager.MoveDestination
+        /// Where it was supposed to go, when the caller still knows.
+        let destination: MenuBarItemManager.MoveDestination?
 
-        /// The section the destination lies in.
-        let expectedSection: MenuBarSection.Name
+        /// The section the destination lies in, when the caller knows.
+        let expectedSection: MenuBarSection.Name?
 
         /// The error the move ended with.
         let error: any Error
@@ -38,8 +38,8 @@ nonisolated struct MoveFailureDiagnosticReport {
 
         init(
             item: MenuBarItem,
-            destination: MenuBarItemManager.MoveDestination,
-            expectedSection: MenuBarSection.Name,
+            destination: MenuBarItemManager.MoveDestination?,
+            expectedSection: MenuBarSection.Name?,
             error: any Error,
             note: String? = nil
         ) {
@@ -185,6 +185,94 @@ nonisolated struct MoveFailureDiagnosticReport {
         try text.write(to: url, atomically: true, encoding: .utf8)
     }
 
+    /// Where reports for failed automatic moves are written without asking:
+    /// `~/Library/Logs/Thaw/Diagnostics`.
+    static var automaticReportsDirectory: URL {
+        DiagnosticLogger.shared.logDirectory.appendingPathComponent("Diagnostics", isDirectory: true)
+    }
+
+    /// How many automatic reports are kept; the oldest are removed.
+    static let automaticReportsKept = 20
+
+    /// Writes the report to the automatic diagnostics folder and removes old
+    /// automatic move reports beyond ``automaticReportsKept``.
+    ///
+    /// A suffix is added when two failures receive the same timestamp-based
+    /// name, so a burst never overwrites an earlier report before pruning can
+    /// account for it.
+    @discardableResult
+    func writeToAutomaticReports(in directory: URL = Self.automaticReportsDirectory) throws -> URL {
+        let fileManager = FileManager.default
+        try fileManager.createDirectory(at: directory, withIntermediateDirectories: true)
+        let url = Self.availableReportURL(
+            in: directory,
+            suggestedFileName: suggestedFileName,
+            fileExists: fileManager.fileExists(atPath:)
+        )
+        try write(to: url)
+        Self.pruneAutomaticReports(in: directory, keeping: Self.automaticReportsKept)
+        return url
+    }
+
+    /// Returns a non-existing URL for `suggestedFileName`, adding a numeric
+    /// suffix before its extension when needed.
+    static func availableReportURL(
+        in directory: URL,
+        suggestedFileName: String,
+        fileExists: (String) -> Bool
+    ) -> URL {
+        let suggestedURL = directory.appendingPathComponent(suggestedFileName)
+        guard fileExists(suggestedURL.path) else {
+            return suggestedURL
+        }
+
+        let base = suggestedURL.deletingPathExtension().lastPathComponent
+        let pathExtension = suggestedURL.pathExtension
+        var suffix = 2
+        while true {
+            let name = pathExtension.isEmpty
+                ? "\(base)-\(suffix)"
+                : "\(base)-\(suffix).\(pathExtension)"
+            let candidate = directory.appendingPathComponent(name)
+            if !fileExists(candidate.path) {
+                return candidate
+            }
+            suffix += 1
+        }
+    }
+
+    /// Removes all but the newest `keepCount` automatic move reports in
+    /// `directory`. Other text files in the diagnostics folder are retained.
+    static func pruneAutomaticReports(in directory: URL, keeping keepCount: Int) {
+        let fileManager = FileManager.default
+        guard let urls = try? fileManager.contentsOfDirectory(
+            at: directory,
+            includingPropertiesForKeys: [.contentModificationDateKey],
+            options: .skipsHiddenFiles
+        ) else {
+            return
+        }
+
+        func modified(_ url: URL) -> Date {
+            (try? url.resourceValues(forKeys: [.contentModificationDateKey]))?.contentModificationDate
+                ?? .distantPast
+        }
+
+        let prefix = "\(Constants.displayName)-move-diagnostic-"
+        let reports = urls
+            .filter { $0.pathExtension == "txt" && $0.lastPathComponent.hasPrefix(prefix) }
+            .sorted {
+                let lhsDate = modified($0)
+                let rhsDate = modified($1)
+                return lhsDate == rhsDate
+                    ? $0.lastPathComponent > $1.lastPathComponent
+                    : lhsDate > rhsDate
+            }
+        for stale in reports.dropFirst(max(0, keepCount)) {
+            try? fileManager.removeItem(at: stale)
+        }
+    }
+
     /// Asks where to save the report, writes it, and reveals it in Finder.
     @MainActor
     func save(in window: NSWindow? = nil) {
@@ -286,8 +374,8 @@ private extension MoveFailureDiagnosticReport {
             and status text, and display/menu-bar geometry because they are needed to \
             investigate the failure. Those values may themselves be sensitive. The report \
             attempts to redact usernames and full names, home-directory paths, network and \
-            connected-device names, e-mail, IP and MAC addresses, trigger names and \
-            condition values, and precise location coordinates. Automated redaction cannot \
+            connected-device names, e-mail, IP and MAC addresses, script values, and \
+            precise location coordinates. Automated redaction cannot \
             be guaranteed to catch everything. Review the report before sharing it.
             """
         )
@@ -308,18 +396,22 @@ private extension MoveFailureDiagnosticReport {
         if let note = failure.note {
             writer.line("Note: \(note)")
         }
-        writer.line("Expected section: \(failure.expectedSection.logString)")
+        writer.line("Expected section: \(failure.expectedSection?.logString ?? "unknown")")
         writer.line("Item: \(failure.item.logString)")
         for line in itemLines(failure.item, cache: cache, manager: manager) {
             writer.line(line)
         }
-        let target = failure.destination.targetItem
-        writer.line("Destination: \(failure.destination.logString)")
-        for line in itemLines(target, cache: cache, manager: manager) {
-            writer.line(line)
-        }
-        if let liveTargetBounds = Bridging.getWindowBounds(for: target.windowID) {
-            writer.line("  liveBounds=\(format(liveTargetBounds))")
+        if let destination = failure.destination {
+            let target = destination.targetItem
+            writer.line("Destination: \(destination.logString)")
+            for line in itemLines(target, cache: cache, manager: manager) {
+                writer.line(line)
+            }
+            if let liveTargetBounds = Bridging.getWindowBounds(for: target.windowID) {
+                writer.line("  liveBounds=\(format(liveTargetBounds))")
+            }
+        } else {
+            writer.line("Destination: not recorded by the caller (see the log excerpt)")
         }
 
         let lastMove = manager.lastMoveOperationTimestamp.map { instant in
