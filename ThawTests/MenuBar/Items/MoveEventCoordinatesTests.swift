@@ -14,10 +14,12 @@ import Testing
 /// Regression tests for the synthetic event coordinates used to move menu bar items.
 @Suite("Move event coordinates")
 struct MoveEventCoordinatesTests {
-    /// Off-screen destinations preserve their horizontal edge while keeping the
-    /// event away from the top-left Hot Corner.
-    @Test("An off-screen destination keeps its horizontal edge and uses the bounds midpoint")
-    func offscreenTargetPointsUseBoundsMidpoint() {
+    /// The target point is used unchanged for both halves of a teleport. In
+    /// particular, an off-screen press must stay off-screen rather than being
+    /// rewritten to a visible notch midpoint, which would flash the real item
+    /// in the center of the display before the release.
+    @Test("An off-screen teleport keeps its parked destination coordinate")
+    func offscreenTeleportKeepsParkedCoordinate() {
         let displayBounds = CGRect(x: 0, y: 0, width: 1470, height: 956)
         let bounds = CGRect(x: -4193, y: 0, width: 22, height: 33)
         let target = MenuBarItem.fixture(
@@ -39,6 +41,14 @@ struct MoveEventCoordinatesTests {
                 on: displayBounds
             ) == CGPoint(x: bounds.maxX, y: bounds.midY)
         )
+
+        let parkedPoint = CGPoint(x: bounds.minX, y: bounds.midY)
+        let eventLocations = MenuBarItemManager.moveEventLocations(
+            targetPoints: (start: parkedPoint, end: parkedPoint),
+            faithfulDragStart: nil
+        )
+        #expect(eventLocations.press == parkedPoint)
+        #expect(eventLocations.release == parkedPoint)
     }
 
     /// #923: dropping onto the exact coordinate of a section divider leaves
@@ -213,21 +223,5 @@ struct MoveEventCoordinatesTests {
         )
 
         #expect(point == CGPoint(x: bounds.minX, y: bounds.minY))
-    }
-
-    /// The notch frame comes from AppKit, so only its horizontal position is
-    /// safe to reuse in a Core Graphics event.
-    @Test("A notch mouse-down keeps the Core Graphics menu bar Y coordinate")
-    func notchMouseDownKeepsCoreGraphicsMenuBarYCoordinate() {
-        let notchFrameAppKit = CGRect(x: 646, y: 924, width: 179, height: 32)
-        let targetPointCoreGraphics = CGPoint(x: -4193, y: 16.5)
-
-        let point = MenuBarItemManager.notchMouseDownPoint(
-            notchFrameAppKit: notchFrameAppKit,
-            targetPointCoreGraphics: targetPointCoreGraphics
-        )
-
-        #expect(point == CGPoint(x: notchFrameAppKit.midX, y: targetPointCoreGraphics.y))
-        #expect(point.y != notchFrameAppKit.midY)
     }
 }
