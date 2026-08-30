@@ -54,6 +54,11 @@ final class MenuBarItemManager {
     /// the first successful lookup.
     var lastControlItemLookupFailureAt: ContinuousClock.Instant?
 
+    /// Exact Control Center launch observed by the latest cache cycle.
+    /// A new host process starts a new divider-recovery episode even if the
+    /// preceding process never produced a successful lookup before exiting.
+    var lastObservedControlCenterGeneration: ProcessGeneration?
+
     /// Consecutive authoritative cache readings in which the hidden section
     /// has no geometric span despite a populated saved hidden section.
     var hiddenSectionCollapseStreak = 0
@@ -239,7 +244,7 @@ final class MenuBarItemManager {
     private var groupOrderObservationTask: Task<Void, Never>?
 
     /// A candidate menu window matched by the open-menu probe.
-    nonisolated struct MenuWindowCandidate: Sendable {
+    nonisolated struct MenuWindowCandidate {
         let windowID: CGWindowID
         let bounds: CGRect
     }

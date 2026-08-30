@@ -109,6 +109,19 @@ nonisolated extension MenuBarItem {
         static let activeSpace = ListOption(rawValue: 1 << 1)
     }
 
+    /// One enumeration together with the source-PID values that came from
+    /// persisted seeds instead of the live Accessibility resolver.
+    struct EnumerationSnapshot {
+        let items: [MenuBarItem]
+        let appliedSourcePIDSeeds: [CGWindowID: SourcePIDSeed]
+        let windowsByID: [CGWindowID: WindowInfo]
+        let controlCenterGeneration: ProcessGeneration?
+
+        var seededSourcePIDWindowIDs: Set<CGWindowID> {
+            Set(appliedSourcePIDSeeds.keys)
+        }
+    }
+
     private static let diagLog = DiagLog(category: "MenuBarItem")
 
     /// Creates and returns a list of menu bar items windows for the given display.
@@ -189,7 +202,7 @@ nonisolated extension MenuBarItem {
     @MainActor
     private static func makeItemsWithoutResolvingSourcePID(
         from windows: [WindowInfo]
-    ) -> [MenuBarItem] {
+    ) -> EnumerationSnapshot {
         var items = windows.map { window in
             if let title = window.title, title.hasPrefix("Thaw.ControlItem.") {
                 let ccBundleID = "com.apple.controlcenter"
@@ -211,7 +224,15 @@ nonisolated extension MenuBarItem {
         diagLog.debug(
             "getMenuBarItemsExperimental: created \(items.count) items without sourcePID resolution, \(nilPIDCount) unresolved"
         )
-        return items
+        return EnumerationSnapshot(
+            items: items,
+            appliedSourcePIDSeeds: [:],
+            windowsByID: Dictionary(
+                windows.map { ($0.windowID, $0) },
+                uniquingKeysWith: { first, _ in first }
+            ),
+            controlCenterGeneration: nil
+        )
     }
 
     @available(macOS 26.0, *)
@@ -220,7 +241,7 @@ nonisolated extension MenuBarItem {
         on display: CGDirectDisplayID?,
         option: ListOption,
         resolveSourcePID: Bool
-    ) async -> [MenuBarItem] {
+    ) async -> EnumerationSnapshot {
         let windows = getMenuBarItemWindows(on: display, option: option)
         diagLog.debug("getMenuBarItems: processing \(windows.count) windows for source PID resolution")
 
@@ -265,6 +286,28 @@ nonisolated extension MenuBarItem {
             )
         }
 
+        // A status-item window can survive this app relaunching. Preserve its
+        // last confirmed owner while the Accessibility resolver starts cold,
+        // but never replace a fresh result from the service.
+        let controlCenterGeneration = SourcePIDSeedStore.currentControlCenterGeneration()
+        let appliedSeeds: [CGWindowID: SourcePIDSeed] = if let controlCenterGeneration {
+            SourcePIDSeedStore.apply(
+                seeds: SourcePIDSeedStore.load(from: Defaults.store),
+                to: &pids,
+                windows: windows,
+                currentControlCenterGeneration: controlCenterGeneration,
+                liveIdentity: SourcePIDSeedStore.liveIdentity(of:)
+            )
+        } else {
+            [:]
+        }
+        let seededWindowIDs = Set(appliedSeeds.keys)
+        if !appliedSeeds.isEmpty {
+            diagLog.info(
+                "getMenuBarItems: restored source PIDs for \(appliedSeeds.count) surviving window(s): \(seededWindowIDs.sorted())"
+            )
+        }
+
         var items = windows.enumerated().map { index, window in
             let pid: pid_t? = controlItemIndices.contains(index) ? ownPID : pids[index]
             return MenuBarItem(uncheckedItemWindow: window, sourcePID: pid)
@@ -290,7 +333,7 @@ nonisolated extension MenuBarItem {
         if !unresolvedIndices.isEmpty {
             // Count how many items each PID has been resolved to.
             var resolvedCountByPID = [pid_t: Int]()
-            for item in items where item.sourcePID != nil {
+            for item in items where item.sourcePID != nil && !seededWindowIDs.contains(item.windowID) {
                 if let pid = item.sourcePID {
                     resolvedCountByPID[pid, default: 0] += 1
                 }
@@ -301,7 +344,7 @@ nonisolated extension MenuBarItem {
             // .ambiguous means multiple different PIDs share the title
             // (e.g. two apps both using "Item-0") and propagation is unsafe.
             var titleToPID = [String: ResolvedPID]()
-            for item in items where item.sourcePID != nil {
+            for item in items where item.sourcePID != nil && !seededWindowIDs.contains(item.windowID) {
                 if let title = item.title, let pid = item.sourcePID {
                     if let existing = titleToPID[title] {
                         // Mark as ambiguous if different PIDs share this title.
@@ -343,7 +386,35 @@ nonisolated extension MenuBarItem {
         } else {
             diagLog.debug("getMenuBarItems: created \(items.count) items, all with resolved sourcePID")
         }
-        return items
+        return EnumerationSnapshot(
+            items: items,
+            appliedSourcePIDSeeds: appliedSeeds,
+            windowsByID: Dictionary(
+                windows.map { ($0.windowID, $0) },
+                uniquingKeysWith: { first, _ in first }
+            ),
+            controlCenterGeneration: controlCenterGeneration
+        )
+    }
+
+    /// Creates a menu-bar enumeration while preserving whether each restored
+    /// source PID was confirmed live or supplied by the persisted seed store.
+    @MainActor
+    static func getMenuBarItemsSnapshot(
+        on display: CGDirectDisplayID? = nil,
+        option: ListOption,
+        resolveSourcePID: Bool = true
+    ) async -> EnumerationSnapshot {
+        diagLog.debug(
+            "getMenuBarItems: starting (resolveSourcePID=\(resolveSourcePID))"
+        )
+        let snapshot = await getMenuBarItemsExperimental(
+            on: display,
+            option: option,
+            resolveSourcePID: resolveSourcePID
+        )
+        diagLog.debug("getMenuBarItems: returned \(snapshot.items.count) items")
+        return snapshot
     }
 
     /// Creates and returns a list of menu bar items for the given display.
@@ -359,16 +430,12 @@ nonisolated extension MenuBarItem {
         option: ListOption,
         resolveSourcePID: Bool = true
     ) async -> [MenuBarItem] {
-        diagLog.debug(
-            "getMenuBarItems: starting (resolveSourcePID=\(resolveSourcePID))"
-        )
-        let items = await getMenuBarItemsExperimental(
+        let snapshot = await getMenuBarItemsSnapshot(
             on: display,
             option: option,
             resolveSourcePID: resolveSourcePID
         )
-        diagLog.debug("getMenuBarItems: returned \(items.count) items")
-        return items
+        return snapshot.items
     }
 }
 

@@ -22,10 +22,10 @@ extension MenuBarItemManager {
         /// of the previous cache.
         private(set) var cachedItemWindowIDs = [CGWindowID]()
 
-        /// A mapping from window identifiers to their resolved source process
-        /// identifiers from the previous cache cycle. Used to detect and correct
-        /// transient sourcePID resolution errors (e.g. stale AX data after moves).
-        private(set) var cachedItemPIDs = [CGWindowID: pid_t]()
+        /// Confirmed window/source incarnations from the previous cache cycle.
+        /// These detect and correct transient source-PID resolution errors
+        /// without trusting a recycled window ID or PID by itself.
+        private(set) var cachedSourcePIDBaselines = [CGWindowID: SourcePIDSeed]()
 
         /// Window identifiers of the system clone windows seen in the most
         /// recent cache cycle. cacheItemsIfNeeded filters these out of its
@@ -40,6 +40,9 @@ extension MenuBarItemManager {
         /// stable — so applySavedLayout's windowID-change gate ignores their
         /// disappearance instead of dispatching a full bulk apply (#736).
         private(set) var cachedControlCenterGenericWindowIDs = Set<CGWindowID>()
+
+        /// Source-PID seeds already written during this app session.
+        private(set) var persistedSourcePIDSeeds: [SourcePIDSeed]?
 
         /// Updates the list of cached menu bar item window identifiers.
         func updateCachedItemWindowIDs(_ itemWindowIDs: [CGWindowID]) {
@@ -56,15 +59,36 @@ extension MenuBarItemManager {
             cachedControlCenterGenericWindowIDs = ids
         }
 
-        /// Updates the mapping from window identifiers to source process identifiers.
-        func updateCachedItemPIDs(_ pids: [CGWindowID: pid_t]) {
-            cachedItemPIDs = pids
+        /// Updates the confirmed window/source incarnations.
+        func updateCachedSourcePIDBaselines(_ baselines: [CGWindowID: SourcePIDSeed]) {
+            cachedSourcePIDBaselines = baselines
+        }
+
+        /// Records a seed snapshot and reports whether it needs persistence.
+        func updatePersistedSourcePIDSeeds(_ seeds: [SourcePIDSeed]) -> Bool {
+            guard seeds != persistedSourcePIDSeeds else { return false }
+            persistedSourcePIDSeeds = seeds
+            return true
+        }
+
+        /// Returns the last persisted snapshot, loading it once per process.
+        /// Priming this cache avoids one redundant defaults write on the first
+        /// successful enumeration after launch.
+        func persistedSourcePIDSeeds(from defaults: UserDefaults) -> [SourcePIDSeed] {
+            if let persistedSourcePIDSeeds {
+                return persistedSourcePIDSeeds
+            }
+            let loaded = SourcePIDSeedStore.load(from: defaults).values.sorted {
+                $0.windowID < $1.windowID
+            }
+            persistedSourcePIDSeeds = loaded
+            return loaded
         }
 
         /// Clears the list of cached menu bar item window identifiers.
         func clearCachedItemWindowIDs() {
             cachedItemWindowIDs.removeAll()
-            cachedItemPIDs.removeAll()
+            cachedSourcePIDBaselines.removeAll()
             // Clear clone IDs alongside the main set so the two don't drift.
             // Leaving stale clone IDs here would let cacheItemsIfNeeded filter
             // a recycled windowID out of its comparison before the recache
@@ -162,7 +186,7 @@ extension MenuBarItemManager {
     /// A pair of control items, taken from a list of menu bar items
     /// during a menu bar item cache operation.
     struct ControlItemPair {
-        nonisolated enum Resolution: Equatable, Sendable {
+        nonisolated enum Resolution: Equatable {
             case identity
             case axFrameCorrelation
         }
@@ -264,6 +288,34 @@ extension MenuBarItemManager {
                 return
             }
 
+            // Duplicate same-title divider windows cannot be disambiguated by
+            // tag or source PID: on Tahoe, Control Center hosts both the stale
+            // and current windows, and enumeration stamps both as this process.
+            // AppKit may expose a synthetic windowNumber that does not fit in a
+            // CGWindowID, so the authoritative-ID paths above are unavailable.
+            // Only current-process AX frames can break the tie; otherwise keep
+            // the last-known-good cache instead of adopting an arbitrary (often
+            // older, lower-numbered) divider.
+            let ambiguousTitles = Self.ambiguousControlItemTitles(in: items)
+            if !ambiguousTitles.isEmpty {
+                if let pair = Self.matchViaAXFrame(items: &items),
+                   !ambiguousTitles.contains(ControlItem.Identifier.alwaysHidden.rawValue) ||
+                   pair.alwaysHidden != nil
+                {
+                    self.hidden = pair.hidden
+                    self.alwaysHidden = pair.alwaysHidden
+                    self.resolution = .axFrameCorrelation
+                    MenuBarItemManager.diagLog.info(
+                        "ControlItemPair: resolved duplicate control-item titles via unambiguous current-process AX frames"
+                    )
+                    return
+                }
+                MenuBarItemManager.diagLog.warning(
+                    "ControlItemPair: refusing ambiguous same-title control windows without an authoritative CG window ID: \(ambiguousTitles.sorted())"
+                )
+                return nil
+            }
+
             // Fallback 1: match by tag (namespace + title).
             if let hidden = items.removeFirst(matching: .hiddenControlItem) {
                 self.hidden = hidden
@@ -310,6 +362,24 @@ extension MenuBarItemManager {
                 "ControlItemPair: unresolved; no strategy identified the hidden control item among \(items.count) item(s)"
             )
             return nil
+        }
+
+        /// Control-item titles that occur more than once in one enumeration.
+        /// A title is the stable channel available when AppKit's window number
+        /// is synthetic, but it cannot distinguish current and stale windows.
+        static nonisolated func ambiguousControlItemTitles(
+            in items: [MenuBarItem]
+        ) -> Set<String> {
+            let relevantTitles = Set([
+                ControlItem.Identifier.hidden.rawValue,
+                ControlItem.Identifier.alwaysHidden.rawValue,
+            ])
+            var counts = [String: Int]()
+            for item in items {
+                guard let title = item.title, relevantTitles.contains(title) else { continue }
+                counts[title, default: 0] += 1
+            }
+            return Set(counts.compactMap { title, count in count > 1 ? title : nil })
         }
 
         /// Whether to rebuild one of Thaw's own control items directly from
@@ -531,14 +601,17 @@ extension MenuBarItemManager {
             var matchedIndices = [Int]()
             for frame in axFrames {
                 let identity = [AXIdentityCatalog.AXItemIdentity(identifier: nil, title: nil, help: nil, frame: frame)]
-                guard
-                    let candidate = candidates.first(where: { candidate in
-                        !matchedIndices.contains(candidate.index)
-                            && candidate.isOwnProcess
-                            && !candidate.isVisibleControlItem
-                            && AXIdentityCatalog.identity(for: candidate.bounds, in: identity) != nil
-                    })
-                else { continue }
+                let matches = candidates.filter { candidate in
+                    !matchedIndices.contains(candidate.index)
+                        && candidate.isOwnProcess
+                        && !candidate.isVisibleControlItem
+                        && AXIdentityCatalog.identity(for: candidate.bounds, in: identity) != nil
+                }
+                // More than one candidate for a current-process frame is not
+                // corroboration. Refuse the whole correlation rather than let
+                // array/window-number order decide which divider is current.
+                guard matches.count <= 1 else { return nil }
+                guard let candidate = matches.first else { continue }
                 matchedIndices.append(candidate.index)
                 if matchedIndices.count == 2 {
                     break
@@ -564,6 +637,16 @@ extension MenuBarItemManager {
             }
         }
         return ghostIDs
+    }
+
+    /// Converts AppKit's status-item window number only when it is an exact
+    /// WindowServer identifier. Tahoe can surface a larger synthetic number;
+    /// treating it as sortable identity would let a stale divider win.
+    static nonisolated func authoritativeControlItemWindowID(
+        windowNumber: Int
+    ) -> CGWindowID? {
+        guard windowNumber > 0 else { return nil }
+        return CGWindowID(exactly: windowNumber)
     }
 
     /// Returns windows that claim this instance's own namespace without
@@ -619,8 +702,9 @@ extension MenuBarItemManager {
         return MenuBarSection.Name.allCases.reduce(into: [:]) { result, name in
             guard let controlItem = menuBarManager.controlItem(withName: name),
                   let window = controlItem.window,
-                  window.windowNumber > 0,
-                  let windowID = CGWindowID(exactly: window.windowNumber)
+                  let windowID = Self.authoritativeControlItemWindowID(
+                      windowNumber: window.windowNumber
+                  )
             else { return }
             result[controlItem.identifier.rawValue] = windowID
         }
@@ -649,12 +733,61 @@ extension MenuBarItemManager {
             in: items,
             ownWindowIDsByTitle: ownControlItemWindowIDsByTitle()
         )
-        guard !ghostIDs.isEmpty else { return [] }
-        MenuBarItemManager.diagLog.warning(
-            "cacheItemsRegardless: dropping \(ghostIDs.count) duplicate control item window(s)"
-        )
-        items.removeAll { ghostIDs.contains($0.windowID) }
+        if !ghostIDs.isEmpty {
+            MenuBarItemManager.diagLog.warning(
+                "cacheItemsRegardless: dropping \(ghostIDs.count) duplicate control item window(s)"
+            )
+            items.removeAll { ghostIDs.contains($0.windowID) }
+        }
         return ghostIDs
+    }
+
+    /// A brief period in which missing dividers mean Control Center is still
+    /// re-hosting status items, not that Thaw should recreate them.
+    static nonisolated let controlCenterRelaunchGrace: Duration = .seconds(20)
+
+    static nonisolated func shouldCountControlItemLookupFailure(
+        hostUptime: Duration?,
+        grace: Duration = controlCenterRelaunchGrace
+    ) -> Bool {
+        guard let hostUptime else { return true }
+        return hostUptime >= grace
+    }
+
+    /// Selects the exact newest host when launch handoff briefly exposes more
+    /// than one Control Center process. `runningApplications` has no ordering
+    /// contract, so using its first entry can select the process being retired.
+    static nonisolated func newestControlCenterGeneration(
+        in generations: [ProcessGeneration]
+    ) -> ProcessGeneration? {
+        SourcePIDSeedStore.newestGeneration(in: generations)
+    }
+
+    private static func controlCenterGeneration() -> ProcessGeneration? {
+        SourcePIDSeedStore.currentControlCenterGeneration()
+    }
+
+    static nonisolated func controlCenterUptime(
+        generation: ProcessGeneration?,
+        now: Date = .now
+    ) -> Duration? {
+        generation.map { .seconds(max(0, now.timeIntervalSince($0.launchDate))) }
+    }
+
+    /// Re-arms divider recovery when Control Center changes process generation.
+    /// The old process's spent rebuild latch cannot govern a new host whose
+    /// status-item windows are being created from scratch.
+    @discardableResult
+    static nonisolated func resetControlItemLookupEpisodeIfHostChanged(
+        previous: ProcessGeneration?,
+        current: ProcessGeneration?,
+        failureStreak: inout Int,
+        alreadyRebuilt: inout Bool
+    ) -> Bool {
+        guard let current, current != previous else { return false }
+        failureStreak = 0
+        alreadyRebuilt = false
+        return true
     }
 
     /// Context maintained during a menu bar item cache operation.
@@ -1414,20 +1547,22 @@ extension MenuBarItemManager {
         let displayID = Bridging.getActiveMenuBarDisplayID()
         MenuBarItemManager.diagLog.debug("cacheItemsRegardless: displayID=\(displayID.map { "\($0)" } ?? "nil"), previousWindowIDs count=\(previousWindowIDs.count)")
 
-        var items = await MenuBarItem.getMenuBarItems(
+        var enumeration = await MenuBarItem.getMenuBarItemsSnapshot(
             option: .activeSpace,
             resolveSourcePID: resolveSourcePID
         )
+        var items = enumeration.items
 
         if items.isEmpty {
             // Retry once after a small delay if we got zero items. This can happen
             // due to transient WindowServer glitches or during display reconfigurations.
             MenuBarItemManager.diagLog.warning("cacheItemsRegardless: getMenuBarItems returned ZERO items, retrying in 250ms...")
             try? await Task.sleep(for: .milliseconds(250))
-            items = await MenuBarItem.getMenuBarItems(
+            enumeration = await MenuBarItem.getMenuBarItemsSnapshot(
                 option: .activeSpace,
                 resolveSourcePID: resolveSourcePID
             )
+            items = enumeration.items
 
             // Still nothing, but the cache holds items. The menu bar does not
             // empty itself, so this is the `.activeSpace` filter resolving a
@@ -1501,57 +1636,69 @@ extension MenuBarItemManager {
         // matching between CG windows and AX extras menu bar children, which
         // can produce wrong matches when AX positions lag behind CG updates.
         // A cached PID from a previous stable cycle is more trustworthy.
+        var provisionalSourcePIDSeeds = enumeration.appliedSourcePIDSeeds
         if resolveSourcePID {
-            let previousPIDs = cacheActor.cachedItemPIDs
+            let previousBaselines = cacheActor.cachedSourcePIDBaselines
+            var attemptedPIDs = Set<pid_t>()
+            var identities = [pid_t: SourceProcessIdentity]()
+
+            func cachedLiveIdentity(for pid: pid_t) -> SourceProcessIdentity? {
+                if let cached = identities[pid] {
+                    return cached
+                }
+                guard attemptedPIDs.insert(pid).inserted,
+                      let resolved = SourcePIDSeedStore.liveIdentity(of: pid)
+                else { return nil }
+                identities[pid] = resolved
+                return resolved
+            }
+
             for i in items.indices {
                 let item = items[i]
-                guard !item.isControlItem else { continue }
-                if let prevPID = previousPIDs[item.windowID],
-                   let currentPID = item.sourcePID,
-                   currentPID != prevPID
-                {
-                    // Only a live previous PID is more trustworthy than a
-                    // fresh resolution. When the app behind it has exited —
-                    // an item's owner relaunching, or Control Center itself
-                    // respawning and recreating every status item, both seen
-                    // in the #854 logs — reverting pins the item to a dead
-                    // process, and every event addressed to it goes nowhere.
-                    // Take the new PID in that case; there is nothing left to
-                    // protect.
-                    guard Self.previousPIDIsLive(prevPID) else {
-                        MenuBarItemManager.diagLog.info(
-                            "SourcePID changed for windowID \(item.windowID): \(prevPID) -> \(currentPID); previous PID is dead, accepting the new one"
-                        )
-                        continue
-                    }
+                guard
+                    !item.isControlItem,
+                    let previous = previousBaselines[item.windowID],
+                    item.sourcePID != previous.pid,
+                    let window = enumeration.windowsByID[item.windowID],
+                    let controlCenterGeneration = enumeration.controlCenterGeneration,
+                    SourcePIDSeedStore.reconciledSourcePID(
+                        currentPID: item.sourcePID,
+                        previous: previous,
+                        for: window,
+                        currentControlCenterGeneration: controlCenterGeneration,
+                        liveIdentity: cachedLiveIdentity(for:)
+                    ) == previous.pid
+                else { continue }
+
+                if let currentPID = item.sourcePID {
                     MenuBarItemManager.diagLog.warning(
-                        "SourcePID changed for windowID \(item.windowID): \(prevPID) -> \(currentPID), reverting to previous PID"
+                        "SourcePID changed for windowID \(item.windowID): \(previous.pid) -> \(currentPID), reverting to the generation-validated baseline"
                     )
-                    // Rebuild the namespace from the previous PID. If the bundle
-                    // ID is not available (app no longer running), keep the
-                    // original tag namespace as a safe fallback.
-                    let prevBundleID = NSRunningApplication(processIdentifier: prevPID)?.bundleIdentifier
-                    let correctedNamespace: MenuBarItemTag.Namespace = if let prevBundleID {
-                        .string(prevBundleID)
-                    } else {
-                        item.tag.namespace
-                    }
-                    let correctedTag = MenuBarItemTag(
-                        namespace: correctedNamespace,
-                        title: item.tag.title,
-                        windowID: item.windowID,
-                        instanceIndex: item.tag.instanceIndex
+                } else {
+                    MenuBarItemManager.diagLog.info(
+                        "SourcePID unresolved for windowID \(item.windowID); restoring the generation-validated in-session baseline \(previous.pid)"
                     )
-                    items[i] = MenuBarItem(
-                        tag: correctedTag,
-                        windowID: item.windowID,
-                        ownerPID: item.ownerPID,
-                        sourcePID: prevPID,
-                        bounds: item.bounds,
-                        title: item.title,
-                        isOnScreen: item.isOnScreen
-                    )
+                    provisionalSourcePIDSeeds[item.windowID] = previous
                 }
+
+                let correctedNamespace = MenuBarItemTag.Namespace.optional(
+                    previous.bundleIdentifier ?? previous.processName
+                )
+                let correctedTag = MenuBarItemTag(
+                    namespace: correctedNamespace,
+                    title: item.tag.title,
+                    windowID: item.windowID,
+                    instanceIndex: item.tag.instanceIndex
+                )
+                items[i] = MenuBarItem(
+                    tag: correctedTag,
+                    windowID: item.windowID,
+                    ownerPID: item.ownerPID,
+                    sourcePID: previous.pid,
+                    bounds: item.bounds,
+                    title: item.title,
+                    isOnScreen: item.isOnScreen
+                )
             }
         }
 
@@ -1609,8 +1756,13 @@ extension MenuBarItemManager {
             .controlItem(withName: .hidden)?.window?.windowNumber
         let alwaysHiddenControlItemWindowNumber = appState?.menuBarManager
             .controlItem(withName: .alwaysHidden)?.window?.windowNumber
-        let hiddenControlItemWID = hiddenControlItemWindowNumber.flatMap { CGWindowID(exactly: $0) }
-        let alwaysHiddenControlItemWID = alwaysHiddenControlItemWindowNumber.flatMap { CGWindowID(exactly: $0) }
+        let hiddenControlItemWID = hiddenControlItemWindowNumber.flatMap {
+            Self.authoritativeControlItemWindowID(windowNumber: $0)
+        }
+        let alwaysHiddenControlItemWID = alwaysHiddenControlItemWindowNumber.flatMap {
+            Self.authoritativeControlItemWindowID(windowNumber: $0)
+        }
+        let observedControlCenterGeneration = Self.controlCenterGeneration()
 
         guard let controlItems = ControlItemPair(
             items: &items,
@@ -1633,6 +1785,27 @@ extension MenuBarItemManager {
             // gone (e.g. their windowNumber no longer matches any
             // enumerated CG window ID), not that this one cycle raced a
             // transient WindowServer update.
+            if Self.resetControlItemLookupEpisodeIfHostChanged(
+                previous: lastObservedControlCenterGeneration,
+                current: observedControlCenterGeneration,
+                failureStreak: &controlItemLookupFailureStreak,
+                alreadyRebuilt: &didRebuildControlItemsForCurrentFailureEpisode
+            ) {
+                lastControlItemLookupFailureAt = nil
+                lastObservedControlCenterGeneration = observedControlCenterGeneration
+            }
+            let hostUptime = Self.controlCenterUptime(
+                generation: observedControlCenterGeneration
+            )
+            guard Self.shouldCountControlItemLookupFailure(hostUptime: hostUptime) else {
+                MenuBarItemManager.diagLog.info(
+                    "cacheItemsRegardless: divider lookup failed \(hostUptime.map { "\(Int($0.milliseconds / 1000)) s" } ?? "?") after Control Center launched; waiting for re-hosting to finish"
+                )
+                await MainActor.run {
+                    self.areControlItemsMissing = true
+                }
+                return
+            }
             controlItemLookupFailureStreak += 1
             lastControlItemLookupFailureAt = .now
             let failureStreak = controlItemLookupFailureStreak
@@ -1669,6 +1842,9 @@ extension MenuBarItemManager {
             controlItemLookupFailureStreak = 0
             didRebuildControlItemsForCurrentFailureEpisode = false
             lastControlItemLookupFailureAt = nil
+            if let observedControlCenterGeneration {
+                lastObservedControlCenterGeneration = observedControlCenterGeneration
+            }
             cacheActor.updateCachedItemWindowIDs(itemWindowIDs)
             cacheActor.updateCachedCloneWindowIDs(cloneWindowIDs.union(ghostWindowIDs))
             cacheActor.updateCachedControlCenterGenericWindowIDs(
@@ -1979,16 +2155,79 @@ extension MenuBarItemManager {
         // Only update when sourcePIDs were actually resolved; the settle-end
         // fast restore (resolveSourcePID=false) must not overwrite the baseline.
         if resolveSourcePID {
-            // Keyed by first occurrence: macOS can briefly report the same
-            // window twice around a move, and trapping on the duplicate
-            // would take the whole cache cycle down with it.
-            let newPIDs = Dictionary(
-                items.compactMap { item in
-                    item.sourcePID.map { (item.windowID, $0) }
-                },
-                uniquingKeysWith: { first, _ in first }
+            let currentWindowIDs = Set(items.map(\.windowID))
+            let currentControlCenterGeneration = SourcePIDSeedStore.currentControlCenterGeneration()
+            let validatedProvisionalSeeds: [CGWindowID: SourcePIDSeed]
+            let freshSeeds: [SourcePIDSeed]
+
+            if let currentControlCenterGeneration {
+                var attemptedPIDs = Set<pid_t>()
+                var identities = [pid_t: SourceProcessIdentity]()
+
+                func cachedLiveIdentity(for pid: pid_t) -> SourceProcessIdentity? {
+                    if let cached = identities[pid] {
+                        return cached
+                    }
+                    guard attemptedPIDs.insert(pid).inserted,
+                          let resolved = SourcePIDSeedStore.liveIdentity(of: pid)
+                    else { return nil }
+                    identities[pid] = resolved
+                    return resolved
+                }
+
+                validatedProvisionalSeeds = provisionalSourcePIDSeeds.filter { windowID, seed in
+                    guard
+                        currentWindowIDs.contains(windowID),
+                        let window = enumeration.windowsByID[windowID]
+                    else { return false }
+                    return SourcePIDSeedStore.isTrustworthy(
+                        seed,
+                        for: window,
+                        currentControlCenterGeneration: currentControlCenterGeneration,
+                        liveIdentity: cachedLiveIdentity(for:)
+                    )
+                }
+                freshSeeds = SourcePIDSeedStore.seeds(
+                    from: items,
+                    excluding: Set(validatedProvisionalSeeds.keys),
+                    windowsByID: enumeration.windowsByID,
+                    currentControlCenterGeneration: currentControlCenterGeneration,
+                    identity: SourcePIDSeedStore.liveIdentity(of:)
+                )
+            } else {
+                validatedProvisionalSeeds = [:]
+                freshSeeds = []
+            }
+
+            let baselines = SourcePIDSeedStore.mergedConfirmedBaselines(
+                previous: cacheActor.cachedSourcePIDBaselines,
+                fresh: freshSeeds,
+                provisional: validatedProvisionalSeeds
             )
-            cacheActor.updateCachedItemPIDs(newPIDs)
+            cacheActor.updateCachedSourcePIDBaselines(baselines)
+
+            let previousPersistedSeeds = cacheActor.persistedSourcePIDSeeds(
+                from: Defaults.store
+            )
+            let persistedSeeds = SourcePIDSeedStore.coalescingCaptureTimes(
+                proposed: SourcePIDSeedStore.mergedPersistedSeeds(
+                    fresh: freshSeeds,
+                    provisional: validatedProvisionalSeeds
+                ),
+                previous: Dictionary(
+                    previousPersistedSeeds.map { ($0.windowID, $0) },
+                    uniquingKeysWith: { _, last in last }
+                )
+            )
+            if cacheActor.updatePersistedSourcePIDSeeds(persistedSeeds) {
+                SourcePIDSeedStore.save(persistedSeeds, to: Defaults.store)
+            }
+
+            if !validatedProvisionalSeeds.isEmpty {
+                MenuBarItemManager.diagLog.debug(
+                    "cacheItemsRegardless: retained \(validatedProvisionalSeeds.count) restored source PID(s) provisionally while persisting \(freshSeeds.count) fresh confirmation(s)"
+                )
+            }
         }
 
         // Detect late-arriving items that belong to the active profile.

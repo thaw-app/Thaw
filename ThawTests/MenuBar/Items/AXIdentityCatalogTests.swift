@@ -258,6 +258,22 @@ struct AXIdentityCatalogTests {
         #expect(result == nil)
     }
 
+    @Test("AX frame selection refuses duplicate current-process candidates")
+    func selectViaAXFrameRejectsAmbiguousDuplicateDividers() {
+        let frame = CGRect(x: 100, y: 0, width: 20, height: 20)
+        let candidates = [
+            CandidateFrame(index: 0, bounds: frame, isOwnProcess: true),
+            CandidateFrame(index: 1, bounds: frame, isOwnProcess: true),
+        ]
+
+        let result = MenuBarItemManager.ControlItemPair.selectViaAXFrame(
+            candidates: candidates,
+            axFrames: [frame]
+        )
+
+        #expect(result == nil)
+    }
+
     // MARK: - MenuBarItemManager.previousPIDIsLive
 
     /// The reconciliation guard prefers a cached PID over a fresh

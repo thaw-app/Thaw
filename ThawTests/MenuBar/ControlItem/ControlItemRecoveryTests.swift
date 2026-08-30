@@ -7,6 +7,7 @@
 //  Licensed under the GNU GPLv3
 
 import CoreGraphics
+import Foundation
 import Testing
 @testable import Thaw
 
@@ -587,5 +588,82 @@ struct MissingAlwaysHiddenDividerRecoveryTests {
             consecutiveMissingReadings: 2,
             threshold: 2
         ))
+    }
+}
+
+@Suite("Control Center relaunch grace")
+struct ControlCenterRelaunchGraceTests {
+    private func generation(pid: pid_t, launchedAt seconds: TimeInterval) -> ProcessGeneration {
+        ProcessGeneration(
+            pid: pid,
+            launchDate: Date(timeIntervalSince1970: seconds)
+        )
+    }
+
+    @Test("Re-hosting failures do not advance divider recovery")
+    func failuresInsideGraceAreIgnored() {
+        #expect(!MenuBarItemManager.shouldCountControlItemLookupFailure(hostUptime: .zero))
+        #expect(!MenuBarItemManager.shouldCountControlItemLookupFailure(
+            hostUptime: MenuBarItemManager.controlCenterRelaunchGrace - .milliseconds(1)
+        ))
+    }
+
+    @Test("Failures after the grace period still recover missing dividers")
+    func failuresAfterGraceAreCounted() {
+        #expect(MenuBarItemManager.shouldCountControlItemLookupFailure(
+            hostUptime: MenuBarItemManager.controlCenterRelaunchGrace
+        ))
+        #expect(MenuBarItemManager.shouldCountControlItemLookupFailure(hostUptime: nil))
+    }
+
+    @Test("A custom grace period is respected")
+    func customGraceIsRespected() {
+        #expect(!MenuBarItemManager.shouldCountControlItemLookupFailure(
+            hostUptime: .seconds(4),
+            grace: .seconds(5)
+        ))
+        #expect(MenuBarItemManager.shouldCountControlItemLookupFailure(
+            hostUptime: .seconds(5),
+            grace: .seconds(5)
+        ))
+    }
+
+    @Test("The newest host generation wins regardless of application ordering")
+    func newestHostGenerationWins() {
+        let retiring = generation(pid: 100, launchedAt: 1000)
+        let current = generation(pid: 200, launchedAt: 2000)
+
+        #expect(MenuBarItemManager.newestControlCenterGeneration(
+            in: [current, retiring]
+        ) == current)
+        #expect(MenuBarItemManager.newestControlCenterGeneration(
+            in: [retiring, current]
+        ) == current)
+    }
+
+    @Test("A new host generation re-arms a spent recovery episode")
+    func newHostRearmsSpentEpisode() {
+        let previous = generation(pid: 100, launchedAt: 1000)
+        let current = generation(pid: 200, launchedAt: 2000)
+        var failureStreak = MenuBarItemManager.controlItemRebuildThreshold + 4
+        var alreadyRebuilt = true
+
+        #expect(MenuBarItemManager.resetControlItemLookupEpisodeIfHostChanged(
+            previous: previous,
+            current: current,
+            failureStreak: &failureStreak,
+            alreadyRebuilt: &alreadyRebuilt
+        ))
+        #expect(failureStreak == 0)
+        #expect(!alreadyRebuilt)
+
+        failureStreak = 2
+        #expect(!MenuBarItemManager.resetControlItemLookupEpisodeIfHostChanged(
+            previous: current,
+            current: current,
+            failureStreak: &failureStreak,
+            alreadyRebuilt: &alreadyRebuilt
+        ))
+        #expect(failureStreak == 2)
     }
 }

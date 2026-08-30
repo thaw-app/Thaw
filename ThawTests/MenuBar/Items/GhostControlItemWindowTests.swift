@@ -16,6 +16,7 @@ import Testing
 struct GhostControlItemWindowTests {
     private let hiddenTitle = "Thaw.ControlItem.Hidden"
     private let alwaysHiddenTitle = "Thaw.ControlItem.AlwaysHidden"
+    private let visibleTitle = "Thaw.ControlItem.Visible"
 
     private func item(tag: MenuBarItemTag, windowID: CGWindowID, title: String) -> MenuBarItem {
         MenuBarItem.fixture(tag: tag, windowID: windowID, title: title)
@@ -114,6 +115,53 @@ struct GhostControlItemWindowTests {
         )
 
         #expect(ghosts.isEmpty)
+    }
+
+    @Test("Authoritative current-process IDs win even when older numerically")
+    func authoritativeDividerGenerationSurvivesReversedIDs() {
+        let items = [
+            item(tag: .hiddenControlItem, windowID: 42, title: hiddenTitle),
+            item(tag: .alwaysHiddenControlItem, windowID: 43, title: alwaysHiddenTitle),
+            item(tag: .visibleControlItem, windowID: 39, title: visibleTitle),
+            item(tag: .hiddenControlItem, windowID: 900, title: hiddenTitle),
+            item(tag: .alwaysHiddenControlItem, windowID: 901, title: alwaysHiddenTitle),
+            item(tag: .visibleControlItem, windowID: 902, title: visibleTitle),
+        ]
+
+        let ghosts = MenuBarItemManager.ghostControlItemWindowIDs(
+            in: items,
+            ownWindowIDsByTitle: [
+                hiddenTitle: 42,
+                alwaysHiddenTitle: 43,
+                visibleTitle: 39,
+            ]
+        )
+        #expect(ghosts == [900, 901, 902])
+    }
+
+    @Test("A synthetic AppKit window number leaves duplicate dividers ambiguous")
+    func syntheticWindowNumberDoesNotSelectADuplicateDivider() {
+        let syntheticWindowNumber = Int(CGWindowID.max) + 1
+        #expect(MenuBarItemManager.authoritativeControlItemWindowID(
+            windowNumber: syntheticWindowNumber
+        ) == nil)
+        #expect(MenuBarItemManager.authoritativeControlItemWindowID(windowNumber: 42) == 42)
+
+        let items = [
+            item(tag: .hiddenControlItem, windowID: 364, title: hiddenTitle),
+            item(
+                tag: .appItem(
+                    bundleID: "com.stonerl.Thaw",
+                    title: hiddenTitle,
+                    instanceIndex: 1
+                ),
+                windowID: 21542,
+                title: hiddenTitle
+            ),
+        ]
+        #expect(MenuBarItemManager.ControlItemPair.ambiguousControlItemTitles(
+            in: items
+        ) == [hiddenTitle])
     }
 
     // MARK: - Orphans under our own namespace (#1032)
@@ -231,5 +279,6 @@ struct GhostControlItemWindowTests {
         let kept = items.filter { !orphans.contains($0.windowID) }
 
         #expect(!LayoutSolver.liveIdentitiesAreDegraded(identities(kept)))
+
     }
 }
