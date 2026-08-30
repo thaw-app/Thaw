@@ -284,10 +284,23 @@ final class LayoutBarPaddingView: NSView {
                 }
             }
 
-            let watchdogTask = Task { [weak self, weak appState] in
+            let watchdogTask = Task { [weak self, weak appState, revealedSection] in
                 try? await Task.sleep(for: MenuBarItemManager.layoutWatchdogTimeout + .seconds(1))
                 guard let self, !Task.isCancelled else { return }
                 await self.resetStabilizingStateIfNeeded()
+                if let revealedSection {
+                    // The move never returned, so the completion path that
+                    // re-conceals the section revealed for the drag (#988)
+                    // has not run and may never run. Restore it here, the
+                    // same way, and give the spacer a beat to re-park the
+                    // divider before the closing cache pass records the
+                    // settled bar. Idempotent with a late completion: the
+                    // restore recomputes the persisted presentation.
+                    await MainActor.run {
+                        revealedSection.updateControlItemState(for: nil)
+                    }
+                    try? await Task.sleep(for: .milliseconds(250))
+                }
                 guard let appState else { return }
                 await appState.itemManager.cacheItemsRegardless(skipRecentMoveCheck: true)
                 await appState.imageCache.updateCacheWithoutChecks(sections: MenuBarSection.Name.allCases)
@@ -557,16 +570,18 @@ final class LayoutBarPaddingView: NSView {
     /// Only the empty-section deadlock qualifies. With items in the section,
     /// the drop anchors on those items and the existing clamp-and-retry move
     /// path owns the case; a divider whose section is already showing is on
-    /// screen and passes the reachability gate; and a non-divider tag (the
-    /// visible chevron, a regular item) never routes through this decision.
+    /// screen and passes the reachability gate; a disabled section is never
+    /// revealed; and a non-divider tag (the visible chevron, a regular item)
+    /// never routes through this decision.
     static nonisolated func shouldRevealSectionForEditorDrag(
         dividerTag: MenuBarItemTag,
         isSectionConcealed: Bool,
+        isEnabled: Bool,
         sectionItemCount: Int
     ) -> Bool {
         guard sectionItemCount == 0 else { return false }
         guard sectionName(forDividerTag: dividerTag) != nil else { return false }
-        return isSectionConcealed
+        return isSectionConcealed && isEnabled
     }
 
     /// Reveals an empty, concealed destination section so its parked divider
@@ -574,8 +589,8 @@ final class LayoutBarPaddingView: NSView {
     /// fresh live item (#988).
     ///
     /// Returns nil — leaving the bar untouched — when the state does not
-    /// qualify (see ``shouldRevealSectionForEditorDrag(dividerTag:sectionState:sectionItemCount:)``)
-    /// or the divider did not come back onscreen; the caller then refuses the
+    /// qualify per `shouldRevealSectionForEditorDrag`, or the divider did
+    /// not come back onscreen; the caller then refuses the
     /// drag exactly as it did before (#923).
     private func revealEmptySectionDivider(
         for divider: MenuBarItem,
@@ -598,8 +613,9 @@ final class LayoutBarPaddingView: NSView {
         guard Self.shouldRevealSectionForEditorDrag(
             dividerTag: divider.tag,
             isSectionConcealed: isConcealed,
+            isEnabled: isEnabled,
             sectionItemCount: itemCount
-        ), isEnabled else {
+        ) else {
             return nil
         }
 
@@ -610,6 +626,15 @@ final class LayoutBarPaddingView: NSView {
             section.controlItem.state = .showSection
         }
 
+        // A cancelled drag must not leave the empty section showing: the
+        // reveal is a Thaw-internal detour, so every cancellation exit
+        // restores the section's persisted state, the same way the timeout
+        // path below does.
+        if Task.isCancelled {
+            await revertRevealedSection(section)
+            return nil
+        }
+
         // The divider slides back beside the visible section once the
         // control item's spacer collapses. Poll for its live window to come
         // back within a display before trusting it as a move anchor; the
@@ -618,6 +643,14 @@ final class LayoutBarPaddingView: NSView {
         let screenFrames = NSScreen.screens.map { CGDisplayBounds($0.displayID) }
         for _ in 0..<40 {
             try? await Task.sleep(for: .milliseconds(50))
+            // A cancelled sleep returns immediately, so without this check a
+            // cancelled task would burn through the remaining iterations and
+            // fall into the revert below, which owns the timeout path — not
+            // cancellation. Exit the reveal outright.
+            if Task.isCancelled {
+                await revertRevealedSection(section)
+                return nil
+            }
             let items = await MenuBarItem.getMenuBarItems(option: .activeSpace)
             if let fresh = items.first(matching: divider.tag),
                let bounds = Bridging.getWindowBounds(for: fresh.windowID),
@@ -632,10 +665,18 @@ final class LayoutBarPaddingView: NSView {
         Self.diagLog.warning(
             "The \(sectionName.logString) divider did not come onscreen after revealing; refusing the drag"
         )
+        await revertRevealedSection(section)
+        return nil
+    }
+
+    /// Returns a section's control item to its persisted state after a
+    /// temporary reveal, on the main actor. Shared by the cancellation and
+    /// timeout exits so a cancelled or failed reveal cannot leave an empty
+    /// section showing.
+    private func revertRevealedSection(_ section: MenuBarSection) async {
         await MainActor.run {
             section.updateControlItemState(for: nil)
         }
-        return nil
     }
 
     /// Ensures the dragged item remains in the intended section and its icon appears.

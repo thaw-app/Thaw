@@ -30,6 +30,7 @@ struct EmptySectionEditorDragTests {
             LayoutBarPaddingView.shouldRevealSectionForEditorDrag(
                 dividerTag: .hiddenControlItem,
                 isSectionConcealed: true,
+                isEnabled: true,
                 sectionItemCount: 0
             )
         )
@@ -37,6 +38,7 @@ struct EmptySectionEditorDragTests {
             LayoutBarPaddingView.shouldRevealSectionForEditorDrag(
                 dividerTag: .alwaysHiddenControlItem,
                 isSectionConcealed: true,
+                isEnabled: true,
                 sectionItemCount: 0
             )
         )
@@ -50,6 +52,7 @@ struct EmptySectionEditorDragTests {
             !LayoutBarPaddingView.shouldRevealSectionForEditorDrag(
                 dividerTag: .hiddenControlItem,
                 isSectionConcealed: true,
+                isEnabled: true,
                 sectionItemCount: 1
             )
         )
@@ -57,7 +60,22 @@ struct EmptySectionEditorDragTests {
             !LayoutBarPaddingView.shouldRevealSectionForEditorDrag(
                 dividerTag: .hiddenControlItem,
                 isSectionConcealed: true,
+                isEnabled: true,
                 sectionItemCount: 8
+            )
+        )
+    }
+
+    @Test("A disabled section never reveals")
+    func disabledSectionDoesNotReveal() {
+        // isEnabled is part of the reveal predicate: a section whose divider
+        // is not added to the menu bar has nothing to bring onscreen.
+        #expect(
+            !LayoutBarPaddingView.shouldRevealSectionForEditorDrag(
+                dividerTag: .hiddenControlItem,
+                isSectionConcealed: true,
+                isEnabled: false,
+                sectionItemCount: 0
             )
         )
     }
@@ -70,6 +88,7 @@ struct EmptySectionEditorDragTests {
             !LayoutBarPaddingView.shouldRevealSectionForEditorDrag(
                 dividerTag: .hiddenControlItem,
                 isSectionConcealed: false,
+                isEnabled: true,
                 sectionItemCount: 0
             )
         )
@@ -83,6 +102,7 @@ struct EmptySectionEditorDragTests {
             !LayoutBarPaddingView.shouldRevealSectionForEditorDrag(
                 dividerTag: .visibleControlItem,
                 isSectionConcealed: true,
+                isEnabled: true,
                 sectionItemCount: 0
             )
         )
@@ -90,6 +110,7 @@ struct EmptySectionEditorDragTests {
             !LayoutBarPaddingView.shouldRevealSectionForEditorDrag(
                 dividerTag: .audioVideoModule,
                 isSectionConcealed: true,
+                isEnabled: true,
                 sectionItemCount: 0
             )
         )
@@ -97,6 +118,7 @@ struct EmptySectionEditorDragTests {
             !LayoutBarPaddingView.shouldRevealSectionForEditorDrag(
                 dividerTag: .clock,
                 isSectionConcealed: true,
+                isEnabled: true,
                 sectionItemCount: 0
             )
         )

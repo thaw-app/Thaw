@@ -926,6 +926,19 @@ final class MenuBarItemImageCache: @unchecked Sendable {
         var boundsUnion = CGRect.null
 
         for (item, bounds) in itemsWithBounds {
+            // Mirrors refreshImages: the capture APIs omit degenerate windows
+            // from the composite, so including one only corrupts the
+            // geometry the composite is sliced with — and since #990 the
+            // union width feeds the resolvedScale derivation, a degenerate
+            // bound would make the whole composite read as an implausible
+            // scale.
+            guard Self.isCapturableBounds(bounds) else {
+                MenuBarItemImageCache.diagLog.debug(
+                    "compositeCapture: skipping degenerate bounds for \(item.logString) (\(bounds.width)x\(bounds.height))"
+                )
+                result.excluded.append(item)
+                continue
+            }
             windowIDs.append(item.windowID)
             storage[item.windowID] = (item, bounds)
             boundsUnion = boundsUnion.union(bounds)
