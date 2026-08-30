@@ -228,6 +228,11 @@ final class MenuBarItemManager {
     /// Cached timeouts for move operations.
     var moveOperationTimeouts = [MenuBarItemTag: Duration]()
 
+    /// Items whose most recent move macOS refused — every release put the
+    /// item straight back — keyed by `uniqueIdentifier`, with when. See
+    /// `noteRefusedMove(of:)`.
+    var macOSRefusedMoves = [String: ContinuousClock.Instant]()
+
     /// Cached timeouts for click operations (adaptive per app).
     var clickOperationTimeouts = [MenuBarItemTag: Duration]()
     /// Serialization gate for cache operations.
@@ -1259,12 +1264,19 @@ final class MenuBarItemManager {
         )
         notchOverflowEjectedUIDs = ejectedStillInHidden
 
+        // An item macOS refused to move sits wherever the refusal left it,
+        // which is not where anyone put it. Treat it like a closed app so
+        // the merge below keeps its saved slot; the record clears when a
+        // move of it lands or the refusal ages out.
+        let refusedIdentifiers = refusedMoveIdentifiers()
+
         var allCurrentIdentifiers = Set<String>()
         var allCurrentBaseIdentifiers = Set<String>()
         for section in MenuBarSection.Name.allCases {
             for item in cache[section] where isPersistable(item) {
                 guard !pendingRehideTagIDs.contains(item.tag.tagIdentifier) else { continue }
                 guard !ejectedStillInHidden.contains(item.uniqueIdentifier) else { continue }
+                guard !refusedIdentifiers.contains(item.uniqueIdentifier) else { continue }
                 // Always track base identifier so stale saved entries for
                 // transient items (Live Activities) get pruned by the
                 // isStaleInstanceIndex guard below and not re-injected.
@@ -1297,7 +1309,8 @@ final class MenuBarItemManager {
                         !$0.isTransientControlCenterItem &&
                         !$0.hasProvisionalIdentity &&
                         !pendingRehideTagIDs.contains($0.tag.tagIdentifier) &&
-                        !ejectedStillInHidden.contains($0.uniqueIdentifier)
+                        !ejectedStillInHidden.contains($0.uniqueIdentifier) &&
+                        !refusedIdentifiers.contains($0.uniqueIdentifier)
                 }
                 .map(\.uniqueIdentifier)
 

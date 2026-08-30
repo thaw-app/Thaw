@@ -68,8 +68,18 @@ final class MenuBarItemFailureLedger {
     /// bulk applies for the remainder of its two-week lifetime, because
     /// nothing re-attempts it often enough to renew *or* retire the mark. The
     /// build stamp makes an update the natural clearing event.
+    /// The rule the marks are recorded by. Bumping it drops every persisted mark
+    /// once, the same way a build change does: marks recorded before the
+    /// owner and stable-identity checks existed blamed Control Center-hosted
+    /// items for Control Center's own timeouts, and one such mark — hours
+    /// old, from a previous rule — cut a user's drag to a single attempt and
+    /// an alert on the first slow press after the rule had changed.
+    private static let markRuleVersion = 2
+
+    /// The build the persisted marks belong to, qualified by ``markRuleVersion``.
     private static var currentBuildVersion: String {
-        Bundle.main.object(forInfoDictionaryKey: "CFBundleVersion") as? String ?? "unknown"
+        let build = Bundle.main.object(forInfoDictionaryKey: "CFBundleVersion") as? String ?? "unknown"
+        return "\(build)/rule\(markRuleVersion)"
     }
 
     /// How long a failed item stays excluded from bulk-apply moves.

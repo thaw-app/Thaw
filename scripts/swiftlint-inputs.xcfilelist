@@ -97,6 +97,7 @@ $(SRCROOT)/Thaw/MenuBar/MenuBarItems/MenuBarItemManager/MenuBarItemManager+Notch
 $(SRCROOT)/Thaw/MenuBar/MenuBarItems/MenuBarItemManager/MenuBarItemManager+TemporaryShow.swift
 $(SRCROOT)/Thaw/MenuBar/MenuBarItems/MenuBarItemManager/MenuBarItemManager+Triggers.swift
 $(SRCROOT)/Thaw/MenuBar/MenuBarItems/MenuBarItemManager/MenuBarItemManager.swift
+$(SRCROOT)/Thaw/MenuBar/MenuBarItems/MenuBarItemManager/MenuBarItemMovePolicy.swift
 $(SRCROOT)/Thaw/MenuBar/MenuBarItems/MenuBarItemNameMemory.swift
 $(SRCROOT)/Thaw/MenuBar/MenuBarItems/MenuBarItemServiceConnection.swift
 $(SRCROOT)/Thaw/MenuBar/MenuBarItems/MenuBarItemTag+TriggerIdentity.swift
