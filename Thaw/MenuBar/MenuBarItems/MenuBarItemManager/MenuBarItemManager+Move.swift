@@ -120,6 +120,168 @@ extension MenuBarItemManager {
         }
     }
 
+    /// The event transport selected for one attempt. Parked and cross-notch
+    /// teleports are named separately so an unsafe faithful plan can never
+    /// silently collapse into the legacy press-at-destination path.
+    nonisolated enum MoveStrategy: Equatable, CustomStringConvertible {
+        case teleport
+        case faithfulDrag
+        case parkedTeleport
+        case crossNotchTeleport
+
+        var description: String {
+            switch self {
+            case .teleport: "teleport"
+            case .faithfulDrag: "faithfulDrag"
+            case .parkedTeleport: "parkedTeleport"
+            case .crossNotchTeleport: "crossNotchTeleport"
+            }
+        }
+    }
+
+    /// Whether a horizontal on-bar gesture can stay inside one safe segment.
+    nonisolated enum HorizontalPathDisposition: Equatable {
+        case sameSafeSegment
+        case crossesNotch
+        case invalidEndpoint
+    }
+
+    /// The strict transport decision, including a refusal to post events.
+    nonisolated enum MoveTransportDecision: Equatable {
+        case use(MoveStrategy)
+        case rejectUnsafePath
+    }
+
+    /// Logical placement of a move endpoint relative to the selected menu-bar
+    /// lane. Screen coordinates alone cannot identify parked items because a
+    /// physical display may legitimately sit to the selected display's left.
+    nonisolated enum MoveEndpointDisposition: Equatable {
+        case selectedDisplay
+        case parked
+        case otherDisplay(CGDirectDisplayID)
+        case invalid
+    }
+
+    nonisolated struct MoveDisplayGeometry: Equatable {
+        let id: CGDirectDisplayID
+        let bounds: CGRect
+    }
+
+    static nonisolated func moveEndpointDisposition(
+        bounds: CGRect,
+        isOnScreen: Bool,
+        selectedDisplayID: CGDirectDisplayID,
+        displays: [MoveDisplayGeometry],
+        parkedLaneYRange: ClosedRange<CGFloat>?,
+        controlDividerX: CGFloat?
+    ) -> MoveEndpointDisposition {
+        let center = CGPoint(x: bounds.midX, y: bounds.midY)
+        if isOnScreen {
+            guard let physicalDisplay = displays.first(where: { $0.bounds.contains(center) }) else {
+                return .invalid
+            }
+            return physicalDisplay.id == selectedDisplayID
+                ? .selectedDisplay
+                : .otherDisplay(physicalDisplay.id)
+        }
+
+        guard
+            let parkedLaneYRange,
+            let controlDividerX,
+            parkedLaneYRange.contains(bounds.midY),
+            bounds.maxX <= controlDividerX
+        else {
+            return .invalid
+        }
+        return .parked
+    }
+
+    /// Classifies a horizontal menu-bar path without consulting AppKit.
+    static nonisolated func horizontalPathDisposition(
+        sourceX: CGFloat,
+        destinationX: CGFloat,
+        displayXRange: ClosedRange<CGFloat>,
+        reservedNotchXRange: ClosedRange<CGFloat>?
+    ) -> HorizontalPathDisposition {
+        guard displayXRange.contains(sourceX), displayXRange.contains(destinationX) else {
+            return .invalidEndpoint
+        }
+        guard let notch = reservedNotchXRange else {
+            return .sameSafeSegment
+        }
+        guard !notch.contains(sourceX), !notch.contains(destinationX) else {
+            return .invalidEndpoint
+        }
+        let crosses = (sourceX < notch.lowerBound && destinationX > notch.upperBound)
+            || (destinationX < notch.lowerBound && sourceX > notch.upperBound)
+        return crosses ? .crossesNotch : .sameSafeSegment
+    }
+
+    /// Selects a transport from explicit display membership and path safety.
+    /// A `nil` endpoint display means WindowServer has parked it off-screen;
+    /// a non-selected display means the plan is stale or cross-display and is
+    /// rejected instead of being teleported.
+    static nonisolated func strictTransportDecision(
+        faithfulDragEnabled: Bool,
+        itemIsControlItem: Bool,
+        sourceDisplayID: CGDirectDisplayID?,
+        destinationDisplayID: CGDirectDisplayID?,
+        selectedDisplayID: CGDirectDisplayID,
+        horizontalPath: HorizontalPathDisposition
+    ) -> MoveTransportDecision {
+        if let sourceDisplayID, sourceDisplayID != selectedDisplayID {
+            return .rejectUnsafePath
+        }
+        if let destinationDisplayID, destinationDisplayID != selectedDisplayID {
+            return .rejectUnsafePath
+        }
+        if sourceDisplayID == nil || destinationDisplayID == nil {
+            return .use(.parkedTeleport)
+        }
+        return switch horizontalPath {
+        case .invalidEndpoint:
+            .rejectUnsafePath
+        case .crossesNotch:
+            .use(.crossNotchTeleport)
+        case .sameSafeSegment:
+            .use(faithfulDragEnabled && !itemIsControlItem ? .faithfulDrag : .teleport)
+        }
+    }
+
+    /// What one round of move events observed, beyond the timeout budget the
+    /// next round inherits.
+    nonisolated struct MoveEventsOutcome {
+        var timeout: Duration
+        var revertedToStart: Bool
+        var strategy: MoveStrategy
+    }
+
+    /// Pure construction of a faithful, horizontal command-drag gesture.
+    nonisolated enum MoveGesture {
+        struct Step: Equatable {
+            let subtype: MenuBarItemEventType.MoveSubtype
+            let point: CGPoint
+        }
+
+        static func faithfulDrag(start: CGPoint, end: CGPoint, intermediateSteps: Int) -> [Step] {
+            let steps = max(1, intermediateSteps)
+            var result = [Step(subtype: .mouseDown, point: start)]
+            for index in 1 ... steps {
+                let t = CGFloat(index) / CGFloat(steps + 1)
+                result.append(Step(
+                    subtype: .mouseDragged,
+                    point: CGPoint(
+                        x: start.x + (end.x - start.x) * t,
+                        y: start.y + (end.y - start.y) * t
+                    )
+                ))
+            }
+            result.append(Step(subtype: .mouseDragged, point: end))
+            result.append(Step(subtype: .mouseUp, point: end))
+            return result
+        }
+    }
+
     /// Final coordinates used to create the opening and closing events for a
     /// move. A teleport has no visible intermediate press: its mouse-down is
     /// stamped directly at the destination, including when that destination
@@ -530,6 +692,83 @@ extension MenuBarItemManager {
         }
     }
 
+    /// Validates both endpoint locations and distinguishes a genuinely parked
+    /// status item from a window belonging to a physical display on the left.
+    private func validateMoveEndpointGeometry(
+        item: MenuBarItem,
+        target: MenuBarItem,
+        snapshot: [MenuBarItem],
+        on displayID: CGDirectDisplayID
+    ) throws -> (source: MoveEndpointDisposition, target: MoveEndpointDisposition) {
+        let selectedBounds = CGDisplayBounds(displayID)
+        let displays = NSScreen.screens.map {
+            MoveDisplayGeometry(id: $0.displayID, bounds: CGDisplayBounds($0.displayID))
+        }
+        let dividers = snapshot.filter {
+            ($0.tag == .hiddenControlItem || $0.tag == .alwaysHiddenControlItem)
+                && (selectedBounds.minX ... selectedBounds.maxX).contains($0.bounds.maxX)
+                && (selectedBounds.minY ... selectedBounds.maxY).contains($0.bounds.midY)
+        }
+        let parkedLaneYRange: ClosedRange<CGFloat>? = if
+            let minY = dividers.map(\.bounds.minY).min(),
+            let maxY = dividers.map(\.bounds.maxY).max()
+        {
+            minY ... maxY
+        } else {
+            selectedBounds.minY ... (selectedBounds.minY + 64)
+        }
+        let dividerX = dividers.map(\.bounds.maxX).max() ?? selectedBounds.minX
+
+        func disposition(for endpoint: MenuBarItem) throws -> MoveEndpointDisposition {
+            let value = Self.moveEndpointDisposition(
+                bounds: endpoint.bounds,
+                isOnScreen: endpoint.isOnScreen,
+                selectedDisplayID: displayID,
+                displays: displays,
+                parkedLaneYRange: parkedLaneYRange,
+                controlDividerX: dividerX
+            )
+            switch value {
+            case .selectedDisplay, .parked:
+                return value
+            case .otherDisplay, .invalid:
+                MenuBarItemManager.diagLog.warning(
+                    "Move rejected stale or cross-display endpoint geometry for \(endpoint.logString)"
+                )
+                throw EventError.staleDestination(item)
+            }
+        }
+        return try (disposition(for: item), disposition(for: target))
+    }
+
+    private func transportDecision(
+        item: MenuBarItem,
+        itemBounds: CGRect,
+        targetPoint: CGPoint,
+        geometry: (source: MoveEndpointDisposition, target: MoveEndpointDisposition),
+        on displayID: CGDirectDisplayID
+    ) -> MoveTransportDecision {
+        let displayBounds = CGDisplayBounds(displayID)
+        let screen = NSScreen.screens.first { $0.displayID == displayID }
+        let notchRange = screen?.frameOfNotch.map { notch in
+            (notch.minX - 2) ... (notch.maxX + 2)
+        }
+        let path = Self.horizontalPathDisposition(
+            sourceX: itemBounds.midX,
+            destinationX: targetPoint.x,
+            displayXRange: displayBounds.minX ... displayBounds.maxX,
+            reservedNotchXRange: notchRange
+        )
+        return Self.strictTransportDecision(
+            faithfulDragEnabled: faithfulDragMovesEnabled,
+            itemIsControlItem: item.isControlItem,
+            sourceDisplayID: geometry.source == .selectedDisplay ? displayID : nil,
+            destinationDisplayID: geometry.target == .selectedDisplay ? displayID : nil,
+            selectedDisplayID: displayID,
+            horizontalPath: path
+        )
+    }
+
     /// Returns the target points for creating the events needed to
     /// move a menu bar item to the given destination.
     private nonisolated func getTargetPoints(
@@ -653,7 +892,7 @@ extension MenuBarItemManager {
         destination: MoveDestination,
         on displayID: CGDirectDisplayID,
         warpCursorAfter: Bool = true
-    ) async throws -> Duration {
+    ) async throws -> MoveEventsOutcome {
         var acquiredSemaphore = false
         do {
             try await eventSemaphore.wait(timeout: .milliseconds(3500))
@@ -682,6 +921,12 @@ extension MenuBarItemManager {
             on: displayID
         )
         let initialDestination = initialEndpoints.destination(matching: destination)
+        let initialGeometry = try validateMoveEndpointGeometry(
+            item: initialEndpoints.source,
+            target: initialEndpoints.target,
+            snapshot: initialEndpoints.snapshot,
+            on: displayID
+        )
         let initialTargetPoints = getTargetPoints(
             forMoving: initialEndpoints.source,
             to: initialDestination,
@@ -714,17 +959,28 @@ extension MenuBarItemManager {
             throw EventError.ownerUnresponsive(item)
         }
 
-        // Press and release at the *destination* (targetPoints.start == .end
-        // == the target edge) with the moved item's window ID stamped on the
-        // press, relying on the owner to relocate its item to the press
-        // location. Every move observed in #881 needed a warm-up attempt
-        // before that took: the first press nudged the item a pixel, the
-        // second teleported it. A drag-gesture geometry was trialled behind
-        // a setting to remove that warm-up and did not fix it, so it was
-        // withdrawn; the warm-up attempt remains an open problem.
+        let initialStrategy: MoveStrategy
+        switch transportDecision(
+            item: initialEndpoints.source,
+            itemBounds: initialEndpoints.source.bounds,
+            targetPoint: initialTargetPoints.end,
+            geometry: initialGeometry,
+            on: displayID
+        ) {
+        case let .use(selected):
+            initialStrategy = selected
+        case .rejectUnsafePath:
+            throw EventError.unsafeMovePath(initialEndpoints.source)
+        }
+        let initialDragPlan = initialStrategy == .faithfulDrag
+            ? faithfulDragSteps(
+                itemBounds: initialEndpoints.source.bounds,
+                targetPoints: initialTargetPoints
+            )
+            : nil
         let initialEventLocations = Self.moveEventLocations(
             targetPoints: initialTargetPoints,
-            faithfulDragStart: nil
+            faithfulDragStart: initialDragPlan?.first?.point
         )
 
         // Capture mouse location only when this call owns the cursor warp.
@@ -740,9 +996,7 @@ extension MenuBarItemManager {
         // when slow apps have to register the tracking events before the
         // mouseDown; irrelevant offscreen.
         let warpPoint = initialEventLocations.press
-        let warpIsOnScreen = NSScreen.screens.contains {
-            CGDisplayBounds($0.displayID).contains(warpPoint)
-        }
+        let warpIsOnScreen = initialGeometry.target == .selectedDisplay
         if warpIsOnScreen {
             // Load-bearing for event delivery — keep unconditionally, even
             // during a bulk apply: the receiving app's tracking needs the
@@ -793,6 +1047,12 @@ extension MenuBarItemManager {
         )
         let liveItem = endpoints.source
         let liveDestination = endpoints.destination(matching: destination)
+        let geometry = try validateMoveEndpointGeometry(
+            item: liveItem,
+            target: endpoints.target,
+            snapshot: endpoints.snapshot,
+            on: displayID
+        )
         let itemBounds = liveItem.bounds
         var itemOrigin = itemBounds.origin
         let targetPoints = getTargetPoints(
@@ -802,15 +1062,35 @@ extension MenuBarItemManager {
             targetBounds: endpoints.target.bounds,
             on: displayID
         )
+        let strategy: MoveStrategy
+        switch transportDecision(
+            item: liveItem,
+            itemBounds: itemBounds,
+            targetPoint: targetPoints.end,
+            geometry: geometry,
+            on: displayID
+        ) {
+        case let .use(selected):
+            strategy = selected
+        case .rejectUnsafePath:
+            MenuBarItemManager.diagLog.warning(
+                "Move transport rejected unsafe or cross-display geometry for \(liveItem.logString)"
+            )
+            throw EventError.unsafeMovePath(liveItem)
+        }
+        let dragPlan = strategy == .faithfulDrag
+            ? faithfulDragSteps(itemBounds: itemBounds, targetPoints: targetPoints)
+            : nil
         let eventLocations = Self.moveEventLocations(
             targetPoints: targetPoints,
-            faithfulDragStart: nil
+            faithfulDragStart: dragPlan?.first?.point
         )
         if warpIsOnScreen, eventLocations.press != warpPoint {
             MouseHelpers.warpCursor(to: eventLocations.press)
         }
         let source = try getEventSource()
         try permitLocalEvents()
+        let releaseItem = strategy == .faithfulDrag ? liveItem : endpoints.target
         guard
             let mouseDown = CGEvent.menuBarItemEvent(
                 item: liveItem,
@@ -819,7 +1099,7 @@ extension MenuBarItemManager {
                 location: eventLocations.press
             ),
             let mouseUp = CGEvent.menuBarItemEvent(
-                item: endpoints.target,
+                item: releaseItem,
                 source: source,
                 type: .move(.mouseUp),
                 location: eventLocations.release
@@ -830,6 +1110,9 @@ extension MenuBarItemManager {
 
         var timeout = getMoveOperationTimeout(for: liveItem)
         MenuBarItemManager.diagLog.debug("Move operation timeout: \(timeout)")
+        MenuBarItemManager.diagLog.info(
+            "Move strategy: \(strategy) for \(liveItem.logString); press at (\(eventLocations.press.x),\(eventLocations.press.y)), release at (\(eventLocations.release.x),\(eventLocations.release.y))"
+        )
         let releaseGuard = makePressReleaseGuard(
             for: liveItem,
             mouseUp: mouseUp,
@@ -840,52 +1123,72 @@ extension MenuBarItemManager {
         // release even if the async attempt stops making progress.
         releaseGuard.arm()
         do {
-            try await scrombleEvent(
-                mouseDown,
-                item: liveItem,
-                timeout: timeout
-            )
-            itemOrigin = try await waitForMoveEventResponse(
-                from: liveItem,
-                initialOrigin: itemOrigin,
-                timeout: timeout
-            )
+            if let dragPlan {
+                itemOrigin = try await postFaithfulDragSteps(
+                    dragPlan,
+                    item: liveItem,
+                    source: source,
+                    startOrigin: itemOrigin,
+                    timeout: timeout,
+                    openingEvent: mouseDown,
+                    releaseGuard: releaseGuard,
+                    destination: destination,
+                    on: displayID
+                )
+            } else {
+                try await scrombleEvent(
+                    mouseDown,
+                    item: liveItem,
+                    timeout: timeout
+                )
+                itemOrigin = try await waitForMoveEventResponse(
+                    from: liveItem,
+                    initialOrigin: itemOrigin,
+                    timeout: timeout
+                )
 
-            // Reflow after the opening press can move the target edge. Release
-            // against a newly resolved exact endpoint rather than stale bounds.
-            let releaseEndpoints = try await resolveCurrentMoveEndpoints(
-                source: item,
-                destination: destination.targetItem,
-                on: displayID
-            )
-            let releaseDestination = releaseEndpoints.destination(matching: destination)
-            let releasePoints = getTargetPoints(
-                forMoving: releaseEndpoints.source,
-                to: releaseDestination,
-                itemBounds: releaseEndpoints.source.bounds,
-                targetBounds: releaseEndpoints.target.bounds,
-                on: displayID
-            )
-            guard let liveMouseUp = CGEvent.menuBarItemEvent(
-                item: releaseEndpoints.target,
-                source: source,
-                type: .move(.mouseUp),
-                location: releasePoints.end
-            ) else {
-                throw EventError.eventCreationFailure(releaseEndpoints.source)
+                // Reflow after the opening press can move the target edge.
+                // Release against a freshly validated endpoint snapshot.
+                let releaseEndpoints = try await resolveCurrentMoveEndpoints(
+                    source: item,
+                    destination: destination.targetItem,
+                    on: displayID
+                )
+                _ = try validateMoveEndpointGeometry(
+                    item: releaseEndpoints.source,
+                    target: releaseEndpoints.target,
+                    snapshot: releaseEndpoints.snapshot,
+                    on: displayID
+                )
+                let releaseDestination = releaseEndpoints.destination(matching: destination)
+                let releasePoints = getTargetPoints(
+                    forMoving: releaseEndpoints.source,
+                    to: releaseDestination,
+                    itemBounds: releaseEndpoints.source.bounds,
+                    targetBounds: releaseEndpoints.target.bounds,
+                    on: displayID
+                )
+                guard let liveMouseUp = CGEvent.menuBarItemEvent(
+                    item: releaseEndpoints.target,
+                    source: source,
+                    type: .move(.mouseUp),
+                    location: releasePoints.end
+                ) else {
+                    throw EventError.eventCreationFailure(releaseEndpoints.source)
+                }
+                try await scrombleEvent(
+                    liveMouseUp,
+                    item: releaseEndpoints.source,
+                    timeout: timeout,
+                    repeating: 2 // Double mouse up prevents invalid item state.
+                )
+                releaseGuard.recordReleaseAttempt(delivered: true)
+                itemOrigin = try await waitForMoveEventResponse(
+                    from: releaseEndpoints.source,
+                    initialOrigin: itemOrigin,
+                    timeout: timeout
+                )
             }
-            try await scrombleEvent(
-                liveMouseUp,
-                item: releaseEndpoints.source,
-                timeout: timeout,
-                repeating: 2 // Double mouse up prevents invalid item state.
-            )
-            releaseGuard.recordReleaseAttempt(delivered: true)
-            itemOrigin = try await waitForMoveEventResponse(
-                from: releaseEndpoints.source,
-                initialOrigin: itemOrigin,
-                timeout: timeout
-            )
         } catch {
             let attemptError = error
             do {
@@ -912,7 +1215,154 @@ extension MenuBarItemManager {
         guard !releaseGuard.didFire else {
             throw EventError.moveTimedOut(item)
         }
-        return timeout
+        let revertedToStart = itemOrigin == itemBounds.origin
+        if revertedToStart {
+            MenuBarItemManager.diagLog.debug(
+                "Move events (\(strategy)) left \(liveItem.logString) at its starting origin (\(itemOrigin.x),\(itemOrigin.y))"
+            )
+        }
+        return MoveEventsOutcome(
+            timeout: timeout,
+            revertedToStart: revertedToStart,
+            strategy: strategy
+        )
+    }
+
+    /// Builds a faithful drag on the item's own menu-bar row. The strict
+    /// transport classifier has already proved both endpoints are on the
+    /// selected display and in one notch-safe segment.
+    private func faithfulDragSteps(
+        itemBounds: CGRect,
+        targetPoints: (start: CGPoint, end: CGPoint)
+    ) -> [MoveGesture.Step] {
+        let barY = itemBounds.minY
+        return MoveGesture.faithfulDrag(
+            start: CGPoint(x: itemBounds.midX, y: barY),
+            end: CGPoint(x: targetPoints.end.x, y: barY),
+            intermediateSteps: 3
+        )
+    }
+
+    /// Posts one coherent faithful drag, and always ends it with a release on
+    /// the bar before propagating a failure.
+    private func postFaithfulDragSteps(
+        _ steps: [MoveGesture.Step],
+        item: MenuBarItem,
+        source: CGEventSource,
+        startOrigin: CGPoint,
+        timeout: Duration,
+        openingEvent: CGEvent,
+        releaseGuard: PressReleaseGuard,
+        destination: MoveDestination,
+        on displayID: CGDirectDisplayID
+    ) async throws -> CGPoint {
+        guard steps.last?.subtype == .mouseUp else {
+            throw EventError.eventCreationFailure(item)
+        }
+        let dragSteps = steps.dropLast()
+
+        var itemOrigin = startOrigin
+        var responseItem = item
+        for (index, step) in dragSteps.enumerated() {
+            let liveItem: MenuBarItem
+            let event: CGEvent
+            if index == 0 {
+                guard step.subtype == .mouseDown else {
+                    throw EventError.eventCreationFailure(item)
+                }
+                liveItem = item
+                event = openingEvent
+            } else {
+                let endpoints = try await resolveCurrentMoveEndpoints(
+                    source: item,
+                    destination: destination.targetItem,
+                    on: displayID
+                )
+                _ = try validateMoveEndpointGeometry(
+                    item: endpoints.source,
+                    target: endpoints.target,
+                    snapshot: endpoints.snapshot,
+                    on: displayID
+                )
+                liveItem = endpoints.source
+                guard let liveEvent = CGEvent.menuBarItemEvent(
+                    item: liveItem,
+                    source: source,
+                    type: .move(step.subtype),
+                    location: step.point
+                ) else {
+                    throw EventError.eventCreationFailure(liveItem)
+                }
+                event = liveEvent
+            }
+            try await scrombleEvent(event, item: liveItem, timeout: timeout)
+            responseItem = liveItem
+            if step.subtype == .mouseDragged {
+                await eventSleep(for: .milliseconds(8))
+            }
+        }
+        itemOrigin = try await waitForMoveEventResponse(
+            from: responseItem,
+            initialOrigin: startOrigin,
+            timeout: timeout
+        )
+
+        // Reflow can move the anchor while the button is held. Re-resolve and
+        // validate the exact release edge instead of using the planned one.
+        let releaseEndpoints = try await resolveCurrentMoveEndpoints(
+            source: item,
+            destination: destination.targetItem,
+            on: displayID
+        )
+        _ = try validateMoveEndpointGeometry(
+            item: releaseEndpoints.source,
+            target: releaseEndpoints.target,
+            snapshot: releaseEndpoints.snapshot,
+            on: displayID
+        )
+        let releaseDestination = releaseEndpoints.destination(matching: destination)
+        let releasePoints = getTargetPoints(
+            forMoving: releaseEndpoints.source,
+            to: releaseDestination,
+            itemBounds: releaseEndpoints.source.bounds,
+            targetBounds: releaseEndpoints.target.bounds,
+            on: displayID
+        )
+        let releasePoint = CGPoint(
+            x: releasePoints.end.x,
+            y: releaseEndpoints.source.bounds.minY
+        )
+        guard let releaseEvent = CGEvent.menuBarItemEvent(
+            item: releaseEndpoints.source,
+            source: source,
+            type: .move(.mouseUp),
+            location: releasePoint
+        ) else {
+            throw EventError.eventCreationFailure(releaseEndpoints.source)
+        }
+        try await scrombleEvent(
+            releaseEvent,
+            item: releaseEndpoints.source,
+            timeout: timeout,
+            repeating: 2
+        )
+        releaseGuard.recordReleaseAttempt(delivered: true)
+
+        // A revert returns to the start and therefore cannot be awaited as an
+        // origin change after release. Give the drop one short settling beat
+        // and re-resolve the exact source before reading its resting origin.
+        await eventSleep(for: .milliseconds(30))
+        let restingEndpoints = try await resolveCurrentMoveEndpoints(
+            source: item,
+            destination: destination.targetItem,
+            on: displayID
+        )
+        itemOrigin = restingEndpoints.source.bounds.origin
+        return itemOrigin
+    }
+
+    private var faithfulDragMovesEnabled: Bool {
+        (Defaults.object(forKey: .faithfulDragMoves) as? Bool) ?? Defaults.DefaultValue.faithfulDragMoves
     }
 
     /// Checks if a menu bar item is in a "blocked" state (positioned at x=-1 off-screen).
@@ -1478,7 +1928,7 @@ extension MenuBarItemManager {
                     attemptMouseLocation = try getMouseLocation()
                     MouseHelpers.hideCursor(watchdogTimeout: options.watchdogTimeout ?? .seconds(2))
                 }
-                let attemptTimeout = try await postMoveEvents(
+                let outcome = try await postMoveEvents(
                     item: item,
                     destination: destination,
                     on: resolvedDisplayID,
@@ -1501,7 +1951,7 @@ extension MenuBarItemManager {
                 // successful moves (#889).
                 updateMoveOperationTimeout(
                     Self.nextMoveOperationTimeout(
-                        after: attemptTimeout,
+                        after: outcome.timeout,
                         outcome: landedOnDestination ? .landed : .displacedWithoutLanding
                     ),
                     for: item
@@ -1592,6 +2042,9 @@ extension MenuBarItemManager {
                     throw error
                 }
                 if case EventError.moveTimedOut = error {
+                    throw error
+                }
+                if case EventError.unsafeMovePath = error {
                     throw error
                 }
                 // Also definitive for the duration of this call: a hung owner

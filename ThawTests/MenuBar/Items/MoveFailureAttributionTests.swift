@@ -83,6 +83,7 @@ struct MoveFailureAttributionTests {
         .staleDestination(.fixture(tag: .appItem(bundleID: "a", title: "b"), windowID: 1)),
         .moveTimedOut(.fixture(tag: .appItem(bundleID: "a", title: "b"), windowID: 1)),
         .moveEngineBusy(.fixture(tag: .appItem(bundleID: "a", title: "b"), windowID: 1)),
+        .unsafeMovePath(.fixture(tag: .appItem(bundleID: "a", title: "b"), windowID: 1)),
         .missingItemBounds(.fixture(tag: .appItem(bundleID: "a", title: "b"), windowID: 1)),
         .cannotComplete,
     ])

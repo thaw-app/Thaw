@@ -127,4 +127,38 @@ struct MoveEndpointIdentityTests {
             destinationWindowID: destination.windowID
         ) == nil)
     }
+
+    @Test("Parked lane geometry is not mistaken for a left display")
+    func parkedLaneIsExplicit() {
+        let selected: CGDirectDisplayID = 1
+        let left: CGDirectDisplayID = 2
+        let displays = [
+            MenuBarItemManager.MoveDisplayGeometry(
+                id: selected,
+                bounds: CGRect(x: 0, y: 0, width: 1728, height: 1117)
+            ),
+            MenuBarItemManager.MoveDisplayGeometry(
+                id: left,
+                bounds: CGRect(x: -2560, y: 0, width: 2560, height: 1440)
+            ),
+        ]
+        let parked = CGRect(x: -2450, y: 0, width: 24, height: 24)
+
+        #expect(MenuBarItemManager.moveEndpointDisposition(
+            bounds: parked,
+            isOnScreen: false,
+            selectedDisplayID: selected,
+            displays: displays,
+            parkedLaneYRange: 0 ... 24,
+            controlDividerX: 1400
+        ) == .parked)
+        #expect(MenuBarItemManager.moveEndpointDisposition(
+            bounds: parked,
+            isOnScreen: true,
+            selectedDisplayID: selected,
+            displays: displays,
+            parkedLaneYRange: 0 ... 24,
+            controlDividerX: 1400
+        ) == .otherDisplay(left))
+    }
 }
