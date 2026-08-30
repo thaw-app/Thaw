@@ -748,8 +748,13 @@ extension MenuBarItemManager {
 
     static nonisolated func shouldCountControlItemLookupFailure(
         hostUptime: Duration?,
+        suppressAutomaticMoves: Bool = false,
         grace: Duration = controlCenterRelaunchGrace
     ) -> Bool {
+        // Layout-editor refreshes are read-and-publish passes. They must not
+        // advance the recovery episode or reach its status-item rebuild and
+        // automatic-recache side effects.
+        guard !suppressAutomaticMoves else { return false }
         guard let hostUptime else { return true }
         return hostUptime >= grace
     }
@@ -880,8 +885,13 @@ extension MenuBarItemManager {
     private func uncheckedCacheItems(
         items: [MenuBarItem],
         controlItems: ControlItemPair,
-        displayID: CGDirectDisplayID?
+        displayID: CGDirectDisplayID?,
+        suppressAutomaticMoves: Bool,
+        suppressSavedOrderPersistence: Bool,
+        forcePersistSavedOrder: Bool,
+        snapshotIsCurrent: () -> Bool
     ) async {
+        guard snapshotIsCurrent() else { return }
         MenuBarItemManager.diagLog.debug("uncheckedCacheItems: processing \(items.count) items for caching")
         var context = CacheContext(controlItems: controlItems, displayID: displayID)
 
@@ -971,15 +981,23 @@ extension MenuBarItemManager {
         // Discard a pass whose divider geometry disagrees with the section's
         // logical state. Keeping the previous cache costs one cycle; accepting
         // the mixture reclassifies a whole section (#851).
-        if cacheChanged,
-           !itemCache.managedItems.isEmpty,
-           let section = await midTransitionSection(in: context)
+        if Self.shouldEvaluateSavedOrderPersistence(
+            cacheChanged: cacheChanged,
+            forcePersistSavedOrder: forcePersistSavedOrder
+        ),
+            !itemCache.managedItems.isEmpty,
+            let section = await midTransitionSection(in: context)
         {
             MenuBarItemManager.diagLog.debug(
                 "Not updating menu bar item cache: \(section.logString) is mid expand/collapse, keeping last-known-good cache"
             )
             return
         }
+
+        // `midTransitionSection` can suspend while a user move completes.
+        // Never publish or persist the observation it was validating if that
+        // move made the underlying geometry obsolete in the meantime.
+        guard snapshotIsCurrent() else { return }
 
         // The always-hidden divider is what tells always-hidden items apart
         // from hidden ones. If this cycle resolved the hidden divider but
@@ -1017,18 +1035,23 @@ extension MenuBarItemManager {
             )
         )
 
-        if recoverCollapsedHiddenSectionIfNeeded(
-            hiddenSectionHasRoom: hiddenSectionHasRoom,
-            controlItems: context.controlItems,
-            // The dividers are excluded: a rebuild that only has the two
-            // control items to place cannot strand anything on the wrong
-            // side of the one it is rebuilding.
-            managedItemCount: context.cache.managedItems.count(where: { !$0.isControlItem })
-        ) {
+        if !suppressAutomaticMoves,
+           recoverCollapsedHiddenSectionIfNeeded(
+               hiddenSectionHasRoom: hiddenSectionHasRoom,
+               controlItems: context.controlItems,
+               // The dividers are excluded: a rebuild that only has the two
+               // control items to place cannot strand anything on the wrong
+               // side of the one it is rebuilding.
+               managedItemCount: context.cache.managedItems.count(where: { !$0.isControlItem })
+           )
+        {
             return
         }
 
-        guard cacheChanged else {
+        guard Self.shouldEvaluateSavedOrderPersistence(
+            cacheChanged: cacheChanged,
+            forcePersistSavedOrder: forcePersistSavedOrder
+        ) else {
             MenuBarItemManager.diagLog.debug("Not updating menu bar item cache, as items haven't changed")
             // Still an observed cycle: the settling stability check needs
             // exactly these stable, no-op reads to count toward its early
@@ -1043,11 +1066,17 @@ extension MenuBarItemManager {
         // produced the standing cache and this one (#958).
         let previousCacheDisplayID = itemCache.displayID
 
-        itemCache = context.cache
+        if cacheChanged {
+            itemCache = context.cache
 
-        // Remember what the resolved items are called, so the next launch can
-        // label them before its own source-PID scan lands (#956).
-        MenuBarItemNameMemory.remember(itemCache.managedItems)
+            // Remember what the resolved items are called, so the next launch
+            // can label them before its own source-PID scan lands (#956).
+            MenuBarItemNameMemory.remember(itemCache.managedItems)
+        } else {
+            MenuBarItemManager.diagLog.debug(
+                "Menu bar item cache is unchanged; evaluating saved-order persistence for a validated Layout-editor move"
+            )
+        }
 
         // Reset isRestoringItemOrder if it's been stuck for too long (10 seconds).
         // This prevents stale flags from blocking saves after user manual moves.
@@ -1090,7 +1119,8 @@ extension MenuBarItemManager {
         // wreckage, not a layout anyone chose. Recording it hands the next
         // pass a target it just moved, which is how a failed apply turns
         // into a bar that drifts a little further on every retry (#900).
-        if context.controlItems.canRepositionControlItems,
+        if !suppressSavedOrderPersistence,
+           context.controlItems.canRepositionControlItems,
            LayoutSolver.shouldPersistSavedOrder(
                LayoutSolver.SavedOrderGate(
                    isRestoringItemOrder: isRestoringItemOrder,
@@ -1147,6 +1177,10 @@ extension MenuBarItemManager {
             } else {
                 saveSectionOrder(from: context.cache)
             }
+        } else if suppressSavedOrderPersistence {
+            MenuBarItemManager.diagLog.warning(
+                "Skipping saveSectionOrder; this cache refresh follows a failed automatic move attempt"
+            )
         } else if !context.controlItems.canRepositionControlItems {
             MenuBarItemManager.diagLog.warning(
                 "Skipping saveSectionOrder; control items resolved only by provisional AX-frame correlation"
@@ -1201,8 +1235,21 @@ extension MenuBarItemManager {
                 "Skipping saveSectionOrder; the last bulk apply left planned moves unenacted, so the current arrangement is partial"
             )
         }
-        MenuBarItemManager.diagLog.debug("Updated menu bar item cache: visible=\(context.cache[.visible].count), hidden=\(context.cache[.hidden].count), alwaysHidden=\(context.cache[.alwaysHidden].count)")
+        if cacheChanged {
+            MenuBarItemManager.diagLog.debug("Updated menu bar item cache: visible=\(context.cache[.visible].count), hidden=\(context.cache[.hidden].count), alwaysHidden=\(context.cache[.alwaysHidden].count)")
+        }
         completedCacheCycles += 1
+    }
+
+    /// Whether a completed cache read must continue through the saved-order
+    /// persistence gates. A validated Layout-editor move may already have
+    /// published its settled geometry during validation, so its final refresh
+    /// must not stop merely because the cache value is identical.
+    static nonisolated func shouldEvaluateSavedOrderPersistence(
+        cacheChanged: Bool,
+        forcePersistSavedOrder: Bool
+    ) -> Bool {
+        cacheChanged || forcePersistSavedOrder
     }
 
     /// Rebuilds the hidden divider after repeated, authoritative evidence
@@ -1501,12 +1548,17 @@ extension MenuBarItemManager {
         _ currentItemWindowIDs: [CGWindowID]? = nil,
         skipRecentMoveCheck: Bool = false,
         resolveSourcePID: Bool = true,
+        reuseCachedIdentities: Bool = false,
         skipSavedLayoutApply: Bool = false,
+        suppressAutomaticMoves: Bool = false,
+        suppressSavedOrderPersistence: Bool = false,
         bypassSavedLayoutCooldown: Bool = false,
-        waiterToken: Int? = nil
+        forcePersistSavedOrder: Bool = false,
+        waiterToken: Int? = nil,
+        cacheAttempt: CacheAttempt? = nil
     ) async {
         MenuBarItemManager.diagLog.debug(
-            "cacheItemsRegardless: entering (skipRecentMoveCheck=\(skipRecentMoveCheck), hasCurrentItemWindowIDs=\(currentItemWindowIDs != nil), resolveSourcePID=\(resolveSourcePID), skipSavedLayoutApply=\(skipSavedLayoutApply), bypassSavedLayoutCooldown=\(bypassSavedLayoutCooldown))"
+            "cacheItemsRegardless: entering (skipRecentMoveCheck=\(skipRecentMoveCheck), hasCurrentItemWindowIDs=\(currentItemWindowIDs != nil), resolveSourcePID=\(resolveSourcePID), reuseCachedIdentities=\(reuseCachedIdentities), skipSavedLayoutApply=\(skipSavedLayoutApply), suppressAutomaticMoves=\(suppressAutomaticMoves), suppressSavedOrderPersistence=\(suppressSavedOrderPersistence), bypassSavedLayoutCooldown=\(bypassSavedLayoutCooldown), forcePersistSavedOrder=\(forcePersistSavedOrder))"
         )
 
         guard skipRecentMoveCheck || !lastMoveOperationOccurred(within: .seconds(1)) else {
@@ -1527,6 +1579,28 @@ extension MenuBarItemManager {
             return
         }
         defer { Task { await cacheGate.end() } }
+
+        // Capture this only after the gate is ours. A cycle that was already
+        // in progress when this call arrived must not make an editor refresh
+        // look successful after this call itself was dropped.
+        let completedCyclesAtGateEntry = completedCacheCycles
+        let moveTimestampAtGateEntry = lastMoveOperationTimestamp
+        func snapshotIsCurrent(_ stage: String) -> Bool {
+            guard lastMoveOperationTimestamp == moveTimestampAtGateEntry else {
+                MenuBarItemManager.diagLog.debug(
+                    "cacheItemsRegardless: discarding stale snapshot at \(stage) because an item moved during this pass"
+                )
+                return false
+            }
+            return true
+        }
+        defer {
+            cacheAttempt?.recordCompletion(
+                cyclesAtEntry: completedCyclesAtGateEntry,
+                cyclesAtExit: completedCacheCycles,
+                snapshotRemainedCurrent: lastMoveOperationTimestamp == moveTimestampAtGateEntry
+            )
+        }
 
         // Ownership of the waiter (if any) defaults to this call. Some
         // paths below (relocation hand-offs) hand ownership to a nested
@@ -1579,6 +1653,17 @@ extension MenuBarItemManager {
             }
         }
 
+        // Layout-editor reconciliation only needs fresh geometry. Reuse a
+        // confirmed identity for the same live window so that its fast cache
+        // pass can skip the occasionally slow AX source-PID scan without
+        // turning every icon into a new Control Center placeholder.
+        if reuseCachedIdentities {
+            items = Self.reusingCachedIdentities(
+                in: items,
+                from: itemCache.managedItems
+            )
+        }
+
         MenuBarItemManager.diagLog.debug("cacheItemsRegardless: getMenuBarItems returned \(items.count) items")
 
         // Drop System Status Item Clone windows before any downstream
@@ -1625,6 +1710,12 @@ extension MenuBarItemManager {
             )
             return
         }
+
+        // Enumeration is the slow portion of this pass. If any move landed
+        // while it was suspended, everything below was computed from the old
+        // bar and must be read-discard: do not update continuity ledgers,
+        // publish cache state, restore layout, or launch an automatic move.
+        guard snapshotIsCurrent("after item enumeration") else { return }
 
         // Recorded only after clones and ghost windows are dropped, so their
         // throwaway windowIDs never enter the continuity history.
@@ -1748,6 +1839,7 @@ extension MenuBarItemManager {
             self.pruneMoveOperationTimeouts(keeping: Set(items.map(\.tag)))
             self.pruneClickOperationTimeouts(keeping: Set(items.map(\.tag)))
         }
+        guard snapshotIsCurrent("after cache pruning") else { return }
 
         // Obtain window IDs from the actual ControlItem objects so the
         // fallback lookup in ControlItemPair can match by window ID when
@@ -1769,6 +1861,7 @@ extension MenuBarItemManager {
             hiddenControlItemWindowID: hiddenControlItemWID,
             alwaysHiddenControlItemWindowID: alwaysHiddenControlItemWID
         ) else {
+            guard snapshotIsCurrent("before control-item recovery") else { return }
             // Recovery path (#754): a failed lookup here used to wipe
             // itemCache and commit the just-fetched window-ID snapshot to
             // the change detector, which together made the failure
@@ -1785,21 +1878,28 @@ extension MenuBarItemManager {
             // gone (e.g. their windowNumber no longer matches any
             // enumerated CG window ID), not that this one cycle raced a
             // transient WindowServer update.
-            if Self.resetControlItemLookupEpisodeIfHostChanged(
-                previous: lastObservedControlCenterGeneration,
-                current: observedControlCenterGeneration,
-                failureStreak: &controlItemLookupFailureStreak,
-                alreadyRebuilt: &didRebuildControlItemsForCurrentFailureEpisode
-            ) {
+            if !suppressAutomaticMoves,
+               Self.resetControlItemLookupEpisodeIfHostChanged(
+                   previous: lastObservedControlCenterGeneration,
+                   current: observedControlCenterGeneration,
+                   failureStreak: &controlItemLookupFailureStreak,
+                   alreadyRebuilt: &didRebuildControlItemsForCurrentFailureEpisode
+               )
+            {
                 lastControlItemLookupFailureAt = nil
                 lastObservedControlCenterGeneration = observedControlCenterGeneration
             }
             let hostUptime = Self.controlCenterUptime(
                 generation: observedControlCenterGeneration
             )
-            guard Self.shouldCountControlItemLookupFailure(hostUptime: hostUptime) else {
+            guard Self.shouldCountControlItemLookupFailure(
+                hostUptime: hostUptime,
+                suppressAutomaticMoves: suppressAutomaticMoves
+            ) else {
                 MenuBarItemManager.diagLog.info(
-                    "cacheItemsRegardless: divider lookup failed \(hostUptime.map { "\(Int($0.milliseconds / 1000)) s" } ?? "?") after Control Center launched; waiting for re-hosting to finish"
+                    suppressAutomaticMoves
+                        ? "cacheItemsRegardless: Missing control item during Layout-editor refresh; not advancing recovery or scheduling an automatic recache. Items remaining: \(items.count)"
+                        : "cacheItemsRegardless: Missing control item for hidden section \(hostUptime.map { "\(Int($0.milliseconds / 1000)) s" } ?? "?") after Control Center launched; not counting it toward a rebuild while the bar is being re-hosted. Items remaining: \(items.count)"
                 )
                 await MainActor.run {
                     self.areControlItemsMissing = true
@@ -1855,6 +1955,7 @@ extension MenuBarItemManager {
         await MainActor.run {
             self.areControlItemsMissing = false
         }
+        guard snapshotIsCurrent("after control-item discovery") else { return }
 
         MenuBarItemManager.diagLog.debug("cacheItemsRegardless: found control items, hidden windowID=\(controlItems.hidden.windowID), alwaysHidden=\(controlItems.alwaysHidden.map { "\($0.windowID)" } ?? "nil")")
 
@@ -1868,7 +1969,7 @@ extension MenuBarItemManager {
         // a provisional correlation says nothing either way, the same rule
         // the parked-divider streak applies — and a disabled section's
         // absent divider is intentional, not a loss to recover from.
-        if controlItems.canRepositionControlItems {
+        if !suppressAutomaticMoves, controlItems.canRepositionControlItems {
             if appState?.settings.advanced.enableAlwaysHiddenSection == true {
                 if controlItems.alwaysHidden == nil {
                     missingAlwaysHiddenDividerStreak += 1
@@ -1909,12 +2010,16 @@ extension MenuBarItemManager {
             return
         }
 
-        await enforceControlItemOrder(controlItems: controlItems)
+        guard snapshotIsCurrent("before control-item order enforcement") else { return }
+        if !suppressAutomaticMoves {
+            await enforceControlItemOrder(controlItems: controlItems)
+        }
 
         guard !Task.isCancelled else {
             MenuBarItemManager.diagLog.debug("cacheItemsRegardless: cancelled before relocateNewLeftmostItems")
             return
         }
+        guard snapshotIsCurrent("after control-item order enforcement") else { return }
 
         // App-relaunch detection: uniqueIdentifier is namespace:title
         // (windowID-independent and stable across restarts), so a
@@ -1944,7 +2049,8 @@ extension MenuBarItemManager {
         // determined (transient bounds during in-flight moves) fall
         // through to the drop path, preserving the original
         // conservative behaviour for ambiguous cases.
-        if let activeLayout = activeProfileLayout,
+        if !suppressAutomaticMoves,
+           let activeLayout = activeProfileLayout,
            !activeProfileItemIdentifiers.isEmpty,
            !previousWindowIDs.isEmpty
         {
@@ -2013,55 +2119,81 @@ extension MenuBarItemManager {
             }
         }
 
-        if await relocateNewLeftmostItems(
-            items,
-            controlItems: controlItems,
-            previousWindowIDs: previousWindowIDs,
-            recentWindowIDs: recentWindowIDs
-        ) {
-            MenuBarItemManager.diagLog.debug("Relocated new leftmost items; scheduling recache")
-            // Ownership transfers to the nested recache: the waiter must not
-            // be told the cache is settled until the second cycle finishes.
-            ownsWaiter = false
-            Task { [weak self] in
-                try? await Task.sleep(for: MenuBarItemManager.uiSettleDelay)
-                // Carry the bypass across the hand-off: this recache is where the
-                // launch restore actually runs, and the move it is retrying behind
-                // was stamped by the relocation just above.
-                await self?.cacheItemsRegardless(
-                    skipRecentMoveCheck: true,
-                    bypassSavedLayoutCooldown: bypassSavedLayoutCooldown,
-                    waiterToken: waiterToken
-                )
+        if !suppressAutomaticMoves {
+            if await relocateNewLeftmostItems(
+                items,
+                controlItems: controlItems,
+                previousWindowIDs: previousWindowIDs,
+                recentWindowIDs: recentWindowIDs
+            ) {
+                MenuBarItemManager.diagLog.debug("Relocated new leftmost items; scheduling recache")
+                // Ownership transfers to the nested recache: the waiter must not
+                // be told the cache is settled until the second cycle finishes.
+                ownsWaiter = false
+                Task { [weak self] in
+                    try? await Task.sleep(for: MenuBarItemManager.uiSettleDelay)
+                    // Carry the caller policy across the hand-off: this recache
+                    // is where the launch restore actually runs after the move.
+                    await self?.cacheItemsRegardless(
+                        skipRecentMoveCheck: true,
+                        resolveSourcePID: resolveSourcePID,
+                        reuseCachedIdentities: reuseCachedIdentities,
+                        skipSavedLayoutApply: skipSavedLayoutApply,
+                        suppressAutomaticMoves: suppressAutomaticMoves,
+                        suppressSavedOrderPersistence: suppressSavedOrderPersistence,
+                        bypassSavedLayoutCooldown: bypassSavedLayoutCooldown,
+                        forcePersistSavedOrder: forcePersistSavedOrder,
+                        waiterToken: waiterToken
+                    )
+                }
+                return
             }
-            return
         }
+        guard snapshotIsCurrent("after new-item relocation check") else { return }
 
-        if await relocatePendingItems(items, controlItems: controlItems) {
-            MenuBarItemManager.diagLog.debug("Relocated pending temporarily-shown items; scheduling recache")
-            // Ownership transfers to the nested recache: the waiter must not
-            // be told the cache is settled until the second cycle finishes.
-            ownsWaiter = false
-            Task { [weak self] in
-                try? await Task.sleep(for: MenuBarItemManager.uiSettleDelay)
-                await self?.cacheItemsRegardless(
-                    skipRecentMoveCheck: true,
-                    bypassSavedLayoutCooldown: bypassSavedLayoutCooldown,
-                    waiterToken: waiterToken
-                )
+        if !suppressAutomaticMoves {
+            if await relocatePendingItems(items, controlItems: controlItems) {
+                MenuBarItemManager.diagLog.debug("Relocated pending temporarily-shown items; scheduling recache")
+                // Ownership transfers to the nested recache: the waiter must not
+                // be told the cache is settled until the second cycle finishes.
+                ownsWaiter = false
+                Task { [weak self] in
+                    try? await Task.sleep(for: MenuBarItemManager.uiSettleDelay)
+                    await self?.cacheItemsRegardless(
+                        skipRecentMoveCheck: true,
+                        resolveSourcePID: resolveSourcePID,
+                        reuseCachedIdentities: reuseCachedIdentities,
+                        skipSavedLayoutApply: skipSavedLayoutApply,
+                        suppressAutomaticMoves: suppressAutomaticMoves,
+                        suppressSavedOrderPersistence: suppressSavedOrderPersistence,
+                        bypassSavedLayoutCooldown: bypassSavedLayoutCooldown,
+                        forcePersistSavedOrder: forcePersistSavedOrder,
+                        waiterToken: waiterToken
+                    )
+                }
+                return
             }
-            return
         }
+        guard snapshotIsCurrent("after pending-item relocation check") else { return }
 
         // Skip all restore logic during the startup settling period.
         // The settling period prevents cascading icon moves when many apps
         // load at login or restart in quick succession (app update checks).
         // A final cacheItemsRegardless() after the period ends handles restore.
         guard !isInStartupSettling else {
-            await uncheckedCacheItems(items: items, controlItems: controlItems, displayID: displayID)
+            await uncheckedCacheItems(
+                items: items,
+                controlItems: controlItems,
+                displayID: displayID,
+                suppressAutomaticMoves: suppressAutomaticMoves,
+                suppressSavedOrderPersistence: suppressSavedOrderPersistence,
+                forcePersistSavedOrder: forcePersistSavedOrder,
+                snapshotIsCurrent: { snapshotIsCurrent("startup cache publish") }
+            )
+            guard snapshotIsCurrent("after startup cache publish") else { return }
             // Absorb items that appear during settling into the profile
             // snapshot so they aren't treated as late arrivals afterwards.
-            if activeProfileLayout != nil {
+            if !suppressAutomaticMoves, activeProfileLayout != nil {
                 for item in items where !item.isControlItem {
                     profileSortedItemIdentifiers.insert(item.uniqueIdentifier)
                 }
@@ -2085,7 +2217,11 @@ extension MenuBarItemManager {
             // then the entire reorder as a visible sequence. Cascading
             // re-applies, which is what the cooldown guards against, cannot
             // happen here: this runs once per settling period.
-            if !skipSavedLayoutApply, !didAttemptEarlySavedLayoutApply {
+            if !skipSavedLayoutApply,
+               !suppressAutomaticMoves,
+               lastMoveOperationTimestamp == moveTimestampAtGateEntry,
+               !didAttemptEarlySavedLayoutApply
+            {
                 let didApply = await applySavedLayout(
                     items: items,
                     previousCycle: PreviousCacheCycle(
@@ -2108,6 +2244,12 @@ extension MenuBarItemManager {
                     )
                     return
                 }
+            } else if !skipSavedLayoutApply,
+                      lastMoveOperationTimestamp != moveTimestampAtGateEntry
+            {
+                MenuBarItemManager.diagLog.debug(
+                    "cacheItemsRegardless: skipping early saved-layout apply because an item moved during this cache pass"
+                )
             }
 
             MenuBarItemManager.diagLog.debug("cacheItemsRegardless: startup settling active, skipping restore")
@@ -2131,7 +2273,10 @@ extension MenuBarItemManager {
         // even when the visible item count is stable),
         // windowIDsChanged fires on every iteration and the bar enters
         // an infinite no-op apply loop.
-        if !skipSavedLayoutApply {
+        if !skipSavedLayoutApply,
+           !suppressAutomaticMoves,
+           lastMoveOperationTimestamp == moveTimestampAtGateEntry
+        {
             let didApplySavedLayout = await applySavedLayout(
                 items: items,
                 previousCycle: PreviousCacheCycle(
@@ -2146,9 +2291,25 @@ extension MenuBarItemManager {
             if didApplySavedLayout {
                 return
             }
+        } else if !skipSavedLayoutApply,
+                  lastMoveOperationTimestamp != moveTimestampAtGateEntry
+        {
+            MenuBarItemManager.diagLog.debug(
+                "cacheItemsRegardless: skipping saved-layout apply because an item moved during this cache pass"
+            )
         }
 
-        await uncheckedCacheItems(items: items, controlItems: controlItems, displayID: displayID)
+        guard snapshotIsCurrent("before cache publish") else { return }
+        await uncheckedCacheItems(
+            items: items,
+            controlItems: controlItems,
+            displayID: displayID,
+            suppressAutomaticMoves: suppressAutomaticMoves,
+            suppressSavedOrderPersistence: suppressSavedOrderPersistence,
+            forcePersistSavedOrder: forcePersistSavedOrder,
+            snapshotIsCurrent: { snapshotIsCurrent("cache publish") }
+        )
+        guard snapshotIsCurrent("after cache publish") else { return }
 
         // Persist the resolved (possibly corrected) sourcePIDs for the next
         // cache cycle so transient resolution errors can be detected.
@@ -2231,7 +2392,8 @@ extension MenuBarItemManager {
         }
 
         // Detect late-arriving items that belong to the active profile.
-        if activeProfileLayout != nil,
+        if !suppressAutomaticMoves,
+           activeProfileLayout != nil,
            !activeProfileItemIdentifiers.isEmpty
         {
             await MainActor.run {
@@ -2263,7 +2425,89 @@ extension MenuBarItemManager {
         // Keep the visible row inside the beside-notch budget regardless of
         // whether a profile is active. Runs last so it sees the settled cache,
         // and self-gates on every in-flight mover.
-        await rebalanceNotchOverflowIfNeeded(items: items, controlItems: controlItems)
+        guard snapshotIsCurrent("before notch-overflow rebalance") else { return }
+        if !suppressAutomaticMoves {
+            await rebalanceNotchOverflowIfNeeded(items: items, controlItems: controlItems)
+        }
+    }
+
+    /// Returns a fresh-geometry reading with previously confirmed identities
+    /// restored for windows that are demonstrably the same live status item.
+    static nonisolated func reusingCachedIdentities(
+        in freshItems: [MenuBarItem],
+        from cachedItems: [MenuBarItem]
+    ) -> [MenuBarItem] {
+        let cachedByWindowID = Dictionary(
+            cachedItems.lazy.map { ($0.windowID, $0) },
+            uniquingKeysWith: { first, _ in first }
+        )
+
+        return freshItems.map { freshItem in
+            guard freshItem.sourcePID == nil,
+                  let cachedItem = cachedByWindowID[freshItem.windowID],
+                  let cachedSourcePID = cachedItem.sourcePID,
+                  cachedItem.ownerPID == freshItem.ownerPID,
+                  cachedItem.title == freshItem.title
+            else {
+                return freshItem
+            }
+
+            return MenuBarItem(
+                tag: cachedItem.tag,
+                windowID: freshItem.windowID,
+                ownerPID: freshItem.ownerPID,
+                sourcePID: cachedSourcePID,
+                bounds: freshItem.bounds,
+                title: freshItem.title,
+                isOnScreen: freshItem.isOnScreen
+            )
+        }
+    }
+
+    /// Performs the authoritative cache pass required before the Layout
+    /// editor may thaw its source and destination rows after a user move.
+    ///
+    /// Ordinary background refreshes deliberately drop when ``CacheGate`` is
+    /// busy. An editor move cannot: thawing from the old cache duplicates or
+    /// removes the transferred icon until a later timer happens to repair it.
+    /// Retry discrete attempts so the gate is released between each one and
+    /// nested relocation recaches cannot deadlock this caller.
+    func refreshCacheAfterLayoutEditorMove(
+        timeout: Duration = .seconds(30),
+        forcePersistSavedOrder: Bool = false
+    ) async -> Bool {
+        let deadline = ContinuousClock.now + timeout
+
+        while !Task.isCancelled {
+            let attempt = CacheAttempt()
+            await cacheItemsRegardless(
+                skipRecentMoveCheck: true,
+                resolveSourcePID: false,
+                reuseCachedIdentities: true,
+                skipSavedLayoutApply: true,
+                suppressAutomaticMoves: true,
+                forcePersistSavedOrder: forcePersistSavedOrder,
+                cacheAttempt: attempt
+            )
+            if attempt.didCompleteCycle {
+                return true
+            }
+
+            guard ContinuousClock.now < deadline else {
+                MenuBarItemManager.diagLog.error(
+                    "Layout editor cache refresh timed out before an authoritative cycle completed"
+                )
+                return false
+            }
+
+            do {
+                try await Task.sleep(for: MenuBarItemManager.uiSettleDelay)
+            } catch {
+                return false
+            }
+        }
+
+        return false
     }
 
     /// Caches the current menu bar items, if the items have changed
