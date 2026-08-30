@@ -1463,9 +1463,8 @@ final class MenuBarItemTriggersManager {
             return nil
         }
 
-        let image = await ScreenCapture.captureWindowAsync(with: item.windowID)
+        return await ScreenCapture.captureWindowAsync(with: item.windowID)
             ?? ScreenCapture.captureWindow(with: item.windowID)
-        return image
     }
 
     /// Captures both the runtime hash and a compact settings preview.

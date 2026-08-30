@@ -99,7 +99,7 @@ enum ImageHashing {
 
         // FNV-1a is small, deterministic across launches, and sufficient for
         // change detection. This is not used as a security primitive.
-        var hash: UInt64 = 0xcbf2_9ce4_8422_2325
+        var hash: UInt64 = 0xCBF2_9CE4_8422_2325
         let prime: UInt64 = 0x0000_0100_0000_01B3
 
         func combine(_ byte: UInt8) {

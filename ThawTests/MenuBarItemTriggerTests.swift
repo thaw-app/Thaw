@@ -806,7 +806,7 @@ struct MenuBarItemTriggerTests {
         #expect(ImageHashing.hammingDistance(mostlyBlack, mostlyWhite) > ImageHashing.changeThreshold)
     }
 
-    @Test func exactHashIsDeterministicAndPixelSensitive() throws {
+    @Test func exactHashIsDeterministicAndPixelSensitive() {
         let first = makeImage(whiteColumns: 8)
         let same = makeImage(whiteColumns: 8)
         let changed = makeImage(whiteColumns: 9)

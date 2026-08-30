@@ -17,7 +17,6 @@ import Foundation
 /// here is instance-drift tolerant, because an item's `:N` suffix can change
 /// while a trigger owns it.
 extension MenuBarItemManager {
-
     /// Updates the set of items whose temporary placement is currently owned
     /// by conditional triggers.
     ///
@@ -116,7 +115,7 @@ extension MenuBarItemManager {
     static nonisolated func triggerReleaseIdentifiersRequiringRestoration(
         _ releasedIdentifiers: Set<String>,
         savedSectionOrder: [String: [String]],
-        knownBaseIdentifiers: Set<String> = []
+        knownBaseIdentifiers _: Set<String> = []
     ) -> Set<String> {
         Set(releasedIdentifiers.filter {
             // Upstream's `savedPositionByBaseID` does its own canonical

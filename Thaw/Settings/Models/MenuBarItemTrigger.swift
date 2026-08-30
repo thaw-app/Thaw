@@ -154,7 +154,6 @@ enum ImageComparisonMode: String, Codable, Hashable, CaseIterable, Identifiable 
         case .exact: "Exact"
         }
     }
-
 }
 
 /// The hashes used at runtime plus a compact PNG used only to preview the
