@@ -336,11 +336,19 @@ extension MenuBarItemManager {
         }
     }
 
+    /// Returns the dynamic delay still required between move operations.
+    nonisolated func moveOperationBufferDuration() async -> Duration {
+        guard let timestamp = await lastMoveOperationTimestamp else {
+            return .zero
+        }
+        return max(.milliseconds(25) - timestamp.duration(to: .now), .zero)
+    }
+
     /// Waits between move operations for a dynamic amount of time,
     /// based on the timestamp of the last move operation.
     nonisolated func waitForMoveOperationBuffer() async throws {
-        if let timestamp = await lastMoveOperationTimestamp {
-            let buffer = max(.milliseconds(25) - timestamp.duration(to: .now), .zero)
+        let buffer = await moveOperationBufferDuration()
+        if buffer > .zero {
             MenuBarItemManager.diagLog.debug("Move operation buffer: \(buffer)")
             do {
                 try await Task.sleep(for: buffer)

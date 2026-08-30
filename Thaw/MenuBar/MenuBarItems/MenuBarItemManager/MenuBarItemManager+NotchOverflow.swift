@@ -351,7 +351,7 @@ extension MenuBarItemManager {
                 failureLedger.recordSuccess(for: item)
             } catch {
                 if !Self.moveAlreadyFiledFailure(for: error) {
-                    failureLedger.recordFailure(for: item, kind: Self.failureKind(of: error))
+                    failureLedger.recordFailure(for: item, kind: ledgerFailureKind(for: error, item: item))
                 }
                 MenuBarItemManager.diagLog.error(
                     "Notch overflow rebalance: failed to eject \(item.logString): \(error)"
