@@ -7,6 +7,85 @@ The `release.yml` workflow reads the section matching the release tag
 (`## [tag]`) and uses it as the release notes for both the GitHub Release
 and the Sparkle appcast, unless overridden with the `release_notes` input.
 
+## [2.0.1-rc.1]
+
+Please report issues at
+[github.com/thaw-app/Thaw/issues](https://github.com/thaw-app/Thaw/issues).
+
+Four fixes from field reports, nothing new. The largest: after a restart,
+the menu bar could sit wherever macOS had dropped the items, and
+re-applying the profile in Settings refused to run at all (#991). The
+always-hidden divider's window had dropped out of the item list while
+parked offscreen, so every layout apply that needed it either skipped
+itself or quit partway through. Thaw now recovers that divider from its
+own window record instead of searching the list. The rest: item previews
+work again in the layout editor on mixed Retina and non-Retina setups
+(#990), a drag into an empty collapsed section completes instead of
+deadlocking (#988), and overlay panels follow space switches on
+multi-display systems (#794).
+
+---
+
+### Upgrade from 2.0.0
+
+1. Update in place through Sparkle.
+2. No settings, schema, or `defaults` changes in this release. Profiles
+   and saved layouts carry over untouched.
+
+---
+
+### Main fixes
+
+1. Profile applies survive a missing always-hidden divider (#991). After
+   a restart the divider rests parked offscreen, and on macOS 26 that
+   parked window intermittently drops out of the item list Thaw
+   enumerates. Lookup then returned nil for the divider while downstream
+   steps still treated the pair as fully resolved: applies skipped
+   wholesale ("always-hidden divider unresolved while its section is
+   enabled") or abandoned after the hidden-boundary moves had already
+   run ("control items degraded before moving AH_ctrl" in the attached
+   log, four milliseconds after a clean tag resolution). The reporter's
+   bar never matched the saved profile, and manual re-applies failed the
+   same way. The control-item pair now recovers the divider from its own
+   window record, the authoritative channel the hidden divider has had
+   since #754, and refuses to adopt a lookalike window from a duplicate
+   Thaw instance. A divider the window server no longer knows is still
+   refused, now under an accurate message instead of "control items
+   degraded".
+2. Layout editor previews render on mixed-scale display setups (#990).
+   Composite captures compared pixel width against bounds times the
+   display scale and rejected any mismatch, but on a 1.0x external
+   beside a Retina display the capture backend picks its own scale: the
+   log recorded 70 rejections, an empty image cache, and gray
+   placeholders for every item. Both composite paths now derive the
+   scale from the capture itself, the same check single-item captures
+   have used since #851, and degenerate zero-width windows are filtered
+   from the bounds union so one orphaned window cannot reject a whole
+   batch.
+3. A drag into an empty collapsed section completes instead of refusing
+   forever (#988). The #923 guard refuses an editor drag whose
+   destination divider is parked offscreen and suggests opening the
+   section first; with every item in always-hidden there was nothing to
+   open and nowhere to drop, which is exactly the reporter's bar. Thaw
+   now reveals the empty destination, retargets the drag onto the
+   freshly revealed divider, and re-conceals the section once the item
+   settles. If the divider does not return within two seconds the old
+   refusal stands. A drag cancelled mid-reveal, or one the move watchdog
+   gives up on, restores the section's previous state instead of leaving
+   it showing. Disabled sections never reveal.
+4. Overlay panels stay on the space you are looking at (#794). A panel
+   kept whatever space was current when it was last shown; with
+   "displays have separate spaces" enabled, every ctrl-arrow switch
+   revealed a vanilla menu bar on both displays, and the tint, shape,
+   and background appeared only on the space that was current at
+   launch. Panels now check per display whether they sit on that
+   display's current space and re-home only when actually stranded.
+   Because the check compares each panel against its own display, the
+   fullscreen drift that forced the old flag's removal cannot return.
+   A re-check shortly after each switch re-shows a panel that a raced
+   space read leaves behind, so the old 60-second housekeeping timer
+   stays a backstop rather than the recovery path.
+
 ## [2.0.0]
 
 Please report issues at [github.com/thaw-app/Thaw/issues](https://github.com/thaw-app/Thaw/issues).
