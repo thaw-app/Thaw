@@ -11,7 +11,7 @@ and the Sparkle appcast, unless overridden with the `release_notes` input.
 
 Please report issues at [github.com/thaw-app/Thaw/issues](https://github.com/thaw-app/Thaw/issues).
 
-Hey everyone. Thaw 2.0 rebuilds the app around macOS 26 (Tahoe): Liquid Glass throughout, a redesigned settings surface, an automation layer built on `thaw://`, and a menu bar pipeline rewritten around item identity, layout persistence, and knowing when to leave the bar alone. The cycle ran sixteen releases: `1.3.0-beta.1` shipped Settings Profiles in April, fifteen betas followed, and five release candidates carried the work home. Nearly everything after beta.15 came out of field logs, real menu bars misbehaving in ways no test caught. This entry walks the run by theme. The detailed per-fix notes live in the RC entries in the [full changelog](https://github.com/thaw-app/Thaw/blob/development/CHANGELOG.md).
+Hey everyone. Thaw 2.0 rebuilds the app around macOS 26 (Tahoe): Liquid Glass throughout, a redesigned settings surface, an automation layer built on `thaw://`, and a menu bar pipeline rewritten around item identity, layout persistence, and knowing when to leave the bar alone. The cycle ran twenty-two releases: `1.3.0-beta.1` shipped Settings Profiles in April, fifteen betas followed, and six release candidates carried the work home. Nearly everything after beta.15 came out of field logs, real menu bars misbehaving in ways no test caught. This entry walks the run by theme. The detailed per-fix notes live in the RC entries in the [full changelog](https://github.com/thaw-app/Thaw/blob/development/CHANGELOG.md).
 
 ---
 ### Upgrade notes
@@ -178,10 +178,7 @@ If you find Thaw useful and want to support its development:
 - Patreon: https://www.patreon.com/c/stonerl
 - PayPal: https://www.paypal.me/tonifoerster
 
-## [2.0.0-unreleased.rc]
-
-<!-- Rename this heading to the real tag before cutting the release:
-     release.yml ships only the section whose heading matches the tag. -->
+## [2.0.0-rc-unreleased]
 
 ### Changed
 

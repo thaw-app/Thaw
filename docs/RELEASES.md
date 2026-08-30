@@ -127,12 +127,12 @@ real release.
 
 ## Channels
 
-Stable and beta share one appcast, which marks beta items with
-`sparkle:channel`; alpha has an appcast of its own. All of them are served from
-the same feed host and updates releases. Tag suffixes map to channels in the
-release workflow (`-beta` / `-rc` → beta, `-alpha` / `-nightly` → alpha), and
-the `channel` input overrides the inference when a tag needs to go somewhere
-its suffix does not imply.
+All three channels share one appcast, served from the feed host named by
+`SUFeedURL`. Stable items carry no `sparkle:channel`; beta and alpha items are
+tagged with theirs. Tag suffixes map to channels in the release workflow
+(`-beta` / `-rc` → beta, `-alpha` / `-nightly` → alpha), and the `channel`
+input overrides the inference when a tag needs to go somewhere its suffix does
+not imply.
 
 Subscribers pick one channel in Settings › About. All three read the same
 `SUFeedURL`; the appcast's `sparkle:channel` tags do the sorting.
