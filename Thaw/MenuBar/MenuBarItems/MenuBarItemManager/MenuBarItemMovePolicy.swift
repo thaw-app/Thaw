@@ -53,6 +53,8 @@ extension MenuBarItemManager {
             case superseded
             /// The press outlived its deadline and was released by the guard.
             case overran
+            /// The selected endpoints do not form a safe path on one display.
+            case unsafePath
             /// Anything else.
             case other
         }
@@ -86,6 +88,8 @@ extension MenuBarItemManager {
             /// A press was released by the deadline guard, or the move as a
             /// whole ran past its deadline.
             case overran
+            /// No transport can safely connect the selected endpoints.
+            case unsafePath
             /// Every attempt displaced the item without landing it.
             case budgetExhausted
             /// The final attempt failed for an unclassified reason.
@@ -103,7 +107,7 @@ extension MenuBarItemManager {
                 switch self {
                 case .targetMoved, .targetRetreating, .ownerAlwaysSilent, .ownerSilent, .overran, .budgetExhausted, .other:
                     true
-                case .refusedByMacOS, .ownerUnresponsive, .itemGone, .destinationGone, .superseded:
+                case .refusedByMacOS, .ownerUnresponsive, .itemGone, .destinationGone, .superseded, .unsafePath:
                     false
                 }
             }
@@ -115,7 +119,7 @@ extension MenuBarItemManager {
                 switch self {
                 case .ownerUnresponsive, .ownerAlwaysSilent, .ownerSilent:
                     true
-                case .refusedByMacOS, .targetMoved, .targetRetreating, .itemGone, .destinationGone, .superseded, .overran, .budgetExhausted, .other:
+                case .refusedByMacOS, .targetMoved, .targetRetreating, .itemGone, .destinationGone, .superseded, .overran, .unsafePath, .budgetExhausted, .other:
                     false
                 }
             }
@@ -132,6 +136,7 @@ extension MenuBarItemManager {
                 case .destinationGone: "destination gone"
                 case .superseded: "superseded"
                 case .overran: "overran deadline"
+                case .unsafePath: "unsafe path"
                 case .budgetExhausted: "budget exhausted"
                 case .other: "other"
                 }
@@ -248,6 +253,8 @@ extension MenuBarItemManager {
                     return .stop(.superseded)
                 case .overran:
                     return .stop(.overran)
+                case .unsafePath:
+                    return .stop(.unsafePath)
                 case .ownerSilent:
                     // An owner with a standing record of ignoring synthetic
                     // events gets no further attempts once it fails this way
@@ -308,6 +315,8 @@ extension MenuBarItemManager {
                 .superseded
             case .moveTimedOut:
                 .overran
+            case .unsafeMovePath:
+                .unsafePath
             case .cannotComplete, .invalidEventSource, .missingMouseLocation, .eventCreationFailure,
                  .itemNotMovable, .menuTrackingActive, .eventWindowMismatch, .staleDestination,
                  .inputPauseTimedOut, .dropReverted, .moveEngineBusy:
@@ -344,7 +353,7 @@ extension MenuBarItemManager {
         case .cannotComplete, .invalidEventSource, .missingMouseLocation, .eventCreationFailure,
              .itemNotMovable, .missingItemBounds, .missingDestinationBounds, .menuTrackingActive, .eventWindowMismatch,
              .staleDestination, .inputPauseTimedOut, .moveSuperseded, .dropReverted,
-             .moveEngineBusy, .moveTimedOut:
+             .moveEngineBusy, .moveTimedOut, .unsafeMovePath:
             return .other
         }
     }
@@ -411,6 +420,8 @@ extension MenuBarItemManager {
             EventError.moveSuperseded(item)
         case .overran:
             EventError.moveTimedOut(item)
+        case .unsafePath:
+            EventError.unsafeMovePath(item)
         case .ownerAlwaysSilent, .ownerSilent, .other:
             (lastError as? EventError) ?? EventError.cannotComplete
         case .budgetExhausted:
