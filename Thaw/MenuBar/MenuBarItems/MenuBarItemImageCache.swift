@@ -948,12 +948,30 @@ final class MenuBarItemImageCache: @unchecked Sendable {
             return result
         }
 
-        let expectedWidth = boundsUnion.width * scale
-        let actualWidth = CGFloat(compositeImage.width)
-        guard actualWidth == expectedWidth else {
-            MenuBarItemImageCache.diagLog.warning("compositeCapture: width mismatch — expected \(expectedWidth) (boundsUnion.width=\(boundsUnion.width) * scale=\(scale)) but got \(actualWidth). Image dimensions: \(compositeImage.width)x\(compositeImage.height)")
+        // The capture backend picks the pixel scale, not Thaw: SCK captures
+        // at best resolution for whichever display owns the filter, and on a
+        // mixed-scale setup that need not be the display whose
+        // backingScaleFactor was handed in (#990: a 1.0x external beside a
+        // Retina display produced 2x pixels — "expected 522.0, got 1044" —
+        // the exact-equality guard rejected every composite, and the layout
+        // editor fell back to gray placeholders). Resolve the scale from the
+        // capture itself, the same check individualCapture already applies
+        // (#851/#736), and crop with it.
+        guard let effectiveScale = MenuBarItemImageCache.resolvedScale(
+            imagePixelWidth: compositeImage.width,
+            boundsWidth: boundsUnion.width,
+            expected: scale
+        ) else {
+            MenuBarItemImageCache.diagLog.warning(
+                "compositeCapture: implausible scale — \(compositeImage.width)px wide for a \(boundsUnion.width)pt union at expected scale \(scale), excluding \(windowIDs.count) windows"
+            )
             result.excluded = itemsWithBounds.map(\.item)
             return result
+        }
+        if effectiveScale != scale {
+            MenuBarItemImageCache.diagLog.warning(
+                "compositeCapture: capture scale \(effectiveScale) differs from display scale \(scale); using the captured scale"
+            )
         }
 
         guard !compositeImage.isTransparent() else {
@@ -985,10 +1003,10 @@ final class MenuBarItemImageCache: @unchecked Sendable {
             }
 
             let cropRect = CGRect(
-                x: (bounds.origin.x - boundsUnion.origin.x) * scale,
-                y: (bounds.origin.y - boundsUnion.origin.y) * scale,
-                width: bounds.width * scale,
-                height: bounds.height * scale
+                x: (bounds.origin.x - boundsUnion.origin.x) * effectiveScale,
+                y: (bounds.origin.y - boundsUnion.origin.y) * effectiveScale,
+                width: bounds.width * effectiveScale,
+                height: bounds.height * effectiveScale
             )
 
             let croppedImage = compositeImage.cropping(to: cropRect)?.detachedCopy()
@@ -1010,7 +1028,7 @@ final class MenuBarItemImageCache: @unchecked Sendable {
             recordCaptureSuccess(for: item)
             result.images[item.tag] = CapturedImage(
                 cgImage: croppedImage,
-                scale: scale
+                scale: effectiveScale
             )
         }
 
@@ -1326,10 +1344,24 @@ final class MenuBarItemImageCache: @unchecked Sendable {
             return
         }
 
-        let expectedWidth = boundsUnion.width * scale
-        guard CGFloat(compositeImage.width) == expectedWidth else {
-            MenuBarItemImageCache.diagLog.debug("refreshImages: width mismatch (expected \(expectedWidth), got \(compositeImage.width)), skipping")
+        // Same resolved-scale treatment as compositeCapture (#990): a 2x
+        // capture of a 1x display's strip is a good image, not a mismatch to
+        // skip. Skipping here starved the hidden/always-hidden strips of the
+        // layout editor entirely.
+        guard let effectiveScale = MenuBarItemImageCache.resolvedScale(
+            imagePixelWidth: compositeImage.width,
+            boundsWidth: boundsUnion.width,
+            expected: scale
+        ) else {
+            MenuBarItemImageCache.diagLog.debug(
+                "refreshImages: implausible scale (\(compositeImage.width)px for a \(boundsUnion.width)pt union at expected scale \(scale)), skipping"
+            )
             return
+        }
+        if effectiveScale != scale {
+            MenuBarItemImageCache.diagLog.debug(
+                "refreshImages: capture scale \(effectiveScale) differs from display scale \(scale); using the captured scale"
+            )
         }
 
         guard !compositeImage.isTransparent() else {
@@ -1341,10 +1373,10 @@ final class MenuBarItemImageCache: @unchecked Sendable {
         for windowID in windowIDs {
             guard let (item, bounds) = storage[windowID] else { continue }
             let cropRect = CGRect(
-                x: (bounds.origin.x - boundsUnion.origin.x) * scale,
-                y: (bounds.origin.y - boundsUnion.origin.y) * scale,
-                width: bounds.width * scale,
-                height: bounds.height * scale
+                x: (bounds.origin.x - boundsUnion.origin.x) * effectiveScale,
+                y: (bounds.origin.y - boundsUnion.origin.y) * effectiveScale,
+                width: bounds.width * effectiveScale,
+                height: bounds.height * effectiveScale
             )
             // No per-item isTransparent() here: the composite-level check
             // above already rejects fully-transparent captures. Individual
@@ -1353,7 +1385,7 @@ final class MenuBarItemImageCache: @unchecked Sendable {
             guard let image = compositeImage.cropping(to: cropRect)?.detachedCopy() else {
                 continue
             }
-            newImages[item.tag] = CapturedImage(cgImage: image, scale: scale)
+            newImages[item.tag] = CapturedImage(cgImage: image, scale: effectiveScale)
         }
 
         guard !newImages.isEmpty, !Task.isCancelled else { return }

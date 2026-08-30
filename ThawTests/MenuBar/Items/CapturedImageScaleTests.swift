@@ -11,15 +11,18 @@ import Testing
 @testable import Thaw
 
 /// Covers `MenuBarItemImageCache.resolvedScale(imagePixelWidth:boundsWidth:expected:)`,
-/// the check `individualCapture` was missing in #851/#736.
+/// the check `individualCapture` was missing in #851/#736 and that
+/// `compositeCapture` and `refreshImages` were still bypassing in #990.
 ///
-/// `compositeCapture` and `refreshImages` both compare an image's pixel
-/// width against `bounds.width * scale` and reject a mismatch.
-/// `individualCapture` did not — and it is the path that runs *after*
-/// `compositeCapture` rejects a capture, so the guard's own failure route
-/// fed the bug. An image cached under the wrong scale makes every consumer
-/// double the item's point size, which is the oversized Layout rows in the
-/// report.
+/// The two composite paths used to compare an image's pixel width against
+/// `bounds.width * scale` and reject a mismatch, while `individualCapture`
+/// ran after that rejection as the fallback — and itself fed the bug in
+/// #851/#736 by caching under an unverified scale. #990 was the remaining
+/// half: on a 1x external beside a Retina display, SCK returned 2x pixels
+/// for the visible strip ("expected 522.0, got 1044") and SkyLight returned
+/// them for the offscreen strips ("expected 5365.0, got 10730"), so every
+/// composite was rejected wholesale and the layout editor showed gray
+/// placeholders. Both paths now resolve the scale the same way.
 @Suite("Captured image scale resolution")
 struct CapturedImageScaleTests {
     @Test("Agreement returns the expected scale unchanged")
@@ -42,6 +45,23 @@ struct CapturedImageScaleTests {
         // (compositeCapture logged "expected 925.0 ... but got 1850.0").
         #expect(
             MenuBarItemImageCache.resolvedScale(imagePixelWidth: 1850, boundsWidth: 925, expected: 1)
+                == 2
+        )
+    }
+
+    @Test("The #990 composite strips resolve to the captured scale")
+    func mixedScaleCompositeStripsResolve() {
+        // The exact shapes from the #990 log: a 1.0x external display next
+        // to a Retina one. SCK captured the 15-item visible strip at 2x and
+        // SkyLight captured the 16 offscreen hidden/always-hidden items at
+        // 2x; the exact-equality guards rejected both composites, and the
+        // layout editor drew gray placeholders for every item.
+        #expect(
+            MenuBarItemImageCache.resolvedScale(imagePixelWidth: 1044, boundsWidth: 522, expected: 1)
+                == 2
+        )
+        #expect(
+            MenuBarItemImageCache.resolvedScale(imagePixelWidth: 10730, boundsWidth: 5365, expected: 1)
                 == 2
         )
     }
