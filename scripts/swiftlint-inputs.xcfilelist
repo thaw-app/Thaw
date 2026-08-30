@@ -72,6 +72,7 @@ $(SRCROOT)/Thaw/MenuBar/LayoutBar/LayoutBarNewItemsBadgeView.swift
 $(SRCROOT)/Thaw/MenuBar/LayoutBar/LayoutBarPaddingView.swift
 $(SRCROOT)/Thaw/MenuBar/LayoutBar/LayoutBarScrollView.swift
 $(SRCROOT)/Thaw/MenuBar/LayoutBar/MenuBarLayoutEditorPanel.swift
+$(SRCROOT)/Thaw/MenuBar/LayoutBar/MoveFailureDiagnosticReport.swift
 $(SRCROOT)/Thaw/MenuBar/LayoutBar/NotchIndicatorOverlay.swift
 $(SRCROOT)/Thaw/MenuBar/MenuBarItems/AXIdentityCatalog.swift
 $(SRCROOT)/Thaw/MenuBar/MenuBarItems/AXItemActivator.swift

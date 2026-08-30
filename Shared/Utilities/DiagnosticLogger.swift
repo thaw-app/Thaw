@@ -92,6 +92,15 @@ final nonisolated class DiagnosticLogger: @unchecked Sendable {
         currentLogFileLock.withLock { $0 }
     }
 
+    /// A bounded text view of the newest bytes in one diagnostic log file.
+    struct TailSnapshot: Equatable {
+        /// The log file that was read.
+        let fileURL: URL
+
+        /// UTF-8 decoded text from the bounded tail window.
+        let text: String
+    }
+
     /// The file handle for writing.
     private let fileHandleLock = OSAllocatedUnfairLock<FileHandle?>(initialState: nil)
 
@@ -567,6 +576,59 @@ final nonisolated class DiagnosticLogger: @unchecked Sendable {
         } catch {
             osLog.warning("Failed to clean up old log files: \(error)")
         }
+    }
+
+    // MARK: - Snapshots
+
+    /// Returns a bounded tail of the active or most recent diagnostic log.
+    ///
+    /// The read is submitted to ``writeQueue`` so every write already accepted
+    /// by ``log(level:category:message:)`` is complete before the snapshot is
+    /// taken. File lookup and I/O also stay off the caller's executor.
+    func tailSnapshot(maxBytes: Int) async -> TailSnapshot? {
+        guard maxBytes > 0 else { return nil }
+        return await withCheckedContinuation { continuation in
+            writeQueue.async { [weak self] in
+                guard
+                    let self,
+                    let fileURL = self.currentLogFile ?? self.latestLogFile,
+                    let text = try? Self.readTail(from: fileURL, maxBytes: maxBytes)
+                else {
+                    continuation.resume(returning: nil)
+                    return
+                }
+                continuation.resume(returning: TailSnapshot(fileURL: fileURL, text: text))
+            }
+        }
+    }
+
+    /// Reads no more than `maxBytes` from the end of `fileURL`.
+    ///
+    /// When the window begins inside a line, that incomplete line is dropped.
+    /// `String(decoding:as:)` deliberately tolerates a trailing partial UTF-8
+    /// scalar, which another process can expose while appending to the shared
+    /// log file.
+    static func readTail(from fileURL: URL, maxBytes: Int) throws -> String {
+        guard maxBytes > 0 else { return "" }
+        let handle = try FileHandle(forReadingFrom: fileURL)
+        defer { try? handle.close() }
+
+        let fileSize = try handle.seekToEnd()
+        let byteLimit = UInt64(maxBytes)
+        let startOffset = fileSize > byteLimit ? fileSize - byteLimit : 0
+        try handle.seek(toOffset: startOffset)
+        let data = try handle.read(upToCount: maxBytes) ?? Data()
+
+        let completeData: Data
+        if startOffset > 0 {
+            guard let newline = data.firstIndex(of: 0x0A) else { return "" }
+            completeData = Data(data.suffix(from: data.index(after: newline)))
+        } else {
+            completeData = data
+        }
+        // Replacement characters keep partial cross-process writes readable.
+        // swiftlint:disable:next optional_data_string_conversion
+        return String(decoding: completeData, as: UTF8.self)
     }
 
     // MARK: - Logging

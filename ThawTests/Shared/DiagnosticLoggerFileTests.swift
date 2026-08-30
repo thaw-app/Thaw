@@ -166,6 +166,59 @@ struct DiagnosticLoggerFileTests {
         }
     }
 
+    @Test("A tail snapshot waits for pending writes")
+    func tailSnapshotIncludesPendingWrites() async throws {
+        try await withTemporaryLogDirectory { tmp in
+            let file = tmp.appendingPathComponent("thaw.log")
+            let marker = "snapshot-marker-\(UUID().uuidString)"
+            DiagnosticLogger.shared.attachToFile(at: file)
+
+            DiagnosticLogger.shared.log(level: .error, category: "FileTests", message: marker)
+            let snapshot = await DiagnosticLogger.shared.tailSnapshot(maxBytes: 64 * 1024)
+
+            #expect(snapshot?.fileURL == file)
+            #expect(snapshot?.text.contains("[ERROR] [FileTests] \(marker)") == true)
+        }
+    }
+
+    @Test("A tail snapshot reads only the bounded newest window")
+    func tailSnapshotIsBounded() async throws {
+        try await withTemporaryLogDirectory { tmp in
+            let file = tmp.appendingPathComponent("thaw.log")
+            DiagnosticLogger.shared.attachToFile(at: file)
+            let oldMarker = "old-marker-\(UUID().uuidString)"
+            let newestMarker = "newest-marker-\(UUID().uuidString)"
+            DiagnosticLogger.shared.log(
+                level: .debug,
+                category: "FileTests",
+                message: oldMarker + String(repeating: "x", count: 16 * 1024)
+            )
+            DiagnosticLogger.shared.log(level: .debug, category: "FileTests", message: newestMarker)
+
+            let snapshot = await DiagnosticLogger.shared.tailSnapshot(maxBytes: 1024)
+
+            #expect(snapshot?.text.utf8.count ?? .max <= 1024)
+            #expect(snapshot?.text.contains(newestMarker) == true)
+            #expect(snapshot?.text.contains(oldMarker) == false)
+        }
+    }
+
+    @Test("Tail decoding tolerates an incomplete UTF-8 scalar")
+    func tailSnapshotToleratesPartialUTF8() throws {
+        let file = FileManager.default.temporaryDirectory
+            .appendingPathComponent("\(UUID().uuidString)-partial-utf8.log")
+        defer { try? FileManager.default.removeItem(at: file) }
+        var bytes = Data("complete line\ntruncated value ".utf8)
+        bytes.append(contentsOf: [0xF0, 0x9F, 0x92])
+        try bytes.write(to: file)
+
+        let text = try DiagnosticLogger.readTail(from: file, maxBytes: bytes.count)
+
+        #expect(text.contains("complete line"))
+        #expect(text.contains("truncated value"))
+        #expect(text.contains("\u{FFFD}"))
+    }
+
     @Test("A message logged while disabled is dropped rather than buffered")
     func messagesLoggedWhileDisabledAreDropped() async throws {
         try await withTemporaryLogDirectory { tmp in

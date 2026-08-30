@@ -61507,6 +61507,12 @@
         }
       }
     },
+    "Save Diagnostic Report" : {
+
+    },
+    "Save Diagnostic Report…" : {
+
+    },
     "Save the global template to the active profile \"%@\", or save it to every profile." : {
       "comment" : "A message that instructs the user to save the global template to a profile.",
       "localizations" : {
@@ -72074,6 +72080,9 @@
           }
         }
       }
+    },
+    "The report retains installed-app identities, menu-item titles and status text, and display/menu-bar geometry for debugging. It attempts to redact other potentially sensitive information, but redaction cannot be guaranteed. Review the report before sharing it." : {
+
     },
     "The language change applies after %@ relaunches." : {
       "localizations" : {
