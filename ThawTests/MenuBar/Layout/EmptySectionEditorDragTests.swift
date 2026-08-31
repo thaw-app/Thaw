@@ -123,4 +123,27 @@ struct EmptySectionEditorDragTests {
             )
         )
     }
+
+    @Test("An always-hidden destination reveals the hidden section with it (#1010)")
+    func alwaysHiddenDestinationRevealsLeadingSections() {
+        // #1010: the always-hidden divider parks to the LEFT of the hidden
+        // section's content. Revealing the always-hidden section alone
+        // shrinks its parked spacer, but AppKit re-places the divider just
+        // left of the hidden section's still-parked content, so it never
+        // comes onscreen and the reveal times out into the #923 refusal —
+        // the reporter's "still same error even after a few system
+        // restarts". The hidden section must expand with it.
+        #expect(
+            LayoutBarPaddingView.sectionsToRevealForEditorDrag(forDividerTag: .alwaysHiddenControlItem)
+                == [.hidden, .alwaysHidden]
+        )
+        // A hidden destination has nothing parked ahead of it that a reveal
+        // would not cover; non-divider tags reveal nothing at all.
+        #expect(
+            LayoutBarPaddingView.sectionsToRevealForEditorDrag(forDividerTag: .hiddenControlItem)
+                == [.hidden]
+        )
+        #expect(LayoutBarPaddingView.sectionsToRevealForEditorDrag(forDividerTag: .visibleControlItem).isEmpty)
+        #expect(LayoutBarPaddingView.sectionsToRevealForEditorDrag(forDividerTag: .clock).isEmpty)
+    }
 }

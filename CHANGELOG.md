@@ -7,6 +7,25 @@ The `release.yml` workflow reads the section matching the release tag
 (`## [tag]`) and uses it as the release notes for both the GitHub Release
 and the Sparkle appcast, unless overridden with the `release_notes` input.
 
+## [Unreleased]
+
+Please report issues at
+[github.com/thaw-app/Thaw/issues](https://github.com/thaw-app/Thaw/issues).
+
+### Fixed
+
+1. A drag into an empty, collapsed Always-Hidden section now works even
+   when the Hidden section is also collapsed (#1010). The #988 reveal
+   expanded only the destination section, but the always-hidden divider
+   parks to the left of the hidden section's content: with the hidden
+   section collapsed behind its 10000-point spacer, the revealed divider
+   was re-placed just left of that still-parked content and never came
+   onscreen, so every drag timed out into the "open the section"
+   refusal — advice that could not help, since only expanding the hidden
+   section puts the always-hidden boundary onscreen. The reveal now
+   expands the hidden section alongside the always-hidden section and
+   restores both once the item settles.
+
 ## [2.0.1-rc.1]
 
 Please report issues at
