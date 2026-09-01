@@ -341,7 +341,7 @@ jobs:
 
       - name: Create updates GitHub Release (ZIP + deltas)
         if: ${{ !inputs.dry_run }}
-        uses: softprops/action-gh-release@3d0d9888cb7fd7b750713d6e236d1fcb99157228 # v3
+        uses: softprops/action-gh-release@efb35369e0ad2afab669f228072c1b0d510eae64 # v3
         with:
           # v3 ignores env GITHUB_TOKEN; token input is required for cross-repo.
           # UPDATES_GITHUB_TOKEN is a release-environment secret only.
@@ -379,7 +379,7 @@ jobs:
 
       - name: Create Thaw GitHub Release (DMG + SBOM + Sparkle payloads)
         if: ${{ !inputs.dry_run }}
-        uses: softprops/action-gh-release@3d0d9888cb7fd7b750713d6e236d1fcb99157228 # v3
+        uses: softprops/action-gh-release@efb35369e0ad2afab669f228072c1b0d510eae64 # v3
         with:
           # softprops v3 uses the token input (env GITHUB_TOKEN is ignored).
           token: ${{ github.token }}
