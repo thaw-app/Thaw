@@ -30,7 +30,7 @@ enum MenuBarTintKind: Int, CaseIterable, Identifiable {
 
     /// Whether the tint is derived from the desktop wallpaper, and so needs
     /// the wallpaper sampled to render at all.
-    var isAdaptive: Bool {
+    nonisolated var isAdaptive: Bool {
         switch self {
         case .adaptive, .adaptiveGradient: true
         case .noTint, .solid, .gradient, .glass: false

@@ -161,8 +161,23 @@ final class LayoutBarPaddingView: NSView {
             // skip the group, and split it across sections.
             var arrangedItems = items(in: arrangedViews)
             if let sourceContainer, sourceContainer !== container {
-                let known = Set(arrangedItems.map(\.tag))
-                arrangedItems += items(in: sourceContainer.arrangedViews).filter { !known.contains($0.tag) }
+                // The unit comes back in the order of the items it was
+                // resolved against, and the block move commits that order, so
+                // the source bar has to lead: put the dragged view back in the
+                // slot it left and let the destination fill in behind it.
+                // Leading with the destination would rank the dragged member
+                // ahead of the siblings it was taken from and turn a group of
+                // a1, a2, a3 into a2, a1, a3 as soon as a2 is the one dragged.
+                var sourceViews = sourceContainer.arrangedViews
+                if !sourceViews.contains(draggingSource),
+                   let oldIndex = draggingSource.oldContainerInfo?.index
+                {
+                    sourceViews.insert(draggingSource, at: min(oldIndex, sourceViews.count))
+                }
+                arrangedItems = Self.groupResolutionItems(
+                    sourceItems: items(in: sourceViews),
+                    destinationItems: arrangedItems
+                )
             }
             draggedUnit = appState.itemGroupManager.dragUnit(for: draggedItem, in: arrangedItems)
         } else if case let .item(draggedItem) = draggingSource.kind {
@@ -588,6 +603,20 @@ final class LayoutBarPaddingView: NSView {
             return true
         }
         return false
+    }
+
+    /// The items a cross-container drop resolves its drag unit against.
+    ///
+    /// The source bar leads: the members that stayed behind still hold their
+    /// pre-drag order there, and that is the order the unit has to keep. The
+    /// destination contributes whatever the source does not already hold, so a
+    /// member that was already sitting there is still gathered into the block.
+    static nonisolated func groupResolutionItems(
+        sourceItems: [MenuBarItem],
+        destinationItems: [MenuBarItem]
+    ) -> [MenuBarItem] {
+        let known = Set(sourceItems.map(\.tag))
+        return sourceItems + destinationItems.filter { !known.contains($0.tag) }
     }
 
     private func items(in views: [LayoutBarArrangedView]) -> [MenuBarItem] {

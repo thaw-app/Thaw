@@ -97,3 +97,63 @@ struct LayoutBarItemActivationTests {
         ))
     }
 }
+
+/// A cross-container drop only inserts the dragged view into the destination,
+/// so the drag unit is resolved against both bars. The order those items are
+/// handed over in is the order the block move commits, which is why the source
+/// bar leads.
+@Suite("Cross-container group drag ordering")
+struct LayoutBarGroupResolutionOrderTests {
+    private func item(_ bundleID: String, _ title: String, _ windowID: CGWindowID) -> MenuBarItem {
+        .fixture(tag: .appItem(bundleID: bundleID, title: title), windowID: windowID)
+    }
+
+    @Test("A member dragged out of its group keeps its place in the source order")
+    func draggedMemberKeepsSourceOrder() throws {
+        let first = item("com.example.a", "1", 1)
+        let dragged = item("com.example.a", "2", 2)
+        let last = item("com.example.a", "3", 3)
+        let unrelated = item("com.example.b", "1", 4)
+
+        // The dragged item shows up in the destination and is restored to the
+        // slot it left in the source before the unit is resolved.
+        let resolutionItems = LayoutBarPaddingView.groupResolutionItems(
+            sourceItems: [first, dragged, last],
+            destinationItems: [unrelated, dragged]
+        )
+        let groups = MenuBarItemGroupResolver.resolve(
+            tags: resolutionItems.map(\.tag),
+            groupSet: .empty
+        )
+        let draggedIndex = try #require(resolutionItems.firstIndex { $0.tag == dragged.tag })
+        let unit = MenuBarItemGroupResolver
+            .dragUnitIndices(forIndex: draggedIndex, in: groups)
+            .map { resolutionItems[$0].tag }
+
+        #expect(unit == [first.tag, dragged.tag, last.tag])
+    }
+
+    @Test("A member already sitting in the destination still joins the unit")
+    func destinationMemberJoinsTheUnit() throws {
+        let first = item("com.example.a", "1", 1)
+        let dragged = item("com.example.a", "2", 2)
+        let stranded = item("com.example.a", "3", 3)
+        let unrelated = item("com.example.b", "1", 4)
+
+        let resolutionItems = LayoutBarPaddingView.groupResolutionItems(
+            sourceItems: [first, dragged],
+            destinationItems: [unrelated, dragged, stranded]
+        )
+        let groups = MenuBarItemGroupResolver.resolve(
+            tags: resolutionItems.map(\.tag),
+            groupSet: .empty
+        )
+        let draggedIndex = try #require(resolutionItems.firstIndex { $0.tag == dragged.tag })
+        let unit = MenuBarItemGroupResolver
+            .dragUnitIndices(forIndex: draggedIndex, in: groups)
+            .map { resolutionItems[$0].tag }
+
+        #expect(resolutionItems.map(\.tag) == [first.tag, dragged.tag, unrelated.tag, stranded.tag])
+        #expect(unit == [first.tag, dragged.tag, stranded.tag])
+    }
+}

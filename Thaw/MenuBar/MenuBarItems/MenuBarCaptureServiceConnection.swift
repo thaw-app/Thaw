@@ -24,6 +24,11 @@ extension MenuBarCaptureService {
         /// Tracks what the current helper process has been told about
         /// diagnostic logging.
         private struct LoggingSyncState {
+            /// Whether a configuration request is on the wire right now. Only
+            /// one may be: two sends started close together can reach the
+            /// helper in the opposite order, and the loser would leave it
+            /// pointed at a file the app has already rotated away.
+            var isSending = false
             /// Whether the helper has never been told which log file to write
             /// to. Set when the session is replaced — a recycled or relaunched
             /// helper starts from scratch — and cleared by the next successful
@@ -67,26 +72,59 @@ extension MenuBarCaptureService {
         /// without this push it silently falls back to OSLog-only logging.
         /// Sent even with logging off, so the helper still prunes the shared
         /// directory by the app's rules rather than by its own defaults.
+        ///
+        /// The log file is read at send time rather than by the caller: a
+        /// caller that arrives while a push is in flight returns right away,
+        /// and the sender already running picks its work up with a file that
+        /// is at least as new as the one that caller would have passed along.
         func syncLogging() async {
-            let logFile = DiagnosticLogger.shared.currentLogFile
-            // Recorded before the send rather than after it: the session can be
-            // dropped while the request is in flight, and the invalidation that
-            // marks the configuration outstanding again must survive this
-            // send's success.
-            loggingSync.withLock { state in
-                state.isPending = false
-                state.syncedLogFile = logFile
+            // One sender at a time. Sends started from different threads reach
+            // the helper in whatever order they hit the wire, so an older
+            // configuration could otherwise land last and stick.
+            let isSender = loggingSync.withLock { state -> Bool in
+                state.isPending = true
+                guard !state.isSending else { return false }
+                state.isSending = true
+                return true
             }
-            guard case .configureLogging = await session.sendAsync(
-                request: .configureLogging(
-                    filePath: logFile?.path,
-                    rotationPolicy: DiagnosticLogger.shared.rotationPolicy
-                )
-            ) else {
-                // Left outstanding on purpose: the next batch retries it.
-                diagLog.error("Capture helper rejected logging configuration")
-                loggingSync.withLock { $0.isPending = true }
-                return
+            guard isSender else { return }
+
+            while loggingSync.withLock({ state -> Bool in
+                if state.isPending {
+                    state.isPending = false
+                    return true
+                }
+                // No outstanding work: release the sender role in the same
+                // critical section that observed the empty flag. Clearing it
+                // after the lock was released races a caller that arrived in
+                // between — it saw the role taken, declined to send, and the
+                // pending flag it had just set would be stranded with no
+                // sender left to service it.
+                state.isSending = false
+                return false
+            }) {
+                let logFile = DiagnosticLogger.shared.currentLogFile
+                // Recorded before the send rather than after it: the session
+                // can be dropped while the request is in flight, and the
+                // invalidation that marks the configuration outstanding again
+                // must survive this send's success.
+                loggingSync.withLock { $0.syncedLogFile = logFile }
+                guard case .configureLogging = await session.sendAsync(
+                    request: .configureLogging(
+                        filePath: logFile?.path,
+                        rotationPolicy: DiagnosticLogger.shared.rotationPolicy
+                    )
+                ) else {
+                    // Left outstanding on purpose: the next batch retries it.
+                    // The sender role goes back in the same critical section,
+                    // so the retry has someone to run it.
+                    diagLog.error("Capture helper rejected logging configuration")
+                    loggingSync.withLock { state in
+                        state.isPending = true
+                        state.isSending = false
+                    }
+                    return
+                }
             }
         }
 

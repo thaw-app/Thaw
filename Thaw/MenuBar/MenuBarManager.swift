@@ -127,6 +127,11 @@ final class MenuBarManager {
     /// Per-screen colors cached before sleep, restored on wake to avoid stale/white flash.
     private var sleepColorCache: [CGDirectDisplayID: MenuBarAverageColorInfo]?
 
+    /// Identifies the most recently started capture pass, so results that land
+    /// after a newer pass has published its own can be dropped.
+    @ObservationIgnored
+    private var captureGeneration = 0
+
     /// Polling state for adaptive wake stabilization.
     private var wakePollTimer: AnyCancellable?
     private var wakePollPrevColors: [CGDirectDisplayID: MenuBarAverageColorInfo]?
@@ -344,12 +349,7 @@ final class MenuBarManager {
         .receive(on: DispatchQueue.main)
         .sink { [weak self] in
             guard let self else { return }
-            let isAdaptiveActive: Bool = {
-                guard let appState = self.appState else { return false }
-                let current = appState.appearanceManager.effectiveConfiguration.current
-                return current.backgroundKind == .adaptive || current.tintKind.isAdaptive
-            }()
-            guard settingsWindow?.isVisible == true || isAdaptiveActive else { return }
+            guard settingsWindow?.isVisible == true || adaptiveCaptureRequirements?.isAdaptive == true else { return }
             updateAverageColorInfo()
         }
         .store(in: &c)
@@ -373,12 +373,7 @@ final class MenuBarManager {
             .publisher(for: NSWorkspace.screensDidWakeNotification)
             .sink { [weak self] _ in
                 guard let self else { return }
-                let isAdaptiveActive: Bool = {
-                    guard let appState = self.appState else { return false }
-                    let current = appState.appearanceManager.effectiveConfiguration.current
-                    return current.backgroundKind == .adaptive || current.tintKind.isAdaptive
-                }()
-                guard isAdaptiveActive else { return }
+                guard adaptiveCaptureRequirements?.isAdaptive == true else { return }
 
                 guard let cache = sleepColorCache else {
                     updateAverageColorInfo()
@@ -386,6 +381,11 @@ final class MenuBarManager {
                 }
 
                 // Restore pre-sleep colors so the bar never flashes white.
+                // Stamping a new pass drops any capture still in flight from
+                // before the sleep, so it cannot land afterwards and overwrite
+                // the restore with whatever the screen looked like on its way
+                // out.
+                captureGeneration += 1
                 averageColors = cache
                 if let id = NSScreen.screenWithActiveMenuBar?.displayID,
                    let cached = cache[id]
@@ -447,7 +447,7 @@ final class MenuBarManager {
         if let appState {
             appearanceConfigurationObservationTask?.cancel()
             appearanceConfigurationObservationTask = Task { [weak self, weak appState] in
-                var previousIsAdaptive: Bool?
+                var previousRequirements: AdaptiveCaptureRequirements?
                 // Observed from the effective configuration for the same
                 // reason as updateAverageColorInfoAsync above: the adaptive
                 // start/stop gates must follow the per-Space override.
@@ -455,11 +455,20 @@ final class MenuBarManager {
                 for await config in changes {
                     guard let self else { return }
                     guard let config else { continue }
-                    let current = config.current
-                    let isAdaptive = current.backgroundKind == .adaptive || current.tintKind.isAdaptive
-                    guard isAdaptive != previousIsAdaptive else { continue }
-                    previousIsAdaptive = isAdaptive
-                    if isAdaptive {
+                    let requirements = AdaptiveCaptureRequirements(configuration: config.current)
+                    let action = Self.adaptiveRefreshAction(from: previousRequirements, to: requirements)
+                    previousRequirements = requirements
+                    switch action {
+                    case .unchanged:
+                        continue
+                    case .recapture:
+                        // The refresh is already running, but what it has to
+                        // sample changed: switching to the gradient tint asks
+                        // for a palette no earlier pass had a reason to take,
+                        // and leaving it to the 30-second poll would strand
+                        // the bar on the average-color fallback until then.
+                        captureAdaptiveColorWithRetry()
+                    case .start:
                         captureAdaptiveColorWithRetry()
                         adaptiveColorRefreshCancellable = Timer.publish(every: 30, tolerance: 5, on: .main, in: .default)
                             .autoconnect()
@@ -474,7 +483,7 @@ final class MenuBarManager {
                             self?.captureAdaptiveColorWithRetry()
                         }
                         wallpaperChangeMonitor.start()
-                    } else {
+                    case .stop:
                         adaptiveColorRefreshCancellable?.cancel()
                         adaptiveColorRefreshCancellable = nil
                         wallpaperChangeMonitor.stop()
@@ -503,6 +512,12 @@ final class MenuBarManager {
                     let newlySeeking = tags.subtracting(previous)
                     guard !newlySeeking.isEmpty else { continue }
                     guard Defaults.bool(forKey: .surfaceItemsSeekingAttention) else { continue }
+                    // Zen mode is a standing request for a quiet menu bar, so
+                    // a blinking icon does not get to reopen a section the
+                    // user just sealed. The attention history is left alone
+                    // rather than cleared, so the item surfaces the next time
+                    // it asks with zen mode off.
+                    guard !isZenModeActive else { continue }
 
                     for tag in newlySeeking {
                         guard let section = sectionContainingHiddenItem(tag, in: appState) else {
@@ -643,6 +658,78 @@ final class MenuBarManager {
         cancellables = c
     }
 
+    // MARK: - Adaptive Color Capture
+
+    /// What an appearance configuration needs sampled from the screen.
+    ///
+    /// An adaptive background or tint needs the average color of the strip
+    /// behind the bar; the adaptive gradient needs a palette derived from the
+    /// wallpaper at its full height as well. Both live in one value so the
+    /// refresh observer can tell a switch between two adaptive kinds apart
+    /// from a switch into or out of adaptive mode, and so the retry loop knows
+    /// when a capture is actually complete.
+    nonisolated struct AdaptiveCaptureRequirements: Equatable {
+        /// Whether the average color of the menu bar strip is needed.
+        let needsAverageColor: Bool
+
+        /// Whether a palette of the wallpaper's dominant colors is needed.
+        let needsPalette: Bool
+
+        /// Whether the configuration samples the wallpaper at all.
+        var isAdaptive: Bool {
+            needsAverageColor || needsPalette
+        }
+
+        init(configuration: MenuBarAppearancePartialConfiguration) {
+            needsAverageColor = configuration.backgroundKind == .adaptive || configuration.tintKind.isAdaptive
+            needsPalette = configuration.tintKind == .adaptiveGradient
+        }
+    }
+
+    /// What the observer of the effective configuration does with the adaptive
+    /// color refresh when the configuration changes.
+    nonisolated enum AdaptiveRefreshAction: Equatable {
+        /// Leave the refresh as it is; the new configuration samples exactly
+        /// what the previous one did.
+        case unchanged
+        /// Start the refresh: capture, then poll and watch the wallpaper.
+        case start
+        /// Keep the running refresh, but capture now, because what has to be
+        /// sampled changed.
+        case recapture
+        /// Stop the refresh.
+        case stop
+    }
+
+    /// Returns the refresh work a change in capture requirements calls for.
+    static nonisolated func adaptiveRefreshAction(
+        from previous: AdaptiveCaptureRequirements?,
+        to current: AdaptiveCaptureRequirements
+    ) -> AdaptiveRefreshAction {
+        guard previous != current else {
+            return .unchanged
+        }
+        guard current.isAdaptive else {
+            return .stop
+        }
+        return previous?.isAdaptive == true ? .recapture : .start
+    }
+
+    /// What the configuration the overlays actually render needs sampled, or
+    /// `nil` without app state to resolve it from.
+    ///
+    /// Resolved from the effective configuration, which is the active Space's
+    /// override when one exists. Gating on the shared configuration alone
+    /// meant a per-Space override that turns on an adaptive tint or background
+    /// never received a palette, and its panels permanently rendered the
+    /// average-color fallback.
+    private var adaptiveCaptureRequirements: AdaptiveCaptureRequirements? {
+        guard let appState else { return nil }
+        return AdaptiveCaptureRequirements(
+            configuration: appState.appearanceManager.effectiveConfiguration.current
+        )
+    }
+
     /// Updates the ``averageColorInfo`` and ``averageColors`` properties with
     /// the current average color of the menu bar background per screen.
     ///
@@ -660,6 +747,10 @@ final class MenuBarManager {
     /// concurrently in a TaskGroup; the for-await loop collects results on the
     /// @MainActor context, so all averageColors / averageColorInfo writes are
     /// complete before the await returns.
+    ///
+    /// A pass that a newer one overtakes publishes nothing, so a read after
+    /// the await sees the newer pass's values instead of its own, and can
+    /// still come back incomplete while that pass is in flight.
     func updateAverageColorInfoAsync() async {
         guard let appState else { return }
 
@@ -668,13 +759,10 @@ final class MenuBarManager {
         let isIceBarVisible = appState.navigationState.isIceBarPresented
         let isSearchVisible = appState.navigationState.isSearchPresented
         let anyIceBarEnabled = appState.settings.displaySettings.isIceBarEnabledOnAnyDisplay
-        // Resolve from the configuration the overlay panels actually render:
-        // the active Space's override when one exists. Gating on the shared
-        // configuration alone meant a per-Space override that turns on an
-        // adaptive tint or background never received a palette, and its
-        // panels permanently rendered the average-color fallback.
-        let currentConfig = appState.appearanceManager.effectiveConfiguration.current
-        let isAdaptiveActive = currentConfig.backgroundKind == .adaptive || currentConfig.tintKind.isAdaptive
+        let requirements = AdaptiveCaptureRequirements(
+            configuration: appState.appearanceManager.effectiveConfiguration.current
+        )
+        let isAdaptiveActive = requirements.isAdaptive
 
         guard isSettingsVisible || isIceBarVisible || isSearchVisible || anyIceBarEnabled || isAdaptiveActive else {
             return
@@ -718,7 +806,14 @@ final class MenuBarManager {
 
         // Only pay for the second, full-height capture when something
         // actually renders a palette.
-        let needsPalette = currentConfig.tintKind == .adaptiveGradient
+        let needsPalette = requirements.needsPalette
+
+        // Stamp the pass. Captures from several passes can be in flight at
+        // once — the poll, a wallpaper change and a wake all start one — and
+        // a slow pass must not publish colors over the newer ones that
+        // replaced them.
+        captureGeneration += 1
+        let generation = captureGeneration
 
         await withTaskGroup(of: (CGDirectDisplayID, MenuBarAverageColorInfo, WallpaperPalette?)?.self) { group in
             for input in inputs {
@@ -759,6 +854,10 @@ final class MenuBarManager {
             // averageColors / averageColorInfo writes below are safe and
             // observable to read-after callers as soon as this await returns.
             for await result in group {
+                // A newer pass has taken over. Drain the rest of the group
+                // without publishing anything, rather than reinstating the
+                // state that pass has already moved on from.
+                guard captureGeneration == generation else { continue }
                 guard let (displayID, info, palette) = result else { continue }
                 if averageColors[displayID] != info {
                     averageColors[displayID] = info
@@ -768,8 +867,9 @@ final class MenuBarManager {
                 }
                 // A failed palette capture leaves the previous one in place
                 // rather than clearing it, so a momentary miss does not drop
-                // the tint to nothing.
-                if let palette, wallpaperPalettes[displayID] != palette {
+                // the tint to nothing. A palette with no swatches counts as a
+                // failure: it renders as the average-color fallback anyway.
+                if let palette, palette.primary != nil, wallpaperPalettes[displayID] != palette {
                     wallpaperPalettes[displayID] = palette
                 }
             }
@@ -778,10 +878,11 @@ final class MenuBarManager {
 
     /// Attempts to capture the adaptive color with retries when the initial
     /// capture fails (e.g. during early app launch before the Window Server
-    /// is fully settled). Retries until all screens have a color entry.
+    /// is fully settled). Retries until every screen has everything the
+    /// current configuration renders from.
     private func captureAdaptiveColorWithRetry() {
-        // Awaits each capture before checking averageColors so we don't burn
-        // retries on stale reads of fire-and-forget Task results.
+        // Awaits each capture before checking the captured state so we don't
+        // burn retries on stale reads of fire-and-forget Task results.
         Task { [weak self] in
             guard let self else { return }
             for attempt in 0 ..< 10 {
@@ -789,13 +890,33 @@ final class MenuBarManager {
                     try? await Task.sleep(for: .seconds(1))
                 }
                 await self.updateAverageColorInfoAsync()
-                let allCaptured = NSScreen.screens.allSatisfy {
-                    self.averageColors.keys.contains($0.displayID)
-                }
-                if allCaptured {
+                if self.hasCompleteAdaptiveCapture() {
                     return
                 }
             }
+        }
+    }
+
+    /// Returns a Boolean value that indicates whether every screen holds the
+    /// samples the current configuration needs.
+    ///
+    /// The average color and the palette come from separate captures, and the
+    /// full-height one that yields the palette can fail on its own while the
+    /// one-pixel strip succeeds. Counting a screen that has a color but no
+    /// palette as captured would end the retries with the gradient tint stuck
+    /// on its average-color fallback.
+    private func hasCompleteAdaptiveCapture() -> Bool {
+        // Nothing can be captured without app state, so further attempts
+        // would only spin.
+        guard let requirements = adaptiveCaptureRequirements else {
+            return true
+        }
+        return NSScreen.screens.allSatisfy { screen in
+            let displayID = screen.displayID
+            guard averageColors.keys.contains(displayID) else {
+                return false
+            }
+            return !requirements.needsPalette || wallpaperPalettes[displayID]?.primary != nil
         }
     }
 
