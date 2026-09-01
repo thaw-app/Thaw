@@ -61,7 +61,6 @@ nonisolated enum MenuBarItemGrouping {
         guard tag.namespace.isString else { return false }
         guard !tag.isSystemItem else { return false }
         guard tag.namespace != .thaw else { return false }
-        guard tag.namespace != .thaw else { return false }
         return tag.isMovable
     }
 

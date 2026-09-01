@@ -629,6 +629,23 @@ final class SystemStateMonitor: ObservableObject {
                 .filter { $0.activationPolicy == .regular }
                 .compactMap(\.bundleIdentifier)
         )
+        let wantsSSID = flags.isEnabled(.wifiSSID)
+        let wantsRecording = flags.isEnabled(.recordingDevices)
+
+        // Off the main actor for the same reason the polled round is: these
+        // samplers block, and the Developer pane would otherwise stall the
+        // main thread for the whole enumeration on every refresh.
+        let sample = await Task.detached(priority: .utility) {
+            PolledSample(
+                audioOutputDeviceName: Self.defaultAudioOutputDeviceName(),
+                isVPNActive: Self.isVPNActive(),
+                wifiSSID: wantsSSID ? Self.currentWiFiSSID() : nil,
+                isFocusActive: Self.isFocusActive(),
+                activeFocusModeName: ThawFocusModeStore.activeMode,
+                isCameraInUse: wantsRecording ? Self.isCameraInUse() : false,
+                isMicrophoneInUse: wantsRecording ? Self.isMicrophoneInUse() : false
+            )
+        }.value
         let bluetoothNames: Set<String> = if flags.isEnabled(.bluetooth) {
             await Task.detached(priority: .utility) {
                 Self.connectedBluetoothDeviceNames()
@@ -641,18 +658,18 @@ final class SystemStateMonitor: ObservableObject {
             frontmostAppBundleID: frontmost,
             runningAppBundleIDs: running,
             isNetworkConnected: isNetworkReachable(),
-            isVPNActive: isVPNActive(),
-            wifiSSID: flags.isEnabled(.wifiSSID) ? currentWiFiSSID() : nil,
+            isVPNActive: sample.isVPNActive,
+            wifiSSID: sample.wifiSSID,
             connectedBluetoothDeviceNames: bluetoothNames,
-            audioOutputDeviceName: defaultAudioOutputDeviceName(),
+            audioOutputDeviceName: sample.audioOutputDeviceName,
             screenCount: NSScreen.screens.count,
             externalDisplayConnected: hasExternalDisplay(),
-            isFocusActive: isFocusActive(),
-            activeFocusModeName: ThawFocusModeStore.activeMode,
+            isFocusActive: sample.isFocusActive,
+            activeFocusModeName: sample.activeFocusModeName,
             energyMode: EnergyModeMonitor.read(),
             thermalState: ProcessInfo.processInfo.thermalState,
-            isCameraInUse: flags.isEnabled(.recordingDevices) ? isCameraInUse() : false,
-            isMicrophoneInUse: flags.isEnabled(.recordingDevices) ? isMicrophoneInUse() : false
+            isCameraInUse: sample.isCameraInUse,
+            isMicrophoneInUse: sample.isMicrophoneInUse
         )
     }
 

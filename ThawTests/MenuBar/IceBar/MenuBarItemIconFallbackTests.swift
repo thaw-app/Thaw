@@ -90,16 +90,24 @@ struct MenuBarItemIconFallbackTests {
     func systemHostedItemsUseTheHostIcon() {
         // Control Center hosts many unrelated modules, so these items have no
         // app of their own to point at.
+        let hostIsRunning = !NSRunningApplication
+            .runningApplications(withBundleIdentifier: SharedConstants.menuBarHostingBundleID)
+            .isEmpty
         for namespace in [
             MenuBarItemTag.Namespace.controlCenter,
             .systemUIServer,
             .textInputMenuAgent,
         ] {
-            let item = item(namespace: namespace, title: "Module", sourcePID: nil)
-            // Resolves to the shared Control Center icon when that process is
-            // running; the important part is that it never falls through to
-            // an unresolved source PID.
-            _ = MenuBarItemIconFallback.appIcon(for: item)
+            // A resolvable source PID that must lose to the host: routing is by
+            // namespace, so a module never answers with the icon of whichever
+            // process happens to own its window.
+            let item = item(namespace: namespace, title: "Module", sourcePID: ownPID)
+            let icon = MenuBarItemIconFallback.appIcon(for: item)
+
+            #expect(icon !== MenuBarItemIconFallback.cachedAppIcon(forPID: ownPID))
+            // Present exactly when the hosting process is: a headless test host
+            // has no Control Center to resolve, and nothing else may stand in.
+            #expect((icon != nil) == hostIsRunning)
         }
     }
 

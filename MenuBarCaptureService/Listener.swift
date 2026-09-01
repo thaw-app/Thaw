@@ -36,7 +36,19 @@ final nonisolated class Listener: @unchecked Sendable {
             switch request {
             case .start:
                 return .start
-            case let .configureLogging(filePath):
+            case let .configureLogging(filePath, rotationPolicy):
+                if let rotationPolicy {
+                    // The app owns the shared log directory's retention, so
+                    // pruning here follows its policy instead of this
+                    // target's defaults.
+                    DiagnosticLogger.shared.setRotationPolicy(rotationPolicy)
+                }
+                guard let filePath else {
+                    // Diagnostic logging is off in the app; stop holding the
+                    // shared file open here too.
+                    DiagnosticLogger.shared.isEnabled = false
+                    return .configureLogging
+                }
                 let requested = URL(fileURLWithPath: filePath)
                     .standardizedFileURL.resolvingSymlinksInPath()
                 let approvedDir = DiagnosticLogger.shared.logDirectory

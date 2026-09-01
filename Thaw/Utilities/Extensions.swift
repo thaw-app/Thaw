@@ -225,18 +225,29 @@ nonisolated extension CGImage {
         }()
 
         var data = [UInt32](repeating: 0, count: width * height)
-        guard let context = CGContext(
-            data: &data,
-            width: width,
-            height: height,
-            bitsPerComponent: 8,
-            bytesPerRow: width * 4,
-            space: colorSpace,
-            bitmapInfo: CGBitmapInfo(alpha: .premultipliedFirst, byteOrder: .order32Little)
-        ) else {
+        // The buffer is bound for the whole lifetime of the context, not just
+        // for the initializer call: `draw` writes through it afterwards. An
+        // inout-to-pointer conversion is only valid for the duration of the
+        // call it is passed to, so the pointer has to stay in scope instead
+        // -- the same shape `ImageHashing.averageHash(_:)` uses.
+        let rendered = data.withUnsafeMutableBytes { buffer -> Bool in
+            guard let context = CGContext(
+                data: buffer.baseAddress,
+                width: width,
+                height: height,
+                bitsPerComponent: 8,
+                bytesPerRow: width * 4,
+                space: colorSpace,
+                bitmapInfo: CGBitmapInfo(alpha: .premultipliedFirst, byteOrder: .order32Little)
+            ) else {
+                return false
+            }
+            context.draw(self, in: CGRect(x: 0, y: 0, width: width, height: height))
+            return true
+        }
+        guard rendered else {
             return WallpaperPalette(swatches: [])
         }
-        context.draw(self, in: CGRect(x: 0, y: 0, width: width, height: height))
 
         let threshold = UInt32((alphaThreshold.clamped(to: 0 ... 1) * 255).rounded(.up))
         var samples = [WallpaperPalette.Sample]()

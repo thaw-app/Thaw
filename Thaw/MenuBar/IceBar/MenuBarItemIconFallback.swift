@@ -22,14 +22,30 @@ import Cocoa
 /// cache, which is load-bearing rather than an optimisation — see
 /// ``appIconsByPID``.
 enum MenuBarItemIconFallback {
+    /// The Control Center icon once it has been resolved.
+    @MainActor
+    private static var cachedControlCenterIcon: NSImage?
+
     /// The Control Center icon, shared by every system-hosted item.
     ///
-    /// Resolved once: these items are hosted by one process, so reading a
-    /// per-item icon would hand back the same image repeatedly.
-    private static let controlCenterIcon: NSImage? = NSRunningApplication
-        .runningApplications(withBundleIdentifier: SharedConstants.menuBarHostingBundleID)
-        .first?
-        .icon
+    /// Cached on the first hit: these items are hosted by one process, so
+    /// reading a per-item icon would hand back the same image repeatedly. A
+    /// miss is deliberately *not* cached — the host may not be running yet
+    /// when the first system-hosted item is drawn, and remembering the `nil`
+    /// would pin every one of them to the generic glyph for the rest of the
+    /// process.
+    @MainActor
+    private static var controlCenterIcon: NSImage? {
+        if let cachedControlCenterIcon {
+            return cachedControlCenterIcon
+        }
+        let icon = NSRunningApplication
+            .runningApplications(withBundleIdentifier: SharedConstants.menuBarHostingBundleID)
+            .first?
+            .icon
+        cachedControlCenterIcon = icon
+        return icon
+    }
 
     /// Application icons already resolved this session, keyed by owning
     /// process.

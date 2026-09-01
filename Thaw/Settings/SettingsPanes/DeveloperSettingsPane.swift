@@ -211,20 +211,27 @@ struct DeveloperSettingsPane: View {
         }
     }
 
+    /// Why a Location-backed readout has no value, or `nil` once permission is
+    /// granted and the caller has to explain the gap itself. Shared by every
+    /// such readout so the two can't drift apart.
+    private func locationPermissionMessage() -> String? {
+        switch systemMonitor.locationAuthorizationStatus {
+        case .notDetermined:
+            return "Awaiting Location permission…"
+        case .denied, .restricted:
+            return "Location denied — enable in System Settings ▸ Privacy & Security ▸ Location Services"
+        default:
+            return nil
+        }
+    }
+
     /// Current coordinate when the Location flag is on, otherwise a hint.
     private func locationValue() -> String {
         guard flags.isEnabled(.location) else { return "Enable flag to read" }
         if let coordinate = systemMonitor.currentCoordinate {
             return String(format: "%.4f, %.4f", coordinate.latitude, coordinate.longitude)
         }
-        switch systemMonitor.locationAuthorizationStatus {
-        case .notDetermined:
-            return "Awaiting Location permission…"
-        case .denied, .restricted:
-            return "Location denied — enable in System Settings"
-        default:
-            return "Locating…"
-        }
+        return locationPermissionMessage() ?? "Locating…"
     }
 
     /// Wi-Fi SSID value or, when unavailable, the reason — usually the
@@ -232,16 +239,7 @@ struct DeveloperSettingsPane: View {
     private func wifiSSIDValue(_ state: SystemState) -> String {
         guard flags.isEnabled(.wifiSSID) else { return "Enable flag to read" }
         if let ssid = state.wifiSSID, !ssid.isEmpty { return ssid }
-        switch systemMonitor.locationAuthorizationStatus {
-        case .notDetermined:
-            return "Awaiting Location permission…"
-        case .denied, .restricted:
-            return "Location denied — enable in System Settings ▸ Privacy & Security ▸ Location Services"
-        case .authorized, .authorizedAlways:
-            return "No Wi-Fi network (or Wi-Fi off)"
-        @unknown default:
-            return "Unavailable"
-        }
+        return locationPermissionMessage() ?? "No Wi-Fi network (or Wi-Fi off)"
     }
 }
 

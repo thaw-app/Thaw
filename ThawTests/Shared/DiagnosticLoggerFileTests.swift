@@ -196,7 +196,8 @@ struct DiagnosticLoggerFileTests {
     /// Pins the retention policy for one test.
     ///
     /// The policy lives on the shared logger, so a value left behind by another
-    /// suite would otherwise decide the outcome here.
+    /// suite would otherwise decide the outcome here. `withTemporaryLogDirectory`
+    /// puts the previous one back, so this test does not decide anyone else's.
     private func useRetentionPolicy(retentionDays: Int, maxFileCount: Int = 50) {
         var policy = DiagnosticLogger.RotationPolicy()
         policy.retentionDays = retentionDays
@@ -400,12 +401,18 @@ struct DiagnosticLoggerFileTests {
     /// Teardown always lands on "disabled", never on the flag's previous value,
     /// because re-enabling would run the fresh-mint path and drop a file in the
     /// developer's real log directory.
+    ///
+    /// The rotation policy is process-wide too, so it is captured here and put
+    /// back on every exit path: a window pinned by one test would otherwise
+    /// follow whichever test runs next, in this suite or in a parallel one.
     private func withTemporaryLogDirectory(_ body: (URL) async throws -> Void) async throws {
         let tmp = FileManager.default.temporaryDirectory
             .appendingPathComponent(UUID().uuidString, isDirectory: true)
         try FileManager.default.createDirectory(at: tmp, withIntermediateDirectories: true)
+        let previousPolicy = DiagnosticLogger.shared.rotationPolicy
         defer {
             DiagnosticLogger.shared.isEnabled = false
+            DiagnosticLogger.shared.setRotationPolicy(previousPolicy)
             try? FileManager.default.removeItem(at: tmp)
         }
 

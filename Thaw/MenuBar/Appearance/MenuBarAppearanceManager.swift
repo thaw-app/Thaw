@@ -58,14 +58,14 @@ final class MenuBarAppearanceManager {
             if let previewConfiguration {
                 let needsPanels = previewConfiguration.hasShadow
                     || previewConfiguration.borderOnMenuBar
-                    || configuration.shapeKind != .noShape
+                    || effectiveConfiguration.shapeKind != .noShape
                     || previewConfiguration.tintKind != .noTint
                     || previewConfiguration.backgroundKind != .none
                 if overlayPanels.isEmpty, needsPanels {
-                    configureOverlayPanels(with: configuration, force: true)
+                    configureOverlayPanels(with: effectiveConfiguration, force: true)
                 }
             } else {
-                if !needsOverlayPanels(for: configuration) {
+                if !needsOverlayPanels(for: effectiveConfiguration) {
                     closeAllOverlayPanels()
                 }
             }
@@ -190,6 +190,28 @@ final class MenuBarAppearanceManager {
         spaceOverrides[activeSpaceOverrideKey()] != nil
     }
 
+    /// The configuration the appearance editor reads and writes.
+    ///
+    /// The overlay panels render ``effectiveConfiguration``, so an edit made
+    /// while the active Space owns an override has to land on that override —
+    /// writing the shared ``configuration`` instead would change nothing the
+    /// user can see, and would quietly restyle every other Space to boot. With
+    /// no override in play this is the shared configuration, unchanged.
+    var editedConfiguration: MenuBarAppearanceConfigurationV2 {
+        get {
+            effectiveConfiguration
+        }
+        set {
+            guard activeSpaceHasOverride else {
+                configuration = newValue
+                return
+            }
+            spaceOverrides[activeSpaceOverrideKey()] = newValue
+            persistSpaceOverrides()
+            updateEffectiveConfiguration()
+        }
+    }
+
     /// Saves the shared configuration as the active Space's override.
     func saveOverrideForActiveSpace() {
         let key = activeSpaceOverrideKey()
@@ -214,7 +236,7 @@ final class MenuBarAppearanceManager {
     private func pruneUnresolvableSpaceOverrides(keeping key: String) {
         var managedKeys = Set(
             Bridging.getManagedSpaces().map { managedSpace in
-                managedSpace.persistentKey ?? String(managedSpace.spaceID)
+                managedSpace.persistentKey
             }
         )
         managedKeys.insert(key)
@@ -275,7 +297,7 @@ final class MenuBarAppearanceManager {
                 }
                 closeAllOverlayPanels()
                 if Set(overlayPanels.map(\.owningScreen)) != Set(NSScreen.screens) {
-                    configureOverlayPanels(with: configuration)
+                    configureOverlayPanels(with: effectiveConfiguration)
                 }
             }
             .store(in: &c)

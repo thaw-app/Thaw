@@ -119,13 +119,18 @@ struct LayoutBarsSection: View {
         .task(id: hasItems) {
             loadDeadlineReached = false
 
-            guard !hasItems, ScreenCapture.cachedCheckPermissions() else {
+            guard !hasItems else {
                 return
             }
 
-            diagLog.debug("Preloading menu bar layout caches (hasItems=\(self.hasItems), screenRecording=\(ScreenCapture.cachedCheckPermissions()))")
+            // Only the image cache needs Screen Recording; the item cache, and
+            // therefore the overlay's own resolution, does not. Bailing out on
+            // the permission left the spinner up forever.
+            let hasScreenRecording = ScreenCapture.cachedCheckPermissions()
 
-            async let preloadCaches: Void = preloadLayoutCaches()
+            diagLog.debug("Preloading menu bar layout caches (hasItems=\(self.hasItems), screenRecording=\(hasScreenRecording))")
+
+            async let preloadCaches: Void = preloadLayoutCaches(includingImages: hasScreenRecording)
 
             try? await Task.sleep(for: .seconds(3))
 
@@ -154,13 +159,19 @@ struct LayoutBarsSection: View {
         }
     }
 
-    private func preloadLayoutCaches() async {
+    private func preloadLayoutCaches(includingImages: Bool) async {
         await itemManager.cacheItemsRegardless(skipRecentMoveCheck: true)
         guard !Task.isCancelled else {
             return
         }
 
         diagLog.debug("Preload: itemCache after cacheItemsRegardless: managedItems=\(self.itemManager.itemCache.managedItems.count), visible=\(itemManager.itemCache[.visible].count), hidden=\(itemManager.itemCache[.hidden].count), alwaysHidden=\(itemManager.itemCache[.alwaysHidden].count)")
+
+        guard includingImages else {
+            // Without Screen Recording the bars draw app icons instead, so
+            // there is nothing to capture.
+            return
+        }
 
         await appState.imageCache.updateCacheWithoutChecks(sections: MenuBarSection.Name.allCases)
         guard !Task.isCancelled else {

@@ -33,15 +33,8 @@ struct SettingsView: View {
 
     var body: some View {
         if appState.settings.general.simpleMode {
-            // No sidebar at all: one screen is the whole point of Simple
-            // Mode, and a sidebar listing a single item is just a sidebar.
-            SimpleModeSettingsPane(
-                itemManager: appState.itemManager,
-                updatesManager: appState.updatesManager,
-                settings: appState.settings.general
-            )
-            .navigationTitle("Settings")
-            .environment(\.settingsDescriptionsVisible, appState.settings.general.showSettingDescriptions)
+            simpleMode
+                .environment(\.settingsDescriptionsVisible, appState.settings.general.showSettingDescriptions)
         } else {
             NavigationSplitView {
                 sidebar
@@ -67,6 +60,38 @@ struct SettingsView: View {
                     .controlGroupStyle(.navigation)
                 }
             }
+        }
+    }
+
+    /// Simple Mode's overview, or the one pane something explicitly asked for.
+    ///
+    /// There is no sidebar at all here: one screen is the whole point of Simple
+    /// Mode, and a sidebar listing a single item is just a sidebar. But flows
+    /// outside the window — a trigger notification, a settings link — still
+    /// navigate to a specific pane, and dropping them on the overview opens the
+    /// wrong destination. Honour the request, with a way back to the overview.
+    @ViewBuilder
+    private var simpleMode: some View {
+        if navigationState.settingsNavigationIdentifier == .general {
+            SimpleModeSettingsPane(
+                itemManager: appState.itemManager,
+                updatesManager: appState.updatesManager,
+                settings: appState.settings.general
+            )
+            .navigationTitle("Settings")
+        } else {
+            settingsPane
+                .id(navigationState.settingsNavigationIdentifier)
+                .navigationTitle(navigationState.settingsNavigationIdentifier.localized)
+                .toolbar {
+                    ToolbarItem(placement: .navigation) {
+                        Button {
+                            navigationState.settingsNavigationIdentifier = .general
+                        } label: {
+                            Label("Back", systemImage: "chevron.left")
+                        }
+                    }
+                }
         }
     }
 

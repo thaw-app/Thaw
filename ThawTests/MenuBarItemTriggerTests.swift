@@ -702,12 +702,16 @@ struct MenuBarItemTriggerTests {
                 pixels[y * size + x] = 255
             }
         }
-        let context = CGContext(
-            data: &pixels, width: size, height: size, bitsPerComponent: 8,
-            bytesPerRow: bytesPerRow, space: CGColorSpaceCreateDeviceGray(),
-            bitmapInfo: CGImageAlphaInfo.none.rawValue
-        )!
-        return context.makeImage()!
+        // `makeImage` reads through the buffer, so the context and the image both
+        // have to be created while the inout-to-pointer conversion is still valid.
+        return pixels.withUnsafeMutableBytes { buffer in
+            let context = CGContext(
+                data: buffer.baseAddress, width: size, height: size, bitsPerComponent: 8,
+                bytesPerRow: bytesPerRow, space: CGColorSpaceCreateDeviceGray(),
+                bitmapInfo: CGImageAlphaInfo.none.rawValue
+            )!
+            return context.makeImage()!
+        }
     }
 
     @Test func hammingDistanceBasics() {

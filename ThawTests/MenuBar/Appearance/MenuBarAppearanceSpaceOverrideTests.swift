@@ -25,7 +25,7 @@ struct MenuBarAppearanceSpaceOverrideTests {
         let resolved = MenuBarAppearanceManager.effectiveConfiguration(
             base: base,
             overrides: [:],
-            activeSpaceID: 42
+            activeSpaceKey: "42"
         )
         #expect(resolved == base)
     }
@@ -37,7 +37,7 @@ struct MenuBarAppearanceSpaceOverrideTests {
         let resolved = MenuBarAppearanceManager.effectiveConfiguration(
             base: base,
             overrides: ["42": overridden],
-            activeSpaceID: 42
+            activeSpaceKey: "42"
         )
         #expect(resolved == overridden)
     }
@@ -49,7 +49,7 @@ struct MenuBarAppearanceSpaceOverrideTests {
         let resolved = MenuBarAppearanceManager.effectiveConfiguration(
             base: base,
             overrides: ["7": overridden],
-            activeSpaceID: 42
+            activeSpaceKey: "42"
         )
         #expect(resolved == base)
     }

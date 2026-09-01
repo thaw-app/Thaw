@@ -363,7 +363,7 @@ struct ProfileSettingsPane: View {
             Divider()
             ForEach(assigned) { profile in
                 HStack {
-                    Text(profile.associatedSpaceName ?? "Space")
+                    Text(profile.associatedSpaceName ?? String(localized: "Space"))
                         .foregroundStyle(.secondary)
                     Spacer()
                     Text(profile.name)

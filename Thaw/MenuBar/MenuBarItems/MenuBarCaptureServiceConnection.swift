@@ -21,11 +21,21 @@ extension MenuBarCaptureService {
         private let diagLog: DiagLog
         private let requestIDs = OSAllocatedUnfairLock(initialState: UInt64(0))
 
-        /// Whether the current helper process has never been told which log
-        /// file to write to. Set when the session is replaced — a recycled or
-        /// relaunched helper starts from scratch — and cleared by the next
-        /// successful logging push.
-        private let loggingPending: OSAllocatedUnfairLock<Bool>
+        /// Tracks what the current helper process has been told about
+        /// diagnostic logging.
+        private struct LoggingSyncState {
+            /// Whether the helper has never been told which log file to write
+            /// to. Set when the session is replaced — a recycled or relaunched
+            /// helper starts from scratch — and cleared by the next successful
+            /// logging push.
+            var isPending = false
+            /// The file the helper was last pointed at. A rotation mints a new
+            /// one, and until the helper is told, it keeps its descriptor on a
+            /// segment retention eventually deletes out from under it.
+            var syncedLogFile: URL?
+        }
+
+        private let loggingSync: OSAllocatedUnfairLock<LoggingSyncState>
 
         private init() {
             let queue = DispatchQueue.targetingGlobal(
@@ -34,10 +44,10 @@ extension MenuBarCaptureService {
                 attributes: .concurrent
             )
             let diagLog = DiagLog(category: "MenuBarCaptureService.Connection")
-            let loggingPending = OSAllocatedUnfairLock(initialState: false)
-            self.loggingPending = loggingPending
+            let loggingSync = OSAllocatedUnfairLock(initialState: LoggingSyncState())
+            self.loggingSync = loggingSync
             self.session = Session(queue: queue, diagLog: diagLog) {
-                loggingPending.withLock { $0 = true }
+                loggingSync.withLock { $0.isPending = true }
             }
             self.queue = queue
             self.diagLog = diagLog
@@ -49,19 +59,35 @@ extension MenuBarCaptureService {
         }
 
         /// Points the helper at the diagnostic log file the app is writing to
-        /// right now. Re-sent whenever the session is replaced: a recycled
-        /// helper is a fresh process that has never been told which file to
-        /// log to, and without this push it silently falls back to OSLog-only
-        /// logging.
+        /// right now, or turns its file logging off when there is none, and
+        /// hands over the retention policy along with it.
+        ///
+        /// Re-sent whenever the session is replaced: a recycled helper is a
+        /// fresh process that has never been told which file to log to, and
+        /// without this push it silently falls back to OSLog-only logging.
+        /// Sent even with logging off, so the helper still prunes the shared
+        /// directory by the app's rules rather than by its own defaults.
         func syncLogging() async {
-            guard let logFile = DiagnosticLogger.shared.currentLogFile else { return }
+            let logFile = DiagnosticLogger.shared.currentLogFile
+            // Recorded before the send rather than after it: the session can be
+            // dropped while the request is in flight, and the invalidation that
+            // marks the configuration outstanding again must survive this
+            // send's success.
+            loggingSync.withLock { state in
+                state.isPending = false
+                state.syncedLogFile = logFile
+            }
             guard case .configureLogging = await session.sendAsync(
-                request: .configureLogging(filePath: logFile.path)
+                request: .configureLogging(
+                    filePath: logFile?.path,
+                    rotationPolicy: DiagnosticLogger.shared.rotationPolicy
+                )
             ) else {
+                // Left outstanding on purpose: the next batch retries it.
                 diagLog.error("Capture helper rejected logging configuration")
+                loggingSync.withLock { $0.isPending = true }
                 return
             }
-            loggingPending.withLock { $0 = false }
         }
 
         func recycle() async {
@@ -74,9 +100,16 @@ extension MenuBarCaptureService {
             scale: CGFloat,
             option: CGWindowImageOption
         ) async -> [Frame] {
-            // The session was replaced since the last batch, so the helper
-            // handling this batch has never been told which file to log to.
-            if loggingPending.withLock({ $0 }) {
+            // The cheapest place to notice that the helper is out of date:
+            // either the session was replaced since the last batch, so the
+            // helper handling it has never been told which file to log to, or
+            // the app has rotated to a file the helper knows nothing about.
+            // Checked here rather than driven from `DiagnosticLogger.onRotate`
+            // because the helper is launched on demand and recycled
+            // constantly, and a rotation push would spin one up only to hand
+            // it a file it may never write to.
+            let logFile = DiagnosticLogger.shared.currentLogFile
+            if loggingSync.withLock({ $0.isPending || $0.syncedLogFile != logFile }) {
                 await syncLogging()
             }
             if let frames = await sendCapture(

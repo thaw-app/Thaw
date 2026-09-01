@@ -60,20 +60,8 @@ struct GeneralSettingsPane: View {
 
     @ViewBuilder
     private var iceIconOptions: some View {
-        showIceIcon
-        if settings.showIceIcon {
-            iceIconPicker
-        }
+        ShowIceIconRow(settings: settings)
         alwaysHiddenIconGestures
-    }
-
-    private var showIceIcon: some View {
-        Toggle("Show \(Constants.displayName) icon", isOn: $settings.showIceIcon)
-            .annotation("Show the \(Constants.displayName) icon in the menu bar. Click to show hidden items, double-click for always-hidden, and right-click for settings.")
-    }
-
-    private var iceIconPicker: some View {
-        IceIconPicker(settings: settings)
     }
 
     @ViewBuilder

@@ -77,11 +77,11 @@ struct MenuBarAppearanceEditor: View {
                 isDynamicToggle
             }
 
-            if appearanceManager.configuration.isDynamic {
-                LabeledBackgroundEditor(configuration: $appearanceManager.configuration, appearance: .light)
-                LabeledBackgroundEditor(configuration: $appearanceManager.configuration, appearance: .dark)
+            if appearanceManager.editedConfiguration.isDynamic {
+                LabeledBackgroundEditor(configuration: $appearanceManager.editedConfiguration, appearance: .light)
+                LabeledBackgroundEditor(configuration: $appearanceManager.editedConfiguration, appearance: .dark)
             } else {
-                UnlabeledBackgroundEditor(configuration: $appearanceManager.configuration.staticConfiguration)
+                UnlabeledBackgroundEditor(configuration: $appearanceManager.editedConfiguration.staticConfiguration)
             }
 
             IceSection("Menu Bar Shape") {
@@ -89,20 +89,20 @@ struct MenuBarAppearanceEditor: View {
                 isInset
             }
 
-            if appearanceManager.configuration.shapeKind != .noShape {
-                if appearanceManager.configuration.isDynamic {
-                    LabeledShapeEditor(configuration: $appearanceManager.configuration, appearance: .light)
-                    LabeledShapeEditor(configuration: $appearanceManager.configuration, appearance: .dark)
+            if appearanceManager.editedConfiguration.shapeKind != .noShape {
+                if appearanceManager.editedConfiguration.isDynamic {
+                    LabeledShapeEditor(configuration: $appearanceManager.editedConfiguration, appearance: .light)
+                    LabeledShapeEditor(configuration: $appearanceManager.editedConfiguration, appearance: .dark)
                 } else {
-                    StaticShapeEditor(configuration: $appearanceManager.configuration)
+                    StaticShapeEditor(configuration: $appearanceManager.editedConfiguration)
                 }
             }
 
-            ThawBarAppearanceEditor(configuration: $appearanceManager.configuration)
+            ThawBarAppearanceEditor(configuration: $appearanceManager.editedConfiguration)
 
-            if appearanceManager.configuration.current.tintKind != .noTint
-                || appearanceManager.configuration.shapeKind != .noShape
-                || appearanceManager.configuration.current.backgroundKind != .none
+            if appearanceManager.editedConfiguration.current.tintKind != .noTint
+                || appearanceManager.editedConfiguration.shapeKind != .noShape
+                || appearanceManager.editedConfiguration.current.backgroundKind != .none
             {
                 if appearanceManager.isReduceTransparencyEnabled {
                     reduceTransparencyWarning
@@ -124,7 +124,7 @@ struct MenuBarAppearanceEditor: View {
         } content: {
             VStack(alignment: .leading, spacing: 8) {
                 if appearanceManager.activeSpaceHasOverride {
-                    Text("This Space uses a saved override.")
+                    Text("This Space uses a saved override. Changes above apply to this Space only.")
                         .foregroundStyle(.secondary)
                     Button("Remove Override for This Space") {
                         appearanceManager.removeOverrideForActiveSpace()
@@ -178,7 +178,7 @@ struct MenuBarAppearanceEditor: View {
     }
 
     private var isDynamicToggle: some View {
-        Toggle("Use dynamic appearance", isOn: $appearanceManager.configuration.isDynamic)
+        Toggle("Use dynamic appearance", isOn: $appearanceManager.editedConfiguration.isDynamic)
             .annotation("Apply different settings based on the current system appearance.")
     }
 
@@ -202,7 +202,7 @@ struct MenuBarAppearanceEditor: View {
 
             if
                 !appState.menuBarManager.isMenuBarHiddenBySystemUserDefaults,
-                appearanceManager.configuration != .defaultConfiguration
+                appearanceManager.editedConfiguration != .defaultConfiguration
             {
                 Button("Reset") {
                     isResetPromptPresented = true
@@ -212,7 +212,7 @@ struct MenuBarAppearanceEditor: View {
                         isResetPromptPresented = false
                     }
                     Button("Reset", role: .destructive) {
-                        appearanceManager.configuration = .defaultConfiguration
+                        appearanceManager.editedConfiguration = .defaultConfiguration
                         isResetPromptPresented = false
                     }
                 } message: {
@@ -225,16 +225,16 @@ struct MenuBarAppearanceEditor: View {
     }
 
     private var shapePicker: some View {
-        MenuBarShapePicker(configuration: $appearanceManager.configuration)
+        MenuBarShapePicker(configuration: $appearanceManager.editedConfiguration)
             .fixedSize(horizontal: false, vertical: true)
     }
 
     @ViewBuilder
     private var isInset: some View {
-        if appearanceManager.configuration.shapeKind != .noShape {
+        if appearanceManager.editedConfiguration.shapeKind != .noShape {
             Toggle(
                 "Use inset shape on screens with notch",
-                isOn: $appearanceManager.configuration.isInset
+                isOn: $appearanceManager.editedConfiguration.isInset
             )
         }
     }
@@ -757,9 +757,9 @@ private struct PreviewButton: View {
     private var previewConfiguration: MenuBarAppearancePartialConfiguration {
         switch appearance {
         case .light:
-            manager.configuration.lightModeConfiguration
+            manager.editedConfiguration.lightModeConfiguration
         case .dark:
-            manager.configuration.darkModeConfiguration
+            manager.editedConfiguration.darkModeConfiguration
         }
     }
 

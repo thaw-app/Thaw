@@ -2105,6 +2105,9 @@
         }
       }
     },
+    "^[%lld items](inflect: true)" : {
+      "comment" : "Fallback name for an unnamed item group"
+    },
     "%lld m" : {
 
     },
@@ -7958,6 +7961,9 @@
           }
         }
       }
+    },
+    "automatic" : {
+      "comment" : "Caption marking an item group that Thaw derives automatically and that cannot be renamed."
     },
     "Automatically check for updates" : {
       "comment" : "A toggle that lets the user enable or disable automatic checking for updates.",
@@ -46760,6 +46766,9 @@
     },
     "This condition is turned off in Developer settings, so the trigger won't run." : {
 
+    },
+    "This Space uses a saved override. Changes above apply to this Space only." : {
+      "comment" : "Note shown in the appearance editor when the active Space has its own saved appearance."
     },
     "This trigger controls %@'s section. Your saved layout no longer applies to it." : {
 

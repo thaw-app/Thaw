@@ -35,6 +35,11 @@ final class WallpaperChangeMonitor {
     private var source: DispatchSourceFileSystemObject?
     private var descriptor: CInt = -1
     private var debounceTask: Task<Void, Never>?
+    private var restartRetryTask: Task<Void, Never>?
+
+    /// How long to wait before retrying a re-open that lost the race with the
+    /// system's replacement of the index.
+    private let restartRetryDelay: Duration = .milliseconds(500)
 
     /// Called on the main actor after the wallpaper changes and the
     /// debounce interval elapses.
@@ -57,6 +62,7 @@ final class WallpaperChangeMonitor {
         // descriptor down directly. The source's cancel handler cannot be
         // relied on here because nothing will run it after deallocation.
         debounceTask?.cancel()
+        restartRetryTask?.cancel()
         source?.cancel()
     }
 
@@ -106,17 +112,33 @@ final class WallpaperChangeMonitor {
     func stop() {
         debounceTask?.cancel()
         debounceTask = nil
+        restartRetryTask?.cancel()
+        restartRetryTask = nil
         source?.cancel()
         source = nil
         descriptor = -1
     }
 
     /// Re-opens the watch after an atomic replacement.
+    ///
+    /// The replacement is not instantaneous, so the re-open can run before the
+    /// new file is linked. Nothing else re-opens the watch, so a lost race
+    /// would otherwise leave the rest of the session on the periodic refresh
+    /// alone; retry once, after which the periodic refresh is the fallback it
+    /// always was.
     private func restart() {
+        restartRetryTask?.cancel()
+        restartRetryTask = nil
         source?.cancel()
         source = nil
         descriptor = -1
         start()
+        guard source == nil else { return }
+        restartRetryTask = Task { [weak self, restartRetryDelay] in
+            try? await Task.sleep(for: restartRetryDelay)
+            guard !Task.isCancelled, let self else { return }
+            start()
+        }
     }
 
     /// Coalesces a burst of writes into a single reported change.

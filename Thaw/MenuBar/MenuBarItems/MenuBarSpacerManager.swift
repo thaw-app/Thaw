@@ -30,6 +30,19 @@ nonisolated struct MenuBarSpacer: Codable, Identifiable, Equatable {
         self.width = width.clamped(to: Self.minWidth ... Self.maxWidth)
         self.color = color
     }
+
+    /// Decodes through the memberwise initializer so the clamp applies to
+    /// persisted widths too. A synthesized `init(from:)` assigns `width`
+    /// directly, and a downgrade from a build with a larger `maxWidth` reads
+    /// back a value wide enough to push other items off the bar.
+    init(from decoder: any Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        try self.init(
+            id: container.decode(UUID.self, forKey: .id),
+            width: container.decode(CGFloat.self, forKey: .width),
+            color: container.decodeIfPresent(IceColor.self, forKey: .color)
+        )
+    }
 }
 
 // MARK: - MenuBarSpacerManager

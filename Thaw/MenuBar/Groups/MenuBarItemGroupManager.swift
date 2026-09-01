@@ -128,7 +128,7 @@ final class MenuBarItemGroupManager {
         if let detected = members.first?.autoDetectedName {
             return detected
         }
-        return String(localized: "\(group.count) items", comment: "Fallback name for an unnamed item group")
+        return String(localized: "^[\(group.count) items](inflect: true)", comment: "Fallback name for an unnamed item group")
     }
 
     // MARK: Editing

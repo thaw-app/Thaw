@@ -47,6 +47,7 @@ final class PresentationMonitor {
     private var settingTask: Task<Void, Never>?
     private var screenParametersTask: Task<Void, Never>?
     private var pollTask: Task<Void, Never>?
+    private var evaluateTask: Task<Void, Never>?
 
     /// The last evaluated state, kept so a repeated signal doesn't re-log.
     private var isPresenting = false
@@ -105,6 +106,8 @@ final class PresentationMonitor {
         screenParametersTask = nil
         pollTask?.cancel()
         pollTask = nil
+        evaluateTask?.cancel()
+        evaluateTask = nil
         // Withdraw anything this monitor engaged; a manual zen mode is left
         // alone by `setAutomaticZenMode`.
         isPresenting = false
@@ -114,9 +117,11 @@ final class PresentationMonitor {
     private func evaluate() {
         // Sample off the main actor: the screen-sharing check walks the whole
         // process table, and this fires on a 5 s cadence. Sampling detached
-        // means two evaluations could in principle land out of order, but at
-        // this cadence the newest state wins on the next poll either way.
-        Task { @MainActor [weak self] in
+        // means two evaluations could otherwise land out of order and leave zen
+        // mode on a stale sample, so the previous round is cancelled first and a
+        // cancelled round never applies what it read.
+        evaluateTask?.cancel()
+        evaluateTask = Task { @MainActor [weak self] in
             // Mirroring is an AppKit/CoreGraphics query that belongs on the
             // main thread and costs nothing; only the process-table walk is
             // worth detaching.
@@ -125,7 +130,7 @@ final class PresentationMonitor {
                 Self.isScreenBeingShared()
             }.value
             let presenting = mirroring || shared
-            guard let self else { return }
+            guard !Task.isCancelled, let self else { return }
             defer { self.appState?.menuBarManager.setAutomaticZenMode(presenting) }
 
             guard presenting != self.isPresenting else { return }

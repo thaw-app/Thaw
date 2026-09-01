@@ -563,6 +563,7 @@ private final class MenuBarOverlayPanelContentView: NSView {
 
     deinit {
         averageColorsObservationTask?.cancel()
+        wallpaperPalettesObservationTask?.cancel()
         appearanceConfigurationObservationTask?.cancel()
         previewConfigurationObservationTask?.cancel()
         isDraggingMenuBarItemObservationTask?.cancel()

@@ -2490,6 +2490,12 @@ extension MenuBarItemManager {
             && ((NSScreen.screenWithActiveMenuBar ?? NSScreen.main)?.hasNotch ?? false)
         let knownBaseIdentifiers = Set(items.map(\.tag.stableIdentifierBase))
         let knownLiveIdentifiers = Set(items.map(\.uniqueIdentifier))
+        // No trigger owns anything unless the user configured one, and with an
+        // empty protected set `isTriggerProtected` misses the exact match and
+        // resolves a base identifier per candidate per live item — quadratic on
+        // a path that runs every cache cycle. Same early return as
+        // `triggerProtectedUIDs`.
+        let hasTriggerProtectedItems = !triggerControlledItemIdentifiers.isEmpty
 
         return Self.layoutDivergesFromSaved(
             candidates: items
@@ -2497,12 +2503,12 @@ extension MenuBarItemManager {
                     !$0.isControlItem
                         && $0.canBeHidden
                         && $0.isMovable
-                        && !Self.isTriggerProtected(
+                        && !(hasTriggerProtectedItems && Self.isTriggerProtected(
                             $0.uniqueIdentifier,
                             by: triggerControlledItemIdentifiers,
                             knownBaseIdentifiers: knownBaseIdentifiers,
                             knownLiveIdentifiers: knownLiveIdentifiers
-                        )
+                        ))
                 }
                 .map { item in
                     DivergenceCandidate(
@@ -3199,13 +3205,22 @@ extension MenuBarItemManager {
         if bulkApplyCompletionGeneration != completionGenerationBeforeApply,
            lastCompletedBulkApplyUnenactedMoveCount == 0
         {
+            // Read the bar again rather than reusing the pre-apply sets. The
+            // apply moved items and may have gained or lost a same-title
+            // sibling; a stale candidate count makes
+            // `triggerProtectionIdentifiers` answer with nothing, which reads
+            // as unprotected and clears the shield of an item the trigger
+            // still controls.
+            let postApplyItems = await MenuBarItem.getMenuBarItems(option: .activeSpace)
+            let postApplyBaseIdentifiers = Set(postApplyItems.map(\.tag.stableIdentifierBase))
+            let postApplyLiveIdentifiers = Set(postApplyItems.map(\.uniqueIdentifier))
             let restored = restorationIdentifiersAtDispatch.filter { identifier in
                 LayoutSolver.savedPositionByBaseID(for: identifier, in: effectiveSavedOrder) != nil
                     && !Self.isTriggerProtected(
                         identifier,
                         by: triggerControlledItemIdentifiers,
-                        knownBaseIdentifiers: knownBaseIdentifiers,
-                        knownLiveIdentifiers: knownLiveIdentifiers
+                        knownBaseIdentifiers: postApplyBaseIdentifiers,
+                        knownLiveIdentifiers: postApplyLiveIdentifiers
                     )
             }
             triggerLayoutRestorationItemIdentifiers.subtract(restored)

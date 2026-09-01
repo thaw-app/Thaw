@@ -42,8 +42,11 @@ nonisolated enum MenuBarItemGroupPolicy {
             var index = [String: Int]()
             for members in groups {
                 // An identifier can only belong to one group; first wins, the
-                // same tie-break `MenuBarItemGroupSet.normalized()` uses.
-                let unclaimed = members.filter { index[$0] == nil }
+                // same tie-break `MenuBarItemGroupSet.normalized()` uses. A
+                // repeat within one group is claimed once as well, or `gather`
+                // would emit it twice and stop being a permutation.
+                var seen = Set<String>()
+                let unclaimed = members.filter { index[$0] == nil && seen.insert($0).inserted }
                 guard unclaimed.count >= 2 else { continue }
                 for member in unclaimed {
                     index[member] = kept.count

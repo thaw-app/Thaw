@@ -885,6 +885,10 @@ final class ControlItem {
         }
 
         let menu = NSMenu(title: Bundle.main.displayName)
+        // Each item's `isEnabled` is the authority here. Automatic validation
+        // would re-enable "All Trigger Features Off" simply because `self`
+        // responds to its action.
+        menu.autoenablesItems = false
 
         let settingsItem = NSMenuItem(
             title: String(localized: "\(Constants.displayName) Settings…"),

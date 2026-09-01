@@ -62,7 +62,13 @@ final class MenuBarLayoutEditorPanel: NSObject, NSPopoverDelegate {
 
     // MARK: NSPopoverDelegate
 
-    func popoverDidClose(_: Notification) {
+    func popoverDidClose(_ notification: Notification) {
+        // The close animates, so this can arrive after `show(on:onDone:)` has
+        // already put a new popover on the anchor window. Hiding the window
+        // then would pull it out from under the popover that just opened.
+        guard popover == nil || (notification.object as? NSPopover) === popover else {
+            return
+        }
         anchorWindow?.orderOut(nil)
     }
 
@@ -166,6 +172,9 @@ private struct MenuBarLayoutEditorContentView: View {
             Button("Done") {
                 onDone?()
             }
+            // The popover is semitransient, so Escape doesn't dismiss it;
+            // without a shortcut a keyboard-only user can't close the editor.
+            .keyboardShortcut(.defaultAction)
 
             Spacer()
         }

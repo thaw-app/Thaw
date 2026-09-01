@@ -74,10 +74,14 @@ extension MenuBarItemService {
             // awaits start() before the rest of its setup, so the retry loop's
             // 2s sleeps must not sit in between. A failing push marks the work
             // pending and retries off the launch path.
-            if await sendLoggingConfiguration() {
-                loggingSync.withLock { $0.isPending = false }
-            } else {
-                loggingSync.withLock { $0.isPending = true }
+            //
+            // Cleared before the send, the way `syncLogging()` does it, and
+            // never after: the session can be dropped while the request is in
+            // flight, and the invalidation that marks the configuration
+            // outstanding again must not be undone by this send's success.
+            loggingSync.withLock { $0.isPending = false }
+            let accepted = await sendLoggingConfiguration()
+            if !accepted || loggingSync.withLock({ $0.isPending }) {
                 Task { await syncLogging() }
             }
 

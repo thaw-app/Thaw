@@ -283,6 +283,7 @@ final class MenuBarItemManager {
         cacheTickCancellable?.cancel()
         menuOpenCheckTask?.cancel()
         navigationStateObservationTask?.cancel()
+        groupOrderObservationTask?.cancel()
     }
 
     /// Continuations waiting for a background cache cycle to complete,
@@ -1057,8 +1058,12 @@ final class MenuBarItemManager {
             return order
         }
         var sections = [MenuBarSection.Name: [String]]()
+        var unconvertible = [String: [String]]()
         for (key, identifiers) in order {
-            guard let name = sectionName(for: key) else { continue }
+            guard let name = sectionName(for: key) else {
+                unconvertible[key] = identifiers
+                continue
+            }
             sections[name] = identifiers
         }
         guard !sections.isEmpty else { return order }
@@ -1068,12 +1073,21 @@ final class MenuBarItemManager {
             return order
         }
 
+        // Consolidation drops a section it empties. Seed every converted
+        // section empty so such a section stays present as an empty list:
+        // restoring its original identifiers instead would duplicate the
+        // members that moved into the winning section, and a duplicate
+        // reaches both `persistSavedSectionOrder` and the live apply's
+        // item-section map.
         var result = [String: [String]]()
+        for name in sections.keys {
+            result[sectionKey(for: name)] = []
+        }
         for (name, identifiers) in gatheredSections {
             result[sectionKey(for: name)] = identifiers
         }
         // Preserve any section whose key could not be converted.
-        for (key, identifiers) in order where result[key] == nil {
+        for (key, identifiers) in unconvertible {
             result[key] = identifiers
         }
         return result
@@ -1084,7 +1098,7 @@ final class MenuBarItemManager {
     /// editing a group changes the *desired* order but moves nothing on
     /// screen by itself.
     func applyGroupOrderToLiveSections() async {
-        guard let appState else { return }
+        guard appState != nil else { return }
         let gathered = gatheredSectionOrder(savedSectionOrder)
         guard gathered != savedSectionOrder, !savedSectionOrder.isEmpty else {
             return

@@ -342,9 +342,6 @@ struct TriggersSettingsPane: View {
 
     // MARK: Available condition kinds
 
-    /// The condition kinds offered in the picker: always-available power
-    /// kinds, kinds whose feature flag is enabled, plus the trigger's own
-    /// current kind (so a disabled flag never hides an existing selection).
     /// Condition kinds whose feature flag is enabled (or which are always
     /// available). The editor additionally always includes a condition's own
     /// current kind, so a disabled flag never hides an existing selection.
@@ -437,7 +434,10 @@ struct TriggersSettingsPane: View {
         var seen = Set<String>()
         options = options.filter { seen.insert($0.bundleID).inserted }
         options.sort { $0.name.localizedCaseInsensitiveCompare($1.name) == .orderedAscending }
-        appOptions = options
+
+        if options != appOptions {
+            appOptions = options
+        }
     }
 
     // MARK: Sections
@@ -1996,6 +1996,12 @@ private struct CommitTextField: View {
             .onSubmit {
                 commit()
                 focusedField.wrappedValue = nil
+            }
+            .onDisappear {
+                // Switching panes tears the field down with focus still on it,
+                // so neither of the commits above ever runs and the draft would
+                // be lost.
+                commit()
             }
     }
 

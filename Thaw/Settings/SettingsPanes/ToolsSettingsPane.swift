@@ -187,8 +187,29 @@ struct ToolsSettingsPane: View {
     /// The app's per-app language override, via the standard `AppleLanguages`
     /// mechanism. Not a `Defaults.Key` — the key name is owned by macOS.
     private var currentLanguageOverride: String {
-        (UserDefaults.standard.array(forKey: "AppleLanguages") as? [String])?.first
-            ?? Self.systemLanguageTag
+        guard let stored = (UserDefaults.standard.array(forKey: "AppleLanguages") as? [String])?.first else {
+            return Self.systemLanguageTag
+        }
+        // The stored value is whatever macOS was handed, which need not be one
+        // of the picker's tags: `en-GB` selects our `en` localization at
+        // runtime but matches no tag, leaving the picker blank.
+        return Self.availableLocalization(matching: stored) ?? Self.systemLanguageTag
+    }
+
+    /// The bundle localization a stored `AppleLanguages` value resolves to, or
+    /// `nil` when this build ships nothing for it.
+    private static func availableLocalization(matching identifier: String) -> String? {
+        let localizations = Bundle.main.localizations.filter { $0 != "Base" }
+        if localizations.contains(identifier) {
+            return identifier
+        }
+        guard let languageCode = Locale(identifier: identifier).language.languageCode?.identifier else {
+            return nil
+        }
+        // The bare language first (`en` for `en-GB`), then any regional variant
+        // of it (`pt-BR` for `pt`), which is how macOS resolves it too.
+        return localizations.first { $0 == languageCode }
+            ?? localizations.first { Locale(identifier: $0).language.languageCode?.identifier == languageCode }
     }
 
     @ViewBuilder
@@ -253,7 +274,13 @@ struct ToolsSettingsPane: View {
         process.executableURL = URL(fileURLWithPath: "/bin/sh")
         process.arguments = [
             "-c",
-            "while /bin/kill -0 \(pid) 2>/dev/null; do /bin/sleep 0.1; done; /usr/bin/open \"\(bundlePath)\"",
+            "while /bin/kill -0 \(pid) 2>/dev/null; do /bin/sleep 0.1; done; /usr/bin/open \"$1\"",
+            // `sh -c` assigns the first operand to $0, so the path has to be
+            // the second. Passing it as an argument keeps a bundle path with
+            // a quote, a backslash, a backtick, or a `$` in it out of the
+            // script text, where double quotes alone would not protect it.
+            "thaw-relaunch",
+            bundlePath,
         ]
         try? process.run()
         NSApp.terminate(nil)

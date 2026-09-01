@@ -207,7 +207,15 @@ extension MenuBarItemManager {
             }
         }
         do {
-            return try await waitTask.value
+            // `waitTask` is unstructured, so awaiting its value does not carry
+            // the caller's cancellation into it. Without the handler a caller
+            // cancelled while input stays active waits for a `nil` timeout that
+            // never arrives.
+            return try await withTaskCancellationHandler {
+                try await waitTask.value
+            } onCancel: {
+                waitTask.cancel()
+            }
         } catch {
             // Only cancellation reaches here. Named so a log full of bare
             // `cannotComplete` failures (#900) can tell this stage apart.

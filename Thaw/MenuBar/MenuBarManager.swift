@@ -346,7 +346,7 @@ final class MenuBarManager {
             guard let self else { return }
             let isAdaptiveActive: Bool = {
                 guard let appState = self.appState else { return false }
-                let current = appState.appearanceManager.configuration.current
+                let current = appState.appearanceManager.effectiveConfiguration.current
                 return current.backgroundKind == .adaptive || current.tintKind.isAdaptive
             }()
             guard settingsWindow?.isVisible == true || isAdaptiveActive else { return }
@@ -375,7 +375,7 @@ final class MenuBarManager {
                 guard let self else { return }
                 let isAdaptiveActive: Bool = {
                     guard let appState = self.appState else { return false }
-                    let current = appState.appearanceManager.configuration.current
+                    let current = appState.appearanceManager.effectiveConfiguration.current
                     return current.backgroundKind == .adaptive || current.tintKind.isAdaptive
                 }()
                 guard isAdaptiveActive else { return }
@@ -1007,6 +1007,11 @@ final class MenuBarManager {
     /// exit. Session-only: zen mode never survives an app relaunch.
     private var sectionsRevealedBeforeZenMode: Set<MenuBarSection.Name> = []
 
+    /// The value of ``showOnHoverAllowed`` when zen mode was engaged, restored
+    /// on exit. A hotkey reveal locks hover off until the section rehides, and
+    /// leaving zen mode must not hand that lock back early.
+    private var showOnHoverAllowedBeforeZenMode = true
+
     /// Toggles zen mode: conceals the hidden and always-hidden sections and
     /// locks reveal gestures until toggled again, then restores what was
     /// showing before. Items are never moved between sections, so engaging or
@@ -1046,6 +1051,9 @@ final class MenuBarManager {
     }
 
     private func activateZenMode() {
+        // Captured before the hides below, since each hide() re-enables hover
+        // reveal and would overwrite the value zen mode has to restore.
+        showOnHoverAllowedBeforeZenMode = showOnHoverAllowed
         var revealedNames = Set<MenuBarSection.Name>()
         for name in [MenuBarSection.Name.hidden, .alwaysHidden] {
             guard let section = section(withName: name), section.isEnabled else {
@@ -1065,7 +1073,8 @@ final class MenuBarManager {
 
     private func deactivateZenMode() {
         isZenModeActive = false
-        showOnHoverAllowed = true
+        showOnHoverAllowed = showOnHoverAllowedBeforeZenMode
+        showOnHoverAllowedBeforeZenMode = true
         for name in sectionsRevealedBeforeZenMode {
             section(withName: name)?.show()
         }

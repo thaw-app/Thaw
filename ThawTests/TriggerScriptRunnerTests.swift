@@ -144,18 +144,23 @@ struct TriggerScriptRunnerTests {
             .appendingPathComponent("thaw-trigger-script-\(UUID().uuidString).sh")
         defer { try? FileManager.default.removeItem(at: scriptURL) }
 
-        let script = "#!/bin/sh\n(sleep 2) &\nprintf done\n"
+        let script = "#!/bin/sh\n(sleep 5) &\nprintf done\n"
         try script.write(to: scriptURL, atomically: true, encoding: .utf8)
         try FileManager.default.setAttributes(
             [.posixPermissions: 0o755],
             ofItemAtPath: scriptURL.path
         )
 
-        let startedAt = Date()
-        let outcome = await TriggerScriptRunner.run(path: scriptURL.path, timeout: 1)
+        // The runner timeout stays well above the elapsed bound, so a slow
+        // launch fails the bound instead of tripping the timeout as well and
+        // leaving the two behaviors indistinguishable. `ContinuousClock` for
+        // the same reason `waitUntil` uses it: a wall-clock adjustment must
+        // not move the measurement.
+        let startedAt = ContinuousClock.now
+        let outcome = await TriggerScriptRunner.run(path: scriptURL.path, timeout: 4)
 
         #expect(outcome?.exitCode == 0)
-        #expect(Date().timeIntervalSince(startedAt) < 1)
+        #expect(ContinuousClock.now - startedAt < .seconds(2))
     }
 
     @Test("expected output after the diagnostic cap is stream-matched")
