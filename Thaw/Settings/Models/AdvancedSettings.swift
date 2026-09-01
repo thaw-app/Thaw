@@ -132,7 +132,7 @@ final class AdvancedSettings {
     /// - Otherwise snaps to `1 / clamp(round(1 / interval), 1, ceiling)`,
     ///   where the ceiling is ``MenuBarItemImageCache/maxIconRefreshRate``.
     /// - Idempotent: already-on-grid values round-trip unchanged.
-    nonisolated static func normalizedIconRefreshInterval(_ interval: TimeInterval) -> TimeInterval {
+    static nonisolated func normalizedIconRefreshInterval(_ interval: TimeInterval) -> TimeInterval {
         guard interval > 0 else { return 0 }
         let ceiling = MenuBarItemImageCache.maxIconRefreshRate
         let fps = min(max((1.0 / interval).rounded(), 1), ceiling)
@@ -281,6 +281,20 @@ final class AdvancedSettings {
 
     /// Loads the model's initial state.
     private func loadInitialState() {
+        // 1.x click-gesture migration (#1012): option-click and double-click
+        // on the menu bar toggled the always-hidden section unconditionally
+        // in 1.x. 2.0 replaced them with opt-in gates whose keys did not
+        // exist for upgraders, so the gestures silently stopped working —
+        // reported as "2.0 did not honor the settings from 1.2". Seed both
+        // gates on when they have never been explicitly set; an explicit
+        // choice (either value, including off) is never overwritten.
+        if Defaults.object(forKey: .useOptionClickToShowAlwaysHiddenSection) == nil {
+            Defaults.set(true, forKey: .useOptionClickToShowAlwaysHiddenSection)
+        }
+        if Defaults.object(forKey: .useDoubleClickToShowAlwaysHiddenSection) == nil {
+            Defaults.set(true, forKey: .useDoubleClickToShowAlwaysHiddenSection)
+        }
+
         Defaults.ifPresent(key: .enableAlwaysHiddenSection, assign: &enableAlwaysHiddenSection)
         Defaults.ifPresent(key: .useOptionClickToShowAlwaysHiddenSection, assign: &useOptionClickToShowAlwaysHiddenSection)
         Defaults.ifPresent(key: .useDoubleClickToShowAlwaysHiddenSection, assign: &useDoubleClickToShowAlwaysHiddenSection)

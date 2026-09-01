@@ -815,20 +815,23 @@ final class ControlItem {
         }
         let menuBarManager = appState.menuBarManager
 
-        // Suppress phantom clicks delivered to the status item button while
-        // no menu bar items are rendered on-screen for the active space. This
-        // catches fast top-of-screen clicks during the menu bar reveal
-        // sequence under a fullscreen app, which would otherwise expand the
-        // hidden section offscreen. NSApp.currentSystemPresentationOptions is
-        // per-app and does not reflect another app's fullscreen state, so the
-        // items-list signal is used directly.
-        let screenForCheck = window?.screen ?? NSScreen.main
-        if let screen = screenForCheck, !screen.isSystemMenuBarVisible() {
-            return
-        }
-
         switch event.type {
         case .leftMouseDown:
+            // Suppress phantom left clicks delivered to the status item
+            // button while no menu bar items are rendered on-screen for the
+            // active space. This catches fast top-of-screen clicks during
+            // the menu bar reveal sequence under a fullscreen app, which
+            // would otherwise expand the hidden section offscreen.
+            // NSApp.currentSystemPresentationOptions is per-app and does
+            // not reflect another app's fullscreen state, so the items-list
+            // signal is used directly. Scoped to left clicks so the
+            // right-click menu below keeps working when the menu bar
+            // transiently has no item windows on the active space (#1012).
+            let screenForCheck = window?.screen ?? NSScreen.main
+            if let screen = screenForCheck, !screen.isSystemMenuBarVisible() {
+                return
+            }
+
             // Capture modifier flags from the event to ensure we have the state
             // at the time of the click, not when the Task executes.
             let modifierFlags = event.modifierFlags

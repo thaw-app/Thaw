@@ -81,6 +81,36 @@ struct AdvancedSettingsTests {
 
     // MARK: Initial load
 
+    @Test("Never-set click gates are seeded on for 1.x upgraders (#1012)")
+    func unsetClickGatesAreSeededOn() throws {
+        try withScratchDefaults { _ in
+            let settings = makeSettings()
+
+            // 1.x toggled the always-hidden section on option-click and
+            // double-click unconditionally; the 2.0 gates defaulted to off
+            // and their keys did not exist for upgraders, so the gestures
+            // silently died. Absent keys must come up on.
+            #expect(settings.useOptionClickToShowAlwaysHiddenSection)
+            #expect(settings.useDoubleClickToShowAlwaysHiddenSection)
+            #expect(Defaults.bool(forKey: .useOptionClickToShowAlwaysHiddenSection))
+            #expect(Defaults.bool(forKey: .useDoubleClickToShowAlwaysHiddenSection))
+        }
+    }
+
+    @Test("An explicit click-gate choice is never overwritten (#1012)")
+    func explicitClickGateChoicesAreRespected() throws {
+        try withScratchDefaults { _ in
+            Defaults.set(false, forKey: .useOptionClickToShowAlwaysHiddenSection)
+            Defaults.set(false, forKey: .useDoubleClickToShowAlwaysHiddenSection)
+            let settings = makeSettings()
+
+            #expect(!settings.useOptionClickToShowAlwaysHiddenSection)
+            #expect(!settings.useDoubleClickToShowAlwaysHiddenSection)
+            #expect(!Defaults.bool(forKey: .useOptionClickToShowAlwaysHiddenSection))
+            #expect(!Defaults.bool(forKey: .useDoubleClickToShowAlwaysHiddenSection))
+        }
+    }
+
     @Test("Stored values are loaded into the model")
     func storedValuesAreLoaded() throws {
         try withScratchDefaults { _ in

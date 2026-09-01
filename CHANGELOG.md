@@ -33,6 +33,15 @@ Please report issues at
    the active menu bar now falls back to the global active space (the two
    coincide there by definition), and the decision logs its inputs so the
    remaining field reports can be pinned to a branch.
+3. The 1.x click gestures survive the upgrade to 2.x (#1012). Option-click
+   and double-click on the menu bar toggled the always-hidden section
+   unconditionally in 1.x; 2.0 turned both into opt-in settings that
+   default to off and whose keys did not exist for upgraders, so the
+   gestures silently stopped working. Both settings now come up on when
+   they have never been explicitly set, and an explicit choice (including
+   off) is never overwritten. The control items' phantom-click suppression
+   no longer swallows the right-click menu, which it also blocked whenever
+   the menu bar transiently had no item windows on the active space.
 
 ## [2.0.1-rc.1]
 
