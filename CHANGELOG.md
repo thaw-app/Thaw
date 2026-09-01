@@ -25,6 +25,14 @@ Please report issues at
    section puts the always-hidden boundary onscreen. The reveal now
    expands the hidden section alongside the always-hidden section and
    restores both once the item settles.
+2. Menu bar appearance re-homing after a space switch no longer depends on
+   the per-display space query alone (#794). On macOS 26 setups where that
+   query stops answering, the old code silently assumed the overlay panel
+   was in place, so the tint, shape, and background stayed stuck on the
+   launch space for every recovery path. The panel on the display that owns
+   the active menu bar now falls back to the global active space (the two
+   coincide there by definition), and the decision logs its inputs so the
+   remaining field reports can be pinned to a branch.
 
 ## [2.0.1-rc.1]
 

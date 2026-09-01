@@ -10,9 +10,9 @@ import Foundation
 import Testing
 @testable import Thaw
 
-/// Covers `MenuBarOverlayPanel.isStranded(panelSpaces:currentSpace:)`, the
-/// pure decision behind the space migration in `show()` (#794). The rest of
-/// the migration talks to the window server (per-display current space and
+/// Covers `MenuBarOverlayPanel.isStranded(panelSpaces:currentSpace:globalActiveSpace:ownsActiveMenuBar:)`,
+/// the pure decision behind the space migration in `show()` (#794). The rest
+/// of the migration talks to the window server (per-display current space,
 /// the panel's own space list) and isn't practically unit-testable; this is
 /// the one piece of its logic that is.
 @Suite("Menu bar overlay panel spaces")
@@ -21,7 +21,9 @@ struct MenuBarOverlayPanelSpaceTests {
     func onCurrentSpaceIsNotStranded() {
         let stranded = MenuBarOverlayPanel.isStranded(
             panelSpaces: [10],
-            currentSpace: 10
+            currentSpace: 10,
+            globalActiveSpace: 10,
+            ownsActiveMenuBar: false
         )
         #expect(!stranded)
     }
@@ -31,7 +33,9 @@ struct MenuBarOverlayPanelSpaceTests {
         // Panel sits on space 10 while its display moved on to space 11.
         let stranded = MenuBarOverlayPanel.isStranded(
             panelSpaces: [10],
-            currentSpace: 11
+            currentSpace: 11,
+            globalActiveSpace: 11,
+            ownsActiveMenuBar: false
         )
         #expect(stranded)
     }
@@ -41,18 +45,61 @@ struct MenuBarOverlayPanelSpaceTests {
         // No spaces at all until the first order-front places it.
         let stranded = MenuBarOverlayPanel.isStranded(
             panelSpaces: [],
-            currentSpace: 10
+            currentSpace: 10,
+            globalActiveSpace: 10,
+            ownsActiveMenuBar: false
         )
         #expect(stranded)
     }
 
-    @Test("An unknown owning display's current space does not strand the panel")
-    func unknownCurrentSpaceIsNotStranded() {
-        // Without per-display space info, `show()` keeps the panel where it
-        // is rather than ordering it out on a guess.
+    @Test("A known current space beats the fallback")
+    func knownCurrentSpaceBeatsFallback() {
+        // The display's own space is authoritative: even with the panel
+        // owning the active menu bar and the global active space pointing
+        // elsewhere, a known per-display space decides the verdict alone.
         let stranded = MenuBarOverlayPanel.isStranded(
             panelSpaces: [10],
-            currentSpace: nil
+            currentSpace: 10,
+            globalActiveSpace: 11,
+            ownsActiveMenuBar: true
+        )
+        #expect(!stranded)
+    }
+
+    @Test("An unknown current space falls back to the global active space on the active display")
+    func unknownCurrentSpaceFallsBackOnActiveDisplay() {
+        // #794: on macOS 26 setups where the per-display query stops
+        // answering, the display that owns the active menu bar can still
+        // judge the panel against the global active space — the two
+        // coincide there by definition. A panel the switch left behind is
+        // stranded; one that followed is not.
+        let stranded = MenuBarOverlayPanel.isStranded(
+            panelSpaces: [10],
+            currentSpace: nil,
+            globalActiveSpace: 11,
+            ownsActiveMenuBar: true
+        )
+        #expect(stranded)
+
+        let followed = MenuBarOverlayPanel.isStranded(
+            panelSpaces: [11],
+            currentSpace: nil,
+            globalActiveSpace: 11,
+            ownsActiveMenuBar: true
+        )
+        #expect(!followed)
+    }
+
+    @Test("An unknown current space does not strand a panel on a sibling display")
+    func unknownCurrentSpaceIsNotStrandedOnSiblingDisplay() {
+        // The fallback must not reach sibling displays: the global active
+        // space says nothing about their current space, and a wrong
+        // order-out would flicker the bar on every housekeeping pass.
+        let stranded = MenuBarOverlayPanel.isStranded(
+            panelSpaces: [10],
+            currentSpace: nil,
+            globalActiveSpace: 11,
+            ownsActiveMenuBar: false
         )
         #expect(!stranded)
     }
@@ -64,7 +111,9 @@ struct MenuBarOverlayPanelSpaceTests {
         // current space.
         let stranded = MenuBarOverlayPanel.isStranded(
             panelSpaces: [30],
-            currentSpace: 30
+            currentSpace: 30,
+            globalActiveSpace: 30,
+            ownsActiveMenuBar: false
         )
         #expect(!stranded)
     }

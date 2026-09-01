@@ -461,6 +461,9 @@ final class MenuBarOverlayPanel: NSPanel, @unchecked Sendable {
         // joins the display's current space. A stranded panel is invisible
         // by definition, so this cannot flicker. (#794)
         if isStrandedOnInactiveSpace() {
+            diagLog.info(
+                "Re-homing the overlay panel onto display \(owningScreen.displayID)'s current space (#794)"
+            )
             orderOut(nil)
         }
 
@@ -494,25 +497,62 @@ final class MenuBarOverlayPanel: NSPanel, @unchecked Sendable {
             // Never ordered — the fresh order in `show()` will place it.
             return true
         }
-        guard let currentSpace = SpaceInfo.currentSpace(for: owningScreen.displayID) else {
-            // No per-display space info — assume the panel is where it is.
-            return false
+        let panelSpaces = Bridging.getSpaceList(for: windowID)
+        let currentSpace = SpaceInfo.currentSpace(for: owningScreen.displayID)
+        let ownsActiveMenuBar = owningScreen.displayID == NSScreen.screenWithActiveMenuBar?.displayID
+        // Diagnostics for the remaining #794 reports: on macOS 26 setups
+        // where the re-home still misses (still reproducing in 2.0.1-rc.1),
+        // the per-display space query is the prime suspect — the nil branch
+        // used to silently assume the panel was fine. Log which leg of the
+        // decision produced the verdict so field reports pin the failure.
+        if currentSpace == nil {
+            diagLog.warning(
+                "Per-display space query returned nil for display \(owningScreen.displayID) (ownsActiveMenuBar: \(ownsActiveMenuBar)); panel spaces: \(panelSpaces)"
+            )
         }
-        return Self.isStranded(
-            panelSpaces: Bridging.getSpaceList(for: windowID),
-            currentSpace: currentSpace.spaceID
+        let stranded = Self.isStranded(
+            panelSpaces: panelSpaces,
+            currentSpace: currentSpace?.spaceID,
+            globalActiveSpace: Bridging.getActiveSpaceID(),
+            ownsActiveMenuBar: ownsActiveMenuBar
         )
+        if stranded {
+            diagLog.info(
+                "Overlay panel is stranded: display \(owningScreen.displayID), windowID \(windowID), panel spaces \(panelSpaces), current space \(String(describing: currentSpace?.spaceID)), active space \(Bridging.getActiveSpaceID())"
+            )
+        }
+        return stranded
     }
 
     /// The pure decision behind `isStrandedOnInactiveSpace`, so it can be
     /// exercised without a live window server connection. The panel is
     /// stranded when it does not sit on the current space of its owning
     /// display, which is also the case for a panel that was never ordered.
-    static func isStranded(panelSpaces: [CGSSpaceID], currentSpace: CGSSpaceID?) -> Bool {
-        guard let currentSpace else {
+    ///
+    /// When the per-display current space is unknown, the panel on the
+    /// display that owns the active menu bar falls back to the global
+    /// active space: the two coincide there by definition. The pre-fallback
+    /// "assume fine" branch could strand a panel permanently when macOS
+    /// stopped answering the per-display query, because every recovery path
+    /// (space switch, post-switch confirmation, housekeeping timer) funnels
+    /// through this one decision (#794). For any other display the decision
+    /// stays conservative: a wrong order-out would flicker the bar on every
+    /// housekeeping pass, and unlike the old `.moveToActiveSpace` the
+    /// explicit order-out + order-front in `show()` cannot drift the panel
+    /// onto another display.
+    static func isStranded(
+        panelSpaces: [CGSSpaceID],
+        currentSpace: CGSSpaceID?,
+        globalActiveSpace: CGSSpaceID,
+        ownsActiveMenuBar: Bool
+    ) -> Bool {
+        if let currentSpace {
+            return !panelSpaces.contains(currentSpace)
+        }
+        guard ownsActiveMenuBar else {
             return false
         }
-        return !panelSpaces.contains(currentSpace)
+        return !panelSpaces.contains(globalActiveSpace)
     }
 
     /// Schedules one delayed re-check of the stranded-panel migration after
