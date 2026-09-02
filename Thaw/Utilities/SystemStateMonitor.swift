@@ -426,7 +426,11 @@ final class SystemStateMonitor: ObservableObject {
             // The authorization result is delivered through the shared
             // INFocusStatusCenter.authorizationStatus, which the monitor
             // already polls, so the completion is deliberately empty.
-            INFocusStatusCenter.default.requestAuthorization { _ in /* handled via authorizationStatus */ }
+            INFocusStatusCenter.default.requestAuthorization { _ in
+                // Deliberately empty: the authorization outcome arrives
+                // through INFocusStatusCenter.authorizationStatus, which
+                // the monitor polls, so the completion has nothing to do.
+            }
         }
     }
 

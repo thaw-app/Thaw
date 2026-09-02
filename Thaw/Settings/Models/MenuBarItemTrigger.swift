@@ -679,10 +679,10 @@ extension TriggerCondition {
 
     /// The watched item and reference hash, for the image-comparison condition.
     var imageValue: (itemIdentifier: String, referenceHash: UInt64?)? {
-        switch self {
-        case let .imageChanged(itemIdentifier, referenceHash): (itemIdentifier, referenceHash)
-        default: nil
+        if case let .imageChanged(itemIdentifier, referenceHash) = self {
+            return (itemIdentifier, referenceHash)
         }
+        return nil
     }
 
     /// The item this condition watches, for either icon-watching kind.
