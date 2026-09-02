@@ -145,6 +145,12 @@ Thaw supports programmatic settings manipulation via the `thaw://` URL scheme wi
 | `customIceIconIsTemplate`                 | Bool | Custom icon renders as template              |
 | `showIceIcon`                             | Bool | Show the Thaw icon in menu bar               |
 | `iceBarLocationOnHotkey`                  | Bool | Thaw Bar appears at mouse location on hotkey     |
+| `enableMenuBarItemOverflow`                | Bool | Eject items that would fall behind the notch |
+| `useThawBarOnNotchOverflow`                | Bool | Send ejected overflow items to the Thaw Bar  |
+| `moveCursorToRevealedItem`                 | Bool | Move the cursor onto an item once revealed   |
+| `searchIncludeVisible`                     | Bool | Include visible items in search results      |
+| `searchIncludeHidden`                      | Bool | Include hidden items in search results       |
+| `searchIncludeAlwaysHidden`                | Bool | Include always-hidden items in search        |
 
 #### Double/Time Interval Settings
 
@@ -359,7 +365,7 @@ open "thaw://get?key=useIceBar&display=37D8832A-...&callback=droppy://thaw-respo
 
 #### Get App Version (No Auth Required)
 
-The app version is a read-only value accessible without whitelist authorization. No callback URL required — it works with `broadcast=true` as well.
+The app version is a read-only value accessible without whitelist authorization. No callback URL is required, and it works with `broadcast=true` as well.
 
 ```bash
 # Get app version (no auth needed)

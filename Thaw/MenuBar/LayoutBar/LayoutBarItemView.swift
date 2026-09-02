@@ -82,7 +82,17 @@ final class LayoutBarItemView: LayoutBarArrangedView {
     private lazy var tooltipController = CustomTooltipController(text: item.displayName, view: self)
     private var tooltipTrackingArea: NSTrackingArea?
     private var appIconPreferenceObservationTask: Task<Void, Never>?
-    private let placeholderImage: NSImage?
+    /// The image drawn inside the placeholder bubble when no capture is
+    /// cached. Re-resolved lazily in ``drawPlaceholder`` so an app that was
+    /// not launchable when this view was created can still supply its icon
+    /// once it is (#981). The view is reused across cache refreshes when the
+    /// item's identity is stable, so without this the generic symbol baked
+    /// in at init stays even after the app is running and could have been
+    /// read.
+    private var placeholderImage: NSImage?
+    /// Whether ``placeholderImage`` already came from a resolved app icon, so
+    /// ``drawPlaceholder`` does not re-run the lookup on every draw.
+    private var placeholderResolvedFromApp = false
 
     /// The image displayed inside the view.
     private var cachedImage: MenuBarItemImageCache.CapturedImage? {
@@ -142,7 +152,9 @@ final class LayoutBarItemView: LayoutBarArrangedView {
     init(appState: AppState, item: MenuBarItem) {
         self.item = item
         self.appState = appState
-        self.placeholderImage = Self.makePlaceholderImage(for: item)
+        let (image, resolvedFromApp) = Self.makePlaceholderImage(for: item)
+        self.placeholderImage = image
+        self.placeholderResolvedFromApp = resolvedFromApp
 
         let initialImage = appState.imageCache.image(for: item.tag)
         self.cachedImage = initialImage
@@ -537,12 +549,38 @@ final class LayoutBarItemView: LayoutBarArrangedView {
         return CGSize(width: width, height: height)
     }
 
-    /// Routed through ``MenuBarItemIconFallback`` so the layout bar and the
+    /// The icon of the app that put this item on the bar, or `nil` when the
+    /// owner can only name Control Center.
+    ///
+    /// Resolved through ``MenuBarItemIconFallback`` so the layout bar and the
     /// Thaw Bar substitute the same image for the same item, and so both
     /// share its per-process icon cache.
+    ///
+    /// On macOS 26 every Control Center slot reports Control Center as its
+    /// owner, so an unresolved placeholder would take Control Center's icon
+    /// through the fallback. That is wrong on its face, and caching it as a
+    /// resolved icon also retires the retry in ``drawPlaceholder`` for the
+    /// owner that shows up once the source PID is known.
     @MainActor
-    private static func makePlaceholderImage(for item: MenuBarItem) -> NSImage? {
-        MenuBarItemIconFallback.image(for: item)
+    private static func resolvedAppIcon(for item: MenuBarItem) -> NSImage? {
+        guard item.immovabilityReason != .unresolvedControlCenterPlaceholder else {
+            return nil
+        }
+        return MenuBarItemIconFallback.appIcon(for: item)
+    }
+
+    @MainActor
+    private static func makePlaceholderImage(for item: MenuBarItem) -> (NSImage?, Bool) {
+        if let icon = resolvedAppIcon(for: item) {
+            return (icon, true)
+        }
+        return (
+            NSImage(
+                systemSymbolName: "menubar.rectangle",
+                accessibilityDescription: item.displayName
+            ),
+            false
+        )
     }
 
     /// Draws the marker identifying a trigger-owned item. Placed at the
@@ -594,8 +632,26 @@ final class LayoutBarItemView: LayoutBarArrangedView {
         backgroundPath.lineWidth = 1
         backgroundPath.stroke()
 
-        guard let placeholderImage else {
+        guard var placeholderImage else {
             return
+        }
+
+        // #981: if the placeholder fell back to the generic symbol at init
+        // because the owning app was not launchable yet, try the app icon
+        // again now. The view is reused across cache refreshes when the
+        // item's identity is stable, so this is the one place a later
+        // resolution surfaces. One lookup per resolution; the flag stops
+        // repeat work once an icon is in hand.
+        if !placeholderResolvedFromApp,
+           let icon = Self.resolvedAppIcon(for: item)
+        {
+            self.placeholderImage = icon
+            placeholderResolvedFromApp = true
+            // Draw the resolved icon in this pass. Assigning only the stored
+            // property left the local binding above holding the generic
+            // symbol, so the icon swap waited on an unrelated invalidation
+            // that never comes for items the image cache can't capture.
+            placeholderImage = icon
         }
 
         let iconBounds = placeholderRect.insetBy(

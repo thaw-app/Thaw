@@ -3,14 +3,14 @@ name: "PR Metadata"
 # Labels (type/area) + shape checks (base/title/Closes/DCO; size warn-only).
 # Uses pull_request_target so fork PRs can still receive labels.
 # DCO is verified via the Pulls commits API only (no checkout of PR code).
-# Crowdin sync PRs are skipped — they are translation-only and often huge.
+# Crowdin sync PRs are skipped: they are translation-only and often huge.
 # They are matched on head branch + same-repo + maintainer association, never on
 # PR title, so an untrusted fork cannot title its way past the checks.
-# Dependabot/Renovate PRs are skipped — they use bot PR bodies (no template) and
+# Dependabot/Renovate PRs are skipped: they use bot PR bodies (no template) and
 # are identified by verified bot login only, never by title.
 #
 # Spam guard: do not run on `edited` (title/body tweaks). Size heads-ups go to
-# the job summary only — never PR comments — so pushes don't bump the timeline.
+# the job summary only, never PR comments, so pushes don't bump the timeline.
 
 on:
   pull_request_target:
@@ -33,7 +33,7 @@ jobs:
       issues: write
     steps:
       # Crowdin sync PRs are trusted translation dumps; skip labeling/shape checks.
-      # Identified by head branch + same-repo + maintainer association — never by
+      # Identified by head branch + same-repo + maintainer association, never by
       # PR title, which any untrusted fork author can set to bypass checks.
       - name: Detect Crowdin sync PR
         id: crowdin
@@ -57,7 +57,7 @@ jobs:
             }
 
       # Dependabot/Renovate use their own PR bodies (no Closes:/template checkboxes).
-      # Match verified bot logins only — never titles — so forks cannot skip checks.
+      # Match verified bot logins only, never titles, so forks cannot skip checks.
       - name: Detect bot dependency PR
         id: bot_deps
         uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9.0.0
@@ -82,7 +82,7 @@ jobs:
             const owner = context.repo.owner;
             const repo = context.repo.repo;
 
-            // PR change kinds — Bug is an Issue type; bug fixes use `fix` on PRs.
+            // PR change kinds. Bug is an Issue type; bug fixes use `fix` on PRs.
             const typeLabels = {
               'Bug fix': ['fix'],
               'CI/CD': ['ci', 'cd'],
@@ -386,7 +386,7 @@ jobs:
             if (failures.length > 0) {
               lines.push('');
               lines.push(`> [!CAUTION]`);
-              lines.push(`> **Convention issues found** — please fix before merge.`);
+              lines.push(`> **Convention issues found**: please fix before merge.`);
               for (const f of failures) {
                 lines.push(`> - ${f}`);
               }
@@ -444,7 +444,7 @@ jobs:
               core.summary
                 .addHeading('PR size heads-up')
                 .addList(warnings)
-                .addRaw('_Informational only — does not block merge._')
+                .addRaw('_Informational only, does not block merge._')
                 .write();
             }
 

@@ -425,6 +425,19 @@ final class AdvancedSettings {
     private func loadInitialState() {
         isLoadingInitialState = true
         defer { isLoadingInitialState = false }
+        // 1.x click-gesture migration (#1012): option-click and double-click
+        // on the menu bar toggled the always-hidden section unconditionally
+        // in 1.x. 2.0 replaced them with opt-in gates whose keys did not
+        // exist for upgraders, so the gestures silently stopped working —
+        // reported as "2.0 did not honor the settings from 1.2". Seed both
+        // gates on when they have never been explicitly set; an explicit
+        // choice (either value, including off) is never overwritten.
+        if Defaults.object(forKey: .useOptionClickToShowAlwaysHiddenSection) == nil {
+            Defaults.set(true, forKey: .useOptionClickToShowAlwaysHiddenSection)
+        }
+        if Defaults.object(forKey: .useDoubleClickToShowAlwaysHiddenSection) == nil {
+            Defaults.set(true, forKey: .useDoubleClickToShowAlwaysHiddenSection)
+        }
 
         Defaults.ifPresent(key: .enableAlwaysHiddenSection, assign: &enableAlwaysHiddenSection)
         Defaults.ifPresent(key: .useOptionClickToShowAlwaysHiddenSection, assign: &useOptionClickToShowAlwaysHiddenSection)

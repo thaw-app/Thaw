@@ -566,6 +566,20 @@ nonisolated enum LayoutSolver {
         return screenFrames.contains { $0.contains(leadingEdge) }
     }
 
+    /// Whether an item lies entirely off every display.
+    ///
+    /// ``isOnScreen`` tests only the leading edge, which is the right test
+    /// for drag anchors but the wrong one for deciding that a *divider* is
+    /// stranded (#978). Hiding a section expands its control item into a
+    /// spacer (`Lengths.expanded`) whose frame reaches far offscreen to the
+    /// left while its trailing edge stays anchored beside the visible
+    /// section, so every healthy collapsed bar fails the leading-edge test.
+    /// Only a divider displaced past all of its items — no edge on any
+    /// screen — is one the parked-divider recovery may rebuild.
+    static nonisolated func isFullyOffScreen(bounds: CGRect, screenFrames: [CGRect]) -> Bool {
+        !screenFrames.contains { $0.intersects(bounds) }
+    }
+
     // MARK: - Notch overflow
 
     /// Decides which visible items must overflow into hidden to fit the
@@ -803,7 +817,9 @@ nonisolated enum LayoutSolver {
         /// visible side.
         var wronglyConcealed: Set<String>
 
-        var count: Int { wronglyVisible.count + wronglyConcealed.count }
+        var count: Int {
+            wronglyVisible.count + wronglyConcealed.count
+        }
 
         var isEmpty: Bool {
             wronglyVisible.isEmpty && wronglyConcealed.isEmpty
@@ -966,6 +982,62 @@ nonisolated enum LayoutSolver {
     ) -> String? {
         desiredHidden.first(where: liveMovableUIDs.contains)
             ?? desiredVisible.last(where: liveMovableUIDs.contains)
+    }
+
+    // MARK: - Cross-section fallback
+
+    /// Which slot a cross-boundary fallback move lands its item in.
+    ///
+    /// The fallback drags every item onto the same anchor, the
+    /// always-hidden divider, so the landing slot is fixed and each move
+    /// pushes whatever is already there one place further away from it.
+    enum FallbackLandingSlot {
+        /// Dragged to the right of the divider, into the leftmost slot of
+        /// the hidden section.
+        case leftmostOfHidden
+        /// Dragged to the left of the divider, into the rightmost slot of
+        /// the always-hidden section.
+        case rightmostOfAlwaysHidden
+    }
+
+    /// The order in which items crossing the hidden to always-hidden
+    /// boundary must be dragged so they come to rest in profile order.
+    ///
+    /// Because every move lands in the same slot and displaces its
+    /// predecessors, the item that must end up furthest from the divider
+    /// moves first, and the one that ends up adjacent to it moves last.
+    ///
+    /// Getting that backwards strands nothing in the wrong section, so no
+    /// gate downstream reports it: membership is correct and only the
+    /// order inside the section comes out reversed. With
+    /// enforceConcealedSectionOrder off, relaxConcealedSectionOrder then
+    /// rewrites the desired sequence to match that reversal, the LCS finds
+    /// nothing to plan, and the apply logs a layout already in its correct
+    /// positions over a bar the user can see is backwards.
+    ///
+    /// The saved order is stored left-to-right, index 0 leftmost. Landing
+    /// at the leftmost slot of hidden therefore means index 0 moves last;
+    /// landing at the rightmost slot of always-hidden means index 0 moves
+    /// first.
+    ///
+    /// Identifiers the profile does not carry have no position to honour.
+    /// They are appended, which lands them together against the divider on
+    /// whichever side they were headed, and sorted so a set's arbitrary
+    /// iteration order cannot make the sequence differ between applies.
+    ///
+    /// Pure over its inputs.
+    static nonisolated func crossSectionFallbackMoveOrder(
+        profileOrder: [String],
+        crossing: Set<String>,
+        landingSlot: FallbackLandingSlot
+    ) -> [String] {
+        let positioned = switch landingSlot {
+        case .leftmostOfHidden:
+            profileOrder.reversed().filter(crossing.contains)
+        case .rightmostOfAlwaysHidden:
+            profileOrder.filter(crossing.contains)
+        }
+        return positioned + crossing.subtracting(profileOrder).sorted()
     }
 
     // MARK: - LCS reorder

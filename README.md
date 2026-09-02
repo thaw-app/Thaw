@@ -1,22 +1,19 @@
 ![Thaw](https://raw.githubusercontent.com/thaw-app/brand-assets/main/headers/light_header.svg#gh-light-mode-only)
 ![Thaw](https://raw.githubusercontent.com/thaw-app/brand-assets/main/headers/dark_header.svg#gh-dark-mode-only)
 
-<!-- Badges: shieldcn — individuals + small related groups (light/dark) -->
+<!-- Badges: shieldcn: individuals + small related groups (light/dark) -->
 <p align="center">
-  <picture><source media="(prefers-color-scheme: dark)" srcset="https://www.shieldcn.dev/badge/macOS-26%2B.svg?variant=outline&amp;size=sm&amp;mode=dark&amp;font=geist" /><img alt="macOS 26+" src="https://www.shieldcn.dev/badge/macOS-26%2B.svg?variant=outline&amp;size=sm&amp;mode=light&amp;font=geist" /></picture>
-  <a href="https://crowdin.com/project/thaw"><picture><source media="(prefers-color-scheme: dark)" srcset="https://www.shieldcn.dev/badge/translated-20_languages.svg?variant=outline&amp;size=sm&amp;mode=dark&amp;font=geist&amp;logo=crowdin" /><img alt="Translated into 20 languages" src="https://www.shieldcn.dev/badge/translated-20_languages.svg?variant=outline&amp;size=sm&amp;mode=light&amp;font=geist&amp;logo=crowdin" /></picture></a>
-  <a href="https://discord.gg/5cnKkKbMFd"><picture><source media="(prefers-color-scheme: dark)" srcset="https://www.shieldcn.dev/badge/Discord-join.svg?variant=outline&amp;size=sm&amp;mode=dark&amp;font=geist&amp;logo=discord&amp;" /><img alt="Discord" src="https://www.shieldcn.dev/badge/Discord-join.svg?variant=outline&amp;size=sm&amp;mode=light&amp;font=geist&amp;logo=discord&amp;" /></picture></a>
+  <a href="https://github.com/thaw-app/Thaw/actions/workflows/ci.yml"><picture><source media="(prefers-color-scheme: dark)" srcset="https://www.shieldcn.dev/github/ci/thaw-app/Thaw.svg?variant=outline&amp;size=sm&amp;mode=dark&amp;font=geist&amp;statusDot=true" /><img alt="CI" src="https://www.shieldcn.dev/github/ci/thaw-app/Thaw.svg?variant=outline&amp;size=sm&amp;mode=light&amp;font=geist&amp;statusDot=true" /></picture></a>
+  <a href="https://discord.gg/KDfWjWDnR4"><picture><source media="(prefers-color-scheme: dark)" srcset="https://www.shieldcn.dev/badge/Discord-join.svg?variant=outline&amp;size=sm&amp;mode=dark&amp;font=geist&amp;logo=discord&amp;" /><img alt="Discord" src="https://www.shieldcn.dev/badge/Discord-join.svg?variant=outline&amp;size=sm&amp;mode=light&amp;font=geist&amp;logo=discord&amp;" /></picture></a>
   <a href="https://github.com/sponsors/stonerl"><picture><source media="(prefers-color-scheme: dark)" srcset="https://www.shieldcn.dev/badge/Sponsor-GitHub.svg?logo=githubsponsors&amp;variant=outline&amp;size=sm&amp;mode=dark&amp;font=geist" /><img alt="Sponsor" src="https://www.shieldcn.dev/badge/Sponsor-GitHub.svg?logo=githubsponsors&amp;variant=outline&amp;size=sm&amp;mode=light&amp;font=geist" /></picture></a>
-  <a href="LICENSE"><picture><source media="(prefers-color-scheme: dark)" srcset="https://www.shieldcn.dev/github/license/thaw-app/Thaw.svg?variant=outline&amp;size=sm&amp;mode=dark&amp;font=geist" /><img alt="License" src="https://www.shieldcn.dev/github/license/thaw-app/Thaw.svg?variant=outline&amp;size=sm&amp;mode=light&amp;font=geist" /></picture></a>
+    <a href="https://sonarcloud.io/component_measures?id=thaw-app_Thaw&amp;metric=coverage"><picture><source media="(prefers-color-scheme: dark)" srcset="https://www.shieldcn.dev/sonar/coverage/thaw-app_Thaw.svg?variant=outline&amp;size=sm&amp;mode=dark&amp;font=geist&amp;logo=sonarqubecloud" /><img alt="Sonar coverage" src="https://www.shieldcn.dev/sonar/coverage/thaw-app_Thaw.svg?variant=outline&amp;size=sm&amp;mode=light&amp;font=geist&amp;logo=sonarqubecloud" /></picture></a>
 </p>
 
 <p align="center">
-  <a href="https://github.com/thaw-app/Thaw/actions/workflows/ci.yml"><picture><source media="(prefers-color-scheme: dark)" srcset="https://www.shieldcn.dev/github/ci/thaw-app/Thaw.svg?variant=outline&amp;size=sm&amp;mode=dark&amp;font=geist&amp;statusDot=true" /><img alt="CI" src="https://www.shieldcn.dev/github/ci/thaw-app/Thaw.svg?variant=outline&amp;size=sm&amp;mode=light&amp;font=geist&amp;statusDot=true" /></picture></a>
   <a href="https://scorecard.dev/viewer/?uri=github.com/thaw-app/Thaw"><picture><source media="(prefers-color-scheme: dark)" srcset="https://www.shieldcn.dev/github/scorecard/thaw-app/Thaw.svg?variant=outline&amp;size=sm&amp;mode=dark&amp;font=geist" /><img alt="OpenSSF Scorecard" src="https://www.shieldcn.dev/github/scorecard/thaw-app/Thaw.svg?variant=outline&amp;size=sm&amp;mode=light&amp;font=geist" /></picture></a>
   <a href="https://www.bestpractices.dev/projects/13303"><picture><source media="(prefers-color-scheme: dark)" srcset="https://www.shieldcn.dev/github/openssf/thaw-app/Thaw.svg?variant=outline&amp;size=sm&amp;mode=dark&amp;font=geist&amp;color=D4AF37" /><img alt="OpenSSF Best Practices" src="https://www.shieldcn.dev/github/openssf/thaw-app/Thaw.svg?variant=outline&amp;size=sm&amp;mode=light&amp;font=geist&amp;color=D4AF37" /></picture></a>
   <picture><source media="(prefers-color-scheme: dark)" srcset="https://www.shieldcn.dev/badge/Baseline-3.svg?variant=outline&amp;size=sm&amp;mode=dark&amp;font=geist" /><img alt="OpenSSF Baseline Level 3" src="https://www.shieldcn.dev/badge/Baseline-3.svg?variant=outline&amp;size=sm&amp;mode=light&amp;font=geist" /></picture>
   <a href="docs/VERIFYING_RELEASES.md"><picture><source media="(prefers-color-scheme: dark)" srcset="https://www.shieldcn.dev/badge/SLSA-Build_L3.svg?variant=outline&amp;size=sm&amp;mode=dark&amp;font=geist&amp;logo=ri:GoPackage" /><img alt="SLSA 3" src="https://www.shieldcn.dev/badge/SLSA-3.svg?variant=outline&amp;size=sm&amp;mode=light&amp;font=geist&amp;logo=ri:GoPackage" /></picture></a>
-  <a href="https://sonarcloud.io/component_measures?id=thaw-app_Thaw&amp;metric=coverage"><picture><source media="(prefers-color-scheme: dark)" srcset="https://www.shieldcn.dev/sonar/coverage/thaw-app_Thaw.svg?variant=outline&amp;size=sm&amp;mode=dark&amp;font=geist&amp;logo=sonarqubecloud" /><img alt="Sonar coverage" src="https://www.shieldcn.dev/sonar/coverage/thaw-app_Thaw.svg?variant=outline&amp;size=sm&amp;mode=light&amp;font=geist&amp;logo=sonarqubecloud" /></picture></a>
 </p>
 
 
@@ -30,12 +27,11 @@
   <a href="#install">Install</a> ·
   <a href="#features">Features</a> ·
   <a href="#integrations">Integrations</a> ·
-  <a href="https://github.com/thaw-app/Thaw/issues/687">macOS 27 status</a> ·
   <a href=".github/CONTRIBUTING.md">Contributing</a>
 </p>
 
 <p align="center">
-  <b>We are open to partnerships and integrations, contact us.</b>
+  <b>We are open to partnerships, integrations, and sponsorships. Contact us.</b>
 </p>
 
 <p align="center">
@@ -56,21 +52,23 @@
 - **Free, and free to keep.** No purchase, no subscription, and no upgrade fee when macOS ships a new version.
 - **Open source, GPL-3.0.** Read the code, build it yourself, fork it.
 - **No tracking, no account.** No analytics, no telemetry, no sign-up.
-- **Screen Recording is optional.** Hiding, revealing, and rearranging items all work without it. Grant it only if you want menu bar item previews and appearance tinting.
-- **Light on your Mac.** A small, steady memory footprint, and no background bloat.
-- **Signed and notarized by Apple**, with [verifiable releases](docs/VERIFYING_RELEASES.md), security practices tracked against the [OpenSSF Best Practices](https://www.bestpractices.dev/projects/13303) criteria, and an [OpenSSF Scorecard](https://scorecard.dev/viewer/?uri=github.com/thaw-app/Thaw) for supply-chain posture.
+- **Screen Recording is optional.** Hiding, revealing, and rearranging items all work without it, and any item Thaw cannot capture is drawn as its app's icon instead. Grant it if you want live item previews and wallpaper-derived tinting.
+- **Light on your Mac.** A small, steady memory footprint.
+- **Signed and notarized by Apple**, with [verifiable releases](docs/VERIFYING_RELEASES.md), the [OpenSSF Best Practices](https://www.bestpractices.dev/projects/13303) Gold badge, and an [OpenSSF Scorecard](https://scorecard.dev/viewer/?uri=github.com/thaw-app/Thaw) for supply-chain posture.
 
 ## Features
 
-- **Declutter your menu bar**: hide icons you do not need and keep an always-hidden section for the rest
-- **Reveal items fast**: show hidden icons by hover, click, scroll/swipe, or hotkey
-- **Search and jump**: find any menu bar item instantly from the keyboard
-- **Switch layouts by context**: save profiles for work, focus, and presenting
-- **Style the bar**: tint, gradient, shadow, border, and custom shapes, per light/dark mode
+- **Declutter your menu bar**: hide the icons you do not need and keep an always-hidden section for the rest
+- **Reveal items fast**: hover, click, scroll or swipe, or press a hotkey
+- **Search and jump**: find any menu bar item from the keyboard
+- **Triggers**: reveal an item when a condition is met, from the battery level to the active Focus, the Wi-Fi network, or a script's exit code
+- **Switch layouts by context**: bind a profile to a display, to a Space, or to a Focus filter
+- **Zen mode**: one action conceals every section and locks the reveal gestures, then puts it all back. It can engage on its own while you present or share your screen
+- **Style the bar**: tint, gradient, shadow, border, and custom shapes, per light/dark mode and per Space
 - **Built for modern macOS**: supports macOS 26 and 27, including notch-friendly layouts via the Thaw Bar
 
 <details>
-<summary><b>Full feature list</b> — 20+ more, including drag-and-drop arrangement, item spacing, and hotkeys</summary>
+<summary><b>Full feature list</b>: 40+ more, including groups, spacers, profiles, triggers, and hotkeys</summary>
 
 ### Menu bar item management
 
@@ -82,19 +80,46 @@
 - Automatically rehide menu bar items
 - Hide application menus when they overlap with shown menu bar items
 - Drag and drop interface to arrange individual menu bar items
+- Groups that keep related items together, so they move and hide as one unit even across sections
+- Spacer items of your own, with adjustable width and colour
+- Activate an item straight from the layout editor
+- Surface a hidden item when its icon starts blinking for attention
 - Display hidden menu bar items in a separate bar (e.g. for MacBooks with the notch)
 - Search menu bar items
 - Menu bar item spacing
-- Profiles for menu bar layout
+- Draw items as their owning app's icon instead of a live capture
 
 ### Menu bar appearance
 
 - Menu bar tint (solid and gradient)
+- Adaptive tint sampled from the wallpaper, either as one average colour or as a gradient built from its two most dominant colours
+- Wallpaper changes re-tint the bar right away
 - Menu bar shadow
 - Menu bar border
-- Custom menu bar shapes (rounded and/or split)
+- Custom menu bar shapes (rounded, split, and notch-aware)
 - Remove background behind menu bar (macOS setting)
 - Different settings for light/dark mode
+- Per-Space appearance overrides
+- A separate shape, tint, and border for the Thaw Bar, instead of inheriting the menu bar's
+
+### Profiles
+
+- Save the whole configuration as a profile and switch between profiles instantly
+- Bind a profile to a display, to a Space, or to a Focus filter
+- Import and export profiles for backup or sharing
+- Pre and post apply script hooks, globally or per profile
+
+### Triggers
+
+Reveal an item when a condition is met, or hide it instead. Battery and power conditions are always available. Every other condition ships switched off and is enabled one at a time from Developer settings, and some are still marked Experimental.
+
+- Frontmost app, app running
+- Network connectivity, VPN, Wi-Fi network, Bluetooth device, audio output device
+- External display, time schedule, location
+- Focus / Do Not Disturb, Energy Mode, thermal pressure
+- Camera or microphone in use, script result
+- A watched icon changing, or blinking for attention
+- Conditions combined with AND / OR, plus an option to invert the action
 
 ### Hotkeys
 
@@ -103,6 +128,16 @@
 - Enable/disable the Thaw Bar
 - Show/hide section divider icons
 - Toggle application menus
+- Toggle automatic rehiding
+- Toggle zen mode
+- Open a specific menu bar item's menu
+- Switch between profiles
+
+### Settings and maintenance
+
+- Simple Mode, which replaces the sidebar with one curated page and keeps every other pane's configuration intact
+- One per-display section driven by a picker, rather than a repeated block per display
+- A Tools pane for diagnostic logging, onboarding replay, per-app language override, cache clearing, and resets for settings, Control Center, the layout, and permissions
 
 </details>
 
@@ -145,9 +180,9 @@
 
 Every core action is a `thaw://` deep link, so Thaw plugs into the launcher you already use.
 
-- **[Raycast](https://www.raycast.com/diazdesandi/thaw)** — official extension. Toggle sections, open search, and change settings without leaving Raycast.
-- **[Droppy](https://getdroppy.app/)** — pair Thaw with Droppy's shelf and extras for a full menu bar suite.
-- **Anything else** — Alfred, Shortcuts, Keyboard Maestro, BetterTouchTool, or a shell script.
+- **[Raycast](https://www.raycast.com/diazdesandi/thaw)**: official extension. Toggle sections, open search, and change settings without leaving Raycast.
+- **[Droppy](https://getdroppy.app/)**: pair Thaw with Droppy's shelf and extras for a full menu bar suite.
+- **Anything else**: Alfred, Shortcuts, Keyboard Maestro, BetterTouchTool, or a shell script.
 
 ```sh
 open "thaw://toggle-hidden"
@@ -167,9 +202,6 @@ brew install thaw@beta   # beta, or stable if it is newer
 Or grab the `.dmg` from the [latest release](https://github.com/thaw-app/Thaw/releases/latest) and drag Thaw to Applications.
 
 Needs macOS 26+. Thaw asks for Accessibility on first launch to move menu bar items; Screen Recording is optional. Stuck? See [Frequent issues](FREQUENT_ISSUES.md).
-
-> [!NOTE]
-> Thaw is an actively maintained fork of [Ice](https://github.com/jordanbaird/Ice), focused on fixes, compatibility, and new features.
 
 ## Languages
 
@@ -208,7 +240,7 @@ Thaw speaks 20 languages, thanks to translators around the world.
   </tr>
 </table>
 
-Missing yours, or spotted something off? [Translate Thaw on Crowdin](https://crowdin.com/project/thaw) — you can request new languages there too. Everyone who has translated Thaw is named in [Credits](CREDITS.md).
+Missing yours, or spotted something off? [Translate Thaw on Crowdin](https://crowdin.com/project/thaw). You can request new languages there too. Everyone who has translated Thaw is named in [Credits](CREDITS.md).
 
 <sub>\* Currently only in the <code>development</code> branch.</sub>
 

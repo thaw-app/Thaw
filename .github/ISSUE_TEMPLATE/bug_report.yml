@@ -7,41 +7,20 @@ body:
   - type: markdown
     attributes:
       value: |
-        **Before submitting:**
-        - Check [Frequent Issues](https://github.com/thaw-app/Thaw/blob/development/FREQUENT_ISSUES.md)
-        - Search [open & closed issues](https://github.com/thaw-app/Thaw/issues?q=is%3Aissue) for duplicates
-
-        > [!IMPORTANT]
-        > **macOS 27 (Golden Gate):** general support, “doesn’t work on 27”, and preview-build discussion belong **only** in the tracking issue:
-        > **[#687 — macOS 27 support & preview builds](https://github.com/thaw-app/Thaw/issues/687)**
-        >
-        > Do **not** open a new issue for that. New issues that ignore #687 will be closed as duplicates.
-
-  - type: checkboxes
-    id: checks
-    attributes:
-      label: Pre-submission Checklist
-      options:
-        - label: I searched existing issues (open & closed) and found no duplicates
-          required: true
-        - label: If this is about macOS 27 / Golden Gate, I have read #687 and this report is a specific new bug not already covered there (or this is not about macOS 27)
-          required: true
-        - label: I'm using the latest app version
-          required: true
+        Check [Frequent Issues](https://github.com/thaw-app/Thaw/blob/development/FREQUENT_ISSUES.md) and search [open and closed issues](https://github.com/thaw-app/Thaw/issues?q=is%3Aissue) first.
 
   - type: textarea
     id: description
     attributes:
       label: What happened?
-      description: Clear and concise description of the bug.
+      description: What went wrong, and what you expected instead.
     validations:
       required: true
 
   - type: textarea
     id: steps
     attributes:
-      label: Steps to Reproduce
-      description: How can we reproduce this?
+      label: Steps to reproduce
       placeholder: |
         1.
         2.
@@ -49,53 +28,48 @@ body:
     validations:
       required: true
 
-  - type: textarea
-    id: expected
+  - type: upload
+    id: evidence
     attributes:
-      label: Expected Behavior
-      description: What did you expect to happen?
+      label: Logs, screenshots, or a screen recording
+      description: |
+        Attach at least one. We can rarely do anything with a report that gives us nothing to look at.
+
+        A screenshot or a short recording covers most visual bugs. If the app crashes, freezes, or the problem looks timing related, a diagnostic log helps far more: Settings, Advanced, Diagnostics, turn on diagnostic logging, reproduce the bug, then attach the log.
     validations:
       required: true
 
   - type: input
     id: app_version
     attributes:
-      label: App Version
-      placeholder: e.g. 1.2.3
+      label: Thaw version
+      placeholder: e.g. 2.1.0
     validations:
       required: true
 
   - type: input
     id: macos_version
     attributes:
-      label: macOS Version
-      description: Use 26.x for Tahoe. For 27 / Golden Gate, confirm you read #687 first.
-      placeholder: e.g. 26.0 (Tahoe) or 27.0 (Golden Gate)
+      label: macOS version
+      placeholder: e.g. 26.1 (Tahoe)
     validations:
       required: true
 
   - type: dropdown
     id: monitor_setup
     attributes:
-      label: Display Setup
+      label: Display setup
+      description: Optional. Plenty of layout and notch bugs only happen on one kind of setup.
       options:
-        - Single monitor
-        - Multiple monitors
+        - Single display
+        - Multiple displays
     validations:
-      required: true
-
-  - type: upload
-    id: logs
-    attributes:
-      label: Logs / Console Output
-      description: Please ensure you have reproduced the issue with Diagnostic logging enabled (Settings → Advanced → Diagnostics → Enable diagnostic logging).
-    validations:
-      required: true
+      required: false
 
   - type: textarea
     id: additional
     attributes:
-      label: Additional Context
-      description: Screenshots, screen recordings, configuration details, etc.
+      label: Anything else?
+      description: Configuration, other menu bar apps, when it started happening.
     validations:
       required: false

@@ -228,7 +228,7 @@ jobs:
 
       # Docs/chore scans skip the macOS build, so reuse the last report cached
       # for this branch (or the PR base / development). Prefer that over
-      # analyzing with no report — Sonar would otherwise publish 0% coverage.
+      # analyzing with no report, since Sonar would otherwise publish 0% coverage.
       - name: Restore cached Coverage XML
         if: env.SONAR_ENABLED == 'true' && needs.changes.outputs.code != 'true'
         uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0

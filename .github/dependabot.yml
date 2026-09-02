@@ -32,3 +32,12 @@ updates:
       github-actions:
         patterns:
           - "*"
+    ignore:
+      # gh-aw pins these inside generated *.lock.yml files, which carry the
+      # compiler version that produced their body. Bumping the action without
+      # recompiling desyncs the two: PR #926 moved gh-aw-actions/setup from
+      # v0.85.4 to v0.86.1 on 2026-08-10 while the lock body stayed at v0.85.4,
+      # and Issue Triage has failed on every run since (the newer setup action
+      # no longer writes the create_prompt_first.sh the older body calls).
+      # These pins belong to `gh aw compile` / `gh aw update`, not Dependabot.
+      - dependency-name: "github/gh-aw-actions/*"

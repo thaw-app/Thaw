@@ -1,23 +1,16 @@
 # Roadmap
 
 Near-term direction (roughly the next year): keep Thaw compatible with current
-macOS releases, finish the menu-bar layout/trigger work below, and harden release
-and contribution practices. Items may slip; the list is intent, not a contract.
+macOS releases, and harden release and contribution practices. Items may slip;
+the list is intent, not a contract.
 
 ## Menu bar item management
 
-- Individual spacer items
-- Menu bar item groups
-- Show menu bar items when trigger conditions are met
+- Temporarily show individual menu bar items
 
 ## Menu bar appearance
 
 - Rounded screen corners
-
-## Hotkeys
-
-- Enable/disable auto rehide
-- Temporarily show individual menu bar items
 
 ## Integrations
 
@@ -27,6 +20,15 @@ and contribution practices. Items may slip; the list is intent, not a contract.
 ## Other
 
 - Menu bar widgets
+
+## Shipped in 2.1.0
+
+These were on the list above until 2.1.0 took them off it:
+
+- Individual spacer items
+- Menu bar item groups
+- Show menu bar items when trigger conditions are met
+- A hotkey to enable and disable auto-rehide
 
 ## Suggesting changes
 

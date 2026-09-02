@@ -6,8 +6,9 @@ a single interactive user on their own Mac.
 
 Update it when trust boundaries or major features change. It supports OpenSSF
 Best Practices documentation criteria (`assurance_case`, security requirements,
-architecture). OpenSSF Silver **`test_statement_coverage80` is claimed** — see
-§6.4 for the measurement and the exclusion set it rests on.
+architecture). Thaw holds the OpenSSF Best Practices **Gold** badge, with the
+passing, silver, and gold tiers each at 100%. See §6.4 for the coverage
+measurement and the exclusion set it rests on.
 
 ## 1. Security requirements (summary)
 
@@ -74,14 +75,14 @@ of Apple’s notarization infrastructure.
                                  │
               ┌──────────────────┼──────────────────┐
               ▼                  ▼                  ▼
-     MenuBarItemService     macOS TCC / AX     Sparkle (HTTPS)
-     MenuBarCaptureService  WindowServer       EdDSA verify
+         XPC helpers        macOS TCC / AX     Sparkle (HTTPS)
+    (item PIDs, capture)    WindowServer       EdDSA verify
 ```
 
 | Boundary | What crosses | Controls |
 | --- | --- | --- |
 | External URL → settings | `thaw://set` etc. | Allowlisted keys; range checks; sender whitelist + `SecCode` Team ID binding |
-| App ↔ XPC helper | Codable requests | Fixed service names; limited request vocabulary; capture requests accept only menu-bar window IDs, validated bounds, and BGRA size limits; same-team peer requirement when signed |
+| App ↔ XPC helpers | Codable requests | Fixed service names; limited request vocabulary; capture requests accept only menu-bar window IDs, validated bounds, and BGRA size limits; listeners accept only same-team peers (`XPCListener(requirement: .isFromSameTeam())`), and a teamless ad-hoc build logs a warning that it is running without peer validation |
 | App ↔ network | Appcast / downloads | HTTPS; Sparkle EdDSA (`SUPublicEDKey`); Apple notarization on shipped builds |
 | App ↔ OS | AX / capture | Explicit TCC; features degrade without grants |
 
@@ -89,7 +90,7 @@ of Apple’s notarization infrastructure.
 
 | Principle | How Thaw applies it |
 | --- | --- |
-| **Economy of mechanism** | Small XPC protocols; URI settings limited to known keys |
+| **Economy of mechanism** | Small XPC protocols (four request cases each); URI settings limited to known keys |
 | **Fail-safe defaults** | Settings URI mutation denied unless allowlisted; permissions off until user grants |
 | **Complete mediation** | Each settings URI request re-checks whitelist + signature; numeric keys clamped to ranges |
 | **Open design** | GPL-3.0; public repo; security policy and this assurance case |
@@ -117,7 +118,7 @@ defect classes before merge.
 
 ## 6. Residual risks
 
-1. Accessibility by design can manipulate other apps’ menu bar items — users
+1. Accessibility by design can manipulate other apps’ menu bar items, so users
    must trust Thaw similarly to other AX utilities.
 2. Private/undocumented WindowServer interactions increase compatibility and
    maintenance risk across macOS versions. Offscreen icon capture uses SkyLight
@@ -131,13 +132,23 @@ defect classes before merge.
    [`thaw-app`](https://github.com/thaw-app) (three owners: `stonerl`,
    `nightah`, `diazdesandi`) rely on the previous path continuing to serve the
    feed. Moving the appcast to a project-controlled domain is planned.
-4. **OpenSSF Silver statement coverage (`test_statement_coverage80`) is Met,
-   against a documented exclusion set.** Statement coverage for `thaw-app_Thaw`
-   is **80.8%** over 9,960 measured lines, from 1,893 tests. The suite is
-   entirely Swift Testing; the last XCTest file was migrated in this cycle.
+4. **Statement coverage (`test_statement_coverage80`) is Met against a
+   documented exclusion set.** Statement coverage for `thaw-app_Thaw` is
+   **84%**, as recorded in the criterion's justification on
+   [bestpractices.dev](https://www.bestpractices.dev/projects/13303). The suite
+   is entirely Swift Testing.
+
+   Branch coverage (`test_branch_coverage80`, a Gold criterion) is **N/A**. No
+   FLOSS toolchain produces reliable condition or branch coverage for Swift:
+   coverage is collected with `xcodebuild -enableCodeCoverage` and imported into
+   SonarCloud as line coverage through `xcresultparser`, and SonarCloud leaves
+   `branch_coverage` and `conditions_to_cover` empty. Apple's `xccov` is
+   line-oriented. The criterion allows N/A when no FLOSS tool can measure branch
+   coverage in the language, and the full rationale is recorded against the
+   criterion on bestpractices.dev.
 
    The measurement excludes code whose substance cannot execute in a headless
-   CI run — WindowServer/CGS private APIs, Accessibility permissions, Carbon
+   CI run: WindowServer/CGS private APIs, Accessibility permissions, Carbon
    hotkey registration, live display and running-app state, NSWindow/NSPanel
    subclasses, SwiftUI view bodies, XPC wiring, and `@main` entry points. The
    set and the rule governing it are in `sonar-project.properties`, which
@@ -149,7 +160,7 @@ defect classes before merge.
    There is still **no enforced 80% gate** in CI; the figure is measured per
    analysis and this claim should be re-checked when it moves. The residual
    gap is concentrated in `ProfileManager` (about 700 lines reachable only
-   through a live `AppState`, which no test can currently construct) — that is
+   through a live `AppState`, which no test can currently construct). That is
    a testability limit, not an untested-logic claim, and narrowing those
    entry points is the route to raising it further.
 
@@ -162,7 +173,8 @@ defect classes before merge.
 | Update authenticity | `SUFeedURL` / `SUPublicEDKey` in `Thaw/Resources/Info.plist`; Sparkle release actions |
 | Architecture | `docs/ARCHITECTURE.md` |
 | Automated analysis | `.github/workflows/ci.yml`, SonarCloud project `thaw-app_Thaw` |
-| Test coverage (Silver `test_statement_coverage80` Met) | SonarCloud `coverage` measure; CI `coverage.xml` — **80.8% over 9,960 measured lines, 1,893 tests**; exclusion set and its governing rule in `sonar-project.properties` |
+| Test coverage (`test_statement_coverage80` Met) | SonarCloud `coverage` measure; CI `coverage.xml`; **84%** per the criterion justification on bestpractices.dev; exclusion set and its governing rule in `sonar-project.properties` |
+| Badge level | [bestpractices.dev/projects/13303](https://www.bestpractices.dev/projects/13303): Gold, with passing, silver, and gold each at 100% |
 | Dependency monitoring | `.github/dependabot.yml` |
 
 ## Revision
@@ -173,3 +185,5 @@ defect classes before merge.
 | 2026-07-27 | Initial version from `development` for OpenSSF docs |
 | 2026-07-27 | Deferred Silver coverage claim; measured ~44% |
 | 2026-07-31 | Claimed Silver `test_statement_coverage80`; measured 80.8% after migrating the suite to Swift Testing and documenting the exclusion set. Corrected the SonarCloud project key to `thaw-app_Thaw` |
+| 2026-08-31 | Added `MenuBarCaptureService` to the trust boundaries and recorded the same-team XPC peer requirement |
+| 2026-09-01 | Restated the badge as Gold rather than a Silver coverage claim, refreshed statement coverage to the 84% recorded on bestpractices.dev, and documented the N/A rationale for branch coverage |

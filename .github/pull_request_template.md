@@ -4,7 +4,7 @@ A brief description of the changes proposed in this pull request.
 
 **Scope:** This PR changes one focused thing (bug fix or feature) plus minimal plumbing. Larger refactors need prior agreement in the issue.
 
-> We are on the process of migrating from XCTest to Swift Test. If you are adding new tests, please use Swift Test.
+> **Tests:** the suite is Swift Testing throughout. Write new tests with `@Test` / `#expect`, not XCTest.
 > **External contributors:** before opening a PR for a bug fix or new feature, please make sure there's a corresponding issue in the [issue tracker](https://github.com/thaw-app/Thaw/issues). PRs that fix or change things that haven't been reported/agreed on may be closed without review.
 
 ## Linked issue (required)
@@ -40,7 +40,7 @@ If you tick **Feature** or **Refactor** and touch more than ~20 files, please me
 **Product surfaces** (optional when the change is not about the app UI). Path-based labeling also applies.
 
 - Use **PR Type** for *what* changed (`CI/CD`, `Documentation`, `Other` / chore, etc.).
-- Use **`ops`** for *where* when it is repo operations: CI, release, GitHub hygiene, scripts, lint/sonar config — not a product surface.
+- Use **`ops`** for *where* when it is repo operations: CI, release, GitHub hygiene, scripts, lint/sonar config, not a product surface.
 
 - [ ] menubar
 - [ ] icebar
@@ -72,7 +72,7 @@ What does this PR change or add, and why?
 - [ ] I've documented new public APIs / non-obvious helpers.
 - [ ] I've updated documentation as needed.
 - [ ] This PR targets the `development` branch.
-- [ ] If this PR changes dependencies / lockfiles (`Package.resolved`, Actions pins, etc.), `dependency-sca` is green — or any `osv-scanner.toml` suppression includes both `reason` and `ignoreUntil` (see [SECURITY.md](SECURITY.md) § Dependency SCA policy).
+- [ ] If this PR changes dependencies / lockfiles (`Package.resolved`, Actions pins, etc.), `dependency-sca` is green, or any `osv-scanner.toml` suppression includes both `reason` and `ignoreUntil` (see [SECURITY.md](SECURITY.md) § Dependency SCA policy).
 
 Test commands run:
 

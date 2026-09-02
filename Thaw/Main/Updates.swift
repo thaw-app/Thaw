@@ -27,6 +27,23 @@ final class UpdatesManager: NSObject {
     /// Tracks whether the updater has been started.
     private var hasStartedUpdater = false
 
+    /// Tracks whether the running check was started by the macOS
+    /// compatibility alert.
+    ///
+    /// That alert promises the user a build for a macOS this one does not
+    /// support. A background check that finds nothing is silent, so the
+    /// promise has to survive the check to be kept: an empty alpha feed
+    /// sends them to the releases page rather than nowhere.
+    @ObservationIgnored
+    private var isCheckingAfterCompatibilityWarning = false
+
+    /// Opens a URL on the user's behalf.
+    ///
+    /// Injectable so a test can watch the compatibility alert's fallback fire
+    /// without handing the running system a browser window.
+    @ObservationIgnored
+    var openURL: @MainActor (URL) -> Void = { NSWorkspace.shared.open($0) }
+
     /// Storage for internal observers.
     @ObservationIgnored
     private var cancellables = Set<AnyCancellable>()
@@ -48,24 +65,56 @@ final class UpdatesManager: NSObject {
         updaterController.updater
     }
 
-    /// A Boolean value that indicates whether the user wants to receive beta updates.
-    var allowsBetaUpdates: Bool {
+    /// The update channel the user is subscribed to.
+    var updateChannel: UpdateChannel {
         get {
             // Computed over UserDefaults, so the @Observable macro cannot
             // track it automatically; register/notify Observation manually
             // (same pattern as the Sparkle-backed properties below).
-            access(keyPath: \.allowsBetaUpdates)
-            return Defaults.store.bool(forKey: "AllowsBetaUpdates")
+            access(keyPath: \.updateChannel)
+            return Self.storedUpdateChannel()
         }
         set {
-            withMutation(keyPath: \.allowsBetaUpdates) {
-                Defaults.store.set(newValue, forKey: "AllowsBetaUpdates")
+            withMutation(keyPath: \.updateChannel) {
+                Defaults.store.set(newValue.rawValue, forKey: "UpdateChannel")
+                // Keep the superseded flag in step so downgrading to a build
+                // that only knows the Bool leaves the user off stable rather
+                // than silently back on it.
+                Defaults.store.set(newValue != .stable, forKey: "AllowsBetaUpdates")
             }
             Task {
                 guard hasStartedUpdater else { return }
                 updater.checkForUpdatesInBackground()
             }
         }
+    }
+
+    /// Reads the stored channel, falling back to the flag that preceded it.
+    ///
+    /// Builds before the split offered a single "Development" setting whose
+    /// subscribers received alpha and beta together. They migrate to beta,
+    /// not alpha: alpha is now a different app on a different feed, and
+    /// moving someone onto it without them asking would swap the product
+    /// out from under them.
+    static nonisolated func storedUpdateChannel(
+        on version: OperatingSystemVersion = ProcessInfo.processInfo.operatingSystemVersion
+    ) -> UpdateChannel {
+        let stored: UpdateChannel = if let raw = Defaults.store.string(forKey: "UpdateChannel"),
+                                       let channel = UpdateChannel(rawValue: raw)
+        {
+            channel
+        } else {
+            Defaults.store.bool(forKey: "AllowsBetaUpdates") ? .beta : .stable
+        }
+        // A channel the running system cannot be offered is not honored
+        // either, or a user who selected alpha and then moved back to a
+        // supported macOS would stay pinned to the rewrite's feed and be
+        // offered nothing at all. Beta rather than stable: they had opted
+        // out of stable, and that much of the choice still applies.
+        guard stored.isAvailable(on: version) else {
+            return .beta
+        }
+        return stored
     }
 
     /// `automaticallyChecksForUpdates`/`automaticallyDownloadsUpdates` are
@@ -165,6 +214,74 @@ final class UpdatesManager: NSObject {
             updater.checkForUpdates()
         #endif
     }
+
+    /// Subscribes to the alpha channel and looks for the build that supports
+    /// the running macOS, falling back to the releases page.
+    ///
+    /// Called from ``MacOSCompatibilityWarning`` once the user accepts the
+    /// offer. The check runs in the background so that the only thing the
+    /// user sees is its outcome: either Sparkle presenting the alpha build,
+    /// or the releases page, which is where the promise lands while the feed
+    /// still carries no alpha item.
+    func checkForAlphaUpdateAfterCompatibilityWarning() {
+        beginCompatibilityCheck()
+        #if DEBUG
+            // Checking for updates hangs in debug mode, so the promise is
+            // answered here rather than by a check that never runs.
+            updateChannel = .alpha
+            resolveCompatibilityCheckWithReleasesPage()
+        #else
+            // Order matters: storing the channel schedules the one background
+            // check this needs, and that task only checks once the updater is
+            // running. Asking again here would open a second session Sparkle
+            // would drop.
+            startUpdaterIfNeeded()
+            updateChannel = .alpha
+        #endif
+    }
+
+    /// Answers the compatibility alert's promise with the releases page, if
+    /// the check it started is the one that just ended empty.
+    ///
+    /// A check that finds nothing also aborts with `SUNoUpdateError`, and one
+    /// that never reaches the feed only aborts, so both endings call this and
+    /// the flag decides which of them arrived first.
+    /// Arms the promise the compatibility alert just made, so that whichever
+    /// way the check ends, the ending is recognized as this one's.
+    func beginCompatibilityCheck() {
+        isCheckingAfterCompatibilityWarning = true
+    }
+
+    func resolveCompatibilityCheckWithReleasesPage() {
+        guard isCheckingAfterCompatibilityWarning else {
+            return
+        }
+        isCheckingAfterCompatibilityWarning = false
+        openURL(Constants.releasesURL)
+    }
+
+    /// Whether a scheduled update should be shown now rather than deferred.
+    ///
+    /// The compatibility alert asked for its check on the user's behalf, so
+    /// its result is shown rather than deferred to a notification they may
+    /// never have granted.
+    func shouldShowScheduledUpdate(inImmediateFocus immediateFocus: Bool, appIsActive: Bool) -> Bool {
+        if isCheckingAfterCompatibilityWarning {
+            return true
+        }
+        return appIsActive ? immediateFocus : false
+    }
+
+    /// Whether an update being shown should also be announced by notification,
+    /// closing the compatibility check on the way.
+    ///
+    /// The update window itself answers the alert, so a notification beside it
+    /// would say the same thing twice.
+    func shouldNotifyAboutUpdate(userInitiated: Bool) -> Bool {
+        let answersCompatibilityWarning = isCheckingAfterCompatibilityWarning
+        isCheckingAfterCompatibilityWarning = false
+        return !userInitiated && !answersCompatibilityWarning
+    }
 }
 
 // MARK: UpdatesManager: SPUUpdaterDelegate
@@ -191,10 +308,15 @@ extension UpdatesManager: SPUUpdaterDelegate {
 
     /// Determines which update channels are allowed.
     func allowedChannels(for _: SPUUpdater) -> Set<String> {
-        if Defaults.store.bool(forKey: "AllowsBetaUpdates") {
-            return ["alpha", "beta"]
-        }
-        return []
+        Self.storedUpdateChannel().allowedSparkleChannels
+    }
+
+    func updaterDidNotFindUpdate(_: SPUUpdater) {
+        resolveCompatibilityCheckWithReleasesPage()
+    }
+
+    func updater(_: SPUUpdater, didAbortWithError _: any Error) {
+        resolveCompatibilityCheckWithReleasesPage()
     }
 
     func updater(_: SPUUpdater, willScheduleUpdateCheckAfterDelay _: TimeInterval) {
@@ -216,11 +338,7 @@ extension UpdatesManager: @MainActor SPUStandardUserDriverDelegate {
         _: SUAppcastItem,
         andInImmediateFocus immediateFocus: Bool
     ) -> Bool {
-        if NSApp.isActive {
-            return immediateFocus
-        } else {
-            return false
-        }
+        shouldShowScheduledUpdate(inImmediateFocus: immediateFocus, appIsActive: NSApp.isActive)
     }
 
     func standardUserDriverWillHandleShowingUpdate(
@@ -228,16 +346,14 @@ extension UpdatesManager: @MainActor SPUStandardUserDriverDelegate {
         forUpdate update: SUAppcastItem,
         state: SPUUserUpdateState
     ) {
-        guard let appState else {
+        guard shouldNotifyAboutUpdate(userInitiated: state.userInitiated), let appState else {
             return
         }
-        if !state.userInitiated {
-            appState.userNotificationManager.addRequest(
-                with: .updateCheck,
-                title: String(localized: "A new update is available"),
-                body: String(localized: "Version \(update.displayVersionString) (\(update.versionString)) is now available")
-            )
-        }
+        appState.userNotificationManager.addRequest(
+            with: .updateCheck,
+            title: String(localized: "A new update is available"),
+            body: String(localized: "Version \(update.displayVersionString) (\(update.versionString)) is now available")
+        )
     }
 
     func standardUserDriverDidReceiveUserAttention(forUpdate _: SUAppcastItem) {
@@ -245,5 +361,79 @@ extension UpdatesManager: @MainActor SPUStandardUserDriverDelegate {
             return
         }
         appState.userNotificationManager.removeDeliveredNotifications(with: [.updateCheck])
+    }
+}
+
+// MARK: - UpdateChannel
+
+/// A stream of releases the user can subscribe to.
+///
+/// All three share the feed named by `SUFeedURL` and differ only in which
+/// `sparkle:channel` tags they accept: beta takes `beta`, alpha takes
+/// `alpha`, and neither takes the other. Alpha is not the same product as
+/// the other two, being the rewrite built against the next macOS, but it
+/// does not need a feed of its own to stay apart from beta.
+///
+/// It cannot stay apart from stable, though. Sparkle's `allowedChannels`
+/// only widens what an updater accepts: an item carrying no `sparkle:channel`
+/// is on the default channel, and per `SPUUpdaterDelegate`, "the default
+/// channel is always included in the allowed set". Every subscriber therefore
+/// sees the stable items. They stop mattering because Sparkle offers the
+/// newest allowed item, and the rewrite's version line runs ahead of the
+/// shipping app's, so a stable release can never outrank an alpha one.
+nonisolated enum UpdateChannel: String, CaseIterable, Identifiable {
+    /// Released builds.
+    case stable
+    /// Release candidates and betas of the shipping app.
+    case beta
+    /// The rewritten app, for testing against a new macOS.
+    case alpha
+
+    var id: String {
+        rawValue
+    }
+
+    /// The channels that can be offered on a system running `version`.
+    static func availableCases(on version: OperatingSystemVersion) -> [UpdateChannel] {
+        allCases.filter { $0.isAvailable(on: version) }
+    }
+
+    /// Whether this channel can be offered on a system running `version`.
+    ///
+    /// Alpha is the rewrite built against the macOS this build does not
+    /// support, so it is offered only there. Showing it earlier would
+    /// advertise a track whose builds the user cannot run, and hide the
+    /// shipping app behind an update that would never arrive.
+    func isAvailable(on version: OperatingSystemVersion) -> Bool {
+        switch self {
+        case .stable, .beta:
+            true
+        case .alpha:
+            version.majorVersion >= MacOSCompatibilityWarning.firstUnsupportedMajorVersion
+        }
+    }
+
+    /// The `sparkle:channel` values an appcast item may carry and still be
+    /// offered to a subscriber of this channel.
+    ///
+    /// Sparkle always adds the default channel to the allowed set, so every
+    /// subscriber sees the untagged stable items too. That is harmless while
+    /// stable stays on the 2.x line: Sparkle offers the newest allowed item,
+    /// and an alpha subscriber's 3.x item outranks anything stable can carry.
+    var allowedSparkleChannels: Set<String> {
+        switch self {
+        case .stable: []
+        case .beta: ["beta"]
+        case .alpha: ["alpha"]
+        }
+    }
+
+    /// A string to show in the interface.
+    var localized: LocalizedStringKey {
+        switch self {
+        case .stable: LocalizedStringKey("Stable")
+        case .beta: LocalizedStringKey("Beta")
+        case .alpha: LocalizedStringKey("Alpha")
+        }
     }
 }

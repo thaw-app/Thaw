@@ -4,7 +4,7 @@ Thaw is translated by volunteers on [Crowdin](https://crowdin.com/project/thaw).
 Everyone below has contributed translated strings to the app.
 
 Want to join them, or spotted a translation that could be better?
-[Translate Thaw on Crowdin](https://crowdin.com/project/thaw) — you can request
+[Translate Thaw on Crowdin](https://crowdin.com/project/thaw). You can request
 new languages there too.
 
 ## Translators

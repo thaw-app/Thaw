@@ -64,7 +64,7 @@ jobs:
           # SwiftPM links ELF executables with `--defsym main=<Module>_main` so
           # testable executables can rename their entry point. That symbol is
           # never emitted under `-parse-as-library`, which libFuzzer needs so
-          # its own `main` wins — linking then fails with an undefined
+          # its own `main` wins, and linking then fails with an undefined
           # `FuzzSettingsURI_main`. Drive `swiftc` directly instead; same flags
           # the Swift libFuzzer docs use. Keep `swift build -DFUZZ_REPLAY` for
           # the macOS corpus replayer in Package.swift.

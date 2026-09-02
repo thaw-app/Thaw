@@ -48,7 +48,7 @@ amend or rebase with sign-off (`git rebase --signoff` then force-push).
 
 We are **friendly to AI-assisted work**. Using coding assistants is fine when the result is high quality and follows this guide.
 
-The DCO still applies to the **human who signs off**. By adding `Signed-off-by`, you certify that you have the right to contribute the change under GPL-3.0 — including any AI-generated portions. The tool is not a DCO party; you are responsible for the commit.
+The DCO still applies to the **human who signs off**. By adding `Signed-off-by`, you certify that you have the right to contribute the change under GPL-3.0, including any AI-generated portions. The tool is not a DCO party; you are responsible for the commit.
 
 In practice:
 
@@ -60,7 +60,7 @@ We use **CodeRabbit** and **SonarCloud** on pull requests. Treat their findings 
 
 **We reserve the right** to reject contributions or block automated committers / assistant-driven submission paths when they harm the project (spam, unsafe automation, or repeated low-quality work).
 
-Pull requests **will be closed** when they show observable process or quality failures — for example unreviewed generated content pasted without human cleanup, missing required tests or documentation, failing CI or review checks left unaddressed, ignored maintainer feedback, wrong base branch, missing issue where required, unsigned commits, unchecked PR template, or drive-by refactors with no issue. Using AI does not lower the bar.
+Pull requests **will be closed** when they show observable process or quality failures, for example unreviewed generated content pasted without human cleanup, missing required tests or documentation, failing CI or review checks left unaddressed, ignored maintainer feedback, wrong base branch, missing issue where required, unsigned commits, unchecked PR template, or drive-by refactors with no issue. Using AI does not lower the bar.
 
 Maintainer bandwidth is limited. If we request changes and there is **no meaningful follow-up** within a reasonable window, the PR **will be closed**. You can always open a new PR later that addresses the feedback.
 
@@ -88,11 +88,11 @@ Regardless of the type of contribution, you'll need a GitHub account and a fork 
 
 ### Reporting bugs
 
-Before submitting a bug report, please search the [issue tracker][it] and check [Frequent Issues][fq] — your problem may already be known with a workaround available.
+Before submitting a bug report, please search the [issue tracker][it] and check [Frequent Issues][fq]. Your problem may already be known with a workaround available.
 
 We want to fix all issues as soon as possible, but before fixing a bug we need to be able to reproduce them first. Our bug report template will guide you through the information we need. Issues without enough information to reproduce the problem may be closed until more details are provided.
 
-If the app crashed — attaching a log file will help us significantly, you can find these in Thaw's settings under the General tab.
+If the app crashed, attach a log file. You can find these in Thaw's settings under the General tab.
 
 ### Translations
 
@@ -169,10 +169,12 @@ SECURITY.md) rather than bypassing the check.
 
 ### Tests
 
-Major new functionality must include automated tests in `ThawTests` (or the
-relevant package test target) unless a maintainer agrees that no seam exists.
-Bug fixes should add a regression test when practical. The PR template checklist
-asks you to confirm this.
+The suite uses [Swift Testing](https://developer.apple.com/documentation/testing)
+throughout; there is no XCTest left to match. Major new functionality must
+include automated tests in `ThawTests` (or the relevant package test target)
+unless a maintainer agrees that no seam exists. Bug fixes should add a
+regression test when practical. The PR template checklist asks you to confirm
+this.
 
 ### Project conventions
 
@@ -187,14 +189,14 @@ asks you to confirm this.
 
 ### Pull Requests
 
-Open a pull request via the [Thaw pull requests page][pr] and select the [appropriate template][prt] — it will guide you through the required information and checklist.
+Open a pull request via the [Thaw pull requests page][pr] and select the [appropriate template][prt]. It will guide you through the required information and checklist.
 
 ## Project docs (orientation)
 
-- [Governance][gov] — roles and decision-making
-- [Architecture][arch] — high-level design
-- [Security policy][sec] — reporting and security requirements
-- [URI schemes][uri] — external automation surface
+- [Governance][gov]: roles and decision-making
+- [Architecture][arch]: high-level design
+- [Security policy][sec]: reporting and security requirements
+- [URI schemes][uri]: external automation surface
 
 ## Resources
 

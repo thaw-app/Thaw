@@ -131,8 +131,8 @@ Dependabot continues to open update PRs; those PRs are subject to the same gate.
 
 | Finding | Gate behavior |
 | --- | --- |
-| Any **unsuppressed** vulnerability reported by OSV-Scanner for scanned artifacts | **Fail** — required check `dependency-sca` must be green to merge into `development` |
-| Vulnerability listed in `osv-scanner.toml` with a documented **reason** and **ignoreUntil** expiry | **Pass** (suppressed) — treated as an accepted residual risk |
+| Any **unsuppressed** vulnerability reported by OSV-Scanner for scanned artifacts | **Fail**: required check `dependency-sca` must be green to merge into `development` |
+| Vulnerability listed in `osv-scanner.toml` with a documented **reason** and **ignoreUntil** expiry | **Pass** (suppressed): treated as an accepted residual risk |
 
 There is no severity carve-out for High/Critical only: if OSV reports it and it
 is not suppressed, the change does not merge. Malicious or compromised
@@ -172,5 +172,5 @@ Rules for maintainers:
 Published advisories (when any exist):  
 https://github.com/thaw-app/Thaw/security/advisories
 
-If there are no published advisories, that means none have been disclosed yet—not
+If there are no published advisories, that means none have been disclosed yet, not
 that the project ignores reports.

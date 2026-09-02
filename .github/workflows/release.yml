@@ -1,7 +1,7 @@
 name: Release
 
 # Sparkle / channel releases are manual only (workflow_dispatch).
-# Pushing semver tags does NOT run this workflow — safe for backfilling
+# Pushing semver tags does NOT run this workflow, which is safe for backfilling
 # release history or pointing tags at old commits without distributing.
 #
 # Artifact split:
@@ -44,6 +44,19 @@ on:
         required: false
         type: boolean
         default: false
+      discussion_category:
+        description: >-
+          Open a release discussion in this category. Only takes effect when
+          Publish release is checked, because the discussion is created on the
+          draft-to-published transition.
+        required: false
+        type: choice
+        default: none
+        options:
+          - none
+          - Announcements
+          - General
+          - Ideas
       publish_appcast:
         description: Push signed appcast.xml to thaw-app/updates gh-pages
         required: false
@@ -61,13 +74,13 @@ on:
           tag (Keep a Changelog style: "## [tag]"). Used for both the Thaw
           GitHub Release body and the Sparkle appcast description. Multi-line
           text is easiest via `gh workflow run release.yml -f release_notes="$(cat notes.md)"`
-          — the web UI's field is single-line.
+          The web UI's field is single-line.
         required: false
         type: string
         default: ""
 
 concurrency:
-  # Dry runs publish nothing, so they must not queue behind — or block — a real release.
+  # Dry runs publish nothing, so they must not queue behind, or block, a real release.
   group: sparkle-appcast${{ inputs.dry_run && '-dry-run' || '' }}
   cancel-in-progress: false
 
@@ -230,7 +243,7 @@ jobs:
         env:
           TAG: ${{ steps.meta.outputs.tag }}
           DMG_NAME: ${{ env.DMG_NAME }}
-          # Pin Syft by version *and* archive digest — no curl-pipe-to-sh and no
+          # Pin Syft by version *and* archive digest: no curl-pipe-to-sh and no
           # mutable git tag in the trust path. Bump together; digests come from
           # syft_<version>_checksums.txt on the corresponding Syft release.
           SYFT_VERSION: 1.42.3
@@ -328,7 +341,7 @@ jobs:
 
       - name: Create updates GitHub Release (ZIP + deltas)
         if: ${{ !inputs.dry_run }}
-        uses: softprops/action-gh-release@3d0d9888cb7fd7b750713d6e236d1fcb99157228 # v3
+        uses: softprops/action-gh-release@efb35369e0ad2afab669f228072c1b0d510eae64 # v3
         with:
           # v3 ignores env GITHUB_TOKEN; token input is required for cross-repo.
           # UPDATES_GITHUB_TOKEN is a release-environment secret only.
@@ -366,7 +379,7 @@ jobs:
 
       - name: Create Thaw GitHub Release (DMG + SBOM + Sparkle payloads)
         if: ${{ !inputs.dry_run }}
-        uses: softprops/action-gh-release@3d0d9888cb7fd7b750713d6e236d1fcb99157228 # v3
+        uses: softprops/action-gh-release@efb35369e0ad2afab669f228072c1b0d510eae64 # v3
         with:
           # softprops v3 uses the token input (env GITHUB_TOKEN is ignored).
           token: ${{ github.token }}
@@ -515,7 +528,7 @@ jobs:
 
           s() { printf '%s\n' "$*" >> "$GITHUB_STEP_SUMMARY"; }
 
-          # Exact byte count, humanised — `du` rounds a 75-byte file up to a 4K block.
+          # Exact byte count, humanised, because `du` rounds a 75-byte file up to a 4K block.
           human() {
             stat -f%z "$1" | awk '
               $1 >= 1048576 { printf "%.1f MB\n", $1/1048576; next }
@@ -523,7 +536,7 @@ jobs:
                             { printf "%d B\n", $1 }'
           }
 
-          s "# Dry run — nothing was published"
+          s "# Dry run: nothing was published"
           s ""
           s "No GitHub Release was created, no blob was signed or attested, and no"
           s "appcast was pushed. Re-run with **Dry run** unchecked to publish."
@@ -545,19 +558,19 @@ jobs:
           s "| Asset | Size | SHA-256 |"
           s "| --- | ---: | --- |"
           for f in "build/${DMG_NAME}" "build/${DMG_NAME}.sha256" "$SBOM_PATH" "${SBOM_PATH}.sha256"; do
-            [[ -f "$f" ]] || { s "| \`$(basename "$f")\` | _missing_ | — |"; continue; }
+            [[ -f "$f" ]] || { s "| \`$(basename "$f")\` | _missing_ | n/a |"; continue; }
             s "| \`$(basename "$f")\` | $(human "$f") | \`$(shasum -a 256 "$f" | cut -c1-16)…\` |"
           done
-          s "| \`${DMG_NAME}.sigstore.json\` | — | _skipped: signing is disabled on dry runs_ |"
-          s "| \`${SBOM_NAME}.sigstore.json\` | — | _skipped: signing is disabled on dry runs_ |"
-          s "| \`${DMG_NAME}.intoto.jsonl\` | — | _skipped: provenance is disabled on dry runs_ |"
-          s "| \`${SBOM_NAME}.intoto.jsonl\` | — | _skipped: provenance is disabled on dry runs_ |"
+          s "| \`${DMG_NAME}.sigstore.json\` | n/a | _skipped: signing is disabled on dry runs_ |"
+          s "| \`${SBOM_NAME}.sigstore.json\` | n/a | _skipped: signing is disabled on dry runs_ |"
+          s "| \`${DMG_NAME}.intoto.jsonl\` | n/a | _skipped: provenance is disabled on dry runs_ |"
+          s "| \`${SBOM_NAME}.intoto.jsonl\` | n/a | _skipped: provenance is disabled on dry runs_ |"
           while IFS= read -r f; do
             [[ -n "$f" ]] || continue
             if [[ -f "$f" ]]; then
               s "| \`$(basename "$f")\` | $(human "$f") | \`$(shasum -a 256 "$f" | cut -c1-16)…\` |"
             else
-              s "| \`$(basename "$f")\` | _missing_ | — |"
+              s "| \`$(basename "$f")\` | _missing_ | n/a |"
             fi
           done <<< "$UPDATE_FILES"
 
@@ -592,7 +605,7 @@ jobs:
           for c in sorted(comps, key=lambda c: c["name"].lower()):
               out.write("| `%s` | `%s` |\n" % (c["name"], c.get("version", "?")))
           if not comps:
-              out.write("| _no packaged components found_ | — |\n")
+              out.write("| _no packaged components found_ | n/a |\n")
           print("SBOM lists %d component(s)" % len(comps))
           '
           else
@@ -618,7 +631,7 @@ jobs:
               return
             fi
             if diff -q "$live" "$APPCAST_PATH" >/dev/null 2>&1; then
-              s "No change — the live appcast already matches what this run generated."
+              s "No change. The live appcast already matches what this run generated."
               return
             fi
             s '```diff'
@@ -715,13 +728,25 @@ jobs:
 
       # The release job always drafts; publishing happens only after both
       # bundles are attached. Left as a draft when publish_release is unchecked.
+      #
+      # --discussion-category is applied in this same call on purpose: GitHub
+      # creates the linked discussion on the draft-to-published transition, so
+      # setting the category earlier on the draft would do nothing. contents:
+      # write is all it needs; the Releases endpoint creates the discussion.
       - name: Publish release
         if: ${{ inputs.publish_release }}
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GH_REPO: ${{ github.repository }}
           TAG: ${{ needs.release.outputs.tag }}
+          DISCUSSION_CATEGORY: ${{ inputs.discussion_category }}
         run: |
           set -euo pipefail
-          gh release edit "$TAG" --draft=false
-          echo "Published release ${TAG} with provenance attached"
+          if [[ "$DISCUSSION_CATEGORY" == "none" ]]; then
+            gh release edit "$TAG" --draft=false
+            echo "Published release ${TAG} with provenance attached"
+          else
+            gh release edit "$TAG" --draft=false \
+              --discussion-category "$DISCUSSION_CATEGORY"
+            echo "Published release ${TAG} with provenance attached, discussion in ${DISCUSSION_CATEGORY}"
+          fi

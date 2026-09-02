@@ -112,7 +112,7 @@ gh attestation verify Thaw_2.0.0.cdx.json --repo thaw-app/Thaw \
   --signer-workflow thaw-app/Thaw/.github/workflows/attest-build-provenance.yml
 ```
 
-`--signer-workflow` pins verification to the reusable provenance workflow — the
+`--signer-workflow` pins verification to the reusable provenance workflow: the
 identity that actually signed, rather than any workflow in the repository.
 Cosign `*.sigstore.json` bundles prove **blob integrity** from the release job;
 attestations prove **build provenance**. Check both for a full release review.

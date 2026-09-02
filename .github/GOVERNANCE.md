@@ -101,7 +101,7 @@ https://github.com/thaw-app/Thaw/graphs/contributors
 Credentials used to ship signed builds (Apple Developer ID certificate material,
 notarization credentials, Sparkle EdDSA **private** key, and related CI tokens)
 are treated as **release secrets**. They are injected only via GitHub Actions
-Secrets / Environments — never committed to git.
+Secrets / Environments, never committed to git.
 
 ### Who may access what (least privilege)
 
@@ -109,8 +109,8 @@ Secrets / Environments — never committed to git.
 | --- | --- | --- |
 | **View / edit release secrets** | Organization owners (`stonerl`, `nightah`, `diazdesandi`), scoped to the repo or org secret store that holds them | Continuity: any one owner unavailable must not block a hotfix |
 | **Dispatch `release.yml`** | Anyone with permission to run `workflow_dispatch` on this repo. Policy: Project Lead by default; Platform Lead for platform/update-path releases or when delegated; other org owners when delegated for a specific release | Start a release or dry-run workflow run |
-| **Approve / consume release secrets in CI** | Required reviewer on the GitHub **`release` Environment**: `diazdesandi`. The release job sets `environment: release`, so signing and publication steps do not run — and secrets are not injected into that job — until that reviewer approves. Other org owners (`stonerl`, `nightah`) are not listed as reviewers (avoids approval spam) but may still unblock via Environment **admin bypass** when needed | Cut signed/notarized builds and publish update assets |
-| **Write collaborators / contributors** | Everyone else with repo write | Code and docs only — no secret read; cannot approve the `release` Environment |
+| **Approve / consume release secrets in CI** | Required reviewer on the GitHub **`release` Environment**: `diazdesandi`. The release job sets `environment: release`, so signing and publication steps do not run, and secrets are not injected into that job, until that reviewer approves. Other org owners (`stonerl`, `nightah`) are not listed as reviewers (avoids approval spam) but may still unblock via Environment **admin bypass** when needed | Cut signed/notarized builds and publish update assets |
+| **Write collaborators / contributors** | Everyone else with repo write | Code and docs only: no secret read; cannot approve the `release` Environment |
 
 Prefer **org-owned** secrets under [`thaw-app`](https://github.com/thaw-app) so admin
 is not tied to one personal account. Add a second Environment reviewer only when
@@ -133,7 +133,7 @@ you intentionally want two-person approval (and accept the extra notifications).
 - Prefer GitHub’s built-in audit log / Actions run history for who approved
   Environment jobs and which workflow run used secrets (values are never logged).
 - Record secret rotations (what rotated, by whom, when) in a private maintainer
-  note or closed tracking issue — not in public issues with secret material.
+  note or closed tracking issue, not in public issues with secret material.
 - Do not print secret values in workflow logs.
 
 ### Rotation
@@ -160,7 +160,7 @@ key recovery requires the offline backup held by org owners (password manager or
 equivalent). At least **two** owners must be able to recover signing material
 without the third.
 
-Document the private backup location among owners only — never in this repo.
+Document the private backup location among owners only, never in this repo.
 
 ## Repository migration
 
@@ -234,7 +234,7 @@ remaining maintainers should still be able to:
    redirect (see [Lessons from the transfer](#lessons-from-the-transfer)); the
    release workflow mirrors the same signed `appcast.xml` to `stonerl/Thaw`
    `main` to keep those installs updating. Continuity therefore also requires
-   a working mirror token — see [RELEASES.md](../docs/RELEASES.md) under
+   a working mirror token; see [RELEASES.md](../docs/RELEASES.md) under
    *Legacy installs*.
 
 ## Bus factor

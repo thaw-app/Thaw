@@ -89,7 +89,7 @@ jobs:
 
       - name: Install OSV-Scanner
         env:
-          # Pin by version *and* archive digest — same pattern as Syft in
+          # Pin by version *and* archive digest, the same pattern as Syft in
           # release.yml. Digests from osv-scanner_SHA256SUMS on the release.
           OSV_SCANNER_VERSION: "2.4.0"
           OSV_SCANNER_SHA256_LINUX_AMD64: "15314940c10d26af9c6649f150b8a47c1262e8fc7e17b1d1029b0e479e8ed8a0"

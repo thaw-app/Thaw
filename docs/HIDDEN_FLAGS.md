@@ -7,7 +7,7 @@ default behaviour does not handle well. Most users will never need them.
 
 These flags are registered as ordinary cases in `Defaults.Key` (see
 `Thaw/Utilities/Defaults.swift`), so their storage goes through the same
-`UserDefaults.standard` domain as every other Thaw setting — they are just
+`UserDefaults.standard` domain as every other Thaw setting. They are just
 not surfaced in the UI.
 
 ## Overview
@@ -50,5 +50,5 @@ defaults delete com.stonerl.Thaw inputPauseThresholdMs
   literal previously used to read it. A raw `UserDefaults.standard` read
   with a string literal in new code should not pass review.
 - These flags are deliberately hidden diagnostics, not user-facing
-  settings — do not add Settings UI for them without a separate decision
+  settings. Do not add Settings UI for them without a separate decision
   to do so.

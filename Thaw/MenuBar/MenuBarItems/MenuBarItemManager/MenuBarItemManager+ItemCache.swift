@@ -220,17 +220,10 @@ extension MenuBarItemManager {
                let hiddenIndex = items.firstIndex(where: { $0.windowID == hiddenWID })
             {
                 self.hidden = items.remove(at: hiddenIndex)
-                if let alwaysHiddenWID = alwaysHiddenControlItemWindowID {
-                    // Do not adopt a duplicate control window when the
-                    // authoritative always-hidden ID is known but absent.
-                    if let alwaysHiddenIndex = items.firstIndex(where: { $0.windowID == alwaysHiddenWID }) {
-                        self.alwaysHidden = items.remove(at: alwaysHiddenIndex)
-                    } else {
-                        self.alwaysHidden = nil
-                    }
-                } else {
-                    self.alwaysHidden = items.removeFirst(matching: .alwaysHiddenControlItem)
-                }
+                self.alwaysHidden = Self.resolveAlwaysHidden(
+                    in: &items,
+                    authoritativeWindowID: alwaysHiddenControlItemWindowID
+                )
                 self.resolution = .identity
                 MenuBarItemManager.diagLog.debug("ControlItemPair: resolved via window ID")
                 return
@@ -260,18 +253,10 @@ extension MenuBarItemManager {
                let hidden = MenuBarItem.ownControlItem(windowID: hiddenWID)
             {
                 self.hidden = hidden
-                if let alwaysHiddenWID = alwaysHiddenControlItemWindowID {
-                    if let alwaysHiddenIndex = items.firstIndex(where: { $0.windowID == alwaysHiddenWID }) {
-                        self.alwaysHidden = items.remove(at: alwaysHiddenIndex)
-                    } else {
-                        // Same reasoning for the partner; a nil always-hidden
-                        // is a legitimate state (the section can be disabled),
-                        // so failure here is not fatal to the pair.
-                        self.alwaysHidden = MenuBarItem.ownControlItem(windowID: alwaysHiddenWID)
-                    }
-                } else {
-                    self.alwaysHidden = items.removeFirst(matching: .alwaysHiddenControlItem)
-                }
+                self.alwaysHidden = Self.resolveAlwaysHidden(
+                    in: &items,
+                    authoritativeWindowID: alwaysHiddenControlItemWindowID
+                )
                 self.resolution = .identity
                 MenuBarItemManager.diagLog.info(
                     "ControlItemPair: recovered hidden control item \(hiddenWID) from its own window; it was absent from the \(items.count)-item list"
@@ -282,7 +267,10 @@ extension MenuBarItemManager {
             // Fallback 1: match by tag (namespace + title).
             if let hidden = items.removeFirst(matching: .hiddenControlItem) {
                 self.hidden = hidden
-                self.alwaysHidden = items.removeFirst(matching: .alwaysHiddenControlItem)
+                self.alwaysHidden = Self.resolveAlwaysHidden(
+                    in: &items,
+                    authoritativeWindowID: alwaysHiddenControlItemWindowID
+                )
                 self.resolution = .identity
                 MenuBarItemManager.diagLog.debug("ControlItemPair: resolved via tag")
                 return
@@ -291,15 +279,13 @@ extension MenuBarItemManager {
             // Fallback 2: match by sourcePID (our own process) + known title.
             let ourPID = ProcessInfo.processInfo.processIdentifier
             let hiddenTitle = ControlItem.Identifier.hidden.rawValue
-            let alwaysHiddenTitle = ControlItem.Identifier.alwaysHidden.rawValue
 
             if let idx = items.firstIndex(where: { $0.sourcePID == ourPID && $0.title == hiddenTitle }) {
                 self.hidden = items.remove(at: idx)
-                if let ahIdx = items.firstIndex(where: { $0.sourcePID == ourPID && $0.title == alwaysHiddenTitle }) {
-                    self.alwaysHidden = items.remove(at: ahIdx)
-                } else {
-                    self.alwaysHidden = nil
-                }
+                self.alwaysHidden = Self.resolveAlwaysHidden(
+                    in: &items,
+                    authoritativeWindowID: alwaysHiddenControlItemWindowID
+                )
                 self.resolution = .identity
                 MenuBarItemManager.diagLog.debug("ControlItemPair: resolved via sourcePID and title")
                 return
@@ -345,6 +331,69 @@ extension MenuBarItemManager {
                 return false
             }
             return !itemWindowIDs.contains(authoritativeWindowID)
+        }
+
+        /// Resolves the always-hidden control item once the hidden divider is
+        /// claimed.
+        ///
+        /// With an authoritative window ID — Thaw's own `NSStatusItem` window
+        /// — the item is taken from the enumerated list when present. When
+        /// absent, it is recovered from the window server via
+        /// `ownControlItem` (#991): the window still exists while it is
+        /// parked offscreen (collapsed section) or filtered off the active
+        /// space, which is exactly the state the divider sits in across a
+        /// relaunch, when every profile apply needs it. Tag matching is
+        /// deliberately skipped in that case: a known-but-absent
+        /// authoritative ID must not adopt a lookalike window from a
+        /// duplicate Thaw instance. Without an authoritative ID, the
+        /// remaining list is tag-matched as before.
+        ///
+        /// `recovery` is the window-server lookup, a parameter so tests can
+        /// substitute a fixture — the unit target owns no real windows.
+        ///
+        /// Returns `nil` when the window is absent and unknown to the window
+        /// server (torn-down status item, disabled section) — the honest
+        /// answer; a stale ID must not be dressed up as a live item.
+        ///
+        /// Zero counts as no ID (`kCGNullWindowID`): a status item whose
+        /// window has not been created yet converts to it through
+        /// `CGWindowID(exactly:)`, and recovering or window-matching against
+        /// it would only ever fail.
+        ///
+        /// Without a usable ID, the remaining list is matched by our own
+        /// process plus the canonical title first — the same identity
+        /// channel the pair's sourcePID fallback uses for the hidden
+        /// divider, and the one that still answers when the hosted title
+        /// drifts from the autosave name — falling back to plain tag
+        /// matching.
+        static func resolveAlwaysHidden(
+            in items: inout [MenuBarItem],
+            authoritativeWindowID: CGWindowID?,
+            recovery: @MainActor (CGWindowID) -> MenuBarItem? = { MenuBarItem.ownControlItem(windowID: $0) }
+        ) -> MenuBarItem? {
+            guard let windowID = authoritativeWindowID, windowID != 0 else {
+                let ourPID = ProcessInfo.processInfo.processIdentifier
+                let alwaysHiddenTitle = ControlItem.Identifier.alwaysHidden.rawValue
+                if let index = items.firstIndex(where: { $0.sourcePID == ourPID && $0.title == alwaysHiddenTitle }) {
+                    return items.remove(at: index)
+                }
+                return items.removeFirst(matching: .alwaysHiddenControlItem)
+            }
+            if let index = items.firstIndex(where: { $0.windowID == windowID }) {
+                return items.remove(at: index)
+            }
+            // The ID is non-nil and absent from the list — the same decision
+            // `shouldRecoverOwnControlItem` encodes for the hidden divider.
+            guard let recovered = recovery(windowID) else {
+                MenuBarItemManager.diagLog.debug(
+                    "ControlItemPair: always-hidden window \(windowID) absent from the \(items.count)-item list and unknown to the window server"
+                )
+                return nil
+            }
+            MenuBarItemManager.diagLog.info(
+                "ControlItemPair: recovered always-hidden control item \(windowID) from its own window; it was absent from the \(items.count)-item list"
+            )
+            return recovered
         }
 
         /// Strategy 4: correlates Thaw's own AX element frames (from its own
@@ -832,7 +881,7 @@ extension MenuBarItemManager {
         // comparison to mean anything: a nil on either side is the ordinary
         // first cycle, not a change.
         let menuBarDisplayChanged: Bool = if let previousCacheDisplayID,
-                                            let currentDisplayID = context.cache.displayID
+                                             let currentDisplayID = context.cache.displayID
         {
             previousCacheDisplayID != currentDisplayID
         } else {
@@ -993,11 +1042,14 @@ extension MenuBarItemManager {
         }
 
         didRecoverHiddenSectionForCurrentCollapse = true
-        let seedPosition = Self.seedPositionForRebuiltDivider(managedItemCount: managedItemCount)
-        MenuBarItemManager.diagLog.warning(
-            "Hidden section remained collapsed for \(hiddenSectionCollapseStreak) authoritative cache passes; rebuilding H_ctrl\(Self.seedDescription(seedPosition))"
+        let seed = Self.seedForRebuiltDivider(
+            managedItemCount: managedItemCount,
+            storedPositions: Self.currentStoredDividerPositions()
         )
-        hiddenControlItem.recreateStatusItem(preferredPosition: seedPosition)
+        MenuBarItemManager.diagLog.warning(
+            "Hidden section remained collapsed for \(hiddenSectionCollapseStreak) authoritative cache passes; rebuilding H_ctrl\(Self.seedDescription(seed))"
+        )
+        hiddenControlItem.recreateStatusItem(preferredPosition: seed.preferredPosition)
 
         Task { [weak self] in
             try? await Task.sleep(for: .milliseconds(100))
@@ -1006,22 +1058,62 @@ extension MenuBarItemManager {
         return true
     }
 
-    /// Rebuilds an authoritatively identified hidden divider after it remains
-    /// parked through repeated layout applies that need it on the bar.
+    /// Why a cycle is asking the parked-divider recovery to look at H_ctrl.
     ///
-    /// `managedItemCount` decides whether the rebuild may also re-stamp the
-    /// seeded position. See ``canSeedRebuiltDividerPosition(managedItemCount:)``.
+    /// The recovery used to take the Phase 1 boundary mismatch alone, which
+    /// made it unreachable in the state it exists to repair (#978): a
+    /// stranded divider reads as a zero-width hidden section, the zero-width
+    /// guards in `applySavedLayout` and `applyProfileLayout` return before
+    /// Phase 1 runs, so the mismatch was never computed and the streak never
+    /// advanced. A refusal is itself evidence an apply wanted the divider on
+    /// the bar and could not have it, so it counts the same as a mismatch.
+    nonisolated enum ParkedDividerTrigger {
+        /// Phase 1 found items on the wrong side of H_ctrl.
+        case boundaryMismatch(Int)
+        /// An apply refused upstream because the hidden section read as
+        /// having no room between the dividers. `source` names the guard.
+        case refusedApply(source: String)
+
+        /// Whether this cycle actually needed the divider on the bar. A
+        /// mismatch of zero is a healthy cycle; a refusal never is.
+        var needsDividerOnBar: Bool {
+            switch self {
+            case let .boundaryMismatch(count): count > 0
+            case .refusedApply: true
+            }
+        }
+
+        var logDescription: String {
+            switch self {
+            case let .boundaryMismatch(count): "\(count)-item boundary mismatch"
+            case let .refusedApply(source): "refused \(source) apply"
+            }
+        }
+    }
+
+    /// Rebuilds an authoritatively identified hidden divider after it remains
+    /// parked through repeated layout cycles that need it on the bar.
+    ///
+    /// "Parked" here means stranded: no edge of the divider's frame falls on
+    /// any display (``LayoutSolver/isFullyOffScreen(bounds:screenFrames:)``).
+    /// The leading-edge test is not enough — a healthy collapsed bar expands
+    /// H_ctrl into an offscreen-reaching spacer, and reading that as parked
+    /// would rebuild dividers that are doing their job (#978). Only a
+    /// divider pushed past every item has both edges offscreen.
+    ///
+    /// `managedItemCount` and the stored control item positions decide what
+    /// the rebuild does with the autosaved position. See
+    /// ``MenuBarItemManager/seedForRebuiltDivider(managedItemCount:storedPositions:)``.
     func recoverParkedHiddenDividerIfNeeded(
-        hiddenBoundaryMismatch: Int,
+        trigger: ParkedDividerTrigger,
         hiddenControlItem: MenuBarItem,
         screenFrames: [CGRect],
         managedItemCount: Int
     ) -> Bool {
-        guard hiddenBoundaryMismatch > 0,
-              !LayoutSolver.isOnScreen(bounds: hiddenControlItem.bounds, screenFrames: screenFrames)
+        guard trigger.needsDividerOnBar,
+              LayoutSolver.isFullyOffScreen(bounds: hiddenControlItem.bounds, screenFrames: screenFrames)
         else {
-            parkedHiddenDividerMismatchStreak = 0
-            didRecoverParkedHiddenDividerForCurrentMismatch = false
+            resetParkedHiddenDividerRecovery()
             return false
         }
 
@@ -1036,11 +1128,14 @@ extension MenuBarItemManager {
         }
 
         didRecoverParkedHiddenDividerForCurrentMismatch = true
-        let seedPosition = Self.seedPositionForRebuiltDivider(managedItemCount: managedItemCount)
-        MenuBarItemManager.diagLog.warning(
-            "H_ctrl remained parked through \(parkedHiddenDividerMismatchStreak) authoritative mismatch applies; rebuilding it\(Self.seedDescription(seedPosition))"
+        let seed = MenuBarItemManager.seedForRebuiltDivider(
+            managedItemCount: managedItemCount,
+            storedPositions: MenuBarItemManager.currentStoredDividerPositions()
         )
-        hiddenControl.recreateStatusItem(preferredPosition: seedPosition)
+        MenuBarItemManager.diagLog.warning(
+            "H_ctrl remained parked through \(parkedHiddenDividerMismatchStreak) authoritative applies (\(trigger.logDescription)); rebuilding it\(MenuBarItemManager.seedDescription(seed))"
+        )
+        hiddenControl.recreateStatusItem(preferredPosition: seed.preferredPosition)
 
         Task { [weak self] in
             try? await Task.sleep(for: .milliseconds(100))
@@ -1054,6 +1149,19 @@ extension MenuBarItemManager {
             )
         }
         return true
+    }
+
+    /// Clears the parked-divider streak, so the next strand starts counting
+    /// from zero and is allowed its own rebuild.
+    ///
+    /// Kept separate from the guard that discovers a healthy divider because
+    /// Phase 1 also has to clear it, and clearing it there on a zero mismatch
+    /// alone was half of why the recovery could never fire (#978): a divider
+    /// stranded while the visible/hidden boundary was consistent had its
+    /// streak reset on every cycle.
+    func resetParkedHiddenDividerRecovery() {
+        parkedHiddenDividerMismatchStreak = 0
+        didRecoverParkedHiddenDividerForCurrentMismatch = false
     }
 
     /// Whether bundleID owns a menu bar item Thaw already tracks: an entry

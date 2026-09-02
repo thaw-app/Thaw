@@ -14,8 +14,9 @@ profiles, and customizes menu bar appearance. It is a maintained fork of
   loss of status items.
 - Prefer local-only operation: no accounts, no telemetry/tracking backend.
 - Fail closed for privileged automation surfaces (`thaw://` settings APIs).
-- Stay compatible with current macOS releases (26+; experimental 27 work on a
-  feature branch).
+- Stay compatible with current macOS releases. The deployment target is macOS
+  26; macOS 27 support is tracked in
+  [#687](https://github.com/thaw-app/Thaw/issues/687).
 
 ## Repository layout
 
@@ -23,10 +24,12 @@ profiles, and customizes menu bar appearance. It is a maintained fork of
 | --- | --- |
 | `Thaw/` | Main application target (UI, menu bar logic, settings, events, permissions) |
 | `Shared/` | Code shared between the app and helper processes (bridging, XPC client types, utilities) |
-| `MenuBarItemService/` | XPC helper process for menu-bar item source PID resolution and related work off the main app |
+| `MenuBarItemService/` | XPC helper process that resolves menu bar item source PIDs off the main app |
 | `MenuBarCaptureService/` | Recyclable XPC helper that runs SkyLight offscreen icon capture so the per-call dictionary leak stays out of the UI process |
 | `ThawCtl/` | Small SwiftPM CLI / control utilities |
-| `ThawTests/` | XCTest suite run in CI |
+| `ThawTests/` | Swift Testing suite run in CI |
+| `Fuzzing/` | SwiftPM libFuzzer targets; currently the `thaw://` settings URI parser |
+| `scripts/` | Coverage, credits, and SwiftLint input helpers used by CI |
 | `docs/` | User/developer documentation (e.g. URI schemes) |
 | `.github/` | CI, release, contributing, security policy |
 
@@ -38,19 +41,18 @@ External dependencies are declared via Swift Package Manager and locked in
 
 ```text
 ┌─────────────────────────────────────────────────────────────┐
-│                        Thaw.app                             │
+│                           Thaw.app                          │
 │  AppDelegate / AppState                                     │
 │  ├── MenuBar (ItemManager, layout, IceBar/Thaw Bar, …)      │
 │  ├── Events / Hotkeys / HID                                 │
+│  ├── Triggers (condition monitors)                          │
 │  ├── Settings + URI handler (thaw://)                       │
 │  ├── Permissions (Accessibility, Screen Recording, …)       │
 │  └── Updates (Sparkle)                                      │
-│                         │ XPC                               │
-│                         ▼                                   │
-│              MenuBarItemService.xpc                         │
-│              (source PID cache / listener)                  │
-│              MenuBarCaptureService.xpc                      │
-│              (offscreen SkyLight capture; recycled)         │
+│              │ XPC                    │ XPC                 │
+│              ▼                        ▼                     │
+│   MenuBarItemService.xpc      MenuBarCaptureService.xpc     │
+│   (source PID resolution)     (offscreen capture; recycled) │
 └─────────────────────────────────────────────────────────────┘
           │                         │
           ▼                         ▼
@@ -66,6 +68,10 @@ External dependencies are declared via Swift Package Manager and locked in
   and the Thaw Bar (IceBar) UI.
 - **Events / Hotkeys:** User input paths that show or hide sections without
   going through the settings UI.
+- **Triggers:** Condition monitors (power, network, Focus, schedule, and
+  others) that reveal or hide an individual item. Everything except the
+  battery and power conditions is off until enabled per condition from
+  Developer settings.
 - **Settings:** UserDefaults-backed configuration, profiles, onboarding.
 - **Permissions:** Guides the user through TCC prompts required for AX and
   screen capture features.
@@ -74,11 +80,20 @@ External dependencies are declared via Swift Package Manager and locked in
 
 ### `MenuBarItemService` (XPC)
 
-A separate process (`com.stonerl.Thaw.MenuBarItemService`) isolates some
-WindowServer / PID lookup work from the UI process. The shared protocol is a
-small Codable request/response surface (`start`, `configureLogging`,
-`sourcePID` / `sourcePIDs`). Logging to a shared diagnostic file is configured
-by the main app after launch.
+A separate process (`com.stonerl.Thaw.MenuBarItemService`) isolates
+WindowServer and PID lookup work from the UI process. The shared protocol is a
+small Codable request/response surface: `start`, `configureLogging`, and
+`sourcePIDs`. Logging to a shared diagnostic file is configured by the main app
+after launch.
+
+### `MenuBarCaptureService` (XPC)
+
+A second helper (`com.stonerl.Thaw.MenuBarCaptureService`) produces the images
+Thaw draws for menu bar items. Its protocol adds `captureBatch` and `recycle`
+to the same `start` and `configureLogging` pair. The app asks for one batch per
+refresh rather than one call per window, and the helper exits once it has spent
+its capture budget, which bounds the per-call leak in the underlying SkyLight
+API to the helper's lifetime rather than the app's.
 
 ### `MenuBarCaptureService` (XPC)
 
@@ -98,7 +113,7 @@ fence-port leak tracked as issue #933.
 
 | Interface | Direction | Notes |
 | --- | --- | --- |
-| `thaw://` URL scheme | Inbound | Automation / deep links; settings mutation is allowlisted + sender-signed — see [URI_SCHEMES.md](URI_SCHEMES.md) |
+| `thaw://` URL scheme | Inbound | Automation / deep links; settings mutation is allowlisted + sender-signed; see [URI_SCHEMES.md](URI_SCHEMES.md) |
 | Sparkle appcast HTTPS | Outbound | Update metadata and downloads over TLS |
 | Accessibility / Screen Recording | System | Required for core menu-bar manipulation and capture |
 | Crowdin | Out-of-band | Localization workflow (not runtime) |
@@ -113,7 +128,8 @@ fence-port leak tracked as issue #933.
 ## Build and release
 
 - **Dev loop:** Open `Thaw.xcodeproj` in Xcode 26+, build/run.
-- **CI:** `.github/workflows/ci.yml` — SwiftLint, `xcodebuild test`, SonarCloud.
+- **CI:** `.github/workflows/ci.yml` runs SwiftLint, `xcodebuild test`, and
+  SonarCloud.
   Shared release/CI pieces live in [`thaw-app/org-ci`](https://github.com/thaw-app/org-ci).
 - **Release:** Signed with Developer ID, notarized, packaged (ZIP/DMG), Sparkle
   appcast updated. See [VERIFYING_RELEASES.md](VERIFYING_RELEASES.md) and
@@ -135,7 +151,7 @@ and supply-chain review:
 
 ## Related documents
 
-- [ASSURANCE_CASE.md](ASSURANCE_CASE.md) — threat model and security argument
-- [URI_SCHEMES.md](URI_SCHEMES.md) — external URL/API surface
-- [SECURITY.md](../.github/SECURITY.md) — security requirements and reporting
-- [GOVERNANCE.md](../.github/GOVERNANCE.md) — project roles and org repo inventory
+- [ASSURANCE_CASE.md](ASSURANCE_CASE.md): threat model and security argument
+- [URI_SCHEMES.md](URI_SCHEMES.md): external URL/API surface
+- [SECURITY.md](../.github/SECURITY.md): security requirements and reporting
+- [GOVERNANCE.md](../.github/GOVERNANCE.md): project roles and org repo inventory

@@ -1,8 +1,8 @@
 name: Attest build provenance
 
 # Reusable provenance signing, isolated from the macOS build job.
-# Called with subject digests only — no Apple/Sparkle secrets, no `release`
-# Environment — so verification can be pinned to this workflow's signing
+# Called with subject digests only: no Apple/Sparkle secrets and no `release`
+# Environment, so verification can be pinned to this workflow's signing
 # identity with `gh attestation verify --signer-workflow`.
 #
 # This is SLSA v1.0 Build L2. Build L3 additionally requires the *build itself*
