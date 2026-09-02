@@ -69,6 +69,27 @@ extension MenuBarItemManager {
             }
         }
 
+        /// Whether a synthetic drag to this destination would press at a
+        /// point that lies off every display.
+        ///
+        /// ``targetPoint(in:on:)`` derives the drop point from the target's
+        /// leading or trailing edge, so a target parked in the off-screen
+        /// zone yields a press no owner is watching: the events are accepted,
+        /// AppKit drops the item beside the parked target, and the item is
+        /// stranded there. ``LayoutSolver/isOnScreen(bounds:screenFrames:)``
+        /// is the matching test — it measures the leading edge, which is the
+        /// edge a drop point is built from.
+        ///
+        /// Answering true is not on its own a reason to refuse a move. A
+        /// collapsed section parks its divider and its items off-screen by
+        /// design, so every drop that conceals an item answers true and is
+        /// still correct. Callers pair this with the moved item's desired
+        /// section: only an item bound for the visible section is stranded
+        /// by a target that answers true.
+        func wouldLandOffScreen(screenFrames: [CGRect]) -> Bool {
+            !LayoutSolver.isOnScreen(bounds: targetItem.bounds, screenFrames: screenFrames)
+        }
+
         /// A string to use for logging purposes.
         var logString: String {
             switch self {

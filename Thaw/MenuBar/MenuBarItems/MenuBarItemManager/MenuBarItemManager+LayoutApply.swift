@@ -2342,6 +2342,47 @@ extension MenuBarItemManager {
                 fallbackSection: fallbackSection
             )
 
+            // An item bound for the visible section has to land on screen, so
+            // its anchor has to be on screen. Anchoring it on a parked item
+            // presses at a point off the display: the events are accepted,
+            // AppKit drops the item beside the parked anchor, and a
+            // desired-visible item is stranded in the concealed zone. The
+            // next planned move can then anchor on the item just stranded,
+            // so one bad drop takes a whole run of items with it.
+            //
+            // #1027: the reporter's tgpro and soundsource:Input were already
+            // on the wrong side of a parked H_ctrl, and Phase 1 had just
+            // declined to rescue them (H_ctrl parked, #899). This pass then
+            // anchored codexbar-codex and codexbar-claude on tgpro, aldente
+            // on soundsource:Input, then Maccy on aldente and
+            // TextInputMenuAgent on Maccy — six desired-visible items walked
+            // into the hidden section, one chained off the last. The bar went
+            // from visible=12/hidden=13 to visible=1/hidden=19 in six
+            // seconds.
+            //
+            // Only visible-bound moves are gated. A parked anchor is the
+            // normal case for the other two sections: concealing a section
+            // parks its divider and its items off screen by design, so
+            // gating those would refuse every move into a collapsed section
+            // and strand the profile's concealment work instead. In the same
+            // log those moves were all correct — App-Cleaner onto a parked
+            // H_ctrl, three always-hidden items onto a parked AH_ctrl — and
+            // they keep running.
+            //
+            // Skipping counts as unenacted, which withholds the saved-order
+            // write, so an arrangement this apply could not achieve is not
+            // persisted as though it had been.
+            if fallbackSection == .visible {
+                let screenFrames = NSScreen.screens.map { CGDisplayBounds($0.displayID) }
+                if dest.wouldLandOffScreen(screenFrames: screenFrames) {
+                    unenactedMoveCount += 1
+                    MenuBarItemManager.diagLog.warning(
+                        "Profile layout: skipping the visible-bound move of \(planned.uid), its anchor \(dest.logString) is parked offscreen (minX=\(dest.targetItem.bounds.minX)); the drop would strand it"
+                    )
+                    continue
+                }
+            }
+
             do {
                 try await move(item: item, to: dest, skipInputPause: true)
                 movedCount += 1
