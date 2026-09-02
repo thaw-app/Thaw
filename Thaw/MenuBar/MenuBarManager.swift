@@ -785,12 +785,7 @@ final class MenuBarManager {
 
         // Resolve per-screen capture inputs synchronously on MainActor before
         // fanning out; the SCK calls themselves are the only async work.
-        var inputs = [(
-            displayID: CGDirectDisplayID,
-            windowIDs: [CGWindowID],
-            bounds: CGRect,
-            fullBounds: CGRect
-        )]()
+        var inputs = [(displayID: CGDirectDisplayID, windowIDs: [CGWindowID], bounds: CGRect, fullBounds: CGRect)]()
         for screen in targetScreens {
             let displayID = screen.displayID
             guard
