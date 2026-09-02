@@ -169,7 +169,16 @@ final class MenuBarItemImageCache: @unchecked Sendable {
     ///
     /// Detection is otherwise tied to the reveal setting, which a user may
     /// leave off while still wanting a trigger to act on the same signal.
-    @ObservationIgnored var isAttentionDetectionRequired = false
+    ///
+    /// Flipping this restarts the live-refresh loop: with every UI consumer
+    /// closed, capture only runs when the loop's section selection includes
+    /// the concealed sections, and that selection reads this flag.
+    @ObservationIgnored var isAttentionDetectionRequired = false {
+        didSet {
+            guard oldValue != isAttentionDetectionRequired else { return }
+            startLiveRefreshIfNeeded()
+        }
+    }
 
     /// Memoized results of ``trimmedImage(for:)``, keyed by tag, each paired
     /// with the `CGImage` it was derived from so a recapture invalidates it.
@@ -766,12 +775,13 @@ final class MenuBarItemImageCache: @unchecked Sendable {
                 self.makeNavigationStateSnapshot()
             }
             let needsRefresh = self.hasVisibleCaptureConsumer(nav: nav)
+                || self.isAttentionDetectionRequired
 
             if needsRefresh {
                 // Already running — don't restart
                 guard self.liveRefreshTask == nil else { return }
                 MenuBarItemImageCache.diagLog.debug(
-                    "Starting live refresh (iceBar=\(nav.isIceBarPresented), search=\(nav.isSearchPresented), settings=\(nav.isSettingsPresented))"
+                    "Starting live refresh (iceBar=\(nav.isIceBarPresented), search=\(nav.isSearchPresented), settings=\(nav.isSettingsPresented), attention=\(self.isAttentionDetectionRequired))"
                 )
                 lastSCKRefreshAt = nil
                 lastHiddenRefreshAt = nil
@@ -828,7 +838,7 @@ final class MenuBarItemImageCache: @unchecked Sendable {
             }
 
             // Determine which sections to refresh based on what's visible
-            let sections: [MenuBarSection.Name]
+            var sections: [MenuBarSection.Name]
             let isLayoutPane = nav.isSettingsPresented
                 && nav.settingsNavigationIdentifier == .menuBarLayout
             // The Hotkeys pane only needs item icons while its per-item list
@@ -858,9 +868,26 @@ final class MenuBarItemImageCache: @unchecked Sendable {
                       let current = appState.menuBarManager.iceBarPanel.currentSection
             {
                 sections = [current]
+            } else if isAttentionDetectionRequired {
+                // Attention triggers watch concealed icons, and the blink
+                // only exists in the capture: sample them even when every
+                // UI consumer is closed.
+                sections = [.hidden, .alwaysHidden]
             } else {
                 try? await Task.sleep(for: .milliseconds(50))
                 continue
+            }
+
+            // A single-section consumer (the Thaw Bar) can be pointed at the
+            // visible section while a trigger watches a concealed icon; the
+            // concealed sections always stay in the sampled set when their
+            // capture is demanded for attention detection.
+            if isAttentionDetectionRequired {
+                for concealed in [MenuBarSection.Name.hidden, .alwaysHidden]
+                    where !sections.contains(concealed)
+                {
+                    sections.append(concealed)
+                }
             }
 
             if appState.itemManager.lastMoveOperationOccurred(within: .seconds(2))

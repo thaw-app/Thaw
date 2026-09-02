@@ -290,6 +290,7 @@ final class LayoutBarPaddingView: NSView {
             }
 
             var pendingMove: (item: MenuBarItem, destination: MenuBarItemManager.MoveDestination)?
+            var failedMemberCount = 0
             do {
                 var previous: MenuBarItem?
                 for item in items {
@@ -299,28 +300,72 @@ final class LayoutBarPaddingView: NSView {
                     let target: MenuBarItemManager.MoveDestination =
                         previous.map { .rightOfItem($0) } ?? destination
                     pendingMove = (item, target)
-                    try await appState.itemManager.move(
-                        item: item,
-                        to: target,
-                        skipInputPause: true,
-                        watchdogTimeout: MenuBarItemManager.layoutWatchdogTimeout
-                    )
+                    do {
+                        try await appState.itemManager.move(
+                            item: item,
+                            to: target,
+                            skipInputPause: true,
+                            watchdogTimeout: MenuBarItemManager.layoutWatchdogTimeout
+                        )
+                    } catch {
+                        // One member failing must not strand the rest of the
+                        // unit half-moved and silent. Recover this member the
+                        // way a single-item move does -- it alerts only when
+                        // the item truly never reached its slot -- then keep
+                        // chaining the remaining members from the last
+                        // successful position, which preserves the order of
+                        // everything that did move.
+                        failedMemberCount += 1
+                        Self.diagLog.error(
+                            "Group move failed on member \(failedMemberCount)/\(items.count) (\(item.logString)); recovering and continuing"
+                        )
+                        await recoverFromFailedMove(
+                            of: item,
+                            to: target,
+                            error: error,
+                            appState: appState
+                        )
+                        continue
+                    }
                     appState.itemManager.removeTemporarilyShownItemFromCache(with: item.tag)
                     previous = item
                 }
-                if let last = previous,
-                   await stabilizePlacement(
-                       of: last,
-                       // Re-chain to the member before the last, not to the
-                       // head's destination: re-asserting the head's drop slot
-                       // would land the retried member AHEAD of the block,
-                       // scrambling the order the chaining loop produced.
-                       to: items.dropLast().last.map { .rightOfItem($0) } ?? destination,
-                       expectedSection: container.section,
-                       appState: appState
-                   )
-                {
-                    appState.itemManager.recordExternalMoveOperation()
+                if let last = previous {
+                    // Re-chain to the member before the last, not to the
+                    // head's destination: re-asserting the head's drop slot
+                    // would land the retried member AHEAD of the block,
+                    // scrambling the order the chaining loop produced.
+                    let lastTarget: MenuBarItemManager.MoveDestination =
+                        items.dropLast().last.map { .rightOfItem($0) } ?? destination
+                    // A stabilization that cannot confirm the block's
+                    // placement is a failed group move, not a success. The
+                    // recovery re-verifies from a fresh cache: when the block
+                    // actually settled, the alert is suppressed and the
+                    // operation is recorded; when it did not, the rescue and
+                    // the alert fire as they would for a single item.
+                    if await stabilizePlacement(
+                        of: last,
+                        to: lastTarget,
+                        expectedSection: container.section,
+                        appState: appState
+                    ) {
+                        appState.itemManager.recordExternalMoveOperation()
+                    } else {
+                        Self.diagLog.warning(
+                            "Group move of \(items.count) items could not confirm placement; verifying"
+                        )
+                        await recoverFromFailedMove(
+                            of: last,
+                            to: lastTarget,
+                            error: GroupMoveStabilizationError(),
+                            appState: appState
+                        )
+                    }
+                }
+                if failedMemberCount > 0 {
+                    Self.diagLog.warning(
+                        "Group move finished with \(failedMemberCount)/\(items.count) member(s) recovered after failure"
+                    )
                 }
             } catch MenuBarItemManager.EventError.menuTrackingActive {
                 Self.diagLog.info("Group move deferred, a menu bar item menu was open")
@@ -1111,5 +1156,15 @@ final class LayoutBarPaddingView: NSView {
         containerLeadingInsetConstraint?.constant = -7.5
         notchView?.removeFromSuperview()
         notchView = nil
+    }
+}
+
+/// A calm, localized stand-in for the error a group move reports when its
+/// final placement could not be confirmed. ``LayoutBarPaddingView/recoverFromFailedMove``
+/// re-verifies from a fresh cache before this ever surfaces, so a user only
+/// sees it when the block genuinely did not land.
+private struct GroupMoveStabilizationError: LocalizedError {
+    var errorDescription: String? {
+        String(localized: "Couldn't confirm that the group settled into place.")
     }
 }

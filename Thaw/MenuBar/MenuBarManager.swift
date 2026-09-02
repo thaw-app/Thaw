@@ -520,13 +520,20 @@ final class MenuBarManager {
                     guard !isZenModeActive else { continue }
 
                     for tag in newlySeeking {
-                        guard let section = sectionContainingHiddenItem(tag, in: appState) else {
+                        // Separate "should I reveal the section" from "should
+                        // I clear this tag's record": a section.show() on the
+                        // first tag flips isHidden, and a hidden-only lookup
+                        // would then skip every sibling tag mapped to the same
+                        // section, leaving stale attention records behind.
+                        guard let section = concealingSection(containing: tag, in: appState) else {
                             continue
                         }
-                        diagLog.info(
-                            "Surfacing \(section.name.logString) for an item seeking attention"
-                        )
-                        section.show()
+                        if section.isHidden {
+                            diagLog.info(
+                                "Surfacing \(section.name.logString) for an item seeking attention"
+                            )
+                            section.show()
+                        }
                         // Drop the history that triggered this, so the same
                         // blink cannot re-show the section on every capture
                         // while it stays visible.
@@ -1282,20 +1289,18 @@ final class MenuBarManager {
     /// Only the concealing sections are considered: an item blinking in the
     /// visible section has already been seen, so there is nothing to
     /// surface.
-    private func sectionContainingHiddenItem(
-        _ tag: MenuBarItemTag,
+    /// The concealable section whose cache currently holds `tag`, regardless
+    /// of whether the section is shown. An item outside hidden/always-hidden
+    /// has no concealing section and returns `nil`.
+    private func concealingSection(
+        containing tag: MenuBarItemTag,
         in appState: AppState
     ) -> MenuBarSection? {
         for name in [MenuBarSection.Name.hidden, .alwaysHidden] {
             guard appState.itemManager.itemCache[name].contains(where: { $0.tag == tag }) else {
                 continue
             }
-            guard let section = section(withName: name), section.isHidden else {
-                // Already showing, so the item is on screen and the blink
-                // has done its job without any help.
-                return nil
-            }
-            return section
+            return section(withName: name)
         }
         return nil
     }
