@@ -67,9 +67,29 @@ extension HookRunner {
                 try check(posix_spawn_file_actions_addclose(&fileActions, stderrWriteFD))
             }
 
-            // A pgroup of zero creates a new group whose ID is the spawned
-            // child PID. We can then signal `-pid` to reap the complete hook
-            // tree on cancellation or timeout.
+            return try spawnInOwnProcessGroup(
+                executablePath: executablePath,
+                arguments: arguments,
+                environment: environment,
+                fileActions: &fileActions,
+                attributes: &attributes
+            )
+        }
+
+        /// Establishes the child's own process group, then spawns it.
+        ///
+        /// Shared by both launchers, which differ only in how they wire the
+        /// standard descriptors: everything from the process group onward is
+        /// identical. A pgroup of zero creates a new group whose ID is the
+        /// spawned child PID, so signalling `-pid` reaps the complete hook
+        /// tree on cancellation or timeout.
+        private static func spawnInOwnProcessGroup(
+            executablePath: String,
+            arguments: [String],
+            environment: [String: String],
+            fileActions: inout posix_spawn_file_actions_t?,
+            attributes: inout posix_spawnattr_t?
+        ) throws -> HookProcess {
             try check(posix_spawnattr_setpgroup(&attributes, 0))
             try check(posix_spawnattr_setflags(&attributes, Int16(POSIX_SPAWN_SETPGROUP)))
 
@@ -141,22 +161,13 @@ extension HookRunner {
                 try check(posix_spawn_file_actions_addclose(&fileActions, outputWriteFD))
             }
 
-            try check(posix_spawnattr_setpgroup(&attributes, 0))
-            try check(posix_spawnattr_setflags(&attributes, Int16(POSIX_SPAWN_SETPGROUP)))
-
-            let argv = [executablePath] + arguments
-            let environmentEntries = environment.map { "\($0.key)=\($0.value)" }
-            return try withCStringArray(argv) { argvPointer in
-                try withCStringArray(environmentEntries) { environmentPointer in
-                    try spawnAndCheck(
-                        executablePath: executablePath,
-                        argvPointer: argvPointer,
-                        environmentPointer: environmentPointer,
-                        fileActions: &fileActions,
-                        attributes: &attributes
-                    )
-                }
-            }
+            return try spawnInOwnProcessGroup(
+                executablePath: executablePath,
+                arguments: arguments,
+                environment: environment,
+                fileActions: &fileActions,
+                attributes: &attributes
+            )
         }
 
         var isRunning: Bool {

@@ -1861,6 +1861,31 @@ private struct ScriptConditionEditor: View {
 
 /// Editor for an image-comparison condition: pick a menu bar item to watch
 /// and capture a reference image of its icon.
+/// The "Watched item" picker shared by the two icon-watching editors.
+///
+/// Both need the same three-part menu: a placeholder while nothing is chosen,
+/// a row for an item that is stored but not currently on the bar, and the
+/// live items. Keeping one copy means a stored-but-absent item cannot start
+/// reading differently depending on which condition selected it.
+private struct WatchedItemPicker: View {
+    let selection: Binding<String>
+    let watchedID: String
+    let itemOptions: [TriggerItemOption]
+
+    var body: some View {
+        IcePicker("Watched item", selection: selection) {
+            if watchedID.isEmpty {
+                Text("Choose an item…").tag("")
+            } else if !itemOptions.contains(where: { $0.id == watchedID }) {
+                Text("\(watchedID) (not present)").tag(watchedID)
+            }
+            ForEach(itemOptions, id: \.id) { option in
+                Text(option.name).tag(option.id)
+            }
+        }
+    }
+}
+
 /// Picks the item whose icon is watched for attention-seeking behaviour.
 /// Unlike ``ImageConditionEditor`` there is no reference to capture: the
 /// verdict comes from how the icon moves over time, not from a comparison
@@ -1875,16 +1900,11 @@ private struct AttentionConditionEditor: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
-            IcePicker("Watched item", selection: itemBinding) {
-                if watchedID.isEmpty {
-                    Text("Choose an item…").tag("")
-                } else if !itemOptions.contains(where: { $0.id == watchedID }) {
-                    Text("\(watchedID) (not present)").tag(watchedID)
-                }
-                ForEach(itemOptions, id: \.id) { option in
-                    Text(option.name).tag(option.id)
-                }
-            }
+            WatchedItemPicker(
+                selection: itemBinding,
+                watchedID: watchedID,
+                itemOptions: itemOptions
+            )
 
             Text("Reveals the item while its icon is blinking. A clock or a battery percentage will not trigger this: they always move to a state they have never shown before, while a blink keeps returning to one. Requires screen recording permission.")
                 .font(.caption)
@@ -1916,16 +1936,11 @@ private struct ImageConditionEditor: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
-            IcePicker("Watched item", selection: itemBinding) {
-                if watchedID.isEmpty {
-                    Text("Choose an item…").tag("")
-                } else if !itemOptions.contains(where: { $0.id == watchedID }) {
-                    Text("\(watchedID) (not present)").tag(watchedID)
-                }
-                ForEach(itemOptions, id: \.id) { option in
-                    Text(option.name).tag(option.id)
-                }
-            }
+            WatchedItemPicker(
+                selection: itemBinding,
+                watchedID: watchedID,
+                itemOptions: itemOptions
+            )
             .disabled(isCapturing)
 
             HStack(spacing: 12) {

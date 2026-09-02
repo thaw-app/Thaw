@@ -1386,7 +1386,7 @@ struct MenuBarItemTriggerTests {
     }
 
     @Test func desktopWithoutPowerSourcesDefaultsToAC() {
-        let power = PowerSourceMonitor.state(from: [])
+        let power = PowerState(descriptions: [])
 
         #expect(power.isOnACPower)
         #expect(power.batteryPercentage == nil)
@@ -1409,7 +1409,7 @@ struct MenuBarItemTriggerTests {
             kIOPSIsChargingKey: true,
         ]
 
-        let power = PowerSourceMonitor.state(from: [internalBattery, ups])
+        let power = PowerState(descriptions: [internalBattery, ups])
 
         #expect(power.batteryPercentage == 42)
         #expect(!power.isOnACPower)
