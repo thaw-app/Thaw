@@ -7,14 +7,47 @@ The `release.yml` workflow reads the section matching the release tag
 (`## [tag]`) and uses it as the release notes for both the GitHub Release
 and the Sparkle appcast, unless overridden with the `release_notes` input.
 
-## [Unreleased]
+## [2.1.0-beta.1]
+
+Hey, we have a Discord! Come say hi: [discord.gg/KDfWjWDnR4](https://discord.gg/KDfWjWDnR4).
+
+First beta of the 2.1.0 line. This is the wave the 2.0.0 notes pointed at: triggers, groups, zen mode, Simple Mode, spacers, and a Thaw Bar that dresses itself. Anything that changes behavior ships switched off; flip it on when you want it.
+
+---
+
+### Upgrade from 2.0.1
+
+1. Pick the beta channel in Settings → Updates. Stable stays on 2.0.1 until 2.1.0 leaves beta.
+2. No schema or `defaults` changes. Profiles, saved layouts, and hotkeys carry over untouched.
+3. Trigger conditions are gated per feature under Settings → Developer. Battery and power work out of the box; everything else is a switch you flip deliberately.
+
+---
 
 ### Added
 
-- **Per-Space profiles** — a profile can be bound to a Space, the way it can already be bound to a display. Switching Spaces applies it. Bindings use the window server's per-Space `uuid` rather than its `CGSSpaceID`, because the ID is renumbered at logout and a stale one would apply the wrong layout to the wrong desktop; the default Space on each display reports an empty uuid and falls back to a key derived from its display. Precedence is Focus Filter, then Space, then display: a Space switch is something the user did on purpose, while a display change is often just docking or waking.
-- **Wallpaper changes re-tint the bar immediately** — adaptive background and tint sampled the pixels behind the menu bar on a 30-second poll, so a new wallpaper took up to half a minute to show up. Thaw now watches the wallpaper store the system rewrites when the wallpaper is set. The poll stays, because a dynamic or aerial wallpaper changes its pixels without ever rewriting that file.
-- **Adaptive Gradient tint** — a new tint kind that builds a gradient from the wallpaper's two most dominant colours, rather than the single average the existing Adaptive kind uses. Averaging answers "what colour is it, roughly" and discards what made the picture worth looking at: a sunset averages to brown. Colours are bucketed, counted, and taken most-covering first, skipping any that sits too close to one already taken — without that step a photo of the sky returns five blues and the gradient draws as a flat fill. The palette samples the wallpaper at full height, unlike the adaptive average, which deliberately reads only the one-pixel strip behind the bar; that second capture only runs while the gradient kind is selected.
-- **Hidden items that ask for attention can surface themselves** — an app with something urgent to say blinks its status icon, which accomplishes nothing behind the chevron. Thaw can now spot a blink and briefly show the section holding it. A blink is told apart from a clock, a battery percentage or a CPU graph by whether the icon keeps returning to a state it already showed: those all move to a state they have never drawn before, while a blink comes back. Off by default under Advanced, and it shows the section rather than moving the item, so a wrong verdict costs a brief reveal instead of a rearranged bar.
+- **Item triggers** move a menu bar item when something happens: battery level, power source, frontmost or running app, network, VPN, Wi-Fi, Bluetooth, audio device, displays, a time window, a Focus, a place, Energy Mode, thermal pressure, camera or mic use, a script's exit, or another icon changing. Conditions combine with all/any/none, actions invert, and a wrong verdict costs a brief reveal instead of a rearranged bar. Designed and implemented by @alvst (#735, #965).
+- **Item groups** bundle items so they move as one, including across sections, matching the macOS 27 semantics. Same-bundle clusters group automatically and dissolve on request.
+- **Zen mode** seals the whole bar with one hotkey. Auto-reveals and hover tricks stand down, and a blinking icon does not get to reopen what you closed. Toggle it again to hand the bar back.
+- **Simple Mode** collapses Settings to one page, ordered by what you actually touch. Everything it hides is still there when you switch it off.
+- **Tools pane** gathers the destructive troubleshooting helpers in one place, plus announcements and Sparkle feed pinning.
+- **Spacer items** create gaps on purpose: pick a width and an optional fill, then drag them like any item.
+- **Per-Space profiles** bind a profile to a Space the way it already binds to a display. Bindings use the window server's per-Space `uuid`, since the ID is renumbered at logout. Precedence is Focus Filter, then Space, then display.
+- **Wallpaper changes re-tint the bar immediately.** Thaw now watches the wallpaper store instead of polling for it. The poll stays for dynamic wallpapers, which change their pixels without ever rewriting that file.
+- **Adaptive Gradient tint** builds the gradient from the wallpaper's dominant colours instead of one averaged brown. Colours are bucketed and taken most-covering first, skipping any too close to one already taken.
+- **Items that ask for attention can surface themselves.** A blinking status icon briefly shows the section holding it. A blink is told apart from a clock or a battery percentage by whether the icon keeps returning to a state it already showed. Off by default under Advanced.
+- **A Thaw Bar of its own**: shape, tint, and border for the bar, independent of the menu bar it mirrors (#248, thanks @kn666).
+- **Hidden icons that refresh at the slider rate.** Captures run through a recyclable XPC helper, so the per-call dictionary leak stays out of the app (#942, thanks @CamilleGuillory).
+- **One Per display section**: the repeated per-display blocks collapse into a single picker-driven section.
+- **A standalone layout editor** opens on its own, with per-Space appearance overrides and last-pane restore; items can be activated straight from the editor (#985, thanks @alvst).
+- **App icons where captures can't go.** Items nobody can capture draw their owning app's icon, so the Thaw Bar, the layout pane, and Search work with Accessibility alone.
+- **A hotkey for automatic rehiding** (#665, thanks @nightah).
+- **Diagnostic logs that rotate** by size and time (#974) and diagnostics rows you can edit (#976), both by @nk-tedo-001.
+
+---
+
+### Dependencies
+
+- `swift-system` is declared directly; Collections and AsyncChannel joined the lockfile. The last XCTest suites moved to Swift Testing.
 
 ## [2.0.1]
 
@@ -107,6 +140,7 @@ Please report issues at [github.com/thaw-app/Thaw/issues](https://github.com/tha
 Hey everyone. Thaw 2.0 rebuilds the app around macOS 26 (Tahoe): Liquid Glass throughout, a redesigned settings surface, an automation layer built on `thaw://`, and a menu bar pipeline rewritten around item identity, layout persistence, and knowing when to leave the bar alone. The cycle ran twenty-two releases: `1.3.0-beta.1` shipped Settings Profiles in April, fifteen betas followed, and six release candidates carried the work home. Nearly everything after beta.15 came out of field logs, real menu bars misbehaving in ways no test caught. This entry walks the run by theme. The detailed per-fix notes live in the RC entries in the [full changelog](https://github.com/thaw-app/Thaw/blob/development/CHANGELOG.md).
 
 ---
+
 ### Upgrade notes
 
 1. **From 1.x:** Thaw 2.0 requires macOS 26. On macOS 14 or 15 you stay on
@@ -387,6 +421,7 @@ Planned as the last release candidate before 2.0 stable. Almost all of it comes 
 - Sparkle bumped in the swift group (#971); github-actions group bumped with four updates (#972).
 - README OpenSSF badges switched to live shieldcn scorecard/openssf endpoints (#920); contributor image source updated; repository notice added.
 - FUNDING.yml gained Ko-fi and PayPal entries.
+
 ## [2.0.0-rc.4]
 
 Please report issues at
