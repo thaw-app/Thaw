@@ -869,6 +869,50 @@ nonisolated enum SearchIndex {
             property: nil
         ),
         SearchEntry(
+            id: "appearance.thawBar",
+            titleKey: "\(Constants.displayName) Bar",
+            titleText: "\(Constants.displayName) Bar",
+            descriptionText: "Background, tint, corners, border, and shadow for the floating bar that shows hidden items.",
+            pane: .menuBarAppearance,
+            sectionKey: "\(Constants.displayName) Bar",
+            sectionText: "\(Constants.displayName) Bar",
+            keywords: ["thaw bar", "icebar", "ice bar", "hidden", "popup", "background", "tint", "corners", "border", "glass", "adaptive"],
+            property: nil
+        ),
+        SearchEntry(
+            id: "appearance.thawBar.background",
+            titleKey: "Background",
+            titleText: "Background",
+            descriptionText: "Fill style for the Thaw Bar: match menu bar (with brightness and glass), solid, gradient, glass, sampled color, or none.",
+            pane: .menuBarAppearance,
+            sectionKey: "\(Constants.displayName) Bar",
+            sectionText: "\(Constants.displayName) Bar",
+            keywords: ["thaw bar", "background", "adaptive", "match", "menu bar", "solid", "gradient", "glass", "sampled"],
+            property: nil
+        ),
+        SearchEntry(
+            id: "appearance.thawBar.corners",
+            titleKey: "Corners",
+            titleText: "Corners",
+            descriptionText: "Rounded capsule or square ends for the Thaw Bar.",
+            pane: .menuBarAppearance,
+            sectionKey: "\(Constants.displayName) Bar",
+            sectionText: "\(Constants.displayName) Bar",
+            keywords: ["thaw bar", "corners", "rounded", "square", "pill"],
+            property: nil
+        ),
+        SearchEntry(
+            id: "appearance.thawBar.omitTopBorder",
+            titleKey: "Omit top border edge",
+            titleText: "Omit top border edge",
+            descriptionText: "When corners are square, skip the top border stroke so it is not clipped by the display corners.",
+            pane: .menuBarAppearance,
+            sectionKey: "\(Constants.displayName) Bar",
+            sectionText: "\(Constants.displayName) Bar",
+            keywords: ["thaw bar", "border", "square", "omit", "top", "clip"],
+            property: nil
+        ),
+        SearchEntry(
             id: "appearance.reset",
             titleKey: "Reset Appearance",
             titleText: "Reset Appearance",

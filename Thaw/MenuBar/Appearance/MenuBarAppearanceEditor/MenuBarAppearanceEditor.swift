@@ -98,9 +98,13 @@ struct MenuBarAppearanceEditor: View {
                 }
             }
 
+            ThawBarAppearanceEditorSection(configuration: $appearanceManager.configuration)
+
             if appearanceManager.configuration.current.tintKind != .noTint
                 || appearanceManager.configuration.shapeKind != .noShape
                 || appearanceManager.configuration.current.backgroundKind != .none
+                || appearanceManager.configuration.currentThawBar.backgroundKind != .none
+                || appearanceManager.configuration.currentThawBar.tintKind != .noTint
             {
                 if appearanceManager.isReduceTransparencyEnabled {
                     reduceTransparencyWarning
@@ -466,21 +470,20 @@ private struct UnlabeledShapeEditor: View {
     }
 
     private var borderToggle: some View {
-        LabeledContent("Border") {
-            HStack {
-                Toggle("Menu Bar", isOn: $configuration.borderOnMenuBar)
-                    .disabled(shapeKind == .noShape)
-
-                Toggle("\(Constants.displayName) Bar", isOn: $configuration.borderOnThawBar)
+        Toggle("Border", isOn: $configuration.borderOnMenuBar)
+            .disabled(shapeKind == .noShape)
+            .annotation {
+                if shapeKind == .noShape {
+                    Text("Choose a shape kind to draw a border around the menu bar shape. The \(Constants.displayName) Bar has its own border setting below.")
+                } else {
+                    Text("Draws a border around the menu bar shape. The \(Constants.displayName) Bar has its own border setting in the \(Constants.displayName) Bar section.")
+                }
             }
-            .toggleStyle(.checkbox)
-            .frame(height: 24)
-        }
     }
 
     @ViewBuilder
     private var borderColor: some View {
-        if configuration.hasBorder {
+        if configuration.borderOnMenuBar {
             ColorPicker(
                 "Border Color",
                 selection: $configuration.borderColor,
@@ -491,7 +494,7 @@ private struct UnlabeledShapeEditor: View {
 
     @ViewBuilder
     private var borderWidth: some View {
-        if configuration.hasBorder {
+        if configuration.borderOnMenuBar {
             IcePicker(
                 "Border Width",
                 selection: $configuration.borderWidth

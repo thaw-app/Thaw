@@ -12,6 +12,12 @@ nonisolated struct MenuBarAppearanceConfigurationV2: Hashable {
     var lightModeConfiguration: MenuBarAppearancePartialConfiguration
     var darkModeConfiguration: MenuBarAppearancePartialConfiguration
     var staticConfiguration: MenuBarAppearancePartialConfiguration
+    /// Thaw Bar appearance for light mode when ``isDynamic`` is on.
+    var thawBarLightModeConfiguration: ThawBarAppearancePartialConfiguration
+    /// Thaw Bar appearance for dark mode when ``isDynamic`` is on.
+    var thawBarDarkModeConfiguration: ThawBarAppearancePartialConfiguration
+    /// Thaw Bar appearance when ``isDynamic`` is off.
+    var thawBarStaticConfiguration: ThawBarAppearancePartialConfiguration
     var shapeKind: MenuBarShapeKind
     var fullShapeInfo: MenuBarFullShapeInfo
     var splitShapeInfo: MenuBarSplitShapeInfo
@@ -42,6 +48,19 @@ nonisolated struct MenuBarAppearanceConfigurationV2: Hashable {
             staticConfiguration
         }
     }
+
+    /// The Thaw Bar partial that applies under the current system appearance.
+    @MainActor
+    var currentThawBar: ThawBarAppearancePartialConfiguration {
+        if isDynamic {
+            switch SystemAppearance.current {
+            case .light: thawBarLightModeConfiguration
+            case .dark: thawBarDarkModeConfiguration
+            }
+        } else {
+            thawBarStaticConfiguration
+        }
+    }
 }
 
 // MARK: Default Configuration
@@ -51,6 +70,9 @@ nonisolated extension MenuBarAppearanceConfigurationV2 {
         lightModeConfiguration: .defaultConfiguration,
         darkModeConfiguration: .defaultConfiguration,
         staticConfiguration: .defaultConfiguration,
+        thawBarLightModeConfiguration: .defaultConfiguration,
+        thawBarDarkModeConfiguration: .defaultConfiguration,
+        thawBarStaticConfiguration: .defaultConfiguration,
         shapeKind: .noShape,
         fullShapeInfo: .defaultValue,
         splitShapeInfo: .defaultValue,
@@ -68,6 +90,9 @@ nonisolated extension MenuBarAppearanceConfigurationV2: Codable {
         case lightModeConfiguration
         case darkModeConfiguration
         case staticConfiguration
+        case thawBarLightModeConfiguration
+        case thawBarDarkModeConfiguration
+        case thawBarStaticConfiguration
         case shapeKind
         case fullShapeInfo
         case splitShapeInfo
@@ -81,10 +106,27 @@ nonisolated extension MenuBarAppearanceConfigurationV2: Codable {
 
     init(from decoder: any Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
+        let light = try container.decodeIfPresent(MenuBarAppearancePartialConfiguration.self, forKey: .lightModeConfiguration) ?? Self.defaultConfiguration.lightModeConfiguration
+        let dark = try container.decodeIfPresent(MenuBarAppearancePartialConfiguration.self, forKey: .darkModeConfiguration) ?? Self.defaultConfiguration.darkModeConfiguration
+        let staticPartial = try container.decodeIfPresent(MenuBarAppearancePartialConfiguration.self, forKey: .staticConfiguration) ?? Self.defaultConfiguration.staticConfiguration
+
+        // Pre-Thaw-Bar-appearance payloads have no thawBar* keys. Seed each
+        // slot from the matching menu bar partial so borders carry over and
+        // the historical black tint overlay is cleared (see migrating(from:)).
+        let thawBarLight = try container.decodeIfPresent(ThawBarAppearancePartialConfiguration.self, forKey: .thawBarLightModeConfiguration)
+            ?? .migrating(from: light)
+        let thawBarDark = try container.decodeIfPresent(ThawBarAppearancePartialConfiguration.self, forKey: .thawBarDarkModeConfiguration)
+            ?? .migrating(from: dark)
+        let thawBarStatic = try container.decodeIfPresent(ThawBarAppearancePartialConfiguration.self, forKey: .thawBarStaticConfiguration)
+            ?? .migrating(from: staticPartial)
+
         try self.init(
-            lightModeConfiguration: container.decodeIfPresent(MenuBarAppearancePartialConfiguration.self, forKey: .lightModeConfiguration) ?? Self.defaultConfiguration.lightModeConfiguration,
-            darkModeConfiguration: container.decodeIfPresent(MenuBarAppearancePartialConfiguration.self, forKey: .darkModeConfiguration) ?? Self.defaultConfiguration.darkModeConfiguration,
-            staticConfiguration: container.decodeIfPresent(MenuBarAppearancePartialConfiguration.self, forKey: .staticConfiguration) ?? Self.defaultConfiguration.staticConfiguration,
+            lightModeConfiguration: light,
+            darkModeConfiguration: dark,
+            staticConfiguration: staticPartial,
+            thawBarLightModeConfiguration: thawBarLight,
+            thawBarDarkModeConfiguration: thawBarDark,
+            thawBarStaticConfiguration: thawBarStatic,
             shapeKind: container.decodeIfPresent(MenuBarShapeKind.self, forKey: .shapeKind) ?? Self.defaultConfiguration.shapeKind,
             fullShapeInfo: container.decodeIfPresent(MenuBarFullShapeInfo.self, forKey: .fullShapeInfo) ?? Self.defaultConfiguration.fullShapeInfo,
             splitShapeInfo: container.decodeIfPresent(MenuBarSplitShapeInfo.self, forKey: .splitShapeInfo) ?? Self.defaultConfiguration.splitShapeInfo,
@@ -102,6 +144,9 @@ nonisolated extension MenuBarAppearanceConfigurationV2: Codable {
         try container.encode(lightModeConfiguration, forKey: .lightModeConfiguration)
         try container.encode(darkModeConfiguration, forKey: .darkModeConfiguration)
         try container.encode(staticConfiguration, forKey: .staticConfiguration)
+        try container.encode(thawBarLightModeConfiguration, forKey: .thawBarLightModeConfiguration)
+        try container.encode(thawBarDarkModeConfiguration, forKey: .thawBarDarkModeConfiguration)
+        try container.encode(thawBarStaticConfiguration, forKey: .thawBarStaticConfiguration)
         try container.encode(shapeKind, forKey: .shapeKind)
         try container.encode(fullShapeInfo, forKey: .fullShapeInfo)
         try container.encode(splitShapeInfo, forKey: .splitShapeInfo)

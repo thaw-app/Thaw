@@ -82,6 +82,10 @@ extension MenuBarAppearanceConfigurationV2 {
             configuration.lightModeConfiguration = partialConfiguration
             configuration.darkModeConfiguration = partialConfiguration
             configuration.staticConfiguration = partialConfiguration
+            let thawBarPartial = ThawBarAppearancePartialConfiguration.migrating(from: partialConfiguration)
+            configuration.thawBarLightModeConfiguration = thawBarPartial
+            configuration.thawBarDarkModeConfiguration = thawBarPartial
+            configuration.thawBarStaticConfiguration = thawBarPartial
             configuration.shapeKind = oldConfiguration.shapeKind
             configuration.fullShapeInfo = oldConfiguration.fullShapeInfo
             configuration.splitShapeInfo = oldConfiguration.splitShapeInfo

@@ -262,5 +262,19 @@ struct MenuBarAppearanceConfigurationTests {
             #expect(configuration.notchShapeInfo == defaultConfiguration.notchShapeInfo)
             #expect(configuration.isDynamic == defaultConfiguration.isDynamic)
         }
+
+        @Test("V1 migration seeds Thaw Bar appearance from the shared border flag")
+        func migratedThawBarAppearance() {
+            let configuration = MenuBarAppearanceConfigurationV2(migrating: oldConfiguration)
+            let thawBar = configuration.thawBarStaticConfiguration
+
+            #expect(thawBar.hasBorder)
+            #expect(thawBar.borderWidth == 3)
+            #expect(thawBar.tintKind == .noTint)
+            #expect(thawBar.backgroundKind == .adaptive)
+            #expect(thawBar.backgroundGlassStyle == .clear)
+            #expect(thawBar.cornerStyle == .rounded)
+            #expect(thawBar.omitTopBorderWhenSquare)
+        }
     }
 }

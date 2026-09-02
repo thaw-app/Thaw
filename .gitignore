@@ -21,3 +21,8 @@ plans/
 # Local badge mockups
 .tmp-badge-preview/
 default.profraw
+
+# Local Debug codesign (self-signed cert copy + DerivedData)
+.local-codesign/
+Thaw-local/
+**/Thaw-local/

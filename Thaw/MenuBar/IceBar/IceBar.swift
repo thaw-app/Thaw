@@ -34,11 +34,19 @@ final class IceBarPanel: NSPanel {
     /// change posts that notification, racing with the show).
     private var lastShowTimestamp: Date?
 
+    /// Display the Thaw Bar was last shown on. Cross-screen opens must drop
+    /// the previous screen's icon captures (light/dark tint is baked in).
+    private var lastShownDisplayID: CGDirectDisplayID?
+
     /// Storage for internal observers.
     private var cancellables = Set<AnyCancellable>()
 
     /// Background cache task started when the panel is shown.
     private var cacheTask: Task<Void, Never>?
+
+    /// Keeps ``hasShadow`` aligned with the Thaw Bar appearance setting while
+    /// the panel is visible.
+    private var thawBarShadowObservationTask: Task<Void, Never>?
 
     /// Creates a new Thaw Bar panel with Liquid Glass support.
     init() {
@@ -69,6 +77,21 @@ final class IceBarPanel: NSPanel {
         self.appState = appState
         configureCancellables()
         colorManager.performSetup(with: self)
+        startThawBarShadowObservation(with: appState)
+    }
+
+    /// Observes Thaw Bar shadow preference and applies it to the panel window.
+    private func startThawBarShadowObservation(with appState: AppState) {
+        thawBarShadowObservationTask?.cancel()
+        thawBarShadowObservationTask = Task { [weak self] in
+            let changes = Observations {
+                appState.appearanceManager.configuration.currentThawBar.hasShadow
+            }
+            for await hasShadow in changes {
+                guard let self else { return }
+                self.hasShadow = hasShadow
+            }
+        }
     }
 
     /// Configures the internal observers.
@@ -228,9 +251,26 @@ final class IceBarPanel: NSPanel {
         currentSection = section
         lastShowTimestamp = Date()
 
-        // Show the panel immediately with whatever cached data we have.
-        // The SwiftUI view observes itemManager and imageCache, so it
-        // will re-render automatically as the background updates land.
+        // Menu bar icon light/dark tint is baked into the captured bitmaps.
+        // Restore this display's warm snapshot when we have one; otherwise clear
+        // wrong-display icons so the panel can still appear instantly (Loading)
+        // while a background SkyLight recapture fills the correct tint.
+        let switchedDisplay = lastShownDisplayID.map { $0 != screen.displayID } ?? false
+        let needsBackgroundRecapture = appState.imageCache.prepareImagesForThawBar(
+            displayID: screen.displayID,
+            section: section
+        )
+        if switchedDisplay {
+            colorManager.invalidateColorInfo()
+            diagLog.notice(
+                "show: display \(self.lastShownDisplayID.map(String.init) ?? "nil") → \(screen.displayID); warmCache=\(!needsBackgroundRecapture)"
+            )
+        }
+        lastShownDisplayID = screen.displayID
+
+        // Show the panel immediately. Never defer orderFront: setting
+        // currentSection without a visible panel makes isHidden flip to false,
+        // so a second click would call hide() instead of show().
         contentView = IceBarHostingView(
             appState: appState,
             colorManager: colorManager,
@@ -242,35 +282,47 @@ final class IceBarPanel: NSPanel {
 
         // Color manager must be updated after updating the panel's origin,
         // but before it is shown.
-        //
-        // Color manager handles frame changes automatically, but does so on
-        // the main queue, so we need to update manually once before showing
-        // the panel to prevent the color from flashing.
         colorManager.updateAllProperties(with: frame, screen: screen)
+
+        hasShadow = appState.appearanceManager.configuration.currentThawBar.hasShadow
 
         orderFrontRegardless()
 
-        // Rehide temporarily shown items and refresh caches in the
-        // background. Ordering is preserved: rehide moves items back
-        // to their correct sections before the cache is rebuilt.
-        // The task is cancelled in close() to avoid holding appState.
+        // Refresh color + icons in the background. Same-display opens keep the
+        // settle delay for control-item positioning; cross-display / cold-cache
+        // opens recapture immediately so Loading is replaced ASAP.
+        let panelFrame = frame
+        let targetDisplayID = screen.displayID
         cacheTask?.cancel()
-        cacheTask = Task { [weak appState] in
+        cacheTask = Task { [weak appState, weak colorManager, switchedDisplay, needsBackgroundRecapture] in
             guard let appState else { return }
+
+            await colorManager?.refresh(with: panelFrame, screen: screen)
+
             await appState.itemManager.rehideTemporarilyShownItems(force: true)
             guard !Task.isCancelled else { return }
-            // Settle delay: when the IceBar just opened on a screen that
-            // was previously inactive, the menu bar has moved screens and
-            // NSStatusItem windows (control item chevrons) are still
-            // positioning. Without this delay, cacheItemsIfNeeded can
-            // recache with stale/zero control item bounds, causing
-            // findSection() to misclassify all items as .visible and
-            // leave the hidden section cache empty ("No items…").
-            try? await Task.sleep(for: .milliseconds(500))
+
+            if switchedDisplay || needsBackgroundRecapture {
+                // Menu bar is already on this screen when the user clicked its
+                // control item; only a short beat is needed before SkyLight.
+                try? await Task.sleep(for: .milliseconds(16))
+            } else {
+                // Settle delay: when the IceBar just opened on a screen that
+                // was previously inactive, the menu bar has moved screens and
+                // NSStatusItem windows (control item chevrons) are still
+                // positioning. Without this delay, cacheItemsIfNeeded can
+                // recache with stale/zero control item bounds, causing
+                // findSection() to misclassify all items as .visible and
+                // leave the hidden section cache empty ("No items…").
+                try? await Task.sleep(for: .milliseconds(500))
+            }
             guard !Task.isCancelled else { return }
             await appState.itemManager.cacheItemsIfNeeded()
             guard !Task.isCancelled else { return }
-            await appState.imageCache.updateCache()
+            await appState.imageCache.recaptureSection(
+                section,
+                preferredDisplayID: targetDisplayID
+            )
         }
     }
 
@@ -375,6 +427,10 @@ private struct IceBarContentView: View {
         appState.appearanceManager.configuration
     }
 
+    private var thawBarConfiguration: ThawBarAppearancePartialConfiguration {
+        configuration.currentThawBar
+    }
+
     private var displaySettings: DisplaySettingsManager {
         appState.settings.displaySettings
     }
@@ -397,7 +453,7 @@ private struct IceBarContentView: View {
     }
 
     private var verticalPadding: CGFloat {
-        screen.hasNotch && configuration.hasRoundedShape ? 2 : 0
+        screen.hasNotch && thawBarConfiguration.cornerStyle.isFullyRounded ? 2 : 0
     }
 
     private var contentHeight: CGFloat {
@@ -460,16 +516,13 @@ private struct IceBarContentView: View {
         }
     }
 
-    private var clipShape: some InsettableShape {
-        if configuration.hasRoundedShape {
-            RoundedRectangle(cornerRadius: contentHeight / 2, style: .circular)
-        } else {
-            RoundedRectangle(cornerRadius: contentHeight / 4, style: .continuous)
-        }
-    }
-
     var body: some View {
-        ZStack {
+        ThawBarChrome(
+            configuration: thawBarConfiguration,
+            colorInfo: colorManager.colorInfo,
+            contentHeight: contentHeight,
+            screen: screen
+        ) {
             Group {
                 if layout == .horizontal {
                     content.frame(height: contentHeight)
@@ -479,17 +532,8 @@ private struct IceBarContentView: View {
             }
             .padding(.horizontal, horizontalPadding)
             .padding(.vertical, verticalPadding)
-            .menuBarItemContainer(appState: appState, colorInfo: colorManager.colorInfo)
-            .foregroundStyle(colorManager.colorInfo?.isBright(for: screen) == true ? .black : .white)
-            .clipShape(clipShape)
-
-            if configuration.current.borderOnThawBar {
-                clipShape
-                    .inset(by: configuration.current.borderWidth / 2)
-                    .stroke(lineWidth: configuration.current.borderWidth)
-                    .foregroundStyle(Color(cgColor: configuration.current.borderColor))
-            }
         }
+        .animation(.easeInOut(duration: 0.35), value: colorManager.colorInfo)
         .padding(5)
         .frame(maxWidth: screen.frame.width)
         .fixedSize(horizontal: true, vertical: layout == .horizontal)
@@ -614,7 +658,12 @@ private struct IceBarContentView: View {
                 Self.diagLog.warning("IceBar content: showing '\(self.cacheGracePeriodActive ? "Loading…" : "Unable to display")' for section \(self.section.logString) — imageCache.cacheFailed=true (grace period active: \(self.cacheGracePeriodActive), loadingTimedOut: \(self.loadingTimedOut), cached images count: \(self.imageCache.images.count), items in section: \(self.itemManager.itemCache[self.section].count))")
             }
         } else {
-            let isLightBackground = colorManager.colorInfo?.isBright(for: screen) == true
+            let isLightBackground = thawBarConfiguration.prefersDarkForeground(
+                sampledColor: colorManager.colorInfo?.color,
+                sampledBrightness: colorManager.colorInfo?.brightness,
+                screenHasNotch: screen.hasNotch
+            )
+            let hasRoundedShape = thawBarConfiguration.cornerStyle.isFullyRounded
             switch layout {
             case .horizontal:
                 ScrollView(.horizontal) {
@@ -628,7 +677,7 @@ private struct IceBarContentView: View {
                                 section: section,
                                 displayID: screen.displayID,
                                 maxHeight: itemMaxHeight,
-                                hasRoundedShape: configuration.hasRoundedShape,
+                                hasRoundedShape: hasRoundedShape,
                                 tooltipDelay: appState.settings.advanced.tooltipDelay,
                                 isLightBackground: isLightBackground
                             )
@@ -655,7 +704,7 @@ private struct IceBarContentView: View {
                                 section: section,
                                 displayID: screen.displayID,
                                 maxHeight: itemMaxHeight,
-                                hasRoundedShape: configuration.hasRoundedShape,
+                                hasRoundedShape: hasRoundedShape,
                                 tooltipDelay: appState.settings.advanced.tooltipDelay,
                                 isLightBackground: isLightBackground
                             )
@@ -682,7 +731,7 @@ private struct IceBarContentView: View {
                                         section: section,
                                         displayID: screen.displayID,
                                         maxHeight: itemMaxHeight,
-                                        hasRoundedShape: configuration.hasRoundedShape,
+                                        hasRoundedShape: hasRoundedShape,
                                         tooltipDelay: appState.settings.advanced.tooltipDelay,
                                         isLightBackground: isLightBackground
                                     )

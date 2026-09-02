@@ -37,9 +37,11 @@ $(SRCROOT)/Thaw/MenuBar/Appearance/Configurations/MenuBarAppearanceConfiguration
 $(SRCROOT)/Thaw/MenuBar/Appearance/Configurations/MenuBarAppearanceConfigurationV2.swift
 $(SRCROOT)/Thaw/MenuBar/Appearance/Configurations/MenuBarShapes.swift
 $(SRCROOT)/Thaw/MenuBar/Appearance/Configurations/MenuBarTintKind.swift
+$(SRCROOT)/Thaw/MenuBar/Appearance/Configurations/ThawBarAppearanceConfiguration.swift
 $(SRCROOT)/Thaw/MenuBar/Appearance/MenuBarAppearanceEditor/MenuBarAppearanceEditor.swift
 $(SRCROOT)/Thaw/MenuBar/Appearance/MenuBarAppearanceEditor/MenuBarAppearanceEditorPanel.swift
 $(SRCROOT)/Thaw/MenuBar/Appearance/MenuBarAppearanceEditor/MenuBarShapePicker.swift
+$(SRCROOT)/Thaw/MenuBar/Appearance/MenuBarAppearanceEditor/ThawBarAppearanceEditor.swift
 $(SRCROOT)/Thaw/MenuBar/Appearance/MenuBarAppearanceManager.swift
 $(SRCROOT)/Thaw/MenuBar/Appearance/MenuBarOverlayPanel.swift
 $(SRCROOT)/Thaw/MenuBar/Appearance/MissionControlDetector.swift
@@ -51,6 +53,8 @@ $(SRCROOT)/Thaw/MenuBar/IceBar/IceBar.swift
 $(SRCROOT)/Thaw/MenuBar/IceBar/IceBarColorManager.swift
 $(SRCROOT)/Thaw/MenuBar/IceBar/IceBarLayout.swift
 $(SRCROOT)/Thaw/MenuBar/IceBar/IceBarLocation.swift
+$(SRCROOT)/Thaw/MenuBar/IceBar/ThawBarBorderShape.swift
+$(SRCROOT)/Thaw/MenuBar/IceBar/ThawBarChrome.swift
 $(SRCROOT)/Thaw/MenuBar/LayoutBar/LayoutBar.swift
 $(SRCROOT)/Thaw/MenuBar/LayoutBar/LayoutBarArrangedView.swift
 $(SRCROOT)/Thaw/MenuBar/LayoutBar/LayoutBarContainer.swift
