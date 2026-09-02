@@ -181,6 +181,42 @@ struct SystemLaunchAgentIndexTests {
         }
     }
 
+    /// Neither spelling of the path is under our control: the agent may
+    /// declare a symlink while `NSRunningApplication.executableURL` reports
+    /// the target, or the reverse. Both sides are canonicalized, so either
+    /// direction resolves. Normalizing only the lookup side left this case
+    /// falling through to the bundle-launch path the type exists to avoid.
+    @Test("A symlinked program path resolves when looked up by its target")
+    func symlinkedProgramPathResolvesFromTarget() throws {
+        let tmp = FileManager.default.temporaryDirectory
+            .appendingPathComponent(UUID().uuidString, isDirectory: true)
+        defer { try? FileManager.default.removeItem(at: tmp) }
+        try FileManager.default.createDirectory(at: tmp, withIntermediateDirectories: true)
+
+        // The real binary, and a symlink pointing at it.
+        let target = tmp.appendingPathComponent("Real")
+        try Data("binary".utf8).write(to: target)
+        let symlink = tmp.appendingPathComponent("Linked")
+        try FileManager.default.createSymbolicLink(at: symlink, withDestinationURL: target)
+
+        // The agent declares the symlink.
+        let plist = try PropertyListSerialization.data(
+            fromPropertyList: [
+                "Label": "com.example.symlinked",
+                "ProgramArguments": [symlink.path],
+            ] as [String: Any],
+            format: .xml,
+            options: 0
+        )
+        try plist.write(to: tmp.appendingPathComponent("com.example.symlinked.plist"))
+
+        let index = SystemLaunchAgentIndex(directories: [tmp])
+        // Looked up by the target, which is what the process would report.
+        #expect(index.label(forExecutableAt: target) == "com.example.symlinked")
+        // And still by the symlink itself.
+        #expect(index.label(forExecutableAt: symlink) == "com.example.symlinked")
+    }
+
     /// A missing directory is normal on a stripped-down system and must
     /// not trap.
     @Test("A missing directory yields an empty index")

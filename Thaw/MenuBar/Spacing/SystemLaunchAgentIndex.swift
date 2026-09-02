@@ -91,13 +91,7 @@ nonisolated struct SystemLaunchAgentIndex: Sendable {
     /// when no indexed agent owns it and the item should be relaunched the
     /// ordinary way.
     func label(forExecutableAt url: URL) -> String? {
-        if let label = labelsByExecutablePath[Self.normalized(url.path)] {
-            return label
-        }
-        // Second chance through the filesystem, in case the running
-        // process reports its executable by a differently linked path than
-        // the one the agent declares.
-        return labelsByExecutablePath[url.resolvingSymlinksInPath().standardizedFileURL.path]
+        labelsByExecutablePath[Self.normalized(url.path)]
     }
 
     /// The executable a LaunchAgent launches. `Program` wins when present;
@@ -109,9 +103,17 @@ nonisolated struct SystemLaunchAgentIndex: Sendable {
         return (plist["ProgramArguments"] as? [String])?.first
     }
 
-    /// Lexical normalization only - no filesystem access, so the index
-    /// costs one read per plist and nothing else.
+    /// Canonicalizes a path so that a symlink and the file it points at
+    /// compare equal.
+    ///
+    /// Applied to both sides, which is the part that matters: an agent may
+    /// declare a symlink while the running process reports the target, or
+    /// the reverse, and neither spelling is under our control. Normalizing
+    /// only one side leaves the other direction silently unmatched, which
+    /// would drop a launch-constrained agent back onto the bundle-launch
+    /// path this type exists to avoid. Costs one filesystem resolution per
+    /// plist, paid once when the shared index is built.
     private static func normalized(_ path: String) -> String {
-        URL(fileURLWithPath: path).standardizedFileURL.path
+        URL(fileURLWithPath: path).resolvingSymlinksInPath().standardizedFileURL.path
     }
 }
