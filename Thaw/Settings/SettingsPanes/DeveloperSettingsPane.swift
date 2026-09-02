@@ -164,8 +164,8 @@ struct DeveloperSettingsPane: View {
                 stateRow("Audio output", state.audioOutputDeviceName ?? "—")
                 stateRow("Energy Mode", energyModeString(state.energyMode))
                 stateRow("Thermal state", thermalString(state.thermalState))
-                stateRow("Camera in use", flags.isEnabled(.recordingDevices) ? (state.isCameraInUse ? "Yes" : "No") : "Enable flag to read")
-                stateRow("Microphone in use", flags.isEnabled(.recordingDevices) ? (state.isMicrophoneInUse ? "Yes" : "No") : "Enable flag to read")
+                stateRow("Camera in use", recordingState(state.isCameraInUse))
+                stateRow("Microphone in use", recordingState(state.isMicrophoneInUse))
                 stateRow("Displays", "\(state.screenCount)\(state.externalDisplayConnected ? " (external connected)" : "")")
                 stateRow("Focus active", state.isFocusActive ? "Yes" : "No")
                 stateRow("Focus Filter profile", state.activeFocusModeName ?? "—")
@@ -174,6 +174,15 @@ struct DeveloperSettingsPane: View {
             .padding(8)
             .frame(maxWidth: .infinity, alignment: .leading)
         }
+    }
+
+    /// Renders a recording-device reading, or the flag-off placeholder when the
+    /// `recordingDevices` feature is not enabled.
+    private func recordingState(_ inUse: Bool) -> String {
+        guard flags.isEnabled(.recordingDevices) else {
+            return "Enable flag to read"
+        }
+        return inUse ? "Yes" : "No"
     }
 
     private func stateRow(_ label: String, _ value: String) -> some View {
@@ -238,7 +247,9 @@ struct DeveloperSettingsPane: View {
     /// Location authorization state, since CoreWLAN needs it to read SSIDs.
     private func wifiSSIDValue(_ state: SystemState) -> String {
         guard flags.isEnabled(.wifiSSID) else { return "Enable flag to read" }
-        if let ssid = state.wifiSSID, !ssid.isEmpty { return ssid }
+        if let ssid = state.wifiSSID, !ssid.isEmpty {
+            return ssid
+        }
         return locationPermissionMessage() ?? "No Wi-Fi network (or Wi-Fi off)"
     }
 }

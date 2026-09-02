@@ -305,7 +305,7 @@ final class LayoutBarPaddingView: NSView {
                             item: item,
                             to: target,
                             skipInputPause: true,
-                            watchdogTimeout: MenuBarItemManager.layoutWatchdogTimeout
+                            options: .init(watchdogTimeout: MenuBarItemManager.layoutWatchdogTimeout)
                         )
                     } catch {
                         // One member failing must not strand the rest of the
@@ -531,7 +531,7 @@ final class LayoutBarPaddingView: NSView {
                     item: item,
                     to: destination,
                     skipInputPause: true,
-                    watchdogTimeout: MenuBarItemManager.layoutWatchdogTimeout
+                    options: .init(watchdogTimeout: MenuBarItemManager.layoutWatchdogTimeout)
                 )
                 // Record the user move before stabilization so the save
                 // gate's cooldown exemption is armed when stabilizePlacement's
@@ -667,7 +667,7 @@ final class LayoutBarPaddingView: NSView {
                     item: item,
                     to: destination,
                     skipInputPause: true,
-                    watchdogTimeout: MenuBarItemManager.layoutWatchdogTimeout
+                    options: .init(watchdogTimeout: MenuBarItemManager.layoutWatchdogTimeout)
                 )
                 // Same #983 reorder as the primary path: arm the
                 // save-gate user-move exemption before stabilize so
@@ -1007,7 +1007,7 @@ final class LayoutBarPaddingView: NSView {
                     item: item,
                     to: destination,
                     skipInputPause: true,
-                    watchdogTimeout: MenuBarItemManager.layoutWatchdogTimeout
+                    options: .init(watchdogTimeout: MenuBarItemManager.layoutWatchdogTimeout)
                 )
                 await appState.itemManager.cacheItemsRegardless(skipRecentMoveCheck: true)
             } catch {

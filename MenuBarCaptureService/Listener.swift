@@ -24,7 +24,11 @@ final nonisolated class Listener: @unchecked Sendable {
     private let instanceID = UInt64.random(in: .min ... .max)
     private var captureCount = 0
 
-    private init() {}
+    private init() {
+        // Intentionally empty: the Connection is a singleton whose state
+        // initializes at its property declarations, so there is nothing to
+        // do here. The private visibility keeps external callers on `shared`.
+    }
 
     deinit {
         cancel()
@@ -174,7 +178,7 @@ final nonisolated class Listener: @unchecked Sendable {
                 continue
             }
             batchBytes += encoded.pixels.count
-            guard batchBytes <= 16 * 1_024 * 1_024 else { break }
+            guard batchBytes <= 16 * 1024 * 1024 else { break }
             frames.append(
                 MenuBarCaptureService.Frame(
                     windowID: windowID,

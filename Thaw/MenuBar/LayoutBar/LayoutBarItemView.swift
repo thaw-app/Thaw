@@ -445,13 +445,18 @@ final class LayoutBarItemView: LayoutBarArrangedView {
         if !isDraggingPlaceholder {
             let triggerControlled = isTriggerControlled
             if !usesAppIcon, let capturedImage = cachedImage?.nsImage {
+                let fraction: CGFloat = if triggerControlled {
+                    Metrics.triggerControlledFraction
+                } else if isEnabled {
+                    1.0
+                } else {
+                    0.67
+                }
                 capturedImage.draw(
                     in: bounds,
                     from: .zero,
                     operation: .sourceOver,
-                    fraction: triggerControlled
-                        ? Metrics.triggerControlledFraction
-                        : (isEnabled ? 1.0 : 0.67)
+                    fraction: fraction
                 )
             } else {
                 drawPlaceholder()

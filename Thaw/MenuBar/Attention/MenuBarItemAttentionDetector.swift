@@ -58,7 +58,7 @@ nonisolated struct MenuBarItemAttentionDetector {
         /// Defaults chosen against the common case of a roughly 1 Hz blink
         /// sampled at the cache's refresh rate: two full on/off cycles
         /// inside six seconds.
-        static let `default` = Configuration(
+        static let standard = Configuration(
             window: 6,
             minimumChanges: 3,
             maximumDistinctStates: 3,
@@ -75,7 +75,7 @@ nonisolated struct MenuBarItemAttentionDetector {
     private var configuration: Configuration
     private var samples: [MenuBarItemTag: [Sample]] = [:]
 
-    init(configuration: Configuration = .default) {
+    init(configuration: Configuration = .standard) {
         self.configuration = configuration
     }
 

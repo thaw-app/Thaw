@@ -490,18 +490,16 @@ final class MenuBarManager {
                     }
                 }
             }
-        }
 
-        // Surface a hidden item that has started blinking for attention.
-        //
-        // This shows the section the item lives in rather than moving the
-        // item itself. Dragging a single item across the divider on a
-        // heuristic is the same shape as the repair loops that collapsed
-        // real menu bars (#958, #960): a wrong verdict there is a wrong
-        // move that persists. Showing a section is the path the hotkey and
-        // hover triggers already use, and the existing rehide timer undoes
-        // it on its own.
-        if let appState {
+            // Surface a hidden item that has started blinking for attention.
+            //
+            // This shows the section the item lives in rather than moving the
+            // item itself. Dragging a single item across the divider on a
+            // heuristic is the same shape as the repair loops that collapsed
+            // real menu bars (#958, #960): a wrong verdict there is a wrong
+            // move that persists. Showing a section is the path the hotkey and
+            // hover triggers already use, and the existing rehide timer undoes
+            // it on its own.
             attentionObservationTask?.cancel()
             attentionObservationTask = Task { [weak self, weak appState] in
                 var previous: Set<MenuBarItemTag> = []

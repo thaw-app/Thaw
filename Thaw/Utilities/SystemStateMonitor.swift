@@ -423,7 +423,10 @@ final class SystemStateMonitor: ObservableObject {
     /// enabled, so `INFocusStatusCenter` can report the focus status.
     private func ensureFocusAuthorization() {
         if INFocusStatusCenter.default.authorizationStatus == .notDetermined {
-            INFocusStatusCenter.default.requestAuthorization { _ in }
+            // The authorization result is delivered through the shared
+            // INFocusStatusCenter.authorizationStatus, which the monitor
+            // already polls, so the completion is deliberately empty.
+            INFocusStatusCenter.default.requestAuthorization { _ in /* handled via authorizationStatus */ }
         }
     }
 
@@ -483,7 +486,7 @@ final class SystemStateMonitor: ObservableObject {
             monitor.pathUpdateHandler = { [weak self] path in
                 let connected = path.status == .satisfied
                 Task { @MainActor in
-                    self?.update { $0.isNetworkConnected = connected }
+                    self?.setNetworkConnected(connected)
                 }
             }
             monitor.start(queue: DispatchQueue(label: "com.stonerl.Thaw.networkMonitor"))
@@ -492,6 +495,11 @@ final class SystemStateMonitor: ObservableObject {
             monitor.cancel()
             pathMonitor = nil
         }
+    }
+
+    @MainActor
+    private func setNetworkConnected(_ connected: Bool) {
+        update { $0.isNetworkConnected = connected }
     }
 
     // MARK: Polled sources

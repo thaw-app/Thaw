@@ -644,37 +644,37 @@ extension TriggerCondition {
 
     /// The saved location, for the location condition.
     var locationValue: (latitude: Double, longitude: Double, radiusMeters: Double, label: String)? {
-        switch self {
-        case let .nearLocation(latitude, longitude, radiusMeters, label):
-            (latitude, longitude, radiusMeters, label)
-        default:
-            nil
+        if case let .nearLocation(latitude, longitude, radiusMeters, label) = self {
+            return (latitude, longitude, radiusMeters, label)
         }
+        return nil
     }
 
     /// The Energy Mode predicate, for the energy-mode condition.
     var energyModeMatch: EnergyModeMatch? {
-        switch self {
-        case let .energyMode(match): match
-        case .lowPowerMode: .low
-        default: nil
+        if case let .energyMode(match) = self {
+            return match
         }
+        if case .lowPowerMode = self {
+            return .low
+        }
+        return nil
     }
 
     /// The thermal threshold, for the thermal-pressure condition.
     var thermalLevel: ThermalLevel? {
-        switch self {
-        case let .thermalPressure(level): level
-        default: nil
+        if case let .thermalPressure(level) = self {
+            return level
         }
+        return nil
     }
 
     /// The script path and expected output, for the script-result condition.
     var scriptValue: (path: String, expectedOutput: String)? {
-        switch self {
-        case let .scriptResult(path, expectedOutput): (path, expectedOutput)
-        default: nil
+        if case let .scriptResult(path, expectedOutput) = self {
+            return (path, expectedOutput)
         }
+        return nil
     }
 
     /// The watched item and reference hash, for the image-comparison condition.
@@ -864,10 +864,10 @@ extension TriggerCondition {
 
     /// Returns a copy with the thermal threshold replaced.
     func withThermalLevel(_ level: ThermalLevel) -> TriggerCondition {
-        switch self {
-        case .thermalPressure: .thermalPressure(atLeast: level)
-        default: self
+        if case .thermalPressure = self {
+            return .thermalPressure(atLeast: level)
         }
+        return self
     }
 
     /// Returns a copy of the location condition with selected fields replaced.

@@ -244,7 +244,7 @@ extension MenuBarItemManager {
                         item: item,
                         to: destination,
                         skipInputPause: true,
-                        watchdogTimeout: Self.layoutWatchdogTimeout
+                        options: .init(watchdogTimeout: Self.layoutWatchdogTimeout)
                     )
                 } catch {
                     failed += 1
@@ -3564,7 +3564,7 @@ extension MenuBarItemManager {
                     item: item,
                     to: .rightOfItem(controlItems.hidden),
                     skipInputPause: true,
-                    watchdogTimeout: Self.layoutWatchdogTimeout
+                    options: .init(watchdogTimeout: Self.layoutWatchdogTimeout)
                 )
                 MenuBarItemManager.diagLog.info("Successfully restored blocked item \(item.logString) to visible section")
             } catch {

@@ -677,7 +677,7 @@ extension MenuBarItemManager {
                 item: item,
                 to: .rightOfItem(hiddenMenuBarItem),
                 skipInputPause: true,
-                watchdogTimeout: Self.layoutWatchdogTimeout
+                options: .init(watchdogTimeout: Self.layoutWatchdogTimeout)
             )
             return true
         } catch {
@@ -724,22 +724,32 @@ extension MenuBarItemManager {
         }
     }
 
+    /// The tunables of a single synthetic-drag move. Every field defaults,
+    /// so callers pass only what they deviate from; the whole struct exists
+    /// so ``move`` and ``moveItem(withTagIdentifier:toSection:options:)``
+    /// stay readable at the call site.
+    struct MoveOptions {
+        var requiredInputPause: Duration?
+        var inputPauseTimeout: Duration?
+        var watchdogTimeout: Duration?
+        var maxMoveAttempts: Int = 8
+        var hideCursorAcrossAttempts: Bool = true
+        var shouldProceed: (@MainActor () -> Bool)?
+    }
+
     /// Moves a menu bar item to the given destination.
     ///
     /// - Parameters:
     ///   - item: The menu bar item to move.
     ///   - destination: The destination to move the item to.
+    ///   - options: The move tunables; every field defaults, so callers only
+    ///     pass what they deviate from.
     func move(
         item: MenuBarItem,
         to destination: MoveDestination,
         on displayID: CGDirectDisplayID? = nil,
         skipInputPause: Bool = false,
-        requiredInputPause: Duration? = nil,
-        inputPauseTimeout: Duration? = nil,
-        watchdogTimeout: Duration? = nil,
-        maxMoveAttempts: Int = 8,
-        hideCursorAcrossAttempts: Bool = true,
-        shouldProceed: (@MainActor () -> Bool)? = nil
+        options: MoveOptions = .init()
     ) async throws {
         // System clone windows are transient WindowServer duplicates that
         // must never be moved. Refuse here as a final safety net so no
@@ -764,7 +774,7 @@ extension MenuBarItemManager {
             MenuBarItemManager.diagLog.error("move: no appState; cannot move \(item.logString)")
             throw EventError.cannotComplete
         }
-        guard shouldProceed?() ?? true else {
+        guard options.shouldProceed?() ?? true else {
             throw EventError.moveSuperseded(item)
         }
 
@@ -773,7 +783,7 @@ extension MenuBarItemManager {
         // Wait briefly for the menu to close; if it stays open, give up this attempt.
         var menuWaitAttempts = 0
         while await isAnyMenuBarItemMenuOpen() {
-            guard shouldProceed?() ?? true else {
+            guard options.shouldProceed?() ?? true else {
                 throw EventError.moveSuperseded(item)
             }
             menuWaitAttempts += 1
@@ -807,9 +817,9 @@ extension MenuBarItemManager {
 
         if !skipInputPause {
             let inputPauseResult = try await waitForUserToPauseInput(
-                for: requiredInputPause,
-                timeout: inputPauseTimeout,
-                shouldContinue: shouldProceed
+                for: options.requiredInputPause,
+                timeout: options.inputPauseTimeout,
+                shouldContinue: options.shouldProceed
             )
             switch inputPauseResult {
             case .paused:
@@ -820,7 +830,7 @@ extension MenuBarItemManager {
                 throw EventError.moveSuperseded(item)
             }
         }
-        guard shouldProceed?() ?? true else {
+        guard options.shouldProceed?() ?? true else {
             throw EventError.moveSuperseded(item)
         }
         appState.hidEventManager.stopAll()
@@ -846,7 +856,7 @@ extension MenuBarItemManager {
         // back to it a single time after all attempts, rather than after each
         // individual attempt (which caused the cursor to oscillate many times
         // during a layout reset when items required multiple attempts).
-        let mouseLocation = hideCursorAcrossAttempts ? try getMouseLocation() : nil
+        let mouseLocation = options.hideCursorAcrossAttempts ? try getMouseLocation() : nil
         // The default 1 s cursor-hide watchdog is too short for menu
         // bar item moves, and the budget they can burn has grown: every
         // attempt spends its whole timeout four times over (two event
@@ -860,10 +870,10 @@ extension MenuBarItemManager {
         // offscreen-target override below in postMoveEvents) and the user
         // sees a brief cursor flash. The floor stays at 10 s so ordinary
         // moves keep their safety net against genuinely stuck states.
-        if hideCursorAcrossAttempts {
+        if options.hideCursorAcrossAttempts {
             MouseHelpers.hideCursor(
-                watchdogTimeout: watchdogTimeout ?? Self.cursorHideWatchdogTimeout(
-                    maxAttempts: max(1, maxMoveAttempts)
+                watchdogTimeout: options.watchdogTimeout ?? Self.cursorHideWatchdogTimeout(
+                    maxAttempts: max(1, options.maxMoveAttempts)
                 )
             )
         }
@@ -892,7 +902,7 @@ extension MenuBarItemManager {
         // move pushing its own anchor. See `targetIsRetreating`.
         var targetMinXHistory: [CGFloat] = plannedTargetBounds.map { [$0.minX] } ?? []
 
-        let maxAttempts = max(1, maxMoveAttempts)
+        let maxAttempts = max(1, options.maxMoveAttempts)
         for n in 1 ... maxAttempts {
             var attemptMouseLocation: CGPoint?
             defer {
@@ -905,7 +915,7 @@ extension MenuBarItemManager {
                 MenuBarItemManager.diagLog.debug("move: cancelled before attempt \(n) for \(item.logString)")
                 throw EventError.cannotComplete
             }
-            guard shouldProceed?() ?? true else {
+            guard options.shouldProceed?() ?? true else {
                 MenuBarItemManager.diagLog.debug("move: superseded before attempt \(n) for \(item.logString)")
                 throw EventError.moveSuperseded(item)
             }
@@ -924,9 +934,9 @@ extension MenuBarItemManager {
                         "Position match without observable displacement on attempt \(n); treating as false positive on a zero-width control item and retrying"
                     )
                 }
-                if !hideCursorAcrossAttempts {
+                if !options.hideCursorAcrossAttempts {
                     attemptMouseLocation = try getMouseLocation()
-                    MouseHelpers.hideCursor(watchdogTimeout: watchdogTimeout ?? .seconds(2))
+                    MouseHelpers.hideCursor(watchdogTimeout: options.watchdogTimeout ?? .seconds(2))
                 }
                 let attemptTimeout = try await postMoveEvents(
                     item: item,
@@ -1013,7 +1023,7 @@ extension MenuBarItemManager {
                 }
                 MenuBarItemManager.diagLog.debug("Attempt \(n) events succeeded but item not at destination, retrying")
                 if n < maxAttempts {
-                    guard shouldProceed?() ?? true else {
+                    guard options.shouldProceed?() ?? true else {
                         throw EventError.moveSuperseded(item)
                     }
                     try await waitForMoveOperationBuffer()

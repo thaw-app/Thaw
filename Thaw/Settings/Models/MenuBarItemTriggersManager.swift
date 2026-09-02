@@ -185,7 +185,10 @@ final class MenuBarItemTriggersManager {
     /// Serializes all trigger-driven item moves. Each batch awaits the
     /// previous one so synthetic-drag moves never overlap — overlapping
     /// moves desync the move engine's cursor hide/show and can strand items.
-    private var moveChain = Task<Void, Never> {}
+    /// Starts as an already-completed no-op task: an empty body is the
+    /// chain's "nothing is running yet" sentinel, and every batch awaits
+    /// it before beginning.
+    private var moveChain = Task<Void, Never> { /* intentionally empty */ }
 
     private let diagLog = DiagLog(category: "MenuBarItemTriggers")
 
@@ -914,18 +917,24 @@ final class MenuBarItemTriggersManager {
         return currentAction.reveal == queuedAction.reveal && currentAction.identifierSet == queuedAction.identifierSet
     }
 
-    private func moveOptions(for trigger: MenuBarItemTrigger) -> (
-        requiredInputPause: Duration,
-        inputPauseTimeout: Duration?,
-        watchdogTimeout: Duration?,
-        maxMoveAttempts: Int,
-        hideCursorAcrossAttempts: Bool
-    ) {
+    private func moveOptions(for trigger: MenuBarItemTrigger) -> MenuBarItemManager.MoveOptions {
         let isFrontmostDriven = trigger.allConditions.contains { $0.kind == .frontmostApp }
         if isFrontmostDriven {
-            return (.seconds(1), .seconds(3), .seconds(2), 3, false)
+            return .init(
+                requiredInputPause: .seconds(1),
+                inputPauseTimeout: .seconds(3),
+                watchdogTimeout: .seconds(2),
+                maxMoveAttempts: 3,
+                hideCursorAcrossAttempts: false
+            )
         }
-        return (.milliseconds(50), nil, nil, 8, true)
+        return .init(
+            requiredInputPause: .milliseconds(50),
+            inputPauseTimeout: nil,
+            watchdogTimeout: nil,
+            maxMoveAttempts: 8,
+            hideCursorAcrossAttempts: true
+        )
     }
 
     private func effectiveState(for trigger: MenuBarItemTrigger, base state: SystemState) -> SystemState {
@@ -969,7 +978,10 @@ final class MenuBarItemTriggersManager {
                 )
                 return
             }
-            let options = self.moveOptions(for: trigger)
+            var options = moveOptions(for: trigger)
+            options.shouldProceed = { [weak self] in
+                self?.queuedMoveIsCurrent(for: trigger, action: action) == true
+            }
             var movedAnyItem = false
             self.diagLog.debug(
                 "Starting trigger move batch for \(trigger.displayName) after queue wait "
@@ -999,14 +1011,7 @@ final class MenuBarItemTriggersManager {
                 let result = await itemManager.moveItem(
                     withTagIdentifier: identifier,
                     toSection: section,
-                    requiredInputPause: options.requiredInputPause,
-                    inputPauseTimeout: options.inputPauseTimeout,
-                    watchdogTimeout: options.watchdogTimeout,
-                    maxMoveAttempts: options.maxMoveAttempts,
-                    hideCursorAcrossAttempts: options.hideCursorAcrossAttempts,
-                    shouldProceed: { [weak self] in
-                        self?.queuedMoveIsCurrent(for: trigger, action: action) == true
-                    }
+                    options: options
                 )
                 guard self.queuedMoveIsCurrent(for: trigger, action: action) else {
                     self.diagLog.debug(

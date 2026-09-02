@@ -20,7 +20,7 @@ struct MenuBarItemAttentionDetectorTests {
     private func verdict(
         _ fingerprints: [Int],
         interval: TimeInterval = 0.5,
-        configuration: MenuBarItemAttentionDetector.Configuration = .default
+        configuration: MenuBarItemAttentionDetector.Configuration = .standard
     ) -> Bool {
         var detector = MenuBarItemAttentionDetector(configuration: configuration)
         var now: TimeInterval = 0
@@ -156,7 +156,7 @@ struct MenuBarItemAttentionDetectorTests {
 
     @Test("A stricter distinct-state limit rejects a three-state pulse")
     func configurationTightensDetection() {
-        var configuration = MenuBarItemAttentionDetector.Configuration.default
+        var configuration = MenuBarItemAttentionDetector.Configuration.standard
         configuration.maximumDistinctStates = 2
         #expect(!verdict([1, 2, 3, 1, 2, 3], configuration: configuration))
         #expect(verdict([1, 0, 1, 0, 1, 0], configuration: configuration))

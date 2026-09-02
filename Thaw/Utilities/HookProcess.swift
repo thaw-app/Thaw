@@ -18,7 +18,7 @@ extension HookRunner {
     /// Process wrapper that launches every hook in its own process group. A
     /// timeout can therefore terminate descendants a shell hook leaves in the
     /// background, rather than only killing the direct script process.
-    nonisolated final class HookProcess: @unchecked Sendable {
+    final nonisolated class HookProcess: @unchecked Sendable {
         let processIdentifier: pid_t
 
         private let lock = NSLock()
@@ -77,21 +77,40 @@ extension HookRunner {
             let environmentEntries = environment.map { "\($0.key)=\($0.value)" }
             return try withCStringArray(argv) { argvPointer in
                 try withCStringArray(environmentEntries) { environmentPointer in
-                    var processIdentifier: pid_t = 0
-                    let result = executablePath.withCString { executablePath in
-                        posix_spawn(
-                            &processIdentifier,
-                            executablePath,
-                            &fileActions,
-                            &attributes,
-                            argvPointer,
-                            environmentPointer
-                        )
-                    }
-                    try check(result)
-                    return HookProcess(processIdentifier: processIdentifier)
+                    try spawnAndCheck(
+                        executablePath: executablePath,
+                        argvPointer: argvPointer,
+                        environmentPointer: environmentPointer,
+                        fileActions: &fileActions,
+                        attributes: &attributes
+                    )
                 }
             }
+        }
+
+        /// The actual posix_spawn, extracted from the launchers so their
+        /// argument-pinning closures stay two deep. Caller pins the argument
+        /// and environment arrays; this pins the executable path itself.
+        private static func spawnAndCheck(
+            executablePath: String,
+            argvPointer: UnsafeMutablePointer<UnsafeMutablePointer<CChar>?>,
+            environmentPointer: UnsafeMutablePointer<UnsafeMutablePointer<CChar>?>,
+            fileActions: inout posix_spawn_file_actions_t?,
+            attributes: inout posix_spawnattr_t?
+        ) throws -> HookProcess {
+            var processIdentifier: pid_t = 0
+            let result = executablePath.withCString { executablePath in
+                posix_spawn(
+                    &processIdentifier,
+                    executablePath,
+                    &fileActions,
+                    &attributes,
+                    argvPointer,
+                    environmentPointer
+                )
+            }
+            try check(result)
+            return HookProcess(processIdentifier: processIdentifier)
         }
 
         /// Launches a process group whose stdout and stderr both write to the
@@ -129,19 +148,13 @@ extension HookRunner {
             let environmentEntries = environment.map { "\($0.key)=\($0.value)" }
             return try withCStringArray(argv) { argvPointer in
                 try withCStringArray(environmentEntries) { environmentPointer in
-                    var processIdentifier: pid_t = 0
-                    let result = executablePath.withCString { executablePath in
-                        posix_spawn(
-                            &processIdentifier,
-                            executablePath,
-                            &fileActions,
-                            &attributes,
-                            argvPointer,
-                            environmentPointer
-                        )
-                    }
-                    try check(result)
-                    return HookProcess(processIdentifier: processIdentifier)
+                    try spawnAndCheck(
+                        executablePath: executablePath,
+                        argvPointer: argvPointer,
+                        environmentPointer: environmentPointer,
+                        fileActions: &fileActions,
+                        attributes: &attributes
+                    )
                 }
             }
         }

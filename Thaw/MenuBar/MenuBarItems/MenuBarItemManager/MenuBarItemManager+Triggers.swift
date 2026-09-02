@@ -17,7 +17,6 @@ import Foundation
 /// here is instance-drift tolerant, because an item's `:N` suffix can change
 /// while a trigger owns it.
 extension MenuBarItemManager {
-
     /// Updates the set of items whose temporary placement is currently owned
     /// by conditional triggers.
     ///
@@ -45,8 +44,7 @@ extension MenuBarItemManager {
         )
         let identifiersRequiringRestoration = Self.triggerReleaseIdentifiersRequiringRestoration(
             releasedIdentifiers,
-            savedSectionOrder: savedSectionOrder,
-            knownBaseIdentifiers: knownBaseIdentifiers
+            savedSectionOrder: savedSectionOrder
         )
         triggerControlledItemIdentifiers = identifiers
         // A condition can become active again before the delayed restore gets
@@ -116,7 +114,7 @@ extension MenuBarItemManager {
     static nonisolated func triggerReleaseIdentifiersRequiringRestoration(
         _ releasedIdentifiers: Set<String>,
         savedSectionOrder: [String: [String]],
-        knownBaseIdentifiers: Set<String> = []
+        knownBaseIdentifiers _: Set<String> = []
     ) -> Set<String> {
         Set(releasedIdentifiers.filter {
             // Upstream's `savedPositionByBaseID` does its own canonical
@@ -302,12 +300,7 @@ extension MenuBarItemManager {
     func moveItem(
         withTagIdentifier tagIdentifier: String,
         toSection section: MenuBarSection.Name,
-        requiredInputPause: Duration = .milliseconds(50),
-        inputPauseTimeout: Duration? = nil,
-        watchdogTimeout: Duration? = nil,
-        maxMoveAttempts: Int = 8,
-        hideCursorAcrossAttempts: Bool = true,
-        shouldProceed: (@MainActor () -> Bool)? = nil
+        options: MoveOptions = .init(requiredInputPause: .milliseconds(50))
     ) async -> TriggerMoveResult {
         guard let appState else { return .unavailable }
         guard !isResettingLayout,
@@ -320,7 +313,7 @@ extension MenuBarItemManager {
             )
             return .deferred
         }
-        guard shouldProceed?() ?? true else { return .deferred }
+        guard options.shouldProceed?() ?? true else { return .deferred }
 
         // Upstream has no `getMenuBarItemsDroppingSystemClones` wrapper;
         // drop transient WindowServer duplicates inline instead.
@@ -403,13 +396,8 @@ extension MenuBarItemManager {
                 item: target,
                 to: destination,
                 on: displayID,
-                skipInputPause: requiredInputPause == .zero,
-                requiredInputPause: requiredInputPause,
-                inputPauseTimeout: inputPauseTimeout,
-                watchdogTimeout: watchdogTimeout,
-                maxMoveAttempts: maxMoveAttempts,
-                hideCursorAcrossAttempts: hideCursorAcrossAttempts,
-                shouldProceed: shouldProceed
+                skipInputPause: options.requiredInputPause == .zero,
+                options: options
             )
             MenuBarItemManager.diagLog.info("moveItem(trigger): moved \(target.logString) to \(resolvedSection.logString)")
             return .moved
