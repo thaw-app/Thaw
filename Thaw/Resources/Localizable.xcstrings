@@ -190,7 +190,7 @@
         },
         "pl" : {
           "stringUnit" : {
-            "state" : "new",
+            "state" : "translated",
             "value" : "%1$@ %2$@ %3$@"
           }
         },
@@ -314,8 +314,8 @@
         },
         "pl" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "%1$@ %2$@ pt"
+            "state" : "translated",
+            "value" : "%1$@ %2$@ pkt"
           }
         },
         "pt-BR" : {
@@ -1152,8 +1152,8 @@
         },
         "pl" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "%1$@ can't currently tell which app owns \"%2$@\", so moving it is disabled. This usually resolves on its own; relaunching the app that owns the item can help."
+            "state" : "translated",
+            "value" : "%1$@ nie może w tej chwili określić, która aplikacja jest właścicielem \"%2$@\", dlatego przenoszenie jest zablokowane. Zazwyczaj problem ten rozwiązuje się sam; pomóc może ponowne uruchomienie aplikacji, do której należy ten element."
           }
         },
         "pt-BR" : {
@@ -1270,8 +1270,8 @@
         },
         "pl" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "%@ can't locate its hidden-section divider right now. It is attempting recovery in the background — try again in a few seconds."
+            "state" : "translated",
+            "value" : "%@ nie może w tej chwili znaleźć separatora ukrytej sekcji. Trwa próba odzyskiwania w tle — spróbuj ponownie za kilka sekund."
           }
         },
         "pt-BR" : {
@@ -3329,7 +3329,7 @@
         },
         "pl" : {
           "stringUnit" : {
-            "state" : "new",
+            "state" : "translated",
             "value" : "+%lld"
           }
         },
@@ -7717,8 +7717,8 @@
         },
         "ja" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Apply the global template above to every connected and previously-seen display. Newly connected displays are also seeded from this template."
+            "state" : "translated",
+            "value" : "このグローバルテンプレートを、接続中および過去に接続されたすべてのディスプレイに適用します。新規接続されたディスプレイにもこのテンプレートが初期値として適用されます。"
           }
         },
         "ko" : {
@@ -8074,8 +8074,8 @@
         },
         "ja" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Applying briefly relaunches apps with menu bar items so they pick up the new spacing."
+            "state" : "translated",
+            "value" : "変更すると、メニューバー項目を含むアプリが一時的に再起動され、新しい間隔が反映されます。"
           }
         },
         "ko" : {
@@ -11061,8 +11061,8 @@
         },
         "ja" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Before a display change or spacing edit relaunches your menu bar apps, Thaw asks you to confirm. Turn this off to apply spacing changes and relaunch apps without confirmation."
+            "state" : "translated",
+            "value" : "ディスプレイの変更や間隔の編集に伴うアプリの再起動前に、Thaw が確認メッセージを表示します。確認なしで間隔の変更を適用してアプリを再起動したい場合は、この設定をオフにしてください。"
           }
         },
         "ko" : {
@@ -12489,8 +12489,8 @@
         },
         "ja" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Changing menu bar spacing for a display can relaunch apps with menu bar items. Unsaved input, progress, or transient app state may be lost."
+            "state" : "translated",
+            "value" : "ディスプレイごとにメニューバーの間隔を変更すると、メニューバー項目を含むアプリが再起動される場合があります。未保存のデータや作業の進行状況、一時的なアプリの状態が失われる可能性があります。"
           }
         },
         "ko" : {
@@ -12507,8 +12507,8 @@
         },
         "pl" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Changing menu bar spacing for a display can relaunch apps with menu bar items. Unsaved input, progress, or transient app state may be lost."
+            "state" : "translated",
+            "value" : "Modyfikacja odstępów paska menu na danym monitorze może skutkować ponownym uruchomieniem programów korzystających z paska menu. Istnieje ryzyko utraty niezapisanych danych, postępów oraz tymczasowego stanu aplikacji."
           }
         },
         "pt-BR" : {
@@ -21780,8 +21780,8 @@
         },
         "pl" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Enable the always-hidden section in Layout to configure icon gestures for that section."
+            "state" : "translated",
+            "value" : "Aby skonfigurować gesty ikon dla zawsze ukrytej sekcji, włącz ją w ustawieniach Układu."
           }
         },
         "pt-BR" : {
@@ -23088,8 +23088,8 @@
         },
         "pl" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Failed to update configuration on ^[%lld profiles](inflect: true)."
+            "state" : "translated",
+            "value" : "Nie udało się zaktualizować konfiguracji dla ^[%lld profili](inflect: true)."
           }
         },
         "pt-BR" : {
@@ -30463,8 +30463,8 @@
         },
         "pl" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Layout reset. Items were moved to the Always Hidden section."
+            "state" : "translated",
+            "value" : "Przywrócono domyślny układ. Elementy przeniesiono do sekcji Zawsze ukryte."
           }
         },
         "pt-BR" : {
@@ -31651,8 +31651,8 @@
         },
         "pl" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "macOS draws a solid menu bar while Reduce Transparency is on, so %@ cannot tint or reshape it. Turn the setting off to see these effects."
+            "state" : "translated",
+            "value" : "Gdy funkcja Zmniejsz przezroczystość jest włączona, macOS rysuje nieprzezroczysty pasek menu, przez co %@ nie może zmienić jego koloru ani kształtu. Wyłącz tę opcję, aby zobaczyć efekty."
           }
         },
         "pt-BR" : {
@@ -44663,8 +44663,8 @@
         },
         "pl" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Resets dividers and moves every movable item except the %@ icon to the selected section."
+            "state" : "translated",
+            "value" : "Zeruje linie podziału i przenosi do wybranej sekcji wszystkie elementy z możliwością zmiany położenia, pomijając ikonę %@."
           }
         },
         "pt-BR" : {
@@ -45020,8 +45020,8 @@
         },
         "pl" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Reveal hidden items through the Thaw Bar while overflow has items ejected. The visible row has no room left beside the notch at that point, so expanding the hidden section inline cannot show them. Disable to always follow the per-display Thaw Bar setting."
+            "state" : "translated",
+            "value" : "Odsłoń ukryte elementy za pomocą paska Thaw, gdy przepełnienie powoduje ich wysunięcie. Widoczny wiersz nie ma już miejsca obok wycięcia, więc rozszerzenie ukrytej sekcji w linii nie może ich wyświetlić. Wyłącz, aby zawsze stosować ustawienie paska Thaw dla każdego wyświetlacza."
           }
         },
         "pt-BR" : {
@@ -49763,8 +49763,8 @@
         },
         "ja" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Show hidden menu bar items in a separate bar below the menu bar."
+            "state" : "translated",
+            "value" : "メニューバーの下に、非表示のメニューバー項目を別のバーで表示します。"
           }
         },
         "ko" : {
@@ -54003,8 +54003,8 @@
       "localizations" : {
         "cs" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "The %@ section is collapsed, so its divider is offscreen. Open the section and try dragging the item again."
+            "state" : "translated",
+            "value" : "Sekce %@ je sbalená, takže její oddělovač je mimo obrazovku. Rozbalte tuto sekci a zkuste přetáhnout ikonu znovu."
           }
         },
         "de" : {
@@ -54063,8 +54063,8 @@
         },
         "pl" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "The %@ section is collapsed, so its divider is offscreen. Open the section and try dragging the item again."
+            "state" : "translated",
+            "value" : "Sekcja %@ jest zwinięta, więc jej separator znajduje się poza ekranem. Otwórz sekcję i spróbuj ponownie przeciągnąć element."
           }
         },
         "pt-BR" : {
@@ -54419,8 +54419,8 @@
         },
         "pl" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "The item was left in the visible section so it isn't stuck offscreen. Try dragging it again in a moment."
+            "state" : "translated",
+            "value" : "Element został pozostawiony w widocznym obszarze, aby nie utknął poza ekranem. Spróbuj przeciągnąć go ponownie za chwilę."
           }
         },
         "pt-BR" : {
@@ -54715,8 +54715,8 @@
       "localizations" : {
         "cs" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "This version of Thaw is not yet compatible with macOS %lld. Preview builds are available on GitHub Releases, and support will be delivered through the alpha update channel."
+            "state" : "translated",
+            "value" : "Tato verze aplikace Thaw ještě není kompatibilní s macOS %lld. Předběžná vydání jsou k dispozici na GitHubu, podpora bude uvolněna skrze kanál aktualizací alfa."
           }
         },
         "de" : {
@@ -54775,8 +54775,8 @@
         },
         "pl" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "This version of Thaw is not yet compatible with macOS %lld. Preview builds are available on GitHub Releases, and support will be delivered through the alpha update channel."
+            "state" : "translated",
+            "value" : "Ta wersja Thaw nie jest jeszcze kompatybilna z macOS %lld. Wersje zapoznawcze są dostępne w GitHub Releases, a wsparcie zostanie udostępnione za pośrednictwem kanału aktualizacji alfa."
           }
         },
         "pt-BR" : {
@@ -54833,8 +54833,8 @@
       "localizations" : {
         "cs" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "This version of Thaw is not yet compatible with macOS %lld. Support arrives through the alpha channel, which carries the rewritten app. Thaw can subscribe you and check for a build now. If none has been published yet, it opens the preview builds on GitHub."
+            "state" : "translated",
+            "value" : "Tato verze aplikace Thaw ještě není kompatibilní s macOS %lld. Podpora bude uvolněna skrze kanál aktualizací alfa, ve kterém je k dispozici přepracovaná aplikace. Thaw vás teď může přihlásit k odběru aktualizací a zkontrolovat, zda je nová verze k dispozici. Pokud zatím nebyla vydaná, otevře se seznam předběžných vydání na GitHubu."
           }
         },
         "de" : {
@@ -54893,8 +54893,8 @@
         },
         "pl" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "This version of Thaw is not yet compatible with macOS %lld. Support arrives through the alpha channel, which carries the rewritten app. Thaw can subscribe you and check for a build now. If none has been published yet, it opens the preview builds on GitHub."
+            "state" : "translated",
+            "value" : "Ta wersja Thaw nie jest jeszcze kompatybilna z macOS %lld. Wsparcie jest wprowadzane poprzez kanał alfa, który zawiera przepisaną aplikację. Thaw może zapisać Cię do subskrypcji i sprawdzić dostępność kompilacji już teraz. Jeśli żadna nie została jeszcze opublikowana, otworzy wersje zapoznawcze na GitHubie."
           }
         },
         "pt-BR" : {
@@ -55383,8 +55383,8 @@
         },
         "pl" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "This will overwrite the settings of ^[%lld displays](inflect: true) with the global template. If the active display's spacing changes, Thaw will relaunch each app with a menu bar item. Relaunching apps may cause unsaved input, progress, or transient app state to be lost."
+            "state" : "translated",
+            "value" : "To nadpisze ustawienia ^[%lld ekranów](inflect: true) globalnym szablonem. Jeśli zmienią się odstępy na aktywnym ekranie, Thaw ponownie uruchomi każdą aplikację posiadającą element na pasku menu. Ponowne uruchomienie aplikacji może spowodować utratę niezapisanych danych, postępów lub tymczasowego stanu aplikacji."
           }
         },
         "pt-BR" : {
@@ -60491,8 +60491,8 @@
         },
         "ja" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "When a profile is active, choose whether spacing changes save to just the active profile or to every profile."
+            "state" : "translated",
+            "value" : "プロファイルがアクティブな場合、間隔の変更をアクティブなプロファイルだけに保存するか、すべてのプロファイルに保存するかを選択します。"
           }
         },
         "ko" : {
