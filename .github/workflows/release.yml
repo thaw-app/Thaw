@@ -733,6 +733,14 @@ jobs:
       # creates the linked discussion on the draft-to-published transition, so
       # setting the category earlier on the draft would do nothing. contents:
       # write is all it needs; the Releases endpoint creates the discussion.
+      #
+      # The Releases endpoint matches discussion_category_name by the
+      # category's *slug*, not its display name: "Announcements" 404s with
+      # "Discussion could not be created" while "announcements" works (that
+      # is how the 2.0.1 publish failed). Resolve whatever the input holds —
+      # slug or display name, case-insensitive — to the slug before touching
+      # the release, so a bad choice fails while the release is still a draft
+      # and a re-dispatch is all it takes.
       - name: Publish release
         if: ${{ inputs.publish_release }}
         env:
@@ -745,8 +753,29 @@ jobs:
           if [[ "$DISCUSSION_CATEGORY" == "none" ]]; then
             gh release edit "$TAG" --draft=false
             echo "Published release ${TAG} with provenance attached"
-          else
-            gh release edit "$TAG" --draft=false \
-              --discussion-category "$DISCUSSION_CATEGORY"
-            echo "Published release ${TAG} with provenance attached, discussion in ${DISCUSSION_CATEGORY}"
+            exit 0
           fi
+
+          categories="$(gh api graphql \
+            -F owner="${GH_REPO%%/*}" -F name="${GH_REPO#*/}" \
+            -f query='query($owner: String!, $name: String!) {
+              repository(owner: $owner, name: $name) {
+                discussionCategories(first: 20) { nodes { slug name } }
+              }
+            }' \
+            --jq '.data.repository.discussionCategories.nodes[] | "\(.slug)\t\(.name)"')"
+          category_slug="$(shopt -s nocasematch; while IFS=$'\t' read -r slug name; do
+            if [[ "$slug" == "$DISCUSSION_CATEGORY" || "$name" == "$DISCUSSION_CATEGORY" ]]; then
+              echo "$slug"
+              break
+            fi
+          done <<< "$categories")"
+          if [[ -z "$category_slug" ]]; then
+            echo "::error::No discussion category matches \"${DISCUSSION_CATEGORY}\". Available categories:"
+            echo "$categories" | awk -F'\t' '{ print "::error::  " $2 " (slug: " $1 ")" }'
+            exit 1
+          fi
+
+          gh release edit "$TAG" --draft=false \
+            --discussion-category "$category_slug"
+          echo "Published release ${TAG} with provenance attached, discussion in ${category_slug}"
