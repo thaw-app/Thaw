@@ -46,6 +46,13 @@ final class MenuBarItemSpacingManager {
     private struct AppHandle {
         let bundleID: String
         let bundleURL: URL?
+
+        /// The launchd label that owns this app's executable, when it is a
+        /// system LaunchAgent. Resolved pre-wave because it is read from
+        /// the running process's executable URL, which is gone by the time
+        /// the fallback runs. Non-nil means the fallback must restart the
+        /// item through launchd rather than by launching the bundle. (#720)
+        let launchdLabel: String?
     }
 
     /// Result of a single applyOffset call.
@@ -94,8 +101,12 @@ final class MenuBarItemSpacingManager {
     /// for items to stabilize before moving them.
     private let applyOffsetSemaphore = SimpleSemaphore(value: 1)
 
-    /// Runs a command with the given arguments.
-    private func runCommand(_ command: String, with arguments: [String]) async throws {
+    /// Runs the executable at `executableURL` with the given arguments.
+    private func runCommand(
+        _ command: String,
+        executable executableURL: URL,
+        with arguments: [String]
+    ) async throws {
         let result: ExecutionResult<Void, DiscardedOutput, StringOutput<UTF8>>
         do {
             // Executed by absolute path, with no argv[0] prepended.
@@ -104,9 +115,9 @@ final class MenuBarItemSpacingManager {
             // argument, so the tool that ended up writing to the global
             // domain was whatever `defaults` the inherited PATH resolved to.
             // `command` is now only used to describe the invocation in logs
-            // and errors; the executable is fixed by Info.plist.
+            // and errors; every executable comes from Info.plist.
             result = try await Subprocess.run(
-                .path(FilePath(Constants.menuBarItemSpacingExecutableURL.path)),
+                .path(FilePath(executableURL.path)),
                 arguments: Arguments(arguments),
                 output: .discarded,
                 error: .string(limit: Self.errorByteLimit)
@@ -140,11 +151,38 @@ final class MenuBarItemSpacingManager {
     private func setOffset(_ offset: Int, forKey key: Key) async throws {
         try await runCommand(
             "defaults",
+            executable: Constants.menuBarItemSpacingExecutableURL,
             with: [
                 "-currentHost", "write", "-globalDomain", key.rawValue, "-int",
                 String(key.defaultValue + offset),
             ]
         )
+    }
+
+    /// The launchd label that owns the given app's executable, or `nil`
+    /// when the app is not launched by a system LaunchAgent.
+    private func launchdLabel(for app: NSRunningApplication) -> String? {
+        guard let executableURL = app.executableURL else {
+            return nil
+        }
+        return SystemLaunchAgentIndex.system.label(forExecutableAt: executableURL)
+    }
+
+    /// Restarts the launchd job with the given label in the calling user's
+    /// GUI domain.
+    ///
+    /// `kickstart -k` kills the running instance and starts a fresh one
+    /// with launchd as its parent, which is the whole point: it is the only
+    /// way to bring a launch-constrained agent back, and it replaces the
+    /// terminate-then-launch pair rather than supplementing it. (#720)
+    private func kickstartLaunchAgent(label: String) async throws {
+        let target = "gui/\(getuid())/\(label)"
+        try await runCommand(
+            "launchctl",
+            executable: Constants.launchctlExecutableURL,
+            with: ["kickstart", "-k", target]
+        )
+        MenuBarItemSpacingManager.diagLog.debug("Kickstarted launchd job \(target)")
     }
 
     /// Asynchronously signals the given app to quit.
@@ -219,6 +257,21 @@ final class MenuBarItemSpacingManager {
     /// Asynchronously relaunches the given app.
     private func relaunchApp(_ app: NSRunningApplication) async throws {
         struct RelaunchError: Error {}
+
+        // System LaunchAgents (Spotlight, Dock, WindowManager, ...) can
+        // carry a launch constraint permitting launchd as their only
+        // launching parent. Terminating one and launching its bundle
+        // ourselves gets the new process SIGKILLed at exec - CODESIGNING,
+        // "Launch Constraint Violation" - and because terminate() is a
+        // *successful* exit, an agent with KeepAlive.SuccessfulExit=false
+        // (Spotlight's setting) is never respawned by launchd either, so
+        // the item stays gone until the machine is rebooted. Restart these
+        // through launchd instead. (#720)
+        if let label = launchdLabel(for: app) {
+            try await kickstartLaunchAgent(label: label)
+            return
+        }
+
         guard
             let url = app.bundleURL,
             let bundleIdentifier = app.bundleIdentifier
@@ -334,7 +387,11 @@ final class MenuBarItemSpacingManager {
                let bid = app.bundleIdentifier,
                bid != ownBundleID
             {
-                preWaveAppHandles[pid] = AppHandle(bundleID: bid, bundleURL: app.bundleURL)
+                preWaveAppHandles[pid] = AppHandle(
+                    bundleID: bid,
+                    bundleURL: app.bundleURL,
+                    launchdLabel: launchdLabel(for: app)
+                )
             }
         }
 
@@ -439,6 +496,19 @@ final class MenuBarItemSpacingManager {
         await withTaskGroup(of: Void.self) { group in
             for handle in missing {
                 group.addTask {
+                    // Same launch constraint as the wave itself: retrying
+                    // openApplication here is what produced the second
+                    // Spotlight crash report, ~8 s after the first. (#720)
+                    if let label = handle.launchdLabel {
+                        do {
+                            try await self.kickstartLaunchAgent(label: label)
+                        } catch {
+                            MenuBarItemSpacingManager.diagLog.error(
+                                "applyOffset fallback kickstart for \(handle.bundleID) (\(label)) failed: \(error)"
+                            )
+                        }
+                        return
+                    }
                     guard let url = handle.bundleURL else {
                         MenuBarItemSpacingManager.diagLog.warning(
                             "applyOffset fallback skipped for \(handle.bundleID): no bundleURL captured pre-wave"

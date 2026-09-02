@@ -92,6 +92,7 @@ $(SRCROOT)/Thaw/MenuBar/Search/MenuBarSearchModel.swift
 $(SRCROOT)/Thaw/MenuBar/Search/MenuBarSearchPanel.swift
 $(SRCROOT)/Thaw/MenuBar/Spacing/MenuBarItemSpacingError.swift
 $(SRCROOT)/Thaw/MenuBar/Spacing/MenuBarItemSpacingManager.swift
+$(SRCROOT)/Thaw/MenuBar/Spacing/SystemLaunchAgentIndex.swift
 $(SRCROOT)/Thaw/Onboarding/GlassSupport.swift
 $(SRCROOT)/Thaw/Onboarding/OnboardingPermissionsView.swift
 $(SRCROOT)/Thaw/Onboarding/OnboardingView.swift

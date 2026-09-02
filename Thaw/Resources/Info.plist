@@ -23,6 +23,8 @@
 	<string>https://github.com/sponsors/stonerl</string>
 	<key>ThawMenuBarItemSpacingExecutableURI</key>
 	<string>file:///usr/bin/defaults</string>
+	<key>ThawLaunchctlExecutableURI</key>
+	<string>file:///bin/launchctl</string>
 	<key>ThawSkyLightFrameworkPath</key>
 	<string>/System/Library/PrivateFrameworks/SkyLight.framework/SkyLight</string>
 </dict>
