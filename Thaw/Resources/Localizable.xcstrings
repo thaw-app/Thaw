@@ -142,8 +142,8 @@
         },
         "es" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "%1$@ %2$@ %3$@"
+            "state" : "translated",
+            "value" : "%1$@%2$@%3$@"
           }
         },
         "fr" : {
@@ -266,8 +266,8 @@
         },
         "es" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "%1$@ %2$@ pt"
+            "state" : "translated",
+            "value" : "%1$@%2$@ pt"
           }
         },
         "fr" : {
@@ -3281,7 +3281,7 @@
         },
         "es" : {
           "stringUnit" : {
-            "state" : "new",
+            "state" : "translated",
             "value" : "+%lld"
           }
         },
@@ -23040,8 +23040,8 @@
         },
         "es" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Failed to update configuration on ^[%lld profiles](inflect: true)."
+            "state" : "translated",
+            "value" : "No se ha podido actualizar la configuración en %lld perfil(es)."
           }
         },
         "fr" : {
@@ -24703,7 +24703,7 @@
         },
         "es" : {
           "stringUnit" : {
-            "state" : "new",
+            "state" : "translated",
             "value" : "Global %@ pt"
           }
         },
@@ -30415,8 +30415,8 @@
         },
         "es" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Layout reset. Items were moved to the Always Hidden section."
+            "state" : "translated",
+            "value" : "Se restableció la disposición. Los elementos se movieron a la sección Ocultos."
           }
         },
         "fr" : {
