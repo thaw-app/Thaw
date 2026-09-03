@@ -198,9 +198,21 @@ jobs:
           RELEASE_NOTES_INPUT: ${{ inputs.release_notes }}
           SOURCE_REPOSITORY: ${{ steps.source.outputs.repository }}
           SOURCE_COMMIT: ${{ steps.source.outputs.commit }}
+          GH_TOKEN: ${{ github.token }}
         run: |
           set -euo pipefail
-          python3 - <<'PY'
+          # The changelog lives in this repository, whichever repository the
+          # code came from: thaw-next carries no copy and reads it from here
+          # at run time. After a cross-repo checkout the working tree is the
+          # source repository, so fetch this repository's CHANGELOG.md at the
+          # ref that dispatched the workflow and hand it to the lookup below.
+          own_changelog=""
+          if [[ "$SOURCE_REPOSITORY" != "$GITHUB_REPOSITORY" ]]; then
+            own_changelog="$RUNNER_TEMP/CHANGELOG.md"
+            gh api "repos/${GITHUB_REPOSITORY}/contents/CHANGELOG.md?ref=${GITHUB_SHA}" \
+              -H "Accept: application/vnd.github.raw" > "$own_changelog"
+          fi
+          OWN_CHANGELOG="$own_changelog" python3 - <<'PY'
           import os
           import re
           import uuid
@@ -212,9 +224,10 @@ jobs:
           # Falls back to the CHANGELOG.md section for this tag (Keep a Changelog
           # style: "## [1.2.3]" or "## 1.2.3", ending at the next "## " heading)
           # only when no manual notes were supplied at dispatch time. Thaw keeps
-          # the changelog at the repository root; thaw-next bundles it into the
-          # app as Thaw/Resources/CHANGELOG.md, so both locations are tried.
-          candidates = ["CHANGELOG.md", "Thaw/Resources/CHANGELOG.md"]
+          # the changelog at the repository root; on a cross-repo build that
+          # file was fetched into OWN_CHANGELOG above and is tried first.
+          candidates = [os.environ.get("OWN_CHANGELOG", ""), "CHANGELOG.md", "Thaw/Resources/CHANGELOG.md"]
+          candidates = [p for p in candidates if p]
           changelog = next((p for p in candidates if os.path.isfile(p)), None)
           if not notes.strip() and changelog:
               text = open(changelog, encoding="utf-8").read()
