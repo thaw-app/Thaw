@@ -712,7 +712,7 @@ struct DisplaySettingsPane: View {
 
     private func globalConfirmationMessage(for pending: PendingGlobalApply) -> String {
         let profileName = pending.activeProfileName ?? ""
-        let displayMessage = String(localized: "This will overwrite the settings of ^[\(pending.displayCount) displays](inflect: true) with the global template. If the active display's spacing changes, Thaw will relaunch each app with a menu bar item. Relaunching apps may cause unsaved input, progress, or transient app state to be lost.")
+        let displayMessage = String(localized: "This will overwrite the settings of \(pending.displayCount) displays with the global template. If the active display's spacing changes, Thaw will relaunch each app with a menu bar item. Relaunching apps may cause unsaved input, progress, or transient app state to be lost.")
         if pending.activeProfileID != nil {
             let profileInstruction = String(localized: "Save the global template to the active profile \"\(profileName)\", or save it to every profile.")
             return "\(displayMessage) \(profileInstruction)"
