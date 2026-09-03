@@ -54,6 +54,14 @@ outputs:
   deployment-target:
     description: MACOSX_DEPLOYMENT_TARGET for this source
     value: ${{ steps.meta.outputs.deployment_target }}
+  swift-compiler:
+    description: >-
+      The swiftlang build string (for example swiftlang-6.4.0.27.1) the
+      binary package's Swift module was compiled by, or empty when the source
+      has no such constraint. The binary ships without library evolution, so
+      only the Xcode carrying exactly this compiler can import it; the Select
+      Xcode step picks by it.
+    value: ${{ steps.binary.outputs.swift_compiler }}
 
 runs:
   using: composite
@@ -165,6 +173,7 @@ runs:
     # here, and every derived name is masked in the log. Nothing is republished.
     - name: Fetch the private binary package
       if: ${{ inputs.source == 'thaw-next' }}
+      id: binary
       shell: bash
       env:
         GH_TOKEN: ${{ steps.token.outputs.token }}
@@ -267,4 +276,15 @@ runs:
         json.dump(doc, sys.stdout, indent=2)
         print()
         PY
-        echo "Binary package ${version} staged for the workspace build"
+        # The module is a binary .swiftmodule, not a .swiftinterface, so it
+        # imports only under the compiler that wrote it; that compiler's
+        # build string is recorded inside the module. Surface it so the
+        # caller can select the matching Xcode rather than the newest one.
+        module="$(find "$override/$framework" -name '*.swiftmodule' -type f | head -1)"
+        swift_compiler="$(strings "$module" | grep -oE 'swiftlang-[0-9.]+' | head -1)"
+        if [[ -z "$swift_compiler" ]]; then
+          echo "::error::Could not read the compiler build string from the binary package's Swift module"
+          exit 1
+        fi
+        echo "swift_compiler=$swift_compiler" >> "$GITHUB_OUTPUT"
+        echo "Binary package ${version} staged for the workspace build (built by ${swift_compiler})"

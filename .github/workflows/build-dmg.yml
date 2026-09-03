@@ -66,6 +66,11 @@ jobs:
       - name: Select Xcode
         env:
           XCODE_APP: Xcode_27
+          # Set for thaw-next: the compiler its binary package was built by.
+          # That package ships without library evolution, so only the Xcode
+          # carrying exactly this compiler can import it; the newest install
+          # is wrong whenever it is newer than the package's release job.
+          REQUIRED_SWIFT: ${{ steps.source.outputs.swift-compiler }}
         run: |
           set -euo pipefail
           shopt -s nullglob
@@ -77,7 +82,25 @@ jobs:
             ls -d /Applications/Xcode*.app || true
             exit 1
           fi
-          selected="${candidates[${#candidates[@]}-1]}"
+          selected=""
+          if [[ -n "$REQUIRED_SWIFT" ]]; then
+            for candidate in "${candidates[@]}"; do
+              swiftc="$candidate/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/swiftc"
+              if [[ -x "$swiftc" ]] && "$swiftc" --version 2>/dev/null | grep -qF "$REQUIRED_SWIFT"; then
+                selected="$candidate"
+              fi
+            done
+            if [[ -z "$selected" ]]; then
+              echo "No installed Xcode carries ${REQUIRED_SWIFT}, which the binary package requires. Installed:"
+              for candidate in "${candidates[@]}"; do
+                swiftc="$candidate/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/swiftc"
+                echo "  $candidate: $("$swiftc" --version 2>/dev/null | head -1)"
+              done
+              exit 1
+            fi
+          else
+            selected="${candidates[${#candidates[@]}-1]}"
+          fi
           sudo xcode-select -s "$selected/Contents/Developer"
           xcodebuild -version
 
