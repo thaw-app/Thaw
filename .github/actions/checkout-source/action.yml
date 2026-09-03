@@ -63,6 +63,7 @@ runs:
       shell: bash
       env:
         SOURCE: ${{ inputs.source }}
+        INPUT_REF: ${{ inputs.ref }}
         THAW_NEXT_TOKEN: ${{ inputs.thaw-next-token }}
         GITHUB_TOKEN: ${{ inputs.github-token }}
       run: |
@@ -85,10 +86,20 @@ runs:
             exit 1
             ;;
         esac
+        # actions/checkout resolves an empty ref on the triggering repository
+        # to github.context.ref, the ref that dispatched the workflow, not to
+        # the default branch the "empty = default branch" contract promises.
+        # Resolve the default branch explicitly for Thaw; thaw-next keeps the
+        # empty ref, for which checkout already uses the foreign default branch.
+        checkout_ref=""
+        if [[ "$SOURCE" == "Thaw" && -z "$INPUT_REF" ]]; then
+          checkout_ref="refs/heads/$(gh api "repos/$GITHUB_REPOSITORY" --jq .default_branch)"
+        fi
         echo "::add-mask::$token"
         {
           echo "token=$token"
           echo "repository=$repository"
+          echo "ref=$checkout_ref"
         } >> "$GITHUB_OUTPUT"
 
     # Checking out over the caller's sparse checkout of this repository is
@@ -99,8 +110,15 @@ runs:
       with:
         repository: ${{ steps.token.outputs.repository }}
         token: ${{ steps.token.outputs.token }}
-        ref: ${{ inputs.ref }}
+        # An explicit ref wins; the token step resolves an empty ref to the
+        # source repository's default branch (empty output for thaw-next, for
+        # which checkout's own default is already that repository's default
+        # branch).
+        ref: ${{ inputs.ref || steps.token.outputs.ref }}
         fetch-depth: ${{ inputs.fetch-depth }}
+        # Nothing after this step needs git credentials, and for thaw-next the
+        # token is a private-repository PAT that must not outlive the checkout.
+        persist-credentials: false
 
     # thaw-next is macOS 27 only. One of its dependencies is a binary package
     # SwiftPM cannot fetch here (see the fetch step below), so thaw-next is
