@@ -23,6 +23,7 @@ $(SRCROOT)/Thaw/Events/EventTap.swift
 $(SRCROOT)/Thaw/Events/HIDEventManager.swift
 $(SRCROOT)/Thaw/Events/RunLoopLocalEventMonitor.swift
 $(SRCROOT)/Thaw/Hotkeys/Hotkey.swift
+$(SRCROOT)/Thaw/Hotkeys/HotkeyAction+Perform.swift
 $(SRCROOT)/Thaw/Hotkeys/HotkeyAction.swift
 $(SRCROOT)/Thaw/Hotkeys/HotkeyRegistry.swift
 $(SRCROOT)/Thaw/Hotkeys/KeyCode.swift
@@ -100,6 +101,7 @@ $(SRCROOT)/Thaw/MenuBar/MenuBarItems/MenuBarItemServiceConnection.swift
 $(SRCROOT)/Thaw/MenuBar/MenuBarItems/MenuBarItemTag+TriggerIdentity.swift
 $(SRCROOT)/Thaw/MenuBar/MenuBarItems/MenuBarItemTag.swift
 $(SRCROOT)/Thaw/MenuBar/MenuBarItems/MenuBarLiveRefreshPolicy.swift
+$(SRCROOT)/Thaw/MenuBar/MenuBarItems/MenuBarSpacer.swift
 $(SRCROOT)/Thaw/MenuBar/MenuBarItems/MenuBarSpacerManager.swift
 $(SRCROOT)/Thaw/MenuBar/MenuBarItems/PendingLedger.swift
 $(SRCROOT)/Thaw/MenuBar/MenuBarItems/StaleIdentifierLedger.swift
@@ -135,6 +137,7 @@ $(SRCROOT)/Thaw/Settings/Models/HookScript.swift
 $(SRCROOT)/Thaw/Settings/Models/HotkeysSettings.swift
 $(SRCROOT)/Thaw/Settings/Models/LogRotationInterval.swift
 $(SRCROOT)/Thaw/Settings/Models/MenuBarItemTrigger.swift
+$(SRCROOT)/Thaw/Settings/Models/MenuBarItemTriggersManager+Live.swift
 $(SRCROOT)/Thaw/Settings/Models/MenuBarItemTriggersManager.swift
 $(SRCROOT)/Thaw/Settings/Models/Profile.swift
 $(SRCROOT)/Thaw/Settings/Models/ProfileManager+Live.swift
@@ -203,6 +206,7 @@ $(SRCROOT)/Thaw/Utilities/ConcurrencyHelpers.swift
 $(SRCROOT)/Thaw/Utilities/ConflictingAppDetector.swift
 $(SRCROOT)/Thaw/Utilities/Constants.swift
 $(SRCROOT)/Thaw/Utilities/Defaults.swift
+$(SRCROOT)/Thaw/Utilities/EnergyMode.swift
 $(SRCROOT)/Thaw/Utilities/EnergyModeMonitor.swift
 $(SRCROOT)/Thaw/Utilities/Extensions.swift
 $(SRCROOT)/Thaw/Utilities/Helpers.swift
@@ -218,6 +222,7 @@ $(SRCROOT)/Thaw/Utilities/Migration.swift
 $(SRCROOT)/Thaw/Utilities/MouseHelpers.swift
 $(SRCROOT)/Thaw/Utilities/ObjectStorage.swift
 $(SRCROOT)/Thaw/Utilities/PowerSourceMonitor.swift
+$(SRCROOT)/Thaw/Utilities/PowerState.swift
 $(SRCROOT)/Thaw/Utilities/Predicates.swift
 $(SRCROOT)/Thaw/Utilities/ScreenCapture.swift
 $(SRCROOT)/Thaw/Utilities/SettingsURIHandler.swift
@@ -226,5 +231,6 @@ $(SRCROOT)/Thaw/Utilities/SimpleSemaphore.swift
 $(SRCROOT)/Thaw/Utilities/SpaceInfo.swift
 $(SRCROOT)/Thaw/Utilities/Swizzling.swift
 $(SRCROOT)/Thaw/Utilities/SystemAppearance.swift
+$(SRCROOT)/Thaw/Utilities/SystemState.swift
 $(SRCROOT)/Thaw/Utilities/SystemStateMonitor.swift
 $(SRCROOT)/Thaw/Utilities/TriggerScriptRunner.swift
