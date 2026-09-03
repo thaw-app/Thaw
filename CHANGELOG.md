@@ -7,6 +7,107 @@ The `release.yml` workflow reads the section matching the release tag
 (`## [tag]`) and uses it as the release notes for both the GitHub Release
 and the Sparkle appcast, unless overridden with the `release_notes` input.
 
+## [3.0.0-alpha.1] - 2026-09-03
+
+Thaw 3 is Thaw rebuilt and redesigned for macOS 27. A new engine on the platform's own model, a new settings window, new glass everywhere, and Swift 6.4 underneath. It is de-iced: the code and names inherited from Ice are gone, and what is left is more Thaw than anything before it.
+
+Hey, we have a Discord! Come say hi: [discord.gg/KDfWjWDnR4](https://discord.gg/KDfWjWDnR4).
+
+<a href="https://www.producthunt.com/products/thaw-2?embed=true&amp;utm_source=badge-featured&amp;utm_medium=badge&amp;utm_campaign=badge-thaw-3" target="_blank" rel="noopener noreferrer"><img alt="Thaw - The only app that owns your whole menu bar, in and out | Product Hunt" width="250" height="54" src="https://api.producthunt.com/widgets/embed-image/v1/featured.svg?post_id=1239794&amp;theme=light&amp;t=1788423441056"></a>
+
+Thank you to the more than 80 people who ran the preview builds, sent logs, and told us what broke. Every one of the areas below was shaped by those reports.
+
+---
+
+### Upgrade from 2.x
+
+1. macOS 27 is required. There is no 2.x compatibility layer.
+2. Update channel is Nightly for now.
+3. The Ice-era settings migrations have been removed. They could never run against the new defaults domain, so nothing is lost by dropping them.
+
+---
+
+### Not here yet
+
+Three things from the 2.1 preview line are still on their way to macOS 27.
+
+- **Scripts.** Script-driven bar modules are being tested by macOS 26 users on the 2.1.0 beta and will be added in a later 3.0 build. The Scripts pane is here as a preview of where they will live.
+- **Item triggers.** The full condition engine from 2.1, where an item moves on battery level, the frontmost app, a network, a Focus, and the rest, is not ported yet. What is here is the reveal-on-icon-change rule.
+- **Rotating diagnostic logs.**
+
+---
+
+### Menu bar
+
+- **Zen mode** seals the whole bar with one hotkey. Reveals and hover tricks stand down until you toggle it back.
+- **Item groups** bundle items so they move as one, including across sections. Same-app clusters group on their own and dissolve on request.
+- **Spacer items** create gaps on purpose: pick a width and drag them like any item.
+- **Items that ask for attention can surface themselves.** A blinking icon briefly shows the section holding it, with a cooldown so a chatty icon cannot keep the bar open. Off by default.
+- **App icons where captures cannot go.** Items nobody can capture draw their owning app's icon, so the Thaw Bar, the layout pane, and search work with Accessibility alone.
+- **Presenter mode.** With the camera and microphone watch on, the bar collapses to zen mode while either is in use and restores after. It works alongside zen mode while presenting.
+- **Confirmations.** A small capsule under the bar confirms the verbs that otherwise succeed invisibly: zen on, hidden items shown, profile applied.
+
+### Thaw Bar and appearance
+
+- **A Thaw Bar of its own.** Shape, tint, and border for the bar, independent of the menu bar it mirrors, and one per-display section instead of repeated blocks.
+- **Adaptive Gradient tint.** A gradient from the wallpaper's two dominant colours instead of one average. Wallpaper changes re-tint the bar at once; the poll stays only for dynamic and aerial wallpapers.
+- **Per-Space appearance overrides**, so the bar can dress differently on each Space.
+
+### Layout
+
+- **A standalone layout editor** opens on its own from a hotkey or a `thaw://` action, with glass chrome and last-pane restore. Items can be activated straight from it.
+- **Hover spotlighting.** Resting on a tile in the layout pane lights the matching item in the real bar. Clicking it opens the inspector.
+- **Displays as a spatial picker**, arranged the way they sit on your desk, with per-display spacing applied inline.
+
+### Search and launchers
+
+- **Search remembers.** Recently activated items sit at the top of an empty query, and selecting a result spotlights the item in the real bar.
+- **Item palette (Lab).** A centred launcher for your menu bar items, hidden ones included. Type part of a name or the owning app and press Return.
+- **Assisted item palette (Lab).** A large list of every item right where the pointer is, with big rows to read and click.
+- **Menu bar magnifier (Lab).** Rest the pointer on the bar and a blown-up slice appears below it. Each icon gets a large outline you can click, and the one you point at is named. Works without Screen Recording; the pixels need it.
+
+### Settings
+
+- **Simple Mode** collapses Settings to one page, ordered by what you touch. Everything it hides is still there when you switch it off.
+- **Sidebar by topic.** Menu Bar, App, Automation, and More. Rows carry a plain glyph, groups fold, arrow keys move through rows and Return selects, and a profile strip pinned to the foot switches profiles without opening the Profiles pane.
+- **Search in the toolbar.** Results take over the detail column with a result count and an empty state that names the query.
+- **What's New and Acknowledgements as reading pages.** A path of releases along the top, one large title with the release date under it, and the notes at reading size on the app's own glass.
+- **Tools pane** gathers the troubleshooting helpers in one place, with the destructive ones last.
+- **Onboarding** restyled in the same language as the rest of the app.
+
+### Privacy
+
+- **A Privacy pane.** Permissions, the capture inspector that shows exactly what the app reads from the screen, and every network call the app makes, each with a switch and one button to turn them all off. A test fails the build if a network client appears anywhere the list does not account for.
+- **Camera and microphone watch (Lab).** A banner names the app that took the microphone, and another says when a camera turns on. While either is in use, Thaw's menu lists what is using it. Banners can be pinned to a display, or follow the pointer, and placed left, centre, or right.
+- **Menu bar history (Lab).** When items appeared in and disappeared from the bar, stored in Thaw's own settings and cleared when the experiment is turned off.
+
+### Profiles and Spaces
+
+- **Per-Space profiles.** Bind a profile to a Space the way it binds to a display. Precedence is Focus Filter, then Space, then display.
+- **Per-Space presentation.** Show or hide the bar per Space, and see which Space each rule belongs to.
+
+### Automation, Shortcuts, and the command line
+
+- **Rules.** Reveal on icon change with a cooldown, global and per-profile hooks that run a script when a profile applies, a script environment with its own variables and timeout, and a whitelist of apps allowed to change settings over `thaw://`.
+- **Shortcuts and Spotlight.** An action opens a chosen item's menu, revealing it first if hidden, alongside actions to reveal hidden items, toggle zen mode, and apply a profile.
+- **Control Center widgets** toggle hidden items and zen mode from Control Center.
+- **A command-line client.** `thawctl` drives the `thaw://` control plane from a terminal.
+
+### The Lab
+
+- **A home for experiments** you can opt into early. Turning any experiment off returns the app to normal, and each one says exactly what it does.
+- **Menu bar overlay.** Your items drawn in a Thaw strip that appears when you point at the space they left, while the system bar keeps its app menus, clock, and modules.
+- **Show item details on hover (beta).** A small readout under an item while the pointer rests on it, showing what the item already reports.
+- **Hide Finder menus on the desktop.** Clicking the desktop puts Finder's menus in the bar; this covers them until you switch away.
+- **Transport bar.** A floating capsule at the bottom of the display your pointer is on, with the active profile, the hidden and always-hidden toggles, zen mode, and a close button. It never takes focus.
+
+### Under the hood
+
+- **Rebuilt from the ground up on a new architecture.** Thaw 3 is a new codebase, not a patched fork. The item manager cluster, AppState, MenuBarManager, the image cache, the layout bar, ControlItem, appearance, and search were written anew; the Ice-branded identifier vocabulary is Thaw's own, with persisted keys pinned so nothing you saved is lost; and the migrations that could never run are gone. The rewrite paid down years of technical debt at the same time: dead machinery and one-case abstractions are deleted, the engine sits behind explicit seams that can be tested in isolation, and the hot paths were rebuilt with performance in mind.
+- **Swift 6.4 and strict concurrency.** The `@Observable` migration is complete, with zero `ObservableObject` conformances left. Detached tasks moved onto `@concurrent` callees, workspace notifications are debounced through swift-async-algorithms, and the engine reads its settings through a configuration protocol instead of reaching into AppState.
+- **Every ScreenCaptureKit call has a watchdog**, so a capture that never answers cannot hang the refresh loop. An XPC capture helper is built in and off by default until it has been verified on macOS 27.
+- **Less idle work.** The polls that used to ask the window server questions whose answers had not changed now latch, memoize, or rate-limit, and the glyph cache publishes only when a glyph actually changed.
+
 ## [2.1.0-beta.1]
 
 Hey, we have a Discord! Come say hi: [discord.gg/KDfWjWDnR4](https://discord.gg/KDfWjWDnR4).
