@@ -660,7 +660,7 @@ extension MenuBarItemManager {
                 // the rare case where the event cycle is dropped under CPU load.
                 // Keeping retries at 2 (vs. the default 8) avoids the visible jitter
                 // from a long retry loop while still tolerating one bad cycle.
-                try await move(item: item, to: moveDestination, on: resolvedDisplayID, skipInputPause: true, maxMoveAttempts: 2)
+                try await move(item: item, to: moveDestination, on: resolvedDisplayID, skipInputPause: true, options: .init(maxMoveAttempts: 2))
             } else {
                 try await move(item: item, to: moveDestination, on: resolvedDisplayID, skipInputPause: true)
             }

@@ -193,6 +193,77 @@ nonisolated extension CGImage {
         return CGColor(colorSpace: colorSpace, components: &components)
     }
 
+    // MARK: Palette Derivation
+
+    /// Returns the image's dominant colors, most-covering first.
+    ///
+    /// Samples at a coarse resolution and hands the pixels to
+    /// ``WallpaperPalette/derive(from:maximumCount:minimumSeparation:)``,
+    /// which holds the actual algorithm and its tests. A larger grid than
+    /// ``averageColor(using:alphaThreshold:option:)`` uses, because ten by
+    /// ten is enough to average but too few pixels for a small subject to
+    /// survive bucketing.
+    ///
+    /// - Parameters:
+    ///   - maximumCount: The most colors to return.
+    ///   - alphaThreshold: An alpha value below which pixels are ignored.
+    func dominantColors(maximumCount: Int = 5, alphaThreshold: CGFloat = 0.5) -> WallpaperPalette {
+        let width = min(width, 48)
+        let height = min(height, 48)
+        guard width > 0, height > 0 else {
+            return WallpaperPalette(swatches: [])
+        }
+
+        let colorSpace: CGColorSpace = {
+            if let colorSpace = self.colorSpace, colorSpace.model == .rgb {
+                return colorSpace
+            }
+            if let colorSpace = CGColorSpace(name: CGColorSpace.displayP3) {
+                return colorSpace
+            }
+            return CGColorSpaceCreateDeviceRGB()
+        }()
+
+        var data = [UInt32](repeating: 0, count: width * height)
+        // The buffer is bound for the whole lifetime of the context, not just
+        // for the initializer call: `draw` writes through it afterwards. An
+        // inout-to-pointer conversion is only valid for the duration of the
+        // call it is passed to, so the pointer has to stay in scope instead
+        // -- the same shape `ImageHashing.averageHash(_:)` uses.
+        let rendered = data.withUnsafeMutableBytes { buffer -> Bool in
+            guard let context = CGContext(
+                data: buffer.baseAddress,
+                width: width,
+                height: height,
+                bitsPerComponent: 8,
+                bytesPerRow: width * 4,
+                space: colorSpace,
+                bitmapInfo: CGBitmapInfo(alpha: .premultipliedFirst, byteOrder: .order32Little)
+            ) else {
+                return false
+            }
+            context.draw(self, in: CGRect(x: 0, y: 0, width: width, height: height))
+            return true
+        }
+        guard rendered else {
+            return WallpaperPalette(swatches: [])
+        }
+
+        let threshold = UInt32((alphaThreshold.clamped(to: 0 ... 1) * 255).rounded(.up))
+        var samples = [WallpaperPalette.Sample]()
+        samples.reserveCapacity(data.count)
+        for pixel in data {
+            guard (pixel >> 24) & 255 >= threshold else { continue }
+            samples.append(WallpaperPalette.Sample(
+                red: Double((pixel >> 16) & 255) / 255,
+                green: Double((pixel >> 8) & 255) / 255,
+                blue: Double(pixel & 255) / 255
+            ))
+        }
+
+        return WallpaperPalette.derive(from: samples, maximumCount: maximumCount)
+    }
+
     // MARK: Transparency Trimming
 
     /// A bounds-validated, read-only view over the alpha channel of

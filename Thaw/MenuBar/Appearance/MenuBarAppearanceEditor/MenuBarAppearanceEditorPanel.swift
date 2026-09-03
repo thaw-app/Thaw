@@ -25,8 +25,9 @@ final class MenuBarAppearanceEditorPanel: NSObject, NSPopoverDelegate {
     /// Storage for internal observers.
     private var cancellables = Set<AnyCancellable>()
 
-    /// Observes `appearanceManager.configuration` to keep the popover's
-    /// content size in sync, replacing the old `$configuration.sink`.
+    /// Observes `appearanceManager.effectiveConfiguration` — what the editor
+    /// itself shows — to keep the popover's content size in sync, replacing
+    /// the old `$configuration.sink`.
     private var appearanceConfigurationObservationTask: Task<Void, Never>?
 
     /// The underlying popover.
@@ -98,7 +99,7 @@ final class MenuBarAppearanceEditorPanel: NSObject, NSPopoverDelegate {
 
         appearanceConfigurationObservationTask?.cancel()
         appearanceConfigurationObservationTask = Task { [weak self, weak appState] in
-            let changes = Observations { appState?.appearanceManager.configuration }
+            let changes = Observations { appState?.appearanceManager.effectiveConfiguration }
             for await _ in changes {
                 guard let self else { return }
                 self.updateContentSize()
@@ -169,8 +170,9 @@ private final class MenuBarAppearanceEditorHostingController: NSHostingControlle
     private weak var appState: AppState?
     private var cancellables = Set<AnyCancellable>()
 
-    /// Observes `appearanceManager.configuration` to keep the preferred
-    /// content size in sync, replacing the old `$configuration.sink`.
+    /// Observes `appearanceManager.effectiveConfiguration` — what the editor
+    /// itself shows — to keep the preferred content size in sync, replacing
+    /// the old `$configuration.sink`.
     private var appearanceConfigurationObservationTask: Task<Void, Never>?
 
     init(appState: AppState, onDone: (() -> Void)?) {
@@ -179,7 +181,7 @@ private final class MenuBarAppearanceEditorHostingController: NSHostingControlle
         updatePreferredContentSize()
 
         appearanceConfigurationObservationTask = Task { [weak self, weak appState] in
-            let changes = Observations { appState?.appearanceManager.configuration }
+            let changes = Observations { appState?.appearanceManager.effectiveConfiguration }
             for await _ in changes {
                 guard let self else { return }
                 self.updatePreferredContentSize()
@@ -202,7 +204,7 @@ private final class MenuBarAppearanceEditorHostingController: NSHostingControlle
             preferredContentSize = NSSize(width: 525, height: 745)
             return
         }
-        let configuration = appState.appearanceManager.configuration
+        let configuration = appState.appearanceManager.effectiveConfiguration
         let baseHeight: CGFloat = configuration.isDynamic ? 755 : 555
         let shapeBonus: CGFloat = configuration.shapeKind == .noShape ? 0 : 105
         let headingBonus: CGFloat = 32

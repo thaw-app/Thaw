@@ -249,6 +249,81 @@ nonisolated extension Bridging {
         let type = cgsSpaceGetType(getMainConnection(), spaceID)
         return type == .fullscreen
     }
+
+    /// A space as the window server currently reports it.
+    nonisolated struct ManagedSpace: Hashable {
+        /// The space's identifier. Renumbered across logout.
+        let spaceID: CGSSpaceID
+        /// A key that survives logout. Safe to persist.
+        let persistentKey: String
+        /// The display the space belongs to.
+        let displayIdentifier: String
+        /// The space's 1-based position within its display's list, which is
+        /// how Mission Control numbers desktops.
+        let ordinal: Int
+    }
+
+    /// Returns every space the window server currently knows about.
+    ///
+    /// A `CGSSpaceID` is renumbered across logout, so it cannot be
+    /// persisted. The window server also carries a `uuid` per space,
+    /// which survives reboot because the system stores it in
+    /// `com.apple.spaces`. That uuid is the persistent key used here.
+    ///
+    /// The default space on each display reports an *empty* uuid rather
+    /// than a real one, so it falls back to a key derived from the
+    /// display it belongs to. There is only ever one empty-uuid space
+    /// per display, which is what makes that fallback unambiguous.
+    static func getManagedSpaces() -> [ManagedSpace] {
+        guard let raw = cgsCopyManagedDisplaySpaces(getMainConnection()) else {
+            diagLog.error("cgsCopyManagedDisplaySpaces returned nil")
+            return []
+        }
+        guard let displays = raw.takeRetainedValue() as? [[String: Any]] else {
+            diagLog.error("cgsCopyManagedDisplaySpaces returned array of unexpected type")
+            return []
+        }
+
+        var result: [ManagedSpace] = []
+        for display in displays {
+            let displayIdentifier = display["Display Identifier"] as? String ?? "unknown"
+            guard let spaces = display["Spaces"] as? [[String: Any]] else {
+                // Entries without a `Spaces` array are collapsed records
+                // for displays that are not currently attached.
+                continue
+            }
+            for (index, space) in spaces.enumerated() {
+                guard let spaceID = space["id64"] as? CGSSpaceID else {
+                    continue
+                }
+                let uuid = space["uuid"] as? String ?? ""
+                result.append(ManagedSpace(
+                    spaceID: spaceID,
+                    persistentKey: uuid.isEmpty ? "display:\(displayIdentifier)#default" : uuid,
+                    displayIdentifier: displayIdentifier,
+                    ordinal: index + 1
+                ))
+            }
+        }
+        return result
+    }
+
+    /// Returns a reboot-stable key for every space, keyed by space identifier.
+    static func getSpacePersistentKeys() -> [CGSSpaceID: String] {
+        var keys: [CGSSpaceID: String] = [:]
+        for space in getManagedSpaces() {
+            keys[space.spaceID] = space.persistentKey
+        }
+        return keys
+    }
+
+    /// Returns the reboot-stable key for the given space, if one is
+    /// available.
+    ///
+    /// - Parameter spaceID: An identifier for a space.
+    static func getSpacePersistentKey(for spaceID: CGSSpaceID) -> String? {
+        getManagedSpaces().first { $0.spaceID == spaceID }?.persistentKey
+    }
 }
 
 // MARK: - CGSWindow

@@ -22,6 +22,7 @@ struct ProfileSettingsPane: View {
     @State private var errorMessage: String?
     @State private var showingError = false
     @State private var previewedProfile: Profile?
+    @State private var activeSpace = SpaceInfo.activeSpace()
 
     var body: some View {
         IceForm {
@@ -39,7 +40,21 @@ struct ProfileSettingsPane: View {
                 } footer: {
                     focusFilterFooter
                 }
+
+                IceSection {
+                    Text("Per-Space Profiles")
+                } content: {
+                    spaceAutoSwitchControls
+                } footer: {
+                    spaceAutoSwitchFooter
+                }
             }
+        }
+        .onReceive(
+            NSWorkspace.shared.notificationCenter
+                .publisher(for: NSWorkspace.activeSpaceDidChangeNotification)
+        ) { _ in
+            activeSpace = SpaceInfo.activeSpace()
         }
         .alert("Error", isPresented: $showingError) {
             Button("OK") { errorMessage = nil }
@@ -302,6 +317,66 @@ struct ProfileSettingsPane: View {
                 display.localizedLabel
             }
         }
+    }
+
+    @ViewBuilder
+    private var spaceAutoSwitchControls: some View {
+        let profileOptions = profileManager.profiles
+        let activeKey = activeSpace.persistentKey
+
+        if let activeKey {
+            let binding = Binding<String>(
+                get: {
+                    profileOptions.first(where: { $0.associatedSpaceKey == activeKey })?.id.uuidString ?? ""
+                },
+                set: { newValue in
+                    if let profileID = UUID(uuidString: newValue) {
+                        profileManager.setAssociatedSpace(
+                            key: activeKey,
+                            spaceName: activeSpace.localizedLabel,
+                            forProfileID: profileID
+                        )
+                    } else if let current = profileOptions.first(where: { $0.associatedSpaceKey == activeKey }) {
+                        profileManager.setAssociatedSpace(key: nil, forProfileID: current.id)
+                    }
+                }
+            )
+
+            IcePicker(selection: binding) {
+                Text("None").tag("")
+                ForEach(profileOptions) { profile in
+                    Text(profile.name).tag(profile.id.uuidString)
+                }
+            } label: {
+                Text(activeSpace.localizedLabel)
+            }
+        } else {
+            // The window server has not published the active Space yet,
+            // which happens mid-switch. Assigning against a key we cannot
+            // resolve would bind the profile to nothing.
+            Text("The active Space is still settling. Switch away and back to assign a profile.")
+                .foregroundStyle(.secondary)
+        }
+
+        let assigned = profileManager.profiles.filter { $0.associatedSpaceKey != nil }
+        if !assigned.isEmpty {
+            Divider()
+            ForEach(assigned) { profile in
+                HStack {
+                    Text(profile.associatedSpaceName ?? String(localized: "Space"))
+                        .foregroundStyle(.secondary)
+                    Spacer()
+                    Text(profile.name)
+                    Button("Remove") {
+                        profileManager.setAssociatedSpace(key: nil, forProfileID: profile.id)
+                    }
+                }
+            }
+        }
+    }
+
+    private var spaceAutoSwitchFooter: some View {
+        Text("Assigns a profile to the Space you are currently on. Spaces have no system name, so each assignment is labelled by its Mission Control position at the time you made it. A Space assignment takes precedence over a display assignment; a Focus Filter still overrides both.")
     }
 
     // MARK: - Actions

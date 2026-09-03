@@ -42,7 +42,19 @@ final nonisolated class Listener: @unchecked Sendable {
             case .start:
                 diagLog.debug("Listener received start request")
                 return .start
-            case let .configureLogging(filePath):
+            case let .configureLogging(filePath, rotationPolicy):
+                if let rotationPolicy {
+                    // Prune by the app's retention settings, not this target's
+                    // defaults: both processes share one log directory.
+                    DiagnosticLogger.shared.setRotationPolicy(rotationPolicy)
+                }
+                guard let filePath else {
+                    // The app turned file logging off; stop writing to the
+                    // shared file rather than holding it open.
+                    DiagnosticLogger.shared.isEnabled = false
+                    diagLog.debug("Listener disabled diagnostic logging")
+                    return .configureLogging
+                }
                 // Only attach to files inside the app's approved log
                 // directory. The path arrives from the XPC peer, and in
                 // teamless (ad-hoc) builds the listener has no peer
@@ -58,7 +70,14 @@ final nonisolated class Listener: @unchecked Sendable {
                     )
                     return nil
                 }
-                DiagnosticLogger.shared.attachToFile(at: requested)
+                guard DiagnosticLogger.shared.attachToFile(at: requested) else {
+                    // Answering success here would leave the app believing both
+                    // processes share a file while this one keeps writing to the
+                    // previous segment — which retention eventually deletes out
+                    // from under it. Failing the request makes the app retry.
+                    diagLog.error("Listener failed to attach diagnostic logging to \(requested.path)")
+                    return nil
+                }
                 diagLog.debug("Listener attached diagnostic logging to \(requested.path)")
                 return .configureLogging
             case let .sourcePIDs(windows):

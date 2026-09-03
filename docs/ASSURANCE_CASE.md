@@ -82,7 +82,7 @@ of Apple’s notarization infrastructure.
 | Boundary | What crosses | Controls |
 | --- | --- | --- |
 | External URL → settings | `thaw://set` etc. | Allowlisted keys; range checks; sender whitelist + `SecCode` Team ID binding |
-| App ↔ XPC helpers | Codable requests | Fixed service names; limited request vocabulary; listeners accept only same-team peers (`XPCListener(requirement: .isFromSameTeam())`), and a teamless ad-hoc build logs a warning that it is running without peer validation |
+| App ↔ XPC helpers | Codable requests | Fixed service names; limited request vocabulary; capture requests accept only menu-bar window IDs, validated bounds, and BGRA size limits; listeners accept only same-team peers (`XPCListener(requirement: .isFromSameTeam())`), and a teamless ad-hoc build logs a warning that it is running without peer validation |
 | App ↔ network | Appcast / downloads | HTTPS; Sparkle EdDSA (`SUPublicEDKey`); Apple notarization on shipped builds |
 | App ↔ OS | AX / capture | Explicit TCC; features degrade without grants |
 
@@ -94,7 +94,7 @@ of Apple’s notarization infrastructure.
 | **Fail-safe defaults** | Settings URI mutation denied unless allowlisted; permissions off until user grants |
 | **Complete mediation** | Each settings URI request re-checks whitelist + signature; numeric keys clamped to ranges |
 | **Open design** | GPL-3.0; public repo; security policy and this assurance case |
-| **Separation of privilege** | XPC helper separated from UI; release signing keys not on the public download host as long-lived plaintext |
+| **Separation of privilege** | XPC helpers separated from UI (PID lookup vs recyclable SkyLight capture); release signing keys not on the public download host as long-lived plaintext |
 | **Least privilege** | Requests only needed TCC rights; no root requirement for normal use |
 | **Least common mechanism** | Per-user install; no shared multi-user daemon for core features |
 | **Psychological acceptability** | Clear permission prompts; authorize dialog lists what automation can do |
@@ -121,7 +121,11 @@ defect classes before merge.
 1. Accessibility by design can manipulate other apps’ menu bar items, so users
    must trust Thaw similarly to other AX utilities.
 2. Private/undocumented WindowServer interactions increase compatibility and
-   maintenance risk across macOS versions.
+   maintenance risk across macOS versions. Offscreen icon capture uses SkyLight
+   in `MenuBarCaptureService` rather than the UI process; the helper is recycled
+   after a capture budget because each `SLWindowListCreateImageFromArray` call
+   leaks a small dictionary in the caller. That contains growth in Thaw but does
+   not remove the leak from the platform API.
 3. Update delivery depends on a GitHub Pages path. The Sparkle appcast is
    served from a `github.io` origin, which does **not** redirect across a
    repository owner transfer, so builds released before the move to
@@ -177,6 +181,7 @@ defect classes before merge.
 
 | Date | Note |
 | --- | --- |
+| 2026-08-15 | Documented `MenuBarCaptureService`: same-team XPC, menu-bar-only window IDs, BGRA size limits, and helper recycle to contain the SkyLight dictionary leak |
 | 2026-07-27 | Initial version from `development` for OpenSSF docs |
 | 2026-07-27 | Deferred Silver coverage claim; measured ~44% |
 | 2026-07-31 | Claimed Silver `test_statement_coverage80`; measured 80.8% after migrating the suite to Swift Testing and documenting the exclusion set. Corrected the SonarCloud project key to `thaw-app_Thaw` |

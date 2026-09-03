@@ -32,28 +32,66 @@ struct SettingsView: View {
     }
 
     var body: some View {
-        NavigationSplitView {
-            sidebar
-        } detail: {
+        if appState.settings.general.simpleMode {
+            simpleMode
+                .environment(\.settingsDescriptionsVisible, appState.settings.general.showSettingDescriptions)
+        } else {
+            NavigationSplitView {
+                sidebar
+            } detail: {
+                settingsPane
+                    .id(navigationState.settingsNavigationIdentifier)
+            }
+            .navigationTitle(navigationState.settingsNavigationIdentifier.localized)
+            .environment(\.settingsDescriptionsVisible, appState.settings.general.showSettingDescriptions)
+            .toolbar {
+                ToolbarItem(placement: .navigation) {
+                    ControlGroup {
+                        Button(action: navigateBack) {
+                            Label("Back", systemImage: "chevron.left")
+                        }
+                        .disabled(isFirstSection)
+
+                        Button(action: navigateForward) {
+                            Label("Forward", systemImage: "chevron.right")
+                        }
+                        .disabled(isLastSection)
+                    }
+                    .controlGroupStyle(.navigation)
+                }
+            }
+        }
+    }
+
+    /// Simple Mode's overview, or the one pane something explicitly asked for.
+    ///
+    /// There is no sidebar at all here: one screen is the whole point of Simple
+    /// Mode, and a sidebar listing a single item is just a sidebar. But flows
+    /// outside the window — a trigger notification, a settings link — still
+    /// navigate to a specific pane, and dropping them on the overview opens the
+    /// wrong destination. Honour the request, with a way back to the overview.
+    @ViewBuilder
+    private var simpleMode: some View {
+        if navigationState.settingsNavigationIdentifier == .general {
+            SimpleModeSettingsPane(
+                itemManager: appState.itemManager,
+                updatesManager: appState.updatesManager,
+                settings: appState.settings.general
+            )
+            .navigationTitle("Settings")
+        } else {
             settingsPane
                 .id(navigationState.settingsNavigationIdentifier)
-        }
-        .navigationTitle(navigationState.settingsNavigationIdentifier.localized)
-        .toolbar {
-            ToolbarItem(placement: .navigation) {
-                ControlGroup {
-                    Button(action: navigateBack) {
-                        Label("Back", systemImage: "chevron.left")
+                .navigationTitle(navigationState.settingsNavigationIdentifier.localized)
+                .toolbar {
+                    ToolbarItem(placement: .navigation) {
+                        Button {
+                            navigationState.settingsNavigationIdentifier = .general
+                        } label: {
+                            Label("Back", systemImage: "chevron.left")
+                        }
                     }
-                    .disabled(isFirstSection)
-
-                    Button(action: navigateForward) {
-                        Label("Forward", systemImage: "chevron.right")
-                    }
-                    .disabled(isLastSection)
                 }
-                .controlGroupStyle(.navigation)
-            }
         }
     }
 
@@ -131,6 +169,12 @@ struct SettingsView: View {
             AdvancedSettingsPane(settings: appState.settings.advanced)
         case .automation:
             AutomationSettingsPane()
+        case .triggers:
+            TriggersSettingsPane(manager: appState.settings.triggers, itemManager: appState.itemManager)
+        case .tools:
+            ToolsSettingsPane(settings: appState.settings.advanced)
+        case .developer:
+            DeveloperSettingsPane(manager: appState.settings.triggers)
         case .about:
             AboutSettingsPane(updatesManager: appState.updatesManager)
         }

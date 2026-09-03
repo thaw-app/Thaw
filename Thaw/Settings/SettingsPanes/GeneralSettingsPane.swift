@@ -13,9 +13,6 @@ struct GeneralSettingsPane: View {
     @Environment(AppState.self) var appState: AppState
     @Bindable var settings: GeneralSettings
     @Bindable var advancedSettings: AdvancedSettings
-    @State private var isImportingCustomIceIcon = false
-    @State private var isPresentingError = false
-    @State private var presentedError: LocalizedErrorWrapper?
     @State private var maxSliderLabelWidth: CGFloat = 0
 
     private var rehideIntervalKey: LocalizedStringKey {
@@ -48,93 +45,23 @@ struct GeneralSettingsPane: View {
 
     // MARK: App Options
 
+    @ViewBuilder
     private var appOptions: some View {
         LaunchAtLogin.Toggle {
             Text("Launch at Login")
         }
+        Toggle("Simple Mode", isOn: $settings.simpleMode)
+            .annotation("Shows only the essential settings. All features keep working and keep their configuration.")
+        Toggle("Show setting descriptions", isOn: $settings.showSettingDescriptions)
+            .annotation("Explains what a setting does directly beneath it, like this text.")
     }
 
     // MARK: Ice Icon Options
 
     @ViewBuilder
     private var iceIconOptions: some View {
-        showIceIcon
-        if settings.showIceIcon {
-            iceIconPicker
-        }
+        ShowIceIconRow(settings: settings)
         alwaysHiddenIconGestures
-    }
-
-    private var showIceIcon: some View {
-        Toggle("Show \(Constants.displayName) icon", isOn: $settings.showIceIcon)
-            .annotation("Show the \(Constants.displayName) icon in the menu bar. Click to show hidden items, double-click for always-hidden, and right-click for settings.")
-    }
-
-    @ViewBuilder
-    private var iceIconPicker: some View {
-        let labelKey: LocalizedStringKey = "\(Constants.displayName) icon"
-
-        IceMenu(labelKey) {
-            ForEach(ControlItemImageSet.userSelectableIceIcons) { imageSet in
-                Button {
-                    settings.iceIcon = imageSet
-                } label: {
-                    iceIconMenuItem(for: imageSet)
-                }
-            }
-            if let lastCustomIceIcon = settings.lastCustomIceIcon {
-                Button {
-                    settings.iceIcon = lastCustomIceIcon
-                } label: {
-                    iceIconMenuItem(for: lastCustomIceIcon)
-                }
-            }
-
-            Divider()
-
-            Button("Choose image…") {
-                isImportingCustomIceIcon = true
-            }
-        } title: {
-            iceIconMenuItem(for: settings.iceIcon)
-        }
-        .annotation("Choose a custom icon to show in the menu bar.")
-        .fileImporter(
-            isPresented: $isImportingCustomIceIcon,
-            allowedContentTypes: [.image]
-        ) { result in
-            do {
-                let url = try result.get()
-                if url.startAccessingSecurityScopedResource() {
-                    defer { url.stopAccessingSecurityScopedResource() }
-                    let data = try Data(contentsOf: url)
-                    settings.iceIcon = ControlItemImageSet(name: .custom, image: .data(data))
-                }
-            } catch {
-                presentedError = LocalizedErrorWrapper(error)
-                isPresentingError = true
-            }
-        }
-        .alert(isPresented: $isPresentingError, error: presentedError) {
-            Button("OK") {
-                presentedError = nil
-                isPresentingError = false
-            }
-        }
-
-        if case .custom = settings.iceIcon.name {
-            Toggle("Custom icon uses dynamic appearance", isOn: $settings.customIceIconIsTemplate)
-                .annotation {
-                    Text(
-                        """
-                        Display the icon as a monochrome image that dynamically adjusts to match \
-                        the menu bar's appearance. This setting removes all color from the icon, \
-                        but ensures consistent rendering with both light and dark backgrounds.
-                        """
-                    )
-                    .padding(.trailing, 50)
-                }
-        }
     }
 
     @ViewBuilder
@@ -155,22 +82,6 @@ struct GeneralSettingsPane: View {
                 .foregroundStyle(.secondary)
                 .font(.callout)
                 .frame(maxWidth: .infinity, alignment: .leading)
-        }
-    }
-
-    private func iceIconMenuItem(for imageSet: ControlItemImageSet) -> some View {
-        Label {
-            Text(imageSet.name.localized)
-        } icon: {
-            if let nsImage = imageSet.hidden.nsImage(for: appState) {
-                if imageSet.name == .custom {
-                    Image(size: CGSize(width: 18, height: 18)) { context in
-                        context.draw(Image(nsImage: nsImage), in: context.clipBoundingRect)
-                    }
-                } else {
-                    Image(nsImage: nsImage)
-                }
-            }
         }
     }
 

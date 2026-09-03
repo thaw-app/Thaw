@@ -34,6 +34,13 @@ nonisolated enum SharedConstants {
     /// The service has no access to `Defaults`, so it uses this value directly.
     static let axMessagingTimeout = 1.0
 
+    // MARK: - Menu Bar Host
+
+    /// Bundle identifier of the process that hosts the menu bar's status
+    /// items on this OS. Maintenance tools use it to locate (and reset) the
+    /// preference domain holding every saved status-item position.
+    static let menuBarHostingBundleID = "com.apple.controlcenter"
+
     // MARK: - Helpers
 
     /// Returns a required string from the bundle's Info.plist.

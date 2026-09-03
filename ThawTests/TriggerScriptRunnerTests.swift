@@ -1,0 +1,234 @@
+//
+//  TriggerScriptRunnerTests.swift
+//  Project: Thaw
+//
+//  Copyright (Ice) © 2023–2025 Jordan Baird
+//  Copyright (Thaw) © 2026 Toni Förster
+//  Licensed under the GNU GPLv3
+
+import Darwin
+import Foundation
+@testable import Thaw
+import Testing
+
+/// These tests launch real shells and fiddle with process-wide state (the
+/// closed-stdout case reassigns descriptor 1), so they must not run in
+/// parallel with anything else in this process.
+@Suite("Trigger script runner", .serialized)
+@MainActor
+struct TriggerScriptRunnerTests {
+    /// Waits for `condition` to hold, up to `timeout`.
+    ///
+    /// The runner's own teardown is not instantaneous -- SIGTERM, a 500 ms
+    /// pause, SIGINT, 100 ms, SIGKILL, then up to a second of group drain --
+    /// and `run` can return before the kernel has finished reaping. Asserting
+    /// the post-state immediately therefore races that budget and flakes on a
+    /// loaded machine. Polling keeps the assertion meaningful without pinning
+    /// it to a wall-clock guess.
+    private func waitUntil(
+        timeout: Duration = .seconds(5),
+        _ condition: () -> Bool
+    ) async -> Bool {
+        let deadline = ContinuousClock.now + timeout
+        while ContinuousClock.now < deadline {
+            if condition() {
+                return true
+            }
+            try? await Task.sleep(for: .milliseconds(50))
+        }
+        return condition()
+    }
+
+    @Test("run captures combined output when the host stdout was closed")
+    func runCapturesCombinedOutputWhenHostStdoutWasClosed() async throws {
+        let scriptURL = FileManager.default.temporaryDirectory
+            .appendingPathComponent("thaw-trigger-script-closed-stdout-\(UUID().uuidString).sh")
+        defer { try? FileManager.default.removeItem(at: scriptURL) }
+
+        let script = "#!/bin/sh\nprintf out\nprintf err >&2\n"
+        try script.write(to: scriptURL, atomically: true, encoding: .utf8)
+        try FileManager.default.setAttributes(
+            [.posixPermissions: 0o755],
+            ofItemAtPath: scriptURL.path
+        )
+
+        // Descriptor 1 has to be genuinely closed for the duration of the
+        // launch: the behaviour under test is that `Pipe()` may then reuse it,
+        // which is what HookProcess's close-before-dup2 ordering guards
+        // against. That window is process-wide and spans a suspension point,
+        // so anything else in this process that opens a descriptor while it is
+        // open can land on 1 and be clobbered by the restore below. The suite
+        // is `.serialized`, which bounds the exposure to background work
+        // rather than to other tests. Restoring eagerly rather than only in
+        // the `defer` keeps the window to the runner call itself.
+        let savedStdout = Darwin.dup(STDOUT_FILENO)
+        #expect(savedStdout >= 0)
+        var restored = false
+        defer {
+            if !restored {
+                _ = Darwin.dup2(savedStdout, STDOUT_FILENO)
+            }
+            _ = Darwin.close(savedStdout)
+        }
+
+        #expect(Darwin.close(STDOUT_FILENO) == 0)
+        let outcome = await TriggerScriptRunner.run(path: scriptURL.path, timeout: 2)
+        #expect(Darwin.dup2(savedStdout, STDOUT_FILENO) >= 0)
+        restored = true
+
+        #expect(outcome?.exitCode == 0)
+        #expect(outcome?.output.contains("out") == true)
+        #expect(outcome?.output.contains("err") == true)
+    }
+
+    @Test("a timed-out script terminates its detached descendant")
+    func timedOutScriptTerminatesDetachedDescendant() async throws {
+        let directory = FileManager.default.temporaryDirectory
+        let markerURL = directory.appendingPathComponent("thaw-trigger-script-child-\(UUID().uuidString)")
+        let scriptURL = directory.appendingPathComponent("thaw-trigger-script-timeout-\(UUID().uuidString).sh")
+        defer {
+            try? FileManager.default.removeItem(at: markerURL)
+            try? FileManager.default.removeItem(at: scriptURL)
+        }
+
+        let script = "#!/bin/sh\n(sleep 2; touch \(markerURL.path)) &\nwait\n"
+        try script.write(to: scriptURL, atomically: true, encoding: .utf8)
+        try FileManager.default.setAttributes(
+            [.posixPermissions: 0o755],
+            ofItemAtPath: scriptURL.path
+        )
+
+        let outcome = await TriggerScriptRunner.run(path: scriptURL.path, timeout: 1)
+
+        #expect(outcome?.exitCode == -1)
+        let markerGone = await waitUntil {
+            !FileManager.default.fileExists(atPath: markerURL.path)
+        }
+        #expect(markerGone, "detached descendant outlived the timeout")
+    }
+
+    @Test("timeout escalation kills a TERM-ignoring descendant after the direct shell exits")
+    func timeoutEscalatesAfterDirectShellExitsToKillTermIgnoringDescendant() async throws {
+        let directory = FileManager.default.temporaryDirectory
+        let pidURL = directory.appendingPathComponent("thaw-trigger-script-child-pid-\(UUID().uuidString)")
+        let scriptURL = directory.appendingPathComponent("thaw-trigger-script-term-ignore-\(UUID().uuidString).sh")
+        defer {
+            if let text = try? String(contentsOf: pidURL, encoding: .utf8), let pid = pid_t(text.trimmingCharacters(in: .whitespacesAndNewlines)) {
+                _ = Darwin.kill(pid, SIGKILL)
+            }
+            try? FileManager.default.removeItem(at: pidURL)
+            try? FileManager.default.removeItem(at: scriptURL)
+        }
+
+        let script = "#!/bin/sh\n(trap '' TERM INT; while :; do sleep 1; done) &\necho $! > \(pidURL.path)\nwait\n"
+        try script.write(to: scriptURL, atomically: true, encoding: .utf8)
+        try FileManager.default.setAttributes(
+            [.posixPermissions: 0o755],
+            ofItemAtPath: scriptURL.path
+        )
+
+        let outcome = await TriggerScriptRunner.run(path: scriptURL.path, timeout: 1)
+
+        #expect(outcome?.exitCode == -1)
+        let childPID = try #require(
+            (try? String(contentsOf: pidURL, encoding: .utf8))
+                .flatMap { pid_t($0.trimmingCharacters(in: .whitespacesAndNewlines)) }
+        )
+        let childGone = await waitUntil { Darwin.kill(childPID, 0) != 0 }
+        #expect(childGone, "TERM-ignoring descendant outlived the escalation")
+    }
+
+    @Test("a detached child does not hold the script result open")
+    func detachedChildDoesNotHoldScriptResultOpen() async throws {
+        let scriptURL = FileManager.default.temporaryDirectory
+            .appendingPathComponent("thaw-trigger-script-\(UUID().uuidString).sh")
+        defer { try? FileManager.default.removeItem(at: scriptURL) }
+
+        let script = "#!/bin/sh\n(sleep 5) &\nprintf done\n"
+        try script.write(to: scriptURL, atomically: true, encoding: .utf8)
+        try FileManager.default.setAttributes(
+            [.posixPermissions: 0o755],
+            ofItemAtPath: scriptURL.path
+        )
+
+        // The runner timeout stays well above the elapsed bound, so a slow
+        // launch fails the bound instead of tripping the timeout as well and
+        // leaving the two behaviors indistinguishable. `ContinuousClock` for
+        // the same reason `waitUntil` uses it: a wall-clock adjustment must
+        // not move the measurement.
+        let startedAt = ContinuousClock.now
+        let outcome = await TriggerScriptRunner.run(path: scriptURL.path, timeout: 4)
+
+        #expect(outcome?.exitCode == 0)
+        #expect(ContinuousClock.now - startedAt < .seconds(2))
+    }
+
+    @Test("expected output after the diagnostic cap is stream-matched")
+    func expectedOutputAfterDiagnosticCapIsStreamMatched() async throws {
+        let scriptURL = FileManager.default.temporaryDirectory
+            .appendingPathComponent("thaw-trigger-script-large-\(UUID().uuidString).sh")
+        defer { try? FileManager.default.removeItem(at: scriptURL) }
+
+        let script = "#!/bin/sh\nhead -c 1100000 /dev/zero | tr '\\000' x\nprintf READY\n"
+        try script.write(to: scriptURL, atomically: true, encoding: .utf8)
+        try FileManager.default.setAttributes(
+            [.posixPermissions: 0o755],
+            ofItemAtPath: scriptURL.path
+        )
+
+        let outcome = await TriggerScriptRunner.run(
+            path: scriptURL.path,
+            timeout: 3,
+            expectedOutputs: ["READY"]
+        )
+
+        #expect(outcome?.exitCode == 0)
+        #expect(outcome?.matchedExpectedOutputs.contains("READY") == true)
+    }
+
+    @Test("Unicode expected output split across pipe reads is stream-matched")
+    func unicodeExpectedOutputSplitAcrossPipeReadsIsStreamMatched() async throws {
+        let scriptURL = FileManager.default.temporaryDirectory
+            .appendingPathComponent("thaw-trigger-script-unicode-\(UUID().uuidString).sh")
+        defer { try? FileManager.default.removeItem(at: scriptURL) }
+
+        let script = "#!/bin/sh\nhead -c 1100000 /dev/zero | tr '\\000' x\nprintf '\\303'; sleep 0.2; printf '\\251'\n"
+        try script.write(to: scriptURL, atomically: true, encoding: .utf8)
+        try FileManager.default.setAttributes(
+            [.posixPermissions: 0o755],
+            ofItemAtPath: scriptURL.path
+        )
+
+        let outcome = await TriggerScriptRunner.run(
+            path: scriptURL.path,
+            timeout: 3,
+            expectedOutputs: ["é"]
+        )
+
+        #expect(outcome?.exitCode == 0)
+        #expect(outcome?.matchedExpectedOutputs.contains("é") == true)
+    }
+
+    @Test("a malformed byte before Unicode expected output is stream-matched")
+    func malformedByteBeforeUnicodeExpectedOutputIsStreamMatched() async throws {
+        let scriptURL = FileManager.default.temporaryDirectory
+            .appendingPathComponent("thaw-trigger-script-malformed-\(UUID().uuidString).sh")
+        defer { try? FileManager.default.removeItem(at: scriptURL) }
+
+        let script = "#!/bin/sh\nhead -c 1100000 /dev/zero | tr '\\000' x\nprintf '\\377\\303\\251'\n"
+        try script.write(to: scriptURL, atomically: true, encoding: .utf8)
+        try FileManager.default.setAttributes(
+            [.posixPermissions: 0o755],
+            ofItemAtPath: scriptURL.path
+        )
+
+        let outcome = await TriggerScriptRunner.run(
+            path: scriptURL.path,
+            timeout: 3,
+            expectedOutputs: ["é"]
+        )
+
+        #expect(outcome?.exitCode == 0)
+        #expect(outcome?.matchedExpectedOutputs.contains("é") == true)
+    }
+}

@@ -8,6 +8,15 @@
 
 import SwiftUI
 
+/// The tint a ``MenuBarItemContainer`` draws over its background, for a
+/// surface that has been given its own instead of the menu bar's.
+nonisolated struct MenuBarContainerTint: Hashable {
+    var kind: MenuBarTintKind
+    var color: CGColor
+    var gradient: IceGradient
+    var opacity: Double
+}
+
 /// A view that is drawn in the style of the menu bar.
 ///
 /// - Important: This view performs drawing on layers above and
@@ -25,6 +34,7 @@ struct MenuBarItemContainer<Content: View>: View {
 
     private let accessor: ColorInfoAccessor
     private let screen: NSScreen?
+    private let tintOverride: MenuBarContainerTint?
     private let content: Content
 
     private var colorInfo: MenuBarAverageColorInfo? {
@@ -44,12 +54,33 @@ struct MenuBarItemContainer<Content: View>: View {
         appearanceManager.configuration.current
     }
 
-    init(appState: AppState, accessor: ColorInfoAccessor, screen: NSScreen? = nil, @ViewBuilder content: () -> Content) {
+    /// The tint to draw, from the override if one was given.
+    ///
+    /// The fallback opacity is the one this view has hardcoded since it was
+    /// written, so callers that pass no override keep drawing exactly as
+    /// before rather than picking up the menu bar's `tintOpacity`.
+    private var tint: MenuBarContainerTint {
+        tintOverride ?? MenuBarContainerTint(
+            kind: configuration.tintKind,
+            color: configuration.tintColor,
+            gradient: configuration.tintGradient,
+            opacity: ThawBarAppearance.inheritedTintOpacity
+        )
+    }
+
+    init(
+        appState: AppState,
+        accessor: ColorInfoAccessor,
+        screen: NSScreen? = nil,
+        tintOverride: MenuBarContainerTint? = nil,
+        @ViewBuilder content: () -> Content
+    ) {
         self.appState = appState
         self.appearanceManager = appState.appearanceManager
         self.menuBarManager = appState.menuBarManager
         self.accessor = accessor
         self.screen = screen
+        self.tintOverride = tintOverride
         self.content = content()
     }
 
@@ -61,7 +92,7 @@ struct MenuBarItemContainer<Content: View>: View {
             }
             .overlay {
                 contentOverlay
-                    .opacity(0.2)
+                    .opacity(tint.opacity)
                     .allowsHitTesting(false)
             }
     }
@@ -84,11 +115,11 @@ struct MenuBarItemContainer<Content: View>: View {
         // Show tint when we have sampled color info (window on non-fullscreen space)
         // or when activeSpace is not fullscreen.
         if colorInfo != nil || !appState.activeSpace.isFullscreen {
-            if case .solid = configuration.tintKind {
-                Color(cgColor: configuration.tintColor)
+            if case .solid = tint.kind {
+                Color(cgColor: tint.color)
             } else if
-                case .gradient = configuration.tintKind,
-                let color = configuration.tintGradient.averageColor()
+                case .gradient = tint.kind,
+                let color = tint.gradient.averageColor()
             {
                 Color(cgColor: color)
             }
@@ -122,7 +153,19 @@ extension View {
     ///   - colorInfo: Information for the average color of the menu bar.
     ///   - screen: The screen where the container is displayed, used to determine
     ///     the appropriate brightness threshold for notched displays.
-    func menuBarItemContainer(appState: AppState, colorInfo: MenuBarAverageColorInfo?, screen: NSScreen? = nil) -> some View {
-        MenuBarItemContainer(appState: appState, accessor: .manual(colorInfo), screen: screen) { self }
+    ///   - tintOverride: A tint to draw in place of the menu bar's. Pass `nil`
+    ///     to follow the menu bar.
+    func menuBarItemContainer(
+        appState: AppState,
+        colorInfo: MenuBarAverageColorInfo?,
+        screen: NSScreen? = nil,
+        tintOverride: MenuBarContainerTint? = nil
+    ) -> some View {
+        MenuBarItemContainer(
+            appState: appState,
+            accessor: .manual(colorInfo),
+            screen: screen,
+            tintOverride: tintOverride
+        ) { self }
     }
 }

@@ -25,11 +25,19 @@ final class LayoutBarItemView: LayoutBarArrangedView {
         static let iconInset: CGFloat = 2
         static let fallbackSymbolPointSize: CGFloat = 11
         static let unresponsiveBadgeWidth: CGFloat = 15
+        static let triggerBadgeWidth: CGFloat = 11
+        static let triggerControlledFraction: CGFloat = 0.45
     }
 
     private weak var appState: AppState?
 
     private var cancellables = Set<AnyCancellable>()
+
+    /// Whether the current mouse gesture has crossed into the existing drag
+    /// path. AppKit normally consumes mouse-up when a dragging session starts,
+    /// but retaining this bit makes the click action safe even if a source app
+    /// or future drag implementation lets that mouse-up reach the view.
+    private var didBeginDraggingForCurrentClick = false
 
     /// Observes `appState.imageCache.images` (wave 3: `MenuBarItemImageCache`
     /// is @Observable rather than a Combine `ObservableObject`, so its old
@@ -39,9 +47,18 @@ final class LayoutBarItemView: LayoutBarArrangedView {
     /// this class's existing Combine-`sink`-based subscription style.
     private var imageObservationTask: Task<Void, Never>?
 
+    /// Observes trigger ownership of this item. The container rebuilds item
+    /// views only on cache changes, so without this a trigger toggled while
+    /// the layout editor is open (its own switch, or the menu bar's
+    /// "All Trigger Features Off") would leave the badge and dimming stale
+    /// until an unrelated recache.
+    private var triggerObservationTask: Task<Void, Never>?
+
     @MainActor
     deinit {
         imageObservationTask?.cancel()
+        triggerObservationTask?.cancel()
+        appIconPreferenceObservationTask?.cancel()
     }
 
     /// The item that the view represents.
@@ -64,6 +81,7 @@ final class LayoutBarItemView: LayoutBarArrangedView {
 
     private lazy var tooltipController = CustomTooltipController(text: item.displayName, view: self)
     private var tooltipTrackingArea: NSTrackingArea?
+    private var appIconPreferenceObservationTask: Task<Void, Never>?
     /// The image drawn inside the placeholder bubble when no capture is
     /// cached. Re-resolved lazily in ``drawPlaceholder`` so an app that was
     /// not launchable when this view was created can still supply its icon
@@ -89,8 +107,45 @@ final class LayoutBarItemView: LayoutBarArrangedView {
         }
     }
 
+    /// Mirrors `advanced.alwaysUseAppIconForMenuBarItems`.
+    private var prefersAppIcon: Bool {
+        appState?.settings.advanced.alwaysUseAppIconForMenuBarItems ?? false
+    }
+
+    /// Whether this view draws the app icon rather than the captured glyph.
+    private var usesAppIcon: Bool {
+        MenuBarItemIconFallback.shouldUseAppIcon(
+            for: item,
+            hasCapture: cachedImage != nil,
+            prefersAppIcon: prefersAppIcon
+        )
+    }
+
     override var kind: Kind {
         .item(effectiveItem)
+    }
+
+    /// The enabled trigger that owns this item's placement, or `nil`.
+    ///
+    /// A trigger-owned item is not where the user put it:
+    /// `MenuBarItemManager` shields it from both the saved-layout reconciler
+    /// and `saveSectionOrder`, and the trigger's own reveal/hide sections
+    /// decide where it sits. The drag is deliberately still allowed — the
+    /// trigger re-asserts the placement, and refusing it would take away the
+    /// only manual correction available when a trigger hasn't applied yet.
+    /// The badge exists so the snap-back isn't a mystery.
+    private var isTriggerControlled: Bool {
+        appState?.settings.triggers.isControlledByTrigger(
+            identifier: effectiveItem.tag.tagIdentifier
+        ) ?? false
+    }
+
+    /// The owning trigger itself. Resolved only on hover, for the tooltip —
+    /// `draw` uses the O(1) ``isTriggerControlled`` instead.
+    private var controllingTrigger: MenuBarItemTrigger? {
+        appState?.settings.triggers.controllingTrigger(
+            forIdentifier: effectiveItem.tag.tagIdentifier
+        )
     }
 
     /// Creates a view that displays the given menu bar item.
@@ -124,7 +179,10 @@ final class LayoutBarItemView: LayoutBarArrangedView {
     }
 
     override func draggingImage() -> NSImage? {
-        cachedImage?.nsImage ?? placeholderBitmapImage()
+        if usesAppIcon {
+            return placeholderBitmapImage()
+        }
+        return cachedImage?.nsImage ?? placeholderBitmapImage()
     }
 
     override func updateTrackingAreas() {
@@ -144,12 +202,61 @@ final class LayoutBarItemView: LayoutBarArrangedView {
 
     override func mouseEntered(with event: NSEvent) {
         super.mouseEntered(with: event)
+        // Refreshed on hover rather than at init: a trigger can be added or
+        // removed while the layout editor is open.
+        tooltipController.text = if let trigger = controllingTrigger {
+            String(localized: "\(effectiveItem.displayName) \u{2014} placed by trigger \u{201C}\(trigger.displayName)\u{201D}")
+        } else {
+            effectiveItem.displayName
+        }
         tooltipController.scheduleShow(delay: tooltipDelay)
     }
 
     override func mouseExited(with event: NSEvent) {
         super.mouseExited(with: event)
         tooltipController.cancel()
+    }
+
+    override func mouseDown(with event: NSEvent) {
+        didBeginDraggingForCurrentClick = false
+        super.mouseDown(with: event)
+    }
+
+    override func mouseUp(with event: NSEvent) {
+        super.mouseUp(with: event)
+
+        let location = convert(event.locationInWindow, from: nil)
+        let shouldActivate = Self.shouldActivateRepresentedItem(
+            buttonNumber: event.buttonNumber,
+            didBeginDragging: didBeginDraggingForCurrentClick,
+            mouseUpInsideBounds: bounds.contains(location)
+        )
+        didBeginDraggingForCurrentClick = false
+
+        guard shouldActivate else { return }
+        activateRepresentedItem()
+    }
+
+    /// Pure click-versus-drag gate used by the AppKit event handlers.
+    static nonisolated func shouldActivateRepresentedItem(
+        buttonNumber: Int,
+        didBeginDragging: Bool,
+        mouseUpInsideBounds: Bool
+    ) -> Bool {
+        buttonNumber == 0 && !didBeginDragging && mouseUpInsideBounds
+    }
+
+    /// Performs the status item's native left-click action. For an on-screen
+    /// item this clicks it in place; for a hidden item the shared activation
+    /// path temporarily reveals it, opens its menu/popover (or launches its
+    /// app when that is the item's normal behavior), and schedules a rehide.
+    private func activateRepresentedItem() {
+        let representedItem = effectiveItem
+        guard let itemManager = appState?.itemManager else { return }
+        let displayID = NSScreen.screenWithActiveMenuBar?.displayID
+        Task {
+            await itemManager.activate(item: representedItem, on: displayID)
+        }
     }
 
     private func configureCancellables() {
@@ -165,6 +272,43 @@ final class LayoutBarItemView: LayoutBarArrangedView {
                     guard !MenuBarItemImageCache.CapturedImage.isVisuallyEqual(previous, image) else { continue }
                     previous = image
                     self.cachedImage = image
+                }
+            }
+
+            // Redraw when the app-icon preference is toggled: `cachedImage`
+            // does not change, so its didSet cannot cover this.
+            appIconPreferenceObservationTask?.cancel()
+            appIconPreferenceObservationTask = Task { @MainActor [weak self, weak appState] in
+                var previous: Bool?
+                let changes = Observations {
+                    appState?.settings.advanced.alwaysUseAppIconForMenuBarItems
+                }
+                for await prefers in changes {
+                    guard let self, let prefers, prefers != previous else { continue }
+                    previous = prefers
+                    setFrameSize(preferredSize(for: cachedImage))
+                    (superview as? LayoutBarContainer)?.itemPreferredSizeDidChange(self)
+                    needsDisplay = true
+                }
+            }
+
+            // `controlledIdentifiers` is stored (not lazily memoized)
+            // precisely so this closure registers a dependency on every read.
+            // The base is read through `effectiveItem` so an AX alias resolved
+            // mid-life queries the same identity `draw` does.
+            triggerObservationTask = Task { @MainActor [weak self, weak appState] in
+                let changes = Observations { [weak self, weak appState] in
+                    guard let self, let appState else { return false }
+                    return appState.settings.triggers.isControlledByTrigger(
+                        identifier: self.effectiveItem.tag.tagIdentifier
+                    )
+                }
+                var previous: Bool?
+                for await controlled in changes {
+                    guard let self else { return }
+                    guard controlled != previous else { continue }
+                    previous = controlled
+                    self.needsDisplay = true
                 }
             }
         }
@@ -299,15 +443,26 @@ final class LayoutBarItemView: LayoutBarArrangedView {
 
     override func draw(_: NSRect) {
         if !isDraggingPlaceholder {
-            if let capturedImage = cachedImage?.nsImage {
+            let triggerControlled = isTriggerControlled
+            if !usesAppIcon, let capturedImage = cachedImage?.nsImage {
+                let fraction: CGFloat = if triggerControlled {
+                    Metrics.triggerControlledFraction
+                } else if isEnabled {
+                    1.0
+                } else {
+                    0.67
+                }
                 capturedImage.draw(
                     in: bounds,
                     from: .zero,
                     operation: .sourceOver,
-                    fraction: isEnabled ? 1.0 : 0.67
+                    fraction: fraction
                 )
             } else {
                 drawPlaceholder()
+            }
+            if triggerControlled {
+                drawTriggerBadge()
             }
             if Bridging.isProcessUnresponsive(item.ownerPID) {
                 let warningImage = NSImage.warning
@@ -331,6 +486,7 @@ final class LayoutBarItemView: LayoutBarArrangedView {
 
     override func mouseDragged(with event: NSEvent) {
         super.mouseDragged(with: event)
+        didBeginDraggingForCurrentClick = true
         tooltipController.cancel()
 
         // #905 fallback: before refusing an `unresolvedControlCenterPlaceholder`
@@ -401,21 +557,24 @@ final class LayoutBarItemView: LayoutBarArrangedView {
     /// The icon of the app that put this item on the bar, or `nil` when the
     /// owner can only name Control Center.
     ///
+    /// Resolved through ``MenuBarItemIconFallback`` so the layout bar and the
+    /// Thaw Bar substitute the same image for the same item, and so both
+    /// share its per-process icon cache.
+    ///
     /// On macOS 26 every Control Center slot reports Control Center as its
     /// owner, so an unresolved placeholder would take Control Center's icon
     /// through the fallback. That is wrong on its face, and caching it as a
-    /// resolved icon also retires the retry below for the owner that shows
-    /// up once the source PID is known.
+    /// resolved icon also retires the retry in ``drawPlaceholder`` for the
+    /// owner that shows up once the source PID is known.
+    @MainActor
     private static func resolvedAppIcon(for item: MenuBarItem) -> NSImage? {
-        if let icon = item.sourceApplication?.icon {
-            return icon
-        }
         guard item.immovabilityReason != .unresolvedControlCenterPlaceholder else {
             return nil
         }
-        return item.owningApplication?.icon
+        return MenuBarItemIconFallback.appIcon(for: item)
     }
 
+    @MainActor
     private static func makePlaceholderImage(for item: MenuBarItem) -> (NSImage?, Bool) {
         if let icon = resolvedAppIcon(for: item) {
             return (icon, true)
@@ -426,6 +585,38 @@ final class LayoutBarItemView: LayoutBarArrangedView {
                 accessibilityDescription: item.displayName
             ),
             false
+        )
+    }
+
+    /// Draws the marker identifying a trigger-owned item. Placed at the
+    /// leading edge so it never collides with the unresponsive badge, which
+    /// owns the trailing edge and can apply to the same item.
+    ///
+    /// The rendered symbol is cached once: `draw(_:)` runs per frame while a
+    /// drag is in flight, and resolving an SF Symbol with a configuration
+    /// allocates on every call.
+    private static let triggerBadge: NSImage? = {
+        let configuration = NSImage.SymbolConfiguration(paletteColors: [.controlAccentColor])
+        return NSImage(
+            systemSymbolName: "bolt.fill",
+            accessibilityDescription: String(localized: "Controlled by a trigger")
+        )?.withSymbolConfiguration(configuration)
+    }()
+
+    private func drawTriggerBadge() {
+        guard let badge = Self.triggerBadge else {
+            return
+        }
+        let width = Metrics.triggerBadgeWidth
+        let scale = width / badge.size.width
+        let size = CGSize(width: width, height: badge.size.height * scale)
+        badge.draw(
+            in: CGRect(
+                x: bounds.minX,
+                y: bounds.minY,
+                width: size.width,
+                height: size.height
+            )
         )
     }
 

@@ -142,6 +142,23 @@ extension MenuBarItemManager {
             knownItemIdentifiers.insert(identifierToMark)
             persistKnownItemIdentifiers()
 
+            // Thaw's own spacers are placed by AppKit's autosave (seeded next
+            // to the Thaw icon) — relocating them like new third-party items
+            // would fight that position every cycle. Window ownership is the
+            // reliable check right after creation, when the cached tag can
+            // still be a generic "Item-0".
+            if MenuBarSpacerManager.isSpacerTag(candidate.tag)
+                || appState?.spacerManager.ownsWindowID(candidate.windowID) == true
+            {
+                MenuBarItemManager.diagLog.info(
+                    "Skipping new-item relocation for Thaw spacer \(candidate.logString)"
+                )
+                // Nothing was relocated: reporting true would make the caller
+                // treat this cycle as interrupted and schedule an extra
+                // recache for a no-op. The spacer is already marked known.
+                return false
+            }
+
             let destination = newItemsMoveDestination(for: controlItems, among: items)
 
             MenuBarItemManager.diagLog.info(
@@ -440,6 +457,29 @@ extension MenuBarItemManager {
         } catch {
             MenuBarItemManager.diagLog.error("Error enforcing control item order: \(error)")
         }
+    }
+
+    /// Moves a visible control item that the live bar classifies outside the
+    /// visible section back beside the hidden divider.
+    ///
+    /// Pairs with ``recoverStrandedHiddenDividerBeforeRefusing(guardSource:controlItems:items:)``
+    /// on the divider-order refusal: that one un-parks the hidden divider,
+    /// this one undoes the #881 login-restoration shape where macOS returns
+    /// the chevron left of the hidden divider. Together they give a refused
+    /// apply a path back to the ordering its gate requires, so the refusal
+    /// defers rather than wedges. No-op when the chevron already sits right
+    /// of the hidden divider — which is also most refusals, because
+    /// repositioning the dividers is what re-classifies it.
+    func recoverMisplacedVisibleControlItem(
+        controlItems: ControlItemPair,
+        items: [MenuBarItem]
+    ) async {
+        guard appState?.isDraggingMenuBarItem != true else { return }
+        guard let misplaced = LayoutSolver.planThawIconMove(
+            items: items,
+            hiddenBounds: bestBounds(for: controlItems.hidden)
+        ) else { return }
+        _ = await relocateThawIcon(misplaced, controlItems: controlItems)
     }
 
     /// Returns a Boolean value that indicates whether any menu bar item

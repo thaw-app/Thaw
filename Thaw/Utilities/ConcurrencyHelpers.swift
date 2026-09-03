@@ -13,7 +13,7 @@ import os.lock
 // MARK: - Debounced Notification Task
 
 /// Starts a `MainActor` task that owns a notification observer feeding a
-/// debounced `AsyncStream`: bursts of notifications posted to `center`
+/// debounced `AsyncChannel`: bursts of notifications posted to `center`
 /// coalesce over `interval`, then `action` runs once per burst.
 ///
 /// The observer is registered before this returns — no notification can
@@ -29,12 +29,12 @@ func debouncedNotificationTask(
     interval: Duration,
     action: @escaping @MainActor () async -> Void
 ) -> Task<Void, Never> {
-    let (events, continuation) = AsyncStream<Void>.makeStream()
+    let events = AsyncChannel<Void>()
     let observer = center.addObserver(
         forName: name,
         object: nil,
         queue: .main
-    ) { _ in continuation.yield(()) }
+    ) { _ in Task { await events.send(()) } }
     return Task { @MainActor in
         defer { center.removeObserver(observer) }
         for await _ in events.debounce(for: interval) {

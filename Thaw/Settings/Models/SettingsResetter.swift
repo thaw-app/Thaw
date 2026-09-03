@@ -47,6 +47,9 @@ extension AppSettings {
         general.autoRehide = Defaults.DefaultValue.autoRehide
         general.rehideStrategy = Defaults.DefaultValue.rehideStrategy
         general.rehideInterval = Defaults.DefaultValue.rehideInterval
+        general.simpleMode = Defaults.DefaultValue.simpleMode
+        general.showSettingDescriptions = Defaults.DefaultValue.showSettingDescriptions
+        appState?.itemGroupManager.apply(nil)
     }
 
     /// Resets Advanced settings to their default values.
@@ -65,6 +68,10 @@ extension AppSettings {
         advanced.showMenuBarTooltips = Defaults.DefaultValue.showMenuBarTooltips
         advanced.iconRefreshInterval = Defaults.DefaultValue.iconRefreshInterval
         advanced.enableDiagnosticLogging = Defaults.DefaultValue.enableDiagnosticLogging
+        advanced.autoZenWhileSharingScreen = Defaults.DefaultValue.autoZenWhileSharingScreen
+        advanced.diagnosticLogMaxSizeMB = Defaults.DefaultValue.diagnosticLogMaxSizeMB
+        advanced.diagnosticLogRetentionDays = Defaults.DefaultValue.diagnosticLogRetentionDays
+        advanced.diagnosticLogRotationInterval = Defaults.DefaultValue.diagnosticLogRotationInterval
         advanced.enableMenuBarItemOverflow = Defaults.DefaultValue.enableMenuBarItemOverflow
         advanced.useThawBarOnNotchOverflow = Defaults.DefaultValue.useThawBarOnNotchOverflow
         advanced.automaticArrangementEnabled = Defaults.DefaultValue.automaticArrangementEnabled

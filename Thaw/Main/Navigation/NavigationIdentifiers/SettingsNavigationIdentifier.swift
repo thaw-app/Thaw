@@ -18,6 +18,9 @@ nonisolated enum SettingsNavigationIdentifier: String, NavigationIdentifier {
     case profiles = "Profiles"
     case advanced = "Advanced"
     case automation = "Automation"
+    case triggers = "Triggers"
+    case tools = "Tools"
+    case developer = "Developer"
     case about = "About"
 
     var localized: LocalizedStringKey {
@@ -30,6 +33,9 @@ nonisolated enum SettingsNavigationIdentifier: String, NavigationIdentifier {
         case .profiles: "Profiles"
         case .advanced: "Advanced"
         case .automation: "Automation"
+        case .triggers: "Triggers"
+        case .tools: "Tools"
+        case .developer: "Dev Mode Flags"
         case .about: "About"
         }
     }
@@ -44,6 +50,9 @@ nonisolated enum SettingsNavigationIdentifier: String, NavigationIdentifier {
         case .profiles: .systemSymbol("person.crop.rectangle.stack")
         case .advanced: .systemSymbol("gearshape.2")
         case .automation: .systemSymbol("app.badge.checkmark")
+        case .triggers: .systemSymbol("bolt.badge.automatic")
+        case .tools: .systemSymbol("wrench.and.screwdriver")
+        case .developer: .systemSymbol("hammer")
         case .about: .systemSymbol("cube")
         }
     }

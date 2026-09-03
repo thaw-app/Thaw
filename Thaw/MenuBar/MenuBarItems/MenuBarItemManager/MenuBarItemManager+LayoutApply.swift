@@ -244,7 +244,7 @@ extension MenuBarItemManager {
                         item: item,
                         to: destination,
                         skipInputPause: true,
-                        watchdogTimeout: Self.layoutWatchdogTimeout
+                        options: .init(watchdogTimeout: Self.layoutWatchdogTimeout)
                     )
                 } catch {
                     failed += 1
@@ -649,6 +649,20 @@ extension MenuBarItemManager {
     /// rebuilds it. The rebuild is withheld while a ⌘-drag is live, matching
     /// the Phase 1 caller: replacing the window under an open drag session
     /// strands the drag the same way the parked divider does.
+    /// Collects the control-item bounds the divider-order gate compares.
+    ///
+    /// `nil` for a divider that is absent from the reading; the order gate
+    /// treats absence as unverifiable rather than as a violation.
+    private func dividerControlItemBounds(
+        items: [MenuBarItem],
+        controlItems: ControlItemPair
+    ) -> (visible: CGRect?, hidden: CGRect, alwaysHidden: CGRect?) {
+        let visible = items
+            .first { $0.tag == .visibleControlItem }?
+            .bounds
+        return (visible, controlItems.hidden.bounds, controlItems.alwaysHidden?.bounds)
+    }
+
     func recoverStrandedHiddenDividerBeforeRefusing(
         guardSource: String,
         controlItems: ControlItemPair,
@@ -1132,13 +1146,19 @@ extension MenuBarItemManager {
         // namespace, never match a profile entry, and so would be relocated as
         // unmanaged arrivals on every cycle. Exclude them until they resolve.
         let provisionalIdentityUIDs = LayoutSolver.provisionalIdentityUIDs(items: items)
+        // A trigger-owned item is deliberately missing from the desired
+        // layout, so it would otherwise be classified as an unmanaged arrival
+        // and given a `.saved` placement from the unfiltered saved order --
+        // moving it straight back out of where the trigger put it.
+        let triggerControlledUIDs = triggerProtectedUIDs(among: currentFlat, items: items)
         let unmanagedUIDs = LayoutSolver.partitionUnmanagedUIDs(
             currentFlat: currentFlat,
             desiredUIDs: desiredSet,
             hiddenCtrlUID: hiddenCtrlUID,
             ahCtrlUID: ahCtrlUID,
             visibleCtrlUID: visibleCtrlUID,
-            provisionalIdentityUIDs: provisionalIdentityUIDs
+            provisionalIdentityUIDs: provisionalIdentityUIDs,
+            triggerControlledUIDs: triggerControlledUIDs
         )
         if !unmanagedUIDs.isEmpty {
             // Build a DesiredLayout for the profile-apply context: the
@@ -1357,6 +1377,40 @@ extension MenuBarItemManager {
             )
             recoverStrandedHiddenDividerBeforeRefusing(
                 guardSource: "applyProfileLayout",
+                controlItems: controlItems,
+                items: items
+            )
+            clearProfileState(source: source, items: items)
+            return
+        }
+
+        // Divider-order gate (#1027). The room gate above catches dividers
+        // collapsed onto one coordinate; this catches them drifted into
+        // foreign sections, which leaves the same room between them and so
+        // passes that gate while every classification below it is garbage.
+        // The reporter's restart parked the hidden divider far offscreen
+        // with the chevron classified into hidden — the unmanaged-placement
+        // and LCS passes then planned against that scramble. Profile applies
+        // are gated too: the room exemption above is about *adjacent*
+        // dividers legitimately describing an empty section, and an
+        // out-of-order divider describes nothing. Refusing defers; the
+        // recovery calls re-order the bar so the next cycle's divergence
+        // re-fires the apply against a trustworthy reading.
+        let dividerBounds = dividerControlItemBounds(items: items, controlItems: controlItems)
+        if !LayoutSolver.controlItemsAreInCanonicalOrder(
+            visibleControlItemBounds: dividerBounds.visible,
+            hiddenControlItemBounds: dividerBounds.hidden,
+            alwaysHiddenControlItemBounds: dividerBounds.alwaysHidden
+        ) {
+            MenuBarItemManager.diagLog.warning(
+                "applyProfileLayout: skipping (\(source)); section dividers are out of order (visibleCtrl.minX=\(dividerBounds.visible?.minX.description ?? "unresolved"), hidden.minX=\(dividerBounds.hidden.minX), alwaysHiddenCtrl.minX=\(dividerBounds.alwaysHidden?.minX.description ?? "unresolved"))"
+            )
+            recoverStrandedHiddenDividerBeforeRefusing(
+                guardSource: "applyProfileLayout",
+                controlItems: controlItems,
+                items: items
+            )
+            await recoverMisplacedVisibleControlItem(
                 controlItems: controlItems,
                 items: items
             )
@@ -2336,6 +2390,47 @@ extension MenuBarItemManager {
                 fallbackSection: fallbackSection
             )
 
+            // An item bound for the visible section has to land on screen, so
+            // its anchor has to be on screen. Anchoring it on a parked item
+            // presses at a point off the display: the events are accepted,
+            // AppKit drops the item beside the parked anchor, and a
+            // desired-visible item is stranded in the concealed zone. The
+            // next planned move can then anchor on the item just stranded,
+            // so one bad drop takes a whole run of items with it.
+            //
+            // #1027: the reporter's tgpro and soundsource:Input were already
+            // on the wrong side of a parked H_ctrl, and Phase 1 had just
+            // declined to rescue them (H_ctrl parked, #899). This pass then
+            // anchored codexbar-codex and codexbar-claude on tgpro, aldente
+            // on soundsource:Input, then Maccy on aldente and
+            // TextInputMenuAgent on Maccy — six desired-visible items walked
+            // into the hidden section, one chained off the last. The bar went
+            // from visible=12/hidden=13 to visible=1/hidden=19 in six
+            // seconds.
+            //
+            // Only visible-bound moves are gated. A parked anchor is the
+            // normal case for the other two sections: concealing a section
+            // parks its divider and its items off screen by design, so
+            // gating those would refuse every move into a collapsed section
+            // and strand the profile's concealment work instead. In the same
+            // log those moves were all correct — App-Cleaner onto a parked
+            // H_ctrl, three always-hidden items onto a parked AH_ctrl — and
+            // they keep running.
+            //
+            // Skipping counts as unenacted, which withholds the saved-order
+            // write, so an arrangement this apply could not achieve is not
+            // persisted as though it had been.
+            if fallbackSection == .visible {
+                let screenFrames = NSScreen.screens.map { CGDisplayBounds($0.displayID) }
+                if dest.wouldLandOffScreen(screenFrames: screenFrames) {
+                    unenactedMoveCount += 1
+                    MenuBarItemManager.diagLog.warning(
+                        "Profile layout: skipping the visible-bound move of \(planned.uid), its anchor \(dest.logString) is parked offscreen (minX=\(dest.targetItem.bounds.minX)); the drop would strand it"
+                    )
+                    continue
+                }
+            }
+
             do {
                 try await move(item: item, to: dest, skipInputPause: true)
                 movedCount += 1
@@ -2744,10 +2839,28 @@ extension MenuBarItemManager {
         // drifted to another section is genuine drift).
         let overflowSkipActive = (appState?.settings.advanced.enableMenuBarItemOverflow ?? false)
             && ((NSScreen.screenWithActiveMenuBar ?? NSScreen.main)?.hasNotch ?? false)
+        let knownBaseIdentifiers = Set(items.map(\.tag.stableIdentifierBase))
+        let knownLiveIdentifiers = Set(items.map(\.uniqueIdentifier))
+        // No trigger owns anything unless the user configured one, and with an
+        // empty protected set `isTriggerProtected` misses the exact match and
+        // resolves a base identifier per candidate per live item — quadratic on
+        // a path that runs every cache cycle. Same early return as
+        // `triggerProtectedUIDs`.
+        let hasTriggerProtectedItems = !triggerControlledItemIdentifiers.isEmpty
 
         return Self.layoutDivergesFromSaved(
             candidates: items
-                .filter { !$0.isControlItem && $0.canBeHidden && $0.isMovable }
+                .filter {
+                    !$0.isControlItem
+                        && $0.canBeHidden
+                        && $0.isMovable
+                        && !(hasTriggerProtectedItems && Self.isTriggerProtected(
+                            $0.uniqueIdentifier,
+                            by: triggerControlledItemIdentifiers,
+                            knownBaseIdentifiers: knownBaseIdentifiers,
+                            knownLiveIdentifiers: knownLiveIdentifiers
+                        ))
+                }
                 .map { item in
                     DivergenceCandidate(
                         tagIdentifier: item.tag.tagIdentifier,
@@ -2901,7 +3014,12 @@ extension MenuBarItemManager {
     /// Excluding them costs nothing real: a late arrival is an app's item
     /// appearing after launch, and those resolve. The items that legitimately
     /// hold a nil PID (Wi-Fi, Clock, BentoBox) are always-present system
-    /// items that never arrive late in the first place.
+    /// items that never arrive late in the first place. A Control Center
+    /// module that resolved to the wrong PID is excluded for the same reason
+    /// the persistence path excludes it (#1027): its identifier names a
+    /// process that does not own the window, so counting it as an arrival
+    /// would re-sort on every flap between the misattributed spelling and
+    /// the real one.
     static nonisolated func lateArrivingProfileIdentifiers(
         items: [MenuBarItem],
         profileIdentifiers: Set<String>,
@@ -2909,7 +3027,9 @@ extension MenuBarItemManager {
     ) -> Set<String> {
         let identifiable = Set(
             items.lazy
-                .filter { !$0.isControlItem && $0.sourcePID != nil }
+                .filter {
+                    !$0.isControlItem && $0.sourcePID != nil && !$0.tag.isMisattributedControlCenterModule
+                }
                 .map(\.uniqueIdentifier)
         )
         return identifiable
@@ -3295,7 +3415,7 @@ extension MenuBarItemManager {
         // Match is exact on uniqueIdentifier: base-identifier fallback
         // could admit an unresolved sibling of a resolved item, which is
         // precisely the item this restriction exists to exclude.
-        let effectiveSavedOrder: [String: [String]]
+        var effectiveSavedOrder: [String: [String]]
         if resolvedIdentitiesOnly {
             effectiveSavedOrder = Self.savedOrderRestrictedToResolvedIdentities(
                 savedSectionOrder: savedSectionOrder,
@@ -3311,6 +3431,20 @@ extension MenuBarItemManager {
             }
         } else {
             effectiveSavedOrder = savedSectionOrder
+        }
+        let knownBaseIdentifiers = Set(items.map(\.tag.stableIdentifierBase))
+        let knownLiveIdentifiers = Set(items.map(\.uniqueIdentifier))
+        effectiveSavedOrder = Self.savedOrderExcludingTriggerControlledIdentifiers(
+            effectiveSavedOrder,
+            controlledIdentifiers: triggerControlledItemIdentifiers,
+            knownBaseIdentifiers: knownBaseIdentifiers,
+            knownLiveIdentifiers: knownLiveIdentifiers
+        )
+        guard effectiveSavedOrder.values.contains(where: { !$0.isEmpty }) else {
+            MenuBarItemManager.diagLog.debug(
+                "applySavedLayout: skipping, every saved item is currently trigger-controlled"
+            )
+            return false
         }
 
         // Build itemSectionMap from the effective order. Each identifier
@@ -3370,6 +3504,33 @@ extension MenuBarItemManager {
             return false
         }
 
+        // Divider-order gate (#1027): the same refusal the profile path
+        // makes, on the same evidence. A dispatch against dividers that sit
+        // out of order plans every unmanaged placement and every move from
+        // a reading that cannot be true; skipping here keeps the bar
+        // untouched while the recovery calls restore the ordering, and the
+        // change gate re-fires once it has.
+        let dividerBounds = dividerControlItemBounds(items: items, controlItems: controlItems)
+        guard LayoutSolver.controlItemsAreInCanonicalOrder(
+            visibleControlItemBounds: dividerBounds.visible,
+            hiddenControlItemBounds: dividerBounds.hidden,
+            alwaysHiddenControlItemBounds: dividerBounds.alwaysHidden
+        ) else {
+            MenuBarItemManager.diagLog.warning(
+                "applySavedLayout: skipping (\(trigger)); section dividers are out of order (visibleCtrl.minX=\(dividerBounds.visible?.minX.description ?? "unresolved"), hidden.minX=\(dividerBounds.hidden.minX), alwaysHiddenCtrl.minX=\(dividerBounds.alwaysHidden?.minX.description ?? "unresolved"))"
+            )
+            recoverStrandedHiddenDividerBeforeRefusing(
+                guardSource: "applySavedLayout",
+                controlItems: controlItems,
+                items: items
+            )
+            await recoverMisplacedVisibleControlItem(
+                controlItems: controlItems,
+                items: items
+            )
+            return false
+        }
+
         // Display-spread gate. While the active menu bar relocates to another
         // display macOS migrates the status item windows between screens
         // asynchronously, so the items transiently straddle two displays. A
@@ -3410,6 +3571,15 @@ extension MenuBarItemManager {
         // Passing it through as duringSettling exempts that apply from
         // Phase 0's settling wait, which its gate-holding caller cannot
         // survive (#943).
+        // The completed-apply counter, not the shared outcome counter: a
+        // user Cmd-drag or layout-editor drag landing between the apply's
+        // own recordBulkApplyOutcome and this guard overwrites the shared
+        // counter with zero, which would satisfy this check and clear the
+        // restoration shields even though the apply finished with unenacted
+        // moves. Only a completed apply writes the completed-apply counter,
+        // and the generation comparison pins it to this apply.
+        let completionGenerationBeforeApply = bulkApplyCompletionGeneration
+        let restorationIdentifiersAtDispatch = triggerLayoutRestorationItemIdentifiers
         await applyProfileLayout(
             ProfileLayoutSpec(
                 pinnedHidden: pinnedHiddenBundleIDs,
@@ -3422,6 +3592,34 @@ extension MenuBarItemManager {
             automatic: true,
             duringSettling: resolvedIdentitiesOnly
         )
+        if bulkApplyCompletionGeneration != completionGenerationBeforeApply,
+           lastCompletedBulkApplyUnenactedMoveCount == 0
+        {
+            // Read the bar again rather than reusing the pre-apply sets. The
+            // apply moved items and may have gained or lost a same-title
+            // sibling; a stale candidate count makes
+            // `triggerProtectionIdentifiers` answer with nothing, which reads
+            // as unprotected and clears the shield of an item the trigger
+            // still controls.
+            let postApplyItems = await MenuBarItem.getMenuBarItems(option: .activeSpace)
+            let postApplyBaseIdentifiers = Set(postApplyItems.map(\.tag.stableIdentifierBase))
+            let postApplyLiveIdentifiers = Set(postApplyItems.map(\.uniqueIdentifier))
+            let restored = restorationIdentifiersAtDispatch.filter { identifier in
+                LayoutSolver.savedPositionByBaseID(for: identifier, in: effectiveSavedOrder) != nil
+                    && !Self.isTriggerProtected(
+                        identifier,
+                        by: triggerControlledItemIdentifiers,
+                        knownBaseIdentifiers: postApplyBaseIdentifiers,
+                        knownLiveIdentifiers: postApplyLiveIdentifiers
+                    )
+            }
+            triggerLayoutRestorationItemIdentifiers.subtract(restored)
+            if !restored.isEmpty {
+                MenuBarItemManager.diagLog.debug(
+                    "Cleared \(restored.count) trigger release restoration shield(s) after a clean saved-layout apply"
+                )
+            }
+        }
         return true
     }
 
@@ -3489,7 +3687,7 @@ extension MenuBarItemManager {
                     item: item,
                     to: .rightOfItem(controlItems.hidden),
                     skipInputPause: true,
-                    watchdogTimeout: Self.layoutWatchdogTimeout
+                    options: .init(watchdogTimeout: Self.layoutWatchdogTimeout)
                 )
                 MenuBarItemManager.diagLog.info("Successfully restored blocked item \(item.logString) to visible section")
             } catch {

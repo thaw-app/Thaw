@@ -158,6 +158,11 @@ struct AboutSettingsPane: View {
                     .menuStyle(.borderlessButton)
                     .fixedSize()
                     .help("More project links")
+
+                    Button("Help translate \(Constants.displayName)", systemImage: "globe") {
+                        openURL(Constants.translateURL)
+                    }
+                    .buttonStyle(.plain)
                 }
                 .font(.system(size: 13))
                 .foregroundStyle(.secondary)

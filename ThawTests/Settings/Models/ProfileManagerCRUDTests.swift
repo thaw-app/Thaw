@@ -224,6 +224,76 @@ struct ProfileManagerCRUDTests {
         }
     }
 
+    // MARK: Space association
+
+    @Test("A Space association persists to the manifest")
+    func spaceAssociationPersists() throws {
+        try withManager(seeding: [makeProfile(named: "Writing")]) { manager, tmp in
+            let id = try #require(manager.profiles.first?.id)
+
+            manager.setAssociatedSpace(key: "SPACE-UUID-A", spaceName: "Desktop 2", forProfileID: id)
+
+            #expect(manager.profiles.first?.associatedSpaceKey == "SPACE-UUID-A")
+            let reloaded = ProfileManager(profilesDirectory: tmp)
+            #expect(reloaded.profiles.first?.associatedSpaceKey == "SPACE-UUID-A")
+            #expect(reloaded.profiles.first?.associatedSpaceName == "Desktop 2")
+        }
+    }
+
+    @Test("Associating a Space moves it off whichever profile held it")
+    func spaceAssociationIsExclusive() throws {
+        try withManager(seeding: [makeProfile(named: "One"), makeProfile(named: "Two")]) { manager, _ in
+            let first = try #require(manager.profiles.first { $0.name == "One" }?.id)
+            let second = try #require(manager.profiles.first { $0.name == "Two" }?.id)
+
+            manager.setAssociatedSpace(key: "SPACE-UUID-A", forProfileID: first)
+            manager.setAssociatedSpace(key: "SPACE-UUID-A", forProfileID: second)
+
+            #expect(manager.profiles.first { $0.id == first }?.associatedSpaceKey == nil)
+            #expect(manager.profiles.first { $0.id == second }?.associatedSpaceKey == "SPACE-UUID-A")
+        }
+    }
+
+    @Test("Passing nil clears the Space association and its cached label")
+    func spaceAssociationCanBeCleared() throws {
+        try withManager(seeding: [makeProfile(named: "Writing")]) { manager, _ in
+            let id = try #require(manager.profiles.first?.id)
+            manager.setAssociatedSpace(key: "SPACE-UUID-A", spaceName: "Desktop 2", forProfileID: id)
+
+            manager.setAssociatedSpace(key: nil, forProfileID: id)
+
+            #expect(manager.profiles.first?.associatedSpaceKey == nil)
+            #expect(manager.profiles.first?.associatedSpaceName == nil)
+        }
+    }
+
+    @Test("A Space key resolves back to the profile that holds it")
+    func spaceLookupFindsItsProfile() throws {
+        try withManager(seeding: [makeProfile(named: "One"), makeProfile(named: "Two")]) { manager, _ in
+            let second = try #require(manager.profiles.first { $0.name == "Two" }?.id)
+            manager.setAssociatedSpace(key: "SPACE-UUID-A", forProfileID: second)
+
+            #expect(manager.profile(forSpaceKey: "SPACE-UUID-A")?.id == second)
+            #expect(manager.profile(forSpaceKey: "SPACE-UUID-B") == nil)
+        }
+    }
+
+    @Test("Space and display associations are independent")
+    func spaceAndDisplayAssociationsCoexist() throws {
+        try withManager(seeding: [makeProfile(named: "Desk")]) { manager, _ in
+            let id = try #require(manager.profiles.first?.id)
+
+            manager.setAssociatedDisplay(uuid: "UUID-A", forProfileID: id)
+            manager.setAssociatedSpace(key: "SPACE-UUID-A", forProfileID: id)
+
+            #expect(manager.profiles.first?.associatedDisplayUUID == "UUID-A")
+            #expect(manager.profiles.first?.associatedSpaceKey == "SPACE-UUID-A")
+
+            manager.setAssociatedSpace(key: nil, forProfileID: id)
+            #expect(manager.profiles.first?.associatedDisplayUUID == "UUID-A")
+        }
+    }
+
     // MARK: Hooks
 
     @Test("An unset profile reports empty automation")

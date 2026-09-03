@@ -169,6 +169,9 @@ nonisolated extension Defaults {
         static let showOnHover = false
         static let showOnScroll = true
         static let autoRehide = true
+        static let simpleMode = false
+        static let autoZenWhileSharingScreen = false
+        static let showSettingDescriptions = true
         static let rehideStrategy: RehideStrategy = .smart
         static let rehideInterval: TimeInterval = 15
 
@@ -191,6 +194,9 @@ nonisolated extension Defaults {
         #else
             static let enableDiagnosticLogging = false
         #endif
+        static let diagnosticLogMaxSizeMB = 10
+        static let diagnosticLogRetentionDays = 2
+        static let diagnosticLogRotationInterval: LogRotationInterval = .off
         static let useOptionClickToShowAlwaysHiddenSection = false
         static let useDoubleClickToShowAlwaysHiddenSection = false
         static let enableMenuBarItemOverflow = true
@@ -209,6 +215,14 @@ nonisolated extension Defaults {
         // MARK: Hotkeys Settings
 
         static nonisolated(unsafe) let hotkeys: [Any]? = nil
+
+        // MARK: Attention Surfacing
+
+        static let surfaceItemsSeekingAttention = false
+
+        // MARK: Item Rendering
+
+        static let alwaysUseAppIconForMenuBarItems = false
 
         // MARK: Appearance Settings
 
@@ -251,6 +265,9 @@ nonisolated extension Defaults {
         case showOnHover = "ShowOnHover"
         case showOnScroll = "ShowOnScroll"
         case autoRehide = "AutoRehide"
+        case simpleMode = "SimpleMode"
+        case showSettingDescriptions = "ShowSettingDescriptions"
+        case autoZenWhileSharingScreen = "AutoZenWhileSharingScreen"
         case rehideStrategy = "RehideStrategy"
         case rehideInterval = "RehideInterval"
         case displayIceBarConfigurations = "DisplayIceBarConfigurations"
@@ -258,6 +275,10 @@ nonisolated extension Defaults {
         case knownDisplays = "KnownDisplays"
         case confirmSpacingRelaunch = "ConfirmSpacingRelaunch"
         case unconfirmedSpacingProfileScope = "UnconfirmedSpacingProfileScope"
+
+        // MARK: Menu Bar Spacers
+
+        case menuBarSpacers = "MenuBarSpacers"
 
         // MARK: Hotkeys Settings
 
@@ -280,6 +301,9 @@ nonisolated extension Defaults {
         case iconRefreshInterval = "IconRefreshInterval"
         case showMenuBarTooltips = "ShowMenuBarTooltips"
         case enableDiagnosticLogging = "EnableDiagnosticLogging"
+        case diagnosticLogMaxSizeMB = "DiagnosticLogMaxSizeMB"
+        case diagnosticLogRetentionDays = "DiagnosticLogRetentionDays"
+        case diagnosticLogRotationInterval = "DiagnosticLogRotationInterval"
         case useOptionClickToShowAlwaysHiddenSection = "UseOptionClickToShowAlwaysHiddenSection"
         case useDoubleClickToShowAlwaysHiddenSection = "UseDoubleClickToShowAlwaysHiddenSection"
         case enableMenuBarItemOverflow = "EnableMenuBarItemOverflow"
@@ -342,9 +366,24 @@ nonisolated extension Defaults {
         /// Settings.
         case profileLayoutRepairBuild = "ProfileLayoutRepairBuild"
 
+        // MARK: Item Rendering
+
+        /// Whether menu bar items are drawn as their owning app's icon
+        /// instead of a live capture, everywhere Thaw renders them.
+        case alwaysUseAppIconForMenuBarItems = "AlwaysUseAppIconForMenuBarItems"
+
+        // MARK: Attention Surfacing
+
+        /// Whether an item that blinks for attention while hidden is
+        /// temporarily surfaced. Off by default: it moves items on a
+        /// heuristic, and a wrong verdict is a wrong move.
+        case surfaceItemsSeekingAttention = "SurfaceItemsSeekingAttention"
+
         // MARK: Appearance Settings
 
         case menuBarAppearanceConfigurationV2 = "MenuBarAppearanceConfigurationV2"
+        case menuBarAppearanceSpaceOverrides = "MenuBarAppearanceSpaceOverrides"
+        case lastSettingsPane = "LastSettingsPane"
 
         // MARK: Migration
 
@@ -372,6 +411,12 @@ nonisolated extension Defaults {
 
         case globalPreProfileHook = "GlobalPreProfileHook"
         case globalPostProfileHook = "GlobalPostProfileHook"
+
+        // MARK: Menu Bar Item Triggers
+
+        case menuBarItemTriggers = "MenuBarItemTriggers"
+        case triggerFeatureFlags = "TriggerFeatureFlags"
+        case showTriggerFeatureFlagsAllOffMenuItem = "ShowTriggerFeatureFlagsAllOffMenuItem"
 
         // MARK: Focus Filter
 

@@ -234,6 +234,10 @@ final class MenuBarItemManager {
     /// Observes `appState.navigationState`'s @Observable properties (wave 3).
     private var navigationStateObservationTask: Task<Void, Never>?
 
+    /// Task observing the item group set, so editing a group re-applies the
+    /// gathered order to the live menu bar.
+    private var groupOrderObservationTask: Task<Void, Never>?
+
     /// A candidate menu window matched by the open-menu probe.
     nonisolated struct MenuWindowCandidate: Sendable {
         let windowID: CGWindowID
@@ -279,6 +283,7 @@ final class MenuBarItemManager {
         cacheTickCancellable?.cancel()
         menuOpenCheckTask?.cancel()
         navigationStateObservationTask?.cancel()
+        groupOrderObservationTask?.cancel()
     }
 
     /// Continuations waiting for a background cache cycle to complete,
@@ -512,12 +517,55 @@ final class MenuBarItemManager {
     /// not complete".
     private var consecutiveUnfinishedBulkApplies = 0
 
+    /// Monotonic marker and result for the most recently recorded outcome,
+    /// which includes an explicit user move (see
+    /// ``recordExternalMoveOperation``) because that too clears the save
+    /// latch.
+    private(set) var bulkApplyOutcomeGeneration = 0
+    private(set) var lastBulkApplyUnenactedMoveCount: Int?
+
+    /// Monotonic marker bumped only when a bulk apply actually ran to
+    /// completion.
+    ///
+    /// Kept separate from ``bulkApplyOutcomeGeneration`` deliberately. Trigger
+    /// release restoration reads it to tell a real completed apply from an
+    /// apply request that early-returned, and a user Cmd-drag or layout-editor
+    /// drag arriving mid-apply also records an outcome with zero unenacted
+    /// moves. Sharing one counter let that user move satisfy the completion
+    /// check, clear the restoration shields with no apply having run, and so
+    /// let the next cache cycle persist a temporary trigger placement as a
+    /// user edit.
+    private(set) var bulkApplyCompletionGeneration = 0
+
+    /// The unenacted-move count of the apply that owns the current
+    /// completion generation.
+    ///
+    /// Kept separate from ``lastBulkApplyUnenactedMoveCount`` because that
+    /// shared counter is overwritten by every outcome recording — including
+    /// a user move's — so it cannot be trusted to still hold the completed
+    /// apply's number by the time a reader pairs it with the generation.
+    private(set) var lastCompletedBulkApplyUnenactedMoveCount: Int?
+
     /// Records how a bulk apply ended, for the saveSectionOrder gate.
     ///
     /// A clean batch clears the arm rather than leaving it to expire: the
     /// bar now matches what the apply set out to produce, and there is no
     /// reason to keep withholding it from the saved order.
-    func recordBulkApplyOutcome(unenactedMoveCount: Int) {
+    ///
+    /// - Parameter isCompletedApply: whether this is a real bulk apply
+    ///   finishing, as opposed to a user move borrowing the same latch.
+    func recordBulkApplyOutcome(unenactedMoveCount: Int, isCompletedApply: Bool = true) {
+        bulkApplyOutcomeGeneration += 1
+        if isCompletedApply {
+            bulkApplyCompletionGeneration += 1
+            // Tracked alongside the completion generation: a user Cmd-drag
+            // or layout-editor drag landing between the apply recording its
+            // outcome and a caller reading it records an outcome of its own
+            // with zero unenacted moves, which must not be mistaken for the
+            // apply's.
+            lastCompletedBulkApplyUnenactedMoveCount = unenactedMoveCount
+        }
+        lastBulkApplyUnenactedMoveCount = unenactedMoveCount
         guard unenactedMoveCount > 0 else {
             unfinishedMoveBatchObservedAt = nil
             consecutiveUnfinishedBulkApplies = 0
@@ -766,6 +814,25 @@ final class MenuBarItemManager {
     /// `uniqueIdentifier` strings (right-to-left, matching cache array order).
     var savedSectionOrder = [String: [String]]()
 
+    /// Items whose section is temporarily owned by an active trigger. Their
+    /// live placement must not overwrite the user's saved layout, and the
+    /// saved-layout reconciler must not move them back while the trigger owns
+    /// them. The trigger manager clears this set when an item is no longer
+    /// controlled, at which point the normal saved-layout restore returns it
+    /// to the user's pre-trigger position.
+    var triggerControlledItemIdentifiers = Set<String>()
+
+    /// Items released by a trigger that still need their full saved position
+    /// (including order within a section) restored. They remain excluded from
+    /// persistence until that replay finishes, so an intervening cache cycle
+    /// cannot capture their temporary trigger placement as a user edit.
+    var triggerLayoutRestorationItemIdentifiers = Set<String>()
+
+    /// The pending delayed re-cache scheduled by a trigger release. Stored so
+    /// a burst of releases coalesces into one wait instead of stacking a
+    /// separate six-second task per release.
+    var triggerReleaseRecacheTask: Task<Void, Never>?
+
     /// Identifiers most recently moved from visible to hidden by the
     /// notch-overflow rebalance (Phase 4 of the layout apply). The ejection
     /// is a transient, per-display accommodation — these items must not be
@@ -967,6 +1034,118 @@ final class MenuBarItemManager {
         Defaults.store.set(savedSectionOrder, forKey: LayoutStateKey.savedSectionOrder)
     }
 
+    // MARK: - Item Groups
+
+    /// The group set to enforce, wrapped in the planner-facing shape.
+    private var activeGroupSet: MenuBarItemGroupPolicy.GroupSet? {
+        guard let appState else { return nil }
+        let resolved = appState.itemGroupManager.groupSet
+        guard !resolved.groups.isEmpty else { return nil }
+        let set = MenuBarItemGroupPolicy.GroupSet(groups: resolved.groups.map(\.memberIdentifiers))
+        return set.isEmpty ? nil : set
+    }
+
+    /// Applies the group bundling invariant to a per-section order.
+    ///
+    /// Mirrors the macOS 27 semantics: a group whose members span multiple
+    /// sections is consolidated into the section holding most of its members
+    /// (ties go to the leftmost member's), and every group ends up in one
+    /// contiguous run. Consolidation is a real relocation on this backend —
+    /// pulling a member out of Hidden reveals it — which is what "groups move
+    /// and hide together" means.
+    func gatheredSectionOrder(_ order: [String: [String]]) -> [String: [String]] {
+        guard let groups = activeGroupSet, !order.isEmpty else {
+            return order
+        }
+        var sections = [MenuBarSection.Name: [String]]()
+        var unconvertible = [String: [String]]()
+        for (key, identifiers) in order {
+            guard let name = sectionName(for: key) else {
+                unconvertible[key] = identifiers
+                continue
+            }
+            sections[name] = identifiers
+        }
+        guard !sections.isEmpty else { return order }
+
+        let (gatheredSections, report) = MenuBarItemGroupPolicy.gather(groups: groups, inSections: sections)
+        guard report != .noChange else {
+            return order
+        }
+
+        // Consolidation drops a section it empties. Seed every converted
+        // section empty so such a section stays present as an empty list:
+        // restoring its original identifiers instead would duplicate the
+        // members that moved into the winning section, and a duplicate
+        // reaches both `persistSavedSectionOrder` and the live apply's
+        // item-section map.
+        var result = [String: [String]]()
+        for name in sections.keys {
+            result[sectionKey(for: name)] = []
+        }
+        for (name, identifiers) in gatheredSections {
+            result[sectionKey(for: name)] = identifiers
+        }
+        // Preserve any section whose key could not be converted.
+        for (key, identifiers) in unconvertible {
+            result[key] = identifiers
+        }
+        return result
+    }
+
+    /// Re-gathers groups in the saved order and moves the live items to
+    /// match. Called when the user creates, edits, or dissolves a group:
+    /// editing a group changes the *desired* order but moves nothing on
+    /// screen by itself.
+    func applyGroupOrderToLiveSections() async {
+        guard appState != nil else { return }
+        let gathered = gatheredSectionOrder(savedSectionOrder)
+        guard gathered != savedSectionOrder, !savedSectionOrder.isEmpty else {
+            return
+        }
+        savedSectionOrder = gathered
+        persistSavedSectionOrder()
+
+        // Reuse the profile-apply move engine with the gathered order as the
+        // spec: `.savedOrder` skips profile-state arming and `automatic:
+        // false` treats this as what it is, a user-initiated edit that should
+        // happen now rather than at the next interaction lull. Closed apps'
+        // entries are carried in the maps so their slots survive the apply.
+        // Exclude trigger-controlled identifiers exactly like applySavedLayout
+        // does: their temporary section belongs to the trigger until release,
+        // and an item present in the spec is a move target (only items absent
+        // from it are classified unmanaged), so including them here would yank
+        // them back and set up a tug-of-war with the trigger's own repair.
+        let liveItems = itemCache.managedItems
+        let effectiveGathered = Self.savedOrderExcludingTriggerControlledIdentifiers(
+            gathered,
+            controlledIdentifiers: triggerControlledItemIdentifiers,
+            knownBaseIdentifiers: Set(liveItems.map(\.tag.stableIdentifierBase)),
+            knownLiveIdentifiers: Set(liveItems.map(\.uniqueIdentifier))
+        )
+        guard effectiveGathered.values.contains(where: { !$0.isEmpty }) else {
+            MenuBarItemManager.diagLog.debug(
+                "applyGroupOrderToLiveSections: skipping live apply, every entry is trigger-controlled"
+            )
+            return
+        }
+        var itemSectionMap = [String: String]()
+        for (sectionKey, identifiers) in effectiveGathered {
+            for identifier in identifiers {
+                itemSectionMap[identifier] = sectionKey
+            }
+        }
+        let spec = ProfileLayoutSpec(
+            pinnedHidden: pinnedHiddenBundleIDs,
+            pinnedAlwaysHidden: pinnedAlwaysHiddenBundleIDs,
+            sectionOrder: effectiveGathered,
+            itemSectionMap: itemSectionMap,
+            itemOrder: effectiveGathered
+        )
+        MenuBarItemManager.diagLog.info("Applying updated group order to live sections")
+        await applyProfileLayout(spec, source: .savedOrder, automatic: false)
+    }
+
     /// Extracts the current per-section item order from the given cache and
     /// persists it. Skips the write when the order has not changed.
     /// For items currently in the cache, uses their current section.
@@ -1015,6 +1194,25 @@ final class MenuBarItemManager {
             pendingRelocations: pendingRelocations,
             waitForRelaunchPrefix: Self.waitForRelaunchPrefix
         )
+        let knownBaseIdentifiers = Set(cache.managedItems.map(\.tag.stableIdentifierBase))
+        let knownLiveIdentifiers = Set(cache.managedItems.map(\.uniqueIdentifier))
+        let triggerProtectedIdentifiers = triggerControlledItemIdentifiers
+            .union(triggerLayoutRestorationItemIdentifiers)
+        let triggerProtectedBaseIdentifiers = Set(triggerProtectedIdentifiers.compactMap {
+            MenuBarItemTag.resolvedBaseIdentifier(
+                for: $0,
+                knownBaseIdentifiers: knownBaseIdentifiers
+            )
+        })
+
+        func isTriggerProtected(_ item: MenuBarItem) -> Bool {
+            Self.isTriggerProtected(
+                item.uniqueIdentifier,
+                by: triggerProtectedIdentifiers,
+                knownBaseIdentifiers: knownBaseIdentifiers,
+                knownLiveIdentifiers: knownLiveIdentifiers
+            )
+        }
 
         // Predicate: items eligible for persistence in savedSectionOrder.
         // Profile-tracked app items (non-control with resolved sourcePID)
@@ -1029,8 +1227,18 @@ final class MenuBarItemManager {
         // section boundary) and they get inserted into desiredFlat at
         // the boundary regardless of saved order.
         func isPersistable(_ item: MenuBarItem) -> Bool {
+            guard !isTriggerProtected(item) else { return false }
             if item.tag == .visibleControlItem {
                 return true
+            }
+            // A Control Center module that resolved to the wrong PID reads
+            // under that process's namespace (#1027). Persisting it would
+            // write an identifier the live bar can never produce again;
+            // excluding it lets the healed saved entry ride the closed-app
+            // merge and keep its position, exactly like Wi-Fi or Clock on a
+            // cycle their PID did not resolve.
+            if item.tag.isMisattributedControlCenterModule {
+                return false
             }
             return !item.isControlItem && item.sourcePID != nil
         }
@@ -1055,8 +1263,10 @@ final class MenuBarItemManager {
                 // Always track base identifier so stale saved entries for
                 // transient items (Live Activities) get pruned by the
                 // isStaleInstanceIndex guard below and not re-injected.
-                let baseID = "\(item.tag.namespace):\(item.tag.title)"
-                allCurrentBaseIdentifiers.insert(baseID)
+                let baseID = item.tag.stableIdentifierBase
+                if !triggerProtectedBaseIdentifiers.contains(baseID) {
+                    allCurrentBaseIdentifiers.insert(baseID)
+                }
                 // Exclude transient Control Center items (Live Activities,
                 // iPhone Mirroring icons) from the identifier set so their
                 // ephemeral UIDs are never written to savedSectionOrder.
@@ -1126,7 +1336,13 @@ final class MenuBarItemManager {
             )
             return
         }
-        let newOrder = computeSectionOrder(from: cache)
+        let computedOrder = computeSectionOrder(from: cache)
+        // Groups are an order invariant: every persisted order has each
+        // group's members in one contiguous run, anchored at the leftmost
+        // member. Applying the gather here means periodic saves, profile
+        // captures, and everything downstream of this function observe the
+        // invariant without knowing about groups.
+        let newOrder = gatheredSectionOrder(computedOrder)
         guard newOrder != savedSectionOrder else { return }
         let previousOrder = savedSectionOrder
         savedSectionOrder = newOrder
@@ -1841,8 +2057,31 @@ final class MenuBarItemManager {
     }
 
     /// Configures the internal observers for the manager.
-    private func configureCancellables(with _: AppState) {
+    private func configureCancellables(with appState: AppState) {
         var c = Set<AnyCancellable>()
+
+        // Editing a group (create, rename, add/remove member, dissolve)
+        // changes the *desired* order but moves nothing on screen. Re-gather
+        // the saved order and re-apply it to the live sections. Debounced
+        // because a multi-step edit lands as several mutations, and each
+        // physical re-order costs a plist write plus a move batch.
+        groupOrderObservationTask?.cancel()
+        groupOrderObservationTask = Task { [weak self, weak appState] in
+            let changes = Observations { [weak appState] in
+                appState?.itemGroupManager.groupSet
+            }
+            var isFirst = true
+            for await _ in changes {
+                guard let self else { return }
+                if isFirst {
+                    isFirst = false
+                    continue
+                }
+                try? await Task.sleep(for: .milliseconds(250))
+                guard !Task.isCancelled else { return }
+                await self.applyGroupOrderToLiveSections()
+            }
+        }
 
         // When any app launches, refresh the cache to detect new menu bar items
         // (e.g., apps with "unremembered" icons that need restoration) and restore
@@ -1901,8 +2140,15 @@ final class MenuBarItemManager {
             for: NSWorkspace.didTerminateApplicationNotification
         )
         .debounce(for: 1, scheduler: DispatchQueue.main)
-        .sink { [weak self] _ in
+        .sink { [weak self] notification in
             guard let self else { return }
+            // Drop the terminated process's cached app icon, so a relaunch
+            // is re-read rather than answered from the dead PID's entry.
+            if let app = notification.userInfo?[NSWorkspace.applicationUserInfoKey]
+                as? NSRunningApplication
+            {
+                MenuBarItemIconFallback.forgetIcon(forPID: app.processIdentifier)
+            }
             MenuBarItemManager.diagLog.debug("App terminated, refreshing cache")
             Task {
                 await self.cacheItemsIfNeeded()
@@ -1990,7 +2236,7 @@ final class MenuBarItemManager {
         lastMoveOperationTimestamp = .now
         lastUserMoveOperationTimestamp = .now
         pendingDivergenceObservedAt = nil
-        recordBulkApplyOutcome(unenactedMoveCount: 0)
+        recordBulkApplyOutcome(unenactedMoveCount: 0, isCompletedApply: false)
     }
 
     /// Whether the save gate's user-move exemption applies: it must, and only,

@@ -34,8 +34,21 @@ final class MenuBarAppearanceManager {
             } catch {
                 diagLog.error("Error encoding menu bar appearance configuration: \(error)")
             }
+            updateEffectiveConfiguration()
         }
     }
+
+    /// Appearance overrides applied while a specific Space is active, keyed
+    /// by the Space's persistent key — the reboot-stable identifier — with a
+    /// session-scoped `CGSSpaceID` fallback for Spaces that expose none.
+    private(set) var spaceOverrides: [String: MenuBarAppearanceConfigurationV2] = [:]
+
+    /// The most recently observed active Space.
+    private(set) var activeSpaceID = SpaceInfo.activeSpace().spaceID
+
+    /// The configuration the overlay panels render: the active Space's
+    /// override when one exists, otherwise the shared `configuration`.
+    private(set) var effectiveConfiguration = Defaults.DefaultValue.menuBarAppearanceConfigurationV2
 
     /// The currently previewed partial configuration.
     ///
@@ -45,14 +58,14 @@ final class MenuBarAppearanceManager {
             if let previewConfiguration {
                 let needsPanels = previewConfiguration.hasShadow
                     || previewConfiguration.borderOnMenuBar
-                    || configuration.shapeKind != .noShape
+                    || effectiveConfiguration.shapeKind != .noShape
                     || previewConfiguration.tintKind != .noTint
                     || previewConfiguration.backgroundKind != .none
                 if overlayPanels.isEmpty, needsPanels {
-                    configureOverlayPanels(with: configuration, force: true)
+                    configureOverlayPanels(with: effectiveConfiguration, force: true)
                 }
             } else {
-                if !needsOverlayPanels(for: configuration) {
+                if !needsOverlayPanels(for: effectiveConfiguration) {
                     closeAllOverlayPanels()
                 }
             }
@@ -139,6 +152,136 @@ final class MenuBarAppearanceManager {
         } catch {
             diagLog.error("Error decoding menu bar appearance configuration: \(error)")
         }
+        do {
+            if let data = Defaults.data(forKey: .menuBarAppearanceSpaceOverrides) {
+                spaceOverrides = try decoder.decode(
+                    [String: MenuBarAppearanceConfigurationV2].self,
+                    from: data
+                )
+            }
+        } catch {
+            diagLog.error("Error decoding per-Space appearance overrides: \(error)")
+        }
+        updateEffectiveConfiguration()
+    }
+
+    // MARK: Per-Space Overrides
+
+    /// Resolves the configuration for a Space. Pure so it is unit-testable.
+    static nonisolated func effectiveConfiguration(
+        base: MenuBarAppearanceConfigurationV2,
+        overrides: [String: MenuBarAppearanceConfigurationV2],
+        activeSpaceKey: String
+    ) -> MenuBarAppearanceConfigurationV2 {
+        overrides[activeSpaceKey] ?? base
+    }
+
+    /// The key the active Space's override is stored under: the persistent
+    /// key where one exists — it survives logout, while space IDs are
+    /// reassigned after a reboot and would silently re-target a saved
+    /// override at an unrelated Space — falling back to the session-scoped
+    /// space ID for Spaces that expose no persistent key.
+    private func activeSpaceOverrideKey() -> String {
+        SpaceInfo(spaceID: activeSpaceID).persistentKey ?? String(activeSpaceID)
+    }
+
+    /// Whether the active Space renders a saved override.
+    var activeSpaceHasOverride: Bool {
+        spaceOverrides[activeSpaceOverrideKey()] != nil
+    }
+
+    /// The configuration the appearance editor reads and writes.
+    ///
+    /// The overlay panels render ``effectiveConfiguration``, so an edit made
+    /// while the active Space owns an override has to land on that override —
+    /// writing the shared ``configuration`` instead would change nothing the
+    /// user can see, and would quietly restyle every other Space to boot. With
+    /// no override in play this is the shared configuration, unchanged.
+    var editedConfiguration: MenuBarAppearanceConfigurationV2 {
+        get {
+            effectiveConfiguration
+        }
+        set {
+            guard activeSpaceHasOverride else {
+                configuration = newValue
+                return
+            }
+            spaceOverrides[activeSpaceOverrideKey()] = newValue
+            persistSpaceOverrides()
+            updateEffectiveConfiguration()
+        }
+    }
+
+    /// Saves the shared configuration as the active Space's override.
+    func saveOverrideForActiveSpace() {
+        let key = activeSpaceOverrideKey()
+        spaceOverrides[key] = configuration
+        pruneUnresolvableSpaceOverrides(keeping: key)
+        persistSpaceOverrides()
+        updateEffectiveConfiguration()
+    }
+
+    /// Removes the active Space's override, if any.
+    func removeOverrideForActiveSpace() {
+        spaceOverrides[activeSpaceOverrideKey()] = nil
+        persistSpaceOverrides()
+        updateEffectiveConfiguration()
+    }
+
+    /// Drops overrides whose key no longer resolves to a Space the window
+    /// server manages: session-scoped space-ID fallback keys from earlier
+    /// sessions (stale after a reboot), and keys of Spaces that have since
+    /// been deleted. Runs on save, the one moment that is allowed to rewrite
+    /// the dictionary anyway.
+    private func pruneUnresolvableSpaceOverrides(keeping key: String) {
+        var managedKeys = Set(
+            Bridging.getManagedSpaces().map { managedSpace in
+                managedSpace.persistentKey
+            }
+        )
+        managedKeys.insert(key)
+        let staleKeys = spaceOverrides.keys.filter { !managedKeys.contains($0) }
+        guard !staleKeys.isEmpty else { return }
+        for staleKey in staleKeys {
+            spaceOverrides.removeValue(forKey: staleKey)
+        }
+        diagLog.debug("Pruned \(staleKeys.count) stale per-Space appearance override(s)")
+    }
+
+    /// Removes every per-Space override.
+    func removeAllSpaceOverrides() {
+        spaceOverrides = [:]
+        persistSpaceOverrides()
+        updateEffectiveConfiguration()
+    }
+
+    private func persistSpaceOverrides() {
+        do {
+            let data = try encoder.encode(spaceOverrides)
+            Defaults.set(data, forKey: .menuBarAppearanceSpaceOverrides)
+        } catch {
+            diagLog.error("Error encoding per-Space appearance overrides: \(error)")
+        }
+    }
+
+    private func updateEffectiveConfiguration() {
+        effectiveConfiguration = Self.effectiveConfiguration(
+            base: configuration,
+            overrides: spaceOverrides,
+            activeSpaceKey: activeSpaceOverrideKey()
+        )
+        // Reconcile the panel lifecycle against the configuration now being
+        // rendered, mirroring `configurationPanelObservationTask` — which
+        // observes only the shared `configuration` and so never runs on a
+        // Space change. Without this, switching to a Space whose override
+        // first needs panels renders nothing (nothing creates them), and
+        // switching away keeps panels alive whose only justification was the
+        // override.
+        if overlayPanels.isEmpty {
+            configureOverlayPanels(with: effectiveConfiguration)
+        } else if !needsOverlayPanels(for: effectiveConfiguration) {
+            closeAllOverlayPanels()
+        }
     }
 
     /// Configures the internal observers for the manager.
@@ -154,7 +297,7 @@ final class MenuBarAppearanceManager {
                 }
                 closeAllOverlayPanels()
                 if Set(overlayPanels.map(\.owningScreen)) != Set(NSScreen.screens) {
-                    configureOverlayPanels(with: configuration)
+                    configureOverlayPanels(with: effectiveConfiguration)
                 }
             }
             .store(in: &c)
@@ -165,6 +308,16 @@ final class MenuBarAppearanceManager {
             .sink { [weak self] _ in
                 self?.isReduceTransparencyEnabled =
                     NSWorkspace.shared.accessibilityDisplayShouldReduceTransparency
+            }
+            .store(in: &c)
+
+        NSWorkspace.shared.notificationCenter
+            .publisher(for: NSWorkspace.activeSpaceDidChangeNotification)
+            .receive(on: DispatchQueue.main)
+            .sink { [weak self] _ in
+                guard let self else { return }
+                activeSpaceID = SpaceInfo.activeSpace().spaceID
+                updateEffectiveConfiguration()
             }
             .store(in: &c)
 
