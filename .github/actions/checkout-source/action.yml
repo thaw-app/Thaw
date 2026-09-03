@@ -1,0 +1,241 @@
+name: Checkout source
+description: >-
+  Check out the repository a Thaw build comes from. "Thaw" is this repository;
+  "thaw-next" is the private macOS 27 codebase, which needs a read token and
+  one binary package fetched by hand. Everything specific to building
+  thaw-next from this repository lives here, so when that source is merged or
+  published the whole directory can be deleted and callers go back to a plain
+  actions/checkout.
+
+inputs:
+  source:
+    description: Thaw or thaw-next
+    required: true
+  ref:
+    description: Branch, tag, or commit to check out (empty = default branch)
+    required: false
+    default: ""
+  fetch-depth:
+    description: Passed to actions/checkout
+    required: false
+    default: "1"
+  thaw-next-token:
+    description: >-
+      Fine-grained PAT with contents read on thaw-app/thaw-next and on the
+      repository that publishes its binary package. Only read when source is
+      thaw-next.
+    required: false
+    default: ""
+  binary-package:
+    description: >-
+      SwiftPM identity of the binary package thaw-next pins from a private
+      release (the THAW_NEXT_BINARY_PACKAGE repository variable). Only read
+      when source is thaw-next; never written into this repository.
+    required: false
+    default: ""
+  github-token:
+    description: Token for the Thaw source (defaults to the job token)
+    required: false
+    default: ${{ github.token }}
+
+outputs:
+  repository:
+    description: owner/name that was checked out
+    value: ${{ steps.meta.outputs.repository }}
+  commit:
+    description: Full commit SHA that was checked out
+    value: ${{ steps.meta.outputs.commit }}
+  project-name:
+    description: Xcode project to build, or empty when a workspace is used
+    value: ${{ steps.meta.outputs.project_name }}
+  workspace-name:
+    description: Xcode workspace to build, or empty when the project is used
+    value: ${{ steps.meta.outputs.workspace_name }}
+  deployment-target:
+    description: MACOSX_DEPLOYMENT_TARGET for this source
+    value: ${{ steps.meta.outputs.deployment_target }}
+
+runs:
+  using: composite
+  steps:
+    - name: Resolve the source token
+      id: token
+      shell: bash
+      env:
+        SOURCE: ${{ inputs.source }}
+        THAW_NEXT_TOKEN: ${{ inputs.thaw-next-token }}
+        GITHUB_TOKEN: ${{ inputs.github-token }}
+      run: |
+        set -euo pipefail
+        case "$SOURCE" in
+          Thaw)
+            token="$GITHUB_TOKEN"
+            repository="$GITHUB_REPOSITORY"
+            ;;
+          thaw-next)
+            if [[ -z "$THAW_NEXT_TOKEN" ]]; then
+              echo "::error::thaw-next-token is empty; set THAW_NEXT_READ_TOKEN where this workflow reads its secrets"
+              exit 1
+            fi
+            token="$THAW_NEXT_TOKEN"
+            repository="thaw-app/thaw-next"
+            ;;
+          *)
+            echo "::error::Unsupported source: $SOURCE"
+            exit 1
+            ;;
+        esac
+        echo "::add-mask::$token"
+        {
+          echo "token=$token"
+          echo "repository=$repository"
+        } >> "$GITHUB_OUTPUT"
+
+    # Checking out over the caller's sparse checkout of this repository is
+    # fine: actions/checkout wipes the directory when the remote differs and
+    # reuses it when it matches.
+    - name: Checkout source
+      uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      with:
+        repository: ${{ steps.token.outputs.repository }}
+        token: ${{ steps.token.outputs.token }}
+        ref: ${{ inputs.ref }}
+        fetch-depth: ${{ inputs.fetch-depth }}
+
+    # thaw-next is macOS 27 only. One of its dependencies is a binary package
+    # SwiftPM cannot fetch here (see the fetch step below), so thaw-next is
+    # built through ThawDev.xcworkspace, which is what points SwiftPM at the
+    # locally staged copy. Thaw keeps the project build.
+    - name: Resolve build settings
+      id: meta
+      shell: bash
+      env:
+        SOURCE: ${{ inputs.source }}
+        REPOSITORY: ${{ steps.token.outputs.repository }}
+      run: |
+        set -euo pipefail
+        case "$SOURCE" in
+          Thaw)
+            project_name="Thaw.xcodeproj"
+            workspace_name=""
+            deployment_target="26.0"
+            ;;
+          thaw-next)
+            project_name=""
+            workspace_name="ThawDev.xcworkspace"
+            deployment_target="27.0"
+            ;;
+        esac
+        commit="$(git rev-parse HEAD)"
+        {
+          echo "repository=$REPOSITORY"
+          echo "commit=$commit"
+          echo "project_name=$project_name"
+          echo "workspace_name=$workspace_name"
+          echo "deployment_target=$deployment_target"
+        } >> "$GITHUB_OUTPUT"
+        echo "Checked out $REPOSITORY@$commit"
+
+    # thaw-next pins one binary Swift package whose zip is published as a
+    # private GitHub release. SwiftPM cannot authenticate to that download, so
+    # this step does it: read the pin from thaw-next's Package.resolved, read
+    # the package manifest at that tag for the asset name and checksum,
+    # download the asset from its own release, verify it against the release's
+    # .sha256 and the manifest checksum, and hand it to the build as a
+    # path-based package in the override slot ThawDev.xcworkspace reads. The
+    # package's identity comes from the caller, so nothing about it is written
+    # here, and every derived name is masked in the log. Nothing is republished.
+    - name: Fetch the private binary package
+      if: ${{ inputs.source == 'thaw-next' }}
+      shell: bash
+      env:
+        GH_TOKEN: ${{ steps.token.outputs.token }}
+        PACKAGE: ${{ inputs.binary-package }}
+      run: |
+        set -euo pipefail
+        if [[ -z "$PACKAGE" ]]; then
+          echo "::error::binary-package is empty; set the THAW_NEXT_BINARY_PACKAGE repository variable"
+          exit 1
+        fi
+        echo "::add-mask::$PACKAGE"
+
+        resolved="Thaw.xcodeproj/project.xcworkspace/xcshareddata/swiftpm/Package.resolved"
+        read -r version location < <(python3 -c "
+        import json, sys
+        pins = json.load(open(sys.argv[1]))['pins']
+        pin = next(p for p in pins if p['identity'] == sys.argv[2])
+        print(pin['state']['version'], pin['location'])
+        " "$resolved" "$PACKAGE")
+        repo="${location#https://github.com/}"
+        repo="${repo%.git}"
+        echo "::add-mask::$repo"
+
+        # The manifest at the pinned tag names the asset and its checksum.
+        manifest="$RUNNER_TEMP/binary-package-manifest.swift"
+        gh api "repos/${repo}/contents/Package.swift?ref=${version}" -q .content | base64 -d > "$manifest"
+        asset="$(grep -oE 'releases/download/[^/"]+/[^"\\)]+' "$manifest" | head -1 | sed 's#.*/##')"
+        manifest_sum="$(grep -oE '[0-9a-f]{64}' "$manifest" | head -1)"
+        package_name="$(sed -nE 's/^[[:space:]]*name: "([^"]+)",?$/\1/p' "$manifest" | head -1)"
+        target_name="$(grep -A1 -E '\.binaryTarget\(' "$manifest" | sed -nE 's/^[[:space:]]*name: "([^"]+)",?$/\1/p' | head -1)"
+        platform="$(grep -oE '\.macOS\(\.v[0-9]+\)' "$manifest" | head -1)"
+        : "${platform:=.macOS(.v26)}"
+        for v in asset manifest_sum package_name target_name; do
+          if [[ -z "${!v}" ]]; then
+            echo "::error::Could not read ${v} from the package manifest at ${version}"
+            exit 1
+          fi
+        done
+        echo "::add-mask::$asset"
+        echo "::add-mask::$package_name"
+        echo "::add-mask::$target_name"
+
+        work="$RUNNER_TEMP/binary-package"
+        rm -rf "$work"
+        mkdir -p "$work"
+        gh release download "$version" \
+          --repo "$repo" \
+          --pattern "$asset" \
+          --pattern "${asset}.sha256" \
+          --dir "$work"
+
+        # 1. The release's own checksum sidecar.
+        expected="$(awk '{print $1}' "$work/${asset}.sha256")"
+        echo "${expected}  ${work}/${asset}" | shasum -a 256 -c - >/dev/null
+        # 2. The checksum SwiftPM would have enforced. Guards against a
+        #    re-uploaded asset.
+        if [[ "$manifest_sum" != "$expected" ]]; then
+          echo "::error::Manifest checksum does not match the release asset for ${version}"
+          exit 1
+        fi
+
+        override=".swiftpm-overrides/${PACKAGE}"
+        rm -rf "$override"
+        mkdir -p "$override"
+        ditto -x -k "$work/${asset}" "$override"
+        framework="$(cd "$override" && ls -d ./*.xcframework | head -1 | sed 's#^\./##')"
+        if [[ -z "$framework" ]]; then
+          echo "::error::The downloaded asset contains no xcframework"
+          exit 1
+        fi
+
+        cat > "$override/Package.swift" <<EOF
+        // swift-tools-version: 6.3
+        // Generated in CI: path-based stand-in for a binary package SwiftPM cannot fetch here.
+        import PackageDescription
+
+        let package = Package(
+            name: "${package_name}",
+            platforms: [${platform}],
+            products: [
+                .library(name: "${target_name}", targets: ["${target_name}"]),
+            ],
+            targets: [
+                .binaryTarget(name: "${target_name}", path: "${framework}"),
+            ]
+        )
+        EOF
+
+        # The workspace build runs with -onlyUsePackageVersionsFromResolvedFile,
+        # so its Package.resolved must match the project's.
+        cp -f "$resolved" ThawDev.xcworkspace/xcshareddata/swiftpm/Package.resolved
+        echo "Binary package ${version} staged for the workspace build"

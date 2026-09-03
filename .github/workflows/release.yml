@@ -21,6 +21,14 @@ name: Release
 # The Thaw release is always created as a draft and only published by
 # attach-provenance, so a provenance failure cannot leave a public release
 # without its attestation bundles.
+#
+# Source selection: the source input picks which repository the tag is
+# checked out from. Thaw (default) is this repository. thaw-next is the
+# private macOS 27 codebase, built at the same tag with THAW_NEXT_READ_TOKEN
+# (a release-environment secret). Everything that differs between the two
+# lives in .github/actions/checkout-source, so retiring the private source
+# later means deleting that directory, the source input, and the two steps
+# that reference it.
 
 on:
   workflow_dispatch:
@@ -29,6 +37,14 @@ on:
         description: Existing release tag to publish (for example, 1.2.3 or 2.0.0-rc.1)
         required: true
         type: string
+      source:
+        description: Repository the tag is built from (thaw-next is the private macOS 27 codebase)
+        required: true
+        type: choice
+        default: Thaw
+        options:
+          - Thaw
+          - thaw-next
       channel:
         description: Sparkle channel (auto infers from tag suffix)
         required: true
@@ -73,7 +89,7 @@ on:
           blank, notes are auto-extracted from the CHANGELOG.md section for this
           tag (Keep a Changelog style: "## [tag]"). Used for both the Thaw
           GitHub Release body and the Sparkle appcast description. Multi-line
-          text is easiest via `gh workflow run release.yml -f release_notes="$(cat notes.md)"`
+          text is easiest via gh workflow run release.yml -f release_notes="$(cat notes.md)"
           The web UI's field is single-line.
         required: false
         type: string
@@ -90,7 +106,8 @@ permissions:
 jobs:
   release:
     if: github.repository == 'thaw-app/Thaw'
-    runs-on: blacksmith-6vcpu-macos-26
+    # GitHub-hosted Xcode 27 preview image (arm64); xcode-27-xlarge for more cores.
+    runs-on: xcode-27
     # Trust boundary: required reviewers on the `release` Environment
     # (diazdesandi). Other org owners can still unblock via admin bypass.
     # Secrets are not consumed until approval.
@@ -110,11 +127,22 @@ jobs:
       UPDATES_REPOSITORY: thaw-app/updates
       LEGACY_APPCAST_REPOSITORY: stonerl/Thaw
     steps:
-      - name: Checkout code
+      # A local composite action has to exist on disk before it can run, so
+      # this sparse checkout brings in .github/actions and nothing else.
+      - name: Checkout build actions
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
-          fetch-depth: 0
+          sparse-checkout: .github/actions
+
+      - name: Checkout source
+        id: source
+        uses: ./.github/actions/checkout-source
+        with:
+          source: ${{ inputs.source }}
           ref: refs/tags/${{ inputs.tag }}
+          fetch-depth: 0
+          thaw-next-token: ${{ secrets.THAW_NEXT_READ_TOKEN }}
+          binary-package: ${{ vars.THAW_NEXT_BINARY_PACKAGE }}
 
       - name: Resolve tag and channel
         id: meta
@@ -168,6 +196,8 @@ jobs:
         env:
           TAG: ${{ steps.meta.outputs.tag }}
           RELEASE_NOTES_INPUT: ${{ inputs.release_notes }}
+          SOURCE_REPOSITORY: ${{ steps.source.outputs.repository }}
+          SOURCE_COMMIT: ${{ steps.source.outputs.commit }}
         run: |
           set -euo pipefail
           python3 - <<'PY'
@@ -181,9 +211,13 @@ jobs:
 
           # Falls back to the CHANGELOG.md section for this tag (Keep a Changelog
           # style: "## [1.2.3]" or "## 1.2.3", ending at the next "## " heading)
-          # only when no manual notes were supplied at dispatch time.
-          if not notes.strip() and os.path.isfile("CHANGELOG.md"):
-              text = open("CHANGELOG.md", encoding="utf-8").read()
+          # only when no manual notes were supplied at dispatch time. Thaw keeps
+          # the changelog at the repository root; thaw-next bundles it into the
+          # app as Thaw/Resources/CHANGELOG.md, so both locations are tried.
+          candidates = ["CHANGELOG.md", "Thaw/Resources/CHANGELOG.md"]
+          changelog = next((p for p in candidates if os.path.isfile(p)), None)
+          if not notes.strip() and changelog:
+              text = open(changelog, encoding="utf-8").read()
               heading = re.compile(
                   r"^##\s+\[?" + re.escape(tag) + r"\]?.*$", re.MULTILINE
               )
@@ -193,11 +227,20 @@ jobs:
                   next_heading = re.search(r"^##\s+", rest, re.MULTILINE)
                   section = rest[: next_heading.start()] if next_heading else rest
                   notes = section.strip()
-                  source = "CHANGELOG.md"
+                  source = changelog
               else:
-                  source = f"none (no CHANGELOG.md section for {tag})"
+                  source = f"none (no {changelog} section for {tag})"
           elif not notes.strip():
               source = "none (no release_notes input, no CHANGELOG.md)"
+
+          # A cross-repo build's tag in this repository does not point at the
+          # code that was built, so the body names the source commit instead.
+          source_repo = os.environ["SOURCE_REPOSITORY"]
+          source_commit = os.environ["SOURCE_COMMIT"]
+          if source_repo != os.environ["GITHUB_REPOSITORY"]:
+              notes = notes.rstrip() + (
+                  f"\n\n---\n\nBuilt from `{source_repo}@{source_commit[:12]}`."
+              )
 
           delimiter = f"notes_{uuid.uuid4().hex}"
           with open(os.environ["GITHUB_OUTPUT"], "a", encoding="utf-8") as f:
@@ -206,7 +249,23 @@ jobs:
           print(f"Release notes source: {source}")
           PY
 
-      - run: sudo xcode-select -s /Applications/Xcode_26.6.app/Contents/Developer
+      - name: Select Xcode
+        env:
+          XCODE_APP: Xcode_27
+        run: |
+          set -euo pipefail
+          shopt -s nullglob
+          # A prefix, so a preview image's Xcode_27.0-beta.N.app is picked up
+          # as well as a final Xcode_27.0.app. The last glob match sorts highest.
+          candidates=(/Applications/"${XCODE_APP}"*.app)
+          if [[ ${#candidates[@]} -eq 0 ]]; then
+            echo "No /Applications/${XCODE_APP}*.app on this runner. Installed:"
+            ls -d /Applications/Xcode*.app || true
+            exit 1
+          fi
+          selected="${candidates[${#candidates[@]}-1]}"
+          sudo xcode-select -s "$selected/Contents/Developer"
+          xcodebuild -version
 
       - name: Configure signing
         uses: thaw-app/org-ci/actions/configure-signing@5c8f979eeee7674b7af949c89edb6b37ac4af413
@@ -221,9 +280,10 @@ jobs:
         uses: thaw-app/org-ci/actions/build@5c8f979eeee7674b7af949c89edb6b37ac4af413
         with:
           apple-team-id: ${{ secrets.APPLE_TEAM_ID }}
-          project-name: Thaw.xcodeproj
+          project-name: ${{ steps.source.outputs.project-name }}
+          workspace-name: ${{ steps.source.outputs.workspace-name }}
           scheme-name: Thaw
-          deployment-target: "26.0"
+          deployment-target: ${{ steps.source.outputs.deployment-target }}
 
       - name: Export Archive
         uses: thaw-app/org-ci/actions/export-and-package@5c8f979eeee7674b7af949c89edb6b37ac4af413
@@ -459,7 +519,6 @@ jobs:
             attempt=$((attempt + 1))
             sleep $((attempt * 2))
           done
-
 
       - name: Mirror appcast to legacy stonerl Pages
         if: ${{ inputs.publish_appcast && inputs.publish_release && !inputs.dry_run }}

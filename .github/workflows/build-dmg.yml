@@ -1,10 +1,38 @@
 name: Build DMG
 
+# Manual, unsigned-of-provenance dev build: a signed and notarized DMG uploaded
+# as a short-lived workflow artifact, never a release. Use it to hand a build
+# to a tester or to check a branch builds and notarizes before tagging.
+#
+# The source input picks which repository is built. Thaw (default) is this
+# repository at the ref given (or the default branch). thaw-next builds the
+# private thaw-app/thaw-next repository at the ref given, using
+# THAW_NEXT_READ_TOKEN (contents: read on thaw-next and its binary
+# package's repository). This
+# workflow runs outside the release environment, so that secret must exist at
+# the repository level as well as in the release environment. Everything
+# thaw-next-specific lives in .github/actions/checkout-source, shared with
+# release.yml.
+
 on:
   workflow_dispatch:
+    inputs:
+      source:
+        description: Repository to build (thaw-next is the private macOS 27 codebase)
+        required: true
+        type: choice
+        default: Thaw
+        options:
+          - Thaw
+          - thaw-next
+      ref:
+        description: Branch, tag, or commit to build (empty = the source repository's default branch)
+        required: false
+        type: string
+        default: ""
 
 concurrency:
-  group: build-dmg-${{ github.ref }}
+  group: build-dmg-${{ inputs.source }}-${{ inputs.ref || github.ref }}
   cancel-in-progress: true
 
 permissions:
@@ -13,18 +41,48 @@ permissions:
 jobs:
   build-dmg:
     if: github.repository == 'thaw-app/Thaw'
-    runs-on: blacksmith-6vcpu-macos-26
+    # GitHub-hosted Xcode 27 preview image (arm64); xcode-27-xlarge for more cores.
+    runs-on: xcode-27
     env:
       APP_NAME: "Thaw.app"
       DMG_NAME: "Thaw-dev.dmg"
     steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      # A local composite action has to exist on disk before it can run, so
+      # this sparse checkout brings in .github/actions and nothing else.
+      - name: Checkout build actions
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          sparse-checkout: .github/actions
 
-      # Issues with other Xcode versions, so we need to specify the version explicitly
-      - run: sudo xcode-select -s /Applications/Xcode_26.6.app/Contents/Developer
+      - name: Checkout source
+        id: source
+        uses: ./.github/actions/checkout-source
+        with:
+          source: ${{ inputs.source }}
+          ref: ${{ inputs.ref }}
+          thaw-next-token: ${{ secrets.THAW_NEXT_READ_TOKEN }}
+          binary-package: ${{ vars.THAW_NEXT_BINARY_PACKAGE }}
+
+      - name: Select Xcode
+        env:
+          XCODE_APP: Xcode_27
+        run: |
+          set -euo pipefail
+          shopt -s nullglob
+          # A prefix, so a preview image's Xcode_27.0-beta.N.app is picked up
+          # as well as a final Xcode_27.0.app. The last glob match sorts highest.
+          candidates=(/Applications/"${XCODE_APP}"*.app)
+          if [[ ${#candidates[@]} -eq 0 ]]; then
+            echo "No /Applications/${XCODE_APP}*.app on this runner. Installed:"
+            ls -d /Applications/Xcode*.app || true
+            exit 1
+          fi
+          selected="${candidates[${#candidates[@]}-1]}"
+          sudo xcode-select -s "$selected/Contents/Developer"
+          xcodebuild -version
 
       - name: Configure signing
-        uses: thaw-app/org-ci/actions/configure-signing@30ef248bedd07c2823c695ffa65f49e61b4a1159
+        uses: thaw-app/org-ci/actions/configure-signing@5c8f979eeee7674b7af949c89edb6b37ac4af413
         with:
           apple-application-cert: ${{ secrets.APPLE_APPLICATION_CERT }}
           apple-application-cert-password: ${{ secrets.APPLE_APPLICATION_CERT_PASSWORD }}
@@ -33,22 +91,23 @@ jobs:
           apple-team-id: ${{ secrets.APPLE_TEAM_ID }}
 
       - name: Build
-        uses: thaw-app/org-ci/actions/build@30ef248bedd07c2823c695ffa65f49e61b4a1159
+        uses: thaw-app/org-ci/actions/build@5c8f979eeee7674b7af949c89edb6b37ac4af413
         with:
           apple-team-id: ${{ secrets.APPLE_TEAM_ID }}
-          project-name: Thaw.xcodeproj
+          project-name: ${{ steps.source.outputs.project-name }}
+          workspace-name: ${{ steps.source.outputs.workspace-name }}
           scheme-name: Thaw
-          deployment-target: "26.0"
+          deployment-target: ${{ steps.source.outputs.deployment-target }}
 
       - name: Export Archive
-        uses: thaw-app/org-ci/actions/export-and-package@30ef248bedd07c2823c695ffa65f49e61b4a1159
+        uses: thaw-app/org-ci/actions/export-and-package@5c8f979eeee7674b7af949c89edb6b37ac4af413
         with:
           apple-team-id: ${{ secrets.APPLE_TEAM_ID }}
           app-name: ${{ env.APP_NAME }}
           dmg-name: ${{ env.DMG_NAME }}
 
       - name: Notarize
-        uses: thaw-app/org-ci/actions/notarize-and-validate@30ef248bedd07c2823c695ffa65f49e61b4a1159
+        uses: thaw-app/org-ci/actions/notarize-and-validate@5c8f979eeee7674b7af949c89edb6b37ac4af413
         with:
           dmg-name: ${{ env.DMG_NAME }}
           app-name: ${{ env.APP_NAME }}
@@ -56,7 +115,7 @@ jobs:
       - name: Upload DMG
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
-          name: Thaw-dmg
+          name: Thaw-dmg-${{ inputs.source }}-${{ steps.source.outputs.commit }}
           path: build/${{ env.DMG_NAME }}
           retention-days: 3
 
