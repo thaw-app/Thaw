@@ -1882,6 +1882,13 @@ nonisolated enum LayoutSolver {
                     continue
                 }
                 guard
+                    // A Control Center module title under a foreign namespace
+                    // is a misattribution, not a real owner (#1027) — the
+                    // title says whose window it is, and no app but Control
+                    // Center titles an item "Battery". Counting one as the
+                    // owner of its title is the #927 mechanism again: the
+                    // genuine twin then reads as the poisoned copy.
+                    !isMisattributedControlCenterEntry(identifier: identifier),
                     !isForeignEntryUnderOwnNamespace(identifier: identifier),
                     !isSelfTitledEntry(identifier: identifier),
                     // A localized display name is not a real owner either.
@@ -1934,6 +1941,20 @@ nonisolated enum LayoutSolver {
             let kept = keptPerSection[sectionKey] ?? []
             var emitted = Set<String>()
             result[sectionKey] = identifiers.filter { identifier in
+                // A Control Center module title under a foreign namespace is
+                // a misattribution, and it needs no live twin to prove it:
+                // the title alone says whose window it is (#1027). The
+                // reporter's profile carried
+                // `com.techsmith.snagit.capturehelper:Battery`, which no
+                // future cycle could ever match — the live Battery reads
+                // `com.apple.controlcenter:Battery` — so every apply planned
+                // the real module as an unmanaged arrival while this ghost
+                // held its place in the order. Generic `Item-N` titles are
+                // not covered: a third-party app's own slot is
+                // indistinguishable from a misattributed one by title alone.
+                if isMisattributedControlCenterEntry(identifier: identifier) {
+                    return false
+                }
                 let isControlCenterHosted = namespace(forIdentifier: identifier) == controlCenter
                 let isProvisionalDuplicate = isControlCenterHosted
                     && titlesWithRealOwner.contains(titlePortion(forIdentifier: identifier))
@@ -1997,6 +2018,23 @@ nonisolated enum LayoutSolver {
                 return emitted.insert(identifier).inserted
             }
         }
+    }
+
+    /// Whether an identifier names a Control Center module under a namespace
+    /// other than Control Center's own.
+    ///
+    /// The source-PID resolution matches AX children to window bounds
+    /// spatially, and on multi-display setups the coordinate skew can hand it
+    /// the neighboring process: #1027's reporter ended up with Control
+    /// Center's Battery persisted as `com.techsmith.snagit.capturehelper:Battery`.
+    /// The strict-majority gate (#784) cannot see it — one wrong PID is not a
+    /// majority event — and the provisional-identity predicates cannot
+    /// either, because the PID did resolve; the title is the only witness.
+    /// ``MenuBarItemTag/canonicalControlCenterModuleIdentifier(_:)`` answers
+    /// exactly that question, so the rewrite being a rewrite is the
+    /// predicate.
+    private static nonisolated func isMisattributedControlCenterEntry(identifier: String) -> Bool {
+        MenuBarItemTag.canonicalControlCenterModuleIdentifier(identifier) != identifier
     }
 
     /// Maps a persisted section key string to its enum value.
@@ -2204,6 +2242,67 @@ nonisolated enum LayoutSolver {
             return true
         }
         return hiddenControlItemMinX - alwaysHiddenControlItemMaxX > 0
+    }
+
+    /// Whether the section dividers sit in the order the sections they
+    /// define require.
+    ///
+    /// Every section assignment on the bar derives from where the dividers
+    /// sit, so dividers that have drifted into a foreign section — the
+    /// visible chevron left of the hidden divider, or the always-hidden
+    /// divider right of it — mean the classifier is describing a bar that
+    /// does not exist. #1027's restart ended in exactly that state before
+    /// any apply ran: the hidden divider was parked far offscreen with the
+    /// chevron classified into the hidden section, and the applies that
+    /// dispatched against that reading planned unmanaged arrivals into
+    /// hidden and anchored moves on the scramble. The anchor gate added for
+    /// the move side limits the blast radius; this gate keeps the planner
+    /// from trusting the reading at all.
+    ///
+    /// The test is deliberately geometric rather than a call to
+    /// ``CacheContext/findSection(for:)``: that classifier resolves every
+    /// straddling item by midpoint, and each divider straddles its own
+    /// boundary by definition, so a divider asked about itself comes back
+    /// one section to the right of its own. Comparing edges directly is the
+    /// only question worth asking: does the chevron sit entirely left of
+    /// the hidden divider, or the always-hidden divider entirely right of
+    /// it.
+    ///
+    /// A divider that cannot be verified (`nil`) passes: a missing
+    /// always-hidden divider is #849's unresolved-section gate's business,
+    /// and a missing visible control item is ordinary on a bar whose owner
+    /// windows have not settled. Blocking on absence would trade this bug
+    /// for a refusal to ever apply.
+    ///
+    /// The cost of a false positive is one refused apply cycle; the change
+    /// gate re-fires via layout divergence once the dividers read truly. The
+    /// refusal paths pair this with the stranded-divider recovery so a
+    /// genuinely scrambled bar converges back rather than wedging.
+    ///
+    /// Pure over its inputs.
+    ///
+    /// - Parameters:
+    ///   - visibleControlItemBounds: The visible control item's (the
+    ///     chevron's) bounds, or `nil` when it is absent from the reading.
+    ///   - hiddenControlItemBounds: The hidden divider's bounds.
+    ///   - alwaysHiddenControlItemBounds: The always-hidden divider's
+    ///     bounds, or `nil` when the section has no divider.
+    static nonisolated func controlItemsAreInCanonicalOrder(
+        visibleControlItemBounds: CGRect?,
+        hiddenControlItemBounds: CGRect,
+        alwaysHiddenControlItemBounds: CGRect?
+    ) -> Bool {
+        if let visibleControlItemBounds,
+            visibleControlItemBounds.maxX <= hiddenControlItemBounds.minX
+        {
+            return false
+        }
+        if let alwaysHiddenControlItemBounds,
+            hiddenControlItemBounds.maxX <= alwaysHiddenControlItemBounds.minX
+        {
+            return false
+        }
+        return true
     }
 
     /// Whether any item the current reading calls visible is parked off every

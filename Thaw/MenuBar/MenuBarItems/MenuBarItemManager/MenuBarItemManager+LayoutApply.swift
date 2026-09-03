@@ -649,6 +649,20 @@ extension MenuBarItemManager {
     /// rebuilds it. The rebuild is withheld while a ⌘-drag is live, matching
     /// the Phase 1 caller: replacing the window under an open drag session
     /// strands the drag the same way the parked divider does.
+    /// Collects the control-item bounds the divider-order gate compares.
+    ///
+    /// `nil` for a divider that is absent from the reading; the order gate
+    /// treats absence as unverifiable rather than as a violation.
+    private func dividerControlItemBounds(
+        items: [MenuBarItem],
+        controlItems: ControlItemPair
+    ) -> (visible: CGRect?, hidden: CGRect, alwaysHidden: CGRect?) {
+        let visible = items
+            .first { $0.tag == .visibleControlItem }?
+            .bounds
+        return (visible, controlItems.hidden.bounds, controlItems.alwaysHidden?.bounds)
+    }
+
     func recoverStrandedHiddenDividerBeforeRefusing(
         guardSource: String,
         controlItems: ControlItemPair,
@@ -1363,6 +1377,40 @@ extension MenuBarItemManager {
             )
             recoverStrandedHiddenDividerBeforeRefusing(
                 guardSource: "applyProfileLayout",
+                controlItems: controlItems,
+                items: items
+            )
+            clearProfileState(source: source, items: items)
+            return
+        }
+
+        // Divider-order gate (#1027). The room gate above catches dividers
+        // collapsed onto one coordinate; this catches them drifted into
+        // foreign sections, which leaves the same room between them and so
+        // passes that gate while every classification below it is garbage.
+        // The reporter's restart parked the hidden divider far offscreen
+        // with the chevron classified into hidden — the unmanaged-placement
+        // and LCS passes then planned against that scramble. Profile applies
+        // are gated too: the room exemption above is about *adjacent*
+        // dividers legitimately describing an empty section, and an
+        // out-of-order divider describes nothing. Refusing defers; the
+        // recovery calls re-order the bar so the next cycle's divergence
+        // re-fires the apply against a trustworthy reading.
+        let dividerBounds = dividerControlItemBounds(items: items, controlItems: controlItems)
+        if !LayoutSolver.controlItemsAreInCanonicalOrder(
+            visibleControlItemBounds: dividerBounds.visible,
+            hiddenControlItemBounds: dividerBounds.hidden,
+            alwaysHiddenControlItemBounds: dividerBounds.alwaysHidden
+        ) {
+            MenuBarItemManager.diagLog.warning(
+                "applyProfileLayout: skipping (\(source)); section dividers are out of order (visibleCtrl.minX=\(dividerBounds.visible?.minX.description ?? "unresolved"), hidden.minX=\(dividerBounds.hidden.minX), alwaysHiddenCtrl.minX=\(dividerBounds.alwaysHidden?.minX.description ?? "unresolved"))"
+            )
+            recoverStrandedHiddenDividerBeforeRefusing(
+                guardSource: "applyProfileLayout",
+                controlItems: controlItems,
+                items: items
+            )
+            await recoverMisplacedVisibleControlItem(
                 controlItems: controlItems,
                 items: items
             )
@@ -2966,7 +3014,12 @@ extension MenuBarItemManager {
     /// Excluding them costs nothing real: a late arrival is an app's item
     /// appearing after launch, and those resolve. The items that legitimately
     /// hold a nil PID (Wi-Fi, Clock, BentoBox) are always-present system
-    /// items that never arrive late in the first place.
+    /// items that never arrive late in the first place. A Control Center
+    /// module that resolved to the wrong PID is excluded for the same reason
+    /// the persistence path excludes it (#1027): its identifier names a
+    /// process that does not own the window, so counting it as an arrival
+    /// would re-sort on every flap between the misattributed spelling and
+    /// the real one.
     static nonisolated func lateArrivingProfileIdentifiers(
         items: [MenuBarItem],
         profileIdentifiers: Set<String>,
@@ -2974,7 +3027,9 @@ extension MenuBarItemManager {
     ) -> Set<String> {
         let identifiable = Set(
             items.lazy
-                .filter { !$0.isControlItem && $0.sourcePID != nil }
+                .filter {
+                    !$0.isControlItem && $0.sourcePID != nil && !$0.tag.isMisattributedControlCenterModule
+                }
                 .map(\.uniqueIdentifier)
         )
         return identifiable
@@ -3443,6 +3498,33 @@ extension MenuBarItemManager {
             )
             recoverStrandedHiddenDividerBeforeRefusing(
                 guardSource: "applySavedLayout",
+                controlItems: controlItems,
+                items: items
+            )
+            return false
+        }
+
+        // Divider-order gate (#1027): the same refusal the profile path
+        // makes, on the same evidence. A dispatch against dividers that sit
+        // out of order plans every unmanaged placement and every move from
+        // a reading that cannot be true; skipping here keeps the bar
+        // untouched while the recovery calls restore the ordering, and the
+        // change gate re-fires once it has.
+        let dividerBounds = dividerControlItemBounds(items: items, controlItems: controlItems)
+        guard LayoutSolver.controlItemsAreInCanonicalOrder(
+            visibleControlItemBounds: dividerBounds.visible,
+            hiddenControlItemBounds: dividerBounds.hidden,
+            alwaysHiddenControlItemBounds: dividerBounds.alwaysHidden
+        ) else {
+            MenuBarItemManager.diagLog.warning(
+                "applySavedLayout: skipping (\(trigger)); section dividers are out of order (visibleCtrl.minX=\(dividerBounds.visible?.minX.description ?? "unresolved"), hidden.minX=\(dividerBounds.hidden.minX), alwaysHiddenCtrl.minX=\(dividerBounds.alwaysHidden?.minX.description ?? "unresolved"))"
+            )
+            recoverStrandedHiddenDividerBeforeRefusing(
+                guardSource: "applySavedLayout",
+                controlItems: controlItems,
+                items: items
+            )
+            await recoverMisplacedVisibleControlItem(
                 controlItems: controlItems,
                 items: items
             )

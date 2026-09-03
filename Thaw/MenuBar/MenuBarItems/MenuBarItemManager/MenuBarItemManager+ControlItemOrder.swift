@@ -459,6 +459,29 @@ extension MenuBarItemManager {
         }
     }
 
+    /// Moves a visible control item that the live bar classifies outside the
+    /// visible section back beside the hidden divider.
+    ///
+    /// Pairs with ``recoverStrandedHiddenDividerBeforeRefusing(guardSource:controlItems:items:)``
+    /// on the divider-order refusal: that one un-parks the hidden divider,
+    /// this one undoes the #881 login-restoration shape where macOS returns
+    /// the chevron left of the hidden divider. Together they give a refused
+    /// apply a path back to the ordering its gate requires, so the refusal
+    /// defers rather than wedges. No-op when the chevron already sits right
+    /// of the hidden divider — which is also most refusals, because
+    /// repositioning the dividers is what re-classifies it.
+    func recoverMisplacedVisibleControlItem(
+        controlItems: ControlItemPair,
+        items: [MenuBarItem]
+    ) async {
+        guard appState?.isDraggingMenuBarItem != true else { return }
+        guard let misplaced = LayoutSolver.planThawIconMove(
+            items: items,
+            hiddenBounds: bestBounds(for: controlItems.hidden)
+        ) else { return }
+        _ = await relocateThawIcon(misplaced, controlItems: controlItems)
+    }
+
     /// Returns a Boolean value that indicates whether any menu bar item
     /// currently has a menu open.
     func isAnyMenuBarItemMenuOpen() async -> Bool {

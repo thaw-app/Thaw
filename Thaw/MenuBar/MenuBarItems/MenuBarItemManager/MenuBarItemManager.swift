@@ -1231,6 +1231,15 @@ final class MenuBarItemManager {
             if item.tag == .visibleControlItem {
                 return true
             }
+            // A Control Center module that resolved to the wrong PID reads
+            // under that process's namespace (#1027). Persisting it would
+            // write an identifier the live bar can never produce again;
+            // excluding it lets the healed saved entry ride the closed-app
+            // merge and keep its position, exactly like Wi-Fi or Clock on a
+            // cycle their PID did not resolve.
+            if item.tag.isMisattributedControlCenterModule {
+                return false
+            }
             return !item.isControlItem && item.sourcePID != nil
         }
 

@@ -57,6 +57,29 @@ nonisolated struct MenuBarItemTag: Hashable, CustomStringConvertible {
         namespace == .controlCenter && MarkerPairResolver.isGenericControlCenterTitle(title)
     }
 
+    /// Whether this tag names a Control Center module under a namespace
+    /// other than Control Center's own — an identity a wrong source-PID
+    /// resolution minted, never one the bar produced legitimately.
+    ///
+    /// A module window (`Battery`, `WiFi`, …) that resolves to a PID gets
+    /// that process's bundle ID as its namespace. Resolution matches AX
+    /// children to window bounds spatially, and on multi-display setups the
+    /// coordinate skew can hand it the neighboring app instead: the reporter
+    /// of #1027 ended up with Control Center's Battery persisted as
+    /// `com.techsmith.snagit.capturehelper:Battery`. The strict-majority
+    /// gate (#784) cannot see it — one wrong PID is not a majority event —
+    /// and the provisional-identity predicates cannot either, because the
+    /// PID did resolve; only the title says who owns the window.
+    ///
+    /// The false positive is an app that genuinely titles its item exactly
+    /// like a system module ("Battery", "Clock"). It costs that item its
+    /// persisted position — it is excluded from the saved order and healed
+    /// to the Control Center spelling on read — and nothing else: the item
+    /// stays movable and hideable, because the live tag is untouched.
+    var isMisattributedControlCenterModule: Bool {
+        namespace != .controlCenter && Self.isControlCenterModuleTitle(title)
+    }
+
     /// A Boolean value that indicates whether the item identified
     /// by this tag is a control item owned by Ice.
     ///
@@ -229,6 +252,91 @@ nonisolated struct MenuBarItemTag: Hashable, CustomStringConvertible {
     /// Bundle identifier of LyricsX, whose menu bar item titles itself with
     /// the lyric line currently on screen.
     static let lyricsXBundleID = "ddddxxx.LyricsX"
+
+    /// The titles Control Center gives its own menu bar modules.
+    ///
+    /// These windows belong to Control Center and nothing else: when one
+    /// reads under any other namespace, the source PID that named that
+    /// namespace resolved to the wrong process. `BentoBox` modules carry an
+    /// instance suffix (`BentoBox-0`, `BentoBox-1`, …), so membership is a
+    /// prefix test there.
+    ///
+    /// Deliberately a closed, Apple-spelled list rather than a heuristic:
+    /// every entry is a title macOS itself writes, in the exact casing
+    /// above, and an app that ships an identically titled item is paying for
+    /// a name it chose to share with a system module. The cost of a wrong
+    /// verdict is one item's saved position, never its movability.
+    static let controlCenterModuleTitles: Set<String> = [
+        "Accessibility",
+        "AudioVideoModule",
+        "Battery",
+        "Bluetooth",
+        "BentoBox",
+        "Clock",
+        "Display",
+        "FaceTime",
+        "FocusModes",
+        "Hearing",
+        "KeyboardBrightness",
+        "MusicRecognition",
+        "NowPlaying",
+        "ScreenMirroring",
+        "Sound",
+        "WiFi",
+    ]
+
+    /// Whether `title` names one of Control Center's own modules, allowing
+    /// for the `BentoBox-<n>` instance suffix.
+    static func isControlCenterModuleTitle(_ title: String) -> Bool {
+        controlCenterModuleTitles.contains(title) || title.hasPrefix("BentoBox")
+    }
+
+    /// The foreign-namespace spelling of a Control Center module identifier,
+    /// if it is one.
+    ///
+    /// #1027's reporter carried `com.techsmith.snagit.capturehelper:Battery`
+    /// in their profile: a multi-display spatial skew in the source-PID
+    /// resolution matched Control Center's Battery window to Snagit's
+    /// helper, the resolved PID named the namespace, and the identifier
+    /// persisted. It can never match the live item — which reads
+    /// `com.apple.controlcenter:Battery` — so every apply planned the real
+    /// Battery as an unmanaged arrival while the ghost entry sat in the
+    /// saved order forever.
+    ///
+    /// Returns the Control Center spelling for such an identifier, carrying
+    /// the title and any instance index through verbatim, and returns the
+    /// input unchanged for everything else — so equality with the input is
+    /// the misattribution test ``LayoutSolver`` prunes on.
+    ///
+    /// Titles Control Center does not own (`Item-0` and friends) are left
+    /// alone: a third-party app's generic slot is indistinguishable from a
+    /// misattributed one by title alone, and guessing there would orphan
+    /// real items.
+    static func canonicalControlCenterModuleIdentifier(_ identifier: String) -> String {
+        guard let separator = identifier.firstIndex(of: ":") else {
+            return identifier
+        }
+        let namespace = String(identifier[..<separator])
+        guard namespace != Namespace.controlCenter.description else {
+            return identifier
+        }
+        let remainder = identifier[identifier.index(after: separator)...]
+        var title = Substring(remainder)
+        var instanceIndex: Substring?
+        if let lastSeparator = title.lastIndex(of: ":"),
+            Int(title[title.index(after: lastSeparator)...]) != nil
+        {
+            instanceIndex = title[title.index(after: lastSeparator)...]
+            title = title[..<lastSeparator]
+        }
+        guard isControlCenterModuleTitle(String(title)) else {
+            return identifier
+        }
+        if let instanceIndex {
+            return "\(Namespace.controlCenter.description):\(title):\(instanceIndex)"
+        }
+        return "\(Namespace.controlCenter.description):\(title)"
+    }
 
     /// The canonical title for an owner whose title carries no identity.
     ///
