@@ -254,6 +254,17 @@ runs:
         EOF
 
         # The workspace build runs with -onlyUsePackageVersionsFromResolvedFile,
-        # so its Package.resolved must match the project's.
-        cp -f "$resolved" ThawDev.xcworkspace/xcshareddata/swiftpm/Package.resolved
+        # so its Package.resolved must match the project's for every package
+        # it still fetches. The binary package is not one of them: the
+        # workspace replaces it with the path-based stand-in above, and a
+        # workspace resolve never records an overridden package. Copying the
+        # project's pin for it across would make the locked build clone the
+        # private repository anyway, with no credentials, and fail.
+        python3 - "$resolved" "$PACKAGE" <<'PY' > ThawDev.xcworkspace/xcshareddata/swiftpm/Package.resolved
+        import json, sys
+        doc = json.load(open(sys.argv[1]))
+        doc['pins'] = [p for p in doc['pins'] if p['identity'] != sys.argv[2]]
+        json.dump(doc, sys.stdout, indent=2)
+        print()
+        PY
         echo "Binary package ${version} staged for the workspace build"
