@@ -276,15 +276,25 @@ runs:
         json.dump(doc, sys.stdout, indent=2)
         print()
         PY
-        # The module is a binary .swiftmodule, not a .swiftinterface, so it
-        # imports only under the compiler that wrote it; that compiler's
-        # build string is recorded inside the module. Surface it so the
-        # caller can select the matching Xcode rather than the newest one.
-        module="$(find "$override/$framework" -name '*.swiftmodule' -type f | head -1)"
-        swift_compiler="$(strings "$module" | grep -oE 'swiftlang-[0-9.]+' | head -1)"
-        if [[ -z "$swift_compiler" ]]; then
-          echo "::error::Could not read the compiler build string from the binary package's Swift module"
-          exit 1
+        # A module built with library evolution ships a .swiftinterface and
+        # imports under any compiler that can read it, so it puts no
+        # constraint on the Xcode. One built without ships only a binary
+        # .swiftmodule, which imports only under the compiler that wrote it;
+        # that compiler's build string is recorded inside the module.
+        # Surface it so the caller can select the matching Xcode rather
+        # than the newest one.
+        swift_compiler=""
+        if [[ -z "$(find "$override/$framework" -name '*.swiftinterface' -type f | head -1)" ]]; then
+          module="$(find "$override/$framework" -name '*.swiftmodule' -type f | head -1)"
+          swift_compiler="$(strings "$module" | grep -oE 'swiftlang-[0-9.]+' | head -1)"
+          if [[ -z "$swift_compiler" ]]; then
+            echo "::error::Could not read the compiler build string from the binary package's Swift module"
+            exit 1
+          fi
         fi
         echo "swift_compiler=$swift_compiler" >> "$GITHUB_OUTPUT"
-        echo "Binary package ${version} staged for the workspace build (built by ${swift_compiler})"
+        if [[ -n "$swift_compiler" ]]; then
+          echo "Binary package ${version} staged for the workspace build (built by ${swift_compiler}; no library evolution, so that Xcode is required)"
+        else
+          echo "Binary package ${version} staged for the workspace build (library evolution; any Xcode 27 will do)"
+        fi
