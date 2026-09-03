@@ -197,7 +197,6 @@ jobs:
           TAG: ${{ steps.meta.outputs.tag }}
           RELEASE_NOTES_INPUT: ${{ inputs.release_notes }}
           SOURCE_REPOSITORY: ${{ steps.source.outputs.repository }}
-          SOURCE_COMMIT: ${{ steps.source.outputs.commit }}
           GH_TOKEN: ${{ github.token }}
         run: |
           set -euo pipefail
@@ -245,15 +244,6 @@ jobs:
                   source = f"none (no {changelog} section for {tag})"
           elif not notes.strip():
               source = "none (no release_notes input, no CHANGELOG.md)"
-
-          # A cross-repo build's tag in this repository does not point at the
-          # code that was built, so the body names the source commit instead.
-          source_repo = os.environ["SOURCE_REPOSITORY"]
-          source_commit = os.environ["SOURCE_COMMIT"]
-          if source_repo != os.environ["GITHUB_REPOSITORY"]:
-              notes = notes.rstrip() + (
-                  f"\n\n---\n\nBuilt from `{source_repo}@{source_commit[:12]}`."
-              )
 
           delimiter = f"notes_{uuid.uuid4().hex}"
           with open(os.environ["GITHUB_OUTPUT"], "a", encoding="utf-8") as f:
