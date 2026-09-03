@@ -111,8 +111,20 @@ runs:
         } >> "$GITHUB_OUTPUT"
 
     # Checking out over the caller's sparse checkout of this repository is
-    # fine: actions/checkout wipes the directory when the remote differs and
-    # reuses it when it matches.
+    # fine for the build: actions/checkout wipes the directory when the remote
+    # differs and reuses it when it matches. It is not fine for the runner,
+    # which comes back to this directory at the end of the job to run the
+    # post steps of the actions used here and fails the job when the action
+    # file is gone. So the action's own directory is set aside before the
+    # checkout and put back after it.
+    - name: Set this action aside
+      shell: bash
+      env:
+        ACTION_PATH: ${{ github.action_path }}
+      run: |
+        set -euo pipefail
+        rm -rf "$RUNNER_TEMP/checkout-source-action"
+        cp -R "$ACTION_PATH" "$RUNNER_TEMP/checkout-source-action"
     - name: Checkout source
       uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       with:
@@ -127,6 +139,15 @@ runs:
         # Nothing after this step needs git credentials, and for thaw-next the
         # token is a private-repository PAT that must not outlive the checkout.
         persist-credentials: false
+    - name: Put this action back
+      shell: bash
+      env:
+        ACTION_PATH: ${{ github.action_path }}
+      run: |
+        set -euo pipefail
+        mkdir -p "$(dirname "$ACTION_PATH")"
+        rm -rf "$ACTION_PATH"
+        cp -R "$RUNNER_TEMP/checkout-source-action" "$ACTION_PATH"
 
     # thaw-next is macOS 27 only. One of its dependencies is a binary package
     # SwiftPM cannot fetch here (see the fetch step below), so thaw-next is
