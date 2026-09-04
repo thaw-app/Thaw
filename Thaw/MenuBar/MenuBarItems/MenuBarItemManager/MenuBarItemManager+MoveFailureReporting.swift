@@ -61,7 +61,7 @@ extension MenuBarItemManager {
         switch error {
         case .missingItemBounds, .missingDestinationBounds, .menuTrackingActive,
              .staleDestination, .moveSuperseded, .moveEngineBusy,
-             .unsafeMovePath:
+             .unsafeMovePath, .inputPauseTimedOut:
             // The item or destination changed, the user still owns the menu,
             // or another transaction owns the bar. A fresh pass may produce
             // a different valid plan, and no terminal malfunction is proven.
