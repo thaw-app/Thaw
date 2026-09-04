@@ -1884,11 +1884,8 @@ extension MenuBarItemManager {
                                     to: dest,
                                     skipInputPause: true,
                                     options: .init(
-
                                         shouldBegin: shouldBeginBatchMove,
-
                                         didFinishWhileHoldingGate: didFinishBatchMove
-
                                     )
                                 )
                                 movedCount += 1
@@ -2011,11 +2008,8 @@ extension MenuBarItemManager {
                             to: dest,
                             skipInputPause: true,
                             options: .init(
-
                                 shouldBegin: shouldBeginBatchMove,
-
                                 didFinishWhileHoldingGate: didFinishBatchMove
-
                             )
                         )
                         movedCount += 1
@@ -2233,11 +2227,8 @@ extension MenuBarItemManager {
                         to: dest,
                         skipInputPause: true,
                         options: .init(
-
                             shouldBegin: shouldBeginBatchMove,
-
                             didFinishWhileHoldingGate: didFinishBatchMove
-
                         )
                     )
                     movedCount += 1
@@ -2348,11 +2339,8 @@ extension MenuBarItemManager {
                                 to: .leftOfItem(ahItem),
                                 skipInputPause: true,
                                 options: .init(
-
                                     shouldBegin: shouldBeginBatchMove,
-
                                     didFinishWhileHoldingGate: didFinishBatchMove
-
                                 )
                             )
                             movedCount += 1
@@ -2393,11 +2381,8 @@ extension MenuBarItemManager {
                                 to: .rightOfItem(ahItem),
                                 skipInputPause: true,
                                 options: .init(
-
                                     shouldBegin: shouldBeginBatchMove,
-
                                     didFinishWhileHoldingGate: didFinishBatchMove
-
                                 )
                             )
                             movedCount += 1
@@ -2626,11 +2611,8 @@ extension MenuBarItemManager {
                     to: dest,
                     skipInputPause: true,
                     options: .init(
-
                         shouldBegin: shouldBeginBatchMove,
-
                         didFinishWhileHoldingGate: didFinishBatchMove
-
                     )
                 )
                 movedCount += 1
