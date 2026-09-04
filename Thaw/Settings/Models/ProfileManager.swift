@@ -48,9 +48,12 @@ final class ProfileManager {
     private(set) var screenParametersTask: Task<Void, Never>?
     private(set) var focusFilterActivatedTask: Task<Void, Never>?
     private(set) var focusFilterDeactivatedTask: Task<Void, Never>?
+    private(set) var spaceChangeTask: Task<Void, Never>?
 
     /// Tracks the last seen active display UUID for auto-switch debouncing.
     var lastActiveDisplayUUID: String?
+    /// Tracks the last seen active Space key for auto-switch debouncing.
+    var lastActiveSpaceKey: String?
     /// Whether a Focus Filter profile is currently applied.
     var focusFilterActive = false
     /// The in-flight layout apply task. Exposed for callers that need to
@@ -105,6 +108,7 @@ final class ProfileManager {
         screenParametersTask?.cancel()
         focusFilterActivatedTask?.cancel()
         focusFilterDeactivatedTask?.cancel()
+        spaceChangeTask?.cancel()
     }
 
     /// (Re)starts the three notification observation tasks. The observers
@@ -147,6 +151,18 @@ final class ProfileManager {
             interval: .seconds(0.5)
         ) { [weak self] in
             await self?.handleFocusFilterDeactivated()
+        }
+
+        // Listen for Space switches to trigger auto-switch. Debounced a
+        // little longer than the switch animation so a fast swipe across
+        // three Spaces applies one profile rather than three.
+        spaceChangeTask?.cancel()
+        spaceChangeTask = debouncedNotificationTask(
+            center: NSWorkspace.shared.notificationCenter,
+            name: NSWorkspace.activeSpaceDidChangeNotification,
+            interval: .seconds(0.75)
+        ) { [weak self] in
+            await self?.checkSpaceAndAutoSwitch()
         }
     }
 
@@ -821,12 +837,38 @@ final class ProfileManager {
             entries.append(ProfileExportEntry(
                 profile: profile,
                 associatedDisplayUUID: meta.associatedDisplayUUID,
-                associatedDisplayName: meta.associatedDisplayName
+                associatedDisplayName: meta.associatedDisplayName,
+                associatedSpaceKey: meta.associatedSpaceKey,
+                associatedSpaceName: meta.associatedSpaceName
             ))
         }
         let bundle = ProfileExportBundle(entries: entries)
         guard let data = try? encoder.encode(bundle) else { return nil }
         return String(data: data, encoding: .utf8)
+    }
+
+    // MARK: - Space Association
+
+    /// Sets the associated Space key for a profile, clearing it from any
+    /// other profile that previously held it (enforces uniqueness), and
+    /// caches a user-supplied label for display.
+    func setAssociatedSpace(key: String?, spaceName: String? = nil, forProfileID profileID: UUID) {
+        if let key {
+            for index in profiles.indices where profiles[index].associatedSpaceKey == key {
+                profiles[index].associatedSpaceKey = nil
+                profiles[index].associatedSpaceName = nil
+            }
+        }
+        if let index = profiles.firstIndex(where: { $0.id == profileID }) {
+            profiles[index].associatedSpaceKey = key
+            profiles[index].associatedSpaceName = key != nil ? spaceName : nil
+        }
+        saveManifest()
+    }
+
+    /// Returns the profile associated with the given Space key, if any.
+    func profile(forSpaceKey key: String) -> ProfileMetadata? {
+        profiles.first { $0.associatedSpaceKey == key }
     }
 
     // MARK: - Display Association
@@ -888,6 +930,17 @@ final class ProfileManager {
                 setAssociatedDisplay(
                     uuid: displayUUID,
                     displayName: entry.associatedDisplayName,
+                    forProfileID: imported.id
+                )
+            }
+
+            // Same reconciliation for the Space association. A key exported
+            // from another Mac will not match any local Space, so it sits
+            // inert rather than binding the profile to the wrong desktop.
+            if let spaceKey = entry.associatedSpaceKey {
+                setAssociatedSpace(
+                    key: spaceKey,
+                    spaceName: entry.associatedSpaceName,
                     forProfileID: imported.id
                 )
             }

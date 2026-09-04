@@ -256,6 +256,12 @@ nonisolated struct MenuBarItem: CustomStringConvertible {
             return custom
         }
 
+        // Thaw's own spacers carry their autosave name as the window title;
+        // show a human name in the layout editor, search, and menus instead.
+        if MenuBarSpacerManager.isSpacerTag(tag) {
+            return String(localized: "Spacer")
+        }
+
         return autoDetectedName
     }
 

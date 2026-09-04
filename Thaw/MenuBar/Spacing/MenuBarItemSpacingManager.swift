@@ -8,6 +8,9 @@
 
 import Cocoa
 import Subprocess
+// Prefer the `System` module when available: Subprocess's API surface uses
+// `System.FilePath`, so both sides must resolve to the same module or the
+// types won't unify.
 #if canImport(System)
     import System
 #else

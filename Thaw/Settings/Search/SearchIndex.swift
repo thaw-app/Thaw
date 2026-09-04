@@ -127,7 +127,6 @@ nonisolated enum SearchIndex {
 
     /// Advanced settings that only participate in search on macOS 27.
     private static let macOS27AdvancedNonSearchableProperties: Set<SettingsProperty> = [
-        .advanced("alwaysUseAppIconForMenuBarItems"),
         .advanced("enableExperimentalWindowHiding"),
         .advanced("enableExperimentalSystemItemHiding"),
         .advanced("menuBarOrderFulfillmentTimeout"),
@@ -251,6 +250,39 @@ nonisolated enum SearchIndex {
             property: nil
         ),
         SearchEntry(
+            id: "pane.triggers",
+            titleKey: "Triggers",
+            titleText: "Triggers",
+            descriptionText: "Automatically move menu bar items when system conditions change.",
+            pane: .triggers,
+            sectionKey: nil,
+            sectionText: nil,
+            keywords: ["triggers", "conditions", "automation", "battery", "focus", "network", "reveal", "hide"],
+            property: nil
+        ),
+        SearchEntry(
+            id: "pane.tools",
+            titleKey: "Tools",
+            titleText: "Tools",
+            descriptionText: "Diagnostics, language override, resets, and troubleshooting tools.",
+            pane: .tools,
+            sectionKey: nil,
+            sectionText: nil,
+            keywords: ["tools", "maintenance", "reset", "cache", "permissions", "language", "logging", "diagnostics", "troubleshooting"],
+            property: nil
+        ),
+        SearchEntry(
+            id: "pane.developer",
+            titleKey: "Dev Mode Flags",
+            titleText: "Dev Mode Flags",
+            descriptionText: "Enable and inspect experimental trigger sources.",
+            pane: .developer,
+            sectionKey: nil,
+            sectionText: nil,
+            keywords: ["developer", "dev mode", "flags", "experimental", "trigger sources", "diagnostics"],
+            property: nil
+        ),
+        SearchEntry(
             id: "pane.about",
             titleKey: "About",
             titleText: "About",
@@ -276,6 +308,28 @@ nonisolated enum SearchIndex {
             sectionText: nil,
             keywords: ["launch", "login", "startup", "auto", "start"],
             property: nil
+        ),
+        SearchEntry(
+            id: "general.showSettingDescriptions",
+            titleKey: "Show setting descriptions",
+            titleText: "Show setting descriptions",
+            descriptionText: "Explains what a setting does directly beneath it.",
+            pane: .general,
+            sectionKey: nil,
+            sectionText: nil,
+            keywords: ["descriptions", "explanations", "captions", "help text", "show"],
+            property: .general("showSettingDescriptions")
+        ),
+        SearchEntry(
+            id: "general.simpleMode",
+            titleKey: "Simple Mode",
+            titleText: "Simple Mode",
+            descriptionText: "Show a single curated settings page instead of the full sidebar.",
+            pane: .general,
+            sectionKey: nil,
+            sectionText: nil,
+            keywords: ["simple mode", "simple", "basic", "minimal", "settings layout"],
+            property: .general("simpleMode")
         ),
         SearchEntry(
             id: "general.showIceIcon",
@@ -533,6 +587,17 @@ nonisolated enum SearchIndex {
             property: .advanced("tooltipDelay")
         ),
         SearchEntry(
+            id: "advanced.autoZenWhileSharingScreen",
+            titleKey: "Enter zen mode while presenting",
+            titleText: "Enter zen mode while presenting",
+            descriptionText: "Hide every concealable section while a display is mirrored or the screen is being shared.",
+            pane: .advanced,
+            sectionKey: "Menu bar behavior",
+            sectionText: "Menu bar behavior",
+            keywords: ["zen", "presenting", "mirror", "screen share", "hide", "presentation"],
+            property: .advanced("autoZenWhileSharingScreen")
+        ),
+        SearchEntry(
             id: "advanced.automaticArrangementEnabled",
             // Reuses catalog strings that are already fully translated, so
             // the entry ships localized without a new Crowdin round.
@@ -770,6 +835,28 @@ nonisolated enum SearchIndex {
             keywords: ["toggle", "application menus", "app menus", "hotkey", "shortcut"],
             property: nil
         ),
+        SearchEntry(
+            id: "hotkeys.toggleAutoRehide",
+            titleKey: "Toggle automatic rehiding",
+            titleText: "Toggle automatic rehiding",
+            descriptionText: nil,
+            pane: .hotkeys,
+            sectionKey: "Other",
+            sectionText: "Other",
+            keywords: ["toggle", "auto rehide", "automatically rehide", "hotkey", "shortcut"],
+            property: nil
+        ),
+        SearchEntry(
+            id: "hotkeys.toggleZenMode",
+            titleKey: "Toggle zen mode",
+            titleText: "Toggle zen mode",
+            descriptionText: nil,
+            pane: .hotkeys,
+            sectionKey: "Other",
+            sectionText: "Other",
+            keywords: ["toggle", "zen mode", "focus", "hide everything", "hotkey", "shortcut"],
+            property: nil
+        ),
     ]
 
     // MARK: Layout Settings
@@ -796,6 +883,28 @@ nonisolated enum SearchIndex {
             sectionText: "Sections",
             keywords: ["divider", "style", "chevron", "separator", "section"],
             property: .advanced("sectionDividerStyle")
+        ),
+        SearchEntry(
+            id: "layout.spacers",
+            titleKey: "Spacers",
+            titleText: "Spacers",
+            descriptionText: "Insert empty gap items into the menu bar and adjust their width.",
+            pane: .menuBarLayout,
+            sectionKey: "Spacers",
+            sectionText: "Spacers",
+            keywords: ["spacer", "gap", "space", "separator", "width"],
+            property: nil
+        ),
+        SearchEntry(
+            id: "layout.groups",
+            titleKey: "Item groups",
+            titleText: "Item groups",
+            descriptionText: "Group menu bar items so they always move together.",
+            pane: .menuBarLayout,
+            sectionKey: "Item groups",
+            sectionText: "Item groups",
+            keywords: ["group", "cluster", "together", "move", "bundle"],
+            property: nil
         ),
         SearchEntry(
             id: "layout.resetMenuBarLayout",
@@ -832,7 +941,7 @@ nonisolated enum SearchIndex {
             pane: .menuBarAppearance,
             sectionKey: "Background",
             sectionText: "Background",
-            keywords: ["background", "style", "solid", "gradient", "glass", "adaptive", "opacity", "shadow", "border"],
+            keywords: ["background", "style", "solid", "gradient", "glass", "adaptive", "palette", "wallpaper", "opacity", "shadow", "border"],
             property: nil
         ),
         SearchEntry(
@@ -865,7 +974,7 @@ nonisolated enum SearchIndex {
             pane: .menuBarAppearance,
             sectionKey: "Shape fill",
             sectionText: "Shape fill",
-            keywords: ["tint", "fill", "style", "solid", "gradient", "glass", "adaptive", "opacity", "shadow", "border"],
+            keywords: ["tint", "fill", "style", "solid", "gradient", "glass", "adaptive", "palette", "wallpaper", "opacity", "shadow", "border"],
             property: nil
         ),
         SearchEntry(

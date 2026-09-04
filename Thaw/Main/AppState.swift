@@ -52,6 +52,12 @@ final class AppState {
     /// Global cache for menu bar item images.
     let imageCache = MenuBarItemImageCache()
 
+    /// Owner of the user's menu bar spacer items.
+    let spacerManager = MenuBarSpacerManager()
+
+    /// Owner of user-authored menu bar item groups.
+    let itemGroupManager = MenuBarItemGroupManager()
+
     /// Manager for input events received by the app.
     let hidEventManager = HIDEventManager()
 
@@ -63,6 +69,9 @@ final class AppState {
 
     /// Manager for user notifications.
     let userNotificationManager = UserNotificationManager()
+
+    /// Engages zen mode while the screen is mirrored or being shared.
+    let presentationMonitor = PresentationMonitor()
 
     /// Storage for internal observers.
     private var cancellables = Set<AnyCancellable>()
@@ -100,6 +109,18 @@ final class AppState {
     /// view body, so the exemption has no UI-observability effect.
     @ObservationIgnored
     private lazy var setupTask = Task { @MainActor in
+        // Rotation mints a new file, and the XPC service is still holding the
+        // old one. Installed before logging starts so even the first rotation
+        // brings the service along.
+        DiagnosticLogger.shared.onRotate = {
+            Task { await MenuBarItemService.Connection.shared.syncLogging() }
+        }
+
+        // Opening a log file prunes the directory, so the stored retention has
+        // to be in place before logging starts — the settings model that would
+        // otherwise supply it is not built until later in this task.
+        DiagnosticLogger.shared.setRotationPolicy(AdvancedSettings.persistedRotationPolicy())
+
         #if DEBUG
             // Debug builds always have diagnostic logging on so logs are
             // captured during development without depending on the toggle.
@@ -121,6 +142,11 @@ final class AppState {
         diagLog.debug("setupTask: starting MenuBarItemService XPC connection")
         await MenuBarItemService.Connection.shared.start()
         diagLog.debug("setupTask: MenuBarItemService XPC connection started")
+        // Capture is optional: don't block item/manager setup if the helper is slow.
+        Task {
+            await MenuBarCaptureService.Connection.shared.start()
+        }
+        diagLog.debug("setupTask: MenuBarCaptureService XPC start kicked off")
 
         appearanceManager.performSetup(with: self)
         hidEventManager.performSetup(with: self)
@@ -131,6 +157,8 @@ final class AppState {
         diagLog.debug("setupTask: starting imageCache setup")
         imageCache.performSetup(with: self)
         diagLog.debug("setupTask: imageCache setup complete")
+        spacerManager.performSetup(with: self)
+        presentationMonitor.performSetup(with: self)
         updatesManager.performSetup(with: self)
         userNotificationManager.performSetup(with: self)
         profileManager.performSetup(with: self)

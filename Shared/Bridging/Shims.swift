@@ -102,6 +102,9 @@ nonisolated func cgsSpaceGetType(
     _ sid: CGSSpaceID
 ) -> CGSSpaceType
 
+@_silgen_name("CGSCopyManagedDisplaySpaces")
+nonisolated func cgsCopyManagedDisplaySpaces(_ cid: CGSConnectionID) -> Unmanaged<CFArray>?
+
 // MARK: - CGSWindow
 
 @_silgen_name("CGSGetWindowCount")

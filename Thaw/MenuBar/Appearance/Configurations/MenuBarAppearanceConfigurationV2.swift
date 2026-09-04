@@ -21,6 +21,8 @@ nonisolated struct MenuBarAppearanceConfigurationV2: Hashable {
     var rightMargin: Double
     var notchMargin: Double
     var isDynamic: Bool
+    /// The Thaw Bar's own appearance, honoured only when it opts in.
+    var thawBarAppearance: ThawBarAppearance
 
     var hasRoundedShape: Bool {
         switch shapeKind {
@@ -42,6 +44,41 @@ nonisolated struct MenuBarAppearanceConfigurationV2: Hashable {
             staticConfiguration
         }
     }
+
+    /// The values the Thaw Bar draws with, from whichever side owns them.
+    ///
+    /// The override is all or nothing. Letting it win field by field would
+    /// mean a panel that is half its own colour and half the menu bar's, and
+    /// there is no editor gesture that asks for that.
+    @MainActor
+    var resolvedThawBarAppearance: ResolvedThawBarAppearance {
+        let partial = current
+        guard thawBarAppearance.overridesMenuBar else {
+            return ResolvedThawBarAppearance(
+                hasRoundedShape: hasRoundedShape,
+                tintKind: partial.tintKind,
+                tintColor: partial.tintColor,
+                tintGradient: partial.tintGradient,
+                // Not `partial.tintOpacity`. The Thaw Bar has always drawn the
+                // inherited tint at a fixed opacity, so reading the menu bar's
+                // here would restyle every existing install.
+                tintOpacity: ThawBarAppearance.inheritedTintOpacity,
+                hasBorder: partial.borderOnThawBar,
+                borderColor: partial.borderColor,
+                borderWidth: partial.borderWidth
+            )
+        }
+        return ResolvedThawBarAppearance(
+            hasRoundedShape: thawBarAppearance.hasRoundedShape,
+            tintKind: thawBarAppearance.tintKind,
+            tintColor: thawBarAppearance.tintColor,
+            tintGradient: thawBarAppearance.tintGradient,
+            tintOpacity: thawBarAppearance.tintOpacity,
+            hasBorder: thawBarAppearance.hasBorder,
+            borderColor: thawBarAppearance.borderColor,
+            borderWidth: thawBarAppearance.borderWidth
+        )
+    }
 }
 
 // MARK: Default Configuration
@@ -59,7 +96,8 @@ nonisolated extension MenuBarAppearanceConfigurationV2 {
         leftMargin: 0,
         rightMargin: 0,
         notchMargin: 0,
-        isDynamic: false
+        isDynamic: false,
+        thawBarAppearance: .defaultConfiguration
     )
 }
 
@@ -77,6 +115,7 @@ nonisolated extension MenuBarAppearanceConfigurationV2: Codable {
         case rightMargin
         case notchMargin
         case isDynamic
+        case thawBarAppearance
     }
 
     init(from decoder: any Decoder) throws {
@@ -93,7 +132,8 @@ nonisolated extension MenuBarAppearanceConfigurationV2: Codable {
             leftMargin: container.decodeIfPresent(Double.self, forKey: .leftMargin) ?? Self.defaultConfiguration.leftMargin,
             rightMargin: container.decodeIfPresent(Double.self, forKey: .rightMargin) ?? Self.defaultConfiguration.rightMargin,
             notchMargin: container.decodeIfPresent(Double.self, forKey: .notchMargin) ?? Self.defaultConfiguration.notchMargin,
-            isDynamic: container.decodeIfPresent(Bool.self, forKey: .isDynamic) ?? Self.defaultConfiguration.isDynamic
+            isDynamic: container.decodeIfPresent(Bool.self, forKey: .isDynamic) ?? Self.defaultConfiguration.isDynamic,
+            thawBarAppearance: container.decodeIfPresent(ThawBarAppearance.self, forKey: .thawBarAppearance) ?? Self.defaultConfiguration.thawBarAppearance
         )
     }
 
@@ -111,6 +151,7 @@ nonisolated extension MenuBarAppearanceConfigurationV2: Codable {
         try container.encode(rightMargin, forKey: .rightMargin)
         try container.encode(notchMargin, forKey: .notchMargin)
         try container.encode(isDynamic, forKey: .isDynamic)
+        try container.encode(thawBarAppearance, forKey: .thawBarAppearance)
     }
 }
 
@@ -268,4 +309,150 @@ nonisolated extension MenuBarAppearancePartialConfiguration: Codable {
         try container.encode(backgroundGlassStyle, forKey: .backgroundGlassStyle)
         try container.encode(tintGlassStyle, forKey: .tintGlassStyle)
     }
+}
+
+// MARK: - ThawBarAppearance
+
+/// The Thaw Bar's own appearance, drawn in place of the menu bar's when
+/// ``overridesMenuBar`` is set.
+///
+/// The Thaw Bar has always borrowed the menu bar's shape, tint and border so
+/// the two read as one surface. That stays the default: every field here is
+/// ignored until the user opts in, and the values seeded into a fresh
+/// override are the ones the panel was already drawing with, so enabling it
+/// changes nothing until something is edited.
+///
+/// Only the corner treatment carries over from ``MenuBarShapeKind``. The
+/// shape kinds describe where the menu bar overlay starts and stops, which a
+/// floating panel has no equivalent of.
+nonisolated struct ThawBarAppearance: Hashable {
+    /// Whether the Thaw Bar draws with these values instead of the menu bar's.
+    var overridesMenuBar: Bool
+    /// Whether the panel's corners are fully rounded rather than squircled.
+    var hasRoundedShape: Bool
+    var tintKind: MenuBarTintKind
+    var tintColor: CGColor
+    var tintGradient: IceGradient
+    var tintOpacity: Double
+    var hasBorder: Bool
+    var borderColor: CGColor
+    var borderWidth: Double
+}
+
+// MARK: Default ThawBarAppearance
+
+nonisolated extension ThawBarAppearance {
+    /// The opacity the Thaw Bar has always drawn its inherited tint at.
+    ///
+    /// `MenuBarItemContainer` hardcoded this, so an override seeded from the
+    /// menu bar's own `tintOpacity` would shift the panel the moment it was
+    /// switched on. Seeding from this value is what keeps the opt-in inert.
+    static let inheritedTintOpacity: Double = 0.2
+
+    static let defaultConfiguration = ThawBarAppearance(
+        overridesMenuBar: false,
+        hasRoundedShape: false,
+        tintKind: .solid,
+        tintColor: .black,
+        tintGradient: .defaultMenuBarTint,
+        tintOpacity: inheritedTintOpacity,
+        hasBorder: false,
+        borderColor: .black,
+        borderWidth: 1
+    )
+}
+
+// MARK: Seeding an Override
+
+nonisolated extension ThawBarAppearance {
+    /// The tint kinds the Thaw Bar can draw.
+    ///
+    /// Glass and the two wallpaper-derived kinds are handled by the menu bar
+    /// overlay, which composites against a live backdrop. The panel has no
+    /// equivalent path and has always drawn nothing for them, so offering them
+    /// here would be an editor control with no effect.
+    static let supportedTintKinds: [MenuBarTintKind] = [.noTint, .solid, .gradient]
+
+    /// An override seeded from what the Thaw Bar is drawing right now.
+    ///
+    /// Switching the override on should not move anything on screen, so it
+    /// starts from the resolved values rather than from the defaults. A tint
+    /// kind the panel cannot draw comes across as ``MenuBarTintKind/noTint``,
+    /// which is what it was already showing for that kind anyway.
+    init(seededFrom resolved: ResolvedThawBarAppearance) {
+        self.init(
+            overridesMenuBar: true,
+            hasRoundedShape: resolved.hasRoundedShape,
+            tintKind: Self.supportedTintKinds.contains(resolved.tintKind) ? resolved.tintKind : .noTint,
+            tintColor: resolved.tintColor,
+            tintGradient: resolved.tintGradient,
+            tintOpacity: resolved.tintOpacity,
+            hasBorder: resolved.hasBorder,
+            borderColor: resolved.borderColor,
+            borderWidth: resolved.borderWidth
+        )
+    }
+}
+
+// MARK: ThawBarAppearance: Codable
+
+nonisolated extension ThawBarAppearance: Codable {
+    private enum CodingKeys: CodingKey {
+        case overridesMenuBar
+        case hasRoundedShape
+        case tintKind
+        case tintColor
+        case tintGradient
+        case tintOpacity
+        case hasBorder
+        case borderColor
+        case borderWidth
+    }
+
+    init(from decoder: any Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        try self.init(
+            overridesMenuBar: container.decodeIfPresent(Bool.self, forKey: .overridesMenuBar) ?? Self.defaultConfiguration.overridesMenuBar,
+            hasRoundedShape: container.decodeIfPresent(Bool.self, forKey: .hasRoundedShape) ?? Self.defaultConfiguration.hasRoundedShape,
+            tintKind: container.decodeIfPresent(MenuBarTintKind.self, forKey: .tintKind) ?? Self.defaultConfiguration.tintKind,
+            tintColor: container.decodeIfPresent(IceColor.self, forKey: .tintColor)?.cgColor ?? Self.defaultConfiguration.tintColor,
+            tintGradient: container.decodeIfPresent(IceGradient.self, forKey: .tintGradient) ?? Self.defaultConfiguration.tintGradient,
+            tintOpacity: container.decodeIfPresent(Double.self, forKey: .tintOpacity) ?? Self.defaultConfiguration.tintOpacity,
+            hasBorder: container.decodeIfPresent(Bool.self, forKey: .hasBorder) ?? Self.defaultConfiguration.hasBorder,
+            borderColor: container.decodeIfPresent(IceColor.self, forKey: .borderColor)?.cgColor ?? Self.defaultConfiguration.borderColor,
+            borderWidth: container.decodeIfPresent(Double.self, forKey: .borderWidth) ?? Self.defaultConfiguration.borderWidth
+        )
+    }
+
+    func encode(to encoder: any Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(overridesMenuBar, forKey: .overridesMenuBar)
+        try container.encode(hasRoundedShape, forKey: .hasRoundedShape)
+        try container.encode(tintKind, forKey: .tintKind)
+        try container.encode(IceColor(cgColor: tintColor), forKey: .tintColor)
+        try container.encode(tintGradient, forKey: .tintGradient)
+        try container.encode(tintOpacity, forKey: .tintOpacity)
+        try container.encode(hasBorder, forKey: .hasBorder)
+        try container.encode(IceColor(cgColor: borderColor), forKey: .borderColor)
+        try container.encode(borderWidth, forKey: .borderWidth)
+    }
+}
+
+// MARK: - ResolvedThawBarAppearance
+
+/// The values the Thaw Bar actually draws with, after the override has been
+/// weighed against the menu bar's configuration.
+///
+/// Resolving in one place keeps the "which side won?" question out of the
+/// view, which otherwise has to ask it separately for the shape, the tint and
+/// the border and can answer inconsistently.
+nonisolated struct ResolvedThawBarAppearance: Hashable {
+    var hasRoundedShape: Bool
+    var tintKind: MenuBarTintKind
+    var tintColor: CGColor
+    var tintGradient: IceGradient
+    var tintOpacity: Double
+    var hasBorder: Bool
+    var borderColor: CGColor
+    var borderWidth: Double
 }

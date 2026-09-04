@@ -35,6 +35,9 @@ final class AppSettings {
     /// The model for per-display Thaw Bar settings.
     let displaySettings = DisplaySettingsManager()
 
+    /// The model for conditional menu bar item triggers.
+    let triggers = MenuBarItemTriggersManager()
+
     /// The shared app state.
     @ObservationIgnored
     private(set) weak var appState: AppState?
@@ -46,5 +49,6 @@ final class AppSettings {
         general.performSetup(with: appState)
         hotkeys.performSetup(with: appState)
         displaySettings.performSetup(with: appState)
+        triggers.performSetup(with: appState)
     }
 }

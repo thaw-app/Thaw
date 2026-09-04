@@ -371,6 +371,12 @@ private struct IceBarContentView: View {
         itemManager.itemCache.managedItems(for: section)
     }
 
+    /// The shape, tint and border to draw with, which is the menu bar's
+    /// unless the Thaw Bar has been given its own.
+    private var appearance: ResolvedThawBarAppearance {
+        configuration.resolvedThawBarAppearance
+    }
+
     private var configuration: MenuBarAppearanceConfigurationV2 {
         appState.appearanceManager.configuration
     }
@@ -397,7 +403,7 @@ private struct IceBarContentView: View {
     }
 
     private var verticalPadding: CGFloat {
-        screen.hasNotch && configuration.hasRoundedShape ? 2 : 0
+        screen.hasNotch && appearance.hasRoundedShape ? 2 : 0
     }
 
     private var contentHeight: CGFloat {
@@ -416,6 +422,11 @@ private struct IceBarContentView: View {
         return menuBarHeight > 0 ? menuBarHeight : nil
     }
 
+    /// Mirrors `advanced.alwaysUseAppIconForMenuBarItems`.
+    private var prefersAppIcon: Bool {
+        appState.settings.advanced.alwaysUseAppIconForMenuBarItems
+    }
+
     /// Per-column maximum widths for the grid layout.
     private var columnWidths: [CGFloat] {
         // Zero-width placeholders (not []) during transient zero-height
@@ -429,7 +440,17 @@ private struct IceBarContentView: View {
         return (0 ..< gridColumns).map { col in
             rows.compactMap { row in
                 guard col < row.count else { return nil }
-                guard let cachedImage = imageCache.images[row[col].tag] else { return nil }
+                let item = row[col]
+                guard !MenuBarItemIconFallback.shouldUseAppIcon(
+                    for: item,
+                    hasCapture: imageCache.images[item.tag] != nil,
+                    prefersAppIcon: prefersAppIcon
+                ), let cachedImage = imageCache.images[item.tag] else {
+                    // No capture: the item renders as a square app icon, so
+                    // reserve that width rather than dropping the column and
+                    // letting the grid collapse around a visible item.
+                    return maxHeight * IceBarItemView.iconFallbackHeightRatio
+                }
                 let image = cachedImage.nsImage
                 guard image.size.height > 0 else { return image.size.width }
                 let scale = maxHeight / image.size.height
@@ -461,7 +482,7 @@ private struct IceBarContentView: View {
     }
 
     private var clipShape: some InsettableShape {
-        if configuration.hasRoundedShape {
+        if appearance.hasRoundedShape {
             RoundedRectangle(cornerRadius: contentHeight / 2, style: .circular)
         } else {
             RoundedRectangle(cornerRadius: contentHeight / 4, style: .continuous)
@@ -479,15 +500,24 @@ private struct IceBarContentView: View {
             }
             .padding(.horizontal, horizontalPadding)
             .padding(.vertical, verticalPadding)
-            .menuBarItemContainer(appState: appState, colorInfo: colorManager.colorInfo)
+            .menuBarItemContainer(
+                appState: appState,
+                colorInfo: colorManager.colorInfo,
+                tintOverride: MenuBarContainerTint(
+                    kind: appearance.tintKind,
+                    color: appearance.tintColor,
+                    gradient: appearance.tintGradient,
+                    opacity: appearance.tintOpacity
+                )
+            )
             .foregroundStyle(colorManager.colorInfo?.isBright(for: screen) == true ? .black : .white)
             .clipShape(clipShape)
 
-            if configuration.current.borderOnThawBar {
+            if appearance.hasBorder {
                 clipShape
-                    .inset(by: configuration.current.borderWidth / 2)
-                    .stroke(lineWidth: configuration.current.borderWidth)
-                    .foregroundStyle(Color(cgColor: configuration.current.borderColor))
+                    .inset(by: appearance.borderWidth / 2)
+                    .stroke(lineWidth: appearance.borderWidth)
+                    .foregroundStyle(Color(cgColor: appearance.borderColor))
             }
         }
         .padding(5)
@@ -530,23 +560,11 @@ private struct IceBarContentView: View {
 
     @ViewBuilder
     private var content: some View {
-        if !ScreenCapture.cachedCheckPermissions() {
-            HStack {
-                Text("The \(Constants.displayName) Bar requires screen recording permissions.")
-
-                Button {
-                    openPermissionsSettings()
-                } label: {
-                    Text("Open \(Constants.displayName) Settings")
-                }
-                .buttonStyle(.plain)
-                .foregroundStyle(.link)
-            }
-            .padding(.horizontal, 10)
-            .onAppear {
-                Self.diagLog.warning("IceBar content: showing 'requires screen recording permissions' — cachedCheckPermissions() returned false")
-            }
-        } else if section == .alwaysHidden || section == .hidden, items.isEmpty {
+        // No Screen Recording branch here on purpose. Items without a capture
+        // render as their owning app's icon, which is the whole point of the
+        // fallback: the permission is documented as optional, and notch
+        // overflow can force this bar on without the user ever choosing it.
+        if section == .alwaysHidden || section == .hidden, items.isEmpty {
             HStack {
                 if cacheGracePeriodActive {
                     Text("Loading menu bar items…")
@@ -588,31 +606,6 @@ private struct IceBarContentView: View {
             .onAppear {
                 Self.diagLog.warning("IceBar content: showing 'Loading menu bar items…' — itemCache.managedItems is EMPTY. This means the item cache has never been populated.")
             }
-        } else if imageCache.cacheFailed(for: section) {
-            HStack {
-                if cacheGracePeriodActive {
-                    Text("Loading menu bar items…")
-                } else if loadingTimedOut {
-                    // Final state: no further automatic retry.
-                    Text("Unable to display menu bar items")
-                    Button {
-                        openPermissionsSettings()
-                    } label: {
-                        Text("Check permissions")
-                    }
-                    .buttonStyle(.plain)
-                    .foregroundStyle(.link)
-                } else {
-                    Text("Loading menu bar items…")
-                }
-            }
-            .padding(.horizontal, 10)
-            .onChange(of: loadingTimedOut) {
-                Self.diagLog.warning("IceBar content: cacheFailed timeout changed to \(self.loadingTimedOut) for section \(self.section.logString)")
-            }
-            .onAppear {
-                Self.diagLog.warning("IceBar content: showing '\(self.cacheGracePeriodActive ? "Loading…" : "Unable to display")' for section \(self.section.logString) — imageCache.cacheFailed=true (grace period active: \(self.cacheGracePeriodActive), loadingTimedOut: \(self.loadingTimedOut), cached images count: \(self.imageCache.images.count), items in section: \(self.itemManager.itemCache[self.section].count))")
-            }
         } else {
             let isLightBackground = colorManager.colorInfo?.isBright(for: screen) == true
             switch layout {
@@ -628,9 +621,10 @@ private struct IceBarContentView: View {
                                 section: section,
                                 displayID: screen.displayID,
                                 maxHeight: itemMaxHeight,
-                                hasRoundedShape: configuration.hasRoundedShape,
+                                hasRoundedShape: appearance.hasRoundedShape,
                                 tooltipDelay: appState.settings.advanced.tooltipDelay,
-                                isLightBackground: isLightBackground
+                                isLightBackground: isLightBackground,
+                                prefersAppIcon: prefersAppIcon
                             )
                         }
                     }
@@ -655,9 +649,10 @@ private struct IceBarContentView: View {
                                 section: section,
                                 displayID: screen.displayID,
                                 maxHeight: itemMaxHeight,
-                                hasRoundedShape: configuration.hasRoundedShape,
+                                hasRoundedShape: appearance.hasRoundedShape,
                                 tooltipDelay: appState.settings.advanced.tooltipDelay,
-                                isLightBackground: isLightBackground
+                                isLightBackground: isLightBackground,
+                                prefersAppIcon: prefersAppIcon
                             )
                         }
                     }
@@ -682,9 +677,10 @@ private struct IceBarContentView: View {
                                         section: section,
                                         displayID: screen.displayID,
                                         maxHeight: itemMaxHeight,
-                                        hasRoundedShape: configuration.hasRoundedShape,
+                                        hasRoundedShape: appearance.hasRoundedShape,
                                         tooltipDelay: appState.settings.advanced.tooltipDelay,
-                                        isLightBackground: isLightBackground
+                                        isLightBackground: isLightBackground,
+                                        prefersAppIcon: prefersAppIcon
                                     )
                                     if rows.count > 1 {
                                         itemView
@@ -733,6 +729,9 @@ private struct IceBarItemView: View {
     let hasRoundedShape: Bool
     let tooltipDelay: TimeInterval
     let isLightBackground: Bool
+    /// Mirrors `advanced.alwaysUseAppIconForMenuBarItems`. Threaded in like
+    /// `tooltipDelay` so the view re-renders when it is toggled.
+    let prefersAppIcon: Bool
 
     private var pillCornerRadius: CGFloat {
         guard let h = maxHeight, h > 0 else { return 4 }
@@ -812,11 +811,31 @@ private struct IceBarItemView: View {
         return Bridging.isWindowOnScreen(liveItem.windowID) ? liveItem : nil
     }
 
+    /// How much of the bar's height an app icon fills. Captures are drawn
+    /// at full height because they are already menu-bar-sized artwork; a
+    /// square app icon at full height reads as oversized next to them.
+    static let iconFallbackHeightRatio: CGFloat = 0.82
+
+    /// The captured glyph, or the owning app's icon when no capture is
+    /// available — most often because Screen Recording was declined.
     private var image: NSImage? {
-        guard let cachedImage = imageCache.images[item.tag] else {
-            return nil
+        if isIconFallback {
+            return MenuBarItemIconFallback.image(for: item)
         }
-        return cachedImage.nsImage
+        return imageCache.images[item.tag]?.nsImage
+    }
+
+    /// Whether ``image`` is an app icon rather than a captured glyph.
+    ///
+    /// An icon is square and arbitrarily large, so it is sized to the bar's
+    /// height instead of being scaled from its own intrinsic size the way a
+    /// capture is.
+    private var isIconFallback: Bool {
+        MenuBarItemIconFallback.shouldUseAppIcon(
+            for: item,
+            hasCapture: imageCache.images[item.tag] != nil,
+            prefersAppIcon: prefersAppIcon
+        )
     }
 
     private func targetSize(for image: NSImage) -> CGSize {
@@ -827,6 +846,15 @@ private struct IceBarItemView: View {
 
         guard let maxHeight, maxHeight > 0 else {
             return intrinsic
+        }
+
+        if isIconFallback {
+            // App icons are square and come at whatever size AppKit felt
+            // like; a capture's intrinsic size is meaningful, an icon's is
+            // not. Inset slightly so icons do not crowd the bar the way
+            // full-height glyphs would.
+            let side = maxHeight * Self.iconFallbackHeightRatio
+            return CGSize(width: side, height: side)
         }
 
         // Scale to fill the available height exactly. This handles both

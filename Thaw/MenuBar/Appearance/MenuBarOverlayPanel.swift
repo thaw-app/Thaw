@@ -342,9 +342,11 @@ final class MenuBarOverlayPanel: NSPanel, @unchecked Sendable {
             }
 
             // `appearanceManager` is now `@Observable` (wave 3), so it no
-            // longer has a `$configuration` publisher.
+            // longer has a `$configuration` publisher. The panels track the
+            // effective configuration so a per-Space override switches the
+            // window level instantly on Space change.
             appearanceConfigurationObservationTask = Task { [weak self, weak appState] in
-                let changes = Observations { appState?.appearanceManager.configuration }
+                let changes = Observations { appState?.appearanceManager.effectiveConfiguration }
                 for await _ in changes {
                     guard let self else { return }
                     self.updateWindowLevel()
@@ -632,7 +634,7 @@ final class MenuBarOverlayPanel: NSPanel, @unchecked Sendable {
     /// the tint became visible, and the items disappeared underneath it.
     private func updateWindowLevel() {
         guard let appState else { return }
-        let config = appState.appearanceManager.configuration
+        let config = appState.appearanceManager.effectiveConfiguration
         if config.current.tintKind != .noTint || config.shapeKind != .noShape || config.current.backgroundKind != .none {
             level = NSWindow.Level(rawValue: Int(CGWindowLevelForKey(.statusWindow)) - 1)
         } else {
@@ -656,11 +658,17 @@ private final class MenuBarOverlayPanelContentView: NSView {
 
     @Published private var averageColorInfo: MenuBarAverageColorInfo?
 
+    @Published private var wallpaperPalette: WallpaperPalette?
+
     private var cancellables = Set<AnyCancellable>()
 
     /// Task observing `menuBarManager.averageColors` (wave 3), replacing the
     /// old `$averageColors` sink.
     private var averageColorsObservationTask: Task<Void, Never>?
+
+    /// Task observing `menuBarManager.wallpaperPalettes` for the adaptive
+    /// gradient tint.
+    private var wallpaperPalettesObservationTask: Task<Void, Never>?
 
     /// Task observing `appearanceManager.configuration` (wave 3), replacing
     /// the old `$configuration` sink and `objectWillChange` debounce sink.
@@ -677,6 +685,7 @@ private final class MenuBarOverlayPanelContentView: NSView {
 
     deinit {
         averageColorsObservationTask?.cancel()
+        wallpaperPalettesObservationTask?.cancel()
         appearanceConfigurationObservationTask?.cancel()
         previewConfigurationObservationTask?.cancel()
         isDraggingMenuBarItemObservationTask?.cancel()
@@ -766,7 +775,7 @@ private final class MenuBarOverlayPanelContentView: NSView {
                 // visible through this one sequence.
                 appearanceConfigurationObservationTask?.cancel()
                 appearanceConfigurationObservationTask = Task { [weak self, weak appState] in
-                    let changes = Observations { appState?.appearanceManager.configuration }
+                    let changes = Observations { appState?.appearanceManager.effectiveConfiguration }
                     for await config in changes {
                         guard let self else { return }
                         guard let config else { continue }
@@ -797,6 +806,16 @@ private final class MenuBarOverlayPanelContentView: NSView {
                         guard let self else { return }
                         guard let displayID = self.overlayPanel?.owningScreen.displayID else { continue }
                         self.averageColorInfo = colors[displayID]
+                    }
+                }
+
+                wallpaperPalettesObservationTask?.cancel()
+                wallpaperPalettesObservationTask = Task { [weak self, weak appState] in
+                    let changes = Observations { appState?.menuBarManager.wallpaperPalettes ?? [:] }
+                    for await palettes in changes {
+                        guard let self else { return }
+                        guard let displayID = self.overlayPanel?.owningScreen.displayID else { continue }
+                        self.wallpaperPalette = palettes[displayID]
                     }
                 }
 
@@ -860,6 +879,7 @@ private final class MenuBarOverlayPanelContentView: NSView {
         $fullConfiguration.replace(with: ())
             .merge(with: $previewConfiguration.replace(with: ()))
             .merge(with: $averageColorInfo.replace(with: ()))
+            .merge(with: $wallpaperPalette.replace(with: ()))
             .sink { [weak self] _ in
                 self?.updateBackgroundGlass()
                 self?.needsDisplay = true
@@ -1296,7 +1316,46 @@ private final class MenuBarOverlayPanelContentView: NSView {
                 color.setFill()
                 rect.fill()
             }
+        case .adaptiveGradient:
+            if let gradient = adaptiveGradient(opacity: configuration.tintOpacity) {
+                gradient.draw(in: rect, angle: 0)
+            } else if let colorInfo = averageColorInfo,
+                      let color = NSColor(cgColor: colorInfo.color)?
+                      .withAlphaComponent(configuration.tintOpacity)
+            {
+                // No palette yet — first launch, or a capture that has not
+                // landed. Falling back to the average keeps the bar tinted
+                // instead of flashing untinted while the palette arrives.
+                color.setFill()
+                rect.fill()
+            }
         }
+    }
+
+    /// Builds the tint gradient from the wallpaper palette, or returns `nil`
+    /// when no palette has been captured yet.
+    ///
+    /// Uses the two most-covering swatches. On a single-colour wallpaper the
+    /// palette hands back the same swatch twice, which draws as a flat tint —
+    /// the honest result for a flat wallpaper.
+    private func adaptiveGradient(opacity: CGFloat) -> NSGradient? {
+        guard
+            let palette = wallpaperPalette,
+            let primary = palette.primary,
+            let secondary = palette.secondary
+        else {
+            return nil
+        }
+        let colorSpace = CGColorSpace(name: CGColorSpace.displayP3) ?? CGColorSpaceCreateDeviceRGB()
+        guard
+            let start = primary.cgColor(in: colorSpace),
+            let end = secondary.cgColor(in: colorSpace),
+            let startColor = NSColor(cgColor: start)?.withAlphaComponent(opacity),
+            let endColor = NSColor(cgColor: end)?.withAlphaComponent(opacity)
+        else {
+            return nil
+        }
+        return NSGradient(starting: startColor, ending: endColor)
     }
 
     private var isBackgroundGlassActive = false

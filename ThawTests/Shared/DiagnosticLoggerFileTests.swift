@@ -11,8 +11,8 @@ import Testing
 @testable import Thaw
 
 /// Covers the on-disk half of ``DiagnosticLogger``: attaching to a file,
-/// appending instead of truncating, closing, and the five-file rotation that
-/// keeps a user's `~/Library/Logs/Thaw` directory from growing without bound.
+/// appending instead of truncating, closing, and the retention pass that keeps
+/// a user's `~/Library/Logs/Thaw` directory from growing without bound.
 ///
 /// This is the mechanism behind user-submitted diagnostics and it is shared
 /// verbatim with the MenuBarItemService XPC target, so the rotation and
@@ -67,19 +67,39 @@ struct DiagnosticLoggerFileTests {
         }
     }
 
-    @Test("Re-attaching to the same file appends a second header instead of truncating")
-    func reattachingAppends() async throws {
+    @Test("Attaching to a file that already holds lines appends instead of truncating")
+    func attachingAppendsToAnExistingFile() async throws {
+        try await withTemporaryLogDirectory { tmp in
+            let file = tmp.appendingPathComponent("thaw.log")
+            // Stands in for the other process having written first: two
+            // processes share one file, so opening it must not lose what is
+            // already there.
+            try Data("written by the other process\n".utf8).write(to: file)
+
+            DiagnosticLogger.shared.attachToFile(at: file)
+
+            let text = contents(of: file)
+            #expect(text.contains("written by the other process"))
+            #expect(text.contains("Thaw Diagnostic Log"))
+        }
+    }
+
+    @Test("Re-attaching to the file already open changes nothing")
+    func reattachingToTheSameFileIsANoOp() async throws {
         try await withTemporaryLogDirectory { tmp in
             let file = tmp.appendingPathComponent("thaw.log")
 
             DiagnosticLogger.shared.attachToFile(at: file)
             DiagnosticLogger.shared.attachToFile(at: file)
 
-            // Two processes share one file, so the second open must not lose
-            // what the first one wrote.
+            // The app re-sends the current path on every rotation and on retry,
+            // so the same path arrives repeatedly. Reopening it would stamp a
+            // second header and a stop footer into the file being written, which
+            // reads as if logging had restarted mid-capture.
             let text = contents(of: file)
-            #expect(occurrences(of: "Thaw Diagnostic Log", in: text) == 2)
-            #expect(occurrences(of: "Diagnostic logging stopped", in: text) == 1)
+            #expect(occurrences(of: "Thaw Diagnostic Log", in: text) == 1)
+            #expect(occurrences(of: "Diagnostic logging stopped", in: text) == 0)
+            #expect(DiagnosticLogger.shared.currentLogFile == file)
         }
     }
 
@@ -171,51 +191,68 @@ struct DiagnosticLoggerFileTests {
         }
     }
 
-    // MARK: Rotation
+    // MARK: Retention
 
-    @Test("Opening a log file prunes the directory down to the five newest logs")
-    func rotationKeepsTheFiveNewestLogs() async throws {
+    /// Pins the retention policy for one test.
+    ///
+    /// The policy lives on the shared logger, so a value left behind by another
+    /// suite would otherwise decide the outcome here. `withTemporaryLogDirectory`
+    /// puts the previous one back, so this test does not decide anyone else's.
+    private func useRetentionPolicy(retentionDays: Int, maxFileCount: Int = 50) {
+        var policy = DiagnosticLogger.RotationPolicy()
+        policy.retentionDays = retentionDays
+        policy.maxFileCount = maxFileCount
+        DiagnosticLogger.shared.setRotationPolicy(policy)
+    }
+
+    @Test("Opening a log file prunes the logs that fell out of the retention window")
+    func retentionDropsLogsPastTheWindow() async throws {
         try await withTemporaryLogDirectory { tmp in
+            useRetentionPolicy(retentionDays: 2)
+            // Seeds are aged one day apart, oldest first: seed-0 is 7 days old,
+            // seed-6 is one day old.
             let seeded = try seedAgedLogFiles(count: 7, in: tmp)
             let file = tmp.appendingPathComponent("current.log")
 
             DiagnosticLogger.shared.attachToFile(at: file)
 
-            let pruned = await waitUntil { logFileNames(in: tmp).count == 5 }
-            #expect(pruned, "rotation left \(logFileNames(in: tmp).count) log files")
+            // Only the one-day-old seed is still inside a two-day window, and
+            // the file just opened is never a candidate.
+            let pruned = await waitUntil { logFileNames(in: tmp).count == 2 }
+            #expect(pruned, "retention left \(logFileNames(in: tmp).count) log files")
 
-            // The file just opened is the newest, so it survives alongside the
-            // four youngest seeds; the three oldest seeds are the casualties.
             let survivors = Set(logFileNames(in: tmp))
             #expect(survivors.contains("current.log"))
-            #expect(survivors.isSuperset(of: seeded.suffix(4)))
-            #expect(survivors.isDisjoint(with: seeded.prefix(3)))
+            #expect(survivors.contains(seeded[6]))
+            #expect(survivors.isDisjoint(with: seeded.prefix(6)))
         }
     }
 
-    @Test("Rotation only prunes log files and leaves other files alone")
-    func rotationIgnoresNonLogFiles() async throws {
+    @Test("Retention only prunes log files and leaves other files alone")
+    func retentionIgnoresNonLogFiles() async throws {
         try await withTemporaryLogDirectory { tmp in
+            useRetentionPolicy(retentionDays: 2)
             try seedAgedLogFiles(count: 7, in: tmp)
             let keepsake = tmp.appendingPathComponent("notes.txt")
             try Data("keep me".utf8).write(to: keepsake)
 
             DiagnosticLogger.shared.attachToFile(at: tmp.appendingPathComponent("current.log"))
 
-            let pruned = await waitUntil { logFileNames(in: tmp).count == 5 }
-            #expect(pruned, "rotation left \(logFileNames(in: tmp).count) log files")
+            let pruned = await waitUntil { logFileNames(in: tmp).count == 2 }
+            #expect(pruned, "retention left \(logFileNames(in: tmp).count) log files")
             #expect(FileManager.default.fileExists(atPath: keepsake.path))
         }
     }
 
-    @Test("A directory holding five or fewer logs is left untouched")
-    func rotationLeavesASmallDirectoryAlone() async throws {
+    @Test("A directory whose logs are all inside the window is left untouched")
+    func retentionLeavesRecentLogsAlone() async throws {
         try await withTemporaryLogDirectory { tmp in
+            // Every seed is days old, but the window is a month wide.
+            useRetentionPolicy(retentionDays: 30)
             let seeded = try seedAgedLogFiles(count: 4, in: tmp)
 
             DiagnosticLogger.shared.attachToFile(at: tmp.appendingPathComponent("current.log"))
 
-            // Five files total is exactly the keep count, so nothing may go.
             // Give the write queue a chance to misbehave before asserting.
             let overPruned = await waitUntil(timeout: .milliseconds(500)) {
                 logFileNames(in: tmp).count < 5
@@ -225,15 +262,17 @@ struct DiagnosticLoggerFileTests {
         }
     }
 
-    @Test("One undeletable log does not stop rotation from pruning the rest")
-    func rotationContinuesPastAnUndeletableLog() async throws {
+    @Test("One undeletable log does not stop retention from pruning the rest")
+    func retentionContinuesPastAnUndeletableLog() async throws {
         try await withTemporaryLogDirectory { tmp in
+            useRetentionPolicy(retentionDays: 2)
+            // Ages run 8 days (seed-0) down to one day (seed-7).
             let seeded = try seedAgedLogFiles(count: 8, in: tmp)
 
-            // Rotation walks the doomed files newest-first, so making the
+            // Retention walks the doomed files newest-first, so making the
             // *first* casualty undeletable is what proves the loop carries on:
-            // the three older ones are only reached after the failure.
-            let stubborn = tmp.appendingPathComponent("seed-3.log")
+            // the older ones are only reached after the failure.
+            let stubborn = tmp.appendingPathComponent("seed-6.log")
             try FileManager.default.setAttributes([.immutable: true], ofItemAtPath: stubborn.path)
             defer {
                 // The flag has to go before the enclosing helper deletes `tmp`,
@@ -243,17 +282,18 @@ struct DiagnosticLoggerFileTests {
 
             DiagnosticLogger.shared.attachToFile(at: tmp.appendingPathComponent("current.log"))
 
-            // Five keepers plus the one that refused to go. Before the per-file
-            // error handling this settled at nine: the failure aborted the loop
-            // and every remaining deletion was skipped.
-            let pruned = await waitUntil { logFileNames(in: tmp).count == 6 }
-            #expect(pruned, "rotation left \(logFileNames(in: tmp).count) log files")
+            // The one-day-old seed, the file just opened, and the one that
+            // refused to go. Without the per-file error handling this settles at
+            // nine: the failure aborts the loop and every later deletion is
+            // skipped.
+            let pruned = await waitUntil { logFileNames(in: tmp).count == 3 }
+            #expect(pruned, "retention left \(logFileNames(in: tmp).count) log files")
 
             let survivors = Set(logFileNames(in: tmp))
-            #expect(survivors.contains("seed-3.log"))
-            #expect(survivors.isDisjoint(with: seeded.prefix(3)))
-            #expect(survivors.isSuperset(of: seeded.suffix(4)))
+            #expect(survivors.contains("seed-6.log"))
+            #expect(survivors.contains(seeded[7]))
             #expect(survivors.contains("current.log"))
+            #expect(survivors.isDisjoint(with: seeded.prefix(6)))
         }
     }
 
@@ -268,12 +308,40 @@ struct DiagnosticLoggerFileTests {
                 .appendingPathComponent("nested", isDirectory: true)
                 .appendingPathComponent("thaw.log")
 
-            DiagnosticLogger.shared.attachToFile(at: file)
+            let attached = DiagnosticLogger.shared.attachToFile(at: file)
 
-            // `attachToFile` optimistically flips the flag on, so a failed open
-            // has to flip it back or the app would think it were logging.
+            // With no earlier segment to fall back on there is nothing to write
+            // to, so logging has to stay off rather than look enabled.
+            #expect(!attached)
             #expect(!DiagnosticLogger.shared.isEnabled)
             #expect(DiagnosticLogger.shared.currentLogFile == nil)
+        }
+    }
+
+    @Test("A failed attach keeps writing to the segment already open")
+    func failedAttachKeepsThePreviousFile() async throws {
+        try await withTemporaryLogDirectory { tmp in
+            let good = tmp.appendingPathComponent("good.log")
+            DiagnosticLogger.shared.attachToFile(at: good)
+
+            let blocker = tmp.appendingPathComponent("blocker")
+            try Data().write(to: blocker)
+            let unopenable = blocker
+                .appendingPathComponent("nested", isDirectory: true)
+                .appendingPathComponent("thaw.log")
+
+            let attached = DiagnosticLogger.shared.attachToFile(at: unopenable)
+
+            // Losing the open must not cost the lines still being written: the
+            // previous file stays, and the caller is told so it can retry.
+            #expect(!attached)
+            #expect(DiagnosticLogger.shared.isEnabled)
+            #expect(DiagnosticLogger.shared.currentLogFile == good)
+
+            let marker = "still writing after a failed attach"
+            DiagnosticLogger.shared.log(level: .info, category: "Test", message: marker)
+            let landed = await waitUntil { contents(of: good).contains(marker) }
+            #expect(landed, "the marker never reached the surviving log file")
         }
     }
 
@@ -333,12 +401,18 @@ struct DiagnosticLoggerFileTests {
     /// Teardown always lands on "disabled", never on the flag's previous value,
     /// because re-enabling would run the fresh-mint path and drop a file in the
     /// developer's real log directory.
+    ///
+    /// The rotation policy is process-wide too, so it is captured here and put
+    /// back on every exit path: a window pinned by one test would otherwise
+    /// follow whichever test runs next, in this suite or in a parallel one.
     private func withTemporaryLogDirectory(_ body: (URL) async throws -> Void) async throws {
         let tmp = FileManager.default.temporaryDirectory
             .appendingPathComponent(UUID().uuidString, isDirectory: true)
         try FileManager.default.createDirectory(at: tmp, withIntermediateDirectories: true)
+        let previousPolicy = DiagnosticLogger.shared.rotationPolicy
         defer {
             DiagnosticLogger.shared.isEnabled = false
+            DiagnosticLogger.shared.setRotationPolicy(previousPolicy)
             try? FileManager.default.removeItem(at: tmp)
         }
 

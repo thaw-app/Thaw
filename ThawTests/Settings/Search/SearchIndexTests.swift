@@ -63,6 +63,12 @@ struct SearchIndexTests {
         #expect(partitioned.count == SearchIndex.entries.count)
     }
 
+    @Test("New trigger panes have searchable pane rows")
+    func triggerPanesAreSearchable() {
+        #expect(SearchIndex.entries(for: .triggers).contains { $0.id == "pane.triggers" })
+        #expect(SearchIndex.entries(for: .developer).contains { $0.id == "pane.developer" })
+    }
+
     // MARK: - sortedByRelevance
 
     @Test("The lowest diff score sorts first")

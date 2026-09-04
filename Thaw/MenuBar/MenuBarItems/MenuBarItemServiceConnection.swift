@@ -24,6 +24,22 @@ extension MenuBarItemService {
         /// The connection's diagnostic logger.
         private let diagLog: DiagLog
 
+        /// Tracks the one logging configuration the service is allowed to be
+        /// missing at a time.
+        private struct LoggingSyncState {
+            /// Whether a request is on the wire right now. Only one may be:
+            /// replies can overtake each other, and the loser would leave the
+            /// service pointed at a file the app has already rotated away.
+            var isSending = false
+            /// Whether the service still owes a configuration. Set when a push
+            /// fails, and when the XPC session is dropped — a service that
+            /// restarts has no idea which file the app is writing to, and
+            /// nothing else would ever tell it.
+            var isPending = false
+        }
+
+        private let loggingSync: OSAllocatedUnfairLock<LoggingSyncState>
+
         /// Creates a new connection.
         private init() {
             let queue = DispatchQueue.targetingGlobal(
@@ -32,7 +48,11 @@ extension MenuBarItemService {
                 attributes: .concurrent
             )
             let diagLog = DiagLog(category: "MenuBarItemService.Connection")
-            self.session = Session(queue: queue, diagLog: diagLog)
+            let loggingSync = OSAllocatedUnfairLock(initialState: LoggingSyncState())
+            self.loggingSync = loggingSync
+            self.session = Session(queue: queue, diagLog: diagLog) {
+                loggingSync.withLock { $0.isPending = true }
+            }
             self.diagLog = diagLog
         }
 
@@ -47,15 +67,22 @@ extension MenuBarItemService {
             // subsequent traffic. When file logging is off in the main
             // app currentLogFile is nil and the XPC service simply logs
             // to OSLog only, matching the prior release-build behaviour.
-            if let logFile = DiagnosticLogger.shared.currentLogFile {
-                let response = await session.sendAsync(request: .configureLogging(filePath: logFile.path))
-                if response == nil {
-                    diagLog.error("configureLogging request returned nil")
-                } else if case .configureLogging = response {
-                    // success
-                } else {
-                    diagLog.error("configureLogging request returned invalid response \(String(describing: response))")
-                }
+            //
+            // Sent unconditionally: even with logging off, this hands over the
+            // retention policy the service prunes the shared directory by.
+            // Only the initial push runs on the launch path: AppState.setupTask
+            // awaits start() before the rest of its setup, so the retry loop's
+            // 2s sleeps must not sit in between. A failing push marks the work
+            // pending and retries off the launch path.
+            //
+            // Cleared before the send, the way `syncLogging()` does it, and
+            // never after: the session can be dropped while the request is in
+            // flight, and the invalidation that marks the configuration
+            // outstanding again must not be undone by this send's success.
+            loggingSync.withLock { $0.isPending = false }
+            let accepted = await sendLoggingConfiguration()
+            if !accepted || loggingSync.withLock({ $0.isPending }) {
+                Task { await syncLogging() }
             }
 
             let response = await session.sendAsync(request: .start)
@@ -70,10 +97,98 @@ extension MenuBarItemService {
             }
         }
 
+        /// Points the service at the diagnostic log file the app is writing to
+        /// right now, or turns its file logging off when there is none, and
+        /// hands over the retention policy along with it.
+        ///
+        /// Called at startup, on every log rotation, and when the user changes
+        /// a diagnostics setting. The state is read here, at send time, rather
+        /// than captured by the caller: a notification that was queued before a
+        /// rotation would otherwise point the service at the file that rotation
+        /// has already replaced.
+        func syncLogging() async {
+            // One sender at a time. A second caller only marks the work as
+            // outstanding: the sender already running will pick it up, and the
+            // state it reads then is newer than anything this caller could
+            // pass along.
+            let isSender = loggingSync.withLock { state -> Bool in
+                state.isPending = true
+                guard !state.isSending else { return false }
+                state.isSending = true
+                return true
+            }
+            guard isSender else { return }
+
+            var attemptsLeft = Self.loggingSyncAttempts
+            while loggingSync.withLock({ state -> Bool in
+                if state.isPending {
+                    state.isPending = false
+                    return true
+                }
+                // No outstanding work: release the sender role in the same
+                // critical section that observed the empty flag. Clearing it
+                // later (after the lock was released) raced a caller that
+                // arrived in between — it saw isSending set, declined to
+                // send, and the pending flag it had just set was stranded
+                // with no sender left to service it.
+                state.isSending = false
+                return false
+            }) {
+                if await sendLoggingConfiguration() {
+                    attemptsLeft = Self.loggingSyncAttempts
+                    continue
+                }
+
+                // Put the work back and try again shortly. Leaving it to the
+                // next request would be enough on a busy app, but a quiet one
+                // could sit for minutes with the service writing to a file this
+                // process has already rotated away.
+                loggingSync.withLock { $0.isPending = true }
+                attemptsLeft -= 1
+                guard attemptsLeft > 0 else {
+                    // Exhausted: the pending flag stays set for the next
+                    // trigger; release the sender role explicitly, since the
+                    // loop exit above is what normally clears it.
+                    loggingSync.withLock { $0.isSending = false }
+                    break
+                }
+                try? await Task.sleep(for: .seconds(2))
+            }
+        }
+
+        /// How many times a failing configuration push is retried before it is
+        /// left for the next request to carry.
+        private static let loggingSyncAttempts = 3
+
+        /// Sends the current logging configuration once.
+        ///
+        /// - Returns: Whether the service accepted it.
+        private func sendLoggingConfiguration() async -> Bool {
+            let request = MenuBarItemService.Request.configureLogging(
+                filePath: DiagnosticLogger.shared.currentLogFile?.path,
+                rotationPolicy: DiagnosticLogger.shared.rotationPolicy
+            )
+            let response = await session.sendAsync(request: request)
+            guard case .configureLogging = response else {
+                diagLog.error("configureLogging request returned \(String(describing: response))")
+                return false
+            }
+            return true
+        }
+
         /// Returns the source process identifiers for the given windows in a
         /// single batch XPC request, avoiding concurrent thread explosion
         /// in the XPC service.
         func sourcePIDs(for windows: [WindowInfo]) async -> [pid_t?] {
+            // The app's most frequent request, and so the cheapest place to
+            // notice that the service is owed a logging configuration. Not
+            // awaited: a sync stuck in its retry cycle sleeps for seconds and
+            // must not delay the request — the kicked-off task re-enters
+            // syncLogging, whose single-sender lock makes extra kickoffs
+            // no-ops.
+            if loggingSync.withLock({ $0.isPending }) {
+                Task { await syncLogging() }
+            }
             let response = await session.sendAsync(request: .sourcePIDs(windows))
             guard let response else {
                 diagLog.error("Source PIDs batch request returned nil")
@@ -109,9 +224,15 @@ extension MenuBarItemService {
             private let queue: DispatchQueue
             private let diagLog: DiagLog
 
-            init(queue: DispatchQueue, diagLog: DiagLog) {
+            /// Called when a session is dropped, so state the peer only learns
+            /// by being told — the diagnostic log path — can be sent again to
+            /// whatever process comes back.
+            private let onInvalidate: @Sendable () -> Void
+
+            init(queue: DispatchQueue, diagLog: DiagLog, onInvalidate: @escaping @Sendable () -> Void) {
                 self.queue = queue
                 self.diagLog = diagLog
+                self.onInvalidate = onInvalidate
             }
 
             func getSession() throws -> XPCSession {
@@ -166,10 +287,13 @@ extension MenuBarItemService {
                 guard let cancelledSession else {
                     return
                 }
-                sessionLock.withLock { session in
-                    if session === cancelledSession {
-                        session = nil
-                    }
+                let dropped = sessionLock.withLock { session -> Bool in
+                    guard session === cancelledSession else { return false }
+                    session = nil
+                    return true
+                }
+                if dropped {
+                    onInvalidate()
                 }
             }
 
@@ -188,8 +312,8 @@ extension MenuBarItemService {
         private let diagLog: DiagLog
 
         /// Creates a new session.
-        init(queue: DispatchQueue, diagLog: DiagLog) {
-            self.storage = Storage(queue: queue, diagLog: diagLog)
+        init(queue: DispatchQueue, diagLog: DiagLog, onInvalidate: @escaping @Sendable () -> Void) {
+            self.storage = Storage(queue: queue, diagLog: diagLog, onInvalidate: onInvalidate)
             self.diagLog = diagLog
         }
 

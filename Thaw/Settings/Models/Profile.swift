@@ -20,6 +20,12 @@ nonisolated struct ProfileMetadata: Codable, Identifiable, Hashable {
     var associatedDisplayUUID: String?
     /// The cached display name, used when the display is disconnected.
     var associatedDisplayName: String?
+    /// The reboot-stable key of the Space this profile auto-activates for,
+    /// or `nil` for manual-only. See `Bridging.getSpacePersistentKeys()`.
+    var associatedSpaceKey: String?
+    /// A user-facing label for the associated Space. Spaces have no system
+    /// name, so this is whatever the user typed when making the association.
+    var associatedSpaceName: String?
 }
 
 // MARK: - GeneralSettingsSnapshot
@@ -602,6 +608,10 @@ nonisolated struct ProfileExportEntry: Codable {
     var profile: Profile
     var associatedDisplayUUID: String?
     var associatedDisplayName: String?
+    /// Space associations are exported too, but a key from another Mac will
+    /// never match locally, so importing one is harmless rather than useful.
+    var associatedSpaceKey: String?
+    var associatedSpaceName: String?
 }
 
 /// Wrapper for exporting multiple profiles as a single file.

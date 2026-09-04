@@ -143,3 +143,4 @@ func withScratchDefaults<Result>(
     }
     return try await body(suite)
 }
+

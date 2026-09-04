@@ -87,6 +87,24 @@ final class MenuBarItemImageCache: @unchecked Sendable {
         /// The scale factor of the image at the time of capture.
         let scale: CGFloat
 
+        /// A value that differs when the image differs, used to spot an
+        /// item blinking for attention.
+        ///
+        /// Hashes the pixel data rather than the `CGImage` identity, so a
+        /// recapture of an unchanged icon fingerprints the same. Falls back
+        /// to the dimensions when the data provider yields nothing, which
+        /// costs sensitivity but never invents a difference.
+        var fingerprint: Int {
+            var hasher = Hasher()
+            hasher.combine(cgImage.width)
+            hasher.combine(cgImage.height)
+            hasher.combine(scale)
+            if let data = cgImage.dataProvider?.data {
+                hasher.combine(data as Data)
+            }
+            return hasher.finalize()
+        }
+
         /// The image's size, applying ``scale``.
         var scaledSize: CGSize {
             CGSize(
@@ -102,12 +120,12 @@ final class MenuBarItemImageCache: @unchecked Sendable {
 
         /// Returns whether two optional captured images have equivalent visual content.
         ///
-        /// Uses pointer equality on `CGImage` as a fast path, falling back to
-        /// dimension and pixel-data comparison when instances differ.
+        /// Pointer-equal `CGImage`s are a fast path, but scale still has to match.
+        /// Otherwise compare dimensions and pixel data.
         static func isVisuallyEqual(_ old: CapturedImage?, _ new: CapturedImage?) -> Bool {
             guard let old, let new else { return old == nil && new == nil }
             if old.cgImage === new.cgImage {
-                return true
+                return old.scale == new.scale
             }
             guard old.scale == new.scale,
                   old.cgImage.width == new.cgImage.width,
@@ -135,6 +153,32 @@ final class MenuBarItemImageCache: @unchecked Sendable {
 
     /// The cached item images, keyed by their corresponding tags.
     private(set) var images = [MenuBarItemTag: CapturedImage]()
+
+    /// Tracks which items are blinking for attention.
+    ///
+    /// Deliberately not observable: it is fed on every capture, and the
+    /// verdict it produces is published through ``tagsSeekingAttention``
+    /// instead, which only changes when the verdict does.
+    @ObservationIgnored private var attentionDetector = MenuBarItemAttentionDetector()
+
+    /// The items currently asking for attention.
+    private(set) var tagsSeekingAttention: Set<MenuBarItemTag> = []
+
+    /// Set by ``MenuBarItemTriggersManager`` while a trigger watches for
+    /// attention-seeking items.
+    ///
+    /// Detection is otherwise tied to the reveal setting, which a user may
+    /// leave off while still wanting a trigger to act on the same signal.
+    ///
+    /// Flipping this restarts the live-refresh loop: with every UI consumer
+    /// closed, capture only runs when the loop's section selection includes
+    /// the concealed sections, and that selection reads this flag.
+    @ObservationIgnored var isAttentionDetectionRequired = false {
+        didSet {
+            guard oldValue != isAttentionDetectionRequired else { return }
+            startLiveRefreshIfNeeded()
+        }
+    }
 
     /// Memoized results of ``trimmedImage(for:)``, keyed by tag, each paired
     /// with the `CGImage` it was derived from so a recapture invalidates it.
@@ -228,13 +272,11 @@ final class MenuBarItemImageCache: @unchecked Sendable {
     /// The currently running live-refresh task, if any.
     private var liveRefreshTask: Task<Void, Never>?
 
-    /// Timestamp of the last offscreen SkyLight batch capture, used to
-    /// rate-limit how often the leaking `SLSWindowListCreateImageFromArrayProxying`
-    /// path is invoked (defense in depth for #759).
-    private var lastSkyLightBatchAt: ContinuousClock.Instant?
+    /// Timestamp of the last Hidden-section capture.
+    private var lastHiddenRefreshAt: ContinuousClock.Instant?
 
-    /// Minimum spacing enforced between offscreen SkyLight batch captures.
-    private static let minSkyLightBatchInterval: Duration = .seconds(1)
+    /// Timestamp of the last Always Hidden-section capture.
+    private var lastAlwaysHiddenRefreshAt: ContinuousClock.Instant?
 
     /// Whether a window's bounds can contribute to a composite capture.
     ///
@@ -251,19 +293,13 @@ final class MenuBarItemImageCache: @unchecked Sendable {
 
     /// Maximum icon refresh rate the UI may offer, in frames per second.
     ///
-    /// The slider ceiling and the SCK capture floor are the same number so
-    /// they cannot drift apart: the UI never promises a rate the engine will
-    /// not deliver. 30 matches the historical slider top. Higher rates pin a
-    /// core while Search / Layout / Thaw Bar stay open (composite SCK +
-    /// per-item crop); leave the SkyLight offscreen floor at 1 s separately.
-    nonisolated static let maxIconRefreshRate: Double = 30
+    /// The slider ceiling and the SCK / Hidden capture floor are the same
+    /// number so they cannot drift apart. Always Hidden stays at 1 fps.
+    static nonisolated let maxIconRefreshRate: Double = 30
 
     /// Minimum spacing enforced between visible-section SCK captures, in seconds.
     /// Reciprocal of ``maxIconRefreshRate``.
-    nonisolated static let minIconRefreshInterval: TimeInterval = 1.0 / maxIconRefreshRate
-
-    /// Minimum spacing enforced between visible-section SCK captures.
-    private static let minSCKRefreshInterval: Duration = .seconds(minIconRefreshInterval)
+    static nonisolated let minIconRefreshInterval: TimeInterval = 1.0 / maxIconRefreshRate
 
     /// Tracks whether the MenuBarLayoutSettingsPane is currently open.
     /// Used to gate background cache prewarming so captures only occur while the
@@ -336,8 +372,7 @@ final class MenuBarItemImageCache: @unchecked Sendable {
 
     /// Marks that the MenuBarLayoutSettingsPane has been closed.
     /// Call this from the pane's onDisappear to stop background cache prewarming
-    /// once the pane is no longer visible, bounding how long perpetual background
-    /// captures (including the leaking SkyLight offscreen path) can run (#759).
+    /// once the pane is no longer visible.
     @MainActor
     func markSettingsPaneClosed() {
         isSettingsPaneOpen = false
@@ -740,23 +775,29 @@ final class MenuBarItemImageCache: @unchecked Sendable {
                 self.makeNavigationStateSnapshot()
             }
             let needsRefresh = self.hasVisibleCaptureConsumer(nav: nav)
+                || self.isAttentionDetectionRequired
 
             if needsRefresh {
                 // Already running — don't restart
                 guard self.liveRefreshTask == nil else { return }
                 MenuBarItemImageCache.diagLog.debug(
-                    "Starting live refresh (iceBar=\(nav.isIceBarPresented), search=\(nav.isSearchPresented), settings=\(nav.isSettingsPresented))"
+                    "Starting live refresh (iceBar=\(nav.isIceBarPresented), search=\(nav.isSearchPresented), settings=\(nav.isSettingsPresented), attention=\(self.isAttentionDetectionRequired))"
                 )
+                lastSCKRefreshAt = nil
+                lastHiddenRefreshAt = nil
+                lastAlwaysHiddenRefreshAt = nil
                 self.liveRefreshTask = Task { [weak self] in
                     guard let self else { return }
                     await self.runLiveRefreshLoop()
                 }
             } else {
-                if self.liveRefreshTask != nil {
-                    MenuBarItemImageCache.diagLog.debug("Stopping live refresh")
-                }
-                self.liveRefreshTask?.cancel()
+                guard let task = self.liveRefreshTask else { return }
+                MenuBarItemImageCache.diagLog.debug("Stopping live refresh")
                 self.liveRefreshTask = nil
+                task.cancel()
+                await task.value
+                guard self.liveRefreshTask == nil else { return }
+                await MenuBarCaptureService.Connection.shared.recycle()
             }
         }
     }
@@ -780,16 +821,13 @@ final class MenuBarItemImageCache: @unchecked Sendable {
                 try? await Task.sleep(for: .seconds(1))
                 continue
             }
-            // Floor the sleep so a sub-millisecond stored interval cannot
-            // truncate to a zero-length sleep and spin the main actor.
-            try? await Task.sleep(for: .seconds(max(interval, Self.minIconRefreshInterval)))
-            guard !Task.isCancelled else { break }
 
             let nav = appState.navigationState
 
             let preferredDisplayID = appState.itemManager.itemCache.displayID
             guard let resolvedScreen = Self.resolveScreen(preferredDisplayID: preferredDisplayID) else {
                 MenuBarItemImageCache.diagLog.warning("liveRefresh: no connected screens available, skipping")
+                try? await Task.sleep(for: .seconds(max(interval, Self.minIconRefreshInterval)))
                 continue
             }
             let screen = resolvedScreen.screen
@@ -800,7 +838,7 @@ final class MenuBarItemImageCache: @unchecked Sendable {
             }
 
             // Determine which sections to refresh based on what's visible
-            let sections: [MenuBarSection.Name]
+            var sections: [MenuBarSection.Name]
             let isLayoutPane = nav.isSettingsPresented
                 && nav.settingsNavigationIdentifier == .menuBarLayout
             // The Hotkeys pane only needs item icons while its per-item list
@@ -830,75 +868,146 @@ final class MenuBarItemImageCache: @unchecked Sendable {
                       let current = appState.menuBarManager.iceBarPanel.currentSection
             {
                 sections = [current]
+            } else if isAttentionDetectionRequired {
+                // Attention triggers watch concealed icons, and the blink
+                // only exists in the capture: sample them even when every
+                // UI consumer is closed.
+                sections = [.hidden, .alwaysHidden]
             } else {
-                // No consumer visible on this tick — keep looping so the
-                // Combine observer can properly cancel the task. Using
-                // `break` here would race with IceBar close() where
-                // currentSection is nilled before isIceBarPresented.
+                try? await Task.sleep(for: .milliseconds(50))
                 continue
             }
 
-            // Hoisted: these are tick-global, not per-section.
-            if appState.itemManager.lastMoveOperationOccurred(within: .seconds(2)) {
-                continue
+            // A single-section consumer (the Thaw Bar) can be pointed at the
+            // visible section while a trigger watches a concealed icon; the
+            // concealed sections always stay in the sampled set when their
+            // capture is demanded for attention detection.
+            if isAttentionDetectionRequired {
+                for concealed in [MenuBarSection.Name.hidden, .alwaysHidden]
+                    where !sections.contains(concealed)
+                {
+                    sections.append(concealed)
+                }
             }
-            if appState.itemManager.isResettingLayout {
+
+            if appState.itemManager.lastMoveOperationOccurred(within: .seconds(2))
+                || appState.itemManager.isResettingLayout
+            {
+                try? await Task.sleep(for: .seconds(max(interval, Self.minIconRefreshInterval)))
                 continue
             }
 
             let scale = screen.backingScaleFactor
+            let now = ContinuousClock.now
+            var nextWake = now + .seconds(max(interval, Self.minIconRefreshInterval))
 
-            // Partition by capture path: visible items refresh via SCK
-            // (leak-free); hidden + always-hidden items refresh via SkyLight,
-            // batched into a single call per tick to amortize the irreducible
-            // per-call dictionary leak.
-            var offscreenBatch = [MenuBarItem]()
-            var offscreenSectionLabels = [String]()
+            var hiddenItems = [MenuBarItem]()
+            var alwaysHiddenItems = [MenuBarItem]()
 
             for section in sections {
                 let items = appState.itemManager.itemCache.managedItems(for: section)
                 guard !items.isEmpty else { continue }
+                guard let sectionInterval = MenuBarLiveRefreshPolicy.refreshInterval(
+                    for: section,
+                    target: interval
+                ) else { continue }
+                let duration = Duration.seconds(sectionInterval)
 
-                if section == .visible {
-                    // Rate-limit the on-screen SCK path, mirroring the
-                    // offscreen SkyLight limit below. Skips only this section
-                    // for this tick, so the offscreen batch still gets its
-                    // chance at its own cadence.
-                    let now = ContinuousClock.now
-                    if let lastSCKRefreshAt,
-                       now - lastSCKRefreshAt < Self.minSCKRefreshInterval
-                    {
-                        MenuBarItemImageCache.diagLog.debug("liveRefresh (SCK): skipping \(items.count) visible items, rate-limited")
-                        continue
+                switch section {
+                case .visible:
+                    if MenuBarLiveRefreshPolicy.isDue(
+                        lastCaptureAt: lastSCKRefreshAt,
+                        now: now,
+                        interval: duration
+                    ) {
+                        lastSCKRefreshAt = now
+                        MenuBarItemImageCache.diagLog.debug(
+                            "liveRefresh (SCK): section=\(section.logString) items=\(items.count)"
+                        )
+                        await withCapturePermit {
+                            await refreshImages(of: items, scale: scale, viaSCK: true)
+                        }
                     }
-                    lastSCKRefreshAt = now
-                    MenuBarItemImageCache.diagLog.debug("liveRefresh (SCK): section=\(section.logString) displayID=\(screen.displayID) backingScaleFactor=\(Double(scale)) hasNotch=\(screen.hasNotch) items=\(items.count) menuBarHeight=\(Double(screen.getMenuBarHeightEstimate()))")
-                    await withCapturePermit {
-                        await refreshImages(of: items, scale: scale, viaSCK: true)
-                    }
-                } else {
-                    offscreenBatch.append(contentsOf: items)
-                    offscreenSectionLabels.append("\(section.logString)=\(items.count)")
+                    nextWake = min(
+                        nextWake,
+                        MenuBarLiveRefreshPolicy.nextDeadline(
+                            capturedAt: lastSCKRefreshAt ?? now,
+                            interval: duration,
+                            now: ContinuousClock.now
+                        )
+                    )
+                case .hidden:
+                    hiddenItems = items
+                case .alwaysHidden:
+                    alwaysHiddenItems = items
                 }
             }
 
-            if !offscreenBatch.isEmpty {
-                // Rate-limit the leaking SkyLight offscreen path: skip this
-                // tick's batch if the last one ran too recently (defense in
-                // depth for #759). Visible-section SCK captures above are
-                // unaffected and keep their normal cadence.
-                let now = ContinuousClock.now
-                if let lastSkyLightBatchAt,
-                   now - lastSkyLightBatchAt < Self.minSkyLightBatchInterval
-                {
-                    MenuBarItemImageCache.diagLog.debug("liveRefresh (SkyLight): skipping batch of \(offscreenBatch.count) offscreen items, rate-limited")
-                } else {
-                    lastSkyLightBatchAt = now
-                    MenuBarItemImageCache.diagLog.debug("liveRefresh (SkyLight): batched \(offscreenBatch.count) offscreen items [\(offscreenSectionLabels.joined(separator: ", "))]")
-                    await withCapturePermit {
-                        await refreshImages(of: offscreenBatch, scale: scale)
-                    }
+            // One offscreen request in flight. Always Hidden goes first when
+            // both are due so Hidden at 30 fps cannot starve its 1 fps slot.
+            let hiddenInterval = MenuBarLiveRefreshPolicy.refreshInterval(for: .hidden, target: interval)
+            let alwaysInterval = MenuBarLiveRefreshPolicy.refreshInterval(for: .alwaysHidden, target: interval)
+            let hiddenDue = !hiddenItems.isEmpty
+                && hiddenInterval != nil
+                && MenuBarLiveRefreshPolicy.isDue(
+                    lastCaptureAt: lastHiddenRefreshAt,
+                    now: now,
+                    interval: .seconds(hiddenInterval ?? interval)
+                )
+            let alwaysDue = !alwaysHiddenItems.isEmpty
+                && alwaysInterval != nil
+                && MenuBarLiveRefreshPolicy.isDue(
+                    lastCaptureAt: lastAlwaysHiddenRefreshAt,
+                    now: now,
+                    interval: .seconds(alwaysInterval ?? 1)
+                )
+
+            switch MenuBarLiveRefreshPolicy.nextOffscreenSection(
+                hiddenDue: hiddenDue,
+                alwaysHiddenDue: alwaysDue
+            ) {
+            case .hidden:
+                lastHiddenRefreshAt = now
+                MenuBarItemImageCache.diagLog.debug("liveRefresh (capture): hidden items=\(hiddenItems.count)")
+                await withCapturePermit {
+                    await refreshImages(of: hiddenItems, scale: scale)
                 }
+            case .alwaysHidden:
+                lastAlwaysHiddenRefreshAt = now
+                MenuBarItemImageCache.diagLog.debug(
+                    "liveRefresh (capture): alwaysHidden items=\(alwaysHiddenItems.count)"
+                )
+                await withCapturePermit {
+                    await refreshImages(of: alwaysHiddenItems, scale: scale)
+                }
+            case .visible, nil:
+                break
+            }
+
+            if let hiddenInterval, !hiddenItems.isEmpty {
+                nextWake = min(
+                    nextWake,
+                    MenuBarLiveRefreshPolicy.nextDeadline(
+                        capturedAt: lastHiddenRefreshAt ?? now,
+                        interval: .seconds(hiddenInterval),
+                        now: ContinuousClock.now
+                    )
+                )
+            }
+            if let alwaysInterval, !alwaysHiddenItems.isEmpty {
+                nextWake = min(
+                    nextWake,
+                    MenuBarLiveRefreshPolicy.nextDeadline(
+                        capturedAt: lastAlwaysHiddenRefreshAt ?? now,
+                        interval: .seconds(alwaysInterval),
+                        now: ContinuousClock.now
+                    )
+                )
+            }
+
+            let sleep = nextWake - ContinuousClock.now
+            if sleep > .zero {
+                try? await Task.sleep(for: sleep)
             }
         }
 
@@ -1296,6 +1405,11 @@ final class MenuBarItemImageCache: @unchecked Sendable {
         scale: CGFloat,
         viaSCK: Bool = false
     ) async {
+        if !viaSCK {
+            await refreshImagesFromCaptureService(items: items, scale: scale)
+            return
+        }
+
         var windowIDs = [CGWindowID]()
         var storage = [CGWindowID: (MenuBarItem, CGRect)]()
         var boundsUnion = CGRect.null
@@ -1335,23 +1449,10 @@ final class MenuBarItemImageCache: @unchecked Sendable {
 
         // Capture path: SCK is leak-free but display-bounded, so only use it
         // when the caller knows all items are on-screen (visible section).
-        // SkyLight is required for items positioned past the display's left
-        // edge (hidden / always-hidden); both SCK filter shapes fail there
-        // (display+including → -3812, desktopIndependentWindow → -3811). Each
-        // SkyLight call leaks one CFMutableDictionary inside
-        // SLSWindowListCreateImageFromArrayProxying; that floor stays until
-        // Apple fixes SCK or the framework leak.
-        let compositeImage: CGImage? = if viaSCK {
-            await ScreenCapture.captureWindowsAsync(
-                with: windowIDs,
-                option: captureOption
-            )
-        } else {
-            ScreenCapture.captureWindows(
-                with: windowIDs,
-                option: captureOption
-            )
-        }
+        let compositeImage = await ScreenCapture.captureWindowsAsync(
+            with: windowIDs,
+            option: captureOption
+        )
         guard let compositeImage else {
             MenuBarItemImageCache.diagLog.debug("refreshImages: capture failed, skipping")
             return
@@ -1402,18 +1503,89 @@ final class MenuBarItemImageCache: @unchecked Sendable {
         }
 
         guard !newImages.isEmpty, !Task.isCancelled else { return }
+        await applyRefreshedImages(newImages)
+    }
 
-        await MainActor.run { [newImages] in
-            var updatedCount = 0
-            for (tag, newImage) in newImages where !CapturedImage.isVisuallyEqual(self.images[tag], newImage) {
-                self.images[tag] = newImage
-                updateAccessOrder(for: tag)
-                updatedCount += 1
-            }
-            if updatedCount > 0 {
-                MenuBarItemImageCache.diagLog.debug("refreshImages: ✓ updated \(updatedCount)/\(newImages.count) items (visually changed)")
-            }
+    /// Offscreen items go through the recyclable SkyLight helper so the
+    /// per-call dictionary leak stays out of the UI process.
+    private nonisolated func refreshImagesFromCaptureService(
+        items: [MenuBarItem],
+        scale: CGFloat
+    ) async {
+        let windowIDs = items.map(\.windowID)
+        guard !windowIDs.isEmpty else { return }
+        var storage = [CGWindowID: MenuBarItem]()
+        for item in items {
+            storage[item.windowID] = item
         }
+        let frames = await MenuBarCaptureService.Connection.shared.capture(
+            windowIDs: windowIDs,
+            scale: scale,
+            option: captureOption
+        )
+        guard !frames.isEmpty, !Task.isCancelled else { return }
+
+        var newImages = [MenuBarItemTag: CapturedImage]()
+        for frame in frames {
+            guard let item = storage[frame.windowID],
+                  let image = MenuBarCaptureService.makeImage(from: frame)
+            else { continue }
+            newImages[item.tag] = CapturedImage(cgImage: image, scale: CGFloat(frame.scale))
+        }
+        guard !newImages.isEmpty, !Task.isCancelled else { return }
+        await applyRefreshedImages(newImages)
+    }
+
+    private func applyRefreshedImages(_ newImages: [MenuBarItemTag: CapturedImage]) {
+        var updatedCount = 0
+        for (tag, newImage) in newImages where !CapturedImage.isVisuallyEqual(images[tag], newImage) {
+            images[tag] = newImage
+            updateAccessOrder(for: tag)
+            updatedCount += 1
+        }
+        // Every capture is recorded, changed or not: the detector needs the
+        // gaps between changes as much as the changes, and an item that has
+        // stopped blinking only stops qualifying once steady samples push
+        // the blink out of its window.
+        recordForAttention(newImages)
+        if updatedCount > 0 {
+            MenuBarItemImageCache.diagLog.debug(
+                "refreshImages: ✓ updated \(updatedCount)/\(newImages.count) items (visually changed)"
+            )
+        }
+    }
+
+    /// Feeds a batch of captures to the attention detector and republishes
+    /// the verdict when it changes.
+    private func recordForAttention(_ newImages: [MenuBarItemTag: CapturedImage]) {
+        guard Defaults.bool(forKey: .surfaceItemsSeekingAttention) || isAttentionDetectionRequired else {
+            if !tagsSeekingAttention.isEmpty {
+                tagsSeekingAttention = []
+            }
+            return
+        }
+
+        let now = Date.timeIntervalSinceReferenceDate
+        for (tag, image) in newImages {
+            attentionDetector.record(fingerprint: image.fingerprint, for: tag, at: now)
+        }
+        attentionDetector.retain(Set(images.keys))
+
+        let seeking = Set(images.keys.filter { attentionDetector.isSeekingAttention($0, at: now) })
+        guard seeking != tagsSeekingAttention else { return }
+        tagsSeekingAttention = seeking
+        if !seeking.isEmpty {
+            MenuBarItemImageCache.diagLog.debug(
+                "attention: \(seeking.count) item(s) seeking attention"
+            )
+        }
+    }
+
+    /// Clears an item's recorded history, so surfacing it does not
+    /// immediately re-trigger on the blink that surfaced it.
+    func clearAttention(for tag: MenuBarItemTag) {
+        attentionDetector.reset(tag)
+        tagsSeekingAttention.remove(tag)
     }
 
     /// Captures the images of the menu bar items in the given section and returns

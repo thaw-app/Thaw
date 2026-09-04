@@ -32,6 +32,7 @@ struct DisplaySettingsPane: View {
     @State private var pendingGlobalApply: PendingGlobalApply?
     @State private var errorMessage: String?
     @State private var showingError = false
+    @State private var selectedDisplayID: String?
 
     /// A spacing apply request awaiting user confirmation.
     private struct PendingSpacingApply: Equatable {
@@ -57,9 +58,18 @@ struct DisplaySettingsPane: View {
             }
             IceSection {
                 confirmSpacingRelaunchControls
+            } footer: {
+                SettingsWarningPill(
+                    title: "Apps may relaunch",
+                    message: "Changing menu bar spacing for a display can relaunch apps with menu bar items. Unsaved input, progress, or transient app state may be lost."
+                )
             }
-            ForEach(displaySettings.allDisplays()) { display in
-                displaySection(for: display)
+            if !displaySettings.allDisplays().isEmpty {
+                IceSection {
+                    Text("Per display")
+                } content: {
+                    perDisplayControls
+                }
             }
         }
         .alert(
@@ -101,15 +111,8 @@ struct DisplaySettingsPane: View {
 
     @ViewBuilder
     private var confirmSpacingRelaunchControls: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            Toggle("Confirm before relaunching apps", isOn: $displaySettings.confirmSpacingRelaunch)
-                .annotation("Before a display change or spacing edit relaunches your menu bar apps, Thaw asks you to confirm. Turn this off to apply spacing changes and relaunch apps without confirmation.")
-
-            SettingsWarningPill(
-                title: "Apps may relaunch",
-                message: "Changing menu bar spacing for a display can relaunch apps with menu bar items. Unsaved input, progress, or transient app state may be lost."
-            )
-        }
+        Toggle("Confirm before relaunching apps", isOn: $displaySettings.confirmSpacingRelaunch)
+            .annotation("Before a display change or spacing edit relaunches your menu bar apps, Thaw asks you to confirm. Turn this off to apply spacing changes and relaunch apps without confirmation.")
 
         if !displaySettings.confirmSpacingRelaunch {
             IcePicker(
@@ -123,12 +126,31 @@ struct DisplaySettingsPane: View {
         }
     }
 
-    private func displaySection(for display: DisplaySettingsManager.DisplayInfo) -> some View {
-        IceSection {
-            displayHeader(for: display)
-        } content: {
-            displayRow(for: display)
+    /// One controls block driven by a display picker, instead of repeating
+    /// the identical block once per display (thaw-next's redesign).
+    @ViewBuilder
+    private var perDisplayControls: some View {
+        let displays = displaySettings.allDisplays()
+        let selected = displays.first { $0.id == selectedDisplayID } ?? displays[0]
+
+        IcePicker(
+            "Display",
+            selection: Binding(
+                get: { selected.id },
+                set: { selectedDisplayID = $0 }
+            )
+        ) {
+            ForEach(displays) { display in
+                Text(display.name).tag(display.id)
+            }
         }
+
+        if selected.hasNotch || !selected.isConnected {
+            displayHeader(for: selected)
+                .frame(maxWidth: .infinity, alignment: .leading)
+        }
+
+        displayRow(for: selected)
     }
 
     private func displayHeader(for display: DisplaySettingsManager.DisplayInfo) -> some View {
@@ -690,7 +712,7 @@ struct DisplaySettingsPane: View {
 
     private func globalConfirmationMessage(for pending: PendingGlobalApply) -> String {
         let profileName = pending.activeProfileName ?? ""
-        let displayMessage = String(localized: "This will overwrite the settings of ^[\(pending.displayCount) displays](inflect: true) with the global template. If the active display's spacing changes, Thaw will relaunch each app with a menu bar item. Relaunching apps may cause unsaved input, progress, or transient app state to be lost.")
+        let displayMessage = String(localized: "This will overwrite the settings of \(pending.displayCount) displays with the global template. If the active display's spacing changes, Thaw will relaunch each app with a menu bar item. Relaunching apps may cause unsaved input, progress, or transient app state to be lost.")
         if pending.activeProfileID != nil {
             let profileInstruction = String(localized: "Save the global template to the active profile \"\(profileName)\", or save it to every profile.")
             return "\(displayMessage) \(profileInstruction)"

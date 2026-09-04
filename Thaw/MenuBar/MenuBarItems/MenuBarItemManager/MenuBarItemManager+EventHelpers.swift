@@ -15,6 +15,12 @@ import os.lock
 // MARK: - Event Helpers
 
 extension MenuBarItemManager {
+    enum InputPauseWaitResult {
+        case paused
+        case timedOut
+        case superseded
+    }
+
     /// An error that can occur during menu bar item event operations.
     enum EventError: CustomStringConvertible, LocalizedError {
         /// A generic indication of a failure.
@@ -49,6 +55,13 @@ extension MenuBarItemManager {
         /// would drag the item against geometry that has already changed,
         /// which is how a failed batch walks the bar (#900).
         case staleDestination(MenuBarItem)
+        /// The user did not pause input before the caller-specific deadline.
+        /// Trigger moves treat this as a deferral rather than taking the
+        /// cursor away while the user is still interacting with the Mac.
+        case inputPauseTimedOut(MenuBarItem)
+        /// The condition which requested this move changed while the move was
+        /// waiting or retrying. The obsolete drag must stop immediately.
+        case moveSuperseded(MenuBarItem)
 
         var description: String {
             switch self {
@@ -76,6 +89,10 @@ extension MenuBarItemManager {
                 "\(Self.self).eventWindowMismatch(item: \(item.tag))"
             case let .staleDestination(item):
                 "\(Self.self).staleDestination(item: \(item.tag))"
+            case let .inputPauseTimedOut(item):
+                "\(Self.self).inputPauseTimedOut(item: \(item.tag))"
+            case let .moveSuperseded(item):
+                "\(Self.self).moveSuperseded(item: \(item.tag))"
             }
         }
 
@@ -105,6 +122,10 @@ extension MenuBarItemManager {
                 "A move event for \"\(item.displayName)\" was delivered to the wrong window"
             case let .staleDestination(item):
                 "The menu bar rearranged while moving \"\(item.displayName)\""
+            case let .inputPauseTimedOut(item):
+                "Input did not pause before moving \"\(item.displayName)\""
+            case let .moveSuperseded(item):
+                "The requested move for \"\(item.displayName)\" is no longer current"
             }
         }
 
@@ -133,7 +154,7 @@ extension MenuBarItemManager {
                 true
             case .cannotComplete, .invalidEventSource, .missingMouseLocation, .eventCreationFailure,
                  .itemNotMovable, .missingItemBounds, .menuTrackingActive, .eventWindowMismatch,
-                 .staleDestination:
+                 .staleDestination, .inputPauseTimedOut, .moveSuperseded:
                 false
             }
         }
@@ -152,28 +173,49 @@ extension MenuBarItemManager {
     }
 
     /// Waits asynchronously for the user to pause input.
-    nonisolated func waitForUserToPauseInput() async throws {
+    @discardableResult
+    nonisolated func waitForUserToPauseInput(
+        for requiredPause: Duration? = nil,
+        timeout: Duration? = nil,
+        shouldContinue: (@MainActor () -> Bool)? = nil
+    ) async throws -> InputPauseWaitResult {
         // The pre-move input-pause window is configurable so users hit by repeated cursor
         // "kidnapping" during menu-bar reordering can widen it. Reordering warps the real cursor,
         // and a very short window lets warps slip through the micro-gaps between a user's own mouse
         // moves when a churny app keeps changing its menu-bar items (see #750, #723, #736). The
         // default preserves the previous 50 ms behaviour; override with:
         //   defaults write com.stonerl.Thaw inputPauseThresholdMs -int <milliseconds>
-        let pauseMs = max(
+        let configuredPause = Duration.milliseconds(max(
             0,
             (Defaults.object(forKey: .inputPauseThresholdMs) as? Int) ?? Defaults.DefaultValue.inputPauseThresholdMs
-        )
-        let waitTask = Task {
+        ))
+        let pause = requiredPause ?? configuredPause
+        let startedAt = ContinuousClock.now
+        let waitTask = Task { () -> InputPauseWaitResult in
             while true {
                 try Task.checkCancellation()
-                if hasUserPausedInput(for: .milliseconds(pauseMs)) {
-                    break
+                if let shouldContinue, !(await shouldContinue()) {
+                    return .superseded
+                }
+                if hasUserPausedInput(for: pause) {
+                    return .paused
+                }
+                if let timeout, ContinuousClock.now - startedAt >= timeout {
+                    return .timedOut
                 }
                 try await Task.sleep(for: .milliseconds(50))
             }
         }
         do {
-            try await waitTask.value
+            // `waitTask` is unstructured, so awaiting its value does not carry
+            // the caller's cancellation into it. Without the handler a caller
+            // cancelled while input stays active waits for a `nil` timeout that
+            // never arrives.
+            return try await withTaskCancellationHandler {
+                try await waitTask.value
+            } onCancel: {
+                waitTask.cancel()
+            }
         } catch {
             // Only cancellation reaches here. Named so a log full of bare
             // `cannotComplete` failures (#900) can tell this stage apart.

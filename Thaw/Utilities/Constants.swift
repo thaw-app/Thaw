@@ -68,6 +68,9 @@ nonisolated enum Constants {
     /// The URL for sponsoring/donating.
     static let donateURL: URL = requiredInfoPlistURL(donateURLInfoPlistKey)
 
+    /// The Crowdin project URL for community translations.
+    static let translateURL = URL(string: "https://crowdin.com/project/thaw")!
+
     /// The executable URL used by `MenuBarItemSpacingManager`.
     static let menuBarItemSpacingExecutableURL: URL = requiredInfoPlistURL(menuBarItemSpacingExecutableURIInfoPlistKey)
 

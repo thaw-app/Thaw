@@ -38,12 +38,13 @@ struct MenuBarTintKindTests {
         #expect(MenuBarTintKind.gradient.rawValue == 2)
         #expect(MenuBarTintKind.glass.rawValue == 3)
         #expect(MenuBarTintKind.adaptive.rawValue == 4)
+        #expect(MenuBarTintKind.adaptiveGradient.rawValue == 5)
     }
 
     @Test("Every case is reachable and no case has been dropped")
     func allCasesIsComplete() {
-        #expect(MenuBarTintKind.allCases.count == 5)
-        #expect(MenuBarTintKind.allCases.map(\.rawValue) == [0, 1, 2, 3, 4])
+        #expect(MenuBarTintKind.allCases.count == 6)
+        #expect(MenuBarTintKind.allCases.map(\.rawValue) == [0, 1, 2, 3, 4, 5])
     }
 
     @Test("A case is identified by its raw value", arguments: MenuBarTintKind.allCases)
@@ -61,7 +62,19 @@ struct MenuBarTintKindTests {
     @Test("A raw value outside the known range produces no case")
     func unknownRawValueProducesNoCase() {
         #expect(MenuBarTintKind(rawValue: -1) == nil)
-        #expect(MenuBarTintKind(rawValue: 5) == nil)
+        #expect(MenuBarTintKind(rawValue: 6) == nil)
+    }
+
+    // MARK: - Adaptivity
+
+    @Test("Only the wallpaper-derived kinds report as adaptive")
+    func isAdaptiveCoversTheWallpaperKinds() {
+        #expect(MenuBarTintKind.adaptive.isAdaptive)
+        #expect(MenuBarTintKind.adaptiveGradient.isAdaptive)
+        #expect(!MenuBarTintKind.noTint.isAdaptive)
+        #expect(!MenuBarTintKind.solid.isAdaptive)
+        #expect(!MenuBarTintKind.gradient.isAdaptive)
+        #expect(!MenuBarTintKind.glass.isAdaptive)
     }
 
     // MARK: - Localization
@@ -73,6 +86,7 @@ struct MenuBarTintKindTests {
         #expect(MenuBarTintKind.gradient.localized == LocalizedStringKey("Gradient"))
         #expect(MenuBarTintKind.glass.localized == LocalizedStringKey("Glass"))
         #expect(MenuBarTintKind.adaptive.localized == LocalizedStringKey("Adaptive"))
+        #expect(MenuBarTintKind.adaptiveGradient.localized == LocalizedStringKey("Adaptive Gradient"))
     }
 
     /// The picker rows are built straight from `allCases`, so two cases sharing
@@ -110,7 +124,7 @@ struct MenuBarTintKindTests {
 
     @Test("A stored raw value decodes to the matching case")
     func storedRawValueDecodesToTheMatchingCase() throws {
-        let data = Data("[0,1,2,3,4]".utf8)
+        let data = Data("[0,1,2,3,4,5]".utf8)
         let decoded = try JSONDecoder().decode([MenuBarTintKind].self, from: data)
 
         #expect(decoded == MenuBarTintKind.allCases)

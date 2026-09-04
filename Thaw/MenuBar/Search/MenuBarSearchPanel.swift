@@ -347,7 +347,7 @@ final class MenuBarSearchPanel: NSPanel {
             model.searchText = ""
         }
         model.editingItemTag = nil
-        AppIconCache.clear()
+        MenuBarItemIconFallback.forgetIconsForExitedApplications()
         ItemNameCache.clear()
         super.close()
         contentView = nil
@@ -578,25 +578,11 @@ private struct MenuBarSearchContentView: View {
 
     @ViewBuilder
     private var mainContent: some View {
-        if !ScreenCapture.cachedCheckPermissions() {
-            VStack(spacing: 16) {
-                Image(systemName: "exclamationmark.triangle")
-                    .font(.system(size: 32))
-                    .foregroundStyle(.secondary)
-                Text("Screen recording permissions are required to search menu bar items.")
-                    .font(.title3)
-                    .multilineTextAlignment(.center)
-                    .padding(.horizontal, 40)
-                Button {
-                    openPermissionsSettings()
-                } label: {
-                    Text("Open \(Constants.displayName) Settings")
-                }
-                .buttonStyle(.plain)
-                .foregroundStyle(.link)
-            }
-            .frame(maxWidth: .infinity, maxHeight: .infinity)
-        } else if hasItems {
+        // No Screen Recording branch here on purpose. Search matches on item
+        // names, not pixels, and each row already carries its app icon, so
+        // the only thing capture adds is the glyph preview on the trailing
+        // edge -- which `itemView` simply omits when there is nothing to show.
+        if hasItems {
             SectionedList(
                 selection: $model.selection,
                 items: $model.displayedItems,
@@ -913,46 +899,6 @@ private struct BottomBarButtonStyle: ButtonStyle {
     }
 }
 
-@MainActor
-private let controlCenterIcon: NSImage? = {
-    guard
-        let app =
-        NSRunningApplication
-            .runningApplications(
-                withBundleIdentifier: "com.apple.controlcenter"
-            )
-            .first
-    else {
-        return nil
-    }
-    return app.icon
-}()
-
-/// Memoizes owning-application icons for the search rows.
-///
-/// `NSRunningApplication(processIdentifier:)` is a Launch Services lookup and
-/// `.icon` decodes on first access per instance. Row bodies re-evaluate for
-/// every item on every keystroke, and each one built a fresh instance, so the
-/// lookup ran N times per keypress. Cleared when the panel closes, which also
-/// keeps a recycled PID from being served a dead app's icon.
-@MainActor
-private enum AppIconCache {
-    private static var icons = [pid_t: NSImage?]()
-
-    static func icon(forPID pid: pid_t) -> NSImage? {
-        if let cached = icons[pid] {
-            return cached
-        }
-        let icon = NSRunningApplication(processIdentifier: pid)?.icon
-        icons[pid] = icon
-        return icon
-    }
-
-    static func clear() {
-        icons.removeAll()
-    }
-}
-
 /// Memoizes item display names for the search rows.
 ///
 /// `MenuBarItem.displayName` is far from a stored property: it reads the whole
@@ -992,20 +938,26 @@ private struct MenuBarSearchItemView: View {
     let item: MenuBarItem
     @FocusState private var isEditing: Bool
 
-    private var itemImage: NSImage {
-        imageCache.trimmedImage(for: item.tag) ?? NSImage()
+    /// The captured glyph, or `nil` when there is none to draw.
+    ///
+    /// Previously an empty `NSImage`, which only ever reached the screen
+    /// because the whole panel refused to open without Screen Recording.
+    private var itemImage: NSImage? {
+        let captured = imageCache.trimmedImage(for: item.tag)
+        // The row already shows the app icon on its leading edge, so when
+        // icons are preferred the trailing preview would just repeat it.
+        if MenuBarItemIconFallback.shouldUseAppIcon(
+            for: item,
+            hasCapture: captured != nil,
+            prefersAppIcon: appState.settings.advanced.alwaysUseAppIconForMenuBarItems
+        ) {
+            return nil
+        }
+        return captured
     }
 
     private var appIcon: NSImage? {
-        switch item.tag.namespace {
-        case .controlCenter, .systemUIServer, .textInputMenuAgent:
-            return controlCenterIcon
-        default:
-            guard let sourcePID = item.sourcePID else {
-                return nil
-            }
-            return AppIconCache.icon(forPID: sourcePID)
-        }
+        MenuBarItemIconFallback.appIcon(for: item)
     }
 
     private var backgroundShape: some InsettableShape {
@@ -1088,20 +1040,23 @@ private struct MenuBarSearchItemView: View {
         }
     }
 
+    @ViewBuilder
     private var itemView: some View {
-        Image(nsImage: itemImage)
-            .frame(
-                width: item.bounds.width,
-                height: dimension
-            )
-            .menuBarItemContainer(
-                appState: appState,
-                colorInfo: model.averageColorInfo
-            )
-            .clipShape(backgroundShape)
-            .overlay {
-                backgroundShape
-                    .strokeBorder(.quaternary)
-            }
+        if let itemImage {
+            Image(nsImage: itemImage)
+                .frame(
+                    width: item.bounds.width,
+                    height: dimension
+                )
+                .menuBarItemContainer(
+                    appState: appState,
+                    colorInfo: model.averageColorInfo
+                )
+                .clipShape(backgroundShape)
+                .overlay {
+                    backgroundShape
+                        .strokeBorder(.quaternary)
+                }
+        }
     }
 }
