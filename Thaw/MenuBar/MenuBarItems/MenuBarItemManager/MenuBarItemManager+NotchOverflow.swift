@@ -381,8 +381,13 @@ extension MenuBarItemManager {
                 try await move(
                     item: item,
                     to: .leftOfItem(controlItems.hidden),
-                    shouldBegin: shouldBeginBatchMove,
-                    didFinishWhileHoldingGate: didFinishBatchMove
+                    options: .init(
+
+                        shouldBegin: shouldBeginBatchMove,
+
+                        didFinishWhileHoldingGate: didFinishBatchMove
+
+                    )
                 )
                 notchOverflowEjectedUIDs.insert(uid)
                 failureLedger.recordSuccess(for: item)
