@@ -2235,7 +2235,7 @@ extension MenuBarItemManager {
 
         var policyState = MovePolicy.State(plannedTargetMinX: bufferedEndpoints.target.bounds.minX)
         let configuration = MovePolicy.Configuration(
-            maxAttempts: max(1, maxMoveAttempts),
+            maxAttempts: max(1, options.maxMoveAttempts),
             displayWidth: CGDisplayBounds(resolvedDisplayID).width,
             itemIsControlItem: item.isControlItem,
             ownerHasSilentRecord: failureLedger.isUnresponsive(item)
