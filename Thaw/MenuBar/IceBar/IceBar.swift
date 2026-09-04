@@ -441,11 +441,12 @@ private struct IceBarContentView: View {
             rows.compactMap { row in
                 guard col < row.count else { return nil }
                 let item = row[col]
+                let cachedImage = imageCache.image(for: item.tag)
                 guard !MenuBarItemIconFallback.shouldUseAppIcon(
                     for: item,
-                    hasCapture: imageCache.images[item.tag] != nil,
+                    hasCapture: cachedImage != nil,
                     prefersAppIcon: prefersAppIcon
-                ), let cachedImage = imageCache.images[item.tag] else {
+                ), let cachedImage else {
                     // No capture: the item renders as a square app icon, so
                     // reserve that width rather than dropping the column and
                     // letting the grid collapse around a visible item.
@@ -816,29 +817,7 @@ private struct IceBarItemView: View {
     /// square app icon at full height reads as oversized next to them.
     static let iconFallbackHeightRatio: CGFloat = 0.82
 
-    /// The captured glyph, or the owning app's icon when no capture is
-    /// available — most often because Screen Recording was declined.
-    private var image: NSImage? {
-        if isIconFallback {
-            return MenuBarItemIconFallback.image(for: item)
-        }
-        return imageCache.images[item.tag]?.nsImage
-    }
-
-    /// Whether ``image`` is an app icon rather than a captured glyph.
-    ///
-    /// An icon is square and arbitrarily large, so it is sized to the bar's
-    /// height instead of being scaled from its own intrinsic size the way a
-    /// capture is.
-    private var isIconFallback: Bool {
-        MenuBarItemIconFallback.shouldUseAppIcon(
-            for: item,
-            hasCapture: imageCache.images[item.tag] != nil,
-            prefersAppIcon: prefersAppIcon
-        )
-    }
-
-    private func targetSize(for image: NSImage) -> CGSize {
+    private func targetSize(for image: NSImage, usesAppIcon: Bool) -> CGSize {
         let intrinsic = image.size
         guard intrinsic.height > 0 else {
             return intrinsic
@@ -848,7 +827,7 @@ private struct IceBarItemView: View {
             return intrinsic
         }
 
-        if isIconFallback {
+        if usesAppIcon {
             // App icons are square and come at whatever size AppKit felt
             // like; a capture's intrinsic size is meaningful, an icon's is
             // not. Inset slightly so icons do not crowd the bar the way
@@ -867,8 +846,17 @@ private struct IceBarItemView: View {
     }
 
     var body: some View {
+        let capturedImage = imageCache.image(for: item.tag)
+        let usesAppIcon = MenuBarItemIconFallback.shouldUseAppIcon(
+            for: item,
+            hasCapture: capturedImage != nil,
+            prefersAppIcon: prefersAppIcon
+        )
+        let image = usesAppIcon
+            ? MenuBarItemIconFallback.image(for: item)
+            : capturedImage?.nsImage
         if let image {
-            let size = targetSize(for: image)
+            let size = targetSize(for: image, usesAppIcon: usesAppIcon)
             Image(nsImage: image)
                 .interpolation(.high)
                 .antialiased(true)

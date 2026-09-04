@@ -60,6 +60,22 @@ struct MenuBarItemImageCacheObservationTests {
 
     @Test
     @MainActor
+    func imageLookupSurvivesWindowIDChange() throws {
+        let cachedTag = makeTag(title: "Stable", windowID: 1)
+        let currentTag = makeTag(title: "Stable", windowID: 2)
+        let image = try #require(makeOpaqueImage())
+        let cache = MenuBarItemImageCache(images: [
+            cachedTag: .init(cgImage: image, scale: 1),
+        ])
+
+        let result = cache.image(for: currentTag)
+
+        #expect(result?.cgImage === image)
+        #expect(result?.scale == 1)
+    }
+
+    @Test
+    @MainActor
     func capturePermitSerializesOperations() async {
         let cache = MenuBarItemImageCache()
         let concurrency = OSAllocatedUnfairLock(initialState: (active: 0, maximum: 0))
