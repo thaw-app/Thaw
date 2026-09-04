@@ -1463,7 +1463,6 @@ extension MenuBarItemManager {
             )
         }
 
-
         // Divider-order gate (#1027). The room gate above catches dividers
         // collapsed onto one coordinate; this catches them drifted into
         // foreign sections, which leaves the same room between them and so
