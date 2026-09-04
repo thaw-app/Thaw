@@ -1883,8 +1883,10 @@ extension MenuBarItemManager {
                                     item: hItem,
                                     to: dest,
                                     skipInputPause: true,
-                                    shouldBegin: shouldBeginBatchMove,
-                                    didFinishWhileHoldingGate: didFinishBatchMove
+                                    options: .init(
+                                        shouldBegin: shouldBeginBatchMove,
+                                        didFinishWhileHoldingGate: didFinishBatchMove
+                                    )
                                 )
                                 movedCount += 1
                                 failureLedger.recordSuccess(for: hItem)
@@ -2005,8 +2007,10 @@ extension MenuBarItemManager {
                             item: item,
                             to: dest,
                             skipInputPause: true,
-                            shouldBegin: shouldBeginBatchMove,
-                            didFinishWhileHoldingGate: didFinishBatchMove
+                            options: .init(
+                                shouldBegin: shouldBeginBatchMove,
+                                didFinishWhileHoldingGate: didFinishBatchMove
+                            )
                         )
                         movedCount += 1
                         didCrossHiddenBoundary = true
@@ -2222,8 +2226,10 @@ extension MenuBarItemManager {
                         item: ahItem,
                         to: dest,
                         skipInputPause: true,
-                        shouldBegin: shouldBeginBatchMove,
-                        didFinishWhileHoldingGate: didFinishBatchMove
+                        options: .init(
+                            shouldBegin: shouldBeginBatchMove,
+                            didFinishWhileHoldingGate: didFinishBatchMove
+                        )
                     )
                     movedCount += 1
                     try? await Task.sleep(for: .milliseconds(200))
@@ -2332,8 +2338,10 @@ extension MenuBarItemManager {
                                 item: item,
                                 to: .leftOfItem(ahItem),
                                 skipInputPause: true,
-                                shouldBegin: shouldBeginBatchMove,
-                                didFinishWhileHoldingGate: didFinishBatchMove
+                                options: .init(
+                                    shouldBegin: shouldBeginBatchMove,
+                                    didFinishWhileHoldingGate: didFinishBatchMove
+                                )
                             )
                             movedCount += 1
                             try? await Task.sleep(for: .milliseconds(100))
@@ -2372,8 +2380,10 @@ extension MenuBarItemManager {
                                 item: item,
                                 to: .rightOfItem(ahItem),
                                 skipInputPause: true,
-                                shouldBegin: shouldBeginBatchMove,
-                                didFinishWhileHoldingGate: didFinishBatchMove
+                                options: .init(
+                                    shouldBegin: shouldBeginBatchMove,
+                                    didFinishWhileHoldingGate: didFinishBatchMove
+                                )
                             )
                             movedCount += 1
                             try? await Task.sleep(for: .milliseconds(100))
@@ -2600,8 +2610,10 @@ extension MenuBarItemManager {
                     item: item,
                     to: dest,
                     skipInputPause: true,
-                    shouldBegin: shouldBeginBatchMove,
-                    didFinishWhileHoldingGate: didFinishBatchMove
+                    options: .init(
+                        shouldBegin: shouldBeginBatchMove,
+                        didFinishWhileHoldingGate: didFinishBatchMove
+                    )
                 )
                 movedCount += 1
                 consecutiveMoveFailures = 0

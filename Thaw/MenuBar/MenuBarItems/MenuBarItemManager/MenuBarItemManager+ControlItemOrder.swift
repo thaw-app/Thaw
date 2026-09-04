@@ -38,6 +38,15 @@ extension MenuBarItemManager {
         }
     }
 
+    /// Reference box recording whether a queued move was accepted by its
+    /// preflight. ``MoveOptions/shouldBegin`` escapes the call frame — it is
+    /// stored in the options struct — so a captured local cannot be mutated
+    /// from inside the closure.
+    private final class MoveAttemptAcceptanceRecorder {
+        var didAcceptMoveAttempt = false
+        var didAcceptCurrentMove = false
+    }
+
     /// Relocates any newly appearing items that macOS placed to the left
     /// of our control items back into the visible section.
     ///
@@ -52,6 +61,7 @@ extension MenuBarItemManager {
         recentWindowIDs: Set<CGWindowID>,
         shouldBeginMove: (@MainActor () -> Bool)? = nil
     ) async -> CacheDrivenMoveOutcome {
+        let beginMove = shouldBeginMove
         guard appState != nil else { return .noAttempt }
         guard controlItems.canRepositionControlItems else {
             MenuBarItemManager.diagLog.debug(
@@ -161,28 +171,28 @@ extension MenuBarItemManager {
 
         case let .systemItem(systemItem):
             MenuBarItemManager.diagLog.info("Relocating non-hideable system item \(systemItem.logString) to visible section")
-            var didAcceptMoveAttempt = false
+            let attemptRecorder = MoveAttemptAcceptanceRecorder()
             do {
                 try await move(
                     item: systemItem,
                     to: .rightOfItem(controlItems.hidden),
                     skipInputPause: true,
-                    shouldBegin: {
-                        let shouldBegin = shouldBeginMove?() ?? true
+                    options: .init(shouldBegin: {
+                        let shouldBegin = beginMove?() ?? true
                         if shouldBegin {
-                            didAcceptMoveAttempt = true
+                            attemptRecorder.didAcceptMoveAttempt = true
                         }
                         return shouldBegin
-                    }
+                    })
                 )
             } catch EventError.moveSuperseded {
                 MenuBarItemManager.diagLog.debug(
                     "Skipping stale system-item relocation for \(systemItem.logString)"
                 )
-                return didAcceptMoveAttempt ? .failedAttempt : .noAttempt
+                return attemptRecorder.didAcceptMoveAttempt ? .failedAttempt : .noAttempt
             } catch {
                 MenuBarItemManager.diagLog.error("Failed to relocate system item \(systemItem.logString): \(error)")
-                return didAcceptMoveAttempt ? .failedAttempt : .noAttempt
+                return attemptRecorder.didAcceptMoveAttempt ? .failedAttempt : .noAttempt
             }
             return .completed
 
@@ -202,10 +212,10 @@ extension MenuBarItemManager {
                 MenuBarItemManager.diagLog.info(
                     "Skipping new-item relocation for Thaw spacer \(candidate.logString)"
                 )
-                // Nothing was relocated: reporting true would make the caller
-                // treat this cycle as interrupted and schedule an extra
+                // Nothing was relocated: reporting an attempt would make the
+                // caller treat this cycle as interrupted and schedule an extra
                 // recache for a no-op. The spacer is already marked known.
-                return false
+                return .noAttempt
             }
 
             let destination = newItemsMoveDestination(for: controlItems, among: items)
@@ -222,28 +232,28 @@ extension MenuBarItemManager {
                 return .noAttempt
             }
 
-            var didAcceptMoveAttempt = false
+            let attemptRecorder = MoveAttemptAcceptanceRecorder()
             do {
                 try await move(
                     item: candidate,
                     to: destination,
                     skipInputPause: true,
-                    shouldBegin: {
-                        let shouldBegin = shouldBeginMove?() ?? true
+                    options: .init(shouldBegin: {
+                        let shouldBegin = beginMove?() ?? true
                         if shouldBegin {
-                            didAcceptMoveAttempt = true
+                            attemptRecorder.didAcceptMoveAttempt = true
                         }
                         return shouldBegin
-                    }
+                    })
                 )
             } catch EventError.moveSuperseded {
                 MenuBarItemManager.diagLog.debug(
                     "Skipping stale new-item relocation for \(candidate.logString)"
                 )
-                return didAcceptMoveAttempt ? .failedAttempt : .noAttempt
+                return attemptRecorder.didAcceptMoveAttempt ? .failedAttempt : .noAttempt
             } catch {
                 MenuBarItemManager.diagLog.error("Failed to relocate \(candidate.logString): \(error)")
-                return didAcceptMoveAttempt ? .failedAttempt : .noAttempt
+                return attemptRecorder.didAcceptMoveAttempt ? .failedAttempt : .noAttempt
             }
             return .completed
 
@@ -272,6 +282,7 @@ extension MenuBarItemManager {
         controlItems: ControlItemPair,
         shouldBeginMove: (@MainActor () -> Bool)? = nil
     ) async -> CacheDrivenMoveOutcome {
+        let beginMove = shouldBeginMove
         // The destination is the right of H_ctrl. When the divider itself is
         // parked offscreen, that destination is in the parked zone: the drag
         // strands the chevron beside it, invisible to the user (#958's
@@ -289,28 +300,28 @@ extension MenuBarItemManager {
             return .noAttempt
         }
         MenuBarItemManager.diagLog.info("Relocating Thaw icon \(thawIcon.logString) to visible section")
-        var didAcceptMoveAttempt = false
+        let attemptRecorder = MoveAttemptAcceptanceRecorder()
         do {
             try await move(
                 item: thawIcon,
                 to: .rightOfItem(controlItems.hidden),
                 skipInputPause: true,
-                shouldBegin: {
-                    let shouldBegin = shouldBeginMove?() ?? true
+                options: .init(shouldBegin: {
+                    let shouldBegin = beginMove?() ?? true
                     if shouldBegin {
-                        didAcceptMoveAttempt = true
+                        attemptRecorder.didAcceptMoveAttempt = true
                     }
                     return shouldBegin
-                }
+                })
             )
         } catch EventError.moveSuperseded {
             MenuBarItemManager.diagLog.debug(
                 "Skipping stale Thaw-icon relocation for \(thawIcon.logString)"
             )
-            return didAcceptMoveAttempt ? .failedAttempt : .noAttempt
+            return attemptRecorder.didAcceptMoveAttempt ? .failedAttempt : .noAttempt
         } catch {
             MenuBarItemManager.diagLog.error("Failed to relocate Thaw icon \(thawIcon.logString): \(error)")
-            return didAcceptMoveAttempt ? .failedAttempt : .noAttempt
+            return attemptRecorder.didAcceptMoveAttempt ? .failedAttempt : .noAttempt
         }
         return .completed
     }
@@ -331,6 +342,7 @@ extension MenuBarItemManager {
         controlItems: ControlItemPair,
         shouldBeginMove: (@MainActor () -> Bool)? = nil
     ) async -> CacheDrivenMoveOutcome {
+        let beginMove = shouldBeginMove
         guard controlItems.canRepositionControlItems else {
             MenuBarItemManager.diagLog.debug(
                 "relocatePendingItems: skipping for provisional AX-frame correlation"
@@ -367,7 +379,7 @@ extension MenuBarItemManager {
             }
         }
 
-        var didAcceptMoveAttempt = false
+        let attemptRecorder = MoveAttemptAcceptanceRecorder()
         var didCompleteMove = false
         var didFailAcceptedMove = false
         func outcome() -> CacheDrivenMoveOutcome {
@@ -377,7 +389,7 @@ extension MenuBarItemManager {
             if didCompleteMove {
                 return .completed
             }
-            return didAcceptMoveAttempt ? .failedAttempt : .noAttempt
+            return attemptRecorder.didAcceptMoveAttempt ? .failedAttempt : .noAttempt
         }
 
         // Iterate a snapshot of the dict keys so promotions of waitForRelaunch
@@ -467,27 +479,27 @@ extension MenuBarItemManager {
                         item: item,
                         to: destination,
                         skipInputPause: true,
-                        shouldBegin: {
-                            let shouldBegin = shouldBeginMove?() ?? true
+                        options: .init(shouldBegin: {
+                            let shouldBegin = beginMove?() ?? true
                             if shouldBegin {
-                                didAcceptMoveAttempt = true
-                                didAcceptCurrentMove = true
+                                attemptRecorder.didAcceptMoveAttempt = true
+                                attemptRecorder.didAcceptCurrentMove = true
                             }
                             return shouldBegin
-                        }
+                        })
                     )
                     pendingRelocations.removeValue(forKey: tagIdentifier)
                     pendingReturnDestinations.removeValue(forKey: tagIdentifier)
                     didCompleteMove = true
                 } catch EventError.moveSuperseded {
-                    didFailAcceptedMove = didFailAcceptedMove || didAcceptCurrentMove
+                    didFailAcceptedMove = didFailAcceptedMove || attemptRecorder.didAcceptCurrentMove
                     MenuBarItemManager.diagLog.debug(
                         "Stopping stale pending-item relocations before moving \(item.logString)"
                     )
                     persistPendingRelocations()
                     return outcome()
                 } catch {
-                    didFailAcceptedMove = didFailAcceptedMove || didAcceptCurrentMove
+                    didFailAcceptedMove = didFailAcceptedMove || attemptRecorder.didAcceptCurrentMove
                     MenuBarItemManager.diagLog.error(
                         """
                         Failed to relocate \(item.logString) back to \
@@ -536,6 +548,7 @@ extension MenuBarItemManager {
         controlItems: ControlItemPair,
         shouldBeginMove: (@MainActor () -> Bool)? = nil
     ) async -> CacheDrivenMoveOutcome {
+        let beginMove = shouldBeginMove
         guard controlItems.canRepositionControlItems else {
             MenuBarItemManager.diagLog.debug(
                 "Skipping control item order enforcement for provisional AX-frame correlation"
@@ -565,28 +578,28 @@ extension MenuBarItemManager {
             return .noAttempt
         }
 
-        var didAcceptMoveAttempt = false
+        let attemptRecorder = MoveAttemptAcceptanceRecorder()
         do {
             MenuBarItemManager.diagLog.debug("Control items have incorrect order")
             try await move(
                 item: alwaysHidden,
                 to: .leftOfItem(hidden),
                 skipInputPause: true,
-                shouldBegin: {
-                    let shouldBegin = shouldBeginMove?() ?? true
+                options: .init(shouldBegin: {
+                    let shouldBegin = beginMove?() ?? true
                     if shouldBegin {
-                        didAcceptMoveAttempt = true
+                        attemptRecorder.didAcceptMoveAttempt = true
                     }
                     return shouldBegin
-                }
+                })
             )
             return .completed
         } catch EventError.moveSuperseded {
             MenuBarItemManager.diagLog.debug("Skipping stale control-item order enforcement")
-            return didAcceptMoveAttempt ? .failedAttempt : .noAttempt
+            return attemptRecorder.didAcceptMoveAttempt ? .failedAttempt : .noAttempt
         } catch {
             MenuBarItemManager.diagLog.error("Error enforcing control item order: \(error)")
-            return didAcceptMoveAttempt ? .failedAttempt : .noAttempt
+            return attemptRecorder.didAcceptMoveAttempt ? .failedAttempt : .noAttempt
         }
     }
 
