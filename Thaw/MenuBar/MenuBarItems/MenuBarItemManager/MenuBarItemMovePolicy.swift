@@ -310,7 +310,7 @@ extension MenuBarItemManager {
                 .overran
             case .cannotComplete, .invalidEventSource, .missingMouseLocation, .eventCreationFailure,
                  .itemNotMovable, .menuTrackingActive, .eventWindowMismatch, .staleDestination,
-                 .dropReverted, .moveEngineBusy:
+                 .inputPauseTimedOut, .dropReverted, .moveEngineBusy:
                 .other
             }
         }
@@ -343,7 +343,7 @@ extension MenuBarItemManager {
             return ownerIsControlCenter || hasProvisionalIdentity ? .other : .unresponsiveOwner
         case .cannotComplete, .invalidEventSource, .missingMouseLocation, .eventCreationFailure,
              .itemNotMovable, .missingItemBounds, .missingDestinationBounds, .menuTrackingActive, .eventWindowMismatch,
-             .staleDestination, .moveSuperseded, .dropReverted,
+             .staleDestination, .inputPauseTimedOut, .moveSuperseded, .dropReverted,
              .moveEngineBusy, .moveTimedOut:
             return .other
         }
