@@ -382,11 +382,8 @@ extension MenuBarItemManager {
                     item: item,
                     to: .leftOfItem(controlItems.hidden),
                     options: .init(
-
                         shouldBegin: shouldBeginBatchMove,
-
                         didFinishWhileHoldingGate: didFinishBatchMove
-
                     )
                 )
                 notchOverflowEjectedUIDs.insert(uid)
