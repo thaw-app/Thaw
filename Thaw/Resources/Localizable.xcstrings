@@ -368,26 +368,26 @@
             "plural" : {
               "few" : {
                 "stringUnit" : {
-                  "state" : "new",
-                  "value" : "[%lld items]"
+                  "state" : "translated",
+                  "value" : "[%lld элемента]"
                 }
               },
               "many" : {
                 "stringUnit" : {
-                  "state" : "new",
-                  "value" : "[%lld items]"
+                  "state" : "translated",
+                  "value" : "[%lld элементов]"
                 }
               },
               "one" : {
                 "stringUnit" : {
-                  "state" : "new",
-                  "value" : "[%lld item]"
+                  "state" : "translated",
+                  "value" : "[%lld элемент]"
                 }
               },
               "other" : {
                 "stringUnit" : {
-                  "state" : "new",
-                  "value" : "[%lld items]"
+                  "state" : "translated",
+                  "value" : "[%lld элемента]"
                 }
               }
             }
@@ -398,8 +398,8 @@
             "plural" : {
               "other" : {
                 "stringUnit" : {
-                  "state" : "new",
-                  "value" : "[%lld items]"
+                  "state" : "translated",
+                  "value" : "[%lld รายการ]"
                 }
               }
             }
@@ -567,13 +567,13 @@
         },
         "ru" : {
           "stringUnit" : {
-            "state" : "new",
+            "state" : "translated",
             "value" : "%@"
           }
         },
         "th" : {
           "stringUnit" : {
-            "state" : "new",
+            "state" : "translated",
             "value" : "%@"
           }
         },
@@ -2500,8 +2500,8 @@
         },
         "ru" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "%1$@ failed with exit status %2$d: %3$@"
+            "state" : "translated",
+            "value" : "%1$@ завершился с кодом ошибки %2$d: %3$@"
           }
         },
         "th" : {
@@ -2624,8 +2624,8 @@
         },
         "ru" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "%1$@ failed with exit status %2$d."
+            "state" : "translated",
+            "value" : "%1$@ завершился с кодом ошибки %2$d."
           }
         },
         "th" : {
@@ -3342,8 +3342,8 @@
         },
         "ru" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "%@ spacer"
+            "state" : "translated",
+            "value" : "%@ разделитель"
           }
         },
         "th" : {
@@ -3460,8 +3460,8 @@
         },
         "ru" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "%@ will delete its cache folder and quit. Launch the app again afterward."
+            "state" : "translated",
+            "value" : "%@ удалит папку с кэшем и завершит работу. После этого снова запустите приложение."
           }
         },
         "th" : {
@@ -4290,8 +4290,8 @@
         },
         "ru" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Accessibility and Screen Recording permissions will be cleared for %@. The app will quit so you can grant them again on next launch."
+            "state" : "translated",
+            "value" : "Разрешения на Универсальный доступ и запись экрана для %@ будут сброшены. Приложение завершит работу, чтобы при следующем запуске вы могли предоставить их снова."
           }
         },
         "th" : {
@@ -4408,8 +4408,8 @@
         },
         "ru" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Accessibility is all Simple Mode needs for hiding and arranging; adding Screen Recording draws your real menu bar icons in the layout editor."
+            "state" : "translated",
+            "value" : "Для скрытия и упорядочивания в простом режиме достаточно разрешения на Универсальный доступ; при добавлении разрешения на запись экрана в редакторе раскладки отображаются реальные значки строки меню."
           }
         },
         "th" : {
@@ -5712,8 +5712,8 @@
         },
         "ru" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Add Spacer"
+            "state" : "translated",
+            "value" : "Добавить разделитель"
           }
         },
         "th" : {
@@ -7613,8 +7613,8 @@
         },
         "ru" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Also start a new log file once the current one has been open for an hour or a day. The size limit still applies."
+            "state" : "translated",
+            "value" : "Также создавать новый файл журнала, если текущий открыт уже час или день. Ограничение размера по-прежнему действует."
           }
         },
         "th" : {
@@ -8681,8 +8681,8 @@
         },
         "ru" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "App language"
+            "state" : "translated",
+            "value" : "Язык приложения"
           }
         },
         "th" : {
@@ -11785,8 +11785,8 @@
         },
         "ru" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Assigns a profile to the Space you are currently on. Spaces have no system name, so each assignment is labelled by its Mission Control position at the time you made it. A Space assignment takes precedence over a display assignment; a Focus Filter still overrides both."
+            "state" : "translated",
+            "value" : "Назначает профиль текущему пространству. У пространств нет системных имён, поэтому каждое назначение обозначается его положением в Mission Control на момент создания. Назначение для пространства имеет приоритет над назначением для дисплея; фильтр фокусирования по-прежнему имеет приоритет над обоими."
           }
         },
         "th" : {
@@ -12379,8 +12379,8 @@
         },
         "ru" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Automatic rehiding is off"
+            "state" : "translated",
+            "value" : "Автоматическое повторное скрытие выключено"
           }
         },
         "th" : {
@@ -12497,8 +12497,8 @@
         },
         "ru" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Automatic rehiding is on"
+            "state" : "translated",
+            "value" : "Автоматическое повторное скрытие включено"
           }
         },
         "th" : {
@@ -14041,8 +14041,8 @@
         },
         "ru" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Behavior"
+            "state" : "translated",
+            "value" : "Поведение"
           }
         },
         "th" : {
@@ -14992,8 +14992,8 @@
         },
         "ru" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Cache cleared. Quitting…"
+            "state" : "translated",
+            "value" : "Кэш очищен. Завершение работы…"
           }
         },
         "th" : {
@@ -15467,8 +15467,8 @@
         },
         "ru" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Capture One Frame"
+            "state" : "translated",
+            "value" : "Захватить один кадр"
           }
         },
         "th" : {
@@ -17483,8 +17483,8 @@
         },
         "ru" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Choose an item"
+            "state" : "translated",
+            "value" : "Выбрать элемент"
           }
         },
         "th" : {
@@ -18431,8 +18431,8 @@
         },
         "ru" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Clear Accessibility and Screen Recording decisions for %@, then quit so you can re-grant them on next launch."
+            "state" : "translated",
+            "value" : "Сбросить разрешения на Универсальный доступ и запись экрана для %@, затем завершить работу, чтобы при следующем запуске предоставить их снова."
           }
         },
         "th" : {
@@ -18786,8 +18786,8 @@
         },
         "ru" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Click"
+            "state" : "translated",
+            "value" : "Нажать"
           }
         },
         "th" : {
@@ -20686,8 +20686,8 @@
         },
         "ru" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Control Center preferences were reset."
+            "state" : "translated",
+            "value" : "Настройки Пункта управления сброшены."
           }
         },
         "th" : {
@@ -20804,8 +20804,8 @@
         },
         "ru" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Control Center will quit and its preference files will be deleted. macOS usually relaunches it automatically."
+            "state" : "translated",
+            "value" : "Пункт управления завершит работу, а его файлы настроек будут удалены. macOS обычно автоматически запускает его снова."
           }
         },
         "th" : {
@@ -21396,8 +21396,8 @@
         },
         "ru" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Couldn't confirm that the group settled into place."
+            "state" : "translated",
+            "value" : "Не удалось подтвердить, что группа заняла своё место."
           }
         },
         "th" : {
@@ -21986,8 +21986,8 @@
         },
         "ru" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Couldn't run tool"
+            "state" : "translated",
+            "value" : "Не удалось запустить инструмент"
           }
         },
         "th" : {
@@ -22105,8 +22105,8 @@
         },
         "ru" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Create Group"
+            "state" : "translated",
+            "value" : "Создать группу"
           }
         },
         "th" : {
@@ -22818,8 +22818,8 @@
         },
         "ru" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Daily"
+            "state" : "translated",
+            "value" : "Ежедневно"
           }
         },
         "th" : {
@@ -23055,8 +23055,8 @@
         },
         "ru" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Days to keep log files"
+            "state" : "translated",
+            "value" : "Количество дней хранения файлов журнала"
           }
         },
         "th" : {
@@ -23412,8 +23412,8 @@
         },
         "ru" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Delete %@'s cache folder, then quit the app."
+            "state" : "translated",
+            "value" : "Удалить папку кэша %@, затем завершить работу приложения."
           }
         },
         "th" : {
@@ -23530,8 +23530,8 @@
         },
         "ru" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Delete older log files after this many days, or sooner if more than 50 pile up. The file being written is always kept."
+            "state" : "translated",
+            "value" : "Удалять старые файлы журнала через указанное количество дней или раньше, если их накопится более 50. Файл, в который в данный момент ведётся запись, всегда сохраняется."
           }
         },
         "th" : {
@@ -24596,8 +24596,8 @@
         },
         "ru" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Diagnostics and Onboarding are non-destructive. Reset and Troubleshooting can delete preferences, clear the cache, or quit apps."
+            "state" : "translated",
+            "value" : "Диагностика и знакомство с приложением не приводят к удалению данных. Сброс и устранение неполадок могут удалить настройки, очистить кэш или завершить работу приложений."
           }
         },
         "th" : {
@@ -24952,8 +24952,8 @@
         },
         "ru" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Display"
+            "state" : "translated",
+            "value" : "Дисплей"
           }
         },
         "th" : {
@@ -27567,8 +27567,8 @@
         },
         "ru" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Enable"
+            "state" : "translated",
+            "value" : "Включить"
           }
         },
         "th" : {
@@ -28992,8 +28992,8 @@
         },
         "ru" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Enter zen mode while presenting"
+            "state" : "translated",
+            "value" : "Войти в режим без отвлекающих элементов во время презентации"
           }
         },
         "th" : {
@@ -29467,8 +29467,8 @@
         },
         "ru" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Every saved status-item position will be deleted and the menu bar host will quit, so your whole menu bar arrangement is rebuilt from scratch."
+            "state" : "translated",
+            "value" : "Все сохранённые позиции элементов строки меню будут удалены, а хост строки меню завершит работу, поэтому вся структура строки меню будет создана заново."
           }
         },
         "th" : {
@@ -29823,8 +29823,8 @@
         },
         "ru" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Explains what a setting does directly beneath it, like this text."
+            "state" : "translated",
+            "value" : "Объясняет, что делает настройка непосредственно под ней, как в этом тексте."
           }
         },
         "th" : {
@@ -30588,26 +30588,26 @@
             "plural" : {
               "few" : {
                 "stringUnit" : {
-                  "state" : "new",
-                  "value" : "Failed to update configuration on [%lld profiles]."
+                  "state" : "translated",
+                  "value" : "Не удалось обновить конфигурацию для [%lld профилей]."
                 }
               },
               "many" : {
                 "stringUnit" : {
-                  "state" : "new",
-                  "value" : "Failed to update configuration on [%lld profiles]."
+                  "state" : "translated",
+                  "value" : "Не удалось обновить конфигурацию для [%lld профилей]."
                 }
               },
               "one" : {
                 "stringUnit" : {
-                  "state" : "new",
-                  "value" : "Failed to update configuration on [%lld profile]."
+                  "state" : "translated",
+                  "value" : "Не удалось обновить конфигурацию для [%lld профиля]."
                 }
               },
               "other" : {
                 "stringUnit" : {
-                  "state" : "new",
-                  "value" : "Failed to update configuration on [%lld profiles]."
+                  "state" : "translated",
+                  "value" : "Не удалось обновить конфигурацию для [%lld профиля]."
                 }
               }
             }
@@ -30906,8 +30906,8 @@
         },
         "ru" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Fill the spacer with a color. Fully transparent renders as an empty gap."
+            "state" : "translated",
+            "value" : "Заполнить разделитель цветом. Полностью прозрачный разделитель отображается как пустой промежуток."
           }
         },
         "th" : {
@@ -31142,8 +31142,8 @@
         },
         "ru" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "First item"
+            "state" : "translated",
+            "value" : "Первый элемент"
           }
         },
         "th" : {
@@ -31740,8 +31740,8 @@
         },
         "ru" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Frame bounds: x=%1$lld, y=%2$lld, %3$lld×%4$lld pt"
+            "state" : "translated",
+            "value" : "Границы области: x=%1$lld, y=%2$lld, %3$lldx%4$lld pt"
           }
         },
         "th" : {
@@ -33523,8 +33523,8 @@
         },
         "ru" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Group name"
+            "state" : "translated",
+            "value" : "Имя группы"
           }
         },
         "th" : {
@@ -33642,8 +33642,8 @@
         },
         "ru" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Grouped items stay adjacent: drag any member and the whole group moves with it."
+            "state" : "translated",
+            "value" : "Сгруппированные элементы остаются рядом: перетащите любой элемент, и вся группа переместится вместе с ним."
           }
         },
         "th" : {
@@ -33761,8 +33761,8 @@
         },
         "ru" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Groups always move together: drag any member in the bars above and the whole group follows."
+            "state" : "translated",
+            "value" : "Группы всегда перемещаются вместе: перетащите любой элемент на панелях выше, и вся группа переместится вместе с ним."
           }
         },
         "th" : {
@@ -33879,8 +33879,8 @@
         },
         "ru" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Help translate %@"
+            "state" : "translated",
+            "value" : "Помогите перевести %@"
           }
         },
         "th" : {
@@ -34354,8 +34354,8 @@
         },
         "ru" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Hide every concealable section for as long as a display is mirrored or your screen is being shared, then put it back. macOS offers no way to see that another app is recording the screen, so recordings are not covered."
+            "state" : "translated",
+            "value" : "Скрывать все доступные для скрытия разделы, пока дисплей дублируется или ваш экран используется для общего доступа, а затем возвращать их. macOS не позволяет определить, что другое приложение записывает экран, поэтому записи экрана не учитываются."
           }
         },
         "th" : {
@@ -35542,8 +35542,8 @@
         },
         "ru" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Hourly"
+            "state" : "translated",
+            "value" : "Ежечасно"
           }
         },
         "th" : {
@@ -35661,8 +35661,8 @@
         },
         "ru" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Hover"
+            "state" : "translated",
+            "value" : "Наведение"
           }
         },
         "th" : {
@@ -38043,8 +38043,8 @@
         },
         "ru" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Inserts an empty gap item into the menu bar. Position it like any other item — hold ⌘ Command and drag it in the menu bar."
+            "state" : "translated",
+            "value" : "Добавляет в строку меню пустой промежуток. Расположите его как любой другой элемент — удерживайте ⌘ Command и перетащите его в строке меню."
           }
         },
         "th" : {
@@ -38279,8 +38279,8 @@
         },
         "ru" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Item groups"
+            "state" : "translated",
+            "value" : "Группы элементов"
           }
         },
         "th" : {
@@ -38398,8 +38398,8 @@
         },
         "ru" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Item icons are cropped out of this band to draw the layout editor, the Bar, and Search."
+            "state" : "translated",
+            "value" : "Значки элементов обрезаются в этой области для отображения редактора раскладки, панели и поиска."
           }
         },
         "th" : {
@@ -39110,8 +39110,8 @@
         },
         "ru" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Keep logs for (days)"
+            "state" : "translated",
+            "value" : "Хранить журналы (дней)"
           }
         },
         "th" : {
@@ -39347,8 +39347,8 @@
         },
         "ru" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Language"
+            "state" : "translated",
+            "value" : "Язык"
           }
         },
         "th" : {
@@ -41840,8 +41840,8 @@
         },
         "ru" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Maximum log file size (MB)"
+            "state" : "translated",
+            "value" : "Максимальный размер файла журнала (МБ)"
           }
         },
         "th" : {
@@ -41958,8 +41958,8 @@
         },
         "ru" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Maximum log file size in megabytes"
+            "state" : "translated",
+            "value" : "Максимальный размер файла журнала в мегабайтах"
           }
         },
         "th" : {
@@ -43500,8 +43500,8 @@
         },
         "ru" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Menu bar layout positions were reset."
+            "state" : "translated",
+            "value" : "Позиции элементов строки меню сброшены."
           }
         },
         "th" : {
@@ -46465,8 +46465,8 @@
         },
         "ru" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "No display found."
+            "state" : "translated",
+            "value" : "Дисплей не найден."
           }
         },
         "th" : {
@@ -48721,8 +48721,8 @@
         },
         "ru" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "not running"
+            "state" : "translated",
+            "value" : "не запущено"
           }
         },
         "th" : {
@@ -49077,8 +49077,8 @@
         },
         "ru" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Nothing shown here is saved or sent anywhere; the capture exists only while this page is open."
+            "state" : "translated",
+            "value" : "Ничего из отображаемого здесь не сохраняется и никуда не отправляется; захват существует только пока эта страница открыта."
           }
         },
         "th" : {
@@ -49551,8 +49551,8 @@
         },
         "ru" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Onboarding"
+            "state" : "translated",
+            "value" : "Первоначальная настройка"
           }
         },
         "th" : {
@@ -51979,8 +51979,8 @@
         },
         "ru" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Per display"
+            "state" : "translated",
+            "value" : "Для каждого дисплея"
           }
         },
         "th" : {
@@ -52216,8 +52216,8 @@
         },
         "ru" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Per-Space override"
+            "state" : "translated",
+            "value" : "Переопределение для пространства"
           }
         },
         "th" : {
@@ -52691,8 +52691,8 @@
         },
         "ru" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Permissions cleared. Quitting…"
+            "state" : "translated",
+            "value" : "Разрешения сброшены. Завершение работы…"
           }
         },
         "th" : {
@@ -52809,8 +52809,8 @@
         },
         "ru" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Pick two items below to group them. Grouped items always move together."
+            "state" : "translated",
+            "value" : "Выберите два элемента ниже, чтобы сгруппировать их. Сгруппированные элементы всегда перемещаются вместе."
           }
         },
         "th" : {
@@ -53998,8 +53998,8 @@
         },
         "ru" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Quit & Clear Cache"
+            "state" : "translated",
+            "value" : "Завершить работу и очистить кэш"
           }
         },
         "th" : {
@@ -54236,8 +54236,8 @@
         },
         "ru" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Quit and clear cache"
+            "state" : "translated",
+            "value" : "Завершить работу и очистить кэш"
           }
         },
         "th" : {
@@ -54354,8 +54354,8 @@
         },
         "ru" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Quit and clear cache?"
+            "state" : "translated",
+            "value" : "Завершить работу и очистить кэш?"
           }
         },
         "th" : {
@@ -54472,8 +54472,8 @@
         },
         "ru" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Quit Control Center and delete its preference files so system menu bar item state can rebuild."
+            "state" : "translated",
+            "value" : "Завершить работу Пункта управления и удалить его файлы настроек, чтобы состояние системных элементов строки меню могло быть восстановлено."
           }
         },
         "th" : {
@@ -54590,8 +54590,8 @@
         },
         "ru" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Quit the menu bar host and delete its saved item positions, so the menu bar arrangement rebuilds from scratch. Use this when items refuse to return to the menu bar after rearranging."
+            "state" : "translated",
+            "value" : "Завершить работу процесса строки меню и удалить сохранённые позиции его элементов, чтобы расположение элементов строки меню было создано заново. Используйте эту функцию, если элементы не возвращаются в строку меню после изменения их расположения."
           }
         },
         "th" : {
@@ -55300,8 +55300,8 @@
         },
         "ru" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Relaunch Now"
+            "state" : "translated",
+            "value" : "Перезапустить сейчас"
           }
         },
         "th" : {
@@ -55656,8 +55656,8 @@
         },
         "ru" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Remove All"
+            "state" : "translated",
+            "value" : "Удалить всё"
           }
         },
         "th" : {
@@ -55774,8 +55774,8 @@
         },
         "ru" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Remove from group"
+            "state" : "translated",
+            "value" : "Удалить из группы"
           }
         },
         "th" : {
@@ -56011,8 +56011,8 @@
         },
         "ru" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Remove Override for This Space"
+            "state" : "translated",
+            "value" : "Удалить переопределение для этого пространства"
           }
         },
         "th" : {
@@ -56247,8 +56247,8 @@
         },
         "ru" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Remove this spacer"
+            "state" : "translated",
+            "value" : "Удалить этот промежуток"
           }
         },
         "th" : {
@@ -56485,8 +56485,8 @@
         },
         "ru" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Replay onboarding"
+            "state" : "translated",
+            "value" : "Повторить первоначальную настройку"
           }
         },
         "th" : {
@@ -56603,8 +56603,8 @@
         },
         "ru" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Replay Onboarding"
+            "state" : "translated",
+            "value" : "Повторить первоначальную настройку"
           }
         },
         "th" : {
@@ -57673,8 +57673,8 @@
         },
         "ru" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Reset Control Center"
+            "state" : "translated",
+            "value" : "Сбросить Пункт управления"
           }
         },
         "th" : {
@@ -57791,8 +57791,8 @@
         },
         "ru" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Reset Control Center preferences"
+            "state" : "translated",
+            "value" : "Сбросить настройки Пункта управления"
           }
         },
         "th" : {
@@ -57909,8 +57909,8 @@
         },
         "ru" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Reset Control Center preferences?"
+            "state" : "translated",
+            "value" : "Сбросить настройки Пункта управления?"
           }
         },
         "th" : {
@@ -58146,8 +58146,8 @@
         },
         "ru" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Reset Layout Positions"
+            "state" : "translated",
+            "value" : "Сбросить позиции элементов"
           }
         },
         "th" : {
@@ -58620,8 +58620,8 @@
         },
         "ru" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Reset menu bar layout positions"
+            "state" : "translated",
+            "value" : "Сбросить позиции элементов строки меню"
           }
         },
         "th" : {
@@ -58738,8 +58738,8 @@
         },
         "ru" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Reset menu bar layout positions?"
+            "state" : "translated",
+            "value" : "Сбросить позиции элементов строки меню?"
           }
         },
         "th" : {
@@ -58856,8 +58856,8 @@
         },
         "ru" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Reset permissions"
+            "state" : "translated",
+            "value" : "Сбросить разрешения"
           }
         },
         "th" : {
@@ -58974,8 +58974,8 @@
         },
         "ru" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Reset Permissions"
+            "state" : "translated",
+            "value" : "Сбросить разрешения"
           }
         },
         "th" : {
@@ -59092,8 +59092,8 @@
         },
         "ru" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Reset permissions?"
+            "state" : "translated",
+            "value" : "Сбросить разрешения?"
           }
         },
         "th" : {
@@ -59566,8 +59566,8 @@
         },
         "ru" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Restore %@ preferences to their defaults. Saved profiles and user data are not deleted. This cannot be undone."
+            "state" : "translated",
+            "value" : "Восстановить настройки %@ по умолчанию. Сохранённые профили и пользовательские данные не удаляются. Это действие нельзя отменить."
           }
         },
         "th" : {
@@ -59921,8 +59921,8 @@
         },
         "ru" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Review the feature tour and permission setup again."
+            "state" : "translated",
+            "value" : "Снова просмотреть обзор функций, а затем настроить разрешения."
           }
         },
         "th" : {
@@ -60516,8 +60516,8 @@
         },
         "ru" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Rotate by time"
+            "state" : "translated",
+            "value" : "Переключать по времени"
           }
         },
         "th" : {
@@ -61228,8 +61228,8 @@
         },
         "ru" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Safe vs maintenance tools"
+            "state" : "translated",
+            "value" : "Безопасные и обслуживающие инструменты"
           }
         },
         "th" : {
@@ -61508,10 +61508,240 @@
       }
     },
     "Save Diagnostic Report" : {
-
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Save Diagnostic Report"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Save Diagnostic Report"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Save Diagnostic Report"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Save Diagnostic Report"
+          }
+        },
+        "hu" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Save Diagnostic Report"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Save Diagnostic Report"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Save Diagnostic Report"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Save Diagnostic Report"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Save Diagnostic Report"
+          }
+        },
+        "nl" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Save Diagnostic Report"
+          }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Save Diagnostic Report"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Save Diagnostic Report"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Save Diagnostic Report"
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Save Diagnostic Report"
+          }
+        },
+        "tr" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Save Diagnostic Report"
+          }
+        },
+        "uk" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Save Diagnostic Report"
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Save Diagnostic Report"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Save Diagnostic Report"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Save Diagnostic Report"
+          }
+        }
+      }
     },
     "Save Diagnostic Report…" : {
-
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Save Diagnostic Report…"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Save Diagnostic Report…"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Save Diagnostic Report…"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Save Diagnostic Report…"
+          }
+        },
+        "hu" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Save Diagnostic Report…"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Save Diagnostic Report…"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Save Diagnostic Report…"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Save Diagnostic Report…"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Save Diagnostic Report…"
+          }
+        },
+        "nl" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Save Diagnostic Report…"
+          }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Save Diagnostic Report…"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Save Diagnostic Report…"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Save Diagnostic Report…"
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Save Diagnostic Report…"
+          }
+        },
+        "tr" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Save Diagnostic Report…"
+          }
+        },
+        "uk" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Save Diagnostic Report…"
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Save Diagnostic Report…"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Save Diagnostic Report…"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Save Diagnostic Report…"
+          }
+        }
+      }
     },
     "Save the global template to the active profile \"%@\", or save it to every profile." : {
       "comment" : "A message that instructs the user to save the global template to a profile.",
@@ -61946,8 +62176,8 @@
         },
         "ru" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Saves the appearance above for the currently active Space only. Every other Space keeps the shared appearance."
+            "state" : "translated",
+            "value" : "Сохраняет указанное выше оформление только для текущего активного пространства. Все остальные пространства используют общее оформление."
           }
         },
         "th" : {
@@ -62184,8 +62414,8 @@
         },
         "ru" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Screen Recording is off, so %@ reads nothing."
+            "state" : "translated",
+            "value" : "Запись экрана выключена, поэтому %@ ничего не считывает."
           }
         },
         "th" : {
@@ -62539,8 +62769,8 @@
         },
         "ru" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Scroll"
+            "state" : "translated",
+            "value" : "Прокрутка"
           }
         },
         "th" : {
@@ -63371,8 +63601,8 @@
         },
         "ru" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Second item"
+            "state" : "translated",
+            "value" : "Второй элемент"
           }
         },
         "th" : {
@@ -63845,8 +64075,8 @@
         },
         "ru" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Settings"
+            "state" : "translated",
+            "value" : "Настройки"
           }
         },
         "th" : {
@@ -64081,8 +64311,8 @@
         },
         "ru" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Settings were reset to defaults."
+            "state" : "translated",
+            "value" : "Настройки сброшены до значений по умолчанию."
           }
         },
         "th" : {
@@ -65750,8 +65980,8 @@
         },
         "ru" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Show hidden items on"
+            "state" : "translated",
+            "value" : "Показывать скрытые элементы"
           }
         },
         "th" : {
@@ -65868,8 +66098,8 @@
         },
         "ru" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Show hidden menu bar items by clicking, hovering, or scrolling in an empty area of the menu bar."
+            "state" : "translated",
+            "value" : "Показывать скрытые элементы строки меню при нажатии, наведении или прокрутке в пустой области строки меню."
           }
         },
         "th" : {
@@ -67293,8 +67523,8 @@
         },
         "ru" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Show setting descriptions"
+            "state" : "translated",
+            "value" : "Показывать описания настроек"
           }
         },
         "th" : {
@@ -67649,8 +67879,8 @@
         },
         "ru" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Shows only the essential settings. All features keep working and keep their configuration."
+            "state" : "translated",
+            "value" : "Показывает только основные настройки. Все функции продолжают работать и сохраняют свою конфигурацию."
           }
         },
         "th" : {
@@ -67886,8 +68116,8 @@
         },
         "ru" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Simple Mode"
+            "state" : "translated",
+            "value" : "Простой режим"
           }
         },
         "th" : {
@@ -68361,8 +68591,8 @@
         },
         "ru" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Spacer"
+            "state" : "translated",
+            "value" : "Разделитель"
           }
         },
         "th" : {
@@ -68479,8 +68709,8 @@
         },
         "ru" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Spacer color"
+            "state" : "translated",
+            "value" : "Цвет разделителя"
           }
         },
         "th" : {
@@ -68597,8 +68827,8 @@
         },
         "ru" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Spacers"
+            "state" : "translated",
+            "value" : "Разделители"
           }
         },
         "th" : {
@@ -68715,8 +68945,8 @@
         },
         "ru" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Spaces with overrides: %lld"
+            "state" : "translated",
+            "value" : "Пространства с переопределениями: %lld"
           }
         },
         "th" : {
@@ -69308,8 +69538,8 @@
         },
         "ru" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Start a new log file once the current one reaches this size."
+            "state" : "translated",
+            "value" : "Создавать новый файл журнала, когда текущий достигает этого размера."
           }
         },
         "th" : {
@@ -70377,8 +70607,8 @@
         },
         "ru" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "System Default"
+            "state" : "translated",
+            "value" : "Системные настройки по умолчанию"
           }
         },
         "th" : {
@@ -70614,8 +70844,8 @@
         },
         "ru" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Thaw reads a band across the top of your display — the menu bar and its background. That band can contain the frontmost app's menus."
+            "state" : "translated",
+            "value" : "Thaw считывает область в верхней части дисплея — строку меню и её фон. Эта область может содержать меню активного приложения."
           }
         },
         "th" : {
@@ -71921,8 +72151,8 @@
         },
         "ru" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "The capture returned nothing for this display."
+            "state" : "translated",
+            "value" : "Захват не обнаружил ничего на этом дисплее."
           }
         },
         "th" : {
@@ -72082,7 +72312,122 @@
       }
     },
     "The report retains installed-app identities, menu-item titles and status text, and display/menu-bar geometry for debugging. It attempts to redact other potentially sensitive information, but redaction cannot be guaranteed. Review the report before sharing it." : {
-
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "The report retains installed-app identities, menu-item titles and status text, and display/menu-bar geometry for debugging. It attempts to redact other potentially sensitive information, but redaction cannot be guaranteed. Review the report before sharing it."
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "The report retains installed-app identities, menu-item titles and status text, and display/menu-bar geometry for debugging. It attempts to redact other potentially sensitive information, but redaction cannot be guaranteed. Review the report before sharing it."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "The report retains installed-app identities, menu-item titles and status text, and display/menu-bar geometry for debugging. It attempts to redact other potentially sensitive information, but redaction cannot be guaranteed. Review the report before sharing it."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "The report retains installed-app identities, menu-item titles and status text, and display/menu-bar geometry for debugging. It attempts to redact other potentially sensitive information, but redaction cannot be guaranteed. Review the report before sharing it."
+          }
+        },
+        "hu" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "The report retains installed-app identities, menu-item titles and status text, and display/menu-bar geometry for debugging. It attempts to redact other potentially sensitive information, but redaction cannot be guaranteed. Review the report before sharing it."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "The report retains installed-app identities, menu-item titles and status text, and display/menu-bar geometry for debugging. It attempts to redact other potentially sensitive information, but redaction cannot be guaranteed. Review the report before sharing it."
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "The report retains installed-app identities, menu-item titles and status text, and display/menu-bar geometry for debugging. It attempts to redact other potentially sensitive information, but redaction cannot be guaranteed. Review the report before sharing it."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "The report retains installed-app identities, menu-item titles and status text, and display/menu-bar geometry for debugging. It attempts to redact other potentially sensitive information, but redaction cannot be guaranteed. Review the report before sharing it."
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "The report retains installed-app identities, menu-item titles and status text, and display/menu-bar geometry for debugging. It attempts to redact other potentially sensitive information, but redaction cannot be guaranteed. Review the report before sharing it."
+          }
+        },
+        "nl" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "The report retains installed-app identities, menu-item titles and status text, and display/menu-bar geometry for debugging. It attempts to redact other potentially sensitive information, but redaction cannot be guaranteed. Review the report before sharing it."
+          }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "The report retains installed-app identities, menu-item titles and status text, and display/menu-bar geometry for debugging. It attempts to redact other potentially sensitive information, but redaction cannot be guaranteed. Review the report before sharing it."
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "The report retains installed-app identities, menu-item titles and status text, and display/menu-bar geometry for debugging. It attempts to redact other potentially sensitive information, but redaction cannot be guaranteed. Review the report before sharing it."
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "The report retains installed-app identities, menu-item titles and status text, and display/menu-bar geometry for debugging. It attempts to redact other potentially sensitive information, but redaction cannot be guaranteed. Review the report before sharing it."
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "The report retains installed-app identities, menu-item titles and status text, and display/menu-bar geometry for debugging. It attempts to redact other potentially sensitive information, but redaction cannot be guaranteed. Review the report before sharing it."
+          }
+        },
+        "tr" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "The report retains installed-app identities, menu-item titles and status text, and display/menu-bar geometry for debugging. It attempts to redact other potentially sensitive information, but redaction cannot be guaranteed. Review the report before sharing it."
+          }
+        },
+        "uk" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "The report retains installed-app identities, menu-item titles and status text, and display/menu-bar geometry for debugging. It attempts to redact other potentially sensitive information, but redaction cannot be guaranteed. Review the report before sharing it."
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "The report retains installed-app identities, menu-item titles and status text, and display/menu-bar geometry for debugging. It attempts to redact other potentially sensitive information, but redaction cannot be guaranteed. Review the report before sharing it."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "The report retains installed-app identities, menu-item titles and status text, and display/menu-bar geometry for debugging. It attempts to redact other potentially sensitive information, but redaction cannot be guaranteed. Review the report before sharing it."
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "The report retains installed-app identities, menu-item titles and status text, and display/menu-bar geometry for debugging. It attempts to redact other potentially sensitive information, but redaction cannot be guaranteed. Review the report before sharing it."
+          }
+        }
+      }
     },
     "The language change applies after %@ relaunches." : {
       "localizations" : {
@@ -72160,8 +72505,8 @@
         },
         "ru" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "The language change applies after %@ relaunches."
+            "state" : "translated",
+            "value" : "Изменение языка вступит в силу после перезапуска %@."
           }
         },
         "th" : {
@@ -72753,8 +73098,8 @@
         },
         "ru" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "This Space uses the shared appearance."
+            "state" : "translated",
+            "value" : "Это пространство использует общее оформление."
           }
         },
         "th" : {
@@ -73515,26 +73860,26 @@
             "plural" : {
               "few" : {
                 "stringUnit" : {
-                  "state" : "new",
-                  "value" : "This will overwrite the settings of %lld displays with the global template. If the active display's spacing changes, Thaw will relaunch each app with a menu bar item. Relaunching apps may cause unsaved input, progress, or transient app state to be lost."
+                  "state" : "translated",
+                  "value" : "Эта настройка перезапишет настройки %lld дисплея глобальным шаблоном."
                 }
               },
               "many" : {
                 "stringUnit" : {
-                  "state" : "new",
-                  "value" : "This will overwrite the settings of %lld displays with the global template. If the active display's spacing changes, Thaw will relaunch each app with a menu bar item. Relaunching apps may cause unsaved input, progress, or transient app state to be lost."
+                  "state" : "translated",
+                  "value" : "Эта настройка перезапишет настройки %lld дисплеев глобальным шаблоном."
                 }
               },
               "one" : {
                 "stringUnit" : {
-                  "state" : "new",
-                  "value" : "This will overwrite the settings of %lld display with the global template. If the active display's spacing changes, Thaw will relaunch each app with a menu bar item. Relaunching apps may cause unsaved input, progress, or transient app state to be lost."
+                  "state" : "translated",
+                  "value" : "Эта настройка перезапишет настройки %lld дисплея глобальным шаблоном."
                 }
               },
               "other" : {
                 "stringUnit" : {
-                  "state" : "new",
-                  "value" : "This will overwrite the settings of %lld displays with the global template. If the active display's spacing changes, Thaw will relaunch each app with a menu bar item. Relaunching apps may cause unsaved input, progress, or transient app state to be lost."
+                  "state" : "translated",
+                  "value" : "Эта настройка перезапишет настройки %lld дисплея глобальным шаблоном."
                 }
               }
             }
@@ -73833,8 +74178,8 @@
         },
         "ru" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "This will reset app preferences to their default values. Saved profiles and user data will not be deleted. This action cannot be undone."
+            "state" : "translated",
+            "value" : "Это восстановит настройки приложения до значений по умолчанию. Сохранённые профили и пользовательские данные не будут удалены. Это действие нельзя отменить."
           }
         },
         "th" : {
@@ -74907,8 +75252,8 @@
         },
         "ru" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Toggle automatic rehiding"
+            "state" : "translated",
+            "value" : "Переключить автоматическое скрытие"
           }
         },
         "th" : {
@@ -75263,8 +75608,8 @@
         },
         "ru" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Toggle zen mode"
+            "state" : "translated",
+            "value" : "Переключить режим без отвлекающих элементов"
           }
         },
         "th" : {
@@ -75381,8 +75726,8 @@
         },
         "ru" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Tools"
+            "state" : "translated",
+            "value" : "Инструменты"
           }
         },
         "th" : {
@@ -76329,8 +76674,8 @@
         },
         "ru" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Troubleshooting"
+            "state" : "translated",
+            "value" : "Устранение неполадок"
           }
         },
         "th" : {
@@ -76447,8 +76792,8 @@
         },
         "ru" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Turn off to show every setting. Nothing you configure here is lost either way."
+            "state" : "translated",
+            "value" : "Выключите, чтобы отображались все настройки. В любом случае заданные здесь параметры не будут потеряны."
           }
         },
         "th" : {
@@ -76921,8 +77266,8 @@
         },
         "ru" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Ungroup"
+            "state" : "translated",
+            "value" : "Разгруппировать"
           }
         },
         "th" : {
@@ -78466,8 +78811,8 @@
         },
         "ru" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Use %@ in a different language than the system. Takes effect after a relaunch."
+            "state" : "translated",
+            "value" : "Использовать %@ на другом языке, отличном от системного. Вступает в силу после перезапуска."
           }
         },
         "th" : {
@@ -78703,8 +79048,8 @@
         },
         "ru" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Use Current Appearance for This Space"
+            "state" : "translated",
+            "value" : "Использовать текущее оформление для этого пространства"
           }
         },
         "th" : {
@@ -80482,8 +80827,8 @@
         },
         "ru" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "What %@ Sees"
+            "state" : "translated",
+            "value" : "Что видит %@"
           }
         },
         "th" : {
@@ -80725,8 +81070,8 @@
         },
         "ru" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "When a hidden item starts blinking its icon, briefly show its section so you see it. Thaw tells a blink apart from a clock or a battery percentage by whether the icon keeps returning to a state it already showed. It shows the section rather than moving the item, and the usual rehide puts it back."
+            "state" : "translated",
+            "value" : "Когда значок скрытого элемента начинает мигать, ненадолго показывать его раздел, чтобы вы могли его увидеть. Thaw отличает мигание от часов или процента заряда батареи по тому, возвращается ли значок к состоянию, которое он уже отображал. Отображается сам раздел, а не перемещается элемент, после чего обычное повторное скрытие возвращает его обратно."
           }
         },
         "th" : {
@@ -82275,8 +82620,8 @@
         },
         "ru" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Zen mode is off"
+            "state" : "translated",
+            "value" : "Режим без отвлекающих элементов выключен"
           }
         },
         "th" : {
@@ -82393,8 +82738,8 @@
         },
         "ru" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Zen mode is on"
+            "state" : "translated",
+            "value" : "Режим без отвлекающих элементов включён"
           }
         },
         "th" : {
