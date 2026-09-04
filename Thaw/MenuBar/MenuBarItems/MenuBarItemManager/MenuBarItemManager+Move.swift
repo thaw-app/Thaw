@@ -2277,7 +2277,6 @@ extension MenuBarItemManager {
                     return
                 }
 
-
                 let outcome = try await postMoveEvents(
                     item: item,
                     destination: destination,
