@@ -458,7 +458,11 @@ extension MenuBarItemManager {
 
             switch decision {
             case let .move(item, destination):
-                var didAcceptCurrentMove = false
+                // Reset the per-move flag: the recorder box outlives the
+                // loop, and a stale `true` from an earlier accepted move
+                // would misreport this iteration's own preflight rejection
+                // as a failed accepted move.
+                attemptRecorder.didAcceptCurrentMove = false
                 let targetSection: MenuBarSection.Name = {
                     if case let .section(section) = entry.kind {
                         return section

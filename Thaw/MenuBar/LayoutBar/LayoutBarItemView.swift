@@ -299,8 +299,12 @@ final class LayoutBarItemView: LayoutBarArrangedView {
                 for await image in changes {
                     guard let self else { return }
                     guard !MenuBarItemImageCache.CapturedImage.isVisuallyEqual(previous, image) else { continue }
+                    // Advance `previous` only when the image was applied: if
+                    // the container is frozen and drops it, recording it here
+                    // would make a republished copy dedupe as unchanged and
+                    // strand the stale thumbnail.
+                    guard self.updateCachedImageIfAllowed(image) else { continue }
                     previous = image
-                    self.updateCachedImageIfAllowed(image)
                 }
             }
 
@@ -473,7 +477,7 @@ final class LayoutBarItemView: LayoutBarArrangedView {
     override func draw(_: NSRect) {
         // A trigger-owned item draws slightly dimmed so the badge reads as a
         // state marker rather than a rendering bug.
-        let fraction: CGFloat = if !isDraggingPlaceholder && isTriggerControlled {
+        let fraction: CGFloat = if !isDraggingPlaceholder, isTriggerControlled {
             Metrics.triggerControlledFraction
         } else {
             Self.iconFraction(
@@ -577,15 +581,17 @@ final class LayoutBarItemView: LayoutBarArrangedView {
         beginDraggingSession(with: [draggingItem], event: event, source: self)
     }
 
-    private func updateCachedImageIfAllowed(_ image: MenuBarItemImageCache.CapturedImage?) {
+    @discardableResult
+    private func updateCachedImageIfAllowed(_ image: MenuBarItemImageCache.CapturedImage?) -> Bool {
         let container = superview as? LayoutBarContainer
         guard Self.shouldUpdateCachedImage(
             hasContainer: container != nil,
             containerAllowsUpdates: container?.canSetArrangedViews ?? true
         ) else {
-            return
+            return false
         }
         cachedImage = image
+        return true
     }
 
     private func preferredSize(for image: MenuBarItemImageCache.CapturedImage?) -> CGSize {

@@ -1728,6 +1728,7 @@ extension MenuBarItemManager {
         // can produce wrong matches when AX positions lag behind CG updates.
         // A cached PID from a previous stable cycle is more trustworthy.
         var provisionalSourcePIDSeeds = enumeration.appliedSourcePIDSeeds
+        var didReconcileSourcePID = false
         if resolveSourcePID {
             let previousBaselines = cacheActor.cachedSourcePIDBaselines
             var attemptedPIDs = Set<pid_t>()
@@ -1790,7 +1791,17 @@ extension MenuBarItemManager {
                     title: item.title,
                     isOnScreen: item.isOnScreen
                 )
+                didReconcileSourcePID = true
             }
+        }
+
+        // The reconciliation above can change an item's namespace while
+        // preserving its instanceIndex. If another live item already holds
+        // that (namespace, title, instanceIndex) identity, two items collide
+        // and windowless tag matching can select the wrong one. Regroup the
+        // instance indices over the reconciled namespaces.
+        if didReconcileSourcePID {
+            MenuBarItem.assignStableInstanceIndices(to: &items, using: enumeration.windowsByID)
         }
 
         // When sourcePID resolution changes an item's identifier (e.g. from

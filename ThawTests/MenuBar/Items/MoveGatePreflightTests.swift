@@ -38,6 +38,7 @@ struct MoveGatePreflightTests {
             try await manager.move(
                 item: movedItem,
                 to: .leftOfItem(targetItem),
+                skipInputPause: true,
                 options: .init(
                     shouldBegin: {
                         events.append("preflight")

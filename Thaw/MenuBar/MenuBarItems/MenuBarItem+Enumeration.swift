@@ -164,9 +164,9 @@ nonisolated extension MenuBarItem {
     }
 
     @MainActor
-    private static func assignStableInstanceIndices(
+    static func assignStableInstanceIndices(
         to items: inout [MenuBarItem],
-        using windows: [WindowInfo]
+        using windowsByID: [CGWindowID: WindowInfo]
     ) {
         // Final pass: assign instance indices to allow individual identification
         // of items with the same (namespace, title). Sort by windowID within each
@@ -181,15 +181,16 @@ nonisolated extension MenuBarItem {
         for (_, indices) in groups where indices.count > 1 {
             let sorted = indices.sorted { items[$0].windowID < items[$1].windowID }
             for (instanceIndex, itemIndex) in sorted.enumerated() where instanceIndex > 0 {
+                guard let window = windowsByID[items[itemIndex].windowID] else { continue }
                 if let sourcePID = items[itemIndex].sourcePID {
                     items[itemIndex] = MenuBarItem(
-                        uncheckedItemWindow: windows[itemIndex],
+                        uncheckedItemWindow: window,
                         sourcePID: sourcePID,
                         instanceIndex: instanceIndex
                     )
                 } else {
                     items[itemIndex] = MenuBarItem(
-                        uncheckedItemWindow: windows[itemIndex],
+                        uncheckedItemWindow: window,
                         sourcePID: nil,
                         instanceIndex: instanceIndex
                     )
@@ -219,7 +220,10 @@ nonisolated extension MenuBarItem {
             return MenuBarItem(uncheckedItemWindow: window, sourcePID: nil)
         }
 
-        assignStableInstanceIndices(to: &items, using: windows)
+        assignStableInstanceIndices(
+            to: &items,
+            using: Dictionary(windows.map { ($0.windowID, $0) }, uniquingKeysWith: { first, _ in first })
+        )
         let nilPIDCount = items.count(where: { $0.sourcePID == nil })
         diagLog.debug(
             "getMenuBarItemsExperimental: created \(items.count) items without sourcePID resolution, \(nilPIDCount) unresolved"
@@ -376,7 +380,10 @@ nonisolated extension MenuBarItem {
             }
         }
 
-        assignStableInstanceIndices(to: &items, using: windows)
+        assignStableInstanceIndices(
+            to: &items,
+            using: Dictionary(windows.map { ($0.windowID, $0) }, uniquingKeysWith: { first, _ in first })
+        )
 
         let nilPIDItems = items.filter { $0.sourcePID == nil }
         if !nilPIDItems.isEmpty {

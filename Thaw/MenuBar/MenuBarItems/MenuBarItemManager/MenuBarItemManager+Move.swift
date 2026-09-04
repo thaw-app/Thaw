@@ -1059,22 +1059,24 @@ extension MenuBarItemManager {
         budget: MoveTransactionBudget,
         warpCursorAfter: Bool = true
     ) async throws -> MoveEventsOutcome {
-        var acquiredSemaphore = false
+        // Take the permit outside `budget.run`: `run` re-checks the deadline
+        // after its operation succeeds and can throw from that check, which
+        // would leave the permit held while this function reports failure —
+        // leaking it for the life of the process. `timeout(for:)` still
+        // refuses admission before the wait when the deadline has passed, and
+        // later `budget.run`/`budget.sleep` calls keep enforcing the deadline.
+        let semaphoreAllowance = try budget.timeout(for: .milliseconds(3500))
         do {
-            try await budget.run(maximum: .milliseconds(3500)) { timeout in
-                try await eventSemaphore.wait(timeout: timeout)
-            }
-            acquiredSemaphore = true
+            try await eventSemaphore.wait(timeout: semaphoreAllowance)
         } catch is SimpleSemaphore.TimeoutError {
             MenuBarItemManager.diagLog.error(
                 "eventSemaphore timed out while moving \(item.logString); preserving the transaction deadline"
             )
             throw EventError.cannotComplete
         }
+        // The permit is held from here on, so the release is unconditional.
         defer {
-            if acquiredSemaphore {
-                Task.detached { [eventSemaphore] in await eventSemaphore.signal() }
-            }
+            Task.detached { [eventSemaphore] in await eventSemaphore.signal() }
         }
 
         // Event-transport admission can take seconds. Resolve both exact
@@ -1910,6 +1912,10 @@ extension MenuBarItemManager {
             MenuBarItemManager.diagLog.warning(
                 "Attempt \(attempt): \(destination.targetItem.logString) no longer reports bounds"
             )
+        case .staleDestination:
+            MenuBarItemManager.diagLog.warning(
+                "Attempt \(attempt): \(destination.targetItem.logString) no longer matches the move plan"
+            )
         case .superseded:
             MenuBarItemManager.diagLog.debug("move: superseded during attempt \(attempt) for \(item.logString)")
         case .overran:
@@ -2031,6 +2037,17 @@ extension MenuBarItemManager {
                             }
                         } catch let error as EventError {
                             throw error
+                        } catch is TaskTimeoutError {
+                            // The outer task's budget-derived allowance
+                            // elapsed before `waitForUserToPauseInput`'s own
+                            // timeout could fire (it is unset or wider than
+                            // the allowance). That is still an input pause
+                            // timeout, so keep the deferral attribution
+                            // instead of reporting a generic failure.
+                            MenuBarItemManager.diagLog.debug(
+                                "move: input did not pause within \(allowance) for \(item.logString)"
+                            )
+                            throw EventError.inputPauseTimedOut(item)
                         } catch {
                             _ = try budget.remaining()
                             MenuBarItemManager.diagLog.debug(
@@ -2218,11 +2235,11 @@ extension MenuBarItemManager {
         // sees a brief cursor flash. The floor stays at 10 s so ordinary
         // moves keep their safety net against genuinely stuck states.
         if options.hideCursorAcrossAttempts {
-            let cursorWatchdog = min(
+            let cursorWatchdog = try min(
                 options.watchdogTimeout ?? Self.cursorHideWatchdogTimeout(
                     maxAttempts: max(1, options.maxMoveAttempts)
                 ),
-                try budget.remaining()
+                budget.remaining()
             )
             MouseHelpers.hideCursor(watchdogTimeout: cursorWatchdog)
         }

@@ -245,6 +245,7 @@ struct MovePolicyTests {
         #expect(Policy.attemptFailure(for: .ownerUnresponsive(item)) == .ownerUnresponsive)
         #expect(Policy.attemptFailure(for: .missingItemBounds(item)) == .itemGone)
         #expect(Policy.attemptFailure(for: .missingDestinationBounds(item)) == .destinationGone)
+        #expect(Policy.attemptFailure(for: .staleDestination(item)) == .staleDestination)
         #expect(Policy.attemptFailure(for: .moveSuperseded(item)) == .superseded)
         #expect(Policy.attemptFailure(for: .moveTimedOut(item)) == .overran)
         #expect(Policy.attemptFailure(for: .unsafeMovePath(item)) == .unsafePath)
@@ -258,6 +259,7 @@ struct MovePolicyTests {
         (.ownerUnresponsive, "ownerUnresponsive"),
         (.itemGone, "missingItemBounds"),
         (.destinationGone, "missingDestinationBounds"),
+        (.staleDestination, "staleDestination"),
         (.superseded, "moveSuperseded"),
         (.overran, "moveTimedOut"),
         (.unsafePath, "unsafeMovePath"),

@@ -109,8 +109,10 @@ nonisolated struct DiagnosticRedactor {
         // Values written after privacy-sensitive labels. This catches
         // trigger-like values that can appear in a log without requiring the
         // report code to depend on a particular automation implementation.
+        // The optional quote after the label covers JSON-style field names
+        // such as {"wifiSSID":"Home Network"}.
         result = result.replacingOccurrences(
-            of: #"(?i)\b(?:ssid|wifi(?:ssid|network)?|networkname|devicename|bluetoothdevice|audiodevice|focusmode|trigger(?:name|value)?|condition(?:name|value)?|script(?:path|output)|location(?:name|label)?)\s*[=:]\s*(?:\"[^\"\r\n]*\"|'[^'\r\n]*'|[^,;\r\n]+)"#,
+            of: #"(?i)\b(?:ssid|wifi(?:ssid|network)?|networkname|devicename|bluetoothdevice|audiodevice|focusmode|trigger(?:name|value)?|condition(?:name|value)?|script(?:path|output)|location(?:name|label)?)"?\s*[=:]\s*(?:\"[^\"\r\n]*\"|'[^'\r\n]*'|[^,;\r\n]+)"#,
             with: "<sensitive-value>",
             options: .regularExpression
         )

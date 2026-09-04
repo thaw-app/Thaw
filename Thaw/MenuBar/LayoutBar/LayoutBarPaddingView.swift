@@ -158,6 +158,15 @@ final class LayoutBarPaddingView: NSView {
             draggingSource.hasContainer = false
 
             container.resumeArrangedViewUpdatesWithoutAnimation()
+            // The dragging session froze the source row too, and the refusal
+            // starts no move task that would thaw it later. Resume it like
+            // every other refusal path; `oldContainerInfo` stays so the drag
+            // session's end can restore the original view to its old slot.
+            if let sourceContainer = draggingSource.oldContainerInfo?.container,
+               sourceContainer !== container
+            {
+                sourceContainer.resumeArrangedViewUpdatesWithoutAnimation()
+            }
             return false
         }
 
