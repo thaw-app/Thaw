@@ -144,6 +144,7 @@ struct MovePolicyTests {
         (.ownerUnresponsive, .ownerUnresponsive),
         (.superseded, .superseded),
         (.overran, .overran),
+        (.unsafePath, .unsafePath),
     ])
     func definitiveFailuresStop(failure: Policy.AttemptFailure, reason: Policy.StopReason) {
         #expect(decisions([.failed(failure)]) == [.stop(reason)])
@@ -214,7 +215,7 @@ struct MovePolicyTests {
     }
 
     @Test("Reasons that prove the item did not land skip the final check", arguments: [
-        Policy.StopReason.refusedByMacOS, .ownerUnresponsive, .itemGone, .destinationGone, .superseded,
+        Policy.StopReason.refusedByMacOS, .ownerUnresponsive, .itemGone, .destinationGone, .superseded, .unsafePath,
     ])
     func noFinalCheckReasons(reason: Policy.StopReason) {
         #expect(!reason.deservesFinalLandingCheck)
@@ -223,7 +224,7 @@ struct MovePolicyTests {
     @Test("Only silence is filed against the owner")
     func onlySilenceIsFiled() {
         let filed: [Policy.StopReason] = [.ownerUnresponsive, .ownerAlwaysSilent, .ownerSilent]
-        let notFiled: [Policy.StopReason] = [.refusedByMacOS, .targetMoved, .targetRetreating, .itemGone, .destinationGone, .superseded, .overran, .budgetExhausted, .other]
+        let notFiled: [Policy.StopReason] = [.refusedByMacOS, .targetMoved, .targetRetreating, .itemGone, .destinationGone, .superseded, .overran, .unsafePath, .budgetExhausted, .other]
         let everyFiledReasonIsFiled = filed.allSatisfy(\.isFiledAgainstOwner)
         let noOtherReasonIsFiled = notFiled.allSatisfy { !$0.isFiledAgainstOwner }
         #expect(everyFiledReasonIsFiled)
@@ -244,8 +245,10 @@ struct MovePolicyTests {
         #expect(Policy.attemptFailure(for: .ownerUnresponsive(item)) == .ownerUnresponsive)
         #expect(Policy.attemptFailure(for: .missingItemBounds(item)) == .itemGone)
         #expect(Policy.attemptFailure(for: .missingDestinationBounds(item)) == .destinationGone)
+        #expect(Policy.attemptFailure(for: .staleDestination(item)) == .staleDestination)
         #expect(Policy.attemptFailure(for: .moveSuperseded(item)) == .superseded)
         #expect(Policy.attemptFailure(for: .moveTimedOut(item)) == .overran)
+        #expect(Policy.attemptFailure(for: .unsafeMovePath(item)) == .unsafePath)
         #expect(Policy.attemptFailure(for: .cannotComplete) == .other)
     }
 
@@ -256,8 +259,10 @@ struct MovePolicyTests {
         (.ownerUnresponsive, "ownerUnresponsive"),
         (.itemGone, "missingItemBounds"),
         (.destinationGone, "missingDestinationBounds"),
+        (.staleDestination, "staleDestination"),
         (.superseded, "moveSuperseded"),
         (.overran, "moveTimedOut"),
+        (.unsafePath, "unsafeMovePath"),
         (.budgetExhausted, "cannotComplete"),
         (.ownerSilent, "cannotComplete"),
         (.other, "cannotComplete"),

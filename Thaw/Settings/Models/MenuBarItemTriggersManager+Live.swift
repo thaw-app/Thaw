@@ -709,16 +709,20 @@ extension MenuBarItemTriggersManager {
         var ids = Set<String>()
         for trigger in triggers where trigger.isEnabled {
             for condition in trigger.allConditions {
-                if case let .imageChanged(itemIdentifier, _) = condition, !itemIdentifier.isEmpty {
+                if case let .imageChanged(itemIdentifier, _, _, _, _) = condition, !itemIdentifier.isEmpty {
                     ids.insert(itemIdentifier)
                 }
             }
         }
 
         let removed = Set(imageHashes.keys).subtracting(ids)
-        let removedAny = !removed.isEmpty
+        let removedExact = Set(exactImageHashes.keys).subtracting(ids)
+        let removedAny = !removed.isEmpty || !removedExact.isEmpty
         for id in removed {
             imageHashes[id] = nil
+        }
+        for id in removedExact {
+            exactImageHashes[id] = nil
         }
 
         guard !ids.isEmpty else {
@@ -734,15 +738,19 @@ extension MenuBarItemTriggersManager {
 
             var changed = removedAny
             for id in ids {
-                guard let hash = await self.currentImageHash(forItemIdentifier: id) else {
-                    if self.imageHashes[id] != nil {
+                guard let fingerprints = await self.currentImageFingerprints(forItemIdentifier: id) else {
+                    if self.imageHashes[id] != nil || self.exactImageHashes[id] != nil {
                         self.imageHashes[id] = nil
+                        self.exactImageHashes[id] = nil
                         changed = true
                     }
                     continue
                 }
-                if self.imageHashes[id] != hash {
-                    self.imageHashes[id] = hash
+                if self.imageHashes[id] != fingerprints.perceptual
+                    || self.exactImageHashes[id] != fingerprints.exact
+                {
+                    self.imageHashes[id] = fingerprints.perceptual
+                    self.exactImageHashes[id] = fingerprints.exact
                     changed = true
                 }
             }
@@ -758,8 +766,22 @@ extension MenuBarItemTriggersManager {
         }
     }
 
-    /// Captures the watched item's window and returns its perceptual hash.
-    func currentImageHash(forItemIdentifier id: String) async -> UInt64? {
+    /// Captures the watched item's window and returns both comparison hashes.
+    private func currentImageFingerprints(
+        forItemIdentifier id: String
+    ) async -> (perceptual: UInt64, exact: UInt64)? {
+        guard
+            let image = await currentImage(forItemIdentifier: id),
+            let perceptual = ImageHashing.averageHash(image),
+            let exact = ImageHashing.exactHash(image)
+        else {
+            return nil
+        }
+        return (perceptual, exact)
+    }
+
+    /// Captures the watched item's current window image.
+    private func currentImage(forItemIdentifier id: String) async -> CGImage? {
         guard
             let appState,
             let item = appState.itemManager.itemCache.managedItems.first(where: { $0.tag.tagIdentifier == id })
@@ -767,15 +789,27 @@ extension MenuBarItemTriggersManager {
             return nil
         }
 
-        let image = await ScreenCapture.captureWindowAsync(with: item.windowID)
+        return await ScreenCapture.captureWindowAsync(with: item.windowID)
             ?? ScreenCapture.captureWindow(with: item.windowID)
-        guard let image else { return nil }
-        return ImageHashing.averageHash(image)
     }
 
-    /// Captures a reference hash for the given item now (used by the editor's
-    /// "Capture reference" button).
-    func captureReferenceHash(forItemIdentifier id: String) async -> UInt64? {
-        await currentImageHash(forItemIdentifier: id)
+    /// Captures both the runtime hash and a compact settings preview.
+    func captureImageReference(forItemIdentifier id: String) async -> ImageComparisonReference? {
+        guard
+            let image = await currentImage(forItemIdentifier: id),
+            let perceptualHash = ImageHashing.averageHash(image),
+            let exactHash = ImageHashing.exactHash(image)
+        else {
+            return nil
+        }
+        let imageData = NSBitmapImageRep(cgImage: image).representation(
+            using: .png,
+            properties: [:]
+        )
+        return ImageComparisonReference(
+            perceptualHash: perceptualHash,
+            exactHash: exactHash,
+            imageData: imageData
+        )
     }
 }

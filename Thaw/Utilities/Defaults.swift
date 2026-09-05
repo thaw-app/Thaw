@@ -245,6 +245,7 @@ nonisolated extension Defaults {
         static let postMoveEventsToWindowOwner = true
         static let discardStrayMoveEvents = true
         static let failFastOnEventWindowMismatch = false
+        static let faithfulDragMoves = false
         static let axMessagingTimeout = SharedConstants.axMessagingTimeout
     }
 }
@@ -545,6 +546,31 @@ nonisolated extension Defaults {
         ///
         /// Hidden diagnostic flag; not exposed in Settings. Default: false.
         case failFastOnEventWindowMismatch = "failFastOnEventWindowMismatch"
+
+        /// Whether an eligible move presses on the item where it sits and
+        /// drags it to the destination (a faithful gesture) instead of the
+        /// press-at-destination "teleport".
+        ///
+        /// On macOS 26 Control Center hosts every status item as a remote
+        /// FrontBoard scene owned by the source app. The teleport presses at
+        /// the destination with the item's window stamped and relies on
+        /// Control Center to relocate a passive item; when the source app's
+        /// status-item scene is cold, the drop can complete on Control
+        /// Center's side while the app never commits the new position, so
+        /// Control Center restores the item's autosaved slot (the "revert").
+        /// Pressing on the item makes the source app start the drag itself
+        /// (`NSStatusItemStartDragAction`) with a warm scene. The transport
+        /// classifier uses this only for an on-screen path inside one safe
+        /// notch segment. Parked and cross-notch endpoints have explicitly
+        /// named teleport transports; invalid or cross-display geometry is
+        /// rejected rather than silently falling back. Inferred from field
+        /// logs, not yet confirmed on a live bar, so it is opt-in.
+        ///
+        /// Enable with:
+        ///   defaults write com.stonerl.Thaw faithfulDragMoves -bool YES
+        ///
+        /// Hidden diagnostic flag; not exposed in Settings. Default: false.
+        case faithfulDragMoves = "faithfulDragMoves"
 
         /// Seconds an accessibility message may block before it fails.
         ///

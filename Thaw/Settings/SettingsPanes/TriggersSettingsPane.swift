@@ -217,7 +217,7 @@ struct TriggersSettingsPane: View {
                             dragProvider(for: trigger.id)
                         },
                         currentCoordinate: { manager.systemMonitor.currentCoordinate },
-                        captureReference: { await manager.captureReferenceHash(forItemIdentifier: $0) },
+                        captureReference: { await manager.captureImageReference(forItemIdentifier: $0) },
                         focusedField: $focusedField,
                         onDelete: { manager.remove(id: trigger.id) }
                     )
@@ -614,7 +614,7 @@ private struct TriggerRow: View {
     let onToggleCollapsedExpansion: () -> Void
     let dragProvider: () -> NSItemProvider
     let currentCoordinate: () -> (latitude: Double, longitude: Double)?
-    let captureReference: (String) async -> UInt64?
+    let captureReference: (String) async -> ImageComparisonReference?
     var focusedField: FocusState<String?>.Binding
     let onDelete: () -> Void
 
@@ -886,16 +886,21 @@ private struct TriggerRow: View {
             Divider()
 
             ForEach(Array(trigger.additionalItems.indices), id: \.self) { index in
+                // Index identity shifts on removal, so SwiftUI can evaluate a
+                // row whose index no longer exists. Every access tolerates a
+                // stale index instead of trapping.
+                let currentItem = trigger.additionalItems.indices.contains(index)
+                    ? trigger.additionalItems[index]
+                    : TriggerTargetItem()
                 HStack(spacing: 8) {
                     IcePicker("Also move", selection: additionalItemBinding(index)) {
-                        let currentItem = trigger.additionalItems[index]
                         let current = currentItem.identifier
                         let resolvedItem = itemOption(
                             matching: current,
                             baseIdentifier: currentItem.baseIdentifier
                         )
                         if !current.isEmpty, resolvedItem == nil {
-                            Text("\(trigger.additionalItems[index].displayName) (not present)").tag(current)
+                            Text("\(currentItem.displayName) (not present)").tag(current)
                         } else if let resolvedItem, resolvedItem.id != current {
                             Text(resolvedItem.name).tag(current)
                         }
@@ -907,6 +912,7 @@ private struct TriggerRow: View {
                         }
                     }
                     Button(role: .destructive) {
+                        guard trigger.additionalItems.indices.contains(index) else { return }
                         trigger.additionalItems.remove(at: index)
                     } label: {
                         Image(systemName: "minus.circle")
@@ -1467,7 +1473,7 @@ private struct ConditionEditorView: View {
     let refreshBluetoothOptions: () -> Void
     let itemOptions: [TriggerItemOption]
     let currentCoordinate: () -> (latitude: Double, longitude: Double)?
-    let captureReference: (String) async -> UInt64?
+    let captureReference: (String) async -> ImageComparisonReference?
     var focusedField: FocusState<String?>.Binding
     let focusID: String
 
@@ -1921,7 +1927,7 @@ private struct AttentionConditionEditor: View {
 private struct ImageConditionEditor: View {
     @Binding var condition: TriggerCondition
     let itemOptions: [TriggerItemOption]
-    let captureReference: (String) async -> UInt64?
+    let captureReference: (String) async -> ImageComparisonReference?
 
     @State private var isCapturing = false
 
@@ -1930,8 +1936,22 @@ private struct ImageConditionEditor: View {
     }
 
     private var hasReference: Bool {
-        guard case let .imageChanged(_, referenceHash) = condition else { return false }
-        return referenceHash != nil
+        condition.imageValue?.referenceHash != nil
+    }
+
+    private var exactReferenceNeedsRecapture: Bool {
+        comparisonMode == .exact
+            && hasReference
+            && condition.imageValue?.referenceExactHash == nil
+    }
+
+    private var referenceImage: NSImage? {
+        guard let data = condition.imageValue?.referenceImageData else { return nil }
+        return NSImage(data: data)
+    }
+
+    private var comparisonMode: ImageComparisonMode {
+        condition.imageValue?.comparisonMode ?? .fuzzy
     }
 
     var body: some View {
@@ -1943,16 +1963,20 @@ private struct ImageConditionEditor: View {
             )
             .disabled(isCapturing)
 
+            IcePicker("Comparison", selection: comparisonModeBinding) {
+                ForEach(ImageComparisonMode.allCases) { mode in
+                    Text(mode.displayString).tag(mode)
+                }
+            }
+
             HStack(spacing: 12) {
                 Button(isCapturing ? "Capturing…" : "Capture Reference") { capture() }
                     .disabled(isCapturing || watchedID.isEmpty)
                 Spacer()
-                Text(hasReference ? "Reference captured" : "No reference yet")
-                    .font(.caption)
-                    .foregroundStyle(hasReference ? .green : .secondary)
+                referenceStatus
             }
 
-            Text("Captures the icon now as a reference, then reveals the item when the icon later changes from it. Requires screen recording permission.")
+            Text(comparisonHelp)
                 .font(.caption)
                 .foregroundStyle(.secondary)
                 .fixedSize(horizontal: false, vertical: true)
@@ -1963,15 +1987,63 @@ private struct ImageConditionEditor: View {
         Binding(get: { watchedID }, set: { condition = condition.withImageItem($0) })
     }
 
+    private var comparisonModeBinding: Binding<ImageComparisonMode> {
+        Binding(
+            get: { comparisonMode },
+            set: { condition = condition.withImageComparisonMode($0) }
+        )
+    }
+
+    @ViewBuilder
+    private var referenceStatus: some View {
+        if let referenceImage {
+            HStack(spacing: 8) {
+                Text("Reference")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                Image(nsImage: referenceImage)
+                    .resizable()
+                    .interpolation(.high)
+                    .scaledToFit()
+                    .frame(width: 32, height: 22)
+                    .padding(4)
+                    .background(.quaternary, in: RoundedRectangle(cornerRadius: 6))
+                    .accessibilityLabel("Captured reference icon")
+            }
+        } else {
+            Text(referenceStatusText)
+                .font(.caption)
+                .foregroundStyle(hasReference && !exactReferenceNeedsRecapture ? .green : .secondary)
+        }
+    }
+
+    private var referenceStatusText: String {
+        if exactReferenceNeedsRecapture {
+            return String(localized: "Recapture required for Exact")
+        }
+        return hasReference
+            ? String(localized: "Reference captured — recapture to add preview")
+            : String(localized: "No reference yet")
+    }
+
+    private var comparisonHelp: String {
+        switch comparisonMode {
+        case .fuzzy:
+            String(localized: "Fuzzy ignores small rendering differences and reveals when the icon meaningfully changes from the reference. Requires screen recording permission.")
+        case .exact:
+            String(localized: "Exact reveals on any pixel-content difference from the reference. Requires screen recording permission.")
+        }
+    }
+
     private func capture() {
         let id = watchedID
         guard !id.isEmpty else { return }
         isCapturing = true
         Task { @MainActor in
-            let hash = await captureReference(id)
+            let reference = await captureReference(id)
             isCapturing = false
-            if let hash, watchedID == id {
-                condition = condition.withImageReferenceHash(hash)
+            if let reference, watchedID == id {
+                condition = condition.withImageReference(reference)
             }
         }
     }

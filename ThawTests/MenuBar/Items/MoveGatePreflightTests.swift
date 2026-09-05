@@ -38,6 +38,7 @@ struct MoveGatePreflightTests {
             try await manager.move(
                 item: movedItem,
                 to: .leftOfItem(targetItem),
+                skipInputPause: true,
                 options: .init(
                     shouldBegin: {
                         events.append("preflight")
@@ -165,6 +166,23 @@ struct MoveGatePreflightTests {
         try await first.value
 
         #expect(events == ["first-wait", "second-body", "first-body"])
+    }
+
+    @Test("The transaction budget caps waits and reports exhaustion")
+    func transactionBudgetCapsWaits() async throws {
+        let elapsed = OSAllocatedUnfairLock(initialState: Duration.zero)
+        let budget = MenuBarItemManager.MoveTransactionBudget(
+            limit: .milliseconds(100),
+            elapsed: { elapsed.withLock { $0 } },
+            sleeper: { duration in elapsed.withLock { $0 += duration } }
+        )
+
+        try await budget.sleep(for: .milliseconds(60))
+        #expect(try budget.remaining() == .milliseconds(40))
+        await #expect(throws: MenuBarItemManager.MoveDeadlineExceeded.self) {
+            try await budget.sleep(for: .milliseconds(50))
+        }
+        #expect(elapsed.withLock { $0 } == .milliseconds(100))
     }
 }
 

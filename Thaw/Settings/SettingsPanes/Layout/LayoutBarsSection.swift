@@ -154,7 +154,7 @@ struct LayoutBarsSection: View {
                     .font(.headline)
                     .padding(.leading, 8)
 
-                LayoutBar(imageCache: appState.imageCache, section: name)
+                LayoutBar(section: name)
             }
         }
     }

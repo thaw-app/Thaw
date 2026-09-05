@@ -46,7 +46,7 @@ nonisolated enum MenuBarItemEventType {
     // MARK: Subtypes
 
     /// Subtype for menu bar item move events.
-    enum MoveSubtype {
+    enum MoveSubtype: Equatable {
         case mouseDown
         case mouseDragged
         case mouseUp

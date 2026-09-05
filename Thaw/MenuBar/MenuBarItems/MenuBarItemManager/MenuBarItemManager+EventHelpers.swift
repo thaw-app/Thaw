@@ -78,6 +78,9 @@ extension MenuBarItemManager {
         /// the move as a whole ran past its deadline. Whatever reply came
         /// back after that describes a press that was no longer down.
         case moveTimedOut(MenuBarItem)
+        /// The planned endpoints do not form a safe transport on the selected
+        /// display. No synthetic press was posted.
+        case unsafeMovePath(MenuBarItem)
 
         var description: String {
             switch self {
@@ -117,6 +120,8 @@ extension MenuBarItemManager {
                 "\(Self.self).moveEngineBusy(item: \(item.tag))"
             case let .moveTimedOut(item):
                 "\(Self.self).moveTimedOut(item: \(item.tag))"
+            case let .unsafeMovePath(item):
+                "\(Self.self).unsafeMovePath(item: \(item.tag))"
             }
         }
 
@@ -158,6 +163,8 @@ extension MenuBarItemManager {
                 "Another move was still in progress when \"\(item.displayName)\" was to be moved"
             case let .moveTimedOut(item):
                 "Moving \"\(item.displayName)\" took too long and was stopped"
+            case let .unsafeMovePath(item):
+                "The path for moving \"\(item.displayName)\" is no longer safe"
             }
         }
 
@@ -202,7 +209,7 @@ extension MenuBarItemManager {
             case .cannotComplete, .invalidEventSource, .missingMouseLocation, .eventCreationFailure,
                  .itemNotMovable, .missingItemBounds, .missingDestinationBounds, .menuTrackingActive, .eventWindowMismatch,
                  .staleDestination, .inputPauseTimedOut, .moveSuperseded, .dropReverted,
-                 .moveEngineBusy, .moveTimedOut:
+                 .moveEngineBusy, .moveTimedOut, .unsafeMovePath:
                 false
             }
         }
@@ -329,11 +336,19 @@ extension MenuBarItemManager {
         }
     }
 
+    /// Returns the dynamic delay still required between move operations.
+    nonisolated func moveOperationBufferDuration() async -> Duration {
+        guard let timestamp = await lastMoveOperationTimestamp else {
+            return .zero
+        }
+        return max(.milliseconds(25) - timestamp.duration(to: .now), .zero)
+    }
+
     /// Waits between move operations for a dynamic amount of time,
     /// based on the timestamp of the last move operation.
     nonisolated func waitForMoveOperationBuffer() async throws {
-        if let timestamp = await lastMoveOperationTimestamp {
-            let buffer = max(.milliseconds(25) - timestamp.duration(to: .now), .zero)
+        let buffer = await moveOperationBufferDuration()
+        if buffer > .zero {
             MenuBarItemManager.diagLog.debug("Move operation buffer: \(buffer)")
             do {
                 try await Task.sleep(for: buffer)

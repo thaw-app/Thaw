@@ -178,6 +178,9 @@ final class MenuBarItemTriggersManager {
     /// conditions, keyed by tag identifier, injected into the system state.
     var imageHashes = [String: UInt64]()
 
+    /// Exact pixel hashes captured in the same pass as ``imageHashes``.
+    var exactImageHashes = [String: UInt64]()
+
     /// Guards against overlapping image-capture passes.
     var isRefreshingImages = false
     var imagesNeedRefresh = false
@@ -223,6 +226,7 @@ final class MenuBarItemTriggersManager {
         var state = systemMonitor.state
         state.scriptOutcomes = scriptOutcomes
         state.imageHashes = imageHashes
+        state.exactImageHashes = exactImageHashes
         state.itemsSeekingAttention = itemsSeekingAttention
         return state
     }

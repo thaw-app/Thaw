@@ -19,13 +19,17 @@ final class LayoutBarNewItemsBadgeView: LayoutBarArrangedView {
 
     /// Returns text attributes adapted to the menu bar background brightness.
     /// When the background is bright, uses dark text; otherwise uses light text.
-    private var textAttributes: [NSAttributedString.Key: Any] {
+    private func textAttributes(opacity: CGFloat = 1) -> [NSAttributedString.Key: Any] {
         let isBright = isBrightForActiveScreen()
         let foregroundColor: NSColor = isBright ? .black : .white
         return [
             .font: NSFont.systemFont(ofSize: 11, weight: .semibold),
-            .foregroundColor: foregroundColor,
+            .foregroundColor: foregroundColor.withAlphaComponent(opacity),
         ]
+    }
+
+    static nonisolated func contentOpacity(isDraggingPlaceholder: Bool) -> CGFloat {
+        isDraggingPlaceholder ? 0.45 : 1
     }
 
     override var kind: Kind {
@@ -59,10 +63,7 @@ final class LayoutBarNewItemsBadgeView: LayoutBarArrangedView {
     }
 
     override func draw(_: NSRect) {
-        guard !isDraggingPlaceholder else {
-            return
-        }
-
+        let opacity = Self.contentOpacity(isDraggingPlaceholder: isDraggingPlaceholder)
         let isBright = isBrightForActiveScreen()
         let pillPath = NSBezierPath(roundedRect: bounds, xRadius: Metrics.cornerRadius, yRadius: Metrics.cornerRadius)
 
@@ -70,16 +71,16 @@ final class LayoutBarNewItemsBadgeView: LayoutBarArrangedView {
         let fillColor: NSColor = isBright ? .black : .white
         let strokeColor: NSColor = isBright ? .black : .white
 
-        fillColor.withAlphaComponent(0.25).setFill()
+        fillColor.withAlphaComponent(0.25 * opacity).setFill()
         pillPath.fill()
 
-        strokeColor.withAlphaComponent(0.65).setStroke()
+        strokeColor.withAlphaComponent(0.65 * opacity).setStroke()
         pillPath.lineWidth = Metrics.borderWidth
         pillPath.stroke()
 
         let title = NSAttributedString(
             string: String(localized: "New Items"),
-            attributes: textAttributes
+            attributes: textAttributes(opacity: opacity)
         )
         let titleSize = title.size()
         let titleOrigin = CGPoint(
@@ -97,6 +98,10 @@ final class LayoutBarNewItemsBadgeView: LayoutBarArrangedView {
 
     override func mouseDragged(with event: NSEvent) {
         super.mouseDragged(with: event)
+
+        guard canBeginDraggingFromCurrentContainer else {
+            return
+        }
 
         let pasteboardItem = NSPasteboardItem()
         pasteboardItem.setData(Data(), forType: .layoutBarItem)

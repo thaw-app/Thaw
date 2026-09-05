@@ -121,6 +121,35 @@ final class LayoutBarItemView: LayoutBarArrangedView {
         )
     }
 
+    /// Whether a cache observation may replace the thumbnail currently shown
+    /// by the layout editor.
+    ///
+    /// A system move temporarily relocates the real status-item window. Live
+    /// capture can observe it under the notch or between sections and publish
+    /// a transient thumbnail while the drag UI is intentionally frozen. Keep
+    /// the last stable thumbnail until the container thaws.
+    static nonisolated func shouldUpdateCachedImage(
+        hasContainer: Bool,
+        containerAllowsUpdates: Bool
+    ) -> Bool {
+        !hasContainer || containerAllowsUpdates
+    }
+
+    /// Opacity used for the captured icon.
+    ///
+    /// The dragged view remains in the arranged views as the drop placeholder.
+    /// Keeping a dimmed snapshot there avoids a blank slot while the dragging
+    /// image follows the pointer.
+    static nonisolated func iconFraction(
+        isDraggingPlaceholder: Bool,
+        isEnabled: Bool
+    ) -> CGFloat {
+        if isDraggingPlaceholder {
+            return 0.45
+        }
+        return isEnabled ? 1.0 : 0.67
+    }
+
     override var kind: Kind {
         .item(effectiveItem)
     }
@@ -270,8 +299,12 @@ final class LayoutBarItemView: LayoutBarArrangedView {
                 for await image in changes {
                     guard let self else { return }
                     guard !MenuBarItemImageCache.CapturedImage.isVisuallyEqual(previous, image) else { continue }
+                    // Advance `previous` only when the image was applied: if
+                    // the container is frozen and drops it, recording it here
+                    // would make a republished copy dedupe as unchanged and
+                    // strand the stale thumbnail.
+                    guard self.updateCachedImageIfAllowed(image) else { continue }
                     previous = image
-                    self.cachedImage = image
                 }
             }
 
@@ -442,26 +475,33 @@ final class LayoutBarItemView: LayoutBarArrangedView {
     }
 
     override func draw(_: NSRect) {
+        // A trigger-owned item draws slightly dimmed so the badge reads as a
+        // state marker rather than a rendering bug.
+        let fraction: CGFloat = if !isDraggingPlaceholder, isTriggerControlled {
+            Metrics.triggerControlledFraction
+        } else {
+            Self.iconFraction(
+                isDraggingPlaceholder: isDraggingPlaceholder,
+                isEnabled: isEnabled
+            )
+        }
+        // When the user prefers app icons, the placeholder — which resolves
+        // app icons — draws instead of the captured glyph.
+        if !usesAppIcon, let capturedImage = cachedImage?.nsImage {
+            capturedImage.draw(
+                in: bounds,
+                from: .zero,
+                operation: .sourceOver,
+                fraction: fraction
+            )
+        } else {
+            drawPlaceholder(fraction: fraction)
+        }
+
+        // Keep status badges out of the drag placeholder; the dimmed icon is
+        // enough to preserve identity without making the slot visually busy.
         if !isDraggingPlaceholder {
-            let triggerControlled = isTriggerControlled
-            if !usesAppIcon, let capturedImage = cachedImage?.nsImage {
-                let fraction: CGFloat = if triggerControlled {
-                    Metrics.triggerControlledFraction
-                } else if isEnabled {
-                    1.0
-                } else {
-                    0.67
-                }
-                capturedImage.draw(
-                    in: bounds,
-                    from: .zero,
-                    operation: .sourceOver,
-                    fraction: fraction
-                )
-            } else {
-                drawPlaceholder()
-            }
-            if triggerControlled {
+            if isTriggerControlled {
                 drawTriggerBadge()
             }
             if Bridging.isProcessUnresponsive(item.ownerPID) {
@@ -488,6 +528,10 @@ final class LayoutBarItemView: LayoutBarArrangedView {
         super.mouseDragged(with: event)
         didBeginDraggingForCurrentClick = true
         tooltipController.cancel()
+
+        guard canBeginDraggingFromCurrentContainer else {
+            return
+        }
 
         // #905 fallback: before refusing an `unresolvedControlCenterPlaceholder`
         // drag, attempt to re-tag the slot with its app-owned identity (when
@@ -535,6 +579,19 @@ final class LayoutBarItemView: LayoutBarArrangedView {
         draggingItem.setDraggingFrame(bounds, contents: draggingImage())
 
         beginDraggingSession(with: [draggingItem], event: event, source: self)
+    }
+
+    @discardableResult
+    private func updateCachedImageIfAllowed(_ image: MenuBarItemImageCache.CapturedImage?) -> Bool {
+        let container = superview as? LayoutBarContainer
+        guard Self.shouldUpdateCachedImage(
+            hasContainer: container != nil,
+            containerAllowsUpdates: container?.canSetArrangedViews ?? true
+        ) else {
+            return false
+        }
+        cachedImage = image
+        return true
     }
 
     private func preferredSize(for image: MenuBarItemImageCache.CapturedImage?) -> CGSize {
@@ -620,7 +677,7 @@ final class LayoutBarItemView: LayoutBarArrangedView {
         )
     }
 
-    private func drawPlaceholder() {
+    private func drawPlaceholder(fraction: CGFloat) {
         let placeholderRect = bounds.insetBy(
             dx: Metrics.placeholderHorizontalInset,
             dy: Metrics.placeholderVerticalInset
@@ -630,10 +687,10 @@ final class LayoutBarItemView: LayoutBarArrangedView {
             xRadius: Metrics.placeholderCornerRadius,
             yRadius: Metrics.placeholderCornerRadius
         )
-        NSColor.quaternaryLabelColor.withAlphaComponent(0.35).setFill()
+        NSColor.quaternaryLabelColor.withAlphaComponent(0.35 * fraction).setFill()
         backgroundPath.fill()
 
-        NSColor.separatorColor.withAlphaComponent(0.6).setStroke()
+        NSColor.separatorColor.withAlphaComponent(0.6 * fraction).setStroke()
         backgroundPath.lineWidth = 1
         backgroundPath.stroke()
 
@@ -641,21 +698,11 @@ final class LayoutBarItemView: LayoutBarArrangedView {
             return
         }
 
-        // #981: if the placeholder fell back to the generic symbol at init
-        // because the owning app was not launchable yet, try the app icon
-        // again now. The view is reused across cache refreshes when the
-        // item's identity is stable, so this is the one place a later
-        // resolution surfaces. One lookup per resolution; the flag stops
-        // repeat work once an icon is in hand.
         if !placeholderResolvedFromApp,
            let icon = Self.resolvedAppIcon(for: item)
         {
             self.placeholderImage = icon
             placeholderResolvedFromApp = true
-            // Draw the resolved icon in this pass. Assigning only the stored
-            // property left the local binding above holding the generic
-            // symbol, so the icon swap waited on an unrelated invalidation
-            // that never comes for items the image cache can't capture.
             placeholderImage = icon
         }
 
@@ -683,14 +730,14 @@ final class LayoutBarItemView: LayoutBarArrangedView {
                 in: iconRect,
                 from: .zero,
                 operation: .sourceOver,
-                fraction: isEnabled ? 0.8 : 0.5
+                fraction: (isEnabled ? 0.8 : 0.5) * fraction
             )
         } else {
             placeholderImage.draw(
                 in: iconRect,
                 from: .zero,
                 operation: .sourceOver,
-                fraction: isEnabled ? 0.9 : 0.5
+                fraction: (isEnabled ? 0.9 : 0.5) * fraction
             )
         }
     }

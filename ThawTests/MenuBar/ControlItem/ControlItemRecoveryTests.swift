@@ -616,6 +616,18 @@ struct ControlCenterRelaunchGraceTests {
         #expect(MenuBarItemManager.shouldCountControlItemLookupFailure(hostUptime: nil))
     }
 
+    @Test("Layout-editor refreshes never advance missing-control recovery")
+    func layoutEditorRefreshDoesNotCount() {
+        #expect(!MenuBarItemManager.shouldCountControlItemLookupFailure(
+            hostUptime: nil,
+            suppressAutomaticMoves: true
+        ))
+        #expect(!MenuBarItemManager.shouldCountControlItemLookupFailure(
+            hostUptime: .seconds(3600),
+            suppressAutomaticMoves: true
+        ))
+    }
+
     @Test("A custom grace period is respected")
     func customGraceIsRespected() {
         #expect(!MenuBarItemManager.shouldCountControlItemLookupFailure(

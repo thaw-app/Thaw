@@ -49,10 +49,17 @@ extension MenuBarItemManager {
             case itemGone
             /// The destination anchor no longer reports bounds.
             case destinationGone
+            /// The destination's identity no longer matches the plan: the
+            /// target window was recycled or the endpoint geometry is no
+            /// longer usable. Retrying would drag the item against geometry
+            /// the bar no longer has.
+            case staleDestination
             /// The caller's condition changed; the move is obsolete.
             case superseded
             /// The press outlived its deadline and was released by the guard.
             case overran
+            /// The selected endpoints do not form a safe path on one display.
+            case unsafePath
             /// Anything else.
             case other
         }
@@ -82,10 +89,15 @@ extension MenuBarItemManager {
             case ownerSilent
             case itemGone
             case destinationGone
+            /// The destination anchor no longer matches the plan (recycled
+            /// target window or unusable endpoint geometry).
+            case staleDestination
             case superseded
             /// A press was released by the deadline guard, or the move as a
             /// whole ran past its deadline.
             case overran
+            /// No transport can safely connect the selected endpoints.
+            case unsafePath
             /// Every attempt displaced the item without landing it.
             case budgetExhausted
             /// The final attempt failed for an unclassified reason.
@@ -103,7 +115,7 @@ extension MenuBarItemManager {
                 switch self {
                 case .targetMoved, .targetRetreating, .ownerAlwaysSilent, .ownerSilent, .overran, .budgetExhausted, .other:
                     true
-                case .refusedByMacOS, .ownerUnresponsive, .itemGone, .destinationGone, .superseded:
+                case .refusedByMacOS, .ownerUnresponsive, .itemGone, .destinationGone, .staleDestination, .superseded, .unsafePath:
                     false
                 }
             }
@@ -115,7 +127,7 @@ extension MenuBarItemManager {
                 switch self {
                 case .ownerUnresponsive, .ownerAlwaysSilent, .ownerSilent:
                     true
-                case .refusedByMacOS, .targetMoved, .targetRetreating, .itemGone, .destinationGone, .superseded, .overran, .budgetExhausted, .other:
+                case .refusedByMacOS, .targetMoved, .targetRetreating, .itemGone, .destinationGone, .staleDestination, .superseded, .overran, .unsafePath, .budgetExhausted, .other:
                     false
                 }
             }
@@ -130,8 +142,10 @@ extension MenuBarItemManager {
                 case .ownerSilent: "owner silent"
                 case .itemGone: "item gone"
                 case .destinationGone: "destination gone"
+                case .staleDestination: "stale destination"
                 case .superseded: "superseded"
                 case .overran: "overran deadline"
+                case .unsafePath: "unsafe path"
                 case .budgetExhausted: "budget exhausted"
                 case .other: "other"
                 }
@@ -242,12 +256,16 @@ extension MenuBarItemManager {
                     return .stop(.itemGone)
                 case .destinationGone:
                     return .stop(.destinationGone)
+                case .staleDestination:
+                    return .stop(.staleDestination)
                 case .ownerUnresponsive:
                     return .stop(.ownerUnresponsive)
                 case .superseded:
                     return .stop(.superseded)
                 case .overran:
                     return .stop(.overran)
+                case .unsafePath:
+                    return .stop(.unsafePath)
                 case .ownerSilent:
                     // An owner with a standing record of ignoring synthetic
                     // events gets no further attempts once it fails this way
@@ -308,8 +326,12 @@ extension MenuBarItemManager {
                 .superseded
             case .moveTimedOut:
                 .overran
+            case .unsafeMovePath:
+                .unsafePath
+            case .staleDestination:
+                .staleDestination
             case .cannotComplete, .invalidEventSource, .missingMouseLocation, .eventCreationFailure,
-                 .itemNotMovable, .menuTrackingActive, .eventWindowMismatch, .staleDestination,
+                 .itemNotMovable, .menuTrackingActive, .eventWindowMismatch,
                  .inputPauseTimedOut, .dropReverted, .moveEngineBusy:
                 .other
             }
@@ -344,7 +366,7 @@ extension MenuBarItemManager {
         case .cannotComplete, .invalidEventSource, .missingMouseLocation, .eventCreationFailure,
              .itemNotMovable, .missingItemBounds, .missingDestinationBounds, .menuTrackingActive, .eventWindowMismatch,
              .staleDestination, .inputPauseTimedOut, .moveSuperseded, .dropReverted,
-             .moveEngineBusy, .moveTimedOut:
+             .moveEngineBusy, .moveTimedOut, .unsafeMovePath:
             return .other
         }
     }
@@ -407,10 +429,14 @@ extension MenuBarItemManager {
             EventError.missingItemBounds(item)
         case .destinationGone:
             EventError.missingDestinationBounds(destinationItem ?? item)
+        case .staleDestination:
+            EventError.staleDestination(item)
         case .superseded:
             EventError.moveSuperseded(item)
         case .overran:
             EventError.moveTimedOut(item)
+        case .unsafePath:
+            EventError.unsafeMovePath(item)
         case .ownerAlwaysSilent, .ownerSilent, .other:
             (lastError as? EventError) ?? EventError.cannotComplete
         case .budgetExhausted:

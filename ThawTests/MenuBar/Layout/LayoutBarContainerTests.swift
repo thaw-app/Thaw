@@ -157,3 +157,245 @@ struct LayoutBarGroupResolutionOrderTests {
         #expect(unit == [first.tag, dragged.tag, stranded.tag])
     }
 }
+
+@Suite("Layout item drag presentation")
+struct LayoutBarItemDragPresentationTests {
+    @Test("A dragged item keeps a visible dimmed placeholder")
+    func draggedItemKeepsVisiblePlaceholder() {
+        let fraction = LayoutBarItemView.iconFraction(
+            isDraggingPlaceholder: true,
+            isEnabled: true
+        )
+
+        #expect(fraction > 0)
+        #expect(fraction < 1)
+    }
+
+    @Test("A frozen container keeps its last stable thumbnail")
+    func frozenContainerRejectsTransientThumbnail() {
+        #expect(!LayoutBarItemView.shouldUpdateCachedImage(
+            hasContainer: true,
+            containerAllowsUpdates: false
+        ))
+        #expect(LayoutBarItemView.shouldUpdateCachedImage(
+            hasContainer: true,
+            containerAllowsUpdates: true
+        ))
+        #expect(LayoutBarItemView.shouldUpdateCachedImage(
+            hasContainer: false,
+            containerAllowsUpdates: false
+        ))
+    }
+
+    @Test("Geometry-only cache changes keep the existing item view")
+    func geometryChangeReusesItemView() {
+        let tag = MenuBarItemTag.appItem(
+            bundleID: "com.example.status-item",
+            title: "Item-0",
+            windowID: 711
+        )
+        let beforeMove = MenuBarItem.fixture(
+            tag: tag,
+            windowID: 711,
+            bounds: CGRect(x: 1400, y: 0, width: 24, height: 33),
+            isOnScreen: true
+        )
+        let afterMove = MenuBarItem.fixture(
+            tag: tag,
+            windowID: 711,
+            bounds: CGRect(x: -3700, y: 0, width: 24, height: 33),
+            isOnScreen: false
+        )
+
+        #expect(LayoutBarContainer.canReuseItemView(
+            representing: beforeMove,
+            for: afterMove
+        ))
+    }
+
+    @Test("A recreated status-item window gets a new item view")
+    func recreatedWindowDoesNotReuseItemView() {
+        let oldItem = MenuBarItem.fixture(
+            tag: .appItem(bundleID: "com.example.status-item", title: "Item-0", windowID: 711),
+            windowID: 711
+        )
+        let recreatedItem = MenuBarItem.fixture(
+            tag: .appItem(bundleID: "com.example.status-item", title: "Item-0", windowID: 812),
+            windowID: 812
+        )
+
+        #expect(!LayoutBarContainer.canReuseItemView(
+            representing: oldItem,
+            for: recreatedItem
+        ))
+    }
+
+    @Test("A changed status-item size gets a new item view")
+    func resizedItemDoesNotReuseItemView() {
+        let tag = MenuBarItemTag.appItem(
+            bundleID: "com.example.status-item",
+            title: "Item-0",
+            windowID: 711
+        )
+        let oldItem = MenuBarItem.fixture(
+            tag: tag,
+            windowID: 711,
+            bounds: CGRect(x: 1400, y: 0, width: 24, height: 33)
+        )
+        let resizedItem = MenuBarItem.fixture(
+            tag: tag,
+            windowID: 711,
+            bounds: CGRect(x: -3700, y: 0, width: 36, height: 33),
+            isOnScreen: false
+        )
+
+        #expect(!LayoutBarContainer.canReuseItemView(
+            representing: oldItem,
+            for: resizedItem
+        ))
+    }
+
+    @Test("The New Items badge remains visible while dragged")
+    func draggedBadgeKeepsVisiblePlaceholder() {
+        let opacity = LayoutBarNewItemsBadgeView.contentOpacity(isDraggingPlaceholder: true)
+
+        #expect(opacity > 0)
+        #expect(opacity < 1)
+    }
+
+    @Test("A cancelled cross-row drag restores the original view exactly once")
+    @MainActor
+    func cancelledCrossRowDragRestoresOriginalView() {
+        let appState = AppState()
+        let source = LayoutBarContainer(appState: appState, section: .visible)
+        let destination = LayoutBarContainer(appState: appState, section: .hidden)
+        let draggedView = LayoutBarNewItemsBadgeView()
+
+        source.arrangedViews = [draggedView]
+        source.arrangedViews.removeAll()
+        destination.arrangedViews = [draggedView]
+
+        source.restoreArrangedViewAfterCancelledDrag(
+            draggedView,
+            from: destination,
+            at: 0
+        )
+
+        #expect(source.arrangedViews.count { $0 === draggedView } == 1)
+        #expect(!destination.arrangedViews.contains { $0 === draggedView })
+        #expect(draggedView.superview === source)
+    }
+
+    @Test("A row frozen by another drag rejects a new drag")
+    func frozenRowRejectsUnrelatedDrag() {
+        #expect(!LayoutBarPaddingView.canAcceptDrag(
+            containerAllowsUpdates: false,
+            beganInContainer: false,
+            alreadyAccepted: false
+        ))
+        #expect(LayoutBarPaddingView.canAcceptDrag(
+            containerAllowsUpdates: false,
+            beganInContainer: true,
+            alreadyAccepted: false
+        ))
+        #expect(LayoutBarPaddingView.canAcceptDrag(
+            containerAllowsUpdates: false,
+            beganInContainer: false,
+            alreadyAccepted: true
+        ))
+    }
+}
+
+@Suite("Layout bar drag identity")
+struct LayoutBarDragIdentityTests {
+    private let provisional = MenuBarItem.fixture(
+        tag: MenuBarItemTag(
+            namespace: .controlCenter,
+            title: "Item-0",
+            windowID: 5467,
+            instanceIndex: 0
+        ),
+        windowID: 5467,
+        sourcePID: nil,
+        ownerPID: 645
+    )
+
+    private let resolved = MenuBarItem.fixture(
+        tag: .appItem(bundleID: "IconSwitcher", title: "Item-0", windowID: 5467),
+        windowID: 5467,
+        sourcePID: 12460,
+        ownerPID: 645
+    )
+
+    private let otherItem = MenuBarItem.fixture(
+        tag: .appItem(bundleID: "com.example.other", title: "Item-0", windowID: 2556),
+        windowID: 2556
+    )
+
+    @Test("The same window is the same item after its identity resolves")
+    func sameWindowIsSameItem() {
+        #expect(LayoutBarPaddingView.isSameItem(resolved, provisional))
+        #expect(!LayoutBarPaddingView.isSameItem(otherItem, provisional))
+    }
+
+    @Test("A recreated window still matches by tag")
+    func recreatedWindowMatchesByTag() {
+        let recreated = MenuBarItem.fixture(
+            tag: .appItem(bundleID: "IconSwitcher", title: "Item-0", windowID: 5744),
+            windowID: 5744,
+            sourcePID: 12460,
+            ownerPID: 645
+        )
+
+        #expect(LayoutBarPaddingView.isSameItem(recreated, resolved))
+    }
+
+    @Test("The dragged item is found beside its target under its resolved name")
+    func reachedPositionUnderResolvedName() {
+        let reached = LayoutBarPaddingView.itemReachedIntendedPosition(
+            item: provisional,
+            destination: .leftOfItem(otherItem),
+            sectionItems: [resolved, otherItem]
+        )
+
+        #expect(reached)
+    }
+
+    @Test("The wrong side of the target is not the intended position")
+    func wrongSideIsNotReached() {
+        let reached = LayoutBarPaddingView.itemReachedIntendedPosition(
+            item: provisional,
+            destination: .rightOfItem(otherItem),
+            sectionItems: [resolved, otherItem]
+        )
+
+        #expect(!reached)
+    }
+
+    @Test("Containment is enough when the target is a section divider")
+    func dividerTargetNeedsOnlyContainment() {
+        let divider = MenuBarItem.fixture(
+            tag: .hiddenControlItem,
+            windowID: 5134,
+            sourcePID: nil
+        )
+        let reached = LayoutBarPaddingView.itemReachedIntendedPosition(
+            item: provisional,
+            destination: .leftOfItem(divider),
+            sectionItems: [otherItem, resolved]
+        )
+
+        #expect(reached)
+    }
+
+    @Test("An item missing from the section has not reached its position")
+    func missingItemIsNotReached() {
+        let reached = LayoutBarPaddingView.itemReachedIntendedPosition(
+            item: provisional,
+            destination: .leftOfItem(otherItem),
+            sectionItems: [otherItem]
+        )
+
+        #expect(!reached)
+    }
+}

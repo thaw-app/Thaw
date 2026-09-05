@@ -11,6 +11,32 @@ import Cocoa
 // MARK: Layout Reset
 
 extension MenuBarItemManager {
+    /// Tracks which move timestamp belongs to a multi-item automatic apply.
+    ///
+    /// Before the first move, the cache snapshot's preflight owns the verdict.
+    /// After each move releases `moveGate`, the batch adopts the timestamp seen
+    /// while it still owned that gate. The next item therefore accepts changes
+    /// made by this batch and rejects a user move that lands between items.
+    nonisolated struct BatchMovePreflightState {
+        private var didFinishMove = false
+        private var expectedTimestamp: ContinuousClock.Instant?
+
+        func shouldBeginMove(
+            currentTimestamp: ContinuousClock.Instant?,
+            initialPreflight: () -> Bool
+        ) -> Bool {
+            guard didFinishMove else {
+                return initialPreflight()
+            }
+            return currentTimestamp == expectedTimestamp
+        }
+
+        mutating func recordMoveGateExit(timestamp: ContinuousClock.Instant?) {
+            didFinishMove = true
+            expectedTimestamp = timestamp
+        }
+    }
+
     /// Errors that can occur during a layout reset.
     enum LayoutResetError: LocalizedError {
         case missingAppState
@@ -109,7 +135,7 @@ extension MenuBarItemManager {
                     }
                     MenuBarItemManager.diagLog.info("Recovered hidden section control item after re-enabling always-hidden section")
                     prepareLayoutStateForReset()
-                    await enforceControlItemOrder(controlItems: retryControlItems)
+                    _ = await enforceControlItemOrder(controlItems: retryControlItems)
                     return try await resetLayoutWithControlItems(
                         controlItems: retryControlItems,
                         items: items,
@@ -138,7 +164,7 @@ extension MenuBarItemManager {
         // authoritative; a provisional lookup must leave the saved layout intact.
         prepareLayoutStateForReset()
 
-        await enforceControlItemOrder(controlItems: controlItems)
+        _ = await enforceControlItemOrder(controlItems: controlItems)
 
         return try await resetLayoutWithControlItems(
             controlItems: controlItems,
@@ -796,7 +822,8 @@ extension MenuBarItemManager {
         _ spec: ProfileLayoutSpec,
         source: ApplySource = .profile,
         automatic: Bool = false,
-        duringSettling: Bool = false
+        duringSettling: Bool = false,
+        shouldBegin: (@MainActor () -> Bool)? = nil
     ) async {
         let pinnedHidden = spec.pinnedHidden
         let pinnedAlwaysHidden = spec.pinnedAlwaysHidden
@@ -870,6 +897,12 @@ extension MenuBarItemManager {
         // during the settling wait (a newer apply has replaced us via
         // applyProfile's layoutTask?.cancel()).
         if Task.isCancelled {
+            return
+        }
+        guard shouldBegin?() ?? true else {
+            MenuBarItemManager.diagLog.info(
+                "applyProfileLayout: skipping automatic apply superseded during its idle wait"
+            )
             return
         }
 
@@ -946,6 +979,14 @@ extension MenuBarItemManager {
         // and reshuffling the bar. This fetch is independent of the cache
         // path, so it needs its own filter.
         items.removeAll(where: \.isSystemClone)
+        guard shouldBegin?() ?? true else {
+            MenuBarItemManager.diagLog.info(
+                "applyProfileLayout: abandoning automatic apply superseded during item discovery"
+            )
+            clearProfileState(source: source, items: items)
+            scheduleDeferredCacheRefresh()
+            return
+        }
 
         // Skip the bulk apply while the majority of items have no resolved
         // sourcePID — uniqueIdentifier (used to match items against
@@ -964,7 +1005,16 @@ extension MenuBarItemManager {
         // Never drag items while a menu bar item menu is tracking — a synthetic
         // Cmd-drag would tear down the user's interaction (Wi-Fi picker, input
         // methods). State is unwound so a subsequent apply can retry cleanly.
-        if await isAnyMenuBarItemMenuOpen() {
+        let menuIsOpen = await isAnyMenuBarItemMenuOpen()
+        guard shouldBegin?() ?? true else {
+            MenuBarItemManager.diagLog.info(
+                "applyProfileLayout: abandoning automatic apply superseded during its menu check"
+            )
+            clearProfileState(source: source, items: items)
+            scheduleDeferredCacheRefresh()
+            return
+        }
+        if menuIsOpen {
             MenuBarItemManager.diagLog.info("applyProfileLayout: skipping, a menu bar item menu is open")
             clearProfileState(source: source, items: items)
             return
@@ -1384,6 +1434,35 @@ extension MenuBarItemManager {
             return
         }
 
+        guard shouldBegin?() ?? true else {
+            MenuBarItemManager.diagLog.info(
+                "applyProfileLayout: abandoning automatic apply superseded while planning"
+            )
+            clearProfileState(source: source, items: items)
+            scheduleDeferredCacheRefresh()
+            return
+        }
+
+        // Each actual move validates the expected timestamp only after it
+        // acquires moveGate. After an owned attempt, the callback advances the
+        // expectation while the gate is still held. A user move that wins the
+        // gate during an inter-item sleep therefore invalidates the next move,
+        // while this batch's own timestamp updates remain accepted.
+        var batchMovePreflight = BatchMovePreflightState()
+        func shouldBeginBatchMove() -> Bool {
+            batchMovePreflight.shouldBeginMove(
+                currentTimestamp: lastMoveOperationTimestamp,
+                initialPreflight: {
+                    shouldBegin?() ?? true
+                }
+            )
+        }
+        func didFinishBatchMove() {
+            batchMovePreflight.recordMoveGateExit(
+                timestamp: lastMoveOperationTimestamp
+            )
+        }
+
         // Divider-order gate (#1027). The room gate above catches dividers
         // collapsed onto one coordinate; this catches them drifted into
         // foreign sections, which leaves the same room between them and so
@@ -1477,6 +1556,29 @@ extension MenuBarItemManager {
         // as an order of record (#900).
         var unenactedMoveCount = 0
 
+        /// Automatic saved-layout restores and profile re-sorts report only
+        /// definitive failures. User-invoked profile applies already have
+        /// their own immediate UI and do not use this background channel.
+        func enqueueApplyMoveFailure(
+            _ error: any Error,
+            item: MenuBarItem,
+            destination: MoveDestination?,
+            expectedSection: MenuBarSection.Name?
+        ) {
+            guard automatic else { return }
+            let failureSource = switch source {
+            case .profile: "the active profile"
+            case .savedOrder: "the saved layout"
+            }
+            enqueueAutomaticMoveFailureReport(
+                of: item,
+                to: destination,
+                expectedSection: expectedSection,
+                error: error,
+                source: failureSource
+            )
+        }
+
         /// Every abandon exits the same way: the abandoned remainder is one
         /// more unenacted move, the outcome feeds the circuit breaker, and
         /// in-flight profile state is torn down before the deferred cache
@@ -1490,6 +1592,17 @@ extension MenuBarItemManager {
                 )
             }
             recordBulkApplyOutcome(unenactedMoveCount: unenactedMoveCount)
+            clearProfileState(source: source, items: items)
+            scheduleDeferredCacheRefresh()
+        }
+
+        /// A manual move that wins moveGate supersedes an automatic plan; it
+        /// is not a failed batch and must not back off an item or trip the
+        /// automatic-apply circuit breaker.
+        func finishSupersededApply(items: [MenuBarItem]) {
+            MenuBarItemManager.diagLog.info(
+                "applyProfileLayout: user move superseded the automatic plan; leaving the user's arrangement authoritative"
+            )
             clearProfileState(source: source, items: items)
             scheduleDeferredCacheRefresh()
         }
@@ -1664,6 +1777,10 @@ extension MenuBarItemManager {
             )
 
             let allFreshItems = await MenuBarItem.getMenuBarItems(option: .activeSpace)
+            guard shouldBeginBatchMove() else {
+                finishSupersededApply(items: allFreshItems)
+                return
+            }
             var allFreshItemsCopy = allFreshItems
             guard let freshControl = ControlItemPair(
                 items: &allFreshItemsCopy,
@@ -1785,11 +1902,23 @@ extension MenuBarItemManager {
                             MenuBarItemManager.diagLog.debug("Profile layout: moving H_ctrl → \(dest.logString)")
                             didAttemptHCtrl = true
                             do {
-                                try await move(item: hItem, to: dest, skipInputPause: true)
+                                try await move(
+                                    item: hItem,
+                                    to: dest,
+                                    skipInputPause: true,
+                                    options: .init(
+                                        shouldBegin: shouldBeginBatchMove,
+                                        didFinishWhileHoldingGate: didFinishBatchMove
+                                    )
+                                )
                                 movedCount += 1
                                 failureLedger.recordSuccess(for: hItem)
                                 try? await Task.sleep(for: .milliseconds(200))
                             } catch {
+                                if case EventError.moveSuperseded = error {
+                                    finishSupersededApply(items: allFreshItems)
+                                    return
+                                }
                                 unenactedMoveCount += 1
                                 // A move cancelled by a newer apply says nothing
                                 // about the divider, and recording it would earn
@@ -1804,6 +1933,12 @@ extension MenuBarItemManager {
                                         failureLedger.recordFailure(for: hItem, kind: Self.failureKind(of: error))
                                     }
                                     MenuBarItemManager.diagLog.error("Profile layout: failed to move H_ctrl: \(error)")
+                                    enqueueApplyMoveFailure(
+                                        error,
+                                        item: hItem,
+                                        destination: dest,
+                                        expectedSection: nil
+                                    )
                                 }
                             }
                         }
@@ -1880,9 +2015,11 @@ extension MenuBarItemManager {
                     .compactMap { offenders[$0] }
                     .sorted { $0.bounds.minX > $1.bounds.minX }
 
-                for (item, dest) in toConceal.map({ ($0, MoveDestination.leftOfItem(hItem)) })
-                    + toReveal.map({ ($0, MoveDestination.rightOfItem(hItem)) })
-                {
+                for (item, dest, expectedSection) in toConceal.map({
+                    ($0, MoveDestination.leftOfItem(hItem), MenuBarSection.Name.hidden)
+                }) + toReveal.map({
+                    ($0, MoveDestination.rightOfItem(hItem), MenuBarSection.Name.visible)
+                }) {
                     if Task.isCancelled {
                         break
                     }
@@ -1897,7 +2034,15 @@ extension MenuBarItemManager {
                         "Profile layout: moving \(item.logString) → \(dest.logString) to fix the H_ctrl boundary"
                     )
                     do {
-                        try await move(item: item, to: dest, skipInputPause: true)
+                        try await move(
+                            item: item,
+                            to: dest,
+                            skipInputPause: true,
+                            options: .init(
+                                shouldBegin: shouldBeginBatchMove,
+                                didFinishWhileHoldingGate: didFinishBatchMove
+                            )
+                        )
                         movedCount += 1
                         didCrossHiddenBoundary = true
                         failureLedger.recordSuccess(for: item)
@@ -1908,6 +2053,10 @@ extension MenuBarItemManager {
                         // the previous arrangement says it should.
                         try? await Task.sleep(for: .milliseconds(200))
                     } catch {
+                        if case EventError.moveSuperseded = error {
+                            finishSupersededApply(items: allFreshItems)
+                            return
+                        }
                         unenactedMoveCount += 1
                         // A move cancelled by a newer apply says nothing about
                         // the item, and recording it would earn a backoff
@@ -1923,6 +2072,12 @@ extension MenuBarItemManager {
                             MenuBarItemManager.diagLog.error(
                                 "Profile layout: failed to move \(item.logString) across the H_ctrl boundary: \(error)"
                             )
+                            enqueueApplyMoveFailure(
+                                error,
+                                item: item,
+                                destination: dest,
+                                expectedSection: expectedSection
+                            )
                         }
                     }
                 }
@@ -1936,6 +2091,10 @@ extension MenuBarItemManager {
         // (and its per-item fallback) is still warranted.
         if didAttemptHCtrl || didCrossHiddenBoundary {
             var postMoveItems = await MenuBarItem.getMenuBarItems(option: .activeSpace)
+            guard shouldBeginBatchMove() else {
+                finishSupersededApply(items: postMoveItems)
+                return
+            }
             postMoveItems.removeAll(where: \.isSystemClone)
             var postMoveItemsCopy = postMoveItems
             if let postMoveControl = ControlItemPair(
@@ -2015,6 +2174,10 @@ extension MenuBarItemManager {
             )
 
             let allFreshItems = await MenuBarItem.getMenuBarItems(option: .activeSpace)
+            guard shouldBeginBatchMove() else {
+                finishSupersededApply(items: allFreshItems)
+                return
+            }
             var allFreshItemsCopy = allFreshItems
             guard let freshControl = ControlItemPair(
                 items: &allFreshItemsCopy,
@@ -2096,12 +2259,30 @@ extension MenuBarItemManager {
             if let dest, !Task.isCancelled {
                 MenuBarItemManager.diagLog.debug("Profile layout: moving AH_ctrl → \(dest.logString)")
                 do {
-                    try await move(item: ahItem, to: dest, skipInputPause: true)
+                    try await move(
+                        item: ahItem,
+                        to: dest,
+                        skipInputPause: true,
+                        options: .init(
+                            shouldBegin: shouldBeginBatchMove,
+                            didFinishWhileHoldingGate: didFinishBatchMove
+                        )
+                    )
                     movedCount += 1
                     try? await Task.sleep(for: .milliseconds(200))
                 } catch {
+                    if case EventError.moveSuperseded = error {
+                        finishSupersededApply(items: allFreshItems)
+                        return
+                    }
                     unenactedMoveCount += 1
                     MenuBarItemManager.diagLog.error("Profile layout: failed to move AH_ctrl: \(error)")
+                    enqueueApplyMoveFailure(
+                        error,
+                        item: ahItem,
+                        destination: dest,
+                        expectedSection: nil
+                    )
                 }
             }
 
@@ -2123,6 +2304,10 @@ extension MenuBarItemManager {
             // the LCS pass below only re-sorts concealed sections when
             // enforceConcealedSectionOrder is on, and it defaults off.
             let freshItems = await MenuBarItem.getMenuBarItems(option: .activeSpace)
+            guard shouldBeginBatchMove() else {
+                finishSupersededApply(items: freshItems)
+                return
+            }
             var freshItemsCopy = freshItems
             if let freshControl = ControlItemPair(
                 items: &freshItemsCopy,
@@ -2192,13 +2377,31 @@ extension MenuBarItemManager {
                             let item = freshItems.first(where: { $0.uniqueIdentifier == uid && isProfileItem($0) })
                         else { continue }
                         do {
-                            try await move(item: item, to: .leftOfItem(ahItem), skipInputPause: true)
+                            try await move(
+                                item: item,
+                                to: .leftOfItem(ahItem),
+                                skipInputPause: true,
+                                options: .init(
+                                    shouldBegin: shouldBeginBatchMove,
+                                    didFinishWhileHoldingGate: didFinishBatchMove
+                                )
+                            )
                             movedCount += 1
                             try? await Task.sleep(for: .milliseconds(100))
                         } catch {
+                            if case EventError.moveSuperseded = error {
+                                finishSupersededApply(items: freshItems)
+                                return
+                            }
                             unenactedMoveCount += 1
                             MenuBarItemManager.diagLog.error(
                                 "Profile layout: per-item move to AH failed for \(uid): \(error)"
+                            )
+                            enqueueApplyMoveFailure(
+                                error,
+                                item: item,
+                                destination: .leftOfItem(ahItem),
+                                expectedSection: .alwaysHidden
                             )
                         }
                     }
@@ -2222,13 +2425,31 @@ extension MenuBarItemManager {
                             let item = freshItems.first(where: { $0.uniqueIdentifier == uid && isProfileItem($0) })
                         else { continue }
                         do {
-                            try await move(item: item, to: .rightOfItem(ahItem), skipInputPause: true)
+                            try await move(
+                                item: item,
+                                to: .rightOfItem(ahItem),
+                                skipInputPause: true,
+                                options: .init(
+                                    shouldBegin: shouldBeginBatchMove,
+                                    didFinishWhileHoldingGate: didFinishBatchMove
+                                )
+                            )
                             movedCount += 1
                             try? await Task.sleep(for: .milliseconds(100))
                         } catch {
+                            if case EventError.moveSuperseded = error {
+                                finishSupersededApply(items: freshItems)
+                                return
+                            }
                             unenactedMoveCount += 1
                             MenuBarItemManager.diagLog.error(
                                 "Profile layout: per-item move to hidden failed for \(uid): \(error)"
+                            )
+                            enqueueApplyMoveFailure(
+                                error,
+                                item: item,
+                                destination: .rightOfItem(ahItem),
+                                expectedSection: .hidden
                             )
                         }
                     }
@@ -2244,6 +2465,10 @@ extension MenuBarItemManager {
             // Re-fetch items and rebuild section assignments after
             // the control item move changed section boundaries.
             items = await MenuBarItem.getMenuBarItems(option: .activeSpace)
+            guard shouldBeginBatchMove() else {
+                finishSupersededApply(items: items)
+                return
+            }
             var itemsCopy2 = items
             guard let freshControl = ControlItemPair(
                 items: &itemsCopy2,
@@ -2359,6 +2584,10 @@ extension MenuBarItemManager {
             }
 
             let allFreshItems = await MenuBarItem.getMenuBarItems(option: .activeSpace)
+            guard shouldBeginBatchMove() else {
+                finishSupersededApply(items: allFreshItems)
+                return
+            }
             var freshItemsCopy = allFreshItems
             guard let freshControl = ControlItemPair(
                 items: &freshItemsCopy,
@@ -2432,12 +2661,24 @@ extension MenuBarItemManager {
             }
 
             do {
-                try await move(item: item, to: dest, skipInputPause: true)
+                try await move(
+                    item: item,
+                    to: dest,
+                    skipInputPause: true,
+                    options: .init(
+                        shouldBegin: shouldBeginBatchMove,
+                        didFinishWhileHoldingGate: didFinishBatchMove
+                    )
+                )
                 movedCount += 1
                 consecutiveMoveFailures = 0
                 failureLedger.recordSuccess(for: item)
                 try? await Task.sleep(for: .milliseconds(200))
             } catch {
+                if case EventError.moveSuperseded = error {
+                    finishSupersededApply(items: allFreshItems)
+                    return
+                }
                 // The loop head's rule extends to a move that was in flight
                 // when the cancellation arrived: the failure is the newer
                 // apply's takeover, not the item's. Recording it would earn
@@ -2457,6 +2698,12 @@ extension MenuBarItemManager {
                 }
                 MenuBarItemManager.diagLog.error(
                     "Profile layout: failed to move \(planned.uid): \(error)"
+                )
+                enqueueApplyMoveFailure(
+                    error,
+                    item: item,
+                    destination: dest,
+                    expectedSection: fallbackSection
                 )
                 if Self.moveBatchShouldAbandon(consecutiveFailures: consecutiveMoveFailures) {
                     unenactedMoveCount += plannedMoves.count - plannedIndex - 1
@@ -3232,8 +3479,13 @@ extension MenuBarItemManager {
         controlItems: ControlItemPair,
         currentDisplayID: CGDirectDisplayID? = nil,
         bypassMoveCooldown: Bool = false,
-        resolvedIdentitiesOnly: Bool = false
+        resolvedIdentitiesOnly: Bool = false,
+        shouldBegin: (@MainActor () -> Bool)? = nil
     ) async -> Bool {
+        guard shouldBegin?() ?? true else {
+            MenuBarItemManager.diagLog.debug("applySavedLayout: skipping superseded cache snapshot")
+            return false
+        }
         // Each guard logs a distinct reason so a "Thaw stopped
         // restoring my layout" bug report can be diagnosed from the
         // first set of logs. Order is significant: the cheap state
@@ -3379,7 +3631,14 @@ extension MenuBarItemManager {
         // Never drag items while a menu bar item menu is tracking — a synthetic
         // Cmd-drag would tear down the user's interaction (Wi-Fi picker, input
         // methods). The change gate stays armed, so the next cache cycle retries.
-        if await isAnyMenuBarItemMenuOpen() {
+        let menuIsOpen = await isAnyMenuBarItemMenuOpen()
+        guard shouldBegin?() ?? true else {
+            MenuBarItemManager.diagLog.debug(
+                "applySavedLayout: skipping, a user move superseded the snapshot during the menu check"
+            )
+            return false
+        }
+        if menuIsOpen {
             MenuBarItemManager.diagLog.info("applySavedLayout: skipping, a menu bar item menu is open")
             return false
         }
@@ -3561,6 +3820,13 @@ extension MenuBarItemManager {
 
         MenuBarItemManager.diagLog.info("applySavedLayout: dispatching bulk apply (\(trigger))")
 
+        guard shouldBegin?() ?? true else {
+            MenuBarItemManager.diagLog.debug(
+                "applySavedLayout: skipping, a user move superseded the snapshot before dispatch"
+            )
+            return false
+        }
+
         // The shared body uses itemOrder as the per-section ordered
         // identifier list, which is structurally identical to
         // savedSectionOrder. Pass the saved order through unchanged.
@@ -3590,7 +3856,8 @@ extension MenuBarItemManager {
             ),
             source: .savedOrder,
             automatic: true,
-            duringSettling: resolvedIdentitiesOnly
+            duringSettling: resolvedIdentitiesOnly,
+            shouldBegin: shouldBegin
         )
         if bulkApplyCompletionGeneration != completionGenerationBeforeApply,
            lastCompletedBulkApplyUnenactedMoveCount == 0

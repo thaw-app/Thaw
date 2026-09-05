@@ -59,6 +59,18 @@ struct DiagnosticRedactorTests {
         #expect(!redacted.contains("private"))
     }
 
+    @Test("JSON-style quoted field names are removed")
+    func jsonQuotedFieldNames() {
+        let redactor = DiagnosticRedactor(terms: [])
+
+        // The quoted key and its value are consumed together; the secret
+        // never survives, which is what matters.
+        #expect(redactor.redact("{\"wifiSSID\":\"Home Network\"}") == "{\"<sensitive-value>}")
+        #expect(!redactor.redact("{\"triggerName\":\"Focus 1\"}").contains("Focus 1"))
+        // Unquoted forms keep working.
+        #expect(redactor.redact("ssid: net") == "<sensitive-value>")
+    }
+
     @Test("Menu bar geometry and identifiers survive redaction")
     func geometry() {
         let redactor = DiagnosticRedactor(

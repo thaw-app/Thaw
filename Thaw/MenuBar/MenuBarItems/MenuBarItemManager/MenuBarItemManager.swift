@@ -196,6 +196,14 @@ final class MenuBarItemManager {
     /// The single record of which items have been failing, and how.
     let failureLedger = MenuBarItemFailureLedger()
 
+    /// When each item's failed automatic move was last presented to the user.
+    /// Reports are still written while this presentation cooldown is active.
+    var automaticMoveFailureReports = [String: Date]()
+
+    /// When any automatic move failure was last presented, to space bursts
+    /// involving several items from one layout pass.
+    var lastAutomaticMoveFailureReport: Date?
+
     /// The record of which saved identifiers no longer match anything.
     let staleIdentifierLedger = StaleIdentifierLedger()
 

@@ -334,12 +334,15 @@ struct TriggerConditionSurfaceTests {
         #expect(rewatched.imageValue?.itemIdentifier == "new")
         #expect(rewatched.imageValue?.referenceHash == nil)
 
-        let recaptured = base.withImageReferenceHash(123)
+        let recaptured = base.withImageReference(
+            ImageComparisonReference(perceptualHash: 123, exactHash: 0, imageData: nil)
+        )
         #expect(recaptured.imageValue?.itemIdentifier == "old")
         #expect(recaptured.imageValue?.referenceHash == 123)
 
+        let reference = ImageComparisonReference(perceptualHash: 1, exactHash: 0, imageData: nil)
         #expect(TriggerCondition.charging.withImageItem("new") == .charging)
-        #expect(TriggerCondition.charging.withImageReferenceHash(1) == .charging)
+        #expect(TriggerCondition.charging.withImageReference(reference) == .charging)
     }
 
     @Test("A location edit replaces only the fields it is given")

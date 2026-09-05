@@ -720,15 +720,25 @@ struct MenuBarItemTriggerTests {
         #expect(ImageHashing.hammingDistance(.max, 0) == 64)
     }
 
-    @Test func averageHashIsDeterministic() {
+    @Test func averageHashIsDeterministic() throws {
         let image = makeImage(whiteColumns: 8)
-        #expect(ImageHashing.averageHash(image) == ImageHashing.averageHash(image))
+        let first = try #require(ImageHashing.averageHash(image))
+        #expect(ImageHashing.averageHash(image) == first)
     }
 
     @Test func averageHashDetectsLargeChange() throws {
         let mostlyBlack = try #require(ImageHashing.averageHash(makeImage(whiteColumns: 2)))
         let mostlyWhite = try #require(ImageHashing.averageHash(makeImage(whiteColumns: 14)))
         #expect(ImageHashing.hammingDistance(mostlyBlack, mostlyWhite) > ImageHashing.changeThreshold)
+    }
+
+    @Test func exactHashIsDeterministicAndPixelSensitive() throws {
+        let first = try #require(ImageHashing.exactHash(makeImage(whiteColumns: 8)))
+        let same = try #require(ImageHashing.exactHash(makeImage(whiteColumns: 8)))
+        let changed = try #require(ImageHashing.exactHash(makeImage(whiteColumns: 9)))
+
+        #expect(first == same)
+        #expect(first != changed)
     }
 
     @Test func imageChangedCondition() {
@@ -749,6 +759,40 @@ struct MenuBarItemTriggerTests {
         #expect(!noRef.isSatisfied(state: changed))
     }
 
+    @Test func exactAndFuzzyImageComparisonDifferOnSmallChanges() {
+        let id = "com.example:Status"
+        var current = state()
+        current.imageHashes = [id: 1] // One perceptual bit differs.
+        current.exactImageHashes = [id: 101]
+
+        let fuzzy = TriggerCondition.imageChanged(
+            itemIdentifier: id,
+            referenceHash: 0,
+            referenceExactHash: 100,
+            comparisonMode: .fuzzy
+        )
+        let exact = TriggerCondition.imageChanged(
+            itemIdentifier: id,
+            referenceHash: 0,
+            referenceExactHash: 100,
+            comparisonMode: .exact
+        )
+
+        #expect(!fuzzy.isSatisfied(state: current))
+        #expect(exact.isSatisfied(state: current))
+    }
+
+    @Test func exactComparisonRequiresAnExactReference() {
+        let condition = TriggerCondition.imageChanged(
+            itemIdentifier: "item",
+            referenceHash: 0,
+            comparisonMode: .exact
+        )
+        var current = state()
+        current.exactImageHashes = ["item": 1]
+        #expect(!condition.isSatisfied(state: current))
+    }
+
     @Test func imageChangedCodableRoundTrip() throws {
         let id = "com.apple.controlcenter:Battery"
         let condition = TriggerCondition.imageChanged(itemIdentifier: id, referenceHash: 0)
@@ -766,6 +810,54 @@ struct MenuBarItemTriggerTests {
         let decoded = try JSONDecoder().decode(TriggerCondition.self, from: data)
 
         #expect(decoded == condition)
+    }
+
+    @Test func imageComparisonSettingsCodableRoundTrip() throws {
+        let condition = TriggerCondition.imageChanged(
+            itemIdentifier: "item",
+            referenceHash: 7,
+            referenceExactHash: 11,
+            comparisonMode: .exact,
+            referenceImageData: Data([1, 2, 3])
+        )
+
+        let data = try JSONEncoder().encode(condition)
+        #expect(try JSONDecoder().decode(TriggerCondition.self, from: data) == condition)
+    }
+
+    @Test func legacyImageComparisonDefaultsToFuzzyWithoutPreview() throws {
+        let data = Data(#"{"imageChanged":{"itemIdentifier":"item","referenceHash":7}}"#.utf8)
+        let decoded = try JSONDecoder().decode(TriggerCondition.self, from: data)
+
+        #expect(decoded.imageValue?.comparisonMode == .fuzzy)
+        #expect(decoded.imageValue?.referenceHash == 7)
+        #expect(decoded.imageValue?.referenceExactHash == nil)
+        #expect(decoded.imageValue?.referenceImageData == nil)
+    }
+
+    @Test func capturedReferenceAndModeArePreserved() {
+        let reference = ImageComparisonReference(
+            perceptualHash: 7,
+            exactHash: 11,
+            imageData: Data([1, 2, 3])
+        )
+        let condition = TriggerCondition.imageChanged(
+            itemIdentifier: "item",
+            referenceHash: nil,
+            comparisonMode: .exact
+        )
+        let captured = condition.withImageReference(reference)
+
+        #expect(captured.imageValue?.comparisonMode == .exact)
+        #expect(captured.imageValue?.referenceHash == 7)
+        #expect(captured.imageValue?.referenceExactHash == 11)
+        #expect(captured.imageValue?.referenceImageData == Data([1, 2, 3]))
+
+        let changedItem = captured.withImageItem("other")
+        #expect(changedItem.imageValue?.comparisonMode == .exact)
+        #expect(changedItem.imageValue?.referenceHash == nil)
+        #expect(changedItem.imageValue?.referenceExactHash == nil)
+        #expect(changedItem.imageValue?.referenceImageData == nil)
     }
 
     // MARK: - Kind / editor mapping

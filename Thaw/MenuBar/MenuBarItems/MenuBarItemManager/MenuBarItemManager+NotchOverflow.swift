@@ -135,14 +135,18 @@ extension MenuBarItemManager {
     /// handoff waits until the planner has actually found overflow — a pass
     /// with nothing to do must return without arming anything, or it drives
     /// the apply on every cache tick forever (#881).
-    func rebalanceNotchOverflowIfNeeded(items: [MenuBarItem], controlItems: ControlItemPair) async {
-        guard let appState else { return }
-        guard appState.settings.advanced.enableMenuBarItemOverflow else { return }
+    func rebalanceNotchOverflowIfNeeded(
+        items: [MenuBarItem],
+        controlItems: ControlItemPair,
+        shouldBeginMove: (@MainActor () -> Bool)? = nil
+    ) async -> CacheDrivenMoveOutcome {
+        guard let appState else { return .noAttempt }
+        guard appState.settings.advanced.enableMenuBarItemOverflow else { return .noAttempt }
         guard controlItems.canRepositionControlItems else {
             MenuBarItemManager.diagLog.debug(
                 "Notch overflow rebalance: skipping for provisional AX-frame correlation"
             )
-            return
+            return .noAttempt
         }
 
         // Never fight another mover. Each of these owns the layout while it
@@ -152,12 +156,12 @@ extension MenuBarItemManager {
               !isRestoringItemOrder,
               !isInStartupSettling,
               !isBulkApplyInProgress
-        else { return }
+        else { return .noAttempt }
 
         // A temporarily-shown item is deliberately parked in visible for as
         // long as the user is interacting with it. Ejecting it would cancel
         // the reveal the user just asked for.
-        guard temporarilyShownItemContexts.isEmpty else { return }
+        guard temporarilyShownItemContexts.isEmpty else { return .noAttempt }
 
         // If the bar just refused synthetic drags in a profile apply, the
         // rebalance's own drags will fare no better — and each eject is a
@@ -168,7 +172,7 @@ extension MenuBarItemManager {
         // backoff cannot help because the rebalance's items are typically
         // different from the ones that failed in the batch.
         guard isAutomaticBulkApplyPermitted(caller: "Notch overflow rebalance", quietly: true) else {
-            return
+            return .noAttempt
         }
 
         let activeMenuBarScreen = NSScreen.screenWithActiveMenuBar
@@ -180,7 +184,7 @@ extension MenuBarItemManager {
         ),
             let screen = activeMenuBarScreen,
             let notch = screen.frameOfNotch
-        else { return }
+        else { return .noAttempt }
 
         // Mid-relocation between displays the item bounds straddle two screens
         // and the budget cannot be trusted. Same guard the persist path uses,
@@ -208,12 +212,12 @@ extension MenuBarItemManager {
         guard !LayoutSolver.itemsSpanMultipleDisplays(
             itemCenters: unparkedItems.map { CGPoint(x: $0.bounds.midX, y: $0.bounds.midY) },
             screenFrames: NSScreen.screens.map { CGDisplayBounds($0.displayID) }
-        ) else { return }
+        ) else { return .noAttempt }
 
         if let last = lastNotchRebalanceTimestamp,
            Date.now.timeIntervalSince(last) < Self.notchRebalanceCooldown
         {
-            return
+            return .noAttempt
         }
 
         let hiddenCtrlUID = controlItems.hidden.uniqueIdentifier
@@ -286,7 +290,7 @@ extension MenuBarItemManager {
             uidWidths: uidWidths,
             availableWidth: availableWidth
         )
-        guard !result.overflowUIDs.isEmpty else { return }
+        guard !result.overflowUIDs.isEmpty else { return .noAttempt }
 
         // A profile apply is the better tool: it re-runs this same planner and
         // restores the saved order at the same time.
@@ -307,7 +311,7 @@ extension MenuBarItemManager {
                 "Notch overflow rebalance: deferring \(result.overflowUIDs.count) item(s) to the profile apply"
             )
             scheduleProfileResort()
-            return
+            return .noAttempt
         }
 
         // Bounce-back guard. Every UID the planner wants to eject is one this
@@ -319,7 +323,7 @@ extension MenuBarItemManager {
             MenuBarItemManager.diagLog.debug(
                 "Notch overflow rebalance: standing down; all \(result.overflowUIDs.count) candidate(s) were already ejected once"
             )
-            return
+            return .noAttempt
         }
 
         lastNotchRebalanceTimestamp = .now
@@ -329,6 +333,33 @@ extension MenuBarItemManager {
             \(budget.logString)
             """
         )
+
+        // The cache snapshot owns the first move. Each accepted attempt then
+        // adopts its timestamp before releasing moveGate, so later moves in
+        // this batch accept its own work but reject an intervening user move.
+        var batchMovePreflight = BatchMovePreflightState()
+        var didAcceptMoveAttempt = false
+        var didAcceptCurrentMove = false
+        var didCompleteMove = false
+        var didFailAcceptedMove = false
+        func shouldBeginBatchMove() -> Bool {
+            let shouldBegin = batchMovePreflight.shouldBeginMove(
+                currentTimestamp: lastMoveOperationTimestamp,
+                initialPreflight: {
+                    shouldBeginMove?() ?? true
+                }
+            )
+            if shouldBegin {
+                didAcceptMoveAttempt = true
+                didAcceptCurrentMove = true
+            }
+            return shouldBegin
+        }
+        func didFinishBatchMove() {
+            batchMovePreflight.recordMoveGateExit(
+                timestamp: lastMoveOperationTimestamp
+            )
+        }
 
         // Leftmost-first, so each ejected item lands deeper in hidden than the
         // one before it and the surviving visible order is preserved.
@@ -345,18 +376,51 @@ extension MenuBarItemManager {
                 )
                 continue
             }
+            didAcceptCurrentMove = false
             do {
-                try await move(item: item, to: .leftOfItem(controlItems.hidden))
+                try await move(
+                    item: item,
+                    to: .leftOfItem(controlItems.hidden),
+                    options: .init(
+                        shouldBegin: shouldBeginBatchMove,
+                        didFinishWhileHoldingGate: didFinishBatchMove
+                    )
+                )
                 notchOverflowEjectedUIDs.insert(uid)
                 failureLedger.recordSuccess(for: item)
+                didCompleteMove = true
+            } catch EventError.moveSuperseded {
+                didFailAcceptedMove = didFailAcceptedMove || didAcceptCurrentMove
+                MenuBarItemManager.diagLog.debug(
+                    "Stopping stale notch-overflow rebalance before moving \(item.logString)"
+                )
+                if didFailAcceptedMove {
+                    return .failedAttempt
+                }
+                return didCompleteMove ? .completed : .noAttempt
             } catch {
+                didFailAcceptedMove = didFailAcceptedMove || didAcceptCurrentMove
                 if !Self.moveAlreadyFiledFailure(for: error) {
-                    failureLedger.recordFailure(for: item, kind: Self.failureKind(of: error))
+                    failureLedger.recordFailure(for: item, kind: ledgerFailureKind(for: error, item: item))
                 }
                 MenuBarItemManager.diagLog.error(
                     "Notch overflow rebalance: failed to eject \(item.logString): \(error)"
                 )
+                await reportAutomaticMoveFailure(
+                    of: item,
+                    to: .leftOfItem(controlItems.hidden),
+                    expectedSection: .hidden,
+                    error: error,
+                    source: "notch overflow management"
+                )
             }
         }
+        if didFailAcceptedMove {
+            return .failedAttempt
+        }
+        if didCompleteMove {
+            return .completed
+        }
+        return didAcceptMoveAttempt ? .failedAttempt : .noAttempt
     }
 }
