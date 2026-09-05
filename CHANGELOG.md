@@ -108,6 +108,38 @@ Three things from the 2.1 preview line are still on their way to macOS 27.
 - **Every ScreenCaptureKit call has a watchdog**, so a capture that never answers cannot hang the refresh loop. An XPC capture helper is built in and off by default until it has been verified on macOS 27.
 - **Less idle work.** The polls that used to ask the window server questions whose answers had not changed now latch, memoize, or rate-limit, and the glyph cache publishes only when a glyph actually changed.
 
+## [2.1.0-unreleased]
+
+Hey, we have a Discord! Come say hi: [discord.gg/KDfWjWDnR4](https://discord.gg/KDfWjWDnR4).
+
+Please report issues at [github.com/thaw-app/Thaw/issues](https://github.com/thaw-app/Thaw/issues).
+
+### New
+
+- **Image-change triggers gain comparison modes and a preview (#1006).** An image-change condition can now compare the current icon to its captured reference Fuzzy — ignoring small rendering noise — or Exact, which reacts to any normalized pixel-content difference. The trigger editor shows the captured reference icon and asks for a recapture when an older reference is switched to Exact. Existing saved conditions keep working and read as Fuzzy.
+- **Failed automatic moves save a redacted diagnostic report (#994, #1004).** When an automatic move — section placement, new-item relocation, control-divider ordering, saved-layout or profile application, notch-overflow rebalancing — reaches a definitive failure, Thaw persists a redacted report, keeps the newest 20, and offers it through the Settings sheet or a notification that opens the file in Finder. Cancelled, superseded, stale, transient, and input-busy outcomes stay silent; presentation cooldowns prevent alert storms without discarding evidence.
+
+### Menu bar stability
+
+A five-part rework of how Thaw moves items on its own (#999–#1003, #1041):
+
+- Move gestures stay on the menu bar: the press-release guard lives inside the event sequence, so a stalled drag is always released and never leaves the cursor captive.
+- Every automatic move runs under a transaction budget with a hard deadline, and a move policy decides per attempt whether to retry or stop — so a stuck move can no longer walk the bar or spin without end.
+- Layout editor cache refreshes are transactional, so a dropped refresh can no longer strand a frozen editor.
+- Automatic multi-move batches are coordinated: each move re-validates its preconditions while holding the move gate, so user moves invalidate stale batch moves instead of racing them.
+- Editor transitions are stabilized: generation-based drag stabilization, stale-thumbnail rejection while a container is frozen, and window-based drag identity that survives Control Center identity resolution.
+- Earlier in the series (#993–#998): move outcomes are explicit and attributable, hosted item identities are reconciled safely, persisted identity seeds are bounded, moves are serialized and preflighted, and diagnostic reports redact sensitive values.
+
+### Fixes
+
+- The Thaw Bar preserves its cached glyphs across window ID changes (#1046), so icons no longer blank out when items are recycled behind the scenes.
+- No blank slot for the Thaw icon at launch (#1043). The icon's hidden preference was applied only after the first asynchronous settings pass, leaving a blank space in the menu bar until it landed; the preference is now applied synchronously during control item setup.
+- The Displays pane says what it does (#1045, #961). Displays with their own settings are now marked "Custom", with a note that they take precedence over the global template — which explains why toggling the template seemed to do nothing. The per-display item spacing control is likewise honest about macOS: spacing is one system-wide value that follows the display hosting the menu bar, so editing is enabled only for that display and the others show their saved value with an explanation.
+
+### Dependencies & localization
+
+- Crowdin sync for `Localizable.xcstrings` (#1040): new Russian and Japanese translations, improved Thai plural formatting, and Russian plural forms for several messages.
+
 ## [2.1.0-beta.2]
 
 Hey, we have a Discord! Come say hi: [discord.gg/KDfWjWDnR4](https://discord.gg/KDfWjWDnR4).

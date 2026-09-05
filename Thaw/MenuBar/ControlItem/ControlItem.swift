@@ -270,6 +270,15 @@ final class ControlItem {
     /// Performs the initial setup of the control item.
     func performSetup(with appState: AppState) {
         self.appState = appState
+        // Apply the icon preference synchronously, before the observation
+        // tasks below get a chance to run. The status item is born visible,
+        // and both the Combine state sink and the settings observation fire
+        // asynchronously, so a launch with the icon disabled would otherwise
+        // render a blank slot in the menu bar until the first async pass
+        // landed (#1043).
+        if identifier == .visible {
+            setIceIconDisplayed(appState.settings.general.showIceIcon)
+        }
         configureCancellables()
     }
 

@@ -153,6 +153,24 @@ final class DisplaySettingsManagerGlobalFallbackTests {
         }
     }
 
+    @Test("The override lookup distinguishes stored entries from the template")
+    func configurationOverrideDistinguishesStoredEntriesFromTemplate() throws {
+        try withScratchDefaults { _ in
+            let explicit = DisplayIceBarConfiguration
+                .defaultConfiguration
+                .withUseIceBar(true)
+            let manager = makeManager(configurations: ["UUID-A": explicit])
+
+            // A stored entry comes back as-is, so the pane can mark the
+            // display as custom (#1045)...
+            #expect(manager.configurationOverride(forUUID: "UUID-A") == explicit)
+            // ...and a display with no entry reads as having none, even
+            // though the resolved configuration would equal the template.
+            #expect(manager.configurationOverride(forUUID: "UUID-MISSING") == nil)
+            #expect(manager.configuration(forUUID: "UUID-MISSING") == global)
+        }
+    }
+
     @Test("The default global configuration preserves the previous fallback")
     func defaultGlobalConfigurationPreservesPreviousFallback() throws {
         try withScratchDefaults { _ in
