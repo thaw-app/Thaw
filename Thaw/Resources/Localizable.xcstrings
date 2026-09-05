@@ -3430,8 +3430,8 @@
         },
         "ja" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "%@ will delete its cache folder and quit. Launch the app again afterward."
+            "state" : "translated",
+            "value" : "%@ はキャッシュフォルダを削除して終了します。その後、アプリを再起動してください。"
           }
         },
         "ko" : {
@@ -3857,6 +3857,124 @@
         }
       }
     },
+    "A diagnostic report was saved to %@." : {
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "A diagnostic report was saved to %@."
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "A diagnostic report was saved to %@."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "A diagnostic report was saved to %@."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "A diagnostic report was saved to %@."
+          }
+        },
+        "hu" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "A diagnostic report was saved to %@."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "A diagnostic report was saved to %@."
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "A diagnostic report was saved to %@."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "A diagnostic report was saved to %@."
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "A diagnostic report was saved to %@."
+          }
+        },
+        "nl" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "A diagnostic report was saved to %@."
+          }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "A diagnostic report was saved to %@."
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "A diagnostic report was saved to %@."
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "A diagnostic report was saved to %@."
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "A diagnostic report was saved to %@."
+          }
+        },
+        "tr" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "A diagnostic report was saved to %@."
+          }
+        },
+        "uk" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "A diagnostic report was saved to %@."
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "A diagnostic report was saved to %@."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "A diagnostic report was saved to %@."
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "A diagnostic report was saved to %@."
+          }
+        }
+      }
+    },
     "A new update is available" : {
       "comment" : "Title of a notification when a new update is available.",
       "localizations" : {
@@ -4260,8 +4378,8 @@
         },
         "ja" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Accessibility and Screen Recording permissions will be cleared for %@. The app will quit so you can grant them again on next launch."
+            "state" : "translated",
+            "value" : "%@ に対して、「アクセシビリティ」および「画面録画」の権限が解除されます。アプリが終了しますので、次回起動時に再度権限を許可してください。"
           }
         },
         "ko" : {
@@ -5564,8 +5682,8 @@
         },
         "ja" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Add Condition"
+            "state" : "translated",
+            "value" : "条件を追加"
           }
         },
         "ko" : {
@@ -5682,8 +5800,8 @@
         },
         "ja" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Add Spacer"
+            "state" : "translated",
+            "value" : "スペーサーを追加"
           }
         },
         "ko" : {
@@ -5800,8 +5918,8 @@
         },
         "ja" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Add Trigger"
+            "state" : "translated",
+            "value" : "トリガーを追加"
           }
         },
         "ko" : {
@@ -6391,8 +6509,8 @@
         },
         "ja" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "All Off"
+            "state" : "translated",
+            "value" : "すべてオフ"
           }
         },
         "ko" : {
@@ -8651,8 +8769,8 @@
         },
         "ja" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "App language"
+            "state" : "translated",
+            "value" : "アプリの言語"
           }
         },
         "ko" : {
@@ -12231,8 +12349,8 @@
         },
         "ja" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "automatic"
+            "state" : "translated",
+            "value" : "自動"
           }
         },
         "ko" : {
@@ -13774,8 +13892,8 @@
         },
         "ja" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Battery level"
+            "state" : "translated",
+            "value" : "バッテリー残量"
           }
         },
         "ko" : {
@@ -17453,8 +17571,8 @@
         },
         "ja" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Choose an item"
+            "state" : "translated",
+            "value" : "項目を選択"
           }
         },
         "ko" : {
@@ -18756,8 +18874,8 @@
         },
         "ja" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Click"
+            "state" : "translated",
+            "value" : "クリック"
           }
         },
         "ko" : {
@@ -19586,8 +19704,8 @@
         },
         "ja" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Condition"
+            "state" : "translated",
+            "value" : "条件"
           }
         },
         "ko" : {
@@ -19704,8 +19822,8 @@
         },
         "ja" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Conditional Triggers"
+            "state" : "translated",
+            "value" : "条件付きトリガー"
           }
         },
         "ko" : {
@@ -22075,8 +22193,8 @@
         },
         "ja" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Create Group"
+            "state" : "translated",
+            "value" : "グループを作成"
           }
         },
         "ko" : {
@@ -27774,8 +27892,8 @@
         },
         "ja" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Enable experimental trigger sources one at a time. Each flag turns on its condition in the Triggers pane and starts its background monitor. Battery and power conditions are always available."
+            "state" : "translated",
+            "value" : "実験的なトリガーソースを個別に有効化します。各フラグをオンにすると、トリガー設定内に該当の条件が追加され、バックグラウンドでの監視が始まります。なお、バッテリーと電源の状態に関する条件は常に利用できます。"
           }
         },
         "ko" : {
@@ -29793,8 +29911,8 @@
         },
         "ja" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Explains what a setting does directly beneath it, like this text."
+            "state" : "translated",
+            "value" : "このテキストのように、設定項目のすぐ下に説明文を表示します。"
           }
         },
         "ko" : {
@@ -33493,8 +33611,8 @@
         },
         "ja" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Group name"
+            "state" : "translated",
+            "value" : "グループの名前"
           }
         },
         "ko" : {
@@ -33612,8 +33730,8 @@
         },
         "ja" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Grouped items stay adjacent: drag any member and the whole group moves with it."
+            "state" : "translated",
+            "value" : "グループ化された項目は常に隣り合って配置されます。いずれかの項目をドラッグすると、グループ全体が一緒に移動します。"
           }
         },
         "ko" : {
@@ -33731,8 +33849,8 @@
         },
         "ja" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Groups always move together: drag any member in the bars above and the whole group follows."
+            "state" : "translated",
+            "value" : "グループは常に一緒に移動します。上のバーにあるいずれかの項目をドラッグすると、グループ全体が追従します。"
           }
         },
         "ko" : {
@@ -38249,8 +38367,8 @@
         },
         "ja" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Item groups"
+            "state" : "translated",
+            "value" : "項目のグループ"
           }
         },
         "ko" : {
@@ -39317,8 +39435,8 @@
         },
         "ja" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Language"
+            "state" : "translated",
+            "value" : "言語"
           }
         },
         "ko" : {
@@ -42638,8 +42756,8 @@
         },
         "ja" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Menu bar item"
+            "state" : "translated",
+            "value" : "メニューバー項目"
           }
         },
         "ko" : {
@@ -47621,8 +47739,8 @@
         },
         "ja" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "No triggers yet"
+            "state" : "translated",
+            "value" : "まだトリガーはありません"
           }
         },
         "ko" : {
@@ -61583,8 +61701,8 @@
         },
         "ru" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Save Diagnostic Report"
+            "state" : "translated",
+            "value" : "Сохранить диагностический отчёт"
           }
         },
         "th" : {
@@ -61701,8 +61819,8 @@
         },
         "ru" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Save Diagnostic Report…"
+            "state" : "translated",
+            "value" : "Сохранить диагностический отчёт…"
           }
         },
         "th" : {
@@ -64045,8 +64163,8 @@
         },
         "ja" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Settings"
+            "state" : "translated",
+            "value" : "設定"
           }
         },
         "ko" : {
@@ -67493,8 +67611,8 @@
         },
         "ja" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Show setting descriptions"
+            "state" : "translated",
+            "value" : "設定の説明を表示"
           }
         },
         "ko" : {
@@ -67849,8 +67967,8 @@
         },
         "ja" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Shows only the essential settings. All features keep working and keep their configuration."
+            "state" : "translated",
+            "value" : "主要な設定のみを表示します。すべての機能は引き続き動作し、設定も保持されます。"
           }
         },
         "ko" : {
@@ -68086,8 +68204,8 @@
         },
         "ja" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Simple Mode"
+            "state" : "translated",
+            "value" : "シンプルモード"
           }
         },
         "ko" : {
@@ -68561,8 +68679,8 @@
         },
         "ja" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Spacer"
+            "state" : "translated",
+            "value" : "スペーサー"
           }
         },
         "ko" : {
@@ -68679,8 +68797,8 @@
         },
         "ja" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Spacer color"
+            "state" : "translated",
+            "value" : "スペーサーの色"
           }
         },
         "ko" : {
@@ -68797,8 +68915,8 @@
         },
         "ja" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Spacers"
+            "state" : "translated",
+            "value" : "スペーサー"
           }
         },
         "ko" : {
@@ -72387,8 +72505,8 @@
         },
         "ru" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "The report retains installed-app identities, menu-item titles and status text, and display/menu-bar geometry for debugging. It attempts to redact other potentially sensitive information, but redaction cannot be guaranteed. Review the report before sharing it."
+            "state" : "translated",
+            "value" : "Отчёт сохраняет идентификаторы установленных приложений, названия элементов меню и текст состояния, а также геометрию дисплея и строки меню для отладки. Предпринимается попытка удалить другие потенциально конфиденциальные сведения, но гарантировать их удаление невозможно. Проверьте отчёт перед тем, как поделиться им."
           }
         },
         "th" : {
@@ -75696,8 +75814,8 @@
         },
         "ja" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Tools"
+            "state" : "translated",
+            "value" : "ツール"
           }
         },
         "ko" : {
@@ -76290,8 +76408,8 @@
         },
         "ja" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Trigger list"
+            "state" : "translated",
+            "value" : "トリガーのリスト"
           }
         },
         "ko" : {
@@ -76526,8 +76644,8 @@
         },
         "ja" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Triggers"
+            "state" : "translated",
+            "value" : "トリガー"
           }
         },
         "ko" : {
@@ -76644,8 +76762,8 @@
         },
         "ja" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Troubleshooting"
+            "state" : "translated",
+            "value" : "トラブルシューティング"
           }
         },
         "ko" : {
@@ -77236,8 +77354,8 @@
         },
         "ja" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Ungroup"
+            "state" : "translated",
+            "value" : "グループ解除"
           }
         },
         "ko" : {
