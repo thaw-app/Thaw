@@ -181,9 +181,6 @@ final class MenuBarItemTriggersManager {
     /// Exact pixel hashes captured in the same pass as ``imageHashes``.
     var exactImageHashes = [String: UInt64]()
 
-    /// Exact pixel hashes captured in the same pass as ``imageHashes``.
-    private var exactImageHashes = [String: UInt64]()
-
     /// Guards against overlapping image-capture passes.
     var isRefreshingImages = false
     var imagesNeedRefresh = false
@@ -231,7 +228,6 @@ final class MenuBarItemTriggersManager {
         state.imageHashes = imageHashes
         state.exactImageHashes = exactImageHashes
         state.itemsSeekingAttention = itemsSeekingAttention
-        state.exactImageHashes = exactImageHashes
         return state
     }
 

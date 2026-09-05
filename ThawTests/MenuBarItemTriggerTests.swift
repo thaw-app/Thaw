@@ -720,9 +720,10 @@ struct MenuBarItemTriggerTests {
         #expect(ImageHashing.hammingDistance(.max, 0) == 64)
     }
 
-    @Test func averageHashIsDeterministic() {
+    @Test func averageHashIsDeterministic() throws {
         let image = makeImage(whiteColumns: 8)
-        #expect(ImageHashing.averageHash(image) == ImageHashing.averageHash(image))
+        let first = try #require(ImageHashing.averageHash(image))
+        #expect(ImageHashing.averageHash(image) == first)
     }
 
     @Test func averageHashDetectsLargeChange() throws {
@@ -731,13 +732,13 @@ struct MenuBarItemTriggerTests {
         #expect(ImageHashing.hammingDistance(mostlyBlack, mostlyWhite) > ImageHashing.changeThreshold)
     }
 
-    @Test func exactHashIsDeterministicAndPixelSensitive() {
-        let first = makeImage(whiteColumns: 8)
-        let same = makeImage(whiteColumns: 8)
-        let changed = makeImage(whiteColumns: 9)
+    @Test func exactHashIsDeterministicAndPixelSensitive() throws {
+        let first = try #require(ImageHashing.exactHash(makeImage(whiteColumns: 8)))
+        let same = try #require(ImageHashing.exactHash(makeImage(whiteColumns: 8)))
+        let changed = try #require(ImageHashing.exactHash(makeImage(whiteColumns: 9)))
 
-        #expect(ImageHashing.exactHash(first) == ImageHashing.exactHash(same))
-        #expect(ImageHashing.exactHash(first) != ImageHashing.exactHash(changed))
+        #expect(first == same)
+        #expect(first != changed)
     }
 
     @Test func imageChangedCondition() {

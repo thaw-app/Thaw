@@ -82,20 +82,30 @@ enum ImageHashing {
         var pixels = [UInt8](repeating: 0, count: bytesPerRow * height)
         let bitmapInfo = CGBitmapInfo.byteOrder32Big.rawValue
             | CGImageAlphaInfo.premultipliedLast.rawValue
-        guard let context = CGContext(
-            data: &pixels,
-            width: width,
-            height: height,
-            bitsPerComponent: 8,
-            bytesPerRow: bytesPerRow,
-            space: CGColorSpaceCreateDeviceRGB(),
-            bitmapInfo: bitmapInfo
-        ) else {
+        // The buffer is bound for the whole lifetime of the context, not just
+        // for the initializer call: `draw` writes through it afterwards. An
+        // inout-to-pointer conversion is only valid for the duration of the
+        // call it is passed to, so the pointer has to stay in scope instead.
+        let rendered = pixels.withUnsafeMutableBytes { buffer -> Bool in
+            guard let context = CGContext(
+                data: buffer.baseAddress,
+                width: width,
+                height: height,
+                bitsPerComponent: 8,
+                bytesPerRow: bytesPerRow,
+                space: CGColorSpaceCreateDeviceRGB(),
+                bitmapInfo: bitmapInfo
+            ) else {
+                return false
+            }
+            context.interpolationQuality = .none
+            context.setBlendMode(.copy)
+            context.draw(image, in: CGRect(x: 0, y: 0, width: width, height: height))
+            return true
+        }
+        guard rendered else {
             return nil
         }
-        context.interpolationQuality = .none
-        context.setBlendMode(.copy)
-        context.draw(image, in: CGRect(x: 0, y: 0, width: width, height: height))
 
         // FNV-1a is small, deterministic across launches, and sufficient for
         // change detection. This is not used as a security primitive.

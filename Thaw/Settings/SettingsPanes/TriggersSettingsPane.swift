@@ -886,16 +886,21 @@ private struct TriggerRow: View {
             Divider()
 
             ForEach(Array(trigger.additionalItems.indices), id: \.self) { index in
+                // Index identity shifts on removal, so SwiftUI can evaluate a
+                // row whose index no longer exists. Every access tolerates a
+                // stale index instead of trapping.
+                let currentItem = trigger.additionalItems.indices.contains(index)
+                    ? trigger.additionalItems[index]
+                    : TriggerTargetItem()
                 HStack(spacing: 8) {
                     IcePicker("Also move", selection: additionalItemBinding(index)) {
-                        let currentItem = trigger.additionalItems[index]
                         let current = currentItem.identifier
                         let resolvedItem = itemOption(
                             matching: current,
                             baseIdentifier: currentItem.baseIdentifier
                         )
                         if !current.isEmpty, resolvedItem == nil {
-                            Text("\(trigger.additionalItems[index].displayName) (not present)").tag(current)
+                            Text("\(currentItem.displayName) (not present)").tag(current)
                         } else if let resolvedItem, resolvedItem.id != current {
                             Text(resolvedItem.name).tag(current)
                         }
@@ -907,6 +912,7 @@ private struct TriggerRow: View {
                         }
                     }
                     Button(role: .destructive) {
+                        guard trigger.additionalItems.indices.contains(index) else { return }
                         trigger.additionalItems.remove(at: index)
                     } label: {
                         Image(systemName: "minus.circle")
@@ -2013,17 +2019,19 @@ private struct ImageConditionEditor: View {
 
     private var referenceStatusText: String {
         if exactReferenceNeedsRecapture {
-            return "Recapture required for Exact"
+            return String(localized: "Recapture required for Exact")
         }
-        return hasReference ? "Reference captured — recapture to add preview" : "No reference yet"
+        return hasReference
+            ? String(localized: "Reference captured — recapture to add preview")
+            : String(localized: "No reference yet")
     }
 
     private var comparisonHelp: String {
         switch comparisonMode {
         case .fuzzy:
-            "Fuzzy ignores small rendering differences and reveals when the icon meaningfully changes from the reference. Requires screen recording permission."
+            String(localized: "Fuzzy ignores small rendering differences and reveals when the icon meaningfully changes from the reference. Requires screen recording permission.")
         case .exact:
-            "Exact reveals on any pixel-content difference from the reference. Requires screen recording permission."
+            String(localized: "Exact reveals on any pixel-content difference from the reference. Requires screen recording permission.")
         }
     }
 

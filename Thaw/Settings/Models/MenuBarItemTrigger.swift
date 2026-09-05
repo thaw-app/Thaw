@@ -150,8 +150,8 @@ enum ImageComparisonMode: String, Codable, Hashable, CaseIterable, Identifiable 
 
     var displayString: String {
         switch self {
-        case .fuzzy: "Fuzzy"
-        case .exact: "Exact"
+        case .fuzzy: String(localized: "Fuzzy")
+        case .exact: String(localized: "Exact")
         }
     }
 }
