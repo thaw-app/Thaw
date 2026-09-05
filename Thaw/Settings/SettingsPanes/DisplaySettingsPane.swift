@@ -420,10 +420,30 @@ struct DisplaySettingsPane: View {
         }
     }
 
+    /// Revalidates a staged spacing request before acting on it. The alert is
+    /// asynchronous: the menu bar can move to another display while it is
+    /// open, and committing then would persist the old display's value while
+    /// the manager applies spacing from the new host. The request is cancelled
+    /// instead, and the slider snaps back to the saved value.
+    private func revalidatePendingSpacing(_ pending: PendingSpacingApply) -> Bool {
+        guard displaySettings.activeMenuBarDisplayUUID == pending.displayID else {
+            draftSpacing[pending.displayID] = CGFloat(
+                displaySettings.configuration(forUUID: pending.displayID).itemSpacingOffset
+            )
+            errorMessage = String(
+                localized: "The menu bar moved to another display while the confirmation was open. The spacing change was cancelled."
+            )
+            showingError = true
+            return false
+        }
+        return true
+    }
+
     @ViewBuilder
     private func spacingConfirmationButtons(for pending: PendingSpacingApply) -> some View {
         if pending.activeProfileID != nil {
             Button(String(localized: "Update Active Profile"), role: .destructive) {
+                guard revalidatePendingSpacing(pending) else { return }
                 if let id = pending.activeProfileID {
                     // updateProfile(scope:.configurationOnly) captures live
                     // state, so the in-memory configuration must hold the new
@@ -451,6 +471,7 @@ struct DisplaySettingsPane: View {
                 }
             }
             Button(String(localized: "Update All Profiles"), role: .destructive) {
+                guard revalidatePendingSpacing(pending) else { return }
                 let previousOffset = displaySettings
                     .configuration(forUUID: pending.displayID)
                     .itemSpacingOffset
@@ -473,6 +494,7 @@ struct DisplaySettingsPane: View {
             }
         } else {
             Button(String(localized: "Apply"), role: .destructive) {
+                guard revalidatePendingSpacing(pending) else { return }
                 commitSpacing(displayID: pending.displayID, offset: pending.offset)
             }
             Button(String(localized: "Cancel"), role: .cancel) {

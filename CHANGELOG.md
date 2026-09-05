@@ -108,45 +108,17 @@ Three things from the 2.1 preview line are still on their way to macOS 27.
 - **Every ScreenCaptureKit call has a watchdog**, so a capture that never answers cannot hang the refresh loop. An XPC capture helper is built in and off by default until it has been verified on macOS 27.
 - **Less idle work.** The polls that used to ask the window server questions whose answers had not changed now latch, memoize, or rate-limit, and the glyph cache publishes only when a glyph actually changed.
 
-## [2.1.0-unreleased]
-
-Hey, we have a Discord! Come say hi: [discord.gg/KDfWjWDnR4](https://discord.gg/KDfWjWDnR4).
-
-Please report issues at [github.com/thaw-app/Thaw/issues](https://github.com/thaw-app/Thaw/issues).
-
-### New
-
-- **Image-change triggers gain comparison modes and a preview (#1006).** An image-change condition can now compare the current icon to its captured reference Fuzzy — ignoring small rendering noise — or Exact, which reacts to any normalized pixel-content difference. The trigger editor shows the captured reference icon and asks for a recapture when an older reference is switched to Exact. Existing saved conditions keep working and read as Fuzzy.
-- **Failed automatic moves save a redacted diagnostic report (#994, #1004).** When an automatic move — section placement, new-item relocation, control-divider ordering, saved-layout or profile application, notch-overflow rebalancing — reaches a definitive failure, Thaw persists a redacted report, keeps the newest 20, and offers it through the Settings sheet or a notification that opens the file in Finder. Cancelled, superseded, stale, transient, and input-busy outcomes stay silent; presentation cooldowns prevent alert storms without discarding evidence.
-
-### Menu bar stability
-
-A five-part rework of how Thaw moves items on its own (#999–#1003, #1041):
-
-- Move gestures stay on the menu bar: the press-release guard lives inside the event sequence, so a stalled drag is always released and never leaves the cursor captive.
-- Every automatic move runs under a transaction budget with a hard deadline, and a move policy decides per attempt whether to retry or stop — so a stuck move can no longer walk the bar or spin without end.
-- Layout editor cache refreshes are transactional, so a dropped refresh can no longer strand a frozen editor.
-- Automatic multi-move batches are coordinated: each move re-validates its preconditions while holding the move gate, so user moves invalidate stale batch moves instead of racing them.
-- Editor transitions are stabilized: generation-based drag stabilization, stale-thumbnail rejection while a container is frozen, and window-based drag identity that survives Control Center identity resolution.
-- Earlier in the series (#993–#998): move outcomes are explicit and attributable, hosted item identities are reconciled safely, persisted identity seeds are bounded, moves are serialized and preflighted, and diagnostic reports redact sensitive values.
-
-### Fixes
-
-- The Thaw Bar preserves its cached glyphs across window ID changes (#1046), so icons no longer blank out when items are recycled behind the scenes.
-- No blank slot for the Thaw icon at launch (#1043). The icon's hidden preference was applied only after the first asynchronous settings pass, leaving a blank space in the menu bar until it landed; the preference is now applied synchronously during control item setup.
-- The Displays pane says what it does (#1045, #961). Displays with their own settings are now marked "Custom", with a note that they take precedence over the global template — which explains why toggling the template seemed to do nothing. The per-display item spacing control is likewise honest about macOS: spacing is one system-wide value that follows the display hosting the menu bar, so editing is enabled only for that display and the others show their saved value with an explanation.
-
-### Dependencies & localization
-
-- Crowdin sync for `Localizable.xcstrings` (#1040): new Russian and Japanese translations, improved Thai plural formatting, and Russian plural forms for several messages.
-
 ## [2.1.0-beta.2]
 
 Hey, we have a Discord! Come say hi: [discord.gg/KDfWjWDnR4](https://discord.gg/KDfWjWDnR4).
 
 Please report issues at [github.com/thaw-app/Thaw/issues](https://github.com/thaw-app/Thaw/issues).
 
-Four fixes, nothing new. The worst of them is not a beta bug at all: changing menu bar spacing could kill Spotlight outright, and it stayed gone until the machine was rebooted (#720, found and fixed by @commanderk33n). Because spacing is re-applied whenever a display connects or disconnects, it fired again on every dock and undock. From the beta.1 reports: revealing a hidden item could drop it on the wrong side of the chevron, so the reveal failed and the item stayed put (#1035); the "Thaw took too long to respond" report turned out to be a Control Center window left behind by an exited Thaw process, freezing the item cache for as long as it stuck around (#1032); and the Capture Inspector was showing people the bottom of their screen instead of their menu bar (#1033).
+<a href="https://www.producthunt.com/products/thaw-2?embed=true&amp;utm_source=badge-featured&amp;utm_medium=badge&amp;utm_campaign=badge-thaw-3" target="_blank" rel="noopener noreferrer"><img alt="Thaw - The only app that owns your whole menu bar, in and out | Product Hunt" width="250" height="54" src="https://api.producthunt.com/widgets/embed-image/v1/featured.svg?post_id=1239794&amp;theme=light&amp;t=1788423441056"></a>
+
+Thanks to everyone who tested the beta and sent logs. @commanderk33n found and fixed the Spotlight crash. @CamilleGuillory and @nk-tedo-001 co-authored the settings work. @3raxton reported the launch icon and profile layout bugs, @nickawilliams reported the Thaw Bar toggle, and @joaofrgomes helped pin down how item spacing really behaves.
+
+This build has two new features, a rework of how Thaw moves items on its own, and four reported fixes. The worst of the fixes is not a beta bug at all: changing menu bar spacing could kill Spotlight outright, and it stayed gone until the machine was rebooted (#720, found and fixed by @commanderk33n). Spacing is re-applied whenever a display connects or disconnects, so the crash fired again on every dock and undock. From the beta.1 reports: revealing a hidden item could drop it on the wrong side of the chevron, so the reveal failed and the item stayed put (#1035); the "Thaw took too long to respond" report turned out to be a Control Center window left behind by an exited Thaw process, freezing the item cache for as long as it stuck around (#1032); and the Capture Inspector was showing people the bottom of their screen instead of their menu bar (#1033).
 
 ---
 
@@ -168,10 +140,28 @@ Four fixes, nothing new. The worst of them is not a beta bug at all: changing me
 
 ---
 
+### New
+
+1. Image-change triggers gain comparison modes and a preview (#1006). A condition can compare the current icon to its captured reference in two ways: Fuzzy, which ignores small rendering noise, or Exact, which reacts to any normalized pixel-content difference. The trigger editor shows the captured reference icon and asks for a recapture when an older reference is switched to Exact. Existing saved conditions keep working and read as Fuzzy.
+2. Failed automatic moves save a redacted diagnostic report (#994, #1004). Section placement, new-item relocation, control-divider ordering, saved-layout and profile application, and notch-overflow rebalancing all route through the same rule: a definitive failure saves a redacted report, Thaw keeps the newest 20, and a notification opens the file in Finder. Cancelled, superseded, stale, transient, and input-busy outcomes stay silent. Presentation cooldowns keep one failing item from turning into an alert storm, and no cooldown suppresses the report itself.
+
+### How automatic moves work now
+
+The move engine was rebuilt in five steps (#999 to #1003, merged as #1041). Move gestures stay on the menu bar: the press-release guard lives inside the event sequence now, so a stalled drag is always released. Every automatic move runs under a transaction budget with a hard deadline, and a policy decides per attempt whether to retry or stop, so a stuck move can neither walk the bar nor spin without end. Layout editor cache refreshes are transactional, so a dropped refresh cannot strand a frozen editor. Automatic multi-move batches are coordinated: each move re-validates its preconditions while holding the move gate, so a user move invalidates a stale batch instead of racing it. Editor transitions are stabilized with generation-based drag state, stale-thumbnail rejection while a container is frozen, and window-based drag identity that survives Control Center identity resolution.
+
+Earlier in the same batch (#993 to #998), move outcomes became explicit and attributable, hosted item identities are reconciled safely, persisted identity seeds are bounded, moves are serialized and preflighted, and diagnostic reports redact sensitive values before anything is written to disk.
+
+### More fixes
+
+1. The Thaw Bar keeps its cached glyphs across window ID changes (#1046). Icons no longer blank out when items are recycled behind the scenes.
+2. No blank slot for the Thaw icon at launch (#1043). The icon's hidden preference was applied only after the first asynchronous settings pass, so a launch with the icon disabled showed a blank space in the menu bar until it landed. The preference is now applied during control item setup, before any of that can render.
+3. The Displays pane says what it does (#1045, #961). Displays with their own settings are marked Custom, and a note says those settings take precedence over the global template, which explains why toggling the template seemed to do nothing. Per-display item spacing now only edits the display that hosts the menu bar, because macOS keeps one spacing value for the whole system and follows it; other displays show their saved value with an explanation of when it applies.
+
 ### Dependencies & localization
 
 - Source strings repaired, including the automatic grammar agreement that two of them had lost (#1036).
 - Crowdin sync for `Localizable.xcstrings` (#1030, #1037). Russian is the big mover, from 69.3% of the catalogue to 82.6%.
+- More Crowdin sync (#1040): new Russian and Japanese translations, improved Thai plural formatting, and Russian plural forms for several messages.
 - The build and release workflows run on macOS 27 runners (#1034).
 - Copyright headers updated across the project (#1026).
 - Two triple-nested closures unnested, which clears both open SonarCloud maintainability issues.

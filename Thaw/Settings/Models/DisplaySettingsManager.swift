@@ -766,7 +766,7 @@ final class DisplaySettingsManager {
         configurations[uuid] ?? globalConfiguration
     }
 
-    /// The display's own stored configuration, or `nil` when it has none and
+    /// The display's own stored configuration, or nil when it has none and
     /// resolves to the global template. The Displays pane uses this to mark
     /// displays whose custom settings shadow the global toggles (#1045).
     func configurationOverride(forUUID uuid: String) -> DisplayIceBarConfiguration? {
