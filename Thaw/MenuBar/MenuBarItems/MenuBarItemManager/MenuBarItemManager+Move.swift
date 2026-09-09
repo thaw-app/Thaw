@@ -128,6 +128,10 @@ extension MenuBarItemManager {
         case faithfulDrag
         case parkedTeleport
         case crossNotchTeleport
+        /// Retry transport that opens the gesture on the source window and
+        /// releases at the destination. Some freshly re-registered status
+        /// items reject the usual press-at-destination teleport.
+        case sourceAnchoredTeleport
 
         var description: String {
             switch self {
@@ -135,6 +139,7 @@ extension MenuBarItemManager {
             case .faithfulDrag: "faithfulDrag"
             case .parkedTeleport: "parkedTeleport"
             case .crossNotchTeleport: "crossNotchTeleport"
+            case .sourceAnchoredTeleport: "sourceAnchoredTeleport"
             }
         }
     }
@@ -176,15 +181,19 @@ extension MenuBarItemManager {
         controlDividerX: CGFloat?
     ) -> MoveEndpointDisposition {
         let center = CGPoint(x: bounds.midX, y: bounds.midY)
-        if isOnScreen {
-            guard let physicalDisplay = displays.first(where: { $0.bounds.contains(center) }) else {
-                return .invalid
-            }
+        if isOnScreen,
+           let physicalDisplay = displays.first(where: { $0.bounds.contains(center) })
+        {
             return physicalDisplay.id == selectedDisplayID
                 ? .selectedDisplay
                 : .otherDisplay(physicalDisplay.id)
         }
 
+        // kCGWindowIsOnscreen describes Space membership/compositing, not
+        // physical display containment. Tahoe can report it as true for a
+        // status item parked thousands of points left of every display.
+        // When an offscreen item geometrically overlaps a left display, the
+        // explicit parked lane remains authoritative.
         guard
             let parkedLaneYRange,
             let controlDividerX,
@@ -377,10 +386,11 @@ extension MenuBarItemManager {
 
     static nonisolated func moveEventLocations(
         targetPoints: (start: CGPoint, end: CGPoint),
-        faithfulDragStart: CGPoint?
+        faithfulDragStart: CGPoint?,
+        sourceAnchoredStart: CGPoint? = nil
     ) -> MoveEventLocations {
         MoveEventLocations(
-            press: faithfulDragStart ?? targetPoints.start,
+            press: faithfulDragStart ?? sourceAnchoredStart ?? targetPoints.start,
             release: targetPoints.end
         )
     }
@@ -898,7 +908,7 @@ extension MenuBarItemManager {
         guard let appState else { return [] }
         return [MenuBarSection.Name.hidden, .alwaysHidden].compactMap { identifier in
             guard let window = appState.menuBarManager.controlItem(withName: identifier)?.window,
-                  let windowID = CGWindowID(exactly: window.windowNumber)
+                  let windowID = Self.windowServerID(windowNumber: window.windowNumber)
             else {
                 return nil
             }
@@ -1107,7 +1117,8 @@ extension MenuBarItemManager {
         destination: MoveDestination,
         on displayID: CGDirectDisplayID,
         budget: MoveTransactionBudget,
-        warpCursorAfter: Bool = true
+        warpCursorAfter: Bool = true,
+        preferSourceAnchoredTeleport: Bool = false
     ) async throws -> MoveEventsOutcome {
         // Take the permit outside `budget.run`: `run` re-checks the deadline
         // after its operation succeeds and can throw from that check, which
@@ -1184,7 +1195,9 @@ extension MenuBarItemManager {
             on: displayID
         ) {
         case let .use(selected):
-            initialStrategy = selected
+            initialStrategy = preferSourceAnchoredTeleport && selected != .faithfulDrag
+                ? .sourceAnchoredTeleport
+                : selected
         case .rejectUnsafePath:
             throw EventError.unsafeMovePath(initialEndpoints.source)
         }
@@ -1196,7 +1209,10 @@ extension MenuBarItemManager {
             : nil
         let initialEventLocations = Self.moveEventLocations(
             targetPoints: initialTargetPoints,
-            faithfulDragStart: initialDragPlan?.first?.point
+            faithfulDragStart: initialDragPlan?.first?.point,
+            sourceAnchoredStart: initialStrategy == .sourceAnchoredTeleport
+                ? CGPoint(x: initialEndpoints.source.bounds.midX, y: initialEndpoints.source.bounds.midY)
+                : nil
         )
 
         // Capture mouse location only when this call owns the cursor warp.
@@ -1287,7 +1303,9 @@ extension MenuBarItemManager {
             on: displayID
         ) {
         case let .use(selected):
-            strategy = selected
+            strategy = preferSourceAnchoredTeleport && selected != .faithfulDrag
+                ? .sourceAnchoredTeleport
+                : selected
         case .rejectUnsafePath:
             MenuBarItemManager.diagLog.warning(
                 "Move transport rejected unsafe or cross-display geometry for \(liveItem.logString)"
@@ -1299,14 +1317,19 @@ extension MenuBarItemManager {
             : nil
         let eventLocations = Self.moveEventLocations(
             targetPoints: targetPoints,
-            faithfulDragStart: dragPlan?.first?.point
+            faithfulDragStart: dragPlan?.first?.point,
+            sourceAnchoredStart: strategy == .sourceAnchoredTeleport
+                ? CGPoint(x: itemBounds.midX, y: itemBounds.midY)
+                : nil
         )
         if warpIsOnScreen, eventLocations.press != warpPoint {
             MouseHelpers.warpCursor(to: eventLocations.press)
         }
         let source = try getEventSource()
         try permitLocalEvents()
-        let releaseItem = strategy == .faithfulDrag ? liveItem : endpoints.target
+        let releaseItem = strategy == .faithfulDrag || strategy == .sourceAnchoredTeleport
+            ? liveItem
+            : endpoints.target
         guard
             let mouseDown = CGEvent.menuBarItemEvent(
                 item: liveItem,
@@ -1390,8 +1413,11 @@ extension MenuBarItemManager {
                     targetBounds: releaseEndpoints.target.bounds,
                     on: displayID
                 )
+                let liveReleaseItem = strategy == .sourceAnchoredTeleport
+                    ? releaseEndpoints.source
+                    : releaseEndpoints.target
                 guard let liveMouseUp = CGEvent.menuBarItemEvent(
-                    item: releaseEndpoints.target,
+                    item: liveReleaseItem,
                     source: source,
                     type: .move(.mouseUp),
                     location: releasePoints.end
@@ -1644,7 +1670,12 @@ extension MenuBarItemManager {
             // Create a MenuBarItem representation of the control item for the destination
             // We need to find it in the current cache
             let items = await MenuBarItem.getMenuBarItems(option: .activeSpace)
-            guard let hiddenMenuBarItem = items.first(where: { $0.windowID == CGWindowID(hiddenControlItem.windowNumber) }) else {
+            guard
+                let hiddenWindowID = Self.windowServerID(
+                    windowNumber: hiddenControlItem.windowNumber
+                ),
+                let hiddenMenuBarItem = items.first(where: { $0.windowID == hiddenWindowID })
+            else {
                 MenuBarItemManager.diagLog.error("Cannot recover item: control item not found in menu bar items")
                 return
             }
@@ -2362,7 +2393,8 @@ extension MenuBarItemManager {
                     destination: destination,
                     on: resolvedDisplayID,
                     budget: budget,
-                    warpCursorAfter: false
+                    warpCursorAfter: false,
+                    preferSourceAnchoredTeleport: policyState.revertedRun > 0
                 )
                 attemptStrategy = outcome.strategy
                 try await waitForLayoutToSettle(

@@ -149,6 +149,27 @@ struct MoveEndpointIdentityTests {
         ) == nil)
     }
 
+    @Test("An off-display Tahoe window is parked despite its onscreen bit")
+    func onscreenBitDoesNotOverrideParkedGeometry() {
+        let selected: CGDirectDisplayID = 1
+        let displays = [
+            MenuBarItemManager.MoveDisplayGeometry(
+                id: selected,
+                bounds: CGRect(x: 0, y: 0, width: 1728, height: 1117)
+            ),
+        ]
+        let parked = CGRect(x: -7775, y: 0, width: 24, height: 24)
+
+        #expect(MenuBarItemManager.moveEndpointDisposition(
+            bounds: parked,
+            isOnScreen: true,
+            selectedDisplayID: selected,
+            displays: displays,
+            parkedLaneYRange: 0 ... 24,
+            controlDividerX: 1400
+        ) == .parked)
+    }
+
     @Test("Parked lane geometry is not mistaken for a left display")
     func parkedLaneIsExplicit() {
         let selected: CGDirectDisplayID = 1

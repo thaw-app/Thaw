@@ -222,7 +222,11 @@ final class MissionControlDetector {
         guard let probeWindow else {
             return
         }
-        let windowID = CGWindowID(probeWindow.windowNumber)
+        guard let windowID = MenuBarItemManager.windowServerID(
+            windowNumber: probeWindow.windowNumber
+        ) else {
+            return
+        }
         guard let actualBounds = Bridging.getWindowBounds(for: windowID) else {
             // No bounds: we can't observe displacement this tick, so don't
             // keep asserting Mission Control is active — that would

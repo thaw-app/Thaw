@@ -494,9 +494,11 @@ final class MenuBarOverlayPanel: NSPanel, @unchecked Sendable {
     /// before re-ordering it, so the fresh order joins the display's
     /// current space.
     private func isStrandedOnInactiveSpace() -> Bool {
-        let windowID = CGWindowID(windowNumber)
-        guard windowID != 0 else {
-            // Never ordered — the fresh order in `show()` will place it.
+        guard let windowID = MenuBarItemManager.windowServerID(
+            windowNumber: windowNumber
+        ) else {
+            // Never ordered, or AppKit exposed a synthetic number. A fresh
+            // order in `show()` is the only useful recovery in either case.
             return true
         }
         let panelSpaces = Bridging.getSpaceList(for: windowID)

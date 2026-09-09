@@ -42,10 +42,15 @@ final class MenuBarSpacerManager {
     /// leaving the tag a generic "Item-0" until the title lands.
     func ownsWindowID(_ windowID: CGWindowID) -> Bool {
         statusItems.values.contains { item in
-            guard let windowNumber = item.button?.window?.windowNumber, windowNumber > 0 else {
+            guard
+                let windowNumber = item.button?.window?.windowNumber,
+                let ownedWindowID = MenuBarItemManager.windowServerID(
+                    windowNumber: windowNumber
+                )
+            else {
                 return false
             }
-            return CGWindowID(windowNumber) == windowID
+            return ownedWindowID == windowID
         }
     }
 

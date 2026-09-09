@@ -639,14 +639,24 @@ extension MenuBarItemManager {
         return ghostIDs
     }
 
-    /// Converts AppKit's status-item window number only when it is an exact
-    /// WindowServer identifier. Tahoe can surface a larger synthetic number;
-    /// treating it as sortable identity would let a stale divider win.
+    /// Converts an AppKit window number only when it is a positive, exactly
+    /// representable WindowServer identifier. Tahoe can surface larger
+    /// synthetic numbers whose low 32 bits are zero; truncating those values
+    /// can crash or accidentally target the null window.
+    static nonisolated func windowServerID(windowNumber: Int) -> CGWindowID? {
+        guard windowNumber > 0,
+              let windowID = CGWindowID(exactly: windowNumber),
+              windowID != kCGNullWindowID
+        else {
+            return nil
+        }
+        return windowID
+    }
+
     static nonisolated func authoritativeControlItemWindowID(
         windowNumber: Int
     ) -> CGWindowID? {
-        guard windowNumber > 0 else { return nil }
-        return CGWindowID(exactly: windowNumber)
+        windowServerID(windowNumber: windowNumber)
     }
 
     /// Returns windows that claim this instance's own namespace without

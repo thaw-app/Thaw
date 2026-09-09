@@ -51,6 +51,40 @@ struct MoveEventCoordinatesTests {
         #expect(eventLocations.release == parkedPoint)
     }
 
+    /// #1058: Tahoe can reject a parked-item teleport that posts both event
+    /// halves at the destination. A retry can start the gesture on the item
+    /// itself while preserving the same destination release coordinate.
+    @Test("A source-anchored retry presses on the item and releases at the destination")
+    func sourceAnchoredRetryUsesSeparateCoordinates() {
+        let source = CGPoint(x: -4432, y: 15)
+        let destination = CGPoint(x: -5202, y: 15)
+
+        let eventLocations = MenuBarItemManager.moveEventLocations(
+            targetPoints: (start: destination, end: destination),
+            faithfulDragStart: nil,
+            sourceAnchoredStart: source
+        )
+
+        #expect(eventLocations.press == source)
+        #expect(eventLocations.release == destination)
+    }
+
+    @Test("Faithful drag takes precedence over a source-anchored retry")
+    func faithfulDragStartTakesPrecedence() {
+        let faithfulStart = CGPoint(x: 100, y: 15)
+        let source = CGPoint(x: -4432, y: 15)
+        let destination = CGPoint(x: -5202, y: 15)
+
+        let eventLocations = MenuBarItemManager.moveEventLocations(
+            targetPoints: (start: destination, end: destination),
+            faithfulDragStart: faithfulStart,
+            sourceAnchoredStart: source
+        )
+
+        #expect(eventLocations.press == faithfulStart)
+        #expect(eventLocations.release == destination)
+    }
+
     /// #923: dropping onto the exact coordinate of a section divider leaves
     /// AppKit free to choose either side. The field log showed
     /// `.leftOfItem(AH_ctrl)` repeatedly landing one point to its right.
