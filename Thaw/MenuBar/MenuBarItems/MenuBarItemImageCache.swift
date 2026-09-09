@@ -164,18 +164,15 @@ final class MenuBarItemImageCache: @unchecked Sendable {
     /// The items currently asking for attention.
     private(set) var tagsSeekingAttention: Set<MenuBarItemTag> = []
 
-    /// Set by ``MenuBarItemTriggersManager`` while a trigger watches for
-    /// attention-seeking items.
+    /// Item identifiers watched by enabled attention-seeking triggers.
     ///
-    /// Detection is otherwise tied to the reveal setting, which a user may
-    /// leave off while still wanting a trigger to act on the same signal.
-    ///
-    /// Flipping this restarts the live-refresh loop: with every UI consumer
-    /// closed, capture only runs when the loop's section selection includes
-    /// the concealed sections, and that selection reads this flag.
-    @ObservationIgnored var isAttentionDetectionRequired = false {
+    /// This is deliberately a set rather than a Boolean demand flag: when no
+    /// UI consumes a whole section, the live loop captures only these items.
+    /// The global "surface items seeking attention" setting remains separate
+    /// and continues to sample every concealed item.
+    @ObservationIgnored var attentionDetectionItemIdentifiers = Set<String>() {
         didSet {
-            guard oldValue != isAttentionDetectionRequired else { return }
+            guard oldValue != attentionDetectionItemIdentifiers else { return }
             startLiveRefreshIfNeeded()
         }
     }
@@ -614,16 +611,24 @@ final class MenuBarItemImageCache: @unchecked Sendable {
             // that this class is @Observable (no more `$isItemHotkeyListExpanded`
             // Combine projection to subscribe to).
 
-            // Restart the live refresh loop when the icon refresh interval
-            // changes. `AdvancedSettings` is `@Observable` rather than a
-            // Combine `ObservableObject`, so this is observed via the
-            // `Observations` async sequence instead of `$iconRefreshInterval`.
+            // Restart the live refresh loop when its cadence or global
+            // attention demand changes. The initial observation also starts
+            // global detection when there is no visible UI consumer.
             let advancedSettings = appState.settings.advanced
             iconRefreshIntervalObservationTask = Task { @MainActor [weak self] in
-                let changes = Observations { advancedSettings.iconRefreshInterval }
-                for await _ in changes {
+                var previous: (interval: TimeInterval, globalAttention: Bool)?
+                let changes = Observations {
+                    (
+                        interval: advancedSettings.iconRefreshInterval,
+                        globalAttention: advancedSettings.surfaceItemsSeekingAttention
+                    )
+                }
+                for await state in changes {
                     guard let self else { return }
-                    guard self.liveRefreshTask != nil else { continue }
+                    guard previous?.interval != state.interval
+                        || previous?.globalAttention != state.globalAttention
+                    else { continue }
+                    previous = state
                     self.liveRefreshTask?.cancel()
                     self.liveRefreshTask = nil
                     self.startLiveRefreshIfNeeded()
@@ -680,6 +685,24 @@ final class MenuBarItemImageCache: @unchecked Sendable {
         isSettingsPaneOpen: Bool
     ) -> Bool {
         hasVisibleConsumer || (allowBackgroundCapture && isSettingsPaneOpen)
+    }
+
+    /// Returns the identifiers a section needs in the next live capture.
+    ///
+    /// Visible consumers and global attention detection consume the complete
+    /// section. Trigger-only demand is intersected with the section's current
+    /// contents so unrelated icons never enter the capture batch.
+    static nonisolated func requiredCaptureIdentifiers(
+        availableIdentifiers: some Sequence<String>,
+        consumerNeedsWholeSection: Bool,
+        globalAttentionNeedsWholeSection: Bool,
+        attentionTriggerIdentifiers: Set<String>
+    ) -> Set<String> {
+        let available = Set(availableIdentifiers)
+        if consumerNeedsWholeSection || globalAttentionNeedsWholeSection {
+            return available
+        }
+        return available.intersection(attentionTriggerIdentifiers)
     }
 
     /// Refreshes the cache for currently visible consumers, or keeps a warm
@@ -774,14 +797,16 @@ final class MenuBarItemImageCache: @unchecked Sendable {
             let nav = await MainActor.run {
                 self.makeNavigationStateSnapshot()
             }
+            let globalAttentionDetection = self.appState?.settings.advanced.surfaceItemsSeekingAttention == true
             let needsRefresh = self.hasVisibleCaptureConsumer(nav: nav)
-                || self.isAttentionDetectionRequired
+                || !self.attentionDetectionItemIdentifiers.isEmpty
+                || globalAttentionDetection
 
             if needsRefresh {
                 // Already running — don't restart
                 guard self.liveRefreshTask == nil else { return }
                 MenuBarItemImageCache.diagLog.debug(
-                    "Starting live refresh (iceBar=\(nav.isIceBarPresented), search=\(nav.isSearchPresented), settings=\(nav.isSettingsPresented), attention=\(self.isAttentionDetectionRequired))"
+                    "Starting live refresh (iceBar=\(nav.isIceBarPresented), search=\(nav.isSearchPresented), settings=\(nav.isSettingsPresented), attentionTriggers=\(self.attentionDetectionItemIdentifiers.count), globalAttention=\(globalAttentionDetection))"
                 )
                 lastSCKRefreshAt = nil
                 lastHiddenRefreshAt = nil
@@ -837,8 +862,10 @@ final class MenuBarItemImageCache: @unchecked Sendable {
                 )
             }
 
-            // Determine which sections to refresh based on what's visible
-            var sections: [MenuBarSection.Name]
+            // Determine which sections a visible UI consumer needs in full.
+            // Attention-trigger demand is applied per identifier below, so a
+            // single watched icon cannot expand this set to whole sections.
+            var consumerSections = Set<MenuBarSection.Name>()
             let isLayoutPane = nav.isSettingsPresented
                 && nav.settingsNavigationIdentifier == .menuBarLayout
             // The Hotkeys pane only needs item icons while its per-item list
@@ -848,47 +875,38 @@ final class MenuBarItemImageCache: @unchecked Sendable {
                 && isItemHotkeyListExpanded
             if nav.isSearchPresented || isLayoutPane || isHotkeyListVisible {
                 if nav.isSearchPresented, !isLayoutPane, !isHotkeyListVisible {
-                    // Search is the only consumer here that can be told to
-                    // leave whole sections out of its results; capturing icons
-                    // for rows it will never render is pure waste. The layout
-                    // pane and the hotkey list always show every section, so
-                    // they keep the unfiltered set.
+                    // Search is the only consumer here that can omit sections.
                     let advanced = appState.settings.advanced
-                    sections = MenuBarSection.Name.allCases.filter { name in
+                    consumerSections = Set(MenuBarSection.Name.allCases.filter { name in
                         switch name {
                         case .visible: advanced.searchIncludeVisible
                         case .hidden: advanced.searchIncludeHidden
                         case .alwaysHidden: advanced.searchIncludeAlwaysHidden
                         }
-                    }
+                    })
                 } else {
-                    sections = MenuBarSection.Name.allCases
+                    consumerSections = Set(MenuBarSection.Name.allCases)
                 }
             } else if nav.isIceBarPresented,
                       let current = appState.menuBarManager.iceBarPanel.currentSection
             {
-                sections = [current]
-            } else if isAttentionDetectionRequired {
-                // Attention triggers watch concealed icons, and the blink
-                // only exists in the capture: sample them even when every
-                // UI consumer is closed.
-                sections = [.hidden, .alwaysHidden]
-            } else {
+                consumerSections = [current]
+            }
+
+            let globalAttentionDetection = appState.settings.advanced.surfaceItemsSeekingAttention
+            let triggerAttentionIdentifiers = attentionDetectionItemIdentifiers
+            guard !consumerSections.isEmpty
+                || globalAttentionDetection
+                || !triggerAttentionIdentifiers.isEmpty
+            else {
                 try? await Task.sleep(for: .milliseconds(50))
                 continue
             }
 
-            // A single-section consumer (the Thaw Bar) can be pointed at the
-            // visible section while a trigger watches a concealed icon; the
-            // concealed sections always stay in the sampled set when their
-            // capture is demanded for attention detection.
-            if isAttentionDetectionRequired {
-                for concealed in [MenuBarSection.Name.hidden, .alwaysHidden]
-                    where !sections.contains(concealed)
-                {
-                    sections.append(concealed)
-                }
-            }
+            // Inspect every section so trigger-only demand can follow a watched
+            // item when it moves. Global attention intentionally retains full
+            // coverage of both concealed sections.
+            let sections = MenuBarSection.Name.allCases
 
             if appState.itemManager.lastMoveOperationOccurred(within: .seconds(2))
                 || appState.itemManager.isResettingLayout
@@ -905,7 +923,16 @@ final class MenuBarItemImageCache: @unchecked Sendable {
             var alwaysHiddenItems = [MenuBarItem]()
 
             for section in sections {
-                let items = appState.itemManager.itemCache.managedItems(for: section)
+                let availableItems = appState.itemManager.itemCache.managedItems(for: section)
+                let requiredIdentifiers = Self.requiredCaptureIdentifiers(
+                    availableIdentifiers: availableItems.map(\.tag.tagIdentifier),
+                    consumerNeedsWholeSection: consumerSections.contains(section),
+                    globalAttentionNeedsWholeSection: globalAttentionDetection && section != .visible,
+                    attentionTriggerIdentifiers: triggerAttentionIdentifiers
+                )
+                let items = availableItems.filter {
+                    requiredIdentifiers.contains($0.tag.tagIdentifier)
+                }
                 guard !items.isEmpty else { continue }
                 guard let sectionInterval = MenuBarLiveRefreshPolicy.refreshInterval(
                     for: section,
@@ -1566,20 +1593,26 @@ final class MenuBarItemImageCache: @unchecked Sendable {
     /// Feeds a batch of captures to the attention detector and republishes
     /// the verdict when it changes.
     private func recordForAttention(_ newImages: [MenuBarItemTag: CapturedImage]) {
-        guard Defaults.bool(forKey: .surfaceItemsSeekingAttention) || isAttentionDetectionRequired else {
+        let globalAttentionDetection = Defaults.bool(forKey: .surfaceItemsSeekingAttention)
+        guard globalAttentionDetection || !attentionDetectionItemIdentifiers.isEmpty else {
             if !tagsSeekingAttention.isEmpty {
                 tagsSeekingAttention = []
             }
             return
         }
 
+        let detectionTags = globalAttentionDetection
+            ? Set(images.keys)
+            : Set(images.keys.filter {
+                attentionDetectionItemIdentifiers.contains($0.tagIdentifier)
+            })
         let now = Date.timeIntervalSinceReferenceDate
-        for (tag, image) in newImages {
+        for (tag, image) in newImages where detectionTags.contains(tag) {
             attentionDetector.record(fingerprint: image.fingerprint, for: tag, at: now)
         }
-        attentionDetector.retain(Set(images.keys))
+        attentionDetector.retain(detectionTags)
 
-        let seeking = Set(images.keys.filter { attentionDetector.isSeekingAttention($0, at: now) })
+        let seeking = Set(detectionTags.filter { attentionDetector.isSeekingAttention($0, at: now) })
         guard seeking != tagsSeekingAttention else { return }
         tagsSeekingAttention = seeking
         if !seeking.isEmpty {

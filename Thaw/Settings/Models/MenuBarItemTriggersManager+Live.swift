@@ -122,6 +122,7 @@ extension MenuBarItemTriggersManager {
             DispatchQueue.main.async {
                 self?.runScriptsIfNeeded()
                 self?.refreshImageHashesIfNeeded()
+                self?.updateAttentionDetectionDemand()
                 self?.scheduleEvaluation()
             }
         }
@@ -682,20 +683,22 @@ extension MenuBarItemTriggersManager {
         }
     }
 
-    /// Tells the image cache whether any enabled trigger needs blink
-    /// detection running, so it is not tied to the reveal setting alone.
+    /// Gives the image cache the exact identifiers watched by enabled blink
+    /// triggers, so trigger-only capture never expands to whole sections.
     func updateAttentionDetectionDemand() {
         guard let appState else { return }
-        let required = featureFlags.isEnabled(.attentionSeeking) && triggers.contains { trigger in
-            trigger.isEnabled && trigger.allConditions.contains { condition in
-                if case let .itemSeekingAttention(id) = condition {
-                    return !id.isEmpty
+        let identifiers = featureFlags.isEnabled(.attentionSeeking)
+            ? Set(triggers.lazy.filter(\.isEnabled).flatMap { trigger in
+                trigger.allConditions.compactMap { condition -> String? in
+                    guard case let .itemSeekingAttention(id) = condition, !id.isEmpty else {
+                        return nil
+                    }
+                    return id
                 }
-                return false
-            }
-        }
-        guard appState.imageCache.isAttentionDetectionRequired != required else { return }
-        appState.imageCache.isAttentionDetectionRequired = required
+            })
+            : []
+        guard appState.imageCache.attentionDetectionItemIdentifiers != identifiers else { return }
+        appState.imageCache.attentionDetectionItemIdentifiers = identifiers
     }
 
     func refreshImageHashesIfNeeded() {

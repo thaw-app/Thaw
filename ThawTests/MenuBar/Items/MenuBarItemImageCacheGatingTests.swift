@@ -73,4 +73,40 @@ struct MenuBarItemImageCacheGatingTests {
             )
         )
     }
+
+    @Test("Trigger-only attention capture selects watched identifiers")
+    func triggerOnlyAttentionCaptureIsNarrow() {
+        let required = MenuBarItemImageCache.requiredCaptureIdentifiers(
+            availableIdentifiers: ["mail", "calendar", "battery"],
+            consumerNeedsWholeSection: false,
+            globalAttentionNeedsWholeSection: false,
+            attentionTriggerIdentifiers: ["calendar", "not-in-section"]
+        )
+
+        #expect(required == ["calendar"])
+    }
+
+    @Test("Visible demand unions a whole section with trigger demand")
+    func visibleConsumerKeepsWholeSection() {
+        let required = MenuBarItemImageCache.requiredCaptureIdentifiers(
+            availableIdentifiers: ["mail", "calendar", "battery"],
+            consumerNeedsWholeSection: true,
+            globalAttentionNeedsWholeSection: false,
+            attentionTriggerIdentifiers: ["calendar"]
+        )
+
+        #expect(required == ["mail", "calendar", "battery"])
+    }
+
+    @Test("Global attention keeps full concealed-section coverage")
+    func globalAttentionKeepsWholeSection() {
+        let required = MenuBarItemImageCache.requiredCaptureIdentifiers(
+            availableIdentifiers: ["mail", "calendar", "battery"],
+            consumerNeedsWholeSection: false,
+            globalAttentionNeedsWholeSection: true,
+            attentionTriggerIdentifiers: []
+        )
+
+        #expect(required == ["mail", "calendar", "battery"])
+    }
 }
