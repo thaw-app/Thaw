@@ -151,6 +151,13 @@ final class MenuBarItemImageCache: @unchecked Sendable {
         var excluded = [MenuBarItem]()
     }
 
+    /// Immutable input for a capture-helper batch that is safe to transfer
+    /// from the main actor to the concurrent executor.
+    private nonisolated struct IdentifierCaptureRequest: Sendable {
+        let identifier: String
+        let windowID: CGWindowID
+    }
+
     /// The cached item images, keyed by their corresponding tags.
     private(set) var images = [MenuBarItemTag: CapturedImage]()
 
@@ -1569,6 +1576,67 @@ final class MenuBarItemImageCache: @unchecked Sendable {
         }
         guard !newImages.isEmpty, !Task.isCancelled else { return }
         await applyRefreshedImages(newImages)
+    }
+
+    /// Captures a fresh batch for image-comparison triggers through the
+    /// recyclable helper process. Selection stays on the main actor; capture
+    /// and frame-to-image copies run on the concurrent executor.
+    func captureCurrentImages(
+        forItemIdentifiers identifiers: Set<String>
+    ) async -> [String: CGImage] {
+        guard let appState, !identifiers.isEmpty else { return [:] }
+
+        let requests: [IdentifierCaptureRequest] = appState.itemManager.itemCache.managedItems.compactMap { item in
+            let identifier = item.tag.tagIdentifier
+            guard identifiers.contains(identifier) else { return nil }
+            return IdentifierCaptureRequest(identifier: identifier, windowID: item.windowID)
+        }
+        guard !requests.isEmpty else { return [:] }
+
+        let preferredDisplayID = appState.itemManager.itemCache.displayID
+        guard let screen = Self.resolveScreen(preferredDisplayID: preferredDisplayID) else {
+            return [:]
+        }
+
+        do {
+            try await captureSemaphore.wait()
+        } catch {
+            return [:]
+        }
+        let captured = await Self.captureCurrentImages(
+            requests: requests,
+            scale: screen.screen.backingScaleFactor,
+            option: captureOption
+        )
+        await captureSemaphore.signal()
+        return captured
+    }
+
+    @concurrent
+    private static nonisolated func captureCurrentImages(
+        requests: [IdentifierCaptureRequest],
+        scale: CGFloat,
+        option: CGWindowImageOption
+    ) async -> [String: CGImage] {
+        let frames = await MenuBarCaptureService.Connection.shared.capture(
+            windowIDs: requests.map(\.windowID),
+            scale: scale,
+            option: option
+        )
+        guard !frames.isEmpty, !Task.isCancelled else { return [:] }
+
+        let identifierByWindowID = Dictionary(
+            requests.map { ($0.windowID, $0.identifier) },
+            uniquingKeysWith: { first, _ in first }
+        )
+        var images = [String: CGImage]()
+        for frame in frames {
+            guard let identifier = identifierByWindowID[frame.windowID],
+                  let image = MenuBarCaptureService.makeImage(from: frame)
+            else { continue }
+            images[identifier] = image
+        }
+        return images
     }
 
     private func applyRefreshedImages(_ newImages: [MenuBarItemTag: CapturedImage]) {

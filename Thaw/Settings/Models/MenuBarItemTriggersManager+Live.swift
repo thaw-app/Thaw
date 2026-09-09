@@ -736,12 +736,19 @@ extension MenuBarItemTriggersManager {
         }
 
         isRefreshingImages = true
-        Task { @MainActor [weak self] in
-            guard let self else { return }
+        Task { @MainActor [weak self, weak appState] in
+            guard let self, let appState else { return }
 
+            // One XPC request captures every watched window. The helper owns
+            // the leaking SkyLight call and is recycled independently of Thaw.
+            let currentImages = await appState.imageCache.captureCurrentImages(
+                forItemIdentifiers: ids
+            )
             var changed = removedAny
             for id in ids {
-                guard let fingerprints = await self.currentImageFingerprints(forItemIdentifier: id) else {
+                guard let image = currentImages[id],
+                      let fingerprints = self.imageFingerprints(for: image)
+                else {
                     if self.imageHashes[id] != nil || self.exactImageHashes[id] != nil {
                         self.imageHashes[id] = nil
                         self.exactImageHashes[id] = nil
@@ -769,39 +776,26 @@ extension MenuBarItemTriggersManager {
         }
     }
 
-    /// Captures the watched item's window and returns both comparison hashes.
-    private func currentImageFingerprints(
-        forItemIdentifier id: String
-    ) async -> (perceptual: UInt64, exact: UInt64)? {
-        guard
-            let image = await currentImage(forItemIdentifier: id),
-            let perceptual = ImageHashing.averageHash(image),
-            let exact = ImageHashing.exactHash(image)
+    /// Returns both comparison hashes for an already captured image.
+    private func imageFingerprints(
+        for image: CGImage
+    ) -> (perceptual: UInt64, exact: UInt64)? {
+        guard let perceptual = ImageHashing.averageHash(image),
+              let exact = ImageHashing.exactHash(image)
         else {
             return nil
         }
         return (perceptual, exact)
     }
 
-    /// Captures the watched item's current window image.
-    private func currentImage(forItemIdentifier id: String) async -> CGImage? {
-        guard
-            let appState,
-            let item = appState.itemManager.itemCache.managedItems.first(where: { $0.tag.tagIdentifier == id })
-        else {
-            return nil
-        }
-
-        return await ScreenCapture.captureWindowAsync(with: item.windowID)
-            ?? ScreenCapture.captureWindow(with: item.windowID)
-    }
-
     /// Captures both the runtime hash and a compact settings preview.
     func captureImageReference(forItemIdentifier id: String) async -> ImageComparisonReference? {
-        guard
-            let image = await currentImage(forItemIdentifier: id),
-            let perceptualHash = ImageHashing.averageHash(image),
-            let exactHash = ImageHashing.exactHash(image)
+        guard let appState,
+              let image = await appState.imageCache.captureCurrentImages(
+                  forItemIdentifiers: [id]
+              )[id],
+              let perceptualHash = ImageHashing.averageHash(image),
+              let exactHash = ImageHashing.exactHash(image)
         else {
             return nil
         }
