@@ -12,13 +12,8 @@ import SwiftUI
 
 /// A scrollable list of items broken up by section.
 struct SectionedList<ItemID: Hashable>: View {
-    private enum ScrollDirection {
-        case up, down
-    }
-
     @Binding var selection: ItemID?
     @Binding var items: [SectionedListItem<ItemID>]
-    @State private var itemFrames = [ItemID: CGRect]()
     @State private var scrollIndicatorsFlashTrigger = 0
 
     let spacing: CGFloat
@@ -62,10 +57,12 @@ struct SectionedList<ItemID: Hashable>: View {
 
     private var scrollView: some View {
         ScrollViewReader { scrollView in
-            GeometryReader { geometry in
-                ScrollView {
-                    scrollContent(scrollView: scrollView, geometry: geometry)
-                }
+            ScrollView {
+                scrollContent
+            }
+            .onChange(of: selection) {
+                guard let selection else { return }
+                scrollView.scrollTo(selection, anchor: .center)
             }
         }
         .scrollIndicatorsFlash(trigger: scrollIndicatorsFlashTrigger)
@@ -90,44 +87,16 @@ struct SectionedList<ItemID: Hashable>: View {
         }
     }
 
-    private func scrollContent(scrollView: ScrollViewProxy, geometry: GeometryProxy) -> some View {
+    private var scrollContent: some View {
         VStack(spacing: spacing) {
             ForEach(items, id: \.id) { item in
                 SectionedListItemView(
                     selection: $selection,
-                    itemFrames: $itemFrames,
                     item: item
                 )
                 .id(item.id)
             }
         }
-        .onChange(of: selection) {
-            guard
-                let selection,
-                let direction = scrollDirection(for: selection, geometry: geometry)
-            else {
-                return
-            }
-            let anchor: UnitPoint = switch direction {
-            case .up: .top
-            case .down: .bottom
-            }
-            scrollView.scrollTo(selection, anchor: anchor)
-        }
-    }
-
-    private func scrollDirection(for selection: ItemID, geometry: GeometryProxy) -> ScrollDirection? {
-        guard let selectionFrame = itemFrames[selection] else {
-            return nil
-        }
-        let geometryFrame = geometry.frame(in: .global)
-        if selectionFrame.minY <= geometryFrame.minY + contentPadding.top {
-            return .up
-        }
-        if selectionFrame.maxY >= geometryFrame.maxY - contentPadding.bottom {
-            return .down
-        }
-        return nil
     }
 }
 
@@ -174,7 +143,6 @@ struct SectionedListItem<ID: Hashable>: @unchecked Sendable {
 private struct SectionedListItemView<ItemID: Hashable>: View {
     @Environment(\.self) private var environment
     @Binding var selection: ItemID?
-    @Binding var itemFrames: [ItemID: CGRect]
     @State private var isHovering = false
 
     let item: SectionedListItem<ItemID>
@@ -231,8 +199,5 @@ private struct SectionedListItemView<ItemID: Hashable>: View {
                 item.action?()
             }
         )
-        .onFrameChange(in: .global) { frame in
-            itemFrames[item.id] = frame
-        }
     }
 }
