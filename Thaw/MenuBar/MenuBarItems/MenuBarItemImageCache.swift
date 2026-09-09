@@ -806,8 +806,8 @@ final class MenuBarItemImageCache: @unchecked Sendable {
     ///
     /// Runs a single capture loop that serves all consumer views (IceBar,
     /// Search, Layout Settings) instead of each view running its own loop.
-    /// Heavy work (`refreshImages`) is `nonisolated` and runs off the main
-    /// actor — only navigation state reads happen on `@MainActor`.
+    /// Heavy work (`refreshImages`) is `@concurrent` and runs on the
+    /// background pool — only navigation state reads happen on `@MainActor`.
     /// Uses `self.appState` (weak property) to avoid retain cycle via
     /// the task's async stack frame.
     @MainActor
@@ -1400,6 +1400,14 @@ final class MenuBarItemImageCache: @unchecked Sendable {
     /// but skips full cache management (LRU eviction, failure tracking,
     /// size enforcement, cleanup).
     /// Skips `@Published` updates when images haven't changed visually.
+    ///
+    /// Marked `@concurrent` because `nonisolated` alone does not leave the
+    /// caller's actor under Approachable Concurrency (SE-0461
+    /// nonisolated(nonsending)): the bounds queries, the crop, and the
+    /// detached copies would otherwise run on the main thread alongside UI
+    /// work. Cache publication hops back through `applyRefreshedImages`,
+    /// which stays on the main actor.
+    @concurrent
     nonisolated func refreshImages(
         of items: [MenuBarItem],
         scale: CGFloat,
