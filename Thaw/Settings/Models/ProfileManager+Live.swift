@@ -8,8 +8,8 @@
 
 import Cocoa
 
-/// The live half of ``ProfileManager``: everything whose substance needs a
-/// running `AppState` — pushing snapshots into live managers, the spacing
+/// The live half of ProfileManager: everything whose substance needs a
+/// running AppState — pushing snapshots into live managers, the spacing
 /// relaunch wave, WindowServer display identity via Bridging, Carbon hotkey
 /// registration, and Focus Filter intents. None of that can run in a unit
 /// test, so this file is excluded from coverage in sonar-project.properties.
@@ -35,7 +35,7 @@ extension ProfileManager {
 
         // Note: profiles' didSet already calls rebuildProfileHotkeys() for
         // every assignment after this class's own init, so no explicit
-        // subscription is needed here (see the doc comment on `profiles`).
+        // subscription is needed here (see the doc comment on profiles).
 
         startObservationTasks()
 
@@ -453,7 +453,7 @@ extension ProfileManager {
     /// associated with the new active display and applies it.
     /// Skipped when a Focus Filter profile is currently active.
     ///
-    /// Internal rather than private because `startObservationTasks()` — which
+    /// Internal rather than private because startObservationTasks() — which
     /// stays in the measured file so its wiring remains testable — installs
     /// the closure that calls it.
     func checkDisplayAndAutoSwitch() async {
@@ -545,7 +545,7 @@ extension ProfileManager {
     /// Called when the Focus Filter deactivates (Focus mode turned off).
     /// Reverts to the display-based profile.
     ///
-    /// Internal for the same reason as ``checkDisplayAndAutoSwitch()``.
+    /// Internal for the same reason as checkDisplayAndAutoSwitch().
     func handleFocusFilterDeactivated() async {
         guard focusFilterActive else { return }
         focusFilterActive = false

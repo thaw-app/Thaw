@@ -166,7 +166,7 @@ struct BulkApplyIdleGateTests {
         #expect(window?.cap == .milliseconds(2000))
     }
 
-    /// A `defaults write` typo that lands a negative cap must degrade to
+    /// A defaults write typo that lands a negative cap must degrade to
     /// "don't wait", never to a batch that cannot start.
     @Test("A negative cap clamps to zero rather than blocking forever")
     func negativeCapClamps() {

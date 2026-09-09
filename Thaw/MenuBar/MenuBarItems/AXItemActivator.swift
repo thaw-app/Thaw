@@ -15,9 +15,9 @@ import Cocoa
 /// system gesture handling and lets items with their own click handling
 /// (e.g. the Wi-Fi picker) behave exactly as they would for a real click.
 ///
-/// Controlled by `AdvancedSettings.useAXClickDelivery` (default on; no
+/// Controlled by AdvancedSettings.useAXClickDelivery (default on; no
 /// longer surfaced in Settings). On any failure the caller
-/// (`MenuBarItemManager.click(item:with:)`) falls back to the existing
+/// (MenuBarItemManager.click(item:with:)) falls back to the existing
 /// synthetic click path unchanged.
 @MainActor
 enum AXItemActivator {
@@ -35,7 +35,7 @@ enum AXItemActivator {
 
     /// Tolerance (in points) used when verifying that a candidate element's
     /// AX frame corresponds to the target item's window bounds. Mirrors the
-    /// tolerance `pressItemViaAccessibility` uses for its own child-frame
+    /// tolerance pressItemViaAccessibility uses for its own child-frame
     /// matching.
     private static let frameMatchTolerance: CGFloat = 10
 
@@ -43,13 +43,13 @@ enum AXItemActivator {
     /// non-responsive app can't block a click indefinitely.
     private static let messagingTimeout: Float = 0.25
 
-    /// Activates `item` via an accessibility action.
+    /// Activates item via an accessibility action.
     ///
-    /// - Throws: ``ActivationError`` when the item's AX element can't be
+    /// - Throws: ActivationError when the item's AX element can't be
     ///   resolved and verified, or when AXPress had no effect — the element
     ///   refused the action and there was no sign of the owner
     ///   reacting. Callers should fall back to the synthetic click path on any
-    ///   error; ``ActivationError/actionFailed`` in particular now means the
+    ///   error; ActivationError/actionFailed in particular now means the
     ///   item was left alone, so clicking it is safe.
     static func activate(item: MenuBarItem) async throws {
         guard let element = resolveElement(for: item) else {
@@ -79,22 +79,22 @@ enum AXItemActivator {
 
     /// Accessibility actions that preserve ordinary left-click semantics.
     ///
-    /// `AXShowMenu` is deliberately absent: Apple status items interpret it
+    /// AXShowMenu is deliberately absent: Apple status items interpret it
     /// as their contextual/right-click menu, not their normal activation.
     static nonisolated let leftClickActions: [Action] = [.press]
 
-    /// Performs `actions` in order, stopping at the first one that has an
+    /// Performs actions in order, stopping at the first one that has an
     /// effect.
     ///
-    /// An action has an effect when the element accepts it **or** when the item
+    /// An action has an effect when the element accepts it or when the item
     /// is observed reacting to it. The second half is the whole point. A
     /// thrown action is not necessarily a no-op: an action can open a menu and
     /// then block because the menu runs a modal tracking loop and the app cannot
-    /// answer while it does, so ``messagingTimeout`` may expire on precisely
+    /// answer while it does, so messagingTimeout may expire on precisely
     /// the calls that worked.
     ///
     /// Reading that as failure escalates, and every escalation from here is a
-    /// second activation of an item whose menu is already open: `AXPress`
+    /// second activation of an item whose menu is already open: AXPress
     /// toggles it shut, and the synthetic click the caller falls back to after
     /// that toggles it again. The user sees the menu they asked for appear and
     /// vanish within the same second, which is what happens for third-party
@@ -118,13 +118,13 @@ enum AXItemActivator {
         return false
     }
 
-    /// Resolves the AX element for `item`.
+    /// Resolves the AX element for item.
     ///
     /// Resolution order:
     /// 1. Hit-test the systemwide element at the item's on-screen center
-    ///    (same coordinate space `HIDEventManager` uses for its own AX
+    ///    (same coordinate space HIDEventManager uses for its own AX
     ///    hit-testing: CoreGraphics global, top-left origin — the same space
-    ///    as `MenuBarItem.bounds`, so no conversion is needed).
+    ///    as MenuBarItem.bounds, so no conversion is needed).
     /// 2. Fall back to the owning app's extras menu bar, matching the child
     ///    whose AX frame contains the item's center.
     private static func resolveElement(for item: MenuBarItem) -> UIElement? {
@@ -138,7 +138,7 @@ enum AXItemActivator {
 
         // Fall back to sourcePID/ownerPID so this works even when
         // sourcePID hasn't resolved yet, matching the convention used by
-        // `MenuBarItemManager.pressItemViaAccessibility`.
+        // MenuBarItemManager.pressItemViaAccessibility.
         let pid = item.sourcePID ?? item.ownerPID
         guard
             let runningApp = NSRunningApplication(processIdentifier: pid),
@@ -162,13 +162,13 @@ enum AXItemActivator {
 
     /// Pure candidate-selection helper: given candidate frames (parallel to
     /// an AX children array) and a target point, returns the index of the
-    /// first frame containing the point, or `nil` when none does.
+    /// first frame containing the point, or nil when none does.
     static nonisolated func candidateIndex(inFrames frames: [CGRect], containing point: CGPoint) -> Int? {
         frames.firstIndex { $0.contains(point) }
     }
 
-    /// Pure frame-verification helper: whether `candidate`, expanded by
-    /// `tolerance` points in every direction, intersects `target`.
+    /// Pure frame-verification helper: whether candidate, expanded by
+    /// tolerance points in every direction, intersects target.
     static nonisolated func framesMatch(_ candidate: CGRect, _ target: CGRect, tolerance: CGFloat) -> Bool {
         candidate.insetBy(dx: -tolerance, dy: -tolerance).intersects(target)
     }

@@ -8,8 +8,8 @@
 
 import Cocoa
 import Subprocess
-// Prefer the `System` module when available: Subprocess's API surface uses
-// `System.FilePath`, so both sides must resolve to the same module or the
+// Prefer the System module when available: Subprocess's API surface uses
+// System.FilePath, so both sides must resolve to the same module or the
 // types won't unify.
 #if canImport(System)
     import System
@@ -36,7 +36,7 @@ final class MenuBarItemSpacingManager {
     }
 
     /// An error thrown when an app is still running after being asked to
-    /// quit. The app is left alone; see ``signalAppToQuit(_:)``.
+    /// quit. The app is left alone; see signalAppToQuit(_:).
     private struct AppNotTerminatedError: Error {}
 
     /// Snapshot of an app captured before the relaunch wave fires. The
@@ -54,7 +54,7 @@ final class MenuBarItemSpacingManager {
         /// How this app may be restarted, decided before the wave because
         /// it reads the running process's executable URL, which is gone by
         /// the time the fallback runs. Only apps the wave can bring back
-        /// are captured, so this is never `.leaveRunning`. (#720, #1070)
+        /// are captured, so this is never .leaveRunning. (#720, #1070)
         let strategy: SpacingRelaunchStrategy
     }
 
@@ -88,11 +88,11 @@ final class MenuBarItemSpacingManager {
     private let quitGracePeriod = 5
 
     /// Small cap on captured standard error from the spacing subprocess,
-    /// following the `HookRunner` output-limit pattern.
+    /// following the HookRunner output-limit pattern.
     private static let errorByteLimit = 16 * 1024
 
     /// The offset to apply to the default spacing and padding.
-    /// Does not take effect until ``applyOffset()`` is called.
+    /// Does not take effect until applyOffset() is called.
     var offset = 0
 
     /// Serializes overlapping applyOffset calls. Without this, two
@@ -109,7 +109,7 @@ final class MenuBarItemSpacingManager {
     /// for items to stabilize before moving them.
     private let applyOffsetSemaphore = SimpleSemaphore(value: 1)
 
-    /// Runs the executable at `executableURL` with the given arguments.
+    /// Runs the executable at executableURL with the given arguments.
     private func runCommand(
         _ command: String,
         executable executableURL: URL,
@@ -121,8 +121,8 @@ final class MenuBarItemSpacingManager {
             //
             // This used to run /usr/bin/env with "defaults" as its first
             // argument, so the tool that ended up writing to the global
-            // domain was whatever `defaults` the inherited PATH resolved to.
-            // `command` is now only used to describe the invocation in logs
+            // domain was whatever defaults the inherited PATH resolved to.
+            // command is now only used to describe the invocation in logs
             // and errors; every executable comes from Info.plist.
             result = try await Subprocess.run(
                 .path(FilePath(executableURL.path)),
@@ -167,7 +167,7 @@ final class MenuBarItemSpacingManager {
         )
     }
 
-    /// The launchd label that owns the given app's executable, or `nil`
+    /// The launchd label that owns the given app's executable, or nil
     /// when the app is not launched by a system LaunchAgent.
     private func launchdLabel(for app: NSRunningApplication) -> String? {
         guard let executableURL = app.executableURL else {
@@ -179,7 +179,7 @@ final class MenuBarItemSpacingManager {
     /// Restarts the launchd job with the given label in the calling user's
     /// GUI domain.
     ///
-    /// `kickstart -k` kills the running instance and starts a fresh one
+    /// kickstart -k kills the running instance and starts a fresh one
     /// with launchd as its parent, which is the whole point: it is the only
     /// way to bring a launch-constrained agent back, and it replaces the
     /// terminate-then-launch pair rather than supplementing it. (#720)
@@ -279,7 +279,7 @@ final class MenuBarItemSpacingManager {
     /// as their only launching parent. Terminating one and launching its
     /// bundle ourselves gets the new process SIGKILLed at exec -
     /// CODESIGNING, "Launch Constraint Violation" - and because terminate()
-    /// is a *successful* exit, an agent with KeepAlive.SuccessfulExit=false
+    /// is a successful exit, an agent with KeepAlive.SuccessfulExit=false
     /// (Spotlight's setting) is never respawned by launchd either, so the
     /// item stays gone until the machine is rebooted. Those go through
     /// launchd; a constrained binary with no label to kickstart is never
@@ -341,7 +341,7 @@ final class MenuBarItemSpacingManager {
         return onDiskSpacing != targetSpacing || onDiskPadding != targetPadding
     }
 
-    /// Applies the current ``offset``.
+    /// Applies the current offset.
     ///
     /// Returns true if a relaunch wave was actually fired, or false if
     /// the on-disk values already matched the requested offset and the

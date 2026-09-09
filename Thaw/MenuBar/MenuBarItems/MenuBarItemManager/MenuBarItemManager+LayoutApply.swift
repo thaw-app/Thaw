@@ -14,7 +14,7 @@ extension MenuBarItemManager {
     /// Tracks which move timestamp belongs to a multi-item automatic apply.
     ///
     /// Before the first move, the cache snapshot's preflight owns the verdict.
-    /// After each move releases `moveGate`, the batch adopts the timestamp seen
+    /// After each move releases moveGate, the batch adopts the timestamp seen
     /// while it still owned that gate. The next item therefore accepts changes
     /// made by this batch and rejects a user move that lands between items.
     nonisolated struct BatchMovePreflightState {
@@ -390,7 +390,7 @@ extension MenuBarItemManager {
             // (in which case it never takes ownership of the waiter and the
             // defer in cacheItemsRegardless never fires for this token) or
             // if the nested recache Task it hands off to never runs because
-            // `self` was deallocated first. Whichever side removes the token
+            // self was deallocated first. Whichever side removes the token
             // from the waiter table first owns the resume; the other is a
             // no-op.
             Task { [weak self] in
@@ -416,11 +416,11 @@ extension MenuBarItemManager {
             await appState.imageCache.updateCacheWithoutChecks(sections: MenuBarSection.Name.allCases)
         }
 
-        // `appState` is now `@Observable` (wave 4), so the manual
-        // `objectWillChange.send()` poke that used to force views bound to
-        // `appState` to refresh after the async `imageCache` mutations above
+        // appState is now @Observable (wave 4), so the manual
+        // objectWillChange.send() poke that used to force views bound to
+        // appState to refresh after the async imageCache mutations above
         // is no longer needed: Observation tracks each mutated property
-        // (`imageCache`'s own storage) directly, independent of this poke.
+        // (imageCache's own storage) directly, independent of this poke.
 
         // Clear any stale -1 sentinel that may have been written into
         // menuBarHeightCache while the Menubar window was transiently
@@ -505,17 +505,17 @@ extension MenuBarItemManager {
             guard !self.isInStartupSettling else { return }
             guard !self.isRestoringItemOrder else { return }
 
-            // Same gate `applySavedLayout` consults, for the same reason.
+            // Same gate applySavedLayout consults, for the same reason.
             // This dispatch already feeds the streak through
-            // `recordBulkApplyOutcome`, but until now nothing read it here,
+            // recordBulkApplyOutcome, but until now nothing read it here,
             // so a bar whose batches never complete re-sorted on every
             // late arrival forever. In #899 that ran seven passes in 22
             // seconds — each one a full move batch with the cursor
             // hijacked — until the reporter killed the app.
             //
             // A late-arrival re-sort is automatic, so it belongs under the
-            // gate. User-initiated applies still bypass it: `applyProfile`
-            // calls `applyProfileLayout` directly and never comes through
+            // gate. User-initiated applies still bypass it: applyProfile
+            // calls applyProfileLayout directly and never comes through
             // here.
             guard self.isAutomaticBulkApplyPermitted(caller: "Profile re-sort") else {
                 return
@@ -733,8 +733,8 @@ extension MenuBarItemManager {
     /// returns before Phase 1, the boundary mismatch is never computed, and
     /// the recovery that would rebuild the divider never advances its streak.
     /// #978's log caught the shape exactly: one launch produced 17
-    /// `parked offscreen` and 24 `zero width` warnings and not a single
-    /// `Phase 1:` line.
+    /// parked offscreen and 24 zero width warnings and not a single
+    /// Phase 1: line.
     ///
     /// So the guards still refuse — nothing plans against the bad reading —
     /// but a stranded divider now counts the refusal, and a run of them
@@ -743,7 +743,7 @@ extension MenuBarItemManager {
     /// strands the drag the same way the parked divider does.
     /// Collects the control-item bounds the divider-order gate compares.
     ///
-    /// `nil` for a divider that is absent from the reading; the order gate
+    /// nil for a divider that is absent from the reading; the order gate
     /// treats absence as unverifiable rather than as a violation.
     private func dividerControlItemBounds(
         items: [MenuBarItem],
@@ -783,8 +783,8 @@ extension MenuBarItemManager {
     /// "Success" is the apply reaching an uncancelled exit, which is not the
     /// same as the bar having taken the arrangement. An apply that plans
     /// moves and fails to enact them still lands here, and this is the one
-    /// write to `savedSectionOrder` that never consulted
-    /// ``LayoutSolver/shouldPersistSavedOrder(_:)`` — so a bar whose drags
+    /// write to savedSectionOrder that never consulted
+    /// LayoutSolver/shouldPersistSavedOrder(_:) — so a bar whose drags
     /// were failing had its wreckage committed while every gated save was
     /// refusing for exactly that reason (#978). The section order is
     /// withheld on an unfinished batch for the same reason the gated path
@@ -878,9 +878,9 @@ extension MenuBarItemManager {
             guard let appState = self.appState else { return }
             appState.imageCache.performCacheCleanup()
             await appState.imageCache.updateCacheWithoutChecks(sections: MenuBarSection.Name.allCases)
-            // `appState` is now `@Observable` (wave 4); Observation tracks
-            // the `imageCache` mutations above directly, so the manual
-            // `objectWillChange.send()` poke is no longer needed.
+            // appState is now @Observable (wave 4); Observation tracks
+            // the imageCache mutations above directly, so the manual
+            // objectWillChange.send() poke is no longer needed.
         }
     }
 
@@ -897,7 +897,7 @@ extension MenuBarItemManager {
         let rawItemSectionMap = spec.itemSectionMap
         let rawItemOrder = spec.itemOrder
         // A profile saved before an item was renamed after its app still
-        // names it by its helper (`at.obdev.littlesnitch.agent:Item-0`).
+        // names it by its helper (at.obdev.littlesnitch.agent:Item-0).
         // Migrate on the way in so the plan is built against identifiers
         // the live bar can actually produce; the profile on disk is
         // rewritten the next time the layout is persisted. Keyed maps are
@@ -930,8 +930,8 @@ extension MenuBarItemManager {
         }
 
         // Automatic applies additionally wait for the user to stop
-        // interacting. `automatic` is the same distinction
-        // `automaticBulkApplyPermitted` already draws at the two dispatch
+        // interacting. automatic is the same distinction
+        // automaticBulkApplyPermitted already draws at the two dispatch
         // sites: a late-arrival re-sort or a saved-layout restore is
         // something Thaw decided to do, and it can afford to wait for a
         // lull. A profile the user just picked cannot — they are watching
@@ -1111,10 +1111,10 @@ extension MenuBarItemManager {
         // change nothing, so the next pass plans the same set again.
         //
         // #881's 08:41 log dragged the same six items 69 times over four
-        // minutes on `ahCtrlUID=nil, crossSectionMoves=8`, the always-hidden
+        // minutes on ahCtrlUID=nil, crossSectionMoves=8, the always-hidden
         // divider having gone unresolved in 552 of 578 cycles.
         //
-        // `saveSectionOrder` already refuses to persist this reading (#849).
+        // saveSectionOrder already refuses to persist this reading (#849).
         // Refusing to move on it is the same judgement one step earlier: an
         // apply that cannot see the boundary cannot plan across it. The state
         // is unwound so the next cache tick retries once the pair resolves.
@@ -1269,7 +1269,7 @@ extension MenuBarItemManager {
         let provisionalIdentityUIDs = LayoutSolver.provisionalIdentityUIDs(items: items)
         // A trigger-owned item is deliberately missing from the desired
         // layout, so it would otherwise be classified as an unmanaged arrival
-        // and given a `.saved` placement from the unfiltered saved order --
+        // and given a .saved placement from the unfiltered saved order --
         // moving it straight back out of where the trigger put it.
         let triggerControlledUIDs = triggerProtectedUIDs(among: currentFlat, items: items)
         let unmanagedUIDs = LayoutSolver.partitionUnmanagedUIDs(
@@ -1288,7 +1288,7 @@ extension MenuBarItemManager {
             // Pinning is left empty here because this code path only
             // positions unmanaged items, not the profile spec items.
             // Retired identifiers are dropped before the lookup, not after:
-            // the saved position is an *index* into these arrays, so a ghost
+            // the saved position is an index into these arrays, so a ghost
             // ahead of a live entry pushes a returning item one slot right of
             // where the user left it, every time, forever. The same pruned
             // order must feed the application below — a saved index only
@@ -1354,8 +1354,8 @@ extension MenuBarItemManager {
         // Gated by the user-facing "Enable menu bar item overflow" toggle in
         // Advanced Settings; when off, the saved profile layout is honoured
         // verbatim and items the notch would otherwise eject stay in visible.
-        // The overflow gate reads the *actual* active menu bar screen — no
-        // `NSScreen.main` fallback. Guessing a screen while the active one is
+        // The overflow gate reads the actual active menu bar screen — no
+        // NSScreen.main fallback. Guessing a screen while the active one is
         // unknown risks budgeting against the wrong display, which is the
         // exact failure this gate prevents, so the gate fails closed instead.
         let activeMenuBarScreen = NSScreen.screenWithActiveMenuBar
@@ -1464,7 +1464,7 @@ extension MenuBarItemManager {
         // refused, this time against the bounds this apply actually planned
         // from. applySavedLayout tests the cache cycle's snapshot, but Phase 2
         // re-reads every item from the Window Server, so the dividers can
-        // collapse in between — and it is *these* bounds that classified the
+        // collapse in between — and it is these bounds that classified the
         // sections above. A collapse means findSection misread the whole
         // hidden section as .visible, so the moves below would drag it to the
         // wrong side of the dividers and, by separating them, un-trip the
@@ -1558,7 +1558,7 @@ extension MenuBarItemManager {
         // The reporter's restart parked the hidden divider far offscreen
         // with the chevron classified into hidden — the unmanaged-placement
         // and LCS passes then planned against that scramble. Profile applies
-        // are gated too: the room exemption above is about *adjacent*
+        // are gated too: the room exemption above is about adjacent
         // dividers legitimately describing an empty section, and an
         // out-of-order divider describes nothing. Refusing defers; the
         // recovery calls re-order the bar so the next cycle's divergence
@@ -1590,16 +1590,16 @@ extension MenuBarItemManager {
         // restore can warp back directly — CGWarpMouseCursorPosition takes
         // CoreGraphics coordinates, matching what each inner move() already
         // uses. The previous AppKit capture flipped against the cursor's
-        // *containing* screen instead of the primary, so on vertically
+        // containing screen instead of the primary, so on vertically
         // stacked or mixed-height multi-monitor setups the restore warped
         // the cursor onto the wrong display.
         //
-        // The hide is released by `restoreCursor()` as soon as the last move
-        // lands, *not* at function exit: everything after Phase 6 (control
+        // The hide is released by restoreCursor() as soon as the last move
+        // lands, not at function exit: everything after Phase 6 (control
         // item width restoration, the settling sleeps, the closing
         // getMenuBarItems pass, state persistence) moves no cursor, so
         // keeping it hidden there only lengthens the window in which the
-        // user has no pointer. The `defer` is the balance for the early
+        // user has no pointer. The defer is the balance for the early
         // return paths that never reach the end of Phase 6.
         let savedCursorPosition = MouseHelpers.locationCoreGraphics
         let cursorOwnershipStartedAt = ContinuousClock.now
@@ -1759,7 +1759,7 @@ extension MenuBarItemManager {
         // hidden per the profile (or vice versa), regardless of whether
         // they appear in BOTH desired sets. The previous
         // crossSectionMoves tally only counts items present in the
-        // *opposite* desired section, which is too narrow: when the
+        // opposite desired section, which is too narrow: when the
         // profile has empty hidden/always-hidden, or when items have
         // simply drifted out of one section without an explicit
         // counterpart, the AH_ctrl move is still the right answer
@@ -1859,8 +1859,8 @@ extension MenuBarItemManager {
         )
         // A zero mismatch alone must not clear the streak. #978's divider
         // stranded while the visible/hidden boundary was consistent —
-        // `hiddenBoundaryMismatch=0` on the very cycle that logged
-        // `parked offscreen` — so resetting here zeroed the counter on every
+        // hiddenBoundaryMismatch=0 on the very cycle that logged
+        // parked offscreen — so resetting here zeroed the counter on every
         // pass and the recovery could never reach its threshold. Clear it
         // only once the divider is demonstrably not stranded, using the same
         // both-edges test the recovery arms on so the two agree about a
@@ -1985,7 +1985,7 @@ extension MenuBarItemManager {
                         }
                         if !LayoutSolver.isOnScreen(bounds: hItem.bounds, screenFrames: screenFrames) {
                             // The divider itself has to be on screen for the drag
-                            // to land. #881 excluded parked *anchors*; a parked
+                            // to land. #881 excluded parked anchors; a parked
                             // H_ctrl fails the same way from the other side — the
                             // drag point is on screen so the owner accepts the
                             // events, but AppKit still snaps the divider back to
@@ -2346,7 +2346,7 @@ extension MenuBarItemManager {
             // Never anchor on an offscreen destination. Anchoring beside a
             // parked item drags AH_ctrl into the parked zone, which is how
             // #978 acquired its second, worse fault: the AH_ctrl move
-            // targeted `left of ControlItem.Hidden` while H_ctrl sat at
+            // targeted left of ControlItem.Hidden while H_ctrl sat at
             // minX=-3596, the drag walked H_ctrl to -9322, and the pair came
             // out inverted with the hidden section reading zero width. The
             // reporter traced their strand to this path rather than to the
@@ -2885,11 +2885,11 @@ extension MenuBarItemManager {
     /// apply in flight, cooldown active, no detected change to react
     /// to, no saved items currently present).
     /// Detects whether the current bar layout differs from
-    /// `savedSectionOrder` in section membership. Returns true if any
+    /// savedSectionOrder in section membership. Returns true if any
     /// movable, hideable item whose baseID appears in the saved order
     /// is currently in a different section than where it was saved.
     ///
-    /// Used as a secondary trigger for `applySavedLayout`: the windowID
+    /// Used as a secondary trigger for applySavedLayout: the windowID
     /// gate fires on app quit/relaunch, but ambient drift (third-party
     /// menu bar tools, Stage Manager toggles, macOS re-spawning the
     /// bar without churning windowIDs) leaves windowIDs intact while
@@ -2898,8 +2898,8 @@ extension MenuBarItemManager {
     ///
     /// Lightweight by design: item bounds are read from the supplied
     /// items array (already populated by the caller's
-    /// `getMenuBarItems` pass) rather than via per-item AX round-trips
-    /// through `CacheContext`. Items that straddle a control-item
+    /// getMenuBarItems pass) rather than via per-item AX round-trips
+    /// through CacheContext. Items that straddle a control-item
     /// boundary are ignored to avoid false positives during transient
     /// section show/hide animations. Exact instance identifiers participate
     /// directly; base-identifier fallback is allowed only when all saved
@@ -2907,9 +2907,9 @@ extension MenuBarItemManager {
     /// from multi-instance items split across sections.
     /// Pure decision helper (#754) for whether a rebuild of the control
     /// items' underlying status items should be triggered, given the
-    /// number of consecutive `ControlItemPair` lookup failures seen so far.
+    /// number of consecutive ControlItemPair lookup failures seen so far.
     /// Extracted so the escalation threshold can be unit-tested without a
-    /// live `NSStatusItem`. The episode latch resets only after a successful
+    /// live NSStatusItem. The episode latch resets only after a successful
     /// lookup, so a permanent failure can trigger at most one rebuild.
     static nonisolated func shouldRebuildControlItems(
         consecutiveFailures: Int,
@@ -2920,7 +2920,7 @@ extension MenuBarItemManager {
     }
 
     /// The wait a change-detector recache must respect while control-item
-    /// lookups keep failing, or `nil` while no backoff applies.
+    /// lookups keep failing, or nil while no backoff applies.
     ///
     /// A lookup failure leaves the window-ID snapshot uncommitted so the
     /// change detector re-fires — which is right for a transient race and
@@ -2929,7 +2929,7 @@ extension MenuBarItemManager {
     /// missing control item. Below the rebuild threshold there is no wait,
     /// so startup transients recover at full speed; past it the wait
     /// doubles per failure and caps, keeping recovery automatic (a retry
-    /// still runs every `maxDelay`) without the constant churn. Real
+    /// still runs every maxDelay) without the constant churn. Real
     /// changes are unaffected — event-driven recaches bypass the detector.
     static nonisolated func controlItemLookupRetryBackoff(
         consecutiveFailures: Int,
@@ -2981,11 +2981,11 @@ extension MenuBarItemManager {
     /// position.
     ///
     /// Both rebuild paths exist to discard a stale autosave position, and both
-    /// discard it by writing the seed `preflightSetup` uses on a fresh install.
+    /// discard it by writing the seed preflightSetup uses on a fresh install.
     /// That value describes a bar Thaw has never arranged. Writing it onto a
     /// bar that already holds managed items drops the rebuilt divider on one
     /// side of all of them, and the next cache pass reads the entire bar into a
-    /// single section — the collapse `preflightSetup` documents for #895,
+    /// single section — the collapse preflightSetup documents for #895,
     /// reached through the same guard-bypassing write that reopened it for
     /// #890.
     ///
@@ -2994,19 +2994,19 @@ extension MenuBarItemManager {
     /// while three earlier parkings that never rebuilt leave the bar intact.
     ///
     /// Skipping the stamp does not cost the recovery its purpose. Discarding
-    /// the old `NSStatusItem` is what gives the divider a window on the current
+    /// the old NSStatusItem is what gives the divider a window on the current
     /// bar again; the follow-up apply the caller schedules is what walks it to
     /// the saved boundary.
     static nonisolated func canSeedRebuiltDividerPosition(managedItemCount: Int) -> Bool {
         managedItemCount == 0
     }
 
-    /// The stored `NSStatusItem` preferred positions of the three control
-    /// items, as a divider rebuild reads them back off `ControlItemDefaults`.
+    /// The stored NSStatusItem preferred positions of the three control
+    /// items, as a divider rebuild reads them back off ControlItemDefaults.
     ///
-    /// Larger means further left: `ControlItem.preflightSetup` seeds the
+    /// Larger means further left: ControlItem.preflightSetup seeds the
     /// visible item at 0 and the hidden divider at 1, and a healthy bar runs
-    /// `visible < hidden < alwaysHidden` reading right to left. `nil` means
+    /// visible < hidden < alwaysHidden reading right to left. nil means
     /// nothing is stored for that item — the always-hidden divider has no
     /// seed at all, and carries none while its section is disabled.
     nonisolated struct StoredDividerPositions {
@@ -3020,7 +3020,7 @@ extension MenuBarItemManager {
     ///
     /// A rebuild that keeps the stored position is only safe while that
     /// position orders the dividers correctly. #978's did not: macOS had
-    /// autosaved `hidden=6866` against `alwaysHidden=1034`, putting H_ctrl
+    /// autosaved hidden=6866 against alwaysHidden=1034, putting H_ctrl
     /// left of AH_ctrl, which is the inversion that reads as a zero-width
     /// hidden section. Restoring it on the next launch is why a relaunch
     /// stopped clearing the strand — the app came up already stranded, first
@@ -3041,10 +3041,10 @@ extension MenuBarItemManager {
         return true
     }
 
-    /// A stored position to replace an inverted one with, or `nil` when the
+    /// A stored position to replace an inverted one with, or nil when the
     /// neighbours give nothing to place the divider between.
     ///
-    /// This restores *ordering*, not geometry. Dropping H_ctrl back between
+    /// This restores ordering, not geometry. Dropping H_ctrl back between
     /// the two chevrons is what gives the following apply a bar it can plan
     /// against; walking the divider to the saved boundary is that apply's
     /// job, exactly as it is for the empty-bar seed.
@@ -3071,7 +3071,7 @@ extension MenuBarItemManager {
 
     /// What a divider rebuild should do with the stored preferred position.
     nonisolated enum RebuiltDividerSeed: Equatable {
-        /// Stamp the value `ControlItem.preflightSetup` writes on a fresh
+        /// Stamp the value ControlItem.preflightSetup writes on a fresh
         /// install. Only for a bar with no managed items.
         case freshInstall(CGFloat)
         /// Rebuild without touching the stored position.
@@ -3079,7 +3079,7 @@ extension MenuBarItemManager {
         /// Stamp a replacement because the stored position is inverted.
         case repaired(CGFloat)
 
-        /// The value to hand `ControlItem.recreateStatusItem`, or `nil` to
+        /// The value to hand ControlItem.recreateStatusItem, or nil to
         /// leave the stored position alone.
         var preferredPosition: CGFloat? {
             switch self {
@@ -3098,7 +3098,7 @@ extension MenuBarItemManager {
     /// - An empty bar takes the fresh-install seed, so it lands where a fresh
     ///   install puts it.
     /// - A populated bar whose stored position still orders the dividers
-    ///   keeps it, per ``canSeedRebuiltDividerPosition(managedItemCount:)``.
+    ///   keeps it, per canSeedRebuiltDividerPosition(managedItemCount:).
     /// - A populated bar whose stored position is inverted takes a repaired
     ///   one. Keeping an inverted position is what made #978 survive a
     ///   relaunch: the rebuild logged "keeping its stored position", restored
@@ -3199,10 +3199,10 @@ extension MenuBarItemManager {
         let knownBaseIdentifiers = Set(items.map(\.tag.stableIdentifierBase))
         let knownLiveIdentifiers = Set(items.map(\.uniqueIdentifier))
         // No trigger owns anything unless the user configured one, and with an
-        // empty protected set `isTriggerProtected` misses the exact match and
+        // empty protected set isTriggerProtected misses the exact match and
         // resolves a base identifier per candidate per live item — quadratic on
         // a path that runs every cache cycle. Same early return as
-        // `triggerProtectedUIDs`.
+        // triggerProtectedUIDs.
         let hasTriggerProtectedItems = !triggerControlledItemIdentifiers.isEmpty
 
         return Self.layoutDivergesFromSaved(
@@ -3240,17 +3240,17 @@ extension MenuBarItemManager {
         let bounds: CGRect
     }
 
-    /// Whether any item sits in a different section than `savedSectionOrder`
+    /// Whether any item sits in a different section than savedSectionOrder
     /// records for it.
     ///
-    /// This is the second of `applySavedLayout`'s two triggers, and the one
+    /// This is the second of applySavedLayout's two triggers, and the one
     /// that fires on ambient drift rather than on items coming and going. Both
     /// exemptions are passed in rather than derived so the rule stays pure:
     ///
-    /// - `overflowExemptUIDs` carries the notch-overflow ejections, and is
+    /// - overflowExemptUIDs carries the notch-overflow ejections, and is
     ///   empty unless the caller has already established that the feature is
     ///   on and the active display is notched.
-    /// - `activelyShownTags` carries the items Thaw is temporarily showing. One
+    /// - activelyShownTags carries the items Thaw is temporarily showing. One
     ///   of those sits outside its saved section because Thaw put it there, and
     ///   it stays there until the rehide runs. Reading that as drift arms a
     ///   bulk apply whose only remaining brake is the open-menu probe, and a
@@ -3354,17 +3354,17 @@ extension MenuBarItemManager {
     /// The profile's items that have appeared since the last profile sort,
     /// and so warrant a re-sort.
     ///
-    /// Items with an unresolved `sourcePID` are excluded. `uniqueIdentifier`
-    /// is derived from `sourcePID` via the tag's namespace, so an item whose
+    /// Items with an unresolved sourcePID are excluded. uniqueIdentifier
+    /// is derived from sourcePID via the tag's namespace, so an item whose
     /// PID did not resolve carries a fallback identity — it collapses into
     /// the Control Center host namespace or repeats its bundle ID as the
     /// title. Counting those as arrivals turns a resolution flap into a
     /// re-sort: the same item alternates between
-    /// `eu.exelban.Stats:CPU_bar_chart` and `eu.exelban.Stats:eu.exelban.Stats:1`,
+    /// eu.exelban.Stats:CPU_bar_chart and eu.exelban.Stats:eu.exelban.Stats:1,
     /// and whichever form the last sort did not see reads as brand new.
     ///
     /// #881's reporter sat at 16–17 of 34 items unresolved for most of an
-    /// hour — under ``majorityOfSourcePIDsUnresolved``'s bar, which needs a
+    /// hour — under majorityOfSourcePIDsUnresolved's bar, which needs a
     /// strict majority — so the applies ran and re-ran, each one landing its
     /// moves and each one re-arming the next.
     ///
@@ -3400,14 +3400,14 @@ extension MenuBarItemManager {
     ///
     /// Dropping an identifier from the desired order leaves the
     /// corresponding item untouched rather than mispositioned, because
-    /// ``LayoutSolver/planLCSMoveSequence(currentNoControls:desiredNoControls:sectionMap:)``
+    /// LayoutSolver/planLCSMoveSequence(currentNoControls:desiredNoControls:sectionMap:)
     /// intersects current with desired and only moves identifiers present in
     /// both. Section keys are preserved even when they empty out, so the
     /// caller can tell an empty section from a missing one.
     ///
     /// The match is exact rather than base-identifier: a base match could
-    /// admit an unresolved sibling of a resolved item (`Item-0:1` resolved,
-    /// `Item-0:2` not), which is exactly what this restriction excludes.
+    /// admit an unresolved sibling of a resolved item (Item-0:1 resolved,
+    /// Item-0:2 not), which is exactly what this restriction excludes.
     static nonisolated func savedOrderRestrictedToResolvedIdentities(
         savedSectionOrder: [String: [String]],
         resolvedIdentifiers: Set<String>
@@ -3419,7 +3419,7 @@ extension MenuBarItemManager {
 
     /// Decides whether a divergence observation should trigger the apply.
     ///
-    /// A single divergent reading of `currentLayoutDivergesFromSaved` can be
+    /// A single divergent reading of currentLayoutDivergesFromSaved can be
     /// transient: an app activating with a wide application menu compresses
     /// or covers status items, shifting their bounds for the duration the
     /// menu is up. Reading that shift as "items in the wrong section" and
@@ -3469,8 +3469,8 @@ extension MenuBarItemManager {
     /// Time alone cannot make the partial result authoritative: allowing this
     /// latch to expire rewrites the saved order with the failed batch's own
     /// wreckage on the next cache change (#900). A clean apply clears the
-    /// latch through `recordBulkApplyOutcome`; an explicit user move clears it
-    /// through `recordExternalMoveOperation`.
+    /// latch through recordBulkApplyOutcome; an explicit user move clears it
+    /// through recordExternalMoveOperation.
     static nonisolated func unfinishedMoveBatchBlocksSave(
         observedAt: ContinuousClock.Instant?
     ) -> Bool {
@@ -3484,7 +3484,7 @@ extension MenuBarItemManager {
     /// circumstantial (a menu was up, an owner was mid-relaunch) and the
     /// retry is what the save-withhold window exists to make room for. A
     /// second consecutive unfinished batch means the bar itself is
-    /// refusing the moves (#900's `cannotComplete` bar), and each further
+    /// refusing the moves (#900's cannotComplete bar), and each further
     /// pass costs the user a hidden cursor for the length of the batch
     /// while landing yet another partial arrangement (#899). From then on
     /// dispatch is rationed to one attempt per cooldown rather than one
@@ -3493,7 +3493,7 @@ extension MenuBarItemManager {
     ///
     /// User-initiated applies (a profile switch) do not consult this gate:
     /// an explicit request is worth a fresh attempt regardless of history.
-    /// They still feed the streak through `recordBulkApplyOutcome`, so a
+    /// They still feed the streak through recordBulkApplyOutcome, so a
     /// failed manual attempt does not hand the automatic path a clean
     /// slate.
     static nonisolated func automaticBulkApplyPermitted(
@@ -3540,7 +3540,7 @@ extension MenuBarItemManager {
         consecutiveFailures >= threshold
     }
 
-    /// The idle window an automatic bulk apply should wait for, or `nil`
+    /// The idle window an automatic bulk apply should wait for, or nil
     /// when the gate is switched off.
     ///
     /// Splitting the sanitising out of the wait loop keeps the two things
@@ -3548,7 +3548,7 @@ extension MenuBarItemManager {
     /// stop" — testable without a clock. A non-positive threshold is the
     /// off switch rather than a zero-length window, so the caller can skip
     /// the loop entirely; a negative cap is clamped rather than rejected,
-    /// because a `defaults write` typo should degrade to "don't wait", not
+    /// because a defaults write typo should degrade to "don't wait", not
     /// to a batch that never starts.
     static nonisolated func bulkApplyIdleWindow(
         thresholdMs: Int,
@@ -3590,7 +3590,7 @@ extension MenuBarItemManager {
         automatic && !userHasPausedPhysicalInput
     }
 
-    /// The previous cache cycle's state that ``applySavedLayout`` diffs
+    /// The previous cache cycle's state that applySavedLayout diffs
     /// the current bar against to decide whether a restore is warranted.
     nonisolated struct PreviousCacheCycle {
         var windowIDs: [CGWindowID]
@@ -3684,7 +3684,7 @@ extension MenuBarItemManager {
         // windowIDsChanged didn't already advance the gate, so the
         // happy path on app quit/relaunch pays nothing.
         //
-        // A single divergent reading is required to be *stable* across two
+        // A single divergent reading is required to be stable across two
         // consecutive cache cycles before it advances the gate (#723): an
         // app activating with a wide application menu can transiently
         // compress or cover status items, which currentLayoutDivergesFromSaved
@@ -3695,7 +3695,7 @@ extension MenuBarItemManager {
         // arms/consumes the pending-divergence state below.
         let currentWindowIDSet = Set(items.map(\.windowID))
         let previousWindowIDSet = Set(previousCycle.windowIDs)
-        // Control-Center-generic (`Item-N`) windows churn windowIDs while
+        // Control-Center-generic (Item-N) windows churn windowIDs while
         // the visible item count stays stable (Live Activities, transient
         // CC widgets). Their disappearance is not an app quit/relaunch and
         // must not dispatch a bulk apply, or every churn cycle replays the
@@ -3742,7 +3742,7 @@ extension MenuBarItemManager {
         //
         // resolvedIdentitiesOnly callers are exempt: they deliberately run
         // while most sourcePIDs are still unresolved, and confine the apply
-        // to the identities that *are* resolved (see effectiveSavedOrder).
+        // to the identities that are resolved (see effectiveSavedOrder).
         let unresolvedSourcePIDCount = items.count { $0.sourcePID == nil }
         if !resolvedIdentitiesOnly,
            Self.majorityOfSourcePIDsUnresolved(unresolvedCount: unresolvedSourcePIDCount, itemCount: items.count)
@@ -3864,7 +3864,7 @@ extension MenuBarItemManager {
             alwaysHiddenControlItemMaxX: controlItems.alwaysHidden?.bounds.maxX,
             savedHiddenItemCount: effectiveSavedOrder[sectionKey(for: .hidden)]?.count ?? 0,
             // Read off the bar this apply was handed, not the cache: this path
-            // is entered with `items` and runs before any recache.
+            // is entered with items and runs before any recache.
             liveHiddenItemCount: LayoutSolver.liveHiddenItemCount(
                 itemBounds: items.map(\.bounds),
                 hiddenControlItemMinX: controlItems.hidden.bounds.minX,
@@ -3997,7 +3997,7 @@ extension MenuBarItemManager {
             // Read the bar again rather than reusing the pre-apply sets. The
             // apply moved items and may have gained or lost a same-title
             // sibling; a stale candidate count makes
-            // `triggerProtectionIdentifiers` answer with nothing, which reads
+            // triggerProtectionIdentifiers answer with nothing, which reads
             // as unprotected and clears the shield of an item the trigger
             // still controls.
             let postApplyItems = await MenuBarItem.getMenuBarItems(option: .activeSpace)

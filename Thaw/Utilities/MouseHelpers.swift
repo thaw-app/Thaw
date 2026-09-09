@@ -14,15 +14,15 @@ import Synchronization
 nonisolated enum MouseHelpers {
     private static let diagLog = DiagLog(category: "MouseHelpers")
 
-    /// Cursor hide/show bookkeeping. The `CGDisplayHideCursor` /
-    /// `CGDisplayShowCursor` calls that `hideCount` mirrors are made *inside*
+    /// Cursor hide/show bookkeeping. The CGDisplayHideCursor /
+    /// CGDisplayShowCursor calls that hideCount mirrors are made inside
     /// the same critical section, so the count and the window server's hide
     /// state can never diverge through interleaving (a hide landing between
     /// another thread's decrement and its show call used to strand the
     /// cursor hidden until the watchdog fired).
     private struct CursorState {
         var hideCount = 0
-        /// The armed watchdog, if any. Sleeps until `watchdogDeadline`, then
+        /// The armed watchdog, if any. Sleeps until watchdogDeadline, then
         /// force-shows the cursor as the safety net against unbalanced hides.
         var watchdogTask: Task<Void, Never>?
         /// Deadline of the armed watchdog, used to extend — never shorten —
@@ -47,7 +47,7 @@ nonisolated enum MouseHelpers {
     /// nested long-timeout hide extends the 1s default a shorter first
     /// holder armed, so the watchdog can't force-show mid-operation).
     ///
-    /// Must be called while holding the `cursorState` lock. Returns whether
+    /// Must be called while holding the cursorState lock. Returns whether
     /// a new watchdog was scheduled so the caller can log outside the lock.
     private static func scheduleWatchdog(_ state: inout CursorState, after timeout: Duration) -> Bool {
         let deadline = ContinuousClock.now + timeout
@@ -66,7 +66,7 @@ nonisolated enum MouseHelpers {
         return true
     }
 
-    /// Must be called while holding the `cursorState` lock.
+    /// Must be called while holding the cursorState lock.
     private static func cancelWatchdog(_ state: inout CursorState) {
         state.watchdogTask?.cancel()
         state.watchdogTask = nil
@@ -104,14 +104,14 @@ nonisolated enum MouseHelpers {
     }
 
     /// Returns the location of the mouse cursor in the coordinate
-    /// space used by `AppKit`, with the origin at the bottom left
+    /// space used by AppKit, with the origin at the bottom left
     /// of the screen.
     static var locationAppKit: CGPoint? {
         CGEvent(source: nil)?.unflippedLocation
     }
 
     /// Returns the location of the mouse cursor in the coordinate
-    /// space used by `CoreGraphics`, with the origin at the top left
+    /// space used by CoreGraphics, with the origin at the top left
     /// of the screen.
     static var locationCoreGraphics: CGPoint? {
         CGEvent(source: nil)?.location
@@ -145,7 +145,7 @@ nonisolated enum MouseHelpers {
     }
 
     /// Decrements the hide cursor count and shows the mouse cursor
-    /// if the count is `0`.
+    /// if the count is 0.
     static func showCursor() {
         var wasAlreadyZero = false
         var showFailure: CGError?
@@ -205,9 +205,9 @@ nonisolated enum MouseHelpers {
     }
 
     /// Returns the point to warp the cursor to in order to place it over a
-    /// menu bar item, or `nil` if the item isn't on any of the given displays.
+    /// menu bar item, or nil if the item isn't on any of the given displays.
     ///
-    /// `CGWarpMouseCursorPosition` clamps an offscreen point to the leftmost
+    /// CGWarpMouseCursorPosition clamps an offscreen point to the leftmost
     /// edge of a display, which sits under the Apple menu, so an item that is
     /// offscreen has to be left alone rather than warped to.
     ///
@@ -226,10 +226,10 @@ nonisolated enum MouseHelpers {
         return point
     }
 
-    /// Returns the cursor to `point` after an operation that moved it.
+    /// Returns the cursor to point after an operation that moved it.
     ///
     /// An unconditional warp, matching what these call sites did before the
-    /// cursor work landed and what `development` does today. A richer version
+    /// cursor work landed and what development does today. A richer version
     /// once preferred the user's own position when they moved the mouse
     /// mid-operation, backed by a hide-suspension mechanism in this type; it
     /// arrived with the macOS 27 backport (#811) and left with the revert of
@@ -256,7 +256,7 @@ nonisolated enum MouseHelpers {
     /// Returns a Boolean value that indicates whether a mouse button
     /// is pressed.
     ///
-    /// - Parameter button: The mouse button to check. Pass `nil` to
+    /// - Parameter button: The mouse button to check. Pass nil to
     ///   check all available mouse buttons (Quartz supports up to 32).
     static func isButtonPressed(_ button: CGMouseButton? = nil) -> Bool {
         let stateID = CGEventSourceStateID.combinedSessionState
@@ -279,7 +279,7 @@ nonisolated enum MouseHelpers {
     /// movement event occurred within the given duration.
     ///
     /// - Parameter duration: The duration within which the last mouse
-    ///   movement event must have occurred in order to return `true`.
+    ///   movement event must have occurred in order to return true.
     static func lastMovementOccurred(
         within duration: Duration,
         stateID: CGEventSourceStateID = .combinedSessionState
@@ -311,7 +311,7 @@ nonisolated enum MouseHelpers {
     /// wheel event occurred within the given duration.
     ///
     /// - Parameter duration: The duration within which the last scroll
-    ///   wheel event must have occurred in order to return `true`.
+    ///   wheel event must have occurred in order to return true.
     static func lastScrollWheelOccurred(
         within duration: Duration,
         stateID: CGEventSourceStateID = .combinedSessionState

@@ -13,7 +13,7 @@ import Testing
 /// Covers the relaunch triage added for #1070.
 ///
 /// The spacing wave has to restart status item owners for a new
-/// `NSStatusItemSpacing` to show up right away, but a launch-constrained
+/// NSStatusItemSpacing to show up right away, but a launch-constrained
 /// system binary that no LaunchAgent claims cannot be brought back once it
 /// is down: the respawn is SIGKILLed by AMFI and the item is gone until
 /// reboot. Those must never be terminated in the first place.
@@ -102,7 +102,7 @@ struct SpacingRelaunchPolicyTests {
         )
     }
 
-    /// A helper can report a bundle outside `/System` while executing from
+    /// A helper can report a bundle outside /System while executing from
     /// inside it, or the reverse. Either spelling makes the spawn
     /// constrained, so either one is enough to skip it.
     @Test("A system executable in a non-system bundle is left running")
@@ -147,7 +147,7 @@ struct SpacingRelaunchPolicyTests {
         )
     }
 
-    /// `/Systems` and `/usrlocal` are not `/System/` and `/usr/`; the
+    /// /Systems and /usrlocal are not /System/ and /usr/; the
     /// prefixes carry their trailing separator so a same-prefixed name at
     /// the root can't be mistaken for a system location.
     @Test(

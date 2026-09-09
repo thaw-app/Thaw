@@ -12,13 +12,13 @@ import Testing
 /// Characterizes the gating decision that bounds the perpetual background
 /// capture loop feeding the SkyLight WindowServer leak (#759).
 ///
-/// `settingsPaneHasBeenOpened` used to be a sticky flag: once the user opened
-/// the layout settings pane a single time, it stayed `true` for the process
+/// settingsPaneHasBeenOpened used to be a sticky flag: once the user opened
+/// the layout settings pane a single time, it stayed true for the process
 /// lifetime, and every space/screen/appearance/item-cache change from then on
 /// triggered a full background capture of all sections — including offscreen
 /// sections through the leaking SkyLight path — even with every Thaw window
-/// closed. `shouldAllowBackgroundCapture` now gates on whether the pane is
-/// *currently* open, bounding the window in which background captures can run.
+/// closed. shouldAllowBackgroundCapture now gates on whether the pane is
+/// currently open, bounding the window in which background captures can run.
 @Suite("Menu bar item image cache gating")
 struct MenuBarItemImageCacheGatingTests {
     /// No visible consumer and the pane is closed: must not allow background

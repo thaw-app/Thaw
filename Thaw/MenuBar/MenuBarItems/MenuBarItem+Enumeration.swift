@@ -69,19 +69,19 @@ extension MenuBarItem {
     /// Every other route to a control item goes through the enumerated item
     /// list and can lose it: the primary lookup needs the window to be
     /// present in that list, tag matching needs an intact namespace, and
-    /// title matching needs a resolved `sourcePID`. All three fail together
+    /// title matching needs a resolved sourcePID. All three fail together
     /// whenever the item service's PID resolution degrades, and the window
     /// itself drops out of the list when it is parked far offscreen or
     /// filtered off the active space. What is left is frame correlation,
     /// which guesses.
     ///
-    /// None of that is necessary. Thaw created these `NSStatusItem`s and
+    /// None of that is necessary. Thaw created these NSStatusItems and
     /// holds their windows, so their IDs are known first-hand. This asks the
     /// window server about one specific window rather than searching a list,
     /// and stamps our own PID so the namespace resolves to Thaw even when
     /// nothing else about the item's identity does.
     ///
-    /// Returns `nil` when the window server no longer knows the ID, which is
+    /// Returns nil when the window server no longer knows the ID, which is
     /// the honest answer: the status item has been torn down or rebuilt, and
     /// a stale ID must not be dressed up as a live item.
     static func ownControlItem(windowID: CGWindowID) -> MenuBarItem? {
@@ -127,7 +127,7 @@ nonisolated extension MenuBarItem {
     /// Creates and returns a list of menu bar items windows for the given display.
     ///
     /// - Parameters:
-    ///   - display: An identifier for a display. Pass `nil` to return the menu bar
+    ///   - display: An identifier for a display. Pass nil to return the menu bar
     ///     item windows across all available displays.
     ///   - option: Options that filter the returned list. Pass an empty option set
     ///     to return all available menu bar item windows.
@@ -331,7 +331,7 @@ nonisolated extension MenuBarItem {
         // (across any title), proving the app is a multi-item app.
         // Without this guard, a single-item app's PID could be
         // incorrectly assigned to an unresolved item from a
-        // *different* app that happens to share the same title
+        // different app that happens to share the same title
         // (e.g. two apps both using "Item-0").
         let unresolvedIndices = items.indices.filter { items[$0].sourcePID == nil && !items[$0].isControlItem }
         if !unresolvedIndices.isEmpty {
@@ -468,7 +468,7 @@ nonisolated extension MenuBarItem {
     /// Creates and returns a list of menu bar items for the given display.
     ///
     /// - Parameters:
-    ///   - display: An identifier for a display. Pass `nil` to return the menu bar
+    ///   - display: An identifier for a display. Pass nil to return the menu bar
     ///     items across all available displays.
     ///   - option: Options that filter the returned list. Pass an empty option set
     ///     to return all available menu bar items.
@@ -527,13 +527,13 @@ nonisolated extension MenuBarItemTag.Namespace {
     }
 
     /// The canonicalized bundle identifier for the app, recovering a
-    /// transiently nil `bundleIdentifier` through the bundle URL.
+    /// transiently nil bundleIdentifier through the bundle URL.
     ///
-    /// `bundleIdentifier` can read nil for an app that has one (login and
+    /// bundleIdentifier can read nil for an app that has one (login and
     /// launch races), and the name fallbacks below the callers mint
     /// localized display names for system processes: an en-GB machine
-    /// wrote `Control Centre:WiFi` that way, persisted it, and the ghost
-    /// then shadowed the canonical `com.apple.controlcenter:WiFi` in the
+    /// wrote Control Centre:WiFi that way, persisted it, and the ghost
+    /// then shadowed the canonical com.apple.controlcenter:WiFi in the
     /// saved order (#949).
     private static func canonicalBundleIdentifier(of app: NSRunningApplication) -> String? {
         let bundleID = app.bundleIdentifier

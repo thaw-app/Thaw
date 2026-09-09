@@ -69,7 +69,7 @@ final class ControlItem {
         let statusItem: NSStatusItem
         let constraint: NSLayoutConstraint?
 
-        /// Set once `dispose()` has run, so `deinit` doesn't remove the
+        /// Set once dispose() has run, so deinit doesn't remove the
         /// status item a second time.
         private var isDisposed = false
 
@@ -121,11 +121,11 @@ final class ControlItem {
         }
 
         /// Explicitly tears down the status item, ahead of (and instead of)
-        /// relying on `deinit`. Used by `ControlItem.recreateStatusItem()`
+        /// relying on deinit. Used by ControlItem.recreateStatusItem()
         /// so the old status item is fully removed — and its position
-        /// cached to the shared `autosaveName` slot — before a new
-        /// `StatusItemStorage` is constructed at that same autosave name.
-        /// Without this, the new `NSStatusItem` would briefly exist
+        /// cached to the shared autosaveName slot — before a new
+        /// StatusItemStorage is constructed at that same autosave name.
+        /// Without this, the new NSStatusItem would briefly exist
         /// alongside the old one under the same autosaveName, and the old
         /// one's later, deinit-driven removal would overwrite the autosave
         /// slot with its own (possibly stale/garbage, in the #754 failure
@@ -160,27 +160,27 @@ final class ControlItem {
         }
     }
 
-    /// The control item's hiding state (`@Published`).
+    /// The control item's hiding state (@Published).
     @Published var state = HidingState.hideSection
 
-    /// The control item's window (`@Published`).
+    /// The control item's window (@Published).
     @Published private(set) var window: NSWindow?
 
-    /// The control item's frame (`@Published`).
+    /// The control item's frame (@Published).
     @Published private(set) var frame: CGRect?
 
-    /// The control item's screen (`@Published`).
+    /// The control item's screen (@Published).
     @Published private(set) var screen: NSScreen?
 
-    /// The control item's frame, if it is onscreen (`@Published`).
+    /// The control item's frame, if it is onscreen (@Published).
     @Published private(set) var onScreenFrame: CGRect?
 
     /// Whether the menu bar accepted this control item but is not rendering
     /// it — most often because macOS parked it in the notch dead zone
-    /// (`@Published`).
+    /// (@Published).
     ///
-    /// Derived from `NSWindow.occlusionState`, so unlike the image cache it
-    /// needs no Screen Recording grant. See ``ControlItemOcclusion`` for why
+    /// Derived from NSWindow.occlusionState, so unlike the image cache it
+    /// needs no Screen Recording grant. See ControlItemOcclusion for why
     /// the underlying signal is debounced before it reaches this property.
     @Published private(set) var isOccluded = false
 
@@ -202,26 +202,26 @@ final class ControlItem {
     /// The control item's diagnostic logger.
     private nonisolated let diagLog = DiagLog(category: "ControlItem")
 
-    /// Debounces the raw `occlusionState` readings behind ``isOccluded``.
+    /// Debounces the raw occlusionState readings behind isOccluded.
     private var occlusionEvaluator = ControlItemOcclusion.Evaluator()
 
     /// When the displays were last reconfigured, used to discard the occlusion
     /// readings taken while the new layout is still settling.
     private var lastDisplayChange: Date?
 
-    /// Tasks backing settings-observation reactions in `configureCancellables()`
-    /// and `configureStatusItemCancellables()`. `GeneralSettings` and
-    /// `AdvancedSettings` are `@Observable` (not Combine `ObservableObject`s),
-    /// so their property changes are observed via the `Observations` async
-    /// sequence instead of `$property` publishers.
+    /// Tasks backing settings-observation reactions in configureCancellables()
+    /// and configureStatusItemCancellables(). GeneralSettings and
+    /// AdvancedSettings are @Observable (not Combine ObservableObjects),
+    /// so their property changes are observed via the Observations async
+    /// sequence instead of $property publishers.
     private var showIceIconObservationTask: Task<Void, Never>?
     private var iceIconObservationTask: Task<Void, Never>?
     private var sectionDividerStyleObservationTask: Task<Void, Never>?
     private var alwaysHiddenSectionObservationTask: Task<Void, Never>?
 
-    /// Task observing `appState.isDraggingMenuBarItem` (wave 4), which is
-    /// `@Observable` rather than a Combine `ObservableObject`, replacing the
-    /// old `$isDraggingMenuBarItem.removeDuplicates().sink`.
+    /// Task observing appState.isDraggingMenuBarItem (wave 4), which is
+    /// @Observable rather than a Combine ObservableObject, replacing the
+    /// old $isDraggingMenuBarItem.removeDuplicates().sink.
     private var isDraggingMenuBarItemObservationTask: Task<Void, Never>?
 
     deinit {
@@ -233,11 +233,11 @@ final class ControlItem {
     }
 
     /// Storage for observers whose subscriptions are bound to the specific
-    /// `NSStatusItem` instance backing `storage`. Combine's KVO publishers
+    /// NSStatusItem instance backing storage. Combine's KVO publishers
     /// latch onto object identity at subscription time, so these must be
-    /// re-created (via `configureStatusItemCancellables()`) whenever
-    /// `storage` — and therefore `statusItem` — is replaced by
-    /// `recreateStatusItem()`. Kept separate from `cancellables` so a
+    /// re-created (via configureStatusItemCancellables()) whenever
+    /// storage — and therefore statusItem — is replaced by
+    /// recreateStatusItem(). Kept separate from cancellables so a
     /// rebuild only tears down and re-subscribes this subset.
     private var statusItemCancellables = Set<AnyCancellable>()
 
@@ -348,8 +348,8 @@ final class ControlItem {
             .store(in: &c)
 
         if let appState {
-            // `appState` is now `@Observable` (wave 4), so it no longer has
-            // an `$isDraggingMenuBarItem` publisher.
+            // appState is now @Observable (wave 4), so it no longer has
+            // an $isDraggingMenuBarItem publisher.
             isDraggingMenuBarItemObservationTask?.cancel()
             isDraggingMenuBarItemObservationTask = Task { [weak self, weak appState] in
                 var previous: Bool?
@@ -404,9 +404,9 @@ final class ControlItem {
     }
 
     /// Configures the observers whose subscriptions are bound to the
-    /// specific `NSStatusItem` instance currently backing `storage`. Called
-    /// once from `configureCancellables()` at setup, and again from
-    /// `recreateStatusItem()` after the underlying status item is rebuilt,
+    /// specific NSStatusItem instance currently backing storage. Called
+    /// once from configureCancellables() at setup, and again from
+    /// recreateStatusItem() after the underlying status item is rebuilt,
     /// since Combine's KVO publishers latch onto the object identity of the
     /// status item they were created from and would otherwise keep
     /// observing the now-detached old one.
@@ -476,12 +476,12 @@ final class ControlItem {
         statusItemCancellables = c
     }
 
-    /// Wires up the permission-free occlusion signal behind ``isOccluded``.
+    /// Wires up the permission-free occlusion signal behind isOccluded.
     ///
-    /// Subscriptions live alongside the rest of `statusItemCancellables`
-    /// because they are bound to the current `NSStatusItem` — both the
+    /// Subscriptions live alongside the rest of statusItemCancellables
+    /// because they are bound to the current NSStatusItem — both the
     /// visibility publisher and the window whose occlusion is sampled belong
-    /// to it, so `recreateStatusItem()` must re-subscribe them.
+    /// to it, so recreateStatusItem() must re-subscribe them.
     private func configureOcclusionObservers(storingIn c: inout Set<AnyCancellable>) {
         let displayChanges = NotificationCenter.default
             .publisher(for: NSApplication.didChangeScreenParametersNotification)
@@ -565,26 +565,26 @@ final class ControlItem {
         }
     }
 
-    /// Rebuilds the control item's underlying `NSStatusItem` from scratch.
+    /// Rebuilds the control item's underlying NSStatusItem from scratch.
     ///
-    /// Used as a bounded recovery step when `ControlItemPair` lookup keeps
+    /// Used as a bounded recovery step when ControlItemPair lookup keeps
     /// failing across multiple independently triggered cache cycles (#754),
     /// or when a confirmed collapsed divider must discard its stale position.
-    /// a state that means the existing status item's `windowNumber` no
+    /// a state that means the existing status item's windowNumber no
     /// longer matches any enumerated CG window ID, which is otherwise
-    /// terminal since `storage` is normally created once and never
+    /// terminal since storage is normally created once and never
     /// recreated.
     ///
-    /// `storage.dispose()` removes the old status item — and caches its
-    /// `autosaveName` position — *before* a fresh `StatusItemStorage` is
-    /// constructed at that same `autosaveName`, so AppKit restores the
+    /// storage.dispose() removes the old status item — and caches its
+    /// autosaveName position — before a fresh StatusItemStorage is
+    /// constructed at that same autosaveName, so AppKit restores the
     /// position the old item cached. This ordering matters: if the new
-    /// storage were created first, the two `NSStatusItem`s would briefly
+    /// storage were created first, the two NSStatusItems would briefly
     /// share one autosaveName, and the old item's removal (deferred to its
-    /// `deinit`) would run after the new item already restored its
+    /// deinit) would run after the new item already restored its
     /// position, overwriting the autosave slot with the old item's own
     /// possibly-stale position and clobbering what the new item just set.
-    /// The `window`-chain and other status-item-bound observers are
+    /// The window-chain and other status-item-bound observers are
     /// re-subscribed against the new instance since Combine's KVO
     /// publishers don't follow object identity changes on their own.
     @MainActor
@@ -684,7 +684,7 @@ final class ControlItem {
     ///
     /// The hidden and always-hidden control items must always be present in
     /// the menu bar, as we use their positions to determine the items in each
-    /// section. Setting `statusItem.isVisible` to `false` completely removes
+    /// section. Setting statusItem.isVisible to false completely removes
     /// the item. Instead, we toggle the width constraint on the item's content
     /// view, update the item's length, then adjust the content size of the
     /// item's window if needed.
@@ -784,7 +784,7 @@ final class ControlItem {
         guard isAddedToMenuBar else {
             return
         }
-        // Setting `statusItem.isVisible` to `false` has the unwanted side
+        // Setting statusItem.isVisible to false has the unwanted side
         // effect of deleting the preferred position. Cache and restore it.
         //
         // Dividers used to be excluded here, which was consistent while the
@@ -907,8 +907,8 @@ final class ControlItem {
         }
 
         let menu = NSMenu(title: Bundle.main.displayName)
-        // Each item's `isEnabled` is the authority here. Automatic validation
-        // would re-enable "All Trigger Features Off" simply because `self`
+        // Each item's isEnabled is the authority here. Automatic validation
+        // would re-enable "All Trigger Features Off" simply because self
         // responds to its action.
         menu.autoenablesItems = false
 
@@ -1167,12 +1167,12 @@ nonisolated enum ControlItemDefaults {
     /// Writes a value without the section-divider guard above.
     ///
     /// The guard was added to stop a user from breaking their menu bar by
-    /// dragging a chevron (`ff7517f7`, "Prevents users from breaking menu bar
+    /// dragging a chevron (ff7517f7, "Prevents users from breaking menu bar
     /// by moving chevrons"). It cannot do that: AppKit writes
-    /// `NSStatusItem Preferred Position <autosaveName>` itself when it places
+    /// NSStatusItem Preferred Position <autosaveName> itself when it places
     /// an item, and that write never passes through this type. So the guard
     /// only ever blocked Thaw's own writes — including the seeding that
-    /// `preflightSetup(for:)` and `resetChevronPositions()` exist to perform,
+    /// preflightSetup(for:) and resetChevronPositions() exist to perform,
     /// which the same commit introduced and silently disabled (#890).
     ///
     /// With no stored position, both dividers can be placed at the same X,
@@ -1217,8 +1217,8 @@ nonisolated enum ControlItemDefaults {
         // this one and re-stamp the hidden divider to 1 on every call,
         // regardless of where the user had it. That was inert from ff7517f7
         // until a1e566d4 routed divider seeding around the subscript guard
-        // (#890), which woke it up: `StatusItemStorage.init` runs preflight
-        // on every launch and every `recreateStatusItem()`, so a populated
+        // (#890), which woke it up: StatusItemStorage.init runs preflight
+        // on every launch and every recreateStatusItem(), so a populated
         // bar had the hidden divider yanked back beside the visible one and
         // the following save persisted the collapsed span (#895).
         if ControlItemDefaults[.preferredPosition, autosaveName] == nil {

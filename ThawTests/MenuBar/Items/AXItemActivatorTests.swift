@@ -11,9 +11,9 @@ import CoreGraphics
 import Testing
 @testable import Thaw
 
-/// Covers the pure, non-AX helpers `AXItemActivator` uses to pick a
+/// Covers the pure, non-AX helpers AXItemActivator uses to pick a
 /// candidate element and verify its frame. The AX round trip itself
-/// (hit-testing, `performAction`, actually resolving a live `UIElement`)
+/// (hit-testing, performAction, actually resolving a live UIElement)
 /// requires the Accessibility permission (TCC) and a real menu bar item, so
 /// it is not unit-testable in CI and is intentionally not scaffolded here.
 @Suite("AX item activator helpers")

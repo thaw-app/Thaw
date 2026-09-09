@@ -12,7 +12,7 @@ import ScreenCaptureKit
 
 // MARK: - Overlay Panel
 
-/// A subclass of `NSPanel` that sits atop the menu bar to alter its appearance.
+/// A subclass of NSPanel that sits atop the menu bar to alter its appearance.
 final class MenuBarOverlayPanel: NSPanel, @unchecked Sendable {
     private let diagLog = DiagLog(category: "MenuBarOverlayPanel")
     /// Flags representing the updatable components of a panel.
@@ -87,9 +87,9 @@ final class MenuBarOverlayPanel: NSPanel, @unchecked Sendable {
         }
     }
 
-    /// The last-observed value of `menuBarManager.isMenuBarHiddenBySystem`
-    /// (wave 3: `menuBarManager` is now `@Observable`, so this is tracked via
-    /// `menuBarManagerObservationTask` rather than a `CombineLatest` operand).
+    /// The last-observed value of menuBarManager.isMenuBarHiddenBySystem
+    /// (wave 3: menuBarManager is now @Observable, so this is tracked via
+    /// menuBarManagerObservationTask rather than a CombineLatest operand).
     private var cachedIsMenuBarHiddenBySystem = false
 
     /// Flags representing the components of the panel currently in need of an update.
@@ -101,12 +101,12 @@ final class MenuBarOverlayPanel: NSPanel, @unchecked Sendable {
     /// Storage for internal observers.
     private var cancellables = Set<AnyCancellable>()
 
-    /// Task observing `menuBarManager.isMenuBarHiddenBySystem` (wave 3),
-    /// replacing the `CombineLatest` operand of the same name.
+    /// Task observing menuBarManager.isMenuBarHiddenBySystem (wave 3),
+    /// replacing the CombineLatest operand of the same name.
     private var menuBarManagerObservationTask: Task<Void, Never>?
 
-    /// Task observing `appearanceManager.configuration` (wave 3), replacing
-    /// the old `$configuration.sink { updateWindowLevel() }` subscription.
+    /// Task observing appearanceManager.configuration (wave 3), replacing
+    /// the old $configuration.sink { updateWindowLevel() } subscription.
     private var appearanceConfigurationObservationTask: Task<Void, Never>?
 
     /// The context that manages panel update tasks.
@@ -125,9 +125,9 @@ final class MenuBarOverlayPanel: NSPanel, @unchecked Sendable {
     /// The screen that owns the panel.
     let owningScreen: NSScreen
 
-    /// Task observing the shared `MissionControlDetector.isActive`, which
+    /// Task observing the shared MissionControlDetector.isActive, which
     /// replaces this panel's own Mission Control probe timer/window (moved
-    /// to `MissionControlDetector`, owned by `MenuBarAppearanceManager`, so
+    /// to MissionControlDetector, owned by MenuBarAppearanceManager, so
     /// the whole app polls the window server once instead of once per
     /// panel).
     private var missionControlObservationTask: Task<Void, Never>?
@@ -162,8 +162,8 @@ final class MenuBarOverlayPanel: NSPanel, @unchecked Sendable {
         configureCancellables()
     }
 
-    /// Updates `alphaValue` based on the combination of
-    /// `cachedIsMenuBarHiddenBySystem` and `isMissionControlActive` — the two
+    /// Updates alphaValue based on the combination of
+    /// cachedIsMenuBarHiddenBySystem and isMissionControlActive — the two
     /// operands of the old `CombineLatest(menuBarManager.$isMenuBarHiddenBySystem,
     /// $isMissionControlActive)` pipeline (wave 3).
     private func updateAlphaForMenuBarVisibility() {
@@ -326,12 +326,12 @@ final class MenuBarOverlayPanel: NSPanel, @unchecked Sendable {
             .store(in: &c)
 
         if let appState {
-            // `menuBarManager` is now `@Observable` (wave 3), so it no longer
-            // has an `$isMenuBarHiddenBySystem` publisher to feed a
-            // `CombineLatest`. `isMissionControlActive`'s side of the old
-            // pairing is now handled by its own `didSet` calling
-            // `updateAlphaForMenuBarVisibility()`, which combines it with
-            // `cachedIsMenuBarHiddenBySystem`, kept in sync below.
+            // menuBarManager is now @Observable (wave 3), so it no longer
+            // has an $isMenuBarHiddenBySystem publisher to feed a
+            // CombineLatest. isMissionControlActive's side of the old
+            // pairing is now handled by its own didSet calling
+            // updateAlphaForMenuBarVisibility(), which combines it with
+            // cachedIsMenuBarHiddenBySystem, kept in sync below.
             menuBarManagerObservationTask = Task { [weak self, weak appState] in
                 let changes = Observations { appState?.menuBarManager.isMenuBarHiddenBySystem ?? false }
                 for await isHidden in changes {
@@ -341,8 +341,8 @@ final class MenuBarOverlayPanel: NSPanel, @unchecked Sendable {
                 }
             }
 
-            // `appearanceManager` is now `@Observable` (wave 3), so it no
-            // longer has a `$configuration` publisher. The panels track the
+            // appearanceManager is now @Observable (wave 3), so it no
+            // longer has a $configuration publisher. The panels track the
             // effective configuration so a per-Space override switches the
             // window level instantly on Space change.
             appearanceConfigurationObservationTask = Task { [weak self, weak appState] in
@@ -353,8 +353,8 @@ final class MenuBarOverlayPanel: NSPanel, @unchecked Sendable {
                 }
             }
 
-            // Mirror the shared `MissionControlDetector.isActive` into this
-            // panel's own `isMissionControlActive`, instead of each panel
+            // Mirror the shared MissionControlDetector.isActive into this
+            // panel's own isMissionControlActive, instead of each panel
             // running its own probe timer/window.
             missionControlObservationTask = Task { [weak self, weak appState] in
                 let changes = Observations { appState?.appearanceManager.missionControlDetector.isActive ?? false }
@@ -374,7 +374,7 @@ final class MenuBarOverlayPanel: NSPanel, @unchecked Sendable {
     }
 
     /// Performs validation for the given validation kind. Returns the panel's
-    /// owning display if successful. Returns `nil` on failure.
+    /// owning display if successful. Returns nil on failure.
     private func validate(for kind: ValidationKind, with windows: [WindowInfo])
         -> Bool
     {
@@ -457,7 +457,7 @@ final class MenuBarOverlayPanel: NSPanel, @unchecked Sendable {
         updateWindowLevel()
 
         // The panel is pinned to the space it was last ordered in on (see
-        // `isStrandedOnInactiveSpace`). Re-fronting an onscreen window does
+        // isStrandedOnInactiveSpace). Re-fronting an onscreen window does
         // not re-home it, so after the owning display has switched spaces
         // the panel must be ordered out first; the fresh order below then
         // joins the display's current space. A stranded panel is invisible
@@ -483,14 +483,14 @@ final class MenuBarOverlayPanel: NSPanel, @unchecked Sendable {
     /// Returns a Boolean value that indicates whether the panel is anchored
     /// to a space other than the current space of its owning display.
     ///
-    /// Overlay panels are `.stationary` and deliberately do not carry
-    /// `.moveToActiveSpace`: that flag re-homes the panel on every order-in,
+    /// Overlay panels are .stationary and deliberately do not carry
+    /// .moveToActiveSpace: that flag re-homes the panel on every order-in,
     /// and during a fullscreen transition it resolves against the global
     /// active space, relocating the panel onto a different display entirely
     /// (the fullscreen drift fixed in a078c0b2). The cost of pinning the
     /// panel is that a space switch strands it on the previous space, where
     /// an order-front is a no-op — the window server considers an onscreen
-    /// window already placed. When stranded, `show()` orders the panel out
+    /// window already placed. When stranded, show() orders the panel out
     /// before re-ordering it, so the fresh order joins the display's
     /// current space.
     private func isStrandedOnInactiveSpace() -> Bool {
@@ -498,7 +498,7 @@ final class MenuBarOverlayPanel: NSPanel, @unchecked Sendable {
             windowNumber: windowNumber
         ) else {
             // Never ordered, or AppKit exposed a synthetic number. A fresh
-            // order in `show()` is the only useful recovery in either case.
+            // order in show() is the only useful recovery in either case.
             return true
         }
         let panelSpaces = Bridging.getSpaceList(for: windowID)
@@ -528,7 +528,7 @@ final class MenuBarOverlayPanel: NSPanel, @unchecked Sendable {
         return stranded
     }
 
-    /// The pure decision behind `isStrandedOnInactiveSpace`, so it can be
+    /// The pure decision behind isStrandedOnInactiveSpace, so it can be
     /// exercised without a live window server connection. The panel is
     /// stranded when it does not sit on the current space of its owning
     /// display, which is also the case for a panel that was never ordered.
@@ -541,8 +541,8 @@ final class MenuBarOverlayPanel: NSPanel, @unchecked Sendable {
     /// (space switch, post-switch confirmation, housekeeping timer) funnels
     /// through this one decision (#794). For any other display the decision
     /// stays conservative: a wrong order-out would flicker the bar on every
-    /// housekeeping pass, and unlike the old `.moveToActiveSpace` the
-    /// explicit order-out + order-front in `show()` cannot drift the panel
+    /// housekeeping pass, and unlike the old .moveToActiveSpace the
+    /// explicit order-out + order-front in show() cannot drift the panel
     /// onto another display.
     static func isStranded(
         panelSpaces: [CGSSpaceID],
@@ -563,7 +563,7 @@ final class MenuBarOverlayPanel: NSPanel, @unchecked Sendable {
     /// a space switch.
     ///
     /// A CGS space read can lag the switch itself: when it still reports the
-    /// previous space, `show()` skips the order-out and re-fronting an
+    /// previous space, show() skips the order-out and re-fronting an
     /// onscreen panel is a no-op, leaving the panel invisible until the
     /// housekeeping timer (60 s ± 10 s). Re-check shortly after the switch
     /// settles instead; only the latest confirmation is kept. (#987 review)
@@ -630,9 +630,9 @@ final class MenuBarOverlayPanel: NSPanel, @unchecked Sendable {
     /// makes the menu bar's material opaque and the panel invisible. The
     /// window server composites the whole menu bar — background, application
     /// menus, and status items alike — into a single window at
-    /// `kCGMainMenuWindowLevel`, so there is no z-order slot that covers the
+    /// kCGMainMenuWindowLevel, so there is no z-order slot that covers the
     /// background without also covering its content. A panel raised to
-    /// `.statusBar` paints over every menu bar item, which is what #844 hit:
+    /// .statusBar paints over every menu bar item, which is what #844 hit:
     /// the tint became visible, and the items disappeared underneath it.
     private func updateWindowLevel() {
         guard let appState else { return }
@@ -664,25 +664,25 @@ private final class MenuBarOverlayPanelContentView: NSView {
 
     private var cancellables = Set<AnyCancellable>()
 
-    /// Task observing `menuBarManager.averageColors` (wave 3), replacing the
-    /// old `$averageColors` sink.
+    /// Task observing menuBarManager.averageColors (wave 3), replacing the
+    /// old $averageColors sink.
     private var averageColorsObservationTask: Task<Void, Never>?
 
-    /// Task observing `menuBarManager.wallpaperPalettes` for the adaptive
+    /// Task observing menuBarManager.wallpaperPalettes for the adaptive
     /// gradient tint.
     private var wallpaperPalettesObservationTask: Task<Void, Never>?
 
-    /// Task observing `appearanceManager.configuration` (wave 3), replacing
-    /// the old `$configuration` sink and `objectWillChange` debounce sink.
+    /// Task observing appearanceManager.configuration (wave 3), replacing
+    /// the old $configuration sink and objectWillChange debounce sink.
     private var appearanceConfigurationObservationTask: Task<Void, Never>?
 
-    /// Task observing `appearanceManager.previewConfiguration` (wave 3),
-    /// replacing the old `$previewConfiguration` sink.
+    /// Task observing appearanceManager.previewConfiguration (wave 3),
+    /// replacing the old $previewConfiguration sink.
     private var previewConfigurationObservationTask: Task<Void, Never>?
 
-    /// Task observing `appState.isDraggingMenuBarItem` (wave 4), which is
-    /// `@Observable` rather than a Combine `ObservableObject`, replacing the
-    /// old `$isDraggingMenuBarItem.removeDuplicates().sink`.
+    /// Task observing appState.isDraggingMenuBarItem (wave 4), which is
+    /// @Observable rather than a Combine ObservableObject, replacing the
+    /// old $isDraggingMenuBarItem.removeDuplicates().sink.
     private var isDraggingMenuBarItemObservationTask: Task<Void, Never>?
 
     deinit {
@@ -733,7 +733,7 @@ private final class MenuBarOverlayPanelContentView: NSView {
     private var shapeCGPath: CGPath?
 
     /// Cached menu bar item windows, updated by publishers instead of
-    /// being queried synchronously during each `draw(_:)` call.
+    /// being queried synchronously during each draw(_:) call.
     private var cachedItemWindows: [WindowInfo] = []
 
     /// In-flight confirmation task for settling the trailing item-window cache
@@ -767,13 +767,13 @@ private final class MenuBarOverlayPanelContentView: NSView {
 
         if let overlayPanel {
             if let appState = overlayPanel.appState {
-                // `appearanceManager` is now `@Observable` (wave 3), so it no
-                // longer has `$configuration` / `objectWillChange` publishers.
+                // appearanceManager is now @Observable (wave 3), so it no
+                // longer has $configuration / objectWillChange publishers.
                 // A single Observation task now covers both the direct
-                // `configuration` updates the old `$configuration` sink
+                // configuration updates the old $configuration sink
                 // handled and the "something changed" signal the old
-                // `objectWillChange` debounce sink existed to catch — under
-                // Observation, every mutation of `configuration` is already
+                // objectWillChange debounce sink existed to catch — under
+                // Observation, every mutation of configuration is already
                 // visible through this one sequence.
                 appearanceConfigurationObservationTask?.cancel()
                 appearanceConfigurationObservationTask = Task { [weak self, weak appState] in
@@ -785,8 +785,8 @@ private final class MenuBarOverlayPanelContentView: NSView {
                     }
                 }
 
-                // `appearanceManager` is now `@Observable` (wave 3), so it no
-                // longer has an `$previewConfiguration` publisher.
+                // appearanceManager is now @Observable (wave 3), so it no
+                // longer has an $previewConfiguration publisher.
                 previewConfigurationObservationTask?.cancel()
                 previewConfigurationObservationTask = Task { [weak self, weak appState] in
                     var previous: MenuBarAppearancePartialConfiguration?
@@ -799,8 +799,8 @@ private final class MenuBarOverlayPanelContentView: NSView {
                     }
                 }
 
-                // `menuBarManager` is now `@Observable` (wave 3), so it no
-                // longer has an `$averageColors` publisher.
+                // menuBarManager is now @Observable (wave 3), so it no
+                // longer has an $averageColors publisher.
                 averageColorsObservationTask?.cancel()
                 averageColorsObservationTask = Task { [weak self, weak appState] in
                     let changes = Observations { appState?.menuBarManager.averageColors ?? [:] }
@@ -822,8 +822,8 @@ private final class MenuBarOverlayPanelContentView: NSView {
                 }
 
                 // Fade out whenever a menu bar item is being dragged.
-                // `appState` is now `@Observable` (wave 4), so it no longer
-                // has an `$isDraggingMenuBarItem` publisher.
+                // appState is now @Observable (wave 4), so it no longer
+                // has an $isDraggingMenuBarItem publisher.
                 isDraggingMenuBarItemObservationTask?.cancel()
                 isDraggingMenuBarItemObservationTask = Task { [weak self, weak appState] in
                     var previous: Bool?
@@ -844,7 +844,7 @@ private final class MenuBarOverlayPanelContentView: NSView {
                     // Redraw whenever the window frame of a control item changes.
                     //
                     // - NOTE: A previous attempt was made to redraw the view when the
-                    //   section's `isHidden` property was changed. This would be semantically
+                    //   section's isHidden property was changed. This would be semantically
                     //   ideal, but the property sometimes changes before the menu bar items
                     //   are actually updated on-screen. Since the view's drawing process relies
                     //   on getting an accurate position of each menu bar item, we need to use
@@ -915,7 +915,7 @@ private final class MenuBarOverlayPanelContentView: NSView {
     /// Starts an async confirmation task that re-reads menu bar item windows
     /// until two consecutive reads return the same total width, then commits
     /// the result. This mirrors the two-read AX confirmation used for
-    /// `applicationMenuFrame` and prevents the trailing shape from being drawn
+    /// applicationMenuFrame and prevents the trailing shape from being drawn
     /// with a stale (transitional) icon layout immediately after an app switch.
     private func scheduleItemWindowsConfirmation(for screen: NSScreen) {
         // Hoist displayID before entering the Task so that no AppKit
@@ -1045,7 +1045,7 @@ private final class MenuBarOverlayPanelContentView: NSView {
         return path
     }
 
-    /// Returns a path for the ``MenuBarShapeKind/notch`` shape kind.
+    /// Returns a path for the MenuBarShapeKind/notch shape kind.
     /// Behaves like full on non-notched displays, splits at the notch
     /// on notched displays.
     private func pathForNotchShape(
@@ -1132,7 +1132,7 @@ private final class MenuBarOverlayPanelContentView: NSView {
         return path
     }
 
-    /// Returns a path for the ``MenuBarShapeKind/full`` shape kind.
+    /// Returns a path for the MenuBarShapeKind/full shape kind.
     private func pathForFullShape(
         in rect: CGRect,
         info: MenuBarFullShapeInfo,
@@ -1166,7 +1166,7 @@ private final class MenuBarOverlayPanelContentView: NSView {
         )
     }
 
-    /// Returns a path for the ``MenuBarShapeKind/split`` shape kind.
+    /// Returns a path for the MenuBarShapeKind/split shape kind.
     private func pathForSplitShape(
         in rect: CGRect,
         info: MenuBarSplitShapeInfo,
@@ -1334,7 +1334,7 @@ private final class MenuBarOverlayPanelContentView: NSView {
         }
     }
 
-    /// Builds the tint gradient from the wallpaper palette, or returns `nil`
+    /// Builds the tint gradient from the wallpaper palette, or returns nil
     /// when no palette has been captured yet.
     ///
     /// Uses the two most-covering swatches. On a single-colour wallpaper the

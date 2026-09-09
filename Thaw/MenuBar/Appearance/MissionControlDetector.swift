@@ -16,9 +16,9 @@ import Observation
 /// probe window against the position it was created at ("at rest"). When
 /// Mission Control activates, the window server displaces every window on
 /// screen — including ours — to arrange it in the Mission Control grid.
-/// AppKit's own `frame` does not reflect that displacement (the window
+/// AppKit's own frame does not reflect that displacement (the window
 /// server moves the window without telling AppKit), so the actual bounds
-/// have to be queried directly through `Bridging.getWindowBounds(for:)`.
+/// have to be queried directly through Bridging.getWindowBounds(for:).
 ///
 /// One probe window is enough for the whole app: Mission Control displaces
 /// every on-screen window together, so a single representative window is
@@ -30,21 +30,21 @@ import Observation
 ///
 /// ## Known limitation: display changes while Mission Control is open
 ///
-/// `didChangeScreenParametersNotification` clears `probeAtRestOrigin` so the
+/// didChangeScreenParametersNotification clears probeAtRestOrigin so the
 /// baseline gets re-latched, but re-latching just adopts whatever origin the
-/// next `tick()` observes. If a display reconfiguration happens *while*
-/// Mission Control is open, that tick latches the **displaced** position as
+/// next tick() observes. If a display reconfiguration happens while
+/// Mission Control is open, that tick latches the displaced position as
 /// "at rest". Mission Control then exits, the probe returns to its true
 /// resting position, and the detector reads that as displacement — a
-/// false-positive `isActive` that persists until the next display change.
+/// false-positive isActive that persists until the next display change.
 /// This is much narrower than the Step 1 bug (which never re-latched at
 /// all, so it stayed wedged forever), but it's real and worth knowing about.
 /// The likely root fix is to stop sampling a baseline entirely and instead
 /// compare the probe window's actual bounds against its own AppKit
-/// `frame.origin`, which per this type's own premise never moves under
+/// frame.origin, which per this type's own premise never moves under
 /// Mission Control. That requires a coordinate-space conversion —
-/// `Bridging.getWindowBounds` is top-left origin (window server/Core
-/// Graphics), `NSWindow.frame` is bottom-left origin (AppKit) — and can't be
+/// Bridging.getWindowBounds is top-left origin (window server/Core
+/// Graphics), NSWindow.frame is bottom-left origin (AppKit) — and can't be
 /// validated without running the app, so it's out of scope here.
 @MainActor
 @Observable
@@ -52,40 +52,40 @@ final class MissionControlDetector {
     /// The polling interval used while nothing suggests Mission Control
     /// might be starting or ending.
     ///
-    /// This is the term that bounds how long it takes to *notice*
+    /// This is the term that bounds how long it takes to notice
     /// displacement has started at all — no step-up signal can help here,
     /// since Mission Control does not change the active space and so does
-    /// not fire `activeSpaceDidChangeNotification`. Combined with the 0.1s
-    /// confirmation debounce in `tick()`, the worst-case time to flip
-    /// `isActive` to `true` from a cold idle state is roughly
-    /// `idleInterval + 0.1`. Kept close to the old fixed 10 Hz rate's
+    /// not fire activeSpaceDidChangeNotification. Combined with the 0.1s
+    /// confirmation debounce in tick(), the worst-case time to flip
+    /// isActive to true from a cold idle state is roughly
+    /// idleInterval + 0.1. Kept close to the old fixed 10 Hz rate's
     /// ~0.2s detection latency rather than trading detection speed for
     /// idle-cost savings; the bulk of the win in this type is already
     /// banked by going from one probe per panel to one for the whole app.
     static let idleInterval: TimeInterval = 0.2
 
-    /// The polling interval used while `isActive` is `true`, or for
-    /// `activeSignalWindow` seconds after a step-up signal. Matches the
+    /// The polling interval used while isActive is true, or for
+    /// activeSignalWindow seconds after a step-up signal. Matches the
     /// fixed rate of the per-panel timer this detector replaces, which
     /// comfortably tracked Mission Control's enter/exit animation without
     /// visible lag.
     static let activeInterval: TimeInterval = 0.1
 
     /// How long after a step-up signal the probe keeps running at
-    /// `activeInterval` before it's allowed to fall back to `idleInterval`.
-    /// Step-up signals are `activeSpaceDidChangeNotification` (helps for
+    /// activeInterval before it's allowed to fall back to idleInterval.
+    /// Step-up signals are activeSpaceDidChangeNotification (helps for
     /// Exposé/space-switch cases, but does not fire for a plain Mission
-    /// Control activation) and the moment `tick()` first observes
-    /// displacement (see `tick()` — this is what actually keeps Mission
+    /// Control activation) and the moment tick() first observes
+    /// displacement (see tick() — this is what actually keeps Mission
     /// Control's confirmation tick and its exit fast, independent of
-    /// `idleInterval`).
+    /// idleInterval).
     static let activeSignalWindow: TimeInterval = 2.0
 
     /// A Boolean value that indicates whether Mission Control or App
     /// Exposé is currently believed to be active.
     private(set) var isActive = false
 
-    /// The probe window used to detect displacement. `nil` when the
+    /// The probe window used to detect displacement. nil when the
     /// detector is stopped (no overlay panels currently need it).
     private var probeWindow: NSPanel?
 
@@ -98,7 +98,7 @@ final class MissionControlDetector {
 
     /// The time of the most recent step-up signal — a notification that
     /// Mission Control might be about to start or end. Drives the adaptive
-    /// poll rate; see `nextInterval(isActive:lastStepUpSignal:now:)`.
+    /// poll rate; see nextInterval(isActive:lastStepUpSignal:now:).
     private var lastStepUpSignal: Date?
 
     /// Storage for internal observers.
@@ -180,7 +180,7 @@ final class MissionControlDetector {
     }
 
     /// Runs the poll loop, re-scheduling itself with an interval chosen by
-    /// `nextInterval(isActive:lastStepUpSignal:now:)` after every tick.
+    /// nextInterval(isActive:lastStepUpSignal:now:) after every tick.
     private func schedulePoll() {
         pollTask?.cancel()
         pollTask = Task { [weak self] in
@@ -217,7 +217,7 @@ final class MissionControlDetector {
     }
 
     /// Polls the probe window's actual on-screen bounds and updates
-    /// `isActive` accordingly.
+    /// isActive accordingly.
     private func tick() {
         guard let probeWindow else {
             return

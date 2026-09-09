@@ -222,7 +222,7 @@ struct GhostControlItemWindowTests {
     }
 
     /// The orphan's title is indistinguishable from one of our control items
-    /// caught in a bar-wide `kCGWindowName` degradation, which is why
+    /// caught in a bar-wide kCGWindowName degradation, which is why
     /// ownership is decided by window number. A degraded control item of
     /// ours is kept, so it still reaches the degradation check.
     @Test("A control item of ours with a degraded title is kept")
@@ -270,7 +270,7 @@ struct GhostControlItemWindowTests {
 
     /// The reason the orphan had to go. Left in the reading it is a
     /// self-titled item under our own namespace, which
-    /// `liveIdentitiesAreDegraded` reads as the whole bar having lost its
+    /// liveIdentitiesAreDegraded reads as the whole bar having lost its
     /// names — so every reading is discarded and the cache freezes for as
     /// long as the orphan lasts.
     @Test("Dropping the orphan clears the false degradation signal")

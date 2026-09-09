@@ -11,7 +11,7 @@ import Foundation
 /// How the spacing relaunch wave is allowed to restart one running
 /// application.
 nonisolated enum SpacingRelaunchStrategy: Equatable {
-    /// Hand the restart to launchd via `launchctl kickstart -k`. The only
+    /// Hand the restart to launchd via launchctl kickstart -k. The only
     /// route that works for a launch-constrained agent, because launchd
     /// stays the launching parent.
     case launchdKickstart(label: String)
@@ -39,27 +39,27 @@ nonisolated enum SpacingRelaunchSkipReason: String, Equatable {
 /// Decides how the spacing relaunch wave may treat each app that owns a
 /// menu bar item.
 ///
-/// Rewriting `NSStatusItemSpacing` only reaches a status item when its
+/// Rewriting NSStatusItemSpacing only reaches a status item when its
 /// owning process restarts, so the wave is what makes a spacing change
 /// visible right away. What it must not do is terminate a process it cannot
 /// bring back.
 ///
 /// Spotlight and TextInputMenuAgent are the case that motivated this:
-/// terminating them is a *successful* exit, so an agent with
-/// `KeepAlive.SuccessfulExit = false` is never respawned by launchd, and
-/// relaunching the bundle ourselves is SIGKILLed at exec (`CODESIGNING`,
+/// terminating them is a successful exit, so an agent with
+/// KeepAlive.SuccessfulExit = false is never respawned by launchd, and
+/// relaunching the bundle ourselves is SIGKILLed at exec (CODESIGNING,
 /// "Launch Constraint Violation"). The item stays gone until reboot, and
-/// `Cmd + Space` stops working with it. Both are indexed LaunchAgents and
-/// come back through `kickstart`, but the same constraint covers system
-/// binaries that no agent in ``SystemLaunchAgentIndex`` claims — those are
+/// Cmd + Space stops working with it. Both are indexed LaunchAgents and
+/// come back through kickstart, but the same constraint covers system
+/// binaries that no agent in SystemLaunchAgentIndex claims — those are
 /// skipped rather than gambled on. (#1070, #720)
 nonisolated enum SpacingRelaunchPolicy {
     /// Path prefixes owned by macOS. Everything below them is either a
     /// platform binary or installed by the OS, and neither is ours to
     /// terminate without a launchd label to restore it with.
     ///
-    /// `/System` covers the sealed system volume, including the
-    /// `CoreServices` agents that carry launch constraints.
+    /// /System covers the sealed system volume, including the
+    /// CoreServices agents that carry launch constraints.
     static let systemPathPrefixes = [
         "/System/",
         "/usr/",
@@ -71,9 +71,9 @@ nonisolated enum SpacingRelaunchPolicy {
     /// The strategy for an app described by the values captured from its
     /// running process.
     ///
-    /// `launchdLabel` wins over everything: a kickstart restarts the job in
+    /// launchdLabel wins over everything: a kickstart restarts the job in
     /// place, which is both the safe route for a constrained binary and the
-    /// only one that respects the agent's `KeepAlive` policy.
+    /// only one that respects the agent's KeepAlive policy.
     static func strategy(
         executableURL: URL?,
         bundleURL: URL?,
@@ -101,9 +101,9 @@ nonisolated enum SpacingRelaunchPolicy {
 
     /// Whether the given location sits under a macOS-owned path prefix.
     ///
-    /// A missing URL counts as *not* system-owned on its own; the caller
+    /// A missing URL counts as not system-owned on its own; the caller
     /// passes both the executable and the bundle, and the remaining
-    /// `guard` rejects an app that has neither.
+    /// guard rejects an app that has neither.
     static func isSystemOwned(_ url: URL?) -> Bool {
         guard let url else {
             return false

@@ -11,10 +11,10 @@ import Foundation
 import Testing
 @testable import Thaw
 
-/// Covers `MouseHelpers.cursorPoint(overItemWithBounds:displayBounds:)`, the
+/// Covers MouseHelpers.cursorPoint(overItemWithBounds:displayBounds:), the
 /// point the search panel warps to after revealing an item.
 ///
-/// The guard is the point of the helper: `CGWarpMouseCursorPosition` clamps a
+/// The guard is the point of the helper: CGWarpMouseCursorPosition clamps a
 /// point that lies on no display to the leftmost edge of one, which sits under
 /// the Apple menu. Hidden and always-hidden items on a notched display sit at
 /// negative X while they are offscreen, so a helper that answered with a point
@@ -23,7 +23,7 @@ import Testing
 @Suite("Cursor point over a revealed item")
 struct MouseHelpersCursorPointTests {
     /// The built-in display, plus one to its left, in the global top-left
-    /// origin coordinate space that `CGDisplayBounds` uses.
+    /// origin coordinate space that CGDisplayBounds uses.
     private let displays = [
         CGRect(x: 0, y: 0, width: 1800, height: 1169),
         CGRect(x: -1920, y: 0, width: 1920, height: 1080),

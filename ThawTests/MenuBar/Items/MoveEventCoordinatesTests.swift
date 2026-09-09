@@ -87,7 +87,7 @@ struct MoveEventCoordinatesTests {
 
     /// #923: dropping onto the exact coordinate of a section divider leaves
     /// AppKit free to choose either side. The field log showed
-    /// `.leftOfItem(AH_ctrl)` repeatedly landing one point to its right.
+    /// .leftOfItem(AH_ctrl) repeatedly landing one point to its right.
     @Test("A control-item destination biases the drop into the requested section")
     func controlItemTargetPointUsesRequestedSide() {
         let displayBounds = CGRect(x: 0, y: 0, width: 1470, height: 956)
@@ -116,8 +116,8 @@ struct MoveEventCoordinatesTests {
     /// A divider that is thousands of points wide needs the bias just as much
     /// as a zero-width one. The width is how the section conceals the items
     /// behind it, not hit-test slack the drop can lean on: in the reporter's
-    /// 21 August log AH_ctrl was parked with `maxX <= 0` and expanded, and
-    /// `.leftOfItem` still landed the item at `minX + 1` on attempts 1 and 5.
+    /// 21 August log AH_ctrl was parked with maxX <= 0 and expanded, and
+    /// .leftOfItem still landed the item at minX + 1 on attempts 1 and 5.
     @Test("An expanded control-item destination is biased too")
     func expandedControlItemTargetPointIsBiased() {
         let displayBounds = CGRect(x: 0, y: 0, width: 1470, height: 956)
@@ -147,8 +147,8 @@ struct MoveEventCoordinatesTests {
 
     /// #1035: the chevron is the anchor TemporaryShow reveals against, and
     /// it was left unbiased because it divides no sections. The reporter's
-    /// log shows what that costs — attempt 2 planned `targetMinX=837.0` and
-    /// then measured `itemMinX=863.0`, i.e. the item landed to the right of
+    /// log shows what that costs — attempt 2 planned targetMinX=837.0 and
+    /// then measured itemMinX=863.0, i.e. the item landed to the right of
     /// a 26pt chevron it was supposed to land left of.
     @Test("A chevron destination is biased into the requested side")
     func chevronTargetPointIsBiased() {

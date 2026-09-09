@@ -36,19 +36,19 @@ final class MenuBarItemManager {
     /// hidden sections are missing from the menu bar.
     var areControlItemsMissing = false
 
-    /// Number of consecutive `ControlItemPair` lookup failures seen by
-    /// `cacheItemsRegardless`. Reset to zero on the first successful lookup.
-    /// Once this reaches `controlItemRebuildThreshold`, the hidden and
+    /// Number of consecutive ControlItemPair lookup failures seen by
+    /// cacheItemsRegardless. Reset to zero on the first successful lookup.
+    /// Once this reaches controlItemRebuildThreshold, the hidden and
     /// always-hidden control items' underlying status items are rebuilt once
-    /// for that uninterrupted failure episode (see `recreateStatusItem()`).
+    /// for that uninterrupted failure episode (see recreateStatusItem()).
     var controlItemLookupFailureStreak = 0
 
     /// Whether the current uninterrupted lookup-failure episode has already
     /// rebuilt the control items. Re-armed only after a successful lookup.
     var didRebuildControlItemsForCurrentFailureEpisode = false
 
-    /// When the most recent `ControlItemPair` lookup failure was recorded.
-    /// Feeds ``controlItemLookupRetryBackoff(consecutiveFailures:threshold:baseDelay:maxDelay:)``
+    /// When the most recent ControlItemPair lookup failure was recorded.
+    /// Feeds controlItemLookupRetryBackoff(consecutiveFailures:threshold:baseDelay:maxDelay:)
     /// so the change-detector poll stops re-running a full recache every
     /// tick against a failure that is not going away (#933). Cleared on
     /// the first successful lookup.
@@ -78,7 +78,7 @@ final class MenuBarItemManager {
     /// Consecutive authoritative cache cycles in which the always-hidden
     /// section is enabled but its divider did not resolve while the hidden
     /// divider did. A display change can strand the AH status item on another
-    /// screen's menu bar; `ControlItemPair` treats the missing divider as
+    /// screen's menu bar; ControlItemPair treats the missing divider as
     /// success, so the lookup-failure rebuild never sees it (#863).
     var missingAlwaysHiddenDividerStreak = 0
 
@@ -86,7 +86,7 @@ final class MenuBarItemManager {
     /// again and re-arms recovery for a later episode.
     var didRecoverMissingAlwaysHiddenDivider = false
 
-    /// Number of consecutive `ControlItemPair` lookup failures required
+    /// Number of consecutive ControlItemPair lookup failures required
     /// before the control items' status items are rebuilt.
     static nonisolated let controlItemRebuildThreshold = 3
 
@@ -104,20 +104,20 @@ final class MenuBarItemManager {
     static nonisolated let missingAlwaysHiddenDividerRecoveryThreshold = 3
 
     /// Supplementary AX-derived identity for items whose CG-side identity is
-    /// degraded (a Control-Center generic `Item-N` placeholder title, or a
-    /// bundle-id-shaped title — see `86f2514e`). Populated at most once per
-    /// `cacheItemsRegardless` pass, only when at least one degraded item is
+    /// degraded (a Control-Center generic Item-N placeholder title, or a
+    /// bundle-id-shaped title — see 86f2514e). Populated at most once per
+    /// cacheItemsRegardless pass, only when at least one degraded item is
     /// present in that pass. Additive and display-only: this map is never
     /// consulted for matching, section assignment, or persisted layout keys
     /// — see plan 014. No display consumer exists on this branch, so this
     /// is groundwork for a future tooltip/display-name path.
     var degradedItemAXIdentities = [CGWindowID: AXIdentityCatalog.AXItemIdentity]()
 
-    /// Gates the AX enrichment pass in `cacheItemsRegardless`. No consumer of
-    /// `degradedItemAXIdentities` exists yet (see its declaration), so the
-    /// per-cycle `AXIdentityCatalog.snapshot` and per-item window bounds
+    /// Gates the AX enrichment pass in cacheItemsRegardless. No consumer of
+    /// degradedItemAXIdentities exists yet (see its declaration), so the
+    /// per-cycle AXIdentityCatalog.snapshot and per-item window bounds
     /// lookups run only when explicitly enabled for diagnostics. Computed so
-    /// a runtime `defaults write` (and a test's scratch store) is observed
+    /// a runtime defaults write (and a test's scratch store) is observed
     /// rather than frozen at first access.
     static nonisolated var isDegradedIdentityEnrichmentEnabled: Bool {
         Defaults.store.bool(forKey: "EnableDegradedItemAXEnrichment")
@@ -126,9 +126,9 @@ final class MenuBarItemManager {
     /// Widest a control item can be while still counting as a marker rather
     /// than a collapsed section's stretched divider.
     ///
-    /// A collapsed section sets its control item to `Lengths.expanded`
+    /// A collapsed section sets its control item to Lengths.expanded
     /// (10000 pt, which the window server clamps to roughly the span of the
-    /// displays); an expanded one uses `NSStatusItem.variableLength`, which
+    /// displays); an expanded one uses NSStatusItem.variableLength, which
     /// measures in single digits. Anything between the two is not a real
     /// state, so the exact value only has to separate them.
     private static nonisolated let markerWidthCeiling: CGFloat = 256
@@ -136,18 +136,18 @@ final class MenuBarItemManager {
     /// Whether a divider's geometry contradicts its section's logical state,
     /// meaning the snapshot was taken part-way through an expand or collapse.
     ///
-    /// The two do not move together: `section.show()` drags the control item
+    /// The two do not move together: section.show() drags the control item
     /// and resizes it in separate steps, so a cache pass can observe items
     /// already at their revealed coordinates while the divider still carries
     /// the stretched width of the collapsed layout. Classifying against that
-    /// mixture puts the whole hidden section into `visible` — which is what
+    /// mixture puts the whole hidden section into visible — which is what
     /// empties the hidden row in the layout editor while it sits open (#851).
     ///
     /// - Parameters:
     ///   - dividerWidth: Width of the section's control item.
     ///   - isSectionCollapsed: Whether the section's logical state is hidden.
     ///
-    /// - Returns: `true` when geometry and logical state disagree.
+    /// - Returns: true when geometry and logical state disagree.
     static nonisolated func isMidSectionTransition(
         dividerWidth: CGFloat,
         isSectionCollapsed: Bool
@@ -223,11 +223,11 @@ final class MenuBarItemManager {
     /// When the user last moved an item themselves, as opposed to Thaw
     /// moving one on their behalf.
     ///
-    /// Both kinds stamp ``lastMoveOperationTimestamp``, and for the restore
+    /// Both kinds stamp lastMoveOperationTimestamp, and for the restore
     /// cooldown that is right — a bar that just moved should be left alone
     /// whoever moved it. The save gate needs to tell them apart. Thaw's own
     /// moves mean the bar is mid-restore and must not be written down; a
-    /// user's move is the one thing that *must* be written down, and
+    /// user's move is the one thing that must be written down, and
     /// promptly, because the restore will otherwise revert it on the next
     /// cycle. Suppressing the save for both would make a Layout-editor drag
     /// undo itself (#958).
@@ -237,8 +237,8 @@ final class MenuBarItemManager {
     var moveOperationTimeouts = [MenuBarItemTag: Duration]()
 
     /// Items whose most recent move macOS refused — every release put the
-    /// item straight back — keyed by `uniqueIdentifier`, with when. See
-    /// `noteRefusedMove(of:)`.
+    /// item straight back — keyed by uniqueIdentifier, with when. See
+    /// noteRefusedMove(of:).
     var macOSRefusedMoves = [String: ContinuousClock.Instant]()
 
     /// Cached timeouts for click operations (adaptive per app).
@@ -249,7 +249,7 @@ final class MenuBarItemManager {
     /// Storage for internal observers.
     private var cancellables = Set<AnyCancellable>()
 
-    /// Observes `appState.navigationState`'s @Observable properties (wave 3).
+    /// Observes appState.navigationState's @Observable properties (wave 3).
     private var navigationStateObservationTask: Task<Void, Never>?
 
     /// Task observing the item group set, so editing a group re-applies the
@@ -274,7 +274,7 @@ final class MenuBarItemManager {
 
     /// First-seen timestamps for candidate menu windows, keyed by window ID.
     /// A real menu is transient; a window that stays on screen longer than
-    /// ``menuWindowPersistenceThreshold`` is persistent furniture (Droppy's
+    /// menuWindowPersistenceThreshold is persistent furniture (Droppy's
     /// shelf, notch HUDs) and must not block moves (#879 regression).
     var menuWindowFirstSeen: [CGWindowID: ContinuousClock.Instant] = [:]
 
@@ -322,10 +322,10 @@ final class MenuBarItemManager {
     /// would produce no evidence and settling would run to its deadline.
     var completedCacheCycles = 0
 
-    /// Source of tokens for ``backgroundCacheWaiters``.
+    /// Source of tokens for backgroundCacheWaiters.
     private var nextBackgroundCacheWaiterToken = 0
 
-    /// Registers `continuation` as a waiter and returns its token.
+    /// Registers continuation as a waiter and returns its token.
     func addBackgroundCacheWaiter(_ continuation: CheckedContinuation<Void, Never>) -> Int {
         nextBackgroundCacheWaiterToken += 1
         let token = nextBackgroundCacheWaiterToken
@@ -333,11 +333,11 @@ final class MenuBarItemManager {
         return token
     }
 
-    /// Resumes the waiter for `token`, if it has not already been resumed.
+    /// Resumes the waiter for token, if it has not already been resumed.
     ///
     /// Removing before resuming is what makes this safe to call more than
     /// once: a second call finds nothing and does nothing. Resuming a
-    /// `CheckedContinuation` twice is a hard crash, so this ordering is
+    /// CheckedContinuation twice is a hard crash, so this ordering is
     /// load-bearing — do not "simplify" it to a lookup followed by a removal.
     func resumeBackgroundCacheWaiter(_ token: Int) {
         backgroundCacheWaiters.removeValue(forKey: token)?.resume()
@@ -475,13 +475,13 @@ final class MenuBarItemManager {
     var layoutBatchGeneration: UInt = 0
     var activeLayoutBatchLease: LayoutBatchLease?
 
-    /// True while `applyProfileLayout` is executing. Suppresses the
-    /// late-arrival detection in `cacheItemsRegardless` to prevent
+    /// True while applyProfileLayout is executing. Suppresses the
+    /// late-arrival detection in cacheItemsRegardless to prevent
     /// false re-sort triggers during an in-flight sort.
     var isApplyingProfileLayout = false
 
     /// Monotonically increasing token identifying the most recent
-    /// profile-state arm. Each `.profile` armProfileState call takes a
+    /// profile-state arm. Each .profile armProfileState call takes a
     /// new token; a cancelled apply may only roll back state it still
     /// owns (its token is still current), so a late-arriving
     /// cancellation cannot clobber the state armed by the newer apply
@@ -509,31 +509,31 @@ final class MenuBarItemManager {
         var profileItemIdentifiers: Set<String>
     }
 
-    /// The snapshot captured by the most recent `.profile` arm, if that
+    /// The snapshot captured by the most recent .profile arm, if that
     /// apply has neither committed nor rolled back yet.
     var priorProfileApplySnapshot: ProfileApplySnapshot?
 
-    /// True while `applyProfileLayout` is actively issuing the move
-    /// sequence (Phase 6). Lets `postMoveEvents` skip redundant
+    /// True while applyProfileLayout is actively issuing the move
+    /// sequence (Phase 6). Lets postMoveEvents skip redundant
     /// per-item cursor hide/show churn — the cursor is already held
     /// hidden for the whole sequence, and is restored once at Phase 7.
     var isBulkApplyInProgress = false
 
     /// Timestamp of the first observation of a diverged layout that has
-    /// not yet been confirmed by a second consecutive observation. `nil`
+    /// not yet been confirmed by a second consecutive observation. nil
     /// when no divergence is currently pending confirmation. See
-    /// `confirmedDivergence(divergedNow:pendingSince:now:staleness:)`.
+    /// confirmedDivergence(divergedNow:pendingSince:now:staleness:).
     var pendingDivergenceObservedAt: ContinuousClock.Instant?
 
     /// When the most recent bulk apply finished with moves it had planned
-    /// but never enacted. `nil` when the last apply enacted everything it
+    /// but never enacted. nil when the last apply enacted everything it
     /// planned, which is the state in which the live bar is an order of
-    /// record. See `unfinishedMoveBatchBlocksSave(observedAt:now:)`.
+    /// record. See unfinishedMoveBatchBlocksSave(observedAt:now:).
     private var unfinishedMoveBatchObservedAt: ContinuousClock.Instant?
 
     /// How many bulk applies in a row ended with planned moves unenacted.
     ///
-    /// Feeds `automaticBulkApplyPermitted`. On a bar where drags fail
+    /// Feeds automaticBulkApplyPermitted. On a bar where drags fail
     /// systemically (#900), every retry apply ends unfinished, re-arms the
     /// save withhold, and so keeps the divergence it would need to clear —
     /// an unbounded loop in which the cursor is hidden for the length of a
@@ -544,7 +544,7 @@ final class MenuBarItemManager {
 
     /// Monotonic marker and result for the most recently recorded outcome,
     /// which includes an explicit user move (see
-    /// ``recordExternalMoveOperation``) because that too clears the save
+    /// recordExternalMoveOperation) because that too clears the save
     /// latch.
     private(set) var bulkApplyOutcomeGeneration = 0
     private(set) var lastBulkApplyUnenactedMoveCount: Int?
@@ -552,7 +552,7 @@ final class MenuBarItemManager {
     /// Monotonic marker bumped only when a bulk apply actually ran to
     /// completion.
     ///
-    /// Kept separate from ``bulkApplyOutcomeGeneration`` deliberately. Trigger
+    /// Kept separate from bulkApplyOutcomeGeneration deliberately. Trigger
     /// release restoration reads it to tell a real completed apply from an
     /// apply request that early-returned, and a user Cmd-drag or layout-editor
     /// drag arriving mid-apply also records an outcome with zero unenacted
@@ -565,7 +565,7 @@ final class MenuBarItemManager {
     /// The unenacted-move count of the apply that owns the current
     /// completion generation.
     ///
-    /// Kept separate from ``lastBulkApplyUnenactedMoveCount`` because that
+    /// Kept separate from lastBulkApplyUnenactedMoveCount because that
     /// shared counter is overwritten by every outcome recording — including
     /// a user move's — so it cannot be trusted to still hold the completed
     /// apply's number by the time a reader pairs it with the generation.
@@ -613,7 +613,7 @@ final class MenuBarItemManager {
     /// session streak and latch into the pure gate and logs a refusal
     /// under the caller's name.
     ///
-    /// - Parameter quietly: `true` logs the refusal at debug instead of
+    /// - Parameter quietly: true logs the refusal at debug instead of
     ///   warning, for a caller that retries on every cache tick and would
     ///   otherwise flood the log with an expected refusal.
     func isAutomaticBulkApplyPermitted(caller: String, quietly: Bool = false) -> Bool {
@@ -644,15 +644,15 @@ final class MenuBarItemManager {
     }
 
     /// How the failure ledger should file an arbitrary error thrown by a
-    /// move. Only `EventError` carries enough detail to blame the owner.
+    /// move. Only EventError carries enough detail to blame the owner.
     static nonisolated func failureKind(of error: any Error) -> MenuBarItemFailureLedger.FailureKind {
         (error as? EventError)?.failureKind ?? .other
     }
 
-    /// Whether ``move(item:to:on:skipInputPause:maxMoveAttempts:)`` already
+    /// Whether move(item:to:on:skipInputPause:maxMoveAttempts:) already
     /// filed this error against the item before throwing it.
     ///
-    /// `move` files every unresponsive-owner failure itself, so a caller that
+    /// move files every unresponsive-owner failure itself, so a caller that
     /// also files one on catching the throw counts a single failed move
     /// twice. That is not a cosmetic tally: the ledger deliberately waits for
     /// a run of unresponsive-owner failures before writing a persisted mark,
@@ -662,10 +662,10 @@ final class MenuBarItemManager {
     /// marked immediately, and marked items get one attempt instead of eight
     /// thereafter.
     ///
-    /// Callers still file the failures `move` does not, so the backoff window
+    /// Callers still file the failures move does not, so the backoff window
     /// keeps counting vanished items and stale destinations.
     static nonisolated func moveAlreadyFiledFailure(for error: any Error) -> Bool {
-        // Pattern-matched rather than compared: `FailureKind`'s `Equatable`
+        // Pattern-matched rather than compared: FailureKind's Equatable
         // conformance is main-actor isolated and this runs nonisolated.
         if case .unresponsiveOwner = failureKind(of: error) {
             return true
@@ -680,11 +680,11 @@ final class MenuBarItemManager {
     /// placed the item, grows when the owner stopped responding, and holds
     /// steady when the attempt displaced the item without landing it.
     ///
-    /// That last case is the one that matters. `waitForMoveEventResponse`
+    /// That last case is the one that matters. waitForMoveEventResponse
     /// returns on any origin change, and an attempt that misses still nudges
     /// the item a pixel or two as the owner registers the click. Decaying on
     /// those responses let a run of misses starve the budget until the item
-    /// could no longer answer inside it — the `itemResponseTimeout` cascade
+    /// could no longer answer inside it — the itemResponseTimeout cascade
     /// in #881. Misses must be neutral, not rewarded.
     static nonisolated func nextMoveOperationTimeout(
         after current: Duration,
@@ -708,7 +708,7 @@ final class MenuBarItemManager {
     /// offscreen parking space, and the plan built against its old position is
     /// describing an arrangement that no longer exists.
     ///
-    /// In the #881 log the target's measured `minX` went from -4222 to 794 on
+    /// In the #881 log the target's measured minX went from -4222 to 794 on
     /// a 1512 pt display between two attempts of a single move, and all eight
     /// attempts were spent re-dragging against it (#900).
     static nonisolated func destinationIsStale(
@@ -722,7 +722,7 @@ final class MenuBarItemManager {
     /// Whether the destination's target has been retreating in one direction
     /// across attempts of a single move.
     ///
-    /// ``destinationIsStale(plannedTargetMinX:currentTargetMinX:displayWidth:)``
+    /// destinationIsStale(plannedTargetMinX:currentTargetMinX:displayWidth:)
     /// measures one attempt against a display-width threshold, which catches
     /// a target that jumped sections but nothing smaller. A move can fail a
     /// different way: the item inserts on the wrong side of its anchor, the
@@ -763,8 +763,8 @@ final class MenuBarItemManager {
 
     /// A launch-stable digest of an identifier list.
     ///
-    /// FNV-1a rather than `hashValue`: Swift seeds its hasher per process,
-    /// so `hashValue` cannot be compared across relaunches, which is exactly
+    /// FNV-1a rather than hashValue: Swift seeds its hasher per process,
+    /// so hashValue cannot be compared across relaunches, which is exactly
     /// the comparison a field log needs to support.
     ///
     /// Order-sensitive by construction — that is the entire point. The saved
@@ -814,7 +814,7 @@ final class MenuBarItemManager {
         return parts.joined(separator: ", ")
     }
 
-    /// How a single `postMoveEvents` attempt turned out, for the purpose of
+    /// How a single postMoveEvents attempt turned out, for the purpose of
     /// sizing the next attempt's budget.
     enum MoveAttemptOutcome {
         /// The item reached its destination.
@@ -836,7 +836,7 @@ final class MenuBarItemManager {
     var pendingReturnDestinations = [String: [String: String]]() // [tagIdentifier: ["neighbor": tag, "position": "left"|"right"]]
 
     /// Persisted per-section item order. Maps section key to an ordered list of
-    /// `uniqueIdentifier` strings (right-to-left, matching cache array order).
+    /// uniqueIdentifier strings (right-to-left, matching cache array order).
     var savedSectionOrder = [String: [String]]()
 
     /// Items whose section is temporarily owned by an active trigger. Their
@@ -869,7 +869,7 @@ final class MenuBarItemManager {
 
     /// Whether notch overflow currently has items ejected into hidden.
     ///
-    /// Callers use this to decide how to *reveal* those items: the visible row
+    /// Callers use this to decide how to reveal those items: the visible row
     /// had no room left beside the notch when they were ejected, so expanding
     /// the hidden section inline cannot show them.
     var hasNotchOverflowEjectedItems: Bool {
@@ -884,7 +884,7 @@ final class MenuBarItemManager {
 
     /// One home for the defaults keys holding the manager's persisted
     /// layout state, shared with ProfileManager's capture path and the
-    /// `--reset-layout` escape hatch so the three can never drift apart.
+    /// --reset-layout escape hatch so the three can never drift apart.
     nonisolated enum LayoutStateKey {
         static let savedSectionOrder = "MenuBarItemManager.savedSectionOrder"
         static let knownItemIdentifiers = "MenuBarItemManager.knownItemIdentifiers"
@@ -963,7 +963,7 @@ final class MenuBarItemManager {
     /// The display names Control Center is currently known by, used to
     /// recognize localized-namespace ghosts in the saved order (#949).
     ///
-    /// The whitespace heuristic in `LayoutSolver` misses languages whose
+    /// The whitespace heuristic in LayoutSolver misses languages whose
     /// display name has none (Kontrollzentrum); the live localized name
     /// covers the current locale, and ghosts minted under a previous
     /// system language still fall to the whitespace test where they can.
@@ -1102,7 +1102,7 @@ final class MenuBarItemManager {
         // section empty so such a section stays present as an empty list:
         // restoring its original identifiers instead would duplicate the
         // members that moved into the winning section, and a duplicate
-        // reaches both `persistSavedSectionOrder` and the live apply's
+        // reaches both persistSavedSectionOrder and the live apply's
         // item-section map.
         var result = [String: [String]]()
         for name in sections.keys {
@@ -1120,7 +1120,7 @@ final class MenuBarItemManager {
 
     /// Re-gathers groups in the saved order and moves the live items to
     /// match. Called when the user creates, edits, or dissolves a group:
-    /// editing a group changes the *desired* order but moves nothing on
+    /// editing a group changes the desired order but moves nothing on
     /// screen by itself.
     func applyGroupOrderToLiveSections() async {
         guard appState != nil else { return }
@@ -1132,7 +1132,7 @@ final class MenuBarItemManager {
         persistSavedSectionOrder()
 
         // Reuse the profile-apply move engine with the gathered order as the
-        // spec: `.savedOrder` skips profile-state arming and `automatic:
+        // spec: .savedOrder skips profile-state arming and `automatic:
         // false` treats this as what it is, a user-initiated edit that should
         // happen now rather than at the next interaction lull. Closed apps'
         // entries are carried in the maps so their slots survive the apply.
@@ -1303,7 +1303,7 @@ final class MenuBarItemManager {
                 // iPhone Mirroring icons) from the identifier set so their
                 // ephemeral UIDs are never written to savedSectionOrder.
                 // isTransientControlCenterItem requires a resolved sourcePID,
-                // so also exclude CC-generic (`Item-N`) items whose sourcePID
+                // so also exclude CC-generic (Item-N) items whose sourcePID
                 // is nil: those are either the same transient windows caught
                 // before resolution, or third-party items degraded to
                 // ambiguous CC identifiers by an XPC resolution failure
@@ -1413,21 +1413,21 @@ final class MenuBarItemManager {
         Self.persistedSectionName(for: key)
     }
 
-    /// Prefix used in `pendingRelocations` values to mark items whose rehide
+    /// Prefix used in pendingRelocations values to mark items whose rehide
     /// failed terminally in the current session. The suffix is the item's
-    /// `windowID` at the time of failure, used to detect app relaunches.
+    /// windowID at the time of failure, used to detect app relaunches.
     private static let waitForRelaunchPrefix = "waitForRelaunch:"
 
-    /// Returns a `pendingRelocations` sentinel value that suppresses same-session
-    /// move attempts. Encodes `windowID` so that a relaunch (new windowID) clears
+    /// Returns a pendingRelocations sentinel value that suppresses same-session
+    /// move attempts. Encodes windowID so that a relaunch (new windowID) clears
     /// the suppression automatically.
     func waitForRelaunchValue(windowID: CGWindowID, section: MenuBarSection.Name) -> String {
         "\(Self.waitForRelaunchPrefix)\(windowID):\(sectionKey(for: section))"
     }
 
-    /// Parses a `pendingRelocations` sentinel value.
-    /// Returns `(windowID, section)` if the value is a wait-for-relaunch entry,
-    /// or `nil` if it is a plain section key.
+    /// Parses a pendingRelocations sentinel value.
+    /// Returns (windowID, section) if the value is a wait-for-relaunch entry,
+    /// or nil if it is a plain section key.
     func parseWaitForRelaunch(_ value: String) -> (windowID: CGWindowID, section: MenuBarSection.Name)? {
         guard value.hasPrefix(Self.waitForRelaunchPrefix) else { return nil }
         let payload = value.dropFirst(Self.waitForRelaunchPrefix.count)
@@ -1494,7 +1494,7 @@ final class MenuBarItemManager {
 
     /// Walks the active profile's saved item order outward from the
     /// badge's missing anchor and returns an insertion index against
-    /// the first sibling that's still present in `itemIdentifiers`.
+    /// the first sibling that's still present in itemIdentifiers.
     /// Walks in the direction implied by the saved relation first
     /// (leftOfAnchor → walk left toward earlier siblings; rightOfAnchor
     /// → walk right toward later siblings), then the opposite direction
@@ -1536,11 +1536,11 @@ final class MenuBarItemManager {
     ///
     /// - Parameters:
     ///   - profileOrder: The saved identifier order for the section.
-    ///   - anchorPos: The anchor's position within `profileOrder`.
+    ///   - anchorPos: The anchor's position within profileOrder.
     ///   - itemIdentifiers: The identifiers currently in the section.
     ///   - walkLeftFirst: Whether the badge sat left of the anchor.
     ///
-    /// - Returns: An index into `itemIdentifiers`, or `nil` when no sibling
+    /// - Returns: An index into itemIdentifiers, or nil when no sibling
     ///   from the saved order is still present.
     static nonisolated func badgeIndex(
         profileOrder: [String],
@@ -1633,16 +1633,16 @@ final class MenuBarItemManager {
         MenuBarItemManager.diagLog.debug("Updated new item destination to \(resolvedSection.logString) at relation \(updatedPlacement.relation.rawValue)")
     }
 
-    /// Applies a previously captured ``NewItemsPlacement`` (from a profile),
+    /// Applies a previously captured NewItemsPlacement (from a profile),
     /// clamping to the hidden section when the always-hidden section is
     /// disabled. Persists the updated preference.
     ///
-    /// When clamping from `alwaysHidden` to `hidden`, the original anchor
+    /// When clamping from alwaysHidden to hidden, the original anchor
     /// references an alwaysHidden item that won't resolve in the hidden
     /// section. Rather than letting the badge fall through to the
-    /// `.hidden`/always-hidden-disabled default (which is the leftmost
+    /// .hidden/always-hidden-disabled default (which is the leftmost
     /// slot, farthest from the clock), we re-anchor to the rightmost
-    /// existing hidden item with `.leftOfAnchor` so the badge lands on
+    /// existing hidden item with .leftOfAnchor so the badge lands on
     /// the clock-side edge of the section; the spot users reach first
     /// when they expand the hidden section.
     func applyNewItemsPlacement(_ placement: NewItemsPlacement) {
@@ -2094,7 +2094,7 @@ final class MenuBarItemManager {
         var c = Set<AnyCancellable>()
 
         // Editing a group (create, rename, add/remove member, dissolve)
-        // changes the *desired* order but moves nothing on screen. Re-gather
+        // changes the desired order but moves nothing on screen. Re-gather
         // the saved order and re-apply it to the live sections. Debounced
         // because a multi-step edit lands as several mutations, and each
         // physical re-order costs a plist write plus a move batch.
@@ -2203,8 +2203,8 @@ final class MenuBarItemManager {
         }
         .store(in: &c)
 
-        // `navigationState` (AppNavigationState) is @Observable (wave 3), so
-        // its old `$settingsNavigationIdentifier`/`$isSettingsPresented`
+        // navigationState (AppNavigationState) is @Observable (wave 3), so
+        // its old $settingsNavigationIdentifier/$isSettingsPresented
         // Combine projections are gone. Both old subscribers wanted the same
         // outcome (refresh the image cache once Menu Bar Layout becomes the
         // presented settings pane), just triggered from two different edges

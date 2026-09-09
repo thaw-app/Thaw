@@ -16,13 +16,13 @@ import SwiftUI
 /// item (⌘-drag in the menu bar or via the layout editor).
 ///
 /// The status-item mechanics — the autosave prefix that keeps spacers outside
-/// Thaw's own concealment, the two `NSStatusItem Visible*` defaults, and the
+/// Thaw's own concealment, the two NSStatusItem Visible* defaults, and the
 /// requirement that the button carry a real image to be composited — are the
 /// ones the section-divider spacers validated.
 @MainActor
 @Observable
 final class MenuBarSpacerManager {
-    /// Deliberately NOT under `Thaw.ControlItem.` — that prefix marks Thaw's
+    /// Deliberately NOT under Thaw.ControlItem. — that prefix marks Thaw's
     /// immovable anchors (never drag sources, special-cased right-click).
     /// Spacers are ordinary items: draggable, reorderable, concealable.
     static nonisolated let autosavePrefix = "Thaw.Spacer."
@@ -30,7 +30,7 @@ final class MenuBarSpacerManager {
     /// Whether a cached item tag belongs to one of Thaw's user-created
     /// spacers, so capture consumers (layout editor, search) can identify
     /// them. Distinct from the section-divider spacers, whose autosave names
-    /// sit under a control-item identifier and end in `.Spacer.<index>`.
+    /// sit under a control-item identifier and end in .Spacer.<index>.
     static nonisolated func isSpacerTag(_ tag: MenuBarItemTag) -> Bool {
         tag.namespace == .thaw && tag.title.hasPrefix(autosavePrefix)
     }
@@ -84,7 +84,7 @@ final class MenuBarSpacerManager {
 
     private func persist() {
         // An empty set is the default, so clear the key rather than storing
-        // an empty array — keeps `defaults read` output honest.
+        // an empty array — keeps defaults read output honest.
         guard !spacers.isEmpty else {
             Defaults.set(nil, forKey: .menuBarSpacers)
             return

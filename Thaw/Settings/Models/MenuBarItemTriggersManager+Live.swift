@@ -10,8 +10,8 @@ import AppKit
 import Collections
 import Foundation
 
-/// The live half of ``MenuBarItemTriggersManager``: everything whose substance
-/// needs a running `AppState`. Setup and its observations, the evaluation pass
+/// The live half of MenuBarItemTriggersManager: everything whose substance
+/// needs a running AppState. Setup and its observations, the evaluation pass
 /// that reads the item cache, the debounced apply, the serial move chain and
 /// its retry bookkeeping, reveal notifications, script runs, and the image
 /// capture behind the icon-watching conditions. None of that can run in a unit
@@ -60,10 +60,10 @@ extension MenuBarItemTriggersManager {
         // different section. Watching it lets triggers repair a manual or
         // external move promptly, rather than trusting a stale Boolean memo
         // until the condition itself happens to flip.
-        // `MenuBarItemManager` is @Observable, so its old `$itemCache`
+        // MenuBarItemManager is @Observable, so its old $itemCache
         // projection is gone. Match the app's Observations async-sequence
-        // pattern; `scheduleEvaluation(after:)` already coalesces, which is
-        // what the old `.debounce` provided.
+        // pattern; scheduleEvaluation(after:) already coalesces, which is
+        // what the old .debounce provided.
         itemCacheObservationTask?.cancel()
         itemCacheObservationTask = Task { @MainActor [weak self, weak appState] in
             let changes = Observations { appState?.itemManager.itemCache }
@@ -114,7 +114,7 @@ extension MenuBarItemTriggersManager {
         // Re-apply when feature flags change (a newly enabled source may
         // satisfy a trigger that was previously inert).
         featureFlags.addChangeHandler { [weak self] in
-            // `isAvailable` reads the flags, so ownership changes with them.
+            // isAvailable reads the flags, so ownership changes with them.
             self?.refreshControlledIdentifiers()
             // Run after the flag set mutates so cached sources whose
             // monitors live here (scripts and image hashes) populate
@@ -133,8 +133,8 @@ extension MenuBarItemTriggersManager {
     /// Evaluates every enabled trigger against the given system state.
     ///
     /// A reveal decision that has flipped relative to the item's current
-    /// placement is applied immediately when `force` is `true` (startup,
-    /// edits, the safety timer) or after a debounce when `false` (live state
+    /// placement is applied immediately when force is true (startup,
+    /// edits, the safety timer) or after a debounce when false (live state
     /// changes).
     func evaluate(for state: SystemState, force: Bool) {
         guard let appState else { return }
@@ -180,8 +180,8 @@ extension MenuBarItemTriggersManager {
         // Editor ownership is a separate question from which items currently
         // carry an action, and it has a single writer. An overridden trigger
         // emits no action but still owns its target, so deriving ownership
-        // from `plan.actions` here would contradict
-        // `refreshControlledIdentifiers` and make the badge flicker depending
+        // from plan.actions here would contradict
+        // refreshControlledIdentifiers and make the badge flicker depending
         // on which writer ran last.
         refreshControlledIdentifiers()
         appState.itemManager.setTriggerControlledItemIdentifiers(triggerControlledIdentifiers)

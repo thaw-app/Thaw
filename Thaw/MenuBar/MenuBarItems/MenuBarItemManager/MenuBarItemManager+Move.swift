@@ -93,11 +93,11 @@ extension MenuBarItemManager {
         /// Whether a synthetic drag to this destination would press at a
         /// point that lies off every display.
         ///
-        /// ``targetPoint(in:on:)`` derives the drop point from the target's
+        /// targetPoint(in:on:) derives the drop point from the target's
         /// leading or trailing edge, so a target parked in the off-screen
         /// zone yields a press no owner is watching: the events are accepted,
         /// AppKit drops the item beside the parked target, and the item is
-        /// stranded there. ``LayoutSolver/isOnScreen(bounds:screenFrames:)``
+        /// stranded there. LayoutSolver/isOnScreen(bounds:screenFrames:)
         /// is the matching test — it measures the leading edge, which is the
         /// edge a drop point is built from.
         ///
@@ -311,7 +311,7 @@ extension MenuBarItemManager {
     }
 
     /// Selects a transport from explicit display membership and path safety.
-    /// A `nil` endpoint display means WindowServer has parked it off-screen;
+    /// A nil endpoint display means WindowServer has parked it off-screen;
     /// a non-selected display means the plan is stale or cross-display and is
     /// rejected instead of being teleported.
     static nonisolated func strictTransportDecision(
@@ -556,7 +556,7 @@ extension MenuBarItemManager {
     /// posts lets two independent retry loops undo each other between attempts.
     private static let moveGate = SimpleSemaphore(value: 1)
 
-    /// A blocked-item recovery may call `move` while its parent still owns the
+    /// A blocked-item recovery may call move while its parent still owns the
     /// gate; task-local ownership lets that nested move pass through safely.
     @TaskLocal private static var holdsMoveGate = false
 
@@ -688,7 +688,7 @@ extension MenuBarItemManager {
     /// Returns the default timeout for move operations associated
     /// with the given item.
     ///
-    /// A budget, not a cost. `waitForMoveEventResponse` polls the item's
+    /// A budget, not a cost. waitForMoveEventResponse polls the item's
     /// origin every 10ms and returns the instant it changes, so an owner that
     /// answers promptly is charged what it takes and nothing more. Raising
     /// these values cannot slow a move that works; it only buys time for one
@@ -724,7 +724,7 @@ extension MenuBarItemManager {
     ///
     /// Growth is adopted as computed; only shrinkage is smoothed against the
     /// standing value. Averaging both directions halved every escalation step
-    /// and so undid the one `nextMoveOperationTimeout` had just decided on:
+    /// and so undid the one nextMoveOperationTimeout had just decided on:
     /// a budget escalating by half from 100ms reaches the ceiling in four
     /// attempts, but smoothed it only reaches 476ms in eight, which is the
     /// exact ladder the #687 log walks before giving up on 1Password
@@ -734,9 +734,9 @@ extension MenuBarItemManager {
     /// the point: one fast answer should not commit an owner to a budget it
     /// cannot meet again.
     ///
-    /// The floor is 75ms: `waitForMoveEventResponse` polls every 10ms, so a
+    /// The floor is 75ms: waitForMoveEventResponse polls every 10ms, so a
     /// budget below that leaves too little margin for system event latency and
-    /// causes `itemResponseTimeout` → retry cascades. The ceiling is a second,
+    /// causes itemResponseTimeout → retry cascades. The ceiling is a second,
     /// which is what an escalating budget is allowed to cost before the item is
     /// better classified as unresponsive than as slow.
     static nonisolated func mergedMoveOperationTimeout(
@@ -747,8 +747,8 @@ extension MenuBarItemManager {
         return next.clamped(min: .milliseconds(75), max: .seconds(1))
     }
 
-    /// Watchdog duration that covers the worst case of a single `move`
-    /// call: every one of `maxAttempts` attempts spends its whole
+    /// Watchdog duration that covers the worst case of a single move
+    /// call: every one of maxAttempts attempts spends its whole
     /// operation timeout four times over (two event posts, two response
     /// waits), budgets can escalate to the merged ceiling, and a failed
     /// attempt posts one more fallback at a fixed 100 ms. The result never
@@ -1016,15 +1016,15 @@ extension MenuBarItemManager {
 
     /// Returns a Boolean value that indicates whether the given menu bar
     /// item has the correct position, relative to the given destination.
-    /// Reports whether `item` is now the immediate neighbor of the
+    /// Reports whether item is now the immediate neighbor of the
     /// destination's target on the requested side.
     ///
     /// This asks for the ordinal relationship rather than comparing
     /// coordinates. The check used to re-read both rects independently and
-    /// compare them for exact `CGFloat` equality, which cannot succeed on a
+    /// compare them for exact CGFloat equality, which cannot succeed on a
     /// bar that reflows: our own drag displaces the target too, so the item
-    /// lands where the target *was* and is then compared against where the
-    /// target now is. In the #881 log the target's measured `minX` swung from
+    /// lands where the target was and is then compared against where the
+    /// target now is. In the #881 log the target's measured minX swung from
     /// -4222 to 794 between attempts while the item sat still, and all eight
     /// attempts were spent re-dragging against a destination that had already
     /// moved (#900).
@@ -1037,7 +1037,7 @@ extension MenuBarItemManager {
     /// - Note: source PIDs are deliberately left unresolved. Only tags, window
     ///   IDs and bounds are needed here, and this runs once per attempt.
     ///
-    /// Main-actor isolated rather than `nonisolated`: the enumeration and the
+    /// Main-actor isolated rather than nonisolated: the enumeration and the
     /// tag comparison both are, and hopping once per attempt costs nothing
     /// next to the enumeration itself.
     private func itemHasCorrectPosition(
@@ -1120,12 +1120,12 @@ extension MenuBarItemManager {
         warpCursorAfter: Bool = true,
         preferSourceAnchoredTeleport: Bool = false
     ) async throws -> MoveEventsOutcome {
-        // Take the permit outside `budget.run`: `run` re-checks the deadline
+        // Take the permit outside budget.run: run re-checks the deadline
         // after its operation succeeds and can throw from that check, which
         // would leave the permit held while this function reports failure —
-        // leaking it for the life of the process. `timeout(for:)` still
+        // leaking it for the life of the process. timeout(for:) still
         // refuses admission before the wait when the deadline has passed, and
-        // later `budget.run`/`budget.sleep` calls keep enforcing the deadline.
+        // later budget.run/budget.sleep calls keep enforcing the deadline.
         let semaphoreAllowance = try budget.timeout(for: .milliseconds(3500))
         do {
             try await eventSemaphore.wait(timeout: semaphoreAllowance)
@@ -1174,7 +1174,7 @@ extension MenuBarItemManager {
         // A process that is alive but not pumping its event loop never
         // acknowledges the synthetic move, so every scrombleEvent below runs
         // to its timeout and burns the full 3.5 s semaphore budget — with the
-        // semaphore held, that stalls every *other* item's move behind it.
+        // semaphore held, that stalls every other item's move behind it.
         // Little Snitch is the recurring case (it ships with GUI Scripting
         // disabled), but this catches any hung owner. Bail out immediately
         // instead; the caller's retry/backoff path picks the item up again
@@ -1698,18 +1698,18 @@ extension MenuBarItemManager {
     /// Returns whether the given item is currently in the "blocked" state
     /// (positioned at x=-1). Exposed so drag-failure callers can classify a
     /// failed move without duplicating the sentinel check performed by
-    /// `isItemBlocked`.
+    /// isItemBlocked.
     func isItemCurrentlyBlocked(_ item: MenuBarItem) async -> Bool {
         await isItemBlocked(item)
     }
 
     /// Attempts to move a blocked (x=-1) item back to the visible section,
     /// immediately right of the hidden control item — the same safe-harbor
-    /// anchor used by `restoreBlockedItemsToVisible` and
-    /// `validateItemPositionAfterMove`. This does not retry the original
+    /// anchor used by restoreBlockedItemsToVisible and
+    /// validateItemPositionAfterMove. This does not retry the original
     /// move; callers are responsible for retrying afterward if desired.
     ///
-    /// - Returns: `true` if the rescue move completed without throwing.
+    /// - Returns: true if the rescue move completed without throwing.
     func rescueBlockedItemToVisible(_ item: MenuBarItem) async -> Bool {
         let items = await MenuBarItem.getMenuBarItems(option: .activeSpace)
         guard let hiddenMenuBarItem = items.first(matching: .hiddenControlItem) else {
@@ -1770,7 +1770,7 @@ extension MenuBarItemManager {
 
     /// The tunables of a single synthetic-drag move. Every field defaults,
     /// so callers pass only what they deviate from; the whole struct exists
-    /// so ``move`` and ``moveItem(withTagIdentifier:toSection:options:)``
+    /// so move and moveItem(withTagIdentifier:toSection:options:)
     /// stay readable at the call site.
     struct MoveOptions {
         var requiredInputPause: Duration?
@@ -1797,7 +1797,7 @@ extension MenuBarItemManager {
         (timeout * 6).clamped(min: .milliseconds(1500), max: .seconds(3))
     }
 
-    /// The immutable event data posted by a press-release guard. `CGEvent`
+    /// The immutable event data posted by a press-release guard. CGEvent
     /// posting is thread-safe and the event is not mutated after arming.
     nonisolated struct PressReleaseEvents: @unchecked Sendable {
         let mouseUp: CGEvent
@@ -2120,7 +2120,7 @@ extension MenuBarItemManager {
                             throw error
                         } catch is TaskTimeoutError {
                             // The outer task's budget-derived allowance
-                            // elapsed before `waitForUserToPauseInput`'s own
+                            // elapsed before waitForUserToPauseInput's own
                             // timeout could fire (it is unset or wider than
                             // the allowance). That is still an input pause
                             // timeout, so keep the deferral attribution
