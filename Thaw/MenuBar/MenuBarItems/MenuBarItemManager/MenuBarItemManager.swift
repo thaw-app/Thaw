@@ -465,8 +465,15 @@ final class MenuBarItemManager {
     var profileSortedItemIdentifiers = Set<String>()
 
     /// Handle for the debounced profile re-sort task. Cancelled and re-created
-    /// each time a new late-arriving profile item is detected.
+    /// each time a new late-arriving profile item is detected, and retained
+    /// until its layout apply has fully returned.
     var profileResortTask: Task<Void, Never>?
+
+    /// Monotonic ownership for every bulk layout batch. A higher-authority
+    /// batch invalidates the closures held by older work before it can issue
+    /// another move or commit state.
+    var layoutBatchGeneration: UInt = 0
+    var activeLayoutBatchLease: LayoutBatchLease?
 
     /// True while `applyProfileLayout` is executing. Suppresses the
     /// late-arrival detection in `cacheItemsRegardless` to prevent

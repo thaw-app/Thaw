@@ -104,4 +104,42 @@ struct BulkMoveCoordinationTests {
             initialPreflight: { true }
         ))
     }
+
+    @Test("Explicit profile work supersedes every automatic batch")
+    func explicitProfileHasHighestAuthority() {
+        for active in [
+            MenuBarItemManager.LayoutBatchKind.savedRestore,
+            .profileResort,
+            .explicitProfile,
+        ] {
+            #expect(MenuBarItemManager.layoutBatchMaySupersede(
+                active: active,
+                requested: .explicitProfile
+            ))
+        }
+    }
+
+    @Test("Saved restores cannot displace profile-owned work")
+    func savedRestoreHasLowestAuthority() {
+        #expect(!MenuBarItemManager.layoutBatchMaySupersede(
+            active: .profileResort,
+            requested: .savedRestore
+        ))
+        #expect(!MenuBarItemManager.layoutBatchMaySupersede(
+            active: .explicitProfile,
+            requested: .savedRestore
+        ))
+    }
+
+    @Test("A newer re-sort replaces an older re-sort but not an explicit apply")
+    func profileResortAuthorityIsStable() {
+        #expect(MenuBarItemManager.layoutBatchMaySupersede(
+            active: .profileResort,
+            requested: .profileResort
+        ))
+        #expect(!MenuBarItemManager.layoutBatchMaySupersede(
+            active: .explicitProfile,
+            requested: .profileResort
+        ))
+    }
 }

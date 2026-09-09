@@ -136,6 +136,9 @@ extension ProfileManager {
         layoutTask?.cancel()
         layoutGeneration &+= 1
         let generation = layoutGeneration
+        guard let batchLease = appState.itemManager.beginLayoutBatch(.explicitProfile) else {
+            return
+        }
 
         let pinnedHidden = Set(profile.menuBarLayout.pinnedHiddenBundleIDs)
         let pinnedAlwaysHidden = Set(profile.menuBarLayout.pinnedAlwaysHiddenBundleIDs)
@@ -162,6 +165,8 @@ extension ProfileManager {
         )
 
         layoutTask = Task { [weak self] in
+            defer { appState.itemManager.finishLayoutBatch(batchLease) }
+
             // 1. Pre-hooks. Global runs first so it can do common setup;
             //    profile-specific runs second so it can override or extend.
             await HookRunner.runIfEnabled(globalPre, context: HookRunner.Context(
@@ -263,7 +268,10 @@ extension ProfileManager {
                     sectionOrder: sectionOrder,
                     itemSectionMap: itemSectionMap,
                     itemOrder: itemOrder
-                )
+                ),
+                shouldBegin: {
+                    appState.itemManager.layoutBatchIsCurrent(batchLease)
+                }
             )
 
             // 3. Post-hooks. Profile runs first (mirror of the pre order),
@@ -461,7 +469,8 @@ extension ProfileManager {
         // waking, a resolution change). Let the Space keep the bar it
         // asked for rather than having the display overwrite it.
         if let spaceKey = SpaceInfo.activeSpace().persistentKey,
-           profile(forSpaceKey: spaceKey) != nil {
+           profile(forSpaceKey: spaceKey) != nil
+        {
             diagLog.debug("Display auto-switch yielding to Space association \(spaceKey)")
             return
         }

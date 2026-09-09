@@ -37,6 +37,66 @@ extension MenuBarItemManager {
         }
     }
 
+    /// Authority of a bulk layout request. Higher-authority work may replace
+    /// lower-authority work; lower-authority background work never displaces a
+    /// profile the user explicitly selected.
+    nonisolated enum LayoutBatchKind: Int, Equatable {
+        case savedRestore
+        case profileResort
+        case explicitProfile
+    }
+
+    nonisolated struct LayoutBatchLease: Equatable {
+        let generation: UInt
+        let kind: LayoutBatchKind
+    }
+
+    static nonisolated func layoutBatchMaySupersede(
+        active: LayoutBatchKind?,
+        requested: LayoutBatchKind
+    ) -> Bool {
+        guard let active else { return true }
+        return requested.rawValue >= active.rawValue
+    }
+
+    /// Claims ownership for a batch and invalidates any lower-authority work.
+    @discardableResult
+    func beginLayoutBatch(_ kind: LayoutBatchKind) -> LayoutBatchLease? {
+        guard Self.layoutBatchMaySupersede(
+            active: activeLayoutBatchLease?.kind,
+            requested: kind
+        ) else {
+            MenuBarItemManager.diagLog.debug(
+                "Layout batch \(kind) deferred behind \(String(describing: activeLayoutBatchLease?.kind))"
+            )
+            return nil
+        }
+
+        if kind == .explicitProfile {
+            profileResortTask?.cancel()
+            profileResortTask = nil
+        }
+        layoutBatchGeneration &+= 1
+        let lease = LayoutBatchLease(generation: layoutBatchGeneration, kind: kind)
+        activeLayoutBatchLease = lease
+        return lease
+    }
+
+    func layoutBatchIsCurrent(_ lease: LayoutBatchLease) -> Bool {
+        activeLayoutBatchLease == lease && layoutBatchGeneration == lease.generation
+    }
+
+    func finishLayoutBatch(_ lease: LayoutBatchLease) {
+        guard layoutBatchIsCurrent(lease) else { return }
+        activeLayoutBatchLease = nil
+    }
+
+    func cancelActiveLayoutBatch(ifKind kind: LayoutBatchKind) {
+        guard activeLayoutBatchLease?.kind == kind else { return }
+        layoutBatchGeneration &+= 1
+        activeLayoutBatchLease = nil
+    }
+
     /// Errors that can occur during a layout reset.
     enum LayoutResetError: LocalizedError {
         case missingAppState
@@ -422,7 +482,16 @@ extension MenuBarItemManager {
     /// calls within the debounce window are coalesced into a single re-sort.
     func scheduleProfileResort() {
         profileResortTask?.cancel()
+        guard let lease = beginLayoutBatch(.profileResort) else { return }
         profileResortTask = Task { [weak self] in
+            defer {
+                if let self {
+                    if self.layoutBatchIsCurrent(lease) {
+                        self.profileResortTask = nil
+                    }
+                    self.finishLayoutBatch(lease)
+                }
+            }
             // Short debounce to coalesce multiple items appearing in quick
             // succession. The app-launch notification already has a 1s debounce,
             // so this only needs to cover the gap between detection and action.
@@ -432,6 +501,7 @@ extension MenuBarItemManager {
                 return // Cancelled; a newer schedule replaced us.
             }
             guard let self, let layout = self.activeProfileLayout else { return }
+            guard self.layoutBatchIsCurrent(lease) else { return }
             guard !self.isInStartupSettling else { return }
             guard !self.isRestoringItemOrder else { return }
 
@@ -448,16 +518,10 @@ extension MenuBarItemManager {
             // calls `applyProfileLayout` directly and never comes through
             // here.
             guard self.isAutomaticBulkApplyPermitted(caller: "Profile re-sort") else {
-                self.profileResortTask = nil
                 return
             }
 
             MenuBarItemManager.diagLog.info("Profile re-sort: re-applying layout for late-arriving items")
-            // Clear profileResortTask BEFORE calling applyProfileLayout,
-            // because applyProfileLayout cancels profileResortTask to
-            // prevent concurrent re-sorts; which would cancel THIS task
-            // and cause the move loop to exit via Task.isCancelled.
-            self.profileResortTask = nil
             await self.applyProfileLayout(
                 ProfileLayoutSpec(
                     pinnedHidden: layout.pinnedHidden,
@@ -466,7 +530,10 @@ extension MenuBarItemManager {
                     itemSectionMap: layout.itemSectionMap,
                     itemOrder: layout.itemOrder
                 ),
-                automatic: true
+                automatic: true,
+                shouldBegin: {
+                    self.layoutBatchIsCurrent(lease)
+                }
             )
         }
     }
@@ -479,6 +546,7 @@ extension MenuBarItemManager {
         profileSortedItemIdentifiers.removeAll()
         profileResortTask?.cancel()
         profileResortTask = nil
+        cancelActiveLayoutBatch(ifKind: .profileResort)
         isApplyingProfileLayout = false
     }
 
@@ -581,8 +649,6 @@ extension MenuBarItemManager {
         pinnedAlwaysHiddenBundleIDs = pinnedAlwaysHidden
         savedSectionOrder = sectionOrder
 
-        profileResortTask?.cancel()
-        profileResortTask = nil
         isApplyingProfileLayout = true
         activeProfileLayout = (
             pinnedHidden: pinnedHidden,
@@ -3844,6 +3910,11 @@ extension MenuBarItemManager {
         // restoration shields even though the apply finished with unenacted
         // moves. Only a completed apply writes the completed-apply counter,
         // and the generation comparison pins it to this apply.
+        guard let batchLease = beginLayoutBatch(.savedRestore) else {
+            return false
+        }
+        defer { finishLayoutBatch(batchLease) }
+
         let completionGenerationBeforeApply = bulkApplyCompletionGeneration
         let restorationIdentifiersAtDispatch = triggerLayoutRestorationItemIdentifiers
         await applyProfileLayout(
@@ -3857,7 +3928,9 @@ extension MenuBarItemManager {
             source: .savedOrder,
             automatic: true,
             duringSettling: resolvedIdentitiesOnly,
-            shouldBegin: shouldBegin
+            shouldBegin: {
+                self.layoutBatchIsCurrent(batchLease) && (shouldBegin?() ?? true)
+            }
         )
         if bulkApplyCompletionGeneration != completionGenerationBeforeApply,
            lastCompletedBulkApplyUnenactedMoveCount == 0
