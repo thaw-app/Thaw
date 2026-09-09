@@ -9,8 +9,8 @@
 import AXSwift6
 import Cocoa
 
-/// Activates a menu bar item by invoking an accessibility action (AXShowMenu,
-/// falling back to AXPress) on its resolved AX element, instead of
+/// Activates a menu bar item by invoking AXPress on its resolved AX element,
+/// instead of
 /// synthesizing mouse events. This avoids leaking synthetic events into
 /// system gesture handling and lets items with their own click handling
 /// (e.g. the Wi-Fi picker) behave exactly as they would for a real click.
@@ -29,7 +29,7 @@ enum AXItemActivator {
         /// window bounds (within tolerance), so acting on it would risk
         /// hitting the wrong item.
         case frameMismatch
-        /// Both AXShowMenu and AXPress failed on the verified element.
+        /// AXPress failed on the verified element.
         case actionFailed
     }
 
@@ -46,8 +46,8 @@ enum AXItemActivator {
     /// Activates `item` via an accessibility action.
     ///
     /// - Throws: ``ActivationError`` when the item's AX element can't be
-    ///   resolved and verified, or when neither AXShowMenu nor AXPress had any
-    ///   effect — an action the element refused *and* no sign of the owner
+    ///   resolved and verified, or when AXPress had no effect — the element
+    ///   refused the action and there was no sign of the owner
     ///   reacting. Callers should fall back to the synthetic click path on any
     ///   error; ``ActivationError/actionFailed`` in particular now means the
     ///   item was left alone, so clicking it is safe.
@@ -68,7 +68,7 @@ enum AXItemActivator {
 
         let snapshot = ClickReactionVerifier.snapshot(for: item)
         let worked = Self.performFirstEffectiveAction(
-            [.showMenu, .press],
+            leftClickActions,
             perform: { (try? element.performAction($0)) != nil },
             didReact: { ClickReactionVerifier.reactionSoFar(against: snapshot)?.didReact == true }
         )
@@ -77,15 +77,21 @@ enum AXItemActivator {
         }
     }
 
+    /// Accessibility actions that preserve ordinary left-click semantics.
+    ///
+    /// `AXShowMenu` is deliberately absent: Apple status items interpret it
+    /// as their contextual/right-click menu, not their normal activation.
+    static nonisolated let leftClickActions: [Action] = [.press]
+
     /// Performs `actions` in order, stopping at the first one that has an
     /// effect.
     ///
     /// An action has an effect when the element accepts it **or** when the item
     /// is observed reacting to it. The second half is the whole point. A
-    /// thrown action is not a no-op: `AXShowMenu` on a status item opens the
-    /// menu and then blocks, because the menu runs a modal tracking loop and
-    /// the app cannot answer the accessibility message while it does, so
-    /// ``messagingTimeout`` expires on precisely the calls that worked.
+    /// thrown action is not necessarily a no-op: an action can open a menu and
+    /// then block because the menu runs a modal tracking loop and the app cannot
+    /// answer while it does, so ``messagingTimeout`` may expire on precisely
+    /// the calls that worked.
     ///
     /// Reading that as failure escalates, and every escalation from here is a
     /// second activation of an item whose menu is already open: `AXPress`

@@ -6,6 +6,7 @@
 //  Copyright (Thaw) © 2026 Toni Förster
 //  Licensed under the GNU GPLv3
 
+import AXSwift6
 import CoreGraphics
 import Testing
 @testable import Thaw
@@ -17,6 +18,12 @@ import Testing
 /// it is not unit-testable in CI and is intentionally not scaffolded here.
 @Suite("AX item activator helpers")
 struct AXItemActivatorTests {
+    @Test("Left-click activation never requests the contextual AX menu")
+    func leftClickUsesPressOnly() {
+        #expect(AXItemActivator.leftClickActions.map(\.rawValue) == [Action.press.rawValue])
+        #expect(!AXItemActivator.leftClickActions.map(\.rawValue).contains(Action.showMenu.rawValue))
+    }
+
     // MARK: - candidateIndex(inFrames:containing:)
 
     @Test("The candidate index is the frame containing the point")
