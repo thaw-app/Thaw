@@ -35,7 +35,8 @@ final class MenuBarItemSpacingManager {
         }
     }
 
-    /// An error thrown when an app fails to terminate after force-quitting.
+    /// An error thrown when an app is still running after being asked to
+    /// quit. The app is left alone; see ``signalAppToQuit(_:)``.
     private struct AppNotTerminatedError: Error {}
 
     /// Snapshot of an app captured before the relaunch wave fires. The
@@ -50,12 +51,11 @@ final class MenuBarItemSpacingManager {
         let bundleID: String
         let bundleURL: URL?
 
-        /// The launchd label that owns this app's executable, when it is a
-        /// system LaunchAgent. Resolved pre-wave because it is read from
-        /// the running process's executable URL, which is gone by the time
-        /// the fallback runs. Non-nil means the fallback must restart the
-        /// item through launchd rather than by launching the bundle. (#720)
-        let launchdLabel: String?
+        /// How this app may be restarted, decided before the wave because
+        /// it reads the running process's executable URL, which is gone by
+        /// the time the fallback runs. Only apps the wave can bring back
+        /// are captured, so this is never `.leaveRunning`. (#720, #1070)
+        let strategy: SpacingRelaunchStrategy
     }
 
     /// Result of a single applyOffset call.
@@ -66,21 +66,26 @@ final class MenuBarItemSpacingManager {
         let didRelaunch: Bool
 
         /// Bundle IDs we expect to see re-attach a menu bar item after
-        /// the wave. Excludes apps that failed to relaunch (and Thaw
-        /// itself, which is never killed). Empty when didRelaunch is
-        /// false. Callers can pass this to a settling task to gate
-        /// post-wave layout work on actual reattachment instead of a
-        /// fixed timer.
+        /// the wave. Excludes apps that failed to relaunch, apps the wave
+        /// deliberately left running, and Thaw itself, which is never
+        /// asked to quit. Empty when didRelaunch is false. Callers can
+        /// pass this to a settling task to gate post-wave layout work on
+        /// actual reattachment instead of a fixed timer.
         let recoveredBundleIDs: Set<String>
 
-        /// Localized names of apps that failed to relaunch (kill timed
+        /// Localized names of apps that failed to relaunch (quit timed
         /// out, or fallback launch could not bring them back). Empty on
-        /// the happy path.
+        /// the happy path. Apps the wave deliberately left running are not
+        /// failures and are not listed here.
         let failedAppNames: [String]
     }
 
-    /// Delay before force terminating an app.
-    private let forceTerminateDelay = 5
+    /// How long an app gets to quit on its own before the wave gives up on
+    /// it. Nothing is force-terminated afterwards: an app that ignores the
+    /// quit request is usually holding a save sheet or an in-flight
+    /// operation, and killing it to reposition an icon costs the user more
+    /// than the icon is worth. It keeps the old spacing instead. (#1070)
+    private let quitGracePeriod = 5
 
     /// Small cap on captured standard error from the spacing subprocess,
     /// following the `HookRunner` output-limit pattern.
@@ -204,25 +209,21 @@ final class MenuBarItemSpacingManager {
         app.terminate()
 
         let pollInterval: Duration = .milliseconds(50)
-        let deadline = ContinuousClock.now.advanced(by: .seconds(forceTerminateDelay))
+        let deadline = ContinuousClock.now.advanced(by: .seconds(quitGracePeriod))
 
         while !app.isTerminated, ContinuousClock.now < deadline {
             try await Task.sleep(for: pollInterval)
         }
 
         if !app.isTerminated {
-            MenuBarItemSpacingManager.diagLog.debug(
+            MenuBarItemSpacingManager.diagLog.notice(
                 """
-                Application "\(app.logString)" did not terminate within \
-                \(forceTerminateDelay) seconds, attempting to force terminate
+                Application "\(app.logString)" did not quit within \
+                \(quitGracePeriod) seconds; leaving it running with the \
+                previous spacing
                 """
             )
-            app.forceTerminate()
-            try? await Task.sleep(for: .seconds(1))
-
-            if !app.isTerminated {
-                throw AppNotTerminatedError()
-            }
+            throw AppNotTerminatedError()
         }
 
         MenuBarItemSpacingManager.diagLog.debug(
@@ -257,35 +258,56 @@ final class MenuBarItemSpacingManager {
         )
     }
 
-    /// Asynchronously relaunches the given app.
-    private func relaunchApp(_ app: NSRunningApplication) async throws {
+    /// The strategy the wave should use for the given running app.
+    ///
+    /// Resolved once per app before the wave, so the decision is made while
+    /// the process is still there to be inspected.
+    private func relaunchStrategy(for app: NSRunningApplication) -> SpacingRelaunchStrategy {
+        SpacingRelaunchPolicy.strategy(
+            executableURL: app.executableURL,
+            bundleURL: app.bundleURL,
+            bundleIdentifier: app.bundleIdentifier,
+            launchdLabel: launchdLabel(for: app)
+        )
+    }
+
+    /// Asynchronously restarts the given app using its pre-resolved
+    /// strategy.
+    ///
+    /// System LaunchAgents (Spotlight, TextInputMenuAgent, Dock,
+    /// WindowManager, ...) can carry a launch constraint permitting launchd
+    /// as their only launching parent. Terminating one and launching its
+    /// bundle ourselves gets the new process SIGKILLed at exec -
+    /// CODESIGNING, "Launch Constraint Violation" - and because terminate()
+    /// is a *successful* exit, an agent with KeepAlive.SuccessfulExit=false
+    /// (Spotlight's setting) is never respawned by launchd either, so the
+    /// item stays gone until the machine is rebooted. Those go through
+    /// launchd; a constrained binary with no label to kickstart is never
+    /// touched at all. (#720, #1070)
+    private func relaunchApp(
+        _ app: NSRunningApplication,
+        bundleID: String,
+        strategy: SpacingRelaunchStrategy
+    ) async throws {
         struct RelaunchError: Error {}
 
-        // System LaunchAgents (Spotlight, Dock, WindowManager, ...) can
-        // carry a launch constraint permitting launchd as their only
-        // launching parent. Terminating one and launching its bundle
-        // ourselves gets the new process SIGKILLed at exec - CODESIGNING,
-        // "Launch Constraint Violation" - and because terminate() is a
-        // *successful* exit, an agent with KeepAlive.SuccessfulExit=false
-        // (Spotlight's setting) is never respawned by launchd either, so
-        // the item stays gone until the machine is rebooted. Restart these
-        // through launchd instead. (#720)
-        if let label = launchdLabel(for: app) {
+        switch strategy {
+        case let .launchdKickstart(label):
             try await kickstartLaunchAgent(label: label)
-            return
-        }
-
-        guard
-            let url = app.bundleURL,
-            let bundleIdentifier = app.bundleIdentifier
-        else {
-            throw RelaunchError()
-        }
-        try await signalAppToQuit(app)
-        if app.isTerminated {
-            try await launchApp(at: url, bundleIdentifier: bundleIdentifier)
-        } else {
-            throw RelaunchError()
+        case let .terminateAndLaunch(bundleURL):
+            try await signalAppToQuit(app)
+            if app.isTerminated {
+                try await launchApp(at: bundleURL, bundleIdentifier: bundleID)
+            } else {
+                throw RelaunchError()
+            }
+        case let .leaveRunning(reason):
+            // Not reachable: applyOffsetLocked filters these out before the
+            // wave. Kept exhaustive so a new strategy can't silently fall
+            // into the terminate path.
+            MenuBarItemSpacingManager.diagLog.debug(
+                "Skipping \(bundleID) in the relaunch wave: \(reason.rawValue)"
+            )
         }
     }
 
@@ -374,52 +396,82 @@ final class MenuBarItemSpacingManager {
             "applyOffset relaunching \(pids.count) unique PIDs from \(items.count) menu bar items"
         )
 
-        // Snapshot pre-wave PID -> (bundleID, bundleURL) so the post-wave
-        // verification can tell whether each expected app actually came back
-        // and the fallback can relaunch via the exact bundleURL that was
-        // running. Stored before signalling so resolution doesn't race with
-        // terminate. Thaw itself is excluded: it's never relaunched (we skip
-        // .current during the wave), so its PID is unchanged post-wave,
-        // which would otherwise be misread as "didn't come back" and
-        // trigger a useless fallback launch of our own bundle.
+        // Snapshot pre-wave PID -> (bundleID, bundleURL, strategy) so the
+        // post-wave verification can tell whether each expected app actually
+        // came back and the fallback can relaunch via the exact bundleURL
+        // that was running. Stored before signalling so resolution doesn't
+        // race with terminate. Thaw itself is excluded: it's never
+        // relaunched (we skip .current during the wave), so its PID is
+        // unchanged post-wave, which would otherwise be misread as "didn't
+        // come back" and trigger a useless fallback launch of our own
+        // bundle.
+        //
+        // Apps the policy declines to restart never enter the map, which is
+        // what keeps them out of the wave, the verification, and the
+        // fallback launch in one step. Before #1070 a launch-constrained
+        // system binary that wasn't covered by an indexed LaunchAgent was
+        // terminated anyway, then hit AMFI on the way back up - twice, once
+        // in the wave and again in the fallback.
         let ownBundleID = NSRunningApplication.current.bundleIdentifier
         var preWaveAppHandles: [pid_t: AppHandle] = [:]
+        var skippedByReason: [SpacingRelaunchSkipReason: [String]] = [:]
         for pid in pids {
-            if let app = NSRunningApplication(processIdentifier: pid),
-               app != .current,
-               let bid = app.bundleIdentifier,
-               bid != ownBundleID
-            {
-                preWaveAppHandles[pid] = AppHandle(
-                    bundleID: bid,
-                    bundleURL: app.bundleURL,
-                    launchdLabel: launchdLabel(for: app)
-                )
+            guard
+                let app = NSRunningApplication(processIdentifier: pid),
+                app != .current,
+                let bid = app.bundleIdentifier,
+                bid != ownBundleID
+            else {
+                continue
             }
+            let strategy = relaunchStrategy(for: app)
+            if case let .leaveRunning(reason) = strategy {
+                skippedByReason[reason, default: []].append(bid)
+                continue
+            }
+            preWaveAppHandles[pid] = AppHandle(
+                bundleID: bid,
+                bundleURL: app.bundleURL,
+                strategy: strategy
+            )
+        }
+
+        for (reason, bundleIDs) in skippedByReason {
+            MenuBarItemSpacingManager.diagLog.notice(
+                """
+                applyOffset leaving \(bundleIDs.count) app(s) running \
+                (\(reason.rawValue)): \(bundleIDs.sorted().joined(separator: ", "))
+                """
+            )
         }
 
         await withTaskGroup(of: Void.self) { group in
-            for pid in pids {
+            for (pid, handle) in preWaveAppHandles {
                 guard
                     let app = NSRunningApplication(processIdentifier: pid),
                     app != .current
                 else {
                     // Skip this PID, don't break: earlier break would abort
                     // the entire wave on any unresolvable PID, leaving most
-                    // apps un-relaunched depending on Set iteration order.
+                    // apps un-relaunched depending on Dictionary iteration
+                    // order.
                     continue
                 }
                 group.addTask {
                     // Errors from relaunchApp are intentionally swallowed.
                     // The post-wave verification + fallback below is the
                     // authoritative source of "did this app come back":
-                    // a kill that times out is often still followed by a
+                    // a quit that times out is often still followed by a
                     // launchd respawn, and the bundleURL fallback can also
                     // recover apps whose relaunchApp threw. Tracking
                     // wave-time exceptions as failures double-counts those
                     // cases and stops the settling task from waiting for
                     // their menu bar items to reattach.
-                    try? await self.relaunchApp(app)
+                    try? await self.relaunchApp(
+                        app,
+                        bundleID: handle.bundleID,
+                        strategy: handle.strategy
+                    )
                 }
             }
         }
@@ -433,11 +485,11 @@ final class MenuBarItemSpacingManager {
         // bundle ID may resolve to a different copy (or to nothing) at
         // fallback time.
         try? await Task.sleep(for: .seconds(2))
-        let stillMissingBundleIDs = await verifyAndFallbackRelaunch(
+        let verification = await verifyAndFallbackRelaunch(
             preWaveAppHandles: preWaveAppHandles
         )
 
-        let failedAppNames = stillMissingBundleIDs.map { bid -> String in
+        let failedAppNames = verification.stillMissingBundleIDs.map { bid -> String in
             NSRunningApplication.runningApplications(
                 withBundleIdentifier: bid
             ).first?.localizedName ?? bid
@@ -454,8 +506,13 @@ final class MenuBarItemSpacingManager {
             )
         }
 
+        // Apps that never quit are subtracted too: their status items never
+        // detached, so a settling period that waits for them to reattach
+        // would wait for something that isn't going to happen.
         let allBundleIDs = Set(preWaveAppHandles.values.map(\.bundleID))
-        let recoveredBundleIDs = allBundleIDs.subtracting(stillMissingBundleIDs)
+        let recoveredBundleIDs = allBundleIDs
+            .subtracting(verification.stillMissingBundleIDs)
+            .subtracting(verification.stillRunningBundleIDs)
         return ApplyOutcome(
             didRelaunch: true,
             recoveredBundleIDs: recoveredBundleIDs,
@@ -463,29 +520,64 @@ final class MenuBarItemSpacingManager {
         )
     }
 
+    /// Outcome of the post-wave check.
+    private struct WaveVerification {
+        /// Apps that are gone: nothing with their bundle ID is running,
+        /// even after the fallback launch.
+        let stillMissingBundleIDs: Set<String>
+
+        /// Apps that are still up on their pre-wave PID because they
+        /// declined the quit request. Nothing to recover - they simply
+        /// keep the previous spacing.
+        let stillRunningBundleIDs: Set<String>
+    }
+
     /// For every pre-wave (pid, bundleID, bundleURL) snapshot, checks
     /// whether a process with that bundle ID is currently running with a
     /// PID different from the pre-wave one. Apps that have not been
     /// replaced run through a fallback launch via
     /// NSWorkspace.openApplication(at:) using the captured bundleURL.
-    /// Returns the bundle IDs of apps that are still missing after the
-    /// fallback.
     private func verifyAndFallbackRelaunch(
         preWaveAppHandles: [pid_t: AppHandle]
-    ) async -> Set<String> {
-        let missing: [AppHandle] = preWaveAppHandles.compactMap { oldPID, handle in
+    ) async -> WaveVerification {
+        var missing: [AppHandle] = []
+        var stillRunning = Set<String>()
+        for (oldPID, handle) in preWaveAppHandles {
             let current = NSRunningApplication.runningApplications(
                 withBundleIdentifier: handle.bundleID
             )
             // Came back if any current instance is a fresh PID.
-            let isBack = current.contains { $0.processIdentifier != oldPID }
-            return isBack ? nil : handle
+            if current.contains(where: { $0.processIdentifier != oldPID }) {
+                continue
+            }
+            // The original process is still alive, so the quit request was
+            // refused (a save sheet, a modal, a busy app). Relaunching it
+            // would mean forcing it down first, which is the destructive
+            // behaviour this path exists to avoid; leave it be. (#1070)
+            if current.contains(where: { $0.processIdentifier == oldPID }) {
+                stillRunning.insert(handle.bundleID)
+                continue
+            }
+            missing.append(handle)
         }
+
+        if !stillRunning.isEmpty {
+            MenuBarItemSpacingManager.diagLog.notice(
+                """
+                applyOffset verification: \(stillRunning.count) app(s) declined to quit \
+                and keep the previous spacing: \(stillRunning.sorted().joined(separator: ", "))
+                """
+            )
+        }
+
         guard !missing.isEmpty else {
             MenuBarItemSpacingManager.diagLog.debug(
-                "applyOffset verification: all \(preWaveAppHandles.count) apps came back"
+                "applyOffset verification: all \(preWaveAppHandles.count - stillRunning.count) relaunched apps came back"
             )
-            return []
+            return WaveVerification(
+                stillMissingBundleIDs: [],
+                stillRunningBundleIDs: stillRunning
+            )
         }
 
         let missingNames = missing.map(\.bundleID).joined(separator: ", ")
@@ -502,7 +594,7 @@ final class MenuBarItemSpacingManager {
                     // Same launch constraint as the wave itself: retrying
                     // openApplication here is what produced the second
                     // Spotlight crash report, ~8 s after the first. (#720)
-                    if let label = handle.launchdLabel {
+                    if case let .launchdKickstart(label) = handle.strategy {
                         do {
                             try await self.kickstartLaunchAgent(label: label)
                         } catch {
@@ -574,7 +666,10 @@ final class MenuBarItemSpacingManager {
                 )
             }
         }
-        return stillMissing
+        return WaveVerification(
+            stillMissingBundleIDs: stillMissing,
+            stillRunningBundleIDs: stillRunning
+        )
     }
 }
 

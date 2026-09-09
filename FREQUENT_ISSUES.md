@@ -62,7 +62,9 @@ Thaw **does** persist item order per profile. Layout drift usually comes from on
 - A **display topology change** (plugging in a monitor, waking from sleep, Sidecar, KVM switch).
 - A **spacing change** that requires Thaw to relaunch apps with menu bar items.
 
-When display spacing must be applied across a transition, Thaw may relaunch affected apps. That can look like icons jumping or duplicating briefly. Enable **Confirm before relaunching apps** in **Settings → Displays** if you want a prompt first.
+When display spacing must be applied across a transition, Thaw may relaunch affected apps, since macOS only reads the new spacing when a status item's owner starts. That can look like icons jumping or duplicating briefly. Enable **Confirm before relaunching apps** in **Settings → Displays** if you want a prompt first.
+
+Thaw only relaunches apps it can bring back. See [What Thaw will and won't quit](#what-thaw-will-and-wont-quit).
 
 If order keeps changing without any display or app changes, it may be a bug. See [Before you file a bug](#before-you-file-a-bug).
 
@@ -168,7 +170,7 @@ Corrupted Control Center state from CodexBar 0.29.x can also cause **Little Snit
 
 Connecting, disconnecting, or switching displays can cause brief visual glitches: resolution flicker or extra spacing. These are often transient.
 
-Thaw may **relaunch apps with menu bar items** when a display transition requires applying different menu bar spacing. That can produce duplicate icons if the host app also relaunches its agent. The duplicate usually belongs to the app, not Thaw.
+Thaw may **relaunch apps with menu bar items** when a display transition requires applying different menu bar spacing. That can produce duplicate icons if the host app also relaunches its agent. The duplicate usually belongs to the app, not Thaw. Thaw does not quit macOS system services during this; see [What Thaw will and won't quit](#what-thaw-will-and-wont-quit).
 
 **Workarounds:**
 
@@ -186,9 +188,19 @@ Menu bar spacing is a **beta** feature. Values far from the default (especially 
 
 1. Return spacing to the default and confirm all items are reachable.
 2. Re-apply spacing in small steps.
-3. If a system app crashes when spacing changes (for example Spotlight), treat it as an upstream macOS issue ([#720](https://github.com/thaw-app/Thaw/issues/720)).
+3. If a system app is missing after a spacing change (for example Spotlight), restart it with `launchctl kickstart -k gui/$(id -u)/com.apple.Spotlight`, or log out and back in.
 
 Related reports: [#664](https://github.com/thaw-app/Thaw/issues/664).
+
+## What Thaw will and won't quit
+
+Menu bar spacing lives in a single system-wide preference, and a status item only picks up a new value when its owning process starts. To apply spacing right away, Thaw restarts the apps that own menu bar items. It sorts them into three groups first:
+
+- **Apps macOS launches for you** (Spotlight, the input menu, Dock, Time Machine) are restarted through `launchctl kickstart`, so launchd stays their launching parent. Quitting one and relaunching it directly is rejected by macOS at exec, and the item would stay gone until you rebooted ([#720](https://github.com/thaw-app/Thaw/issues/720)).
+- **System binaries no LaunchAgent claims** are left alone entirely. Thaw has no way to bring them back, so it never takes them down ([#1070](https://github.com/thaw-app/Thaw/issues/1070)).
+- **Your own apps** are asked to quit and launched again. Thaw asks — it never force-quits. An app that declines (a save sheet, a long operation) keeps running and keeps the previous spacing.
+
+The trade-off is that anything Thaw skips keeps its old spacing until it next starts on its own. Spacing changes are rare; a permanently dead Spotlight is not worth an evenly spaced menu bar.
 
 ## Screen Recording and permission prompts
 
