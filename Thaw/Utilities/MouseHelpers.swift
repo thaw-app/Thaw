@@ -288,6 +288,25 @@ nonisolated enum MouseHelpers {
         return .seconds(seconds) <= duration
     }
 
+    /// Whether physical pointer input occurred after an operation took cursor
+    /// ownership. HID-system timestamps exclude Thaw's synthetic warps/events.
+    static func physicalPointerInputOccurred(
+        since start: ContinuousClock.Instant,
+        now: ContinuousClock.Instant = .now
+    ) -> Bool {
+        let elapsed = max(start.duration(to: now), .zero)
+        return lastMovementOccurred(within: elapsed, stateID: .hidSystemState)
+            || lastScrollWheelOccurred(within: elapsed, stateID: .hidSystemState)
+            || isButtonPressed()
+    }
+
+    /// Pure cursor-ownership decision used by move and batch restoration.
+    static func shouldRestoreSavedCursorPosition(
+        physicalPointerInputOccurred: Bool
+    ) -> Bool {
+        !physicalPointerInputOccurred
+    }
+
     /// Returns a Boolean value that indicates whether the last scroll
     /// wheel event occurred within the given duration.
     ///

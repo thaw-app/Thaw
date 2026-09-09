@@ -88,4 +88,14 @@ struct MouseHelpersCursorPointTests {
 
         #expect(point == nil)
     }
+
+    @Test("Saved cursor position is restored only while Thaw retains ownership")
+    func cursorRestorationRespectsPhysicalInput() {
+        #expect(MouseHelpers.shouldRestoreSavedCursorPosition(
+            physicalPointerInputOccurred: false
+        ))
+        #expect(!MouseHelpers.shouldRestoreSavedCursorPosition(
+            physicalPointerInputOccurred: true
+        ))
+    }
 }

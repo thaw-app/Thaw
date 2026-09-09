@@ -1602,15 +1602,27 @@ extension MenuBarItemManager {
         // user has no pointer. The `defer` is the balance for the early
         // return paths that never reach the end of Phase 6.
         let savedCursorPosition = MouseHelpers.locationCoreGraphics
+        let cursorOwnershipStartedAt = ContinuousClock.now
         var cursorRestored = false
         func restoreCursor() {
             guard !cursorRestored else { return }
             cursorRestored = true
-            // savedCursorPosition is already in CoreGraphics coordinates, so
-            // warp back directly with no AppKit→CG flip (and no dependence on
-            // which screen contains it).
-            if let savedCursorPosition {
+            let physicalInputOccurred = MouseHelpers.physicalPointerInputOccurred(
+                since: cursorOwnershipStartedAt
+            )
+            // savedCursorPosition is already in CoreGraphics coordinates. Only
+            // reclaim it while Thaw still owns the pointer; a physical move or
+            // scroll during the batch makes the user's newer location final.
+            if let savedCursorPosition,
+               MouseHelpers.shouldRestoreSavedCursorPosition(
+                   physicalPointerInputOccurred: physicalInputOccurred
+               )
+            {
                 MouseHelpers.restoreCursorPosition(to: savedCursorPosition)
+            } else if physicalInputOccurred {
+                MenuBarItemManager.diagLog.debug(
+                    "Profile layout: preserving physical pointer movement made during the batch"
+                )
             }
             MouseHelpers.showCursor()
         }

@@ -2221,6 +2221,7 @@ extension MenuBarItemManager {
         // individual attempt (which caused the cursor to oscillate many times
         // during a layout reset when items required multiple attempts).
         let mouseLocation = options.hideCursorAcrossAttempts ? try getMouseLocation() : nil
+        let cursorOwnershipStartedAt = ContinuousClock.now
         // The default 1 s cursor-hide watchdog is too short for menu
         // bar item moves, and the budget they can burn has grown: every
         // attempt spends its whole timeout four times over (two event
@@ -2245,7 +2246,18 @@ extension MenuBarItemManager {
         }
         defer {
             if let mouseLocation {
-                MouseHelpers.restoreCursorPosition(to: mouseLocation)
+                let physicalInputOccurred = MouseHelpers.physicalPointerInputOccurred(
+                    since: cursorOwnershipStartedAt
+                )
+                if MouseHelpers.shouldRestoreSavedCursorPosition(
+                    physicalPointerInputOccurred: physicalInputOccurred
+                ) {
+                    MouseHelpers.restoreCursorPosition(to: mouseLocation)
+                } else {
+                    MenuBarItemManager.diagLog.debug(
+                        "move: preserving physical pointer movement made during the transaction"
+                    )
+                }
                 MouseHelpers.showCursor()
             }
         }
