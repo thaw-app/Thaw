@@ -280,8 +280,10 @@ nonisolated enum MouseHelpers {
     ///
     /// - Parameter duration: The duration within which the last mouse
     ///   movement event must have occurred in order to return `true`.
-    static func lastMovementOccurred(within duration: Duration) -> Bool {
-        let stateID = CGEventSourceStateID.combinedSessionState
+    static func lastMovementOccurred(
+        within duration: Duration,
+        stateID: CGEventSourceStateID = .combinedSessionState
+    ) -> Bool {
         let seconds = CGEventSource.secondsSinceLastEventType(stateID, eventType: .mouseMoved)
         return .seconds(seconds) <= duration
     }
@@ -291,8 +293,10 @@ nonisolated enum MouseHelpers {
     ///
     /// - Parameter duration: The duration within which the last scroll
     ///   wheel event must have occurred in order to return `true`.
-    static func lastScrollWheelOccurred(within duration: Duration) -> Bool {
-        let stateID = CGEventSourceStateID.combinedSessionState
+    static func lastScrollWheelOccurred(
+        within duration: Duration,
+        stateID: CGEventSourceStateID = .combinedSessionState
+    ) -> Bool {
         let seconds = CGEventSource.secondsSinceLastEventType(stateID, eventType: .scrollWheel)
         return .seconds(seconds) <= duration
     }

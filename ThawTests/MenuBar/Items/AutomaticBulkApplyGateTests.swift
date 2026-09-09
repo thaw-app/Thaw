@@ -145,9 +145,8 @@ struct AutomaticBulkApplyGateTests {
 /// A batch holds the cursor hidden for its whole length, so one dispatched
 /// the instant a late arrival is noticed can take the pointer away
 /// mid-interaction and then contest it move by move (#899, #723). The gate
-/// waits for one real lull first — and, crucially, only defers: the cap
-/// guarantees the batch still runs, because a saved layout that is never
-/// restored is the worse failure.
+/// waits for one real lull first and defers this dispatch if the deadline
+/// expires while input remains active.
 @Suite("Bulk apply idle gate")
 struct BulkApplyIdleGateTests {
     /// Off by default. A non-positive threshold is the switch, not a
@@ -180,11 +179,11 @@ struct BulkApplyIdleGateTests {
     @Test("A paused user concludes the wait immediately")
     func pausedUserConcludesImmediately() {
         #expect(
-            MenuBarItemManager.bulkApplyIdleWaitConcluded(
+            MenuBarItemManager.bulkApplyIdleWaitDecision(
                 userHasPausedInput: true,
                 elapsed: .zero,
                 cap: .milliseconds(2000)
-            )
+            ) == .ready
         )
     }
 
@@ -192,37 +191,53 @@ struct BulkApplyIdleGateTests {
     @Test("An active user inside the cap keeps waiting")
     func activeUserInsideCapWaits() {
         #expect(
-            !MenuBarItemManager.bulkApplyIdleWaitConcluded(
+            MenuBarItemManager.bulkApplyIdleWaitDecision(
                 userHasPausedInput: false,
                 elapsed: .milliseconds(500),
                 cap: .milliseconds(2000)
-            )
+            ) == .waiting
         )
     }
 
-    /// The important exit: a user who never stops must not starve the
-    /// apply. At the cap the batch proceeds regardless.
-    @Test("The cap concludes the wait even with input in flight")
-    func capConcludesDespiteInput() {
+    /// The deadline defers automatic work instead of authorizing a move over
+    /// continuing input.
+    @Test("The deadline defers while input remains active")
+    func deadlineDefersActiveInput() {
         #expect(
-            MenuBarItemManager.bulkApplyIdleWaitConcluded(
+            MenuBarItemManager.bulkApplyIdleWaitDecision(
                 userHasPausedInput: false,
                 elapsed: .milliseconds(2000),
                 cap: .milliseconds(2000)
-            )
+            ) == .deferBatch
         )
     }
 
-    /// A clamped cap degrades to "don't wait" rather than to a stall.
-    @Test("A zero cap never defers")
-    func zeroCapNeverDefers() {
+    /// A clamped zero deadline immediately defers active-input work.
+    @Test("A zero deadline immediately defers active input")
+    func zeroDeadlineDefers() {
         #expect(
-            MenuBarItemManager.bulkApplyIdleWaitConcluded(
+            MenuBarItemManager.bulkApplyIdleWaitDecision(
                 userHasPausedInput: false,
                 elapsed: .zero,
                 cap: .zero
-            )
+            ) == .deferBatch
         )
+    }
+
+    @Test("Only automatic batches yield when physical input resumes")
+    func automaticBatchYieldsBetweenMoves() {
+        #expect(MenuBarItemManager.automaticBatchShouldYieldForInput(
+            automatic: true,
+            userHasPausedPhysicalInput: false
+        ))
+        #expect(!MenuBarItemManager.automaticBatchShouldYieldForInput(
+            automatic: false,
+            userHasPausedPhysicalInput: false
+        ))
+        #expect(!MenuBarItemManager.automaticBatchShouldYieldForInput(
+            automatic: true,
+            userHasPausedPhysicalInput: true
+        ))
     }
 }
 

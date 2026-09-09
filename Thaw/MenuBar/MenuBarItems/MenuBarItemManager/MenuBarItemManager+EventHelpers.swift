@@ -227,6 +227,15 @@ extension MenuBarItemManager {
             !MouseHelpers.isButtonPressed()
     }
 
+    /// Returns whether physical input has paused, excluding Thaw's synthetic
+    /// cursor warps and posted events from the movement/scroll timestamps.
+    nonisolated func hasUserPausedPhysicalInput(for duration: Duration) -> Bool {
+        NSEvent.modifierFlags.isEmpty &&
+            !MouseHelpers.lastMovementOccurred(within: duration, stateID: .hidSystemState) &&
+            !MouseHelpers.lastScrollWheelOccurred(within: duration, stateID: .hidSystemState) &&
+            !MouseHelpers.isButtonPressed()
+    }
+
     /// Waits asynchronously for the user to pause input.
     @discardableResult
     nonisolated func waitForUserToPauseInput(
@@ -249,7 +258,7 @@ extension MenuBarItemManager {
         let waitTask = Task { () -> InputPauseWaitResult in
             while true {
                 try Task.checkCancellation()
-                if let shouldContinue, !(await shouldContinue()) {
+                if let shouldContinue, await !shouldContinue() {
                     return .superseded
                 }
                 if hasUserPausedInput(for: pause) {
@@ -291,13 +300,13 @@ extension MenuBarItemManager {
     /// the first poll already passes — and sidesteps the collision when the
     /// bar is not idle.
     ///
-    /// Deferring only. The cap guarantees the batch still runs, and
-    /// cancellation exits promptly so a newer apply can replace this one;
-    /// the caller re-checks `Task.isCancelled` immediately afterwards.
+    /// The cap is a deadline for this dispatch, not permission to override
+    /// active input. Reaching it returns `false` so a later cache/profile event
+    /// can retry. Cancellation also exits promptly for a newer apply.
     ///
     /// On by default at 300 ms; disable with:
     ///   defaults write com.stonerl.Thaw bulkApplyIdleThresholdMs -int 0
-    nonisolated func waitForBulkApplyIdleWindow() async {
+    nonisolated func waitForBulkApplyIdleWindow() async -> Bool {
         let thresholdMs = (Defaults.object(forKey: .bulkApplyIdleThresholdMs) as? Int)
             ?? Defaults.DefaultValue.bulkApplyIdleThresholdMs
         let capMs = (Defaults.object(forKey: .bulkApplyIdleWaitCapMs) as? Int)
@@ -306,34 +315,39 @@ extension MenuBarItemManager {
             thresholdMs: thresholdMs,
             capMs: capMs
         ) else {
-            return
+            return true
         }
 
         let start = ContinuousClock.now
         while !Task.isCancelled {
             let elapsed = ContinuousClock.now - start
-            if MenuBarItemManager.bulkApplyIdleWaitConcluded(
+            switch MenuBarItemManager.bulkApplyIdleWaitDecision(
                 userHasPausedInput: hasUserPausedInput(for: window.threshold),
                 elapsed: elapsed,
                 cap: window.cap
             ) {
-                if elapsed >= window.cap {
-                    MenuBarItemManager.diagLog.debug(
-                        "Bulk apply idle gate: cap reached after \(elapsed.milliseconds) ms without a lull; proceeding anyway"
-                    )
-                } else if elapsed > .zero {
+            case .ready:
+                if elapsed > .zero {
                     MenuBarItemManager.diagLog.debug(
                         "Bulk apply idle gate: waited \(elapsed.milliseconds) ms for input to settle"
                     )
                 }
-                return
+                return true
+            case .deferBatch:
+                MenuBarItemManager.diagLog.debug(
+                    "Bulk apply idle gate: deadline reached after \(elapsed.milliseconds) ms without a lull; deferring"
+                )
+                return false
+            case .waiting:
+                break
             }
             do {
                 try await Task.sleep(for: .milliseconds(50))
             } catch {
-                return // Cancelled; the caller's Task.isCancelled check handles it.
+                return false
             }
         }
+        return false
     }
 
     /// Returns the dynamic delay still required between move operations.

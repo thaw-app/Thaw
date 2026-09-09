@@ -956,7 +956,12 @@ extension MenuBarItemManager {
             guard isAutomaticBulkApplyPermitted(caller: "Profile layout") else {
                 return
             }
-            await waitForBulkApplyIdleWindow()
+            guard await waitForBulkApplyIdleWindow() else {
+                MenuBarItemManager.diagLog.info(
+                    "Profile layout: deferring automatic apply because user input stayed active"
+                )
+                return
+            }
         }
 
         // Bail before arming any profile state if cancellation arrived
@@ -1515,13 +1520,30 @@ extension MenuBarItemManager {
         // gate during an inter-item sleep therefore invalidates the next move,
         // while this batch's own timestamp updates remain accepted.
         var batchMovePreflight = BatchMovePreflightState()
+        var batchYieldedForInput = false
+        let inputPause = Duration.milliseconds(max(
+            0,
+            (Defaults.object(forKey: .inputPauseThresholdMs) as? Int)
+                ?? Defaults.DefaultValue.inputPauseThresholdMs
+        ))
         func shouldBeginBatchMove() -> Bool {
-            batchMovePreflight.shouldBeginMove(
+            guard batchMovePreflight.shouldBeginMove(
                 currentTimestamp: lastMoveOperationTimestamp,
                 initialPreflight: {
                     shouldBegin?() ?? true
                 }
-            )
+            ) else {
+                return false
+            }
+            let inputPaused = hasUserPausedPhysicalInput(for: inputPause)
+            if Self.automaticBatchShouldYieldForInput(
+                automatic: automatic,
+                userHasPausedPhysicalInput: inputPaused
+            ) {
+                batchYieldedForInput = true
+                return false
+            }
+            return true
         }
         func didFinishBatchMove() {
             batchMovePreflight.recordMoveGateExit(
@@ -1666,6 +1688,16 @@ extension MenuBarItemManager {
         /// is not a failed batch and must not back off an item or trip the
         /// automatic-apply circuit breaker.
         func finishSupersededApply(items: [MenuBarItem]) {
+            if batchYieldedForInput {
+                MenuBarItemManager.diagLog.info(
+                    "applyProfileLayout: physical input resumed between moves; deferring the automatic remainder"
+                )
+                if case .profile = source {
+                    restoreProfileStateAfterAbortedApply(token: applyToken)
+                }
+                scheduleDeferredCacheRefresh()
+                return
+            }
             MenuBarItemManager.diagLog.info(
                 "applyProfileLayout: user move superseded the automatic plan; leaving the user's arrangement authoritative"
             )
@@ -3514,21 +3546,36 @@ extension MenuBarItemManager {
         return (.milliseconds(thresholdMs), .milliseconds(max(0, capMs)))
     }
 
-    /// Whether an automatic bulk apply has waited long enough to start
-    /// issuing moves.
-    ///
-    /// Two exits, and the second is the important one: the wait defers a
-    /// batch, it never cancels it. A user who never stops moving the mouse
-    /// would otherwise starve the apply indefinitely, and a saved layout
-    /// that is never restored is a worse failure than one restored while
-    /// the pointer is in motion — the per-move pause still applies once the
-    /// batch is under way.
-    static nonisolated func bulkApplyIdleWaitConcluded(
+    nonisolated enum BulkApplyIdleWaitDecision: Equatable {
+        case waiting
+        case ready
+        case deferBatch
+    }
+
+    /// Whether an automatic bulk apply may start, must keep waiting, or should
+    /// defer this dispatch. The cap is never permission to override input.
+    static nonisolated func bulkApplyIdleWaitDecision(
         userHasPausedInput: Bool,
         elapsed: Duration,
         cap: Duration
+    ) -> BulkApplyIdleWaitDecision {
+        if userHasPausedInput {
+            return .ready
+        }
+        if elapsed >= cap {
+            return .deferBatch
+        }
+        return .waiting
+    }
+
+    /// Automatic batches yield only between complete synthetic gestures. The
+    /// caller checks this before starting the next move, after the preceding
+    /// move's release guard has delivered its mouse-up.
+    static nonisolated func automaticBatchShouldYieldForInput(
+        automatic: Bool,
+        userHasPausedPhysicalInput: Bool
     ) -> Bool {
-        userHasPausedInput || elapsed >= cap
+        automatic && !userHasPausedPhysicalInput
     }
 
     /// The previous cache cycle's state that ``applySavedLayout`` diffs
