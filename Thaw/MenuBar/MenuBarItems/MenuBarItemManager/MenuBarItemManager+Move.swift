@@ -466,6 +466,20 @@ extension MenuBarItemManager {
         case recycledDestination
     }
 
+    /// Replaces endpoint records in a geometry snapshot without changing its
+    /// membership or order. The full-bar list can therefore skip source-PID
+    /// resolution while the two identities it acts on remain freshly resolved.
+    static nonisolated func replacingMoveEndpoints(
+        in snapshot: [MenuBarItem],
+        with endpoints: [MenuBarItem]
+    ) -> [MenuBarItem] {
+        let endpointsByWindowID = Dictionary(
+            endpoints.map { ($0.windowID, $0) },
+            uniquingKeysWith: { first, _ in first }
+        )
+        return snapshot.map { endpointsByWindowID[$0.windowID] ?? $0 }
+    }
+
     static nonisolated func currentMoveEndpoints(
         in items: [MenuBarItem],
         expectedSource: MenuBarItem,
@@ -827,18 +841,39 @@ extension MenuBarItemManager {
         return bounds
     }
 
-    /// Re-enumerates both planned endpoints with source ownership resolved and
-    /// returns fresh records from the same snapshot.
+    /// Refreshes both planned endpoint identities. Geometry-only validation
+    /// queries those windows plus Thaw's authoritative dividers; ordinal
+    /// landing checks additionally enumerate the bar without resolving every
+    /// item's source PID, then overlay the two resolved endpoint records.
     private func resolveCurrentMoveEndpoints(
         source expectedSource: MenuBarItem,
         destination expectedDestination: MenuBarItem,
-        on displayID: CGDirectDisplayID
+        on displayID: CGDirectDisplayID,
+        requiresFullSnapshot: Bool = false
     ) async throws -> CurrentMoveEndpoints {
-        let items = await MenuBarItem.getMenuBarItems(
-            on: displayID,
-            option: .activeSpace,
-            resolveSourcePID: true
-        ).filter { !$0.isSystemClone }
+        let endpoints = await MenuBarItem.refreshMoveEndpoints([
+            expectedSource,
+            expectedDestination,
+        ])
+        let items: [MenuBarItem]
+        if requiresFullSnapshot {
+            let geometrySnapshot = await MenuBarItem.getMenuBarItems(
+                on: displayID,
+                option: .activeSpace,
+                resolveSourcePID: false
+            ).filter { !$0.isSystemClone }
+            items = Self.replacingMoveEndpoints(
+                in: geometrySnapshot,
+                with: endpoints
+            )
+        } else {
+            let endpointWindowIDs = Set(endpoints.map(\.windowID))
+            let freshDividers = authoritativeMoveGeometryDividers().filter {
+                !endpointWindowIDs.contains($0.windowID)
+            }
+            items = endpoints + freshDividers
+        }
+
         switch Self.currentMoveEndpoints(
             in: items,
             expectedSource: expectedSource,
@@ -854,6 +889,20 @@ extension MenuBarItemManager {
             throw EventError.staleDestination(expectedSource)
         case .failure(.recycledSource):
             throw EventError.moveSuperseded(expectedSource)
+        }
+    }
+
+    /// Fresh divider records from windows Thaw owns directly. These provide
+    /// parked-lane geometry without another full menu-bar enumeration.
+    private func authoritativeMoveGeometryDividers() -> [MenuBarItem] {
+        guard let appState else { return [] }
+        return [MenuBarSection.Name.hidden, .alwaysHidden].compactMap { identifier in
+            guard let window = appState.menuBarManager.controlItem(withName: identifier)?.window,
+                  let windowID = CGWindowID(exactly: window.windowNumber)
+            else {
+                return nil
+            }
+            return MenuBarItem.ownControlItem(windowID: windowID)
         }
     }
 
@@ -989,7 +1038,8 @@ extension MenuBarItemManager {
         let endpoints = try await resolveCurrentMoveEndpoints(
             source: item,
             destination: destination.targetItem,
-            on: displayID
+            on: displayID,
+            requiresFullSnapshot: true
         )
         return Self.endpointsHaveCorrectPosition(endpoints, for: destination)
     }
@@ -2200,7 +2250,8 @@ extension MenuBarItemManager {
         let bufferedEndpoints = try await resolveCurrentMoveEndpoints(
             source: item,
             destination: destination.targetItem,
-            on: resolvedDisplayID
+            on: resolvedDisplayID,
+            requiresFullSnapshot: true
         )
 
         MenuBarItemManager.diagLog.info(
@@ -2322,7 +2373,8 @@ extension MenuBarItemManager {
                 let settledEndpoints = try await resolveCurrentMoveEndpoints(
                     source: item,
                     destination: destination.targetItem,
-                    on: resolvedDisplayID
+                    on: resolvedDisplayID,
+                    requiresFullSnapshot: true
                 )
                 let landed = Self.endpointsHaveCorrectPosition(settledEndpoints, for: destination)
                 updateMoveOperationTimeout(

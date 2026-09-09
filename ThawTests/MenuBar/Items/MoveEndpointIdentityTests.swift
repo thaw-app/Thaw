@@ -89,6 +89,27 @@ struct MoveEndpointIdentityTests {
         ) == .failure(.recycledDestination))
     }
 
+    @Test("Fresh endpoints overlay an unresolved geometry snapshot")
+    func freshEndpointsOverlayGeometrySnapshot() {
+        let source = item(windowID: 40, x: 100, sourcePID: nil, title: "Source")
+        let middle = item(windowID: 41, x: 200, sourcePID: nil, title: "Middle")
+        let target = item(windowID: 42, x: 300, sourcePID: nil, title: "Target")
+        let freshSource = item(windowID: 40, x: 140, sourcePID: 81, title: "Source")
+        let freshTarget = item(windowID: 42, x: 340, sourcePID: 81, title: "Target")
+
+        let merged = MenuBarItemManager.replacingMoveEndpoints(
+            in: [source, middle, target],
+            with: [freshSource, freshTarget]
+        )
+
+        #expect(merged.map(\.windowID) == [40, 41, 42])
+        #expect(merged[0].sourcePID == 81)
+        #expect(merged[0].bounds.minX == 140)
+        #expect(merged[1] == middle)
+        #expect(merged[2].sourcePID == 81)
+        #expect(merged[2].bounds.minX == 340)
+    }
+
     @Test("Exact endpoints produce deterministic ordinal positions")
     func exactEndpointsProduceIndices() {
         let source = item(windowID: 40, x: 100, title: "Source")

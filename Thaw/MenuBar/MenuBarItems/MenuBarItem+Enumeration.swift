@@ -424,6 +424,47 @@ nonisolated extension MenuBarItem {
         return snapshot
     }
 
+    /// Refreshes only the exact windows used by a move and resolves source
+    /// ownership for that narrow set. No persisted PID seed or same-title
+    /// propagation is used: a failed live resolution must reject the move
+    /// rather than dressing a stale endpoint as current.
+    @MainActor
+    static func refreshMoveEndpoints(_ expectedEndpoints: [MenuBarItem]) async -> [MenuBarItem] {
+        let expectedByWindowID = Dictionary(
+            expectedEndpoints.map { ($0.windowID, $0) },
+            uniquingKeysWith: { first, _ in first }
+        )
+        let windows = expectedEndpoints.compactMap { expected in
+            WindowInfo(windowID: expected.windowID)
+        }
+        guard !windows.isEmpty else { return [] }
+
+        let sourcePIDs: [pid_t?]
+        if #available(macOS 26.0, *) {
+            let resolved = await MenuBarItemService.Connection.shared.sourcePIDs(for: windows)
+            sourcePIDs = resolved.count == windows.count
+                ? resolved
+                : [pid_t?](repeating: nil, count: windows.count)
+        } else {
+            sourcePIDs = windows.map(\.ownerPID)
+        }
+
+        let ownPID = ProcessInfo.processInfo.processIdentifier
+        let controlCenterBundleID = "com.apple.controlcenter"
+        return windows.enumerated().compactMap { index, window in
+            guard let expected = expectedByWindowID[window.windowID] else { return nil }
+            let isOwnControlItem = window.title?.hasPrefix("Thaw.ControlItem.") == true
+                && (window.owningApplication?.bundleIdentifier == controlCenterBundleID
+                    || window.ownerPID == ownPID)
+            let sourcePID = isOwnControlItem ? ownPID : sourcePIDs[index]
+            return MenuBarItem(
+                uncheckedItemWindow: window,
+                sourcePID: sourcePID,
+                instanceIndex: expected.tag.instanceIndex
+            )
+        }
+    }
+
     /// Creates and returns a list of menu bar items for the given display.
     ///
     /// - Parameters:
