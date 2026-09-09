@@ -60,6 +60,10 @@ final class ControlItem {
         static let expanded: CGFloat = 10000
     }
 
+    /// Nonzero seed length used to make AppKit materialize a WindowServer
+    /// window before the intended control-item length is applied.
+    static nonisolated let statusItemMaterializationLength: CGFloat = 1
+
     /// Storage for a control item's underlying status item.
     private final class StatusItemStorage {
         let statusItem: NSStatusItem
@@ -74,7 +78,13 @@ final class ControlItem {
         init(controlItem: ControlItem) {
             ControlItemDefaults.preflightSetup(for: controlItem.identifier)
 
-            self.statusItem = NSStatusBar.system.statusItem(withLength: 0)
+            // A zero-length status item can remain a synthetic AppKit window
+            // whose windowNumber has no representable CGWindowID. Give AppKit
+            // one point to materialize a real WindowServer window; the first
+            // updateStatusItem pass immediately applies the intended length.
+            self.statusItem = NSStatusBar.system.statusItem(
+                withLength: ControlItem.statusItemMaterializationLength
+            )
             self.statusItem.autosaveName = controlItem.identifier.rawValue
 
             if let button = statusItem.button {
