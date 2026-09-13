@@ -7,6 +7,80 @@ The `release.yml` workflow reads the section matching the release tag
 (`## [tag]`) and uses it as the release notes for both the GitHub Release
 and the Sparkle appcast, unless overridden with the `release_notes` input.
 
+## [3.0.0-alpha.3] - 2026-09-12
+
+Toggling the hidden section no longer shuffles your items, and Thaw's own icon stays where you put it. Clicking the Clock opens Notification Center without showing the items you hid. Apps that quit leave the layout editor. Siri no longer opens Settings on every message. Right-clicking Thaw's icon works on the first try. And a crash when Thaw pressed one of its own items from a background thread is gone. The Thaw Bar answers on the first click now, closing Settings no longer takes Thaw down with it, and the layout editor shows the same folded bars as Simple Mode. There is also a first prototype of a build-your-own status icon, in Settings under Widgets.
+
+Something broke? [Open an issue](https://github.com/thaw-app/Thaw/issues/new/choose). Something missing? [Tell us here](https://github.com/thaw-app/Thaw/discussions).
+
+---
+
+### Upgrade from 3.0.0-alpha.2
+
+1. Nothing to do. The menu bar layout access grant, profiles, saved layouts, and hotkeys carry over.
+2. The first time you show the hidden section after updating, the bar may settle once. After that it stays put.
+
+---
+
+### Build your own status icon (prototype)
+
+- **Compose an icon from three slots.** An outer arc or ring, a center symbol, and a bottom row of dots or bars. Each meter tracks a reading: battery, Wi-Fi strength, volume, or CPU. Find it in Settings under Widgets.
+- **The symbol follows the real connection.** On Ethernet it draws Apple's classic Ethernet glyph, on Wi-Fi the bars move with signal strength, and cellular, other connections, and offline each get their own symbol. It reads the actual default route, so a plugged-in Mac shows the cable no matter what the Wi-Fi radio is doing.
+- **Publish it as a real menu bar item.** It updates every two seconds, stays up when you close Settings, and comes back on its own at the next launch. Clicking it shows the same readings in a menu, with a shortcut to Network Settings. The pane carries an Alpha badge; live data can be switched off for sliders if you would rather test with your own values.
+
+### Menu bar
+
+- **Manual arrangement is now hands-off.** When manual arrangement is on, Thaw only hides and reveals. It never reorders, repairs, or rewrites positions. You drag, the bar stays. ([#1092](https://github.com/thaw-app/Thaw/issues/1092), thanks @nullsin and @1Hendrix for the weight traces that proved the boundary-repair path was bypassing the manual gate)
+- **Show and hide keep your order.** In alpha.2 a reveal could come up in the right order and then re-sort itself half a second later, and the bar sometimes came back in a different order on the next toggle. Both were Thaw rewriting the layout table right after a reveal, once from a scan that had not finished and once from a scan that missed apps still waking up. The pass now waits for its own reveal, finishes with the full item set, and writes nothing when the table is already right. After a restart, with apps still launching, the order held across every toggle we tried.
+- **The layout engine re-seats only what moved.** A toggle used to rewrite every item's position weight, 16 to 18 per cycle, with the visible control bouncing to the middle and back. The engine now keeps the weights of items that are already where they belong and seats only the misplaced ones. Toggles write 0 to 3 weights instead of the whole run.
+- **Thaw's icon stays at its end of the bar.** A repair pass treated Thaw's own control as a regular item and could seat it in the middle of the bar, beside the section divider. It never moves Thaw's controls now. The small jiggle of the icon on each toggle is gone with it, since it was the side effect of the same redundant writes.
+- **Clock click without the reveal.** Opening Notification Center from the Clock used to drop the hiding restriction for as long as the panel stayed open, so every hidden item appeared behind it. The strip is now masked for the instant the press needs, the restriction comes straight back, and the hidden items never paint. The mask now lifts after half a second instead of three and a half, so the panel feels immediate.
+- **Quit apps leave the layout on their own.** macOS 27 does not always post the termination notification for agent apps. Some quit without either a launch or a terminate event ever reaching Thaw. The cache is now swept for departed owners on every tick, so a quit item's tile leaves the layout editor and the Thaw Bar within a few seconds instead of waiting for a relaunch. ([#1098](https://github.com/thaw-app/Thaw/issues/1098), thanks @BruceInLouisville for the CardHop report that led us to the notification gap)
+- **Quitting Thaw keeps your reorders.** The quit-time restore wrote back a snapshot taken at first launch, undoing every move made during the session and re-laddering them on the next start. It now only puts back the items Thaw itself parked.
+- **Stuck repairs come back.** A boundary repair that failed twice was switched off for the rest of the session, which left items stranded until you dragged them by hand. It re-arms after 60 seconds.
+- **No false alarm at launch.** macOS registers Thaw's own dividers a second or two after start. The "section dividers are hidden by macOS" alert no longer fires during that window; a divider that stays missing past the settling period still raises it.
+- **The Thaw Bar shows on the first click.** On some Macs the first click after launch reported the bar as open but drew it just off the right edge of the screen, so nothing appeared until a second click. The bar is now measured and placed on the display you clicked before it opens.
+- **One slow app can't stall the scan.** Processes that answer accessibility slowly (Adobe's IPC broker, WebKit content processes) could use up the whole scan budget before any item was collected, leaving the Thaw Bar stuck on "Loading menu bar items". Each app now gets its own deadline, so one laggard slows its own items, not the bar. The deadline is enforced through a cancellation-aware continuation race, so a hung accessibility call is actually interrupted instead of measured and ignored. ([#1099](https://github.com/thaw-app/Thaw/issues/1099))
+- **Joined walk callers see one answer.** Two callers sharing an in-flight walk used to get different results: the initiator got the last-complete fallback, the joiner got the raw partial list, and live items could read as departed. Settling now runs once inside the walk task, so every caller sees the same answer.
+- **Cooldown skips are honest.** A slow app skipped by cooldown reported the walk as complete, overwriting the last-complete list without it. Skips now mark the walk truncated.
+
+### Layout editor
+
+- **Same folded bars as Simple Mode.** The layout pane embeds the folded menu bar directly instead of a wrapper around it, which also fixes dragging in the pane that the wrapper had broken.
+- **Drop targets light up.** Dragging an item over a section draws an accent band on that strip and highlights its name in the gutter.
+- **Reduce Motion is honored.** With it on, reorder slides are skipped.
+
+### Fixes
+
+- Pressing one of Thaw's own items from the runtime's accessibility presser crashed the app on a main-actor assertion. The press now hops to the main thread itself.
+- Siri no longer opens Thaw Settings on every message send. The reopen handler now checks whether Thaw is frontmost: a dock or app-icon click brings it forward first, an activation cycle does not. ([#1082](https://github.com/thaw-app/Thaw/issues/1082), thanks @Mason-Boom)
+- Right-clicking Thaw's icon no longer flashes the context menu or needs multiple clicks. The menu was opening one run-loop hop after the event tap returned, so a quick right-click raced the menu's tracking loop against the mouseUp. The call is now synchronous, so the menu opens during the event tap callback before the mouseUp is processed.
+- Right-clicking an item sometimes took several tries because the hit test used the item's old position after the bar reflowed. The test now allows 10 points of slack.
+- Closing the Settings window could quit Thaw outright. macOS 27 can terminate an app that deactivates with no visible windows, and Thaw deactivated itself when its last window closed. It now drops to the background without that call, so the window closes and Thaw stays in the menu bar.
+- What's New shows a release on the date the changelog says, instead of a day early in time zones west of UTC.
+- Simple Mode's bar uses one continuous corner radius and a hairline separator instead of the themed border.
+- Strip captures no longer show black squares or wallpaper bleed. ScreenCaptureKit's first complete frame can arrive before the menu bar finished redrawing, so crops read as solid black or showed the desktop behind the bar. The capture now holds the stream open briefly and prefers the settled composite.
+- Saved placements survive startup. The ghost prune no longer deletes entries whose bundle cannot be resolved by LaunchServices. Inner-bundle helpers (Fantastical's team-ID-prefixed helper, for example) are never registered with LaunchServices, and absence from one walk proved nothing.
+- The clock reveal mask lands on the right display. On a display stacked above or below the primary, the mask used the target display's height for the coordinate conversion. It now anchors to the primary display's height, so the mask covers the menu bar instead of sitting off it.
+- The battery widget reads real charge. IOPSCopyPowerSourcesList returns opaque handles, not dictionaries. Each handle is now resolved through IOPSGetPowerSourceDescription per the SDK contract, so the widget reports the actual percentage instead of 0%. The live system readings (CPU, Wi-Fi, battery), the power source watcher, and the multi-item status bar publishing pattern are all adapted from [Barometer](https://github.com/mackid1993/Barometer) by @mackid1993, used with permission.
+- The Split bar shape now renders at higher effective display resolutions. Apps that increase the usable screen space (Crisp, MoreDecks) pushed the AppKit point space past the global display coordinate space that AX item frames live in, so the pill bounds filter dropped every item and the trailing pill did not render. The filter now uses CGDisplayBounds, the same coordinate space AX uses. ([#1081](https://github.com/thaw-app/Thaw/issues/1081), thanks @CoolJosh0221)
+- Concealed captures register in the LRU. Disk gap-fill captures that were never read or recaptured sat outside the trimmer. They are now registered on load.
+- Routine failures are no longer logged as errors. A window frame that refuses to report (routine on a live bar), a cancelled capture (how a superseded pass retires), and a nil display at startup (fires a few times then never again) are all debug-level now.
+- On restart, hidden items could flash for a moment before the Thaw Bar took over. The reveal now sits behind the same mask the Clock uses until the panel is up.
+
+### Thanks
+
+The icon-dancing issue from the earlier alpha.3 builds was rough on a lot of you, and your patience while we tracked it down through the layout engine, the manual-arrangement gate, and the weight-assignment path made the fix possible.
+
+Thank you to @nullsin and @1Hendrix for [#1092](https://github.com/thaw-app/Thaw/issues/1092), @cookie-drummer for testing the fix, @BruceInLouisville for [#1098](https://github.com/thaw-app/Thaw/issues/1098), @mrleblanc101 for [#1087](https://github.com/thaw-app/Thaw/issues/1087) and [#1088](https://github.com/thaw-app/Thaw/issues/1088), @gigecogary for [#1089](https://github.com/thaw-app/Thaw/issues/1089), and @Mason-Boom for [#1082](https://github.com/thaw-app/Thaw/issues/1082), and @CoolJosh0221 for [#1081](https://github.com/thaw-app/Thaw/issues/1081). Thank you to @fishcharlie and @joaofrgomes for testing. The live system readings, power source watcher, and status item publishing pattern are adapted from [Barometer](https://github.com/mackid1993/Barometer) by @mackid1993, used with permission. And thank you to everyone in the Discord who reported issues, sent logs, and tested builds between releases. Every report shaped this one.
+
+### Known issues
+
+- iStats menu bar items may be hidden when another item gets hidden. We are working with the iStats developers to resolve this issue.
+- An app with several menu bar items that renamed them in the macOS 27 upgrade may need those items reassigned once by hand.
+- Items whose title is live text (a temperature, a clock, a transfer rate) are placed by macOS from memory rather than from the layout table. They can land next to where you put them rather than exactly there.
+- Flux cannot be seen or properly handled by Thaw.
+
 ## [3.0.0-alpha.2] - 2026-09-10
 
 We reenable the cursor free method, reorders now land the moment you drop an item, and the cursor stays yours. Plus, a fix for layouts saved on macOS 26 being discarded on 27.
