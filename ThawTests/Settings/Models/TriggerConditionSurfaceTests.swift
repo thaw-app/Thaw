@@ -69,7 +69,8 @@ struct TriggerConditionSurfaceTests {
         let editorless = TriggerConditionKind.allCases.filter { $0.editor == .none }
         #expect(Set(editorless) == [
             .onACPower, .onBatteryPower, .charging, .networkConnected, .vpnActive,
-            .externalDisplay, .focusActive, .cameraInUse, .microphoneInUse,
+            .externalDisplay, .externalDrive, .removableDrive, .networkVolume,
+            .focusActive, .cameraInUse, .microphoneInUse,
         ])
     }
 
@@ -79,11 +80,13 @@ struct TriggerConditionSurfaceTests {
             guard case let .text(prompt) = kind.editor else { return nil }
             return prompt
         }
-        // Three text kinds, and no two share a prompt — a copy-paste slip in
+        // Five text kinds, and no two share a prompt — a copy-paste slip in
         // that table is otherwise invisible.
-        #expect(prompts.count == 3)
-        #expect(Set(prompts).count == 3)
+        #expect(prompts.count == 5)
+        #expect(Set(prompts).count == 5)
         #expect(prompts.allSatisfy { !$0.isEmpty })
+        #expect(TriggerConditionKind.externalVolumeNamed.editor == .text(prompt: "Drive name"))
+        #expect(TriggerConditionKind.externalVolumeUUID.editor == .text(prompt: "Volume UUID"))
     }
 
     // MARK: - Summaries
@@ -105,6 +108,8 @@ struct TriggerConditionSurfaceTests {
         #expect(TriggerCondition.wifiSSID(name: "Café").summary.contains("Café"))
         #expect(TriggerCondition.bluetoothConnected(name: "Keyboard").summary.contains("Keyboard"))
         #expect(TriggerCondition.audioOutput(contains: "Studio").summary.contains("Studio"))
+        #expect(TriggerCondition.externalVolumeNamed(name: "Backup").summary.contains("Backup"))
+        #expect(TriggerCondition.externalVolumeUUID(uuid: "drive-id").summary.contains("drive-id"))
         #expect(TriggerCondition.focusMode(name: "Work").summary.contains("Work"))
         #expect(TriggerCondition.nearLocation(
             latitude: 1, longitude: 2, radiusMeters: 250, label: "Home"
@@ -119,6 +124,8 @@ struct TriggerConditionSurfaceTests {
         #expect(TriggerCondition.wifiSSID(name: "").summary == "On a Wi-Fi network")
         #expect(TriggerCondition.bluetoothConnected(name: "").summary == "A Bluetooth device is connected")
         #expect(TriggerCondition.audioOutput(contains: "").summary == "Audio output device")
+        #expect(TriggerCondition.externalVolumeNamed(name: "").summary == "A named external drive is connected")
+        #expect(TriggerCondition.externalVolumeUUID(uuid: "").summary == "A specific external volume is mounted")
         #expect(TriggerCondition.focusMode(name: "").summary == "A Focus mode is active")
         #expect(TriggerCondition.nearLocation(
             latitude: 0, longitude: 0, radiusMeters: 150, label: ""
@@ -186,6 +193,8 @@ struct TriggerConditionSurfaceTests {
         #expect(TriggerCondition.wifiSSID(name: "Net").text == "Net")
         #expect(TriggerCondition.bluetoothConnected(name: "Mouse").text == "Mouse")
         #expect(TriggerCondition.audioOutput(contains: "Display").text == "Display")
+        #expect(TriggerCondition.externalVolumeNamed(name: "Backup").text == "Backup")
+        #expect(TriggerCondition.externalVolumeUUID(uuid: "drive-id").text == "drive-id")
         #expect(TriggerCondition.focusMode(name: "Work").text == "Work")
         #expect(TriggerCondition.charging.text == nil)
 
@@ -263,6 +272,14 @@ struct TriggerConditionSurfaceTests {
         #expect(TriggerCondition.wifiSSID(name: "a").withText("b").text == "b")
         #expect(TriggerCondition.bluetoothConnected(name: "a").withText("b").text == "b")
         #expect(TriggerCondition.audioOutput(contains: "a").withText("b").text == "b")
+        #expect(
+            TriggerCondition.externalVolumeNamed(name: "a")
+                .withText(" Photos, 2026 ") == .externalVolumeNamed(name: "Photos, 2026")
+        )
+        #expect(
+            TriggerCondition.externalVolumeUUID(uuid: "a")
+                .withText(" b ") == .externalVolumeUUID(uuid: "b")
+        )
         #expect(TriggerCondition.focusMode(name: "a").withText("b").text == "b")
         #expect(TriggerCondition.charging.withText("b") == .charging)
 
@@ -394,6 +411,14 @@ struct TriggerConditionSurfaceTests {
         #expect(TriggerCondition.make(kind: .audioOutput, preserving: ssid).text == "Net")
         #expect(TriggerCondition.make(kind: .focusModeNamed, preserving: ssid).text == "Net")
         #expect(TriggerCondition.make(kind: .bluetoothConnected, preserving: ssid).text == "Net")
+        #expect(
+            TriggerCondition.make(kind: .externalVolumeNamed, preserving: .wifiSSID(name: "Photos, 2026"))
+                == .externalVolumeNamed(name: "Photos, 2026")
+        )
+        #expect(
+            TriggerCondition.make(kind: .externalVolumeUUID, preserving: .audioOutput(contains: "drive-id"))
+                == .externalVolumeUUID(uuid: "drive-id")
+        )
 
         let weekly = TriggerCondition.weeklySchedule(
             startMinutes: 300, endMinutes: 400, weekdays: [.monday]
@@ -412,6 +437,20 @@ struct TriggerConditionSurfaceTests {
         let rescripted = TriggerCondition.make(kind: .scriptResult, preserving: script)
         #expect(rescripted.scriptValue?.path == "/tmp/a.sh")
         #expect(rescripted.scriptValue?.expectedOutput == "ok")
+    }
+
+    @Test("Generic and named external-drive kinds remain separate during conversion")
+    func conversionKeepsGenericAndNamedExternalDrivesSeparate() {
+        let named = TriggerCondition.externalVolumeNamed(name: "Backup")
+
+        #expect(
+            TriggerCondition.make(kind: .externalDrive, preserving: named)
+                == .externalDriveConnected
+        )
+        #expect(
+            TriggerCondition.make(kind: .externalVolumeNamed, preserving: .externalDriveConnected)
+                == .externalVolumeNamed(name: "")
+        )
     }
 
     @Test("Switching between the two icon-watching kinds keeps the item")

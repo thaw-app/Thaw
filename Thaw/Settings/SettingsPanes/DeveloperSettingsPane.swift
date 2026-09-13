@@ -167,6 +167,8 @@ struct DeveloperSettingsPane: View {
                 stateRow("Camera in use", recordingState(state.isCameraInUse))
                 stateRow("Microphone in use", recordingState(state.isMicrophoneInUse))
                 stateRow("Displays", "\(state.screenCount)\(state.externalDisplayConnected ? " (external connected)" : "")")
+                stateRow("External drive", state.externalDriveConnected ? "Mounted" : "Not mounted")
+                stateRow("Mounted volumes", state.mountedVolumes.map(\.name).sorted().joined(separator: ", ").orDash)
                 stateRow("Focus active", state.isFocusActive ? "Yes" : "No")
                 stateRow("Focus Filter profile", state.activeFocusModeName ?? "—")
                 stateRow("Location", locationValue())

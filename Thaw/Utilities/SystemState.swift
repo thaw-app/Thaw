@@ -19,6 +19,14 @@ struct ScriptOutcome: Equatable {
     var matchedExpectedOutputs: Set<String> = []
 }
 
+/// The mounted-volume facts used by external-drive trigger conditions.
+nonisolated struct MountedVolume: Equatable, Hashable, Sendable {
+    var name: String
+    var uuid: String
+    var isRemovable: Bool
+    var isNetwork: Bool
+}
+
 // MARK: - SystemState
 
 /// A snapshot of the system signals that menu bar item triggers evaluate
@@ -54,6 +62,12 @@ struct SystemState: Equatable {
 
     /// Whether at least one external (non-built-in) display is connected.
     var externalDisplayConnected: Bool
+
+    /// Whether at least one local external volume is currently mounted.
+    var externalDriveConnected: Bool
+
+    /// External local and network volumes currently mounted on the system.
+    var mountedVolumes: Set<MountedVolume>
 
     /// Whether a macOS Focus / Do Not Disturb appears to be active
     /// (best-effort).
@@ -114,6 +128,8 @@ struct SystemState: Equatable {
         audioOutputDeviceName: String? = nil,
         screenCount: Int = 1,
         externalDisplayConnected: Bool = false,
+        externalDriveConnected: Bool = false,
+        mountedVolumes: Set<MountedVolume> = [],
         isFocusActive: Bool = false,
         activeFocusModeName: String? = nil,
         currentLatitude: Double? = nil,
@@ -137,6 +153,8 @@ struct SystemState: Equatable {
         self.audioOutputDeviceName = audioOutputDeviceName
         self.screenCount = screenCount
         self.externalDisplayConnected = externalDisplayConnected
+        self.externalDriveConnected = externalDriveConnected
+        self.mountedVolumes = mountedVolumes
         self.isFocusActive = isFocusActive
         self.activeFocusModeName = activeFocusModeName
         self.currentLatitude = currentLatitude

@@ -28,6 +28,7 @@ enum TriggerFeature: String, CaseIterable, Identifiable {
     case bluetooth
     case audioOutput
     case display
+    case externalDrive
     case schedule
     case focusMode
     case location
@@ -56,6 +57,7 @@ enum TriggerFeature: String, CaseIterable, Identifiable {
         case .bluetooth: "Bluetooth device"
         case .audioOutput: "Audio output device"
         case .display: "External display"
+        case .externalDrive: "External drive"
         case .schedule: "Time schedule"
         case .focusMode: "Focus / Do Not Disturb"
         case .location: "Location"
@@ -82,6 +84,7 @@ enum TriggerFeature: String, CaseIterable, Identifiable {
         case .bluetooth: "Reveal an item while a Bluetooth device is connected."
         case .audioOutput: "Reveal an item based on the current audio output device."
         case .display: "Reveal an item while an external display is connected."
+        case .externalDrive: "Reveal an item while an external drive is mounted."
         case .schedule: "Reveal an item during a time-of-day window."
         case .focusMode: "Reveal an item while a macOS Focus is active."
         case .location: "Reveal an item while you're near a saved place (uses Location)."

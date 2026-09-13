@@ -191,6 +191,11 @@ enum TriggerCondition: Codable, Hashable {
     case bluetoothConnected(name: String)
     case audioOutput(contains: String)
     case externalDisplayConnected
+    case externalDriveConnected
+    case removableDriveConnected
+    case networkVolumeConnected
+    case externalVolumeNamed(name: String)
+    case externalVolumeUUID(uuid: String)
 
     // Time / Focus
     case schedule(startMinutes: Int, endMinutes: Int)
@@ -268,6 +273,22 @@ enum TriggerCondition: Codable, Hashable {
             return !substring.isEmpty && (state.audioOutputDeviceName?.localizedCaseInsensitiveContains(substring) ?? false)
         case .externalDisplayConnected:
             return state.externalDisplayConnected
+        case .externalDriveConnected:
+            return state.externalDriveConnected
+        case .removableDriveConnected:
+            return state.mountedVolumes.contains { !$0.isNetwork && $0.isRemovable }
+        case .networkVolumeConnected:
+            return state.mountedVolumes.contains { $0.isNetwork }
+        case let .externalVolumeNamed(name):
+            let name = name.trimmingCharacters(in: .whitespacesAndNewlines)
+            return !name.isEmpty && state.mountedVolumes.contains { volume in
+                !volume.isNetwork && volume.name.localizedCaseInsensitiveCompare(name) == .orderedSame
+            }
+        case let .externalVolumeUUID(uuid):
+            let uuid = uuid.trimmingCharacters(in: .whitespacesAndNewlines)
+            return !uuid.isEmpty && state.mountedVolumes.contains {
+                $0.uuid.caseInsensitiveCompare(uuid) == .orderedSame
+            }
         case let .schedule(start, end):
             return Self.isWithinSchedule(now: now, startMinutes: start, endMinutes: end)
         case let .weeklySchedule(start, end, weekdays):
@@ -350,6 +371,18 @@ enum TriggerCondition: Codable, Hashable {
             return substring.isEmpty ? "Audio output device" : "Audio output is “\(substring)”"
         case .externalDisplayConnected:
             return "External display is connected"
+        case .externalDriveConnected:
+            return "External drive is connected"
+        case .removableDriveConnected:
+            return "A removable drive is connected"
+        case .networkVolumeConnected:
+            return "A network volume is mounted"
+        case let .externalVolumeNamed(name):
+            let name = name.trimmingCharacters(in: .whitespacesAndNewlines)
+            return name.isEmpty ? "A named external drive is connected" : "External drive “\(name)” is connected"
+        case let .externalVolumeUUID(uuid):
+            let uuid = uuid.trimmingCharacters(in: .whitespacesAndNewlines)
+            return uuid.isEmpty ? "A specific external volume is mounted" : "Volume with ID “\(uuid)” is mounted"
         case let .schedule(start, end):
             return "Between \(Self.clockString(start)) and \(Self.clockString(end))"
         case let .weeklySchedule(start, end, weekdays):
@@ -472,6 +505,11 @@ enum TriggerConditionKind: String, CaseIterable, Identifiable {
     case bluetoothConnected
     case audioOutput
     case externalDisplay
+    case externalDrive
+    case externalVolumeNamed
+    case removableDrive
+    case networkVolume
+    case externalVolumeUUID
     case schedule
     case focusActive
     case focusModeNamed
@@ -504,6 +542,11 @@ enum TriggerConditionKind: String, CaseIterable, Identifiable {
         case .bluetoothConnected: "Bluetooth device is connected"
         case .audioOutput: "Audio output device"
         case .externalDisplay: "External display is connected"
+        case .externalDrive: "External drive is connected"
+        case .externalVolumeNamed: "External drive is named"
+        case .removableDrive: "Removable drive is connected"
+        case .networkVolume: "Network volume is mounted"
+        case .externalVolumeUUID: "External volume ID is"
         case .schedule: "During time window"
         case .focusActive: "Any Focus is active"
         case .focusModeNamed: "Focus Filter profile is"
@@ -546,6 +589,8 @@ enum TriggerConditionKind: String, CaseIterable, Identifiable {
         case .wifiSSID: .text(prompt: "Network name")
         case .bluetoothConnected: .bluetoothPicker
         case .audioOutput: .text(prompt: "Device name contains")
+        case .externalVolumeNamed: .text(prompt: "Drive name")
+        case .externalVolumeUUID: .text(prompt: "Volume UUID")
         case .focusModeNamed: .text(prompt: "Thaw profile name (e.g. Work Layout)")
         case .schedule: .timeRange
         case .nearLocation: .location
@@ -555,7 +600,8 @@ enum TriggerConditionKind: String, CaseIterable, Identifiable {
         case .imageChanged: .imageComparison
         case .itemSeekingAttention: .itemPicker
         case .onACPower, .onBatteryPower, .charging, .networkConnected,
-             .vpnActive, .externalDisplay, .focusActive,
+             .vpnActive, .externalDisplay, .externalDrive, .removableDrive,
+             .networkVolume, .focusActive,
              .cameraInUse, .microphoneInUse:
             .none
         }
@@ -575,6 +621,8 @@ enum TriggerConditionKind: String, CaseIterable, Identifiable {
         case .bluetoothConnected: .bluetooth
         case .audioOutput: .audioOutput
         case .externalDisplay: .display
+        case .externalDrive, .externalVolumeNamed, .removableDrive,
+             .networkVolume, .externalVolumeUUID: .externalDrive
         case .schedule: .schedule
         case .focusActive: .focusMode
         case .focusModeNamed: .focusMode
@@ -626,6 +674,11 @@ extension TriggerCondition {
         case .bluetoothConnected: .bluetoothConnected
         case .audioOutput: .audioOutput
         case .externalDisplayConnected: .externalDisplay
+        case .externalDriveConnected: .externalDrive
+        case .externalVolumeNamed: .externalVolumeNamed
+        case .removableDriveConnected: .removableDrive
+        case .networkVolumeConnected: .networkVolume
+        case .externalVolumeUUID: .externalVolumeUUID
         case .schedule, .weeklySchedule: .schedule
         case .focusActive: .focusActive
         case .focusMode: .focusModeNamed
@@ -660,6 +713,8 @@ extension TriggerCondition {
     var text: String? {
         switch self {
         case let .wifiSSID(name), let .bluetoothConnected(name), let .audioOutput(name), let .focusMode(name): name
+        case let .externalVolumeNamed(name): name
+        case let .externalVolumeUUID(uuid): uuid
         default: nil
         }
     }
@@ -778,6 +833,11 @@ extension TriggerCondition {
         case .bluetoothConnected: .bluetoothConnected(name: "")
         case .audioOutput: .audioOutput(contains: "")
         case .externalDisplay: .externalDisplayConnected
+        case .externalDrive: .externalDriveConnected
+        case .externalVolumeNamed: .externalVolumeNamed(name: "")
+        case .removableDrive: .removableDriveConnected
+        case .networkVolume: .networkVolumeConnected
+        case .externalVolumeUUID: .externalVolumeUUID(uuid: "")
         case .schedule: .weeklySchedule(startMinutes: 9 * 60, endMinutes: 17 * 60, weekdays: ScheduleWeekday.everyDay)
         case .focusActive: .focusActive
         case .focusModeNamed: .focusMode(name: "")
@@ -803,6 +863,8 @@ extension TriggerCondition {
         case .wifiSSID: .wifiSSID(name: old.text ?? "")
         case .bluetoothConnected: .bluetoothConnected(name: old.text ?? "")
         case .audioOutput: .audioOutput(contains: old.text ?? "")
+        case .externalVolumeNamed: .externalVolumeNamed(name: old.text ?? "")
+        case .externalVolumeUUID: .externalVolumeUUID(uuid: old.text ?? "")
         case .focusModeNamed: .focusMode(name: old.text ?? "")
         case .schedule:
             if let window = old.scheduleWindow {
@@ -841,7 +903,8 @@ extension TriggerCondition {
             // icon-watching kinds; the reference hash has no meaning here.
             .itemSeekingAttention(itemIdentifier: old.watchedItemIdentifier ?? "")
         case .onACPower, .onBatteryPower, .charging, .networkConnected,
-             .vpnActive, .externalDisplay, .focusActive, .nearLocation,
+             .vpnActive, .externalDisplay, .externalDrive, .removableDrive,
+             .networkVolume, .focusActive, .nearLocation,
              .cameraInUse, .microphoneInUse:
             defaultCondition(for: kind)
         }
@@ -872,6 +935,10 @@ extension TriggerCondition {
         case .bluetoothConnected: .bluetoothConnected(name: value)
         case .audioOutput: .audioOutput(contains: value)
         case .focusMode: .focusMode(name: value)
+        case .externalVolumeNamed:
+            .externalVolumeNamed(name: value.trimmingCharacters(in: .whitespacesAndNewlines))
+        case .externalVolumeUUID:
+            .externalVolumeUUID(uuid: value.trimmingCharacters(in: .whitespacesAndNewlines))
         default: self
         }
     }

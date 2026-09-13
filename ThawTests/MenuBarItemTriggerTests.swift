@@ -34,6 +34,8 @@ struct MenuBarItemTriggerTests {
         audio: String? = nil,
         screenCount: Int = 1,
         externalDisplay: Bool = false,
+        externalDrive: Bool = false,
+        mountedVolumes: Set<MountedVolume> = [],
         focus: Bool = false,
         seekingAttention: Set<String> = []
     ) -> SystemState {
@@ -48,6 +50,8 @@ struct MenuBarItemTriggerTests {
             audioOutputDeviceName: audio,
             screenCount: screenCount,
             externalDisplayConnected: externalDisplay,
+            externalDriveConnected: externalDrive,
+            mountedVolumes: mountedVolumes,
             isFocusActive: focus,
             itemsSeekingAttention: seekingAttention
         )
@@ -176,6 +180,83 @@ struct MenuBarItemTriggerTests {
     @Test func externalDisplay() {
         #expect(TriggerCondition.externalDisplayConnected.isSatisfied(state: state(externalDisplay: true)))
         #expect(!TriggerCondition.externalDisplayConnected.isSatisfied(state: state(externalDisplay: false)))
+    }
+
+    @Test func externalDrive() {
+        #expect(TriggerCondition.externalDriveConnected.isSatisfied(state: state(externalDrive: true)))
+        #expect(!TriggerCondition.externalDriveConnected.isSatisfied(state: state(externalDrive: false)))
+    }
+
+    @Test("Mounted volumes are classified by type, name, and UUID")
+    func externalVolumeKinds() {
+        let mountedVolumes: Set<MountedVolume> = [
+            MountedVolume(name: "Backup", uuid: "backup-id", isRemovable: true, isNetwork: false),
+            MountedVolume(name: "NAS", uuid: "nas-id", isRemovable: false, isNetwork: true),
+        ]
+        let current = state(mountedVolumes: mountedVolumes)
+
+        #expect(TriggerCondition.removableDriveConnected.isSatisfied(state: current))
+        #expect(TriggerCondition.networkVolumeConnected.isSatisfied(state: current))
+        #expect(TriggerCondition.externalVolumeNamed(name: "backup").isSatisfied(state: current))
+        #expect(!TriggerCondition.externalVolumeNamed(name: "NAS").isSatisfied(state: current))
+        #expect(TriggerCondition.externalVolumeUUID(uuid: "BACKUP-ID").isSatisfied(state: current))
+        #expect(!TriggerCondition.externalVolumeUUID(uuid: "missing-id").isSatisfied(state: current))
+    }
+
+    @Test("A named external drive uses an exact, case-insensitive full-name match")
+    func namedExternalDriveMatching() {
+        let current = state(mountedVolumes: [
+            MountedVolume(name: "Backup Drive", uuid: "", isRemovable: false, isNetwork: false),
+            MountedVolume(name: "Photos, 2026", uuid: "", isRemovable: true, isNetwork: false),
+        ])
+
+        #expect(
+            TriggerCondition.externalVolumeNamed(name: " \nBACKUP drive\t")
+                .isSatisfied(state: current)
+        )
+        #expect(!TriggerCondition.externalVolumeNamed(name: "Backup").isSatisfied(state: current))
+        #expect(!TriggerCondition.externalVolumeNamed(name: "Drive").isSatisfied(state: current))
+        #expect(TriggerCondition.externalVolumeNamed(name: "Photos, 2026").isSatisfied(state: current))
+    }
+
+    @Test("Explicit removable or network metadata is enough when internal status is unknown")
+    func mountedVolumeClassificationHandlesUnknownInternalStatus() {
+        #expect(SystemStateMonitor.shouldIncludeMountedVolume(isInternal: nil, isRemovable: true, isNetwork: false))
+        #expect(SystemStateMonitor.shouldIncludeMountedVolume(isInternal: nil, isRemovable: false, isNetwork: true))
+        #expect(!SystemStateMonitor.shouldIncludeMountedVolume(isInternal: nil, isRemovable: false, isNetwork: false))
+        #expect(!SystemStateMonitor.shouldIncludeMountedVolume(isInternal: true, isRemovable: false, isNetwork: false))
+    }
+
+    @Test("A named external drive requires a nonblank configured name and a mounted local drive")
+    func namedExternalDriveRequiresNameAndMountedDrive() {
+        let current = state(mountedVolumes: [
+            MountedVolume(name: "123", uuid: "", isRemovable: true, isNetwork: false),
+        ])
+
+        #expect(TriggerCondition.externalVolumeNamed(name: "123").isSatisfied(state: current))
+        #expect(!TriggerCondition.externalVolumeNamed(name: " \n\t").isSatisfied(state: current))
+        #expect(!TriggerCondition.externalVolumeNamed(name: "123").isSatisfied(state: state(externalDrive: true)))
+    }
+
+    @Test("A named external-drive condition survives persistence")
+    func namedExternalDriveCodableRoundTrip() throws {
+        let condition = TriggerCondition.externalVolumeNamed(name: "Photos, 2026")
+
+        let data = try JSONEncoder().encode(condition)
+        let decoded = try JSONDecoder().decode(TriggerCondition.self, from: data)
+
+        #expect(decoded == condition)
+    }
+
+    @Test("The generic and named external-drive conditions remain separate")
+    func externalDriveEditorKeepsGenericAndNamedConditionsSeparate() {
+        let named = TriggerCondition.make(kind: .externalVolumeNamed, preserving: .externalDriveConnected)
+            .withText(" 123 ")
+
+        #expect(named == .externalVolumeNamed(name: "123"))
+        #expect(named.text == "123")
+        #expect(TriggerCondition.make(kind: .externalVolumeNamed, preserving: named) == named)
+        #expect(TriggerCondition.make(kind: .externalDrive, preserving: named) == .externalDriveConnected)
     }
 
     @Test func focusActive() {

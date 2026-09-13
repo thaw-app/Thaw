@@ -42,6 +42,10 @@ final class SystemStateMonitor: ObservableObject {
 
     // Event-driven source handles.
     private var workspaceObservers = [NSObjectProtocol]()
+    private var volumeObservers = [NSObjectProtocol]()
+    private var volumeRefreshTask: Task<Void, Never>?
+    private var volumeRefreshPending = false
+    private var volumeRefreshGeneration = 0
     private var screenObserver: NSObjectProtocol?
     private var systemLoadObservers = [NSObjectProtocol]()
 
@@ -110,6 +114,7 @@ final class SystemStateMonitor: ObservableObject {
         setFrontmostAppMonitoring(flags.isEnabled(.frontmostApp) || flags.isEnabled(.appRunning))
         setAppRefreshPolling(flags.isEnabled(.appRunning))
         setDisplayMonitoring(flags.isEnabled(.display))
+        setExternalDriveMonitoring(flags.isEnabled(.externalDrive))
         setNetworkMonitoring(flags.isEnabled(.network) || flags.isEnabled(.vpn))
         setSystemLoadMonitoring(flags.isEnabled(.energyMode) || flags.isEnabled(.thermalPressure))
 
@@ -253,6 +258,118 @@ final class SystemStateMonitor: ObservableObject {
             }
         }
         return false
+    }
+
+    // MARK: External drives
+
+    private func setExternalDriveMonitoring(_ enabled: Bool) {
+        let isMonitoring = !volumeObservers.isEmpty
+        guard enabled != isMonitoring else {
+            if enabled {
+                scheduleExternalDriveRefresh()
+            }
+            return
+        }
+
+        if enabled {
+            let center = NSWorkspace.shared.notificationCenter
+            for name in [
+                NSWorkspace.didMountNotification,
+                NSWorkspace.didUnmountNotification,
+                NSWorkspace.didRenameVolumeNotification,
+            ] {
+                let token = center.addObserver(forName: name, object: nil, queue: .main) { [weak self] _ in
+                    MainActor.assumeIsolated { self?.scheduleExternalDriveRefresh() }
+                }
+                volumeObservers.append(token)
+            }
+            scheduleExternalDriveRefresh()
+        } else {
+            for token in volumeObservers {
+                NSWorkspace.shared.notificationCenter.removeObserver(token)
+            }
+            volumeObservers.removeAll()
+            volumeRefreshTask?.cancel()
+            volumeRefreshTask = nil
+            volumeRefreshPending = false
+            volumeRefreshGeneration &+= 1
+        }
+    }
+
+    /// Reads volume metadata away from the main actor and collapses bursts of
+    /// workspace notifications into at most one follow-up read.
+    private func scheduleExternalDriveRefresh() {
+        guard volumeRefreshTask == nil else {
+            volumeRefreshPending = true
+            return
+        }
+
+        volumeRefreshGeneration &+= 1
+        let generation = volumeRefreshGeneration
+        volumeRefreshTask = Task { [weak self] in
+            let volumes = await Task.detached(priority: .utility) {
+                Self.mountedVolumes()
+            }.value
+
+            guard let self, self.volumeRefreshGeneration == generation else { return }
+            self.volumeRefreshTask = nil
+            guard !Task.isCancelled else { return }
+
+            self.update {
+                $0.externalDriveConnected = volumes.contains { !$0.isNetwork }
+                $0.mountedVolumes = volumes
+            }
+            self.diagLog.debug("External drive state refreshed: connected=\(volumes.contains { !$0.isNetwork })")
+
+            if self.volumeRefreshPending {
+                self.volumeRefreshPending = false
+                self.scheduleExternalDriveRefresh()
+            }
+        }
+    }
+
+    private static nonisolated func mountedVolumes() -> Set<MountedVolume> {
+        let keys: Set<URLResourceKey> = [
+            .volumeNameKey,
+            .volumeUUIDStringKey,
+            .volumeIsInternalKey,
+            .volumeIsRemovableKey,
+            .volumeIsEjectableKey,
+            .volumeIsLocalKey,
+        ]
+        guard let urls = FileManager.default.mountedVolumeURLs(
+            includingResourceValuesForKeys: Array(keys),
+            options: [.skipHiddenVolumes]
+        ) else {
+            return []
+        }
+
+        return Set(urls.compactMap { url in
+            guard let values = try? url.resourceValues(forKeys: keys) else { return nil }
+            let isNetwork = values.volumeIsLocal == false
+            let isRemovable = values.volumeIsRemovable == true || values.volumeIsEjectable == true
+            guard shouldIncludeMountedVolume(
+                isInternal: values.volumeIsInternal,
+                isRemovable: isRemovable,
+                isNetwork: isNetwork
+            ) else { return nil }
+            return MountedVolume(
+                name: values.volumeName ?? url.lastPathComponent,
+                uuid: values.volumeUUIDString ?? "",
+                isRemovable: isRemovable,
+                isNetwork: isNetwork
+            )
+        })
+    }
+
+    /// Keeps remote volumes and local volumes that macOS identifies as
+    /// external through either bus placement or removable/ejectable status.
+    static nonisolated func shouldIncludeMountedVolume(
+        isInternal: Bool?,
+        isRemovable: Bool,
+        isNetwork: Bool
+    ) -> Bool {
+        isNetwork || isInternal == false || isRemovable
     }
 
     // MARK: Location (for Wi-Fi SSID)
@@ -504,6 +621,9 @@ final class SystemStateMonitor: ObservableObject {
         )
         let wantsSSID = flags.isEnabled(.wifiSSID)
         let wantsRecording = flags.isEnabled(.recordingDevices)
+        async let volumeSnapshot = Task.detached(priority: .utility) {
+            Self.mountedVolumes()
+        }.value
 
         // Off the main actor for the same reason the polled round is: these
         // samplers block, and the Developer pane would otherwise stall the
@@ -526,6 +646,7 @@ final class SystemStateMonitor: ObservableObject {
         } else {
             []
         }
+        let volumes = await volumeSnapshot
         return SystemState(
             power: PowerSourceMonitor.readCurrentState(),
             frontmostAppBundleID: frontmost,
@@ -537,6 +658,8 @@ final class SystemStateMonitor: ObservableObject {
             audioOutputDeviceName: sample.audioOutputDeviceName,
             screenCount: NSScreen.screens.count,
             externalDisplayConnected: hasExternalDisplay(),
+            externalDriveConnected: volumes.contains { !$0.isNetwork },
+            mountedVolumes: volumes,
             isFocusActive: sample.isFocusActive,
             activeFocusModeName: sample.activeFocusModeName,
             energyMode: EnergyModeMonitor.read(),
