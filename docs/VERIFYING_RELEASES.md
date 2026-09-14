@@ -148,7 +148,7 @@ best-effort inventory, not a legal license notice.
 ## Check a Git version tag
 
 1. Fetch tags and identify the release tag (e.g. `2.0.0-rc.1`).
-2. **Before trusting a new key:** obtain the releaser’s **full GPG fingerprint**
+2. Before trusting a new key, obtain the releaser’s **full GPG fingerprint**
    from a source you already trust (for example the Project Lead’s GitHub
    profile GPG keys page, or a fingerprint previously confirmed out-of-band).
    Compare that fingerprint **character-for-character** to the key you are about
@@ -173,9 +173,9 @@ check above succeeds.
 
 ## Install channels
 
-- **GitHub Releases:** https://github.com/thaw-app/Thaw/releases  
-- **Homebrew:** `brew install thaw` / `brew install thaw@beta`  
-- **In-app updates:** Sparkle (stable / beta channels in Settings)
+- GitHub Releases: https://github.com/thaw-app/Thaw/releases  
+- Homebrew: `brew install thaw` / `brew install thaw@beta`  
+- In-app updates: Sparkle (stable / beta channels in Settings)
 
 ## Related
 

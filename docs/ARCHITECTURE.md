@@ -14,9 +14,7 @@ profiles, and customizes menu bar appearance. It is a maintained fork of
   loss of status items.
 - Prefer local-only operation: no accounts, no telemetry/tracking backend.
 - Fail closed for privileged automation surfaces (`thaw://` settings APIs).
-- Stay compatible with current macOS releases. The deployment target is macOS
-  26; macOS 27 support is tracked in
-  [#687](https://github.com/thaw-app/Thaw/issues/687).
+- Stay compatible with current macOS releases. The deployment target is macOS 26; macOS 27 is supported.
 
 ## Repository layout
 
@@ -63,20 +61,12 @@ External dependencies are declared via Swift Package Manager and locked in
 
 ### Main app (`Thaw/`)
 
-- **MenuBar:** Enumerates and moves status items, maintains hidden /
-  always-hidden sections, layout reconciliation, spacing, appearance overlay,
-  and the Thaw Bar (IceBar) UI.
-- **Events / Hotkeys:** User input paths that show or hide sections without
-  going through the settings UI.
-- **Triggers:** Condition monitors (power, network, Focus, schedule, and
-  others) that reveal or hide an individual item. Everything except the
-  battery and power conditions is off until enabled per condition from
-  Developer settings.
-- **Settings:** UserDefaults-backed configuration, profiles, onboarding.
-- **Permissions:** Guides the user through TCC prompts required for AX and
-  screen capture features.
-- **Updates:** Sparkle client; feed URL and EdDSA public key live in
-  `Thaw/Resources/Info.plist`.
+- MenuBar: enumerates and moves status items, maintains hidden / always-hidden sections, layout reconciliation, spacing, appearance overlay, and the Thaw Bar (IceBar) UI.
+- Events / Hotkeys: user input paths that show or hide sections without going through the settings UI.
+- Triggers: condition monitors (power, network, Focus, schedule, and others) that reveal or hide an individual item. Everything except the battery and power conditions is off until enabled per condition from Developer settings.
+- Settings: UserDefaults-backed configuration, profiles, onboarding.
+- Permissions: guides the user through TCC prompts required for AX and screen capture features.
+- Updates: Sparkle client; feed URL and EdDSA public key live in `Thaw/Resources/Info.plist`.
 
 ### `MenuBarItemService` (XPC)
 
@@ -127,14 +117,10 @@ fence-port leak tracked as issue #933.
 
 ## Build and release
 
-- **Dev loop:** Open `Thaw.xcodeproj` in Xcode 26+, build/run.
-- **CI:** `.github/workflows/ci.yml` runs SwiftLint, `xcodebuild test`, and
-  SonarCloud.
-  Shared release/CI pieces live in [`thaw-app/org-ci`](https://github.com/thaw-app/org-ci).
-- **Release:** Signed with Developer ID, notarized, packaged (ZIP/DMG), Sparkle
-  appcast updated. See [VERIFYING_RELEASES.md](VERIFYING_RELEASES.md) and
-  [RELEASES.md](RELEASES.md).
-- **Hosting:** Canonical source is [thaw-app/Thaw](https://github.com/thaw-app/Thaw).
+- Dev loop: open `Thaw.xcodeproj` in Xcode 26+, build/run.
+- CI: `.github/workflows/ci.yml` runs SwiftLint, `xcodebuild test`, and SonarCloud. Shared release/CI pieces live in [`thaw-app/org-ci`](https://github.com/thaw-app/org-ci).
+- Release: signed with Developer ID, notarized, packaged (ZIP/DMG), Sparkle appcast updated. See [VERIFYING_RELEASES.md](VERIFYING_RELEASES.md) and [RELEASES.md](RELEASES.md).
+- Hosting: canonical source is [thaw-app/Thaw](https://github.com/thaw-app/Thaw).
 
 ## Related organization repositories
 

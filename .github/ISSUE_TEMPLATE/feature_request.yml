@@ -1,5 +1,5 @@
 name: Feature Request
-description: Request a feature or suggest an idea.
+description: Suggest a feature or improvement.
 title: "[Feature Request] "
 type: feature
 projects: ["thaw-app/1"]
@@ -9,17 +9,12 @@ body:
       value: |
         **Before submitting:** Search [open & closed suggestions](https://github.com/thaw-app/Thaw/issues?q=is%3Aissue+-type%3ABug) for duplicates.
 
-        > [!IMPORTANT]
-        > macOS 27 / Golden Gate support and preview builds are tracked in **[#687](https://github.com/thaw-app/Thaw/issues/687)**. Do not open a new feature request that is just “support macOS 27”.
-
   - type: checkboxes
     id: checks
     attributes:
-      label: Pre-submission Checklist
+      label: Pre-submission checklist
       options:
         - label: I searched existing issues (open & closed) and found no duplicates
-          required: true
-        - label: If this is about macOS 27 / Golden Gate, I have read #687 (or this request is not about macOS 27)
           required: true
 
   - type: textarea

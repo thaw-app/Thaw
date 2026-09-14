@@ -3,23 +3,15 @@
 
 <!-- Badges: shieldcn: individuals + small related groups (light/dark) -->
 <p align="center">
-  <a href="https://github.com/thaw-app/Thaw/actions/workflows/ci.yml"><picture><source media="(prefers-color-scheme: dark)" srcset="https://www.shieldcn.dev/github/ci/thaw-app/Thaw.svg?variant=outline&amp;size=sm&amp;mode=dark&amp;font=geist&amp;statusDot=true" /><img alt="CI" src="https://www.shieldcn.dev/github/ci/thaw-app/Thaw.svg?variant=outline&amp;size=sm&amp;mode=light&amp;font=geist&amp;statusDot=true" /></picture></a>
-  <a href="https://discord.gg/KDfWjWDnR4"><picture><source media="(prefers-color-scheme: dark)" srcset="https://www.shieldcn.dev/badge/Discord-join.svg?variant=outline&amp;size=sm&amp;mode=dark&amp;font=geist&amp;logo=discord&amp;" /><img alt="Discord" src="https://www.shieldcn.dev/badge/Discord-join.svg?variant=outline&amp;size=sm&amp;mode=light&amp;font=geist&amp;logo=discord&amp;" /></picture></a>
-  <a href="https://github.com/sponsors/stonerl"><picture><source media="(prefers-color-scheme: dark)" srcset="https://www.shieldcn.dev/badge/Sponsor-GitHub.svg?logo=githubsponsors&amp;variant=outline&amp;size=sm&amp;mode=dark&amp;font=geist" /><img alt="Sponsor" src="https://www.shieldcn.dev/badge/Sponsor-GitHub.svg?logo=githubsponsors&amp;variant=outline&amp;size=sm&amp;mode=light&amp;font=geist" /></picture></a>
-    <a href="https://sonarcloud.io/component_measures?id=thaw-app_Thaw&amp;metric=coverage"><picture><source media="(prefers-color-scheme: dark)" srcset="https://www.shieldcn.dev/sonar/coverage/thaw-app_Thaw.svg?variant=outline&amp;size=sm&amp;mode=dark&amp;font=geist&amp;logo=sonarqubecloud" /><img alt="Sonar coverage" src="https://www.shieldcn.dev/sonar/coverage/thaw-app_Thaw.svg?variant=outline&amp;size=sm&amp;mode=light&amp;font=geist&amp;logo=sonarqubecloud" /></picture></a>
+  <a href="https://discord.gg/KDfWjWDnR4"><picture><source media="(prefers-color-scheme: dark)" srcset="https://www.shieldcn.dev/badge/Discord-join.svg?variant=outline&amp;size=xs&amp;mode=dark&amp;font=geist&amp;logo=discord&amp;" /><img alt="Discord" src="https://www.shieldcn.dev/badge/Discord-join.svg?variant=outline&amp;size=xs&amp;mode=light&amp;font=geist&amp;logo=discord&amp;" /></picture></a>
+  <a href="https://sonarcloud.io/component_measures?id=thaw-app_Thaw&amp;metric=coverage"><picture><source media="(prefers-color-scheme: dark)" srcset="https://www.shieldcn.dev/sonar/coverage/thaw-app_Thaw.svg?variant=outline&amp;size=xs&amp;mode=dark&amp;font=geist&amp;logo=sonarqubecloud" /><img alt="Sonar coverage" src="https://www.shieldcn.dev/sonar/coverage/thaw-app_Thaw.svg?variant=outline&amp;size=xs&amp;mode=light&amp;font=geist&amp;logo=sonarqubecloud" /></picture></a>
+  <a href="https://scorecard.dev/viewer/?uri=github.com/thaw-app/Thaw"><picture><source media="(prefers-color-scheme: dark)" srcset="https://www.shieldcn.dev/github/scorecard/thaw-app/Thaw.svg?variant=outline&amp;size=xs&amp;mode=dark&amp;font=geist" /><img alt="OpenSSF Scorecard" src="https://www.shieldcn.dev/github/scorecard/thaw-app/Thaw.svg?variant=outline&amp;size=xs&amp;mode=light&amp;font=geist" /></picture></a>
+  <a href="https://www.bestpractices.dev/projects/13303"><picture><source media="(prefers-color-scheme: dark)" srcset="https://www.shieldcn.dev/github/openssf/thaw-app/Thaw.svg?variant=outline&amp;size=xs&amp;mode=dark&amp;font=geist&amp;color=D4AF37" /><img alt="OpenSSF Best Practices" src="https://www.shieldcn.dev/github/openssf/thaw-app/Thaw.svg?variant=outline&amp;size=xs&amp;mode=light&amp;font=geist&amp;color=D4AF37" /></picture></a>
+  <a href="docs/VERIFYING_RELEASES.md"><picture><source media="(prefers-color-scheme: dark)" srcset="https://www.shieldcn.dev/badge/SLSA-Build_L3.svg?variant=outline&amp;size=xs&amp;mode=dark&amp;font=geist&amp;logo=ri:GoPackage" /><img alt="SLSA 3" src="https://www.shieldcn.dev/badge/SLSA-3.svg?variant=outline&amp;size=xs&amp;mode=light&amp;font=geist&amp;logo=ri:GoPackage" /></picture></a>
 </p>
 
 <p align="center">
-  <a href="https://scorecard.dev/viewer/?uri=github.com/thaw-app/Thaw"><picture><source media="(prefers-color-scheme: dark)" srcset="https://www.shieldcn.dev/github/scorecard/thaw-app/Thaw.svg?variant=outline&amp;size=sm&amp;mode=dark&amp;font=geist" /><img alt="OpenSSF Scorecard" src="https://www.shieldcn.dev/github/scorecard/thaw-app/Thaw.svg?variant=outline&amp;size=sm&amp;mode=light&amp;font=geist" /></picture></a>
-  <a href="https://www.bestpractices.dev/projects/13303"><picture><source media="(prefers-color-scheme: dark)" srcset="https://www.shieldcn.dev/github/openssf/thaw-app/Thaw.svg?variant=outline&amp;size=sm&amp;mode=dark&amp;font=geist&amp;color=D4AF37" /><img alt="OpenSSF Best Practices" src="https://www.shieldcn.dev/github/openssf/thaw-app/Thaw.svg?variant=outline&amp;size=sm&amp;mode=light&amp;font=geist&amp;color=D4AF37" /></picture></a>
-  <picture><source media="(prefers-color-scheme: dark)" srcset="https://www.shieldcn.dev/badge/Baseline-3.svg?variant=outline&amp;size=sm&amp;mode=dark&amp;font=geist" /><img alt="OpenSSF Baseline Level 3" src="https://www.shieldcn.dev/badge/Baseline-3.svg?variant=outline&amp;size=sm&amp;mode=light&amp;font=geist" /></picture>
-  <a href="docs/VERIFYING_RELEASES.md"><picture><source media="(prefers-color-scheme: dark)" srcset="https://www.shieldcn.dev/badge/SLSA-Build_L3.svg?variant=outline&amp;size=sm&amp;mode=dark&amp;font=geist&amp;logo=ri:GoPackage" /><img alt="SLSA 3" src="https://www.shieldcn.dev/badge/SLSA-3.svg?variant=outline&amp;size=sm&amp;mode=light&amp;font=geist&amp;logo=ri:GoPackage" /></picture></a>
-</p>
-
-
-<p align="center">
-  <b>Take back your menu bar. Hide what you don't need, find anything in a keystroke,<br />  and make the bar look the way you want.</b><br />
-  <b>Free and open source. Private by design: no tracking, no account, nothing ever leaves your Mac.</b>
+  <b>The open source menu bar manager.</b>
 </p>
 
 <p align="center">
@@ -30,43 +22,27 @@
   <a href=".github/CONTRIBUTING.md">Contributing</a>
 </p>
 
-<p align="center">
-  <b>We are open to partnerships, integrations, and sponsorships. Contact us.</b>
-</p>
-
-<p align="center">
-  <a href="https://www.raycast.com/diazdesandi/thaw"><img alt="Works with Raycast" src="https://raw.githubusercontent.com/thaw-app/brand-assets/main/badges/works-with-raycast.svg" height="36" /></a>
-  <a href="https://getdroppy.app/"><img alt="Works with Droppy" src="https://raw.githubusercontent.com/thaw-app/brand-assets/main/badges/works-with-droppy.svg" height="36" /></a>
-</p>
-
 <div align="center">
-  <a href="https://trendshift.io/repositories/21173" target="_blank"><img src="https://trendshift.io/api/badge/repositories/21173" alt="thaw-app/Thaw | Trendshift" style="width: 250px; height: 55px;" width="250" height="55" /></a>
-  <a href="https://www.producthunt.com/products/thaw-2?embed=true&amp;utm_source=badge-featured&amp;utm_medium=badge&amp;utm_campaign=badge-thaw-3" target="_blank" rel="noopener noreferrer"><img alt="Thaw - The only app that owns your whole menu bar, in and out | Product Hunt" width="250" height="54" src="https://api.producthunt.com/widgets/embed-image/v1/featured.svg?post_id=1239794&amp;theme=light&amp;t=1788423441056"></a>
+  <a href="https://trendshift.io/repositories/21173" target="_blank"><img src="https://trendshift.io/api/badge/repositories/21173" alt="thaw-app/Thaw | Trendshift" style="width: 150px; height: 33px;" width="150" height="33" /></a>
+  <a href="https://www.producthunt.com/products/thaw-2?embed=true&amp;utm_source=badge-featured&amp;utm_medium=badge&amp;utm_campaign=badge-thaw-3" target="_blank" rel="noopener noreferrer"><img alt="Thaw | Product Hunt" width="150" height="32" src="https://api.producthunt.com/widgets/embed-image/v1/featured.svg?post_id=1239794&amp;theme=light&amp;t=1788423441056"></a>
 </div>
 
 <p align="center">
   <a href="https://github.com/user-attachments/assets/9584065d-f840-4545-9a42-cfc5534b5ac3"><img alt="Thaw overview" src="https://github.com/user-attachments/assets/9584065d-f840-4545-9a42-cfc5534b5ac3" width="800" /></a>
 </p>
 
-## Why Thaw
-
-- **Free, and free to keep.** No purchase, no subscription, and no upgrade fee when macOS ships a new version.
-- **Open source, GPL-3.0.** Read the code, build it yourself, fork it.
-- **No tracking, no account.** No analytics, no telemetry, no sign-up.
-- **Screen Recording is optional.** Hiding, revealing, and rearranging items all work without it, and any item Thaw cannot capture is drawn as its app's icon instead. Grant it if you want live item previews and wallpaper-derived tinting.
-- **Light on your Mac.** A small, steady memory footprint.
-- **Signed and notarized by Apple**, with [verifiable releases](docs/VERIFYING_RELEASES.md), the [OpenSSF Best Practices](https://www.bestpractices.dev/projects/13303) Gold badge, and an [OpenSSF Scorecard](https://scorecard.dev/viewer/?uri=github.com/thaw-app/Thaw) for supply-chain posture.
-
 ## Features
 
-- **Declutter your menu bar**: hide the icons you do not need and keep an always-hidden section for the rest
-- **Reveal items fast**: hover, click, scroll or swipe, or press a hotkey
-- **Search and jump**: find any menu bar item from the keyboard
-- **Triggers**: reveal an item when a condition is met, from the battery level to the active Focus, the Wi-Fi network, or a script's exit code
-- **Switch layouts by context**: bind a profile to a display, to a Space, or to a Focus filter
-- **Zen mode**: one action conceals every section and locks the reveal gestures, then puts it all back. It can engage on its own while you present or share your screen
-- **Style the bar**: tint, gradient, shadow, border, and custom shapes, per light/dark mode and per Space
-- **Built for modern macOS**: supports macOS 26 and 27, including notch-friendly layouts via the Thaw Bar
+- Declutter your menu bar by hiding the icons you don't need, with an always-hidden section for the rest
+- Reveal items by hovering, clicking, scrolling, swiping, or pressing a hotkey
+- Search and jump to any menu bar item from the keyboard
+- Triggers that reveal an item when a condition is met, from battery level to the active Focus, the Wi-Fi network, or a script's exit code
+- Switch layouts by context: bind a profile to a display, a Space, or a Focus filter
+- Zen mode: one action conceals every section and locks the reveal gestures, then puts it all back. It can engage on its own while you present or share your screen
+- Style the bar with tint, gradient, shadow, border, and custom shapes, per light/dark mode and per Space
+- Built for modern macOS: supports macOS 26 and 27, including notch-friendly layouts via the Thaw Bar
+- Light on your Mac, with a small and steady memory footprint
+- Multilingual: available in 20 languages
 
 <details>
 <summary><b>Full feature list</b>: 40+ more, including groups, spacers, profiles, triggers, and hotkeys</summary>
@@ -177,13 +153,24 @@ Reveal an item when a condition is met, or hide it instead. Battery and power co
 
 </details>
 
+## Transparency
+
+- Free, and free to keep. No purchase, no subscription, and no upgrade fee when macOS ships a new version.
+- Open source, GPL-3.0. Read the code, build it yourself, fork it.
+- No tracking, no account. No analytics, no telemetry, no sign-up.
+- Screen Recording is optional. Hiding, revealing, and rearranging items all work without it, and any item Thaw cannot capture is drawn as its app's icon instead. Grant it if you want live item previews and wallpaper-derived tinting.
+- Signed and notarized by Apple, with verifiable releases, the OpenSSF Best Practices Gold badge, and an OpenSSF Scorecard for supply-chain posture.
+
 ## Integrations
+
+<a href="https://www.raycast.com/diazdesandi/thaw"><img alt="Works with Raycast" src="https://raw.githubusercontent.com/thaw-app/brand-assets/main/badges/works-with-raycast.svg" height="28" /></a>
+<a href="https://getdroppy.app/"><img alt="Works with Droppy" src="https://raw.githubusercontent.com/thaw-app/brand-assets/main/badges/works-with-droppy.svg" height="28" /></a>
 
 Every core action is a `thaw://` deep link, so Thaw plugs into the launcher you already use.
 
-- **[Raycast](https://www.raycast.com/diazdesandi/thaw)**: official extension. Toggle sections, open search, and change settings without leaving Raycast.
-- **[Droppy](https://getdroppy.app/)**: pair Thaw with Droppy's shelf and extras for a full menu bar suite.
-- **Anything else**: Alfred, Shortcuts, Keyboard Maestro, BetterTouchTool, or a shell script.
+- [Raycast](https://www.raycast.com/diazdesandi/thaw): official extension. Toggle sections, open search, and change settings without leaving Raycast.
+- [Droppy](https://getdroppy.app/): pair Thaw with Droppy's shelf and extras for a full menu bar suite.
+- Anything else: Alfred, Shortcuts, Keyboard Maestro, BetterTouchTool, or a shell script.
 
 ```sh
 open "thaw://toggle-hidden"
@@ -206,7 +193,7 @@ Needs macOS 26+. Thaw asks for Accessibility on first launch to move menu bar it
 
 ## Languages
 
-Thaw speaks 20 languages, thanks to translators around the world.
+Thaw is available in 20 languages, thanks to translators around the world.
 
 <table frame="void" rules="none">
   <tr>
@@ -247,9 +234,11 @@ Missing yours, or spotted something off? [Translate Thaw on Crowdin](https://cro
 
 ## Contributors
 
-This project exists thanks to the awesome people who contribute code and documentation. Translations happen on Crowdin rather than in git, so translators are credited separately in [Credits](CREDITS.md).
+This project exists thanks to the people who contribute code and documentation. Translations happen on Crowdin rather than in git, so translators are credited separately in [Credits](CREDITS.md).
 
 Want to contribute? Start with [Ways to contribute](https://github.com/thaw-app/Thaw/issues/316). Pull requests are welcome against the `development` branch (see [Contributing](.github/CONTRIBUTING.md)).
+
+Open to partnerships, integrations, and sponsorships. [Get in touch](https://github.com/sponsors/stonerl).
 
 <p align="center">
   <a href="https://github.com/thaw-app/Thaw/graphs/contributors"><img alt="contributors" src="https://shieldcn.dev/contributors/thaw-app/Thaw.svg?title=false&amp;size=40&amp;names=true&amp;titleAlign=center&amp;limit=100&amp;mode=light&amp;font=space-grotesk&amp;watermark=true&amp;border=false" /></a>
