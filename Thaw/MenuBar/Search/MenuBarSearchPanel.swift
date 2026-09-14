@@ -500,10 +500,16 @@ private struct MenuBarSearchContentView: View {
             .frame(width: 600, height: 400)
             .fixedSize()
             .onAppear {
-                Task { @MainActor in
-                    try? await Task.sleep(for: .milliseconds(50))
-                    searchFieldIsFocused = true
-                }
+                // Focus the field as soon as the view is in the hierarchy.
+                // Setting it synchronously here covers the common case; the
+                // async hop covers the turn where the hosting view is still
+                // being installed as the panel's content view, which is when a
+                // fast typist's first keystroke used to land on nothing (#969).
+                // The previous 50 ms sleep was long enough that typing begun
+                // the instant the hotkey fired arrived before the focus was
+                // set, producing the "failed keyboard action" error sound.
+                searchFieldIsFocused = true
+                DispatchQueue.main.async { searchFieldIsFocused = true }
             }
             .onChange(of: model.searchText, initial: true) {
                 updateDisplayedItems()
