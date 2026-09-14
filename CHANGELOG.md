@@ -226,7 +226,7 @@ Three things from the 2.1 preview line are still on their way to macOS 27. Anoth
 - On a notched display, when the frontmost app's menu is long enough to wrap past the notch, Thaw can repeatedly try to move items and briefly take the cursor. A fix is coming in alpha 2.
 - iStats menu bar items may be hidden when another item gets hidden. We are working with the iStats developers to resolve this issue.
 
-## [2.1.0-beta.3]
+## [2.1.0-beta.3] - 2026-09-14
 
 Hey, we have a Discord! Come say hi: [discord.gg/KDfWjWDnR4](https://discord.gg/KDfWjWDnR4).
 
@@ -234,9 +234,9 @@ Please report issues at [github.com/thaw-app/Thaw/issues](https://github.com/tha
 
 <a href="https://www.producthunt.com/products/thaw-2?embed=true&amp;utm_source=badge-featured&amp;utm_medium=badge&amp;utm_campaign=badge-thaw-3" target="_blank" rel="noopener noreferrer"><img alt="Thaw - The only app that owns your whole menu bar, in and out | Product Hunt" width="250" height="54" src="https://api.producthunt.com/widgets/embed-image/v1/featured.svg?post_id=1239794&amp;theme=light&amp;t=1788423441056"></a>
 
-Thanks to @wiper2 for the spacing report and the crash logs behind it, @lucifercraig12345-create for finding both the search freeze and the spacer crash, @Chamiu for the `dropReverted` report, and @ppocass for tracing a menu bar that never rendered down to the window number itself.
+Thanks to @wiper2 for the spacing report and crash logs, @lucifercraig12345-create for the search freeze, the spacer crash, and the external-drive trigger request, @Chamiu for the `dropReverted` report, @ppocass for tracing a menu bar that never rendered, @leos for the spacing-restart report, and @balaji-dutt for the stuck-rehide and localized-ghost diagnoses.
 
-Five reported bugs, four more found while fixing them, and three changes to how item images are captured. The one worth reading about is the first. The #720 fix in beta.2 taught the spacing relaunch wave to restart system LaunchAgents through `launchctl` instead of killing them, which rescued Spotlight. It did not stop the wave from terminating system binaries that no LaunchAgent claims, and those are just as unrestartable.
+Spacing changes no longer kill system services that cannot be brought back, and you can now turn the restart wave off entirely. You can also sort a section alphabetically, remove stale displays from the list, type in the search panel the moment it opens, and reveal a hidden item while an external drive is mounted. Five reported bugs and four more found while fixing them are in here, plus three image-capture performance changes, and three ways automatic layout work used to fight whoever was using the mouse.
 
 ---
 
@@ -244,43 +244,56 @@ Five reported bugs, four more found while fixing them, and three changes to how 
 
 1. Update in place through Sparkle on the beta channel. Stable stays on 2.0.1 until 2.1.0 leaves beta.
 2. No schema or `defaults` changes. Profiles, saved layouts, and hotkeys carry over untouched.
-3. Spacing changes now leave some items alone. A menu bar item whose owner Thaw declines to restart keeps its previous spacing until that app next starts on its own, so the bar can look uneven for a while after a spacing change. `FREQUENT_ISSUES.md` has a new section listing what Thaw will and will not quit.
-4. An app that refuses a quit request is no longer force-terminated. If an app is holding an unsaved document, it stays running and keeps its old spacing rather than losing the document.
+3. Spacing changes leave some items alone, and you can turn the wave off. An item whose owner Thaw declines to restart keeps its previous spacing until that app next starts, so the bar can look uneven for a while. "When applying spacing" under Settings, Displays has a "Wait until next restart (no apps restarted)" option that stops Thaw restarting apps for a spacing change at all. `FREQUENT_ISSUES.md` lists what Thaw will and will not quit.
+4. An app that refuses a quit request is no longer force-terminated. If it is holding an unsaved document, it stays running and keeps its old spacing.
 
 ---
 
-### Main fixes
+### Spacing
 
-1. Changing menu bar spacing no longer kills system services that cannot be brought back (#1070, thanks @wiper2). macOS reads `NSStatusItemSpacing` once, when a status item's owner starts, so applying a spacing change means restarting the apps that own menu bar items. The wave did that without asking whether each one could be restarted. Beta.2 fixed the case where an indexed LaunchAgent was involved, but a launch-constrained CoreServices binary that no agent claims got terminated like any ordinary app, and the kernel then killed both the relaunch and the fallback launch at exec: the same CODESIGNING termination and "Launch Constraint Violation" as #720, from the same cause, because Thaw is not a launching parent those binaries accept. Terminating them is also a *successful* exit, so launchd has no reason to bring them back on its own. Spotlight and the input menu stayed dead until the next reboot, and `Cmd + Space` with them. Spacing is re-applied whenever a display connects or disconnects, which is why the reporter hit this on every sleep and wake. Every candidate is now triaged before anything is signalled. An item owned by an indexed LaunchAgent is restarted with `launchctl kickstart -k`, as before. A binary under `/System`, `/usr`, `/bin`, `/sbin`, or `/Library/Apple` with no label to kickstart is left running, and so is a process with no launchable bundle, such as an XPC helper or an extension host. Ordinary apps are quit and launched back the way they always were. Anything the wave leaves running is also dropped from the set of items it waits to see reattach, so the settling period no longer stalls on items that never detached.
-2. Typing in the settings search field no longer freezes the app (#1055, thanks @lucifercraig12345-create). Every row in `SectionedList` carried a `GeometryReader` that reported its frame back up the view tree, so a list long enough to matter re-measured itself on every keystroke, and the reporter found it by typing and scrolling at the same time. The per-row frame tracking is gone, and scroll-to-selection uses a center anchor instead of measured frames.
-3. Adding a spacer to a visible section no longer crashes (#1056, thanks @lucifercraig12345-create). `StatusItemStorage` asked AppKit for a status item of zero length. AppKit can answer that with a synthetic window whose `windowNumber` has no representable `CGWindowID`, and the crash came from resizing that window. The status item now starts one point wide, and the first `updateStatusItem` pass applies the intended control item length immediately after.
-4. A move started just after an app updates no longer reverts (#1058, thanks @Chamiu). `moveEndpointDisposition` read the `isOnScreen` bit and trusted it, without looking at where the item actually sat in the parked lane, so a move that had really landed was reported as `dropReverted`. The geometry is checked first now, and the retry goes through `sourceAnchoredTeleport`, which presses on the source window and releases at the destination rather than replaying the original gesture.
-5. A menu bar that never renders because of a bad window number is caught rather than acted on (#1060, thanks @ppocass). `CGWindowID(exactly:)` accepted any value that happened to fit, so a synthetic or negative window number became an ID that looked entirely plausible downstream. `windowServerID(windowNumber:)` rejects zero, negative, and non-representable values instead of converting them.
+1. Changing menu bar spacing no longer kills system services that cannot be brought back (#1070, thanks @wiper2). The relaunch wave now triages each app first: indexed LaunchAgents restart through `launchctl`, system binaries with no label and processes with no launchable bundle are left running, and ordinary apps are quit and launched back. Anything left running is dropped from the set the wave waits to reattach.
+2. You can apply a spacing change without restarting your apps (#1071, thanks @leos). "When applying spacing" under Settings, Displays now offers "Wait until next restart (no apps restarted)", which writes the preference and leaves every app running. The new spacing appears the next time each app starts. The "Confirm before relaunching apps" toggle and its save-scope picker only appear when a relaunch wave can actually fire.
 
----
+### Displays
+
+1. Remove stale displays from the Per Display list (#1054). A Remove control on each disconnected display drops its cached name and settings. A display you connect again reappears on its own.
+
+### Menu bar layout
+
+1. Sort a section alphabetically (#936). Each section heading in Settings, Menu Bar Layout has a Sort A→Z button. Closed apps keep their saved slot, and the order is written to the active profile.
+2. A stuck rehide no longer freezes a position in place (#1079, thanks @balaji-dutt). An app that runs since boot never relaunches, so a failed rehide used to block the item's saved position forever. Thaw now ages that state out after a day.
+3. Localized Control Center ghosts are pruned (#1080, thanks @balaji-dutt). On a non-English system, Control Center's localized name could land in an item identifier and persist forever, duplicating the canonical entries. Thaw now drops those copies when the canonical namespace is present.
+
+### Triggers
+
+1. Reveal a hidden item while an external drive is mounted (#1053, thanks @lucifercraig12345-create for the request, @alvst). A trigger can now match any external drive, an exact case-insensitive drive name, a removable drive, a network volume, or a volume UUID. Thaw observes volume mount, unmount, and rename notifications and reevaluates triggers when mounted volumes change, so an NTFS helper or any drive-tied utility appears while its drive is connected and hides again when it ejects.
 
 ### Layout work stays out of your way
 
 Three separate ways an automatic batch could work against whoever was using the mouse at the time.
 
-1. Bulk layout work has one owner. An explicit profile apply, a background re-sort, and a saved-order restore could all run at once and write over each other. Each claims a lease ranked by authority now: a profile you selected supersedes background work and never the reverse, and a superseded batch stops at its next move instead of finishing on top of the newer one.
-2. Automatic batches wait for a pause in physical input. They used to move items out from under a pointer that was still in use. A batch checks for a lull before it starts, checks again between moves, and defers the rest when input resumes, leaving your arrangement where you put it.
-3. The cursor stays where you left it. Cursor restoration ran at the end of every batch, warping the pointer back to wherever that batch had started even if you had moved the mouse in the meantime. It now runs only when the HID timestamps show no physical pointer input since the operation took ownership.
+1. Bulk layout work has one owner. A profile apply, a background re-sort, and a saved-order restore could all run at once and write over each other. Each claims a lease ranked by authority now: a profile you selected supersedes background work and never the reverse, and a superseded batch stops at its next move.
+2. Automatic batches wait for a pause in physical input, and check again between moves, deferring the rest when input resumes. The detector now reads HID timestamps for mouse-down, up, and dragged events across left, right, and other buttons, not just movement and scroll, so a click during a batch is still detected after the button is released.
+3. The cursor stays where you left it. Restoration now runs only when the HID timestamps show no physical pointer input since the operation took ownership, so it no longer warps the pointer back if you moved the mouse mid-batch.
 
----
+### Search
 
-### More fixes
+1. The search panel takes your first keystroke (#969). The field is now first responder as soon as the panel opens, instead of needing a click first.
+2. Typing in the settings search field no longer freezes the app (#1055, thanks @lucifercraig12345-create). Each row in `SectionedList` re-measured itself on every keystroke. The per-row frame tracking is gone.
 
-1. Clicking one of Apple's own menu bar items opens the right thing. Activation tried `AXShowMenu` first, but Apple's status items read that as a request for their contextual menu rather than as a normal click. Only `AXPress` is used now.
-2. Moves resolve their endpoints against live windows. Endpoint validation leaned on persisted PID seeds and propagated ownership between items that shared a title, which let a stale endpoint pass for a current one. `refreshMoveEndpoints` re-reads the exact windows a move will use and resolves ownership for that set alone, so a failed live resolution rejects the move instead of dressing up an old one.
+### Fixes
 
----
+1. Adding a spacer to a visible section no longer crashes (#1056, thanks @lucifercraig12345-create). A zero-length status item can stay a synthetic window with no representable window ID. The status item, and now spacers too, start one point wide before taking their intended width.
+2. A move started just after an app updates no longer reverts (#1058, thanks @Chamiu). The `isOnScreen` bit was trusted without checking where the item actually sat, so a move that had landed was reported as `dropReverted`. The geometry is checked first.
+3. A menu bar that never renders because of a bad window number is caught rather than acted on (#1060, thanks @ppocass). `CGWindowID(exactly:)` accepted any value that fit. `windowServerID(windowNumber:)` rejects zero, negative, and non-representable values.
+4. Clicking one of Apple's own menu bar items opens the right thing. Activation tried `AXShowMenu` first, but Apple's status items read that as a contextual-menu request. Only `AXPress` is used now.
+5. Moves resolve their endpoints against live windows. Endpoint validation leaned on persisted PID seeds and title-matched ownership, so a stale endpoint could pass for a current one. `refreshMoveEndpoints` re-reads the exact windows a move will use, so a failed live resolution rejects the move.
 
 ### Performance
 
-1. Menu bar item images refresh off the main actor. `refreshImages` was `nonisolated`, which under Approachable Concurrency keeps the caller's actor, so the bounds queries, the crop, and the detached copies all ran on the main thread next to UI work. They run on the background pool now, and publication hops back through `applyRefreshedImages`.
-2. Blink triggers capture only the items they watch. Attention detection was a single Boolean demand, so one enabled trigger made the live loop capture every item in the concealed sections. The image cache takes the identifiers the enabled triggers name and captures those windows alone. The global "surface items seeking attention" setting is unaffected and still samples everything.
-3. Those captures go out as one request. Each watched item used to make its own round trip through the capture helper.
+1. Menu bar item images refresh off the main actor. `refreshImages` was `nonisolated`, which under Approachable Concurrency kept the caller's actor, so the bounds queries, crop, and copies ran on the main thread. They run on the background pool now.
+2. Blink triggers capture only the items they watch. One enabled trigger used to make the live loop capture every concealed item. The cache now takes the identifiers the enabled triggers name and captures those alone. The global "surface items seeking attention" setting is unaffected.
+3. Those captures go out as one request instead of one round trip per watched item.
 
 ## [2.1.0-beta.2]
 
