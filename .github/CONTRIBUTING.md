@@ -49,6 +49,7 @@ You need a GitHub account and a fork:
 
    ```bash
    git clone https://github.com/YOUR_USERNAME/Thaw.git
+   cd Thaw
    ```
 
 3. Create a branch for your changes

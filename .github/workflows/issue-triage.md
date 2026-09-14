@@ -44,6 +44,7 @@ safe-outputs:
     create-issue: false
   missing-tool:
     create-issue: false
+  failure-report-as-issue: false
 ---
 
 # Issue Triage
