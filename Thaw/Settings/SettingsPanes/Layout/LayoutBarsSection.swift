@@ -150,9 +150,17 @@ struct LayoutBarsSection: View {
             section.isEnabled
         {
             VStack(alignment: .leading) {
-                Text(name.localized)
-                    .font(.headline)
-                    .padding(.leading, 8)
+                HStack {
+                    Text(name.localized)
+                        .font(.headline)
+                        .padding(.leading, 8)
+                    Spacer(minLength: 0)
+                    Button("Sort A\u{2192}Z") {
+                        itemManager.sortSection(name)
+                    }
+                    .help(Text("Sort the items in this section alphabetically by name."))
+                    .buttonStyle(.borderless)
+                }
 
                 LayoutBar(section: name)
             }
