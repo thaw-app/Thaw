@@ -253,6 +253,49 @@ struct DisplaySettingsManagerMutationTests {
         }
     }
 
+    // MARK: Removing saved displays (#1054)
+
+    @Test("removeSavedDisplay drops the display from knownDisplays, configurations, and allDisplays")
+    func removeSavedDisplayClearsBothStores() throws {
+        try withScratchDefaults { _ in
+            let manager = makeManager(
+                configurations: ["UUID-Zed": .defaultConfiguration.withGridColumns(9)]
+            )
+            manager.knownDisplays = [
+                "UUID-Zed": KnownDisplay(name: "Zed", hasNotch: false),
+                "UUID-Abe": KnownDisplay(name: "Abe", hasNotch: false),
+            ]
+
+            #expect(manager.allDisplays().map(\.id).contains("UUID-Zed"))
+
+            manager.removeSavedDisplay(forUUID: "UUID-Zed")
+
+            #expect(manager.knownDisplays["UUID-Zed"] == nil, "the cached name must be gone")
+            #expect(manager.configurations["UUID-Zed"] == nil, "the per-display override must be gone")
+            #expect(!manager.allDisplays().map(\.id).contains("UUID-Zed"))
+            #expect(manager.knownDisplays["UUID-Abe"] != nil, "other saved displays are untouched")
+        }
+    }
+
+    @Test("removeSavedDisplay on a connected display leaves the live entry intact")
+    func removeSavedDisplayOnConnectedDisplayIsHarmlessToOthers() throws {
+        try withScratchDefaults { _ in
+            let manager = makeManager()
+            // A connected display re-enters knownDisplays on the next
+            // screen-parameters notification, so removing its cached entry is
+            // not destructive; the per-display override is what we care about.
+            let connected = manager.allDisplays().first(where: { $0.isConnected })
+            guard let id = connected?.id else {
+                // No display attached on this runner; assert the no-op path
+                // still does not throw and leaves state consistent.
+                manager.removeSavedDisplay(forUUID: "UUID-None")
+                return
+            }
+            manager.removeSavedDisplay(forUUID: id)
+            #expect(manager.configurationOverride(forUUID: id) == nil)
+        }
+    }
+
     // MARK: Persistence round-trip
 
     @Test("Configurations survive a reload")

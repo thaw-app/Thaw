@@ -94,6 +94,22 @@ final class DisplaySettingsManager {
         }
     }
 
+    /// When a spacing change becomes visible, and whether Thaw is allowed
+    /// to restart apps to make it immediate. `relaunchApps` (the default)
+    /// applies the change right away by restarting the apps Thaw can bring
+    /// back. `writeOnly` writes the preference and leaves every app
+    /// running, so the new spacing appears the next time each status-item
+    /// owner starts on its own — after a restart, or when the app is
+    /// reopened. Synced into `MenuBarItemSpacingManager.spacingApplyMode`
+    /// alongside `offset`. (#1075)
+    var spacingApplyMode = Defaults.DefaultValue.spacingApplyMode {
+        didSet {
+            guard oldValue != spacingApplyMode else { return }
+            Defaults.set(spacingApplyMode.rawValue, forKey: .spacingApplyMode)
+            appState?.spacingManager.spacingApplyMode = spacingApplyMode
+        }
+    }
+
     /// Storage for internal observers.
     @ObservationIgnored
     var cancellables = Set<AnyCancellable>()
@@ -205,6 +221,11 @@ final class DisplaySettingsManager {
            let scope = SpacingProfileSaveScope(rawValue: raw)
         {
             unconfirmedSpacingProfileScope = scope
+        }
+        if let raw = Defaults.string(forKey: .spacingApplyMode),
+           let mode = SpacingApplyMode(rawValue: raw)
+        {
+            spacingApplyMode = mode
         }
     }
 
@@ -678,6 +699,28 @@ final class DisplaySettingsManager {
             configurations = updated
         }
         return targets
+    }
+
+    /// Forgets a previously-connected display: drops its cached name from
+    /// `knownDisplays` and its per-display override from `configurations`.
+    /// Used by the Displays pane's "remove saved display" control so the
+    /// list does not accumulate disconnected displays the user no longer
+    /// cares about (#1054). A display that is currently connected is
+    /// re-captured into `knownDisplays` on the next screen-parameters
+    /// notification, so calling this on a connected display only discards
+    /// its per-display override.
+    func removeSavedDisplay(forUUID uuid: String) {
+        var updatedKnown = knownDisplays
+        let removedKnown = updatedKnown.removeValue(forKey: uuid) != nil
+        var updatedConfigs = configurations
+        let removedConfig = updatedConfigs.removeValue(forKey: uuid) != nil
+        guard removedKnown || removedConfig else { return }
+        if removedKnown {
+            knownDisplays = updatedKnown
+        }
+        if removedConfig {
+            configurations = updatedConfigs
+        }
     }
 
     /// Toggles the Thaw Bar for the display with the active menu bar.
