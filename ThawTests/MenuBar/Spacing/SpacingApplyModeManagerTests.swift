@@ -43,22 +43,6 @@ struct SpacingApplyModeManagerTests {
         CFPreferencesSynchronize(anyApp, currentUser, currentHost)
     }
 
-    /// Removes any value the test planted so it cannot leak into other tests
-    /// or the live app. The manager treats an unset key as its default (16),
-    /// so clearing restores the baseline.
-    private func clearOnDiskSpacing() {
-        for key in [Self.spacingKey, Self.paddingKey] {
-            CFPreferencesSetValue(
-                key,
-                nil,
-                anyApp,
-                currentUser,
-                currentHost
-            )
-        }
-        CFPreferencesSynchronize(anyApp, currentUser, currentHost)
-    }
-
     /// Captures the original values (or nil when unset) of the two spacing
     /// keys *before* a test plants its own, and restores exactly those values
     /// afterwards, including nil for keys that were unset. Restoring the
@@ -84,6 +68,16 @@ struct SpacingApplyModeManagerTests {
         defer { restoreOriginalSpacing() }
         manager.spacingApplyMode = .relaunchApps
         #expect(manager.willRelaunch(forOffset: 4) == true)
+    }
+
+    @Test("willRelaunch is false under relaunchApps when on-disk already matches")
+    func willRelaunchFalseWhenOnDiskMatches() {
+        let manager = MenuBarItemSpacingManager()
+        manager.offset = 4 // target = 20
+        plantOnDiskSpacing(20) // on-disk = 20 -> no mismatch
+        defer { restoreOriginalSpacing() }
+        manager.spacingApplyMode = .relaunchApps
+        #expect(manager.willRelaunch(forOffset: 4) == false)
     }
 
     @Test("willRelaunch is false under writeOnly even when on-disk differs")

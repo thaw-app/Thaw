@@ -216,4 +216,27 @@ struct LocalizedControlCenterGhostPruningTests {
 
         #expect(pruned["hidden"]?.contains("Some App:Item-0") == true)
     }
+
+    @Test("An instance-indexed Item-N alias ghost is pruned when the canonical namespace is present")
+    func instanceIndexedItemNGhostIsPruned() {
+        // The exact shape from #1080's report: Control Centre:Item-0:13, with
+        // the :N instance suffix the windowID-sort enumeration assigns. The
+        // alias rule prunes it alongside the canonical com.apple.controlcenter
+        // entries; the suffix does not protect it.
+        let pruned = LayoutSolver.prunedSectionOrder(
+            [
+                "hidden": [
+                    "com.apple.controlcenter:WiFi",
+                    "Control Centre:Item-0:13",
+                    "com.lwouis.alt-tab-macos:Item-0",
+                ],
+            ],
+            displayNameAliases: ["Control Centre"]
+        )
+
+        let kept = pruned["hidden"] ?? []
+        #expect(kept.contains("com.apple.controlcenter:WiFi"))
+        #expect(kept.contains("com.lwouis.alt-tab-macos:Item-0"))
+        #expect(!kept.contains("Control Centre:Item-0:13"))
+    }
 }
