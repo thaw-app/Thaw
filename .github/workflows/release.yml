@@ -777,7 +777,7 @@ jobs:
   attach-provenance:
     needs: [release, attest-dmg, attest-sbom]
     if: ${{ github.repository == 'thaw-app/Thaw' && !inputs.dry_run }}
-    runs-on: blacksmith-4vcpu-ubuntu-2404
+    runs-on: ubuntu-latest
     permissions:
       contents: write
     steps:
