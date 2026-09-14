@@ -1400,13 +1400,51 @@ final class MenuBarItemManager {
     func sortSection(_ section: MenuBarSection.Name) -> [String]? {
         let items = itemCache.managedItems(for: section)
         guard !items.isEmpty else { return nil }
+
+        // Persistable-item predicate, mirroring computeSectionOrder's
+        // currentInSection filter so non-persistable items (control items,
+        // trigger-protected, misattributed, transient, provisional,
+        // pending-rehide, ejected, refused) are excluded from the sort
+        // and never written into savedSectionOrder. The same guards apply
+        // to the cross-section identifier sets below.
+        let pendingRehideTags = LayoutSolver.pendingRehideTagIdentifiers(
+            pendingReturnDestinations: pendingReturnDestinations,
+            pendingRelocations: pendingRelocations,
+            waitForRelaunchPrefix: Self.waitForRelaunchPrefix
+        )
+        let ejectedStillInHidden = notchOverflowEjectedUIDs.intersection(
+            Set(itemCache[.hidden].map(\.uniqueIdentifier))
+        )
+        let refusedIdentifiers = refusedMoveIdentifiers()
+        func isSortPersistable(_ item: MenuBarItem) -> Bool {
+            guard !Self.isTriggerProtected(
+                item.uniqueIdentifier,
+                by: triggerControlledItemIdentifiers.union(triggerLayoutRestorationItemIdentifiers),
+                knownBaseIdentifiers: Set(itemCache.managedItems.map(\.tag.stableIdentifierBase)),
+                knownLiveIdentifiers: Set(itemCache.managedItems.map(\.uniqueIdentifier))
+            ) else { return false }
+            if item.tag == .visibleControlItem {
+                return true
+            }
+            guard !item.tag.isMisattributedControlCenterModule else { return false }
+            return !item.isControlItem && item.sourcePID != nil
+        }
+        let persistableItems = items.filter {
+            isSortPersistable($0)
+                && !$0.isTransientControlCenterItem
+                && !$0.hasProvisionalIdentity
+                && !pendingRehideTags.contains($0.tag.tagIdentifier)
+                && !ejectedStillInHidden.contains($0.uniqueIdentifier)
+                && !refusedIdentifiers.contains($0.uniqueIdentifier)
+        }
+        guard !persistableItems.isEmpty else { return nil }
         // Sort the live items by display name, then merge with the saved
         // order so identifiers for apps that are currently quit (whose
         // items are not in the cache) are retained at a stable position
         // instead of being dropped. Reuses planSectionOrder, the same
         // position-preserving merge computeSectionOrder runs, so a sort
         // never loses a closed app's saved slot. (#936)
-        let sortedLive = LayoutSolver.sortedSectionIdentifiers(items) { $0.displayName }
+        let sortedLive = LayoutSolver.sortedSectionIdentifiers(persistableItems) { $0.displayName }
         guard !sortedLive.isEmpty else { return nil }
 
         let key = sectionKey(for: section)
@@ -1415,11 +1453,6 @@ final class MenuBarItemManager {
         // Cross-section identifier sets, mirroring computeSectionOrder so
         // the merge can tell a closed app (absent everywhere) from one that
         // moved to another section (dropped from this section's order).
-        let pendingRehideTags = LayoutSolver.pendingRehideTagIdentifiers(
-            pendingReturnDestinations: pendingReturnDestinations,
-            pendingRelocations: pendingRelocations,
-            waitForRelaunchPrefix: Self.waitForRelaunchPrefix
-        )
         let knownBaseIdentifiers = Set(itemCache.managedItems.map(\.tag.stableIdentifierBase))
         let knownLiveIdentifiers = Set(itemCache.managedItems.map(\.uniqueIdentifier))
         let triggerProtectedIdentifiers = triggerControlledItemIdentifiers
@@ -1433,15 +1466,10 @@ final class MenuBarItemManager {
         var allCurrentIdentifiers = Set<String>()
         var allCurrentBaseIdentifiers = Set<String>()
         for item in itemCache.managedItems {
-            guard !Self.isTriggerProtected(
-                item.uniqueIdentifier,
-                by: triggerProtectedIdentifiers,
-                knownBaseIdentifiers: knownBaseIdentifiers,
-                knownLiveIdentifiers: knownLiveIdentifiers
-            ) else { continue }
+            guard isSortPersistable(item) else { continue }
             guard !pendingRehideTags.contains(item.tag.tagIdentifier) else { continue }
-            guard !item.isControlItem, item.sourcePID != nil else { continue }
-            guard !item.tag.isMisattributedControlCenterModule else { continue }
+            guard !ejectedStillInHidden.contains(item.uniqueIdentifier) else { continue }
+            guard !refusedIdentifiers.contains(item.uniqueIdentifier) else { continue }
             guard !item.isTransientControlCenterItem, !item.hasProvisionalIdentity else { continue }
             allCurrentIdentifiers.insert(item.uniqueIdentifier)
             let baseID = item.tag.stableIdentifierBase
@@ -1459,6 +1487,7 @@ final class MenuBarItemManager {
         guard !merged.isEmpty else { return nil }
         guard savedSectionOrder[key] != merged else { return merged }
 
+        let previousOrder = savedSectionOrder
         var newOrder = savedSectionOrder
         newOrder[key] = merged
         savedSectionOrder = newOrder
@@ -1469,12 +1498,22 @@ final class MenuBarItemManager {
         // order into it and reapply; reapplyActiveProfile reads the on-disk
         // profile, not this manager's savedSectionOrder, so without the
         // profile update it would re-apply the stale order and discard the
-        // sort. Without an active profile, trigger the saved-layout apply
-        // path (a cache cycle runs applySavedLayout against the just-written
+        // sort. If the profile write fails, roll this manager's
+        // savedSectionOrder back to the pre-sort order so the live state
+        // and the on-disk profile do not diverge, and surface the failure.
+        // Without an active profile, trigger the saved-layout apply path (a
+        // cache cycle runs applySavedLayout against the just-written
         // savedSectionOrder). (#936)
-        if appState?.profileManager.activeProfileID != nil {
-            appState?.profileManager.updateActiveProfileSectionOrder(section, identifiers: merged)
-            appState?.profileManager.reapplyActiveProfile()
+        if let profileManager = appState?.profileManager,
+           profileManager.activeProfileID != nil
+        {
+            guard profileManager.updateActiveProfileSectionOrder(section, identifiers: merged) else {
+                savedSectionOrder = previousOrder
+                persistSavedSectionOrder()
+                MenuBarItemManager.diagLog.error("sortSection: profile update failed; rolled back savedSectionOrder")
+                return nil
+            }
+            profileManager.reapplyActiveProfile()
         } else {
             Task { [weak self] in
                 await self?.cacheItemsRegardless()
