@@ -1858,6 +1858,28 @@ nonisolated enum LayoutSolver {
     /// Order is preserved: entries are dropped, never rearranged, so pruning
     /// cannot itself permute a section (#885).
     ///
+    /// Returns the unique identifiers of `items` sorted by the given key,
+    /// stable for equal keys. Used by the "Sort A→Z" section action (#936)
+    /// to reorder a section alphabetically without dragging each icon.
+    ///
+    /// Pure over its inputs; the orchestrator writes the result into
+    /// savedSectionOrder and reapplies the active profile.
+    static nonisolated func sortedSectionIdentifiers(
+        _ items: [MenuBarItem],
+        by key: (MenuBarItem) -> String
+    ) -> [String] {
+        // stableSort is unavailable on LinuxFoundation; indexed enumeration
+        // preserves the input order for equal keys, matching a stable sort.
+        let indexed = items.enumerated().map { offset, item in (offset, key(item), item.uniqueIdentifier) }
+        let sorted = indexed.sorted { lhs, rhs in
+            if lhs.1 != rhs.1 {
+                return lhs.1.localizedCaseInsensitiveCompare(rhs.1) == .orderedAscending
+            }
+            return lhs.0 < rhs.0
+        }
+        return sorted.map(\.2)
+    }
+
     /// Pure over its inputs.
     static nonisolated func prunedSectionOrder(
         _ savedSectionOrder: [String: [String]],
@@ -1973,6 +1995,23 @@ nonisolated enum LayoutSolver {
                 // a bundle-ID-less app ever got, and deleting it would
                 // lose the user's placement (#949).
                 if isDisplayNameNamespace(identifier: identifier, aliases: displayNameAliases) {
+                    let namespace = namespace(forIdentifier: identifier)
+                    // A Control Center localized-name alias ("Control
+                    // Centre", "Kontrollzentrum") is redundant once the
+                    // canonical com.apple.controlcenter namespace is present
+                    // anywhere in the saved order: the alias was only ever a
+                    // fallback minted when bundle-ID resolution failed
+                    // transiently. Pruning it drops the localized ghosts
+                    // (including generic Item-N ones the claimed-title rule
+                    // below skips) without touching the canonical entries.
+                    // A whitespace-containing namespace that is NOT a CC
+                    // alias is left alone: it may be a bundle-ID-less app's
+                    // only identity (#949). (#1080)
+                    if displayNameAliases.contains(namespace),
+                       !controlCenterTitles.isEmpty
+                    {
+                        return false
+                    }
                     let title = titlePortion(forIdentifier: identifier)
                     if controlCenterTitles.contains(title) {
                         return false
@@ -2293,12 +2332,12 @@ nonisolated enum LayoutSolver {
         alwaysHiddenControlItemBounds: CGRect?
     ) -> Bool {
         if let visibleControlItemBounds,
-            visibleControlItemBounds.maxX <= hiddenControlItemBounds.minX
+           visibleControlItemBounds.maxX <= hiddenControlItemBounds.minX
         {
             return false
         }
         if let alwaysHiddenControlItemBounds,
-            hiddenControlItemBounds.maxX <= alwaysHiddenControlItemBounds.minX
+           hiddenControlItemBounds.maxX <= alwaysHiddenControlItemBounds.minX
         {
             return false
         }

@@ -156,3 +156,64 @@ struct UntitledEntryPruningTests {
         #expect(pruned["visible"] == ["com.shortcutlabs.FlicMac:Item-0"])
     }
 }
+
+/// On a non-English-locale machine, Control Center's localized owner name
+/// ("Control Centre", "Kontrollzentrum") can land in the namespace when
+/// bundle-ID resolution fails transiently, minting ghosts like
+/// `Control Centre:Item-0:13`. The generic `Item-N` title is shared by every
+/// owner, so the existing claimed-title rule skips them and they persist
+/// forever, duplicating the canonical `com.apple.controlcenter:Item-N`
+/// entries and inflating the stale-identifier ledger's unmatched count.
+/// When the canonical `com.apple.controlcenter` namespace is present
+/// anywhere in the saved order, the localized alias copies are redundant
+/// and can be pruned. (#1080)
+@Suite("Localized Control Center ghost pruning")
+struct LocalizedControlCenterGhostPruningTests {
+    @Test("A Control Centre alias ghost is pruned when the canonical namespace is present")
+    func localizedAliasGhostIsPruned() {
+        let pruned = LayoutSolver.prunedSectionOrder(
+            [
+                "hidden": [
+                    "com.apple.controlcenter:WiFi",
+                    "com.lwouis.alt-tab-macos:Item-0",
+                    "Control Centre:Item-0:8",
+                    "Control Centre:Item-0:10",
+                ],
+            ],
+            displayNameAliases: ["Control Centre"]
+        )
+
+        let kept = pruned["hidden"] ?? []
+        #expect(kept.contains("com.apple.controlcenter:WiFi"))
+        #expect(kept.contains("com.lwouis.alt-tab-macos:Item-0"))
+        #expect(!kept.contains("Control Centre:Item-0:8"))
+        #expect(!kept.contains("Control Centre:Item-0:10"))
+    }
+
+    @Test("A localized alias ghost is kept when no canonical entry exists")
+    func localizedAliasGhostSurvivesWithoutCanonicalTwin() {
+        // No com.apple.controlcenter:* entry anywhere, and the title is
+        // not a known Control Center module name, so it may be the only
+        // identity a bundle-ID-less Control Center slot ever got. Deleting
+        // it would lose the user's placement (#949 protection).
+        let pruned = LayoutSolver.prunedSectionOrder(
+            ["hidden": ["Control Centre:SomeUniqueApp"]],
+            displayNameAliases: ["Control Centre"]
+        )
+
+        #expect(pruned["hidden"] == ["Control Centre:SomeUniqueApp"])
+    }
+
+    @Test("A whitespace-namespaced non-alias ghost is not pruned by the alias rule")
+    func whitespaceNonAliasGhostIsNotPrunedByAliasRule() {
+        // A third-party app whose display name has a space but is not a
+        // Control Center alias stays protected by #949: we do not know it
+        // has a canonical twin.
+        let pruned = LayoutSolver.prunedSectionOrder(
+            ["hidden": ["Some App:Item-0", "com.example.other:Item-0"]],
+            displayNameAliases: ["Control Centre"]
+        )
+
+        #expect(pruned["hidden"]?.contains("Some App:Item-0") == true)
+    }
+}
