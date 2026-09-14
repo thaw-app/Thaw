@@ -734,7 +734,15 @@ final class ControlItem {
             removeSpacerItems()
 
             spacerItems = (0 ..< needed).map { index in
-                let item = NSStatusBar.system.statusItem(withLength: 0)
+                // A zero-length status item can remain a synthetic AppKit
+                // window whose windowNumber has no representable CGWindowID.
+                // Give AppKit one point to materialize a real WindowServer
+                // window (the same fix ControlItem itself uses for #1056); the
+                // `Lengths.expanded` assignment below applies the intended
+                // length on the next layout pass.
+                let item = NSStatusBar.system.statusItem(
+                    withLength: ControlItem.statusItemMaterializationLength
+                )
                 item.autosaveName = "\(identifier.rawValue).Spacer.\(index)"
 
                 if let button = item.button {

@@ -233,7 +233,7 @@ extension MenuBarItemManager {
         NSEvent.modifierFlags.isEmpty &&
             !MouseHelpers.lastMovementOccurred(within: duration, stateID: .hidSystemState) &&
             !MouseHelpers.lastScrollWheelOccurred(within: duration, stateID: .hidSystemState) &&
-            !MouseHelpers.isButtonPressed()
+            !MouseHelpers.lastPointerButtonEventOccurred(within: duration, stateID: .hidSystemState)
     }
 
     /// Waits asynchronously for the user to pause input.

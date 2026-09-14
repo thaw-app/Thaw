@@ -288,6 +288,27 @@ nonisolated enum MouseHelpers {
         return .seconds(seconds) <= duration
     }
 
+    /// Whether a physical button press, release, or drag happened within
+    /// the interval. Covers left, right, and other buttons, and the drag
+    /// events a held-button move produces. `isButtonPressed()` alone misses
+    /// a press that happened during the window but was released before the
+    /// check, so the timestamped event types are what make a bulk layout
+    /// batch defer to a click that landed mid-sequence. (#1075 review)
+    static func lastPointerButtonEventOccurred(
+        within duration: Duration,
+        stateID: CGEventSourceStateID = .combinedSessionState
+    ) -> Bool {
+        let eventTypes: [CGEventType] = [
+            .leftMouseDown, .leftMouseUp,
+            .rightMouseDown, .rightMouseUp,
+            .otherMouseDown, .otherMouseUp,
+            .leftMouseDragged, .rightMouseDragged, .otherMouseDragged,
+        ]
+        return eventTypes.contains { type in
+            .seconds(CGEventSource.secondsSinceLastEventType(stateID, eventType: type)) <= duration
+        }
+    }
+
     /// Whether physical pointer input occurred after an operation took cursor
     /// ownership. HID-system timestamps exclude Thaw's synthetic warps/events.
     static func physicalPointerInputOccurred(
@@ -297,7 +318,7 @@ nonisolated enum MouseHelpers {
         let elapsed = max(start.duration(to: now), .zero)
         return lastMovementOccurred(within: elapsed, stateID: .hidSystemState)
             || lastScrollWheelOccurred(within: elapsed, stateID: .hidSystemState)
-            || isButtonPressed()
+            || lastPointerButtonEventOccurred(within: elapsed, stateID: .hidSystemState)
     }
 
     /// Pure cursor-ownership decision used by move and batch restoration.
