@@ -6,7 +6,7 @@
   <a href="https://discord.gg/KDfWjWDnR4"><picture><source media="(prefers-color-scheme: dark)" srcset="https://www.shieldcn.dev/badge/Discord-join.svg?variant=outline&amp;size=xs&amp;mode=dark&amp;font=geist&amp;logo=discord&amp;" /><img alt="Discord" src="https://www.shieldcn.dev/badge/Discord-join.svg?variant=outline&amp;size=xs&amp;mode=light&amp;font=geist&amp;logo=discord&amp;" /></picture></a>
   <a href="https://sonarcloud.io/component_measures?id=thaw-app_Thaw&amp;metric=coverage"><picture><source media="(prefers-color-scheme: dark)" srcset="https://www.shieldcn.dev/sonar/coverage/thaw-app_Thaw.svg?variant=outline&amp;size=xs&amp;mode=dark&amp;font=geist&amp;logo=sonarqubecloud" /><img alt="Sonar coverage" src="https://www.shieldcn.dev/sonar/coverage/thaw-app_Thaw.svg?variant=outline&amp;size=xs&amp;mode=light&amp;font=geist&amp;logo=sonarqubecloud" /></picture></a>
   <a href="https://scorecard.dev/viewer/?uri=github.com/thaw-app/Thaw"><picture><source media="(prefers-color-scheme: dark)" srcset="https://www.shieldcn.dev/github/scorecard/thaw-app/Thaw.svg?variant=outline&amp;size=xs&amp;mode=dark&amp;font=geist" /><img alt="OpenSSF Scorecard" src="https://www.shieldcn.dev/github/scorecard/thaw-app/Thaw.svg?variant=outline&amp;size=xs&amp;mode=light&amp;font=geist" /></picture></a>
-  <a href="https://www.bestpractices.dev/projects/13303"><picture><source media="(prefers-color-scheme: dark)" srcset="https://www.shieldcn.dev/github/openssf/thaw-app_Thaw.svg?variant=outline&amp;size=xs&amp;mode=dark&amp;font=geist&amp;color=D4AF37" /><img alt="OpenSSF Best Practices" src="https://www.shieldcn.dev/github/openssf/thaw-app_Thaw.svg?variant=outline&amp;size=xs&amp;mode=light&amp;font=geist&amp;color=D4AF37" /></picture></a>
+  <a href="https://www.bestpractices.dev/projects/13303"><picture><source media="(prefers-color-scheme: dark)" srcset="https://www.shieldcn.dev/github/openssf/thaw-app/Thaw.svg?variant=outline&amp;size=xs&amp;mode=dark&amp;font=geist&amp;color=D4AF37" /><img alt="OpenSSF Best Practices" src="https://www.shieldcn.dev/github/openssf/thaw-app/Thaw.svg?variant=outline&amp;size=xs&amp;mode=light&amp;font=geist&amp;color=D4AF37" /></picture></a>
   <a href="docs/VERIFYING_RELEASES.md"><picture><source media="(prefers-color-scheme: dark)" srcset="https://www.shieldcn.dev/badge/SLSA-Build_L3.svg?variant=outline&amp;size=xs&amp;mode=dark&amp;font=geist&amp;logo=ri:GoPackage" /><img alt="SLSA 3" src="https://www.shieldcn.dev/badge/SLSA-3.svg?variant=outline&amp;size=xs&amp;mode=light&amp;font=geist&amp;logo=ri:GoPackage" /></picture></a>
 </p>
 
@@ -23,8 +23,8 @@
 </p>
 
 <div align="center">
-  <a href="https://trendshift.io/repositories/21173" target="_blank"><img src="https://trendshift.io/api/badge/repositories/21173" alt="thaw-app/Thaw | Trendshift" style="width: 250px; height: 55px;" width="250" height="55" /></a>
-  <a href="https://www.producthunt.com/products/thaw-2?embed=true&amp;utm_source=badge-featured&amp;utm_medium=badge&amp;utm_campaign=badge-thaw-3" target="_blank" rel="noopener noreferrer"><img alt="Thaw | Product Hunt" width="250" height="54" src="https://api.producthunt.com/widgets/embed-image/v1/featured.svg?post_id=1239794&amp;theme=light&amp;t=1788423441056"></a>
+  <a href="https://trendshift.io/repositories/21173" target="_blank"><img src="https://trendshift.io/api/badge/repositories/21173" alt="thaw-app/Thaw | Trendshift" style="width: 150px; height: 33px;" width="150" height="33" /></a>
+  <a href="https://www.producthunt.com/products/thaw-2?embed=true&amp;utm_source=badge-featured&amp;utm_medium=badge&amp;utm_campaign=badge-thaw-3" target="_blank" rel="noopener noreferrer"><img alt="Thaw | Product Hunt" width="150" height="32" src="https://api.producthunt.com/widgets/embed-image/v1/featured.svg?post_id=1239794&amp;theme=light&amp;t=1788423441056"></a>
 </div>
 
 <p align="center">
