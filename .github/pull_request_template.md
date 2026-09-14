@@ -5,7 +5,7 @@ A brief description of the changes proposed in this pull request.
 **Scope:** This PR changes one focused thing (bug fix or feature) plus minimal plumbing. Larger refactors need prior agreement in the issue.
 
 > **Tests:** the suite is Swift Testing throughout. Write new tests with `@Test` / `#expect`, not XCTest.
-> **External contributors:** before opening a PR for a bug fix or new feature, please make sure there's a corresponding issue in the [issue tracker](https://github.com/thaw-app/Thaw/issues). PRs that fix or change things that haven't been reported/agreed on may be closed without review.
+> **External contributors:** before opening a PR for a bug fix or new feature, make sure there's a corresponding issue in the [issue tracker](https://github.com/thaw-app/Thaw/issues). PRs that fix or change things that haven't been reported/agreed on may be closed without review.
 
 ## Linked issue (required)
 

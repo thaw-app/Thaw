@@ -132,8 +132,8 @@ defect classes before merge.
    [`thaw-app`](https://github.com/thaw-app) (three owners: `stonerl`,
    `nightah`, `diazdesandi`) rely on the previous path continuing to serve the
    feed. Moving the appcast to a project-controlled domain is planned.
-4. **Statement coverage (`test_statement_coverage80`) is Met against a
-   documented exclusion set.** Statement coverage for `thaw-app_Thaw` is
+4. Statement coverage (`test_statement_coverage80`) is Met against a
+   documented exclusion set. Statement coverage for `thaw-app_Thaw` is
    **84%**, as recorded in the criterion's justification on
    [bestpractices.dev](https://www.bestpractices.dev/projects/13303). The suite
    is entirely Swift Testing.

@@ -117,10 +117,10 @@ Thaw supports programmatic settings manipulation via the `thaw://` URL scheme wi
 
 ### Security Model
 
-1. **Feature Toggle**: Settings URI is disabled by default (enable in Settings → Automation)
-2. **Whitelist**: Only approved apps can modify settings
-3. **First-Time Authorization**: New apps trigger a confirmation dialog with app name and permissions. Apps can proactively request authorization via `thaw://authorize` without reading or writing settings
-4. **Silent Failures**: Unauthorized requests fail without user interruption
+1. Feature toggle: Settings URI is disabled by default (enable in Settings → Automation)
+2. Whitelist: only approved apps can modify settings
+3. First-time authorization: new apps trigger a confirmation dialog with app name and permissions. Apps can proactively request authorization via `thaw://authorize` without reading or writing settings
+4. Silent failures: unauthorized requests fail without user interruption
 
 ### Supported Settings Keys
 
@@ -182,7 +182,7 @@ These settings affect specific displays based on context:
 | `iceBarLayout`           | String | All displays with IceBar enabled | Thaw Bar layout: `horizontal`, `vertical`, or `grid` |
 | `gridColumns`            | Int | All displays with IceBar enabled | Maximum items per row in grid layout (2–10) |
 
-**Per-Display Behavior:**
+##### Per-Display Behavior
 
 By default:
 - `useIceBar`: Only affects the display with the currently active menu bar (where your cursor is)
@@ -439,16 +439,18 @@ open "thaw://get?key=display&display=37D8832A-...&callback=droppy://thaw-respons
 
 #### Response Mechanisms
 
-**Callback URL (Recommended):**
+##### Callback URL (Recommended)
+
 - Thaw opens the provided URL with URL-encoded JSON data
 - Format: `yourapp://thaw-response?data=<url-encoded-json>`
 - Your app must implement a URI handler for the callback
 - Receives full settings data
 
-**Distributed Notification (Acknowledgement Only):**
+##### Distributed Notification (Acknowledgement Only)
+
 - Thaw broadcasts via `DistributedNotificationCenter`
 - Notification name: `com.stonerl.Thaw.settingsURIGetResponse`
-- **Only returns acknowledgement, not full settings data** (for security)
+- Returns only an acknowledgement, not full settings data (for security)
 - Use callback URL to receive full settings payload
 
 ```bash

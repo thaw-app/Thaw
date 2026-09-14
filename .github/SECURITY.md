@@ -19,9 +19,8 @@ Homebrew, or in-app Sparkle updates.
 
 Only the **latest stable** Thaw release is supported for security fixes and
 compatibility work. Older releases are end-of-life when a newer stable ships:
-we do not backport security patches to abandoned versions. Beta / alpha /
-experimental (for example macOS 27 preview) channels are best-effort and may
-lag or diverge from stable.
+we do not backport security patches to abandoned versions. Beta and alpha
+channels are best-effort and may lag or diverge from stable.
 
 Users should upgrade via [GitHub Releases](https://github.com/thaw-app/Thaw/releases),
 Homebrew (`thaw` / `thaw@beta`), or in-app Sparkle updates.
@@ -33,18 +32,11 @@ Thaw produces.
 
 ### You can expect
 
-- **Local-first:** Thaw does not require an account and does not operate a
-  first-party tracking or analytics backend.
-- **Explicit permissions:** Features that need Accessibility or Screen Recording
-  ask via normal macOS TCC prompts and do not work without those grants.
-- **Guarded automation:** Settings changes via `thaw://` require a
-  user-approved application allowlist and matching code-signing Team ID. See
-  [docs/URI_SCHEMES.md](../docs/URI_SCHEMES.md).
-- **Authenticated updates:** Release builds are Developer ID–signed and
-  notarized. In-app updates use HTTPS + Sparkle EdDSA. See
-  [docs/VERIFYING_RELEASES.md](../docs/VERIFYING_RELEASES.md).
-- **Coordinated disclosure:** Private reporting channel and a target
-  acknowledgement window (below).
+- Local-first: Thaw does not require an account and does not operate a first-party tracking or analytics backend.
+- Explicit permissions: features that need Accessibility or Screen Recording ask via normal macOS TCC prompts and do not work without those grants.
+- Guarded automation: settings changes via `thaw://` require a user-approved application allowlist and matching code-signing Team ID. See [docs/URI_SCHEMES.md](../docs/URI_SCHEMES.md).
+- Authenticated updates: release builds are Developer ID–signed and notarized. In-app updates use HTTPS + Sparkle EdDSA. See [docs/VERIFYING_RELEASES.md](../docs/VERIFYING_RELEASES.md).
+- Coordinated disclosure: private reporting channel and a target acknowledgement window (below).
 
 ### You cannot expect
 
@@ -97,14 +89,11 @@ Include:
 
 ## Vulnerability response process
 
-1. **Acknowledge** the report within **48 hours** (best effort).
-2. **Triage** severity, affected versions, and exploitability.
-3. **Fix** on a private branch when needed; prepare a release for the latest
-   supported line.
-4. **Credit** reporters in the advisory / release notes unless they request
-   anonymity ([OpenSSF vulnerability_report_credit](https://www.bestpractices.dev/)).
-5. **Disclose** via GitHub Security Advisories (and CVE when appropriate) after
-   a fix is available or per coordinated timing with the reporter.
+1. Acknowledge the report within 48 hours (best effort).
+2. Triage severity, affected versions, and exploitability.
+3. Fix on a private branch when needed; prepare a release for the latest supported line.
+4. Credit reporters in the advisory / release notes unless they request anonymity ([OpenSSF vulnerability_report_credit](https://www.bestpractices.dev/)).
+5. Disclose via GitHub Security Advisories (and CVE when appropriate) after a fix is available or per coordinated timing with the reporter.
 6. Ask reporters to keep issues confidential until a mitigating release ships.
 
 We aim to fix critical, exploitable issues promptly; timelines depend on

@@ -46,9 +46,9 @@ amend or rebase with sign-off (`git rebase --signoff` then force-push).
 
 ### AI-assisted contributions
 
-We are **friendly to AI-assisted work**. Using coding assistants is fine when the result is high quality and follows this guide.
+We are friendly to AI-assisted work. Using coding assistants is fine when the result is high quality and follows this guide.
 
-The DCO still applies to the **human who signs off**. By adding `Signed-off-by`, you certify that you have the right to contribute the change under GPL-3.0, including any AI-generated portions. The tool is not a DCO party; you are responsible for the commit.
+The DCO still applies to the human who signs off. By adding `Signed-off-by`, you certify that you have the right to contribute the change under GPL-3.0, including any AI-generated portions. The tool is not a DCO party; you are responsible for the commit.
 
 In practice:
 
@@ -56,13 +56,13 @@ In practice:
 - Do not feed clearly proprietary or third-party-restricted code into an assistant and commit the result as if it were yours.
 - You must understand and be able to explain the change in review.
 
-We use **CodeRabbit** and **SonarCloud** on pull requests. Treat their findings as part of the review bar unless a maintainer marks something won’t-fix. We expect fixes and high quality before (and during) human review.
+We use CodeRabbit and SonarCloud on pull requests. Treat their findings as part of the review bar unless a maintainer marks something won’t-fix. We expect fixes and high quality before (and during) human review.
 
-**We reserve the right** to reject contributions or block automated committers / assistant-driven submission paths when they harm the project (spam, unsafe automation, or repeated low-quality work).
+We reserve the right to reject contributions or block automated committers / assistant-driven submission paths when they harm the project (spam, unsafe automation, or repeated low-quality work).
 
-Pull requests **will be closed** when they show observable process or quality failures, for example unreviewed generated content pasted without human cleanup, missing required tests or documentation, failing CI or review checks left unaddressed, ignored maintainer feedback, wrong base branch, missing issue where required, unsigned commits, unchecked PR template, or drive-by refactors with no issue. Using AI does not lower the bar.
+Pull requests will be closed when they show observable process or quality failures, for example unreviewed generated content pasted without human cleanup, missing required tests or documentation, failing CI or review checks left unaddressed, ignored maintainer feedback, wrong base branch, missing issue where required, unsigned commits, unchecked PR template, or drive-by refactors with no issue. Using AI does not lower the bar.
 
-Maintainer bandwidth is limited. If we request changes and there is **no meaningful follow-up** within a reasonable window, the PR **will be closed**. You can always open a new PR later that addresses the feedback.
+Maintainer bandwidth is limited. If we request changes and there is no meaningful follow-up within a reasonable window, the PR will be closed. You can always open a new PR later that addresses the feedback.
 
 ## Before You Start
 
@@ -117,9 +117,6 @@ This includes but is not limited to:
 
 - Xcode 26+
 - macOS 26+
-
-> [!NOTE]
-> macOS 27 (Golden Gate) experimental work happens on `feat/macos-27-experimental` and is tracked in [issue #687](https://github.com/thaw-app/Thaw/issues/687).
 
 ### Getting Started
 
@@ -178,14 +175,13 @@ this.
 
 ### Project conventions
 
-- **Branch & base:** All external PRs must target `development` (not `main`), unless a maintainer asks otherwise.
-- **PR size:** Aim for ≤500 lines / ≤20 files per PR. If you expect to exceed this, say why in the Summary and link the design/issue.
-- **Templates & issues:** Bugfix and feature PRs should always reference a GitHub issue (`Closes: #123`, or `Closes: N/A` when agreed).
-- **Commit / PR titles:** Prefer conventional commits, e.g. `fix(menubar): …`, `feat(settings): …`.
-- **DCO:** Every commit must be signed off (`git commit -s`). CI enforces this
-  on PRs via PR Metadata (author-email must match the trailer).
-- **Code review bots:** CodeRabbit and SonarCloud comments are treated as *required* unless a maintainer marks them won’t-fix. If you’re unsure, wait for a maintainer reply before large refactors spurred by bots alone.
-- **Sensitive areas:** Expect deeper review and stronger tests when touching menu bar hiding/layout, IceBar / Thaw Bar, triggers/automation, logging, or permissions.
+- Branch & base: all external PRs must target `development` (not `main`), unless a maintainer asks otherwise.
+- PR size: aim for ≤500 lines / ≤20 files per PR. If you expect to exceed this, say why in the Summary and link the design/issue.
+- Templates & issues: bugfix and feature PRs should always reference a GitHub issue (`Closes: #123`, or `Closes: N/A` when agreed).
+- Commit / PR titles: prefer conventional commits, e.g. `fix(menubar): …`, `feat(settings): …`.
+- DCO: every commit must be signed off (`git commit -s`). CI enforces this on PRs via PR Metadata (author-email must match the trailer).
+- Code review bots: CodeRabbit and SonarCloud comments are treated as *required* unless a maintainer marks them won’t-fix. If you’re unsure, wait for a maintainer reply before large refactors spurred by bots alone.
+- Sensitive areas: expect deeper review and stronger tests when touching menu bar hiding/layout, IceBar / Thaw Bar, triggers/automation, logging, or permissions.
 
 ### Pull Requests
 

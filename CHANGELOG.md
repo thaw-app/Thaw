@@ -24,31 +24,31 @@ Something broke? [Open an issue](https://github.com/thaw-app/Thaw/issues/new/cho
 
 ### Build your own status icon (prototype)
 
-- **Compose an icon from three slots.** An outer arc or ring, a center symbol, and a bottom row of dots or bars. Each meter tracks a reading: battery, Wi-Fi strength, volume, or CPU. Find it in Settings under Widgets.
-- **The symbol follows the real connection.** On Ethernet it draws Apple's classic Ethernet glyph, on Wi-Fi the bars move with signal strength, and cellular, other connections, and offline each get their own symbol. It reads the actual default route, so a plugged-in Mac shows the cable no matter what the Wi-Fi radio is doing.
-- **Publish it as a real menu bar item.** It updates every two seconds, stays up when you close Settings, and comes back on its own at the next launch. Clicking it shows the same readings in a menu, with a shortcut to Network Settings. The pane carries an Alpha badge; live data can be switched off for sliders if you would rather test with your own values.
+- Compose an icon from three slots: an outer arc or ring, a center symbol, and a bottom row of dots or bars. Each meter tracks a reading (battery, Wi-Fi strength, volume, or CPU). Find it in Settings under Widgets.
+- The symbol follows the real connection. On Ethernet it draws Apple's classic Ethernet glyph, on Wi-Fi the bars move with signal strength, and cellular, other connections, and offline each get their own symbol. It reads the actual default route, so a plugged-in Mac shows the cable no matter what the Wi-Fi radio is doing.
+- It publishes as a real menu bar item. It updates every two seconds, stays up when you close Settings, and comes back on its own at the next launch. Clicking it shows the same readings in a menu, with a shortcut to Network Settings. The pane carries an Alpha badge; live data can be switched off for sliders if you would rather test with your own values.
 
 ### Menu bar
 
-- **Manual arrangement is now hands-off.** When manual arrangement is on, Thaw only hides and reveals. It never reorders, repairs, or rewrites positions. You drag, the bar stays. ([#1092](https://github.com/thaw-app/Thaw/issues/1092), thanks @nullsin and @1Hendrix for the weight traces that proved the boundary-repair path was bypassing the manual gate)
-- **Show and hide keep your order.** In alpha.2 a reveal could come up in the right order and then re-sort itself half a second later, and the bar sometimes came back in a different order on the next toggle. Both were Thaw rewriting the layout table right after a reveal, once from a scan that had not finished and once from a scan that missed apps still waking up. The pass now waits for its own reveal, finishes with the full item set, and writes nothing when the table is already right. After a restart, with apps still launching, the order held across every toggle we tried.
-- **The layout engine re-seats only what moved.** A toggle used to rewrite every item's position weight, 16 to 18 per cycle, with the visible control bouncing to the middle and back. The engine now keeps the weights of items that are already where they belong and seats only the misplaced ones. Toggles write 0 to 3 weights instead of the whole run.
-- **Thaw's icon stays at its end of the bar.** A repair pass treated Thaw's own control as a regular item and could seat it in the middle of the bar, beside the section divider. It never moves Thaw's controls now. The small jiggle of the icon on each toggle is gone with it, since it was the side effect of the same redundant writes.
-- **Clock click without the reveal.** Opening Notification Center from the Clock used to drop the hiding restriction for as long as the panel stayed open, so every hidden item appeared behind it. The strip is now masked for the instant the press needs, the restriction comes straight back, and the hidden items never paint. The mask now lifts after half a second instead of three and a half, so the panel feels immediate.
-- **Quit apps leave the layout on their own.** macOS 27 does not always post the termination notification for agent apps. Some quit without either a launch or a terminate event ever reaching Thaw. The cache is now swept for departed owners on every tick, so a quit item's tile leaves the layout editor and the Thaw Bar within a few seconds instead of waiting for a relaunch. ([#1098](https://github.com/thaw-app/Thaw/issues/1098), thanks @BruceInLouisville for the CardHop report that led us to the notification gap)
-- **Quitting Thaw keeps your reorders.** The quit-time restore wrote back a snapshot taken at first launch, undoing every move made during the session and re-laddering them on the next start. It now only puts back the items Thaw itself parked.
-- **Stuck repairs come back.** A boundary repair that failed twice was switched off for the rest of the session, which left items stranded until you dragged them by hand. It re-arms after 60 seconds.
-- **No false alarm at launch.** macOS registers Thaw's own dividers a second or two after start. The "section dividers are hidden by macOS" alert no longer fires during that window; a divider that stays missing past the settling period still raises it.
-- **The Thaw Bar shows on the first click.** On some Macs the first click after launch reported the bar as open but drew it just off the right edge of the screen, so nothing appeared until a second click. The bar is now measured and placed on the display you clicked before it opens.
-- **One slow app can't stall the scan.** Processes that answer accessibility slowly (Adobe's IPC broker, WebKit content processes) could use up the whole scan budget before any item was collected, leaving the Thaw Bar stuck on "Loading menu bar items". Each app now gets its own deadline, so one laggard slows its own items, not the bar. The deadline is enforced through a cancellation-aware continuation race, so a hung accessibility call is actually interrupted instead of measured and ignored. ([#1099](https://github.com/thaw-app/Thaw/issues/1099))
-- **Joined walk callers see one answer.** Two callers sharing an in-flight walk used to get different results: the initiator got the last-complete fallback, the joiner got the raw partial list, and live items could read as departed. Settling now runs once inside the walk task, so every caller sees the same answer.
-- **Cooldown skips are honest.** A slow app skipped by cooldown reported the walk as complete, overwriting the last-complete list without it. Skips now mark the walk truncated.
+- With manual arrangement on, Thaw only hides and reveals. It never reorders, repairs, or rewrites positions. You drag, the bar stays. ([#1092](https://github.com/thaw-app/Thaw/issues/1092), thanks @nullsin and @1Hendrix for the weight traces that proved the boundary-repair path was bypassing the manual gate)
+- Show and hide keep your order. In alpha.2 a reveal could come up in the right order and then re-sort itself half a second later, and the bar sometimes came back in a different order on the next toggle. Both were Thaw rewriting the layout table right after a reveal, once from a scan that had not finished and once from a scan that missed apps still waking up. The pass now waits for its own reveal, finishes with the full item set, and writes nothing when the table is already right. After a restart, with apps still launching, the order held across every toggle we tried.
+- The layout engine re-seats only what moved. A toggle used to rewrite every item's position weight, 16 to 18 per cycle, with the visible control bouncing to the middle and back. The engine now keeps the weights of items that are already where they belong and seats only the misplaced ones. Toggles write 0 to 3 weights instead of the whole run.
+- Thaw's icon stays at its end of the bar. A repair pass treated Thaw's own control as a regular item and could seat it in the middle of the bar, beside the section divider. It never moves Thaw's controls now. The small jiggle of the icon on each toggle is gone with it, since it was the side effect of the same redundant writes.
+- Clock click without the reveal. Opening Notification Center from the Clock used to drop the hiding restriction for as long as the panel stayed open, so every hidden item appeared behind it. The strip is now masked for the instant the press needs, the restriction comes straight back, and the hidden items never paint. The mask now lifts after half a second instead of three and a half, so the panel feels immediate.
+- Quit apps leave the layout on their own. macOS 27 does not always post the termination notification for agent apps. Some quit without either a launch or a terminate event ever reaching Thaw. The cache is now swept for departed owners on every tick, so a quit item's tile leaves the layout editor and the Thaw Bar within a few seconds instead of waiting for a relaunch. ([#1098](https://github.com/thaw-app/Thaw/issues/1098), thanks @BruceInLouisville for the CardHop report that led us to the notification gap)
+- Quitting Thaw keeps your reorders. The quit-time restore wrote back a snapshot taken at first launch, undoing every move made during the session and re-laddering them on the next start. It now only puts back the items Thaw itself parked.
+- Stuck repairs come back. A boundary repair that failed twice was switched off for the rest of the session, which left items stranded until you dragged them by hand. It re-arms after 60 seconds.
+- No false alarm at launch. macOS registers Thaw's own dividers a second or two after start. The "section dividers are hidden by macOS" alert no longer fires during that window; a divider that stays missing past the settling period still raises it.
+- The Thaw Bar shows on the first click. On some Macs the first click after launch reported the bar as open but drew it just off the right edge of the screen, so nothing appeared until a second click. The bar is now measured and placed on the display you clicked before it opens.
+- One slow app can't stall the scan. Processes that answer accessibility slowly (Adobe's IPC broker, WebKit content processes) could use up the whole scan budget before any item was collected, leaving the Thaw Bar stuck on "Loading menu bar items". Each app now gets its own deadline, so one laggard slows its own items, not the bar. The deadline is enforced through a cancellation-aware continuation race, so a hung accessibility call is actually interrupted instead of measured and ignored. ([#1099](https://github.com/thaw-app/Thaw/issues/1099))
+- Joined walk callers see one answer. Two callers sharing an in-flight walk used to get different results: the initiator got the last-complete fallback, the joiner got the raw partial list, and live items could read as departed. Settling now runs once inside the walk task, so every caller sees the same answer.
+- Cooldown skips are honest. A slow app skipped by cooldown reported the walk as complete, overwriting the last-complete list without it. Skips now mark the walk truncated.
 
 ### Layout editor
 
-- **Same folded bars as Simple Mode.** The layout pane embeds the folded menu bar directly instead of a wrapper around it, which also fixes dragging in the pane that the wrapper had broken.
-- **Drop targets light up.** Dragging an item over a section draws an accent band on that strip and highlights its name in the gutter.
-- **Reduce Motion is honored.** With it on, reorder slides are skipped.
+- The layout pane shows the same folded bars as Simple Mode. It embeds the folded menu bar directly instead of a wrapper around it, which also fixes dragging in the pane that the wrapper had broken.
+- Drop targets light up. Dragging an item over a section draws an accent band on that strip and highlights its name in the gutter.
+- Reduce Motion is honored: with it on, reorder slides are skipped.
 
 ### Fixes
 
@@ -103,8 +103,8 @@ Thanks to @lathe-agent-oa (@TheBenMeadows) for [#1085](https://github.com/thaw-a
 
 ### Menu bar
 
-- **Reorders write the layout table.** macOS 27 keeps every item's position in one protected file. With access to it, a move is a write and the bar re-sorts on its own in well under a second. The synthetic drag that hid the cursor and held your mouse for a second and a half is off.
-- **Menu bar layout access.** The permission behind that write. You select the file once. The grant survives relaunches, app updates, and system updates. It is required, so onboarding asks for it next to Accessibility.
+- Reorders write the layout table. macOS 27 keeps every item's position in one protected file. With access to it, a move is a write and the bar re-sorts on its own in well under a second. The synthetic drag that hid the cursor and held your mouse for a second and a half is off.
+- Menu bar layout access is the permission behind that write. You select the file once. The grant survives relaunches, app updates, and system updates. It is required, so onboarding asks for it next to Accessibility.
 
 ### Fixes
 
@@ -139,88 +139,88 @@ Thank you to the more than 80 people who ran the preview builds, sent logs, and 
 
 Three things from the 2.1 preview line are still on their way to macOS 27. Another one will be available on a future update.
 
-- **Scripts.** Script-driven bar modules are being tested by macOS 26 users on the 2.1.0 beta and will be added in a later 3.0 build. The Scripts pane is here as a preview of where they will live.
-- **Widgets.** The Widgets pane is a placeholder so the destination is discoverable; it holds no settings yet.
-- **Item triggers.** The full condition engine from 2.1, where an item moves on battery level, the frontmost app, a network, a Focus, and the rest, is not ported yet. What is here is the reveal-on-icon-change rule.
-- **Rotating diagnostic logs.** The system for keeping and cycling through diagnostic logs is not yet implemented; it will appear in a future 3.0 build.
+- Scripts: script-driven bar modules are being tested by macOS 26 users on the 2.1.0 beta and will be added in a later 3.0 build. The Scripts pane is here as a preview of where they will live.
+- Widgets: the Widgets pane is a placeholder so the destination is discoverable; it holds no settings yet.
+- Item triggers: the full condition engine from 2.1, where an item moves on battery level, the frontmost app, a network, a Focus, and the rest, is not ported yet. What is here is the reveal-on-icon-change rule.
+- Rotating diagnostic logs: the system for keeping and cycling through diagnostic logs is not yet implemented; it will appear in a future 3.0 build.
 
 ---
 
 ### Menu bar
 
-- **Manual arrangement.** Thaw never moves an item. You arrange the bar yourself with ⌘-drag, Thaw records what it sees and confines itself to hiding. Classic menu bar manager experience.
-- **Zen mode** seals the whole bar with one hotkey. Reveals and hover tricks stand down until you toggle it back.
-- **Item groups** bundle items so they move as one, including across sections. Same-app clusters group on their own and dissolve on request.
-- **Spacer items** create gaps on purpose: pick a width and drag them like any item.
-- **Items that ask for attention can surface themselves.** A blinking icon briefly shows the section holding it, with a cooldown so a chatty icon cannot keep the bar open. Off by default.
-- **App icons where captures cannot go.** Items nobody can capture draw their owning app's icon, so the Thaw Bar, the layout pane, and search work with Accessibility alone.
-- **Presenter mode.** With the camera and microphone watch on, the bar collapses to zen mode while either is in use and restores after. It works alongside zen mode while presenting.
-- **Confirmations.** A small capsule under the bar confirms the verbs that otherwise succeed invisibly: zen on, hidden items shown, profile applied.
+- Manual arrangement: Thaw never moves an item. You arrange the bar yourself with ⌘-drag, Thaw records what it sees and confines itself to hiding. Classic menu bar manager experience.
+- Zen mode seals the whole bar with one hotkey. Reveals and hover tricks stand down until you toggle it back.
+- Item groups bundle items so they move as one, including across sections. Same-app clusters group on their own and dissolve on request.
+- Spacer items create gaps on purpose: pick a width and drag them like any item.
+- Items that ask for attention can surface themselves. A blinking icon briefly shows the section holding it, with a cooldown so a chatty icon cannot keep the bar open. Off by default.
+- App icons where captures cannot go: items nobody can capture draw their owning app's icon, so the Thaw Bar, the layout pane, and search work with Accessibility alone.
+- Presenter mode: with the camera and microphone watch on, the bar collapses to zen mode while either is in use and restores after. It works alongside zen mode while presenting.
+- Confirmations: a small capsule under the bar confirms the verbs that otherwise succeed invisibly (zen on, hidden items shown, profile applied).
 
 ### Thaw Bar and appearance
 
-- **A Thaw Bar of its own.** Shape, tint, and border for the bar, independent of the menu bar it mirrors, and one per-display section instead of repeated blocks.
-- **Adaptive Gradient tint.** A gradient from the wallpaper's two dominant colours instead of one average. Wallpaper changes re-tint the bar at once; the poll stays only for dynamic and aerial wallpapers.
-- **Per-Space appearance overrides**, so the bar can dress differently on each Space.
+- A Thaw Bar of its own: shape, tint, and border for the bar, independent of the menu bar it mirrors, and one per-display section instead of repeated blocks.
+- Adaptive Gradient tint builds a gradient from the wallpaper's two dominant colours instead of one average. Wallpaper changes re-tint the bar at once; the poll stays only for dynamic and aerial wallpapers.
+- Per-Space appearance overrides, so the bar can dress differently on each Space.
 
 ### Layout
 
-- **A standalone layout editor** opens on its own from a hotkey or a `thaw://` action, with glass chrome and last-pane restore. Items can be activated straight from it.
-- **Hover spotlighting.** Resting on a tile in the layout pane lights the matching item in the real bar. Clicking it opens the inspector.
-- **Displays as a spatial picker**, arranged the way they sit on your desk, with per-display spacing applied inline.
+- A standalone layout editor opens on its own from a hotkey or a `thaw://` action, with glass chrome and last-pane restore. Items can be activated straight from it.
+- Hover spotlighting: resting on a tile in the layout pane lights the matching item in the real bar. Clicking it opens the inspector.
+- Displays as a spatial picker, arranged the way they sit on your desk, with per-display spacing applied inline.
 
 ### Search and launchers
 
-- **Search remembers.** Recently activated items sit at the top of an empty query, and selecting a result spotlights the item in the real bar.
-- **Item palette (Lab).** A centred launcher for your menu bar items, hidden ones included. Type part of a name or the owning app and press Return.
-- **Assisted item palette (Lab).** A large list of every item right where the pointer is, with big rows to read and click.
-- **Menu bar magnifier (Lab).** Rest the pointer on the bar and a blown-up slice appears below it. Each icon gets a large outline you can click, and the one you point at is named. Works without Screen Recording; the pixels need it.
+- Search remembers. Recently activated items sit at the top of an empty query, and selecting a result spotlights the item in the real bar.
+- Item palette (Lab): a centred launcher for your menu bar items, hidden ones included. Type part of a name or the owning app and press Return.
+- Assisted item palette (Lab): a large list of every item right where the pointer is, with big rows to read and click.
+- Menu bar magnifier (Lab): rest the pointer on the bar and a blown-up slice appears below it. Each icon gets a large outline you can click, and the one you point at is named. Works without Screen Recording; the pixels need it.
 
 ### Settings
 
-- **Simple Mode** collapses Settings to one page, ordered by what you touch. Everything it hides is still there when you switch it off.
-- **Sidebar by topic.** Menu Bar, App, Automation, and More. Rows carry a plain glyph, groups fold, arrow keys move through rows and Return selects, and a profile strip pinned to the foot switches profiles without opening the Profiles pane.
-- **Search in the toolbar.** Results take over the detail column with a result count and an empty state that names the query.
-- **What's New and Acknowledgements as reading pages.** A path of releases along the top, one large title with the release date under it, and the notes at reading size on the app's own glass.
-- **Tools pane** gathers the troubleshooting helpers in one place, with the destructive ones last.
-- **Onboarding** restyled in the same language as the rest of the app. Welcome to the new Thaw, arrange the real bar with a Tidy for me option, then ask for access. Denying Accessibility no longer strands you, Screen Recording is asked for once and takes no for an answer, a first-run hint teaches hiding in place, and onboarding can be replayed from Settings.
-- **Accessibility.** Reduce Transparency, Increase Contrast, and Reduce Motion are honoured on every glass surface. Icon-only buttons have names, the sidebar rail is reachable by keyboard, selection is marked without relying on colour, and type sizes follow the Dynamic Type scale.
-- **Layout backups can be restored inside Thaw**, from the Tools pane.
+- Simple Mode collapses Settings to one page, ordered by what you touch. Everything it hides is still there when you switch it off.
+- Sidebar by topic: Menu Bar, App, Automation, and More. Rows carry a plain glyph, groups fold, arrow keys move through rows and Return selects, and a profile strip pinned to the foot switches profiles without opening the Profiles pane.
+- Search in the toolbar. Results take over the detail column with a result count and an empty state that names the query.
+- What's New and Acknowledgements are reading pages: a path of releases along the top, one large title with the release date under it, and the notes at reading size on the app's own glass.
+- A Tools pane gathers the troubleshooting helpers in one place, with the destructive ones last.
+- Onboarding is restyled in the same language as the rest of the app. Welcome to the new Thaw, arrange the real bar with a Tidy for me option, then ask for access. Denying Accessibility no longer strands you, Screen Recording is asked for once and takes no for an answer, a first-run hint teaches hiding in place, and onboarding can be replayed from Settings.
+- Accessibility: Reduce Transparency, Increase Contrast, and Reduce Motion are honoured on every glass surface. Icon-only buttons have names, the sidebar rail is reachable by keyboard, selection is marked without relying on colour, and type sizes follow the Dynamic Type scale.
+- Layout backups can be restored inside Thaw, from the Tools pane.
 
 ### Privacy
 
-- **A Privacy pane.** Permissions, the capture inspector that shows exactly what the app reads from the screen, and every network call the app makes, each with a switch and one button to turn them all off. A test fails the build if a network client appears anywhere the list does not account for.
-- **Camera and microphone watch (Lab).** A banner names the app that took the microphone, and another says when a camera turns on. While either is in use, Thaw's menu lists what is using it. Banners can be pinned to a display, or follow the pointer, and placed left, centre, or right.
-- **Menu bar history (Lab).** When items appeared in and disappeared from the bar, stored in Thaw's own settings and cleared when the experiment is turned off.
+- A Privacy pane: permissions, the capture inspector that shows exactly what the app reads from the screen, and every network call the app makes, each with a switch and one button to turn them all off. A test fails the build if a network client appears anywhere the list does not account for.
+- Camera and microphone watch (Lab): a banner names the app that took the microphone, and another says when a camera turns on. While either is in use, Thaw's menu lists what is using it. Banners can be pinned to a display, or follow the pointer, and placed left, centre, or right.
+- Menu bar history (Lab): when items appeared in and disappeared from the bar, stored in Thaw's own settings and cleared when the experiment is turned off.
 
 ### Profiles and Spaces
 
-- **Per-Space profiles.** Bind a profile to a Space the way it binds to a display. Precedence is Focus Filter, then Space, then display.
-- **Per-Space presentation.** Show or hide the bar per Space, and see which Space each rule belongs to.
-- **A profile shows what applying it would change** before you apply it.
+- Per-Space profiles: bind a profile to a Space the way it binds to a display. Precedence is Focus Filter, then Space, then display.
+- Per-Space presentation: show or hide the bar per Space, and see which Space each rule belongs to.
+- A profile shows what applying it would change before you apply it.
 
 ### Automation, Shortcuts, and the command line
 
-- **Rules.** Reveal on icon change with a cooldown, global and per-profile hooks that run a script when a profile applies, a script environment with its own variables and timeout, and a whitelist of apps allowed to change settings over `thaw://`.
-- **Shortcuts and Spotlight.** An action opens a chosen item's menu, revealing it first if hidden, alongside actions to reveal hidden items, toggle zen mode, and apply a profile.
-- **Control Center widgets** toggle hidden items and zen mode from Control Center.
-- **A command-line client.** `thawctl` drives the `thaw://` control plane from a terminal.
+- Rules: reveal on icon change with a cooldown, global and per-profile hooks that run a script when a profile applies, a script environment with its own variables and timeout, and a whitelist of apps allowed to change settings over `thaw://`.
+- Shortcuts and Spotlight: an action opens a chosen item's menu, revealing it first if hidden, alongside actions to reveal hidden items, toggle zen mode, and apply a profile.
+- Control Center widgets toggle hidden items and zen mode from Control Center.
+- A command-line client: `thawctl` drives the `thaw://` control plane from a terminal.
 
 ### The Lab
 
-- **A home for experiments** you can opt into early. Turning any experiment off returns the app to normal, and each one says exactly what it does.
-- **Menu bar overlay.** Your items drawn in a Thaw strip that appears when you point at the space they left, while the system bar keeps its app menus, clock, and modules.
-- **Show item details on hover (beta).** A small readout under an item while the pointer rests on it, showing what the item already reports.
-- **Hide Finder menus on the desktop.** Clicking the desktop puts Finder's menus in the bar; this covers them until you switch away.
-- **Transport bar.** A floating capsule at the bottom of the display your pointer is on, with the active profile, the hidden and always-hidden toggles, zen mode, and a close button. It never takes focus.
+- A home for experiments you can opt into early. Turning any experiment off returns the app to normal, and each one says exactly what it does.
+- Menu bar overlay: your items drawn in a Thaw strip that appears when you point at the space they left, while the system bar keeps its app menus, clock, and modules.
+- Show item details on hover (beta): a small readout under an item while the pointer rests on it, showing what the item already reports.
+- Hide Finder menus on the desktop: clicking the desktop puts Finder's menus in the bar; this covers them until you switch away.
+- Transport bar: a floating capsule at the bottom of the display your pointer is on, with the active profile, the hidden and always-hidden toggles, zen mode, and a close button. It never takes focus.
 
 ### Under the hood
 
-- **Rebuilt from the ground up on a new architecture.** Thaw 3 is a new codebase, not a patched fork. The item manager cluster, AppState, MenuBarManager, the image cache, the layout bar, ControlItem, appearance, and search were written anew; the Ice-branded identifier vocabulary is Thaw's own, with persisted keys pinned so nothing you saved is lost; and the migrations that could never run are gone. The rewrite paid down years of technical debt at the same time: dead machinery and one-case abstractions are deleted, the engine sits behind explicit seams that can be tested in isolation, and the hot paths were rebuilt with performance in mind.
-- **Reorders are planned as a diff.** The engine computes the smallest set of moves against the live order instead of walking the bar pair by pair. The seconds of silence before a synthetic drag starts are gone, the native overflow chevron is treated as menu bar chrome rather than an item, and on a notched display concealed items are revealed for capture one at a time.
-- **Swift 6.4 and strict concurrency.** The `@Observable` migration is complete, with zero `ObservableObject` conformances left. Detached tasks moved onto `@concurrent` callees, workspace notifications are debounced through swift-async-algorithms, and the engine reads its settings through a configuration protocol instead of reaching into AppState.
-- **Every ScreenCaptureKit call has a watchdog**, so a capture that never answers cannot hang the refresh loop. An XPC capture helper is built in and off by default until it has been verified on macOS 27.
-- **Less idle work.** The polls that used to ask the window server questions whose answers had not changed now latch, memoize, or rate-limit, and the glyph cache publishes only when a glyph actually changed.
+- Rebuilt from the ground up on a new architecture. Thaw 3 is a new codebase, not a patched fork. The item manager cluster, AppState, MenuBarManager, the image cache, the layout bar, ControlItem, appearance, and search were written anew; the Ice-branded identifier vocabulary is Thaw's own, with persisted keys pinned so nothing you saved is lost; and the migrations that could never run are gone. The rewrite paid down years of technical debt at the same time: dead machinery and one-case abstractions are deleted, the engine sits behind explicit seams that can be tested in isolation, and the hot paths were rebuilt with performance in mind.
+- Reorders are planned as a diff. The engine computes the smallest set of moves against the live order instead of walking the bar pair by pair. The seconds of silence before a synthetic drag starts are gone, the native overflow chevron is treated as menu bar chrome rather than an item, and on a notched display concealed items are revealed for capture one at a time.
+- Swift 6.4 and strict concurrency. The `@Observable` migration is complete, with zero `ObservableObject` conformances left. Detached tasks moved onto `@concurrent` callees, workspace notifications are debounced through swift-async-algorithms, and the engine reads its settings through a configuration protocol instead of reaching into AppState.
+- Every ScreenCaptureKit call has a watchdog, so a capture that never answers cannot hang the refresh loop. An XPC capture helper is built in and off by default until it has been verified on macOS 27.
+- Less idle work. The polls that used to ask the window server questions whose answers had not changed now latch, memoize, or rate-limit, and the glyph cache publishes only when a glyph actually changed.
 
 ### Known issues
 
@@ -359,31 +359,31 @@ First beta of the 2.1.0 line. This is the wave the 2.0.0 notes pointed at: trigg
 
 ### Added
 
-- **Item triggers** move a menu bar item when something happens: battery level, power source, frontmost or running app, network, VPN, Wi-Fi, Bluetooth, audio device, displays, a time window, a Focus, a place, Energy Mode, thermal pressure, camera or mic use, a script's exit, or another icon changing. Conditions combine with all/any/none, actions invert, and a wrong verdict costs a brief reveal instead of a rearranged bar. Designed and implemented by @alvst (#735, #965).
-- **Item groups** bundle items so they move as one, including across sections, matching the macOS 27 semantics. Same-bundle clusters group automatically and dissolve on request.
-- **Zen mode** seals the whole bar with one hotkey. Auto-reveals and hover tricks stand down, and a blinking icon does not get to reopen what you closed. Toggle it again to hand the bar back.
-- **Simple Mode** collapses Settings to one page, ordered by what you actually touch. Everything it hides is still there when you switch it off.
-- **Tools pane** gathers the destructive troubleshooting helpers in one place, plus announcements and Sparkle feed pinning.
-- **Spacer items** create gaps on purpose: pick a width and an optional fill, then drag them like any item.
-- **Per-Space profiles** bind a profile to a Space the way it already binds to a display. Bindings use the window server's per-Space `uuid`, since the ID is renumbered at logout. Precedence is Focus Filter, then Space, then display.
-- **Wallpaper changes re-tint the bar immediately.** Thaw now watches the wallpaper store instead of polling for it. The poll stays for dynamic wallpapers, which change their pixels without ever rewriting that file.
-- **Adaptive Gradient tint** builds the gradient from the wallpaper's dominant colours instead of one averaged brown. Colours are bucketed and taken most-covering first, skipping any too close to one already taken.
-- **Items that ask for attention can surface themselves.** A blinking status icon briefly shows the section holding it. A blink is told apart from a clock or a battery percentage by whether the icon keeps returning to a state it already showed. Off by default under Advanced.
-- **A Thaw Bar of its own**: shape, tint, and border for the bar, independent of the menu bar it mirrors (#248, thanks @kn666).
-- **Hidden icons that refresh at the slider rate.** Captures run through a recyclable XPC helper, so the per-call dictionary leak stays out of the app (#942, thanks @CamilleGuillory).
-- **One Per display section**: the repeated per-display blocks collapse into a single picker-driven section.
-- **A standalone layout editor** opens on its own, with per-Space appearance overrides and last-pane restore; items can be activated straight from the editor (#985, thanks @alvst).
-- **App icons where captures can't go.** Items nobody can capture draw their owning app's icon, so the Thaw Bar, the layout pane, and Search work with Accessibility alone.
-- **A hotkey for automatic rehiding** (#665, thanks @nightah).
-- **Diagnostic logs that rotate** by size and time (#974) and diagnostics rows you can edit (#976), both by @nk-tedo-001.
+- Item triggers move a menu bar item when something happens: battery level, power source, frontmost or running app, network, VPN, Wi-Fi, Bluetooth, audio device, displays, a time window, a Focus, a place, Energy Mode, thermal pressure, camera or mic use, a script's exit, or another icon changing. Conditions combine with all/any/none, actions invert, and a wrong verdict costs a brief reveal instead of a rearranged bar. Designed and implemented by @alvst (#735, #965).
+- Item groups bundle items so they move as one, including across sections, matching the macOS 27 semantics. Same-bundle clusters group automatically and dissolve on request.
+- Zen mode seals the whole bar with one hotkey. Auto-reveals and hover tricks stand down, and a blinking icon does not get to reopen what you closed. Toggle it again to hand the bar back.
+- Simple Mode collapses Settings to one page, ordered by what you actually touch. Everything it hides is still there when you switch it off.
+- A Tools pane gathers the destructive troubleshooting helpers in one place, plus announcements and Sparkle feed pinning.
+- Spacer items create gaps on purpose: pick a width and an optional fill, then drag them like any item.
+- Per-Space profiles bind a profile to a Space the way it already binds to a display. Bindings use the window server's per-Space `uuid`, since the ID is renumbered at logout. Precedence is Focus Filter, then Space, then display.
+- Wallpaper changes re-tint the bar immediately. Thaw now watches the wallpaper store instead of polling for it. The poll stays for dynamic wallpapers, which change their pixels without ever rewriting that file.
+- Adaptive Gradient tint builds the gradient from the wallpaper's dominant colours instead of one averaged brown. Colours are bucketed and taken most-covering first, skipping any too close to one already taken.
+- Items that ask for attention can surface themselves. A blinking status icon briefly shows the section holding it. A blink is told apart from a clock or a battery percentage by whether the icon keeps returning to a state it already showed. Off by default under Advanced.
+- A Thaw Bar of its own: shape, tint, and border for the bar, independent of the menu bar it mirrors (#248, thanks @kn666).
+- Hidden icons that refresh at the slider rate. Captures run through a recyclable XPC helper, so the per-call dictionary leak stays out of the app (#942, thanks @CamilleGuillory).
+- One Per display section: the repeated per-display blocks collapse into a single picker-driven section.
+- A standalone layout editor opens on its own, with per-Space appearance overrides and last-pane restore; items can be activated straight from the editor (#985, thanks @alvst).
+- App icons where captures can't go. Items nobody can capture draw their owning app's icon, so the Thaw Bar, the layout pane, and Search work with Accessibility alone.
+- A hotkey for automatic rehiding (#665, thanks @nightah).
+- Diagnostic logs that rotate by size and time (#974) and diagnostics rows you can edit (#976), both by @nk-tedo-001.
 
 ---
 
 ### Fixed
 
-- **A profile apply no longer walks the visible section into the hidden one** (#1027, thanks @nk-tedo-001). On a three-display Mac after a restart, the reporter's bar went from twelve visible items to one in six seconds. The hidden divider was parked off-screen with two visible-bound items already stranded behind it, and Phase 1 had just declined to rescue them — a parked divider cannot be dragged onto (#899), so it hands off to the per-item pass. That pass then anchored its moves on the stranded items. A drop point derives from its anchor's leading edge, so each move pressed at a point off the display, AppKit dropped the item beside the parked anchor, and the next move anchored on the item just stranded: six desired-visible items followed each other out of the bar. Moves bound for the visible section now require an anchor that is actually on screen, and skip when it is not. Moves into the hidden and always-hidden sections are untouched — parking is how concealment works, and gating those would refuse every move into a collapsed section. A skipped move counts as unenacted, so the arrangement is not written back to the saved order as though it had been achieved.
-- **Control Center modules no longer persist under another app's name, and profiles that already carry one heal on load** (#1027). The reporter's `main.json` held `com.techsmith.snagit.capturehelper:Battery`. On a three-display setup, the source-PID resolution matched Control Center's Battery window to Snagit's helper process, the resolved PID became the identifier's namespace, and the wrong spelling persisted. The live item reads `com.apple.controlcenter:Battery`, so it never matched the saved entry again: every apply planned Battery as an unmanaged arrival into the hidden section, and the reporter could not reorder it. No existing guard catches this. The PID did resolve, so the identity is not provisional. The title is not a generic slot, so the item is not transient. And one wrong PID is not a majority, so the #784 gate stayed quiet as designed. What does identify the item is the title: only Control Center names an item "Battery", "WiFi", or "FocusModes". Those titles under any other namespace are now treated as misattributed. The persistence path excludes them the way it excludes an unresolved item, and the load-time prune drops the ghost from saved orders and profiles outright, since the title alone is proof enough and no live twin is needed to confirm it; the module then re-persists under its real name on the next cycle that resolves it properly. The cost of a wrong verdict is small: an app that genuinely titles its item "Battery" or "Clock" keeps its movability and only loses its persisted position. Generic `Item-N` slots are never touched, since a third-party app's own slot is indistinguishable from a misattributed one by title alone.
-- **A bulk apply no longer dispatches while the section dividers sit out of order** (#1027). In the same log, both of the reporter's other control items were classified into the hidden section before any apply ran. The dividers were scattered rather than collapsed onto one coordinate, so the zero-width gate from #868 passed while every section assignment derived from that reading was wrong. Both apply paths, the saved-order dispatch and the profile pass's fresh re-read, now refuse a reading that places the visible control item or the always-hidden divider outside its own section. The refusal also attempts recovery: it un-parks a stranded hidden divider and re-seats the visible chevron, so a scrambled bar returns to a state the gate accepts instead of staying stuck. A divider that is absent still passes. A disabled always-hidden section has no divider by design, and a missing divider is what the #849 gate already handles.
+- A profile apply no longer walks the visible section into the hidden one (#1027, thanks @nk-tedo-001). On a three-display Mac after a restart, the reporter's bar went from twelve visible items to one in six seconds. The hidden divider was parked off-screen with two visible-bound items already stranded behind it, and Phase 1 had just declined to rescue them. A parked divider cannot be dragged onto (#899), so it hands off to the per-item pass. That pass then anchored its moves on the stranded items. A drop point derives from its anchor's leading edge, so each move pressed at a point off the display, AppKit dropped the item beside the parked anchor, and the next move anchored on the item just stranded: six desired-visible items followed each other out of the bar. Moves bound for the visible section now require an anchor that is actually on screen, and skip when it is not. Moves into the hidden and always-hidden sections are untouched: parking is how concealment works, and gating those would refuse every move into a collapsed section. A skipped move counts as unenacted, so the arrangement is not written back to the saved order as though it had been achieved.
+- Control Center modules no longer persist under another app's name, and profiles that already carry one heal on load (#1027). The reporter's `main.json` held `com.techsmith.snagit.capturehelper:Battery`. On a three-display setup, the source-PID resolution matched Control Center's Battery window to Snagit's helper process, the resolved PID became the identifier's namespace, and the wrong spelling persisted. The live item reads `com.apple.controlcenter:Battery`, so it never matched the saved entry again: every apply planned Battery as an unmanaged arrival into the hidden section, and the reporter could not reorder it. No existing guard catches this. The PID did resolve, so the identity is not provisional. The title is not a generic slot, so the item is not transient. And one wrong PID is not a majority, so the #784 gate stayed quiet as designed. What does identify the item is the title: only Control Center names an item "Battery", "WiFi", or "FocusModes". Those titles under any other namespace are now treated as misattributed. The persistence path excludes them the way it excludes an unresolved item, and the load-time prune drops the ghost from saved orders and profiles outright, since the title alone is proof enough and no live twin is needed to confirm it; the module then re-persists under its real name on the next cycle that resolves it properly. The cost of a wrong verdict is small: an app that genuinely titles its item "Battery" or "Clock" keeps its movability and only loses its persisted position. Generic `Item-N` slots are never touched, since a third-party app's own slot is indistinguishable from a misattributed one by title alone.
+- A bulk apply no longer dispatches while the section dividers sit out of order (#1027). In the same log, both of the reporter's other control items were classified into the hidden section before any apply ran. The dividers were scattered rather than collapsed onto one coordinate, so the zero-width gate from #868 passed while every section assignment derived from that reading was wrong. Both apply paths, the saved-order dispatch and the profile pass's fresh re-read, now refuse a reading that places the visible control item or the always-hidden divider outside its own section. The refusal also attempts recovery: it un-parks a stranded hidden divider and re-seats the visible chevron, so a scrambled bar returns to a state the gate accepts instead of staying stuck. A divider that is absent still passes. A disabled always-hidden section has no divider by design, and a missing divider is what the #849 gate already handles.
 
 ---
 
@@ -779,11 +779,11 @@ of whoever ran it.
 
 ### Highlights
 
-- **Hidden items work from launch, and the cache can no longer stall for good**: on a cold start the item cache froze for a full minute on unresolved identities: every Thaw Bar tooltip read "Menu Bar Item" and every click silently did nothing until the settling deadline expired (#943). In the worse interleaving the settling task deadlocked awaiting itself, past every deadline. One report had the cache rejecting every refresh for 20+ hours, with the Visible row in Settings → Layout permanently empty (#945).
-- **The Thaw icon stops drifting left across restarts**: the stalled early apply executed a minute late with the desired order it had narrowed at launch, when only a handful of identities had resolved. Everything that resolved during the stall was re-inserted as "unmanaged" at saved indices, which changed the chevron's planned neighbors and moved it left of the leftmost item; macOS remembers the new position, so each restart ratcheted it further (#947).
-- **Items stop shuffling mid-session on localized systems**: saved-order ghosts namespaced by a localized app name (`Control Centre:WiFi`, minted while a bundle ID transiently read nil) counted as "real owners" and deleted their genuine `com.apple.controlcenter` twins from the saved order on every load. The live items then planned as unmanaged and were repositioned by every apply, with the cursor contested for each synthetic drag (#949).
-- **Spanish onboarding restored**: two strings shipped as translated-but-empty, so Spanish systems rendered a blank tour slide description and a blank New Items badge hint.
-- **XPC session race closed**: a stale cancellation handler could tear down a healthy, newer session and race the lock every other access went through.
+- Hidden items work from launch, and the cache can no longer stall for good. On a cold start the item cache froze for a full minute on unresolved identities: every Thaw Bar tooltip read "Menu Bar Item" and every click silently did nothing until the settling deadline expired (#943). In the worse interleaving the settling task deadlocked awaiting itself, past every deadline. One report had the cache rejecting every refresh for 20+ hours, with the Visible row in Settings → Layout permanently empty (#945).
+- The Thaw icon stops drifting left across restarts. The stalled early apply executed a minute late with the desired order it had narrowed at launch, when only a handful of identities had resolved. Everything that resolved during the stall was re-inserted as "unmanaged" at saved indices, which changed the chevron's planned neighbors and moved it left of the leftmost item; macOS remembers the new position, so each restart ratcheted it further (#947).
+- Items stop shuffling mid-session on localized systems. Saved-order ghosts namespaced by a localized app name (`Control Centre:WiFi`, minted while a bundle ID transiently read nil) counted as "real owners" and deleted their genuine `com.apple.controlcenter` twins from the saved order on every load. The live items then planned as unmanaged and were repositioned by every apply, with the cursor contested for each synthetic drag (#949).
+- Spanish onboarding restored: two strings shipped as translated-but-empty, so Spanish systems rendered a blank tour slide description and a blank New Items badge hint.
+- XPC session race closed: a stale cancellation handler could tear down a healthy, newer session and race the lock every other access went through.
 
 ---
 
@@ -826,11 +826,11 @@ so they land together.
 
 ### Highlights
 
-- **Launch restore actually runs**: the saved layout is applied at cold start instead of losing to a move cooldown that launch itself had stamped ~0.4 s earlier (#881, #900).
-- **Storms are bounded**: a failed or parked-divider move can no longer hijack the cursor indefinitely or write a half-finished order into `savedSectionOrder`.
-- **Control-item pairing repaired**: Thaw's visible chevron is no longer mistaken for the hidden divider, the mispair behind hidden sections reading zero width (#923, #924, #927).
-- **Memory leak closed**: recache backoff stops the CA fence port growth reported at 47 GiB on macOS 26 (#933).
-- **Field repair**: `Thaw --reset-layout` clears persisted order and re-seeds dividers without starting the app.
+- Launch restore actually runs: the saved layout is applied at cold start instead of losing to a move cooldown that launch itself had stamped ~0.4 s earlier (#881, #900).
+- Storms are bounded: a failed or parked-divider move can no longer hijack the cursor indefinitely or write a half-finished order into `savedSectionOrder`.
+- Control-item pairing repaired: Thaw's visible chevron is no longer mistaken for the hidden divider, the mispair behind hidden sections reading zero width (#923, #924, #927).
+- Memory leak closed: recache backoff stops the CA fence port growth reported at 47 GiB on macOS 26 (#933).
+- Field repair: `Thaw --reset-layout` clears persisted order and re-seeds dividers without starting the app.
 
 ---
 
@@ -983,7 +983,7 @@ Merged PRs behind the above: #889, #892, #897, #901, #906, #910, #911, #914, #91
 
 ### Hotfix
 
-- **Hidden divider boundary and layout-editor drags**: repair the visible/hidden boundary when `H_ctrl` drifts before the per-item reorder pass, so `applyProfileLayout` no longer reports "all items already in correct positions" while the whole hidden section sits misplaced. Drops into an empty hidden section that only contains the new-items badge no longer snap back, and persistent status-level windows (shelf/HUD) no longer defer every move, though deferral still applies while the pointer is inside a long-open menu (#880, fixes #879).
+- Hidden divider boundary and layout-editor drags: repair the visible/hidden boundary when `H_ctrl` drifts before the per-item reorder pass, so `applyProfileLayout` no longer reports "all items already in correct positions" while the whole hidden section sits misplaced. Drops into an empty hidden section that only contains the new-items badge no longer snap back, and persistent status-level windows (shelf/HUD) no longer defer every move, though deferral still applies while the pointer is inside a long-open menu (#880, fixes #879).
 
 ---
 
@@ -993,10 +993,10 @@ This RC is a large reliability and platform update: menu bar identity/ordering, 
 
 ### Highlights
 
-- **Menu bar reliability overhaul**: safer saved-layout apply/persist, stronger item identity matching, and fewer false “reorder storms,” especially with Control Center items, dynamic titles, and multi-display setups.
-- **Settings & onboarding refresh**: redesigned settings UI, glass tour onboarding, stronger AX identity / click paths.
-- **Swift 6.2 + approachable concurrency**: MainActor default isolation on the app target, AXSwift6, EventTap synchronization, and cleanup of pre–Swift 6 GCD/Timer patterns.
-- **Update distribution**: Sparkle ZIP/deltas/appcast publish to `thaw-app/updates`, with a mirror for legacy `stonerl` Pages installs.
+- Menu bar reliability overhaul: safer saved-layout apply/persist, stronger item identity matching, and fewer false “reorder storms,” especially with Control Center items, dynamic titles, and multi-display setups.
+- Settings & onboarding refresh: redesigned settings UI, glass tour onboarding, stronger AX identity / click paths.
+- Swift 6.2 + approachable concurrency: MainActor default isolation on the app target, AXSwift6, EventTap synchronization, and cleanup of pre–Swift 6 GCD/Timer patterns.
+- Update distribution: Sparkle ZIP/deltas/appcast publish to `thaw-app/updates`, with a mirror for legacy `stonerl` Pages installs.
 
 ---
 
@@ -1057,8 +1057,8 @@ This RC is a large reliability and platform update: menu bar identity/ordering, 
 
 ### Settings, profiles & onboarding
 
-- **Settings UI redesign** (native grouped forms, relocated options, refreshed Ice UI primitives, sidebar search).
-- **Glass tour** onboarding in first-launch and settings.
+- Settings UI redesign: native grouped forms, relocated options, refreshed Ice UI primitives, sidebar search.
+- Glass tour onboarding in first-launch and settings.
 - Unconfigured displays fall back to **global configuration** instead of hardcoded defaults (fixes spacing resets on Space/display changes).
 - Ice V1 appearance data converted at import time.
 - Cleared hotkey bindings removed instead of persisting JSON `null`.
@@ -1109,7 +1109,7 @@ This RC is a large reliability and platform update: menu bar identity/ordering, 
 
 ### Platform & engineering
 
-- **Swift 6.2** packaging alignment.
+- Swift 6.2 packaging alignment.
 - MainActor default isolation on the app target.
 - `@Observable` migration for ObservableObject surfaces.
 - `SourcePIDCache` converted to an actor.

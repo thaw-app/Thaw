@@ -1,5 +1,5 @@
 name: Bug Report
-description: File a bug report
+description: Report something broken or behaving wrong.
 title: "[Bug] "
 type: bug
 projects: ["thaw-app/1"]
