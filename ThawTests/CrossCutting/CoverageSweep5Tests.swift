@@ -84,7 +84,7 @@ struct CoverageSweep5Tests {
         func waitForRelaunchWithAbsentItemSkips() {
             let entry = PendingLedger.PendingEntry(
                 tagIdentifier: "com.example.app:Status",
-                kind: .waitForRelaunch(windowID: 900, section: .hidden)
+                kind: .waitForRelaunch(windowID: 900, section: .hidden, setAt: nil)
             )
 
             let decision = plan(

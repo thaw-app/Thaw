@@ -234,6 +234,7 @@ nonisolated extension Defaults {
         static let globalDisplayConfiguration: DisplayIceBarConfiguration = .defaultConfiguration
         static let confirmSpacingRelaunch = true
         static let unconfirmedSpacingProfileScope: SpacingProfileSaveScope = .activeProfile
+        static let spacingApplyMode: SpacingApplyMode = .relaunchApps
 
         // MARK: Hidden Diagnostic Flags
 
@@ -276,6 +277,7 @@ nonisolated extension Defaults {
         case knownDisplays = "KnownDisplays"
         case confirmSpacingRelaunch = "ConfirmSpacingRelaunch"
         case unconfirmedSpacingProfileScope = "UnconfirmedSpacingProfileScope"
+        case spacingApplyMode = "SpacingApplyMode"
 
         // MARK: Menu Bar Spacers
 

@@ -1389,6 +1389,35 @@ final class MenuBarItemManager {
         )
     }
 
+    /// Reorders one section's items alphabetically by display name and
+    /// applies the result. The sort is computed from the current item cache,
+    /// written into `savedSectionOrder` for the section, persisted, and the
+    /// active profile is reapplied so the menu bar reflects the new order
+    /// immediately. The active profile's own itemOrder is refreshed by the
+    /// reapply, so the order survives a restart. Returns the sorted
+    /// identifiers, or nil if the section had nothing to sort. (#936)
+    @discardableResult
+    func sortSection(_ section: MenuBarSection.Name) -> [String]? {
+        let items = itemCache.managedItems(for: section)
+        guard !items.isEmpty else { return nil }
+        let sorted = LayoutSolver.sortedSectionIdentifiers(items) { $0.displayName }
+        guard !sorted.isEmpty else { return nil }
+        var newOrder = savedSectionOrder
+        let key = sectionKey(for: section)
+        guard newOrder[key] != sorted else { return sorted }
+        newOrder[key] = sorted
+        savedSectionOrder = newOrder
+        persistSavedSectionOrder()
+        MenuBarItemManager.diagLog.info("Sorted section \(key) alphabetically: \(sorted.count) item(s)")
+        // Persist the sorted order into the active profile before re-applying.
+        // reapplyActiveProfile reads the on-disk profile layout, not this
+        // manager's savedSectionOrder, so without this the reapply would
+        // re-apply the stale order and discard the sort. (#936)
+        appState?.profileManager.updateActiveProfileSectionOrder(section, identifiers: sorted)
+        appState?.profileManager.reapplyActiveProfile()
+        return sorted
+    }
+
     /// Returns a persistable string key for the given section name.
     func sectionKey(for section: MenuBarSection.Name) -> String {
         switch section {
@@ -1418,27 +1447,44 @@ final class MenuBarItemManager {
     /// windowID at the time of failure, used to detect app relaunches.
     private static let waitForRelaunchPrefix = "waitForRelaunch:"
 
+    /// How long a waitForRelaunch sentinel is allowed to sit before the
+    /// planner promotes it to a regular section entry. The windowID-change
+    /// exit handles the normal case (app relaunches), but an app that keeps
+    /// running since boot never changes windowID, and without this cap the
+    /// sentinel would stick forever and keep the item off savedSectionOrder.
+    /// One day is long enough that a genuinely relaunching app clears it
+    /// naturally, short enough that a stuck sentinel does not outlive a
+    /// user's patience. (#1079)
+    static let waitForRelaunchAgeCap: Duration = .seconds(86400)
+
     /// Returns a pendingRelocations sentinel value that suppresses same-session
     /// move attempts. Encodes windowID so that a relaunch (new windowID) clears
-    /// the suppression automatically.
-    func waitForRelaunchValue(windowID: CGWindowID, section: MenuBarSection.Name) -> String {
-        "\(Self.waitForRelaunchPrefix)\(windowID):\(sectionKey(for: section))"
+    /// the suppression automatically, and a unix timestamp so a sentinel whose
+    /// app never relaunches can be aged out by ``planPendingMove``. (#1079)
+    func waitForRelaunchValue(windowID: CGWindowID, section: MenuBarSection.Name, setAt: Date = Date()) -> String {
+        "\(Self.waitForRelaunchPrefix)\(windowID):\(sectionKey(for: section)):\(Int(setAt.timeIntervalSince1970))"
     }
 
     /// Parses a pendingRelocations sentinel value.
-    /// Returns (windowID, section) if the value is a wait-for-relaunch entry,
-    /// or nil if it is a plain section key.
-    func parseWaitForRelaunch(_ value: String) -> (windowID: CGWindowID, section: MenuBarSection.Name)? {
+    /// Returns (windowID, section, setAt) if the value is a wait-for-relaunch
+    /// entry, or nil if it is a plain section key. setAt is nil for the
+    /// pre-#1079 format, which carries no timestamp; ``planPendingMove``
+    /// treats a nil setAt as stale on the next pass.
+    func parseWaitForRelaunch(_ value: String) -> (windowID: CGWindowID, section: MenuBarSection.Name, setAt: Date?)? {
         guard value.hasPrefix(Self.waitForRelaunchPrefix) else { return nil }
         let payload = value.dropFirst(Self.waitForRelaunchPrefix.count)
-        // Format: "<windowID>:<sectionKey>"
-        guard let colonIndex = payload.firstIndex(of: ":") else { return nil }
-        let widString = String(payload[payload.startIndex ..< colonIndex])
-        let secString = String(payload[payload.index(after: colonIndex)...])
-        guard let wid = CGWindowID(widString),
-              let section = sectionName(for: secString)
+        // Format: "<windowID>:<sectionKey>[:<unixTime>]"
+        let parts = payload.split(separator: ":", maxSplits: 2, omittingEmptySubsequences: false)
+        guard parts.count >= 2,
+              let wid = CGWindowID(parts[0]),
+              let section = sectionName(for: String(parts[1]))
         else { return nil }
-        return (wid, section)
+        let setAt: Date? = if parts.count >= 3, let secs = Int(parts[2]) {
+            Date(timeIntervalSince1970: TimeInterval(secs))
+        } else {
+            nil
+        }
+        return (wid, section, setAt)
     }
 
     /// Returns the effective section for newly detected menu bar items, falling back

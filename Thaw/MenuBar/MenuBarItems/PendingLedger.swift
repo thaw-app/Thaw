@@ -7,6 +7,7 @@
 //  Licensed under the GNU GPLv3
 
 import CoreGraphics
+import Foundation
 
 // MARK: - PendingLedger
 
@@ -39,8 +40,12 @@ nonisolated enum PendingLedger {
             case section(MenuBarSection.Name)
             /// A wait-for-relaunch sentinel: the rehide hit its retry cap
             /// in this session; suppress moves until the windowID changes
-            /// (app relaunch).
-            case waitForRelaunch(windowID: CGWindowID, section: MenuBarSection.Name)
+            /// (app relaunch). `setAt` records when the sentinel was
+            /// written so a sentinel whose app never relaunches can be
+            /// promoted after an age cap instead of sticking forever.
+            /// nil marks the pre-#1079 persisted format, which has no
+            /// timestamp and is treated as stale on the next pass.
+            case waitForRelaunch(windowID: CGWindowID, section: MenuBarSection.Name, setAt: Date?)
         }
     }
 
@@ -107,7 +112,9 @@ nonisolated enum PendingLedger {
         hiddenBounds: CGRect,
         boundsForWindowID: [CGWindowID: CGRect],
         activelyShownTags: Set<String>,
-        returnInfo: PendingReturnInfo
+        returnInfo: PendingReturnInfo,
+        now: Date = Date(),
+        sentinelAgeCap: Duration? = nil
     ) -> PendingMove {
         if activelyShownTags.contains(entry.tagIdentifier) {
             return .skip(reason: .activelyShown)
@@ -117,13 +124,27 @@ nonisolated enum PendingLedger {
 
         // waitForRelaunch sentinel handling. If the windowID has changed
         // (app relaunched), we promote and let the orchestrator re-run.
-        // If unchanged, skip. If item is not present at all, skip and
-        // keep the entry for next launch.
-        if case let .waitForRelaunch(sentinelWindowID, sentinelSection) = entry.kind {
+        // If unchanged, skip — unless an age cap was supplied and the
+        // sentinel is older than it (or has no timestamp, the pre-#1079
+        // format), in which case the app is never going to relaunch and we
+        // promote so the item can be moved and re-enter savedSectionOrder
+        // instead of sticking off the persisted order forever. A nil cap
+        // disables aging, preserving the pre-#1079 behavior for callers
+        // that do not supply one. (#1079)
+        if case let .waitForRelaunch(sentinelWindowID, sentinelSection, setAt) = entry.kind {
             guard let item else {
                 return .skip(reason: .itemNotPresent)
             }
             if item.windowID == sentinelWindowID {
+                let isStale: Bool = {
+                    guard let sentinelAgeCap else { return false }
+                    guard let setAt else { return true }
+                    let ageSeconds = Int64(now.timeIntervalSince(setAt).rounded())
+                    return ageSeconds >= sentinelAgeCap.components.seconds
+                }()
+                if isStale {
+                    return .promoteWaitForRelaunch(section: sentinelSection)
+                }
                 return .skip(reason: .waitForRelaunchActive)
             }
             return .promoteWaitForRelaunch(section: sentinelSection)

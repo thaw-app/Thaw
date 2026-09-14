@@ -8,6 +8,7 @@
 
 import Cocoa
 import Subprocess
+
 // Prefer the System module when available: Subprocess's API surface uses
 // System.FilePath, so both sides must resolve to the same module or the
 // types won't unify.
@@ -94,6 +95,16 @@ final class MenuBarItemSpacingManager {
     /// The offset to apply to the default spacing and padding.
     /// Does not take effect until applyOffset() is called.
     var offset = 0
+
+    /// When a spacing change becomes visible, and whether the relaunch
+    /// wave is allowed to run at all. `relaunchApps` (the default) applies
+    /// the change immediately by restarting the apps Thaw can bring back.
+    /// `writeOnly` writes the on-disk preference and leaves every app
+    /// running, so the new spacing appears the next time each status-item
+    /// owner starts on its own. Synced from `DisplaySettingsManager`
+    /// alongside `offset`; kept here so the spacing manager stays the one
+    /// place that decides whether a wave fires. (#1075)
+    var spacingApplyMode: SpacingApplyMode = .relaunchApps
 
     /// Serializes overlapping applyOffset calls. Without this, two
     /// concurrent callers (e.g. the screen-change sink and the
@@ -334,6 +345,12 @@ final class MenuBarItemSpacingManager {
     /// no-op guard in applyOffsetLocked so callers can decide whether to
     /// prompt the user before a relaunch without performing the apply.
     func willRelaunch(forOffset offset: Int) -> Bool {
+        guard spacingApplyMode == .relaunchApps else {
+            // writeOnly never fires a wave: the preference is written and
+            // the new spacing appears on the next owner start, so there is
+            // nothing to prompt the user about and nothing to settle on.
+            return false
+        }
         let targetSpacing = Key.spacing.defaultValue + offset
         let targetPadding = Key.padding.defaultValue + offset
         let onDiskSpacing = currentlyAppliedValue(forKey: .spacing)
@@ -382,6 +399,18 @@ final class MenuBarItemSpacingManager {
         if onDiskSpacing == targetSpacing, onDiskPadding == targetPadding {
             MenuBarItemSpacingManager.diagLog.debug(
                 "applyOffset no-op: on-disk already matches target; skipping relaunch"
+            )
+            return ApplyOutcome(didRelaunch: false, recoveredBundleIDs: [], failedAppNames: [])
+        }
+
+        // writeOnly: persist the preference but leave every app running. The
+        // new spacing shows up the next time each status-item owner starts
+        // on its own (after a restart, or when the app is reopened). No wave,
+        // no settling period, nothing to recover from. (#1075)
+        if spacingApplyMode == .writeOnly {
+            try await writeDefaults(for: offset)
+            MenuBarItemSpacingManager.diagLog.info(
+                "applyOffset writeOnly: wrote spacing=\(targetSpacing)/padding=\(targetPadding); skipping relaunch wave"
             )
             return ApplyOutcome(didRelaunch: false, recoveredBundleIDs: [], failedAppNames: [])
         }

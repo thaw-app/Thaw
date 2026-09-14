@@ -174,6 +174,7 @@ struct SettingsResetterTests {
             // Default is `.activeProfile`, so this has to be moved off it for the
             // assertion below to mean anything.
             settings.displaySettings.unconfirmedSpacingProfileScope = .allProfiles
+            settings.displaySettings.spacingApplyMode = .writeOnly
 
             settings.resetDisplay()
 
@@ -184,6 +185,7 @@ struct SettingsResetterTests {
                 settings.displaySettings.unconfirmedSpacingProfileScope
                     == Defaults.DefaultValue.unconfirmedSpacingProfileScope
             )
+            #expect(settings.displaySettings.spacingApplyMode == Defaults.DefaultValue.spacingApplyMode)
         }
     }
 

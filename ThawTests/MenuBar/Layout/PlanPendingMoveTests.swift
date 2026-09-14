@@ -164,7 +164,7 @@ struct PlanPendingMoveTests {
         let item = visibleItem(bundleID: "com.example.app", title: "Status", windowID: 802)
         let entry = PendingLedger.PendingEntry(
             tagIdentifier: item.tag.tagIdentifier,
-            kind: .waitForRelaunch(windowID: 802, section: .hidden)
+            kind: .waitForRelaunch(windowID: 802, section: .hidden, setAt: nil)
         )
 
         let decision = PendingLedger.planPendingMove(
@@ -191,7 +191,7 @@ struct PlanPendingMoveTests {
         let item = visibleItem(bundleID: "com.example.app", title: "Status", windowID: 803)
         let entry = PendingLedger.PendingEntry(
             tagIdentifier: item.tag.tagIdentifier,
-            kind: .waitForRelaunch(windowID: 999, section: .hidden)
+            kind: .waitForRelaunch(windowID: 999, section: .hidden, setAt: nil)
         )
 
         let decision = PendingLedger.planPendingMove(
@@ -211,6 +211,80 @@ struct PlanPendingMoveTests {
             #expect(section == .hidden)
         } else {
             Issue.record("expected .promoteWaitForRelaunch, got \(decision)")
+        }
+    }
+
+    /// A waitForRelaunch sentinel whose windowID is unchanged but whose
+    /// setAt timestamp is older than the age cap promotes instead of
+    /// skipping. The source app never relaunched (same PID, same windowID
+    /// since boot), so the windowID-change exit can never fire; without the
+    /// age cap the item would be stuck off savedSectionOrder forever. The
+    /// cap lets the orchestrator promote it to a regular section entry so
+    /// the item can be moved and persisted. (#1079)
+    @Test("A stale waitForRelaunch sentinel promotes past the age cap")
+    func waitForRelaunchStaleSentinelPromotes() {
+        let item = visibleItem(bundleID: "com.example.app", title: "Status", windowID: 805)
+        let setAt = Date(timeIntervalSince1970: 1_700_000_000)
+        let now = setAt.addingTimeInterval(2 * 24 * 3600) // 2 days later
+        let entry = PendingLedger.PendingEntry(
+            tagIdentifier: item.tag.tagIdentifier,
+            kind: .waitForRelaunch(windowID: 805, section: .hidden, setAt: setAt)
+        )
+
+        let decision = PendingLedger.planPendingMove(
+            entry: entry,
+            items: [item],
+            controlItems: pair(),
+            hiddenBounds: hiddenBounds,
+            boundsForWindowID: [:],
+            activelyShownTags: [],
+            returnInfo: PendingLedger.PendingReturnInfo(
+                destinations: [:],
+                fallbackNeighbors: [:]
+            ),
+            now: now,
+            sentinelAgeCap: .seconds(86400)
+        )
+
+        if case let .promoteWaitForRelaunch(section) = decision {
+            #expect(section == .hidden)
+        } else {
+            Issue.record("expected .promoteWaitForRelaunch for a stale sentinel, got \(decision)")
+        }
+    }
+
+    /// A sentinel with no setAt (old persisted format, pre-#1079) is treated
+    /// as stale on the next encounter and promoted, so a stuck sentinel
+    /// persisted before the timestamp shipped clears itself on the first
+    /// pass after upgrade instead of waiting for an app relaunch that never
+    /// comes. (#1079)
+    @Test("A waitForRelaunch sentinel with no timestamp promotes as stale")
+    func waitForRelaunchNoTimestampPromotesAsStale() {
+        let item = visibleItem(bundleID: "com.example.app", title: "Status", windowID: 806)
+        let entry = PendingLedger.PendingEntry(
+            tagIdentifier: item.tag.tagIdentifier,
+            kind: .waitForRelaunch(windowID: 806, section: .hidden, setAt: nil)
+        )
+
+        let decision = PendingLedger.planPendingMove(
+            entry: entry,
+            items: [item],
+            controlItems: pair(),
+            hiddenBounds: hiddenBounds,
+            boundsForWindowID: [:],
+            activelyShownTags: [],
+            returnInfo: PendingLedger.PendingReturnInfo(
+                destinations: [:],
+                fallbackNeighbors: [:]
+            ),
+            now: Date(),
+            sentinelAgeCap: .seconds(86400)
+        )
+
+        if case let .promoteWaitForRelaunch(section) = decision {
+            #expect(section == .hidden)
+        } else {
+            Issue.record("expected .promoteWaitForRelaunch for a timestamp-less sentinel, got \(decision)")
         }
     }
 

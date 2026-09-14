@@ -62,9 +62,13 @@ Thaw **does** persist item order per profile. Layout drift usually comes from on
 - A **display topology change** (plugging in a monitor, waking from sleep, Sidecar, KVM switch).
 - A **spacing change** that requires Thaw to relaunch apps with menu bar items.
 
-When display spacing must be applied across a transition, Thaw may relaunch affected apps, since macOS only reads the new spacing when a status item's owner starts. That can look like icons jumping or duplicating briefly. Enable **Confirm before relaunching apps** in **Settings → Displays** if you want a prompt first.
+When display spacing must be applied across a transition, Thaw may relaunch affected apps, since macOS only reads the new spacing when a status item's owner starts. That can look like icons jumping or duplicating briefly. Enable **Confirm before relaunching apps** in **Settings → Displays** if you want a prompt first, or switch **When applying spacing** to **Wait until next restart** to stop Thaw from restarting apps at all.
 
 Thaw only relaunches apps it can bring back. See [What Thaw will and won't quit](#what-thaw-will-and-wont-quit).
+
+If an item's rehide fails too many times, Thaw stops trying for that session and waits for the item's app to relaunch before moving it again. An app that keeps running since boot never relaunches, so that wait used to stick forever and the item's saved position could silently stop persisting. Thaw now ages that state out after a day and moves the item normally, so a stuck rehide no longer freezes a position in place. (#1079)
+
+On a non-English system, Control Center's localized name ("Control Centre", "Kontrollzentrum") could end up as the namespace for a menu bar item when bundle-ID resolution failed, and those entries duplicated the canonical `com.apple.controlcenter` ones without a way to be removed. Thaw now drops those localized copies whenever the canonical namespace is present, so the stale-identifier ledger stops counting them. (#1080)
 
 If order keeps changing without any display or app changes, it may be a bug. See [Before you file a bug](#before-you-file-a-bug).
 
@@ -198,9 +202,11 @@ Menu bar spacing lives in a single system-wide preference, and a status item onl
 
 - **Apps macOS launches for you** (Spotlight, the input menu, Dock, Time Machine) are restarted through `launchctl kickstart`, so launchd stays their launching parent. Quitting one and relaunching it directly is rejected by macOS at exec, and the item would stay gone until you rebooted ([#720](https://github.com/thaw-app/Thaw/issues/720)).
 - **System binaries no LaunchAgent claims** are left alone entirely. Thaw has no way to bring them back, so it never takes them down ([#1070](https://github.com/thaw-app/Thaw/issues/1070)).
-- **Your own apps** are asked to quit and launched again. Thaw asks — it never force-quits. An app that declines (a save sheet, a long operation) keeps running and keeps the previous spacing.
+- **Your own apps** are asked to quit and launched again. Thaw asks; it never force-quits. An app that declines (a save sheet, a long operation) keeps running and keeps the previous spacing.
 
 The trade-off is that anything Thaw skips keeps its old spacing until it next starts on its own. Spacing changes are rare; a permanently dead Spotlight is not worth an evenly spaced menu bar.
+
+If you would rather Thaw never restart apps, set **When applying spacing** to **Wait until next restart** in **Settings → Displays**. Thaw still writes the new spacing to the system preference, but leaves every app running; the new spacing appears the next time each app starts on its own (after a restart, or when you reopen it). This avoids the restart disruption when plugging in or unplugging monitors, at the cost of spacing not taking effect immediately.
 
 ## Screen Recording and permission prompts
 

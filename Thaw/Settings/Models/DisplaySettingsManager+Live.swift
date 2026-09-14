@@ -27,6 +27,12 @@ extension DisplaySettingsManager {
         configureObservers()
         captureCurrentlyConnectedDisplays()
         seedSpacingOffsetFromActiveDisplay()
+        // Mirror the persisted mode into the spacing manager at launch, the
+        // same way seedSpacingOffsetFromActiveDisplay mirrors the offset.
+        // didSet on spacingApplyMode only pushes after this point, so without
+        // this the manager would stay at its .relaunchApps default until the
+        // user re-saved the setting. (#1075)
+        appState.spacingManager.spacingApplyMode = spacingApplyMode
     }
 
     /// Copies the active display's offset into the spacing manager at launch.

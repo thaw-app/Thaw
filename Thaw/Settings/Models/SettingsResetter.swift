@@ -99,5 +99,6 @@ extension AppSettings {
         displaySettings.globalConfiguration = Defaults.DefaultValue.globalDisplayConfiguration
         displaySettings.confirmSpacingRelaunch = Defaults.DefaultValue.confirmSpacingRelaunch
         displaySettings.unconfirmedSpacingProfileScope = Defaults.DefaultValue.unconfirmedSpacingProfileScope
+        displaySettings.spacingApplyMode = Defaults.DefaultValue.spacingApplyMode
     }
 }

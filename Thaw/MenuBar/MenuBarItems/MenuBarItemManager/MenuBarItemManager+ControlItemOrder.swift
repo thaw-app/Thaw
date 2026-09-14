@@ -426,7 +426,7 @@ extension MenuBarItemManager {
             if let sentinel = parseWaitForRelaunch(rawSectionString) {
                 entry = PendingLedger.PendingEntry(
                     tagIdentifier: tagIdentifier,
-                    kind: .waitForRelaunch(windowID: sentinel.windowID, section: sentinel.section)
+                    kind: .waitForRelaunch(windowID: sentinel.windowID, section: sentinel.section, setAt: sentinel.setAt)
                 )
             } else if let parsedSection = sectionName(for: rawSectionString) {
                 entry = PendingLedger.PendingEntry(tagIdentifier: tagIdentifier, kind: .section(parsedSection))
@@ -447,7 +447,9 @@ extension MenuBarItemManager {
                 returnInfo: PendingLedger.PendingReturnInfo(
                     destinations: pendingReturnDestinations,
                     fallbackNeighbors: fallbackNeighborByTagIdentifier
-                )
+                ),
+                now: Date(),
+                sentinelAgeCap: MenuBarItemManager.waitForRelaunchAgeCap
             )
 
             // Handle a sentinel promotion in-place: rewrite pendingRelocations
@@ -473,7 +475,9 @@ extension MenuBarItemManager {
                     returnInfo: PendingLedger.PendingReturnInfo(
                         destinations: pendingReturnDestinations,
                         fallbackNeighbors: fallbackNeighborByTagIdentifier
-                    )
+                    ),
+                    now: Date(),
+                    sentinelAgeCap: MenuBarItemManager.waitForRelaunchAgeCap
                 )
             }
 
@@ -488,7 +492,7 @@ extension MenuBarItemManager {
                     if case let .section(section) = entry.kind {
                         return section
                     }
-                    if case let .waitForRelaunch(_, section) = entry.kind {
+                    if case let .waitForRelaunch(_, section, _) = entry.kind {
                         return section
                     }
                     return .hidden

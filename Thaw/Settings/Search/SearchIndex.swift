@@ -762,6 +762,17 @@ nonisolated enum SearchIndex {
             keywords: ["confirm", "relaunch", "apps", "spacing", "restart"],
             property: nil
         ),
+        SearchEntry(
+            id: "displays.spacingApplyMode",
+            titleKey: "When applying spacing",
+            titleText: "When applying spacing",
+            descriptionText: "Choose whether spacing changes restart menu bar apps immediately or wait until the next restart. macOS only reads menu bar spacing when a status item's owner starts, so restarting apps applies the change now; waiting leaves every app running and the new spacing appears the next time each app starts.",
+            pane: .displays,
+            sectionKey: nil,
+            sectionText: nil,
+            keywords: ["spacing", "relaunch", "restart", "apps", "disable", "without", "immediate", "next restart"],
+            property: nil
+        ),
     ]
 
     // MARK: Hotkey Settings
@@ -862,6 +873,17 @@ nonisolated enum SearchIndex {
     // MARK: Layout Settings
 
     private static let layoutEntries: [SearchEntry] = [
+        SearchEntry(
+            id: "layout.sortSectionAlphabetically",
+            titleKey: "Sort a section A→Z",
+            titleText: "Sort a section A→Z",
+            descriptionText: "Reorder the items in any menu bar section alphabetically by name, without dragging each one. The sort applies to the active profile and takes effect immediately.",
+            pane: .menuBarLayout,
+            sectionKey: nil,
+            sectionText: nil,
+            keywords: ["sort", "alphabetical", "order", "arrange", "a to z", "hidden", "section"],
+            property: nil
+        ),
         SearchEntry(
             id: "advanced.enableAlwaysHiddenSection",
             titleKey: "Enable the always-hidden section",
