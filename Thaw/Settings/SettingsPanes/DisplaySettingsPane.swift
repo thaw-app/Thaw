@@ -691,7 +691,9 @@ struct DisplaySettingsPane: View {
             Text("Menu bar item spacing")
         }
         .annotation(
-            "Applying briefly relaunches apps with menu bar items so they pick up the new spacing."
+            displaySettings.spacingApplyMode == .writeOnly
+                ? "Applying writes the new spacing without restarting apps; the new spacing appears the next time each menu bar app starts."
+                : "Applying briefly relaunches apps with menu bar items so they pick up the new spacing."
         )
         .onChange(of: savedOffset) { _, newValue in
             // Sync draft when the saved value changes externally

@@ -718,8 +718,15 @@ final class ProfileManager {
             var saved = layout.savedSectionOrder
             saved[key] = identifiers
             layout.savedSectionOrder = saved
+            // Initialize itemOrder from the full savedSectionOrder when it is
+            // absent, not an empty dictionary: resolvedItemOrder prefers a
+            // non-empty itemOrder and would otherwise shadow the complete
+            // saved order with a single-section dict, dropping every other
+            // section's tracking on reapply. The updated savedSectionOrder
+            // already carries the sorted section, so seeding from it keeps
+            // all sections present.
             if layout.itemOrder == nil {
-                layout.itemOrder = [:]
+                layout.itemOrder = saved
             }
             layout.itemOrder?[key] = identifiers
             profile.menuBarLayout = layout
