@@ -10,6 +10,10 @@ import Combine
 import Observation
 import SwiftUI
 
+/// Samples the menu bar / wallpaper strip under the Thaw Bar for icon contrast.
+///
+/// Sampling runs on whatever screen the panel is on — not only the main
+/// display — so a secondary-screen open does not keep the previous brightness.
 @MainActor
 @Observable
 final class IceBarColorManager {
@@ -47,17 +51,17 @@ final class IceBarColorManager {
         if let iceBarPanel {
             iceBarPanel.publisher(for: \.screen)
                 .receive(on: DispatchQueue.main)
-                .sink { [weak self] screen in
-                    guard
-                        let self,
-                        let screen,
-                        screen == .main
-                    else {
+                .sink { [weak self, weak iceBarPanel] screen in
+                    guard let self, let screen, let iceBarPanel, iceBarPanel.isVisible else {
                         return
                     }
+                    // Drop the previous display's sample before the new capture
+                    // lands so icon contrast cannot briefly reuse the old screen.
+                    self.invalidateColorInfo()
+                    let frame = iceBarPanel.frame
                     Task { [weak self] in
                         guard let self else { return }
-                        await self.updateWindowImage(for: screen)
+                        await self.refresh(with: frame, screen: screen)
                     }
                 }
                 .store(in: &c)
@@ -69,8 +73,7 @@ final class IceBarColorManager {
                         let self,
                         let iceBarPanel,
                         let screen = iceBarPanel.screen,
-                        iceBarPanel.isVisible,
-                        screen == .main
+                        iceBarPanel.isVisible
                     else {
                         return
                     }
@@ -103,15 +106,14 @@ final class IceBarColorManager {
                 guard
                     let iceBarPanel,
                     iceBarPanel.isVisible,
-                    let screen = iceBarPanel.screen,
-                    screen == .main
+                    let screen = iceBarPanel.screen
                 else {
                     return
                 }
                 let frame = iceBarPanel.frame
                 Task { [weak self] in
                     guard let self else { return }
-                    await self.updateWindowImage(for: screen)
+                    guard await self.updateWindowImage(for: screen) else { return }
                     withAnimation {
                         self.updateColorInfo(with: frame, screen: screen)
                     }
@@ -120,22 +122,17 @@ final class IceBarColorManager {
             .store(in: &c)
 
             // Manage visibility: update colors immediately + start/stop periodic timer.
-            // Single subscription replaces the previous two \.isVisible observers.
             iceBarPanel.publisher(for: \.isVisible)
                 .removeDuplicates()
                 .receive(on: DispatchQueue.main)
                 .sink { [weak self, weak iceBarPanel] isVisible in
                     guard let self else { return }
                     if isVisible {
-                        // Refresh windowImage immediately so the first color
-                        // update isn't stale. Awaiting inside a Task so
-                        // updateColorInfo reads the fresh capture, not the
-                        // previous cycle's leftover.
-                        if let iceBarPanel, let screen = iceBarPanel.screen, screen == .main {
+                        if let iceBarPanel, let screen = iceBarPanel.screen {
                             let frame = iceBarPanel.frame
                             Task { [weak self] in
                                 guard let self else { return }
-                                await self.updateWindowImage(for: screen)
+                                guard await self.updateWindowImage(for: screen) else { return }
                                 self.updateColorInfo(with: frame, screen: screen)
                             }
                         }
@@ -160,15 +157,14 @@ final class IceBarColorManager {
                     let self,
                     let iceBarPanel,
                     iceBarPanel.isVisible,
-                    let screen = iceBarPanel.screen,
-                    screen == .main
+                    let screen = iceBarPanel.screen
                 else {
                     return
                 }
                 let frame = iceBarPanel.frame
                 Task { [weak self] in
                     guard let self else { return }
-                    await self.updateWindowImage(for: screen)
+                    guard await self.updateWindowImage(for: screen) else { return }
                     withAnimation {
                         self.updateColorInfo(with: frame, screen: screen)
                     }
@@ -192,7 +188,14 @@ final class IceBarColorManager {
         windowImage = nil
     }
 
-    private func updateWindowImage(for screen: NSScreen) async {
+    /// Captures the menu bar / wallpaper strip for `screen`.
+    ///
+    /// - Returns: `true` when this call stored the current generation's image.
+    ///   Callers must not update ``colorInfo`` after a `false` result — a stale
+    ///   capture would otherwise sample a newer `windowImage` with an older
+    ///   frame / screen.
+    @discardableResult
+    private func updateWindowImage(for screen: NSScreen) async -> Bool {
         let windows = WindowInfo.createWindows(option: .onScreen)
         let displayID = screen.displayID
 
@@ -200,11 +203,13 @@ final class IceBarColorManager {
             let menuBarWindow = WindowInfo.menuBarWindow(from: windows, for: displayID),
             let wallpaperWindow = WindowInfo.wallpaperWindow(from: windows, for: displayID)
         else {
-            return
+            return false
         }
 
         let windowIDs = [menuBarWindow.windowID, wallpaperWindow.windowID]
-        let bounds = withMutableCopy(of: wallpaperWindow.bounds) { $0.size.height = 1 }
+        // Quartz window bounds use a top-left origin. Capture the menu bar
+        // window's own frame so the average matches the visible bar body.
+        let bounds = menuBarWindow.bounds
 
         // Stamp our generation before suspending. If the counter advances while
         // we await (a clearWindowImage, a stopPeriodicRefresh, or a newer
@@ -218,8 +223,9 @@ final class IceBarColorManager {
             screenBounds: bounds,
             option: .nominalResolution
         )
-        guard generation == windowImageGeneration, let image else { return }
+        guard generation == windowImageGeneration, let image else { return false }
         windowImage = image
+        return true
     }
 
     /// The horizontal position (`0...1`) of the bar's center within the screen,
@@ -250,20 +256,27 @@ final class IceBarColorManager {
 
         let percentage = Self.colorSamplePercentage(frame: frame, screenFrame: screen.frame)
 
-        let cropRect = CGRect(x: imageBounds.width * percentage, y: 0, width: 0, height: 1)
-            .insetBy(dx: -150, dy: 0)
-            .intersection(imageBounds)
+        // Sample a horizontal band across the full captured menu-bar height so
+        // the average tracks the visible bar body, not only the top pixel row.
+        let cropRect = CGRect(
+            x: imageBounds.width * percentage,
+            y: 0,
+            width: 0,
+            height: imageBounds.height
+        )
+        .insetBy(dx: -150, dy: 0)
+        .intersection(imageBounds)
 
         guard
             let croppedImage = image.cropping(to: cropRect),
-            let averageColor = croppedImage.averageColor()
+            let averageColor = croppedImage.averageColor(option: .ignoreAlpha)
         else {
             return
         }
 
-        // Just use `menuBarWindow` as the source for now, regardless
-        // of whether its image contributed to the average.
-        colorInfo = MenuBarAverageColorInfo(color: averageColor, source: .menuBarWindow)
+        let next = MenuBarAverageColorInfo(color: averageColor, source: .menuBarWindow)
+        guard colorInfo != next else { return }
+        colorInfo = next
     }
 
     func updateAllProperties(with frame: CGRect, screen: NSScreen) {
@@ -273,8 +286,20 @@ final class IceBarColorManager {
         // cycle's leftover.
         Task { [weak self] in
             guard let self else { return }
-            await self.updateWindowImage(for: screen)
-            self.updateColorInfo(with: frame, screen: screen)
+            await self.refresh(with: frame, screen: screen)
         }
+    }
+
+    /// Drops the standing sample so a cross-display Thaw Bar open cannot
+    /// briefly reuse the previous screen's brightness for icon contrast.
+    func invalidateColorInfo() {
+        colorInfo = nil
+        clearWindowImage()
+    }
+
+    /// Captures the menu bar strip for `screen` and rewrites ``colorInfo``.
+    func refresh(with frame: CGRect, screen: NSScreen) async {
+        guard await updateWindowImage(for: screen) else { return }
+        updateColorInfo(with: frame, screen: screen)
     }
 }

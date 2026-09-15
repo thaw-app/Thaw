@@ -34,6 +34,10 @@ final class IceBarPanel: NSPanel {
     /// change posts that notification, racing with the show).
     private var lastShowTimestamp: Date?
 
+    /// Display the Thaw Bar was last shown on. Cross-screen opens must drop
+    /// the previous screen's icon captures (light/dark tint is baked in).
+    private var lastShownDisplayID: CGDirectDisplayID?
+
     /// Storage for internal observers.
     private var cancellables = Set<AnyCancellable>()
 
@@ -228,9 +232,26 @@ final class IceBarPanel: NSPanel {
         currentSection = section
         lastShowTimestamp = Date()
 
-        // Show the panel immediately with whatever cached data we have.
-        // The SwiftUI view observes itemManager and imageCache, so it
-        // will re-render automatically as the background updates land.
+        // Menu bar icon light/dark tint is baked into the captured bitmaps.
+        // Restore this display's warm snapshot when we have one; otherwise clear
+        // wrong-display icons so the panel can still appear instantly (Loading)
+        // while a background SkyLight recapture fills the correct tint.
+        let switchedDisplay = lastShownDisplayID.map { $0 != screen.displayID } ?? false
+        let needsBackgroundRecapture = appState.imageCache.prepareImagesForThawBar(
+            displayID: screen.displayID,
+            section: section
+        )
+        if switchedDisplay {
+            colorManager.invalidateColorInfo()
+            diagLog.notice(
+                "show: display \(self.lastShownDisplayID.map(String.init) ?? "nil") → \(screen.displayID); warmCache=\(!needsBackgroundRecapture)"
+            )
+        }
+        lastShownDisplayID = screen.displayID
+
+        // Show the panel immediately. Never defer orderFront: setting
+        // currentSection without a visible panel makes isHidden flip to false,
+        // so a second click would call hide() instead of show().
         contentView = IceBarHostingView(
             appState: appState,
             colorManager: colorManager,
@@ -242,23 +263,23 @@ final class IceBarPanel: NSPanel {
 
         // Color manager must be updated after updating the panel's origin,
         // but before it is shown.
-        //
-        // Color manager handles frame changes automatically, but does so on
-        // the main queue, so we need to update manually once before showing
-        // the panel to prevent the color from flashing.
         colorManager.updateAllProperties(with: frame, screen: screen)
 
         orderFrontRegardless()
 
-        // Rehide temporarily shown items and refresh caches in the
-        // background. Ordering is preserved: rehide moves items back
-        // to their correct sections before the cache is rebuilt.
-        // The task is cancelled in close() to avoid holding appState.
+        // Refresh color + icons in the background. Keep the settle delay so
+        // control-item positioning does not leave the hidden section empty.
+        let panelFrame = frame
+        let targetDisplayID = screen.displayID
         cacheTask?.cancel()
-        cacheTask = Task { [weak appState] in
+        cacheTask = Task { [weak appState, weak colorManager] in
             guard let appState else { return }
+
+            await colorManager?.refresh(with: panelFrame, screen: screen)
+
             await appState.itemManager.rehideTemporarilyShownItems(force: true)
             guard !Task.isCancelled else { return }
+
             // Settle delay: when the IceBar just opened on a screen that
             // was previously inactive, the menu bar has moved screens and
             // NSStatusItem windows (control item chevrons) are still
@@ -270,7 +291,10 @@ final class IceBarPanel: NSPanel {
             guard !Task.isCancelled else { return }
             await appState.itemManager.cacheItemsIfNeeded()
             guard !Task.isCancelled else { return }
-            await appState.imageCache.updateCache()
+            await appState.imageCache.recaptureSection(
+                section,
+                preferredDisplayID: targetDisplayID
+            )
         }
     }
 
