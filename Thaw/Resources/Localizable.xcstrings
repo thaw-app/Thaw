@@ -226,8 +226,8 @@
         },
         "zh-Hans" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Remove from group"
+            "state" : "translated",
+            "value" : "从分组中移除"
           }
         },
         "zh-Hant" : {
@@ -344,8 +344,8 @@
         },
         "zh-Hans" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Reference captured"
+            "state" : "translated",
+            "value" : "已捕获参考图像"
           }
         },
         "zh-Hant" : {
@@ -699,8 +699,8 @@
         },
         "zh-Hans" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Relaunch Now"
+            "state" : "translated",
+            "value" : "立即重启"
           }
         },
         "zh-Hant" : {
@@ -818,8 +818,8 @@
         },
         "zh-Hans" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Remove"
+            "state" : "translated",
+            "value" : "移除"
           }
         },
         "zh-Hant" : {
@@ -1055,8 +1055,8 @@
         },
         "zh-Hans" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Remove All"
+            "state" : "translated",
+            "value" : "全部移除"
           }
         },
         "zh-Hant" : {
@@ -1292,8 +1292,8 @@
         },
         "zh-Hans" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Radius"
+            "state" : "translated",
+            "value" : "圆角半径"
           }
         },
         "zh-Hant" : {
@@ -1410,8 +1410,8 @@
         },
         "zh-Hans" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Remove Override for This Space"
+            "state" : "translated",
+            "value" : "移除此操作空间的单独配置"
           }
         },
         "zh-Hant" : {
@@ -1528,8 +1528,8 @@
         },
         "zh-Hans" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Remove this condition"
+            "state" : "translated",
+            "value" : "移除此条件"
           }
         },
         "zh-Hant" : {
@@ -1646,8 +1646,8 @@
         },
         "zh-Hans" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Remove this spacer"
+            "state" : "translated",
+            "value" : "移除此占位间隔"
           }
         },
         "zh-Hant" : {
@@ -1884,8 +1884,8 @@
         },
         "zh-Hans" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Replay onboarding"
+            "state" : "translated",
+            "value" : "重新播放指引"
           }
         },
         "zh-Hant" : {
@@ -2002,8 +2002,8 @@
         },
         "zh-Hans" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Replay Onboarding"
+            "state" : "translated",
+            "value" : "重新播放指引"
           }
         },
         "zh-Hant" : {
@@ -2477,8 +2477,8 @@
         },
         "zh-Hans" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Quit the menu bar host and delete its saved item positions, so the menu bar arrangement rebuilds from scratch. Use this when items refuse to return to the menu bar after rearranging."
+            "state" : "translated",
+            "value" : "退出菜单栏宿主进程并删除保存的图标位置，从头重建菜单栏布局。当重新排列后图标未能正常回到菜单栏时，可以使用此功能。"
           }
         },
         "zh-Hant" : {
@@ -2834,8 +2834,8 @@
         },
         "zh-Hans" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Per-Space Profiles"
+            "state" : "translated",
+            "value" : "按操作空间配置"
           }
         },
         "zh-Hant" : {
@@ -3190,8 +3190,8 @@
         },
         "zh-Hans" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Permissions cleared. Quitting…"
+            "state" : "translated",
+            "value" : "权限已清除。正在退出…"
           }
         },
         "zh-Hant" : {
@@ -3308,8 +3308,8 @@
         },
         "zh-Hans" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Pick two items below to group them. Grouped items always move together."
+            "state" : "translated",
+            "value" : "在下方选择两个项目进行分组。分组的项目将始终一起移动。"
           }
         },
         "zh-Hant" : {
@@ -3901,8 +3901,8 @@
         },
         "zh-Hans" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Quit Control Center and delete its preference files so system menu bar item state can rebuild."
+            "state" : "translated",
+            "value" : "退出控制中心并删除其偏好设置文件，以便系统菜单栏图标状态重新构建。"
           }
         },
         "zh-Hant" : {
@@ -4496,8 +4496,8 @@
         },
         "zh-Hans" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Quit & Clear Cache"
+            "state" : "translated",
+            "value" : "退出并清除缓存"
           }
         },
         "zh-Hant" : {
@@ -4734,8 +4734,8 @@
         },
         "zh-Hans" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Quit and clear cache"
+            "state" : "translated",
+            "value" : "退出并清除缓存"
           }
         },
         "zh-Hant" : {
@@ -4852,8 +4852,8 @@
         },
         "zh-Hans" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Quit and clear cache?"
+            "state" : "translated",
+            "value" : "退出并清除缓存？"
           }
         },
         "zh-Hant" : {
@@ -5923,8 +5923,8 @@
         },
         "zh-Hans" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Rotate by time"
+            "state" : "translated",
+            "value" : "按时间轮换"
           }
         },
         "zh-Hant" : {
@@ -6161,8 +6161,8 @@
         },
         "zh-Hans" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Rounded corners"
+            "state" : "translated",
+            "value" : "圆角"
           }
         },
         "zh-Hant" : {
@@ -6279,8 +6279,8 @@
         },
         "zh-Hans" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Runs your script about every 30 seconds. Reveals when it exits 0, or — if an expected output is set — when its output contains that text."
+            "state" : "translated",
+            "value" : "大约每 30 秒运行一次您的脚本。当返回码为 0 或输出包含预期文本时显示。"
           }
         },
         "zh-Hant" : {
@@ -6398,8 +6398,8 @@
         },
         "zh-Hans" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Reveals the item while its icon is blinking. A clock or a battery percentage will not trigger this: they always move to a state they have never shown before, while a blink keeps returning to one. Requires screen recording permission."
+            "state" : "translated",
+            "value" : "当图标闪烁时显示该项目。时钟或电池百分比不会触发：因为它们的变化是单向更新的，而闪烁会反复交替。此功能需要屏幕录制权限。"
           }
         },
         "zh-Hant" : {
@@ -6518,7 +6518,7 @@
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "s"
+            "value" : "秒"
           }
         },
         "zh-Hant" : {
@@ -6635,8 +6635,8 @@
         },
         "zh-Hans" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Safe vs maintenance tools"
+            "state" : "translated",
+            "value" : "日常工具与维护工具"
           }
         },
         "zh-Hant" : {
@@ -6990,8 +6990,8 @@
         },
         "zh-Hans" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Save Diagnostic Report"
+            "state" : "translated",
+            "value" : "存储诊断报告"
           }
         },
         "zh-Hant" : {
@@ -7108,8 +7108,8 @@
         },
         "zh-Hans" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Save Diagnostic Report…"
+            "state" : "translated",
+            "value" : "存储诊断报告…"
           }
         },
         "zh-Hant" : {
@@ -7228,7 +7228,7 @@
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "将全局模板保存到当前配置文件“%@”，或保存到所有配置文件。"
+            "value" : "Save the global template to the active profile \"%@\", or save it to every profile."
           }
         },
         "zh-Hant" : {
@@ -7347,7 +7347,7 @@
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "将新间距保存到当前配置文件“%@”，或保存到所有配置文件。"
+            "value" : "Save the new spacing to the active profile \"%@\", or save it to every profile."
           }
         },
         "zh-Hant" : {
@@ -7464,8 +7464,8 @@
         },
         "zh-Hans" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Review the feature tour and permission setup again."
+            "state" : "translated",
+            "value" : "重新回顾功能指引与权限设置流程。"
           }
         },
         "zh-Hant" : {
@@ -8176,8 +8176,8 @@
         },
         "zh-Hans" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Reset Control Center"
+            "state" : "translated",
+            "value" : "重置控制中心"
           }
         },
         "zh-Hant" : {
@@ -8294,8 +8294,8 @@
         },
         "zh-Hans" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Reset Control Center preferences"
+            "state" : "translated",
+            "value" : "重置控制中心偏好设置"
           }
         },
         "zh-Hant" : {
@@ -8412,8 +8412,8 @@
         },
         "zh-Hans" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Reset Control Center preferences?"
+            "state" : "translated",
+            "value" : "重置控制中心偏好设置？"
           }
         },
         "zh-Hant" : {
@@ -8649,8 +8649,8 @@
         },
         "zh-Hans" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Reset Layout Positions"
+            "state" : "translated",
+            "value" : "重置布局位置"
           }
         },
         "zh-Hant" : {
@@ -9004,8 +9004,8 @@
         },
         "zh-Hans" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Restore %@ preferences to their defaults. Saved profiles and user data are not deleted. This cannot be undone."
+            "state" : "translated",
+            "value" : "将 %@ 的偏好设置恢复为默认值。已保存的配置文件和用户数据不会被删除。此操作无法撤销。"
           }
         },
         "zh-Hant" : {
@@ -9122,8 +9122,8 @@
         },
         "zh-Hans" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Reset menu bar layout positions"
+            "state" : "translated",
+            "value" : "重置菜单栏布局位置"
           }
         },
         "zh-Hant" : {
@@ -9240,8 +9240,8 @@
         },
         "zh-Hans" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Reset menu bar layout positions?"
+            "state" : "translated",
+            "value" : "重置菜单栏布局位置？"
           }
         },
         "zh-Hant" : {
@@ -9358,8 +9358,8 @@
         },
         "zh-Hans" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Reset permissions"
+            "state" : "translated",
+            "value" : "重置权限"
           }
         },
         "zh-Hant" : {
@@ -9476,8 +9476,8 @@
         },
         "zh-Hans" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Reset Permissions"
+            "state" : "translated",
+            "value" : "重置权限"
           }
         },
         "zh-Hant" : {
@@ -9594,8 +9594,8 @@
         },
         "zh-Hans" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Reset permissions?"
+            "state" : "translated",
+            "value" : "重置权限？"
           }
         },
         "zh-Hant" : {
@@ -10068,8 +10068,8 @@
         },
         "zh-Hans" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Per-Space override"
+            "state" : "translated",
+            "value" : "操作空间单独配置"
           }
         },
         "zh-Hant" : {
@@ -10186,8 +10186,8 @@
         },
         "zh-Hans" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Per display"
+            "state" : "translated",
+            "value" : "按显示器"
           }
         },
         "zh-Hant" : {
@@ -10304,8 +10304,8 @@
         },
         "zh-Hans" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Saves the appearance above for the currently active Space only. Every other Space keeps the shared appearance."
+            "state" : "translated",
+            "value" : "仅为当前活动的操作空间保存上方外观。其余所有空间保持通用外观。"
           }
         },
         "zh-Hant" : {
@@ -11608,8 +11608,8 @@
         },
         "zh-Hans" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Move trigger down"
+            "state" : "translated",
+            "value" : "下移触发器"
           }
         },
         "zh-Hant" : {
@@ -11726,8 +11726,8 @@
         },
         "zh-Hans" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Move trigger up"
+            "state" : "translated",
+            "value" : "上移触发器"
           }
         },
         "zh-Hant" : {
@@ -12320,8 +12320,8 @@
         },
         "zh-Hans" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "No display found."
+            "state" : "translated",
+            "value" : "未找到显示器。"
           }
         },
         "zh-Hant" : {
@@ -12675,8 +12675,8 @@
         },
         "zh-Hans" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Mode"
+            "state" : "translated",
+            "value" : "模式"
           }
         },
         "zh-Hant" : {
@@ -13623,8 +13623,8 @@
         },
         "zh-Hans" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Menu bar item"
+            "state" : "translated",
+            "value" : "菜单栏项目"
           }
         },
         "zh-Hant" : {
@@ -14455,8 +14455,8 @@
         },
         "zh-Hans" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Menu bar layout positions were reset."
+            "state" : "translated",
+            "value" : "菜单栏布局位置已重置。"
           }
         },
         "zh-Hant" : {
@@ -15167,8 +15167,8 @@
         },
         "zh-Hans" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "No location captured"
+            "state" : "translated",
+            "value" : "未获取到位置"
           }
         },
         "zh-Hant" : {
@@ -16636,8 +16636,8 @@
         },
         "zh-Hans" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Onboarding"
+            "state" : "translated",
+            "value" : "新手指引"
           }
         },
         "zh-Hant" : {
@@ -17229,8 +17229,8 @@
         },
         "zh-Hans" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Other…"
+            "state" : "translated",
+            "value" : "其他…"
           }
         },
         "zh-Hant" : {
@@ -17347,8 +17347,8 @@
         },
         "zh-Hans" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Otherwise hide in"
+            "state" : "translated",
+            "value" : "否则隐藏于"
           }
         },
         "zh-Hant" : {
@@ -17465,8 +17465,8 @@
         },
         "zh-Hans" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Overridden by %@. Move this trigger above them to give it priority."
+            "state" : "translated",
+            "value" : "已被 %@ 覆盖。上移此触发器以提升其优先级。"
           }
         },
         "zh-Hant" : {
@@ -18308,8 +18308,8 @@
         },
         "zh-Hans" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "No reference yet"
+            "state" : "translated",
+            "value" : "尚无参考"
           }
         },
         "zh-Hant" : {
@@ -18663,8 +18663,8 @@
         },
         "zh-Hans" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "No triggers yet"
+            "state" : "translated",
+            "value" : "尚无触发器"
           }
         },
         "zh-Hant" : {
@@ -19378,7 +19378,7 @@
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "由于该显示器已启用 %@ 栏，因此该功能不可用。"
+            "value" : "Not available because the %@ Bar is enabled in the global template."
           }
         },
         "zh-Hant" : {
@@ -19733,8 +19733,8 @@
         },
         "zh-Hans" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "not running"
+            "state" : "translated",
+            "value" : "未运行"
           }
         },
         "zh-Hant" : {
@@ -20089,8 +20089,8 @@
         },
         "zh-Hans" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Nothing shown here is saved or sent anywhere; the capture exists only while this page is open."
+            "state" : "translated",
+            "value" : "此处显示的任何内容均不会被保存或上传；捕获仅在当前页面打开时保留。"
           }
         },
         "zh-Hant" : {
@@ -20207,8 +20207,8 @@
         },
         "zh-Hans" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Notify when this reveals the item"
+            "state" : "translated",
+            "value" : "触发显示该项目时发出通知"
           }
         },
         "zh-Hant" : {
@@ -20563,8 +20563,8 @@
         },
         "zh-Hans" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Maximum log file size (MB)"
+            "state" : "translated",
+            "value" : "最大日志文件大小 (MB)"
           }
         },
         "zh-Hant" : {
@@ -20681,8 +20681,8 @@
         },
         "zh-Hans" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Trigger list view"
+            "state" : "translated",
+            "value" : "触发器列表视图"
           }
         },
         "zh-Hant" : {
@@ -20799,8 +20799,8 @@
         },
         "zh-Hans" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Toggle zen mode"
+            "state" : "translated",
+            "value" : "切换专注模式 (Zen Mode)"
           }
         },
         "zh-Hant" : {
@@ -20917,8 +20917,8 @@
         },
         "zh-Hans" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Tools"
+            "state" : "translated",
+            "value" : "工具"
           }
         },
         "zh-Hant" : {
@@ -21511,8 +21511,8 @@
         },
         "zh-Hans" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Trigger list"
+            "state" : "translated",
+            "value" : "触发器列表"
           }
         },
         "zh-Hant" : {
@@ -21629,8 +21629,8 @@
         },
         "zh-Hans" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Triggers"
+            "state" : "translated",
+            "value" : "触发器"
           }
         },
         "zh-Hant" : {
@@ -21866,8 +21866,8 @@
         },
         "zh-Hans" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Troubleshooting"
+            "state" : "translated",
+            "value" : "疑难解答"
           }
         },
         "zh-Hant" : {
@@ -21984,8 +21984,8 @@
         },
         "zh-Hans" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Turn off to show every setting. Nothing you configure here is lost either way."
+            "state" : "translated",
+            "value" : "关闭后将显示所有设置。无论开启与否，您配置的任何内容都不会丢失。"
           }
         },
         "zh-Hant" : {
@@ -22102,8 +22102,8 @@
         },
         "zh-Hans" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Turn on the Location flag in Developer settings and grant permission to capture your current location."
+            "state" : "translated",
+            "value" : "请在开发者设置中开启“定位”开关并授予权限以获取您当前的位置。"
           }
         },
         "zh-Hant" : {
@@ -22458,8 +22458,8 @@
         },
         "zh-Hans" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Ungroup"
+            "state" : "translated",
+            "value" : "解散分组"
           }
         },
         "zh-Hant" : {
@@ -22933,8 +22933,8 @@
         },
         "zh-Hans" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Toggle automatic rehiding"
+            "state" : "translated",
+            "value" : "切换自动隐藏"
           }
         },
         "zh-Hant" : {
@@ -23410,15 +23410,9 @@
           }
         },
         "zh-Hans" : {
-          "variations" : {
-            "plural" : {
-              "other" : {
-                "stringUnit" : {
-                  "state" : "new",
-                  "value" : "This will overwrite the settings of %lld displays with the global template. If the active display's spacing changes, Thaw will relaunch each app with a menu bar item. Relaunching apps may cause unsaved input, progress, or transient app state to be lost."
-                }
-              }
-            }
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "这将使用全局模板覆盖 %lld 台显示器的设置。若当前显示器的间距发生变化，Thaw 将重新启动涉及菜单栏项目的应用程序。重新启动应用可能会导致未保存的输入、进度或临时状态丢失。"
           }
         },
         "zh-Hant" : {
@@ -23660,8 +23654,8 @@
         },
         "zh-Hans" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "This condition is turned off in Developer settings, so the trigger won't run."
+            "state" : "translated",
+            "value" : "此条件已在开发者设置中关闭，因此该触发器不会执行。"
           }
         },
         "zh-Hant" : {
@@ -23779,8 +23773,8 @@
         },
         "zh-Hans" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "This Space uses a saved override. Changes above apply to this Space only."
+            "state" : "translated",
+            "value" : "此空间正在使用单独保存的配置。上述更改仅对当前空间生效。"
           }
         },
         "zh-Hant" : {
@@ -23897,8 +23891,8 @@
         },
         "zh-Hans" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "This Space uses the shared appearance."
+            "state" : "translated",
+            "value" : "此空间正在使用共享外观。"
           }
         },
         "zh-Hant" : {
@@ -24015,8 +24009,8 @@
         },
         "zh-Hans" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "This trigger controls %@'s section. Your saved layout no longer applies to it."
+            "state" : "translated",
+            "value" : "此触发器正在控制 %@ 所在分区，已保存的布局将不再应用于该项。"
           }
         },
         "zh-Hant" : {
@@ -24133,8 +24127,8 @@
         },
         "zh-Hans" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "This trigger controls the section of %@. Your saved layout no longer applies to them."
+            "state" : "translated",
+            "value" : "此触发器正在控制 %@ 所在分区，已保存的布局将不再应用于这些项。"
           }
         },
         "zh-Hant" : {
@@ -24251,8 +24245,8 @@
         },
         "zh-Hans" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "This version of Thaw is not yet compatible with macOS %lld. Preview builds are available on GitHub Releases, and support will be delivered through the alpha update channel."
+            "state" : "translated",
+            "value" : "此版本的 Thaw 尚未兼容 macOS %lld。预览版本可在 GitHub Releases 获取，正式适配将通过 Alpha 更新通道提供。"
           }
         },
         "zh-Hant" : {
@@ -24369,8 +24363,8 @@
         },
         "zh-Hans" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "This version of Thaw is not yet compatible with macOS %lld. Support arrives through the alpha channel, which carries the rewritten app. Thaw can subscribe you and check for a build now. If none has been published yet, it opens the preview builds on GitHub."
+            "state" : "translated",
+            "value" : "此版本的 Thaw 尚未兼容 macOS %lld。适配通过 Alpha 通道提供（包含全新重写的应用）。Thaw 现在可以为您订阅并检查版本。如果尚未发布，将为您打开 GitHub 预览页。"
           }
         },
         "zh-Hant" : {
@@ -24725,8 +24719,8 @@
         },
         "zh-Hans" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "This will reset app preferences to their default values. Saved profiles and user data will not be deleted. This action cannot be undone."
+            "state" : "translated",
+            "value" : "这将把应用程序偏好设置恢复为默认值。已保存的配置文件和用户数据不会被删除。此操作无法撤销。"
           }
         },
         "zh-Hant" : {
@@ -24843,8 +24837,8 @@
         },
         "zh-Hans" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Threshold"
+            "state" : "translated",
+            "value" : "阈值"
           }
         },
         "zh-Hant" : {
@@ -25437,8 +25431,8 @@
         },
         "zh-Hans" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "To"
+            "state" : "translated",
+            "value" : "至"
           }
         },
         "zh-Hant" : {
@@ -25682,7 +25676,7 @@
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "更新激活的配置文件"
+            "value" : "Update Active Profile"
           }
         },
         "zh-Hant" : {
@@ -25801,7 +25795,7 @@
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "更新所有配置文件"
+            "value" : "Update All Profiles"
           }
         },
         "zh-Hant" : {
@@ -25918,8 +25912,8 @@
         },
         "zh-Hans" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "The language change applies after %@ relaunches."
+            "state" : "translated",
+            "value" : "语言更改将在重启 %@ 后生效。"
           }
         },
         "zh-Hant" : {
@@ -26273,8 +26267,8 @@
         },
         "zh-Hans" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "What %@ Sees"
+            "state" : "translated",
+            "value" : "%@ 获取的内容"
           }
         },
         "zh-Hant" : {
@@ -26516,8 +26510,8 @@
         },
         "zh-Hans" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "When a hidden item starts blinking its icon, briefly show its section so you see it. Thaw tells a blink apart from a clock or a battery percentage by whether the icon keeps returning to a state it already showed. It shows the section rather than moving the item, and the usual rehide puts it back."
+            "state" : "translated",
+            "value" : "当隐藏项目开始闪烁图标时，短暂展示其所在分区以便您查阅。Thaw 通过图标是否交替返回既有状态来区分闪烁与时钟/电量更新。它仅展示分区而非移动项目，通常在超时后会自动重新隐藏。"
           }
         },
         "zh-Hant" : {
@@ -26991,8 +26985,8 @@
         },
         "zh-Hans" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "While this trigger is on, it controls its target's section and your saved layout no longer applies to it."
+            "state" : "translated",
+            "value" : "当此触发器处于启用状态时，它将接管目标所在的分区，您保存的布局将不再对其生效。"
           }
         },
         "zh-Hant" : {
@@ -27592,8 +27586,8 @@
         },
         "zh-Hans" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Without Screen Recording, menu bar items appear as their app's icon rather than a live preview. You can still arrange them."
+            "state" : "translated",
+            "value" : "在未授予屏幕录制权限时，菜单栏项目将显示为其对应的应用程序图标而非实时预览。您依然可以排列它们。"
           }
         },
         "zh-Hant" : {
@@ -28067,8 +28061,8 @@
         },
         "zh-Hans" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Zen mode is off"
+            "state" : "translated",
+            "value" : "专注模式已关闭"
           }
         },
         "zh-Hant" : {
@@ -28185,8 +28179,8 @@
         },
         "zh-Hans" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Watched item"
+            "state" : "translated",
+            "value" : "监控项目"
           }
         },
         "zh-Hant" : {
@@ -28541,8 +28535,8 @@
         },
         "zh-Hans" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Use Current Appearance for This Space"
+            "state" : "translated",
+            "value" : "对此操作空间使用当前外观"
           }
         },
         "zh-Hant" : {
@@ -29372,8 +29366,8 @@
         },
         "zh-Hans" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Use %@ in a different language than the system. Takes effect after a relaunch."
+            "state" : "translated",
+            "value" : "使用不同于系统的语言运行 %@。重启后生效。"
           }
         },
         "zh-Hant" : {
@@ -29491,8 +29485,8 @@
         },
         "zh-Hans" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Use a separate appearance"
+            "state" : "translated",
+            "value" : "使用独立外观"
           }
         },
         "zh-Hant" : {
@@ -29609,8 +29603,8 @@
         },
         "zh-Hans" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Use Current Location"
+            "state" : "translated",
+            "value" : "使用当前位置"
           }
         },
         "zh-Hant" : {
@@ -30914,8 +30908,8 @@
         },
         "zh-Hans" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "The report retains installed-app identities, menu-item titles and status text, and display/menu-bar geometry for debugging. It attempts to redact other potentially sensitive information, but redaction cannot be guaranteed. Review the report before sharing it."
+            "state" : "translated",
+            "value" : "报告保留已安装应用的标识、菜单项标题与状态文本，以及显示器/菜单栏尺寸信息以供调试。程序会尽力脱敏其他潜在敏感信息，但无法完全保证。分享前请先检查报告内容。"
           }
         },
         "zh-Hant" : {
@@ -31033,8 +31027,8 @@
         },
         "zh-Hans" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Screen Recording is off, so %@ reads nothing."
+            "state" : "translated",
+            "value" : "屏幕录制权限未开启，因此 %@ 未获取任何图像。"
           }
         },
         "zh-Hant" : {
@@ -31152,8 +31146,8 @@
         },
         "zh-Hans" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Show hidden items on"
+            "state" : "translated",
+            "value" : "显示隐藏项目方式："
           }
         },
         "zh-Hant" : {
@@ -31389,8 +31383,8 @@
         },
         "zh-Hans" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Show All Off in menu bar dropdown"
+            "state" : "translated",
+            "value" : "在菜单栏下拉项中显示“全部关闭”"
           }
         },
         "zh-Hant" : {
@@ -31865,8 +31859,8 @@
         },
         "zh-Hans" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Show app icons instead of live previews"
+            "state" : "translated",
+            "value" : "显示应用图标代替实时预览"
           }
         },
         "zh-Hant" : {
@@ -32102,8 +32096,8 @@
         },
         "zh-Hans" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Show hidden menu bar items by clicking, hovering, or scrolling in an empty area of the menu bar."
+            "state" : "translated",
+            "value" : "通过在菜单栏空白区域点击、悬停或滚动来显示隐藏的菜单栏项目。"
           }
         },
         "zh-Hant" : {
@@ -32347,7 +32341,7 @@
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "在该显示器的菜单栏下方，以独立菜单栏显示隐藏的项目。"
+            "value" : "Show hidden menu bar items in a separate bar below the menu bar."
           }
         },
         "zh-Hant" : {
@@ -32583,8 +32577,8 @@
         },
         "zh-Hans" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Show in"
+            "state" : "translated",
+            "value" : "显示于"
           }
         },
         "zh-Hant" : {
@@ -34006,8 +34000,8 @@
         },
         "zh-Hans" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Scroll"
+            "state" : "translated",
+            "value" : "滚动"
           }
         },
         "zh-Hant" : {
@@ -34720,8 +34714,8 @@
         },
         "zh-Hans" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Second item"
+            "state" : "translated",
+            "value" : "第二项"
           }
         },
         "zh-Hant" : {
@@ -35312,8 +35306,8 @@
         },
         "zh-Hans" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Settings"
+            "state" : "translated",
+            "value" : "设置"
           }
         },
         "zh-Hant" : {
@@ -35548,8 +35542,8 @@
         },
         "zh-Hans" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Settings were reset to defaults."
+            "state" : "translated",
+            "value" : "设置已重置为默认值。"
           }
         },
         "zh-Hant" : {
@@ -36498,8 +36492,8 @@
         },
         "zh-Hans" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Surface hidden items that ask for attention"
+            "state" : "translated",
+            "value" : "浮现请求关注的隐藏项目"
           }
         },
         "zh-Hant" : {
@@ -36734,8 +36728,8 @@
         },
         "zh-Hans" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "System Default"
+            "state" : "translated",
+            "value" : "系统默认"
           }
         },
         "zh-Hant" : {
@@ -36971,8 +36965,8 @@
         },
         "zh-Hans" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Thaw reads a band across the top of your display — the menu bar and its background. That band can contain the frontmost app's menus."
+            "state" : "translated",
+            "value" : "Thaw 会读取屏幕顶部的一条区域——即菜单栏及其背景。该区域可能包含最前端应用程序的文本菜单。"
           }
         },
         "zh-Hant" : {
@@ -37803,8 +37797,8 @@
         },
         "zh-Hans" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "The %@ section is collapsed, so its divider is offscreen. Open the section and try dragging the item again."
+            "state" : "translated",
+            "value" : "%@ 分区已折叠，因此其分隔符在屏幕外。请先展开该分区，再尝试拖动项目。"
           }
         },
         "zh-Hant" : {
@@ -37922,8 +37916,8 @@
         },
         "zh-Hans" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "The active Space is still settling. Switch away and back to assign a profile."
+            "state" : "translated",
+            "value" : "当前操作空间仍在切换过渡中。请切出并切回以分配配置。"
           }
         },
         "zh-Hant" : {
@@ -38278,8 +38272,8 @@
         },
         "zh-Hans" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "The capture returned nothing for this display."
+            "state" : "translated",
+            "value" : "此显示器未返回任何捕获图像。"
           }
         },
         "zh-Hant" : {
@@ -38516,8 +38510,8 @@
         },
         "zh-Hans" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Style the %@ Bar on its own instead of matching the menu bar."
+            "state" : "translated",
+            "value" : "独立设置 %@ 工具栏的样式，而不与菜单栏保持一致。"
           }
         },
         "zh-Hant" : {
@@ -38635,8 +38629,8 @@
         },
         "zh-Hans" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Show setting descriptions"
+            "state" : "translated",
+            "value" : "显示设置说明文字"
           }
         },
         "zh-Hant" : {
@@ -38753,8 +38747,8 @@
         },
         "zh-Hans" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Spacer"
+            "state" : "translated",
+            "value" : "占位间隔"
           }
         },
         "zh-Hant" : {
@@ -39109,8 +39103,8 @@
         },
         "zh-Hans" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Shows only the essential settings. All features keep working and keep their configuration."
+            "state" : "translated",
+            "value" : "仅展示核心基础设置。所有功能仍保持正常运作与既有配置。"
           }
         },
         "zh-Hant" : {
@@ -39346,8 +39340,8 @@
         },
         "zh-Hans" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Simple Mode"
+            "state" : "translated",
+            "value" : "精简模式"
           }
         },
         "zh-Hant" : {
@@ -39703,8 +39697,8 @@
         },
         "zh-Hans" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Space"
+            "state" : "translated",
+            "value" : "操作空间"
           }
         },
         "zh-Hant" : {
@@ -39821,8 +39815,8 @@
         },
         "zh-Hans" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Spacer color"
+            "state" : "translated",
+            "value" : "占位间隔颜色"
           }
         },
         "zh-Hant" : {
@@ -40058,8 +40052,8 @@
         },
         "zh-Hans" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Spacers"
+            "state" : "translated",
+            "value" : "占位间隔"
           }
         },
         "zh-Hant" : {
@@ -40176,8 +40170,8 @@
         },
         "zh-Hans" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Spaces with overrides: %lld"
+            "state" : "translated",
+            "value" : "单独配置的操作空间：%lld 个"
           }
         },
         "zh-Hant" : {
@@ -40769,8 +40763,8 @@
         },
         "zh-Hans" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Start a new log file once the current one reaches this size."
+            "state" : "translated",
+            "value" : "当当前日志文件达到此大小时新建日志文件。"
           }
         },
         "zh-Hant" : {
@@ -41006,8 +41000,8 @@
         },
         "zh-Hans" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Maximum log file size in megabytes"
+            "state" : "translated",
+            "value" : "最大日志文件大小（MB）"
           }
         },
         "zh-Hant" : {
@@ -41483,15 +41477,9 @@
           }
         },
         "zh-Hans" : {
-          "variations" : {
-            "plural" : {
-              "other" : {
-                "stringUnit" : {
-                  "state" : "new",
-                  "value" : "[%lld items]"
-                }
-              }
-            }
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "[%lld 项]"
           }
         },
         "zh-Hant" : {
@@ -41852,8 +41840,8 @@
         },
         "zh-Hans" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Battery level"
+            "state" : "translated",
+            "value" : "电池电量"
           }
         },
         "zh-Hant" : {
@@ -42089,8 +42077,8 @@
         },
         "zh-Hans" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Behavior"
+            "state" : "translated",
+            "value" : "行为"
           }
         },
         "zh-Hant" : {
@@ -42804,7 +42792,7 @@
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Broadcast"
+            "value" : "广播"
           }
         },
         "zh-Hant" : {
@@ -43040,8 +43028,8 @@
         },
         "zh-Hans" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Cache cleared. Quitting…"
+            "state" : "translated",
+            "value" : "缓存已清除。正在退出…"
           }
         },
         "zh-Hant" : {
@@ -43515,8 +43503,8 @@
         },
         "zh-Hans" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Capture One Frame"
+            "state" : "translated",
+            "value" : "捕获一帧"
           }
         },
         "zh-Hant" : {
@@ -43633,8 +43621,8 @@
         },
         "zh-Hans" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Capture Reference"
+            "state" : "translated",
+            "value" : "捕获参考图像"
           }
         },
         "zh-Hant" : {
@@ -43989,8 +43977,8 @@
         },
         "zh-Hans" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Capturing…"
+            "state" : "translated",
+            "value" : "正在捕获…"
           }
         },
         "zh-Hant" : {
@@ -44466,7 +44454,7 @@
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "排列菜单栏项目。"
+            "value" : "排列菜单栏项目"
           }
         },
         "zh-Hant" : {
@@ -44584,7 +44572,7 @@
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "排列方向"
+            "value" : "排列方式"
           }
         },
         "zh-Hant" : {
@@ -44939,8 +44927,8 @@
         },
         "zh-Hans" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Assigns a profile to the Space you are currently on. Spaces have no system name, so each assignment is labelled by its Mission Control position at the time you made it. A Space assignment takes precedence over a display assignment; a Focus Filter still overrides both."
+            "state" : "translated",
+            "value" : "为当前所在的操作空间分配配置。由于操作空间没有系统名称，每个分配均按设置时的调度中心 (Mission Control) 位置标记。空间配置优先于显示器配置；专注模式过滤条件仍优先于两者。"
           }
         },
         "zh-Hant" : {
@@ -45415,8 +45403,8 @@
         },
         "zh-Hans" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "automatic"
+            "state" : "translated",
+            "value" : "自动"
           }
         },
         "zh-Hant" : {
@@ -45533,8 +45521,8 @@
         },
         "zh-Hans" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Automatic rehiding is off"
+            "state" : "translated",
+            "value" : "自动隐藏已关闭"
           }
         },
         "zh-Hant" : {
@@ -45651,8 +45639,8 @@
         },
         "zh-Hans" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Automatic rehiding is on"
+            "state" : "translated",
+            "value" : "自动隐藏已开启"
           }
         },
         "zh-Hant" : {
@@ -46245,8 +46233,8 @@
         },
         "zh-Hans" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Automatically reveal a menu bar item while a condition is met, then hide it again when the condition no longer applies. Enable additional condition types in the Developer pane."
+            "state" : "translated",
+            "value" : "当满足条件时自动显示菜单栏项目，当条件不再适用时重新将其隐藏。可以在开发者面板中启用更多条件类型。"
           }
         },
         "zh-Hant" : {
@@ -46363,8 +46351,8 @@
         },
         "zh-Hans" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Captures the icon now as a reference, then reveals the item when the icon later changes from it. Requires screen recording permission."
+            "state" : "translated",
+            "value" : "现在将图标捕获为基准参考，后续当图标发生变化时显示该项目。此功能需要屏幕录制权限。"
           }
         },
         "zh-Hant" : {
@@ -46839,15 +46827,9 @@
           }
         },
         "zh-Hans" : {
-          "variations" : {
-            "plural" : {
-              "other" : {
-                "stringUnit" : {
-                  "state" : "translated",
-                  "value" : "%lld 个应用"
-                }
-              }
-            }
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "应用数 %lld"
           }
         },
         "zh-Hant" : {
@@ -46970,8 +46952,8 @@
         },
         "zh-Hans" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Condition"
+            "state" : "translated",
+            "value" : "条件"
           }
         },
         "zh-Hant" : {
@@ -47088,8 +47070,8 @@
         },
         "zh-Hans" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Click"
+            "state" : "translated",
+            "value" : "点击"
           }
         },
         "zh-Hant" : {
@@ -47326,8 +47308,8 @@
         },
         "zh-Hans" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Click an item to open it. Hidden items are temporarily revealed."
+            "state" : "translated",
+            "value" : "点击某个项目以打开它。隐藏的项目将临时展开显示。"
           }
         },
         "zh-Hant" : {
@@ -47681,8 +47663,8 @@
         },
         "zh-Hans" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Collapse trigger"
+            "state" : "translated",
+            "value" : "折叠触发器"
           }
         },
         "zh-Hant" : {
@@ -47918,8 +47900,8 @@
         },
         "zh-Hans" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Conditional Triggers"
+            "state" : "translated",
+            "value" : "条件触发器"
           }
         },
         "zh-Hant" : {
@@ -48989,8 +48971,8 @@
         },
         "zh-Hans" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Control Center preferences were reset."
+            "state" : "translated",
+            "value" : "控制中心偏好设置已重置。"
           }
         },
         "zh-Hant" : {
@@ -49225,8 +49207,8 @@
         },
         "zh-Hans" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Clear Accessibility and Screen Recording decisions for %@, then quit so you can re-grant them on next launch."
+            "state" : "translated",
+            "value" : "清除 %@ 的“辅助功能”和“屏幕录制”授权记录并退出，以便下次启动时重新授权。"
           }
         },
         "zh-Hant" : {
@@ -50533,8 +50515,8 @@
         },
         "zh-Hans" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Choose a device…"
+            "state" : "translated",
+            "value" : "选择设备…"
           }
         },
         "zh-Hant" : {
@@ -50770,8 +50752,8 @@
         },
         "zh-Hans" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Choose an app…"
+            "state" : "translated",
+            "value" : "选择应用…"
           }
         },
         "zh-Hant" : {
@@ -50888,8 +50870,8 @@
         },
         "zh-Hans" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Choose an item"
+            "state" : "translated",
+            "value" : "选择项目"
           }
         },
         "zh-Hant" : {
@@ -51006,8 +50988,8 @@
         },
         "zh-Hans" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Choose an item…"
+            "state" : "translated",
+            "value" : "选择项目…"
           }
         },
         "zh-Hant" : {
@@ -51482,7 +51464,7 @@
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "选择要在搜索面板中显示的菜单栏区域以及它们的显示顺序。使用上下键调整顺序，关闭某个部分即可将其中的项目从搜索结果中排除。"
+            "value" : "Choose which menu bar sections appear in the search panel, and in what order. Use the up and down buttons to reorder, and turn off a section to exclude its items from search results."
           }
         },
         "zh-Hant" : {
@@ -51599,8 +51581,8 @@
         },
         "zh-Hans" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Choose…"
+            "state" : "translated",
+            "value" : "选择…"
           }
         },
         "zh-Hant" : {
@@ -51954,8 +51936,8 @@
         },
         "zh-Hans" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Controlled by a trigger"
+            "state" : "translated",
+            "value" : "由触发器控制"
           }
         },
         "zh-Hant" : {
@@ -52191,8 +52173,8 @@
         },
         "zh-Hans" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "%@ spacer"
+            "state" : "translated",
+            "value" : "%@ 占位间隔"
           }
         },
         "zh-Hant" : {
@@ -52309,8 +52291,8 @@
         },
         "zh-Hans" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "%@ will delete its cache folder and quit. Launch the app again afterward."
+            "state" : "translated",
+            "value" : "%@ 将删除其缓存文件夹并退出。之后请重新打开应用。"
           }
         },
         "zh-Hant" : {
@@ -52546,8 +52528,8 @@
         },
         "zh-Hans" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "%lld m"
+            "state" : "translated",
+            "value" : "%lld 米"
           }
         },
         "zh-Hant" : {
@@ -52782,8 +52764,8 @@
         },
         "zh-Hans" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "A diagnostic report was saved to %@."
+            "state" : "translated",
+            "value" : "诊断报告已保存至 %@。"
           }
         },
         "zh-Hant" : {
@@ -53256,8 +53238,8 @@
         },
         "zh-Hans" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Accessibility and Screen Recording permissions will be cleared for %@. The app will quit so you can grant them again on next launch."
+            "state" : "translated",
+            "value" : "将清除 %@ 的“辅助功能”与“屏幕录制”权限。应用将退出，以便您在下次启动时重新授予。"
           }
         },
         "zh-Hant" : {
@@ -53374,8 +53356,8 @@
         },
         "zh-Hans" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Accessibility is all Simple Mode needs for hiding and arranging; adding Screen Recording draws your real menu bar icons in the layout editor."
+            "state" : "translated",
+            "value" : "精简模式只需辅助功能权限即可隐藏和排列；增加屏幕录制权限可以在布局编辑器中绘制真实的菜单栏图标。"
           }
         },
         "zh-Hant" : {
@@ -53968,8 +53950,8 @@
         },
         "zh-Hans" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Adaptive Gradient"
+            "state" : "translated",
+            "value" : "自适应渐变"
           }
         },
         "zh-Hant" : {
@@ -54443,8 +54425,8 @@
         },
         "zh-Hans" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Add a trigger to reveal a menu bar item when a condition is met."
+            "state" : "translated",
+            "value" : "添加触发器以便在满足条件时展开显示菜单栏项目。"
           }
         },
         "zh-Hant" : {
@@ -54686,8 +54668,8 @@
         },
         "zh-Hans" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "%1$@ — placed by trigger “%2$@”"
+            "state" : "translated",
+            "value" : "%1$@ — 由触发器“%2$@”放置"
           }
         },
         "zh-Hant" : {
@@ -54804,8 +54786,8 @@
         },
         "zh-Hans" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "%@ (not present)"
+            "state" : "translated",
+            "value" : "%@ (不存在)"
           }
         },
         "zh-Hant" : {
@@ -54922,8 +54904,8 @@
         },
         "zh-Hans" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "%@ (not running)"
+            "state" : "translated",
+            "value" : "%@ (未运行)"
           }
         },
         "zh-Hant" : {
@@ -55047,7 +55029,7 @@
         },
         "zh-Hans" : {
           "stringUnit" : {
-            "state" : "new",
+            "state" : "translated",
             "value" : "%1$@ %2$@"
           }
         },
@@ -55172,7 +55154,7 @@
         },
         "zh-Hans" : {
           "stringUnit" : {
-            "state" : "new",
+            "state" : "translated",
             "value" : "%1$@ %2$@ %3$@ %4$@"
           }
         },
@@ -56501,8 +56483,8 @@
         },
         "zh-Hans" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "%1$@ failed with exit status %2$d: %3$@"
+            "state" : "translated",
+            "value" : "%1$@ 执行失败，退出码 %2$d：%3$@"
           }
         },
         "zh-Hant" : {
@@ -56625,8 +56607,8 @@
         },
         "zh-Hans" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "%1$@ failed with exit status %2$d."
+            "state" : "translated",
+            "value" : "%1$@ 执行失败，退出码 %2$d。"
           }
         },
         "zh-Hant" : {
@@ -57575,8 +57557,8 @@
         },
         "zh-Hans" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Another enabled trigger also targets this item. Priority runs top to bottom; the first active trigger wins."
+            "state" : "translated",
+            "value" : "另一个已启用的触发器也以该项目为目标。优先级自上而下，首个生效的触发器将优先执行。"
           }
         },
         "zh-Hant" : {
@@ -57693,8 +57675,8 @@
         },
         "zh-Hans" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "App language"
+            "state" : "translated",
+            "value" : "应用语言"
           }
         },
         "zh-Hant" : {
@@ -57930,8 +57912,8 @@
         },
         "zh-Hans" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Application"
+            "state" : "translated",
+            "value" : "应用程序"
           }
         },
         "zh-Hant" : {
@@ -58288,7 +58270,7 @@
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "始终在该显示器的菜单栏中显示隐藏的项目。"
+            "value" : "Always show hidden menu bar items in the menu bar."
           }
         },
         "zh-Hant" : {
@@ -58526,7 +58508,7 @@
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "是否将全局设置应用到所有显示器？"
+            "value" : "Apply global settings to all displays?"
           }
         },
         "zh-Hant" : {
@@ -58883,7 +58865,7 @@
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "将上面的全局模板应用于所有已连接且之前曾显示过的显示器。新连接的显示器也将以该模板为初始配置。"
+            "value" : "Apply the global template above to every connected and previously-seen display. Newly connected displays are also seeded from this template."
           }
         },
         "zh-Hant" : {
@@ -59240,7 +59222,7 @@
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "点击“应用”可重新启动带有菜单栏项目的应用程序，使其采用新的间距设置。"
+            "value" : "Applying briefly relaunches apps with menu bar items so they pick up the new spacing."
           }
         },
         "zh-Hant" : {
@@ -59595,8 +59577,8 @@
         },
         "zh-Hans" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Add Condition"
+            "state" : "translated",
+            "value" : "添加条件"
           }
         },
         "zh-Hant" : {
@@ -59713,8 +59695,8 @@
         },
         "zh-Hans" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "All Trigger Features Off"
+            "state" : "translated",
+            "value" : "已关闭所有触发器特性"
           }
         },
         "zh-Hant" : {
@@ -59831,8 +59813,8 @@
         },
         "zh-Hans" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Add Spacer"
+            "state" : "translated",
+            "value" : "添加占位间隔"
           }
         },
         "zh-Hant" : {
@@ -59949,8 +59931,8 @@
         },
         "zh-Hans" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Add Trigger"
+            "state" : "translated",
+            "value" : "添加触发器"
           }
         },
         "zh-Hant" : {
@@ -60067,8 +60049,8 @@
         },
         "zh-Hans" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Adds the emergency trigger-feature shutoff to the three-dot menu. Keep this off unless a trigger source is disrupting normal computer use."
+            "state" : "translated",
+            "value" : "在更多操作菜单中添加紧急关闭触发器特性的选项。除非某个触发器源严重干扰正常电脑使用，否则请保持关闭。"
           }
         },
         "zh-Hant" : {
@@ -60540,8 +60522,8 @@
         },
         "zh-Hans" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "All Off"
+            "state" : "translated",
+            "value" : "全部关闭"
           }
         },
         "zh-Hant" : {
@@ -61497,8 +61479,8 @@
         },
         "zh-Hans" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Also move"
+            "state" : "translated",
+            "value" : "同时移动"
           }
         },
         "zh-Hant" : {
@@ -61615,8 +61597,8 @@
         },
         "zh-Hans" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Also move another item"
+            "state" : "translated",
+            "value" : "同时移动另一项目"
           }
         },
         "zh-Hant" : {
@@ -61733,8 +61715,8 @@
         },
         "zh-Hans" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Also start a new log file once the current one has been open for an hour or a day. The size limit still applies."
+            "state" : "translated",
+            "value" : "当当前日志开启达一小时或一天后开启新日志文件。大小限制依然有效。"
           }
         },
         "zh-Hant" : {
@@ -61969,8 +61951,8 @@
         },
         "zh-Hans" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Control Center will quit and its preference files will be deleted. macOS usually relaunches it automatically."
+            "state" : "translated",
+            "value" : "控制中心将退出且其偏好设置文件将被删除。macOS 通常会自动重启控制中心。"
           }
         },
         "zh-Hant" : {
@@ -62205,8 +62187,8 @@
         },
         "zh-Hans" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Match"
+            "state" : "translated",
+            "value" : "匹配"
           }
         },
         "zh-Hant" : {
@@ -62798,8 +62780,8 @@
         },
         "zh-Hans" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Hide the item while the condition is met (invert)"
+            "state" : "translated",
+            "value" : "当满足条件时隐藏该项目 (反选)"
           }
         },
         "zh-Hant" : {
@@ -63512,8 +63494,8 @@
         },
         "zh-Hans" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Hourly"
+            "state" : "translated",
+            "value" : "每小时"
           }
         },
         "zh-Hant" : {
@@ -63631,8 +63613,8 @@
         },
         "zh-Hans" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Hover"
+            "state" : "translated",
+            "value" : "悬停"
           }
         },
         "zh-Hant" : {
@@ -63988,8 +63970,8 @@
         },
         "zh-Hans" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "How often animated icons refresh in the visible section, Hidden Thaw Bar, Search, and Layout. Always Hidden is capped at 1 fps. Higher values use more CPU."
+            "state" : "translated",
+            "value" : "动画图标在可见分区、隐藏栏、搜索与布局中的刷新频率。“始终隐藏”上限为 1 fps。数值越高占用 CPU 越多。"
           }
         },
         "zh-Hant" : {
@@ -64108,7 +64090,7 @@
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Ice Cube"
+            "value" : "冰块图标"
           }
         },
         "zh-Hant" : {
@@ -64462,8 +64444,8 @@
         },
         "zh-Hans" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Hide every concealable section for as long as a display is mirrored or your screen is being shared, then put it back. macOS offers no way to see that another app is recording the screen, so recordings are not covered."
+            "state" : "translated",
+            "value" : "当屏幕处于镜像或正在共享时，隐藏所有可折叠分区，结束后恢复。macOS 未提供检测其他应用屏幕录制状态的接口，因此不含录屏场景。"
           }
         },
         "zh-Hant" : {
@@ -64942,8 +64924,8 @@
         },
         "zh-Hans" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "From"
+            "state" : "translated",
+            "value" : "从"
           }
         },
         "zh-Hant" : {
@@ -65180,8 +65162,8 @@
         },
         "zh-Hans" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Full Screen Space %lld"
+            "state" : "translated",
+            "value" : "全屏空间 %lld"
           }
         },
         "zh-Hant" : {
@@ -66608,8 +66590,8 @@
         },
         "zh-Hans" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Group name"
+            "state" : "translated",
+            "value" : "分组名称"
           }
         },
         "zh-Hant" : {
@@ -66727,8 +66709,8 @@
         },
         "zh-Hans" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Grouped items stay adjacent: drag any member and the whole group moves with it."
+            "state" : "translated",
+            "value" : "分组项目始终保持相邻：拖动任意成员，整个分组将一同移动。"
           }
         },
         "zh-Hant" : {
@@ -66846,8 +66828,8 @@
         },
         "zh-Hans" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Groups always move together: drag any member in the bars above and the whole group follows."
+            "state" : "translated",
+            "value" : "分组项目始终一起移动：在上方的栏中拖动任意成员，整个分组都会随之移动。"
           }
         },
         "zh-Hant" : {
@@ -66964,8 +66946,8 @@
         },
         "zh-Hans" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Help translate %@"
+            "state" : "translated",
+            "value" : "协助翻译 %@"
           }
         },
         "zh-Hant" : {
@@ -68508,8 +68490,8 @@
         },
         "zh-Hans" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Language"
+            "state" : "translated",
+            "value" : "语言"
           }
         },
         "zh-Hant" : {
@@ -68627,8 +68609,8 @@
         },
         "zh-Hans" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Live previews are off"
+            "state" : "translated",
+            "value" : "实时预览已关闭"
           }
         },
         "zh-Hant" : {
@@ -68745,8 +68727,8 @@
         },
         "zh-Hans" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Live System State"
+            "state" : "translated",
+            "value" : "实时系统状态"
           }
         },
         "zh-Hant" : {
@@ -71001,8 +70983,8 @@
         },
         "zh-Hans" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Inserts an empty gap item into the menu bar. Position it like any other item — hold ⌘ Command and drag it in the menu bar."
+            "state" : "translated",
+            "value" : "在菜单栏中插入一个空白占位项目。按住 ⌘ Command 键拖动即可像普通项目一样在菜单栏中放置它。"
           }
         },
         "zh-Hant" : {
@@ -71119,8 +71101,8 @@
         },
         "zh-Hans" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Keep logs for (days)"
+            "state" : "translated",
+            "value" : "日志保留天数"
           }
         },
         "zh-Hant" : {
@@ -71355,8 +71337,8 @@
         },
         "zh-Hans" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Item groups"
+            "state" : "translated",
+            "value" : "项目分组"
           }
         },
         "zh-Hant" : {
@@ -71474,8 +71456,8 @@
         },
         "zh-Hans" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Item icons are cropped out of this band to draw the layout editor, the Bar, and Search."
+            "state" : "translated",
+            "value" : "从该区域裁剪出各项目的图标，用于绘制布局编辑器、工具栏和搜索界面。"
           }
         },
         "zh-Hant" : {
@@ -72192,8 +72174,8 @@
         },
         "zh-Hans" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Frame bounds: x=%1$lld, y=%2$lld, %3$lld×%4$lld pt"
+            "state" : "translated",
+            "value" : "视窗范围：x=%1$lld, y=%2$lld, %3$lld×%4$lld pt"
           }
         },
         "zh-Hant" : {
@@ -72787,8 +72769,8 @@
         },
         "zh-Hans" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Desktop %lld"
+            "state" : "translated",
+            "value" : "桌面 %lld"
           }
         },
         "zh-Hant" : {
@@ -73023,8 +73005,8 @@
         },
         "zh-Hans" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Dev Mode Flags"
+            "state" : "translated",
+            "value" : "开发者调试标记"
           }
         },
         "zh-Hant" : {
@@ -73141,8 +73123,8 @@
         },
         "zh-Hans" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Device"
+            "state" : "translated",
+            "value" : "设备"
           }
         },
         "zh-Hant" : {
@@ -73378,8 +73360,8 @@
         },
         "zh-Hans" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Diagnostics and Onboarding are non-destructive. Reset and Troubleshooting can delete preferences, clear the cache, or quit apps."
+            "state" : "translated",
+            "value" : "诊断与新手指引属于无损操作。重置与疑难解答可能会删除偏好设置、清除缓存或退出应用程序。"
           }
         },
         "zh-Hant" : {
@@ -73734,8 +73716,8 @@
         },
         "zh-Hans" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Display"
+            "state" : "translated",
+            "value" : "显示器"
           }
         },
         "zh-Hant" : {
@@ -74685,8 +74667,8 @@
         },
         "zh-Hans" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Delete this trigger"
+            "state" : "translated",
+            "value" : "删除此触发器"
           }
         },
         "zh-Hant" : {
@@ -74803,8 +74785,8 @@
         },
         "zh-Hans" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Delete older log files after this many days, or sooner if more than 50 pile up. The file being written is always kept."
+            "state" : "translated",
+            "value" : "在此天数后删除旧日志文件，若累积超过 50 个将提前清理。当前正在写入的文件始终保留。"
           }
         },
         "zh-Hant" : {
@@ -75278,8 +75260,8 @@
         },
         "zh-Hans" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Couldn't confirm that the group settled into place."
+            "state" : "translated",
+            "value" : "无法确认该分组已放置就位。"
           }
         },
         "zh-Hant" : {
@@ -75868,8 +75850,8 @@
         },
         "zh-Hans" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Couldn't run tool"
+            "state" : "translated",
+            "value" : "无法运行工具"
           }
         },
         "zh-Hant" : {
@@ -75987,8 +75969,8 @@
         },
         "zh-Hans" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Create Group"
+            "state" : "translated",
+            "value" : "创建分组"
           }
         },
         "zh-Hant" : {
@@ -76106,8 +76088,8 @@
         },
         "zh-Hans" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Current Space"
+            "state" : "translated",
+            "value" : "当前操作空间"
           }
         },
         "zh-Hant" : {
@@ -76225,8 +76207,8 @@
         },
         "zh-Hans" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Delete %@'s cache folder, then quit the app."
+            "state" : "translated",
+            "value" : "删除 %@ 的缓存文件夹，然后退出应用。"
           }
         },
         "zh-Hant" : {
@@ -76462,8 +76444,8 @@
         },
         "zh-Hans" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Custom delay"
+            "state" : "translated",
+            "value" : "自定义延迟"
           }
         },
         "zh-Hant" : {
@@ -76700,8 +76682,8 @@
         },
         "zh-Hans" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Daily"
+            "state" : "translated",
+            "value" : "每天"
           }
         },
         "zh-Hant" : {
@@ -76937,8 +76919,8 @@
         },
         "zh-Hans" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Days to keep log files"
+            "state" : "translated",
+            "value" : "日志保留天数"
           }
         },
         "zh-Hant" : {
@@ -77768,8 +77750,8 @@
         },
         "zh-Hans" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Enter zen mode while presenting"
+            "state" : "translated",
+            "value" : "演示时进入专注模式"
           }
         },
         "zh-Hant" : {
@@ -78243,8 +78225,8 @@
         },
         "zh-Hans" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Every saved status-item position will be deleted and the menu bar host will quit, so your whole menu bar arrangement is rebuilt from scratch."
+            "state" : "translated",
+            "value" : "所有保存的状态栏图标位置都将被删除且菜单栏宿主将退出，整个菜单栏布局将从头重建。"
           }
         },
         "zh-Hant" : {
@@ -78480,8 +78462,8 @@
         },
         "zh-Hans" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Expand trigger"
+            "state" : "translated",
+            "value" : "展开触发器"
           }
         },
         "zh-Hant" : {
@@ -78599,8 +78581,8 @@
         },
         "zh-Hans" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Explains what a setting does directly beneath it, like this text."
+            "state" : "translated",
+            "value" : "在设置项正下方显示其功能说明（类似本段文字）。"
           }
         },
         "zh-Hant" : {
@@ -79431,15 +79413,9 @@
           }
         },
         "zh-Hans" : {
-          "variations" : {
-            "plural" : {
-              "other" : {
-                "stringUnit" : {
-                  "state" : "new",
-                  "value" : "Failed to update configuration on [%lld profiles]."
-                }
-              }
-            }
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "未能更新 [%lld 个配置文件] 上的设置。"
           }
         },
         "zh-Hant" : {
@@ -79681,8 +79657,8 @@
         },
         "zh-Hans" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Fill the spacer with a color. Fully transparent renders as an empty gap."
+            "state" : "translated",
+            "value" : "为占位间隔填充颜色。完全透明将呈现为纯空白间隙。"
           }
         },
         "zh-Hant" : {
@@ -79917,8 +79893,8 @@
         },
         "zh-Hans" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "First item"
+            "state" : "translated",
+            "value" : "第一项"
           }
         },
         "zh-Hant" : {
@@ -80630,8 +80606,8 @@
         },
         "zh-Hans" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Drag to change trigger priority"
+            "state" : "translated",
+            "value" : "拖动以调整触发器优先级"
           }
         },
         "zh-Hant" : {
@@ -80749,8 +80725,8 @@
         },
         "zh-Hans" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Draw each menu bar item as its app's icon everywhere %@ shows it. Items whose app cannot be identified keep their live preview."
+            "state" : "translated",
+            "value" : "在 %@ 所有展示区域中将菜单栏项目绘制为其对应的应用图标。无法识别所属应用的项目将保持实时预览。"
           }
         },
         "zh-Hant" : {
@@ -81818,8 +81794,8 @@
         },
         "zh-Hans" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Enable"
+            "state" : "translated",
+            "value" : "启用"
           }
         },
         "zh-Hant" : {
@@ -82055,8 +82031,8 @@
         },
         "zh-Hans" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Enable experimental trigger sources one at a time. Each flag turns on its condition in the Triggers pane and starts its background monitor. Battery and power conditions are always available."
+            "state" : "translated",
+            "value" : "逐一启用实验性触发器源。每个标记都会在“触发器”面板中开启对应条件并启动后台监视。电池和电源条件始终可用。"
           }
         },
         "zh-Hant" : {
@@ -82768,14 +82744,784 @@
         },
         "zh-Hans" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Zen mode is on"
+            "state" : "translated",
+            "value" : "专注模式已开启"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "new",
             "value" : "Zen mode is on"
+          }
+        }
+      }
+    },
+    "Unable to display menu bar items" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "无法显示菜单栏项目"
+          }
+        }
+      }
+    },
+    "How often animated menu bar icons are refreshed in panels. Higher values are smoother but use more CPU." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "面板中动画菜单栏图标的刷新频率。数值越大越流畅，但会增加CPU占用。"
+          }
+        }
+      }
+    },
+    "Failed to update configuration on %lld profile(s)." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "更新 %lld 个配置文件失败。"
+          }
+        }
+      }
+    },
+    "Show hidden menu bar items in a separate bar below the menu bar on this display." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "在该显示器的菜单栏下方，以独立菜单栏显示隐藏的项目。"
+          }
+        }
+      }
+    },
+    "Open %@ Settings" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "打开 %@ 设置"
+          }
+        }
+      }
+    },
+    "Get real-time information about the menu bar." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "获取有关菜单栏的实时信息。"
+          }
+        }
+      }
+    },
+    "Hooks" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Hooks"
+          }
+        }
+      }
+    },
+    "%@ can work in a limited mode without this permission." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ 可以在没有此权限的情况下以受限模式运行。"
+          }
+        }
+      }
+    },
+    "Reset menu bar layout?" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "是否重置菜单栏布局？"
+          }
+        }
+      }
+    },
+    "Settings URI is disabled. External apps cannot read or modify %@ settings." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "设置 URI 已禁用。外部应用无法读取或修改 %@ 设置。"
+          }
+        }
+      }
+    },
+    "Screen recording permissions are required to search menu bar items." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "需要屏幕录制权限才能搜索菜单栏项目。"
+          }
+        }
+      }
+    },
+    "Resets dividers and moves every movable item except the %@ icon to hidden — just like a fresh install." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "重置分隔线，并将除 %@ 图标之外的所有可移动项目移至隐藏状态，跟原版本菜单栏一样。"
+          }
+        }
+      }
+    },
+    "%@ needs your permission to manage the menu bar." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ 需要您的授权以管理菜单栏。"
+          }
+        }
+      }
+    },
+    "Restores divider defaults and moves every movable item except the %@ icon to Hidden. Use this if the layout looks broken or items won’t load." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "恢复分隔线默认设置，并将除 %@ 图标外的所有可移动元素隐藏。如果布局显示异常或元素无法加载，请使用此选项。"
+          }
+        }
+      }
+    },
+    "Development" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "开发版"
+          }
+        }
+      }
+    },
+    "Absolutely no personal information is collected or stored." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "绝不收集或存储任何个人信息。"
+          }
+        }
+      }
+    },
+    "Would you like to import your existing configuration?" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "您想导入现有配置吗？"
+          }
+        }
+      }
+    },
+    "Reset Layout" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "重置布局"
+          }
+        }
+      }
+    },
+    "Icon positions can't be restored." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "无法还原图标位置。"
+          }
+        }
+      }
+    },
+    "Add Application Manually" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "手动添加应用程序"
+          }
+        }
+      }
+    },
+    "Menu bar layout requires screen recording permissions." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "菜单栏布局需要屏幕录制权限。"
+          }
+        }
+      }
+    },
+    "Due to a bug in a previous version of the app, the data for %@'s menu bar sections was corrupted and had to be reset." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "由于早期版本的漏洞，%@ 菜单栏部分数据已损坏，必须重置。"
+          }
+        }
+      }
+    },
+    "Use the faster LCS (Longest Common Subsequence) algorithm for profile sorting on notched displays instead of the full sort. LCS minimises the number of moves but may be less reliable on notched displays with smaller resolutions." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "在刘海屏设备上，对配置排序时使用更快的 LCS（最长公共子序列）算法，而不是完整排序。LCS 可减少元素移动次数，但在分辨率较低的刘海屏设备上可能稳定性较差。"
+          }
+        }
+      }
+    },
+    "%@ needs this to:" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ 需要此权限来："
+          }
+        }
+      }
+    },
+    "Supported Settings" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "支持的设置"
+          }
+        }
+      }
+    },
+    "The %@ Bar requires screen recording permissions." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ Bar 需要屏幕录制权限。"
+          }
+        }
+      }
+    },
+    "Display images of individual menu bar items." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "显示单个菜单栏项目的图像。"
+          }
+        }
+      }
+    },
+    "Maximum number of items per row in the grid layout." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "网格布局中每行的最大条目数。"
+          }
+        }
+      }
+    },
+    "Use LCS sorting on notched displays" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "在刘海屏上使用 LCS 排序"
+          }
+        }
+      }
+    },
+    "We found existing settings from Ice, the original app." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "我们找到了 Ice（原版应用）的设置。"
+          }
+        }
+      }
+    },
+    "Change the menu bar's appearance." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "更改菜单栏的外观。"
+          }
+        }
+      }
+    },
+    "Spaces" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "操作空间"
+          }
+        }
+      }
+    },
+    "App" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "应用"
+          }
+        }
+      }
+    },
+    "Privacy" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "隐私与权限"
+          }
+        }
+      }
+    },
+    "Rules" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "规则"
+          }
+        }
+      }
+    },
+    "Scripts" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "脚本"
+          }
+        }
+      }
+    },
+    "Widgets" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "小组件"
+          }
+        }
+      }
+    },
+    "The Lab" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "实验室"
+          }
+        }
+      }
+    },
+    "Arrange menu bar items" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "排列菜单栏项目"
+          }
+        }
+      }
+    },
+    "Drag items between sections. Move New Items to choose where future items appear." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "在不同分区之间拖动项目。移动“新菜单栏项”以决定未来新增项目的出现位置。"
+          }
+        }
+      }
+    },
+    "Tip: Hold ⌘ Command while dragging an item directly in the menu bar." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "提示：在菜单栏中按住 ⌘ Command 键可直接拖动项目。"
+          }
+        }
+      }
+    },
+    "macOS 27 does not let Thaw hide some system items. This is known, so no bug report is needed." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "macOS 27 限制了 Thaw 隐藏部分系统图标。此为已知系统限制，无需提交错误报告。"
+          }
+        }
+      }
+    },
+    "No item groups yet" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "暂无项目分组"
+          }
+        }
+      }
+    },
+    "Right-click an item in the layout bars above to group it with another. Grouped items always move and hide together." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "在上方布局栏中右键点击项目以将其与其他项目分组。分组后的项目将始终一起移动和隐藏。"
+          }
+        }
+      }
+    },
+    "Who arranges items" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "项目排列规则"
+          }
+        }
+      }
+    },
+    "Manual drag and drop" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "手动拖拽排列"
+          }
+        }
+      }
+    },
+    "You arrange the menu bar yourself by ⌘-dragging items. Thaw only hides and reveals, never moves, and never writes the system's layout table." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "您可以通过按住 ⌘ 拖动图标来自行排列菜单栏。Thaw 仅负责隐藏与显示，从不强制移动项目，也不会写入系统的布局表。"
+          }
+        }
+      }
+    },
+    "This Space" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "当前空间"
+          }
+        }
+      }
+    },
+    "Hide the menu bar in this Space" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "在此空间中隐藏菜单栏"
+          }
+        }
+      }
+    },
+    "Hides the system menu bar only while this Space is showing. Other Spaces keep their current behavior." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "仅在当前空间处于活动状态时隐藏系统菜单栏。其他空间保持既有行为。"
+          }
+        }
+      }
+    },
+    "Disable hover reveal in this Space" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "在此空间中停用悬停展开"
+          }
+        }
+      }
+    },
+    "Stops a hidden menu bar from sliding down when the pointer reaches the top edge of the screen in this Space." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "在此空间中，当鼠标指针移至屏幕顶部边缘时，阻止隐藏的菜单栏滑出。"
+          }
+        }
+      }
+    },
+    "Reveal strip height" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "触发区域高度"
+          }
+        }
+      }
+    },
+    "How tall the invisible strip at the top of the screen is before a hidden menu bar reveals itself. macOS does not expose this control anywhere. Thaw cannot read the current value back, so this starts at a neutral default rather than at your system's setting." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "在隐藏菜单栏自动展开前，屏幕顶部不可见触发区域的高度。macOS 并未公开此控制项，Thaw 无法读取系统当前值，因此此处以默认中性值显示而非系统配置。"
+          }
+        }
+      }
+    },
+    "Drops every override Thaw set for this Space and returns it to the system default behavior." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "清除 Thaw 为此空间设置的所有单独配置，并恢复系统默认行为。"
+          }
+        }
+      }
+    },
+    "Reset This Space" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "重置当前空间"
+          }
+        }
+      }
+    },
+    "All Spaces" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "所有空间"
+          }
+        }
+      }
+    },
+    "Use the fullscreen menu bar appearance everywhere" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "在所有位置使用全屏菜单栏外观"
+          }
+        }
+      }
+    },
+    "Gives ordinary desktop Spaces the menu bar appearance macOS normally reserves for fullscreen apps." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "让普通桌面空间具有 macOS 通常专用于全屏应用时的菜单栏外观。"
+          }
+        }
+      }
+    },
+    "Hide the menu bar in every Space" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "在每一个空间中隐藏菜单栏"
+          }
+        }
+      }
+    },
+    "Hides the system menu bar in every context, fullscreen included. This is the blunt instrument — prefer the per-Space control above when only one Space needs it." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "在所有场景（包括全屏模式）下隐藏系统菜单栏。此为全局强制选项——若仅单个空间需要，建议优先使用上方的单空间控制。"
+          }
+        }
+      }
+    },
+    "These controls last for this session" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "这些控制仅在本次会话中生效"
+          }
+        }
+      }
+    },
+    "macOS gives Thaw this state for as long as it is running. Everything on this page reverts when Thaw quits, and none of it is saved to your settings or profiles." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "macOS 仅在 Thaw 运行期间保留此状态。当 Thaw 退出时，本页面的所有更改均会还原，且不会保存至您的设置或配置文件中。"
+          }
+        }
+      }
+    },
+    "Discuss in The Lab" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "前往实验室参与讨论"
+          }
+        }
+      }
+    },
+    "Fetching release notes is off in Privacy, so this is the last copy fetched." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "“隐私”中已关闭获取发布说明功能，因此此处显示为最后一次获取的副本。"
+          }
+        }
+      }
+    },
+    "Fetching release notes is off in Privacy. Turn on" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "“隐私”中已关闭获取发布说明功能。开启"
+          }
+        }
+      }
+    },
+    "Privacy questions are welcome" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "欢迎提出隐私相关疑问"
+          }
+        }
+      }
+    },
+    "Nothing could be written back. Grant Full Disk Access on the Privacy page and try again." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "未能写回数据。请在“隐私”页面授予完全磁盘访问权限后重试。"
+          }
+        }
+      }
+    },
+    "Open System Settings, go to Privacy & Security" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "打开“系统设置”，前往“隐私与安全性”"
+          }
+        }
+      }
+    },
+    "The menu bar could not be hidden across all Spaces." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "无法在所有操作空间中隐藏菜单栏。"
           }
         }
       }
