@@ -4,6 +4,7 @@ Check here before [filing a bug](https://github.com/thaw-app/Thaw/issues/new/cho
 
 - [Items end up in the wrong section](#items-end-up-in-the-wrong-section)
 - [Thaw removed an item](#thaw-removed-an-item)
+- [Thaw's own icon is missing: how to open Settings](#thaws-own-icon-is-missing-how-to-open-settings)
 - [Layout changes on its own](#layout-changes-on-its-own)
 - [How do I solve the `Thaw cannot arrange menu bar items in automatically hidden menu bars` error?](#how-do-i-solve-the-thaw-cannot-arrange-menu-bar-items-in-automatically-hidden-menu-bars-error)
 - [An item is visible in the menu bar but missing from Layout settings](#an-item-is-visible-in-the-menu-bar-but-missing-from-layout-settings)
@@ -42,6 +43,24 @@ Fix:
 
 1. **Option + click** the Thaw icon to reveal the always-hidden section (or double-click an empty area of the menu bar if you enabled that in **Settings → Advanced**).
 2. **⌘ Command + drag** the item into a different section.
+
+## Thaw's own icon is missing: how to open Settings
+
+If Thaw's own menu bar icon is missing, open its Settings directly from Terminal:
+
+```sh
+open "thaw://open-settings"
+```
+
+This is an existing [action URL](docs/URI_SCHEMES.md#supported-actions); it does not require enabling Settings URI automation or authorizing a caller to change settings.
+
+Once Settings opens:
+
+1. Check **General → Show Thaw icon**.
+2. On macOS 27, check **System Settings → Menu Bar → Allow in Menu Bar → Thaw** as well. The app's icon preference and macOS's permission to show its items are separate controls.
+3. If both are enabled and the icon is still missing, follow [Before you file a bug](#before-you-file-a-bug). Include your Thaw and macOS versions, installation path, and which displays are affected. Note separately whether Settings opens, Layout shows items, and hidden items can be revealed.
+
+Opening Settings restores access to the controls; it does not establish that the menu bar problem is fixed. Related report: [#1135](https://github.com/thaw-app/Thaw/issues/1135).
 
 ## Layout changes on its own
 
