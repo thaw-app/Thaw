@@ -317,14 +317,21 @@ final class LayoutBarContainer: NSView {
             arrangedViews.removeAll()
             return
         }
+        // Live Activities and other transient Control Center slots are not
+        // stable menu bar items: macOS may expose them with a temporary
+        // Control Center identity, and it refuses attempts to arrange them.
+        // Do not present those slots as draggable controls in the editor.
+        // A regular hosted app item appears here once source-PID resolution
+        // gives it a stable, non-Control-Center identity.
+        let eligibleItems = items.filter(Self.shouldRepresentInLayout)
         // Thumbnail refreshes below can trigger an immediate size-only layout,
         // which normally resets this flag. Preserve the caller's animation
         // choice for the actual ordered reconciliation that follows.
         let shouldAnimateReconciledLayout = shouldAnimateNextLayoutPass
         var newViews = [LayoutBarArrangedView]()
-        let itemIdentifiers = items.map(\.uniqueIdentifier)
+        let itemIdentifiers = eligibleItems.map(\.uniqueIdentifier)
         let badgeIndex = appState.itemManager.newItemsBadgeIndex(in: section, itemIdentifiers: itemIdentifiers)
-        for item in items {
+        for item in eligibleItems {
             if let existingView = arrangedViews.lazy
                 .compactMap({ $0 as? LayoutBarItemView })
                 .first(where: { Self.canReuseItemView(representing: $0.item, for: item) })
@@ -356,6 +363,12 @@ final class LayoutBarContainer: NSView {
         }
         shouldAnimateNextLayoutPass = shouldAnimateReconciledLayout
         arrangedViews = newViews
+    }
+
+    /// Whether an observed item represents a durable item the layout editor
+    /// can offer for arrangement.
+    static nonisolated func shouldRepresentInLayout(_ item: MenuBarItem) -> Bool {
+        !item.isTransientControlCenterItem && !item.hasProvisionalIdentity
     }
 
     /// Whether an existing view still represents the same live status-item

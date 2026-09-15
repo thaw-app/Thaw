@@ -63,6 +63,45 @@ struct LayoutBarContainerTests {
     }
 }
 
+@Suite("Layout editor item eligibility")
+struct LayoutBarItemEligibilityTests {
+    @Test("A mirrored Live Activity is omitted after source resolution")
+    func resolvedLiveActivityIsOmitted() {
+        let item = MenuBarItem.fixture(
+            tag: MenuBarItemTag(namespace: .controlCenter, title: "Item-16"),
+            windowID: 35_774,
+            sourcePID: 9_001
+        )
+
+        #expect(item.isTransientControlCenterItem)
+        #expect(!LayoutBarContainer.shouldRepresentInLayout(item))
+    }
+
+    @Test("An unresolved Control Center slot is omitted while its identity is provisional")
+    func unresolvedControlCenterSlotIsOmitted() {
+        let item = MenuBarItem.fixture(
+            tag: MenuBarItemTag(namespace: .controlCenter, title: "Item-16"),
+            windowID: 35_774,
+            sourcePID: nil,
+            ownerPID: 943
+        )
+
+        #expect(item.hasProvisionalIdentity)
+        #expect(!LayoutBarContainer.shouldRepresentInLayout(item))
+    }
+
+    @Test("A durable app item remains available for arrangement")
+    func durableAppItemRemainsVisible() {
+        let item = MenuBarItem.fixture(
+            tag: .appItem(bundleID: "com.example.weather", title: "Item-0"),
+            windowID: 4_200,
+            sourcePID: 9_002
+        )
+
+        #expect(LayoutBarContainer.shouldRepresentInLayout(item))
+    }
+}
+
 @Suite("Layout item activation")
 struct LayoutBarItemActivationTests {
     @Test("A left click released inside the icon activates its menu bar item")
