@@ -55,6 +55,7 @@ private let booleanKeys: [String] = [
     "showOnScroll",
     "useIceBarOnlyOnNotchedDisplay",
     "hideApplicationMenus",
+    "hideDockIconWhenToggling",
     "enableAlwaysHiddenSection",
     "useOptionClickToShowAlwaysHiddenSection",
     "useDoubleClickToShowAlwaysHiddenSection",
@@ -161,7 +162,7 @@ private let globalReadableKeys: [String] = globalBooleanKeys + doubleKeys + enum
 /// starts from an empty whitelist.
 @MainActor
 @Suite("Settings URI handler residue", .serialized)
-struct SettingsURIHandlerCoverageTests {
+enum SettingsURIHandlerCoverageTests {
     // MARK: - Key table completeness
 
     @MainActor

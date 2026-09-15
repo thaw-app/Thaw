@@ -172,6 +172,7 @@ nonisolated extension Defaults {
         static let simpleMode = false
         static let autoZenWhileSharingScreen = false
         static let showSettingDescriptions = true
+        static let hideDockIconWhenToggling = false
         static let rehideStrategy: RehideStrategy = .smart
         static let rehideInterval: TimeInterval = 15
 
@@ -270,6 +271,7 @@ nonisolated extension Defaults {
         case simpleMode = "SimpleMode"
         case showSettingDescriptions = "ShowSettingDescriptions"
         case autoZenWhileSharingScreen = "AutoZenWhileSharingScreen"
+        case hideDockIconWhenToggling = "HideDockIconWhenToggling"
         case rehideStrategy = "RehideStrategy"
         case rehideInterval = "RehideInterval"
         case displayIceBarConfigurations = "DisplayIceBarConfigurations"

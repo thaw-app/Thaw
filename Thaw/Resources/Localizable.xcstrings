@@ -82779,6 +82779,256 @@
           }
         }
       }
+    },
+    "Hide Dock icon when toggling the menu bar" : {
+      "comment" : "Label for the setting that prevents the app icon from appearing in the Dock when revealing or concealing hidden menu bar items.",
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Hide Dock icon when toggling the menu bar"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Hide Dock icon when toggling the menu bar"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Hide Dock icon when toggling the menu bar"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Hide Dock icon when toggling the menu bar"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Hide Dock icon when toggling the menu bar"
+          }
+        },
+        "hu" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Hide Dock icon when toggling the menu bar"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Hide Dock icon when toggling the menu bar"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Hide Dock icon when toggling the menu bar"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Hide Dock icon when toggling the menu bar"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Hide Dock icon when toggling the menu bar"
+          }
+        },
+        "nl" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Hide Dock icon when toggling the menu bar"
+          }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Hide Dock icon when toggling the menu bar"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Hide Dock icon when toggling the menu bar"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Hide Dock icon when toggling the menu bar"
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Hide Dock icon when toggling the menu bar"
+          }
+        },
+        "tr" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Hide Dock icon when toggling the menu bar"
+          }
+        },
+        "uk" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Hide Dock icon when toggling the menu bar"
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Hide Dock icon when toggling the menu bar"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Hide Dock icon when toggling the menu bar"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Hide Dock icon when toggling the menu bar"
+          }
+        }
+      }
+    },
+    "Keep the app's icon out of the Dock when showing or hiding hidden menu bar items. If they need extra space, they open in the Thaw Bar instead of hiding the app menus. Settings windows still appear normally." : {
+      "comment" : "Explanation for the setting that keeps the Dock icon hidden during menu bar toggles and sends overflow to the Thaw Bar.",
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Keep the app's icon out of the Dock when showing or hiding hidden menu bar items. If they need extra space, they open in the Thaw Bar instead of hiding the app menus. Settings windows still appear normally."
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Keep the app's icon out of the Dock when showing or hiding hidden menu bar items. If they need extra space, they open in the Thaw Bar instead of hiding the app menus. Settings windows still appear normally."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Keep the app's icon out of the Dock when showing or hiding hidden menu bar items. If they need extra space, they open in the Thaw Bar instead of hiding the app menus. Settings windows still appear normally."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Keep the app's icon out of the Dock when showing or hiding hidden menu bar items. If they need extra space, they open in the Thaw Bar instead of hiding the app menus. Settings windows still appear normally."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Keep the app's icon out of the Dock when showing or hiding hidden menu bar items. If they need extra space, they open in the Thaw Bar instead of hiding the app menus. Settings windows still appear normally."
+          }
+        },
+        "hu" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Keep the app's icon out of the Dock when showing or hiding hidden menu bar items. If they need extra space, they open in the Thaw Bar instead of hiding the app menus. Settings windows still appear normally."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Keep the app's icon out of the Dock when showing or hiding hidden menu bar items. If they need extra space, they open in the Thaw Bar instead of hiding the app menus. Settings windows still appear normally."
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Keep the app's icon out of the Dock when showing or hiding hidden menu bar items. If they need extra space, they open in the Thaw Bar instead of hiding the app menus. Settings windows still appear normally."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Keep the app's icon out of the Dock when showing or hiding hidden menu bar items. If they need extra space, they open in the Thaw Bar instead of hiding the app menus. Settings windows still appear normally."
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Keep the app's icon out of the Dock when showing or hiding hidden menu bar items. If they need extra space, they open in the Thaw Bar instead of hiding the app menus. Settings windows still appear normally."
+          }
+        },
+        "nl" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Keep the app's icon out of the Dock when showing or hiding hidden menu bar items. If they need extra space, they open in the Thaw Bar instead of hiding the app menus. Settings windows still appear normally."
+          }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Keep the app's icon out of the Dock when showing or hiding hidden menu bar items. If they need extra space, they open in the Thaw Bar instead of hiding the app menus. Settings windows still appear normally."
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Keep the app's icon out of the Dock when showing or hiding hidden menu bar items. If they need extra space, they open in the Thaw Bar instead of hiding the app menus. Settings windows still appear normally."
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Keep the app's icon out of the Dock when showing or hiding hidden menu bar items. If they need extra space, they open in the Thaw Bar instead of hiding the app menus. Settings windows still appear normally."
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Keep the app's icon out of the Dock when showing or hiding hidden menu bar items. If they need extra space, they open in the Thaw Bar instead of hiding the app menus. Settings windows still appear normally."
+          }
+        },
+        "tr" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Keep the app's icon out of the Dock when showing or hiding hidden menu bar items. If they need extra space, they open in the Thaw Bar instead of hiding the app menus. Settings windows still appear normally."
+          }
+        },
+        "uk" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Keep the app's icon out of the Dock when showing or hiding hidden menu bar items. If they need extra space, they open in the Thaw Bar instead of hiding the app menus. Settings windows still appear normally."
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Keep the app's icon out of the Dock when showing or hiding hidden menu bar items. If they need extra space, they open in the Thaw Bar instead of hiding the app menus. Settings windows still appear normally."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Keep the app's icon out of the Dock when showing or hiding hidden menu bar items. If they need extra space, they open in the Thaw Bar instead of hiding the app menus. Settings windows still appear normally."
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Keep the app's icon out of the Dock when showing or hiding hidden menu bar items. If they need extra space, they open in the Thaw Bar instead of hiding the app menus. Settings windows still appear normally."
+          }
+        }
+      }
     }
   },
   "version" : "1.1"

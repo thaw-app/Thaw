@@ -35,6 +35,19 @@ struct SearchIndexTests {
         #expect(!SearchIndex.entries.isEmpty)
     }
 
+    @Test("The hide-Dock-icon-when-toggling row is indexed")
+    func hideDockIconWhenTogglingIsSearchable() {
+        let entry = SearchIndex.entries.first { $0.id == "general.hideDockIconWhenToggling" }
+
+        #expect(entry?.property == .general("hideDockIconWhenToggling"))
+        #expect(entry?.titleText == "Hide Dock icon when toggling the menu bar")
+        #expect(
+            entry?.descriptionText
+                == "Keep the app's icon out of the Dock when showing or hiding hidden menu bar items. If they need extra space, they open in the Thaw Bar instead of hiding the app menus. Settings windows still appear normally."
+        )
+        #expect(entry?.pane == .general)
+    }
+
     // MARK: - entries(for:)
 
     @Test(

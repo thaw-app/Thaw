@@ -52,6 +52,7 @@ final class GeneralSettingsTests {
         .autoRehide,
         .rehideStrategy,
         .rehideInterval,
+        .hideDockIconWhenToggling,
     ]
 
     private let savedDefaults: [Defaults.Key: Any?]
@@ -143,6 +144,7 @@ final class GeneralSettingsTests {
         Defaults.set(true, forKey: .showOnHover)
         Defaults.set(false, forKey: .showOnScroll)
         Defaults.set(false, forKey: .autoRehide)
+        Defaults.set(true, forKey: .hideDockIconWhenToggling)
         Defaults.set(42.5, forKey: .rehideInterval)
 
         let settings = makeSettings()
@@ -157,6 +159,7 @@ final class GeneralSettingsTests {
         #expect(settings.showOnHover)
         #expect(!settings.showOnScroll)
         #expect(!settings.autoRehide)
+        #expect(settings.hideDockIconWhenToggling)
         #expect(settings.rehideInterval == 42.5)
     }
 
@@ -173,6 +176,7 @@ final class GeneralSettingsTests {
         #expect(settings.iceBarLocation == Defaults.DefaultValue.iceBarLocation)
         #expect(settings.showOnHover == Defaults.DefaultValue.showOnHover)
         #expect(settings.autoRehide == Defaults.DefaultValue.autoRehide)
+        #expect(settings.hideDockIconWhenToggling == Defaults.DefaultValue.hideDockIconWhenToggling)
         #expect(settings.rehideStrategy == Defaults.DefaultValue.rehideStrategy)
         #expect(settings.rehideInterval == Defaults.DefaultValue.rehideInterval)
         #expect(settings.lastCustomIceIcon == nil)
@@ -286,6 +290,7 @@ final class GeneralSettingsTests {
             ["key": "useIceBar", "value": true],
             ["key": "useIceBarOnlyOnNotchedDisplay", "value": true],
             ["key": "iceBarLocationOnHotkey", "value": true],
+            ["key": "hideDockIconWhenToggling", "value": true],
         ])
 
         #expect(!settings.showIceIcon)
@@ -296,6 +301,7 @@ final class GeneralSettingsTests {
         #expect(settings.useIceBar)
         #expect(settings.useIceBarOnlyOnNotchedDisplay)
         #expect(settings.iceBarLocationOnHotkey)
+        #expect(settings.hideDockIconWhenToggling)
     }
 
     @Test("An external double change updates the rehide interval")

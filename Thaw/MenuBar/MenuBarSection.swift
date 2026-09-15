@@ -89,7 +89,10 @@ final class MenuBarSection {
             screenFrameMinX: screen.frame.minX,
             screenVisibleMaxX: screen.visibleFrame.maxX,
             notchFrame: screen.frameOfNotch,
-            allowHidingApplicationMenus: appState.settings.advanced.hideApplicationMenus
+            allowHidingApplicationMenus: Self.allowsHidingApplicationMenus(
+                hideApplicationMenus: appState.settings.advanced.hideApplicationMenus,
+                hideDockIconWhenToggling: appState.settings.general.hideDockIconWhenToggling
+            )
         )
     }
 

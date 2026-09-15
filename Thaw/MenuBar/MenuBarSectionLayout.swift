@@ -129,6 +129,16 @@ nonisolated extension MenuBarSection {
         return max(0, screenVisibleMaxX - clampedAppMenuRightEdge)
     }
 
+    /// Hiding application menus means becoming a regular app, which flashes
+    /// the Dock icon. The General setting that keeps the Dock clean therefore
+    /// disables that presentation path so overflow falls back to the Thaw Bar.
+    static func allowsHidingApplicationMenus(
+        hideApplicationMenus: Bool,
+        hideDockIconWhenToggling: Bool
+    ) -> Bool {
+        hideApplicationMenus && !hideDockIconWhenToggling
+    }
+
     /// Decides whether inline presentation fits, optionally allowing the app
     /// menus to be hidden to recover more space.
     static func presentationMode(

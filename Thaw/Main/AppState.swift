@@ -95,6 +95,17 @@ final class AppState {
     /// Track open windows to prevent duplicates
     private var openWindows = Set<IceWindowIdentifier>()
 
+    /// Whether settings, permissions, search, or the Thaw Bar is up.
+    /// Those surfaces activate as a regular app, so a menu-bar hide retry
+    /// must not switch back to accessory and hide their Dock icon.
+    var explicitUIWantsRegularActivation: Bool {
+        navigationState.isSettingsPresented
+            || navigationState.isSearchPresented
+            || navigationState.isIceBarPresented
+            || openWindows.contains(.settings)
+            || openWindows.contains(.permissions)
+    }
+
     /// Track last known screen count to detect disconnects.
     private var lastKnownScreenCount = NSScreen.screens.count
 
@@ -482,6 +493,9 @@ final class AppState {
     }
 
     func activate(withPolicy policy: NSApplication.ActivationPolicy? = nil) {
+        if policy == .regular {
+            menuBarManager.invalidatePendingAccessoryActivation()
+        }
         if let policy {
             NSApp.setActivationPolicy(policy)
         }

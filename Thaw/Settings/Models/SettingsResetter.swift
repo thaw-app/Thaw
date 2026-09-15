@@ -49,6 +49,7 @@ extension AppSettings {
         general.rehideInterval = Defaults.DefaultValue.rehideInterval
         general.simpleMode = Defaults.DefaultValue.simpleMode
         general.showSettingDescriptions = Defaults.DefaultValue.showSettingDescriptions
+        general.hideDockIconWhenToggling = Defaults.DefaultValue.hideDockIconWhenToggling
         appState?.itemGroupManager.apply(nil)
     }
 

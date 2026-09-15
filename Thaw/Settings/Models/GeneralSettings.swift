@@ -36,6 +36,18 @@ final class GeneralSettings {
         }
     }
 
+    /// A Boolean value that indicates whether automatic menu bar reveals
+    /// keep the Dock icon hidden. When `true`, overflow uses the Thaw Bar
+    /// instead of hiding application menus (which would flash the Dock).
+    /// A manual hide-menus command still uses regular activation. Settings
+    /// windows and other explicit UI still activate normally.
+    var hideDockIconWhenToggling = Defaults.DefaultValue.hideDockIconWhenToggling {
+        didSet {
+            guard oldValue != hideDockIconWhenToggling else { return }
+            Defaults.set(hideDockIconWhenToggling, forKey: .hideDockIconWhenToggling)
+        }
+    }
+
     /// A Boolean value that indicates whether the Ice icon
     /// should be shown.
     var showIceIcon = Defaults.DefaultValue.showIceIcon {
@@ -224,6 +236,7 @@ final class GeneralSettings {
         Defaults.ifPresent(key: .autoRehide, assign: &autoRehide)
         Defaults.ifPresent(key: .simpleMode, assign: &simpleMode)
         Defaults.ifPresent(key: .showSettingDescriptions, assign: &showSettingDescriptions)
+        Defaults.ifPresent(key: .hideDockIconWhenToggling, assign: &hideDockIconWhenToggling)
         Defaults.ifPresent(key: .rehideInterval, assign: &rehideInterval)
 
         Defaults.ifPresent(key: .iceBarLocation) { rawValue in
@@ -290,6 +303,8 @@ final class GeneralSettings {
                 showOnHover = boolValue
             case "showOnScroll" where showOnScroll != boolValue:
                 showOnScroll = boolValue
+            case "hideDockIconWhenToggling" where hideDockIconWhenToggling != boolValue:
+                hideDockIconWhenToggling = boolValue
             case "autoRehide" where autoRehide != boolValue:
                 autoRehide = boolValue
             default:

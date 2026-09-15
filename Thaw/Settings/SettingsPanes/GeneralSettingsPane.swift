@@ -54,6 +54,8 @@ struct GeneralSettingsPane: View {
             .annotation("Shows only the essential settings. All features keep working and keep their configuration.")
         Toggle("Show setting descriptions", isOn: $settings.showSettingDescriptions)
             .annotation("Explains what a setting does directly beneath it, like this text.")
+        Toggle("Hide Dock icon when toggling the menu bar", isOn: $settings.hideDockIconWhenToggling)
+            .annotation("Keep the app's icon out of the Dock when showing or hiding hidden menu bar items. If they need extra space, they open in the Thaw Bar instead of hiding the app menus. Settings windows still appear normally.")
     }
 
     // MARK: Ice Icon Options
