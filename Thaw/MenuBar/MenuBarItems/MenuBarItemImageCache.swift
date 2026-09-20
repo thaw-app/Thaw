@@ -618,22 +618,24 @@ final class MenuBarItemImageCache: @unchecked Sendable {
             // that this class is @Observable (no more $isItemHotkeyListExpanded
             // Combine projection to subscribe to).
 
-            // Restart the live refresh loop when its cadence or global
-            // attention demand changes. The initial observation also starts
-            // global detection when there is no visible UI consumer.
+            // Restart the live refresh loop when its cadence, global attention
+            // demand, or app-icon mode changes. The initial observation also
+            // starts global detection when there is no visible UI consumer.
             let advancedSettings = appState.settings.advanced
             iconRefreshIntervalObservationTask = Task { @MainActor [weak self] in
-                var previous: (interval: TimeInterval, globalAttention: Bool)?
+                var previous: (interval: TimeInterval, globalAttention: Bool, prefersAppIcon: Bool)?
                 let changes = Observations {
                     (
                         interval: advancedSettings.iconRefreshInterval,
-                        globalAttention: advancedSettings.surfaceItemsSeekingAttention
+                        globalAttention: advancedSettings.surfaceItemsSeekingAttention,
+                        prefersAppIcon: advancedSettings.alwaysUseAppIconForMenuBarItems
                     )
                 }
                 for await state in changes {
                     guard let self else { return }
                     guard previous?.interval != state.interval
                         || previous?.globalAttention != state.globalAttention
+                        || previous?.prefersAppIcon != state.prefersAppIcon
                     else { continue }
                     previous = state
                     self.liveRefreshTask?.cancel()
