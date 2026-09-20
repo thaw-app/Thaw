@@ -11,9 +11,7 @@ and the Sparkle appcast, unless overridden with the `release_notes` input.
 
 **macOS 26 only · Build 60**
 
-A bug-fix pass on the menu bar layout engine and its settings. Seven
-field reports are fixed here, from parked reorders that reverted to the
-screen-recording indicator.
+A bug-fix pass on the menu bar layout engine and its settings. Seven field reports are fixed here, from parked reorders that reverted to the screen-recording indicator.
 
 ### Fixes
 
@@ -24,6 +22,79 @@ screen-recording indicator.
 5. **The Smart rehide interval is visible where it is used.** Smart falls back to the same interval Timed uses, but the slider only appeared under Timed, so the value that governed Smart could not be seen or changed. The slider now appears under both. Focus rehides on activation and ignores the interval. [#1049](https://github.com/thaw-app/Thaw/issues/1049)
 6. **A renamed anchor still places new items.** A "New items" anchor saved under a helper's name stopped matching after the namespace was canonicalized, so new items fell back to the section default. Anchor lookup now canonicalizes, and the placement names the live item. [#1069](https://github.com/thaw-app/Thaw/issues/1069)
 7. **App-icon mode stops sampling the menu bar.** "Always use app icon for menu bar items" only changed what Thaw drew; it still captured the menu bar for previews, which is what raises the screen-recording indicator. With the setting on, Thaw no longer captures. [#1051](https://github.com/thaw-app/Thaw/issues/1051)
+
+## [3.0.0-alpha.6] - 2026-09-20
+
+**macOS 27 only · Build 106**
+
+> [!NOTE]
+> **Missing a fix?**
+>
+> If an issue you reported is not fixed in this build, comment on it and tell us. We had a wave of new reports and duplicates and lost track of some.
+
+> [!TIP]
+> **iStat Menus and Little Snitch**
+>
+> Thaw and iStat Menus work well together since iStat Menus 7.5.1. For Little Snitch, turn on **Security → Allow GUI Scripting access to Little Snitch**.
+
+### Expected behavior and current limits
+
+- **Several items from one app:** some apps' menu bar items cannot be hidden independently with the current macOS 27 mechanism. An item you put in Hidden can stay visible when another item from the same app is in Visible. [#1125](https://github.com/thaw-app/Thaw/issues/1125)
+- **App icons instead of menu bar previews:** when Thaw has no usable capture, including when Screen Recording permission is off, it shows the item's app icon instead of leaving a hole. That fallback is on purpose. If an item still disappears completely, report it. [#1119](https://github.com/thaw-app/Thaw/issues/1119)
+- **Spacing changes:** applying spacing can restart menu bar apps so they pick up the new value. Each app adds its own padding, so the same setting does not always produce the same gaps. [#1126](https://github.com/thaw-app/Thaw/issues/1126)
+- **macOS-pinned items stay where they are:** Clock, Control Center and Siri cannot be moved. The macOS items toggle covers only those three.
+- **The Layout editor does not reorder under Manual arrangement:** a drag there is refused with a warning instead of overwriting the order you saved by hand.
+- **Live Activities:** macOS 27 hides some Live Activity items and gives Thaw no way to bring them back on demand. This is a system limitation, not a setting. [#1095](https://github.com/thaw-app/Thaw/issues/1095)
+- **Shortcuts and the Focus icon:** macOS 27 can hide the Shortcuts item, and the Focus icon may not be visible to Thaw at all, so Thaw cannot manage either one. [#1105](https://github.com/thaw-app/Thaw/issues/1105), [#1124](https://github.com/thaw-app/Thaw/issues/1124)
+
+### New
+
+- **Swap bar:** one press trades your shown and hidden items, and the next trades them back, each group keeping its own order. It is a real layout change, so it survives a relaunch. The bar sits under the menu bar on the display your pointer is on, with the swap beside the active profile, the section toggles, and zen mode. Thaw's right-click menu, a hotkey, or a Shortcuts action reach the same swap. Turn it on with "Show Swap bar".
+- **Panel instead of the status menu (Alpha):** right-click Thaw's icon to get a panel of controls instead of a menu of text. It shows the sections, zen mode, the active profile, and the Swap bar. Everything else stays in the menu, which comes back when this is off.
+- **macOS 27 limits in the Layout pane:** the pane opens with a list of what macOS 27 does not let Thaw do, and keeps it behind an info button after you dismiss it.
+- **Glow warning:** Thaw tells you when Glow is also managing the menu bar. Two apps hiding the same items fight each other, and Thaw cannot win that quietly.
+- **Reorder circuit breaker:** when automatic reordering starts looping, Thaw stops, waits longer on each repeat, and a single manual move clears it.
+- **System item toggle scoped to macOS items:** the show/hide toggle now covers Clock, Control Center and Siri only, the items macOS pins.
+
+### Fixes
+
+- **Supporting text and warning pills are readable in light mode.** Both use ink that meets contrast instead of the dimmed grey.
+- **The settings panes got a consistency pass.** Panes that had no title now have one, buttons that do the same thing look the same and sit in the same place, and error alerts name what failed.
+- **The Displays pane leads with the display selector**, and its Customized label reflects the whole configuration rather than one setting.
+- **The Thaw Bar pane opens on the real-spacing preview**, and the panel no longer shows two sets of controls for the same thing.
+- **Missing dividers explain themselves.** The empty state says Thaw is placing the dividers and only sends you to System Settings if they stay missing.
+- **Thaw no longer reopens the last Settings pane at launch**, and a crash loop no longer stacks Troubleshooting windows.
+- **A Core Foundation result that is not an array or a dictionary no longer crashes the app.** Five bridging sites are checked before use.
+- **A Manual-arrangement reorder is refused with a warning** instead of silently overwriting the order you saved.
+- **A missing capture no longer leaves a blank slot.** An item with no app icon and no capture, such as a concealed Apple module, now falls back to a substitute glyph instead of an empty cell.
+
+### Menu bar reliability
+
+- **The Notification Center shortcut works while Thaw holds the menu bar assertion.** [#1146](https://github.com/thaw-app/Thaw/issues/1146)
+- **Clicking an empty part of the bar no longer opens the Thaw Bar or reveals Always Hidden items.** [#1145](https://github.com/thaw-app/Thaw/issues/1145)
+- **Right-clicking Thaw's icon keeps its context menu open** instead of showing it and hiding it again. [#1147](https://github.com/thaw-app/Thaw/issues/1147)
+- **Clicking an item inside the hidden section no longer closes the whole section.** [#1148](https://github.com/thaw-app/Thaw/issues/1148)
+- **A quit app's item no longer stays behind as a dead icon in the Thaw Bar.** [#1149](https://github.com/thaw-app/Thaw/issues/1149)
+- **Concealed icons are no longer painted onto the bar while Thaw captures them.** The reveal mask is captured in-process, so a Clock click opens Notification Center faster, and the mask is captured even when no Thaw panel is open.
+- **A hidden row keeps its own glyph.** It no longer borrows a neighbour's pixels or draws an empty row.
+- **A concealed item gets one fresh capture attempt** each time a visible consumer asks for it, instead of staying blacklisted.
+- **Full-frame icons such as Little Snitch keep their glyph.** The background for the knock-out is sampled from the edge of the crop instead of its corners. [#1119](https://github.com/thaw-app/Thaw/issues/1119)
+- **Item crops no longer include the desktop behind the bar**, and status items are taken from the window they are drawn in.
+- **Wallpaper captures work** even though the wallpaper window belongs to a system process.
+- **Items the window server parks stay in the inventory**, and the repeated Thaw Bar warnings and Clock relocation loops stop.
+- **Dropping an item in the Layout pane puts it where you dropped it**, in the order you dropped a group, without dragging the cursor across the bar. A drop still works while the reorder breaker is cooling down.
+- **Hiding a batch of items no longer walks the cursor** into the hidden section.
+- **A move the position store cannot express still completes** through the Command-drag fallback. Drops can land next to parked-band items, and two icons of one app sitting on one weight are separated.
+- **The Thaw icon honours a held Option**, and Always Hidden presents the Thaw Bar when it is on.
+- **The capture helper no longer aborts while ScreenCaptureKit builds its window filter**, and Layout opens right after the Thaw Bar without the multi-second wait.
+
+### Still under investigation
+
+- **Thaw's own menu bar item can still go missing on macOS 27.** A stranded control item is now reseated instead of staying invisible until relaunch. This needs a live test on macOS 27 before it is called fixed. [#1135](https://github.com/thaw-app/Thaw/issues/1135)
+- **Hidden section items still look wrong in some cases.** Always-hidden icons are captured after the section settles, and edge-ring knock-out helps full-frame icons, but the reports stay open. [#1119](https://github.com/thaw-app/Thaw/issues/1119)
+- **The five clicking bugs reported against alpha.5 have fixes in this build.** The reports stay open until someone confirms them on a live macOS 27 setup: empty-spot clicks, the Notification Center shortcut, the right-click menu, hidden-section collapse, and a dead Thaw Bar icon. [#1145](https://github.com/thaw-app/Thaw/issues/1145), [#1146](https://github.com/thaw-app/Thaw/issues/1146), [#1147](https://github.com/thaw-app/Thaw/issues/1147), [#1148](https://github.com/thaw-app/Thaw/issues/1148), [#1149](https://github.com/thaw-app/Thaw/issues/1149)
+- **Uneven gaps after a spacing change are not resolved.** [#1126](https://github.com/thaw-app/Thaw/issues/1126)
+- **The reported Accessibility crash is still under investigation.** This release keeps compact crash diagnostics even when regular logging is off. If Thaw crashes, attach the crash report and the files available through **Troubleshooting → Show Log Files in Finder**.
 
 ## [3.0.0-alpha.5] - 2026-09-15
 
