@@ -100,8 +100,25 @@ struct LayoutReconcilerUnmanagedPlacementTests {
 
     // MARK: - Pass 3: default placements
 
-    @Test("A visible default placement lands at the end of the visible section, left of the hidden control")
-    func visibleDefaultLandsBeforeHiddenControl() {
+    @Test("A visible default placement ignores a chevron parked mid-section")
+    func visibleDefaultIgnoresParkedChevron() {
+        // The Thaw chevron can be moved anywhere in the visible section. A
+        // default new item belongs at the section start (the placeholder's
+        // default slot), not next to wherever the chevron happens to sit.
+        let result = apply(
+            placements: ["app:new": .newItemDefault(section: .visible)],
+            unmanagedUIDs: ["app:new"],
+            desiredFiltered: ["app:left", Self.chevron, "app:right", Self.hiddenControl]
+        )
+
+        #expect(result.desiredFiltered == [
+            "app:new", "app:left", Self.chevron, "app:right", Self.hiddenControl,
+        ])
+        #expect(result.sectionMap["app:new"] == "visible")
+    }
+
+    @Test("A visible default placement lands after a leading chevron")
+    func visibleDefaultLandsAfterLeadingChevron() {
         let result = apply(
             placements: ["app:new": .newItemDefault(section: .visible)],
             unmanagedUIDs: ["app:new"],
@@ -109,13 +126,13 @@ struct LayoutReconcilerUnmanagedPlacementTests {
         )
 
         #expect(result.desiredFiltered == [
-            Self.chevron, "app:visible", "app:new", Self.hiddenControl, "app:hidden",
+            Self.chevron, "app:new", "app:visible", Self.hiddenControl, "app:hidden",
         ])
         #expect(result.sectionMap["app:new"] == "visible")
     }
 
-    @Test("A hidden default placement lands left of the always-hidden control")
-    func hiddenDefaultLandsBeforeAlwaysHiddenControl() {
+    @Test("A hidden default placement lands at the start of the hidden section when always-hidden is on")
+    func hiddenDefaultLandsAfterHiddenControlWithAlwaysHidden() {
         let result = apply(
             placements: ["app:new": .newItemDefault(section: .hidden)],
             unmanagedUIDs: ["app:new"],
@@ -126,7 +143,7 @@ struct LayoutReconcilerUnmanagedPlacementTests {
         )
 
         #expect(result.desiredFiltered == [
-            Self.chevron, Self.hiddenControl, "app:hidden", "app:new",
+            Self.chevron, Self.hiddenControl, "app:new", "app:hidden",
             Self.alwaysHiddenControl, "app:alwaysHidden",
         ])
         #expect(result.sectionMap["app:new"] == "hidden")
