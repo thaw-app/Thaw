@@ -1581,9 +1581,19 @@ extension HIDEventManager {
         appState: AppState,
         screen: NSScreen
     ) {
+        // The Thaw icon is deliberately excluded from
+        // `isMouseInsideEmptyMenuBarSpace`, but scrolling directly on it is a
+        // supported reveal gesture, so accept the icon region explicitly.
+        // Without this, only scrolling over empty menu bar space reveals the
+        // hidden section. (#1073)
+        let overEmptyMenuBarSpace = isMouseInsideEmptyMenuBarSpace(
+            appState: appState,
+            screen: screen
+        )
+        let overThawIcon = isMouseInsideIceIcon(appState: appState)
         guard
             appState.settings.general.showOnScroll,
-            isMouseInsideEmptyMenuBarSpace(appState: appState, screen: screen),
+            overEmptyMenuBarSpace || overThawIcon,
             !isCursorOverForeignWidgetUIElement(),
             let hiddenSection = appState.menuBarManager.section(
                 withName: .hidden
