@@ -586,8 +586,8 @@ struct LayoutReconcilerUnmanagedPlacementTests {
 
     // MARK: - Pass interaction
 
-    @Test("Saved placements are applied before default placements even when listed later")
-    func savedPassRunsBeforeDefaultPass() {
+    @Test("A default placement at the New items slot precedes a saved placement at that slot")
+    func defaultAtNewItemsSlotPrecedesSavedPlacement() {
         let result = apply(
             placements: [
                 "app:default": .newItemDefault(section: .visible),
@@ -598,10 +598,12 @@ struct LayoutReconcilerUnmanagedPlacementTests {
             savedSectionOrder: ["visible": ["app:saved"]]
         )
 
-        // The saved item precedes the default item despite coming second
-        // in unmanagedUIDs.
+        // The visible section's default slot is its start, where the "New
+        // items" badge sits, so a new item lands there ahead of a saved item
+        // that also targets the start. The saved pass still runs first; it is
+        // the shared slot that gives the default item the lead. (#1069)
         #expect(result.desiredFiltered == [
-            Self.chevron, "app:saved", "app:default", Self.hiddenControl,
+            Self.chevron, "app:default", "app:saved", Self.hiddenControl,
         ])
     }
 
