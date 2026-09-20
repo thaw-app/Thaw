@@ -986,6 +986,22 @@ extension MenuBarItemManager {
 
         while let context = currentContexts.popLast() {
             guard let item = items.first(matchingTag: context.tag, pid: context.sourcePID) else {
+                // An item whose owning process has terminated is never
+                // coming back. Drop the context now instead of re-queueing it
+                // for up to ten not-found attempts, which leaves a dead icon
+                // in the Thaw Bar until the retries exhaust. (#1149)
+                if context.sourcePID > 0, !Self.previousPIDIsLive(context.sourcePID) {
+                    MenuBarItemManager.diagLog.debug(
+                        """
+                        Dropping temporarily shown item \(context.tag) after its \
+                        source process (\(context.sourcePID)) terminated
+                        """
+                    )
+                    let tagIdentifier = context.tag.tagIdentifier
+                    pendingRelocations.removeValue(forKey: tagIdentifier)
+                    pendingReturnDestinations.removeValue(forKey: tagIdentifier)
+                    continue
+                }
                 context.notFoundAttempts += 1
                 MenuBarItemManager.diagLog.debug(
                     """
