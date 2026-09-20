@@ -258,4 +258,54 @@ struct MoveEventCoordinatesTests {
 
         #expect(point == CGPoint(x: bounds.minX, y: bounds.minY))
     }
+
+    // MARK: - Parked release point
+
+    /// #1074/#1102/#1104/#1133: while a parked item is held, WindowServer
+    /// reports it at the display origin and the parked lane reads as reflowed
+    /// by roughly a thousand points. A release point rebuilt from that
+    /// snapshot lands past the end of the lane, so a parked teleport must
+    /// keep the point planned before the press.
+    @Test("A parked teleport keeps the release point planned before the press")
+    func parkedTeleportKeepsPlannedReleasePoint() {
+        #expect(
+            MenuBarItemManager.MoveStrategy.parkedTeleport.keepsPlannedReleasePoint(
+                targetDisposition: .parked
+            )
+        )
+        #expect(
+            MenuBarItemManager.MoveStrategy.parkedTeleport.keepsPlannedReleasePoint(
+                targetDisposition: .selectedDisplay
+            )
+        )
+    }
+
+    /// A source-anchored retry is only a parked move when its destination is
+    /// parked too. Against a visible destination the reflow is real and the
+    /// fresh release point is the correct one.
+    @Test("A source-anchored retry keeps the planned point only for a parked destination")
+    func sourceAnchoredRetryKeepsPlannedPointOnlyWhenTargetParked() {
+        #expect(
+            MenuBarItemManager.MoveStrategy.sourceAnchoredTeleport.keepsPlannedReleasePoint(
+                targetDisposition: .parked
+            )
+        )
+        #expect(
+            !MenuBarItemManager.MoveStrategy.sourceAnchoredTeleport.keepsPlannedReleasePoint(
+                targetDisposition: .selectedDisplay
+            )
+        )
+    }
+
+    @Test("Other transports always re-resolve their release point")
+    func otherTransportsReresolveReleasePoint() {
+        for strategy in [
+            MenuBarItemManager.MoveStrategy.teleport,
+            .faithfulDrag,
+            .crossNotchTeleport,
+        ] {
+            #expect(!strategy.keepsPlannedReleasePoint(targetDisposition: .parked))
+            #expect(!strategy.keepsPlannedReleasePoint(targetDisposition: .selectedDisplay))
+        }
+    }
 }
