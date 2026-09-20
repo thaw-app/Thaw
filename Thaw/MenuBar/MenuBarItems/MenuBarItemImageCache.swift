@@ -575,7 +575,7 @@ final class MenuBarItemImageCache: @unchecked Sendable {
                 // new items that the layout pane will need).
                 let nav = self.makeNavigationStateSnapshot()
                 let hasVisible = self.hasVisibleCaptureConsumer(nav: nav)
-                let settingsOpen = self.isSettingsPaneOpen
+                let settingsOpen = self.isSettingsPaneOpen && !nav.prefersAppIcon
                 guard hasVisible || settingsOpen else {
                     return
                 }
@@ -656,6 +656,7 @@ final class MenuBarItemImageCache: @unchecked Sendable {
         let isSettingsPresented: Bool
         let settingsNavigationIdentifier: SettingsNavigationIdentifier?
         let isItemHotkeyListExpanded: Bool
+        let prefersAppIcon: Bool
     }
 
     /// Constructs a NavigationStateSnapshot from the current appState in a single MainActor hop.
@@ -669,7 +670,8 @@ final class MenuBarItemImageCache: @unchecked Sendable {
                 isAppFrontmost: false,
                 isSettingsPresented: false,
                 settingsNavigationIdentifier: nil,
-                isItemHotkeyListExpanded: false
+                isItemHotkeyListExpanded: false,
+                prefersAppIcon: false
             )
         }
         return NavigationStateSnapshot(
@@ -678,7 +680,8 @@ final class MenuBarItemImageCache: @unchecked Sendable {
             isAppFrontmost: appState.navigationState.isAppFrontmost,
             isSettingsPresented: appState.navigationState.isSettingsPresented,
             settingsNavigationIdentifier: appState.navigationState.settingsNavigationIdentifier,
-            isItemHotkeyListExpanded: isItemHotkeyListExpanded
+            isItemHotkeyListExpanded: isItemHotkeyListExpanded,
+            prefersAppIcon: appState.settings.advanced.alwaysUseAppIconForMenuBarItems
         )
     }
 
@@ -751,6 +754,10 @@ final class MenuBarItemImageCache: @unchecked Sendable {
 
     /// Returns whether any visible surface currently needs live item captures.
     private func hasVisibleCaptureConsumer(nav: NavigationStateSnapshot) -> Bool {
+        // App-icon mode renders no capture, so no visible consumer needs one.
+        if nav.prefersAppIcon {
+            return false
+        }
         if nav.isIceBarPresented || nav.isSearchPresented {
             return true
         }
@@ -783,7 +790,8 @@ final class MenuBarItemImageCache: @unchecked Sendable {
             isAppFrontmost: appState.navigationState.isAppFrontmost,
             isSettingsPresented: appState.navigationState.isSettingsPresented,
             settingsNavigationIdentifier: appState.navigationState.settingsNavigationIdentifier,
-            isItemHotkeyListExpanded: isItemHotkeyListExpanded
+            isItemHotkeyListExpanded: isItemHotkeyListExpanded,
+            prefersAppIcon: appState.settings.advanced.alwaysUseAppIconForMenuBarItems
         )
         return hasVisibleCaptureConsumer(nav: nav)
     }
