@@ -995,9 +995,10 @@ extension MenuBarItemManager {
                         source process (\(context.sourcePID)) terminated
                         """
                     )
-                    let tagIdentifier = context.tag.tagIdentifier
-                    pendingRelocations.removeValue(forKey: tagIdentifier)
-                    pendingReturnDestinations.removeValue(forKey: tagIdentifier)
+                    // Keep the persisted pendingRelocations /
+                    // pendingReturnDestinations records: relocatePendingItems
+                    // uses them to restore the item's original section and
+                    // ordering when the app relaunches.
                     continue
                 }
                 context.notFoundAttempts += 1
