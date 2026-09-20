@@ -159,6 +159,33 @@ struct PlanUnmanagedPlacementTests {
         #expect(result["com.new.app:Status"] == .newItemDefault(section: .visible))
     }
 
+    /// An anchor persisted under a helper namespace matches the live item,
+    /// and the placement names the live UID the reconciler resolves. (#1069)
+    @Test("A canonicalized anchor matches its live item")
+    func canonicalizedAnchorMatchesLiveItem() {
+        let placement = MenuBarItemManager.NewItemsPlacement(
+            sectionKey: "visible",
+            anchorIdentifier: "at.obdev.littlesnitch.agent:Item-0",
+            relation: .leftOfAnchor
+        )
+        let liveAnchor = "at.obdev.littlesnitch:Item-0"
+
+        let result = LayoutSolver.planUnmanagedPlacement(
+            unmanagedUIDs: ["com.new.app:Status"],
+            savedSectionOrder: [:],
+            newItemsPlacement: placement,
+            currentUIDs: ["com.new.app:Status", liveAnchor]
+        )
+
+        #expect(
+            result["com.new.app:Status"] == .newItemAnchored(
+                section: .visible,
+                anchorUID: liveAnchor,
+                relation: .leftOfAnchor
+            )
+        )
+    }
+
     // MARK: Volatile-title identities (#815)
 
     /// A volatile-title owner is saved under whatever its title was at the

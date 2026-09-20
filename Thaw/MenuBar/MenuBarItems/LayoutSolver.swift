@@ -1320,15 +1320,17 @@ nonisolated enum LayoutSolver {
                 continue
             }
 
-            // 2. NewItemsPlacement anchor (if configured and present in
-            //    the current menu bar).
+            // 2. NewItemsPlacement anchor (if configured and present in the
+            //    current bar), resolved to the live UID. (#1069)
             if newItemsPlacement.relation != .sectionDefault,
                let anchor = newItemsPlacement.anchorIdentifier,
-               currentUIDs.contains(anchor)
+               let liveAnchor = currentUIDs.first(where: {
+                   newItemsAnchorMatches($0, anchor)
+               })
             {
                 result[uid] = .newItemAnchored(
                     section: newItemsSection,
-                    anchorUID: anchor,
+                    anchorUID: liveAnchor,
                     relation: newItemsPlacement.relation
                 )
                 continue
@@ -1632,6 +1634,15 @@ nonisolated enum LayoutSolver {
         guard canonical != namespaceValue else { return identifier }
         guard identifier.firstIndex(of: ":") != nil else { return canonical }
         return "\(canonical):\(titlePortion(forIdentifier: identifier))"
+    }
+
+    /// Whether `identifier` names the same NewItemsPlacement anchor as
+    /// `anchor`, allowing for persisted-identifier canonicalization. (#1069)
+    static nonisolated func newItemsAnchorMatches(_ identifier: String, _ anchor: String) -> Bool {
+        if identifier == anchor {
+            return true
+        }
+        return canonicalIdentifier(identifier) == canonicalIdentifier(anchor)
     }
 
     /// Applies ``canonicalIdentifier(_:)`` across a saved section order.

@@ -81,6 +81,24 @@ struct CanonicalIdentifierTests {
         #expect(LayoutSolver.canonicalIdentifier(once) == once)
     }
 
+    /// A NewItemsPlacement anchor saved under the helper name matches the
+    /// live item under the app name. (#1069)
+    @Test("A helper-named anchor matches its canonical live identifier")
+    func newItemsAnchorMatchesCanonicalized() {
+        #expect(
+            LayoutSolver.newItemsAnchorMatches(
+                "at.obdev.littlesnitch:Item-0",
+                "at.obdev.littlesnitch.agent:Item-0"
+            )
+        )
+        #expect(
+            !LayoutSolver.newItemsAnchorMatches(
+                "at.obdev.littlesnitch:Item-0",
+                "com.other.app:Item-0"
+            )
+        )
+    }
+
     /// Across a whole saved order: sections keep their keys, and order
     /// within a section is preserved — entries are rewritten in place,
     /// never rearranged (#885).
