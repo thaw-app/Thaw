@@ -143,14 +143,10 @@ extension MenuBarItemManager {
             }
         }
 
-        /// Whether this move must keep the release point planned before the
-        /// press instead of rebuilding it from a mid-hold snapshot.
-        ///
-        /// While a parked item is held, WindowServer reports the item at the
-        /// display origin and the parked lane reads as reflowed by roughly a
-        /// thousand points. A release point rebuilt from that snapshot lands
-        /// past the end of the lane, so a parked teleport releases at the
-        /// point planned just before the press. (#1074, #1102, #1104, #1133)
+        /// Whether this move releases at the point planned before the press
+        /// instead of a mid-hold snapshot. While a parked item is held, its
+        /// lane reads as reflowed by roughly a thousand points.
+        /// (#1074, #1102, #1104, #1133)
         func keepsPlannedReleasePoint(
             targetDisposition: MoveEndpointDisposition
         ) -> Bool {
@@ -1436,12 +1432,6 @@ extension MenuBarItemManager {
                     targetBounds: releaseEndpoints.target.bounds,
                     on: displayID
                 )
-                // While a parked item is held, WindowServer reports the
-                // item at the display origin and the parked lane reads as
-                // reflowed by roughly a thousand points. Rebuilding the
-                // release point from that snapshot lands past the end of the
-                // lane, so a parked teleport keeps the point planned just
-                // before the press. (#1074, #1102, #1104, #1133)
                 let releaseLocation = strategy.keepsPlannedReleasePoint(
                     targetDisposition: geometry.target
                 ) ? eventLocations.release : releasePoints.end

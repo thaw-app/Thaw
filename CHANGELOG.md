@@ -11,10 +11,10 @@ and the Sparkle appcast, unless overridden with the `release_notes` input.
 
 **macOS 26 only · Build 60**
 
-A bug-fix pass on the menu bar layout engine. Four reports that all came
-back to the same two code paths are fixed here: parked reorders that
-reverted, a dead icon left behind after an app quit, scroll reveal on the
-Thaw icon, and new items ignoring the "New items" placeholder.
+A bug-fix pass on the menu bar layout engine. Four field reports are
+fixed here: parked reorders that reverted, a dead icon left behind after
+an app quit, scroll reveal on the Thaw icon, and new items ignoring the
+"New items" placeholder.
 
 ### Fixes
 

@@ -261,11 +261,8 @@ struct MoveEventCoordinatesTests {
 
     // MARK: - Parked release point
 
-    /// #1074/#1102/#1104/#1133: while a parked item is held, WindowServer
-    /// reports it at the display origin and the parked lane reads as reflowed
-    /// by roughly a thousand points. A release point rebuilt from that
-    /// snapshot lands past the end of the lane, so a parked teleport must
-    /// keep the point planned before the press.
+    /// A parked teleport must keep the point planned before the press: a held
+    /// item reads at the display origin and its lane reflows by ~1000pt.
     @Test("A parked teleport keeps the release point planned before the press")
     func parkedTeleportKeepsPlannedReleasePoint() {
         #expect(
@@ -280,9 +277,8 @@ struct MoveEventCoordinatesTests {
         )
     }
 
-    /// A source-anchored retry is only a parked move when its destination is
-    /// parked too. Against a visible destination the reflow is real and the
-    /// fresh release point is the correct one.
+    /// A source-anchored retry keeps the planned point only when its
+    /// destination is parked; a visible destination's reflow is real.
     @Test("A source-anchored retry keeps the planned point only for a parked destination")
     func sourceAnchoredRetryKeepsPlannedPointOnlyWhenTargetParked() {
         #expect(

@@ -102,9 +102,8 @@ struct LayoutReconcilerUnmanagedPlacementTests {
 
     @Test("A visible default placement ignores a chevron parked mid-section")
     func visibleDefaultIgnoresParkedChevron() {
-        // The Thaw chevron can be moved anywhere in the visible section. A
-        // default new item belongs at the section start (the placeholder's
-        // default slot), not next to wherever the chevron happens to sit.
+        // The chevron can sit anywhere in the visible section, so a default
+        // new item still belongs at the section start, not next to the icon.
         let result = apply(
             placements: ["app:new": .newItemDefault(section: .visible)],
             unmanagedUIDs: ["app:new"],

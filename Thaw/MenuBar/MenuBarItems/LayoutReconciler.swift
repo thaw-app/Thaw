@@ -296,23 +296,13 @@ nonisolated enum LayoutReconciler {
             }
         }
         /// Default insertion index for a section when no NewItemsPlacement
-        /// anchor applies. Mirrors `MenuBarItemManager.defaultNewItemsBadgeIndex`
-        /// so the "New items" placeholder the user positions in the Layout
-        /// editor and the slot a genuinely new item lands in cannot disagree.
-        ///
-        /// The visible section defaults to its first slot; hidden defaults to
-        /// its first slot when the always-hidden section is enabled and its
-        /// last slot otherwise; always-hidden defaults to its last slot.
-        /// (#1069)
+        /// anchor applies. Mirrors `defaultNewItemsBadgeIndex` so the badge
+        /// and a new item's slot cannot disagree. (#1069)
         func sectionDefaultIndex(for section: MenuBarSection.Name) -> Int {
             switch section {
             case .visible:
-                // The visible section is the first block of desiredFiltered,
-                // so its leftmost slot is index 0. Skip a chevron only when
-                // it actually leads the block: the Thaw icon can be parked
-                // mid-section, and dragging the default to its position would
-                // put new items next to the divider instead of at the
-                // placeholder. (#1069)
+                // Visible is the first block, so its leftmost slot is 0.
+                // Skip a leading chevron only; the icon can sit mid-section.
                 if let chevron = controlUIDs.visible, desiredFiltered.first == chevron {
                     return 1
                 }
@@ -325,10 +315,8 @@ nonisolated enum LayoutReconciler {
                 return sectionEndIndex(for: .alwaysHidden)
             }
         }
-        /// Whether a section's default new-item slot sits at the section
-        /// start (where successive defaults must be offset to keep their
-        /// order) rather than the section end (where each insert advances the
-        /// boundary on its own).
+        /// Whether a section's default slot is at its start, where successive
+        /// defaults need an offset to keep their order.
         func sectionDefaultIsAtStart(_ section: MenuBarSection.Name) -> Bool {
             switch section {
             case .visible:
@@ -490,11 +478,8 @@ nonisolated enum LayoutReconciler {
             }
         }
 
-        // Pass 3: .newItemDefault placements. Insert at the section's
-        // default slot in unmanagedUIDs order so their relative ordering
-        // matches the current menu bar. The slot is the same one the
-        // Layout editor badge defaults to, not the section end, so a new
-        // item lands where the user sees the placeholder. (#1069)
+        // Pass 3: .newItemDefault placements, at the badge's default slot so
+        // a new item lands where the placeholder sits. (#1069)
         var defaultInsertedCount = [MenuBarSection.Name: Int]()
         for uid in unmanagedUIDs {
             if case let .newItemDefault(section) = placements[uid] {
@@ -502,10 +487,8 @@ nonisolated enum LayoutReconciler {
                 if desiredFiltered.contains(uid) {
                     continue
                 }
-                // A start-of-section slot is stable, so successive defaults
-                // need an offset to keep their unmanagedUIDs order; an
-                // end-of-section slot advances as each item is inserted at
-                // it and needs no offset.
+                // A start slot is stable, so offset each insert; an end slot
+                // advances on its own.
                 let base = sectionDefaultIndex(for: section)
                 let offset = sectionDefaultIsAtStart(section)
                     ? defaultInsertedCount[section, default: 0]
