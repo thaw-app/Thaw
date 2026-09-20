@@ -14230,6 +14230,17 @@
         }
       }
     },
+    "Menu bar items are rehidden using a smart algorithm, or after the interval below." : {
+      "comment" : "A description of how the smart rehide strategy works.",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Menu bar items are rehidden using a smart algorithm, or after the interval below."
+          }
+        }
+      }
+    },
     "Menu bar items are rehidden when the focused app changes." : {
       "comment" : "A description of the rehide strategy when it's set to \"focused app\".",
       "localizations" : {

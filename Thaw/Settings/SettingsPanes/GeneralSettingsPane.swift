@@ -155,7 +155,7 @@ struct GeneralSettingsPane: View {
             .annotation {
                 switch settings.rehideStrategy {
                 case .smart:
-                    Text("Menu bar items are rehidden using a smart algorithm.")
+                    Text("Menu bar items are rehidden using a smart algorithm, or after the interval below.")
                 case .timed:
                     Text("Menu bar items are rehidden after a fixed amount of time.")
                 case .focusedApp:
@@ -163,7 +163,9 @@ struct GeneralSettingsPane: View {
                 }
             }
 
-            if case .timed = settings.rehideStrategy {
+            // Smart falls back to the same interval Timed uses; Focus rehides
+            // on activation and ignores it. (#1049)
+            if settings.rehideStrategy != .focusedApp {
                 IceSlider(
                     rehideIntervalKey,
                     value: $settings.rehideInterval,
