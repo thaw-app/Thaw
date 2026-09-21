@@ -6,8 +6,8 @@
       "kind" : "remoteSourceControl",
       "location" : "https://github.com/thaw-app/AXSwift6",
       "state" : {
-        "revision" : "4678fd96f9e0ede805348f9d8a91935b2650bf0c",
-        "version" : "0.5.1"
+        "revision" : "798afe6d2929d104beef6118c99bc77a3e45d4da",
+        "version" : "0.5.2"
       }
     },
     {
@@ -42,8 +42,8 @@
       "kind" : "remoteSourceControl",
       "location" : "https://github.com/sparkle-project/Sparkle",
       "state" : {
-        "revision" : "ac2def288cbff5cfc7df3ffef6abdf45b72bcb0a",
-        "version" : "2.9.6"
+        "revision" : "eef1a539a373c1f1a320624b1130fc5de7b2e100",
+        "version" : "2.10.0"
       }
     },
     {
