@@ -260,8 +260,8 @@
         },
         "fr" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Reference captured"
+            "state" : "translated",
+            "value" : ""
           }
         },
         "hu" : {
@@ -615,8 +615,8 @@
         },
         "fr" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Relaunch Now"
+            "state" : "translated",
+            "value" : "Relancer maintenant"
           }
         },
         "hu" : {
@@ -734,8 +734,8 @@
         },
         "fr" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Remove"
+            "state" : "translated",
+            "value" : "Supprimer"
           }
         },
         "hu" : {
@@ -971,8 +971,8 @@
         },
         "fr" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Remove All"
+            "state" : "translated",
+            "value" : "Tout supprimer"
           }
         },
         "hu" : {
@@ -1208,8 +1208,8 @@
         },
         "fr" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Radius"
+            "state" : "translated",
+            "value" : "Rayon"
           }
         },
         "hu" : {
@@ -1326,8 +1326,8 @@
         },
         "fr" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Remove Override for This Space"
+            "state" : "translated",
+            "value" : ""
           }
         },
         "hu" : {
@@ -1444,8 +1444,8 @@
         },
         "fr" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Remove this condition"
+            "state" : "translated",
+            "value" : "Supprimer cette condition"
           }
         },
         "hu" : {
@@ -1562,8 +1562,8 @@
         },
         "fr" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Remove this spacer"
+            "state" : "translated",
+            "value" : ""
           }
         },
         "hu" : {
@@ -1800,8 +1800,8 @@
         },
         "fr" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Replay onboarding"
+            "state" : "translated",
+            "value" : "Revoir l'introduction"
           }
         },
         "hu" : {
@@ -1918,8 +1918,8 @@
         },
         "fr" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Replay Onboarding"
+            "state" : "translated",
+            "value" : "Revoir l'introduction"
           }
         },
         "hu" : {
