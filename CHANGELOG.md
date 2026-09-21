@@ -11,7 +11,11 @@ and the Sparkle appcast, unless overridden with the `release_notes` input.
 
 **macOS 26 only · Build 60**
 
-A bug-fix pass on the menu bar layout engine and its settings. Seven field reports are fixed here, from parked reorders that reverted to the screen-recording indicator.
+A bug-fix pass on the menu bar layout engine and its settings, plus one new option. Eight field reports are fixed here, from parked reorders that reverted to the screen-recording indicator.
+
+### New
+
+- **Keep Thaw out of the Dock while you toggle the bar.** "Hide Dock icon when toggling the menu bar" (General) stops Thaw switching to a regular activation policy when it shows or hides hidden items, so the Dock icon no longer flashes on every toggle. Overflow that would have hidden the frontmost app's menus opens in the Thaw Bar instead. Settings and other explicit windows still appear normally. [#1128](https://github.com/thaw-app/Thaw/issues/1128)
 
 ### Fixes
 
@@ -22,6 +26,7 @@ A bug-fix pass on the menu bar layout engine and its settings. Seven field repor
 5. **The Smart rehide interval is visible where it is used.** Smart falls back to the same interval Timed uses, but the slider only appeared under Timed, so the value that governed Smart could not be seen or changed. The slider now appears under both. Focus rehides on activation and ignores the interval. [#1049](https://github.com/thaw-app/Thaw/issues/1049)
 6. **A renamed anchor still places new items.** A "New items" anchor saved under a helper's name stopped matching after the namespace was canonicalized, so new items fell back to the section default. Anchor lookup now canonicalizes, and the placement names the live item. [#1069](https://github.com/thaw-app/Thaw/issues/1069)
 7. **App-icon mode stops sampling the menu bar.** "Always use app icon for menu bar items" only changed what Thaw drew; it still captured the menu bar for previews, which is what raises the screen-recording indicator. With the setting on, Thaw no longer captures. [#1051](https://github.com/thaw-app/Thaw/issues/1051)
+8. **The Thaw Bar uses the right icon tint on every display.** Opening the bar on a second display briefly showed the other display's light or dark icon tint. Thaw now keeps a per-display icon snapshot and restores it before the bar appears. [#1065](https://github.com/thaw-app/Thaw/issues/1065)
 
 ## [3.0.0-alpha.6] - 2026-09-20
 
