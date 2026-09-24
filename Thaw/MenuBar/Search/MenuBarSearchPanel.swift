@@ -496,7 +496,7 @@ private struct MenuBarSearchContentView: View {
             }
             .scrollEdgeEffectStyle(.automatic, for: .vertical)
             .environment(\.menuBarSearchPanel, panel)
-            .glassEffect(.regular, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+            .glassEffect(.regular, in: RoundedRectangle(cornerRadius: ThawRadius.card, style: .continuous))
             .frame(width: 600, height: 400)
             .fixedSize()
             .onAppear {

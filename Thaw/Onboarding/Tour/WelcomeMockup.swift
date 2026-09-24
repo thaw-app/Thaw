@@ -244,7 +244,7 @@ struct ThawWelcomeMockup: View {
                     .resizable()
                     .aspectRatio(contentMode: .fit)
                     .frame(width: 93, height: 93)
-                    .shadow(color: .black.opacity(0.3), radius: 20, y: 10)
+                    .thawShadow(.hero)
                     .scaleEffect(model.iconAppeared ? 1 : 0.85)
                     .opacity(model.iconAppeared ? 1 : 0)
             }

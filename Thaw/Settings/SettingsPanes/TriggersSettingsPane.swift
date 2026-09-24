@@ -732,7 +732,7 @@ private struct TriggerRow: View {
             .padding(isCollapsed ? 6 : 8)
         }
         .overlay {
-            RoundedRectangle(cornerRadius: 14, style: .continuous)
+            RoundedRectangle(cornerRadius: ThawRadius.card, style: .continuous)
                 .stroke(isDragging ? Color.orange : .clear, lineWidth: 2)
         }
         .animation(.easeInOut(duration: 0.12), value: isDragging)
@@ -861,12 +861,12 @@ private struct TriggerRow: View {
         .padding(.vertical, 8)
         .frame(width: 560, alignment: .leading)
         .background(.regularMaterial)
-        .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+        .clipShape(RoundedRectangle(cornerRadius: ThawRadius.card, style: .continuous))
         .overlay {
-            RoundedRectangle(cornerRadius: 14, style: .continuous)
+            RoundedRectangle(cornerRadius: ThawRadius.card, style: .continuous)
                 .stroke(.secondary.opacity(0.25))
         }
-        .shadow(color: .black.opacity(0.18), radius: 14, y: 6)
+        .thawShadow(.raised)
     }
 
     private var dragPreviewToggle: some View {

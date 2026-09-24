@@ -28,7 +28,7 @@ struct LayoutBar: View {
     let section: MenuBarSection.Name
 
     private var backgroundShape: some InsettableShape {
-        RoundedRectangle(cornerRadius: 12, style: .continuous)
+        RoundedRectangle(cornerRadius: ThawRadius.card, style: .continuous)
     }
 
     var body: some View {

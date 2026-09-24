@@ -115,7 +115,7 @@ private struct OnboardingPermissionCard: View {
                     .foregroundStyle(permission.iconColor)
 
                 Text(permission.title)
-                    .font(.system(size: 13, weight: .semibold))
+                    .font(ThawType.heading)
 
                 Spacer()
             }
@@ -123,13 +123,14 @@ private struct OnboardingPermissionCard: View {
             VStack(alignment: .leading, spacing: 5) {
                 ForEach(permission.details, id: \.self) { detail in
                     HStack(alignment: .top, spacing: 6) {
+                        // A 3pt bullet, not type: no text style is this small.
                         Image(systemName: "circle.fill")
                             .font(.system(size: 3))
                             .foregroundStyle(.tertiary)
                             .padding(.top, 5)
 
                         Text(detail)
-                            .font(.system(size: 11))
+                            .font(ThawType.caption)
                             .foregroundStyle(.secondary)
                             .fixedSize(horizontal: false, vertical: true)
                     }
@@ -141,7 +142,7 @@ private struct OnboardingPermissionCard: View {
 
             if permission.hasPermission {
                 Label("Permission Granted", systemImage: "checkmark")
-                    .font(.system(size: 12, weight: .medium))
+                    .font(ThawType.detail.weight(.medium))
                     .foregroundStyle(.green)
                     .frame(maxWidth: .infinity)
                     .frame(height: 30)
@@ -150,7 +151,7 @@ private struct OnboardingPermissionCard: View {
                     permission.performRequest()
                 } label: {
                     Text("Grant Permission")
-                        .font(.system(size: 12, weight: .semibold))
+                        .font(ThawType.detail.weight(.semibold))
                         .frame(maxWidth: .infinity)
                         .frame(height: 30)
                 }
@@ -159,7 +160,7 @@ private struct OnboardingPermissionCard: View {
         }
         .padding(14)
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
-        .glassEffect(.regular, in: RoundedRectangle(cornerRadius: 16))
+        .glassEffect(.regular, in: RoundedRectangle(cornerRadius: ThawRadius.card))
         .animation(.easeOut(duration: 0.3), value: permission.hasPermission)
     }
 }

@@ -16,7 +16,7 @@ struct BetaBadge: View {
 
     var body: some View {
         Text("BETA")
-            .font(.system(size: 10, weight: .medium))
+            .font(ThawType.micro.weight(.medium))
             .padding(.horizontal, 6)
             .padding(.vertical, 1)
             .background {

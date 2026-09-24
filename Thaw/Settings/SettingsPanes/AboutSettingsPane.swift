@@ -17,6 +17,8 @@ struct AboutSettingsPane: View {
     private static let iconSize: CGFloat = 180
     private static let iconCenter = iconSize / 2
 
+    /// The app name is a display element; scaled so it follows the text size.
+    @ScaledMetric(relativeTo: .largeTitle) private var appNameSize: CGFloat = 60
     @State private var iconHoverLocation = CGPoint(x: iconCenter, y: iconCenter)
     @State private var iconIsHovering = false
     @State private var applicationIcon = AboutSettingsPane.currentApplicationIcon()
@@ -108,14 +110,14 @@ struct AboutSettingsPane: View {
                 }
             VStack(alignment: .leading) {
                 Text(verbatim: Constants.displayName)
-                    .font(.system(size: 60))
+                    .font(.system(size: appNameSize))
                     .foregroundStyle(.primary)
 
                 HStack(spacing: 6) {
                     let versionText = versionLabelResource
 
                     Text(versionText)
-                        .font(.system(size: 15))
+                        .font(.title3)
                         .foregroundStyle(.secondary)
                         .textSelection(.enabled)
 
@@ -133,7 +135,7 @@ struct AboutSettingsPane: View {
                 }
 
                 Text(Constants.copyrightString)
-                    .font(.system(size: 14))
+                    .font(ThawType.body)
                     .foregroundStyle(.secondary)
 
                 HStack(spacing: 10) {
@@ -164,7 +166,7 @@ struct AboutSettingsPane: View {
                     }
                     .buttonStyle(.plain)
                 }
-                .font(.system(size: 13))
+                .font(ThawType.body)
                 .foregroundStyle(.secondary)
             }
             .fontWeight(.medium)

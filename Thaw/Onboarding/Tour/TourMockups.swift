@@ -92,7 +92,7 @@ private struct DemoMenuBar: View {
                 .padding(.horizontal, 14)
                 .frame(height: 38)
                 .background(LinearGradient(colors: [.indigo, .blue], startPoint: .leading, endPoint: .trailing), in: Capsule())
-                .shadow(color: .black.opacity(0.25), radius: 10, y: 3)
+                .thawShadow(.raised)
 
                 Spacer(minLength: 8)
 
@@ -104,7 +104,7 @@ private struct DemoMenuBar: View {
                 .padding(.horizontal, 14)
                 .frame(height: 38)
                 .background(LinearGradient(colors: [.orange, .pink], startPoint: .leading, endPoint: .trailing), in: Capsule())
-                .shadow(color: .black.opacity(0.25), radius: 10, y: 3)
+                .thawShadow(.raised)
             }
             .padding(.horizontal, 30)
             .animation(.spring(duration: 0.4), value: hiddenSymbols)
@@ -136,7 +136,7 @@ private struct DemoMenuBar: View {
                     EmptyView()
                 }
             }
-            .shadow(color: .black.opacity(0.25), radius: 10, y: 3)
+            .thawShadow(.raised)
             .padding(.horizontal, 30)
             .animation(.spring(duration: 0.4), value: hiddenSymbols)
         }

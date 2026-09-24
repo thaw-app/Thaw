@@ -21,7 +21,7 @@ struct SearchField: View {
 
         HStack(spacing: 8) {
             Image(systemName: "magnifyingglass")
-                .font(.system(size: 13, weight: .medium))
+                .font(ThawType.symbol.weight(.medium))
                 .foregroundStyle(.secondary)
 
             TextField(text: $text, prompt: Text("Search")) {
@@ -29,7 +29,7 @@ struct SearchField: View {
             }
             .labelsHidden()
             .textFieldStyle(.plain)
-            .font(.system(size: 13))
+            .font(ThawType.body)
             .textContentType(.none)
             .autocorrectionDisabled(true)
             .writingToolsBehavior(.disabled)
@@ -39,7 +39,7 @@ struct SearchField: View {
                 text = ""
             } label: {
                 Image(systemName: "xmark.circle.fill")
-                    .font(.system(size: 13))
+                    .font(ThawType.symbol)
                     .foregroundStyle(.tertiary)
             }
             .buttonStyle(.plain)
@@ -99,7 +99,7 @@ private struct SearchGroupSection: View {
         VStack(alignment: .leading, spacing: 3) {
             HStack(spacing: 7) {
                 group.pane.iconResource.view
-                    .font(.system(size: 12, weight: .semibold))
+                    .font(ThawType.detail.weight(.semibold))
                     .foregroundStyle(.secondary)
                     .frame(width: 18, height: 18)
 
@@ -173,7 +173,7 @@ private struct SearchResultRowContent: View {
         HStack(alignment: .center, spacing: 8) {
             VStack(alignment: .leading, spacing: 3) {
                 Text(entry.titleKey)
-                    .font(.system(size: 13, weight: isHovering ? .medium : .regular))
+                    .font(ThawType.body.weight(isHovering ? .medium : .regular))
                     .foregroundStyle(.primary)
                     .multilineTextAlignment(.leading)
                     .lineLimit(2)
@@ -195,7 +195,7 @@ private struct SearchResultRowContent: View {
             Spacer(minLength: 0)
 
             Image(systemName: "chevron.right")
-                .font(.system(size: 10, weight: .semibold))
+                .font(ThawType.micro.weight(.semibold))
                 .foregroundStyle(isHovering ? Color.accentColor : Color.secondary.opacity(0.55))
                 .offset(x: isHovering ? 1 : 0)
         }
@@ -256,7 +256,7 @@ struct SearchEmptyView: View {
     var body: some View {
         VStack(spacing: 10) {
             Image(systemName: "magnifyingglass")
-                .font(.system(size: 24, weight: .light))
+                .font(ThawType.symbolLarge.weight(.light))
                 .foregroundStyle(.tertiary)
 
             Text("No settings found")

@@ -105,6 +105,6 @@ struct SettingsWarningPill: View {
     }
 
     private var shape: RoundedRectangle {
-        RoundedRectangle(cornerRadius: 16, style: .continuous)
+        RoundedRectangle(cornerRadius: ThawRadius.card, style: .continuous)
     }
 }
