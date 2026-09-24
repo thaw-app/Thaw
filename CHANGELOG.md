@@ -7,6 +7,31 @@ The `release.yml` workflow reads the section matching the release tag
 (`## [tag]`) and uses it as the release notes for both the GitHub Release
 and the Sparkle appcast, unless overridden with the `release_notes` input.
 
+## [2.1.0-beta.5] - 2026-09-23
+
+**macOS 26 only · Build 61**
+
+A bug-fix release. Thaw stops relaunching your menu bar apps without asking, and fixes the new-item and app-menu bugs beta.4 left behind.
+
+### Fixes
+
+1. **The spacing prompt stops coming back after Cancel.** Waking the Mac, changing resolution, or a display dropping out for a moment could look like a display change, so Thaw asked to relaunch apps for a spacing that was already right. Cancel now counts for that display, and a display that briefly goes missing is no longer treated as a change. Moving to another display still asks. [#1180](https://github.com/thaw-app/Thaw/issues/1180)
+2. **"Confirm before relaunching apps" covers every automatic relaunch.** It only applied to display changes. Connecting a display for the first time, switching profiles (by hand or automatically), and changing spacing through a Settings URL all relaunched apps without asking. They ask now. If you decline during a profile switch, the rest of the profile still applies. Changes you confirm in Settings > Displays don't ask twice. [#1098](https://github.com/thaw-app/Thaw/issues/1098)
+3. **New items land at the "New items" placeholder.** The beta.4 fix only covered new items with no placeholder set. When the Thaw icon sat at the right end of the visible section, where it usually is, a new app was placed past it and ended up next to the Thaw icon. It now stays at the placeholder. [#1069](https://github.com/thaw-app/Thaw/issues/1069)
+4. **Clicking an app menu no longer opens the hidden section.** In some apps, Firefox among them, clicking a menu title like File opened the hidden section as if you had clicked empty menu bar space. Since 2.0.0 Thaw trusted the menu positions each app reports, and these apps report positions that aren't on screen. Thaw now falls back to where the menus actually are. [#1028](https://github.com/thaw-app/Thaw/issues/1028)
+5. **Fewer menu bar writes and screen captures.** Every show and hide rewrote Thaw's icons, even when nothing had changed. On macOS 26 each of those writes holds on to memory until Thaw quits. Thaw now writes only what changed, and with an adaptive tint it stops capturing the screen while your displays sleep. Both should slow the memory growth some of you see after days of uptime. If Activity Monitor still shows Thaw growing, please add a comment to [#1129](https://github.com/thaw-app/Thaw/issues/1129).
+
+### Updates
+
+- **The beta channel offers 2.1 updates again.** The beta update feed was built from the 3.0 alpha builds, so some of you stayed on beta.2. From this release, 2.1 installs on the beta channel get 2.1 updates. [#1170](https://github.com/thaw-app/Thaw/issues/1170)
+- **"Dev Mode Flags" is now "Trigger Sources".** The switches that add conditions to the Triggers pane had a name that made them look like debugging tools, and the Triggers pane sent you to "Developer settings", which isn't in the sidebar. The pane and every pointer to it now say Trigger Sources.
+- **Search, About and onboarding follow your text size.** They used fixed point sizes, so the macOS text size setting didn't reach them. Trigger cards and the layout bar also use the same 16pt corners as the rest of Settings.
+- **Sparkle 2.10.0 and AXSwift6 0.5.2.** The update framework and the accessibility library Thaw uses are on their latest versions.
+
+### Correction to beta.4
+
+The beta.4 notes gave the wrong name for the app-icon setting. It's **Settings > Layout > Advanced layout controls > Show app icons instead of live previews**. Turning it on stops Thaw capturing the menu bar, which removes the screen-recording indicator. [#1051](https://github.com/thaw-app/Thaw/issues/1051)
+
 ## [2.1.0-beta.4] - 2026-09-20
 
 **macOS 26 only · Build 60**
