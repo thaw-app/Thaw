@@ -54,6 +54,9 @@ extension DisplaySettingsManager {
         guard let appState else { return }
         let offset = activeDisplaySpacingOffset
         appState.spacingManager.offset = offset
+        // Record the seeded display as applied, or the first screen-parameters
+        // notification after launch reads as a display change and prompts.
+        lastAppliedActiveDisplayUUID = Bridging.getActiveMenuBarDisplayUUID()
         diagLog.debug("Seeded spacingManager.offset=\(offset) from the active display at setup")
     }
 
@@ -252,16 +255,14 @@ extension DisplaySettingsManager {
         let desired = activeDisplaySpacingOffset
         // A display transition can fire the relaunch wave with no warning.
         // When confirmations are enabled and this apply would actually
-        // relaunch apps, ask the user first. Declining keeps the current
-        // on-disk spacing and leaves lastAppliedActiveDisplayUUID untouched
-        // so the next genuine transition re-prompts. The in-pane Apply and
-        // global broadcast carry their own confirmations, so only the
-        // automatic path is gated here.
+        // relaunch apps, ask the user first. Declining marks the display as
+        // handled so it doesn't ask again until a real transition.
         if reason == "screenParametersChanged",
            confirmSpacingRelaunch,
            appState.spacingManager.willRelaunch(forOffset: desired),
            !presentSpacingRelaunchConfirmation()
         {
+            lastAppliedActiveDisplayUUID = Bridging.getActiveMenuBarDisplayUUID()
             diagLog.info("User declined the spacing relaunch confirmation for a display transition; skipping apply")
             return
         }

@@ -258,13 +258,16 @@ final class DisplaySettingsManager {
     /// that leaves the active display UUID the same is not a reason to
     /// re-apply spacing (and risk a relaunch wave when on-disk values drift).
     ///
+    /// A nil current UUID is skipped too: during sleep/wake it resolves to the
+    /// global template and would relaunch apps to a spacing nobody chose.
+    ///
     /// Pure on its inputs, separated from the sink so it can be unit tested
     /// without spinning up AppState or driving real screen events.
     static func shouldSkipSpacingApply(
         currentActiveDisplayUUID currentUUID: String?,
         lastAppliedActiveDisplayUUID lastUUID: String?
     ) -> Bool {
-        currentUUID == lastUUID
+        currentUUID == nil || currentUUID == lastUUID
     }
 
     /// Handles per-display settings changed externally via Settings URI scheme.

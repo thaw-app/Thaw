@@ -38,9 +38,9 @@ struct DisplaySettingsManagerSpacingGateTests {
         ))
     }
 
-    @Test("An apply is not skipped once the current UUID becomes nil")
-    func predicateDoesNotSkipWhenCurrentBecomesNil() {
-        #expect(!DisplaySettingsManager.shouldSkipSpacingApply(
+    @Test("A nil current UUID skips the spacing apply (#1180)")
+    func predicateSkipsWhenCurrentBecomesNil() {
+        #expect(DisplaySettingsManager.shouldSkipSpacingApply(
             currentActiveDisplayUUID: nil,
             lastAppliedActiveDisplayUUID: "UUID-A"
         ))
