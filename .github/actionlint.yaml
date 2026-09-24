@@ -4,3 +4,8 @@ self-hosted-runner:
   labels:
     - xcode-27
     - xcode-27-xlarge
+paths:
+  # gh-aw emits concurrency.queue, which actionlint doesn't know yet.
+  .github/workflows/*.lock.yml:
+    ignore:
+      - 'unexpected key "queue" for "concurrency" section'

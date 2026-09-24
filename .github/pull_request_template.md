@@ -67,8 +67,9 @@ What does this PR change or add, and why?
 
 - [ ] I've built and run the app locally and verified that it works as expected.
 - [ ] I've run `swiftformat .` to keep the code style consistent.
-- [ ] I've run the smallest relevant test commands (list 1–2 below), e.g. `xcodebuild test …` or `swift test --package-path MenuBarModel`.
+- [ ] I've run the smallest relevant test commands (list 1 or 2 below), e.g. `xcodebuild test …`.
 - [ ] I've added tests for new behavior (if applicable).
+- [ ] I've noted which macOS versions I tested on (26, 27, or both).
 - [ ] I've documented new public APIs / non-obvious helpers.
 - [ ] I've updated documentation as needed.
 - [ ] This PR targets the `development` branch.

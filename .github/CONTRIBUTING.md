@@ -80,8 +80,10 @@ A pull request to fix anything unclear, incomplete, or out of date in the projec
 
 ### Prerequisites
 
-- Xcode 26+
-- macOS 26+
+- Xcode 26.3 or later (CI builds with Xcode 26.6 and 27.0)
+- macOS 26 or 27
+
+Thaw 2.x ships for macOS 26 and 3.0 for macOS 27. CI runs this repository's tests on both.
 
 ### Getting started
 

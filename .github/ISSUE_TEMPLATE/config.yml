@@ -1,1 +1,11 @@
 blank_issues_enabled: false
+contact_links:
+  - name: Frequent issues
+    url: https://github.com/thaw-app/Thaw/blob/development/FREQUENT_ISSUES.md
+    about: Answers to the most common problems, including a missing Thaw icon.
+  - name: Report a security vulnerability
+    url: https://github.com/thaw-app/Thaw/security/advisories/new
+    about: Report privately. Please don't open a public issue for security problems.
+  - name: Discord
+    url: https://discord.gg/KDfWjWDnR4
+    about: Questions and help from the community.
