@@ -443,8 +443,10 @@ struct DisplaySettingsPane: View {
     /// to a profile is desired.
     private func commitSpacing(displayID: String, offset: Double) {
         draftSpacing[displayID] = CGFloat(offset)
-        displaySettings.updateConfiguration(forDisplayUUID: displayID) { config in
-            config.withItemSpacingOffset(offset)
+        displaySettings.performUserSpacingChange {
+            displaySettings.updateConfiguration(forDisplayUUID: displayID) { config in
+                config.withItemSpacingOffset(offset)
+            }
         }
     }
 
@@ -747,7 +749,9 @@ struct DisplaySettingsPane: View {
     /// the resulting configurations change up and drives the relaunch wave
     /// for the active display on the next main-queue dispatch.
     private func commitGlobalApply() {
-        displaySettings.applyGlobalToAllKnownDisplays()
+        displaySettings.performUserSpacingChange {
+            displaySettings.applyGlobalToAllKnownDisplays()
+        }
     }
 
     /// Broadcasts the global template and, when a profile is active,
@@ -781,7 +785,9 @@ struct DisplaySettingsPane: View {
                 appState: appState
             )
         } catch {
-            displaySettings.configurations = previousConfigurations
+            displaySettings.performUserSpacingChange {
+                displaySettings.configurations = previousConfigurations
+            }
             errorMessage = error.localizedDescription
             showingError = true
         }
@@ -798,7 +804,9 @@ struct DisplaySettingsPane: View {
                 propagateToDisplays: true
             )
         } catch {
-            displaySettings.configurations = previousConfigurations
+            displaySettings.performUserSpacingChange {
+                displaySettings.configurations = previousConfigurations
+            }
             errorMessage = error.localizedDescription
             showingError = true
         }

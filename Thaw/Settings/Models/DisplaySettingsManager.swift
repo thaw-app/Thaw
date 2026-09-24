@@ -32,10 +32,14 @@ final class DisplaySettingsManager {
     /// — for the spacing reaction). `loadInitialState()` runs from `init`,
     /// so its assignment does not trigger this `didSet`, matching the old
     /// `dropFirst()` skip of the initial emission during setup.
+    ///
+    /// Stands down while a profile apply installs its snapshot; the apply
+    /// drives spacing itself.
     var configurations: [String: DisplayIceBarConfiguration] = [:] {
         didSet {
             guard oldValue != configurations else { return }
             persistConfigurations()
+            guard !isSpacingReactionSuspended else { return }
             applyActiveDisplaySpacing(reason: "configurationsChanged")
         }
     }
@@ -139,6 +143,15 @@ final class DisplaySettingsManager {
     /// reflect a resolution or other-parameter change on the same display.
     /// Internal access so unit tests in ThawTests can seed and assert it.
     var lastAppliedActiveDisplayUUID: String?
+
+    /// True during a Displays pane spacing commit, which already asked.
+    @ObservationIgnored
+    private(set) var isCommittingUserSpacingChange = false
+
+    /// True while configuration writes must not apply spacing: a profile
+    /// snapshot install, or recording a declined relaunch.
+    @ObservationIgnored
+    private(set) var isSpacingReactionSuspended = false
 
     /// UUID of the display that currently owns the menu bar, or nil if it
     /// cannot be determined. Exposed for views that need to decide whether
@@ -268,6 +281,41 @@ final class DisplaySettingsManager {
         lastAppliedActiveDisplayUUID lastUUID: String?
     ) -> Bool {
         currentUUID == nil || currentUUID == lastUUID
+    }
+
+    /// Whether a spacing apply has to ask before it relaunches apps. Only a
+    /// Displays pane commit, which asked already, skips the prompt.
+    static func needsSpacingRelaunchConfirmation(
+        isUserInitiated: Bool,
+        confirmationsEnabled: Bool,
+        willRelaunch: Bool
+    ) -> Bool {
+        !isUserInitiated && confirmationsEnabled && willRelaunch
+    }
+
+    /// Runs a Displays pane spacing commit so the automatic confirmation
+    /// gate treats it as already confirmed.
+    func performUserSpacingChange(_ change: () -> Void) {
+        isCommittingUserSpacingChange = true
+        defer { isCommittingUserSpacingChange = false }
+        change()
+    }
+
+    /// Runs `change` without the `configurations` reaction applying spacing.
+    func withSpacingReactionSuspended(_ change: () -> Void) {
+        isSpacingReactionSuspended = true
+        defer { isSpacingReactionSuspended = false }
+        change()
+    }
+
+    /// Writes the spacing still in effect back to the active display after a
+    /// declined relaunch, so its configuration doesn't show a spacing that was
+    /// never applied.
+    func keepEffectiveSpacing(offset: Int) {
+        guard let uuid = activeMenuBarDisplayUUID else { return }
+        withSpacingReactionSuspended {
+            updateConfiguration(forDisplayUUID: uuid) { $0.withItemSpacingOffset(Double(offset)) }
+        }
     }
 
     /// Handles per-display settings changed externally via Settings URI scheme.

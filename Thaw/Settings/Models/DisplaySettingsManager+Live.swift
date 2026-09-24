@@ -24,15 +24,12 @@ extension DisplaySettingsManager {
     /// Performs the initial setup of the manager.
     func performSetup(with appState: AppState) {
         self.appState = appState
+        // Mirror the persisted mode first: capturing displays can apply
+        // spacing, and that apply must see the user's mode, not the default.
+        appState.spacingManager.spacingApplyMode = spacingApplyMode
         configureObservers()
         captureCurrentlyConnectedDisplays()
         seedSpacingOffsetFromActiveDisplay()
-        // Mirror the persisted mode into the spacing manager at launch, the
-        // same way seedSpacingOffsetFromActiveDisplay mirrors the offset.
-        // didSet on spacingApplyMode only pushes after this point, so without
-        // this the manager would stay at its .relaunchApps default until the
-        // user re-saved the setting. (#1075)
-        appState.spacingManager.spacingApplyMode = spacingApplyMode
     }
 
     /// Copies the active display's offset into the spacing manager at launch.
@@ -252,18 +249,22 @@ extension DisplaySettingsManager {
     /// which stays in the measured file — re-derives spacing through it.
     func applyActiveDisplaySpacing(reason: String) {
         guard let appState else { return }
+        // A nil display resolves to the global template, not this display's spacing.
+        guard Bridging.getActiveMenuBarDisplayUUID() != nil else {
+            diagLog.info("Active menu bar display unknown; skipping spacing apply (\(reason))")
+            return
+        }
         let desired = activeDisplaySpacingOffset
-        // A display transition can fire the relaunch wave with no warning.
-        // When confirmations are enabled and this apply would actually
-        // relaunch apps, ask the user first. Declining marks the display as
-        // handled so it doesn't ask again until a real transition.
-        if reason == "screenParametersChanged",
-           confirmSpacingRelaunch,
-           appState.spacingManager.willRelaunch(forOffset: desired),
-           !presentSpacingRelaunchConfirmation()
-        {
-            lastAppliedActiveDisplayUUID = Bridging.getActiveMenuBarDisplayUUID()
-            diagLog.info("User declined the spacing relaunch confirmation for a display transition; skipping apply")
+        // Every apply except a Displays pane commit asks first. A declined display
+        // transition marks the display as handled so it doesn't ask again; any
+        // other decline writes the spacing still in effect back to the display.
+        guard confirmSpacingRelaunchIfNeeded(forOffset: desired) else {
+            if reason == "screenParametersChanged" {
+                lastAppliedActiveDisplayUUID = Bridging.getActiveMenuBarDisplayUUID()
+            } else {
+                keepEffectiveSpacing(offset: appState.spacingManager.offset)
+            }
+            diagLog.info("User declined the spacing relaunch confirmation (\(reason)); skipping apply")
             return
         }
         let previousAppliedUUID = lastAppliedActiveDisplayUUID
@@ -311,17 +312,33 @@ extension DisplaySettingsManager {
         }
     }
 
-    /// Presents an app-modal confirmation before a display transition fires
+    /// Returns false when the user declines a relaunch they should be asked
+    /// about, true when the apply can go ahead.
+    ///
+    /// Internal so the profile apply goes through the same gate.
+    func confirmSpacingRelaunchIfNeeded(forOffset offset: Int) -> Bool {
+        guard let appState else { return true }
+        guard Self.needsSpacingRelaunchConfirmation(
+            isUserInitiated: isCommittingUserSpacingChange,
+            confirmationsEnabled: confirmSpacingRelaunch,
+            willRelaunch: appState.spacingManager.willRelaunch(forOffset: offset)
+        ) else {
+            return true
+        }
+        return presentSpacingRelaunchConfirmation()
+    }
+
+    /// Presents an app-modal confirmation before an automatic apply fires
     /// the relaunch wave. Returns true when the user approves the relaunch,
     /// false when they cancel. Runs modally so it surfaces even with the
     /// Settings window closed; ticking the suppression checkbox while pressing
-    /// Apply turns confirmSpacingRelaunch off so future transitions apply
+    /// Apply turns confirmSpacingRelaunch off so future applies relaunch
     /// silently. Cancelling never changes that setting.
     private func presentSpacingRelaunchConfirmation() -> Bool {
         NSApp.activate(ignoringOtherApps: true)
         let alert = NSAlert()
         alert.messageText = String(localized: "Apply menu bar spacing change?")
-        alert.informativeText = String(localized: "When a display transition requires Thaw to apply a different menu bar spacing, Thaw relaunches apps with menu bar items. Relaunching apps may cause unsaved input, progress, or transient app state to be lost.")
+        alert.informativeText = String(localized: "Applying this spacing change will relaunch each app with a menu bar item. Relaunching apps may cause unsaved input, progress, or transient app state to be lost.")
         alert.addButton(withTitle: String(localized: "Apply"))
         alert.addButton(withTitle: String(localized: "Cancel"))
         alert.showsSuppressionButton = true

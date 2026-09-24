@@ -86,4 +86,64 @@ struct DisplaySettingsManagerSpacingGateTests {
             lastAppliedActiveDisplayUUID: manager.lastAppliedActiveDisplayUUID
         ))
     }
+
+    // MARK: - Relaunch confirmation
+
+    @Test("An automatic apply that relaunches asks first")
+    func automaticRelaunchNeedsConfirmation() {
+        #expect(DisplaySettingsManager.needsSpacingRelaunchConfirmation(
+            isUserInitiated: false,
+            confirmationsEnabled: true,
+            willRelaunch: true
+        ))
+    }
+
+    @Test("A Displays pane commit is not asked about twice")
+    func userCommitSkipsConfirmation() {
+        #expect(!DisplaySettingsManager.needsSpacingRelaunchConfirmation(
+            isUserInitiated: true,
+            confirmationsEnabled: true,
+            willRelaunch: true
+        ))
+    }
+
+    @Test("Turning confirmations off applies without asking")
+    func disabledConfirmationsSkipPrompt() {
+        #expect(!DisplaySettingsManager.needsSpacingRelaunchConfirmation(
+            isUserInitiated: false,
+            confirmationsEnabled: false,
+            willRelaunch: true
+        ))
+    }
+
+    @Test("An apply that relaunches nothing never asks")
+    func noRelaunchSkipsPrompt() {
+        #expect(!DisplaySettingsManager.needsSpacingRelaunchConfirmation(
+            isUserInitiated: false,
+            confirmationsEnabled: true,
+            willRelaunch: false
+        ))
+    }
+
+    @Test("A user spacing change is flagged only while it runs")
+    func userSpacingChangeFlagIsScoped() {
+        let manager = DisplaySettingsManager()
+        var flaggedInside = false
+        manager.performUserSpacingChange {
+            flaggedInside = manager.isCommittingUserSpacingChange
+        }
+        #expect(flaggedInside)
+        #expect(!manager.isCommittingUserSpacingChange)
+    }
+
+    @Test("A suspended spacing reaction is flagged only while it runs")
+    func spacingReactionSuspensionIsScoped() {
+        let manager = DisplaySettingsManager()
+        var flaggedInside = false
+        manager.withSpacingReactionSuspended {
+            flaggedInside = manager.isSpacingReactionSuspended
+        }
+        #expect(flaggedInside)
+        #expect(!manager.isSpacingReactionSuspended)
+    }
 }

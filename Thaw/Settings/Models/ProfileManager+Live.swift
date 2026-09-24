@@ -207,8 +207,20 @@ extension ProfileManager {
             // leaves the offset at its launch value of 0. applyOffset()
             // below would then write the system default over the user's
             // spacing and relaunch every menu bar app to do it.
-            appState.spacingManager.offset = appState.settings.displaySettings
+            let desiredOffset = appState.settings.displaySettings
                 .activeDisplaySpacingOffset
+
+            // A profile switch asks before relaunching, like any apply not confirmed
+            // in the Displays pane. Declining keeps the current spacing.
+            let relaunchApproved = appState.settings.displaySettings
+                .confirmSpacingRelaunchIfNeeded(forOffset: desiredOffset)
+            if relaunchApproved {
+                appState.spacingManager.offset = desiredOffset
+            } else {
+                appState.settings.displaySettings
+                    .keepEffectiveSpacing(offset: appState.spacingManager.offset)
+                self?.diagLog.info("User declined the spacing relaunch confirmation for profile \(profile.name); keeping current spacing")
+            }
 
             // Run the spacing apply BEFORE the layout pass. Otherwise the
             // two race: applyOffset() kills and relaunches every menu bar
@@ -236,21 +248,26 @@ extension ProfileManager {
 
             let didRelaunch: Bool
             let recovered: Set<String>
-            do {
-                let outcome = try await appState.spacingManager.applyOffset()
-                didRelaunch = outcome.didRelaunch
-                recovered = outcome.recoveredBundleIDs
-            } catch is CancellationError {
-                // The task was cancelled, typically because a newer
-                // layoutTask is taking over. Drop the preflight settling
-                // and bail out so we don't apply a stale layout pass on
-                // top of the new task's work.
-                appState.itemManager.cancelSettlingPeriod(reason: "spacingRelaunch:cancelled")
-                return
-            } catch {
-                self?.diagLog.error("spacingRelaunch: applyOffset failed: \(error)")
+            if !relaunchApproved {
                 didRelaunch = false
                 recovered = []
+            } else {
+                do {
+                    let outcome = try await appState.spacingManager.applyOffset()
+                    didRelaunch = outcome.didRelaunch
+                    recovered = outcome.recoveredBundleIDs
+                } catch is CancellationError {
+                    // The task was cancelled, typically because a newer
+                    // layoutTask is taking over. Drop the preflight settling
+                    // and bail out so we don't apply a stale layout pass on
+                    // top of the new task's work.
+                    appState.itemManager.cancelSettlingPeriod(reason: "spacingRelaunch:cancelled")
+                    return
+                } catch {
+                    self?.diagLog.error("spacingRelaunch: applyOffset failed: \(error)")
+                    didRelaunch = false
+                    recovered = []
+                }
             }
             if didRelaunch {
                 appState.itemManager.startSettlingPeriod(
@@ -344,12 +361,15 @@ extension ProfileManager {
             }
         }
 
-        // configurations.didSet derives active-display spacing synchronously,
-        // so install its global fallback before the per-display overrides.
+        // Install the global fallback first, so anything resolving the active
+        // display in between reads the profile's template.
         appState.settings.displaySettings.globalConfiguration = profile.globalDisplayConfiguration
 
-        // Apply display configurations.
-        appState.settings.displaySettings.configurations = profile.displayConfigurations
+        // applyProfile drives spacing after the snapshot, so hold back the
+        // configurations reaction.
+        appState.settings.displaySettings.withSpacingReactionSuspended {
+            appState.settings.displaySettings.configurations = profile.displayConfigurations
+        }
 
         // Apply the spacing-relaunch confirmation preferences
         appState.settings.displaySettings.confirmSpacingRelaunch = profile.confirmSpacingRelaunch
