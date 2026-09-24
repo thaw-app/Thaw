@@ -121,7 +121,7 @@ private extension MenuBarItemTriggerRuntimeStatus {
         case .off:
             "This trigger is turned off."
         case .inactive:
-            "A required trigger source is disabled in Developer settings."
+            "A condition this trigger needs is turned off in Trigger Sources."
         case .settling:
             "The condition changed and is waiting for its settle delay before moving the item."
         case .moving:
@@ -447,7 +447,7 @@ struct TriggersSettingsPane: View {
             VStack(alignment: .leading, spacing: 6) {
                 Text("Conditional Triggers")
                     .font(.headline)
-                Text("Automatically reveal a menu bar item while a condition is met, then hide it again when the condition no longer applies. Enable additional condition types in the Developer pane.")
+                Text("Automatically reveal a menu bar item while a condition is met, then hide it again when the condition no longer applies. Turn on more condition types in Trigger Sources.")
                     .font(.callout)
                     .foregroundStyle(.secondary)
                     .fixedSize(horizontal: false, vertical: true)
@@ -1123,7 +1123,7 @@ private struct TriggerRow: View {
         HStack(alignment: .firstTextBaseline, spacing: 6) {
             Image(systemName: "exclamationmark.triangle.fill")
                 .foregroundStyle(.orange)
-            Text("This condition is turned off in Developer settings, so the trigger won't run.")
+            Text("This condition is turned off in Trigger Sources, so the trigger won't run.")
                 .font(.caption)
                 .foregroundStyle(.secondary)
                 .fixedSize(horizontal: false, vertical: true)
@@ -1342,7 +1342,7 @@ private struct TriggerRow: View {
             )
 
             if coordinate == nil {
-                Text("Turn on the Location flag in Developer settings and grant permission to capture your current location.")
+                Text("Turn on Location in Trigger Sources and grant permission to capture your current location.")
                     .font(.caption)
                     .foregroundStyle(.secondary)
                     .fixedSize(horizontal: false, vertical: true)

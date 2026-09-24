@@ -35,7 +35,7 @@ nonisolated enum SettingsNavigationIdentifier: String, NavigationIdentifier {
         case .automation: "Automation"
         case .triggers: "Triggers"
         case .tools: "Tools"
-        case .developer: "Dev Mode Flags"
+        case .developer: "Trigger Sources"
         case .about: "About"
         }
     }

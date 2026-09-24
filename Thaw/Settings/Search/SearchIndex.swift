@@ -273,9 +273,9 @@ nonisolated enum SearchIndex {
         ),
         SearchEntry(
             id: "pane.developer",
-            titleKey: "Dev Mode Flags",
-            titleText: "Dev Mode Flags",
-            descriptionText: "Enable and inspect experimental trigger sources.",
+            titleKey: "Trigger Sources",
+            titleText: "Trigger Sources",
+            descriptionText: "Turn trigger sources on or off and see the live system state.",
             pane: .developer,
             sectionKey: nil,
             sectionText: nil,

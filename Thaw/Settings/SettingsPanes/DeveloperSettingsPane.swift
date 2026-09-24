@@ -74,7 +74,7 @@ struct DeveloperSettingsPane: View {
         IceSection {
             VStack(alignment: .leading, spacing: 6) {
                 HStack {
-                    Text("Dev Mode Flags")
+                    Text("Trigger Sources")
                         .font(.headline)
                     Spacer()
                     Button {
@@ -84,7 +84,7 @@ struct DeveloperSettingsPane: View {
                     }
                     .disabled(!flags.hasEnabledFlags)
                 }
-                Text("Enable experimental trigger sources one at a time. Each flag turns on its condition in the Triggers pane and starts its background monitor. Battery and power conditions are always available.")
+                Text("Turn on the trigger sources you want to use. Each one adds its conditions to the Triggers pane and starts a background monitor. Battery and power conditions are always available.")
                     .font(.callout)
                     .foregroundStyle(.secondary)
                     .fixedSize(horizontal: false, vertical: true)
