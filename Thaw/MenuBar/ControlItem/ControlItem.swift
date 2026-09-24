@@ -193,6 +193,15 @@ final class ControlItem {
     /// Spacer items used to extend hidden/always-hidden width on ultra-wide displays.
     private var spacerItems = [NSStatusItem]()
 
+    /// What the button's image was last built from. `NSImage` compares by
+    /// identity, so the source is what tells a real change from a repeat.
+    private var appliedImageSource: ImageSource?
+
+    private struct ImageSource: Equatable {
+        let image: ControlItemImage?
+        let customIceIconIsTemplate: Bool
+    }
+
     /// The shared app state.
     private weak var appState: AppState?
 
@@ -358,9 +367,7 @@ final class ControlItem {
                     guard let self else { return }
                     guard let isDragging, isDragging != previous else { continue }
                     previous = isDragging
-                    if isDragging {
-                        updateStatusItem()
-                    }
+                    updateStatusItem()
                 }
             }
 
@@ -598,11 +605,15 @@ final class ControlItem {
             )
         }
         storage = StatusItemStorage(controlItem: self)
+        appliedImageSource = nil
         configureStatusItemCancellables()
         updateStatusItem()
     }
 
     /// Updates the appearance of the status item using the current hiding state.
+    ///
+    /// Writes only values that changed: on macOS 26 every status item write
+    /// leaks Core Animation fence ports inside AppKit.
     private func updateStatusItem() {
         guard
             let appState,
@@ -611,73 +622,107 @@ final class ControlItem {
             return
         }
 
-        button.font = NSFont.boldSystemFont(ofSize: NSFont.systemFontSize)
-        button.title = ""
-        button.image = nil
+        let customIceIconIsTemplate = appState.settings.general.customIceIconIsTemplate
+        setIfChanged(button, \.font, NSFont.boldSystemFont(ofSize: NSFont.systemFontSize))
 
         switch identifier {
         case .visible:
             if !appState.settings.general.showIceIcon {
+                setIfChanged(button, \.title, "")
+                setImage(nil, customIceIconIsTemplate: customIceIconIsTemplate, on: button)
                 hideIceIconCompletely()
                 return
             }
             updateStatusItemVisibility(true)
-            button.appearsDisabled = false
+            setIfChanged(button, \.appearsDisabled, false)
+            setIfChanged(button, \.title, "")
 
             let icon = appState.settings.general.iceIcon
-
-            // We can usually just create the image directly from the icon.
-            var image = switch state {
-            case .showSection: icon.visible.nsImage(for: appState)
-            case .hideSection: icon.hidden.nsImage(for: appState)
+            let image = switch state {
+            case .showSection: icon.visible
+            case .hideSection: icon.hidden
             }
-
-            if
-                case .custom = icon.name,
-                let originalImage = image
-            {
+            setImage(
+                image,
+                customIceIconIsTemplate: customIceIconIsTemplate,
+                on: button
+            ) { built in
+                guard case .custom = icon.name else {
+                    return built
+                }
                 // Custom icons need to be resized to fit inside the button.
-                let originalWidth = originalImage.size.width
-                let originalHeight = originalImage.size.height
+                let originalWidth = built.size.width
+                let originalHeight = built.size.height
                 let ratio = max(originalWidth / 25, originalHeight / 17)
                 let newSize = CGSize(width: originalWidth / ratio, height: originalHeight / ratio)
-                image = originalImage.resized(to: newSize)
+                return built.resized(to: newSize)
             }
-
-            button.image = image
         case .hidden, .alwaysHidden:
             switch state {
             case .showSection:
-                button.isEnabled = true
-                button.alphaValue = 1
+                setIfChanged(button, \.isEnabled, true)
+                setIfChanged(button, \.alphaValue, 1)
                 switch appState.settings.advanced.sectionDividerStyle {
                 case .noDivider:
                     updateStatusItemVisibility(false)
-                    button.appearsDisabled = true
-                    button.isHighlighted = false
+                    setIfChanged(button, \.appearsDisabled, true)
+                    setIfChanged(button, \.isHighlighted, false)
+                    setImage(nil, customIceIconIsTemplate: customIceIconIsTemplate, on: button)
 
-                    if appState.isDraggingMenuBarItem, appState.settings.advanced.showAllSectionsOnUserDrag {
-                        // We still want a subtle marker between sections.
-                        button.title = "|"
-                    }
+                    // We still want a subtle marker between sections.
+                    let showsMarker = appState.isDraggingMenuBarItem
+                        && appState.settings.advanced.showAllSectionsOnUserDrag
+                    setIfChanged(button, \.title, showsMarker ? "|" : "")
                 case .chevron:
                     updateStatusItemVisibility(true)
-                    button.appearsDisabled = false
-
-                    if identifier != .visible {
-                        button.image = ControlItemImage.builtin(.chevronSmall).nsImage(for: appState)
-                    }
+                    setIfChanged(button, \.appearsDisabled, false)
+                    setIfChanged(button, \.title, "")
+                    setImage(
+                        .builtin(.chevronSmall),
+                        customIceIconIsTemplate: customIceIconIsTemplate,
+                        on: button
+                    )
                 }
             case .hideSection:
                 updateStatusItemVisibility(true)
-                button.appearsDisabled = true
-                button.isHighlighted = false
+                setIfChanged(button, \.appearsDisabled, true)
+                setIfChanged(button, \.isHighlighted, false)
+                setIfChanged(button, \.title, "")
+                setImage(nil, customIceIconIsTemplate: customIceIconIsTemplate, on: button)
                 // Match the spacer item pattern: invisible and non-interactive.
                 // The constraint stays active so items are pushed off-screen.
-                button.isEnabled = false
-                button.alphaValue = 0
+                setIfChanged(button, \.isEnabled, false)
+                setIfChanged(button, \.alphaValue, 0)
             }
         }
+    }
+
+    /// See ``updateStatusItem()`` for why repeated writes matter.
+    private func setIfChanged<Root: AnyObject, Value: Equatable>(
+        _ object: Root,
+        _ keyPath: ReferenceWritableKeyPath<Root, Value>,
+        _ value: Value
+    ) {
+        if object[keyPath: keyPath] != value {
+            object[keyPath: keyPath] = value
+        }
+    }
+
+    /// Sets the button's image, building it only when its source changed.
+    private func setImage(
+        _ image: ControlItemImage?,
+        customIceIconIsTemplate: Bool,
+        on button: NSStatusBarButton,
+        adjust: (NSImage) -> NSImage? = { $0 }
+    ) {
+        let source = ImageSource(image: image, customIceIconIsTemplate: customIceIconIsTemplate)
+        guard source != appliedImageSource else {
+            return
+        }
+        appliedImageSource = source
+        button.image = image?
+            .nsImage(customIceIconIsTemplate: customIceIconIsTemplate)
+            .flatMap(adjust)
     }
 
     /// Updates the visibility of the status item.
@@ -694,8 +739,10 @@ final class ControlItem {
         }
 
         if isVisible {
-            constraint?.isActive = true
-            statusItem.length = identifier.length(for: state)
+            if let constraint {
+                setIfChanged(constraint, \.isActive, true)
+            }
+            setIfChanged(statusItem, \.length, identifier.length(for: state))
 
             let shouldUseSpacers = (identifier == .hidden || identifier == .alwaysHidden) && state == .hideSection
             updateSpacerItems(forHiddenState: shouldUseSpacers)
@@ -706,14 +753,20 @@ final class ControlItem {
 
             let shouldShow = showOnDrag && isDragging
 
-            constraint?.isActive = false
-            statusItem.length = shouldShow ? 3 : 0
-
-            if let window {
-                let size = withMutableCopy(of: window.frame.size) { $0.width = shouldShow ? 3 : 1 }
-                window.setContentSize(size)
+            if let constraint {
+                setIfChanged(constraint, \.isActive, false)
             }
+            setIfChanged(statusItem, \.length, shouldShow ? 3 : 0)
+            setWindowWidthIfChanged(shouldShow ? 3 : 1)
         }
+    }
+
+    private func setWindowWidthIfChanged(_ width: CGFloat) {
+        guard let window, window.frame.width != width else {
+            return
+        }
+        let size = withMutableCopy(of: window.frame.size) { $0.width = width }
+        window.setContentSize(size)
     }
 
     /// Adds or removes spacer items to extend the hidden/always-hidden section width.
@@ -757,7 +810,7 @@ final class ControlItem {
             }
         }
 
-        spacerItems.forEach { $0.length = Lengths.expanded }
+        spacerItems.forEach { setIfChanged($0, \.length, Lengths.expanded) }
     }
 
     /// Removes spacer items from the status bar.
@@ -823,13 +876,11 @@ final class ControlItem {
 
     /// Hides the Ice icon without removing the status item or losing autosave data.
     private func hideIceIconCompletely() {
-        constraint?.isActive = false
-        statusItem.length = 0
-
-        if let window {
-            let size = withMutableCopy(of: window.frame.size) { $0.width = 1 }
-            window.setContentSize(size)
+        if let constraint {
+            setIfChanged(constraint, \.isActive, false)
         }
+        setIfChanged(statusItem, \.length, 0)
+        setWindowWidthIfChanged(1)
     }
 
     /// Performs the control item's action.
