@@ -351,11 +351,14 @@ final class MenuBarItemSpacingManager {
             // nothing to prompt the user about and nothing to settle on.
             return false
         }
-        let targetSpacing = Key.spacing.defaultValue + offset
-        let targetPadding = Key.padding.defaultValue + offset
-        let onDiskSpacing = currentlyAppliedValue(forKey: .spacing)
-        let onDiskPadding = currentlyAppliedValue(forKey: .padding)
-        return onDiskSpacing != targetSpacing || onDiskPadding != targetPadding
+        return !isOnDisk(offset: offset)
+    }
+
+    /// Whether the on-disk spacing and padding already match `offset`,
+    /// regardless of the apply mode.
+    func isOnDisk(offset: Int) -> Bool {
+        currentlyAppliedValue(forKey: .spacing) == Key.spacing.defaultValue + offset
+            && currentlyAppliedValue(forKey: .padding) == Key.padding.defaultValue + offset
     }
 
     /// Applies the current offset.

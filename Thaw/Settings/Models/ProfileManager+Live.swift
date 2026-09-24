@@ -212,14 +212,19 @@ extension ProfileManager {
 
             // A profile switch asks before relaunching, like any apply not confirmed
             // in the Displays pane. Declining keeps the current spacing.
-            let relaunchApproved = appState.settings.displaySettings
+            // An unknown display resolves to the global template, so the
+            // spacing waits for a known display; the rest still applies.
+            let isDisplayKnown = Bridging.getActiveMenuBarDisplayUUID() != nil
+            let relaunchApproved = isDisplayKnown && appState.settings.displaySettings
                 .confirmSpacingRelaunchIfNeeded(forOffset: desiredOffset)
             if relaunchApproved {
                 appState.spacingManager.offset = desiredOffset
-            } else {
+            } else if isDisplayKnown {
                 appState.settings.displaySettings
                     .keepEffectiveSpacing(offset: appState.spacingManager.offset)
                 self?.diagLog.info("User declined the spacing relaunch confirmation for profile \(profile.name); keeping current spacing")
+            } else {
+                self?.diagLog.info("Active menu bar display unknown; deferring spacing for profile \(profile.name)")
             }
 
             // Run the spacing apply BEFORE the layout pass. Otherwise the

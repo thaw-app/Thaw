@@ -1935,7 +1935,12 @@ extension HIDEventManager {
             return nil
         }
 
-        let childFrames = AXHelpers.children(for: menuBar).compactMap { AXHelpers.frame(for: $0) }
+        // A frame that fails to read could be the menu under the cursor.
+        let children = AXHelpers.children(for: menuBar)
+        let childFrames = children.compactMap { AXHelpers.frame(for: $0) }
+        guard childFrames.count == children.count else {
+            return nil
+        }
         return Self.applicationMenuHitResult(
             childFrames: childFrames,
             mouseLocation: mouseLocation,

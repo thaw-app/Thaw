@@ -51,9 +51,11 @@ extension DisplaySettingsManager {
         guard let appState else { return }
         let offset = activeDisplaySpacingOffset
         appState.spacingManager.offset = offset
-        // Record the seeded display as applied, or the first screen-parameters
-        // notification after launch reads as a display change and prompts.
-        lastAppliedActiveDisplayUUID = Bridging.getActiveMenuBarDisplayUUID()
+        // Record the display as applied only when its spacing is really on
+        // disk; a mismatch stays unrecorded so the next notification applies it.
+        if appState.spacingManager.isOnDisk(offset: offset) {
+            lastAppliedActiveDisplayUUID = Bridging.getActiveMenuBarDisplayUUID()
+        }
         diagLog.debug("Seeded spacingManager.offset=\(offset) from the active display at setup")
     }
 

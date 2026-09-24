@@ -855,7 +855,9 @@ final class MenuBarManager {
         await withTaskGroup(of: (CGDirectDisplayID, MenuBarAverageColorInfo, WallpaperPalette?)?.self) { group in
             for input in inputs {
                 group.addTask {
+                    // Displays can sleep mid-pass; each capture rechecks.
                     guard
+                        await !self.areDisplaysAsleep,
                         let image = await ScreenCapture.captureWindowsAsync(
                             with: input.windowIDs,
                             screenBounds: input.bounds,
@@ -867,7 +869,7 @@ final class MenuBarManager {
                     }
 
                     var palette: WallpaperPalette?
-                    if needsPalette {
+                    if needsPalette, await !self.areDisplaysAsleep {
                         // The strip above is one pixel tall by design, which
                         // is enough to average and far too little to derive a
                         // scheme from, so the palette re-captures at the
