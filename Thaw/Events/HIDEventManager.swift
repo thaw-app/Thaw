@@ -1935,18 +1935,47 @@ extension HIDEventManager {
             return nil
         }
 
-        // AX queries succeeded - check if cursor is inside any menu item.
-        for child in AXHelpers.children(for: menuBar) {
-            guard let frame = AXHelpers.frame(for: child) else {
-                continue
-            }
-            if frame.contains(mouseLocation) {
-                return true
-            }
-        }
+        let childFrames = AXHelpers.children(for: menuBar).compactMap { AXHelpers.frame(for: $0) }
+        return Self.applicationMenuHitResult(
+            childFrames: childFrames,
+            mouseLocation: mouseLocation,
+            menuBarStrip: menuBarStrip(for: screen)
+        )
+    }
 
-        // AX succeeded but cursor is not in any menu item.
+    /// Classifies a click against the menu bar-owning app's AX menu items.
+    ///
+    /// Returns nil unless every item overlaps `menuBarStrip`, since some apps
+    /// (Firefox) report menus that aren't the ones on screen.
+    static nonisolated func applicationMenuHitResult(
+        childFrames: [CGRect],
+        mouseLocation: CGPoint,
+        menuBarStrip: CGRect?
+    ) -> Bool? {
+        if childFrames.contains(where: { $0.contains(mouseLocation) }) {
+            return true
+        }
+        if let menuBarStrip,
+           childFrames.isEmpty || !childFrames.allSatisfy({ $0.intersects(menuBarStrip) })
+        {
+            return nil
+        }
         return false
+    }
+
+    /// The screen's menu bar in CoreGraphics coordinates, the space AX
+    /// frames are reported in, or nil if the menu bar height is unknown.
+    private func menuBarStrip(for screen: NSScreen) -> CGRect? {
+        guard let menuBarHeight = screen.getMenuBarHeight() else {
+            return nil
+        }
+        let displayBounds = CGDisplayBounds(screen.displayID)
+        return CGRect(
+            x: displayBounds.minX,
+            y: displayBounds.minY,
+            width: displayBounds.width,
+            height: menuBarHeight
+        )
     }
 
     /// Returns the concrete application menu item frame at the given cursor
