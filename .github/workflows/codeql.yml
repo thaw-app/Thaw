@@ -20,7 +20,9 @@ jobs:
   analyze:
     if: github.repository == 'thaw-app/Thaw'
     name: Analyze Swift
-    runs-on: xcode-27
+    # CodeQL traces Swift builds under Rosetta, and macOS 27 ships some
+    # build tools (sandbox-exec, swift-plugin-server) as arm64 only.
+    runs-on: macos-26
     timeout-minutes: 90
     permissions:
       security-events: write
@@ -36,6 +38,9 @@ jobs:
         with:
           languages: swift
           build-mode: manual
+
+      - name: Select Xcode 26.6
+        run: sudo xcode-select -s /Applications/Xcode_26.6.app/Contents/Developer
 
       # CodeQL traces this build to construct the database. Tests are not run;
       # compilation is all the extractor needs.
