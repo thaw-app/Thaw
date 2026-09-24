@@ -13,9 +13,7 @@ on:
     - cron: "30 1 * * 6"
   workflow_dispatch:
 
-# Declare default permissions as read only.
-# Publishing requires no workflow-level write permissions. The analysis job
-# declares its own full permission set, which replaces this default outright.
+# Read-only default; the analysis job declares its own full permission set.
 permissions:
   contents: read
 

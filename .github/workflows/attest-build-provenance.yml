@@ -1,16 +1,7 @@
 name: Attest build provenance
 
-# Reusable provenance signing, isolated from the macOS build job.
-# Called with subject digests only: no Apple/Sparkle secrets and no `release`
-# Environment, so verification can be pinned to this workflow's signing
-# identity with `gh attestation verify --signer-workflow`.
-#
-# This is SLSA v1.0 Build L2. Build L3 additionally requires the *build itself*
-# to run in the trusted reusable workflow, so the caller cannot influence what
-# gets attested; here the caller supplies the digest. Moving the macOS build
-# into thaw-app/org-ci is the prerequisite for claiming L3.
-#
-# See: https://docs.github.com/actions/security-guides/using-artifact-attestations-and-reusable-workflows-to-achieve-slsa-v1-build-level-3
+# Signs provenance away from the build (digests in, no secrets), so verifiers
+# can pin it with --signer-workflow. SLSA Build L2; L3 needs the build in org-ci.
 
 on:
   workflow_call:
@@ -52,10 +43,8 @@ jobs:
           SUBJECT_NAME: ${{ inputs.subject-name }}
         run: |
           set -euo pipefail
-          # Artifact names must be filesystem-safe; keep basename only.
-          # Parameter expansion, not `basename | tr`: tr would rewrite the
-          # trailing newline basename emits into a stray character, producing
-          # `Thaw.dmg_` and a bundle the release job cannot find.
+          # Filesystem-safe basename by parameter expansion; `basename | tr` would turn
+          # the trailing newline into a stray `_`.
           safe="${SUBJECT_NAME##*/}"
           safe="${safe//[^A-Za-z0-9._-]/_}"
           test -n "$safe"

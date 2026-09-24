@@ -2,9 +2,8 @@ name: CI
 concurrency:
   group: ${{ github.workflow }}-${{ github.head_ref || github.ref }}
   cancel-in-progress: true
-# Always run on PRs and on pushes to the default branch (development) so
-# Scorecard CI-Tests / SAST see checks on nearly every merge. Heavy macOS
-# work stays gated behind path detection below.
+# Runs on every PR and push to development so Scorecard sees checks; the
+# macOS work stays gated on path detection below.
 on:
   pull_request:
   push:
@@ -129,11 +128,8 @@ jobs:
         id: cache-week
         run: echo "week=$(date +%Y-%U)" >> "$GITHUB_OUTPUT"
 
-      # COMPILATION_CACHE_ENABLE_CACHING = YES writes a content-addressed cache to
-      # Build/CompilationCache.noindex (the default CAS path under -derivedDataPath).
-      # Persisting it across runs turns most of the build into cache hits instead of
-      # a full recompile. Keyed by week so the cache periodically rotates rather than
-      # growing unbounded; restore-keys still reuses the prior week's cache as a base.
+      # Persists Xcode's compilation cache so most of the build is cache hits. Keyed
+      # by week to rotate it; restore-keys start from last week's.
       - name: Cache Swift compilation cache
         if: needs.changes.outputs.code == 'true'
         uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
@@ -168,13 +164,8 @@ jobs:
           unzip -oq xcresultparser.zip
           NEWEST_BUNDLE=$(ls -td Build/Logs/Test/*.xcresult 2>/dev/null | head -n1)
           ./product/xcresultparser -c -o xml "$NEWEST_BUNDLE" > coverage.xml
-          # xcresultparser emits absolute paths from this macOS runner
-          # (/Users/runner/work/Thaw/Thaw/...). The Sonar scan runs on a
-          # separate Linux runner and matches coverage entries to sources by
-          # path, so without this every entry fails to resolve and the analysis
-          # reports 0% coverage. The script also drops DerivedData and
-          # SourcePackages entries, and exits non-zero if nothing resolves
-          # rather than shipping an empty report.
+          # Sonar matches coverage by path on Linux, so rewrite this runner's absolute
+          # paths; the script fails if nothing resolves rather than report 0%.
           python3 scripts/normalize-coverage.py coverage.xml
 
       - name: Upload Coverage XML
@@ -186,10 +177,8 @@ jobs:
           retention-days: 1
           if-no-files-found: error
 
-      # Persist the last successful report so docs/chore pushes (code=false) can
-      # still feed Sonar. Without this, those scans omit coverageReportPaths and
-      # Sonar's Zero Coverage Sensor publishes 0% for the whole branch.
-      # Key omits runner.os so the Linux sonarqube job can restore a macOS save.
+      # Keeps the last report so docs-only pushes still feed Sonar instead of 0%.
+      # The key omits runner.os so the Linux sonarqube job can restore it.
       - name: Cache Coverage XML for Sonar reuse
         if: needs.changes.outputs.code == 'true' && (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository)
         uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
@@ -197,9 +186,8 @@ jobs:
           path: coverage.xml
           key: sonar-coverage-${{ github.ref_name }}-${{ github.sha }}
 
-  # 2.x ships for macOS 26 and runs on macOS 27, so the tests run on both.
-  # This job builds with Xcode 26.6 on macOS 26; the build job above covers
-  # Xcode 27 on macOS 27 and owns coverage.
+  # Tests with Xcode 26.6 on macOS 26; `build` covers Xcode 27 on macOS 27
+  # and owns coverage.
   build-macos-26:
     if: github.repository == 'thaw-app/Thaw'
     runs-on: macos-26
@@ -241,9 +229,8 @@ jobs:
             CODE_SIGNING_REQUIRED=NO \
             CODE_SIGNING_ALLOWED=NO
 
-  # Always run so Scorecard SAST sees a Sonar-related check on nearly every PR,
-  # including docs/chore changes that skip the macOS build. Forks / Dependabot
-  # no-op without secrets (same job name keeps required checks satisfiable).
+  # Always runs so Scorecard sees a Sonar check on nearly every PR; forks and
+  # Dependabot no-op without secrets under the same job name.
   sonarqube:
     needs: [changes, build]
     if: github.repository == 'thaw-app/Thaw'
@@ -270,9 +257,8 @@ jobs:
         with:
           name: coverage-data
 
-      # Docs/chore scans skip the macOS build, so reuse the last report cached
-      # for this branch (or the PR base / development). Prefer that over
-      # analyzing with no report, since Sonar would otherwise publish 0% coverage.
+      # Docs/chore scans skip the build, so reuse the last cached report rather than
+      # let Sonar publish 0%.
       - name: Restore cached Coverage XML
         if: env.SONAR_ENABLED == 'true' && needs.changes.outputs.code != 'true'
         uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
@@ -299,9 +285,8 @@ jobs:
             echo "::warning::No coverage.xml available; Sonar will publish zero coverage for this analysis."
           fi
 
-      # coverage.xml only exists when this run built tests or restored a cached
-      # report. Never put sonar.coverageReportPaths in sonar-project.properties:
-      # a missing file would fail the scanner on cold branches.
+      # coverage.xml exists only if this run built or restored it, so keep
+      # sonar.coverageReportPaths out of sonar-project.properties.
       - name: SonarQube Scan
         if: env.SONAR_ENABLED == 'true'
         uses: SonarSource/sonarqube-scan-action@ba9859eae8dd6bd29e412f25ddbbef3d032000f4 # v8.2.2

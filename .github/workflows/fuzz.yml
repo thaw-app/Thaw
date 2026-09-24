@@ -1,9 +1,7 @@
 name: Fuzz
 
-# Swift's `-sanitize=fuzzer` is Linux-only (it is rejected on both arm64 and
-# x86_64 Apple targets), so fuzzing runs in a Swift Linux container rather than
-# on a macOS runner. SettingsURIParser depends on Foundation alone, which is
-# what makes that possible.
+# Swift's -sanitize=fuzzer is Linux-only, so this runs in a Swift Linux
+# container; SettingsURIParser needs only Foundation.
 on:
   schedule:
     # Nightly, offset from the hour to avoid GitHub's cron pileup.
@@ -61,13 +59,8 @@ jobs:
       - name: Build fuzzer
         run: |
           set -euo pipefail
-          # SwiftPM links ELF executables with `--defsym main=<Module>_main` so
-          # testable executables can rename their entry point. That symbol is
-          # never emitted under `-parse-as-library`, which libFuzzer needs so
-          # its own `main` wins, and linking then fails with an undefined
-          # `FuzzSettingsURI_main`. Drive `swiftc` directly instead; same flags
-          # the Swift libFuzzer docs use. Keep `swift build -DFUZZ_REPLAY` for
-          # the macOS corpus replayer in Package.swift.
+          # Calls swiftc directly: SwiftPM links with --defsym main=<Module>_main, which
+          # -parse-as-library never emits. `swift build -DFUZZ_REPLAY` stays for macOS.
           mkdir -p Fuzzing/.build/release
           swiftc -parse-as-library -O -sanitize=fuzzer,address \
             -o Fuzzing/.build/release/FuzzSettingsURI \

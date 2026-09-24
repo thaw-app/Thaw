@@ -1,10 +1,5 @@
-# Software composition analysis gate for OpenSSF Baseline OSPS-VM-05.03.
-# Scans Swift Package.resolved (and other lockfiles we pass) against OSV and
-# fails when known vulnerabilities remain unsuppressed.
-#
-# Uses a version+SHA256–pinned osv-scanner binary (same trust pattern as Syft
-# in release.yml). The google/osv-scanner-action image is still on v2.3.8, which
-# cannot extract Package.resolved; CLI v2.4.0 can.
+# OSV lockfile scan for OpenSSF OSPS-VM-05.03; fails on unsuppressed vulns. The
+# CLI is pinned by version and SHA-256; the Action image can't read Package.resolved.
 name: Dependency SCA
 
 concurrency:

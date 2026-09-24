@@ -1,18 +1,7 @@
 name: Build DMG
 
-# Manual, unsigned-of-provenance dev build: a signed and notarized DMG uploaded
-# as a short-lived workflow artifact, never a release. Use it to hand a build
-# to a tester or to check a branch builds and notarizes before tagging.
-#
-# The source input picks which repository is built. Thaw (default) is this
-# repository at the ref given (or the default branch). thaw-next builds the
-# private thaw-app/thaw-next repository at the ref given, using
-# THAW_NEXT_READ_TOKEN (contents: read on thaw-next and its binary
-# package's repository). This
-# workflow runs outside the release environment, so that secret must exist at
-# the repository level as well as in the release environment. Everything
-# thaw-next-specific lives in .github/actions/checkout-source, shared with
-# release.yml.
+# Manual signed, notarized DMG as a short-lived artifact, never a release.
+# source=thaw-next needs THAW_NEXT_READ_TOKEN at repository level too.
 
 on:
   workflow_dispatch:
@@ -66,10 +55,8 @@ jobs:
       - name: Select Xcode
         env:
           XCODE_APP: Xcode_27
-          # Set for thaw-next: the compiler its binary package was built by.
-          # That package ships without library evolution, so only the Xcode
-          # carrying exactly this compiler can import it; the newest install
-          # is wrong whenever it is newer than the package's release job.
+          # thaw-next: the exact compiler its binary package was built with; the package
+          # has no library evolution, so a newer Xcode can't import it.
           REQUIRED_SWIFT: ${{ steps.source.outputs.swift-compiler }}
         run: |
           set -euo pipefail

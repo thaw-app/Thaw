@@ -1,16 +1,7 @@
 name: "PR Metadata"
 
-# Labels (type/area) + shape checks (base/title/Closes/DCO; size warn-only).
-# Uses pull_request_target so fork PRs can still receive labels.
-# DCO is verified via the Pulls commits API only (no checkout of PR code).
-# Crowdin sync PRs are skipped: they are translation-only and often huge.
-# They are matched on head branch + same-repo + maintainer association, never on
-# PR title, so an untrusted fork cannot title its way past the checks.
-# Dependabot/Renovate PRs are skipped: they use bot PR bodies (no template) and
-# are identified by verified bot login only, never by title.
-#
-# Spam guard: do not run on `edited` (title/body tweaks). Size heads-ups go to
-# the job summary only, never PR comments, so pushes don't bump the timeline.
+# Labels and shape checks via pull_request_target, never checking out PR code.
+# Crowdin and bot PRs skip by branch or login, never title; no `edited` runs.
 
 on:
   pull_request_target:
@@ -32,9 +23,8 @@ jobs:
       pull-requests: write
       issues: write
     steps:
-      # Crowdin sync PRs are trusted translation dumps; skip labeling/shape checks.
-      # Identified by head branch + same-repo + maintainer association, never by
-      # PR title, which any untrusted fork author can set to bypass checks.
+      # Crowdin PRs skip labels and checks, matched by branch, repo and maintainer,
+      # never by title, which a fork could set.
       - name: Detect Crowdin sync PR
         id: crowdin
         uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9.0.0

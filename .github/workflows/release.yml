@@ -1,34 +1,7 @@
 name: Release
 
-# Sparkle / channel releases are manual only (workflow_dispatch).
-# Pushing semver tags does NOT run this workflow, which is safe for backfilling
-# release history or pointing tags at old commits without distributing.
-#
-# Artifact split:
-#   - thaw-app/Thaw releases: DMG, cosign bundles, CycloneDX SBOM, SLSA provenance
-#     (+ Sparkle ZIP/deltas during cutover dual-publish; remove after 2–3 releases)
-#   - thaw-app/updates releases + Pages: Sparkle ZIP, deltas, appcast.xml (canonical)
-#   - stonerl/Thaw main: mirrored appcast.xml for legacy SUFeedURL installs
-# Appcast enclosure URLs for new items point at thaw-app/updates; Thaw copies are
-# a belt-and-suspenders mirror only.
-#
-# Build provenance is signed in attest-build-provenance.yml (reusable), not in
-# this job, so the signing identity is separate from the macOS build trust
-# boundary and verifiers can pin it with `--signer-workflow`. That is SLSA v1.0
-# Build L2; see the header of that workflow for what L3 would additionally
-# require.
-#
-# The Thaw release is always created as a draft and only published by
-# attach-provenance, so a provenance failure cannot leave a public release
-# without its attestation bundles.
-#
-# Source selection: the source input picks which repository the tag is
-# checked out from. Thaw (default) is this repository. thaw-next is the
-# private macOS 27 codebase, built at the same tag with THAW_NEXT_READ_TOKEN
-# (a release-environment secret). Everything that differs between the two
-# lives in .github/actions/checkout-source, so retiring the private source
-# later means deleting that directory, the source input, and the two steps
-# that reference it.
+# Manual only; pushing a tag never releases. Drafts until attach-provenance
+# adds the attestations. The Sparkle feed lives in thaw-app/updates.
 
 on:
   workflow_dispatch:
@@ -108,9 +81,8 @@ jobs:
     if: github.repository == 'thaw-app/Thaw'
     # GitHub-hosted Xcode 27 preview image (arm64); xcode-27-xlarge for more cores.
     runs-on: xcode-27
-    # Trust boundary: required reviewers on the `release` Environment
-    # (diazdesandi). Other org owners can still unblock via admin bypass.
-    # Secrets are not consumed until approval.
+    # Needs approval on the `release` environment (admins can bypass); secrets
+    # aren't read before that.
     environment: release
     permissions:
       contents: write
@@ -200,11 +172,8 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           set -euo pipefail
-          # The changelog lives in this repository, whichever repository the
-          # code came from: thaw-next carries no copy and reads it from here
-          # at run time. After a cross-repo checkout the working tree is the
-          # source repository, so fetch this repository's CHANGELOG.md at the
-          # ref that dispatched the workflow and hand it to the lookup below.
+          # The changelog lives here even for thaw-next builds, so fetch this
+          # repository's CHANGELOG.md at the dispatching ref.
           own_changelog=""
           if [[ "$SOURCE_REPOSITORY" != "$GITHUB_REPOSITORY" ]]; then
             own_changelog="$RUNNER_TEMP/CHANGELOG.md"
@@ -220,11 +189,8 @@ jobs:
           notes = os.environ.get("RELEASE_NOTES_INPUT", "")
           source = "release_notes input"
 
-          # Falls back to the CHANGELOG.md section for this tag (Keep a Changelog
-          # style: "## [1.2.3]" or "## 1.2.3", ending at the next "## " heading)
-          # only when no manual notes were supplied at dispatch time. Thaw keeps
-          # the changelog at the repository root; on a cross-repo build that
-          # file was fetched into OWN_CHANGELOG above and is tried first.
+          # Without manual notes, use this tag's CHANGELOG.md section ("## [x.y.z]" to
+          # the next "## "), trying OWN_CHANGELOG first on cross-repo builds.
           candidates = [os.environ.get("OWN_CHANGELOG", ""), "CHANGELOG.md", "Thaw/Resources/CHANGELOG.md"]
           candidates = [p for p in candidates if p]
           changelog = next((p for p in candidates if os.path.isfile(p)), None)
@@ -255,10 +221,8 @@ jobs:
       - name: Select Xcode
         env:
           XCODE_APP: Xcode_27
-          # Set for thaw-next: the compiler its binary package was built by.
-          # That package ships without library evolution, so only the Xcode
-          # carrying exactly this compiler can import it; the newest install
-          # is wrong whenever it is newer than the package's release job.
+          # thaw-next: the exact compiler its binary package was built with; the package
+          # has no library evolution, so a newer Xcode can't import it.
           REQUIRED_SWIFT: ${{ steps.source.outputs.swift-compiler }}
         run: |
           set -euo pipefail
@@ -329,9 +293,8 @@ jobs:
         env:
           TAG: ${{ steps.meta.outputs.tag }}
           DMG_NAME: ${{ env.DMG_NAME }}
-          # Pin Syft by version *and* archive digest: no curl-pipe-to-sh and no
-          # mutable git tag in the trust path. Bump together; digests come from
-          # syft_<version>_checksums.txt on the corresponding Syft release.
+          # Syft pinned by version and archive digest; bump both from the release's
+          # syft_<version>_checksums.txt.
           SYFT_VERSION: 1.42.3
           SYFT_SHA256_DARWIN_ARM64: d71ee7db2be0fe2e96f679fd9d69ef04274cc86c8604707797080a21070b3f32
           SYFT_SHA256_DARWIN_AMD64: c00d01b7c43504708c8922d643d1cbaefa62ca8876baa4d2c2cf4c3be43707a9
@@ -355,10 +318,8 @@ jobs:
           export PATH="$bin:$PATH"
           syft version
 
-          # Scan the source tree, not the exported .app: SwiftPM dependencies are
-          # statically linked into the binary, so only Package.resolved records
-          # them. Build output and CI workflows are excluded so the SBOM lists
-          # shipped dependencies rather than release tooling.
+          # Scan the source tree: SwiftPM deps are statically linked, so only
+          # Package.resolved lists them. Build output and CI files are excluded.
           sbom_name="Thaw_${TAG}.cdx.json"
           sbom_path="build/${sbom_name}"
           syft scan dir:. \
@@ -485,9 +446,8 @@ jobs:
             ${{ steps.update-assets.outputs.files }}
           body: ${{ steps.notes.outputs.body }}
           generate_release_notes: false
-          # Always a draft here. attach-provenance flips it to published once the
-          # attestation bundles are attached (and only when publish_release is
-          # checked), so a failed attestation cannot ship an unattested release.
+          # Always a draft; attach-provenance publishes it once the attestations are
+          # attached, so an unattested release can't ship.
           draft: true
           prerelease: ${{ steps.meta.outputs.prerelease == 'true' }}
 
@@ -814,21 +774,8 @@ jobs:
           gh release upload "$TAG" "$dmg_bundle" "$sbom_bundle" --clobber
           echo "Attached provenance to release ${TAG}"
 
-      # The release job always drafts; publishing happens only after both
-      # bundles are attached. Left as a draft when publish_release is unchecked.
-      #
-      # --discussion-category is applied in this same call on purpose: GitHub
-      # creates the linked discussion on the draft-to-published transition, so
-      # setting the category earlier on the draft would do nothing. contents:
-      # write is all it needs; the Releases endpoint creates the discussion.
-      #
-      # The Releases endpoint matches discussion_category_name by the
-      # category's *slug*, not its display name: "Announcements" 404s with
-      # "Discussion could not be created" while "announcements" works (that
-      # is how the 2.0.1 publish failed). Resolve whatever the input holds —
-      # slug or display name, case-insensitive — to the slug before touching
-      # the release, so a bad choice fails while the release is still a draft
-      # and a re-dispatch is all it takes.
+      # Publishes once both bundles are attached. The discussion category must be set
+      # here, on publish, and as a slug, so resolve it first while still a draft.
       - name: Publish release
         if: ${{ inputs.publish_release }}
         env:
