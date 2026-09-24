@@ -229,6 +229,66 @@ struct LayoutReconcilerUnmanagedPlacementTests {
         #expect(result.sectionMap["app:new"] == "visible")
     }
 
+    @Test("A leftOfAnchor placement keeps its slot when the chevron trails the visible section (#1069)")
+    func anchoredLeftOfAnchorWithTrailingChevron() {
+        // The bar from the reporter's log: the Thaw icon trails the visible
+        // section, and the New items badge sits left of its leftmost item.
+        let result = apply(
+            placements: [
+                "neat.software.Tim:Item-0": .newItemAnchored(
+                    section: .visible,
+                    anchorUID: "com.intelliscapesolutions.caffeine:Item-0",
+                    relation: .leftOfAnchor
+                ),
+            ],
+            unmanagedUIDs: ["neat.software.Tim:Item-0"],
+            desiredFiltered: [
+                "com.intelliscapesolutions.caffeine:Item-0",
+                "com.apparentsoft.trickster:Item-0",
+                "com.bjango.istatmenus.status:com.bjango.istatmenus.time",
+                Self.chevron,
+                Self.hiddenControl,
+            ]
+        )
+
+        #expect(result.desiredFiltered == [
+            "neat.software.Tim:Item-0",
+            "com.intelliscapesolutions.caffeine:Item-0",
+            "com.apparentsoft.trickster:Item-0",
+            "com.bjango.istatmenus.status:com.bjango.istatmenus.time",
+            Self.chevron,
+            Self.hiddenControl,
+        ])
+        #expect(result.sectionMap["neat.software.Tim:Item-0"] == "visible")
+    }
+
+    @Test("The #1069 placement plans a move left of the anchor, not right of the item beside the chevron")
+    func trailingChevronPlacementPlansMoveLeftOfAnchor() {
+        let tim = "neat.software.Tim:Item-0"
+        let caffeine = "com.intelliscapesolutions.caffeine:Item-0"
+        let trickster = "com.apparentsoft.trickster:Item-0"
+        let istatTime = "com.bjango.istatmenus.status:com.bjango.istatmenus.time"
+        let applied = apply(
+            placements: [
+                tim: .newItemAnchored(section: .visible, anchorUID: caffeine, relation: .leftOfAnchor),
+            ],
+            unmanagedUIDs: [tim],
+            desiredFiltered: [caffeine, trickster, istatTime, Self.chevron, Self.hiddenControl],
+            sectionMap: [caffeine: "visible", trickster: "visible", istatTime: "visible", Self.chevron: "visible"]
+        )
+
+        // Where macOS put Tim before the apply ran, as logged.
+        let moves = LayoutSolver.planLCSMoveSequence(
+            currentNoControls: [caffeine, trickster, tim, istatTime, Self.chevron],
+            desiredNoControls: applied.desiredFiltered.filter { $0 != Self.hiddenControl },
+            sectionMap: applied.sectionMap,
+            unanchorableUIDs: [Self.chevron],
+            preferredMoveUIDs: [tim]
+        )
+
+        #expect(moves == [LayoutSolver.LCSPlannedMove(uid: tim, destination: .leftOfUID(caffeine))])
+    }
+
     @Test("An anchored placement with the rightOfAnchor relation lands just after the anchor")
     func anchoredRightOfAnchorLandsAfterAnchor() {
         let result = apply(

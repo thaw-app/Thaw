@@ -260,10 +260,10 @@ nonisolated enum LayoutReconciler {
         func sectionStartIndex(for section: MenuBarSection.Name) -> Int {
             switch section {
             case .visible:
-                if let visibleCtrlUID = controlUIDs.visible,
-                   let chevronIdx = desiredFiltered.firstIndex(of: visibleCtrlUID)
-                {
-                    return chevronIdx + 1
+                // Visible is the first block, so its leftmost slot is 0.
+                // The chevron can sit anywhere in it; skip only a leading one.
+                if let chevron = controlUIDs.visible, desiredFiltered.first == chevron {
+                    return 1
                 }
                 return 0
             case .hidden:
@@ -301,12 +301,7 @@ nonisolated enum LayoutReconciler {
         func sectionDefaultIndex(for section: MenuBarSection.Name) -> Int {
             switch section {
             case .visible:
-                // Visible is the first block, so its leftmost slot is 0.
-                // Skip a leading chevron only; the icon can sit mid-section.
-                if let chevron = controlUIDs.visible, desiredFiltered.first == chevron {
-                    return 1
-                }
-                return 0
+                return sectionStartIndex(for: .visible)
             case .hidden:
                 return controlUIDs.alwaysHidden != nil
                     ? sectionStartIndex(for: .hidden)
