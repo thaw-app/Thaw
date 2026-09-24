@@ -1,6 +1,6 @@
 ---
 description: "Triages new issues: sets type and Priority, applies classifier labels, identifies duplicates, and asks clarifying questions ONLY when required fields are missing."
-model: gpt-5.4
+model: gpt-6-luna
 engine:
   id: copilot
 on:
