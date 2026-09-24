@@ -294,7 +294,7 @@ jobs:
           xcodebuild -version
 
       - name: Configure signing
-        uses: thaw-app/org-ci/actions/configure-signing@5c8f979eeee7674b7af949c89edb6b37ac4af413
+        uses: thaw-app/org-ci/actions/configure-signing@63c7bb8706f3a2a8f75a6ebee21e602ba5876710
         with:
           apple-application-cert: ${{ secrets.APPLE_APPLICATION_CERT }}
           apple-application-cert-password: ${{ secrets.APPLE_APPLICATION_CERT_PASSWORD }}
@@ -303,7 +303,7 @@ jobs:
           apple-team-id: ${{ secrets.APPLE_TEAM_ID }}
 
       - name: Build
-        uses: thaw-app/org-ci/actions/build@5c8f979eeee7674b7af949c89edb6b37ac4af413
+        uses: thaw-app/org-ci/actions/build@63c7bb8706f3a2a8f75a6ebee21e602ba5876710
         with:
           apple-team-id: ${{ secrets.APPLE_TEAM_ID }}
           project-name: ${{ steps.source.outputs.project-name }}
@@ -312,14 +312,14 @@ jobs:
           deployment-target: ${{ steps.source.outputs.deployment-target }}
 
       - name: Export Archive
-        uses: thaw-app/org-ci/actions/export-and-package@5c8f979eeee7674b7af949c89edb6b37ac4af413
+        uses: thaw-app/org-ci/actions/export-and-package@63c7bb8706f3a2a8f75a6ebee21e602ba5876710
         with:
           apple-team-id: ${{ secrets.APPLE_TEAM_ID }}
           app-name: ${{ env.APP_NAME }}
           dmg-name: ${{ env.DMG_NAME }}
 
       - name: Notarize
-        uses: thaw-app/org-ci/actions/notarize-and-validate@5c8f979eeee7674b7af949c89edb6b37ac4af413
+        uses: thaw-app/org-ci/actions/notarize-and-validate@63c7bb8706f3a2a8f75a6ebee21e602ba5876710
         with:
           dmg-name: ${{ env.DMG_NAME }}
           app-name: ${{ env.APP_NAME }}
@@ -391,7 +391,7 @@ jobs:
 
       - name: Sparkle ZIP and appcast
         id: sparkle
-        uses: thaw-app/org-ci/actions/sparkle-release@5c8f979eeee7674b7af949c89edb6b37ac4af413
+        uses: thaw-app/org-ci/actions/sparkle-release@63c7bb8706f3a2a8f75a6ebee21e602ba5876710
         with:
           tag: ${{ steps.meta.outputs.tag }}
           channel: ${{ steps.meta.outputs.channel }}
@@ -399,6 +399,9 @@ jobs:
           asset-prefix: Thaw
           appcast-title: Thaw
           sparkle-private-key: ${{ secrets.SPARKLE_ED25519_PRIVATE_KEY }}
+          # Matches the Sparkle version in Package.resolved.
+          sparkle-version: "2.10.0"
+          sparkle-sha256: c2bf58aa8387266ac179357b1415d6f2635f044da8be41042af32425dae6da0c
           updates-repository: ${{ env.UPDATES_REPOSITORY }}
           updates-token: ${{ secrets.UPDATES_GITHUB_TOKEN }}
           release-html-url: https://github.com/${{ github.repository }}/releases/tag/${{ steps.meta.outputs.tag }}
