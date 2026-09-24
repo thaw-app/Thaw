@@ -197,6 +197,50 @@ jobs:
           path: coverage.xml
           key: sonar-coverage-${{ github.ref_name }}-${{ github.sha }}
 
+  # 2.x ships for macOS 26 and runs on macOS 27, so the tests run on both.
+  # This job builds with Xcode 26.6 on macOS 26; the build job above covers
+  # Xcode 27 on macOS 27 and owns coverage.
+  build-macos-26:
+    if: github.repository == 'thaw-app/Thaw'
+    runs-on: macos-26
+    needs: [changes, static_analysis]
+    env:
+      HOMEBREW_NO_AUTO_UPDATE: 1
+    steps:
+      - name: Skip macOS build (no code changes)
+        if: needs.changes.outputs.code != 'true'
+        run: echo "No code-related paths changed; skipping xcodebuild test."
+
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        if: needs.changes.outputs.code == 'true'
+
+      - name: Select Xcode 26.6
+        if: needs.changes.outputs.code == 'true'
+        run: sudo xcode-select -s /Applications/Xcode_26.6.app/Contents/Developer
+
+      - name: Cache SwiftPM
+        if: needs.changes.outputs.code == 'true'
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: |
+            Build/SourcePackages
+            ~/Library/Caches/org.swift.swiftpm
+          key: spm-macos-26-${{ hashFiles('**/Package.resolved') }}
+          restore-keys: |
+            spm-macos-26-
+
+      - name: Build and Test
+        if: needs.changes.outputs.code == 'true'
+        run: |
+          xcodebuild test \
+            -project Thaw.xcodeproj \
+            -scheme Thaw \
+            -derivedDataPath Build/ \
+            -destination 'platform=macOS' \
+            CODE_SIGN_IDENTITY="" \
+            CODE_SIGNING_REQUIRED=NO \
+            CODE_SIGNING_ALLOWED=NO
+
   # Always run so Scorecard SAST sees a Sonar-related check on nearly every PR,
   # including docs/chore changes that skip the macOS build. Forks / Dependabot
   # no-op without secrets (same job name keeps required checks satisfiable).
