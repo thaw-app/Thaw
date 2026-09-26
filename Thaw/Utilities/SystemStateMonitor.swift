@@ -309,17 +309,24 @@ final class SystemStateMonitor: ObservableObject {
             self.volumeRefreshTask = nil
             guard !Task.isCancelled else { return }
 
-            self.update {
-                $0.externalDriveConnected = volumes.contains { !$0.isNetwork }
-                $0.mountedVolumes = volumes
-            }
-            self.diagLog.debug("External drive state refreshed: connected=\(volumes.contains { !$0.isNetwork })")
+            self.applyMountedVolumes(volumes)
 
             if self.volumeRefreshPending {
                 self.volumeRefreshPending = false
                 self.scheduleExternalDriveRefresh()
             }
         }
+    }
+
+    /// Publishes a finished volume read.
+    ///
+    /// A method so the `contains` closure is not nested inside the refresh task and `update`.
+    private func applyMountedVolumes(_ volumes: Set<MountedVolume>) {
+        update {
+            $0.externalDriveConnected = volumes.contains { !$0.isNetwork }
+            $0.mountedVolumes = volumes
+        }
+        diagLog.debug("External drive state refreshed: connected=\(volumes.contains { !$0.isNetwork })")
     }
 
     private static nonisolated func mountedVolumes() -> Set<MountedVolume> {
