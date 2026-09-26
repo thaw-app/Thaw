@@ -24166,8 +24166,8 @@
     "This version of Thaw is not yet compatible with macOS %lld. Support is coming through the alpha and beta update channels, and preview builds are available on GitHub Releases." : {
       "comment" : "Message of the alert shown on a macOS release this version doesn't support, when no updater is available to switch channels. The argument is the macOS major version."
     },
-    "This version of Thaw is not yet compatible with macOS %lld. Support is coming through the alpha and beta update channels, which carry the rewritten app. Thaw can switch you to alpha updates and check for a build now. If none has been published yet, it opens the preview builds on GitHub." : {
-      "comment" : "Message of the alert shown on a macOS release this version doesn't support, offering to switch to alpha updates. The argument is the macOS major version."
+    "This version of Thaw is not yet compatible with macOS %lld. Support is coming through the alpha and beta update channels, which carry the rewritten app. Thaw can switch you to beta updates and check for a build now. If none has been published yet, it opens the preview builds on GitHub." : {
+      "comment" : "Message of the alert shown on a macOS release this version doesn't support, offering to switch to beta updates. The argument is the macOS major version."
     },
     "This will reset all settings to their default values. This action cannot be undone." : {
       "comment" : "A message displayed in an alert when the user confirms resetting all settings.",
@@ -36173,123 +36173,8 @@
         }
       }
     },
-    "Switch to Alpha Updates" : {
-      "localizations" : {
-        "cs" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Přepnout na alfa aktualizace"
-          }
-        },
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Zu Alpha-Updates wechseln"
-          }
-        },
-        "es" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Cambiar a actualizaciones Alpha"
-          }
-        },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Passer aux mises à jour Alpha"
-          }
-        },
-        "hu" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Váltás az alfa frissítésekre"
-          }
-        },
-        "id" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Beralih ke pembaruan Alpha"
-          }
-        },
-        "it" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Passa agli aggiornamenti Alpha"
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "アルファアップデートに切り替える"
-          }
-        },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "알파 업데이트로 전환"
-          }
-        },
-        "nl" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Overschakelen naar Alpha-updates"
-          }
-        },
-        "pl" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Przełącz na aktualizacje Alpha"
-          }
-        },
-        "pt-BR" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Mudar para atualizações Alpha"
-          }
-        },
-        "ru" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Перейти на альфа-обновления"
-          }
-        },
-        "th" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "เปลี่ยนเป็นการอัปเดต Alpha"
-          }
-        },
-        "tr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Alfa güncellemelerine geç"
-          }
-        },
-        "uk" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Перейти на альфа-оновлення"
-          }
-        },
-        "vi" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Chuyển sang bản cập nhật Alpha"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "切换到内测版更新"
-          }
-        },
-        "zh-Hant" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "切換至內測版更新"
-          }
-        }
-      }
+    "Switch to Beta Updates" : {
+      "comment" : "Button in the unsupported-macOS alert that switches the app to beta updates and checks for a compatible build."
     },
     "System Default" : {
       "localizations" : {

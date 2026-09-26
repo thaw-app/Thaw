@@ -198,24 +198,24 @@ final class UpdatesManager: NSObject {
         #endif
     }
 
-    /// Subscribes to the alpha channel and looks for the build that supports
+    /// Subscribes to the beta channel and looks for the build that supports
     /// the running macOS, falling back to the releases page.
     ///
     /// Called from ``MacOSCompatibilityWarning`` once the user accepts. The
-    /// check runs in the background, so the user only sees the alpha build
+    /// check runs in the background, so the user only sees the new build
     /// or the releases page.
-    func checkForAlphaUpdateAfterCompatibilityWarning() {
+    func checkForBetaUpdateAfterCompatibilityWarning() {
         beginCompatibilityCheck()
         #if DEBUG
             // Checking for updates hangs in debug mode, so the promise is
             // answered here rather than by a check that never runs.
-            updateChannel = .alpha
+            updateChannel = .beta
             resolveCompatibilityCheckWithReleasesPage()
         #else
             // Storing the channel schedules the check; asking again would open a
             // second session that Sparkle drops.
             startUpdaterIfNeeded()
-            updateChannel = .alpha
+            updateChannel = .beta
         #endif
     }
 
@@ -284,7 +284,7 @@ extension UpdatesManager: SPUUpdaterDelegate {
 
     /// Determines which update channels are allowed.
     func allowedChannels(for _: SPUUpdater) -> Set<String> {
-        Self.storedUpdateChannel().allowedSparkleChannels
+        Self.storedUpdateChannel().allowedSparkleChannels(on: ProcessInfo.processInfo.operatingSystemVersion)
     }
 
     func updaterDidNotFindUpdate(_: SPUUpdater) {
@@ -391,6 +391,19 @@ nonisolated enum UpdateChannel: String, CaseIterable, Identifiable {
         case .beta: ["beta"]
         case .alpha: ["alpha"]
         }
+    }
+
+    /// The tags to accept on a system running `version`.
+    ///
+    /// On a macOS this build doesn't support, beta also takes alpha. Every
+    /// 2.x beta there is a build that can't run, and the rewrite's items all
+    /// require that macOS, so beta reaches the newest 3.x build whichever
+    /// channel it was published on.
+    func allowedSparkleChannels(on version: OperatingSystemVersion) -> Set<String> {
+        guard self == .beta, UpdateChannel.alpha.isAvailable(on: version) else {
+            return allowedSparkleChannels
+        }
+        return allowedSparkleChannels.union(UpdateChannel.alpha.allowedSparkleChannels)
     }
 
     /// A string to show in the interface.

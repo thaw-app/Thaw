@@ -31,6 +31,22 @@ struct UpdateChannelTests {
         #expect(UpdateChannel.beta.allowedSparkleChannels == ["beta"])
     }
 
+    /// On a macOS this build supports, beta's tags don't change.
+    @Test("Beta stays beta-only on a supported macOS", arguments: [25, 26])
+    func betaStaysBetaOnSupportedVersions(majorVersion: Int) {
+        #expect(UpdateChannel.beta.allowedSparkleChannels(on: Self.version(majorVersion)) == ["beta"])
+    }
+
+    /// On an unsupported macOS every 2.x beta is unrunnable, so beta also
+    /// takes the rewrite's alpha builds. The other channels are unchanged.
+    @Test("Beta takes alpha too on an unsupported macOS", arguments: [27, 28])
+    func betaTakesAlphaOnUnsupportedVersions(majorVersion: Int) {
+        let version = Self.version(majorVersion)
+        #expect(UpdateChannel.beta.allowedSparkleChannels(on: version) == ["beta", "alpha"])
+        #expect(UpdateChannel.alpha.allowedSparkleChannels(on: version) == ["alpha"])
+        #expect(UpdateChannel.stable.allowedSparkleChannels(on: version).isEmpty)
+    }
+
     /// Alpha is a parallel track, not a superset of the release candidates.
     @Test("Alpha takes alpha without beta")
     func alphaExcludesBeta() {

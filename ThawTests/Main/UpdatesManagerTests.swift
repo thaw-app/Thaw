@@ -27,17 +27,17 @@ struct UpdatesManagerTests {
 
     /// Read via ``UpdatesManager/storedUpdateChannel(on:)`` because the
     /// `updateChannel` getter withholds alpha on a supported macOS.
-    @Test("Accepting the alert subscribes to alpha")
-    func acceptingTheAlertSubscribesToAlpha() throws {
+    @Test("Accepting the alert subscribes to beta")
+    func acceptingTheAlertSubscribesToBeta() throws {
         try withScratchDefaults { _ in
             let manager = manager { _ in }
-            manager.checkForAlphaUpdateAfterCompatibilityWarning()
+            manager.checkForBetaUpdateAfterCompatibilityWarning()
             let unsupported = OperatingSystemVersion(
                 majorVersion: MacOSCompatibilityWarning.firstUnsupportedMajorVersion,
                 minorVersion: 0,
                 patchVersion: 0
             )
-            #expect(UpdatesManager.storedUpdateChannel(on: unsupported) == .alpha)
+            #expect(UpdatesManager.storedUpdateChannel(on: unsupported) == .beta)
         }
     }
 
@@ -159,13 +159,16 @@ struct UpdatesManagerTests {
         }
     }
 
-    /// The Settings picker must reach the updater.
+    /// The Settings picker must reach the updater. Beta's tags depend on the
+    /// running macOS, so the expectation does too.
     @Test("The allowed channels follow the stored channel")
     func allowedChannelsFollowStoredChannel() throws {
         try withScratchDefaults { store in
             let manager = manager { _ in }
             store.set(UpdateChannel.beta.rawValue, forKey: "UpdateChannel")
-            #expect(manager.allowedChannels(for: manager.updater) == ["beta"])
+            let running = ProcessInfo.processInfo.operatingSystemVersion
+            #expect(manager.allowedChannels(for: manager.updater) == UpdateChannel.beta.allowedSparkleChannels(on: running))
+            #expect(manager.allowedChannels(for: manager.updater).contains("beta"))
         }
     }
 
