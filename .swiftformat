@@ -14,8 +14,10 @@
 # --trailing-commas always: Matches 'trailing_comma: mandatory_comma: true'.
 --trailing-commas always
 
-# --header: Matches 'file_header' rule.
---header "//\n//  {file}\n//  Project: Thaw\n//\n//  Copyright (Ice) © 2023–2025 Jordan Baird\n//  Copyright (Thaw) © 2026 Toni Förster\n//  Licensed under the GNU GPLv3"
+# --header ignore: SwiftLint's 'file_header' rule checks the header. The Ice
+# line belongs only on files that still contain Jordan Baird's code, so a single
+# literal template here would stamp it back onto every file.
+--header ignore
 
 # --enable isEmpty: Opt-in rule to match SwiftLint's 'empty_count'.
 --enable isEmpty
