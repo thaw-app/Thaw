@@ -165,4 +165,29 @@ struct OnboardingMockupsTests {
             #expect(model.focusIndex == 0)
         }
     }
+
+    // MARK: - GlassIconBubble
+
+    @MainActor
+    @Suite("Glass icon bubble")
+    struct GlassIconBubbleTests {
+        /// The onboarding mockups construct these without arguments and rely
+        /// on the defaults matching a real menu bar glyph.
+        @Test("A glass icon bubble takes the documented defaults")
+        func defaults() {
+            let bubble = GlassIconBubble(symbol: "gear")
+            #expect(bubble.symbol == "gear")
+            #expect(bubble.size == 30)
+            #expect(bubble.tint == Color.primary)
+            #expect(bubble.showBackground)
+        }
+
+        @Test("Explicit values override the glass icon bubble defaults")
+        func explicitValues() {
+            let bubble = GlassIconBubble(symbol: "star", size: 12, tint: .red, showBackground: false)
+            #expect(bubble.size == 12)
+            #expect(bubble.tint == Color.red)
+            #expect(!bubble.showBackground)
+        }
+    }
 }

@@ -73,6 +73,17 @@ struct SettingsURIHandlerTests {
         #expect(keys.contains("gridColumns"))
     }
 
+    /// Guards the copies in `SettingsURIKeyTable` against drift. Without it a
+    /// key added to production would escape every test that iterates them.
+    @Test("The key lists the URI tests iterate still match the handler's own tables")
+    func localKeyListsMatchTheHandler() {
+        #expect(Set(SettingsURIKeyTable.booleanKeys) == Set(SettingsURIHandler.supportedBooleanKeys))
+        #expect(Set(SettingsURIKeyTable.doubleKeys) == Set(SettingsURIHandler.doubleKeys))
+        #expect(Set(SettingsURIKeyTable.enumKeys) == Set(SettingsURIHandler.enumKeys))
+        #expect(Set(SettingsURIKeyTable.perDisplayKeys) == Set(SettingsURIHandler.perDisplayKeys))
+        #expect(SettingsURIKeyTable.booleanKeys.count == SettingsURIHandler.supportedBooleanKeys.count, "no duplicates on either side")
+    }
+
     // MARK: - isValidSettingsKey() Tests
 
     @Test("A boolean key is a valid settings key")
@@ -214,6 +225,22 @@ struct SettingsURIHandlerTests {
         #expect(SettingsURIHandler.parseDouble("12abc") == nil)
     }
 
+    /// `parseDouble` is `Double.init(String:)`, so it accepts every spelling
+    /// Swift does, including hex floats, a leading plus, and a bare leading or
+    /// trailing point.
+    @Test("Every spelling Swift accepts parses to its value", arguments: [
+        ("0x1p3", 8.0),
+        ("+2.5", 2.5),
+        (".5", 0.5),
+        ("5.", 5.0),
+        ("2e1", 20.0),
+        ("-0", -0.0),
+    ])
+    func swiftDoubleSpellingsParse(_ pair: (String, Double)) {
+        let (value, expected) = pair
+        #expect(SettingsURIHandler.parseDouble(value) == expected, "\(value)")
+    }
+
     // MARK: - PerDisplayScope Tests
 
     @Test("The active display scope spells itself \"active\"")
@@ -307,4 +334,65 @@ struct SettingsURIHandlerTests {
                 != SettingsURIHandler.PerDisplayScope.activeDisplay
         )
     }
+}
+
+/// The keys ``SettingsURIHandler`` publishes, copied for `@Test(arguments:)`.
+///
+/// The arguments are evaluated outside the main actor and the handler is
+/// `@MainActor`, so the tables cannot be read directly.
+/// `localKeyListsMatchTheHandler` keeps the copies in step.
+nonisolated enum SettingsURIKeyTable {
+    static let booleanKeys: [String] = [
+        "autoRehide",
+        "showOnClick",
+        "showOnDoubleClick",
+        "showOnHover",
+        "showOnScroll",
+        "useIceBarOnlyOnNotchedDisplay",
+        "hideApplicationMenus",
+        "hideDockIconWhenToggling",
+        "enableAlwaysHiddenSection",
+        "useOptionClickToShowAlwaysHiddenSection",
+        "useDoubleClickToShowAlwaysHiddenSection",
+        "enableSecondaryContextMenu",
+        "showAllSectionsOnUserDrag",
+        "showMenuBarTooltips",
+        "enableDiagnosticLogging",
+        "customIceIconIsTemplate",
+        "showIceIcon",
+        "iceBarLocationOnHotkey",
+        "enableMenuBarItemOverflow",
+        "useThawBarOnNotchOverflow",
+        "searchIncludeVisible",
+        "searchIncludeHidden",
+        "searchIncludeAlwaysHidden",
+        "moveCursorToRevealedItem",
+    ]
+
+    static let doubleKeys: [String] = [
+        "rehideInterval",
+        "showOnHoverDelay",
+        "tooltipDelay",
+        "iconRefreshInterval",
+        "tempShowInterval",
+    ]
+
+    static let enumKeys: [String] = ["rehideStrategy"]
+
+    static let perDisplayKeys: [String] = [
+        "useIceBar",
+        "useThawBarForAlwaysHidden",
+        "iceBarLocation",
+        "alwaysShowHiddenItems",
+        "iceBarLayout",
+        "gridColumns",
+    ]
+
+    /// The Boolean keys stored in `Defaults`, which answer on
+    /// `.settingsDidChangeViaURI`. That is all of ``booleanKeys``: the handler
+    /// keeps the per-display Booleans out of `supportedBooleanKeys`.
+    static let globalBooleanKeys: [String] = booleanKeys
+
+    /// Every key `get` can be asked for that is not a per-display one.
+    static let globalReadableKeys: [String] = globalBooleanKeys + doubleKeys + enumKeys
 }

@@ -214,6 +214,49 @@ struct SettingsURIHandlerGetTests {
         }
     }
 
+    /// Unlike most schemeless cases, these do not parse at all, a different
+    /// branch, so each case asserts that first.
+    @Test("A callback URL the parser cannot read at all is refused", arguments: [
+        "https://exa mple.com/callback",
+        "ht^tp://callback",
+        "http://[::1",
+        "http://%%",
+        "thaw-callback://ho st/path",
+    ])
+    func unparsableCallbackIsRefused(_ callback: String) throws {
+        try withScratchDefaults { _ in
+            #expect(URLComponents(string: callback) == nil, "\(callback) must be unparsable for this test to mean anything")
+            #expect(
+                !SettingsURIHandler.handleGet(
+                    key: "version",
+                    displayUUID: nil,
+                    callback: callback,
+                    broadcast: false,
+                    requestId: "req-unparsable"
+                ),
+                "\(callback)"
+            )
+        }
+    }
+
+    /// A callback the handler will not open fails the whole request even
+    /// when the caller also asked for a broadcast, for an unparsable URL
+    /// exactly as for a dangerous scheme.
+    @Test("An unparsable callback is not quietly downgraded to a broadcast")
+    func unparsableCallbackIsNotDowngraded() throws {
+        try withScratchDefaults { _ in
+            #expect(
+                !SettingsURIHandler.handleGet(
+                    key: "all",
+                    displayUUID: nil,
+                    callback: "https://exa mple.com/callback",
+                    broadcast: true,
+                    requestId: "req-unparsable-both"
+                )
+            )
+        }
+    }
+
     // MARK: Broadcast response
 
     @Test("A broadcast get is answered")
@@ -386,6 +429,172 @@ struct SettingsURIHandlerGetTests {
                         requestId: "req-persisted-\(key)"
                     ),
                     "\(key)"
+                )
+            }
+        }
+    }
+
+    @Test("Every key the handler publishes is readable", arguments: SettingsURIKeyTable.globalReadableKeys)
+    func everyGlobalKeyIsReadable(_ key: String) throws {
+        try withScratchDefaults { _ in
+            #expect(
+                SettingsURIHandler.handleGet(
+                    key: key,
+                    displayUUID: nil,
+                    callback: nil,
+                    broadcast: true,
+                    requestId: "req-read-\(key)"
+                ),
+                "\(key)"
+            )
+        }
+    }
+
+    /// Reading is never destructive: a `get` of every publishable key must
+    /// leave the store exactly as it found it. Three keys are seeded with
+    /// distinctive values so a read that wrote a default back is caught,
+    /// and one is left unset so a read that materialised a default is too.
+    @Test("Reading every key leaves the stored values alone")
+    func readingDoesNotWriteBack() throws {
+        try withScratchDefaults { _ in
+            Defaults.set(true, forKey: .showOnHover)
+            Defaults.set(123.0, forKey: .rehideInterval)
+            Defaults.set(RehideStrategy.focusedApp.rawValue, forKey: .rehideStrategy)
+            Defaults.removeObject(forKey: .tooltipDelay)
+
+            for key in SettingsURIKeyTable.globalReadableKeys {
+                _ = SettingsURIHandler.handleGet(
+                    key: key,
+                    displayUUID: nil,
+                    callback: nil,
+                    broadcast: true,
+                    requestId: "req-readonly-\(key)"
+                )
+            }
+
+            #expect(Defaults.bool(forKey: .showOnHover))
+            #expect(Defaults.double(forKey: .rehideInterval) == 123)
+            #expect(Defaults.integer(forKey: .rehideStrategy) == RehideStrategy.focusedApp.rawValue)
+            #expect(
+                Defaults.object(forKey: .tooltipDelay) == nil,
+                "reading an unset key must not write a default into the store"
+            )
+        }
+    }
+
+    /// The individual-key read resolves the display before it looks at the
+    /// key at all, and reports a missing setting when it cannot. Every test
+    /// here persists a *different* display first, so the refusal is the
+    /// named identifier being unknown rather than the store being empty.
+    @Test("A per-display read for a display that is not there is refused", arguments: SettingsURIKeyTable.perDisplayKeys)
+    func perDisplayReadForAnAbsentDisplayIsRefused(_ key: String) throws {
+        try withScratchDefaults { _ in
+            let known = UUID().uuidString
+            let absent = UUID().uuidString
+            let data = try JSONEncoder().encode([known: DisplayIceBarConfiguration.defaultConfiguration])
+            Defaults.set(data, forKey: .displayIceBarConfigurations)
+
+            // Control: the same key against a display the store knows is
+            // answered, so the refusal below is about the identifier.
+            #expect(
+                SettingsURIHandler.handleGet(
+                    key: key,
+                    displayUUID: known,
+                    callback: nil,
+                    broadcast: true,
+                    requestId: "req-known-\(key)"
+                ),
+                "\(key)"
+            )
+            #expect(
+                !SettingsURIHandler.handleGet(
+                    key: key,
+                    displayUUID: absent,
+                    callback: nil,
+                    broadcast: true,
+                    requestId: "req-absent-\(key)"
+                ),
+                "\(key)"
+            )
+        }
+    }
+
+    /// A malformed identifier takes the same route out, unlike `set`, which
+    /// rejects it earlier on its `UUID(uuidString:)` check.
+    @Test("A per-display read with a malformed identifier is refused", arguments: SettingsURIKeyTable.perDisplayKeys)
+    func perDisplayReadWithAMalformedIdentifierIsRefused(_ key: String) throws {
+        try withScratchDefaults { _ in
+            #expect(
+                !SettingsURIHandler.handleGet(
+                    key: key,
+                    displayUUID: "not-a-display",
+                    callback: nil,
+                    broadcast: true,
+                    requestId: "req-malformed-\(key)"
+                ),
+                "\(key)"
+            )
+        }
+    }
+
+    /// A global key is not per-display, so the same unknown identifier that
+    /// fails a per-display read has to be ignored here rather than turning
+    /// a perfectly good read into a failure.
+    @Test("An unknown display identifier on a global read is ignored, not refused")
+    func absentDisplayIdentifierOnAGlobalReadIsIgnored() throws {
+        try withScratchDefaults { _ in
+            #expect(
+                SettingsURIHandler.handleGet(
+                    key: "showOnHover",
+                    displayUUID: UUID().uuidString,
+                    callback: nil,
+                    broadcast: true,
+                    requestId: "req-global-with-display"
+                )
+            )
+        }
+    }
+
+    // MARK: Stored values the enumeration cannot name
+
+    /// A downgrade or a hand-written `defaults write` can leave a raw value
+    /// outside the enumeration. The read must answer with it rather than
+    /// report "Setting not found", or the caller could never see or fix it.
+    @Test("A rehideStrategy the enumeration cannot name is still answered", arguments: [99, -1, 3])
+    func outOfRangeRehideStrategyIsStillAnswered(_ raw: Int) throws {
+        try withScratchDefaults { _ in
+            Defaults.set(raw, forKey: .rehideStrategy)
+
+            #expect(
+                SettingsURIHandler.handleGet(
+                    key: "rehideStrategy",
+                    displayUUID: nil,
+                    callback: nil,
+                    broadcast: true,
+                    requestId: "req-strategy-\(raw)"
+                ),
+                "rehideStrategy=\(raw)"
+            )
+            #expect(Defaults.integer(forKey: .rehideStrategy) == raw, "a read must not repair the stored value")
+        }
+    }
+
+    /// The contrast: a value the enumeration *can* name is answered too, so
+    /// the test above is not simply asserting that reads always succeed.
+    @Test("A rehideStrategy the enumeration can name is answered as well")
+    func inRangeRehideStrategyIsAnswered() throws {
+        try withScratchDefaults { _ in
+            for strategy in RehideStrategy.allCases {
+                Defaults.set(strategy.rawValue, forKey: .rehideStrategy)
+                #expect(
+                    SettingsURIHandler.handleGet(
+                        key: "rehideStrategy",
+                        displayUUID: nil,
+                        callback: nil,
+                        broadcast: true,
+                        requestId: "req-strategy-\(strategy.rawValue)"
+                    ),
+                    "\(strategy)"
                 )
             }
         }

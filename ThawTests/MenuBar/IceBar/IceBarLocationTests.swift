@@ -6,6 +6,7 @@
 //  Licensed under the GNU GPLv3
 
 import Foundation
+import SwiftUI
 import Testing
 @testable import Thaw
 
@@ -190,5 +191,25 @@ struct IceBarLocationTests {
         #expect(IceBarLocation.fromString("ice_icon") == nil)
         #expect(IceBarLocation.fromString("left_aligned") == nil)
         #expect(IceBarLocation.fromString("right_aligned") == nil)
+    }
+
+    // MARK: - Label Tests
+
+    @Test("The fixed labels are the documented ones")
+    func localizedLabels() {
+        #expect(IceBarLocation.dynamic.localized == LocalizedStringKey("Dynamic"))
+        #expect(IceBarLocation.mousePointer.localized == LocalizedStringKey("Mouse pointer"))
+        #expect(IceBarLocation.leftAligned.localized == LocalizedStringKey("Left aligned"))
+        #expect(IceBarLocation.rightAligned.localized == LocalizedStringKey("Right aligned"))
+    }
+
+    @Test("No two locations share a label")
+    func localizedLabelsAreDistinct() {
+        let labels = IceBarLocation.allCases.map(\.localized)
+        for (offset, label) in labels.enumerated() {
+            for other in labels[(offset + 1)...] {
+                #expect(label != other)
+            }
+        }
     }
 }

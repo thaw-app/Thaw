@@ -58,10 +58,9 @@ private enum MenuBarWindowRule: String, CaseIterable, Sendable {
 /// window it measures, and that height places every managed item. A dropped
 /// clause would match another window and return a plausible but wrong height.
 ///
-/// Not covered: the enumeration paths that ask the window server what
-/// exists, `currentBounds()`, the success arm of `init?(windowID:)`, and the
-/// Dock-owned arm of `wallpaperWindow(from:for:)`, which needs a running
-/// Dock. That clause is pinned from the other side by a non-Dock owner.
+/// The window server paths are covered by `WindowInfoLiveTests` below. The
+/// Dock-owned arm of `wallpaperWindow(from:for:)` is pinned here from the
+/// other side by a non-Dock owner.
 @Suite("Window info lookups without a window server")
 struct WindowInfoDerivedTests {
     // MARK: - Enumeration refusals
@@ -241,6 +240,43 @@ struct WindowInfoDerivedTests {
             #expect(owner.bundleIdentifier != "com.apple.dock")
 
             #expect(WindowInfo.wallpaperWindow(from: [window], for: unknownDisplay) == nil)
+        }
+    }
+}
+
+// MARK: - Live window server
+
+/// Runs the CGS query chain against the hosted session. A bare CI session may
+/// have no menu bar or wallpaper window, so each lookup is checked only when
+/// it returns one.
+@MainActor
+@Suite("Window info lookups against the window server", .serialized)
+struct WindowInfoLiveTests {
+    @Test("The menu bar window, when present, sits on its display")
+    func menuBarWindowSitsOnItsDisplay() {
+        let display = CGMainDisplayID()
+        // A hosted test session has a menu bar; a bare CI session may not.
+        // Either way the CGS query chain runs for real.
+        if let window = WindowInfo.menuBarWindow(for: display) {
+            #expect(window.title == "Menubar")
+            #expect(window.bounds.height > 0)
+            #expect(CGDisplayBounds(display).contains(window.bounds))
+            // Round-trip through the failable single-window initializer.
+            let sameWindow = WindowInfo(windowID: window.windowID)
+            #expect(sameWindow?.windowID == window.windowID)
+            // currentBounds re-queries live state for the same window.
+            if let bounds = window.currentBounds() {
+                #expect(bounds.height > 0)
+            }
+        }
+    }
+
+    @Test("The wallpaper window, when present, sits on its display")
+    func wallpaperWindowSitsOnItsDisplay() {
+        let display = CGMainDisplayID()
+        if let window = WindowInfo.wallpaperWindow(for: display) {
+            #expect(window.owningApplication?.bundleIdentifier == "com.apple.dock")
+            #expect(CGDisplayBounds(display).contains(window.bounds))
         }
     }
 }

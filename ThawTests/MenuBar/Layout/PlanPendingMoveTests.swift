@@ -56,6 +56,27 @@ struct PlanPendingMoveTests {
         )
     }
 
+    /// Plans with no stored destinations and no bounds overrides.
+    private func planWithDefaults(
+        entry: PendingLedger.PendingEntry,
+        items: [MenuBarItem],
+        controlItems: MenuBarItemManager.ControlItemPair,
+        returnInfo: PendingLedger.PendingReturnInfo = PendingLedger.PendingReturnInfo(
+            destinations: [:],
+            fallbackNeighbors: [:]
+        )
+    ) -> PendingLedger.PendingMove {
+        PendingLedger.planPendingMove(
+            entry: entry,
+            items: items,
+            controlItems: controlItems,
+            hiddenBounds: hiddenBounds,
+            boundsForWindowID: [:],
+            activelyShownTags: [],
+            returnInfo: returnInfo
+        )
+    }
+
     // MARK: - Scenarios
 
     @Test("A standard entry for a visible item falls back to the section boundary")
@@ -352,5 +373,139 @@ struct PlanPendingMoveTests {
         } else {
             Issue.record("expected .move(.leftOfItem(neighbor)), got \(decision)")
         }
+    }
+
+    /// The owning app quit, so there's no item to compare yet; the entry must
+    /// survive to the next pass.
+    @Test("A waitForRelaunch sentinel whose item is still gone skips")
+    func waitForRelaunchWithAbsentItemSkips() {
+        let entry = PendingLedger.PendingEntry(
+            tagIdentifier: "com.example.app:Status",
+            kind: .waitForRelaunch(windowID: 900, section: .hidden, setAt: nil)
+        )
+
+        let decision = planWithDefaults(
+            entry: entry,
+            items: [],
+            controlItems: .fixture(hiddenAt: hiddenBounds)
+        )
+
+        #expect(decision == .skip(reason: .itemNotPresent))
+    }
+
+    /// With no stored destination, the live nearest-neighbour cache is
+    /// consulted before the section boundary, always to the right of that neighbour.
+    @Test("A fallback neighbour is used when no destination was stored")
+    func fallbackNeighbourIsUsedWhenNoDestinationWasStored() {
+        let item = visibleItem(bundleID: "com.example.app", title: "Status", windowID: 910)
+        let neighbor = visibleItem(bundleID: "com.example.app", title: "Neighbour", windowID: 911, x: 600)
+        let entry = PendingLedger.PendingEntry(
+            tagIdentifier: item.tag.tagIdentifier,
+            kind: .section(.hidden)
+        )
+
+        let decision = planWithDefaults(
+            entry: entry,
+            items: [item, neighbor],
+            controlItems: .fixture(hiddenAt: hiddenBounds),
+            returnInfo: PendingLedger.PendingReturnInfo(
+                destinations: [:],
+                fallbackNeighbors: [item.tag.tagIdentifier: neighbor.tag]
+            )
+        )
+
+        guard case let .move(movedItem, destination) = decision else {
+            Issue.record("expected .move, got \(decision)")
+            return
+        }
+        #expect(movedItem.windowID == 910)
+        guard case let .rightOfItem(target) = destination else {
+            Issue.record("expected .rightOfItem, got \(destination)")
+            return
+        }
+        #expect(target.windowID == 911)
+    }
+
+    /// A fallback neighbour that is no longer in the live item list is
+    /// stale; the planner must fall through to the section boundary
+    /// instead of aiming at an item that is not there.
+    @Test("A fallback neighbour that is no longer present falls through to the boundary")
+    func staleFallbackNeighbourFallsThroughToTheBoundary() {
+        let item = visibleItem(bundleID: "com.example.app", title: "Status", windowID: 912)
+        let departed = visibleItem(bundleID: "com.example.app", title: "Departed", windowID: 913, x: 600)
+        let entry = PendingLedger.PendingEntry(
+            tagIdentifier: item.tag.tagIdentifier,
+            kind: .section(.hidden)
+        )
+
+        let decision = planWithDefaults(
+            entry: entry,
+            items: [item],
+            controlItems: .fixture(hiddenAt: hiddenBounds),
+            returnInfo: PendingLedger.PendingReturnInfo(
+                destinations: [:],
+                fallbackNeighbors: [item.tag.tagIdentifier: departed.tag]
+            )
+        )
+
+        guard case let .move(_, destination) = decision,
+              case let .leftOfItem(target) = destination
+        else {
+            Issue.record("expected .move(.leftOfItem), got \(decision)")
+            return
+        }
+        #expect(target.tag == .hiddenControlItem)
+    }
+
+    @Test("An always-hidden entry lands left of the always-hidden divider")
+    func alwaysHiddenEntryLandsLeftOfTheAlwaysHiddenDivider() {
+        let item = visibleItem(bundleID: "com.example.app", title: "Status", windowID: 914)
+        let entry = PendingLedger.PendingEntry(
+            tagIdentifier: item.tag.tagIdentifier,
+            kind: .section(.alwaysHidden)
+        )
+
+        let decision = planWithDefaults(
+            entry: entry,
+            items: [item],
+            controlItems: .fixture(
+                hiddenAt: hiddenBounds,
+                alwaysHiddenAt: CGRect(x: 100, y: 0, width: 10, height: 22)
+            )
+        )
+
+        guard case let .move(_, destination) = decision,
+              case let .leftOfItem(target) = destination
+        else {
+            Issue.record("expected .move(.leftOfItem), got \(decision)")
+            return
+        }
+        #expect(target.tag == .alwaysHiddenControlItem)
+    }
+
+    /// The always-hidden section can be switched off, which removes its
+    /// divider. An entry recorded before that must degrade to the hidden
+    /// divider rather than be dropped.
+    @Test("An always-hidden entry degrades to the hidden divider when the section is off")
+    func alwaysHiddenEntryDegradesWhenTheSectionIsOff() {
+        let item = visibleItem(bundleID: "com.example.app", title: "Status", windowID: 915)
+        let entry = PendingLedger.PendingEntry(
+            tagIdentifier: item.tag.tagIdentifier,
+            kind: .section(.alwaysHidden)
+        )
+
+        let decision = planWithDefaults(
+            entry: entry,
+            items: [item],
+            controlItems: .fixture(hiddenAt: hiddenBounds)
+        )
+
+        guard case let .move(_, destination) = decision,
+              case let .leftOfItem(target) = destination
+        else {
+            Issue.record("expected .move(.leftOfItem), got \(decision)")
+            return
+        }
+        #expect(target.tag == .hiddenControlItem)
     }
 }

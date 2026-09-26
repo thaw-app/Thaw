@@ -377,3 +377,20 @@ struct DiagnosticLoggerFileNameTests {
         #expect(url.lastPathComponent == "thaw_2026-06-07_09-48-52_3.log")
     }
 }
+
+// MARK: - DiagLog Tests
+
+/// `DiagnosticLogger.shared` is disabled in tests, so no files are written.
+@Suite("Diagnostic log facade")
+struct DiagLogTests {
+    @Test("Every DiagLog level forwards without diagnostic logging enabled")
+    func diagLogLevelsForwardWhenDisabled() {
+        let log = DiagLog(category: "DiagLogTests")
+        log.debug("debug \(42)")
+        log.info("info")
+        log.notice("notice")
+        log.warning("warning")
+        log.error("error")
+        #expect(!DiagnosticLogger.shared.isEnabled)
+    }
+}

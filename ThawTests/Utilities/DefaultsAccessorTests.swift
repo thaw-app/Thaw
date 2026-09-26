@@ -1,5 +1,5 @@
 //
-//  CoverageSweep3Tests.swift
+//  DefaultsAccessorTests.swift
 //  Project: Thaw
 //
 //  Copyright (Thaw) © 2026 Toni Förster
@@ -9,18 +9,12 @@ import Foundation
 import Testing
 @testable import Thaw
 
-/// Coverage sweep, part 3: the `Defaults` facade accessors that no other
-/// suite reaches.
+/// The typed `Defaults` accessors with no caller elsewhere in the app.
 ///
-/// `array(forKey:)`, `float(forKey:)` and `url(forKey:)` have no other caller.
-/// `globalDomain` reads a different domain from every other accessor, which is
-/// worth pinning because reading the app domain would still look plausible.
-///
-/// Tests run through ``withScratchDefaults(sourceLocation:_:)`` and the suite is
-/// `.serialized` because `Defaults.store` is process-wide. The accessors are
-/// key-agnostic, so each test just picks a key of the matching type.
-@Suite("Coverage sweep 3: Defaults facade accessors", .serialized)
-struct CoverageSweep3Tests {
+/// Serialized because `Defaults.store` is process-wide. The accessors ignore
+/// the key's meaning, so each test picks any key of the matching type.
+@Suite("Defaults accessors", .serialized)
+struct DefaultsAccessorTests {
     @Test("array(forKey:) returns the stored array")
     func arrayForKeyReturnsTheStoredArray() throws {
         try withScratchDefaults { suite in
@@ -71,11 +65,11 @@ struct CoverageSweep3Tests {
     @Test("url(forKey:) resolves a stored path")
     func urlForKeyResolvesAStoredPath() throws {
         try withScratchDefaults { suite in
-            suite.set("/nonexistent/thaw-coverage-sweep/file.txt", forKey: Defaults.Key.menuBarSearchPanelFrame.rawValue)
+            suite.set("/nonexistent/thaw-defaults-accessor/file.txt", forKey: Defaults.Key.menuBarSearchPanelFrame.rawValue)
 
             let url = try #require(Defaults.url(forKey: .menuBarSearchPanelFrame))
 
-            #expect(url.path == "/nonexistent/thaw-coverage-sweep/file.txt")
+            #expect(url.path == "/nonexistent/thaw-defaults-accessor/file.txt")
             #expect(url.lastPathComponent == "file.txt")
         }
     }
@@ -92,9 +86,9 @@ struct CoverageSweep3Tests {
     @Test("globalDomain reads the shared domain rather than the app's own")
     func globalDomainDoesNotSeeTheAppDomain() throws {
         try withScratchDefaults { _ in
-            Defaults.set("thaw-coverage-sweep", forKey: .newItemsSection)
+            Defaults.set("thaw-defaults-accessor", forKey: .newItemsSection)
 
-            #expect(Defaults.string(forKey: .newItemsSection) == "thaw-coverage-sweep")
+            #expect(Defaults.string(forKey: .newItemsSection) == "thaw-defaults-accessor")
             #expect(Defaults.globalDomain[Defaults.Key.newItemsSection.rawValue] == nil)
         }
     }

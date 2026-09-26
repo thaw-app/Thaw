@@ -5,6 +5,7 @@
 //  Copyright (Thaw) © 2026 Toni Förster
 //  Licensed under the GNU GPLv3
 
+import SwiftUI
 import Testing
 @testable import Thaw
 
@@ -60,5 +61,14 @@ struct SectionDividerStyleTests {
     func allCasesContainsAllStyles() {
         #expect(SectionDividerStyle.allCases.contains(.noDivider))
         #expect(SectionDividerStyle.allCases.contains(.chevron))
+    }
+
+    // MARK: - Label Tests
+
+    @Test("Each style has its own label")
+    func localizedLabels() {
+        #expect(SectionDividerStyle.noDivider.localized == LocalizedStringKey("None"))
+        #expect(SectionDividerStyle.chevron.localized == LocalizedStringKey("Chevron"))
+        #expect(SectionDividerStyle.noDivider.localized != SectionDividerStyle.chevron.localized)
     }
 }

@@ -91,6 +91,26 @@ struct MenuBarItemTagCodingTests {
         #expect(MenuBarItemTag(persistenceKey: "") == nil)
     }
 
+    /// The three kinds are the stored format. Anything else is from a newer build or
+    /// corrupt, and guessing would file the item under the wrong identity.
+    @Test(
+        "An unknown namespace kind is rejected",
+        arguments: ["z:com.example.app:0:Status", "N:com.example.app:0:Status", ":com.example.app:0:Status"]
+    )
+    func unknownNamespaceKindIsRejected(_ persistenceKey: String) {
+        #expect(MenuBarItemTag(persistenceKey: persistenceKey) == nil)
+    }
+
+    @Test("A malformed UUID namespace is rejected")
+    func malformedUUIDNamespaceIsRejected() {
+        #expect(MenuBarItemTag(persistenceKey: "u:not-a-uuid:0:Status") == nil)
+    }
+
+    @Test("A non-numeric instance index is rejected")
+    func nonNumericInstanceIndexIsRejected() {
+        #expect(MenuBarItemTag(persistenceKey: "s:com.example.app:first:Status") == nil)
+    }
+
     // MARK: - WindowID Tests
 
     @Test("A decoded tag has no window ID")

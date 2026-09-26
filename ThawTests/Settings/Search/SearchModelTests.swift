@@ -95,4 +95,34 @@ struct SearchModelTests {
 
         #expect(results.contains { $0.id == "general.launchAtLogin" })
     }
+
+    @Test("A sectioned entry resolves its header through the catalog")
+    func sectionedEntryResolvesItsHeader() throws {
+        let entry = try #require(SearchIndex.entries.first { $0.id == "general.showOnClick" })
+        let english = try Self.localizationBundle("en")
+
+        #expect(entry.sectionText == "Empty menu bar area")
+        // The English source doubles as the catalog key, so resolving
+        // against `en` has to give the source string back.
+        #expect(entry.localizedSection(bundle: english) == "Empty menu bar area")
+    }
+
+    @Test("An entry without a section header resolves to nil")
+    func unsectionedEntryResolvesToNil() throws {
+        let entry = try #require(SearchIndex.entries.first { $0.id == "pane.general" })
+
+        #expect(entry.sectionText == nil)
+        #expect(entry.localizedSection() == nil)
+    }
+
+    @Test("Every entry that has a section header can resolve it")
+    func everySectionedEntryResolves() throws {
+        let english = try Self.localizationBundle("en")
+        let sectioned = SearchIndex.entries.filter { $0.sectionText != nil }
+
+        #expect(!sectioned.isEmpty)
+        for entry in sectioned {
+            #expect(entry.localizedSection(bundle: english) == entry.sectionText)
+        }
+    }
 }

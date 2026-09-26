@@ -130,4 +130,33 @@ struct AutomationSettingsTests {
             #expect(!Defaults.bool(forKey: .settingsURIEnabled))
         }
     }
+
+    @Test("Adding the current app whitelists this bundle")
+    func addCurrentAppWhitelistsThisBundle() throws {
+        try withScratchDefaults { _ in
+            let bundleID = try #require(
+                Bundle.main.bundleIdentifier,
+                "the test host is an app bundle, so it always has an identifier"
+            )
+            let settings = AutomationSettings()
+            #expect(settings.whitelistedApps.isEmpty)
+
+            settings.addCurrentApp()
+
+            #expect(settings.whitelistedApps.contains { $0.bundleId == bundleID })
+            #expect(SettingsURIHandler.getWhitelist().contains(bundleID))
+        }
+    }
+
+    @Test("Adding the current app twice does not duplicate the entry")
+    func addCurrentAppIsIdempotent() throws {
+        try withScratchDefaults { _ in
+            let settings = AutomationSettings()
+
+            settings.addCurrentApp()
+            settings.addCurrentApp()
+
+            #expect(settings.whitelistedApps.count == 1)
+        }
+    }
 }
