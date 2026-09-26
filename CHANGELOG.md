@@ -7,6 +7,14 @@ The `release.yml` workflow reads the section matching the release tag
 (`## [tag]`) and uses it as the release notes for both the GitHub Release
 and the Sparkle appcast, unless overridden with the `release_notes` input.
 
+## [2.1.0-beta.6] - Unreleased
+
+**macOS 26 only**
+
+### New
+
+- **Opened items can stay a while after their menu closes.** A hidden item you open from search or the Thaw Bar went back as soon as its menu closed, so one click in the wrong place sent it away and you had to find it again. "Hide opened items again after" (Settings > General > After revealing) keeps it in the menu bar for up to 30 seconds after the menu closes. It starts at 0 seconds, which works as before. [#342](https://github.com/thaw-app/Thaw/issues/342)
+
 ## [3.0.0-alpha.7] - 2026-09-25
 
 **macOS 27 only · Build 108 · Beta candidate**
