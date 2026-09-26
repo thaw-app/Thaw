@@ -2857,6 +2857,22 @@ extension MenuBarItemManager {
             MenuBarItemManager.diagLog.debug("applySavedLayout: skipping, no windowID change and saved layout matches current")
             return false
         }
+        // Control Center at or left of the notch is a stale position from a
+        // display reconnect or widget churn. Applying against it throws the
+        // Thaw icon far left; a later tick retries once it settles.
+        if let screen = NSScreen.screenWithActiveMenuBar ?? NSScreen.main,
+           screen.hasNotch,
+           let notch = screen.frameOfNotch
+        {
+            let rightBoundary = items.first(where: { $0.tag == .controlCenter })?.bounds.minX
+                ?? screen.frame.maxX
+            guard LayoutSolver.isMenuBarGeometryReady(rightBoundary: rightBoundary, notchMaxX: notch.maxX) else {
+                MenuBarItemManager.diagLog.debug(
+                    "applySavedLayout: skipping, menu bar geometry not settled (rightBoundary=\(rightBoundary), notch.maxX=\(notch.maxX))"
+                )
+                return false
+            }
+        }
         // Discard the arm so it can't confirm a later, unrelated cycle.
         pendingDivergenceObservedAt = nil
 
