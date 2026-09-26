@@ -126,7 +126,7 @@ extension MenuBarItemManager {
     static func performWithMoveGate(
         timeout: Duration = moveGateTimeout,
         timeoutProvider: (@MainActor () throws -> Duration)? = nil,
-        waitBeforeGate: @MainActor () async throws -> Void = {},
+        waitBeforeGate: @MainActor () async throws -> Void = { /* No admission work by default. */ },
         didFinishWhileHoldingGate: (@MainActor () -> Void)? = nil,
         operation: @MainActor () async throws -> Void
     ) async throws {

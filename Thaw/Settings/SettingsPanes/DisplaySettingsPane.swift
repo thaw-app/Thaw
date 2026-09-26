@@ -119,7 +119,7 @@ struct DisplaySettingsPane: View {
                         selectedDisplayID = displaySettings.allDisplays().first?.id
                     }
                 }
-                Button(String(localized: "Cancel"), role: .cancel) {}
+                Button(String(localized: "Cancel"), role: .cancel) { /* The alert dismisses itself. */ }
             },
             message: { pending in
                 Text(String(localized: "This removes \"\(pending.name)\" and its saved settings from the list. The display reappears here if you connect it again."))

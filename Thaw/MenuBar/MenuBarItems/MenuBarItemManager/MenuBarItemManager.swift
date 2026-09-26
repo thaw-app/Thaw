@@ -1113,7 +1113,6 @@ final class MenuBarItemManager {
 
         // Tells a closed app from one moved to another section.
         let knownBaseIdentifiers = Set(itemCache.managedItems.map(\.tag.stableIdentifierBase))
-        let knownLiveIdentifiers = Set(itemCache.managedItems.map(\.uniqueIdentifier))
         let triggerProtectedIdentifiers = triggerControlledItemIdentifiers
             .union(triggerLayoutRestorationItemIdentifiers)
         let triggerProtectedBaseIdentifiers = Set(triggerProtectedIdentifiers.compactMap {

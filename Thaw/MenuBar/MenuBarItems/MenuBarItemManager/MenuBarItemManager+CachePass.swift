@@ -897,7 +897,6 @@ extension MenuBarItemManager {
                         waiterToken: waiterToken
                     )
                 }
-                return
             }
         }
     }
