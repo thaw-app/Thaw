@@ -75,6 +75,7 @@ private let doubleKeys: [String] = [
     "showOnHoverDelay",
     "tooltipDelay",
     "iconRefreshInterval",
+    "tempShowInterval",
 ]
 
 /// See ``booleanKeys`` for why these are copies.
