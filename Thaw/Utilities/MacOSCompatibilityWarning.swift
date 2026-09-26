@@ -56,7 +56,7 @@ enum MacOSCompatibilityWarning {
                 title: title,
                 message: String(
                     localized: """
-                    This version of Thaw is not yet compatible with macOS \(release). Preview builds are available on GitHub Releases, and support will be delivered through the alpha update channel.
+                    This version of Thaw is not yet compatible with macOS \(release). Support is coming through the alpha and beta update channels, and preview builds are available on GitHub Releases.
                     """
                 ),
                 confirmButtonTitle: String(localized: "View Preview Builds"),
@@ -68,7 +68,7 @@ enum MacOSCompatibilityWarning {
             title: title,
             message: String(
                 localized: """
-                This version of Thaw is not yet compatible with macOS \(release). Support arrives through the alpha channel, which carries the rewritten app. Thaw can subscribe you and check for a build now. If none has been published yet, it opens the preview builds on GitHub.
+                This version of Thaw is not yet compatible with macOS \(release). Support is coming through the alpha and beta update channels, which carry the rewritten app. Thaw can switch you to alpha updates and check for a build now. If none has been published yet, it opens the preview builds on GitHub.
                 """
             ),
             confirmButtonTitle: String(localized: "Switch to Alpha Updates"),
