@@ -1048,22 +1048,6 @@ extension Publisher {
     func discardMerge<P: Publisher>(_ other: P) -> some Publisher<Void, Failure> where P.Failure == Failure {
         replace(with: ()).merge(with: other.replace(with: ()))
     }
-
-    /// Transforms the elements of the upstream sequence into a sequence of
-    /// publishers and merges the results.
-    ///
-    /// - Parameter transform: A closure that takes an element of the upstream
-    ///   sequence as a parameter and returns a publisher.
-    ///
-    /// - Returns: A publisher that emits an event when any upstream publisher
-    ///   emits an event.
-    func mergeMap<P: Publisher>(
-        _ transform: @escaping (Output.Element) -> P
-    ) -> some Publisher<P.Output, P.Failure> where Output: Sequence, Failure == Never {
-        flatMap { sequence in
-            Publishers.MergeMany(sequence.map(transform))
-        }
-    }
 }
 
 // MARK: - RangeReplaceableCollection where Element == MenuBarItem

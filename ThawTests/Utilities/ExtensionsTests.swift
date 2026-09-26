@@ -473,36 +473,6 @@ struct ExtensionsTests {
 
             #expect(count == 4)
         }
-
-        @Test("mergeMap flattens one publisher per element of the sequence")
-        func mergeMapFlattensPerElement() {
-            let subject = PassthroughSubject<[Int], Never>()
-            var received = [Int]()
-
-            let cancellable = subject
-                .mergeMap { Just($0 * 2) }
-                .sink { received.append($0) }
-
-            subject.send([1, 2, 3])
-            cancellable.cancel()
-
-            #expect(received.sorted() == [2, 4, 6])
-        }
-
-        @Test("An empty sequence produces no downstream elements")
-        func mergeMapOnEmptySequenceProducesNothing() {
-            let subject = PassthroughSubject<[Int], Never>()
-            var received = [Int]()
-
-            let cancellable = subject
-                .mergeMap { Just($0 * 2) }
-                .sink { received.append($0) }
-
-            subject.send([])
-            cancellable.cancel()
-
-            #expect(received.isEmpty)
-        }
     }
 
     // MARK: - DistributedNotificationCenter

@@ -51,11 +51,6 @@ nonisolated struct SearchEntry: Identifiable, @unchecked Sendable {
         String(localized: String.LocalizationValue(titleText), bundle: bundle)
     }
 
-    /// The section header as rendered, when the entry has one.
-    func localizedSection(bundle: Bundle = .main) -> String? {
-        sectionText.map { String(localized: String.LocalizationValue($0), bundle: bundle) }
-    }
-
     /// The annotation text as rendered, when the entry has one.
     func localizedDescription(bundle: Bundle = .main) -> String? {
         descriptionText.map { String(localized: String.LocalizationValue($0), bundle: bundle) }

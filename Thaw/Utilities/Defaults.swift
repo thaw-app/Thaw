@@ -32,10 +32,6 @@ nonisolated enum Defaults {
         store.string(forKey: key.rawValue)
     }
 
-    static func array(forKey key: Key) -> [Any]? {
-        store.array(forKey: key.rawValue)
-    }
-
     static func dictionary(forKey key: Key) -> [String: Any]? {
         store.dictionary(forKey: key.rawValue)
     }
@@ -52,20 +48,12 @@ nonisolated enum Defaults {
         store.integer(forKey: key.rawValue)
     }
 
-    static func float(forKey key: Key) -> Float {
-        store.float(forKey: key.rawValue)
-    }
-
     static func double(forKey key: Key) -> Double {
         store.double(forKey: key.rawValue)
     }
 
     static func bool(forKey key: Key) -> Bool {
         store.bool(forKey: key.rawValue)
-    }
-
-    static func url(forKey key: Key) -> URL? {
-        store.url(forKey: key.rawValue)
     }
 
     static func set(_ value: Any?, forKey key: Key) {
@@ -268,7 +256,6 @@ nonisolated extension Defaults {
 
         // MARK: Internal
 
-        case menuBarSearchPanelFrame = "MenuBarSearchPanelFrame"
         case menuBarSearchPanelFrameWithConfig = "MenuBarSearchPanelFrame_"
 
         // MARK: Menu Bar Item Custom Names
