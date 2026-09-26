@@ -115,7 +115,13 @@ nonisolated enum ScreenCapture {
     /// but the underlying SCK filter is display-bounded; use captureWindows
     /// (SkyLight) for windows positioned off-display.
     static func captureWindowsAsync(with windowIDs: [CGWindowID], screenBounds: CGRect? = nil, option: CGWindowImageOption = []) async -> CGImage? {
-        await Bridging.captureWindowsImageSCK(windowIDs: windowIDs, screenBounds: screenBounds, options: option)
+        // On macOS 15, SCK captures of other apps' menu bar items come back
+        // fully transparent even with Screen Recording granted. Window-list
+        // capture, which 1.x used, returns the real images there.
+        guard #available(macOS 26.0, *) else {
+            return captureWindows(with: windowIDs, screenBounds: screenBounds, option: option)
+        }
+        return await Bridging.captureWindowsImageSCK(windowIDs: windowIDs, screenBounds: screenBounds, options: option)
     }
 
     /// Async, ScreenCaptureKit-backed equivalent of captureWindow.
