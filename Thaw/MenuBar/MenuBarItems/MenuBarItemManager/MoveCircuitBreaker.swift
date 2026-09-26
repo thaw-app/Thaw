@@ -16,6 +16,9 @@ import Foundation
 ///
 /// Counted in a sliding window. Past a limit, automatic moves are refused for
 /// a cooldown that grows with each trip. User moves are never counted.
+///
+/// Also owns the two coarser rules: how many unfinished bulk applies in a row
+/// ration the next one, and how many failures in a row end a batch.
 @MainActor
 final class MoveCircuitBreaker {
     enum Signal: Equatable {
@@ -52,6 +55,10 @@ final class MoveCircuitBreaker {
     private var cooldown: Duration = MoveCircuitBreaker.initialCooldown
     private var trips = 0
 
+    /// Bulk applies in a row that ended with planned moves unenacted.
+    private(set) var unfinishedBulkApplyStreak = 0
+    private var lastUnfinishedBulkApplyAt: ContinuousClock.Instant?
+
     init(now: @escaping () -> ContinuousClock.Instant = { .now }) {
         self.now = now
     }
@@ -65,7 +72,69 @@ final class MoveCircuitBreaker {
     /// Diagnostics for the log.
     var stateDescription: String {
         let openFor = openUntil.map { max(Duration.zero, now().duration(to: $0)) } ?? .zero
-        return "trips=\(trips) open=\(isOpen) openFor=\(openFor) window=\(events.count) cooldown=\(cooldown)"
+        return "trips=\(trips) open=\(isOpen) openFor=\(openFor) window=\(events.count) "
+            + "cooldown=\(cooldown) unfinishedBulkApplies=\(unfinishedBulkApplyStreak)"
+    }
+
+    /// Whether an automatic bulk apply may start now. Closed breaker first,
+    /// then the unfinished-apply ration.
+    var permitsAutomaticBulkApply: Bool {
+        !isOpen && Self.bulkApplyPermitted(
+            consecutiveUnfinishedBatches: unfinishedBulkApplyStreak,
+            lastUnfinishedBatchAt: lastUnfinishedBulkApplyAt,
+            now: now()
+        )
+    }
+
+    /// Records how a bulk apply ended. A clean one, or a user move, resets
+    /// the streak.
+    func noteBulkApplyOutcome(unenactedMoveCount: Int) {
+        guard unenactedMoveCount > 0 else {
+            unfinishedBulkApplyStreak = 0
+            lastUnfinishedBulkApplyAt = nil
+            return
+        }
+        unfinishedBulkApplyStreak += 1
+        lastUnfinishedBulkApplyAt = now()
+    }
+
+    /// Whether an automatic bulk apply may dispatch given how the recent ones
+    /// ended.
+    ///
+    /// One retry after a failed batch. Two in a row means the bar refuses moves
+    /// (#900), so after that it's one attempt per cooldown, each costing a
+    /// hidden cursor (#899). Past the hard cap it waits for a clean apply or a
+    /// user move.
+    static nonisolated func bulkApplyPermitted(
+        consecutiveUnfinishedBatches: Int,
+        lastUnfinishedBatchAt: ContinuousClock.Instant?,
+        now: ContinuousClock.Instant,
+        maxConsecutive: Int = 2,
+        cooldown: Duration = .seconds(60),
+        hardCap: Int = 6
+    ) -> Bool {
+        if consecutiveUnfinishedBatches < maxConsecutive {
+            return true
+        }
+        if consecutiveUnfinishedBatches >= hardCap {
+            return false
+        }
+        guard let lastUnfinishedBatchAt else {
+            return true
+        }
+        return now - lastUnfinishedBatchAt >= cooldown
+    }
+
+    /// Whether a move batch should abandon its remaining moves.
+    ///
+    /// Each failing move burns its full budget with the cursor hidden (#899).
+    /// Three in a row means the bar is refusing drags. Consecutive, not total:
+    /// a success resets the run.
+    static nonisolated func batchShouldAbandon(
+        consecutiveFailures: Int,
+        threshold: Int = 3
+    ) -> Bool {
+        consecutiveFailures >= threshold
     }
 
     /// Records an automatic move and trips when a limit is crossed. Returns

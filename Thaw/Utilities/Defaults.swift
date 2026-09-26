@@ -417,7 +417,7 @@ nonisolated extension Defaults {
         /// saved-layout restore; applying a profile still works.
         ///
         /// Try ``bulkApplyIdleThresholdMs``, ``enforceConcealedSectionOrder``, and the
-        /// unfinished-batch rationing in `automaticBulkApplyPermitted` first.
+        /// unfinished-batch rationing in `MoveCircuitBreaker.bulkApplyPermitted` first.
         ///
         /// Hidden diagnostic flag; not exposed in Settings. Default: true.
         case automaticArrangementEnabled = "automaticArrangementEnabled"

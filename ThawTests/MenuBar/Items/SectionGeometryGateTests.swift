@@ -376,7 +376,7 @@ struct SectionGeometryApplyGateTests {
         }
     }
 
-    // No test for the hard cap: `automaticBulkApplyPermitted` returns before the
+    // No test for the hard cap: `MoveCircuitBreaker.bulkApplyPermitted` returns before the
     // `applyProfileLayout` dispatch where recovery lives, and the recovery recache
     // skips `applySavedLayout` entirely.
 }

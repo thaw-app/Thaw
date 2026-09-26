@@ -109,6 +109,35 @@ struct MoveCircuitBreakerTests {
         #expect(!breaker.note(.failedMove))
     }
 
+    @Test("An open breaker refuses bulk applies too")
+    func openBreakerRefusesBulkApply() {
+        let breaker = makeBreaker()
+        #expect(breaker.permitsAutomaticBulkApply)
+        tripOnFailures(breaker)
+        #expect(!breaker.permitsAutomaticBulkApply)
+    }
+
+    @Test("Two unfinished bulk applies ration the next to one per cooldown")
+    func unfinishedStreakRations() {
+        let breaker = makeBreaker()
+        breaker.noteBulkApplyOutcome(unenactedMoveCount: 3)
+        #expect(breaker.permitsAutomaticBulkApply)
+        breaker.noteBulkApplyOutcome(unenactedMoveCount: 3)
+        #expect(!breaker.permitsAutomaticBulkApply)
+        clock.advance(by: .seconds(61))
+        #expect(breaker.permitsAutomaticBulkApply)
+    }
+
+    @Test("A clean bulk apply resets the unfinished streak")
+    func cleanApplyResetsStreak() {
+        let breaker = makeBreaker()
+        breaker.noteBulkApplyOutcome(unenactedMoveCount: 3)
+        breaker.noteBulkApplyOutcome(unenactedMoveCount: 3)
+        breaker.noteBulkApplyOutcome(unenactedMoveCount: 0)
+        #expect(breaker.unfinishedBulkApplyStreak == 0)
+        #expect(breaker.permitsAutomaticBulkApply)
+    }
+
     private func tripOnFailures(_ breaker: MoveCircuitBreaker) {
         for _ in 0 ... MoveCircuitBreaker.failureLimit {
             breaker.note(.failedMove)

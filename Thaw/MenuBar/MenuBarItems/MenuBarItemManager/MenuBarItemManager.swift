@@ -433,13 +433,6 @@ final class MenuBarItemManager {
     /// finished. See unfinishedMoveBatchBlocksSave(observedAt:now:).
     private var unfinishedMoveBatchObservedAt: ContinuousClock.Instant?
 
-    /// How many bulk applies in a row ended with planned moves unenacted.
-    ///
-    /// Lets automaticBulkApplyPermitted tell one bad batch from a bar where
-    /// drags always fail, which otherwise loops with the cursor hidden
-    /// (#899, #900).
-    private var consecutiveUnfinishedBulkApplies = 0
-
     /// Monotonic marker and result for the most recently recorded outcome,
     /// which includes an explicit user move (see
     /// recordExternalMoveOperation) because that too clears the save
@@ -475,15 +468,14 @@ final class MenuBarItemManager {
             lastCompletedBulkApplyUnenactedMoveCount = unenactedMoveCount
         }
         lastBulkApplyUnenactedMoveCount = unenactedMoveCount
+        moveCircuitBreaker.noteBulkApplyOutcome(unenactedMoveCount: unenactedMoveCount)
         guard unenactedMoveCount > 0 else {
             unfinishedMoveBatchObservedAt = nil
-            consecutiveUnfinishedBulkApplies = 0
             return
         }
         unfinishedMoveBatchObservedAt = .now
-        consecutiveUnfinishedBulkApplies += 1
         MenuBarItemManager.diagLog.warning(
-            "Profile layout: \(unenactedMoveCount) planned move(s) left unenacted; withholding the current arrangement from the saved order (streak: \(consecutiveUnfinishedBulkApplies))"
+            "Profile layout: \(unenactedMoveCount) planned move(s) left unenacted; withholding the current arrangement from the saved order (streak: \(moveCircuitBreaker.unfinishedBulkApplyStreak))"
         )
     }
 
@@ -493,20 +485,14 @@ final class MenuBarItemManager {
         Self.unfinishedMoveBatchBlocksSave(observedAt: unfinishedMoveBatchObservedAt)
     }
 
-    /// Feeds the session streak and latch into the pure gate and logs a
-    /// refusal under the caller's name.
+    /// Asks the move circuit breaker and logs a refusal under the caller's name.
     ///
     /// - Parameter quietly: Log at debug, for callers that retry every tick.
     func isAutomaticBulkApplyPermitted(caller: String, quietly: Bool = false) -> Bool {
-        if Self.automaticBulkApplyPermitted(
-            consecutiveUnfinishedBatches: consecutiveUnfinishedBulkApplies,
-            lastUnfinishedBatchAt: unfinishedMoveBatchObservedAt,
-            now: .now
-        ) {
+        if moveCircuitBreaker.permitsAutomaticBulkApply {
             return true
         }
-        let message = "\(caller): skipping, \(consecutiveUnfinishedBulkApplies) consecutive bulk applies " +
-            "ended with unenacted moves; cooling down before another attempt"
+        let message = "\(caller): skipping, automatic moves are paused (\(moveCircuitBreaker.stateDescription))"
         if quietly {
             MenuBarItemManager.diagLog.debug(message)
         } else {

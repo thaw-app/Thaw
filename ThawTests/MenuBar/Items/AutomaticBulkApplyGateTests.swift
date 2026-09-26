@@ -22,7 +22,7 @@ struct AutomaticBulkApplyGateTests {
     @Test("A clean history permits dispatch")
     func cleanHistoryPermits() {
         #expect(
-            MenuBarItemManager.automaticBulkApplyPermitted(
+            MoveCircuitBreaker.bulkApplyPermitted(
                 consecutiveUnfinishedBatches: 0,
                 lastUnfinishedBatchAt: nil,
                 now: clock.now
@@ -34,7 +34,7 @@ struct AutomaticBulkApplyGateTests {
     @Test("A single unfinished batch permits the retry")
     func singleFailurePermitsRetry() {
         #expect(
-            MenuBarItemManager.automaticBulkApplyPermitted(
+            MoveCircuitBreaker.bulkApplyPermitted(
                 consecutiveUnfinishedBatches: 1,
                 lastUnfinishedBatchAt: clock.now,
                 now: clock.now
@@ -47,7 +47,7 @@ struct AutomaticBulkApplyGateTests {
     func secondFailureBlocksImmediateDispatch() {
         let now = clock.now
         #expect(
-            !MenuBarItemManager.automaticBulkApplyPermitted(
+            !MoveCircuitBreaker.bulkApplyPermitted(
                 consecutiveUnfinishedBatches: 2,
                 lastUnfinishedBatchAt: now,
                 now: now
@@ -60,7 +60,7 @@ struct AutomaticBulkApplyGateTests {
     func cooldownRestoresDispatch() {
         let failedAt = clock.now
         #expect(
-            MenuBarItemManager.automaticBulkApplyPermitted(
+            MoveCircuitBreaker.bulkApplyPermitted(
                 consecutiveUnfinishedBatches: 2,
                 lastUnfinishedBatchAt: failedAt,
                 now: failedAt.advanced(by: .seconds(60)),
@@ -74,7 +74,7 @@ struct AutomaticBulkApplyGateTests {
     func streakInsideCooldownBlocks() {
         let failedAt = clock.now
         #expect(
-            !MenuBarItemManager.automaticBulkApplyPermitted(
+            !MoveCircuitBreaker.bulkApplyPermitted(
                 consecutiveUnfinishedBatches: 5,
                 lastUnfinishedBatchAt: failedAt,
                 now: failedAt.advanced(by: .seconds(59)),
@@ -88,7 +88,7 @@ struct AutomaticBulkApplyGateTests {
     @Test("A streak without a timestamp permits dispatch")
     func streakWithoutTimestampPermits() {
         #expect(
-            MenuBarItemManager.automaticBulkApplyPermitted(
+            MoveCircuitBreaker.bulkApplyPermitted(
                 consecutiveUnfinishedBatches: 3,
                 lastUnfinishedBatchAt: nil,
                 now: clock.now
@@ -104,7 +104,7 @@ struct AutomaticBulkApplyGateTests {
         let failedAt = clock.now
         let wayPast = failedAt.advanced(by: .seconds(3600))
         #expect(
-            !MenuBarItemManager.automaticBulkApplyPermitted(
+            !MoveCircuitBreaker.bulkApplyPermitted(
                 consecutiveUnfinishedBatches: 6,
                 lastUnfinishedBatchAt: failedAt,
                 now: wayPast,
@@ -117,7 +117,7 @@ struct AutomaticBulkApplyGateTests {
     func belowHardCapCooldownAllowsRetry() {
         let failedAt = clock.now
         #expect(
-            MenuBarItemManager.automaticBulkApplyPermitted(
+            MoveCircuitBreaker.bulkApplyPermitted(
                 consecutiveUnfinishedBatches: 5,
                 lastUnfinishedBatchAt: failedAt,
                 now: failedAt.advanced(by: .seconds(60)),
@@ -234,18 +234,18 @@ struct MoveBatchCircuitBreakerTests {
     /// A batch with no failures runs to completion.
     @Test("No failures does not abandon")
     func noFailuresDoesNotAbandon() {
-        #expect(!MenuBarItemManager.moveBatchShouldAbandon(consecutiveFailures: 0))
+        #expect(!MoveCircuitBreaker.batchShouldAbandon(consecutiveFailures: 0))
     }
 
     /// Failures below the threshold, or reset by a success, keep the batch going.
     @Test("Failures below the threshold do not abandon", arguments: [1, 2])
     func belowThresholdDoesNotAbandon(count: Int) {
-        #expect(!MenuBarItemManager.moveBatchShouldAbandon(consecutiveFailures: count))
+        #expect(!MoveCircuitBreaker.batchShouldAbandon(consecutiveFailures: count))
     }
 
     /// The third consecutive failure trips the breaker.
     @Test("The threshold abandons the batch")
     func thresholdAbandons() {
-        #expect(MenuBarItemManager.moveBatchShouldAbandon(consecutiveFailures: 3))
+        #expect(MoveCircuitBreaker.batchShouldAbandon(consecutiveFailures: 3))
     }
 }

@@ -2133,7 +2133,7 @@ extension MenuBarItemManager {
             "Profile layout: \(plannedMoves.count) item move(s) needed (\(movedCount) control move(s) preceded)"
         )
 
-        // Failures with no success between them; feeds moveBatchShouldAbandon.
+        // Failures with no success between them; feeds MoveCircuitBreaker.batchShouldAbandon.
         // Backoff skips don't count; they cost nothing and say nothing new.
         var consecutiveMoveFailures = 0
 
@@ -2235,7 +2235,7 @@ extension MenuBarItemManager {
                     destination: dest,
                     expectedSection: fallbackSection
                 )
-                if Self.moveBatchShouldAbandon(consecutiveFailures: consecutiveMoveFailures) {
+                if MoveCircuitBreaker.batchShouldAbandon(consecutiveFailures: consecutiveMoveFailures) {
                     unenactedMoveCount += plannedMoves.count - plannedIndex - 1
                     MenuBarItemManager.diagLog.warning(
                         "Profile layout: \(consecutiveMoveFailures) consecutive move failures, abandoning the remaining \(plannedMoves.count - plannedIndex - 1) move(s)"
@@ -2715,47 +2715,6 @@ extension MenuBarItemManager {
         observedAt: ContinuousClock.Instant?
     ) -> Bool {
         observedAt != nil
-    }
-
-    /// Whether an automatic apply may dispatch given how the recent ones
-    /// ended.
-    ///
-    /// One retry after a failed batch. Two in a row means the bar refuses moves
-    /// (#900), so after that it's one attempt per cooldown, each costing a hidden cursor (#899).
-    ///
-    /// User-initiated applies skip this gate but still feed the streak.
-    static nonisolated func automaticBulkApplyPermitted(
-        consecutiveUnfinishedBatches: Int,
-        lastUnfinishedBatchAt: ContinuousClock.Instant?,
-        now: ContinuousClock.Instant,
-        maxConsecutive: Int = 2,
-        cooldown: Duration = .seconds(60),
-        hardCap: Int = 6
-    ) -> Bool {
-        if consecutiveUnfinishedBatches < maxConsecutive {
-            return true
-        }
-        if consecutiveUnfinishedBatches >= hardCap {
-            return false
-        }
-        guard let lastUnfinishedBatchAt else {
-            return true
-        }
-        return now - lastUnfinishedBatchAt >= cooldown
-    }
-
-    /// Whether a move batch should abandon its remaining moves after a run
-    /// of consecutive failures.
-    ///
-    /// Each failing move burns its full budget with the cursor hidden (#899).
-    /// Three in a row means the bar is refusing drags. The remainder counts as unenacted.
-    ///
-    /// Consecutive, not total: a success resets the run.
-    static nonisolated func moveBatchShouldAbandon(
-        consecutiveFailures: Int,
-        threshold: Int = 3
-    ) -> Bool {
-        consecutiveFailures >= threshold
     }
 
     /// The idle window an automatic bulk apply should wait for, or nil
