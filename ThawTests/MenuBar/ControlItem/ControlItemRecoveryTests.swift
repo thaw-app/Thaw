@@ -610,10 +610,10 @@ struct ControlCenterRelaunchGraceTests {
         let retiring = generation(pid: 100, launchedAt: 1000)
         let current = generation(pid: 200, launchedAt: 2000)
 
-        #expect(MenuBarItemManager.newestControlCenterGeneration(
+        #expect(SourcePIDSeedStore.newestGeneration(
             in: [current, retiring]
         ) == current)
-        #expect(MenuBarItemManager.newestControlCenterGeneration(
+        #expect(SourcePIDSeedStore.newestGeneration(
             in: [retiring, current]
         ) == current)
     }

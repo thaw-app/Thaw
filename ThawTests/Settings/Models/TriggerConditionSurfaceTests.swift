@@ -29,12 +29,6 @@ struct TriggerConditionSurfaceTests {
         }
     }
 
-    @Test("Only the two battery thresholds use a percentage")
-    func percentageKinds() {
-        let usingPercentage = TriggerConditionKind.allCases.filter(\.usesPercentage)
-        #expect(usingPercentage == [.batteryBelow, .batteryAtOrAbove])
-    }
-
     @Test("Jittery sources settle for longer than discrete ones")
     func settleIntervals() {
         #expect(TriggerConditionKind.batteryBelow.settleInterval == .seconds(6))

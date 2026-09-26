@@ -243,12 +243,6 @@ final class MenuBarItemTriggersManager {
         trigger.shouldReveal(state: effectiveState(for: trigger, base: evaluationState))
     }
 
-    /// Whether the trigger's target item is currently placed in its reveal
-    /// section (i.e. the trigger last revealed it).
-    func isCurrentlyRevealed(_ trigger: MenuBarItemTrigger) -> Bool {
-        lastAppliedReveal[trigger.id] == true
-    }
-
     /// Returns the current runtime status for a trigger.
     func runtimeStatus(for trigger: MenuBarItemTrigger) -> MenuBarItemTriggerRuntimeStatus {
         guard trigger.isEnabled else { return .off }

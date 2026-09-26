@@ -610,14 +610,6 @@ extension MenuBarItemManager {
         return hostUptime >= grace
     }
 
-    /// Launch handoff can briefly show two Control Center processes, and
-    /// runningApplications is unordered, so pick the newest explicitly.
-    static nonisolated func newestControlCenterGeneration(
-        in generations: [ProcessGeneration]
-    ) -> ProcessGeneration? {
-        SourcePIDSeedStore.newestGeneration(in: generations)
-    }
-
     private static func controlCenterGeneration() -> ProcessGeneration? {
         SourcePIDSeedStore.currentControlCenterGeneration()
     }

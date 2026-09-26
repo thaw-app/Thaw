@@ -220,9 +220,6 @@ struct MenuBarItemGroupTests {
 
         #expect(set.isSuppressedAutomaticNamespace(.string("com.example.app")))
         #expect(!set.isSuppressedAutomaticNamespace(.string("com.other.app")))
-
-        set.unsuppressAutomatic(.string("com.example.app"))
-        #expect(!set.isSuppressedAutomaticNamespace(.string("com.example.app")))
     }
 
     @Test("Collapse state round-trips")

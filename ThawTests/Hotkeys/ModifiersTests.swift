@@ -36,21 +36,6 @@ struct ModifiersTests {
         #expect(Modifiers.command.rawValue == 1 << 3)
     }
 
-    // MARK: - Canonical Order
-
-    @Test("The canonical order holds four modifiers")
-    func canonicalOrderCount() {
-        #expect(Modifiers.canonicalOrder.count == 4)
-    }
-
-    @Test("The canonical order is control, option, shift, command")
-    func canonicalOrderSequence() {
-        #expect(Modifiers.canonicalOrder[0] == .control)
-        #expect(Modifiers.canonicalOrder[1] == .option)
-        #expect(Modifiers.canonicalOrder[2] == .shift)
-        #expect(Modifiers.canonicalOrder[3] == .command)
-    }
-
     // MARK: - Symbolic Value
 
     @Test("Control renders as ⌃")

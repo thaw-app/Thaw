@@ -1666,19 +1666,4 @@ nonisolated enum LayoutSolver {
     }
 
     // MARK: - Batch PID scan window selection
-
-    /// Returns the first window in the batch whose windowID is not
-    /// already cached, or nil when every window is cached.
-    ///
-    /// `pidBody` returns early on a cache hit, so it must get an unresolved
-    /// window for the AX scan to run and resolve the whole batch.
-    static nonisolated func selectWindowForBatchScan<W>(
-        windows: [W],
-        windowID: (W) -> CGWindowID,
-        cachedPIDs: [CGWindowID: pid_t]
-    ) -> W? {
-        windows.first(where: { window in
-            cachedPIDs[windowID(window)] == nil
-        })
-    }
 }

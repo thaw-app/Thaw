@@ -99,19 +99,6 @@ final class AutomationSettings {
         refreshWhitelist()
     }
 
-    func removeWhitelistedApp(at indexSet: IndexSet) {
-        let appsToRemove = indexSet.compactMap { index -> String? in
-            guard index < whitelistedApps.count else { return nil }
-            return whitelistedApps[index].bundleId
-        }
-
-        for bundleId in appsToRemove {
-            SettingsURIHandler.removeFromWhitelist(bundleId: bundleId)
-        }
-
-        refreshWhitelist()
-    }
-
     /// Attempts to add the currently running app to the whitelist (for testing).
     func addCurrentApp() {
         guard let bundleId = Bundle.main.bundleIdentifier else { return }

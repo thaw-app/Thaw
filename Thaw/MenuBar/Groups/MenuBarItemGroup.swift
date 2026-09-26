@@ -252,10 +252,6 @@ nonisolated struct MenuBarItemGroupSet: Codable, Equatable, Sendable {
         suppressedAutomaticNamespaces.insert(namespace.description)
     }
 
-    mutating func unsuppressAutomatic(_ namespace: MenuBarItemTag.Namespace) {
-        suppressedAutomaticNamespaces.remove(namespace.description)
-    }
-
     private mutating func removeFromAllGroups(_ identifier: String, exceptGroupAt keep: Int? = nil) {
         for index in groups.indices where index != keep {
             groups[index].remove(identifier)

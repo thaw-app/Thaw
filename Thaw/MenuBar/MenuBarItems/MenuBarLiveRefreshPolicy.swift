@@ -7,16 +7,8 @@
 
 import Foundation
 
-/// Pure live-refresh cadence and backend decisions.
+/// Pure live-refresh cadence decisions.
 nonisolated enum MenuBarLiveRefreshPolicy {
-    /// Capture backend for a section's live icons.
-    enum Backend: Equatable {
-        /// On-screen items: ScreenCaptureKit in the app process.
-        case screenCaptureKit
-        /// Offscreen items: recyclable SkyLight capture XPC.
-        case captureService
-    }
-
     /// Returns the live interval for `section`, or `nil` when refresh is Off.
     static func refreshInterval(
         for section: MenuBarSection.Name,
@@ -29,10 +21,6 @@ nonisolated enum MenuBarLiveRefreshPolicy {
         case .alwaysHidden:
             return max(target, MenuBarCaptureService.minAlwaysHiddenInterval)
         }
-    }
-
-    static func backend(for section: MenuBarSection.Name) -> Backend {
-        section == .visible ? .screenCaptureKit : .captureService
     }
 
     /// One offscreen request in flight. When both are due, Always Hidden goes

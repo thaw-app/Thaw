@@ -452,7 +452,6 @@ struct MenuBarItemTriggersManagerPlanTests {
         let status = manager.runtimeStatus(for: onACTrigger)
         #expect(status == .pending || status == .idle)
         #expect(manager.shouldRevealNow(onACTrigger) == (status == .pending))
-        #expect(!manager.isCurrentlyRevealed(onACTrigger))
     }
 
     @Test("Terminal statuses survive being read back")

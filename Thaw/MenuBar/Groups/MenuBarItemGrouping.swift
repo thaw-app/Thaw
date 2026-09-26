@@ -79,32 +79,4 @@ nonisolated enum MenuBarItemGrouping {
     static func group(containing index: Int, in tags: [MenuBarItemTag]) -> Group? {
         groups(in: tags).first { $0.memberIndices.contains(index) }
     }
-
-    /// Moves the block of elements at `sourceRange` so it begins at
-    /// `destinationIndex`, expressed in the *original* array's index space.
-    ///
-    /// Same convention as a drop cursor. The block keeps its internal order.
-    static func moveBlock<Element>(
-        _ elements: [Element],
-        sourceRange: Range<Int>,
-        toIndexInOriginal destinationIndex: Int
-    ) -> [Element] {
-        guard !sourceRange.isEmpty,
-              sourceRange.lowerBound >= 0,
-              sourceRange.upperBound <= elements.count
-        else {
-            return elements
-        }
-        let block = Array(elements[sourceRange])
-        var remainder = elements
-        remainder.removeSubrange(sourceRange)
-
-        // Translate the destination into remainder space.
-        let removedBefore = max(0, min(destinationIndex, sourceRange.upperBound) - sourceRange.lowerBound)
-        let insertionIndex = (destinationIndex - removedBefore)
-            .clamped(to: 0 ... remainder.count)
-
-        remainder.insert(contentsOf: block, at: insertionIndex)
-        return remainder
-    }
 }

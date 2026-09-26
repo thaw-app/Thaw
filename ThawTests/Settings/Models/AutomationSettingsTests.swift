@@ -81,34 +81,6 @@ struct AutomationSettingsTests {
         }
     }
 
-    @Test("Removing by index drops exactly the selected rows")
-    func removingByIndexDropsTheSelectedRows() throws {
-        try withScratchDefaults { _ in
-            let settings = AutomationSettings()
-            for id in ["com.example.Alpha", "com.example.Beta", "com.example.Gamma"] {
-                settings.addToWhitelist(bundleId: id)
-            }
-            // Sorted by display name, so the order here is alpha, beta, gamma.
-            #expect(settings.whitelistedApps.count == 3)
-
-            settings.removeWhitelistedApp(at: IndexSet([0, 2]))
-
-            #expect(settings.whitelistedApps.map(\.bundleId) == ["com.example.Beta"])
-        }
-    }
-
-    @Test("An out-of-range index is skipped rather than trapping")
-    func outOfRangeIndexIsSkipped() throws {
-        try withScratchDefaults { _ in
-            let settings = AutomationSettings()
-            settings.addToWhitelist(bundleId: "com.example.Alpha")
-
-            settings.removeWhitelistedApp(at: IndexSet([5]))
-
-            #expect(settings.whitelistedApps.map(\.bundleId) == ["com.example.Alpha"])
-        }
-    }
-
     @Test("Entries are ordered by display name, not insertion order")
     func whitelistIsSortedByDisplayName() throws {
         try withScratchDefaults { _ in

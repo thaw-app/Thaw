@@ -13,9 +13,8 @@ import Testing
 ///
 /// Two properties matter and neither is visible from a call site. Key
 /// identity: the key is the storage instance's own address, so two storages
-/// of the same `Value` type must not share a slot. Strong/weak: `set(_:for:)`
-/// retains, while `weakSet(_:for:)` boxes the value in a `WeakReference`.
-/// Both are lifetime behavior, so tests assert through `weak var` observers.
+/// of the same `Value` type must not share a slot. Lifetime: `set(_:for:)`
+/// retains its value, so tests assert through `weak var` observers.
 @MainActor
 @Suite("Object storage")
 struct ObjectStorageTests {
@@ -134,68 +133,5 @@ struct ObjectStorageTests {
 
         #expect(observed != nil)
         #expect(storage.value(for: host)?.id == 1)
-    }
-
-    /// `weakSet(_:for:)` boxes the value so the association does not extend its
-    /// lifetime, and a read after deallocation degrades to nil rather than to a
-    /// dangling reference.
-    @Test("weakSet does not keep its value alive")
-    func weakSetDoesNotRetainItsValue() {
-        let storage = ObjectStorage<Payload>()
-        let host = Host()
-        weak var observed: Payload?
-
-        var payload: Payload? = Payload(id: 1)
-        observed = payload
-        storage.weakSet(payload, for: host)
-        #expect(storage.value(for: host) === payload)
-
-        // End the payload's lifetime explicitly rather than relying on a
-        // scope ending to release the last strong reference.
-        payload = nil
-
-        #expect(observed == nil)
-        #expect(storage.value(for: host) == nil)
-    }
-
-    @Test("weakSet reads back through the box while the value is alive")
-    func weakSetReadsBackThroughTheBox() {
-        let storage = ObjectStorage<Payload>()
-        let host = Host()
-        let payload = Payload(id: 7)
-
-        storage.weakSet(payload, for: host)
-
-        #expect(storage.value(for: host)?.id == 7)
-    }
-
-    @Test("weakSet with nil clears a previously stored reference")
-    func weakSetWithNilClearsTheValue() {
-        let storage = ObjectStorage<Payload>()
-        let host = Host()
-
-        storage.weakSet(Payload(id: 1), for: host)
-        storage.weakSet(nil, for: host)
-
-        #expect(storage.value(for: host) == nil)
-    }
-
-    @Test("A strong write can be replaced by a weak one")
-    func strongWriteCanBeReplacedByAWeakOne() {
-        let storage = ObjectStorage<Payload>()
-        let host = Host()
-        weak var observed: Payload?
-
-        var payload: Payload? = Payload(id: 1)
-        observed = payload
-        storage.set(payload, for: host)
-        storage.weakSet(payload, for: host)
-
-        // End the payload's lifetime explicitly rather than relying on a
-        // scope ending to release the last strong reference.
-        payload = nil
-
-        #expect(observed == nil)
-        #expect(storage.value(for: host) == nil)
     }
 }

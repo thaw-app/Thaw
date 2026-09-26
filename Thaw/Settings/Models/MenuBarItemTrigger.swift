@@ -560,11 +560,6 @@ enum TriggerConditionKind: String, CaseIterable, Identifiable {
         }
     }
 
-    /// Whether this kind carries a battery percentage threshold.
-    var usesPercentage: Bool {
-        self == .batteryBelow || self == .batteryAtOrAbove
-    }
-
     /// How long a flipped condition of this kind must hold before its item
     /// is moved. Battery percentage thresholds use a long settle to absorb
     /// readings that jitter around the threshold; discrete sources (app

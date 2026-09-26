@@ -34,13 +34,6 @@ struct MenuBarLiveRefreshPolicyTests {
         #expect(MenuBarLiveRefreshPolicy.refreshInterval(for: .alwaysHidden, target: 2) == 2)
     }
 
-    @Test("Visible uses ScreenCaptureKit; offscreen uses the capture service")
-    func backends() {
-        #expect(MenuBarLiveRefreshPolicy.backend(for: .visible) == .screenCaptureKit)
-        #expect(MenuBarLiveRefreshPolicy.backend(for: .hidden) == .captureService)
-        #expect(MenuBarLiveRefreshPolicy.backend(for: .alwaysHidden) == .captureService)
-    }
-
     @Test("The first frame is due immediately")
     func firstFrameIsDue() {
         let now = ContinuousClock.now
