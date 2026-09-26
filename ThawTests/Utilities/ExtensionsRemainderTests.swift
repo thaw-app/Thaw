@@ -87,11 +87,9 @@ private struct PixelLayout: Sendable, CustomStringConvertible {
 /// Builds a 32-bit image every one of whose pixels carries `bytes`, in
 /// exactly that physical order.
 ///
-/// The image is assembled straight out of a data provider rather than
-/// snapshotted from a `CGContext`, because `CGContext` accepts only a
-/// handful of the layouts below — a big-endian or `Last`-alpha context
-/// cannot be created at all on this platform, so a context-built fixture
-/// could never reach half of the offset table.
+/// Built from a data provider because `CGContext` cannot be created with a
+/// big-endian or `Last`-alpha layout, so a context-built fixture could not
+/// reach half of the offset table.
 private func makeRawImage(
     width: Int,
     height: Int,
@@ -127,11 +125,8 @@ private func makeRawImage(
 }
 
 /// A four-byte pixel whose byte at `index` is `alpha` and whose other three
-/// bytes are `others`.
-///
-/// Filling the three non-alpha bytes with the opposite value is the whole
-/// point: a fixture built this way only produces the expected answer if the
-/// alpha byte really is read from `index`.
+/// bytes are `others`. Filling them with the opposite value means the
+/// fixture only gives the expected answer if alpha is read from `index`.
 private func makePixel(alpha: UInt8, atByte index: Int, others: UInt8) -> [UInt8] {
     var bytes = [UInt8](repeating: others, count: 4)
     bytes[index] = alpha
@@ -163,54 +158,33 @@ private func makeMask(width: Int, height: Int, value: UInt8) throws -> CGImage {
 
 // MARK: - Suite
 
-/// Covers what `ExtensionsTests`, `ExtensionsCoverageTests`,
-/// `ExtensionsGraphicsTests`, `CGImageAnalysisTests` and
-/// `CGImageDetachedCopyTests` leave behind in `Utilities/Extensions.swift`:
-/// the refusals and the format-dependent branches of the `CGColor` and
-/// `CGImage` helpers.
+/// Covers what the sibling Extensions and CGImage suites leave behind in
+/// `Utilities/Extensions.swift`: the refusals and format-dependent branches
+/// of the `CGColor` and `CGImage` helpers.
 ///
-/// Between them the sibling suites already drive `Bundle`, the `MenuBarItem`
-/// collection helpers, `Comparable.clamped`, `EdgeInsets`, `tryClaimOnce`,
-/// the `Publisher` operators, the interface-theme notification name,
-/// `NSBezierPath`, `NSImage`, `NSApplication`, `NSPanel`, transparency
-/// trimming, `detachedCopy`, and the happy paths of `averageColor` and
-/// `isTransparent`. What none of them reach is:
-///
-/// - **The alpha-offset table in `isTransparent`.** The fast path reads one
-///   byte per pixel out of the image's own buffer, and which byte that is
-///   depends on the alpha position *and* the byte order. Only one of the
-///   eight combinations — premultiplied-first little-endian, what a screen
-///   capture produces — is exercised anywhere else, and it happens to be the
-///   one every other suite's fixture uses. A transposed row in that table
-///   would make Thaw read a color channel as if it were alpha and silently
-///   throw away, or silently cache, the wrong menu bar item images.
+/// - **The alpha-offset table in `isTransparent`.** The fast path picks the
+///   alpha byte from the alpha position and the byte order. Other suites only
+///   use premultiplied-first little-endian (the screen capture format); a
+///   transposed row would read a color channel as alpha and drop or cache
+///   the wrong item images.
 /// - **The two fallbacks out of the fast path**: a pixel format that is not
-///   32-bit, and an alpha format with no alpha channel at all.
-/// - **`averageColor`'s color space resolution**, both the fall-through to
-///   Display P3 when neither the argument nor the image offers an RGB space,
-///   and the refusal when the resolved space cannot back an 8-bit context.
-/// - **`CGColor.brightness`'s `nil` branch**, which `ExtensionsGraphicsTests`
-///   records as unreachable. It is reachable — through a pattern color, the
-///   one kind of color that has no numeric components to convert.
+///   32-bit, and an alpha format with no alpha channel.
+/// - **`averageColor`'s color space resolution**: the fall-through to
+///   Display P3, and the refusal when the space cannot back an 8-bit context.
+/// - **`CGColor.brightness`'s `nil` branch**, reachable through a pattern
+///   color, which has no numeric components to convert.
 ///
-/// Deliberately **not** covered here:
+/// Not covered:
 ///
-/// - Every `NSScreen` member. The block is by far the largest uncovered
-///   region left in the file, and all of it either reads the number,
-///   arrangement, or notch status of the attached displays, calls into
-///   `Bridging` or the Accessibility API, or mutates the process-global
-///   display caches the running host app shares. None of it can be asserted
-///   deterministically from a unit test.
+/// - `NSScreen` members, which read the attached displays, call `Bridging`
+///   or Accessibility, or mutate display caches the host app shares.
 /// - `NSStatusItem.showMenu(_:)`, which runs a modal menu tracking loop.
-/// - `NSPanel.waitForInvisibleWithKVO`'s cancellation arm, which is only
-///   reachable behind a panel that has actually been ordered in.
-/// - Four refusals that no fixture can produce: the `@unknown default` arms;
-///   the `alphaOnly` row of the offset table (Core Graphics rejects a 32-bit
-///   `alphaOnly` image outright, so the guard above it can never be passed);
-///   the short-buffer guard (an image whose provider is smaller than its own
-///   geometry is likewise rejected at creation); and the two "context could
-///   not be created" arms of `isTransparentSlow` and `detachedCopy`, both of
-///   which are guarded against by their callers.
+/// - `NSPanel.waitForInvisibleWithKVO`'s cancellation arm, which needs a
+///   panel that has been ordered in.
+/// - Refusals no fixture can produce: the `@unknown default` arms, the
+///   `alphaOnly` offset row (Core Graphics rejects a 32-bit `alphaOnly`
+///   image), the short-buffer guard (rejected at creation), and the "context
+///   could not be created" arms of `isTransparentSlow` and `detachedCopy`.
 @Suite("Extensions remainder")
 struct ExtensionsRemainderTests {
     // MARK: - CGColor
@@ -322,9 +296,8 @@ struct ExtensionsRemainderTests {
             #expect(image.isTransparent(alphaThreshold: 0.5))
         }
 
-        /// An image whose alpha info says there is no alpha channel has no
-        /// alpha byte to read, and an image with no alpha is opaque by
-        /// definition — even when, as here, every byte in it is zero.
+        /// An image whose alpha info says there is no alpha channel is opaque by
+        /// definition, even when, as here, every byte in it is zero.
         @Test("An image with no alpha channel is never transparent", arguments: [
             (CGImageAlphaInfo.noneSkipFirst, CGBitmapInfo.byteOrder32Little),
             (CGImageAlphaInfo.noneSkipLast, CGBitmapInfo.byteOrder32Big),
@@ -393,8 +366,8 @@ struct ExtensionsRemainderTests {
     struct AverageColorSpaceTests {
         /// A mask has no color space of its own, so it is the only image that
         /// reaches the Display P3 fall-through. A mask value of 0 paints the
-        /// context's default fill color — opaque black — which keeps every
-        /// pixel above the default alpha threshold.
+        /// context's default fill (opaque black), keeping every pixel above the
+        /// default alpha threshold.
         @Test("An image with no color space of its own is averaged in Display P3")
         func colorSpacelessImageFallsBackToDisplayP3() throws {
             let mask = try makeMask(width: 6, height: 6, value: 0)

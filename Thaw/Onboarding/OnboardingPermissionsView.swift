@@ -7,23 +7,16 @@
 
 import SwiftUI
 
-/// The permissions step shown at the end of the glass onboarding tour, and
-/// again on its own whenever permissions are missing on a later launch.
-///
-/// One view serves both so the second encounter looks like the first.
+/// The permissions step at the end of onboarding, and on its own whenever
+/// permissions are missing on a later launch.
 struct ThawPermissionsView: View {
     @Environment(AppPermissions.self) private var permissions
 
     var onContinue: () -> Void
 
-    /// Shows a Quit button beside Continue when non-nil.
-    ///
-    /// Absent during onboarding, where the tour precedes this step and the
-    /// app menu is available. Supplied when the view is presented standalone:
-    /// that window hides its close, minimize and zoom buttons, and Continue
-    /// stays disabled until the required permissions are granted, so without
-    /// this there is no way out of the window for a user who does not want
-    /// to grant them.
+    /// Shows a Quit button beside Continue when non-nil. Supplied only when
+    /// standalone, where the window has no close button and Continue waits
+    /// on the required permissions.
     var onQuit: (() -> Void)?
 
     @State private var appeared = false

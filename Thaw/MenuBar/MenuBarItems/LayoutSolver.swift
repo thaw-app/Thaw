@@ -12,84 +12,51 @@ import CoreGraphics
 /// Snapshot-pure planners that decide which menu bar item moves are
 /// needed to reach a desired layout given the currently observed state.
 ///
-/// LayoutSolver answers the question: "given what's here right now,
-/// what is the next move?" Every function is pure over its inputs.
-/// Nothing inside calls Bridging or NSScreen; the orchestrator pre-
-/// computes the observed state (section classification, hidden divider
-/// bounds, item widths, etc.) and passes it in.
-///
-/// Paired with PendingLedger, which owns the history-dependent state
-/// for in-flight rehides (waitForRelaunch sentinels, return-destination
-/// anchors stored across cycles). The boundary follows the council's
-/// temporality split: LayoutSolver decides over the current snapshot,
-/// PendingLedger decides over per-entry retry state.
+/// Every function is pure; the orchestrator computes observed state and
+/// passes it in. PendingLedger owns the state that spans cycles.
 nonisolated enum LayoutSolver {
     // MARK: - Result types
 
     /// A decision emitted by the leftmost-item relocation planner.
     ///
-    /// Only describes WHICH item should move and what kind of move it is.
-    /// The orchestrator owns destination computation (which depends on
-    /// instance state like newItemsPlacement) and state mutation
-    /// (knownItemIdentifiers).
+    /// Only which item moves and how; the orchestrator owns destinations
+    /// and state.
     enum LeftmostMove: Equatable {
-        /// The Thaw visible-control icon is sitting left of the hidden
-        /// divider; restore it to the visible section.
+        /// The Thaw icon is left of the hidden divider.
         case thawIcon(MenuBarItem)
-        /// A non-hideable system item (screen recording / mic / camera
-        /// indicator) is left of the hidden divider; restore it to
-        /// visible.
+        /// A non-hideable system indicator is left of the hidden divider.
         case systemItem(MenuBarItem)
-        /// A genuinely new hideable item is left of the hidden divider;
-        /// relocate it to the user's new-items section and persist its
-        /// identifier so future cache cycles do not treat it as "new"
-        /// again.
+        /// A new hideable item is left of the hidden divider. The identifier
+        /// is persisted so it isn't treated as new again.
         case newHideableItem(MenuBarItem, identifierToMark: String)
-        /// No relocation is warranted on this pass.
         case noop(reason: NoopReason)
 
         enum NoopReason: Equatable {
-            /// No movable items currently sit left of the hidden divider.
             case noLeftmostItems
-            /// One or more hideable candidates have unresolved sourcePID;
-            /// defer until the next cache cycle resolves them.
+            /// Defer until sourcePIDs resolve.
             case unresolvedSourcePID
-            /// No hideable candidate passes the newness test (either the
-            /// item has a saved section, has been seen before, or appears
-            /// to be an identifier migration of an existing window).
+            /// Saved, seen before, or an identifier migration.
             case noNewCandidate
-            /// The chosen candidate is already in the configured new-items
-            /// section; moving would be a no-op.
             case alreadyInTarget
         }
     }
 
-    /// The result of the notch-overflow planner.
     struct NotchOverflowResult: Equatable {
-        /// UIDs of items that should overflow from visible to hidden.
         let overflowUIDs: [String]
-        /// The desiredFiltered sequence after the overflow has been applied
-        /// (overflowed items repositioned into the hidden section).
         let updatedDesiredFiltered: [String]
-        /// Updated section assignments. Overflowed UIDs are remapped to
-        /// "hidden". Keys are uniqueIdentifiers, values are persisted
-        /// section keys ("visible"/"hidden"/"alwaysHidden").
+        /// Values are persisted section keys.
         let updatedSectionMap: [String: String]
     }
 
     /// An abstract destination emitted by the LCS planner.
     ///
-    /// References anchor items by UID rather than by MenuBarItem because
-    /// the orchestrator re-fetches the live items between each move
-    /// (positions shift mid-sequence) and resolves the UID back to a
-    /// MenuBarItem at execution time.
+    /// By UID, since live items are re-fetched between moves.
     enum LCSPlannedDestination: Equatable {
         case leftOfUID(String)
         case rightOfUID(String)
         case sectionBoundary(MenuBarSection.Name)
     }
 
-    /// A single planned move emitted by the LCS planner.
     struct LCSPlannedMove: Equatable {
         let uid: String
         let destination: LCSPlannedDestination
@@ -97,18 +64,11 @@ nonisolated enum LayoutSolver {
 
     /// A placement decision for an unmanaged item during profile apply.
     ///
-    /// Encodes intent (saved vs new-item-default vs new-item-anchored)
-    /// without committing to a concrete MoveDestination. The
-    /// orchestrator resolves anchor uids and section boundaries against
-    /// the live items.
+    /// Intent only; the orchestrator resolves it against live items.
     enum UnmanagedPlacement: Equatable {
-        /// Item was seen in a prior session and has a saved position.
         case saved(section: MenuBarSection.Name, index: Int)
-        /// Item is new; place it at the default position within the
-        /// user's configured new-items section.
         case newItemDefault(section: MenuBarSection.Name)
-        /// Item is new and the user's anchor preference resolves
-        /// against a currently-present item.
+        /// The anchor preference resolves to a present item.
         case newItemAnchored(
             section: MenuBarSection.Name,
             anchorUID: String,
@@ -119,29 +79,19 @@ nonisolated enum LayoutSolver {
     /// The nearest eligible neighbors on either side of an item, as
     /// indices into the item list the search ran over.
     struct ReturnAnchors: Equatable {
-        /// The neighbor to the right, preferred as the anchor.
+        /// Preferred.
         let successor: Int?
-        /// The neighbor to the left, used when there is no successor.
         let predecessor: Int?
     }
 
-    /// A position within the saved section order: a section and the
-    /// zero-based index of the item within that section's saved array.
     struct SavedPosition: Equatable {
         let section: MenuBarSection.Name
         let index: Int
     }
 
-    /// The live observation triple planLeftmostMove needs from the
-    /// orchestrator. hiddenBounds is drawn from the hidden control
-    /// item's frame and marks the right edge of the leftmost zone.
-    /// sectionByWindowID is a per-cycle windowID to section lookup
-    /// rebuilt from cache state. previousWindowIDs is the windowID
-    /// snapshot from the prior cache cycle, used to distinguish a
-    /// genuinely new item from one whose identifier migrated when
-    /// sourcePID resolution succeeded. recentWindowIDs widens that
-    /// same test over the last several cycles so one degraded
-    /// enumeration cannot make an established item look new.
+    /// previousWindowIDs tells a new item from one whose identifier migrated
+    /// when sourcePID resolved. recentWindowIDs widens that over several
+    /// cycles so one degraded enumeration can't make an item look new.
     struct LeftmostObservation {
         let hiddenBounds: CGRect
         let sectionByWindowID: [CGWindowID: MenuBarSection.Name]
@@ -167,14 +117,7 @@ nonisolated enum LayoutSolver {
     /// sequence the profile-apply planner consumes, inserting the hidden and
     /// always-hidden control items at their section boundaries.
     ///
-    /// Order is: visible items, hidden control item, hidden items, always-
-    /// hidden control item (when present), always-hidden items. The visible
-    /// control item is already part of the visible array (it is not filtered
-    /// out upstream the way the hidden and always-hidden control items are), so
-    /// it is not reinserted here.
-    ///
-    /// Pure over its inputs. Shared by applyProfileLayout and the log-replay
-    /// harness so both build currentFlat identically.
+    /// The visible control item is already in the visible array.
     static nonisolated func flattenCurrentSections(
         visible: [String],
         hidden: [String],
@@ -194,42 +137,15 @@ nonisolated enum LayoutSolver {
 
     // MARK: - Unmanaged partition
 
-    /// Returns the subset of currentFlat that should be routed through
-    /// planUnmanagedPlacement: items present in the live menu bar that
-    /// are neither in the desired sequence (savedSectionOrder for the
-    /// .savedOrder path, profile spec for the .profile path) nor any
-    /// of the three Thaw control items.
+    /// Live items that are neither desired nor Thaw control items. Order is
+    /// preserved.
     ///
-    /// Control items are uniformly excluded because saveSectionOrder
-    /// omits them from savedSectionOrder by design (they're not
-    /// user-positionable in the same way as third-party items). If any
-    /// control item leaks through, planUnmanagedPlacement will route it
-    /// through NewItemsPlacement and the LCS planner will emit moves
-    /// that drag the Thaw icon to the user's configured anchor on every
-    /// cache cycle. Visible-control-item exclusion was the omission
-    /// that caused the field-reported "Thaw icon keeps moving" bug.
-    ///
-    /// Unresolved generic Control Center items (uniqueIdentifiers passed in
-    /// unresolvedGenericCCUIDs) are also excluded. These are widgets macOS
-    /// hosts under Control Center that Thaw cannot yet attribute to their
-    /// owning app (e.g. Little Snitch's agent before its marker window
-    /// appears): they fall back to the com.apple.controlcenter namespace,
-    /// never match a profile entry, and would otherwise be relocated as
-    /// unmanaged arrivals on every cycle. Leaving them in place until they
-    /// resolve was the fix for the field-reported "Little Snitch keeps moving"
-    /// bug. The caller computes the set from items whose tag is a Control
-    /// Center generic item and whose sourcePID is nil.
-    ///
-    /// Input order is preserved, since downstream consumers (LCS
-    /// planner) treat the result as the iteration order for placement.
-    /// Pure over its inputs.
-    /// - Parameter triggerControlledUIDs: items a conditional trigger
-    ///   currently owns, already resolved to live UIDs by the caller. They are
-    ///   deliberately absent from the desired layout, so without this they
-    ///   would be classified as unmanaged arrivals and the fallback placement
-    ///   would move them back to their saved section and index -- undoing the
-    ///   trigger. Filtering only the saved order is not enough for the same
-    ///   reason: the fallback still has an opinion.
+    /// All control items must be excluded, or the Thaw icon gets dragged to
+    /// the new-items anchor every cycle. Unresolved generic Control Center
+    /// items are excluded too: they never match a profile entry and would be
+    /// relocated every cycle (seen with Little Snitch).
+    /// - Parameter triggerControlledUIDs: Items a trigger owns. Otherwise the
+    ///   fallback placement moves them back and undoes the trigger.
     static nonisolated func partitionUnmanagedUIDs(
         currentFlat: [String],
         desiredUIDs: Set<String>,
@@ -255,19 +171,6 @@ nonisolated enum LayoutSolver {
 
     // MARK: - Leftmost relocation
 
-    /// Computes the next leftmost-relocation decision.
-    ///
-    /// Walks the cascade implemented by relocateNewLeftmostItems:
-    /// (1) Thaw visible-control icon recovery, (2) non-hideable system
-    /// item recovery, (3) genuinely new hideable item placement under the
-    /// user's new-items section. The fourth path is "no action" with a
-    /// typed reason so tests can pin down which branch fired.
-    ///
-    /// Pure over its inputs. The orchestrator computes hiddenBounds,
-    /// sectionByWindowID, and the cached hidden / always-hidden tag sets
-    /// (all of which depend on live state) and passes them in. State
-    /// mutation (knownItemIdentifiers, persistence) and execution
-    /// (move()) stay with the orchestrator.
     /// Items sitting left of the hidden divider, ordered so `first` is a
     /// stable choice. The Thaw icon is a control item but must always be
     /// visible, so it is admitted here.
@@ -277,10 +180,7 @@ nonisolated enum LayoutSolver {
     ) -> [MenuBarItem] {
         let candidates = items
             .filter { item in
-                // Generic Control Center placeholders are not draggable, but
-                // the planner must still see them so the unresolved-sourcePID
-                // safety path can defer relocation without acting on an
-                // unstable identifier.
+                // Not draggable, but the unresolved-sourcePID path needs them.
                 let isUnresolvedControlCenterPlaceholder =
                     item.tag.isControlCenterGenericItem && item.sourcePID == nil
 
@@ -288,19 +188,15 @@ nonisolated enum LayoutSolver {
                     (item.isMovable || isUnresolvedControlCenterPlaceholder) &&
                     (!item.isControlItem || item.tag == .visibleControlItem)
             }
-        // Tie-broken: `first` on this list picks the item to relocate, so a
-        // minX tie during reflow must not hand the decision to a different
-        // item on an otherwise identical pass.
+        // Tie-broken so a minX tie during reflow can't flip the choice.
         return MenuBarItem.sortByLeadingEdgeThenIdentifier(candidates)
     }
 
     /// The Thaw-icon relocation decision on its own, for callers that must
     /// act before the rest of ``planLeftmostMove``'s inputs are trustworthy.
     ///
-    /// This decision reads only geometry and our own control item's tag,
-    /// both of which are correct from the first cache pass. The other paths
-    /// classify third-party items by namespace, which is why they have to
-    /// wait for source PIDs to resolve.
+    /// Needs only geometry and our own tag, which are right from the first
+    /// pass; the other paths wait for source PIDs.
     static nonisolated func planThawIconMove(
         items: [MenuBarItem],
         hiddenBounds: CGRect
@@ -309,6 +205,8 @@ nonisolated enum LayoutSolver {
             .first { $0.tag == .visibleControlItem }
     }
 
+    /// Picks the next leftmost relocation: the Thaw icon, then non-hideable
+    /// system items, then new hideable items, else a typed no-op.
     static nonisolated func planLeftmostMove(
         items: [MenuBarItem],
         observation: LeftmostObservation,
@@ -329,49 +227,32 @@ nonisolated enum LayoutSolver {
             return .thawIcon(thawIcon)
         }
 
-        // Path 2: non-hideable system item (camera / mic / screen recording).
-        // Excludes transient Control Center items (Live Activities,
-        // iPhone Mirroring); those live deeply off-screen and cannot be
-        // dragged successfully, so retrying every cache cycle would
-        // burn the eventSemaphore for ~4 s per attempt.
+        // Path 2: non-hideable system item. Transient Control Center items
+        // live far offscreen and can't be dragged; retrying costs ~4 s each.
         if let systemItem = leftmostItems.first(where: { !$0.canBeHidden && !$0.isTransientControlCenterItem }) {
             return .systemItem(systemItem)
         }
 
         // Path 3: hideable candidate selection.
         let hideableLeftmost = leftmostItems.filter(\.canBeHidden)
-        // Continuity is judged over several cycles, not just the previous one.
-        // A single degraded enumeration — a Space switch, a partially
-        // published window list — drops an item's windowID from the previous
-        // cycle, and the item then reads as brand new on the cycle after
-        // (#849). `recentWindowIDs` carries the windowIDs seen across the last
-        // several cycles so those gaps can't manufacture a new item.
+        // Judged over several cycles, since one degraded enumeration can drop
+        // a windowID and make the item look new (#849).
         let previousIDs = Set(observation.previousWindowIDs)
             .union(observation.recentWindowIDs)
 
-        // Unresolved sourcePID short-circuit. Without sourcePID
-        // resolution, third-party items hosted by Control Center fall
-        // back to namespace com.apple.controlcenter, which prevents
-        // matching against savedSectionOrder (real bundle IDs). The
-        // next cache pass with resolved sourcePIDs will handle
-        // relocation safely.
+        // Without sourcePIDs, Control Center-hosted items can't match
+        // savedSectionOrder. Wait for the next pass.
         if hideableLeftmost.contains(where: { $0.sourcePID == nil }) {
             return .noop(reason: .unresolvedSourcePID)
         }
 
-        // Build identifier → section lookup over savedSectionOrder.
         var savedSectionForIdentifier = [String: MenuBarSection.Name]()
         for (sectionKeyString, identifiers) in savedSectionOrder {
             guard let section = sectionName(forPersistedKey: sectionKeyString) else { continue }
             for identifier in identifiers {
                 savedSectionForIdentifier[identifier] = section
-                // Also file the saved entry under its canonical form. Owners
-                // that title their items after a live metric were persisted
-                // under whatever value was on screen at save time, which no
-                // longer matches the item today; without this the item looks
-                // like it has no saved section and gets relocated as new.
-                // Additive, so identifiers persisted before canonicalization
-                // existed keep matching under their raw key too.
+                // Also under the canonical form: items titled after a live
+                // metric were saved under a stale value. Raw keys still match.
                 let canonical = MenuBarItemTag.canonicalPersistentIdentifier(identifier)
                 if canonical != identifier {
                     savedSectionForIdentifier[canonical] = section
@@ -379,20 +260,10 @@ nonisolated enum LayoutSolver {
             }
         }
 
-        // Namespace-level fallback for owners whose item title is not stable.
-        // The same physical status item is tagged `<bundleID>:Item-0` while
-        // macOS still hosts it as a generic Control Center slot, and
-        // `<bundleID>:<the owner's own window title>` once sourcePID
-        // resolution renames it. A saved entry filed under one form misses
-        // the other, so the item looks like it has no saved section and gets
-        // relocated as new — which is how an item the user put in Always
-        // Hidden gets dragged back out (#849).
-        //
-        // Only consulted where it cannot be ambiguous: the owner must have
-        // exactly one saved entry and exactly one live item, so there is only
-        // one item the saved entry could refer to. Like the canonical-form
-        // lookup above, this can only ever conclude that an item *does* have
-        // a saved section, so it suppresses relocations and never causes one.
+        // Namespace fallback: an item is `<bundleID>:Item-0` while hosted as
+        // a generic slot and renamed once sourcePID resolves, so one saved
+        // form misses the other (#849). Only used with exactly one saved
+        // entry and one live item, and it can only suppress relocations.
         let savedCountByNamespace = Dictionary(
             savedSectionOrder.lazy
                 .filter { sectionName(forPersistedKey: $0.key) != nil }
@@ -408,8 +279,7 @@ nonisolated enum LayoutSolver {
         let candidate = hideableLeftmost.first { item in
             let identifier = "\(item.tag.namespace):\(item.tag.title)"
 
-            // Items with a saved section belong to restoreItemsToSaved-
-            // Sections, not to the new-item relocation path.
+            // Saved items belong to restoreItemsToSavedSections.
             var hasSavedSection = savedSectionForIdentifier[identifier] != nil ||
                 savedSectionForIdentifier[item.uniqueIdentifier] != nil ||
                 savedSectionForIdentifier[
@@ -427,9 +297,7 @@ nonisolated enum LayoutSolver {
             let isNewIdentity = !knownItemIdentifiers.contains(identifier)
             let notPlacedHidden = !hiddenTags.contains(item.tag) && !alwaysHiddenTags.contains(item.tag)
 
-            // When isNewIdentity is true but the windowID has been seen
-            // before, the item's identifier migrated (e.g. sourcePID
-            // resolution succeeded). Treat that as not-new.
+            // A seen windowID with a new identity is a migration, not new.
             let isNewID = previousIDs.isEmpty ? isNewIdentity : !previousIDs.contains(item.windowID)
             if isNewIdentity, !isNewID {
                 return false
@@ -440,7 +308,6 @@ nonisolated enum LayoutSolver {
             return .noop(reason: .noNewCandidate)
         }
 
-        // "Already in target" check.
         if observation.sectionByWindowID[candidate.windowID] == effectiveNewItemsSection {
             return .noop(reason: .alreadyInTarget)
         }
@@ -454,15 +321,9 @@ nonisolated enum LayoutSolver {
     /// Whether the menu bar geometry is settled enough to run a layout pass on
     /// a notched display.
     ///
-    /// `rightBoundary` is Control Center's left edge (or the screen's right edge
-    /// when Control Center is absent), the same value the notch-overflow budget
-    /// is derived from. A finite value to the right of the notch's right edge is
-    /// a valid layout anchor. A value at or left of the notch (or non-finite)
-    /// means Control Center was reported at a stale off-screen position, which
-    /// happens transiently during a display reconnect or Control Center widget
-    /// churn. Running the placement and move logic against that geometry
-    /// mis-positions the control items (the Thaw visible icon jumps to the far
-    /// left), so the pass must be deferred until the geometry settles.
+    /// `rightBoundary` is Control Center's left edge. At or left of the notch
+    /// (or non-finite), Control Center is at a stale position, as during a
+    /// display reconnect, and acting on it throws the Thaw icon far left.
     static nonisolated func isMenuBarGeometryReady(
         rightBoundary: CGFloat,
         notchMaxX: CGFloat
@@ -473,23 +334,11 @@ nonisolated enum LayoutSolver {
     /// Whether the notch-overflow rebalance should run for the current active
     /// menu bar display.
     ///
-    /// Overflow ejection is only meaningful on the display the user's persistent
-    /// layout is anchored to — the *main* menu bar display. When a notched
-    /// display is merely a secondary (e.g. a MacBook whose built-in screen sits
-    /// next to a non-notched external that is the main display), macOS relocates
-    /// the status items onto the built-in's menu bar only while it transiently
-    /// holds focus. Computing the narrow beside-notch budget there ejects
-    /// profile items that fit fine on the main display, and they stay stranded
-    /// in hidden once focus returns to the main screen. So overflow runs only
-    /// when the active notched display is also the main display; on a notched
-    /// secondary the saved layout is honoured verbatim.
+    /// Only on the main display. On a notched secondary that briefly holds
+    /// focus, the narrow budget strands items in hidden.
     ///
-    /// `activeScreenKnown` is whether `NSScreen.screenWithActiveMenuBar`
-    /// actually resolved a screen. When it is `false` (e.g. mid
-    /// display-reconfiguration) the gate fails closed: guessing a screen —
-    /// such as falling back to `NSScreen.main` — risks computing the budget
-    /// against a display the layout is not anchored to, which is the same
-    /// mis-budget failure this gate exists to prevent.
+    /// Fails closed when the active screen is unknown; guessing risks the
+    /// same wrong budget.
     static nonisolated func shouldManageNotchOverflow(
         overflowEnabled: Bool,
         activeScreenKnown: Bool,
@@ -501,28 +350,12 @@ nonisolated enum LayoutSolver {
 
     /// Whether the given menu bar items currently occupy more than one display.
     ///
-    /// Each center is matched to the screen frame that contains it. Frames and
-    /// centers are expected in the global CoreGraphics coordinate space
-    /// (top-left origin), so a secondary display above the main one has a
-    /// negative y origin. When the centers resolve to more than one distinct
-    /// screen the active menu bar is relocating between displays: macOS
-    /// migrates the status item windows asynchronously, so for a window of time
-    /// some items sit on the old screen and some on the new one. A bulk apply
-    /// dispatched then resolves each move against a different display and
-    /// cannot converge, leaving items stranded where they read as un-hidden; a
-    /// section order persisted then bakes that transition artifact into the
-    /// saved layout. Every caller defers until the items collapse back onto a
-    /// single display.
+    /// Global CoreGraphics coordinates. macOS migrates status items between
+    /// displays asynchronously; moving or saving mid-migration strands items,
+    /// so callers defer.
     ///
-    /// Callers must pass only unparked items. Parked hidden and always-hidden
-    /// items are shoved left of the menu bar and land at arbitrary negative x,
-    /// which is a real display's coordinate space whenever the user has a
-    /// screen positioned to the left of the main one. Feeding those centers in
-    /// makes the predicate report a spread on a perfectly settled layout, and
-    /// it never recovers: the persist gate then blocks every write to
-    /// savedSectionOrder for as long as that arrangement is connected. Centers
-    /// that land on no screen are still ignored, but that is a fallback, not
-    /// the filter; do not rely on it to exclude parked items.
+    /// Pass only unparked items. Parked items can land on a display left of
+    /// the main one, which reads as a spread forever and blocks every save.
     static nonisolated func itemsSpanMultipleDisplays(
         itemCenters: [CGPoint],
         screenFrames: [CGRect]
@@ -541,25 +374,11 @@ nonisolated enum LayoutSolver {
         return false
     }
 
-    /// Whether the given item bounds currently fall on any of the provided
-    /// screen frames. An item parked off-screen by the control item's
-    /// collapse — shoved thousands of points left of the display — does
-    /// not, and using it as a drag anchor makes the move fail every retry:
-    /// AppKit snaps the item back to its autosave position on mouse-up,
-    /// so the divider flickers on-screen then springs back once per attempt
-    /// for the full retry budget (#881: cursor seizure and icon storm).
+    /// A parked item is a bad drag anchor: AppKit snaps it back on every
+    /// retry (#881).
     ///
-    /// Measured at the leading edge, not the center. A collapsed hidden
-    /// divider is 5000 points wide — that width is how the section conceals
-    /// the items to its left — so its center sits 2500 points right of the
-    /// divider itself. In #958 the divider was parked at minX -3871 with a
-    /// center at -1371, which on a three-display arrangement with a display
-    /// left of the origin lands squarely on a screen. The guard that was
-    /// meant to refuse a drag from a parked divider read that center, saw a
-    /// screen, and let the drag through. Every ordinary item is narrow
-    /// enough that the two measurements agree.
-    ///
-    /// Pure over its inputs.
+    /// Tests the leading edge, not the center: a collapsed divider is 5000pt
+    /// wide, so its center can land on a display left of the origin (#958).
     static nonisolated func isOnScreen(bounds: CGRect, screenFrames: [CGRect]) -> Bool {
         let leadingEdge = CGPoint(x: bounds.minX, y: bounds.midY)
         return screenFrames.contains { $0.contains(leadingEdge) }
@@ -567,14 +386,9 @@ nonisolated enum LayoutSolver {
 
     /// Whether an item lies entirely off every display.
     ///
-    /// ``isOnScreen`` tests only the leading edge, which is the right test
-    /// for drag anchors but the wrong one for deciding that a *divider* is
-    /// stranded (#978). Hiding a section expands its control item into a
-    /// spacer (`Lengths.expanded`) whose frame reaches far offscreen to the
-    /// left while its trailing edge stays anchored beside the visible
-    /// section, so every healthy collapsed bar fails the leading-edge test.
-    /// Only a divider displaced past all of its items — no edge on any
-    /// screen — is one the parked-divider recovery may rebuild.
+    /// For stranded dividers, unlike ``isOnScreen``: a collapsed divider's
+    /// leading edge is always far offscreen, so only a divider with no edge
+    /// on any screen may be rebuilt (#978).
     static nonisolated func isFullyOffScreen(bounds: CGRect, screenFrames: [CGRect]) -> Bool {
         !screenFrames.contains { $0.intersects(bounds) }
     }
@@ -584,18 +398,8 @@ nonisolated enum LayoutSolver {
     /// Decides which visible items must overflow into hidden to fit the
     /// available width under the notch.
     ///
-    /// Implements the tiered priority algorithm: unmanaged items
-    /// (newly-detected, not in any profile section) are the first
-    /// candidates to overflow because the profile has no saved position
-    /// for them. Profile-saved items only overflow if even removing all
-    /// unmanaged items still leaves the layout exceeding the budget.
-    /// Within each tier, leftmost items overflow first.
-    ///
-    /// The planner does not call Bridging or NSScreen. Callers compute
-    /// availableWidth from notch geometry and Control Center position,
-    /// and supply per-uid widths derived from live item bounds. This
-    /// keeps the planner pure for testing and pins down the algorithm
-    /// for regression-locking.
+    /// Unmanaged items overflow first; profile items only if that isn't
+    /// enough. Leftmost first within each tier.
     static nonisolated func planNotchOverflow(
         desiredFiltered: [String],
         unmanagedUIDs: [String],
@@ -604,15 +408,8 @@ nonisolated enum LayoutSolver {
         uidWidths: [String: CGFloat],
         availableWidth: CGFloat
     ) -> NotchOverflowResult {
-        // Guard against invalid / not-yet-settled geometry. A non-positive or
-        // non-finite budget means the menu bar layout could not be measured:
-        // during a display disconnect/reconnect Control Center transiently
-        // reports a stale off-screen left edge, which drives rightBoundary and
-        // therefore availableWidth negative. On such a budget the eject logic
-        // below would treat every visible item as overflow and dump the whole
-        // section into hidden, corrupting the layout (and the persisted saved
-        // order). Never act on a budget we cannot trust: return no overflow and
-        // leave the layout untouched until the geometry settles.
+        // During a display reconnect Control Center reports a stale edge and
+        // the budget goes negative, which would dump every item into hidden.
         guard availableWidth > 0, availableWidth.isFinite else {
             return NotchOverflowResult(
                 overflowUIDs: [],
@@ -621,7 +418,6 @@ nonisolated enum LayoutSolver {
             )
         }
 
-        // Visible-section UIDs in profile order (left-to-right).
         let visibleUIDs = Array(desiredFiltered.prefix(while: { $0 != controlUIDs.hidden }))
         let chevronWidth = controlUIDs.visible.flatMap { uidWidths[$0] } ?? 0
 
@@ -630,7 +426,6 @@ nonisolated enum LayoutSolver {
         let unmanagedNonChevron = nonChevronUIDs.filter { unmanagedSet.contains($0) }
         let profileNonChevron = nonChevronUIDs.filter { !unmanagedSet.contains($0) }
 
-        // Profile baseline: chevron + all profile-saved visible items.
         var profileBaseline: CGFloat = chevronWidth
         for uid in profileNonChevron {
             profileBaseline += uidWidths[uid] ?? 0
@@ -639,10 +434,7 @@ nonisolated enum LayoutSolver {
         var overflowUIDs: [String] = []
 
         if profileBaseline > availableWidth {
-            // Profile alone exceeds budget. All unmanaged overflow plus
-            // enough profile items (leftmost first) to fit. Iterate
-            // profile items from the CC end inward; whatever doesn't fit
-            // overflows.
+            // Profile alone exceeds the budget; fill from the CC end inward.
             overflowUIDs.append(contentsOf: unmanagedNonChevron)
             var profileFitting = [String]()
             var usedWidth = chevronWidth
@@ -660,8 +452,7 @@ nonisolated enum LayoutSolver {
             )
             overflowUIDs.append(contentsOf: profileOverflow)
         } else {
-            // Profile fits. Try to fit unmanaged items from the CC end;
-            // whatever doesn't fit overflows. Profile items stay put.
+            // Profile fits; fit unmanaged items from the CC end.
             var usedWidth = profileBaseline
             var unmanagedFitting = [String]()
             for uid in unmanagedNonChevron.reversed() {
@@ -678,7 +469,6 @@ nonisolated enum LayoutSolver {
             )
         }
 
-        // No overflow → return inputs unchanged.
         if overflowUIDs.isEmpty {
             return NotchOverflowResult(
                 overflowUIDs: [],
@@ -687,11 +477,8 @@ nonisolated enum LayoutSolver {
             )
         }
 
-        // Rebuild desiredFiltered: chevron + remaining visible items +
-        // hiddenCtrl + existingHidden + overflowUIDs + ahCtrl +
-        // existingAH. Overflowed items append in their original visible
-        // order so leftmost-from-visible lands at the deepest end of
-        // hidden.
+        // Overflowed items append in visible order, so the leftmost lands
+        // deepest in hidden.
         var controlSet: Set<String> = [controlUIDs.hidden]
         if let ahUID = controlUIDs.alwaysHidden {
             controlSet.insert(ahUID)
@@ -704,12 +491,8 @@ nonisolated enum LayoutSolver {
         let hiddenStart = hiddenIndex.map { $0 + 1 } ?? desiredFiltered.endIndex
         let hiddenEnd = alwaysHiddenIndex ?? desiredFiltered.endIndex
 
-        // The control items can transiently appear out of order (see
-        // MenuBarItemManager.enforceControlItemOrder), and the hidden control
-        // can be missing entirely during a display reconnect. Either case makes
-        // the hidden-section slice below an invalid range, which would trap.
-        // A layout we cannot describe is one we must not rewrite: leave the
-        // inputs untouched until the ordering settles.
+        // Control items can be out of order or missing during a reconnect,
+        // which would trap the slice below.
         guard hiddenStart <= hiddenEnd else {
             return NotchOverflowResult(
                 overflowUIDs: [],
@@ -726,12 +509,8 @@ nonisolated enum LayoutSolver {
             .filter { !controlSet.contains($0) }
 
         let overflowSet = Set(overflowUIDs)
-        // Keep the visible items in their saved order and drop only the
-        // overflowed ones. The visible control item is never in overflowSet, so
-        // filtering preserves its saved position instead of forcing it to the
-        // front of the visible section. Prepending the chevron relocated the
-        // always-visible Thaw icon to the leftmost slot on every overflow even
-        // though it was never the item that overflowed.
+        // Filter rather than prepend the chevron, which would move the Thaw
+        // icon leftmost on every overflow.
         let remainingVisible = visibleUIDs.filter { !overflowSet.contains($0) }
 
         var rebuilt = [String]()
@@ -770,17 +549,8 @@ nonisolated enum LayoutSolver {
 
     /// Counts the items sitting on the wrong side of the hidden divider.
     ///
-    /// Phase 1's hidden↔always-hidden arithmetic cannot see these: both of
-    /// its tallies intersect against the currently-occupied hidden and
-    /// always-hidden sets, so a bar whose divider has drifted past every
-    /// managed item (leaving both sets empty) reports zero mismatch. The
-    /// LCS pass cannot see them either — it receives sequences with the
-    /// dividers stripped, so a divergence that is purely a divider
-    /// position leaves current equal to desired and plans no moves (#879).
-    ///
-    /// A non-zero count means one divider move fixes every listed item at
-    /// once, which is why this is measured separately from the per-item
-    /// reorder the LCS plans.
+    /// Phase 1 and the LCS pass both miss a drifted divider: Phase 1 sees
+    /// empty sets and the LCS strips dividers (#879).
     static nonisolated func hiddenBoundaryMismatch(
         currentVisible: Set<String>,
         currentHidden: Set<String>,
@@ -804,16 +574,11 @@ nonisolated enum LayoutSolver {
     /// The items counted by ``hiddenBoundaryMismatch(currentVisible:currentHidden:currentAlwaysHidden:desiredVisible:desiredHidden:desiredAlwaysHidden:)``,
     /// named and split by the direction they have to travel.
     ///
-    /// The tally decides that a repair is needed; this decides what the
-    /// repair moves. Deriving one from the other keeps a caller that fixes
-    /// the boundary item-by-item from disagreeing with the count that sent
-    /// it there.
+    /// Derived from the same rule as the tally, so the two can't disagree.
     struct HiddenBoundaryOffenders: Equatable {
-        /// Currently visible, wanted in hidden or always-hidden. These
-        /// travel to the divider's concealed side.
+        /// Visible, but wanted concealed.
         var wronglyVisible: Set<String>
-        /// Currently concealed, wanted in visible. These travel to its
-        /// visible side.
+        /// Concealed, but wanted visible.
         var wronglyConcealed: Set<String>
 
         var count: Int {
@@ -827,18 +592,9 @@ nonisolated enum LayoutSolver {
 
     /// Splits the boundary mismatch into the two directions of travel.
     ///
-    /// `overflowExemptUIDs` carries the notch-overflow eject set
-    /// (`notchOverflowEjectedUIDs`). An ejected item sits in hidden while
-    /// the profile still lists it visible — that divergence is by design,
-    /// the same rule `currentLayoutDivergesFromSaved` applies through its
-    /// own overflow exemption. Counting it here makes Phase 1 recall the
-    /// item to visible every apply and the next cycle's overflow plan
-    /// eject it again: a two-drag oscillation for as long as the bar stays
-    /// over budget (#958's 20 August log, nk-tedo-001). The exemption only
-    /// covers an item actually sitting in hidden; one that drifted into
-    /// always-hidden is genuine drift and keeps counting.
-    ///
-    /// Pure over its inputs.
+    /// `overflowExemptUIDs` are notch-overflow ejects, in hidden by design.
+    /// Counting them oscillates between recall and eject. Only hidden is
+    /// exempt; always-hidden is real drift.
     static nonisolated func hiddenBoundaryOffenders(
         currentVisible: Set<String>,
         currentHidden: Set<String>,
@@ -848,10 +604,7 @@ nonisolated enum LayoutSolver {
         desiredAlwaysHidden: Set<String>,
         overflowExemptUIDs: Set<String> = []
     ) -> HiddenBoundaryOffenders {
-        // Everything the profile places left of the hidden divider, in
-        // either of the two concealed sections. Which of the two an item
-        // lands in is the always-hidden divider's problem, handled by the
-        // AH_ctrl planning that follows this check.
+        // Which concealed section is the always-hidden divider's problem.
         let desiredConcealed = desiredHidden.union(desiredAlwaysHidden)
         let currentConcealed = currentHidden.union(currentAlwaysHidden)
 
@@ -865,31 +618,13 @@ nonisolated enum LayoutSolver {
     /// Whether a boundary mismatch should be repaired by dragging the
     /// hidden divider, or by moving the offending items to it.
     ///
-    /// Dragging H_ctrl re-sections every item it crosses. The cost is the
-    /// whole bar and the benefit is one drag, so the trade is only worth
-    /// taking when the divider itself is what drifted rather than the
-    /// items. That shows up as a side with nothing live left on it:
+    /// Dragging H_ctrl re-sections every item it crosses, so only drag it
+    /// when a side has nothing live left, meaning the divider drifted:
+    /// nothing concealed (#879) or nothing visible (#958). Otherwise move
+    /// the items.
     ///
-    /// - Nothing concealed is #879, where the divider had drifted past
-    ///   every managed item and eighteen of eighteen read visible. Moving
-    ///   them one at a time would mean eighteen drags across a boundary
-    ///   that is in the wrong place anyway.
-    /// - Nothing visible is the collapse in #958, where the whole bar has
-    ///   ended up behind the divider. The drag is the recovery.
-    ///
-    /// Anything in between means the divider is roughly where it belongs
-    /// and some items have wandered across it. #958's 21 August log is the
-    /// case that settles the trade: one item on the wrong side, nine still
-    /// correctly concealed, and the drag planned to reach that one item
-    /// would have carried H_ctrl from minX -3871 to 1648, across the
-    /// entire visible section.
-    ///
-    /// Counts exclude the control items. The chevron is always on the
-    /// visible side of H_ctrl, so counting it would keep `liveVisibleCount`
-    /// above zero on precisely the collapsed bar the second case exists to
-    /// rescue.
-    ///
-    /// Pure over its inputs.
+    /// Counts exclude control items; the chevron would keep the visible
+    /// count above zero on a collapsed bar.
     static nonisolated func shouldMoveHiddenDivider(
         liveConcealedCount: Int,
         liveVisibleCount: Int
@@ -900,53 +635,22 @@ nonisolated enum LayoutSolver {
     /// Plans where to drag the hidden divider so the visible/hidden split
     /// matches the profile.
     ///
-    /// Section order runs right-to-left: index 0 of each ordered section
-    /// is its rightmost item, and items live to one side of their own
-    /// divider (visible right of the hidden divider, hidden left of it).
-    /// The divider therefore belongs immediately right of the rightmost
-    /// item the profile assigns to hidden, which is the same gap as
-    /// immediately left of the leftmost item it assigns to visible.
+    /// The divider belongs right of the rightmost hidden item, else left of
+    /// the leftmost visible one, so emptying hidden still parks it past
+    /// every visible item.
     ///
-    /// Anchors to the hidden side first because that side is what the
-    /// profile is trying to repopulate; falls back to the visible side
-    /// when the profile's hidden section has no live members, so a
-    /// profile that empties the hidden section still parks the divider
-    /// past every visible item instead of leaving it mid-bar.
-    ///
-    /// An anchor in `unanchorableUIDs` yields nil rather than a search
-    /// that continues past it. The anchor names the gap the divider
-    /// belongs in, so the next candidate along is an item the profile
-    /// wants on the *other* side of that gap; anchoring there would drag
-    /// the divider past an item instead of up to it.
-    ///
-    /// Thaw's own control items are what reaches that test. The caller's
-    /// candidate set is already filtered to items that are movable and on
-    /// screen, and the chevron satisfies both whatever the rest of the bar
-    /// is doing — which makes it the anchor of last resort in exactly the
-    /// passes where every real item on its side has been dragged off the
-    /// bar and filtered out. #958's reporter restored a known-good plist
-    /// with Thaw quit and watched the first apply after relaunch collapse
-    /// it again: eleven items the profile assigns to visible were sitting
-    /// parked on the hidden side, nothing else visible was live, and the
-    /// fallback returned the chevron. Dragging H_ctrl up to it swept the
-    /// rest of the section across with it.
-    ///
-    /// Returning nil leaves the boundary where it is and hands the work to
-    /// the per-item LCS pass, which moves the items back to the divider.
-    /// That is the direction that restores the profile; this move is the
-    /// direction that destroys it.
-    ///
-    /// Pure over its inputs. Returns nil when neither section has a live
-    /// movable member to anchor against.
+    /// An unanchorable candidate yields nil rather than searching on; the
+    /// next candidate would be on the wrong side of the gap. In practice
+    /// that's the chevron, and dragging H_ctrl to it swept a whole section
+    /// into hidden (#958). Nil hands the work to the per-item LCS pass.
     static nonisolated func planHiddenDividerAnchor(
         desiredHidden: [String],
         desiredVisible: [String],
         liveMovableUIDs: Set<String>,
         unanchorableUIDs: Set<String> = []
     ) -> HiddenDividerAnchor? {
-        // One selection rule, shared with hiddenDividerAnchorCandidate so a
-        // caller logging the refused candidate can never name an item other
-        // than the one this planner considered.
+        // Shared with hiddenDividerAnchorCandidate so logs name the same
+        // item.
         guard let candidate = hiddenDividerAnchorCandidate(
             desiredHidden: desiredHidden,
             desiredVisible: desiredVisible,
@@ -965,15 +669,8 @@ nonisolated enum LayoutSolver {
     }
 
     /// The item ``planHiddenDividerAnchor(desiredHidden:desiredVisible:liveMovableUIDs:unanchorableUIDs:)``
-    /// picks before the unanchorable test, so the caller's log line can say
-    /// which item was refused instead of reporting a bar with nothing live
-    /// as the same event.
-    ///
-    /// The two nil cases need telling apart in the field: one says the
-    /// profile's items are not on the bar right now, the other says they
-    /// are on the wrong side of it and the divider must not chase them.
-    ///
-    /// Pure over its inputs.
+    /// picks before the unanchorable test, so logs can tell "nothing live"
+    /// from "refused anchor".
     static nonisolated func hiddenDividerAnchorCandidate(
         desiredHidden: [String],
         desiredVisible: [String],
@@ -987,44 +684,21 @@ nonisolated enum LayoutSolver {
 
     /// Which slot a cross-boundary fallback move lands its item in.
     ///
-    /// The fallback drags every item onto the same anchor, the
-    /// always-hidden divider, so the landing slot is fixed and each move
-    /// pushes whatever is already there one place further away from it.
+    /// Every move lands on the always-hidden divider and pushes earlier
+    /// arrivals away from it.
     enum FallbackLandingSlot {
-        /// Dragged to the right of the divider, into the leftmost slot of
-        /// the hidden section.
         case leftmostOfHidden
-        /// Dragged to the left of the divider, into the rightmost slot of
-        /// the always-hidden section.
         case rightmostOfAlwaysHidden
     }
 
     /// The order in which items crossing the hidden to always-hidden
     /// boundary must be dragged so they come to rest in profile order.
     ///
-    /// Because every move lands in the same slot and displaces its
-    /// predecessors, the item that must end up furthest from the divider
-    /// moves first, and the one that ends up adjacent to it moves last.
+    /// The item that ends furthest from the divider moves first. Getting it
+    /// backwards reverses the section silently: membership is right, and
+    /// relaxConcealedSectionOrder then accepts the reversal.
     ///
-    /// Getting that backwards strands nothing in the wrong section, so no
-    /// gate downstream reports it: membership is correct and only the
-    /// order inside the section comes out reversed. With
-    /// enforceConcealedSectionOrder off, relaxConcealedSectionOrder then
-    /// rewrites the desired sequence to match that reversal, the LCS finds
-    /// nothing to plan, and the apply logs a layout already in its correct
-    /// positions over a bar the user can see is backwards.
-    ///
-    /// The saved order is stored left-to-right, index 0 leftmost. Landing
-    /// at the leftmost slot of hidden therefore means index 0 moves last;
-    /// landing at the rightmost slot of always-hidden means index 0 moves
-    /// first.
-    ///
-    /// Identifiers the profile does not carry have no position to honour.
-    /// They are appended, which lands them together against the divider on
-    /// whichever side they were headed, and sorted so a set's arbitrary
-    /// iteration order cannot make the sequence differ between applies.
-    ///
-    /// Pure over its inputs.
+    /// Unknown identifiers go last, sorted for determinism.
     static nonisolated func crossSectionFallbackMoveOrder(
         profileOrder: [String],
         crossing: Set<String>,
@@ -1041,44 +715,14 @@ nonisolated enum LayoutSolver {
 
     // MARK: - LCS reorder
 
-    /// Plans the LCS-anchored move sequence for items that need to move
-    /// to reach the desired order.
-    ///
-    /// Computes LCS over current and desired (filtered to overlap), then
-    /// for each item that must move scans forward for a stable anchor in
-    /// the same section, falls back to a backward scan, falls back to a
-    /// section boundary. "Stable anchors" are LCS items plus items
-    /// already planned by the sequence; so the destination of move N+1
-    /// can reference an anchor that move N just established.
-    ///
-    /// Pure over its inputs. Returns destinations as anchor UIDs so the
-    /// orchestrator can resolve them against fresh items between moves.
     /// Rewrites the desired sequence so that, inside concealed sections,
     /// items keep the relative order they already have.
     ///
-    /// A move costs the same whether or not anyone can see its result: the
-    /// cursor is hijacked, the drag is synthesised, the landing is polled.
-    /// Spending that on the order of two items parked thousands of points
-    /// off-screen buys nothing a user can perceive — the hidden and
-    /// always-hidden sections are revealed through the Thaw Bar, which
-    /// renders from the cache rather than from where the windows sit.
+    /// A move hijacks the cursor, and reordering items parked offscreen buys
+    /// nothing visible; the Thaw Bar renders from the cache.
     ///
-    /// Membership is still enforced. Only the ordering *within* a relaxed
-    /// section is surrendered: an item that must cross into hidden is
-    /// absent from hidden's current run, so it still plans a move; an item
-    /// already in hidden but "out of order" no longer does. Feeding the
-    /// result to ``planLCSMoveSequence(currentNoControls:desiredNoControls:sectionMap:)``
-    /// is what drops those moves — the LCS now finds those items already
-    /// in place.
-    ///
-    /// Positions are preserved, contents are permuted: the rewrite emits a
-    /// relaxed item wherever the desired sequence had one, so a caller that
-    /// interleaves sections still gets a well-formed sequence back. Items
-    /// with no live counterpart sort last within their section (stably, in
-    /// desired order), because an item that is not in the current run has
-    /// to be moved regardless of what this relaxation says.
-    ///
-    /// Pure over its inputs.
+    /// Membership is still enforced; only order within a section is
+    /// surrendered. Items with no live counterpart sort last.
     static nonisolated func relaxConcealedSectionOrder(
         desiredNoControls: [String],
         currentNoControls: [String],
@@ -1092,10 +736,8 @@ nonisolated enum LayoutSolver {
             currentIndex[uid] = index
         }
 
-        // Per relaxed section, the desired members re-sorted into the order
-        // they currently sit in. Sorting on (rank, desiredIndex) keeps the
-        // comparison total, so the sort is deterministic without relying on
-        // Swift's `sort` being stable.
+        // (rank, desiredIndex) keeps the sort deterministic, since `sort`
+        // isn't stable.
         var queues = [String: [String]]()
         for key in relaxedSectionKeys {
             let members = desiredNoControls.enumerated().filter { _, uid in
@@ -1124,6 +766,9 @@ nonisolated enum LayoutSolver {
         }
     }
 
+    /// Plans moves for items outside the LCS. Each anchors forward, then
+    /// backward, then on the section boundary; anchors are LCS items or
+    /// ones already planned. Returns anchor UIDs, resolved between moves.
     static nonisolated func planLCSMoveSequence(
         currentNoControls: [String],
         desiredNoControls: [String],
@@ -1158,17 +803,9 @@ nonisolated enum LayoutSolver {
 
             var destination: LCSPlannedDestination?
 
-            // Scan forward for a stable anchor in the same section.
-            //
-            // Skips anchors the caller marked unanchorable — Thaw's own
-            // section dividers. They stay in the sequence because their
-            // position is part of the layout, but a move that anchors on one
-            // and fails pushes it: the bar lays out right to left, so an
-            // insertion on the wrong side shoves the anchor further left, and
-            // the next attempt shoves it again. Walking a divider that way is
-            // what ends in a zero-width hidden section (#924, #927). A
-            // neighbouring app item is an equally good insertion point and
-            // costs nothing when it goes wrong.
+            // Scan forward for a stable anchor in the same section. Skip
+            // Thaw's dividers: a failed move shoves them left each retry,
+            // ending in a zero-width hidden section (#924, #927).
             for scanIdx in (desiredIdx + 1) ..< lcsDesired.count {
                 let candidateUID = lcsDesired[scanIdx]
                 let candidateKey = sectionMap[candidateUID] ?? "visible"
@@ -1218,10 +855,7 @@ nonisolated enum LayoutSolver {
 
     // MARK: - Saved-position lookup
 
-    /// Looks up the saved position for the given identifier by exact match.
-    ///
-    /// Returns the section and index in that section's saved array if the
-    /// identifier matches an entry. Returns nil if not found.
+    /// Exact-match lookup.
     static nonisolated func savedPosition(
         for uid: String,
         in savedSectionOrder: [String: [String]]
@@ -1238,12 +872,7 @@ nonisolated enum LayoutSolver {
     /// Looks up the saved position for the given identifier, falling back
     /// to baseID matching when the exact instanceIndex differs.
     ///
-    /// Multi-instance apps may receive a different :N suffix on relaunch
-    /// (instance indices are reassigned by windowID sort order after each
-    /// assignStableInstanceIndices pass). This variant first tries an
-    /// exact-identifier match, then a baseID-prefix match against any
-    /// instance saved for the same namespace:title. Returns the first
-    /// baseID match found.
+    /// Multi-instance apps can get a different :N suffix on relaunch.
     static nonisolated func savedPositionByBaseID(
         for uid: String,
         in savedSectionOrder: [String: [String]]
@@ -1252,19 +881,9 @@ nonisolated enum LayoutSolver {
             return exact
         }
 
-        // Canonical match, before the base-ID fallback below.
-        //
-        // A volatile-title owner is saved under whatever its title was at the
-        // time and carries a different one now, so the exact match above
-        // always misses. The base-ID fallback misses too: for these owners the
-        // title *is* the volatile part, so `namespace:title` differs between
-        // the saved entry and the live item just as the full identifier does.
-        // Without this the item reaches planUnmanagedPlacement with no saved
-        // position and is placed by newItemDefault instead of where the user
-        // put it (#815).
-        //
-        // Instance index is preserved by canonicalization, so two items from
-        // the same opaque owner still resolve to their own saved entries.
+        // For volatile titles both the exact and base-ID matches miss, since
+        // the title is the volatile part. Canonicalization keeps the
+        // instance index.
         let canonicalUID = MenuBarItemTag.canonicalPersistentIdentifier(uid)
         if canonicalUID != uid {
             for (sectionKeyString, identifiers) in savedSectionOrder {
@@ -1297,12 +916,6 @@ nonisolated enum LayoutSolver {
     /// apply, consulting saved positions first and falling back to the
     /// user's NewItemsPlacement preference.
     ///
-    /// Unmanaged items are items present in the live menu bar but not
-    /// covered by the profile spec. Today's behavior parks them all at
-    /// visible-leftmost; this planner replaces that hardcoded choice
-    /// with the user's actual layout history.
-    ///
-    /// Pure over its inputs.
     static nonisolated func planUnmanagedPlacement(
         unmanagedUIDs: [String],
         savedSectionOrder: [String: [String]],
@@ -1313,14 +926,12 @@ nonisolated enum LayoutSolver {
         let newItemsSection = sectionName(forPersistedKey: newItemsPlacement.sectionKey) ?? .hidden
 
         for uid in unmanagedUIDs {
-            // 1. Saved-position lookup (exact then baseID).
             if let position = savedPositionByBaseID(for: uid, in: savedSectionOrder) {
                 result[uid] = .saved(section: position.section, index: position.index)
                 continue
             }
 
-            // 2. NewItemsPlacement anchor (if configured and present in the
-            //    current bar), resolved to the live UID. (#1069)
+            // NewItemsPlacement anchor, resolved to the live UID.
             if newItemsPlacement.relation != .sectionDefault,
                let anchor = newItemsPlacement.anchorIdentifier,
                let liveAnchor = currentUIDs.first(where: {
@@ -1335,8 +946,6 @@ nonisolated enum LayoutSolver {
                 continue
             }
 
-            // 3. Fallback: place at the new-items section's default
-            //    boundary.
             result[uid] = .newItemDefault(section: newItemsSection)
         }
         return result
@@ -1347,29 +956,14 @@ nonisolated enum LayoutSolver {
     /// Computes the abstract destination that positions an item at the
     /// given saved index within its section.
     ///
-    /// Used by the profile-route unmanaged placement path
-    /// (applyProfileLayout's unmanaged-items block via
-    /// planUnmanagedPlacement) and by the reconciler when it lifts a
-    /// saved position into a concrete destination. Forward-first scan
-    /// finds a successor
-    /// anchor (the next uid in saved order that is currently in the
-    /// section); backward scan finds a predecessor anchor. Falls back
-    /// to the section boundary when no anchors are present.
-    ///
-    /// Forward-first matches user intent: when restoring an item at
-    /// saved index N, prefer to anchor against the item that follows
-    /// it in saved order rather than the one before, because the
-    /// follower's current position is the more reliable signal of
-    /// "this is where the section ends".
-    ///
-    /// Pure over its inputs.
+    /// Prefers the successor anchor, whose position is the more reliable
+    /// signal, then the predecessor, then the section boundary.
     static nonisolated func anchorDestination(
         forSavedIndex savedIndex: Int,
         inSection section: MenuBarSection.Name,
         savedSequence: [String],
         currentUIDsInSection: Set<String>
     ) -> LCSPlannedDestination {
-        // Forward scan: closest successor anchor.
         if savedIndex + 1 < savedSequence.count {
             for i in (savedIndex + 1) ..< savedSequence.count {
                 let candidate = savedSequence[i]
@@ -1378,7 +972,6 @@ nonisolated enum LayoutSolver {
                 }
             }
         }
-        // Backward scan: closest predecessor anchor.
         if savedIndex > 0 {
             let start = min(savedIndex - 1, savedSequence.count - 1)
             if start >= 0 {
@@ -1390,24 +983,15 @@ nonisolated enum LayoutSolver {
                 }
             }
         }
-        // No anchors → section boundary.
         return .sectionBoundary(section)
     }
 
     /// Finds the nearest eligible neighbors on either side of the item at
     /// `index`.
     ///
-    /// Used to anchor a temporarily shown item when it is returned to its
-    /// section. Callers decide eligibility; only neighbors that share the
-    /// item's section qualify, because anchoring against an item from
-    /// another section returns the item into *that* section instead.
-    ///
-    /// Forward-first for the same reason as
-    /// ``anchorDestination(forSavedIndex:inSection:savedSequence:currentUIDsInSection:)``:
-    /// the successor's position is the more reliable signal of where the
-    /// item belongs.
-    ///
-    /// Pure over its inputs.
+    /// Only same-section neighbors qualify, or the item returns into the
+    /// wrong section. Successor first, as in
+    /// ``anchorDestination(forSavedIndex:inSection:savedSequence:currentUIDsInSection:)``.
     static nonisolated func returnAnchors(
         forIndex index: Int,
         itemCount: Int,
@@ -1428,20 +1012,8 @@ nonisolated enum LayoutSolver {
     /// Computes the new saved-section identifiers array for one section,
     /// preserving closed-app positions relative to their old neighbors.
     ///
-    /// Replaces the buggy "append closed apps to the end" logic that
-    /// destroyed positional intent every time the user quit an app.
-    /// The new algorithm:
-    ///
-    /// 1. Start with the items currently in the section (cache order).
-    /// 2. Walk the old saved order. For each entry that is no longer
-    ///    present in the cache (closed app) and is not a stale instance
-    ///    index, splice it into the new list at a position anchored
-    ///    against its old neighbors that are still present. Forward-
-    ///    first scan (insert before the closest still-present successor)
-    ///    then backward (after the closest still-present predecessor)
-    ///    then append as last resort.
-    ///
-    /// Pure over its inputs.
+    /// Closed apps are spliced back beside their old neighbors (successor
+    /// first, then predecessor, then the end) instead of appended.
     static nonisolated func planSectionOrder(
         currentInSection: [String],
         oldSavedForSection: [String],
@@ -1451,29 +1023,16 @@ nonisolated enum LayoutSolver {
         var identifiers = currentInSection
 
         for (oldIdx, savedUID) in oldSavedForSection.enumerated() {
-            // Already in the new list (currently present) or already
-            // inserted by an earlier iteration: skip.
             if identifiers.contains(savedUID) {
                 continue
             }
-            // Present somewhere in the cache (other section): drop the
-            // saved entry; the item moved, do not re-preserve it here.
+            // The item moved to another section.
             if allCurrentIdentifiers.contains(savedUID) {
                 continue
             }
-            // Stale instance index: the app is back with a different
-            // :N suffix. The cache already has it under its new uid;
-            // drop the stale saved entry.
-            //
-            // The shared resolver, not `baseID(forIdentifier:)`: the producer
-            // builds `allCurrentBaseIdentifiers` from `stableIdentifierBase`,
-            // which keeps the whole title, while `baseID` truncates at the
-            // second colon. For a title that contains a colon the two
-            // disagree -- live `ns:Meeting:30` against saved
-            // `ns:Meeting:30:0` -- and the stale entry gets re-inserted on
-            // every cycle. `resolvedBaseIdentifier` strips a suffix only when
-            // the remainder is a base the cache actually has, so it cannot
-            // turn the title "Meeting:30" into an unrelated "Meeting".
+            // Stale instance index: the app is back with a new :N suffix.
+            // Not `baseID(forIdentifier:)`, which truncates titles that
+            // contain a colon and re-inserts the stale entry every cycle.
             if MenuBarItemTag.resolvedBaseIdentifier(
                 for: savedUID,
                 knownBaseIdentifiers: allCurrentBaseIdentifiers
@@ -1481,12 +1040,8 @@ nonisolated enum LayoutSolver {
                 continue
             }
 
-            // Find an anchor in oldSavedForSection that's also in the
-            // new identifiers list. Forward-first (closest successor),
-            // then backward (closest predecessor), then append.
             var insertAt: Int = identifiers.count
 
-            // Forward scan from oldIdx+1.
             var foundForward = false
             if oldIdx + 1 < oldSavedForSection.count {
                 for i in (oldIdx + 1) ..< oldSavedForSection.count {
@@ -1499,7 +1054,6 @@ nonisolated enum LayoutSolver {
                 }
             }
 
-            // Backward scan from oldIdx-1 (only if forward didn't find one).
             if !foundForward, oldIdx > 0 {
                 for i in stride(from: oldIdx - 1, through: 0, by: -1) {
                     let candidate = oldSavedForSection[i]
@@ -1518,9 +1072,7 @@ nonisolated enum LayoutSolver {
 
     // MARK: - Internal helpers
 
-    /// Computes the Longest Common Subsequence of two string arrays.
-    /// Returns the set of items that appear in both arrays in the same
-    /// relative order: these items don't need to be moved.
+    /// Items in the LCS don't need to move.
     static nonisolated func longestCommonSubsequence(
         _ a: [String],
         _ b: [String],
@@ -1566,7 +1118,6 @@ nonisolated enum LayoutSolver {
             }
         }
 
-        // Backtrack to find the LCS items.
         var result = Set<String>()
         var i = m
         var j = n
@@ -1583,25 +1134,19 @@ nonisolated enum LayoutSolver {
         return result
     }
 
-    /// Extracts the baseID (namespace:title) prefix from a uniqueIdentifier.
+    /// The `namespace:title` prefix.
     static nonisolated func baseID(forIdentifier id: String) -> String {
         id.split(separator: ":", maxSplits: 2).prefix(2).joined(separator: ":")
     }
 
-    /// Extracts the namespace prefix from a uniqueIdentifier.
-    ///
-    /// Every namespace form renders without a colon — a bundle ID, a UUID
-    /// string, or the literal `null` — so the first component is the whole
-    /// namespace.
+    /// No namespace form contains a colon, so the first component is it.
     private static nonisolated func namespace(forIdentifier id: String) -> String {
         String(id.prefix { $0 != ":" })
     }
 
     // MARK: - Saved-order pruning
 
-    /// The title portion of a `namespace:title` identifier, with any trailing
-    /// `:<digits>` instance index left attached — two entries only count as
-    /// the same item if their instance indexes match too.
+    /// Keeps any `:<digits>` instance index, so instances must match too.
     private static nonisolated func titlePortion(forIdentifier id: String) -> String {
         guard let separator = id.firstIndex(of: ":") else { return "" }
         return String(id[id.index(after: separator)...])
@@ -1610,23 +1155,10 @@ nonisolated enum LayoutSolver {
     /// Rewrites a persisted identifier so its namespace matches what a live
     /// item now reports.
     ///
-    /// ``MenuBarItemTag/Namespace/canonicalBundleID(_:)`` renames items
-    /// hosted by a nested helper after the app the user installed. That
-    /// changes `uniqueIdentifier`, so an entry persisted before the rename
-    /// — `at.obdev.littlesnitch.agent:Item-0` — can no longer match the
-    /// live item, which now reports `at.obdev.littlesnitch:Item-0`. Left
-    /// alone it is pruned as unmatchable and the item loses its saved
-    /// position; worse, Little Snitch is precisely the item whose saved
-    /// position users already struggle to keep (#372, #575, #643, #651,
-    /// #709), so silently orphaning it would land on the least forgiving
-    /// case in the tracker.
-    ///
-    /// Only the namespace is touched. The title and any instance index are
-    /// carried through verbatim, so this cannot merge two distinct items
-    /// or reorder anything.
-    ///
-    /// Pure over its inputs, and the identity function for the
-    /// overwhelming majority of identifiers.
+    /// ``MenuBarItemTag/Namespace/canonicalBundleID(_:)`` renames nested
+    /// helpers, e.g. `at.obdev.littlesnitch.agent` to `at.obdev.littlesnitch`,
+    /// so older entries would be pruned and lose their position. Only the
+    /// namespace changes.
     static nonisolated func canonicalIdentifier(_ identifier: String) -> String {
         let namespaceValue = namespace(forIdentifier: identifier)
         let canonical = MenuBarItemTag.Namespace.canonicalBundleID(namespaceValue)
@@ -1635,8 +1167,7 @@ nonisolated enum LayoutSolver {
         return "\(canonical):\(titlePortion(forIdentifier: identifier))"
     }
 
-    /// Whether `identifier` names the same NewItemsPlacement anchor as
-    /// `anchor`, allowing for persisted-identifier canonicalization. (#1069)
+    /// Allows for persisted-identifier canonicalization.
     static nonisolated func newItemsAnchorMatches(_ identifier: String, _ anchor: String) -> Bool {
         if identifier == anchor {
             return true
@@ -1646,11 +1177,7 @@ nonisolated enum LayoutSolver {
 
     /// Applies ``canonicalIdentifier(_:)`` across a saved section order.
     ///
-    /// Runs before pruning at load, so an entry that only looks unmatchable
-    /// because of the rename is migrated rather than discarded. Order is
-    /// preserved — entries are rewritten in place, never rearranged.
-    ///
-    /// Pure over its inputs.
+    /// Runs before pruning at load. Order is preserved.
     static nonisolated func canonicalizedSectionOrder(
         _ savedSectionOrder: [String: [String]]
     ) -> [String: [String]] {
@@ -1659,25 +1186,10 @@ nonisolated enum LayoutSolver {
         }
     }
 
-    /// Whether an identifier carries no title at all.
-    ///
-    /// ``MenuBarItem/uniqueIdentifier`` is `namespace:title` — or
-    /// `namespace:title:index` past the first instance — and it does not omit
-    /// an empty title the way ``MenuBarItemTag/description`` does. An item
-    /// whose title could not be read therefore persists as
-    /// `com.apple.controlcenter:` or `com.apple.controlcenter::1`.
-    /// Whether the identifier's namespace is a localized display name
-    /// rather than a stable identifier.
-    ///
-    /// The namespace fallback mints one when an owning app's bundle ID
-    /// reads nil mid-launch: the window's owner name is the process
-    /// display name, which macOS localizes for system processes — an
-    /// en-GB machine writes `Control Centre:Battery` next to the
-    /// canonical `com.apple.controlcenter:Battery` (#949). Bundle IDs and
-    /// executable names never contain whitespace; display names usually
-    /// do, and `aliases` carries the ones that do not — the caller passes
-    /// Control Center's current localized name (Kontrollzentrum), which
-    /// no heuristic can recognize locale-independently.
+    /// Whether the namespace is a localized display name, minted when a
+    /// bundle ID reads nil mid-launch (`Control Centre:Battery`, #949).
+    /// Display names usually contain whitespace; `aliases` covers those that
+    /// don't, such as Kontrollzentrum.
     private static nonisolated func isDisplayNameNamespace(
         identifier: String,
         aliases: Set<String>
@@ -1686,20 +1198,20 @@ nonisolated enum LayoutSolver {
         return namespace.contains(where: \.isWhitespace) || aliases.contains(namespace)
     }
 
+    /// An unreadable title persists as `com.apple.controlcenter:` or
+    /// `com.apple.controlcenter::1`.
     private static nonisolated func hasEmptyTitle(identifier: String) -> Bool {
         let title = titlePortion(forIdentifier: identifier)
         if title.isEmpty {
             return true
         }
-        // All that is left is the instance-index suffix, so the title
-        // between the two colons was empty.
+        // Only an instance-index suffix is left.
         guard title.hasPrefix(":") else { return false }
         let index = title.dropFirst()
         return !index.isEmpty && index.allSatisfy(\.isNumber)
     }
 
-    /// The title portion with any trailing `:<digits>` instance index
-    /// removed, for the checks that compare against a fixed title.
+    /// The title without any `:<digits>` instance index.
     private static nonisolated func titleWithoutInstanceIndex(_ title: String) -> String {
         guard
             let separator = title.lastIndex(of: ":"),
@@ -1713,11 +1225,8 @@ nonisolated enum LayoutSolver {
     /// Whether an identifier claims Thaw's own namespace while naming an item
     /// Thaw does not own.
     ///
-    /// The only items legitimately persisted under this namespace are the
-    /// control items and the spacers, which is the same pair
-    /// ``MenuBarItemTag/isControlItem`` recognizes. Anything else is a
-    /// misattribution written when source-PID resolution handed a foreign
-    /// window our own PID, and it can never match a live item again.
+    /// Only control items and spacers belong here; anything else came from
+    /// source-PID resolution handing a foreign window our PID.
     private static nonisolated func isForeignEntryUnderOwnNamespace(identifier: String) -> Bool {
         guard namespace(forIdentifier: identifier) == MenuBarItemTag.Namespace.thaw.description else {
             return false
@@ -1731,22 +1240,12 @@ nonisolated enum LayoutSolver {
 
     /// Whether an identifier's title is a copy of its own namespace.
     ///
-    /// `kCGWindowName` occasionally reports an item's title as its owner's
-    /// bundle identifier — for the whole bar at once, Thaw's own control
-    /// items included. The tag built from that reading is
-    /// `com.steipete.codexbar:com.steipete.codexbar`, which carries no more
-    /// identity than the namespace alone and does not match the same item's
-    /// normal reading (`com.steipete.codexbar:codexbar-claude`). #881's
-    /// reporter carried 21 of these and #927's 23, on unrelated machines.
+    /// `kCGWindowName` sometimes reports every title as the owner's bundle
+    /// ID, giving `com.steipete.codexbar:com.steipete.codexbar`. This clears
+    /// entries earlier builds wrote.
     ///
-    /// ``liveIdentitiesAreDegraded(namespaces:titles:)`` keeps new ones out
-    /// of the saved order; this clears what earlier builds already wrote.
-    ///
-    /// Both sides are canonicalized because pruning runs after
-    /// ``canonicalizedSectionOrder(_:)``, which rewrites the namespace of a
-    /// nested-helper item but carries its title through verbatim — leaving
-    /// `at.obdev.littlesnitch:at.obdev.littlesnitch.agent`, whose halves are
-    /// no longer literally equal.
+    /// Both halves are canonicalized, since the namespace was already
+    /// rewritten but the title wasn't.
     private static nonisolated func isSelfTitledEntry(identifier: String) -> Bool {
         let title = titleWithoutInstanceIndex(titlePortion(forIdentifier: identifier))
         guard !title.isEmpty else { return false }
@@ -1757,9 +1256,7 @@ nonisolated enum LayoutSolver {
     /// Whether an identifier names a WindowServer clone rather than a real
     /// item.
     ///
-    /// ``MenuBarItemTag/isSystemClone`` keeps these out of the cache, but
-    /// layouts captured before that gate existed hold one entry per clone —
-    /// #927's reporter carried six under a single owner.
+    /// Older layouts hold one entry per clone.
     private static nonisolated func isSystemCloneEntry(identifier: String) -> Bool {
         titleWithoutInstanceIndex(titlePortion(forIdentifier: identifier)) == "System Status Item Clone"
     }
@@ -1767,47 +1264,26 @@ nonisolated enum LayoutSolver {
     /// The smallest bar the proportional half of
     /// ``liveIdentitiesAreDegraded(_:)`` will judge.
     ///
-    /// One app whose window really is named after its own bundle identifier
-    /// reaches half of a two- or three-item bar on its own. It cannot reach
-    /// half of four.
+    /// One genuinely self-titled app can be half of a bar of three, not four.
     private static let minimumDegradationSample = 4
 
     /// Whether a reading of the bar titled its items after their own owners
     /// rather than after themselves.
     ///
-    /// `kCGWindowName` degrades bar-wide: in #881's 12:38 log the live hidden
-    /// section came back as `com.rogueamoeba.soundsource:com.rogueamoeba.soundsource`,
-    /// `leits.MeetingBar:leits.MeetingBar` and nine more, and two minutes
-    /// earlier the same items had read normally. Caching that reading is what
-    /// makes the damage self-sustaining: every item looks new, so the whole
-    /// bar is persisted under a second set of identifiers, and every
-    /// subsequent flip between the two spellings presents a bar's worth of
-    /// late arrivals to ``MenuBarItemManager/lateArrivingProfileIdentifiers(items:profileIdentifiers:alreadySortedIdentifiers:)``,
-    /// which schedules a re-sort, which posts moves and captures the cursor.
-    /// #881's reporter rode that loop to a streak of nine consecutive bulk
-    /// applies with unenacted moves.
+    /// `kCGWindowName` degrades bar-wide. Caching it makes every item look
+    /// new, and each flip between spellings triggers a re-sort that moves
+    /// the cursor (#881).
     ///
-    /// Two signals, either of which is enough:
+    /// Either signal is enough:
     ///
-    /// - **A control item lost its name.** Thaw titles its own items
-    ///   `Thaw.ControlItem.*`, so one in our namespace titled with our bundle
-    ///   identifier can only be a degraded read. This is also the signal with
-    ///   consequences of its own — ``MenuBarItem/init(uncheckedItemWindow:instanceIndex:)``
-    ///   recognizes control items by that title prefix, so a degraded reading
+    /// - A control item titled with our bundle ID. Such a reading also
     ///   arrives with the dividers missing.
-    /// - **Half the bar is self-titled.** Covers the case where our own items
-    ///   happen to read correctly, subject to ``minimumDegradationSample``.
+    /// - Half the bar is self-titled, subject to ``minimumDegradationSample``.
     ///
-    /// A partial degradation that trips neither signal still reaches the
-    /// cache; ``prunedSectionOrder(_:)`` clears those entries at the next
-    /// load rather than leaving them to accumulate.
+    /// Partial degradations are cleared by ``prunedSectionOrder(_:)``.
     ///
-    /// - Parameter identities: The namespace and title of every non-control
-    ///   item in the reading, plus any window that *should* have been a
-    ///   control item. Clones and ghost windows are expected to be dropped
-    ///   already, so their throwaway titles cannot skew the proportion.
-    ///
-    /// Pure over its inputs.
+    /// - Parameter identities: Non-control items plus any window that should
+    ///   have been a control item, with clones and ghosts already dropped.
     static nonisolated func liveIdentitiesAreDegraded(
         _ identities: [(namespace: String, title: String)]
     ) -> Bool {
@@ -1826,54 +1302,8 @@ nonisolated enum LayoutSolver {
         return identities.count(where: isSelfTitled) * 2 >= identities.count
     }
 
-    /// Removes persisted entries that can no longer match any live item.
-    ///
-    /// Two fixes so far prevent their own failure from recurring but leave
-    /// the damage already written to disk in place. This clears both.
-    ///
-    /// **Provisional-identity duplicates (#788).** A Control-Center-hosted
-    /// item whose source PID fails to resolve is namespaced
-    /// `com.apple.controlcenter:<title>`, and older builds persisted that
-    /// form. Once resolution works, the same item is saved again under its
-    /// real owner, so the layout holds both. The Control Center copy can
-    /// never match a live item again — resolution now succeeds — but it is
-    /// still planned against on every apply. Dropped only when the identical
-    /// title is also present under a real owner, so a genuine Control Center
-    /// item is never removed on its own.
-    ///
-    /// **Volatile-title accumulation (#815).** An owner that titles its item
-    /// with live content wrote one entry per sample: iStat Menus one per
-    /// metric reading, LyricsX one per lyric. Canonicalization collapses them
-    /// to a single key, and the rest are dead weight. This also matters
-    /// beyond tidiness — the namespace fallback in
-    /// ``planLeftmostRelocation`` only fires when an owner has exactly one
-    /// saved entry, so the accumulated history disables the very remedy that
-    /// would have prevented the churn.
-    ///
-    /// **Misattributed own-namespace entries (#927).** Source-PID resolution
-    /// occasionally hands a foreign window Thaw's own PID, and the layout then
-    /// holds e.g. `com.stonerl.Thaw:WiFi` for an item Control Center owns.
-    /// Only the control items and spacers belong under this namespace, so
-    /// everything else is dropped.
-    ///
-    /// **System clones (#927).** WindowServer's `System Status Item Clone`
-    /// windows are refused by the cache, but layouts captured before that gate
-    /// existed hold one entry per clone.
-    ///
-    /// **Self-titled entries (#881, #927).** A bar-wide `kCGWindowName`
-    /// degradation titles every item with its own owner's bundle identifier,
-    /// and the resulting `com.steipete.codexbar:com.steipete.codexbar` never
-    /// matches the same item's normal reading. See ``isSelfTitledEntry(identifier:)``.
-    ///
-    /// Order is preserved: entries are dropped, never rearranged, so pruning
-    /// cannot itself permute a section (#885).
-    ///
-    /// Returns the unique identifiers of `items` sorted by the given key,
-    /// stable for equal keys. Used by the "Sort A→Z" section action (#936)
-    /// to reorder a section alphabetically without dragging each icon.
-    ///
-    /// Pure over its inputs; the orchestrator writes the result into
-    /// savedSectionOrder and reapplies the active profile.
+    /// Unique identifiers of `items` sorted by `key`, stable for equal keys.
+    /// Backs the "Sort A→Z" section action.
     static nonisolated func sortedSectionIdentifiers(
         _ items: [MenuBarItem],
         by key: (MenuBarItem) -> String
@@ -1890,21 +1320,24 @@ nonisolated enum LayoutSolver {
         return sorted.map(\.2)
     }
 
-    /// Pure over its inputs.
+    /// Removes persisted entries that can no longer match a live item:
+    ///
+    /// - Control Center copies of items now saved under their real owner
+    ///   (#788). Genuine Control Center items are never removed on their own.
+    /// - Volatile-title samples (iStat Menus, LyricsX) that canonicalize to
+    ///   one key (#815). Extra entries also disable the namespace fallback.
+    /// - Foreign items under Thaw's namespace, system clones, and self-titled
+    ///   entries (#881, #927).
+    ///
+    /// Entries are dropped, never rearranged (#885).
     static nonisolated func prunedSectionOrder(
         _ savedSectionOrder: [String: [String]],
         displayNameAliases: Set<String> = []
     ) -> [String: [String]] {
         let controlCenter = MenuBarItemTag.Namespace.controlCenter.description
 
-        // Titles claimed by a real owner somewhere in the saved layout.
-        //
-        // A misattributed entry under our own namespace is not a real owner,
-        // and counting it as one is worse than leaving it alone: it makes the
-        // provisional-duplicate rule below delete the *genuine* Control Center
-        // twin. #927's reporter lost `com.apple.controlcenter:WiFi` that way
-        // and kept `com.stonerl.Thaw:WiFi`, so the live WiFi item was planned
-        // as unmanaged on every apply.
+        // Titles claimed by a real owner. Misattributed entries don't count,
+        // or the genuine Control Center twin gets deleted (#927).
         var titlesWithRealOwner = Set<String>()
         var controlCenterTitles = Set<String>()
         for identifiers in savedSectionOrder.values {
@@ -1914,21 +1347,12 @@ nonisolated enum LayoutSolver {
                     continue
                 }
                 guard
-                    // A Control Center module title under a foreign namespace
-                    // is a misattribution, not a real owner (#1027) — the
-                    // title says whose window it is, and no app but Control
-                    // Center titles an item "Battery". Counting one as the
-                    // owner of its title is the #927 mechanism again: the
-                    // genuine twin then reads as the poisoned copy.
+                    // A Control Center module title under a foreign
+                    // namespace is a misattribution (#1027).
                     !isMisattributedControlCenterEntry(identifier: identifier),
                     !isForeignEntryUnderOwnNamespace(identifier: identifier),
                     !isSelfTitledEntry(identifier: identifier),
-                    // A localized display name is not a real owner either.
-                    // Counting `Control Centre:WiFi` as one deletes the
-                    // genuine `com.apple.controlcenter:WiFi` below, and the
-                    // live WiFi item then plans as unmanaged on every apply —
-                    // the same failure #927 documents, through a vector its
-                    // guards did not cover (#949).
+                    // Nor is a localized display name (#949).
                     !isDisplayNameNamespace(identifier: identifier, aliases: displayNameAliases)
                 else {
                     continue
@@ -1937,19 +1361,8 @@ nonisolated enum LayoutSolver {
             }
         }
 
-        // Deduplicate canonical forms across the *whole* saved order, not per
-        // section. A volatile-title owner whose item was in visible when one
-        // sample was persisted and in hidden when another was leaves two
-        // entries that canonicalize to the same key in different sections.
-        // Both would survive a per-section pass, and the section lookups built
-        // from this order would then resolve that key by whichever section the
-        // dictionary happened to iterate last — a nondeterministic answer to
-        // "where does this item belong".
-        //
-        // Visible wins over hidden wins over always-hidden: keeping the item
-        // in the most visible section it was ever saved in fails toward the
-        // user seeing it, rather than toward it disappearing into a section
-        // they have to open.
+        // Dedupe across all sections, or one key can live in two sections
+        // and resolve nondeterministically. The most visible section wins.
         var seenCanonical = Set<String>()
         var keptPerSection = [String: Set<String>]()
         for sectionKey in ["visible", "hidden", "alwaysHidden"] where savedSectionOrder[sectionKey] != nil {
@@ -1962,8 +1375,7 @@ nonisolated enum LayoutSolver {
             }
             keptPerSection[sectionKey] = keptHere
         }
-        // Sections outside the known three keep their own entries; they are
-        // not part of the precedence order and must not be silently emptied.
+        // Unknown sections keep their entries.
         for (sectionKey, identifiers) in savedSectionOrder where keptPerSection[sectionKey] == nil {
             keptPerSection[sectionKey] = Set(identifiers)
         }
@@ -1973,17 +1385,9 @@ nonisolated enum LayoutSolver {
             let kept = keptPerSection[sectionKey] ?? []
             var emitted = Set<String>()
             result[sectionKey] = identifiers.filter { identifier in
-                // A Control Center module title under a foreign namespace is
-                // a misattribution, and it needs no live twin to prove it:
-                // the title alone says whose window it is (#1027). The
-                // reporter's profile carried
-                // `com.techsmith.snagit.capturehelper:Battery`, which no
-                // future cycle could ever match — the live Battery reads
-                // `com.apple.controlcenter:Battery` — so every apply planned
-                // the real module as an unmanaged arrival while this ghost
-                // held its place in the order. Generic `Item-N` titles are
-                // not covered: a third-party app's own slot is
-                // indistinguishable from a misattributed one by title alone.
+                // The module title alone proves the misattribution, e.g.
+                // `com.techsmith.snagit.capturehelper:Battery` (#1027).
+                // Generic `Item-N` titles are ambiguous and not covered.
                 if isMisattributedControlCenterEntry(identifier: identifier) {
                     return false
                 }
@@ -1993,30 +1397,12 @@ nonisolated enum LayoutSolver {
                 if isProvisionalDuplicate {
                     return false
                 }
-                // A display-name-namespaced ghost is pruned only when its
-                // canonical twin exists: the Control Center entry sharing
-                // its title, Thaw's own control items by their reserved
-                // titles, or a real owner claiming the same non-generic
-                // title (`Control Centre:Alcove` next to
-                // `com.henrikruscon.Alcove:Alcove`). Generic `Item-N`
-                // titles are excluded from the claimed-title rule — every
-                // owner has an Item-0 — and a display-name entry with no
-                // twin is left alone entirely: it may be the only identity
-                // a bundle-ID-less app ever got, and deleting it would
-                // lose the user's placement (#949).
+                // Pruned only when a canonical twin exists. With no twin it
+                // may be a bundle-ID-less app's only identity (#949).
                 if isDisplayNameNamespace(identifier: identifier, aliases: displayNameAliases) {
                     let namespace = namespace(forIdentifier: identifier)
-                    // A Control Center localized-name alias ("Control
-                    // Centre", "Kontrollzentrum") is redundant once the
-                    // canonical com.apple.controlcenter namespace is present
-                    // anywhere in the saved order: the alias was only ever a
-                    // fallback minted when bundle-ID resolution failed
-                    // transiently. Pruning it drops the localized ghosts
-                    // (including generic Item-N ones the claimed-title rule
-                    // below skips) without touching the canonical entries.
-                    // A whitespace-containing namespace that is NOT a CC
-                    // alias is left alone: it may be a bundle-ID-less app's
-                    // only identity (#949). (#1080)
+                    // A Control Center alias is redundant once the canonical
+                    // namespace is saved anywhere, Item-N ghosts included.
                     if displayNameAliases.contains(namespace),
                        !controlCenterTitles.isEmpty
                     {
@@ -2036,21 +1422,12 @@ nonisolated enum LayoutSolver {
                         return false
                     }
                 }
-                // A Control-Center-hosted entry with no title identifies
-                // nothing: the only live item it could match is one whose
-                // title was equally unreadable, and two of those are
-                // indistinguishable apart from an instance index assigned in
-                // arrival order. #881's reporter carried four of them —
-                // `com.apple.controlcenter:` through `::3` — which the apply
-                // planned against on every pass. Left to real owners, where
-                // an empty title still feeds planLeftmostRelocation's
-                // namespace fallback.
+                // Untitled Control Center entries identify nothing. Real
+                // owners keep theirs for the namespace fallback.
                 if isControlCenterHosted, hasEmptyTitle(identifier: identifier) {
                     return false
                 }
-                // Nothing live will ever carry these names again: the first
-                // is a foreign item wearing our namespace, the second a
-                // WindowServer clone that the cache already refuses.
+                // Nothing live will carry these names again.
                 if isForeignEntryUnderOwnNamespace(identifier: identifier) {
                     return false
                 }
@@ -2060,9 +1437,7 @@ nonisolated enum LayoutSolver {
                 if isSelfTitledEntry(identifier: identifier) {
                     return false
                 }
-                // `kept` decides which section owns a canonical form; this
-                // guards against the same raw identifier being listed twice
-                // within one section.
+                // Guards against a duplicate within one section.
                 guard kept.contains(identifier) else { return false }
                 return emitted.insert(identifier).inserted
             }
@@ -2072,21 +1447,13 @@ nonisolated enum LayoutSolver {
     /// Whether an identifier names a Control Center module under a namespace
     /// other than Control Center's own.
     ///
-    /// The source-PID resolution matches AX children to window bounds
-    /// spatially, and on multi-display setups the coordinate skew can hand it
-    /// the neighboring process: #1027's reporter ended up with Control
-    /// Center's Battery persisted as `com.techsmith.snagit.capturehelper:Battery`.
-    /// The strict-majority gate (#784) cannot see it — one wrong PID is not a
-    /// majority event — and the provisional-identity predicates cannot
-    /// either, because the PID did resolve; the title is the only witness.
-    /// ``MenuBarItemTag/canonicalControlCenterModuleIdentifier(_:)`` answers
-    /// exactly that question, so the rewrite being a rewrite is the
-    /// predicate.
+    /// Multi-display coordinate skew can hand source-PID resolution the
+    /// neighboring process (#1027). The PID resolved, so only the title
+    /// shows it.
     private static nonisolated func isMisattributedControlCenterEntry(identifier: String) -> Bool {
         MenuBarItemTag.canonicalControlCenterModuleIdentifier(identifier) != identifier
     }
 
-    /// Maps a persisted section key string to its enum value.
     private static nonisolated func sectionName(forPersistedKey key: String) -> MenuBarSection.Name? {
         switch key {
         case "visible": .visible
@@ -2107,35 +1474,15 @@ nonisolated enum LayoutSolver {
 
     // MARK: - State flag gates
 
-    /// Truth table for the saveSectionOrder gate: only persist when no
-    /// in-flight orchestrator owns the menu bar state. Each input maps
-    /// to a class-level flag whose individual semantics are documented
-    /// in MenuBarItemManager's coordination block.
+    /// Persist only when no in-flight orchestrator owns the menu bar.
     ///
-    /// `hasPendingDivergence` blocks the save when `applySavedLayout`
-    /// has observed a layout divergence on the current cycle but is
-    /// still awaiting confirmation on a second consecutive cycle before
-    /// correcting it (#736). During that one-cycle window the live cache
-    /// reflects a transient macOS rebuild (e.g. a space switch that
-    /// re-exposed hidden items as visible) that has not yet been
-    /// restored; persisting it bakes the transient state into the saved
-    /// layout. Once `applySavedLayout` confirms and runs its correction
-    /// the pending-divergence arm is cleared and the next cache cycle
-    /// sees a settled layout safe to persist.
+    /// `hasPendingDivergence`: a divergence awaits a second cycle's
+    /// confirmation, and the cache may hold a transient macOS rebuild.
     ///
-    /// `hasUnfinishedMoveBatch` blocks the save when the last bulk apply
-    /// planned moves it never enacted (#900). What the bar shows then is
-    /// neither the arrangement the user chose nor the one macOS had: it
-    /// is the arrangement the batch happened to reach before it gave up.
-    /// Persisting it overwrites the layout the batch was trying to
-    /// restore, so the next pass measures against the partial result and
-    /// the bar walks a little further each time instead of converging.
-    /// Holding the old order keeps a fixed target for the retry.
+    /// `hasUnfinishedMoveBatch`: the last apply gave up partway. Saving that
+    /// makes the bar drift further each pass instead of converging.
     ///
-    /// Pure over its inputs so the gate can be characterized without
-    /// instantiating MenuBarItemManager. Any future addition to the
-    /// gate (new in-flight signal) should extend both this function
-    /// and its tests.
+    /// Extend this and its tests for any new in-flight signal.
     static nonisolated func shouldPersistSavedOrder(_ gate: SavedOrderGate) -> Bool {
         !gate.isRestoringItemOrder &&
             !gate.isResettingLayout &&
@@ -2152,11 +1499,8 @@ nonisolated enum LayoutSolver {
 
     /// The signals ``shouldPersistSavedOrder(_:)`` reads.
     ///
-    /// Bundled rather than passed as nine positional flags. A new
-    /// in-flight signal then extends this type instead of every call site,
-    /// which is what the note above asks for, and the defaults spell out
-    /// the permissive state — the one where persisting is safe — so a call
-    /// site only names the signals that deviate from it.
+    /// Defaults are the permissive state, so call sites name only the
+    /// signals that deviate.
     struct SavedOrderGate {
         var isRestoringItemOrder = false
         var isResettingLayout = false
@@ -2171,47 +1515,25 @@ nonisolated enum LayoutSolver {
         /// Whether a move landed recently enough that `applySavedLayout`
         /// would decline to run.
         ///
-        /// The two paths have to agree. `applySavedLayout` holds a five
-        /// second cooldown after any move so a wave of relaunching apps
-        /// cannot cascade into re-applies; this gate did not, so a cycle
-        /// inside the cooldown skipped the restore and took the save,
-        /// which is the one ordering that writes an unsettled bar down as
-        /// the user's layout. In the #958 log that pairing is a single
-        /// millisecond apart, and it moved twelve items out of the
-        /// visible section for good.
+        /// Must match `applySavedLayout`'s cooldown, or a cycle skips the
+        /// restore but takes the save and persists an unsettled bar (#958).
         var isWithinMoveCooldown = false
 
         /// Whether the menu bar is on a different display than it was on
         /// the cycle that produced the current cache.
         ///
-        /// macOS moves status items to the new screen one at a time, so a
-        /// snapshot taken during the relocation reads a bar that is
-        /// partly on each. `itemsSpanMultipleDisplays` is meant to catch
-        /// exactly that, but it can only see the items still classified
-        /// visible — and misclassification is the fault, so by the time
-        /// it matters the evidence has already been moved out of its
-        /// input. It correctly stopped a save 2.5 minutes earlier in the
-        /// #958 log with sixteen visible items, then passed the one that
-        /// mattered with four. This signal is derived from the displays
-        /// themselves and does not thin out as items are misread.
+        /// macOS migrates items one at a time. `itemsSpanMultipleDisplays`
+        /// only sees items still classified visible, which thin out as they
+        /// are misread; this comes from the displays themselves (#958).
         var menuBarDisplayChanged = false
     }
 
     /// Whether the always-hidden section is resolved well enough for the
     /// current cache snapshot to be an order of record.
     ///
-    /// The always-hidden divider is the only boundary separating always-
-    /// hidden items from hidden ones. When it is missing,
-    /// `CacheContext.findSection` has no boundary to test against and
-    /// degrades every always-hidden item to `.hidden` — a lossy but
-    /// recoverable misreading, until `saveSectionOrder` writes it down and
-    /// makes it the user's layout. That is #849: the divider went
-    /// unresolved for a single cache cycle and the whole always-hidden
-    /// section was persisted as visible.
-    ///
-    /// A nil divider is only a problem when the section is enabled. Users
-    /// who never turned the always-hidden section on have no divider by
-    /// design, and must still be able to persist their layout.
+    /// Without the always-hidden divider every always-hidden item reads as
+    /// hidden, and saving that loses the section (#849). A nil divider is
+    /// fine when the section is disabled.
     static nonisolated func isAlwaysHiddenSectionResolved(
         hasAlwaysHiddenControlItem: Bool,
         isAlwaysHiddenSectionEnabled: Bool
@@ -2222,57 +1544,25 @@ nonisolated enum LayoutSolver {
     /// Whether the hidden section has physical room between the two
     /// dividers for the items the saved layout puts there.
     ///
-    /// The hidden section is the span between the always-hidden divider's
-    /// trailing edge and the hidden divider's leading edge. When that span
-    /// closes to zero, `CacheContext.findSection` can no longer satisfy the
-    /// strict test for `.hidden` (it would need `minX >= ah.maxX` and
-    /// `maxX <= hidden.minX` at the same coordinate), so every item falls
-    /// through to the midpoint tie-break and the on-screen ones resolve
-    /// `.visible`. Persisting that reading moves the user's hidden items
-    /// into the visible section for good.
+    /// When the span between the dividers closes to zero, every hidden item
+    /// classifies as visible, and saving that is permanent. Seen on a docked
+    /// notched secondary at negative X (#795).
     ///
-    /// Observed on a docked topology — external non-notched main display,
-    /// notched built-in secondary at negative X — where the gap between the
-    /// dividers went from 677pt to 0 across a single launch (#795).
+    /// Passes with no always-hidden divider, or when nothing is saved as
+    /// hidden.
     ///
-    /// Two conditions keep this from firing on healthy layouts:
-    ///
-    /// - Without an always-hidden divider there is no second boundary and
-    ///   so no span to close; everything left of the hidden divider is
-    ///   `.hidden` by definition.
-    /// - A user whose saved layout puts nothing in the hidden section has
-    ///   no reason for the dividers to be apart, and must still be able to
-    ///   persist. Only a saved layout that *expects* hidden items makes a
-    ///   closed span evidence of a misread.
-    ///
-    /// **The saved count alone deadlocks (#924).** A user who drags every
-    /// hidden item into visible leaves the dividers correctly adjacent, but
-    /// the saved order still lists the old hidden entries — and it cannot stop
-    /// listing them, because this gate is what blocks the write that would
-    /// clear them. The gate's own effect preserves its trigger, so Thaw goes
-    /// permanently read-only on that bar: no save, and no apply either, since
-    /// `applySavedLayout` consults the same answer. Reinstalling does not help;
-    /// the frozen order is on disk.
-    ///
-    /// `liveHiddenItemCount` cannot break the tie by itself, because a
-    /// collapse *also* reads as zero live hidden items — that misclassification
-    /// is the whole problem (#868). What separates the two is where the items
-    /// went. A collapse leaves them parked thousands of points off every
-    /// display while the cache calls them visible, which is a position no
-    /// genuinely visible item can hold. An emptied section leaves every visible
-    /// item on the bar. So an empty live section is trusted only when nothing
-    /// the cache calls visible is parked off-screen.
+    /// The saved count alone deadlocks: emptying hidden by hand leaves stale
+    /// saved entries this gate then never lets be overwritten (#924). An
+    /// empty live section is trusted only when no visible item is parked
+    /// off-screen, which is what a collapse looks like (#868).
     ///
     /// - Parameters:
     ///   - hiddenControlItemMinX: Leading edge of the hidden divider.
     ///   - alwaysHiddenControlItemMaxX: Trailing edge of the always-hidden
     ///     divider, or `nil` when the section has no divider.
-    ///   - savedHiddenItemCount: How many items the saved layout assigns to
-    ///     the hidden section.
-    ///   - liveHiddenItemCount: How many items the current reading of the bar
-    ///     places in the hidden section.
-    ///   - hasVisibleItemParkedOffBar: Whether any item the current reading
-    ///     calls visible is parked off every display. See
+    ///   - savedHiddenItemCount: Items the saved layout puts in hidden.
+    ///   - liveHiddenItemCount: Items the current reading puts in hidden.
+    ///   - hasVisibleItemParkedOffBar: See
     ///     ``hasVisibleItemParkedOffBar(visibleItemBounds:screenFrames:)``.
     static nonisolated func hiddenSectionHasRoom(
         hiddenControlItemMinX: CGFloat,
@@ -2296,46 +1586,19 @@ nonisolated enum LayoutSolver {
     /// Whether the section dividers sit in the order the sections they
     /// define require.
     ///
-    /// Every section assignment on the bar derives from where the dividers
-    /// sit, so dividers that have drifted into a foreign section — the
-    /// visible chevron left of the hidden divider, or the always-hidden
-    /// divider right of it — mean the classifier is describing a bar that
-    /// does not exist. #1027's restart ended in exactly that state before
-    /// any apply ran: the hidden divider was parked far offscreen with the
-    /// chevron classified into the hidden section, and the applies that
-    /// dispatched against that reading planned unmanaged arrivals into
-    /// hidden and anchored moves on the scramble. The anchor gate added for
-    /// the move side limits the blast radius; this gate keeps the planner
-    /// from trusting the reading at all.
+    /// Misordered dividers mean the classifier describes a bar that doesn't
+    /// exist, so the planner must not trust it (#1027).
     ///
-    /// The test is deliberately geometric rather than a call to
-    /// ``CacheContext/findSection(for:)``: that classifier resolves every
-    /// straddling item by midpoint, and each divider straddles its own
-    /// boundary by definition, so a divider asked about itself comes back
-    /// one section to the right of its own. Comparing edges directly is the
-    /// only question worth asking: does the chevron sit entirely left of
-    /// the hidden divider, or the always-hidden divider entirely right of
-    /// it.
-    ///
-    /// A divider that cannot be verified (`nil`) passes: a missing
-    /// always-hidden divider is #849's unresolved-section gate's business,
-    /// and a missing visible control item is ordinary on a bar whose owner
-    /// windows have not settled. Blocking on absence would trade this bug
-    /// for a refusal to ever apply.
-    ///
-    /// The cost of a false positive is one refused apply cycle; the change
-    /// gate re-fires via layout divergence once the dividers read truly. The
-    /// refusal paths pair this with the stranded-divider recovery so a
-    /// genuinely scrambled bar converges back rather than wedging.
-    ///
-    /// Pure over its inputs.
+    /// Geometric rather than ``CacheContext/findSection(for:)``, which puts
+    /// each divider one section right of its own. A `nil` divider passes;
+    /// blocking on absence would refuse to ever apply.
     ///
     /// - Parameters:
-    ///   - visibleControlItemBounds: The visible control item's (the
-    ///     chevron's) bounds, or `nil` when it is absent from the reading.
+    ///   - visibleControlItemBounds: The chevron's bounds, or `nil` when
+    ///     absent.
     ///   - hiddenControlItemBounds: The hidden divider's bounds.
-    ///   - alwaysHiddenControlItemBounds: The always-hidden divider's
-    ///     bounds, or `nil` when the section has no divider.
+    ///   - alwaysHiddenControlItemBounds: `nil` when the section has no
+    ///     divider.
     static nonisolated func controlItemsAreInCanonicalOrder(
         visibleControlItemBounds: CGRect?,
         hiddenControlItemBounds: CGRect,
@@ -2357,27 +1620,11 @@ nonisolated enum LayoutSolver {
     /// Whether any item the current reading calls visible is parked off every
     /// display.
     ///
-    /// This is the tell that separates a collapsed hidden section from an
-    /// emptied one, and it is only meaningful for items classified `.visible`:
-    /// hidden and always-hidden items are parked off-screen whenever their
-    /// section is closed, which is ordinary rather than evidence of anything.
-    /// An item the cache calls visible has no such excuse — a visible item is
-    /// on the bar by definition, so one that is not is a misread.
+    /// Tells a collapsed hidden section from an emptied one. With no screen
+    /// frames, answers `true` and leaves it to the saved count.
     ///
-    /// With no screen frames to test against the answer is unknowable, and the
-    /// conservative answer is the one that preserves the older behaviour: say
-    /// the items are parked, leaving the saved-count branch to decide.
-    ///
-    /// Membership is decided by geometry rather than by asking the cache,
-    /// because the callers that need this answer include the apply path, which
-    /// is handed a bar directly and has no populated cache to consult. Anything
-    /// at or right of the hidden divider is what the visible section holds;
-    /// hidden and always-hidden items sit left of it and are excluded, so a
-    /// closed always-hidden section full of legitimately parked items does not
-    /// read as a fault.
-    ///
-    /// Pure over its inputs. Off-bar membership is decided by
-    /// ``isOnScreen(bounds:screenFrames:)``.
+    /// Geometric because the apply path has no cache. Only items at or right
+    /// of the hidden divider count. Uses ``isOnScreen(bounds:screenFrames:)``.
     static nonisolated func hasVisibleItemParkedOffBar(
         itemBounds: [CGRect],
         hiddenControlItemMinX: CGFloat,
@@ -2394,10 +1641,7 @@ nonisolated enum LayoutSolver {
 
     /// How many items the given bar places strictly between the two dividers.
     ///
-    /// The geometric counterpart to the cache's `.hidden` section, for the
-    /// callers that have a bar but no cache.
-    ///
-    /// Pure over its inputs.
+    /// For callers with a bar but no cache.
     static nonisolated func liveHiddenItemCount(
         itemBounds: [CGRect],
         hiddenControlItemMinX: CGFloat,
@@ -2413,26 +1657,11 @@ nonisolated enum LayoutSolver {
 
     // MARK: - Pending rehide identifiers
 
-    /// Returns the set of `tag.tagIdentifier` values whose item is
-    /// known to belong to a section other than its current cache
-    /// position because of a temporarily-shown rehide that has not yet
-    /// completed.
+    /// Items whose temporary-show rehide hasn't completed: those in
+    /// `pendingReturnDestinations`, and `pendingRelocations` carrying the
+    /// `waitForRelaunch:` sentinel.
     ///
-    /// Two sources contribute:
-    /// 1. Active `pendingReturnDestinations` entries: the in-flight
-    ///    context has been dropped (rehide gave up or the user
-    ///    abandoned return) but the return-destination metadata
-    ///    survives until the app relaunches and relocatePendingItems
-    ///    moves the item back.
-    /// 2. `pendingRelocations` entries whose value carries the
-    ///    `waitForRelaunch:` sentinel: the rehide hit the per-session
-    ///    retry cap and was suspended, waiting for the app to
-    ///    relaunch with a fresh windowID.
-    ///
-    /// saveSectionOrder uses the union to exclude these items from
-    /// the cache snapshot, so planSectionOrder treats them as closed
-    /// apps and preserves their original-section saved entry rather
-    /// than overwriting it with the live visible position.
+    /// saveSectionOrder excludes them so their original section is kept.
     static nonisolated func pendingRehideTagIdentifiers(
         pendingReturnDestinations: [String: [String: String]],
         pendingRelocations: [String: String],
@@ -2450,14 +1679,8 @@ nonisolated enum LayoutSolver {
     /// Returns the first window in the batch whose windowID is not
     /// already cached, or nil when every window is cached.
     ///
-    /// Drives `SourcePIDCache.pidsBody`'s decision about which window
-    /// to hand to `pidBody` for the AX scan. `pidBody` returns
-    /// immediately on a cache hit at its entry, so passing a cached
-    /// window means the scan body (including the marker-pair
-    /// fallback) never runs. Selecting an unresolved window forces
-    /// the scan path to execute and resolves every other unresolved
-    /// window in the same batch by populating the cache during the
-    /// AX traversal.
+    /// `pidBody` returns early on a cache hit, so it must get an unresolved
+    /// window for the AX scan to run and resolve the whole batch.
     static nonisolated func selectWindowForBatchScan<W>(
         windows: [W],
         windowID: (W) -> CGWindowID,

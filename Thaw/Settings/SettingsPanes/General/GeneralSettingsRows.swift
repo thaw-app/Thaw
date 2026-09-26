@@ -9,15 +9,9 @@
 import LaunchAtLogin
 import SwiftUI
 
-// The handful of general settings that both ``GeneralSettingsPane`` and
-// ``SimpleModeSettingsPane`` offer.
-//
-// These are the settings a user would notice missing, so Simple Mode shows
-// them too. Defining each row once keeps the two panes from drifting.
-//
-// Rows the full pane grows out of these — the hover delay, the rehide
-// strategy, the always-hidden gestures — stay in ``GeneralSettingsPane``.
-// They are what Simple Mode exists to leave out.
+// General settings rows shared by ``GeneralSettingsPane`` and
+// ``SimpleModeSettingsPane``. Tuning rows (hover delay, rehide strategy,
+// always-hidden gestures) stay in ``GeneralSettingsPane``.
 
 // MARK: - LaunchAtLoginRow
 
@@ -48,10 +42,6 @@ struct ShowIceIconRow: View {
 // MARK: - ShowHiddenItemsOnRow
 
 /// Which gestures on an empty stretch of the menu bar reveal hidden items.
-///
-/// All three fit on one row as a button group, so Simple Mode takes the whole
-/// control rather than a two-gesture variant of it. A user who never finds
-/// this row thinks the app is broken, which is what earns it a place there.
 struct ShowHiddenItemsOnRow: View {
     @Bindable var settings: GeneralSettings
 

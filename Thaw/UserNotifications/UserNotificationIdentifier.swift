@@ -6,7 +6,6 @@
 //  Copyright (Thaw) © 2026 Toni Förster
 //  Licensed under the GNU GPLv3
 
-/// An identifier for a user notification.
 enum UserNotificationIdentifier: String {
     case updateCheck = "UpdateCheck"
     case triggerFired = "TriggerFired"

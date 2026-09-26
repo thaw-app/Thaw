@@ -39,8 +39,6 @@ private struct OnceModifier: ViewModifier {
 extension View {
     /// Adds an action to perform exactly once, before the first
     /// time the view appears.
-    ///
-    /// - Parameter action: The action to perform.
     func once(perform action: @escaping () -> Void) -> some View {
         modifier(OnceModifier(action: action))
     }
@@ -65,8 +63,6 @@ private struct OnceScene<Content: Scene>: Scene {
 
 extension Scene {
     /// Adds an action to perform exactly once, when the scene appears.
-    ///
-    /// - Parameter action: The action to perform.
     func once(perform action: @escaping () -> Void) -> some Scene {
         OnceScene(content: self, action: action)
     }

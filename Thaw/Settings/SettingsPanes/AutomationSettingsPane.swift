@@ -45,12 +45,9 @@ struct AutomationSettingsPane: View {
             }
         }
         .onChange(of: appState.profileManager.profiles) { _, updated in
-            // The selected profile can disappear out from under the
-            // picker (delete from the Profiles pane, import-replace,
-            // etc.). Reset to the active profile if any, otherwise
-            // the first remaining profile, so the picker and the
-            // per-profile HookRow bindings always reference a profile
-            // that actually exists.
+            // The selected profile can disappear (deleted, import-replaced).
+            // Fall back to the active profile, else the first remaining one,
+            // so the picker and HookRow bindings never point at a missing one.
             let ids = Set(updated.map(\.id))
             if let current = selectedHookProfileID, !ids.contains(current) {
                 selectedHookProfileID = appState.profileManager.activeProfileID

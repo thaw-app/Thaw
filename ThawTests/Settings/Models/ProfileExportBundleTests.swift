@@ -11,8 +11,8 @@ import Testing
 
 @Suite("Profile export bundle")
 struct ProfileExportBundleTests {
-    /// Swift Testing builds a fresh suite instance per test, so these stand in
-    /// for the XCTest `setUp` that rebuilt them before every case.
+    /// Swift Testing builds a fresh suite instance per test, so these are
+    /// rebuilt for every case.
     private let encoder: JSONEncoder
     private let decoder: JSONDecoder
 

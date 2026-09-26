@@ -29,8 +29,6 @@ final class LayoutBarPaddingView: NSView {
     private var containerLeadingInsetConstraint: NSLayoutConstraint?
     private var notchObservers = Set<AnyCancellable>()
 
-    /// Task observing `menuBarManager.averageColorInfo` (wave 3), replacing
-    /// the old `$averageColorInfo` sink.
     private var averageColorInfoObservationTask: Task<Void, Never>?
 
     deinit {
@@ -38,17 +36,11 @@ final class LayoutBarPaddingView: NSView {
         stabilizationTask?.cancel()
     }
 
-    /// The layout view's arranged views.
     var arrangedViews: [LayoutBarArrangedView] {
         get { container.arrangedViews }
         set { container.arrangedViews = newValue }
     }
 
-    /// Creates a layout bar view with the given app state, section, and spacing.
-    ///
-    /// - Parameters:
-    ///   - appState: The shared app state instance.
-    ///   - section: The section whose items are represented.
     init(appState: AppState, section: MenuBarSection.Name) {
         self.container = LayoutBarContainer(appState: appState, section: section)
 
@@ -87,11 +79,9 @@ final class LayoutBarPaddingView: NSView {
               )
         else { return [] }
         acceptedDraggingSource = sourceView
-        // Freeze the destination's arrangedViews so that the cache refresh
-        // triggered while the system move is in flight cannot overwrite the
-        // mid-drag visual state. updateNewItemsPlacement at the end of move()
-        // depends on that state to capture the badge's new neighbors; without
-        // this guard the dropped item bounces to the wrong side of the badge.
+        // Freeze so a cache refresh mid-move can't overwrite the drag state.
+        // updateNewItemsPlacement needs it, or the item lands on the wrong
+        // side of the badge.
         container.canSetArrangedViews = false
         return container.updateArrangedViewsForDrag(with: sender, phase: .entered)
     }
@@ -106,11 +96,8 @@ final class LayoutBarPaddingView: NSView {
             container.updateArrangedViewsForDrag(with: sender, phase: .exited)
         }
 
-        // A pointer can cross one or more rows before it reaches the final
-        // destination. Each entered row is frozen above, so thaw a row as
-        // soon as it is no longer participating in the drag. Keep only the
-        // original source frozen; refreshing it now would reinsert a duplicate
-        // item behind the dragging image.
+        // Thaw rows the pointer only passed through. The source stays frozen,
+        // or a refresh reinserts a duplicate behind the drag image.
         if !acceptedDraggingSource.beganDragging(in: container) {
             container.resumeArrangedViewUpdatesWithoutAnimation()
         }
@@ -152,16 +139,13 @@ final class LayoutBarPaddingView: NSView {
                 alert.beginSheetModal(for: window)
             }
 
-            // Revert the visual state: remove the item from the container it was dropped into
-            // and set hasContainer to false so it snaps back to its original container.
+            // Snap the item back to its original container.
             container.updateArrangedViewsForDrag(with: sender, phase: .exited)
             draggingSource.hasContainer = false
 
             container.resumeArrangedViewUpdatesWithoutAnimation()
-            // The dragging session froze the source row too, and the refusal
-            // starts no move task that would thaw it later. Resume it like
-            // every other refusal path; `oldContainerInfo` stays so the drag
-            // session's end can restore the original view to its old slot.
+            // No move task will thaw the source row, so resume it here.
+            // `oldContainerInfo` stays so the session end can restore the view.
             if let sourceContainer = draggingSource.oldContainerInfo?.container,
                sourceContainer !== container
             {
@@ -191,25 +175,17 @@ final class LayoutBarPaddingView: NSView {
         var willMove = false
         let sourceContainer = draggingSource.oldContainerInfo?.container
 
-        // A grouped item drags its whole group: resolve the drag unit once
-        // and move members as one block, preserving their relative order.
+        // A grouped item drags its whole group as one block.
         var draggedUnit = [MenuBarItem]()
         if case let .item(draggedItem) = draggingSource.kind,
            let appState = container.appState
         {
-            // A cross-container drop only inserts the dragged view here, so
-            // the group's other members are still arranged in the source bar.
-            // Resolving against the destination alone would see a lone member,
-            // skip the group, and split it across sections.
+            // The other members are still in the source bar; resolving against
+            // the destination alone would split the group across sections.
             var arrangedItems = items(in: arrangedViews)
             if let sourceContainer, sourceContainer !== container {
-                // The unit comes back in the order of the items it was
-                // resolved against, and the block move commits that order, so
-                // the source bar has to lead: put the dragged view back in the
-                // slot it left and let the destination fill in behind it.
-                // Leading with the destination would rank the dragged member
-                // ahead of the siblings it was taken from and turn a group of
-                // a1, a2, a3 into a2, a1, a3 as soon as a2 is the one dragged.
+                // The source bar leads, with the dragged view back in its
+                // slot, or dragging a2 turns a1, a2, a3 into a2, a1, a3.
                 var sourceViews = sourceContainer.arrangedViews
                 if !sourceViews.contains(draggingSource),
                    let oldIndex = draggingSource.oldContainerInfo?.index
@@ -265,8 +241,7 @@ final class LayoutBarPaddingView: NSView {
             }
         }
 
-        // Only re-enable view updates here if no move was initiated.
-        // When a move IS initiated, the move() Task re-enables after stabilization.
+        // When a move starts, its task re-enables updates after stabilizing.
         if !willMove {
             container.resumeArrangedViewUpdatesWithoutAnimation()
             if sourceContainer !== container {
@@ -280,10 +255,8 @@ final class LayoutBarPaddingView: NSView {
 
     /// Moves a group's drag unit as one block.
     ///
-    /// The unit's leftmost member takes `destination`; every remaining member
-    /// is then chained to its right, so the unit keeps its internal order.
-    /// Members that were scattered are pulled to the drop point, which is what
-    /// makes "drag any member" gather the whole group.
+    /// The leftmost member takes `destination` and the rest chain to its
+    /// right, which also gathers scattered members.
     private func move(
         items: [MenuBarItem],
         startingWith draggedItem: MenuBarItem,
@@ -293,10 +266,8 @@ final class LayoutBarPaddingView: NSView {
         guard let appState = container.appState else {
             return
         }
-        // `items` is already in arranged-view order, so its first element is
-        // the group's leftmost member — the same anchor that gathering a group
-        // uses. Promoting the dragged member instead would land it ahead of
-        // the siblings to its left and reorder the group.
+        // Anchor on the leftmost member, not the dragged one, or the group
+        // reorders.
         guard items.count > 1 else {
             move(item: draggedItem, to: destination, sourceContainer: sourceContainer)
             return
@@ -304,9 +275,7 @@ final class LayoutBarPaddingView: NSView {
 
         Task { [self, appState, sourceContainer] in
             guard !isStabilizing else {
-                // Bail without leaving either container frozen: the drop
-                // container was frozen by draggingEntered, the source by the
-                // dragging session.
+                // Don't leave either container frozen.
                 await MainActor.run {
                     self.container.canSetArrangedViews = true
                     if sourceContainer !== self.container {
@@ -321,10 +290,8 @@ final class LayoutBarPaddingView: NSView {
                 return
             }
 
-            // One awaited move per member, so the window in which a move can
-            // still be in flight scales with the unit. Without this, a move
-            // that never returns leaves isStabilizing true and both bars
-            // frozen for the rest of the session.
+            // Scales with the unit. A move that never returns would otherwise
+            // leave both bars frozen for the session.
             let watchdogTask = Task { [weak self, weak appState, weak sourceContainer] in
                 try? await Task.sleep(for: (MenuBarItemManager.layoutWatchdogTimeout * items.count) + .seconds(1))
                 guard let self, !Task.isCancelled else { return }
@@ -339,9 +306,6 @@ final class LayoutBarPaddingView: NSView {
             do {
                 var previous: MenuBarItem?
                 for item in items {
-                    // The first member takes the drop destination; each next
-                    // member chains to the previous one's right, keeping the
-                    // unit's relative order.
                     let target: MenuBarItemManager.MoveDestination =
                         previous.map { .rightOfItem($0) } ?? destination
                     pendingMove = (item, target)
@@ -353,13 +317,8 @@ final class LayoutBarPaddingView: NSView {
                             options: .init(watchdogTimeout: MenuBarItemManager.layoutWatchdogTimeout)
                         )
                     } catch {
-                        // One member failing must not strand the rest of the
-                        // unit half-moved and silent. Recover this member the
-                        // way a single-item move does -- it alerts only when
-                        // the item truly never reached its slot -- then keep
-                        // chaining the remaining members from the last
-                        // successful position, which preserves the order of
-                        // everything that did move.
+                        // Recover this member like a single move, then keep
+                        // chaining from the last successful position.
                         failedMemberCount += 1
                         Self.diagLog.error(
                             "Group move failed on member \(failedMemberCount)/\(items.count) (\(item.logString)); recovering and continuing"
@@ -376,18 +335,12 @@ final class LayoutBarPaddingView: NSView {
                     previous = item
                 }
                 if let last = previous {
-                    // Re-chain to the member before the last, not to the
-                    // head's destination: re-asserting the head's drop slot
-                    // would land the retried member AHEAD of the block,
-                    // scrambling the order the chaining loop produced.
+                    // Chain to the previous member, not the head's slot, or
+                    // the retried member lands ahead of the block.
                     let lastTarget: MenuBarItemManager.MoveDestination =
                         items.dropLast().last.map { .rightOfItem($0) } ?? destination
-                    // A stabilization that cannot confirm the block's
-                    // placement is a failed group move, not a success. The
-                    // recovery re-verifies from a fresh cache: when the block
-                    // actually settled, the alert is suppressed and the
-                    // operation is recorded; when it did not, the rescue and
-                    // the alert fire as they would for a single item.
+                    // Unconfirmed placement is a failure. Recovery re-checks
+                    // a fresh cache and alerts only if the block didn't land.
                     if await stabilizePlacement(
                         of: last,
                         to: lastTarget,
@@ -417,10 +370,8 @@ final class LayoutBarPaddingView: NSView {
                 Self.diagLog.info("Group move deferred, a menu bar item menu was open")
             } catch {
                 Self.diagLog.error("Error moving menu bar item group: \(error)")
-                // Earlier members may already have moved, so logging alone
-                // leaves the unit split with no user-visible signal. Recover
-                // the member that failed the way a single-item move does,
-                // alerting only if it never reaches its slot.
+                // Earlier members may have moved, so recover rather than
+                // only log.
                 if let pendingMove {
                     await recoverFromFailedMove(
                         of: pendingMove.item,
@@ -431,11 +382,8 @@ final class LayoutBarPaddingView: NSView {
                 }
             }
             watchdogTask.cancel()
-            // Mirror the single-item move's completion: re-anchor the New
-            // Items badge and re-enable BOTH containers before the flags are
-            // reset. The source bar was frozen by the dragging session and
-            // would stay stuck at its mid-drag snapshot until an unrelated
-            // later drag reset it.
+            // Like a single move: re-anchor the badge and thaw both
+            // containers, or the source stays at its mid-drag snapshot.
             if let appState = container.appState {
                 await appState.itemManager.cacheItemsRegardless(skipRecentMoveCheck: true)
             }
@@ -518,23 +466,18 @@ final class LayoutBarPaddingView: NSView {
         stabilizationGeneration &+= 1
         let generation = stabilizationGeneration
 
-        // Explicit strong captures: the move must complete even if the view
-        // is torn down mid-drag; only the longer-lived watchdog below holds
-        // weak references.
+        // Strong captures: the move must finish even if the view goes away.
         stabilizationTask = Task { [self, appState] in
             var didValidateUserMove = false
             @MainActor
             func acceptValidatedUserMove() {
-                // Clear an unfinished automatic-batch latch only after the
-                // editor move has reached its requested settled placement.
+                // Only after the move reached its settled placement.
                 appState.itemManager.recordExternalMoveOperation()
                 didValidateUserMove = true
             }
 
-            // Increased delay to allow macOS to settle after operations like Reset Layout.
-            // Prevents transient errors when dragging items immediately after reset.
-            // A cancelled sleep must not leave the layouts frozen or isStabilizing
-            // stuck true (the watchdog that would reset them hasn't started yet).
+            // Let macOS settle after e.g. Reset Layout. On cancellation, thaw
+            // here since the watchdog hasn't started.
             guard await (try? Task.sleep(for: .milliseconds(150))) != nil else {
                 _ = await resetStabilizingStateIfNeeded(
                     generation: generation,
@@ -543,36 +486,19 @@ final class LayoutBarPaddingView: NSView {
                 return
             }
 
-            // A drop into a section resolves to that section's divider when
-            // the section has no other anchor. A concealed section parks its
-            // divider offscreen, so the drag must not hand it to move() (#923):
-            // the synthetic drag would target a click point far offscreen,
-            // yank the item offscreen, and macOS would snap it straight back
-            // until the retry budget ran out. When the destination section is
-            // also EMPTY, though, refusing deadlocks the user (#988): the
-            // parked divider is the only anchor the drop can ever resolve to,
-            // and the refusal's "open the section and try dragging again"
-            // advice has nothing to open. In that one state, reveal the
-            // section to bring its divider back onscreen, retarget the move
-            // onto the fresh divider, and re-conceal the section once the
-            // item has settled. The always-hidden divider parks to the left
-            // of the hidden section's content, so revealing the destination
-            // alone is not enough to bring it onscreen when the hidden
-            // section is also collapsed (#1010): the reveal covers every
-            // section whose parked content would keep the divider offscreen.
+            // A concealed section parks its divider offscreen, and moving onto
+            // it yanks the item offscreen until retries run out (#923). If the
+            // section is also empty, refusing deadlocks the user (#988), so
+            // reveal it, retarget onto the fresh divider, and re-conceal after.
+            // The always-hidden divider also needs the hidden section revealed
+            // (#1010).
             var destination = destination
             var revealedSections: [MenuBarSection] = []
             let targetItem = destination.targetItem
             if targetItem.isControlItem {
                 let screenFrames = NSScreen.screens.map { CGDisplayBounds($0.displayID) }
-                // The destination comes from the frozen arranged views, whose
-                // bounds were captured before the drag began. A divider that
-                // parked in between would still read as on screen, so the
-                // gate asks the window server where it is now. A window the
-                // server cannot answer for counts as unreachable too: this
-                // gate exists to keep a stranded divider away from move(),
-                // and a stale snapshot is no evidence that the divider is
-                // reachable.
+                // Frozen bounds predate the drag, so ask the window server.
+                // No answer counts as unreachable.
                 let targetBounds = Bridging.getWindowBounds(for: targetItem.windowID)
                 let isReachable = targetBounds.map {
                     LayoutSolver.isOnScreen(bounds: $0, screenFrames: screenFrames)
@@ -617,12 +543,8 @@ final class LayoutBarPaddingView: NSView {
                     cancelOwningTask: true
                 ) else { return }
                 guard let appState else { return }
-                // A drag that revealed a collapsed section (#988, #1010)
-                // must re-conceal it even when the move never returned: the
-                // completion path that re-conceals has not run and may never
-                // run. The reset above thawed the bars; park the divider
-                // back and give the spacer a beat before the closing cache
-                // pass records the settled bar.
+                // Re-conceal revealed sections; the completion path may never
+                // run.
                 if !revealedSections.isEmpty {
                     await MainActor.run {
                         for section in revealedSections {
@@ -631,11 +553,9 @@ final class LayoutBarPaddingView: NSView {
                     }
                     try? await Task.sleep(for: .milliseconds(250))
                 }
-                // The owner task's cancellation runs its defer and cancels
-                // this watchdog. Launch recovery independently so that mutual
-                // cancellation cannot abort it, and retry until the old cache
-                // owner actually releases CacheGate instead of issuing a
-                // one-shot refresh that will probably be dropped.
+                // Independent so mutual cancellation can't abort it. Retry
+                // until the old owner releases CacheGate; a one-shot refresh
+                // would likely be dropped.
                 Task { [weak appState] in
                     guard let appState else { return }
                     guard await appState.itemManager.refreshCacheAfterLayoutEditorMove() else {
@@ -666,27 +586,17 @@ final class LayoutBarPaddingView: NSView {
                     acceptValidatedUserMove()
                 }
             } catch MenuBarItemManager.EventError.menuTrackingActive {
-                // A menu bar item's menu (Wi-Fi picker, input method panel,
-                // etc.) was open and the move was deferred to avoid tearing
-                // down the user's interaction. This isn't a failure worth
-                // alerting on — log only.
+                // Deferred so an open menu isn't torn down. Not a failure.
                 Self.diagLog.info("Move deferred, a menu bar item menu was open")
             } catch MenuBarItemManager.EventError.moveEngineBusy {
-                // Another move held the bar for the whole wait. Nothing was
-                // tried, so nothing failed; the editor snaps the item back
-                // and the user can drag again once the bar is free.
+                // Nothing was tried, so nothing failed.
                 Self.diagLog.info("Move deferred, another move held the bar")
             } catch {
                 guard isCurrentStabilization(generation) else { return }
                 Self.diagLog.error("Error moving menu bar item: \(error)")
-                // The system event-driven move sometimes throws cannotComplete
-                // after macOS has already settled the item into the requested
-                // slot: the click sequence bounces the item past the target
-                // and back during verification, but a subsequent reconciliation
-                // lands it where the user asked. Resample the cache after a
-                // short settle window and only show the alert when the item
-                // is NOT in the position the user actually dragged it to;
-                // showing it for a move that visibly worked is a false alarm.
+                // cannotComplete can fire after the item already settled in
+                // place. Resample and alert only if it isn't where it was
+                // dragged.
                 try? await Task.sleep(for: .milliseconds(250))
                 guard isCurrentStabilization(generation) else { return }
                 _ = await appState.itemManager.refreshCacheAfterLayoutEditorMove()
@@ -713,12 +623,8 @@ final class LayoutBarPaddingView: NSView {
                     Self.diagLog.info("Move verification failed but \(item.logString) reached intended position in \(container.section.logString); suppressing alert")
                     acceptValidatedUserMove()
                 case .rescueAndRetry:
-                    // The item is stuck at the x=-1 sentinel. Rescue it to
-                    // the visible section, let macOS settle, then retry the
-                    // original move exactly once (no loop). Only if that
-                    // retry also fails do we alert, and with a calm message
-                    // rather than the raw error, matching the safe-harbor
-                    // behavior of restoreBlockedItemsToVisible.
+                    // Stuck at x=-1. Rescue to visible, retry once, and only
+                    // then alert with a calm message.
                     Self.diagLog.warning("\(item.logString) is blocked (x=-1); attempting one rescue-and-retry before alerting")
                     _ = await appState.itemManager.rescueBlockedItemToVisible(item)
                     guard isCurrentStabilization(generation) else { return }
@@ -745,9 +651,7 @@ final class LayoutBarPaddingView: NSView {
                             acceptValidatedUserMove()
                         }
                     } catch MenuBarItemManager.EventError.menuTrackingActive {
-                        // Same deferral the outer catch handles: the user
-                        // opened a menu bar item's menu while the retry was
-                        // in flight. Nothing failed, so don't alert.
+                        // A menu opened during the retry. Nothing failed.
                         Self.diagLog.info("Rescue-and-retry deferred, a menu bar item menu was open")
                     } catch {
                         guard isCurrentStabilization(generation) else { return }
@@ -789,9 +693,8 @@ final class LayoutBarPaddingView: NSView {
                     guard isCurrentStabilization(generation) else { return }
                     report.run(alert, in: window)
                 case .alertGeneric:
-                    // Generated before the alert shows so the "Save Diagnostic
-                    // Report…" button has the bar as it was at the failure,
-                    // not as it settles while the alert is up.
+                    // Before the alert, so the report shows the bar at the
+                    // failure.
                     let report = await MoveFailureDiagnosticReport.generate(
                         for: .init(
                             item: item,
@@ -806,19 +709,14 @@ final class LayoutBarPaddingView: NSView {
                 }
             }
             if !revealedSections.isEmpty {
-                // Re-conceal the sections that were revealed for the drag
-                // (#988). desiredState was never modified, so
-                // updateControlItemState restores whatever presentation the
-                // user configured — including the ice-bar overrides that
-                // force these sections collapsed — and parks the divider
-                // with the newly moved item back offscreen.
+                // Re-conceal revealed sections. desiredState was never
+                // changed, so this restores the user's presentation.
                 await MainActor.run {
                     for section in revealedSections {
                         section.updateControlItemState(for: nil)
                     }
                 }
-                // Give the spacer a beat to re-park the divider before the
-                // closing cache pass records the settled bar.
+                // Let the spacer re-park the divider before the cache pass.
                 try? await Task.sleep(for: .milliseconds(250))
             }
             guard isCurrentStabilization(generation) else { return }
@@ -839,10 +737,7 @@ final class LayoutBarPaddingView: NSView {
                 }
                 self.isStabilizing = false
                 self.stabilizationTask = nil
-                // Update the badge anchor BEFORE re-enabling view updates, using
-                // the current visual arrangement from the drag. This ensures the
-                // didSet refresh uses the correct anchor position.
-                // Only update if this section actually contains the badge.
+                // Before re-enabling updates, so didSet uses the new anchor.
                 if let appState = self.container.appState,
                    self.containsNewItemsBadge()
                 {
@@ -851,11 +746,7 @@ final class LayoutBarPaddingView: NSView {
                         arrangedViews: self.container.arrangedViews
                     )
                 }
-                // Re-enable view updates on both the destination (frozen by
-                // draggingEntered) and the source (frozen by willBeginAt on
-                // the dragging session). Without resetting the source, its
-                // arrangedViews would stay frozen at the mid-drag snapshot
-                // until the next drag originated from that container.
+                // Thaw both destination and source.
                 self.container.resumeArrangedViewUpdatesWithoutAnimation()
                 if sourceContainer !== self.container {
                     sourceContainer?.resumeArrangedViewUpdatesWithoutAnimation()
@@ -863,9 +754,7 @@ final class LayoutBarPaddingView: NSView {
                 return true
             }
 
-            // Thumbnail capture is allowed to lag behind geometry. The moved
-            // view retains its last stable image, so holding both rows frozen
-            // while capture retries only makes the editor feel stuck.
+            // Thumbnails may lag geometry; don't hold rows frozen for them.
             if didThawCurrentMove {
                 await MainActor.run {
                     appState.imageCache.performCacheCleanup()
@@ -880,22 +769,15 @@ final class LayoutBarPaddingView: NSView {
     /// Recovers from a failed move, alerting the user only when the item
     /// did not reach the slot it was dragged to.
     ///
-    /// Shared by the single-item and group paths so a failed member of a
-    /// group move is as informative as a failed single-item move.
+    /// Shared by the single-item and group paths.
     private func recoverFromFailedMove(
         of item: MenuBarItem,
         to destination: MenuBarItemManager.MoveDestination,
         error: any Error,
         appState: AppState
     ) async {
-        // The system event-driven move sometimes throws cannotComplete
-        // after macOS has already settled the item into the requested
-        // slot: the click sequence bounces the item past the target
-        // and back during verification, but a subsequent reconciliation
-        // lands it where the user asked. Resample the cache after a
-        // short settle window and only show the alert when the item
-        // is NOT in the position the user actually dragged it to;
-        // showing it for a move that visibly worked is a false alarm.
+        // cannotComplete can fire after the item already settled in place.
+        // Resample and alert only if it isn't where the user dragged it.
         try? await Task.sleep(for: .milliseconds(250))
         await appState.itemManager.cacheItemsRegardless(skipRecentMoveCheck: true)
         let reachedPosition = didItemReachIntendedPosition(
@@ -919,12 +801,8 @@ final class LayoutBarPaddingView: NSView {
             Self.diagLog.info("Move verification failed but \(item.logString) reached intended position in \(container.section.logString); suppressing alert")
             appState.itemManager.recordExternalMoveOperation()
         case .rescueAndRetry:
-            // The item is stuck at the x=-1 sentinel. Rescue it to
-            // the visible section, let macOS settle, then retry the
-            // original move exactly once (no loop). Only if that
-            // retry also fails do we alert, and with a calm message
-            // rather than the raw error, matching the safe-harbor
-            // behavior of restoreBlockedItemsToVisible.
+            // Stuck at x=-1. Rescue to visible, retry once, and only then
+            // alert with a calm message.
             Self.diagLog.warning("\(item.logString) is blocked (x=-1); attempting one rescue-and-retry before alerting")
             _ = await appState.itemManager.rescueBlockedItemToVisible(item)
             try? await Task.sleep(for: .milliseconds(250))
@@ -936,9 +814,8 @@ final class LayoutBarPaddingView: NSView {
                     skipInputPause: true,
                     options: .init(watchdogTimeout: MenuBarItemManager.layoutWatchdogTimeout)
                 )
-                // Same #983 reorder as the primary path: arm the
-                // save-gate user-move exemption before stabilize so
-                // its cache pass can persist the retry.
+                // Arm the save-gate exemption before stabilizing so the
+                // retry persists.
                 appState.itemManager.recordExternalMoveOperation()
                 appState.itemManager.removeTemporarilyShownItemFromCache(with: item.tag)
                 _ = await stabilizePlacement(
@@ -949,9 +826,7 @@ final class LayoutBarPaddingView: NSView {
                     generation: stabilizationGeneration
                 )
             } catch MenuBarItemManager.EventError.menuTrackingActive {
-                // Same deferral the outer catch handles: the user
-                // opened a menu bar item's menu while the retry was
-                // in flight. Nothing failed, so don't alert.
+                // A menu opened during the retry. Nothing failed.
                 Self.diagLog.info("Rescue-and-retry deferred, a menu bar item menu was open")
             } catch {
                 Self.diagLog.error("Rescue-and-retry failed for \(item.logString): \(error)")
@@ -975,11 +850,8 @@ final class LayoutBarPaddingView: NSView {
         }
     }
 
-    /// Returns true when the dragged item is sitting in the slot the user
-    /// asked for: in the destination section, immediately adjacent to the
-    /// target on the requested side. For control-item targets (section
-    /// dividers) there is no array entry to anchor against, so containment
-    /// in the destination section is the strongest claim we can make.
+    /// Whether the item is adjacent to the target on the requested side. For
+    /// divider targets, being in the section is the best available check.
     private func didItemReachIntendedPosition(
         item: MenuBarItem,
         destination: MenuBarItemManager.MoveDestination,
@@ -1021,9 +893,7 @@ final class LayoutBarPaddingView: NSView {
         if isStabilizing {
             isStabilizing = false
             container.canSetArrangedViews = true
-            // The source bar is frozen by the dragging session, so an abnormal
-            // exit has to thaw it too or it stays at its mid-drag snapshot
-            // until an unrelated later drag resets it.
+            // Thaw the source too.
             if sourceContainer !== container {
                 sourceContainer?.canSetArrangedViews = true
             }
@@ -1032,23 +902,15 @@ final class LayoutBarPaddingView: NSView {
 
     /// Whether a cached item is the item that was dragged.
     ///
-    /// The dragged item's tag is a snapshot. The cache refreshed after the
-    /// move can name the same window differently — a provisional
-    /// `com.apple.controlcenter:Item-0` resolves to its app's identifier
-    /// once the source process is known — and an exact tag comparison then
-    /// misses the item that just landed, which re-drags it (the move engine
-    /// finds it already in place and cancels) and, on the failure path,
-    /// alerts for a move that worked. The window is what moved: match it
-    /// first, and fall back to the tag without its window for a window that
-    /// was recreated in between.
+    /// Matches the window first: after the move a provisional
+    /// `com.apple.controlcenter:Item-0` tag can resolve to the app's, and a
+    /// tag match would alert for a move that worked. Falls back to the tag
+    /// for a recreated window.
     static nonisolated func isSameItem(_ cached: MenuBarItem, _ dragged: MenuBarItem) -> Bool {
         cached.windowID == dragged.windowID || cached.tag.matchesIgnoringWindowID(dragged.tag)
     }
 
-    /// Whether the async continuation still belongs to the move that owns the
-    /// frozen editor rows. The recovery watchdog invalidates the generation
-    /// and cancels that task before reopening the editor, so a slow old move
-    /// cannot resume later and reorder the bar over a newer drag.
+    /// So a slow old move can't resume and reorder the bar over a newer drag.
     private func isCurrentStabilization(_ generation: Int) -> Bool {
         isStabilizing && stabilizationGeneration == generation && !Task.isCancelled
     }
@@ -1084,10 +946,8 @@ final class LayoutBarPaddingView: NSView {
 
     /// The items a cross-container drop resolves its drag unit against.
     ///
-    /// The source bar leads: the members that stayed behind still hold their
-    /// pre-drag order there, and that is the order the unit has to keep. The
-    /// destination contributes whatever the source does not already hold, so a
-    /// member that was already sitting there is still gathered into the block.
+    /// The source bar leads, since it holds the pre-drag order. The
+    /// destination adds members the source lacks.
     static nonisolated func groupResolutionItems(
         sourceItems: [MenuBarItem],
         destinationItems: [MenuBarItem]
@@ -1130,9 +990,8 @@ final class LayoutBarPaddingView: NSView {
     }
 
     private func liveFallbackDestinationForDraggedItem() async -> MenuBarItemManager.MoveDestination? {
-        // This fallback only needs the section's control item. Resolving every
-        // item's source process can block on Accessibility for many seconds,
-        // leaving both drag rows frozen before move() can start its watchdog.
+        // Skip source resolution: it can block on Accessibility for seconds
+        // before move() starts its watchdog.
         let items = await MenuBarItem.getMenuBarItems(
             option: .activeSpace,
             resolveSourcePID: false
@@ -1147,7 +1006,6 @@ final class LayoutBarPaddingView: NSView {
         }
     }
 
-    /// Maps a section-divider tag to the name of the section it bounds.
     private static nonisolated func sectionName(forDividerTag tag: MenuBarItemTag) -> MenuBarSection.Name? {
         switch tag {
         case .hiddenControlItem: .hidden
@@ -1159,12 +1017,8 @@ final class LayoutBarPaddingView: NSView {
     /// Whether an editor drag onto a parked divider should reveal the
     /// destination section instead of refusing (#988).
     ///
-    /// Only the empty-section deadlock qualifies. With items in the section,
-    /// the drop anchors on those items and the existing clamp-and-retry move
-    /// path owns the case; a divider whose section is already showing is on
-    /// screen and passes the reachability gate; a disabled section is never
-    /// revealed; and a non-divider tag (the visible chevron, a regular item)
-    /// never routes through this decision.
+    /// Only the empty, concealed, enabled section with a divider tag
+    /// qualifies.
     static nonisolated func shouldRevealSectionForEditorDrag(
         dividerTag: MenuBarItemTag,
         isSectionConcealed: Bool,
@@ -1179,14 +1033,9 @@ final class LayoutBarPaddingView: NSView {
     /// Which sections must expand inline so the given section divider can
     /// return onscreen for an editor drag.
     ///
-    /// The always-hidden divider sits to the LEFT of everything in the
-    /// hidden section. Revealing the always-hidden section alone shrinks
-    /// its 10000-point parked spacer back to a normal-width item, but AppKit
-    /// re-places that item just left of the hidden section's own content —
-    /// which is still parked offscreen behind the hidden divider's
-    /// 10000-point spacer while the hidden section is collapsed (#1010).
-    /// Both sections must expand together; a hidden destination needs only
-    /// itself. Pure over its input.
+    /// The always-hidden divider sits left of the hidden section's content,
+    /// which stays parked offscreen while hidden is collapsed, so both must
+    /// expand (#1010).
     static nonisolated func sectionsToRevealForEditorDrag(
         forDividerTag dividerTag: MenuBarItemTag
     ) -> [MenuBarSection.Name] {
@@ -1197,15 +1046,11 @@ final class LayoutBarPaddingView: NSView {
         }
     }
 
-    /// Reveals an empty, concealed destination section — together with every
-    /// section whose parked content would keep its divider offscreen
-    /// (#1010) — so the divider returns onscreen, and returns the revealed
-    /// sections together with the divider's fresh live item (#988).
+    /// Reveals an empty concealed section so its divider returns onscreen,
+    /// and returns the revealed sections and the divider's fresh item (#988).
     ///
-    /// Returns nil — leaving the bar untouched — when the state does not
-    /// qualify per `shouldRevealSectionForEditorDrag`, or the divider did
-    /// not come back onscreen; the caller then refuses the
-    /// drag exactly as it did before (#923).
+    /// Returns nil, leaving the bar untouched, when the state doesn't qualify
+    /// or the divider never returns; the caller then refuses.
     private func revealEmptySectionDivider(
         for divider: MenuBarItem,
         appState: AppState
@@ -1219,8 +1064,7 @@ final class LayoutBarPaddingView: NSView {
             return nil
         }
         let (isConcealed, isEnabled) = await MainActor.run {
-            // Compare inside the actor: HidingState's Equatable conformance
-            // is MainActor-isolated.
+            // HidingState's Equatable is MainActor-isolated.
             (section.controlItem.state == .hideSection, section.isEnabled)
         }
         let itemCount = appState.itemManager.itemCache[sectionName].count
@@ -1233,10 +1077,7 @@ final class LayoutBarPaddingView: NSView {
             return nil
         }
 
-        // Resolve the full reveal scope. Sections ahead of the destination
-        // are expanded regardless of their own state: the gate above only
-        // qualifies the destination, and the leading sections exist purely
-        // to bring the destination's divider onscreen (#1010).
+        // Sections ahead of the destination expand regardless of state.
         let revealNames = Self.sectionsToRevealForEditorDrag(forDividerTag: divider.tag)
         var sections: [MenuBarSection] = []
         for name in revealNames {
@@ -1257,27 +1098,19 @@ final class LayoutBarPaddingView: NSView {
             }
         }
 
-        // A cancelled drag must not leave the revealed sections showing: the
-        // reveal is a Thaw-internal detour, so every cancellation exit
-        // restores the sections' persisted state, the same way the timeout
-        // path below does.
+        // Cancellation must not leave revealed sections showing.
         if Task.isCancelled {
             await revertRevealedSections(sections)
             return nil
         }
 
-        // The divider slides back beside the visible section once the
-        // control item's spacer collapses. Poll for its live window to come
-        // back within a display before trusting it as a move anchor; the
-        // captured item's windowID survives the state change, but its
-        // bounds snapshot does not, so resolve a fresh item.
+        // Poll until the divider is back on a display. The windowID survives
+        // the state change but its bounds don't, so resolve a fresh item.
         let screenFrames = NSScreen.screens.map { CGDisplayBounds($0.displayID) }
         for _ in 0 ..< 40 {
             try? await Task.sleep(for: .milliseconds(50))
-            // A cancelled sleep returns immediately, so without this check a
-            // cancelled task would burn through the remaining iterations and
-            // fall into the revert below, which owns the timeout path — not
-            // cancellation. Exit the reveal outright.
+            // A cancelled sleep returns immediately; don't fall into the
+            // timeout path.
             if Task.isCancelled {
                 await revertRevealedSections(sections)
                 return nil
@@ -1291,8 +1124,7 @@ final class LayoutBarPaddingView: NSView {
             }
         }
 
-        // The divider never came back. Undo the reveal so an empty section
-        // is not left showing, and let the caller refuse as before.
+        // Never came back. Undo the reveal and let the caller refuse.
         Self.diagLog.warning(
             "The \(sectionName.logString) divider did not come onscreen after revealing; refusing the drag"
         )
@@ -1300,10 +1132,7 @@ final class LayoutBarPaddingView: NSView {
         return nil
     }
 
-    /// Returns every revealed section's control item to its persisted state
-    /// after a temporary reveal, on the main actor. Shared by the
-    /// cancellation and timeout exits so a cancelled or failed reveal cannot
-    /// leave a section showing.
+    /// Returns revealed sections to their persisted state.
     private func revertRevealedSections(_ sections: [MenuBarSection]) async {
         await MainActor.run {
             for section in sections {
@@ -1321,8 +1150,8 @@ final class LayoutBarPaddingView: NSView {
         generation: Int
     ) async -> Bool {
         guard isCurrentStabilization(generation) else { return false }
-        // A dropped refresh is not evidence. Keep the drag projection frozen
-        // until this move owns and completes a fast geometry cache pass.
+        // A dropped refresh is not evidence. Stay frozen until this move
+        // completes its own cache pass.
         guard await appState.itemManager.refreshCacheAfterLayoutEditorMove() else {
             return false
         }
@@ -1389,8 +1218,6 @@ final class LayoutBarPaddingView: NSView {
             }
             .store(in: &notchObservers)
 
-        // `menuBarManager` is now `@Observable` (wave 3), so it no longer has
-        // an `$averageColorInfo` publisher.
         averageColorInfoObservationTask = Task { [weak self, weak appState] in
             var previous: MenuBarAverageColorInfo?
             let changes = Observations { appState?.menuBarManager.averageColorInfo }
@@ -1415,16 +1242,10 @@ final class LayoutBarPaddingView: NSView {
         }
 
         let notchIndicatorWidth = notch.width + MenuBarSection.notchGap
-        // Distance from the bar's trailing edge to the notch indicator's
-        // trailing edge — equals the real-world items area (everything
-        // right of `notch.maxX + notchGap` in the menu bar) plus the 7.5pt
-        // cosmetic inset that sits between items and the rounded edge.
+        // The real items area right of the notch, plus the 7.5pt inset.
         let notchTrailingOffset = max(0, screen.frame.maxX - notch.maxX - MenuBarSection.notchGap) + 7.5
-        // Bar must always be wide enough to represent the real-world span
-        // from `notch.minX` to `screen.maxX`, with no inset on the left
-        // (the notch itself sits flush) and 7.5pt cosmetic inset on the
-        // right. When the Settings pane is wider, the bar grows past this
-        // and the empty area is shown to the LEFT of the notch.
+        // Wide enough for `notch.minX` to `screen.maxX` plus the 7.5pt inset.
+        // A wider pane grows the bar to the left of the notch.
         let barMinWidth = max(0, screen.frame.maxX - notch.minX) + 7.5
         let colorInfo = container.appState?.menuBarManager.averageColorInfo
 
@@ -1444,20 +1265,8 @@ final class LayoutBarPaddingView: NSView {
 
         let widthConstraint = view.widthAnchor.constraint(equalToConstant: notchIndicatorWidth)
         let trailingConstraint = view.trailingAnchor.constraint(equalTo: trailingAnchor, constant: -notchTrailingOffset)
-        // Lower priority so the bar can grow leftward when the user has
-        // more items than fit between the notch and the bar's trailing
-        // edge. With this at .required, container.leading is hard-pinned
-        // at notchView.trailing, the container's slot is fixed in width,
-        // and overflowing items get clipped without ever pushing the
-        // documentView wider than the scroll view's visible area, so no
-        // horizontal scrollbar appears. Dropping to .defaultHigh keeps
-        // the notch as the preferred boundary while letting AutoLayout
-        // break it when items need more room — paddingView then extends
-        // further left (via the existing leading inset constraint),
-        // NSScrollView observes documentView wider than visible and
-        // surfaces the horizontal scroller. The container is z-above
-        // notchView, so items rendered over the notch indicator stay
-        // draggable.
+        // Not .required: overflowing items would be clipped with no
+        // scrollbar. .defaultHigh lets the bar grow left past the notch.
         let containerLeading = container.leadingAnchor.constraint(greaterThanOrEqualTo: view.trailingAnchor)
         containerLeading.priority = .defaultHigh
         let minWidth = widthAnchor.constraint(greaterThanOrEqualToConstant: barMinWidth)
@@ -1493,10 +1302,8 @@ final class LayoutBarPaddingView: NSView {
     }
 }
 
-/// A calm, localized stand-in for the error a group move reports when its
-/// final placement could not be confirmed. ``LayoutBarPaddingView/recoverFromFailedMove``
-/// re-verifies from a fresh cache before this ever surfaces, so a user only
-/// sees it when the block genuinely did not land.
+/// Shown when a group move's placement can't be confirmed. Only surfaces
+/// after ``LayoutBarPaddingView/recoverFromFailedMove`` re-verifies.
 private struct GroupMoveStabilizationError: LocalizedError {
     var errorDescription: String? {
         String(localized: "Couldn't confirm that the group settled into place.")

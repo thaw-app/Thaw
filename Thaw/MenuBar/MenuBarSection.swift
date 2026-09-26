@@ -11,19 +11,16 @@ import SwiftUI
 /// A representation of a section in a menu bar.
 @MainActor
 final class MenuBarSection {
-    /// The name of the section.
     let name: Name
 
     /// The control item that manages the section.
     let controlItem: ControlItem
 
-    /// The shared app state.
     private weak var appState: AppState?
 
     /// A task that manages rehiding the section.
     private var rehideTask: Task<Void, Never>?
 
-    /// The section's diagnostic logger.
     private nonisolated let diagLog = DiagLog(category: "MenuBarSection")
 
     /// A Boolean value that indicates whether the Thaw Bar should be used
@@ -96,7 +93,6 @@ final class MenuBarSection {
         )
     }
 
-    /// A weak reference to the menu bar manager.
     private weak var menuBarManager: MenuBarManager? {
         appState?.menuBarManager
     }
@@ -142,7 +138,6 @@ final class MenuBarSection {
     /// A Boolean value that indicates whether the section is enabled.
     var isEnabled: Bool {
         if case .visible = name {
-            // The visible section should always be enabled.
             return true
         }
         return controlItem.isAddedToMenuBar
@@ -160,13 +155,11 @@ final class MenuBarSection {
         }
     }
 
-    /// Creates a section with the given name and control item.
     init(name: Name, controlItem: ControlItem) {
         self.name = name
         self.controlItem = controlItem
     }
 
-    /// Creates a section with the given name.
     convenience init(name: Name) {
         let controlItem = switch name {
         case .visible:
@@ -179,7 +172,6 @@ final class MenuBarSection {
         self.init(name: name, controlItem: controlItem)
     }
 
-    /// Performs the initial setup of the section.
     func performSetup(with appState: AppState) {
         self.appState = appState
         controlItem.performSetup(with: appState)
@@ -194,7 +186,6 @@ final class MenuBarSection {
     func updateControlItemState(for screen: NSScreen? = nil) {
         guard let appState else { return }
 
-        // If the user wants to show, always show.
         if desiredState == .showSection {
             controlItem.state = .showSection
             return
@@ -234,7 +225,6 @@ final class MenuBarSection {
         }
     }
 
-    /// Shows the section.
     func show(triggeredByHotkey: Bool = false) {
         guard let menuBarManager, isHidden else {
             return
@@ -246,7 +236,6 @@ final class MenuBarSection {
             return
         }
 
-        // Determine whether we should use the Thaw Bar based on settings.
         let shouldUseIceBarBasedOnSettings = useIceBar
 
         var preferredPresentationMode: PresentationMode
@@ -254,14 +243,9 @@ final class MenuBarSection {
             preferredPresentationMode = .iceBar
         } else if let screen = screenForIceBar {
             preferredPresentationMode = presentationMode(on: screen)
-            // Avoid hiding application menus while a fullscreen space is
-            // active. Hiding the application menus activates Thaw
-            // (NSApp.activate), and activating inside a fullscreen space
-            // makes macOS immediately hide the menu bar (FB13544993). Fall
-            // back to the Thaw Bar instead: its panel is shown via
-            // orderFrontRegardless() without activating. This mirrors the
-            // fullscreen guard already present in the reactive sink in
-            // MenuBarManager.
+            // Hiding app menus activates Thaw, and activating in a fullscreen
+            // space makes macOS hide the menu bar (FB13544993). Use the Thaw
+            // Bar instead, which orders front without activating.
             if
                 preferredPresentationMode == .inlineHidingApplicationMenus,
                 appState?.activeSpace.isFullscreen == true
@@ -281,11 +265,9 @@ final class MenuBarSection {
             preferredPresentationMode = .inline
         }
 
-        // Use Ice Thaw if settings say so OR if items still won't fit inline.
         if preferredPresentationMode == .iceBar {
-            // Make sure hidden and always-hidden control items are collapsed.
-            // Still update the visible control item (Ice icon) state to show
-            // its alternate icon.
+            // Collapse the hidden control items, but still update the visible
+            // one so it shows its alternate icon.
             for section in menuBarManager.sections {
                 switch section.name {
                 case .visible:
@@ -314,11 +296,9 @@ final class MenuBarSection {
                 startRehideChecks()
             }
 
-            return // We're done.
+            return
         }
 
-        // If we made it here, we're not using the Thaw Bar.
-        // Make sure it's closed.
         menuBarManager.iceBarPanel.close()
 
         if preferredPresentationMode == .inlineHidingApplicationMenus {
@@ -341,13 +321,12 @@ final class MenuBarSection {
         startRehideChecks()
     }
 
-    /// Hides the section.
     func hide() {
         guard let menuBarManager, !isHidden else {
             return
         }
 
-        menuBarManager.iceBarPanel.close() // Make sure Thaw Bar is always closed.
+        menuBarManager.iceBarPanel.close()
         menuBarManager.showOnHoverAllowed = true
 
         for section in menuBarManager.sections {
@@ -358,7 +337,6 @@ final class MenuBarSection {
         stopRehideChecks()
     }
 
-    /// Toggles the visibility of the section.
     func toggle(triggeredByHotkey: Bool = false) {
         if isHidden {
             show(triggeredByHotkey: triggeredByHotkey)
@@ -396,14 +374,9 @@ final class MenuBarSection {
 
         switch appState.settings.general.rehideStrategy {
         case .smart, .timed:
-            // Smart uses the rehide interval as a fallback to the click-based
-            // rehide checks; timed uses it as the rule. The interval itself is
-            // never gated, but the hide at its end is: hiding under a cursor
-            // that is still over the bar or the Thaw Bar is the #924 bug, and
-            // hiding while a menu bar item's menu is open would yank the menu
-            // out from under the user. Both defer by restarting the checks.
-            // Task.sleep replaces Timer so cancellation is automatic when the
-            // task is reassigned or cancelled.
+            // The hide at the end of the interval defers (by restarting the
+            // checks) while the cursor is over the bar or Thaw Bar (#924), or
+            // while an item's menu is open.
             let interval = appState.settings.general.rehideInterval
             rehideTask = Task { [weak self, weak appState] in
                 try? await Task.sleep(for: .seconds(interval))

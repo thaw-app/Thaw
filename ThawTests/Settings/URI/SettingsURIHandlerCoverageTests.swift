@@ -10,9 +10,7 @@ import Testing
 @testable import Thaw
 
 /// Collects the notifications posted on `name` while `body` runs.
-///
-/// Each sibling suite carries one of these; it is file-scoped here so the
-/// nested suites below can share a single copy.
+/// File-scoped so the nested suites below share one copy.
 @MainActor
 private func notifications(
     named name: Notification.Name,
@@ -41,11 +39,9 @@ private final class NotificationBox: @unchecked Sendable {
 
 /// The Boolean keys ``SettingsURIHandler`` publishes as settable and toggleable.
 ///
-/// Copied rather than referenced because `@Test(arguments:)` evaluates its
-/// collection outside the main actor and the handler is `@MainActor`. The first
-/// test in `KeyTableCompleteness` asserts the copies still match the tables they
-/// mirror, so a key added to production without being added here fails loudly
-/// instead of quietly going untested.
+/// Copied because `@Test(arguments:)` evaluates its collection outside the
+/// main actor and the handler is `@MainActor`. `KeyTableCompleteness`
+/// asserts the copies still match the handler's tables.
 private let booleanKeys: [String] = [
     "autoRehide",
     "showOnClick",
@@ -106,59 +102,28 @@ private let globalBooleanKeys: [String] = booleanKeys
 /// Every key the `get` action can be asked for that is not a per-display one.
 private let globalReadableKeys: [String] = globalBooleanKeys + doubleKeys + enumKeys
 
-/// The residue of ``SettingsURIHandler`` that its four existing suites leave
-/// unreached, plus the table-completeness claims none of them makes.
+/// Covers what the four sibling ``SettingsURIHandler`` suites leave
+/// unreached, plus key-table completeness:
 ///
-/// The siblings between them already cover a great deal.
-/// `SettingsURIHandlerTests` covers the key tables, `parseBool`, `parseDouble`
-/// and `PerDisplayScope`; `SettingsURIHandlerApplyTests` covers `set`/`toggle`,
-/// range clamping, the enumeration parse and the whitelist;
-/// `SettingsURIHandlerGetTests` covers `get`, the callback-scheme refusals, the
-/// specific-display writes and code-signature verification; and
-/// `SettingsURIHandlerTailTests` covers the empty display identifier, the shape
-/// of a per-display announcement, the toggles the per-display surface refuses,
-/// and whitelist removal purging the stored identity. None of that is redone.
+/// - **The named-display toggle of `alwaysShowHiddenItems`.** Only the
+///   `useIceBar` arm of `handleToggle` was driven with a display identifier.
+/// - **Reading a per-display key for an unknown display.** The individual-key
+///   refusal takes a different arm from the covered `key=display` one.
+/// - **A stored `rehideStrategy` raw value outside `0...2`.** A downgrade or a
+///   hand-edited `defaults write` produces one; `get` must still answer.
+/// - **A callback URL `URLComponents` refuses outright.** The sibling
+///   "schemeless" cases parse and fail the scheme check instead.
+/// - **The full key tables.** A key in `supportedBooleanKeys` but missing from
+///   `keyMapping` is refused at run time with no compile-time error.
+/// - **Parser edge inputs.** Whitespace, digit separators, hex floats, and
+///   infinity spellings the range check must refuse.
 ///
-/// What is genuinely left, and what this suite adds:
+/// Not covered: `promptForAuthorization` (modal `NSAlert`), the success path
+/// of `sendCallbackResponse` (launches another app), `getAppName`'s
+/// bundle-path arm (needs an installed app that is not running), and
+/// `verifyCodeSignature` arms that need a team-signed app.
 ///
-/// - **The named-display toggle of `alwaysShowHiddenItems`.** `handleToggle`
-///   has a separate arm for each of the two Boolean per-display keys. Only the
-///   `useIceBar` one is driven with a display identifier today, so the second
-///   arm — identical in effect, and the one a `thaw://toggle` URL uses to flip
-///   "always show" on one monitor — has never run.
-/// - **Reading a per-display key for a display that is not there.**
-///   `getSettingValue` refuses before it looks at the key when the identifier
-///   resolves to neither an attached screen nor a persisted configuration. The
-///   `key=display` form of that refusal is covered; the individual-key form,
-///   which fails through an entirely different arm, is not.
-/// - **A stored enumeration value the enumeration cannot name.** `getSettingValue`
-///   has a fallback for a `rehideStrategy` raw value outside `0...2`, which is
-///   what a downgrade or a hand-edited `defaults write` produces. It must still
-///   answer rather than report the setting as missing.
-/// - **A callback URL that will not parse at all.** The sibling suite's
-///   "schemeless" cases all parse successfully and are turned away by the
-///   scheme check one line later; nothing has yet handed the handler a string
-///   `URLComponents` refuses outright. Each case here asserts that first, so the
-///   test pins the branch it means to.
-/// - **The key tables, driven in full.** The siblings name a handful of keys
-///   each. A key present in `supportedBooleanKeys` but missing from the private
-///   `keyMapping` table is refused at run time with no compile-time complaint,
-///   so every publishable key is set, toggled and read here.
-/// - **Parser inputs at the edges.** Surrounding whitespace, digit separators,
-///   Swift's hexadecimal float syntax, and the spellings of infinity that
-///   `Double.init` accepts but the range check must refuse.
-///
-/// Deliberately **not** covered: `promptForAuthorization` (runs a modal
-/// `NSAlert`), the success path of `sendCallbackResponse` (hands a URL to
-/// `NSWorkspace`, which launches another app), `getAppName`'s bundle-path arm
-/// (only reached for an app that is installed but *not running*, which is a
-/// property of the machine rather than of the code), and every
-/// `verifyCodeSignature` arm that needs an app whose signature names a team —
-/// no such app is guaranteed to exist on a given Mac.
-///
-/// Everything that reads or writes a setting runs inside `withScratchDefaults`,
-/// so the suite never touches the real `com.stonerl.Thaw` domain and always
-/// starts from an empty whitelist.
+/// Every read or write runs inside `withScratchDefaults`.
 @MainActor
 @Suite("Settings URI handler residue", .serialized)
 enum SettingsURIHandlerCoverageTests {
@@ -273,19 +238,15 @@ enum SettingsURIHandlerCoverageTests {
     @Suite("Toggling a named display")
     struct TogglingANamedDisplay {
         /// The Boolean per-display keys reach separate arms of
-        /// `handlePerDisplayToggle`, and the "always show" one has never been
-        /// driven with a display identifier. All have to behave identically:
-        /// a toggle carries the flag and neither kind of value, because the
-        /// reader is being told to flip whatever it holds, not to store
-        /// something.
+        /// `handlePerDisplayToggle`. All must behave identically: a toggle carries
+        /// the flag and no value, since the reader flips whatever it holds.
         @Test(
             "Any Boolean per-display key can be toggled on a named display",
             arguments: ["useIceBar", "alwaysShowHiddenItems", "useThawBarForAlwaysHidden"]
         )
         func namedDisplayToggleWorksForBothBooleanKeys(_ key: String) throws {
             try withScratchDefaults { _ in
-                // The toggle path now requires the display to be known, the
-                // same as the set path, so persist a configuration for it.
+                // The toggle path requires the display to be known, so persist one.
                 let uuid = UUID().uuidString
                 let seeded = try JSONEncoder().encode([uuid: DisplayIceBarConfiguration.defaultConfiguration])
                 Defaults.set(seeded, forKey: .displayIceBarConfigurations)
@@ -306,18 +267,16 @@ enum SettingsURIHandlerCoverageTests {
             }
         }
 
-        /// Toggle and set now validate a named display identically: it must
-        /// parse as a UUID *and* be connected or have a persisted
-        /// configuration. This used to differ — toggle checked only that the
-        /// string contained a hyphen, so it accepted a display that does not
-        /// exist and reported success for a toggle that never happened.
+        /// Toggle and set validate a named display identically: it must parse as
+        /// a UUID and be connected or persisted. Toggle used to check only for a
+        /// hyphen and reported success for displays that did not exist.
         @Test(
             "A named-display toggle refuses an unknown display, like the set path",
             arguments: ["useIceBar", "alwaysShowHiddenItems", "useThawBarForAlwaysHidden"]
         )
         func namedDisplayToggleRefusesAnUnknownDisplay(_ key: String) throws {
             try withScratchDefaults { _ in
-                // Never persisted, never attached — and now refused.
+                // Never persisted or attached, so refused.
                 #expect(!SettingsURIHandler.handleToggle(key: key, sender: "test", displayUUID: UUID().uuidString), "\(key)")
                 #expect(!SettingsURIHandler.handleToggle(key: key, sender: "test", displayUUID: "nodashes"), "\(key)")
 
@@ -418,9 +377,8 @@ enum SettingsURIHandlerCoverageTests {
             }
         }
 
-        /// A malformed identifier is not a display either, and takes the same
-        /// route out — unlike the `set` path, which rejects it a step earlier
-        /// on its `UUID(uuidString:)` check.
+        /// A malformed identifier takes the same route out, unlike `set`, which
+        /// rejects it earlier on its `UUID(uuidString:)` check.
         @Test("A per-display read with a malformed identifier is refused", arguments: perDisplayKeys)
         func perDisplayReadWithAMalformedIdentifierIsRefused(_ key: String) throws {
             try withScratchDefaults { _ in
@@ -461,12 +419,9 @@ enum SettingsURIHandlerCoverageTests {
     @MainActor
     @Suite("A stored value the enumeration cannot name")
     struct UnnamedEnumerationValue {
-        /// A downgrade, or a hand-written `defaults write`, can leave a raw
-        /// value outside the enumeration behind. The read has to answer with
-        /// what is there rather than report the setting as missing — if
-        /// `getSettingValue` returned nil for it, the request would come back
-        /// as "Setting not found" and the caller would have no way to see, or
-        /// correct, the value that is actually stored.
+        /// A downgrade or a hand-written `defaults write` can leave a raw value
+        /// outside the enumeration. The read must answer with it rather than
+        /// report "Setting not found", or the caller could never see or fix it.
         @Test("A rehideStrategy the enumeration cannot name is still answered", arguments: [99, -1, 3])
         func outOfRangeRehideStrategyIsStillAnswered(_ raw: Int) throws {
             try withScratchDefaults { _ in
@@ -526,11 +481,8 @@ enum SettingsURIHandlerCoverageTests {
     @MainActor
     @Suite("Callback URLs that will not parse")
     struct UnparsableCallbackURLs {
-        /// The sibling suite's "schemeless" cases all parse and are turned away
-        /// by the scheme check a line later. These do not parse at all, which
-        /// is a different branch — so each case asserts that first, and the
-        /// test would stop meaning anything the moment `URLComponents` started
-        /// accepting one of them.
+        /// The sibling "schemeless" cases parse and fail the scheme check. These
+        /// do not parse at all, a different branch, so each case asserts that first.
         @Test("A callback URL the parser cannot read at all is refused", arguments: [
             "https://exa mple.com/callback",
             "ht^tp://callback",
@@ -616,10 +568,9 @@ enum SettingsURIHandlerCoverageTests {
             }
         }
 
-        /// `parseDouble` is `Double.init(String:)`, so it accepts every
-        /// spelling Swift does — including hexadecimal floats, a leading plus,
-        /// and a bare leading or trailing point. Pinning that is worth more
-        /// than pretending otherwise: these are values a caller can send today.
+        /// `parseDouble` is `Double.init(String:)`, so it accepts every spelling
+        /// Swift does, including hex floats, a leading plus, and a bare leading or
+        /// trailing point.
         @Test("Every spelling Swift accepts parses to its value", arguments: [
             ("0x1p3", 8.0),
             ("+2.5", 2.5),
@@ -664,10 +615,9 @@ enum SettingsURIHandlerCoverageTests {
             }
         }
 
-        /// The infinities `Double.init` produces — spelled out, or reached by
-        /// overflowing an exponent — are parsed successfully and then have to
-        /// be caught by the finiteness check rather than clamped to the top of
-        /// the range, which is what a naive clamp would do.
+        /// The infinities `Double.init` produces, spelled out or from exponent
+        /// overflow, must be caught by the finiteness check rather than clamped to
+        /// the top of the range.
         @Test("Every infinity the parser produces is refused rather than clamped", arguments: [
             "infinity",
             "INFINITY",

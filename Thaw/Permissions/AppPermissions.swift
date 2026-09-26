@@ -9,9 +9,8 @@
 import Foundation
 import Observation
 
-/// An abstraction over ``AppPermissions`` that lets views depend on just the
-/// pieces they read, so previews can supply lightweight stand-ins instead of
-/// the real manager and its associated app machinery.
+/// The parts of ``AppPermissions`` views read, so previews can supply
+/// lightweight stand-ins.
 @MainActor
 protocol PermissionsManaging: AnyObject, Observable {
     /// The state of the app's granted permissions.
@@ -39,12 +38,11 @@ final class AppPermissions: PermissionsManaging {
         case missing
         /// Every permission, required or not, has been granted.
         case hasAll
-        /// All required permissions are granted, but at least one optional
-        /// permission is missing — the app can run in limited mode.
+        /// Required permissions are granted but an optional one is missing,
+        /// so the app runs in limited mode.
         case hasRequired
     }
 
-    /// The manager's logger.
     let diagLog = DiagLog(category: "Permissions")
 
     /// The permission for Accessibility features.
@@ -53,7 +51,6 @@ final class AppPermissions: PermissionsManaging {
     /// The permission for Screen Recording features.
     let screenRecording = ScreenRecordingPermission()
 
-    /// The state of the app's granted permissions.
     private(set) var permissionsState: PermissionsState = .missing
 
     /// The permissions required for full app functionality.
@@ -66,7 +63,6 @@ final class AppPermissions: PermissionsManaging {
         allPermissions.filter(\.isRequired)
     }
 
-    /// Creates a new permissions manager.
     init() {
         self.updatePermissionsState()
         for permission in allPermissions {
@@ -76,7 +72,6 @@ final class AppPermissions: PermissionsManaging {
         }
     }
 
-    /// Updates the current permissions state.
     private func updatePermissionsState() {
         if allPermissions.allSatisfy(\.hasPermission) {
             permissionsState = .hasAll

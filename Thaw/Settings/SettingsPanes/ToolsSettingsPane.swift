@@ -185,7 +185,7 @@ struct ToolsSettingsPane: View {
     private static let systemLanguageTag = "system"
 
     /// The app's per-app language override, via the standard `AppleLanguages`
-    /// mechanism. Not a `Defaults.Key` — the key name is owned by macOS.
+    /// mechanism. Not a `Defaults.Key`; the key name is owned by macOS.
     private var currentLanguageOverride: String {
         guard let stored = (UserDefaults.standard.array(forKey: "AppleLanguages") as? [String])?.first else {
             return Self.systemLanguageTag
@@ -261,13 +261,10 @@ struct ToolsSettingsPane: View {
     }
 
     private func relaunchApp() {
-        // Terminate first, reopen after: launching a second instance while
-        // this one is still alive races teardown and can leave multiple
-        // copies running. The detached shell outlives the app, waits for
-        // this PID to exit, and only then opens the bundle again.
-        // Foundation Process rather than the Subprocess package on purpose —
-        // Subprocess ties the child's lifetime to the awaiting task, which
-        // dies with the app before the relaunch could fire.
+        // Reopen only after this PID exits: a second instance launched during
+        // teardown can leave multiple copies running. Foundation Process, not
+        // Subprocess, because Subprocess ties the child to the awaiting task,
+        // which dies with the app.
         let pid = ProcessInfo.processInfo.processIdentifier
         let bundlePath = Bundle.main.bundlePath
         let process = Process()
@@ -275,10 +272,8 @@ struct ToolsSettingsPane: View {
         process.arguments = [
             "-c",
             "while /bin/kill -0 \(pid) 2>/dev/null; do /bin/sleep 0.1; done; /usr/bin/open \"$1\"",
-            // `sh -c` assigns the first operand to $0, so the path has to be
-            // the second. Passing it as an argument keeps a bundle path with
-            // a quote, a backslash, a backtick, or a `$` in it out of the
-            // script text, where double quotes alone would not protect it.
+            // `sh -c` assigns the first operand to $0, so the path goes second.
+            // As an argument, special characters in it stay out of the script.
             "thaw-relaunch",
             bundlePath,
         ]

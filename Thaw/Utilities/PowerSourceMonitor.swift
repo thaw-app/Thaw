@@ -42,20 +42,15 @@ final class PowerSourceMonitor: ObservableObject {
     /// Begins observing power source changes. Safe to call more than once;
     /// subsequent calls are no-ops while already running.
     func start() {
-        // Both handles are checked, not just the run loop source. When
-        // `IOPSNotificationCreateRunLoopSource` fails, `runLoopSource` stays
-        // nil while the safety timer is still scheduled, so guarding on the
-        // source alone would let a second call schedule -- and leak -- another
-        // timer, breaking the documented no-op contract.
+        // Check both handles: if `IOPSNotificationCreateRunLoopSource` fails, the source
+        // stays nil while the timer is scheduled, so a second call would leak a timer.
         guard runLoopSource == nil, safetyTimer == nil else { return }
 
         let context = Unmanaged.passUnretained(self).toOpaque()
         let callback: IOPowerSourceCallbackType = { context in
             guard let context else { return }
             let monitor = Unmanaged<PowerSourceMonitor>.fromOpaque(context).takeUnretainedValue()
-            // The callback is invoked on the run loop it was registered
-            // on (the main run loop), but hop explicitly to keep the
-            // @MainActor isolation contract clear.
+            // Already on the main run loop, but hop explicitly to keep the isolation clear.
             Task { @MainActor in
                 monitor.refresh()
             }
@@ -79,7 +74,6 @@ final class PowerSourceMonitor: ObservableObject {
         refresh()
     }
 
-    /// Stops observing power source changes.
     func stop() {
         if let runLoopSource {
             CFRunLoopRemoveSource(CFRunLoopGetMain(), runLoopSource, .defaultMode)

@@ -12,28 +12,19 @@ import Testing
 /// Pins ``MenuBarItemManager/MoveDestination/wouldLandOffScreen(screenFrames:)``
 /// and the desired-section rule the profile apply's LCS pass pairs it with.
 ///
-/// #1027: after a restart on a three-display Mac, the reporter's hidden
-/// divider sat parked at `minX=-2422` with `tgpro` and `soundsource:Input`
-/// already stranded on the wrong side of it. Phase 1 declined to rescue them
-/// (a parked H_ctrl cannot be dragged onto, #899) and handed off to the LCS
-/// pass, which anchored `codexbar-codex` and `codexbar-claude` on the parked
-/// `tgpro`, `aldente` on the parked `soundsource:Input`, then `Maccy` on the
-/// freshly stranded `aldente` and `TextInputMenuAgent` on the freshly
-/// stranded `Maccy`. Six desired-visible items walked into the hidden
-/// section, each chained off the last, and the bar went from
-/// `visible=12/hidden=13` to `visible=1/hidden=19`.
+/// After a restart on three displays the hidden divider sat parked at -2422
+/// with two items stranded behind it. The LCS pass then anchored visible-bound
+/// moves on parked items, each chaining off the last, and the bar went from
+/// visible=12/hidden=13 to visible=1/hidden=19 (#1027).
 ///
-/// The rule has two halves and the suite pins both: a visible-bound move onto
-/// a parked anchor is refused, and a concealment move onto a parked anchor is
-/// not — parking is how concealment works, so gating those would refuse every
-/// move into a collapsed section.
+/// A visible-bound move onto a parked anchor is refused; a concealment move is
+/// not, because parking is how concealment works.
 @Suite("Parked visible-bound move exclusion")
 struct ParkedVisibleBoundMoveTests {
     private static let display = CGRect(x: 0, y: 0, width: 1728, height: 1120)
     private static let screenFrames = [display]
 
-    /// The reporter's parked zone: items concealed behind a collapsed hidden
-    /// section sit thousands of points left of the display.
+    /// Items behind a collapsed hidden section sit thousands of points left of the display.
     private static let parkedBounds = CGRect(x: -2422, y: 0, width: 24, height: 22)
     private static let onScreenBounds = CGRect(x: 800, y: 0, width: 24, height: 22)
 
@@ -100,8 +91,7 @@ struct ParkedVisibleBoundMoveTests {
 
     // MARK: - The desired-section rule
 
-    /// Mirrors the LCS pass's gate: skip only when the item is bound for the
-    /// visible section *and* the destination lands off screen.
+    /// Mirrors the LCS gate: skip only a visible-bound move whose destination is off screen.
     private static func wouldSkip(
         desiredSection: MenuBarSection.Name,
         destination: MenuBarItemManager.MoveDestination
@@ -131,8 +121,8 @@ struct ParkedVisibleBoundMoveTests {
         arguments: [MenuBarSection.Name.hidden, .alwaysHidden]
     )
     func concealmentMoveOntoParkedAnchorRuns(section: MenuBarSection.Name) {
-        // App-Cleaner onto a parked H_ctrl, and the always-hidden trio onto a
-        // parked AH_ctrl: correct in the #1027 log, and still permitted.
+        // App-Cleaner onto a parked H_ctrl and the always-hidden trio onto a parked
+        // AH_ctrl were correct in the log and are still permitted.
         let controlItems = MenuBarItemManager.ControlItemPair.fixture(
             hiddenAt: Self.parkedBounds,
             alwaysHiddenAt: Self.parkedBounds
@@ -145,10 +135,8 @@ struct ParkedVisibleBoundMoveTests {
     /// The reporter's own move sequence, replayed against the gate.
     @Test("The #1027 sequence skips the six stranding moves and keeps the rest")
     func reporterSequenceIsGatedExactly() {
-        // (uid, desired section, anchor parked?) in the order the log enacted
-        // them. The anchors of the visible-bound moves were parked: tgpro and
-        // soundsource:Input were already stranded, and aldente and Maccy were
-        // stranded by the moves immediately preceding.
+        // (uid, desired section, anchor parked?) in log order. The visible-bound
+        // anchors were parked, either already stranded or stranded by the move before.
         let sequence: [(uid: String, section: MenuBarSection.Name, anchorParked: Bool)] = [
             ("ru.yandex.desktop.disk2:Item-0", .alwaysHidden, true),
             ("com.nextcloud.desktopclient:Item-0", .alwaysHidden, true),

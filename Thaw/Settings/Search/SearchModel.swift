@@ -25,25 +25,22 @@ struct SearchGroup: Identifiable {
 
 /// A precomputed searchable wrapper around a ``SearchEntry``.
 ///
-/// The `properties` are built once at initialization rather than re-derived
-/// on every fuzzy search, so the static corpus is tokenized a single time.
+/// `properties` are built once so the corpus is tokenized a single time.
 private struct SearchItem: Searchable {
     let entry: SearchEntry
     let properties: [FuseProp]
 
     init(entry: SearchEntry, bundle: Bundle = .main) {
         self.entry = entry
-        // Weight the title highest, then keywords, then the description.
-        // Lower weight values contribute less to the diff score, so a
-        // match in the title ranks above a match in the description.
+        // Title ranks above keywords, which rank above the description.
         let weights = SearchWeights.settings
         // Match against what the pane actually renders, so a translated
         // build is searchable in its own language.
         let localizedTitle = entry.localizedTitle(bundle: bundle)
         var props = [FuseProp(localizedTitle, weight: weights.title)]
         if localizedTitle != entry.titleText {
-            // Keep the English source matchable too — users search the term
-            // they saw in the docs as often as the one on screen.
+            // Keep the English source matchable too, for terms users saw in
+            // the docs.
             props.append(FuseProp(entry.titleText, weight: weights.title))
         }
         if !entry.keywords.isEmpty {
@@ -82,9 +79,8 @@ final class SearchModel {
     /// Ranks the whole index against `query`, resolving titles against
     /// `bundle`.
     ///
-    /// The instance path resolves against `Bundle.main`, whose localization a
-    /// test process cannot switch; this exposes the same ranking with the
-    /// bundle injected so translated matching is verifiable.
+    /// Tests can't switch `Bundle.main`'s localization, so this takes the
+    /// bundle to verify translated matching.
     static func rankedEntries(for query: String, bundle: Bundle) -> [SearchEntry] {
         let items = SearchIndex.entries.map { SearchItem(entry: $0, bundle: bundle) }
         let results = Fuse(threshold: 0.5).searchSync(query, in: items, by: \.properties)

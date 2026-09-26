@@ -56,9 +56,8 @@ struct MenuBarItemContainer<Content: View>: View {
 
     /// The tint to draw, from the override if one was given.
     ///
-    /// The fallback opacity is the one this view has hardcoded since it was
-    /// written, so callers that pass no override keep drawing exactly as
-    /// before rather than picking up the menu bar's `tintOpacity`.
+    /// Without an override, keep the original hardcoded opacity rather than the
+    /// menu bar's `tintOpacity`.
     private var tint: MenuBarContainerTint {
         tintOverride ?? MenuBarContainerTint(
             kind: configuration.tintKind,
@@ -133,8 +132,6 @@ extension View {
     /// - Important: This modifier performs drawing on layers above and
     ///   below the current view. The resulting view will probably look
     ///   incorrect if the current view's background is not transparent.
-    ///
-    /// - Parameter appState: The shared ``AppState`` object.
     func menuBarItemContainer(appState: AppState) -> some View {
         MenuBarItemContainer(appState: appState, accessor: .automatic) { self }
     }

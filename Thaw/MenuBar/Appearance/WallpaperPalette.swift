@@ -9,17 +9,12 @@ import CoreGraphics
 
 /// The dominant colors of an image, ordered by how much of it they cover.
 ///
-/// Averaging a wallpaper answers "what colour is it, roughly" and throws away
-/// everything that made it worth looking at: a sunset averages to brown. A
-/// palette keeps the colours that actually occupy the image, which is what
-/// lets an adaptive gradient read as *derived from* the wallpaper rather than
-/// smeared from it.
+/// An average turns a sunset into brown; a palette keeps the colours that
+/// actually occupy the image.
 ///
-/// The derivation is deliberately pure and deterministic — it takes samples
-/// and returns swatches — so it can be tested without a screen. Pixel reading
+/// Pure and deterministic so it can be tested without a screen. Pixel reading
 /// lives in ``CGImage/dominantColors(maximumCount:)``.
 nonisolated struct WallpaperPalette: Equatable {
-    /// One colour of a palette.
     struct Swatch: Equatable {
         /// Components in the 0...1 range.
         let red: Double
@@ -29,13 +24,12 @@ nonisolated struct WallpaperPalette: Equatable {
         /// The fraction of the sampled image this swatch covers, 0...1.
         let weight: Double
 
-        /// Perceived brightness, on the same W3C weighting the rest of the
-        /// app uses to decide between light and dark menu bar items.
+        /// Perceived brightness, using the same W3C weighting as the rest
+        /// of the app.
         var brightness: Double {
             ((red * 299) + (green * 587) + (blue * 114)) / 1000
         }
 
-        /// The swatch as a color, in the given RGB color space.
         func cgColor(in colorSpace: CGColorSpace) -> CGColor? {
             CGColor(
                 colorSpace: colorSpace,
@@ -43,11 +37,8 @@ nonisolated struct WallpaperPalette: Equatable {
             )
         }
 
-        /// Straight-line distance to another swatch in RGB.
-        ///
-        /// Not perceptually uniform, but the job here is only to reject
-        /// near-duplicates, and RGB distance is predictable enough to write
-        /// tests against.
+        /// RGB distance. Not perceptually uniform, but good enough to reject
+        /// near-duplicates and easy to test.
         func distance(to other: Swatch) -> Double {
             let dr = red - other.red
             let dg = green - other.green
@@ -63,10 +54,9 @@ nonisolated struct WallpaperPalette: Equatable {
         let blue: Double
     }
 
-    /// The swatches, most-covering first. May be empty.
+    /// Most-covering first. May be empty.
     let swatches: [Swatch]
 
-    /// The most-covering swatch, if any.
     var primary: Swatch? {
         swatches.first
     }
@@ -77,19 +67,14 @@ nonisolated struct WallpaperPalette: Equatable {
         swatches.count > 1 ? swatches[1] : primary
     }
 
-    /// How finely each channel is bucketed before counting.
-    ///
-    /// Five bits gives 32 levels per channel. Finer splits a smooth gradient
-    /// into dozens of near-identical buckets and buries the actual subject;
-    /// coarser merges colours a viewer would call different.
+    /// Buckets per channel. Finer splits smooth gradients into near-identical
+    /// buckets; coarser merges colours a viewer would call different.
     private static let levelsPerChannel = 32
 
     /// Derives a palette from raw samples.
     ///
-    /// Colours are bucketed and counted, then taken most-populous first,
-    /// skipping any that sits too close to one already taken. Without that
-    /// separation step a photo of the sky returns five blues, which makes a
-    /// gradient look like a flat fill.
+    /// Takes buckets most-populous first, skipping any too close to one
+    /// already taken, so a sky photo doesn't return five blues.
     ///
     /// - Parameters:
     ///   - samples: The observed pixels. Order does not matter.
@@ -148,7 +133,6 @@ nonisolated struct WallpaperPalette: Equatable {
         return WallpaperPalette(swatches: result)
     }
 
-    /// Maps a sample onto its bucket.
     private static func bucketKey(for sample: Sample, levels: Int) -> Int {
         func level(_ value: Double) -> Int {
             let scaled = Int(value.clamped(to: 0 ... 1) * Double(levels))

@@ -47,9 +47,7 @@ nonisolated struct MenuBarAppearanceConfigurationV2: Hashable {
 
     /// The values the Thaw Bar draws with, from whichever side owns them.
     ///
-    /// The override is all or nothing. Letting it win field by field would
-    /// mean a panel that is half its own colour and half the menu bar's, and
-    /// there is no editor gesture that asks for that.
+    /// The override is all or nothing, never mixed field by field.
     @MainActor
     var resolvedThawBarAppearance: ResolvedThawBarAppearance {
         let partial = current
@@ -163,9 +161,7 @@ nonisolated struct MenuBarAppearancePartialConfiguration: Hashable {
     var borderOnMenuBar: Bool
     /// Whether the shape border is drawn around the Thaw Bar.
     ///
-    /// The Thaw Bar is the panel in `IceBar.swift`, which still carries the
-    /// `iceBar` prefix from Ice on everything that is persisted under an
-    /// existing defaults key. This one is new, so it uses the current name.
+    /// New, so it uses the Thaw name rather than the persisted `iceBar` prefix.
     var borderOnThawBar: Bool
     var borderColor: CGColor
     var borderWidth: Double
@@ -186,11 +182,8 @@ nonisolated struct MenuBarAppearancePartialConfiguration: Hashable {
 
     /// Whether the shape border is drawn anywhere.
     ///
-    /// Setting this turns the border on or off in both places at once, which
-    /// is what every caller predating the split means by it: the Ice import
-    /// in ``MenuBarAppearanceConfigurationV2/init(migrating:)`` carries over
-    /// a single flag, and the editor uses it to decide whether the colour and
-    /// width rows apply to anything at all.
+    /// Setting this changes both places at once, which is what callers
+    /// predating the split (the Ice import, the editor) mean by it.
     var hasBorder: Bool {
         get {
             borderOnMenuBar || borderOnThawBar
@@ -316,15 +309,9 @@ nonisolated extension MenuBarAppearancePartialConfiguration: Codable {
 /// The Thaw Bar's own appearance, drawn in place of the menu bar's when
 /// ``overridesMenuBar`` is set.
 ///
-/// The Thaw Bar has always borrowed the menu bar's shape, tint and border so
-/// the two read as one surface. That stays the default: every field here is
-/// ignored until the user opts in, and the values seeded into a fresh
-/// override are the ones the panel was already drawing with, so enabling it
-/// changes nothing until something is edited.
-///
-/// Only the corner treatment carries over from ``MenuBarShapeKind``. The
-/// shape kinds describe where the menu bar overlay starts and stops, which a
-/// floating panel has no equivalent of.
+/// Ignored until the user opts in, and seeded from what the panel already
+/// draws, so enabling it changes nothing on its own. Only the corner treatment
+/// carries over from ``MenuBarShapeKind``; a floating panel has no edges to match.
 nonisolated struct ThawBarAppearance: Hashable {
     /// Whether the Thaw Bar draws with these values instead of the menu bar's.
     var overridesMenuBar: Bool
@@ -344,9 +331,7 @@ nonisolated struct ThawBarAppearance: Hashable {
 nonisolated extension ThawBarAppearance {
     /// The opacity the Thaw Bar has always drawn its inherited tint at.
     ///
-    /// `MenuBarItemContainer` hardcoded this, so an override seeded from the
-    /// menu bar's own `tintOpacity` would shift the panel the moment it was
-    /// switched on. Seeding from this value is what keeps the opt-in inert.
+    /// Seeding from this, not the menu bar's `tintOpacity`, keeps the opt-in inert.
     static let inheritedTintOpacity: Double = 0.2
 
     static let defaultConfiguration = ThawBarAppearance(
@@ -367,18 +352,14 @@ nonisolated extension ThawBarAppearance {
 nonisolated extension ThawBarAppearance {
     /// The tint kinds the Thaw Bar can draw.
     ///
-    /// Glass and the two wallpaper-derived kinds are handled by the menu bar
-    /// overlay, which composites against a live backdrop. The panel has no
-    /// equivalent path and has always drawn nothing for them, so offering them
-    /// here would be an editor control with no effect.
+    /// Glass and the wallpaper-derived kinds need the overlay's live backdrop,
+    /// which the panel lacks.
     static let supportedTintKinds: [MenuBarTintKind] = [.noTint, .solid, .gradient]
 
     /// An override seeded from what the Thaw Bar is drawing right now.
     ///
-    /// Switching the override on should not move anything on screen, so it
-    /// starts from the resolved values rather than from the defaults. A tint
-    /// kind the panel cannot draw comes across as ``MenuBarTintKind/noTint``,
-    /// which is what it was already showing for that kind anyway.
+    /// Starts from the resolved values so switching on changes nothing. A tint
+    /// kind the panel can't draw becomes ``MenuBarTintKind/noTint``.
     init(seededFrom resolved: ResolvedThawBarAppearance) {
         self.init(
             overridesMenuBar: true,
@@ -443,9 +424,7 @@ nonisolated extension ThawBarAppearance: Codable {
 /// The values the Thaw Bar actually draws with, after the override has been
 /// weighed against the menu bar's configuration.
 ///
-/// Resolving in one place keeps the "which side won?" question out of the
-/// view, which otherwise has to ask it separately for the shape, the tint and
-/// the border and can answer inconsistently.
+/// Resolved in one place so the view can't answer inconsistently per field.
 nonisolated struct ResolvedThawBarAppearance: Hashable {
     var hasRoundedShape: Bool
     var tintKind: MenuBarTintKind

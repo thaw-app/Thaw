@@ -63,9 +63,8 @@ struct WallpaperChangeMonitorTests {
             monitor.onChange = { changes += 1 }
             monitor.start()
 
-            // How the system actually rewrites the index: the watched inode
-            // is unlinked rather than written in place. Without a re-open,
-            // the monitor would go deaf after this first replacement.
+            // The system replaces the index rather than writing in place, so
+            // without a re-open the monitor goes deaf after the first change.
             try Data("first".utf8).write(to: url, options: .atomic)
             #expect(await waitForChange({ changes }, from: 0))
 

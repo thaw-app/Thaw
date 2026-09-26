@@ -8,11 +8,8 @@
 
 import SwiftUI
 
-/// Glass alert banner for settings form rows.
-///
-/// Uses the same Liquid Glass chrome as ``IceSlider``, tinted with
-/// `tint` (defaults to `Color.accentColor`) so notices pick up the
-/// app/system accent — or an explicit info/warning color.
+/// Glass alert banner for settings form rows, in ``IceSlider``'s Liquid Glass
+/// chrome tinted with `tint` (the accent color by default).
 struct SettingsWarningPill: View {
     private let title: LocalizedStringKey?
     private let message: LocalizedStringKey
@@ -89,8 +86,7 @@ struct SettingsWarningPill: View {
         }
         .padding(.horizontal, 14)
         .padding(.vertical, 12)
-        // Light tint wash over clear glass — reads like the mock's milky
-        // translucent pill, not a solid fill.
+        // Light tint wash over clear glass: a milky translucent pill, not a solid fill.
         .glassEffect(.clear.tint(tint.opacity(0.18)), in: shape)
         .overlay {
             shape.strokeBorder(tint.opacity(0.28), lineWidth: 1)

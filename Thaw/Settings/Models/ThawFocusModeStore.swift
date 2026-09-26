@@ -27,9 +27,6 @@ nonisolated enum ThawFocusModeStore {
     }
 
     /// The profile manifest, shared with ``ProfileEntityQuery``.
-    ///
-    /// Centralized here so the path is stated once rather than rebuilt at
-    /// each call site.
     static var manifestURL: URL? {
         FileManager.default
             .urls(for: .applicationSupportDirectory, in: .userDomainMask)
@@ -49,11 +46,9 @@ nonisolated enum ThawFocusModeStore {
     /// Resolves a profile id to its name from the on-disk profile manifest,
     /// matching how ``ProfileEntityQuery`` reads profiles.
     ///
-    /// Cached against the manifest's modification date. ``activeMode`` is
-    /// sampled on the trigger poll every five seconds, and re-reading and
-    /// re-decoding the whole manifest each time is pure waste when it changes
-    /// only on a profile edit. `stat` is cheap; the read and the JSON decode
-    /// are not.
+    /// Cached against the manifest's modification date, since ``activeMode``
+    /// is polled every five seconds and the manifest only changes on a
+    /// profile edit.
     private static func profileName(forID id: String) -> String? {
         guard let manifestURL else { return nil }
 

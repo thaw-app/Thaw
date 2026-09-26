@@ -10,23 +10,14 @@ import Foundation
 import Testing
 @testable import Thaw
 
-/// Characterizes the bounded control-item recovery path for issue #754:
-/// on macOS 26 with multiple displays, after long uptime `ControlItemPair`
-/// lookup in `cacheItemsRegardless` can start failing permanently. These
-/// tests cover the pure escalation decision that gates rebuilding the
-/// control items' underlying status items.
+/// Covers the escalation decision that gates rebuilding the control items
+/// (#754): on macOS 26 with multiple displays, `ControlItemPair` lookup in
+/// `cacheItemsRegardless` can start failing permanently after long uptime.
 ///
-/// The detector re-arming half of the fix (a failed lookup no longer commits
-/// `itemWindowIDs` to `CacheActor`, so `cacheItemsIfNeeded` keeps seeing a
-/// mismatch and keeps re-driving recache attempts) is not covered here:
-/// `CacheActor` is a private nested type of `MenuBarItemManager` with no
-/// reachable seam, and exercising it live would require a real
-/// `MenuBarItemManager` wired to an `AppState`, live `NSStatusItem`s, and
-/// screen-recording permission — not available in this unit test target.
-/// That half is verified by code reading instead: see the ordering of
-/// `cacheActor.updateCachedItemWindowIDs`/`updateCachedCloneWindowIDs` in
-/// `cacheItemsRegardless`, which now runs only after the `ControlItemPair`
-/// guard succeeds, never inside the failure branch.
+/// The re-arming half (a failed lookup no longer commits `itemWindowIDs` to
+/// `CacheActor`) has no reachable seam, since `CacheActor` is private. The
+/// window-ID cache updates in `cacheItemsRegardless` must run only after the
+/// `ControlItemPair` guard succeeds.
 @Suite("Control item recovery")
 struct ControlItemRecoveryTests {
     @Test("Below the threshold, no rebuild is requested")
@@ -167,10 +158,8 @@ struct ParkedHiddenDividerRecoveryTests {
         ))
     }
 
-    /// Models the manager's own episode latch for the parked-divider
-    /// recovery: mismatches accumulate, recovery fires once at the
-    /// threshold, and no second recovery is allowed until a mismatch=0
-    /// reading re-arms the streak.
+    /// Models the parked-divider episode latch: recovery fires once at the
+    /// threshold and re-arms only after a mismatch=0 reading.
     @Test("A persistent parked-mismatch episode recovers only once, then re-arms on zero")
     func mismatchEpisodeRearmsOnZero() {
         var consecutiveMismatches = 0
@@ -211,9 +200,7 @@ struct ParkedHiddenDividerRecoveryTests {
         #expect(recoverCount == 2)
     }
 
-    /// Below the threshold the streak accumulates without triggering
-    /// recovery, so a single transient mismatch does not recreate the
-    /// divider.
+    /// A single transient mismatch must not recreate the divider.
     @Test("Below the threshold, mismatches accumulate without recovery")
     func belowThresholdMismatchesAccumulate() {
         for count in 1 ..< (MenuBarItemManager.parkedHiddenDividerRecoveryThreshold) {
@@ -243,13 +230,9 @@ struct ParkedHiddenDividerRecoveryTests {
 
 /// Covers the seed-position half of both divider rebuilds (#958).
 ///
-/// A rebuild used to write `preflightSetup`'s fresh-install seed
-/// unconditionally, through the same guard-bypassing route that reopened
-/// #895/#890. On a populated bar that drops the rebuilt divider on one side of
-/// every managed item and the following cache pass reads the whole bar into one
-/// section. nk-tedo-001's log has the shape exactly: one rebuild in five hours,
-/// visible section 12 items before it and 1 item three seconds after, and three
-/// earlier off-screen parkings that never rebuilt and never collapsed.
+/// A rebuild used to write the fresh-install seed unconditionally. On a
+/// populated bar that drops the divider on one side of every managed item,
+/// and the next cache pass reads the whole bar into one section.
 @Suite("Rebuilt divider seed position")
 struct RebuiltDividerSeedPositionTests {
     /// A healthy populated bar: visible rightmost, always-hidden leftmost,
@@ -260,8 +243,8 @@ struct RebuiltDividerSeedPositionTests {
         alwaysHidden: 1034
     )
 
-    /// #978's plist, verbatim. H_ctrl autosaved far left of AH_ctrl, which is
-    /// the inversion that reads as a zero-width hidden section.
+    /// #978's plist. H_ctrl autosaved far left of AH_ctrl, which reads as a
+    /// zero-width hidden section.
     private static let invertedPositions = MenuBarItemManager.StoredDividerPositions(
         visible: 1008,
         hidden: 6866,
@@ -277,9 +260,8 @@ struct RebuiltDividerSeedPositionTests {
         ) == .freshInstall(1))
     }
 
-    /// The empty-bar branch runs first: nothing is stranded on a bar with no
-    /// items, so an inverted position there is just stale and the fresh
-    /// install seed is still the right answer.
+    /// Nothing is stranded on an empty bar, so an inverted position there is
+    /// just stale and the seed still applies.
     @Test("An empty bar takes the seed even from an inverted position")
     func emptyBarSeedsOverInversion() {
         #expect(MenuBarItemManager.seedForRebuiltDivider(
@@ -297,9 +279,7 @@ struct RebuiltDividerSeedPositionTests {
         ) == .keepStored)
     }
 
-    /// The reported bar. Nothing about the count itself is special; the point
-    /// is that a populated bar with a sane stored position never reaches the
-    /// stamp.
+    /// A populated bar with a sane stored position never reaches the stamp.
     @Test("The reported bar withholds the seed")
     func reportedBarWithholdsTheSeed() {
         for count in 1 ... 38 {
@@ -313,9 +293,8 @@ struct RebuiltDividerSeedPositionTests {
         }
     }
 
-    /// The gate is about what a rebuild would strand, so it reads the count
-    /// and nothing else. A negative count cannot occur, but answering "seed
-    /// it" for one would put the destructive branch behind an arithmetic slip.
+    /// A negative count cannot occur, but seeding on one would put the
+    /// destructive branch behind an arithmetic slip.
     @Test("A nonsensical count does not unlock the seed")
     func negativeCountDoesNotSeed() {
         #expect(!MenuBarItemManager.canSeedRebuiltDividerPosition(managedItemCount: -1))
@@ -325,8 +304,7 @@ struct RebuiltDividerSeedPositionTests {
         ) == .keepStored)
     }
 
-    /// The three branches have to be distinguishable in a field log, because
-    /// telling them apart is what separated cause from symptom in #958.
+    /// The three branches must be distinguishable in a field log.
     @Test("The log fragment names which branch ran")
     func logFragmentNamesTheBranch() {
         let seeded = MenuBarItemManager.seedDescription(.freshInstall(1))
@@ -341,13 +319,9 @@ struct RebuiltDividerSeedPositionTests {
 
 /// Covers the inverted-position half of the parked-divider rebuild (#978).
 ///
-/// The #958 fix taught both rebuilds to keep the stored position on a
-/// populated bar, which is right whenever that position still orders the
-/// dividers. #978's did not — macOS had autosaved `Hidden = 6866` against
-/// `AlwaysHidden = 1034` — so "keeping its stored position" restored the
-/// value that stranded the divider. That is why a relaunch stopped clearing
-/// the strand and the app came up already stranded, first layout line 0.4s
-/// after startup.
+/// Keeping the stored position on a populated bar is only right while it
+/// still orders the dividers. macOS can autosave `Hidden = 6866` against
+/// `AlwaysHidden = 1034`, and restoring that strands the divider on relaunch.
 @Suite("Stored divider position ordering (#978)")
 struct StoredDividerPositionOrderingTests {
     private static func positions(
@@ -388,9 +362,8 @@ struct StoredDividerPositionOrderingTests {
         ))
     }
 
-    /// An ordering the check cannot see cannot be violated. Reporting an
-    /// unknown position as inverted would hand the rebuild a repair it has no
-    /// evidence for, which is the mistake #958 was about.
+    /// Reporting an unknown position as inverted would hand the rebuild a
+    /// repair it has no evidence for.
     @Test("Unknown positions do not read as inverted")
     func unknownPositionsAreOrdered() {
         #expect(MenuBarItemManager.storedHiddenPositionIsOrdered(Self.positions()))
@@ -418,9 +391,8 @@ struct StoredDividerPositionOrderingTests {
         ) == 1009)
     }
 
-    /// Both neighbours corrupt gives nothing to interpolate between. A
-    /// midpoint would just be a different wrong answer, so the rebuild keeps
-    /// the stored position rather than inventing one.
+    /// With both neighbours corrupt there is nothing to interpolate between,
+    /// so the rebuild keeps the stored position.
     @Test("Corrupt neighbours withhold the repair")
     func corruptNeighboursWithholdTheRepair() {
         #expect(MenuBarItemManager.repairedHiddenDividerPosition(
@@ -432,8 +404,7 @@ struct StoredDividerPositionOrderingTests {
         ) == .keepStored)
     }
 
-    /// The end-to-end shape #978 needs: a populated bar, an inverted stored
-    /// position, and a rebuild that replaces it instead of restoring it.
+    /// A populated bar with an inverted stored position gets it replaced, not restored.
     @Test("A populated bar with an inverted position gets a repaired seed")
     func populatedBarRepairsTheInversion() {
         #expect(MenuBarItemManager.seedForRebuiltDivider(
@@ -443,11 +414,9 @@ struct StoredDividerPositionOrderingTests {
     }
 }
 
-/// Covers the retry backoff #933 asked for: a permanently failing lookup
-/// left the window-ID snapshot uncommitted, so the change detector re-ran
-/// a full recache on every 3-second poll for 27 hours straight. The
-/// backoff keeps startup transients fast, then decays the retry cadence
-/// toward a bounded ceiling so recovery stays automatic without the churn.
+/// Covers the retry backoff (#933). A permanently failing lookup made the
+/// change detector re-run a full recache on every 3-second poll. The backoff
+/// keeps startup retries fast, then decays toward a bounded ceiling.
 @Suite("Control item lookup retry backoff")
 struct ControlItemLookupRetryBackoffTests {
     @Test("Below the rebuild threshold there is no backoff")
@@ -477,10 +446,8 @@ struct ControlItemLookupRetryBackoffTests {
         ) == .seconds(48))
     }
 
-    /// The ceiling is what turns a permanent failure into one bounded
-    /// retry per minute instead of an ever-rarer one: the bar can still
-    /// heal itself (display reattached, WindowServer settled) without the
-    /// user relaunching.
+    /// The ceiling keeps a permanent failure at one retry per minute, so the
+    /// bar can still heal itself (display reattached, WindowServer settled).
     @Test("The backoff is capped so retries never stop")
     func backoffIsCapped() {
         let threshold = MenuBarItemManager.controlItemRebuildThreshold
@@ -535,9 +502,8 @@ struct MissingAlwaysHiddenDividerRecoveryTests {
         ))
     }
 
-    /// Models the manager's own episode latch: missing readings accumulate,
-    /// recovery fires once at the threshold, and no second recovery is
-    /// allowed until a resolved reading re-arms the streak.
+    /// Models the episode latch: recovery fires once at the threshold and
+    /// re-arms only after a resolved reading.
     @Test("A persistent missing episode recovers only once, then re-arms on resolution")
     func missingEpisodeRearmsOnResolution() {
         var consecutiveMissing = 0
@@ -560,7 +526,7 @@ struct MissingAlwaysHiddenDividerRecoveryTests {
             alreadyRecovered = false
         }
 
-        // The #863 field log: alwaysHidden=nil on every cycle for 12+ hours.
+        // alwaysHidden=nil on every cycle for hours (#863).
         for _ in 0 ..< (MenuBarItemManager.missingAlwaysHiddenDividerRecoveryThreshold * 4) {
             recordMissing()
         }
@@ -574,9 +540,9 @@ struct MissingAlwaysHiddenDividerRecoveryTests {
         #expect(recoverCount == 2)
     }
 
-    /// A disabled always-hidden section has no divider by choice. The
-    /// orchestrator resets the streak in that state; this pins the decision
-    /// function's contract that only enabled-section readings reach it.
+    /// A disabled always-hidden section has no divider by choice; the
+    /// orchestrator resets the streak then, so only enabled-section readings
+    /// reach this function.
     @Test("A custom threshold is respected")
     func customThresholdIsRespected() {
         #expect(!MenuBarItemManager.shouldRecoverMissingAlwaysHiddenDivider(

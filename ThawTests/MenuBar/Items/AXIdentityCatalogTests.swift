@@ -12,11 +12,9 @@ import Testing
 /// Covers the pure, non-AX helpers `AXIdentityCatalog` and
 /// `MenuBarItemManager.ControlItemPair` use for frame correlation.
 ///
-/// Walking a real `extrasMenuBar` requires the Accessibility permission
-/// (TCC) and a live menu bar, so the identities a snapshot would actually
-/// collect are not assertable in CI. What is assertable — and covered
-/// below — is that `snapshot(hosts:)` degrades quietly when those reads
-/// fail rather than trapping or hanging.
+/// A real `extrasMenuBar` walk needs Accessibility permission and a live
+/// menu bar, so CI only checks that `snapshot(hosts:)` degrades quietly
+/// when AX reads fail.
 @Suite("AX identity catalog")
 @MainActor
 struct AXIdentityCatalogTests {
@@ -39,8 +37,7 @@ struct AXIdentityCatalogTests {
 
     @Test("Overlap must exceed half of the smaller rectangle")
     func identityRequiresMoreThanHalfOfSmallerRectArea() {
-        // Both rects have area 100 (so "smaller" area is 100). A 60-area
-        // intersection (60%) clears the >50% threshold.
+        // Both rects have area 100; a 60-area intersection clears the >50% threshold.
         let target = CGRect(x: 0, y: 0, width: 10, height: 10)
         let candidate = identity(frame: CGRect(x: 4, y: 0, width: 10, height: 10))
 
@@ -51,9 +48,8 @@ struct AXIdentityCatalogTests {
 
     @Test("Overlap at the threshold is rejected")
     func identityRejectsOverlapAtOrBelowHalfOfSmallerRectArea() {
-        // Both rects have area 100 (so "smaller" area is 100). A 50-area
-        // intersection is exactly the threshold, which the spec requires
-        // to be exceeded, not merely met.
+        // A 50-area intersection of two 100-area rects meets the threshold
+        // but does not exceed it.
         let target = CGRect(x: 0, y: 0, width: 10, height: 10)
         let candidate = identity(frame: CGRect(x: 5, y: 0, width: 10, height: 10))
 
@@ -65,9 +61,7 @@ struct AXIdentityCatalogTests {
     @Test("A tie between top candidates is ambiguous")
     func identityReturnsNilOnTieBetweenTopCandidates() {
         let target = CGRect(x: 0, y: 0, width: 20, height: 20)
-        // Two distinct candidates, each fully containing target so both
-        // clear the threshold with the exact same intersection area (the
-        // full 400pt² of target) — an ambiguous tie.
+        // Both candidates fully contain target, so they tie on intersection area.
         let exact = identity(frame: target)
         let taller = identity(frame: CGRect(x: 0, y: 0, width: 20, height: 30))
 
@@ -108,11 +102,8 @@ struct AXIdentityCatalogTests {
 
     @Test("A later strictly better candidate replaces the current best")
     func identityReplacesAnEarlierBestWithAStrictlyBetterOne() {
-        // Both candidates clear the threshold, so the first becomes the
-        // standing best and the second has to displace it. The
-        // above-threshold-then-better ordering is what distinguishes this
-        // from testIdentityTakesHighestOverlapAmongMultipleCandidates,
-        // where the weaker candidate never qualifies at all.
+        // Both candidates clear the threshold, so the second has to displace
+        // the first. In the multiple-candidates test the weaker one never qualifies.
         let target = CGRect(x: 0, y: 0, width: 20, height: 20)
         let good = identity(frame: CGRect(x: 6, y: 0, width: 20, height: 20)) // 280pt², 70%
         let better = identity(frame: target) // 400pt², 100%
@@ -137,9 +128,7 @@ struct AXIdentityCatalogTests {
 
     @Test("A better candidate resolves an earlier tie")
     func identityRecoversFromAnEarlierTieWhenABetterCandidateArrives() {
-        // A tie only makes the result ambiguous while it is still the best
-        // score. Something strictly better resolves the ambiguity, so the
-        // tie flag has to be cleared rather than latched.
+        // A strictly better candidate must clear the tie flag, not latch it.
         let target = CGRect(x: 0, y: 0, width: 20, height: 20)
         let tiedA = identity(frame: CGRect(x: 6, y: 0, width: 20, height: 20)) // 280pt²
         let tiedB = identity(frame: CGRect(x: -6, y: 0, width: 20, height: 20)) // 280pt²
@@ -171,10 +160,8 @@ struct AXIdentityCatalogTests {
 
     @Test("An unavailable Accessibility tree degrades quietly")
     func snapshotWithoutAccessibilityPermissionDegradesQuietly() {
-        // Without the Accessibility permission (the CI case) every AX read
-        // fails, so the walk finds no extras menu bar to descend into. The
-        // contract under test is that this degrades to a well-formed
-        // snapshot instead of trapping or hanging on the messaging timeout.
+        // Without Accessibility permission (the CI case) every AX read fails.
+        // The snapshot must stay well-formed, not trap or hang on the messaging timeout.
         let snapshot = AXIdentityCatalog.snapshot(hosts: [.current])
 
         #expect(snapshot.allSatisfy { !$0.frame.isNull })
@@ -275,12 +262,9 @@ struct AXIdentityCatalogTests {
 
     // MARK: - MenuBarItemManager.previousPIDIsLive
 
-    /// The reconciliation guard prefers a cached PID over a fresh
-    /// resolution, because AX spatial matching can mis-match. That only
-    /// holds while the cached process exists: once it has exited — an
-    /// item's owner relaunching, or Control Center respawning and
-    /// recreating every status item, both in the #854 logs — reverting
-    /// pins the item to a dead process.
+    /// The reconciliation guard prefers a cached PID because AX spatial
+    /// matching can mis-match. Once the cached process exits (owner relaunch,
+    /// Control Center respawn), reverting pins the item to a dead process.
     @Test("This process is live")
     func currentProcessIsLive() {
         #expect(MenuBarItemManager.previousPIDIsLive(ProcessInfo.processInfo.processIdentifier))
@@ -302,10 +286,8 @@ struct AXIdentityCatalogTests {
     // MARK: - MenuBarItemManager.eventTargetPID
 
     /// Historic behaviour: aim at the app whose status item it is.
-    ///
-    /// Correct before macOS 26, when that app also owned the window. On 26
-    /// Control Center hosts every status item window, so this targets a
-    /// process that does not own the window being dragged.
+    /// On macOS 26 Control Center owns every status item window, so this
+    /// targets a process that does not own the dragged window.
     @Test("By default a resolved source PID wins")
     func eventTargetPrefersSourcePIDByDefault() {
         #expect(
@@ -313,9 +295,7 @@ struct AXIdentityCatalogTests {
         )
     }
 
-    /// The existing fallback: with no owning app known, the window's owner
-    /// is all there is — which is the host, and the target the flag makes
-    /// unconditional.
+    /// With no owning app known, the window's owner (the host) is the only target.
     @Test("An unresolved source PID already falls back to the window owner")
     func eventTargetFallsBackToOwner() {
         #expect(
@@ -323,9 +303,8 @@ struct AXIdentityCatalogTests {
         )
     }
 
-    /// The flag under test: always address the process that owns the window
-    /// being dragged, which on macOS 26 is the host rather than the app
-    /// whose status item it is.
+    /// The flag always addresses the process that owns the dragged window,
+    /// which on macOS 26 is the host, not the status item's app.
     @Test("Preferring the window owner overrides a resolved source PID")
     func eventTargetPrefersWindowOwnerWhenFlagged() {
         #expect(
@@ -333,8 +312,8 @@ struct AXIdentityCatalogTests {
         )
     }
 
-    /// With the flag on, an unresolved owner changes nothing — which is the
-    /// point: the move stops depending on identity.
+    /// With the flag on, an unresolved owner changes nothing, so the move
+    /// no longer depends on identity.
     @Test("The window owner is used whether or not the source PID resolved")
     func eventTargetIgnoresSourcePIDWhenFlagged() {
         #expect(
@@ -344,10 +323,9 @@ struct AXIdentityCatalogTests {
 
     // MARK: - MenuBarItemManager.ControlItemPair.shouldRecoverOwnControlItem
 
-    /// Thaw created its control items and holds their windows, so when one
-    /// goes missing from the enumerated list it can be rebuilt from its own
-    /// window instead of guessed at. The gate is deliberately narrow: an
-    /// authoritative ID in hand, and that window absent from the list.
+    /// Thaw owns its control item windows, so a missing one can be rebuilt
+    /// from its own window. The gate is narrow: an authoritative ID, and
+    /// that window absent from the list.
     @Test("A known control window missing from the list is recovered")
     func recoversAuthoritativeWindowAbsentFromList() {
         #expect(
@@ -371,9 +349,8 @@ struct AXIdentityCatalogTests {
         )
     }
 
-    /// Without an authoritative ID there is nothing to be authoritative
-    /// about — at startup the status item may not exist yet, and the tag and
-    /// title fallbacks are the right answer.
+    /// At startup the status item may not exist yet, so without an
+    /// authoritative ID the tag and title fallbacks apply.
     @Test("No authoritative window ID means no recovery")
     func doesNotRecoverWithoutAuthoritativeID() {
         #expect(
@@ -384,9 +361,7 @@ struct AXIdentityCatalogTests {
         )
     }
 
-    /// An empty list is the degenerate form of the case this exists for:
-    /// enumeration returned nothing, and the fallbacks have nothing to work
-    /// with either.
+    /// Enumeration returning nothing leaves the fallbacks nothing to work with.
     @Test("An empty item list still recovers a known window")
     func recoversFromEmptyList() {
         #expect(
@@ -399,19 +374,11 @@ struct AXIdentityCatalogTests {
 
     /// Regression for #923 / #924 / #927.
     ///
-    /// The visible control item is own-process, so it qualifies on frame
-    /// alone. When the hidden divider is missing from the candidate list —
-    /// parked far offscreen, or dropped by the active-space filter — it can
-    /// be the only own-process candidate left, and the hidden AX frame
-    /// correlates onto it. Returned as the hidden divider, every section
-    /// boundary downstream is then measured from the wrong window: the
-    /// hidden section reads as zero width, and both the save and the apply
-    /// refuse (the latter since c3317dfd), so the layout stops persisting
-    /// and every item lands visible after a restart.
-    ///
-    /// Refusing to match is the correct outcome. The caller logs "missing
-    /// control items" and bails, which is recoverable; returning the wrong
-    /// window is not.
+    /// With the hidden divider missing from the candidates (parked offscreen
+    /// or dropped by the active-space filter), the hidden AX frame can
+    /// correlate onto the visible control item. Section boundaries are then
+    /// measured from the wrong window, save and apply refuse, and every item
+    /// lands visible after a restart. Refusing to match is recoverable.
     @Test("AX frame selection never returns the visible control item")
     func selectViaAXFrameRejectsVisibleControlItem() {
         let frame = CGRect(x: 100, y: 0, width: 20, height: 20)
@@ -445,8 +412,8 @@ struct AXIdentityCatalogTests {
         #expect(result == [1])
     }
 
-    /// The visible item must not be able to absorb the always-hidden slot
-    /// either — the pair is selected by the same loop.
+    /// The same loop selects the always-hidden slot, so the visible item
+    /// must not absorb that either.
     @Test("The visible control item cannot take the always-hidden slot")
     func selectViaAXFrameRejectsVisibleForAlwaysHidden() {
         let hiddenFrame = CGRect(x: 100, y: 0, width: 20, height: 20)

@@ -9,18 +9,11 @@ import Cocoa
 import Testing
 @testable import Thaw
 
-/// Coverage sweep, part 6: the live display and window-server adapters that
-/// earlier sweeps left uncovered because their *values* depend on the machine
-/// running the suite.
+/// Coverage sweep, part 6: live display and window-server adapters whose
+/// values depend on the machine, so these tests assert invariants instead.
+/// Hosted tests run with a real WindowServer session.
 ///
-/// The trick that makes them testable anyway: assert **invariants** instead of
-/// values. `getMenuBarHeightEstimate()` never returns a non-positive height on
-/// any hardware — the notch-aware fallback guarantees it — and
-/// `frameOfNotch` is non-nil exactly when the screen has a notch, whether or
-/// not the runner's display has one. Hosted tests run with a real
-/// WindowServer session, so the queries themselves are exercised for real.
-///
-/// Deliberate gaps, and why:
+/// Not covered:
 ///
 /// - `NSStatusItem.showMenu(_:)` runs a modal menu-tracking loop.
 /// - `NSScreen.invalidateMenuBarHeightCache()` would throw away state the
@@ -148,9 +141,8 @@ struct CoverageSweep6Tests {
 
     @Test("A snapshot of the current app only yields framed identities")
     func snapshotOfCurrentAppYieldsFramedIdentities() {
-        // The test host has no extras menu bar, so this normally returns [].
-        // The point is driving the live-AX adapter: application lookup,
-        // messaging timeouts, and the extras-menu-bar guard all run for real.
+        // The test host has no extras menu bar, so this normally returns [],
+        // but the live AX lookups and timeouts still run.
         let identities = AXIdentityCatalog.snapshot(hosts: [.current])
         #expect(identities.allSatisfy { $0.frame.width >= 0 })
     }
@@ -159,9 +151,7 @@ struct CoverageSweep6Tests {
 
     @Test("Every DiagLog level forwards without diagnostic logging enabled")
     func diagLogLevelsForwardWhenDisabled() {
-        // DiagnosticLogger.shared is disabled in tests, so these hit the
-        // os.Logger passthrough and the shared logger's disabled check —
-        // no files are opened or written.
+        // DiagnosticLogger.shared is disabled in tests, so no files are written.
         let log = DiagLog(category: "CoverageSweep6")
         log.debug("debug \(42)")
         log.info("info")

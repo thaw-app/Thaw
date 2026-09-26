@@ -85,8 +85,7 @@ func makeTestProfileContent(
 
 // MARK: - Profile fixtures
 
-/// Builds the standard test profile that was previously duplicated across the
-/// `ProfileManager` suites.
+/// Builds the standard test profile the `ProfileManager` suites share.
 func makeProfile(
     named name: String = "Test Profile",
     savedSectionOrder: [String: [String]] = [:],

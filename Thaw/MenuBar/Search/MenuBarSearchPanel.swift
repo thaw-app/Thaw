@@ -18,7 +18,6 @@ extension EnvironmentValues {
 final class MenuBarSearchPanel: NSPanel {
     private static nonisolated let diagLog = DiagLog(category: "MenuBarSearchPanel")
 
-    /// The shared app state.
     private weak var appState: AppState?
 
     /// Storage for internal observers.
@@ -125,27 +124,11 @@ final class MenuBarSearchPanel: NSPanel {
             names[uniqueIdentifier] = newName
         }
         Defaults.set(names, forKey: .menuBarItemCustomNames)
-        // Renaming is the one thing that can change a display name while the
-        // panel is open, so it owns invalidating the memo.
+        // Renaming is the only thing that changes a name while the panel is open.
         ItemNameCache.clear()
-        // The rendered row (`MenuBarSearchItemView`) reads its display name
-        // from `Defaults`/`item.customName` directly rather than from a
-        // tracked `model` property, so writing to `Defaults` above doesn't
-        // register as an Observation mutation. The old code forced a
-        // refresh with `model.objectWillChange.send()`; @Observable has no
-        // such escape hatch. `MenuBarSearchContentView.updateDisplayedItems()`
-        // (the function that actually rebuilds the row list) isn't reachable
-        // from here across the panel/view boundary, so instead we write
-        // `displayedItems` back unchanged: @Observable's generated setter
-        // unconditionally calls `withMutation(keyPath:)` (no implicit
-        // equality check), so this is a genuine, Observation-visible
-        // mutation of the exact property the row list renders from, forcing
-        // SwiftUI to re-evaluate each row (and pick up the new name).
-        //
-        // Routed through a local rather than written as a direct
-        // self-assignment: the round trip is the point, and spelling it out
-        // keeps it from reading — to a human or a static analyser — as a
-        // typo'd `x = x`.
+        // Rows read names from `Defaults`, which Observation doesn't track.
+        // Writing `displayedItems` back unchanged still fires `withMutation`,
+        // so rows re-render. The local keeps it from reading as `x = x`.
         let itemsToRerender = model.displayedItems
         model.displayedItems = itemsToRerender
     }
@@ -160,7 +143,6 @@ final class MenuBarSearchPanel: NSPanel {
         true
     }
 
-    /// Creates a menu bar search panel with Liquid Glass effect.
     init() {
         super.init(
             contentRect: .zero,
@@ -179,18 +161,17 @@ final class MenuBarSearchPanel: NSPanel {
         self.collectionBehavior = [
             .fullScreenAuxiliary, .ignoresCycle, .moveToActiveSpace,
         ]
-        // Liquid Glass: transparent window with shadow
         self.hasShadow = true
         self.backgroundColor = .clear
         self.isOpaque = false
-        // Close panel when it loses key focus (e.g., another app gets focus)
+        // Close when the panel loses key focus.
         NotificationCenter.default.addObserver(
             self,
             selector: #selector(panelResignedKey),
             name: NSWindow.didResignKeyNotification,
             object: self
         )
-        // setFrameAutosaveName("MenuBarSearchPanel") // Manual persistence is used instead.
+        // Frames are saved per display manually, not via setFrameAutosaveName.
     }
 
     deinit {
@@ -202,14 +183,12 @@ final class MenuBarSearchPanel: NSPanel {
         close()
     }
 
-    /// Performs the initial setup of the panel.
     func performSetup(with appState: AppState) {
         self.appState = appState
         configureCancellables()
         model.performSetup(with: self)
     }
 
-    /// Configures the internal observers for the panel.
     private func configureCancellables() {
         var c = Set<AnyCancellable>()
 
@@ -219,7 +198,6 @@ final class MenuBarSearchPanel: NSPanel {
             }
             .store(in: &c)
 
-        // Save the frame when the application terminates.
         NotificationCenter.default.publisher(for: NSApplication.willTerminateNotification)
             .sink { [weak self] _ in
                 guard let self else { return }
@@ -239,7 +217,6 @@ final class MenuBarSearchPanel: NSPanel {
             )
         )
         .sink { [weak self] _ in
-            // Force close and clear any cached screen references on hot-plug
             self?.close()
         }
         .store(in: &c)
@@ -258,7 +235,7 @@ final class MenuBarSearchPanel: NSPanel {
             return
         }
 
-        // Important that we set the navigation state before updating the cache.
+        // Must be set before updating the cache.
         appState.navigationState.isSearchPresented = true
 
         let hostingView = MenuBarSearchHostingView(
@@ -269,9 +246,7 @@ final class MenuBarSearchPanel: NSPanel {
         )
         hostingView.setFrameSize(hostingView.intrinsicContentSize)
 
-        // Try to load saved frame for current display
         if let savedFrame = loadFrameForDisplay(screen) {
-            // Convert relative position back to absolute coordinates
             let visibleFrame = screen.visibleFrame
             let absoluteFrame = CGRect(
                 x: savedFrame.origin.x + visibleFrame.minX,
@@ -280,7 +255,6 @@ final class MenuBarSearchPanel: NSPanel {
                 height: hostingView.intrinsicContentSize.height
             )
 
-            // Ensure frame is within this display's visible frame
             let adjustedFrame = CGRect(
                 x: max(visibleFrame.minX, min(absoluteFrame.origin.x, visibleFrame.maxX - hostingView.intrinsicContentSize.width)),
                 y: max(visibleFrame.minY, min(absoluteFrame.origin.y, visibleFrame.maxY - hostingView.intrinsicContentSize.height)),
@@ -290,7 +264,6 @@ final class MenuBarSearchPanel: NSPanel {
 
             setFrame(adjustedFrame, display: false)
         } else {
-            // No saved frame for this display, center on screen
             let centered = CGPoint(
                 x: screen.visibleFrame.midX - hostingView.intrinsicContentSize.width / 2,
                 y: screen.visibleFrame.midY - hostingView.intrinsicContentSize.height / 2
@@ -300,7 +273,6 @@ final class MenuBarSearchPanel: NSPanel {
         }
 
         contentView = hostingView
-        // Match window corner radius and curve to glass effect (.continuous)
         contentView?.layer?.cornerRadius = 16
         contentView?.layer?.cornerCurve = .continuous
         contentView?.layer?.masksToBounds = true
@@ -309,10 +281,8 @@ final class MenuBarSearchPanel: NSPanel {
         mouseDownMonitor.start()
         keyDownMonitor.start()
 
-        // Rehide temporarily shown items and refresh caches in the
-        // background. Ordering is preserved: rehide moves items back
-        // to their correct sections before the cache is rebuilt.
-        // The task is cancelled in close() to avoid holding appState.
+        // Rehide runs before the recache. Cancelled in close() so it doesn't
+        // hold appState.
         cacheTask?.cancel()
         cacheTask = Task { [weak appState] in
             guard let appState else { return }
@@ -325,7 +295,6 @@ final class MenuBarSearchPanel: NSPanel {
         }
     }
 
-    /// Toggles the panel's visibility.
     func toggle() {
         if isVisible {
             close()
@@ -337,7 +306,6 @@ final class MenuBarSearchPanel: NSPanel {
     /// Dismisses the search panel.
     @MainActor
     override func close() {
-        // Only save if window is actually visible and has content
         if isVisible, let screen, contentView != nil {
             saveFrameForDisplay(screen)
         }
@@ -373,14 +341,11 @@ final class MenuBarSearchPanel: NSPanel {
         model.editingName = ""
     }
 
-    /// Saves the frame for a specific display.
     private func saveFrameForDisplay(_ screen: NSScreen) {
-        // Only save if window is visible and has content
         guard isVisible, contentView != nil else {
             return
         }
 
-        // Get current window frame and ensure we're saving from the right screen
         let currentFrame = frame
         let actualScreen = NSScreen.screens.first { $0.visibleFrame.intersects(currentFrame) } ?? screen
 
@@ -388,7 +353,7 @@ final class MenuBarSearchPanel: NSPanel {
             return
         }
 
-        // Save position relative to the display's visible frame for consistency
+        // Saved relative to the display's visible frame.
         let visibleFrame = actualScreen.visibleFrame
         let relativeFrame = CGRect(
             x: currentFrame.minX - visibleFrame.minX,
@@ -402,7 +367,6 @@ final class MenuBarSearchPanel: NSPanel {
         Defaults.store.synchronize()
     }
 
-    /// Loads the saved frame for a specific display.
     private func loadFrameForDisplay(_ screen: NSScreen) -> CGRect? {
         guard let uuidString = Bridging.getDisplayUUIDString(for: screen.displayID) else {
             return nil
@@ -460,12 +424,8 @@ private struct MenuBarSearchContentView: View {
     @Environment(AppState.self) var appState: AppState
     @Environment(MenuBarItemManager.self) var itemManager: MenuBarItemManager
     @Environment(MenuBarItemImageCache.self) var imageCache: MenuBarItemImageCache
-    // `MenuBarSearchModel` is @Observable (wave 3). `$model.property`
-    // bindings are needed in several of this view's computed properties
-    // (searchField, mainContent), not just `body`, so a local `@Bindable`
-    // re-declaration inside `body` alone wouldn't reach them. Passed in
-    // explicitly and held as `@Bindable` here instead of via `@Environment`,
-    // which keeps bindings available anywhere in the type.
+    // Held as `@Bindable` rather than from `@Environment` so computed
+    // properties outside `body` can use `$model` bindings.
     @Bindable var model: MenuBarSearchModel
     @FocusState private var searchFieldIsFocused: Bool
     @AppStorage(Defaults.Key.rememberSearchQuery.rawValue) private var rememberSearchQuery = Defaults.DefaultValue.rememberSearchQuery
@@ -500,14 +460,9 @@ private struct MenuBarSearchContentView: View {
             .frame(width: 600, height: 400)
             .fixedSize()
             .onAppear {
-                // Focus the field as soon as the view is in the hierarchy.
-                // Setting it synchronously here covers the common case; the
-                // async hop covers the turn where the hosting view is still
-                // being installed as the panel's content view, which is when a
-                // fast typist's first keystroke used to land on nothing (#969).
-                // The previous 50 ms sleep was long enough that typing begun
-                // the instant the hotkey fired arrived before the focus was
-                // set, producing the "failed keyboard action" error sound.
+                // Set now and again after an async hop, for the turn where the
+                // hosting view is still being installed. A delay drops a fast
+                // typist's first keystroke with an error sound (#969).
                 searchFieldIsFocused = true
                 DispatchQueue.main.async { searchFieldIsFocused = true }
             }
@@ -516,12 +471,8 @@ private struct MenuBarSearchContentView: View {
                 selectFirstDisplayedItem()
             }
             .onChange(of: itemManager.itemCache, initial: true) {
-                // The memo's inputs are the cached items, so a new cache is the
-                // one moment it can be wrong. It matters for an item whose
-                // source process resolved late: the row was built while the
-                // item had no owner to be named after, and the recache that
-                // finally supplies one arrives here. Keystrokes, which is what
-                // the memo is actually there to absorb, don't reach this.
+                // A new cache can name an item whose source process resolved
+                // late, so the memo must be cleared.
                 ItemNameCache.clear()
                 updateDisplayedItems()
                 if model.selection == nil {
@@ -584,10 +535,8 @@ private struct MenuBarSearchContentView: View {
 
     @ViewBuilder
     private var mainContent: some View {
-        // No Screen Recording branch here on purpose. Search matches on item
-        // names, not pixels, and each row already carries its app icon, so
-        // the only thing capture adds is the glyph preview on the trailing
-        // edge -- which `itemView` simply omits when there is nothing to show.
+        // No Screen Recording branch: search matches names, and `itemView`
+        // omits the glyph preview when there's no capture.
         if hasItems {
             SectionedList(
                 selection: $model.selection,
@@ -725,7 +674,6 @@ private struct MenuBarSearchContentView: View {
             model.displayedItems = searchItems.map(\.listItem)
         } else {
             let selectableItems = searchItems.filter(\.listItem.isSelectable)
-            // Using weighted search via FuseProp
             let fuseResults = model.fuse.searchSync(model.searchText, in: selectableItems, by: \.properties)
 
             model.displayedItems = fuseResults
@@ -747,9 +695,7 @@ private struct MenuBarSearchContentView: View {
         }
         closePanel()
         Task {
-            // Wait until the search panel is fully closed before acting on
-            // the selected item. Uses KVO on isVisible so we resume as soon
-            // as the panel hides rather than waiting a fixed 25 ms.
+            // Act only once the panel has fully closed.
             await panel.waitUntilClosed(timeout: .milliseconds(200))
             await itemManager.activate(item: item, on: displayID)
             if appState.settings.advanced.moveCursorToRevealedItem {
@@ -907,16 +853,10 @@ private struct BottomBarButtonStyle: ButtonStyle {
 
 /// Memoizes item display names for the search rows.
 ///
-/// `MenuBarItem.displayName` is far from a stored property: it reads the whole
-/// `menuBarItemCustomNames` dictionary out of `UserDefaults` and bridges it,
-/// then — for the common case with no custom name — resolves the owning
-/// application through Launch Services and runs the title through a couple of
-/// regexes. The search panel asks for it once per item to build the fuzzy
-/// search corpus *and* once per rendered row, on every keystroke, so the cost
-/// scaled with item count × typing speed.
+/// `MenuBarItem.displayName` reads defaults, Launch Services, and regexes,
+/// and search asks for it per item and per row on every keystroke.
 ///
-/// Cleared when the panel closes and when a name is edited, which is the only
-/// thing that can change an item's name while the panel is open.
+/// Cleared when the panel closes and when a name is edited.
 @MainActor
 private enum ItemNameCache {
     private static var names = [MenuBarItemTag: String]()
@@ -945,13 +885,10 @@ private struct MenuBarSearchItemView: View {
     @FocusState private var isEditing: Bool
 
     /// The captured glyph, or `nil` when there is none to draw.
-    ///
-    /// Previously an empty `NSImage`, which only ever reached the screen
-    /// because the whole panel refused to open without Screen Recording.
     private var itemImage: NSImage? {
         let captured = imageCache.trimmedImage(for: item.tag)
-        // The row already shows the app icon on its leading edge, so when
-        // icons are preferred the trailing preview would just repeat it.
+        // When icons are preferred, the trailing preview would repeat the
+        // leading app icon.
         if MenuBarItemIconFallback.shouldUseAppIcon(
             for: item,
             hasCapture: captured != nil,

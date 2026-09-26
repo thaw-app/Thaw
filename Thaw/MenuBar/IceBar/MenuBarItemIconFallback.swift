@@ -11,16 +11,10 @@ import Cocoa
 /// The owning application's icon, shown where a captured glyph is not
 /// available.
 ///
-/// Capturing a menu bar item needs Screen Recording. Without it the Thaw Bar
-/// previously rendered nothing at all — the permission was labelled optional,
-/// but a user who declined it and then hit notch overflow, which forces the
-/// Thaw Bar on by default, had no way to reach their hidden items. An app
-/// icon is not as good as the real glyph, and it cannot show a badge or a
-/// live value, but it identifies the item well enough to click the right one.
+/// Captures need Screen Recording, which is optional, and notch overflow can
+/// force the Thaw Bar on. An app icon is enough to click the right item.
 ///
-/// Ported from `OverflowFallbackIcon` in thaw-next, including the per-process
-/// cache, which is load-bearing rather than an optimisation — see
-/// ``appIconsByPID``.
+/// The per-process cache is load-bearing; see ``appIconsByPID``.
 enum MenuBarItemIconFallback {
     /// The Control Center icon once it has been resolved.
     @MainActor
@@ -28,12 +22,8 @@ enum MenuBarItemIconFallback {
 
     /// The Control Center icon, shared by every system-hosted item.
     ///
-    /// Cached on the first hit: these items are hosted by one process, so
-    /// reading a per-item icon would hand back the same image repeatedly. A
-    /// miss is deliberately *not* cached — the host may not be running yet
-    /// when the first system-hosted item is drawn, and remembering the `nil`
-    /// would pin every one of them to the generic glyph for the rest of the
-    /// process.
+    /// A miss is not cached: the host may not be running yet, and a cached
+    /// `nil` would pin every system item to the generic glyph.
     @MainActor
     private static var controlCenterIcon: NSImage? {
         if let cachedControlCenterIcon {
@@ -50,23 +40,16 @@ enum MenuBarItemIconFallback {
     /// Application icons already resolved this session, keyed by owning
     /// process.
     ///
-    /// Both halves of resolving one allocate: `NSRunningApplication(processIdentifier:)`
-    /// returns a fresh object rather than a shared instance, and `.icon`
-    /// builds a new `NSImage` with its own representations. This is read from
-    /// SwiftUI view bodies, which re-evaluate whenever anything they observe
-    /// changes — with the bar open that is continuous, and resolving per
-    /// evaluation allocates faster than the autorelease pool drains, growing
-    /// the process for as long as the bar stays up.
+    /// Resolving allocates a new `NSRunningApplication` and `NSImage` each
+    /// time. View bodies read this continuously while the bar is open, which
+    /// outpaces the autorelease pool and grows memory.
     ///
-    /// `NSImage?` rather than `NSImage` so a process that has no icon is
-    /// remembered as such instead of being re-resolved on every read.
+    /// Optional so a process with no icon is remembered as such.
     @MainActor
     private static var appIconsByPID: [pid_t: NSImage?] = [:]
 
-    /// Forgets the cached icon for a process.
-    ///
-    /// Keeps a relaunched app from being answered out of a dead process's
-    /// entry, and stops the map growing across a long session.
+    /// Forgets the cached icon for a process, so the map doesn't grow across
+    /// a long session.
     @MainActor
     static func forgetIcon(forPID pid: pid_t) {
         appIconsByPID.removeValue(forKey: pid)
@@ -81,9 +64,7 @@ enum MenuBarItemIconFallback {
 
     /// The owning application's icon, resolved once per process.
     ///
-    /// Callers rendering item icons should come through here rather than
-    /// reading `sourceApplication?.icon` directly — see the note on
-    /// ``appIconsByPID`` for what that costs inside a view body.
+    /// Use this instead of `sourceApplication?.icon`; see ``appIconsByPID``.
     @MainActor
     static func cachedAppIcon(forPID pid: pid_t) -> NSImage? {
         if let cached = appIconsByPID[pid] {
@@ -96,19 +77,14 @@ enum MenuBarItemIconFallback {
 
     /// Whether an item should be drawn as an app icon rather than a capture.
     ///
-    /// Two reasons lead here: there is no capture to draw, or the user asked
-    /// for icons regardless. The preference deliberately loses to a missing
-    /// icon — an item whose app has quit still renders its stale capture
-    /// rather than degrading to a generic glyph, because the capture at
-    /// least shows what the item looked like.
+    /// The preference loses to a missing icon: an item whose app quit keeps
+    /// its stale capture rather than a generic glyph.
     ///
     /// - Parameters:
     ///   - item: The item being rendered.
     ///   - hasCapture: Whether a captured glyph is available for it.
-    ///   - prefersAppIcon: The user's `alwaysUseAppIconForMenuBarItems`
-    ///     setting. Passed in rather than read from `Defaults` here so that
-    ///     SwiftUI views observing `AdvancedSettings` re-render when it is
-    ///     toggled.
+    ///   - prefersAppIcon: `alwaysUseAppIconForMenuBarItems`. Passed in so
+    ///     observing views re-render when it is toggled.
     @MainActor
     static func shouldUseAppIcon(
         for item: MenuBarItem,
@@ -122,9 +98,7 @@ enum MenuBarItemIconFallback {
 
     /// The image to display for an item that has no usable capture.
     ///
-    /// Always answers with something: an item nobody can identify is still
-    /// better rendered as a generic glyph than as a gap the user cannot
-    /// click.
+    /// Never nil: a generic glyph beats a gap the user can't click.
     @MainActor
     static func image(for item: MenuBarItem) -> NSImage? {
         appIcon(for: item) ?? NSImage(
@@ -135,14 +109,13 @@ enum MenuBarItemIconFallback {
 
     /// The icon of the item's live source application.
     ///
-    /// Deliberately has no generic fallback, so callers can tell an item
-    /// whose app has quit from one that simply has no icon.
+    /// No generic fallback, so callers can tell a quit app from one with no
+    /// icon.
     @MainActor
     static func appIcon(for item: MenuBarItem) -> NSImage? {
         switch item.tag.namespace {
         case .controlCenter, .systemUIServer, .textInputMenuAgent:
-            // One process hosts many unrelated modules. Its own icon is the
-            // most honest answer available; the item's name carries the rest.
+            // One process hosts many unrelated modules.
             return controlCenterIcon
         default:
             guard let sourcePID = item.sourcePID else {

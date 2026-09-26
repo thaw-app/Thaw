@@ -14,15 +14,11 @@ import Testing
 /// `averageColor(using:alphaThreshold:option:)` and
 /// `isTransparent(alphaThreshold:)`.
 ///
-/// Both feed real decisions — the menu bar's average color drives the
-/// adaptive tint, and the transparency check decides whether a captured menu
-/// bar item is worth caching — and both are pure functions of pixel data, so
-/// they can be driven with images built in memory.
-///
-/// `isTransparent` has a fast path that reads alpha bytes straight from the
-/// image's data provider and a `TransparencyContext` fallback for pixel
-/// formats it does not recognise. The cases below build images in several
-/// formats so both routes are exercised.
+/// Both are pure functions of pixel data: the average color drives the
+/// adaptive tint, and the transparency check decides whether a captured
+/// item is worth caching. `isTransparent` has a fast path for known pixel
+/// formats and a `TransparencyContext` fallback, so the cases build images
+/// in several formats to exercise both.
 @Suite("CGImage analysis")
 struct CGImageAnalysisTests {
     // MARK: Average color
@@ -107,21 +103,20 @@ struct CGImageAnalysisTests {
 
     @Test("A pixel just below the alpha threshold is excluded (round up, not to nearest)")
     func pixelJustBelowThresholdIsExcluded() throws {
-        // A fill alpha of 0.334 quantises to the alpha byte round(0.334 * 255) = 85,
-        // i.e. a normalised alpha of 85 / 255 ≈ 0.3333 — strictly below 0.334.
+        // A fill alpha of 0.334 quantises to the byte round(0.334 * 255) = 85,
+        // a normalised alpha of about 0.3333, strictly below 0.334.
         let image = try makeCanvas(width: 4, height: 4) { context in
             context.setFillColor(red: 1, green: 0, blue: 0, alpha: 0.334)
             context.fill(CGRect(x: 0, y: 0, width: 4, height: 4))
         }
 
-        // By the documented contract — "pixels with an alpha component greater
-        // than or equal to this value contribute" — every pixel is below the
-        // threshold, so the average must be nil. The byte threshold is therefore
+        // Pixels with alpha at or above the threshold contribute, so every pixel
+        // here is excluded and the average must be nil. The byte threshold is
         // ceil(0.334 * 255) = 86; rounding to nearest would give 85 and wrongly
-        // admit these pixels, returning a spurious non-nil color.
+        // admit these pixels.
         #expect(image.averageColor(alphaThreshold: 0.334) == nil)
 
-        // Control: the pixels really do exist — a threshold of 0 admits them.
+        // Control: a threshold of 0 admits the same pixels.
         #expect(image.averageColor(alphaThreshold: 0) != nil)
     }
 

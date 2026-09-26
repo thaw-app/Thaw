@@ -9,13 +9,12 @@ import Foundation
 import Testing
 @testable import Thaw
 
-/// Exercises the Focus Filter profile resolution against a real manifest
-/// file written into the test host's Application Support directory.
+/// Resolves Focus Filter profiles against a real manifest in the test host's
+/// Application Support directory.
 ///
-/// ``ThawFocusModeStore`` caches the parsed manifest against its
-/// modification date, so these tests set explicit modification dates to
-/// walk the cache through its hit and miss paths. The static cache and the
-/// Defaults facade are process-wide, hence `.serialized`.
+/// ``ThawFocusModeStore`` caches the manifest by modification date, so tests
+/// set explicit dates to drive cache hits and misses. The static cache and
+/// Defaults are process-wide, hence `.serialized`.
 @Suite("Thaw Focus mode store")
 @MainActor
 struct ThawFocusModeStoreTests {
@@ -23,8 +22,7 @@ struct ThawFocusModeStoreTests {
         .urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
         .appendingPathComponent("Thaw/Profiles", isDirectory: true)
 
-    /// Writes a manifest with the given profiles and stamps an explicit
-    /// modification date so the store's cache can be driven precisely.
+    /// Writes a manifest with an explicit modification date to drive the cache.
     private func writeManifest(_ profiles: [ProfileMetadata], modifiedAt: Date) throws {
         try FileManager.default.createDirectory(at: profilesDirectory, withIntermediateDirectories: true)
 

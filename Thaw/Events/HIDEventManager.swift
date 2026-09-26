@@ -29,10 +29,7 @@ final class HIDEventManager {
 
     /// Minimum interval between processed mouse-moved events (~30 fps).
     ///
-    /// Time-based, not count-based: a count divisor scales its effective
-    /// work rate with the input device's polling rate, so a 1000 Hz mouse
-    /// would do 8x the work of a 125 Hz mouse for identical physical
-    /// motion. A wall-clock gate keeps the cost independent of the device.
+    /// Time-based, not count-based, so a 1000 Hz mouse costs the same as a 125 Hz one.
     static nonisolated let mouseMovedThrottleInterval: TimeInterval = 1.0 / 30.0
 
     /// Timestamp of the last processed mouse-moved event, used to rate
@@ -41,15 +38,8 @@ final class HIDEventManager {
 
     /// Cursor location at the last processed mouse-moved event.
     ///
-    /// Compared against the current location as a cheap gate: a sub-point
-    /// move cannot change which screen the cursor is on or which display
-    /// owns the active menu bar, so the screen queries below would return
-    /// the same answers. Only updated when a mouse-moved event actually
-    /// proceeds past this gate, not on every observed event — comparing
-    /// against the last *observed* location instead would let a slow drift
-    /// of less than a point per tick accumulate past the threshold without
-    /// ever being caught, since the reference point would keep creeping
-    /// along with it.
+    /// A cheap gate before the screen queries. Updated only when an event
+    /// passes it, so a slow sub-point drift still accumulates past the threshold.
     private nonisolated let lastMouseMovedLocation = OSAllocatedUnfairLock(initialState: CGPoint.zero)
 
     /// Timestamp of the last forwarded app menu click, used to debounce
@@ -61,14 +51,10 @@ final class HIDEventManager {
     private var cancellables = Set<AnyCancellable>()
 
     /// Task observing `GeneralSettings.showOnHover`, `AdvancedSettings.
-    /// showMenuBarTooltips`, and `DisplaySettingsManager.configurations` —
-    /// all `@Observable` rather than Combine `ObservableObject`s, so they
-    /// can no longer feed the `Publishers.CombineLatest3` this used to be.
+    /// showMenuBarTooltips`, and `DisplaySettingsManager.configurations`.
     private var hoverSettingsObservationTask: Task<Void, Never>?
 
-    /// Task observing `itemManager.itemCache` (wave 4), which is
-    /// `@Observable` rather than a Combine `ObservableObject`, replacing the
-    /// old `$itemCache.removeDuplicates().receive(on:).sink` pipeline.
+    /// Task observing `itemManager.itemCache`.
     private var itemCacheWindowBoundsObservationTask: Task<Void, Never>?
 
     /// Timer that periodically checks whether the event tap is still
@@ -88,8 +74,7 @@ final class HIDEventManager {
     private var hoverRearmTask: Task<Void, Never>?
     private var hoverRearmTaskToken: UUID?
 
-    /// Tracks the last seen value of showOnHover so the CombineLatest3 sink
-    /// can restrict rearm logic to false→true transitions only.
+    /// Last seen showOnHover, so rearm runs only on false→true transitions.
     private var lastShowOnHover: Bool?
 
     /// The currently pending hover action, used to avoid restarting the same
@@ -144,11 +129,8 @@ final class HIDEventManager {
     /// Rebuilt from itemCache whenever it changes, eliminating
     /// per-event Window Server IPC calls during mouse movement.
     ///
-    /// Protected by a lock because the CGEventTap callback reads this array
-    /// on the main RunLoop, while writes happen on the main thread via Combine.
-    /// Although both currently execute on the main thread, the RunLoop-based
-    /// guarantee is implicit — using a lock makes the safety explicit and
-    /// protects against future refactoring that might change threading.
+    /// Locked because the event tap callback reads it on the main run loop;
+    /// both sides are on the main thread today, but only implicitly.
     private nonisolated let windowBoundsLock = OSAllocatedUnfairLock(
         initialState: [(windowID: CGWindowID, bounds: CGRect)]()
     )
@@ -205,15 +187,9 @@ final class HIDEventManager {
         guard let self, isEnabled, let appState else {
             return event
         }
-        // Prefer the screen the mouse is physically on so clicks on the external
-        // monitor's menu bar are processed against the correct display geometry.
-        // Fall back to the active-menu-bar screen when the mouse screen cannot
-        // be determined.
-        // Note: getMenuBarHeight() is NOT used as a gate here because it may
-        // return nil transiently during startup (before the Window Server has
-        // populated the menu bar window list). The downstream hit-testing in
-        // isMouseInsideMenuBar() / isMouseInsideEmptyMenuBarSpace() handles the
-        // case where the menu bar is genuinely absent (fullscreen app, etc.).
+        // Prefer the screen under the mouse so external-display clicks use the
+        // right geometry. Don't gate on getMenuBarHeight(): it can be nil during
+        // startup, and the hit-testing below handles a truly absent menu bar.
         let screen: NSScreen
         if let s = NSScreen.screenWithMouse ?? NSScreen.main {
             screen = s
@@ -305,14 +281,8 @@ final class HIDEventManager {
             return event
         }
 
-        // Cheap gate: skip the screen queries below when the cursor hasn't
-        // moved meaningfully since the last processed event. A sub-point
-        // move cannot put the cursor on a different screen or change which
-        // display owns the active menu bar, so those queries would return
-        // the same answers. Compared against the last *processed* location
-        // (only updated when we proceed past this gate) rather than the
-        // last *observed* one, so a slow drift of under a point per tick
-        // still accumulates past the threshold instead of never triggering.
+        // Skip the screen queries for sub-point moves. Compared against the last
+        // processed location, so a slow drift still eventually passes.
         let currentLocation = NSEvent.mouseLocation
         let lastLocation = lastMouseMovedLocation.withLock { $0 }
         let dx = currentLocation.x - lastLocation.x
@@ -357,11 +327,8 @@ final class HIDEventManager {
     /// atomically records `now` as the new last-processed time when it
     /// does.
     ///
-    /// The read-and-set happens under a single lock acquisition so two
-    /// concurrent callers can't both observe an elapsed interval and both
-    /// pass the gate. Extracted as a pure function of `now` (rather than
-    /// reading `CACurrentMediaTime()` internally) so it's directly testable
-    /// without a real event tap.
+    /// Read-and-set under one lock so two callers can't both pass. Takes `now`
+    /// as a parameter so it's testable without an event tap.
     static nonisolated func shouldProcessMouseMoved(
         now: TimeInterval,
         lastProcessTime: OSAllocatedUnfairLock<TimeInterval>
@@ -488,8 +455,7 @@ final class HIDEventManager {
         var knownWindowIDs = Set<CGWindowID>()
         var buffer = [(windowID: CGWindowID, bounds: CGRect)]()
 
-        // Query all on-screen menu bar item windows first to get fresh bounds.
-        // This ensures we have accurate bounds even if the cache is stale.
+        // Fresh on-screen bounds first, in case the cache is stale.
         let allWindowIDs = Bridging.getMenuBarWindowList(option: [
             .onScreen, .activeSpace, .itemsOnly,
         ])
@@ -503,8 +469,7 @@ final class HIDEventManager {
             }
         }
 
-        // Add any managed items that might not be in the Window Server list yet.
-        // This is a fallback for items that might not be reported by the Window Server.
+        // Add managed items the Window Server hasn't reported yet.
         let items = cache.managedItems
         for item in items where item.isOnScreen && !knownWindowIDs.contains(item.windowID) {
             guard item.bounds.width <= Self.maxReasonableItemWidth else {
@@ -520,18 +485,9 @@ final class HIDEventManager {
 
     /// Rebuilds the bounds lookup using the current on-screen menu bar layout.
     ///
-    /// Section show/hide changes often keep the same window IDs while moving
-    /// items on or off screen. Rebuilding from the last item cache in those
-    /// moments can leave hit testing with stale geometry, so use a direct
-    /// Window Server snapshot instead.
-    ///
-    /// Unlike ``rebuildWindowBoundsLookup(from:)``, this method intentionally
-    /// omits the managed-items fallback. During a section transition the cached
-    /// bounds are stale (items have moved on/off screen while keeping the same
-    /// window ID), so appending them here would corrupt rather than improve the
-    /// lookup. The trade-off is that an item not yet reported by the Window
-    /// Server immediately after a transition may be briefly unhittable; that
-    /// window is typically sub-frame and acceptable given the correctness gain.
+    /// Section show/hide moves items while keeping window IDs, so cached
+    /// geometry is stale; this uses a Window Server snapshot and skips the
+    /// managed-items fallback. An unreported item may be unhittable for about a frame.
     private func rebuildWindowBoundsLookupFromCurrentLayout() {
         let allWindowIDs = Bridging.getMenuBarWindowList(option: [
             .onScreen, .activeSpace, .itemsOnly,
@@ -557,20 +513,12 @@ final class HIDEventManager {
         var c = Set<AnyCancellable>()
 
         if let appState {
-            // Pre-seed so the initial CombineLatest3 emission is treated as a
-            // no-op when showOnHover is already true at subscription time,
-            // avoiding unnecessary startup rearm work.
+            // Pre-seed so the first emission doesn't rearm when showOnHover is already on.
             lastShowOnHover = appState.settings.general.showOnHover
 
             // Start or stop the mouse-moved tap when show-on-hover,
             // menu-bar-tooltips, or per-display configurations change.
-            //
-            // `GeneralSettings`, `AdvancedSettings`, and `DisplaySettingsManager`
-            // are `@Observable` rather than Combine `ObservableObject`s, so
-            // this is now driven by the `Observations` async sequence instead
-            // of `Publishers.CombineLatest3`. `continue` below (rather than
-            // `return`) preserves the old sink's per-event early-outs without
-            // ending the observation.
+            // `continue`, not `return`, so an early-out doesn't end the observation.
             let generalSettings = appState.settings.general
             let advancedSettings = appState.settings.advanced
             let displaySettings = appState.settings.displaySettings
@@ -619,10 +567,8 @@ final class HIDEventManager {
                 }
             }
 
-            // Rebuild the window bounds lookup whenever the item cache changes.
-            // This replaces per-event Window Server IPC calls with an in-memory lookup.
-            // `itemManager` is now `@Observable` (wave 4), so it no longer has
-            // an `$itemCache` publisher.
+            // Rebuild the bounds lookup whenever the item cache changes, so
+            // hit-testing avoids per-event Window Server IPC.
             let itemManagerForWindowBounds = appState.itemManager
             itemCacheWindowBoundsObservationTask = Task { [weak self] in
                 var previous: MenuBarItemManager.ItemCache?
@@ -635,12 +581,8 @@ final class HIDEventManager {
                 }
             }
 
-            // When any section's control item state changes, the menu bar layout shifts.
-            // Merge all sections into a single publisher so only one cache refresh fires
-            // per layout change batch, regardless of how many sections change at once.
-            // Drop the initial emission per publisher so MergeMany no longer relies on
-            // a global dropFirst count and rebuildWindowBoundsLookupFromCurrentLayout()
-            // runs only for real updates.
+            // Control item state changes shift the layout. Merge all sections so one
+            // refresh fires per batch, dropping each publisher's initial emission.
             Publishers.MergeMany(
                 appState.menuBarManager.sections.map {
                     $0.controlItem.$state
@@ -713,10 +655,8 @@ final class HIDEventManager {
 
         guard isEnabled else { return }
 
-        // Check all NSEvent-based monitors and restart any that stopped running.
-        // This handles cases where macOS silently invalidates monitors due to
-        // accessibility permission changes, system resource pressure, or other
-        // unexpected conditions.
+        // Restart stopped NSEvent monitors; macOS can silently invalidate them
+        // on permission changes or resource pressure.
         for monitor in allMonitors {
             monitor.ensureRunning()
         }
@@ -850,13 +790,9 @@ extension HIDEventManager {
             return
         }
 
-        // Suppress show-on-click when no menu bar status items are currently
-        // rendered on-screen for the active space. This catches the case where
-        // a fullscreen app has auto-hidden the menu bar and the click lands in
-        // the top-of-screen trigger zone before the menu bar visually reveals.
-        // NSApp.currentSystemPresentationOptions is per-app and does not
-        // reflect another app's fullscreen state, so the items-list signal is
-        // used directly without a precondition.
+        // Suppress show-on-click when no status items are on screen: a fullscreen
+        // app's auto-hidden menu bar. currentSystemPresentationOptions is per-app
+        // and can't see another app's fullscreen state.
         if !screen.isSystemMenuBarVisible() {
             Self.diagLog.debug("handleShowOnClick: suppressing, no menu bar items on-screen for active space")
             return
@@ -1098,7 +1034,6 @@ extension HIDEventManager {
                 return
             }
 
-            // Get the window that was clicked.
             guard
                 let mouseLocation = MouseHelpers.locationCoreGraphics,
                 let windowUnderMouse = WindowInfo.createWindows(
@@ -1131,7 +1066,6 @@ extension HIDEventManager {
                 return
             }
 
-            // All checks have passed, hide the sections.
             for section in appState.menuBarManager.sections {
                 section.hide()
             }
@@ -1165,12 +1099,9 @@ extension HIDEventManager {
             else {
                 return
             }
-            // Delay prevents the menu from immediately closing and gives any
-            // foreign widget's own right-click menu a chance to render. Notch
-            // overlay applications cover wide regions of the menu bar visually
-            // but only respond to clicks on their actual icon, so probing
-            // whether a foreign menu opened in response to this click is more
-            // accurate than testing window bounds.
+            // The delay keeps the menu from closing at once and lets a foreign
+            // widget's own menu render. Notch overlays cover wide areas but only
+            // react on their icon, so probing for an opened menu beats bounds tests.
             try await Task.sleep(for: .milliseconds(100))
             try Task.checkCancellation()
             if isForeignPopUpMenuOpen() {
@@ -1185,15 +1116,9 @@ extension HIDEventManager {
         }
     }
 
-    /// Returns whether the cursor sits on a UI element owned by a foreign
-    /// third-party menu bar widget such as a notch overlay application,
-    /// using the system-wide accessibility hit-test. Excludes Thaw's own
-    /// elements, the Window Server (which owns the menu bar background), and
-    /// elements with a menu-bar / menu / menu-item role (the front app's
-    /// File/Edit/View region returns the app's PID but a menu-bar-class
-    /// role). When the helper returns true, Thaw defers to the widget under
-    /// the cursor even if the widget didn't open its own pop-up menu in
-    /// response to the click.
+    /// Returns whether the cursor is on an element owned by a third-party menu
+    /// bar widget (e.g. a notch overlay), via the system-wide AX hit-test.
+    /// Excludes Thaw, the Window Server, and menu-bar/menu/menu-item roles.
     private func isCursorOverForeignWidgetUIElement() -> Bool {
         guard let mouseLocation = MouseHelpers.locationCoreGraphics else {
             return false
@@ -1218,12 +1143,8 @@ extension HIDEventManager {
         if isWindowServerPID(pid) {
             return false
         }
-        // The frontmost application owns its own menu bar background between
-        // File/Edit/View items. AX returns the app's menu bar element here
-        // even though the geometric isMouseInsideEmptyMenuBarSpace check
-        // already passed (no specific menu item is hit). Filter by role: a
-        // menu bar / menu / menu item role means the cursor is over the front
-        // app's menu bar, not over a third-party widget overlay.
+        // Between File/Edit/View items AX returns the front app's menu bar
+        // element, so a menu-class role means the app's menu bar, not a widget.
         switch AXHelpers.role(for: element) {
         case .menuBar, .menu, .menuItem, .menuBarItem:
             return false
@@ -1232,11 +1153,8 @@ extension HIDEventManager {
         }
     }
 
-    /// Returns whether the given PID belongs to the macOS WindowServer
-    /// daemon. WindowServer has no bundle identifier and is not represented as
-    /// an NSRunningApplication, so the executable name has to be read via
-    /// proc_name. Used to exclude WindowServer-owned AX elements from the
-    /// foreign-widget hit-test.
+    /// Returns whether the given PID belongs to WindowServer, which has no
+    /// bundle identifier or NSRunningApplication, so it is read via proc_name.
     private func isWindowServerPID(_ pid: pid_t) -> Bool {
         var buffer = [CChar](repeating: 0, count: Int(MAXPATHLEN))
         let length = buffer.withUnsafeMutableBufferPointer { ptr -> Int32 in
@@ -1248,14 +1166,9 @@ extension HIDEventManager {
         return String(data: Data(procName), encoding: .utf8) == "WindowServer"
     }
 
-    /// Returns whether any non-Thaw window at the pop-up-menu window level is
-    /// currently on-screen. Right-click menus (NSMenu and equivalents) render
-    /// at kCGPopUpMenuWindowLevel, while persistent overlay windows from
-    /// notch overlay applications sit a level below. Filtering to the exact
-    /// pop-up level distinguishes an actually open menu from a widget's idle
-    /// overlay, which is needed to avoid showing Thaw's secondary context
-    /// menu after a click that landed on a foreign widget that opened its own
-    /// menu.
+    /// Returns whether any non-Thaw window at kCGPopUpMenuWindowLevel is on
+    /// screen. Notch overlays sit one level below, so the exact level tells an
+    /// open menu from an idle overlay.
     private func isForeignPopUpMenuOpen() -> Bool {
         let ownPID = getpid()
         let popUpLevel = Int(CGWindowLevelForKey(.popUpMenuWindow))
@@ -1299,7 +1212,6 @@ extension HIDEventManager {
             return false
         }
 
-        // Click is on app menu area - check if we need to forward it
         let hasExpandedDivider = appState.menuBarManager.sections.contains { section in
             section.controlItem.isSectionDivider && section.controlItem.state == .hideSection
         }
@@ -1365,9 +1277,8 @@ extension HIDEventManager {
         if isDraggingMenuBarItem {
             isDraggingMenuBarItem = false
 
-            // Record the external move so caching is suppressed for 1s and order
-            // restoration is suppressed for 2s,
-            // then schedule a cache update to pick up the user's new item positions.
+            // Record the external move (suppresses caching for 1s and order
+            // restoration for 2s), then refresh the cache for the new positions.
             if let appState {
                 appState.itemManager.recordExternalMoveOperation()
                 Task { [weak appState] in
@@ -1490,12 +1401,8 @@ extension HIDEventManager {
             pendingHoverAction = .hide
             let taskToken = UUID()
             hoverTaskToken = taskToken
-            // When the Thaw Bar (Ice Bar) is the active presentation, the
-            // rehide interval — not the hover delay — should govern how
-            // long the panel stays open after the cursor leaves. The start
-            // rehide checks already use rehideInterval; a 0.2 s hover
-            // delay always wins that race and snaps the panel shut before
-            // the user can click an icon.
+            // With the Thaw Bar, the rehide interval governs how long it stays
+            // open; the 0.2 s hover delay would snap it shut before a click.
             let hideDelay: TimeInterval = if let activeDisplay = appState.hidEventManager.bestScreen(appState: appState),
                                              appState.settings.displaySettings.useIceBar(for: activeDisplay.displayID)
             {
@@ -1614,14 +1521,9 @@ extension HIDEventManager {
 extension HIDEventManager {
     /// Returns the best screen to use for hover, scroll, and tooltip calculations.
     ///
-    /// Always returns the screen that currently owns the active menu bar.
-    /// This prevents showing the hidden section or IceBar on a monitor
-    /// whose menu bar is inactive (e.g. when another monitor has a
-    /// fullscreen app), where clicking icons would have no effect.
-    ///
-    /// For mouse-down events, `mouseDownMonitor` resolves the screen from
-    /// `NSScreen.screenWithMouse` instead so that clicks on a secondary
-    /// display's menu bar are evaluated against the correct display geometry.
+    /// Always the screen owning the active menu bar, since clicks on an
+    /// inactive menu bar do nothing. `mouseDownMonitor` uses
+    /// `NSScreen.screenWithMouse` instead.
     func bestScreen(appState _: AppState) -> NSScreen? {
         NSScreen.screenWithActiveMenuBar ?? NSScreen.main
     }
@@ -1648,8 +1550,7 @@ extension HIDEventManager {
             return
         }
 
-        // Find the specific window under the cursor using the cached bounds lookup.
-        // This avoids per-event IPC calls to the Window Server.
+        // Cached bounds lookup avoids per-event Window Server IPC.
         let entries = windowBoundsLock.withLock { $0 }
         let hoveredEntry = entries.first(where: { $0.bounds.contains(mouseLocation) })
 
@@ -1660,7 +1561,6 @@ extension HIDEventManager {
 
         let hoveredID = hoveredEntry.windowID
 
-        // If we're still over the same item, nothing to do.
         if hoveredID == tooltipHoveredWindowID {
             return
         }
@@ -1681,7 +1581,6 @@ extension HIDEventManager {
             let freshEntries = windowBoundsLock.withLock { $0 }
             let positionBounds = freshEntries.first(where: { $0.windowID == hoveredID })?.bounds ?? cachedBounds
 
-            // Look up the item from the cache by window ID.
             let allItems = appState.itemManager.itemCache.managedItems
             let displayName: String
             if let item = allItems.first(where: { $0.windowID == hoveredID }) {
@@ -1793,19 +1692,14 @@ extension HIDEventManager {
             return false
         }
 
-        // Use the pre-built bounds lookup table, which is rebuilt
-        // whenever the item cache changes. This avoids per-event
-        // IPC calls to the Window Server.
+        // Cached lookup first, avoiding per-event Window Server IPC.
         let cacheHit = isMouseInsideCachedMenuBarItem()
 
-        // If we found a hit in the cache, return early.
         if cacheHit {
             return true
         }
 
-        // If the cache missed, query the Window Server directly as a fallback.
-        // This handles the case where items were just shown and the cache
-        // hasn't been updated yet.
+        // Cache miss: items may have just been shown, so ask the Window Server.
         let windowIDs = Bridging.getMenuBarWindowList(option: [
             .onScreen, .activeSpace, .itemsOnly,
         ])
@@ -1850,21 +1744,14 @@ extension HIDEventManager {
 
         // Then perform expensive Window Server checks.
         //
-        // Always exclude the concrete application-menu click region from empty-space
-        // detection; the function `isMouseInsideApplicationMenuClickRegion` checks whether
-        // the mouse is over a concrete menu item using AX hit-testing, while
-        // `handleApplicationMenuClickThrough` separately handles left-click forwarding
-        // to the application menu. When AX hit-testing is indeterminate (returns nil),
-        // fall back to cheap geometric detection to avoid misclassifying the app menu
-        // area as empty space.
+        // Exclude the app menu click region. If AX is indeterminate (nil), fall
+        // back to geometry so the app menu isn't taken for empty space.
         let appMenuResult = isMouseInsideApplicationMenuClickRegion(
             appState: appState,
             screen: screen
         )
 
-        // Use the AX result when available; fall back to geometric detection
-        // when hit-testing is indeterminate (e.g., due to expanded section-divider
-        // windows interfering with AX queries).
+        // Expanded divider windows can make AX indeterminate.
         let isInAppMenu: Bool = if let result = appMenuResult {
             result
         } else {
@@ -1896,10 +1783,8 @@ extension HIDEventManager {
             let visibleSection = appState.menuBarManager.section(
                 withName: .visible
             ),
-            // Use the live window frame instead of the debounced controlItem.frame.
-            // controlItem.frame has a 50ms debounce and can be stale immediately
-            // after the context menu closes, causing hit-testing to incorrectly
-            // classify an icon click as empty-space and double-fire show/toggle.
+            // Use the live frame: controlItem.frame is debounced 50ms and can be
+            // stale after the context menu closes, double-firing show/toggle.
             let iceIconFrame = visibleSection.controlItem.window?.frame,
             let mouseLocation = MouseHelpers.locationAppKit
         else {
@@ -1924,8 +1809,7 @@ extension HIDEventManager {
             return false
         }
 
-        // Query AX to determine if the cursor is inside a menu item.
-        // Distinguish between "AX indeterminate" (nil) and "AX succeeded but no hit" (false).
+        // Keep "AX indeterminate" (nil) apart from "no hit" (false).
         guard
             let frontApp = NSWorkspace.shared.menuBarOwningApplication,
             let axApp = AXHelpers.application(for: frontApp),

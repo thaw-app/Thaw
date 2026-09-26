@@ -19,15 +19,13 @@ final class MenuBarAppearanceEditorPanel: NSObject, NSPopoverDelegate {
         NSScreen.screenWithMouse ?? NSScreen.main
     }
 
-    /// The shared app state.
     private weak var appState: AppState?
 
     /// Storage for internal observers.
     private var cancellables = Set<AnyCancellable>()
 
-    /// Observes `appearanceManager.effectiveConfiguration` — what the editor
-    /// itself shows — to keep the popover's content size in sync, replacing
-    /// the old `$configuration.sink`.
+    /// Observes `appearanceManager.effectiveConfiguration` to keep the
+    /// popover's content size in sync.
     private var appearanceConfigurationObservationTask: Task<Void, Never>?
 
     /// The underlying popover.
@@ -170,9 +168,8 @@ private final class MenuBarAppearanceEditorHostingController: NSHostingControlle
     private weak var appState: AppState?
     private var cancellables = Set<AnyCancellable>()
 
-    /// Observes `appearanceManager.effectiveConfiguration` — what the editor
-    /// itself shows — to keep the preferred content size in sync, replacing
-    /// the old `$configuration.sink`.
+    /// Observes `appearanceManager.effectiveConfiguration` to keep the
+    /// preferred content size in sync.
     private var appearanceConfigurationObservationTask: Task<Void, Never>?
 
     init(appState: AppState, onDone: (() -> Void)?) {

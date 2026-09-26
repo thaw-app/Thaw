@@ -17,12 +17,10 @@ import Testing
 /// stores concurrently and each would read the other's. The lock makes the
 /// swap window mutually exclusive.
 ///
-/// - Note: this protects suites that go through the synchronous
-///   `withScratchDefaults`; the async variant serializes through
-///   ``ScratchDefaultsMutex`` instead. A suite that reads the real `Defaults`
-///   domain without taking the lock can still observe someone else's scratch
-///   store. The end state is for every `Defaults`-touching suite to route
-///   through here.
+/// - Note: this protects suites using the synchronous `withScratchDefaults`;
+///   the async variant uses ``ScratchDefaultsMutex``. A suite that reads the
+///   real `Defaults` domain without the lock can still see another suite's
+///   scratch store.
 private let scratchDefaultsLock = OSAllocatedUnfairLock()
 
 /// Serializes the async variant's store swap across the whole process.
@@ -72,19 +70,13 @@ private let scratchDefaultsMutex = ScratchDefaultsMutex()
 /// land in the real `com.stonerl.Thaw` domain and mutate the defaults of
 /// whoever runs the suite.
 ///
-/// This replaces the per-key snapshot/restore that `GeneralSettingsTests` and
-/// `AdvancedSettingsTests` had to do by hand. Those worked, but they could
-/// only protect keys they knew about, and their own doc comments flag that the
-/// approach is unsound once suites run concurrently.
-///
 /// - Important: `Defaults.store` is process-wide. A suite calling this **must**
 ///   be `.serialized`, otherwise a sibling test running in parallel will read
 ///   through this suite's scratch store. Serialization scopes execution within
 ///   a suite, so a `.serialized` suite is safe even though the store is global.
 ///
 /// - Warning: `scratchDefaultsLock` is non-recursive. A nested
-///   `withScratchDefaults` call on the same thread — that is, from inside
-///   `body` — is unsupported and will deadlock.
+///   `withScratchDefaults` call from inside `body` deadlocks.
 @discardableResult
 func withScratchDefaults<Result>(
     sourceLocation: SourceLocation = #_sourceLocation,
@@ -109,11 +101,9 @@ func withScratchDefaults<Result>(
 
 /// Async counterpart to ``withScratchDefaults(sourceLocation:_:)``.
 ///
-/// Saving, installing, and restoring `Defaults.store` are serialized through
-/// ``ScratchDefaultsMutex``: an unfair lock cannot be held across a
-/// suspension point, so this variant suspends on the actor-backed mutex
-/// instead and holds it for the whole body, suspensions included. Prefer the
-/// synchronous variant wherever the body does not actually need to await.
+/// Serialized through ``ScratchDefaultsMutex``, which is held across
+/// suspensions for the whole body. Prefer the synchronous variant when the
+/// body does not need to await.
 ///
 /// - Warning: the mutex is non-recursive: nesting a `withScratchDefaults`
 ///   call inside `body` deadlocks. It is also independent of the synchronous

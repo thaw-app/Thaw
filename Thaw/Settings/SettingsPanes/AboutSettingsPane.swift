@@ -26,8 +26,7 @@ struct AboutSettingsPane: View {
     @State private var copyFeedbackTask: Task<Void, Never>?
 
     var body: some View {
-        // Structured grouped form (macOS-26 organization, 27 design): the app
-        // identity sits in an unbordered header, followed by an Updates card.
+        // App identity in an unbordered header, followed by an Updates card.
         IceForm {
             IceSection(isBordered: false) {
                 appIconAndCopyrightContent

@@ -10,26 +10,18 @@ import Foundation
 /// Canonicalizes identifier orders so a group's members stay contiguous, and
 /// repairs orders where a group has been split across sections.
 ///
-/// This is the invariant half of grouping. ``MenuBarItemGroupResolver`` answers
-/// *what* the groups are; this type answers *what a valid order looks like* and
-/// is applied at the few chokepoints that write layout state, so the planners
-/// downstream can stay identifier-only and group-unaware.
+/// ``MenuBarItemGroupResolver`` says what the groups are; this says what a
+/// valid order looks like. Applied where layout state is written, so the
+/// planners can stay group-unaware.
 ///
-/// Two properties make it safe to run on every write, and both are covered by
-/// tests rather than by comment:
-///
-/// - **Permutation.** `gather` never drops or invents an identifier. That is
-///   what makes it impossible for canonicalization to silently lose an item.
-/// - **Idempotence.** Gathering an already-canonical order changes nothing, so
-///   re-running each cycle produces no write and cannot start a write storm.
+/// Safe on every write because `gather` is a permutation (never loses an
+/// item) and idempotent (no write storm). Both are covered by tests.
 nonisolated enum MenuBarItemGroupPolicy {
     // MARK: - GroupSet
 
-    /// Groups resolved against a live item set, as ordered member identifier
-    /// lists. Deliberately plain strings so the pure planners never need tags.
+    /// Plain strings so the pure planners never need tags.
     struct GroupSet: Equatable, Sendable {
-        /// Member identifiers per group. A group with fewer than two members is
-        /// not a group and is dropped on construction.
+        /// Groups with fewer than two members are dropped on construction.
         let groups: [[String]]
 
         private let indexByIdentifier: [String: Int]
@@ -40,10 +32,9 @@ nonisolated enum MenuBarItemGroupPolicy {
             var kept = [[String]]()
             var index = [String: Int]()
             for members in groups {
-                // An identifier can only belong to one group; first wins, the
-                // same tie-break `MenuBarItemGroupSet.normalized()` uses. A
-                // repeat within one group is claimed once as well, or `gather`
-                // would emit it twice and stop being a permutation.
+                // First group wins, as in `MenuBarItemGroupSet.normalized()`.
+                // Repeats within a group are claimed once too, or `gather`
+                // stops being a permutation.
                 var seen = Set<String>()
                 let unclaimed = members.filter { index[$0] == nil && seen.insert($0).inserted }
                 guard unclaimed.count >= 2 else { continue }
@@ -60,7 +51,6 @@ nonisolated enum MenuBarItemGroupPolicy {
             groups.isEmpty
         }
 
-        /// The index of the group owning `identifier`, if any.
         func groupIndex(of identifier: String) -> Int? {
             indexByIdentifier[identifier]
         }
@@ -72,11 +62,8 @@ nonisolated enum MenuBarItemGroupPolicy {
 
     // MARK: - Report
 
-    /// What a canonicalization pass actually did.
-    ///
-    /// Returned rather than logged: the planners this feeds are pure and
-    /// `nonisolated`, and their purity is load-bearing for their tests. Callers
-    /// log it. A pass that reports nothing performed no write.
+    /// What a canonicalization pass did. Returned rather than logged to keep
+    /// the planners pure; callers log it.
     struct CanonicalizationReport: Equatable, Sendable {
         /// Identifiers whose position changed.
         var movedIdentifiers: [String]
@@ -102,8 +89,6 @@ nonisolated enum MenuBarItemGroupPolicy {
         static let noChange = CanonicalizationReport()
     }
 
-    /// A group that was found spanning more than one section, and the section
-    /// every member was consolidated into.
     struct SectionRepair: Equatable, Sendable {
         let groupIndex: Int
         let from: [MenuBarSection.Name]
@@ -121,10 +106,7 @@ nonisolated enum MenuBarItemGroupPolicy {
     /// Reorders `order` so every group's members sit in one contiguous run,
     /// anchored at the position of the group's leftmost member.
     ///
-    /// Members keep their **current** relative order — gathering never silently
-    /// reorders within a group — and non-members keep theirs. Identifiers that
-    /// belong to no group, and group members absent from `order`, are left
-    /// entirely alone.
+    /// Members and non-members both keep their relative order.
     static func gather(
         groups: GroupSet,
         in order: [String]
@@ -133,7 +115,6 @@ nonisolated enum MenuBarItemGroupPolicy {
             return (order, .noChange)
         }
 
-        // Current positions of each group's members, in order of appearance.
         var memberPositions = [Int: [Int]](minimumCapacity: groups.groups.count)
         for (position, identifier) in order.enumerated() {
             guard let group = groups.groupIndex(of: identifier) else { continue }
@@ -158,8 +139,6 @@ nonisolated enum MenuBarItemGroupPolicy {
         result.reserveCapacity(order.count)
         for (position, identifier) in order.enumerated() {
             if let group = anchors[position] {
-                // Emit the whole group at its leftmost member's slot, in the
-                // members' existing relative order.
                 for memberPosition in memberPositions[group] ?? [] {
                     result.append(order[memberPosition])
                 }
@@ -187,9 +166,8 @@ nonisolated enum MenuBarItemGroupPolicy {
         )
     }
 
-    /// Indices of groups whose members are present but not contiguous in
-    /// `order`. Empty means the order is canonical. Used by tests and by a
-    /// debug-build assertion after a commit.
+    /// Indices of groups whose members are present but not contiguous.
+    /// Empty means the order is canonical.
     static func scattered(groups: GroupSet, in order: [String]) -> [Int] {
         var positions = [Int: [Int]]()
         for (position, identifier) in order.enumerated() {
@@ -209,8 +187,7 @@ nonisolated enum MenuBarItemGroupPolicy {
 
     // MARK: - Section membership
 
-    /// Indices of groups whose members are spread across more than one section.
-    /// Empty means the sections are healthy.
+    /// Indices of groups spread across more than one section.
     static func split(
         groups: GroupSet,
         inSections sections: [MenuBarSection.Name: [String]]
@@ -229,15 +206,11 @@ nonisolated enum MenuBarItemGroupPolicy {
     /// 2. otherwise the section holding the most members;
     /// 3. ties break toward the **most visible** section.
     ///
-    /// Rule 3 matters: repairing toward visibility can never make an item
-    /// unreachable, whereas repairing toward always-hidden could conceal
-    /// something the user never asked to conceal — and on macOS 27 the
-    /// always-hidden reveal gesture may not even be enabled.
-    /// - Parameter gatheringWithin: sections whose *internal* order may be
-    ///   rewritten to make groups contiguous. Membership is repaired for every
-    ///   section regardless; this only controls the reordering step, because on
-    ///   macOS 27 the visible order mirrors live AX geometry and must not be
-    ///   rewritten from persisted state.
+    /// Repairing toward visibility never makes an item unreachable; on macOS 27
+    /// the always-hidden reveal gesture may not even be enabled.
+    /// - Parameter gatheringWithin: Sections whose internal order may be
+    ///   rewritten. Membership is repaired everywhere; on macOS 27 the visible
+    ///   order mirrors live AX geometry and must not be rewritten.
     static func gather(
         groups: GroupSet,
         inSections sections: [MenuBarSection.Name: [String]],
@@ -256,8 +229,6 @@ nonisolated enum MenuBarItemGroupPolicy {
             )
             let members = Set(groups.members(ofGroup: group))
 
-            // Pull every member out of the losing sections, then splice the
-            // whole group into the winner at its first member's position.
             for section in sectionCounts.keys where section != winner {
                 result[section]?.removeAll { members.contains($0) }
                 if result[section]?.isEmpty == true {
@@ -267,10 +238,8 @@ nonisolated enum MenuBarItemGroupPolicy {
             var winnerOrder = result[winner] ?? []
             let present = Set(winnerOrder)
             let missing = groups.members(ofGroup: group).filter { !present.contains($0) }
-            // Splice the newcomers in after the last member already here, so the
-            // members that stayed keep their relative order and the arrivals
-            // land together behind them. Inserting after the *first* member
-            // would drop them into the middle of the run instead.
+            // Insert after the last member, not the first, or the arrivals
+            // land in the middle of the run.
             if let tail = winnerOrder.lastIndex(where: { members.contains($0) }) {
                 winnerOrder.insert(contentsOf: missing, at: tail + 1)
             } else {
@@ -288,7 +257,6 @@ nonisolated enum MenuBarItemGroupPolicy {
             )
         }
 
-        // Then make every eligible section's order contiguous.
         for (section, order) in result where gatheringWithin.contains(section) {
             let gathered = gather(groups: groups, in: order)
             guard gathered.report.didChange else { continue }

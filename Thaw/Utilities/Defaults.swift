@@ -12,16 +12,10 @@ import SwiftUI
 nonisolated enum Defaults {
     /// The store every accessor below reads and writes.
     ///
-    /// Production never assigns this; it stays `.standard` for the life of
-    /// the process. It exists so tests can point the whole `Defaults` facade
-    /// at a scratch suite instead of the user's real `com.stonerl.Thaw`
-    /// domain. Without it, exercising anything that persists a setting
-    /// rewrites the defaults of whoever is running the tests, and the suite
-    /// has to defend itself with per-key snapshot/restore that is not safe
-    /// once tests run in parallel.
-    ///
-    /// `UserDefaults` is itself thread-safe, so the unchecked annotation
-    /// covers only the reassignment, which is confined to test setup.
+    /// Production leaves it `.standard`. Tests point it at a scratch suite so they
+    /// don't rewrite the user's `com.stonerl.Thaw` domain, which per-key
+    /// snapshot/restore can't protect once tests run in parallel. `UserDefaults` is
+    /// thread-safe; the unchecked annotation covers only reassignment in test setup.
     static nonisolated(unsafe) var store: UserDefaults = .standard
 
     /// Returns a dictionary containing the keys and values for
@@ -30,108 +24,54 @@ nonisolated enum Defaults {
         store.persistentDomain(forName: UserDefaults.globalDomain) ?? [:]
     }
 
-    /// Returns the object for the specified key.
-    ///
-    /// - Parameter key: The key in the UserDefaults database
-    ///   to retrieve the value for.
     static func object(forKey key: Key) -> Any? {
         store.object(forKey: key.rawValue)
     }
 
-    /// Returns the string for the specified key.
-    ///
-    /// - Parameter key: The key in the UserDefaults database
-    ///   to retrieve the value for.
     static func string(forKey key: Key) -> String? {
         store.string(forKey: key.rawValue)
     }
 
-    /// Returns the array for the specified key.
-    ///
-    /// - Parameter key: The key in the UserDefaults database
-    ///   to retrieve the value for.
     static func array(forKey key: Key) -> [Any]? {
         store.array(forKey: key.rawValue)
     }
 
-    /// Returns the dictionary for the specified key.
-    ///
-    /// - Parameter key: The key in the UserDefaults database
-    ///   to retrieve the value for.
     static func dictionary(forKey key: Key) -> [String: Any]? {
         store.dictionary(forKey: key.rawValue)
     }
 
-    /// Returns the data for the specified key.
-    ///
-    /// - Parameter key: The key in the UserDefaults database
-    ///   to retrieve the value for.
     static func data(forKey key: Key) -> Data? {
         store.data(forKey: key.rawValue)
     }
 
-    /// Returns the string array for the specified key.
-    ///
-    /// - Parameter key: The key in the UserDefaults database
-    ///   to retrieve the value for.
     static func stringArray(forKey key: Key) -> [String]? {
         store.stringArray(forKey: key.rawValue)
     }
 
-    /// Returns the integer value for the specified key.
-    ///
-    /// - Parameter key: The key in the UserDefaults database
-    ///   to retrieve the value for.
     static func integer(forKey key: Key) -> Int {
         store.integer(forKey: key.rawValue)
     }
 
-    /// Returns the single precision floating point value for
-    /// the specified key.
-    ///
-    /// - Parameter key: The key in the UserDefaults database
-    ///   to retrieve the value for.
     static func float(forKey key: Key) -> Float {
         store.float(forKey: key.rawValue)
     }
 
-    /// Returns the double precision floating point value for
-    /// the specified key.
-    ///
-    /// - Parameter key: The key in the UserDefaults database
-    ///   to retrieve the value for.
     static func double(forKey key: Key) -> Double {
         store.double(forKey: key.rawValue)
     }
 
-    /// Returns the Boolean value for the specified key.
-    ///
-    /// - Parameter key: The key in the UserDefaults database
-    ///   to retrieve the value for.
     static func bool(forKey key: Key) -> Bool {
         store.bool(forKey: key.rawValue)
     }
 
-    /// Returns the url for the specified key.
-    ///
-    /// - Parameter key: The key in the UserDefaults database
-    ///   to retrieve the value for.
     static func url(forKey key: Key) -> URL? {
         store.url(forKey: key.rawValue)
     }
 
-    /// Sets the value for the specified key.
-    ///
-    /// - Parameter key: The key in the UserDefaults database
-    ///   to set the value for.
     static func set(_ value: Any?, forKey key: Key) {
         store.set(value, forKey: key.rawValue)
     }
 
-    /// Removes the value of the specified key.
-    ///
-    /// - Parameter key: The key in the UserDefaults database
-    ///   to remove the value for.
     static func removeObject(forKey key: Key) {
         store.removeObject(forKey: key.rawValue)
     }
@@ -443,18 +383,9 @@ nonisolated extension Defaults {
         /// Milliseconds of input inactivity required before an *automatic*
         /// bulk apply starts issuing its move sequence.
         ///
-        /// `inputPauseThresholdMs` gates each individual move; this gates
-        /// the batch. A batch holds the cursor hidden for its whole length,
-        /// so starting one the instant a late arrival is noticed can take
-        /// the pointer away mid-interaction and then fight the user for it
-        /// move by move. Waiting for a real lull first costs nothing when
-        /// the bar is idle — the common case — and avoids the collision
-        /// entirely when it isn't.
-        ///
-        /// 300 ms is the default: a batch dispatched mid-interaction contests
-        /// the pointer for its whole length, and waiting for one real lull up
-        /// front costs nothing on an idle bar. Set 0 to disable the gate and
-        /// fall back to the per-move pause alone.
+        /// `inputPauseThresholdMs` gates each move; this gates the batch. A batch hides
+        /// the cursor for its whole length, so starting mid-interaction fights the user
+        /// move by move. Set 0 to fall back to the per-move pause alone.
         ///
         /// Hidden diagnostic flag; not exposed in Settings. Default: 300.
         case bulkApplyIdleThresholdMs = "bulkApplyIdleThresholdMs"
@@ -462,13 +393,9 @@ nonisolated extension Defaults {
         /// Maximum milliseconds an automatic bulk apply waits for the idle
         /// window described by ``bulkApplyIdleThresholdMs``.
         ///
-        /// The wait defers, it never cancels. A user who keeps the mouse
-        /// moving indefinitely would otherwise starve the apply forever,
-        /// and a layout that is never restored is a worse outcome than one
-        /// restored during input. Once the cap elapses the batch proceeds
-        /// as it always did.
-        ///
-        /// Ignored when the threshold is 0.
+        /// The wait defers, never cancels: a user who never stops moving would otherwise
+        /// starve the apply forever. After the cap the batch proceeds. Ignored when the
+        /// threshold is 0.
         ///
         /// Hidden diagnostic flag; not exposed in Settings. Default: 2000.
         case bulkApplyIdleWaitCapMs = "bulkApplyIdleWaitCapMs"
@@ -476,37 +403,21 @@ nonisolated extension Defaults {
         /// Whether a bulk apply enforces item order *within* the hidden and
         /// always-hidden sections, rather than only their membership.
         ///
-        /// Every move costs the same whether or not its result is visible:
-        /// the cursor is hijacked, a drag is synthesised, the landing is
-        /// polled. On a bar with a well-populated hidden section a large
-        /// share of a batch can be spent reordering items parked thousands
-        /// of points off-screen, which the Thaw Bar renders from the cache
-        /// anyway. Setting this to false surrenders that ordering and keeps
-        /// membership, shortening batches on exactly the bars where long
-        /// batches hurt most.
-        ///
-        /// False by default: on a well-populated hidden section the ordering
-        /// moves are the bulk of a batch and none of their results are
-        /// visible, so surrendering them is what keeps batches short enough
-        /// not to fight the user. Set true to restore order as well as
-        /// membership inside the concealed sections.
+        /// Every move hijacks the cursor whatever its result, and on a well-populated
+        /// hidden section most of a batch reorders items parked off-screen that the Thaw
+        /// Bar renders from the cache anyway. False keeps membership only, so batches
+        /// stay short. Set true to restore order inside the concealed sections.
         ///
         /// Hidden diagnostic flag; not exposed in Settings. Default: false.
         case enforceConcealedSectionOrder = "enforceConcealedSectionOrder"
 
         /// Whether Thaw rearranges the bar on its own initiative.
         ///
-        /// The escape hatch for bars where the automatic paths misbehave in
-        /// ways no gate has caught. Set to false and the late-arrival
-        /// re-sort and the saved-layout restore both stand down; applying a
-        /// profile still works, so the user keeps a way to arrange the bar
-        /// deliberately — they just decide when.
+        /// The escape hatch. False stands down the late-arrival re-sort and the
+        /// saved-layout restore; applying a profile still works.
         ///
-        /// This is the blunt instrument. The graduated responses —
-        /// ``bulkApplyIdleThresholdMs``, ``enforceConcealedSectionOrder``,
-        /// and the unfinished-batch rationing in
-        /// `automaticBulkApplyPermitted` — are all better first attempts.
-        /// Reach for this when they have not helped.
+        /// Try ``bulkApplyIdleThresholdMs``, ``enforceConcealedSectionOrder``, and the
+        /// unfinished-batch rationing in `automaticBulkApplyPermitted` first.
         ///
         /// Hidden diagnostic flag; not exposed in Settings. Default: true.
         case automaticArrangementEnabled = "automaticArrangementEnabled"
@@ -514,28 +425,13 @@ nonisolated extension Defaults {
         /// Whether synthetic move events are posted to the process that owns
         /// the item's *window* rather than the app that owns the *item*.
         ///
-        /// On macOS 26 those are different processes: Control Center hosts
-        /// every status item window, so the CG owner of the window Thaw is
-        /// dragging is Control Center, while `sourcePID` names the app whose
-        /// status item it logically is. Thaw has always preferred
-        /// `sourcePID`, which was right when the owning app really did own
-        /// the window, and on 26 targets a process that does not own the
-        /// window being dragged.
-        ///
-        /// Two consequences, both confirmed by the rc.3 test build. Moves
-        /// that failed with `itemResponseTimeout` were failing because the
-        /// events went to the wrong process (#900, #923, and the
-        /// notch-overflow ejections in #924). And an item whose owning app
-        /// never resolved need not be
-        /// immovable at all: with the host as the target, the move does not
-        /// require knowing who owns the item, so
-        /// ``MenuBarItem/ImmovabilityReason/unresolvedControlCenterPlaceholder``
-        /// stops applying while this is on, which is now the shipping
-        /// posture.
-        ///
-        /// On by default: on macOS 26 the window's owner is the process that
-        /// actually receives the drag, and addressing it is what lets a
-        /// Control Center slot with no resolved owner move at all.
+        /// On macOS 26 Control Center hosts every status item window, so the window's CG
+        /// owner is Control Center while `sourcePID` names the item's app. Events sent to
+        /// `sourcePID` reach a process that doesn't own the dragged window, which caused
+        /// the `itemResponseTimeout` failures (#900, #923, #924). Targeting the host also
+        /// lets a slot with no resolved owner move, so
+        /// ``MenuBarItem/ImmovabilityReason/unresolvedControlCenterPlaceholder`` stops
+        /// applying while this is on.
         ///
         /// Hidden diagnostic flag; not exposed in Settings. Default: true.
         case postMoveEventsToWindowOwner = "postMoveEventsToWindowOwner"
@@ -557,20 +453,14 @@ nonisolated extension Defaults {
         /// drags it to the destination (a faithful gesture) instead of the
         /// press-at-destination "teleport".
         ///
-        /// On macOS 26 Control Center hosts every status item as a remote
-        /// FrontBoard scene owned by the source app. The teleport presses at
-        /// the destination with the item's window stamped and relies on
-        /// Control Center to relocate a passive item; when the source app's
-        /// status-item scene is cold, the drop can complete on Control
-        /// Center's side while the app never commits the new position, so
-        /// Control Center restores the item's autosaved slot (the "revert").
-        /// Pressing on the item makes the source app start the drag itself
-        /// (`NSStatusItemStartDragAction`) with a warm scene. The transport
-        /// classifier uses this only for an on-screen path inside one safe
-        /// notch segment. Parked and cross-notch endpoints have explicitly
-        /// named teleport transports; invalid or cross-display geometry is
-        /// rejected rather than silently falling back. Inferred from field
-        /// logs, not yet confirmed on a live bar, so it is opt-in.
+        /// On macOS 26 each status item is a remote FrontBoard scene hosted by Control
+        /// Center. The teleport relies on Control Center relocating a passive item; with a
+        /// cold source-app scene the drop can finish while the app never commits, and
+        /// Control Center restores the autosaved slot (the "revert"). Pressing on the item
+        /// makes the app start the drag itself (`NSStatusItemStartDragAction`) with a warm
+        /// scene. Used only for on-screen paths inside one safe notch segment; parked and
+        /// cross-notch endpoints use named teleports, and invalid or cross-display geometry
+        /// is rejected. Inferred from field logs, not confirmed on a live bar, so opt-in.
         ///
         /// Enable with:
         ///   defaults write com.stonerl.Thaw faithfulDragMoves -bool YES

@@ -9,55 +9,29 @@ import Foundation
 import Testing
 @testable import Thaw
 
-/// Covers ``SettingsURIHandler``'s *read* surface — the `get` action, the way
-/// it answers, and the per-display lookups both halves of the handler share.
+/// Covers ``SettingsURIHandler``'s `get` action, how it answers, and the
+/// per-display lookups shared with `set` and `toggle`.
 ///
-/// `SettingsURIHandlerTests` covers the pure key tables and
-/// `SettingsURIHandlerApplyTests` covers `set`/`toggle`; this suite drives the
-/// paths that hand data back to a *third-party app*. That makes refusal the
-/// interesting behaviour: a callback URL is an address the handler would
-/// otherwise hand to `NSWorkspace`, so every malformed or dangerous one has to
-/// be turned away before it is opened. Nothing here supplies a callback the
-/// handler would accept, precisely so the suite never opens a URL or launches
-/// another app.
+/// A callback URL would otherwise go to `NSWorkspace`, so every malformed or
+/// dangerous one must be refused before it is opened. No test supplies a
+/// callback the handler would accept, so nothing opens a URL or launches an app.
 ///
-/// Three shapes of assertion appear below:
+/// Response bodies are not observable here: the payload travels down a
+/// callback URL, and the `distnoted` broadcast does not deliver back into the
+/// test host. Tests assert the returned Boolean (a broadcast request succeeds
+/// only when it produced data, like a callback request) or the per-display
+/// notification's `userInfo`. The `iceBarLocation valid values` test calls
+/// `getSettingValue` directly instead.
 ///
-/// - the Boolean the handler returns, which is its contract with the URL
-///   dispatcher,
-/// - the in-process notification the per-display lookups post, whose `userInfo`
-///   carries the scope and value the handler resolved, and
-/// - a direct call into `getSettingValue`, used once to pin the `validValues`
-///   map a `thaw://get?key=iceBarLocation` advertises after it silently
-///   dropped two enum cases.
-///
-/// The response *body* is not asserted through its delivery channels, because
-/// it is not observable that way: the full payload only ever travels down a
-/// callback URL — which would mean opening a URL and launching another app —
-/// and the broadcast alternative goes out through `distnoted`, which does not
-/// deliver back into the test host. The one body-level assertion, the
-/// `iceBarLocation valid values` test, calls `getSettingValue` directly
-/// instead: that function is a read with no delivery side effects, so pinning
-/// its return advertises the map without ever opening a URL or posting a
-/// distributed notification. Everywhere else, what is asserted is the Boolean:
-/// a broadcast request reports success only when it produced data, the same way
-/// a callback request does, and no response, however shaped, talks its way past
-/// callback validation.
-///
-/// Every test body runs inside `withScratchDefaults`, so the handler's reads
-/// and writes go to a throwaway store rather than the real `com.stonerl.Thaw`
-/// domain, and each test starts from an empty store.
+/// Every test runs inside `withScratchDefaults`.
 @MainActor
 @Suite("Settings URI handler get", .serialized)
 struct SettingsURIHandlerGetTests {
     // MARK: Helpers
 
     /// Persists a configuration for `uuid` so the handler accepts it as a
-    /// known display.
-    ///
-    /// The handler accepts a display that is either connected *or* has a
-    /// persisted configuration, and a test cannot attach a screen — so the
-    /// persisted half is the only door into the specific-display code paths.
+    /// known display. A test cannot attach a screen, so this is the only way
+    /// into the specific-display paths.
     private func persistConfiguration(
         _ configuration: DisplayIceBarConfiguration,
         forUUID uuid: String
@@ -282,9 +256,9 @@ struct SettingsURIHandlerGetTests {
     ])
     func unknownKeyIsRefusedOverBroadcast(_ key: String) throws {
         try withScratchDefaults { _ in
-            // The acknowledgement still goes out unchanged — it is a fixed shape a
-            // third-party integrator reads — but the handler reports the failure to
-            // its own caller, exactly as the callback path does.
+            // The acknowledgement goes out unchanged, since integrators read its fixed
+            // shape, but the handler reports the failure to its caller, as the callback
+            // path does.
             #expect(
                 !SettingsURIHandler.handleGet(
                     key: key,
@@ -425,11 +399,9 @@ struct SettingsURIHandlerGetTests {
             let uuid = UUID().uuidString
             try persistConfiguration(.defaultConfiguration, forUUID: uuid)
 
-            // The validValues map drifted to three entries when IceBarLocation
-            // grew from three to five cases, so leftAligned and rightAligned
-            // could no longer be discovered through thaw://get. Drive the
-            // expectation from IceBarLocation itself so a future case can never
-            // silently drop out of the advertised set the way these two did.
+            // validValues drifted to three entries when IceBarLocation grew to five
+            // cases, hiding leftAligned and rightAligned from thaw://get. Derive the
+            // expectation from IceBarLocation so no future case can drop out.
             let value = try #require(
                 SettingsURIHandler.getSettingValue(key: "iceBarLocation", displayUUID: uuid)
             )
@@ -629,9 +601,9 @@ struct SettingsURIHandlerGetTests {
             SettingsURIHandler.addToWhitelist(bundleId: "com.apple.finder")
             #expect(SettingsURIHandler.isWhitelisted(bundleIdentifier: "com.apple.finder"))
 
-            // The identity has to be recorded even though the bundle ID is already
-            // listed. Once it is, the entry is verified against it instead of the
-            // unsigned-legacy rule — and Finder does not carry that team.
+            // The identity must be recorded even though the bundle ID is already
+            // listed. The entry is then verified against it instead of the
+            // unsigned-legacy rule, and Finder does not carry that team.
             SettingsURIHandler.addToWhitelist(bundleId: "com.apple.finder", teamIdentifier: "ABCDE12345")
 
             #expect(!SettingsURIHandler.isWhitelisted(bundleIdentifier: "com.apple.finder"))

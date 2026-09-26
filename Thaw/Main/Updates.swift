@@ -30,10 +30,8 @@ final class UpdatesManager: NSObject {
     /// Tracks whether the running check was started by the macOS
     /// compatibility alert.
     ///
-    /// That alert promises the user a build for a macOS this one does not
-    /// support. A background check that finds nothing is silent, so the
-    /// promise has to survive the check to be kept: an empty alpha feed
-    /// sends them to the releases page rather than nowhere.
+    /// A background check that finds nothing is silent, so this flag keeps the
+    /// alert's promise: an empty alpha feed opens the releases page instead.
     @ObservationIgnored
     private var isCheckingAfterCompatibilityWarning = false
 
@@ -68,9 +66,7 @@ final class UpdatesManager: NSObject {
     /// The update channel the user is subscribed to.
     var updateChannel: UpdateChannel {
         get {
-            // Computed over UserDefaults, so the @Observable macro cannot
-            // track it automatically; register/notify Observation manually
-            // (same pattern as the Sparkle-backed properties below).
+            // Computed over UserDefaults, so Observation is registered by hand.
             access(keyPath: \.updateChannel)
             return Self.storedUpdateChannel()
         }
@@ -91,11 +87,8 @@ final class UpdatesManager: NSObject {
 
     /// Reads the stored channel, falling back to the flag that preceded it.
     ///
-    /// Builds before the split offered a single "Development" setting whose
-    /// subscribers received alpha and beta together. They migrate to beta,
-    /// not alpha: alpha is now a different app on a different feed, and
-    /// moving someone onto it without them asking would swap the product
-    /// out from under them.
+    /// The old "Development" flag migrates to beta, not alpha: alpha is now a
+    /// different app, and moving users onto it unasked would swap the product.
     static nonisolated func storedUpdateChannel(
         on version: OperatingSystemVersion = ProcessInfo.processInfo.operatingSystemVersion
     ) -> UpdateChannel {
@@ -106,25 +99,18 @@ final class UpdatesManager: NSObject {
         } else {
             Defaults.store.bool(forKey: "AllowsBetaUpdates") ? .beta : .stable
         }
-        // A channel the running system cannot be offered is not honored
-        // either, or a user who selected alpha and then moved back to a
-        // supported macOS would stay pinned to the rewrite's feed and be
-        // offered nothing at all. Beta rather than stable: they had opted
-        // out of stable, and that much of the choice still applies.
+        // A channel this system can't be offered falls back to beta, so alpha
+        // users back on a supported macOS aren't stranded. Beta, since they left stable.
         guard stored.isAvailable(on: version) else {
             return .beta
         }
         return stored
     }
 
-    /// `automaticallyChecksForUpdates`/`automaticallyDownloadsUpdates` are
-    /// computed properties backed by Sparkle's `updater`, not by a stored
-    /// property the @Observable macro can track automatically. The old
-    /// Combine `objectWillChange.send()` poke is replaced with the macro-
-    /// synthesized `access(keyPath:)`/`withMutation(keyPath:)` calls, which
-    /// register/notify Observation access for a specific property exactly
-    /// like a stored property would.
     /// A Boolean value that indicates whether to automatically check for updates.
+    ///
+    /// Backed by Sparkle's `updater`, so Observation is registered by hand
+    /// with `access(keyPath:)`/`withMutation(keyPath:)`.
     var automaticallyChecksForUpdates: Bool {
         get {
             access(keyPath: \.automaticallyChecksForUpdates)
@@ -179,10 +165,7 @@ final class UpdatesManager: NSObject {
     /// Configures the internal observers for the manager.
     private func configureCancellables() {
         var c = Set<AnyCancellable>()
-        // `assign(to: &$property)` relied on the Combine `@Published`
-        // projection, which no longer exists now that this class is
-        // @Observable. Replaced with an explicit `.sink` that writes the
-        // plain property (weak self, since KVO publishers can outlive us).
+        // Weak self: KVO publishers can outlive us.
         updater.publisher(for: \.canCheckForUpdates)
             .sink { [weak self] value in
                 self?.canCheckForUpdates = value
@@ -218,11 +201,9 @@ final class UpdatesManager: NSObject {
     /// Subscribes to the alpha channel and looks for the build that supports
     /// the running macOS, falling back to the releases page.
     ///
-    /// Called from ``MacOSCompatibilityWarning`` once the user accepts the
-    /// offer. The check runs in the background so that the only thing the
-    /// user sees is its outcome: either Sparkle presenting the alpha build,
-    /// or the releases page, which is where the promise lands while the feed
-    /// still carries no alpha item.
+    /// Called from ``MacOSCompatibilityWarning`` once the user accepts. The
+    /// check runs in the background, so the user only sees the alpha build
+    /// or the releases page.
     func checkForAlphaUpdateAfterCompatibilityWarning() {
         beginCompatibilityCheck()
         #if DEBUG
@@ -231,27 +212,24 @@ final class UpdatesManager: NSObject {
             updateChannel = .alpha
             resolveCompatibilityCheckWithReleasesPage()
         #else
-            // Order matters: storing the channel schedules the one background
-            // check this needs, and that task only checks once the updater is
-            // running. Asking again here would open a second session Sparkle
-            // would drop.
+            // Storing the channel schedules the check; asking again would open a
+            // second session that Sparkle drops.
             startUpdaterIfNeeded()
             updateChannel = .alpha
         #endif
     }
 
-    /// Answers the compatibility alert's promise with the releases page, if
-    /// the check it started is the one that just ended empty.
-    ///
-    /// A check that finds nothing also aborts with `SUNoUpdateError`, and one
-    /// that never reaches the feed only aborts, so both endings call this and
-    /// the flag decides which of them arrived first.
     /// Arms the promise the compatibility alert just made, so that whichever
     /// way the check ends, the ending is recognized as this one's.
     func beginCompatibilityCheck() {
         isCheckingAfterCompatibilityWarning = true
     }
 
+    /// Answers the compatibility alert's promise with the releases page, if
+    /// the check it started is the one that just ended empty.
+    ///
+    /// An empty check also aborts with `SUNoUpdateError`, so both endings call
+    /// this and the flag decides which arrived first.
     func resolveCompatibilityCheckWithReleasesPage() {
         guard isCheckingAfterCompatibilityWarning else {
             return
@@ -298,10 +276,8 @@ extension UpdatesManager: SPUUpdaterDelegate {
 
     /// Pins the appcast feed to the URL declared in Info.plist.
     ///
-    /// Without this, Sparkle resolves the feed as user defaults → Info.plist,
-    /// so a stray `defaults write … SUFeedURL …` (or any process writing to
-    /// the app's defaults) could point update checks at a foreign server.
-    /// Answering from the delegate short-circuits that lookup.
+    /// Otherwise Sparkle prefers a `SUFeedURL` user default over Info.plist,
+    /// so anything writing the app's defaults could redirect update checks.
     func feedURLString(for _: SPUUpdater) -> String? {
         Bundle.main.object(forInfoDictionaryKey: "SUFeedURL") as? String
     }
@@ -368,19 +344,12 @@ extension UpdatesManager: @MainActor SPUStandardUserDriverDelegate {
 
 /// A stream of releases the user can subscribe to.
 ///
-/// All three share the feed named by `SUFeedURL` and differ only in which
-/// `sparkle:channel` tags they accept: beta takes `beta`, alpha takes
-/// `alpha`, and neither takes the other. Alpha is not the same product as
-/// the other two, being the rewrite built against the next macOS, but it
-/// does not need a feed of its own to stay apart from beta.
+/// All three share the `SUFeedURL` feed and differ only in the
+/// `sparkle:channel` tags they accept. Alpha is the rewrite for the next macOS.
 ///
-/// It cannot stay apart from stable, though. Sparkle's `allowedChannels`
-/// only widens what an updater accepts: an item carrying no `sparkle:channel`
-/// is on the default channel, and per `SPUUpdaterDelegate`, "the default
-/// channel is always included in the allowed set". Every subscriber therefore
-/// sees the stable items. They stop mattering because Sparkle offers the
-/// newest allowed item, and the rewrite's version line runs ahead of the
-/// shipping app's, so a stable release can never outrank an alpha one.
+/// Sparkle always allows the default (untagged, stable) channel, so every
+/// subscriber sees stable items; the alpha version line runs ahead, so stable
+/// never outranks it.
 nonisolated enum UpdateChannel: String, CaseIterable, Identifiable {
     /// Released builds.
     case stable
@@ -400,10 +369,8 @@ nonisolated enum UpdateChannel: String, CaseIterable, Identifiable {
 
     /// Whether this channel can be offered on a system running `version`.
     ///
-    /// Alpha is the rewrite built against the macOS this build does not
-    /// support, so it is offered only there. Showing it earlier would
-    /// advertise a track whose builds the user cannot run, and hide the
-    /// shipping app behind an update that would never arrive.
+    /// Alpha is offered only on the macOS this build doesn't support, since
+    /// elsewhere its builds can't run.
     func isAvailable(on version: OperatingSystemVersion) -> Bool {
         switch self {
         case .stable, .beta:
@@ -416,10 +383,8 @@ nonisolated enum UpdateChannel: String, CaseIterable, Identifiable {
     /// The `sparkle:channel` values an appcast item may carry and still be
     /// offered to a subscriber of this channel.
     ///
-    /// Sparkle always adds the default channel to the allowed set, so every
-    /// subscriber sees the untagged stable items too. That is harmless while
-    /// stable stays on the 2.x line: Sparkle offers the newest allowed item,
-    /// and an alpha subscriber's 3.x item outranks anything stable can carry.
+    /// Sparkle always adds the untagged stable items too, which is harmless
+    /// while stable stays on 2.x and alpha on 3.x.
     var allowedSparkleChannels: Set<String> {
         switch self {
         case .stable: []

@@ -8,15 +8,10 @@
 import Testing
 @testable import Thaw
 
-/// Characterization tests for LayoutSolver.planUnmanagedPlacement.
-///
-/// Pins down the placement decision for items present in the live menu
-/// bar but not covered by a profile spec. Saved positions win; otherwise
-/// the user's NewItemsPlacement preference applies; otherwise fall back
-/// to the section default.
+/// LayoutSolver.planUnmanagedPlacement for items outside the profile: saved
+/// positions win, then NewItemsPlacement, then the section default.
 @Suite("Plan unmanaged placement")
 struct PlanUnmanagedPlacementTests {
-    /// All unmanaged items have saved positions → all placements are .saved.
     @Test("Unmanaged items with saved positions all get saved placements")
     func allSavedReturnsSavedPlacements() {
         let saved: [String: [String]] = [
@@ -40,8 +35,6 @@ struct PlanUnmanagedPlacementTests {
         #expect(result["com.c.app:C"] == .saved(section: .hidden, index: 0))
     }
 
-    /// No saved positions, no anchor → all .newItemDefault in the
-    /// new-items section.
     @Test("An unseen item with no anchor lands in the new-items section")
     func allUnseenReturnsNewItemDefault() {
         let placement = MenuBarItemManager.NewItemsPlacement(
@@ -60,7 +53,6 @@ struct PlanUnmanagedPlacementTests {
         #expect(result["com.new.app:Status"] == .newItemDefault(section: .hidden))
     }
 
-    /// Mixed: one saved, one unseen → correct per-uid placements.
     @Test("A mix of saved and unseen items gets per-uid placements")
     func mixedSavedAndUnseen() {
         let saved: [String: [String]] = [
@@ -83,9 +75,7 @@ struct PlanUnmanagedPlacementTests {
         #expect(result["com.new.app:Status"] == .newItemDefault(section: .hidden))
     }
 
-    /// Multi-instance: only one instance is saved, the other instance is
-    /// the unmanaged one. baseID fallback gives the unmanaged instance
-    /// the saved position (treating them as fungible).
+    /// Only one instance is saved; the baseID fallback treats instances as fungible.
     @Test("A different instance index falls back to the saved baseID slot")
     func multiInstanceBaseIDFallback() {
         let saved: [String: [String]] = [
@@ -97,8 +87,7 @@ struct PlanUnmanagedPlacementTests {
             relation: .sectionDefault
         )
 
-        // A different instance index appears. Exact match fails, baseID
-        // match succeeds → .saved.
+        // The exact match fails; the baseID match succeeds.
         let result = LayoutSolver.planUnmanagedPlacement(
             unmanagedUIDs: ["com.example.app:Status:7"],
             savedSectionOrder: saved,
@@ -112,8 +101,6 @@ struct PlanUnmanagedPlacementTests {
         )
     }
 
-    /// NewItemsPlacement configured with an anchor that's currently
-    /// present → .newItemAnchored returned for an unseen item.
     @Test("A present anchor produces an anchored placement")
     func anchorPlacementWhenAnchorPresent() {
         let placement = MenuBarItemManager.NewItemsPlacement(
@@ -138,8 +125,6 @@ struct PlanUnmanagedPlacementTests {
         )
     }
 
-    /// NewItemsPlacement anchor configured but anchor item is absent from
-    /// the current menu bar → fall back to .newItemDefault.
     @Test("An absent anchor falls back to the section default")
     func anchorAbsentFallsBackToDefault() {
         let placement = MenuBarItemManager.NewItemsPlacement(
@@ -158,8 +143,7 @@ struct PlanUnmanagedPlacementTests {
         #expect(result["com.new.app:Status"] == .newItemDefault(section: .visible))
     }
 
-    /// An anchor persisted under a helper namespace matches the live item,
-    /// and the placement names the live UID the reconciler resolves. (#1069)
+    /// A helper-namespace anchor matches the live item and names its live UID.
     @Test("A canonicalized anchor matches its live item")
     func canonicalizedAnchorMatchesLiveItem() {
         let placement = MenuBarItemManager.NewItemsPlacement(
@@ -187,13 +171,9 @@ struct PlanUnmanagedPlacementTests {
 
     // MARK: Volatile-title identities (#815)
 
-    /// A volatile-title owner is saved under whatever its title was at the
-    /// time and carries a different one now, so the exact lookup misses. The
-    /// baseID fallback misses too, because for these owners the title *is*
-    /// the volatile part, so `namespace:title` differs just as the full
-    /// identifier does. Without a canonical comparison the item arrives here
-    /// with no saved position and is placed by newItemDefault — dropping the
-    /// lyrics back into the hidden section the user dragged them out of.
+    /// A volatile-title owner's title is the volatile part, so both the exact and
+    /// baseID lookups miss. Without canonical comparison the lyrics land back in
+    /// the hidden section the user dragged them out of.
     @Test("A canonicalized identity reuses its saved position")
     func canonicalIdentityReusesSavedPosition() {
         let owner = MenuBarItemTag.lyricsXBundleID
@@ -218,7 +198,7 @@ struct PlanUnmanagedPlacementTests {
         #expect(result[liveUID] != .newItemDefault(section: .hidden))
     }
 
-    /// The same for the metric owner the canonicalizer was built for.
+    /// The same for the metric owner.
     @Test("A changed metric reading reuses its saved position")
     func changedMetricReusesSavedPosition() {
         let owner = MenuBarItemTag.iStatMenusStatusBundleID
@@ -240,9 +220,7 @@ struct PlanUnmanagedPlacementTests {
         #expect(result[liveUID] == .saved(section: .hidden, index: 0))
     }
 
-    /// Canonicalization preserves the instance index, so two items from one
-    /// opaque owner must still resolve to their own saved entries rather than
-    /// both collapsing onto the first.
+    /// Canonicalization keeps the instance index, so two items from one owner keep their own entries.
     @Test("Instance indexes still separate two items from one owner")
     func instanceIndexesResolveSeparately() {
         let owner = MenuBarItemTag.lyricsXBundleID

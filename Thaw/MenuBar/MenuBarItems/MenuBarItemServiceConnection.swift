@@ -15,32 +15,25 @@ import XPC
 extension MenuBarItemService {
     /// A connection to the `MenuBarItemService` XPC service.
     final class Connection: Sendable {
-        /// The shared connection.
         static let shared = Connection()
 
-        /// The connection's underlying session.
         private let session: Session
 
-        /// The connection's diagnostic logger.
         private let diagLog: DiagLog
 
         /// Tracks the one logging configuration the service is allowed to be
         /// missing at a time.
         private struct LoggingSyncState {
-            /// Whether a request is on the wire right now. Only one may be:
-            /// replies can overtake each other, and the loser would leave the
-            /// service pointed at a file the app has already rotated away.
+            /// Only one request may be in flight: replies can overtake each
+            /// other and leave the service on a rotated-away file.
             var isSending = false
-            /// Whether the service still owes a configuration. Set when a push
-            /// fails, and when the XPC session is dropped — a service that
-            /// restarts has no idea which file the app is writing to, and
-            /// nothing else would ever tell it.
+            /// Set when a push fails or the session drops, since a restarted
+            /// service doesn't know which file the app is writing to.
             var isPending = false
         }
 
         private let loggingSync: OSAllocatedUnfairLock<LoggingSyncState>
 
-        /// Creates a new connection.
         private init() {
             let queue = DispatchQueue.targetingGlobal(
                 label: "MenuBarItemService.Connection.queue",
@@ -56,29 +49,15 @@ extension MenuBarItemService {
             self.diagLog = diagLog
         }
 
-        /// Starts the connection.
         func start() async {
             diagLog.debug("Starting MenuBarItemService connection")
 
-            // If the main app already has a diagnostic log file open,
-            // hand its path to the XPC service so both processes append
-            // to the same file. Sent before the start request so the
-            // XPC service is logging to disk by the time it handles any
-            // subsequent traffic. When file logging is off in the main
-            // app currentLogFile is nil and the XPC service simply logs
-            // to OSLog only, matching the prior release-build behaviour.
+            // Send the log file and retention policy before the start request,
+            // even with logging off. Only one push on the launch path, since
+            // AppState.setupTask awaits start(); a failure retries later.
             //
-            // Sent unconditionally: even with logging off, this hands over the
-            // retention policy the service prunes the shared directory by.
-            // Only the initial push runs on the launch path: AppState.setupTask
-            // awaits start() before the rest of its setup, so the retry loop's
-            // 2s sleeps must not sit in between. A failing push marks the work
-            // pending and retries off the launch path.
-            //
-            // Cleared before the send, the way `syncLogging()` does it, and
-            // never after: the session can be dropped while the request is in
-            // flight, and the invalidation that marks the configuration
-            // outstanding again must not be undone by this send's success.
+            // Cleared before the send, never after, so an invalidation during
+            // the send can't be undone by its success.
             loggingSync.withLock { $0.isPending = false }
             let accepted = await sendLoggingConfiguration()
             if !accepted || loggingSync.withLock({ $0.isPending }) {
@@ -101,16 +80,10 @@ extension MenuBarItemService {
         /// right now, or turns its file logging off when there is none, and
         /// hands over the retention policy along with it.
         ///
-        /// Called at startup, on every log rotation, and when the user changes
-        /// a diagnostics setting. The state is read here, at send time, rather
-        /// than captured by the caller: a notification that was queued before a
-        /// rotation would otherwise point the service at the file that rotation
-        /// has already replaced.
+        /// State is read at send time, so a notification queued before a
+        /// rotation can't point the service at the replaced file.
         func syncLogging() async {
-            // One sender at a time. A second caller only marks the work as
-            // outstanding: the sender already running will pick it up, and the
-            // state it reads then is newer than anything this caller could
-            // pass along.
+            // One sender at a time; other callers only mark work pending.
             let isSender = loggingSync.withLock { state -> Bool in
                 state.isPending = true
                 guard !state.isSending else { return false }
@@ -125,12 +98,9 @@ extension MenuBarItemService {
                     state.isPending = false
                     return true
                 }
-                // No outstanding work: release the sender role in the same
-                // critical section that observed the empty flag. Clearing it
-                // later (after the lock was released) raced a caller that
-                // arrived in between — it saw isSending set, declined to
-                // send, and the pending flag it had just set was stranded
-                // with no sender left to service it.
+                // Release the sender role in the same critical section that
+                // saw no pending work, or a caller arriving between could
+                // strand its pending flag.
                 state.isSending = false
                 return false
             }) {
@@ -139,16 +109,12 @@ extension MenuBarItemService {
                     continue
                 }
 
-                // Put the work back and try again shortly. Leaving it to the
-                // next request would be enough on a busy app, but a quiet one
-                // could sit for minutes with the service writing to a file this
-                // process has already rotated away.
+                // Retry soon: a quiet app could leave the service writing to a
+                // rotated-away file for minutes.
                 loggingSync.withLock { $0.isPending = true }
                 attemptsLeft -= 1
                 guard attemptsLeft > 0 else {
-                    // Exhausted: the pending flag stays set for the next
-                    // trigger; release the sender role explicitly, since the
-                    // loop exit above is what normally clears it.
+                    // Leave the pending flag for the next trigger.
                     loggingSync.withLock { $0.isSending = false }
                     break
                 }
@@ -176,16 +142,10 @@ extension MenuBarItemService {
             return true
         }
 
-        /// Returns the source process identifiers for the given windows in a
-        /// single batch XPC request, avoiding concurrent thread explosion
-        /// in the XPC service.
+        /// One batch request, avoiding a thread explosion in the XPC service.
         func sourcePIDs(for windows: [WindowInfo]) async -> [pid_t?] {
-            // The app's most frequent request, and so the cheapest place to
-            // notice that the service is owed a logging configuration. Not
-            // awaited: a sync stuck in its retry cycle sleeps for seconds and
-            // must not delay the request — the kicked-off task re-enters
-            // syncLogging, whose single-sender lock makes extra kickoffs
-            // no-ops.
+            // The most frequent request, so a cheap place to catch a pending
+            // logging sync. Not awaited: its retries sleep for seconds.
             if loggingSync.withLock({ $0.isPending }) {
                 Task { await syncLogging() }
             }
@@ -209,24 +169,15 @@ extension MenuBarItemService {
 extension MenuBarItemService {
     /// A wrapper around an XPC session.
     private final nonisolated class Session: Sendable {
-        /// A session's underlying storage.
-        ///
-        /// Self-locking: every access to the stored session, including the
-        /// invalidation fired by the XPC cancellation handler on an
-        /// arbitrary thread, goes through `sessionLock`. The cancellation
-        /// handler previously wrote `session = nil` outside the lock that
-        /// guarded every other access, racing `getSession`, and a stale
-        /// handler could nil out a newer session created after the one it
-        /// belonged to.
+        /// Every access goes through `sessionLock`, including the cancellation
+        /// handler, so a stale handler can't nil out a newer session.
         private final nonisolated class Storage: @unchecked Sendable {
             private let name = MenuBarItemService.name
             private let sessionLock = OSAllocatedUnfairLock<XPCSession?>(initialState: nil)
             private let queue: DispatchQueue
             private let diagLog: DiagLog
 
-            /// Called when a session is dropped, so state the peer only learns
-            /// by being told — the diagnostic log path — can be sent again to
-            /// whatever process comes back.
+            /// Called when a session drops, so the log path can be resent.
             private let onInvalidate: @Sendable () -> Void
 
             init(queue: DispatchQueue, diagLog: DiagLog, onInvalidate: @escaping @Sendable () -> Void) {
@@ -241,28 +192,22 @@ extension MenuBarItemService {
                         return session
                     }
                     diagLog.debug("getOrCreateSession: creating new XPC session for service '\(self.name)'")
-                    // Box so the cancellation handler can identify the session
-                    // it belongs to: the handler is passed to the initializer,
-                    // before the created instance exists to capture.
+                    // The handler is passed before the session exists, so it
+                    // finds its session through this box.
                     let createdSession = OSAllocatedUnfairLock<XPCSession?>(initialState: nil)
                     let newSession = try XPCSession(xpcService: name, options: .inactive) { [weak self] error in
                         self?.handleCancellation(error, of: createdSession)
                     }
-                    // Same-team peer validation can never pass in a build signed
-                    // without a team identifier (ad-hoc/personal builds) — every
-                    // send would fail with "Peer forbidden (code signing)".
-                    // Mirrors the teamless fallback in the service's Listener.
+                    // Same-team validation always fails in ad-hoc builds
+                    // ("Peer forbidden"). Mirrors the service's Listener.
                     if CodeSigningInfo.processTeamIdentifier != nil {
                         newSession.setPeerRequirement(.isFromSameTeam())
                     } else {
                         diagLog.notice("getOrCreateSession: no team identifier (ad-hoc build), skipping peer requirement")
                     }
                     newSession.setTargetQueue(queue)
-                    // Populated before activate(): a session cancelled right
-                    // after activation would otherwise race the box write,
-                    // find it empty, and leave the dead session stored. If
-                    // activate() throws, the handler firing against the
-                    // populated box is a no-op — nothing was stored to drop.
+                    // Populated before activate(), or a quick cancellation
+                    // would find it empty and leave the dead session stored.
                     createdSession.withLock { $0 = newSession }
                     try newSession.activate()
                     diagLog.debug("getOrCreateSession: XPC session activated successfully")
@@ -308,10 +253,8 @@ extension MenuBarItemService {
         /// The underlying XPC session storage, which synchronizes internally.
         private let storage: Storage
 
-        /// The session's diagnostic logger.
         private let diagLog: DiagLog
 
-        /// Creates a new session.
         init(queue: DispatchQueue, diagLog: DiagLog, onInvalidate: @escaping @Sendable () -> Void) {
             self.storage = Storage(queue: queue, diagLog: diagLog, onInvalidate: onInvalidate)
             self.diagLog = diagLog
@@ -321,19 +264,15 @@ extension MenuBarItemService {
             cancel(reason: "Session deinitialized")
         }
 
-        /// Cancels the session.
         func cancel(reason: String) {
             storage.cancel(reason: reason)
         }
 
         /// Sends the given request to the service asynchronously and returns the response.
         ///
-        /// Uses the non-blocking `XPCSession.send(_:replyHandler:)` API so that Swift
-        /// cooperative-thread-pool threads are never stranded on a blocking C call.
-        /// The continuation is protected by a shared `OSAllocatedUnfairLock`-guarded
-        /// box so that exactly one of (reply handler) or (cancellation handler) resumes
-        /// it. This lets upstream `Task` cancellation (e.g. from `Task.withTimeout`)
-        /// unblock the caller immediately without stranding a thread.
+        /// Non-blocking, so cooperative threads are never stranded. Exactly one
+        /// of the reply or cancellation handler resumes the continuation, so
+        /// Task cancellation unblocks the caller immediately.
         func sendAsync(request: Request) async -> Response? {
             let xpcSession: XPCSession
             do {
@@ -343,10 +282,8 @@ extension MenuBarItemService {
                 return nil
             }
 
-            // Shared mutable box: holds the continuation until one of the two
-            // racing paths (reply handler vs. cancellation handler) claims it.
-            // Setting the stored value to nil is the "claim" — whichever path
-            // wins claims it and resumes; the other path sees nil and does nothing.
+            // Whichever path takes the continuation out of the box resumes it;
+            // the other sees nil.
             typealias Cont = CheckedContinuation<Response?, Never>
             let box = OSAllocatedUnfairLock<Cont?>(initialState: nil)
 
@@ -355,9 +292,7 @@ extension MenuBarItemService {
                     performXPCSend(xpcSession, request: request, box: box, continuation: continuation)
                 }
             } onCancel: {
-                // Fired on an arbitrary thread when the enclosing Task is cancelled.
-                // Claim the continuation and resume it immediately so the caller is
-                // unblocked. The XPC reply handler will see the box is empty and no-op.
+                // Arbitrary thread.
                 if let cont = box.withLock({ $0.take() }) {
                     cont.resume(returning: nil)
                 }
@@ -370,12 +305,9 @@ extension MenuBarItemService {
             box: OSAllocatedUnfairLock<CheckedContinuation<Response?, Never>?>,
             continuation: CheckedContinuation<Response?, Never>
         ) {
-            // Store the continuation so the cancellation handler can reach it.
             box.withLock { $0 = continuation }
 
-            // Fast path: task was cancelled after we stored the continuation.
-            // The onCancel handler may have already claimed it, so try to claim
-            // here; if we succeed, resume immediately to avoid starting the XPC send.
+            // Cancelled already: claim and resume without sending.
             if Task.isCancelled {
                 if let cont = box.withLock({ $0.take() }) {
                     cont.resume(returning: nil)

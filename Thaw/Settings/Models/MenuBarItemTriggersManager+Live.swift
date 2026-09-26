@@ -10,19 +10,11 @@ import AppKit
 import Collections
 import Foundation
 
-/// The live half of MenuBarItemTriggersManager: everything whose substance
-/// needs a running AppState. Setup and its observations, the evaluation pass
-/// that reads the item cache, the debounced apply, the serial move chain and
-/// its retry bookkeeping, reveal notifications, script runs, and the image
-/// capture behind the icon-watching conditions. None of that can run in a unit
-/// test, so this file is excluded from coverage in sonar-project.properties.
+/// The live half of MenuBarItemTriggersManager: everything that needs a
+/// running AppState. Excluded from coverage in sonar-project.properties.
 ///
-/// The measured half (MenuBarItemTriggersManager.swift) keeps the decisions:
-/// the priority plan, identifier resolution, feature availability, runtime
-/// status, ownership, CRUD and persistence. New decision logic belongs there,
-/// not here; methods in this file should stay thin orchestration over those
-/// measured primitives, mirroring the ProfileManager / ProfileManager+Live
-/// split.
+/// Decision logic belongs in MenuBarItemTriggersManager.swift; keep methods
+/// here as thin orchestration over it.
 extension MenuBarItemTriggersManager {
     /// Performs the initial setup of the manager.
     func performSetup(with appState: AppState) {
@@ -42,12 +34,9 @@ extension MenuBarItemTriggersManager {
 
         // Re-evaluate on every distinct system state change.
         systemMonitor.$state
-            // The monitor is seeded before the item manager has populated
-            // its cache. Ignoring this replay keeps the configured targets
-            // claimed above until the cache observer below can build a plan
-            // from real items; otherwise that empty-cache evaluation would
-            // immediately release them and let initial saved-layout restore
-            // race the trigger's first move.
+            // Ignore the seed replay, which arrives before the item cache is
+            // populated. An empty-cache evaluation would release the targets
+            // claimed above and let saved-layout restore race the first move.
             .dropFirst()
             .removeDuplicates()
             .sink { [weak self] _ in
@@ -56,14 +45,9 @@ extension MenuBarItemTriggersManager {
             }
             .store(in: &cancellables)
 
-        // A cache update is the authoritative signal that an item moved to a
-        // different section. Watching it lets triggers repair a manual or
-        // external move promptly, rather than trusting a stale Boolean memo
-        // until the condition itself happens to flip.
-        // MenuBarItemManager is @Observable, so its old $itemCache
-        // projection is gone. Match the app's Observations async-sequence
-        // pattern; scheduleEvaluation(after:) already coalesces, which is
-        // what the old .debounce provided.
+        // A cache update is the authoritative signal that an item changed
+        // section, so triggers can repair manual or external moves promptly.
+        // scheduleEvaluation(after:) coalesces the updates.
         itemCacheObservationTask?.cancel()
         itemCacheObservationTask = Task { @MainActor [weak self, weak appState] in
             let changes = Observations { appState?.itemManager.itemCache }
@@ -177,12 +161,9 @@ extension MenuBarItemTriggersManager {
         // trigger actions. This includes both reveal and hide actions, and
         // naturally handles partial multi-item ownership.
         let triggerControlledIdentifiers = Set(plan.actions.values.flatMap(\.identifiers))
-        // Editor ownership is a separate question from which items currently
-        // carry an action, and it has a single writer. An overridden trigger
-        // emits no action but still owns its target, so deriving ownership
-        // from plan.actions here would contradict
-        // refreshControlledIdentifiers and make the badge flicker depending
-        // on which writer ran last.
+        // Ownership has a single writer, refreshControlledIdentifiers. An
+        // overridden trigger emits no action but still owns its target, so
+        // deriving ownership from plan.actions would make the badge flicker.
         refreshControlledIdentifiers()
         appState.itemManager.setTriggerControlledItemIdentifiers(triggerControlledIdentifiers)
 

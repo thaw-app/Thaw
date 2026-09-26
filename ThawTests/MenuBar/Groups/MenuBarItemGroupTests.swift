@@ -55,16 +55,12 @@ struct MenuBarItemGroupTests {
 
     // MARK: normalized()
 
-    /// Two distinct rules that are easy to conflate:
-    ///
-    /// - `createGroup` / `add` are *user intent* — "put this item in that group"
-    ///   deliberately steals the identifier from whichever group holds it.
-    /// - `normalized()` is a *repair pass* over possibly-corrupt decoded data,
-    ///   where the only sane tie-break is deterministic: the earlier group wins.
+    /// `createGroup` / `add` are user intent and steal the identifier from
+    /// whichever group holds it. `normalized()` repairs decoded data, where the
+    /// earlier group wins.
     @Test("normalized() resolves a contested identifier in favour of the earlier group")
     func normalizationBreaksTiesTowardTheEarlierGroup() {
-        // Built directly, bypassing createGroup, so the repair rule is what is
-        // under test rather than the stealing rule.
+        // Built directly, bypassing createGroup's stealing rule.
         let set = MenuBarItemGroupSet(
             groups: [
                 MenuBarItemGroup(name: "First", memberIdentifiers: ["com.a:One", "com.a:Two"]),
@@ -119,9 +115,8 @@ struct MenuBarItemGroupTests {
         #expect(set.normalized().normalized() == set.normalized())
     }
 
-    /// The sharpest failure mode in the model: group membership must be
-    /// canonicalized with the *same* function the persisted section order uses,
-    /// or an app whose title churns silently loses its group.
+    /// Membership must be canonicalized with the same function as the
+    /// persisted section order, or an app whose title churns loses its group.
     @Test("Member identifiers are canonicalized the same way persisted order is")
     func membersAreCanonicalized() {
         let bundle = MenuBarItemTag.iStatMenusStatusBundleID
@@ -131,14 +126,12 @@ struct MenuBarItemGroupTests {
         var set = MenuBarItemGroupSet()
         set.createGroup(name: nil, memberIdentifiers: raw)
 
-        // Both raw titles canonicalize to the same identifier, collapsing to a
-        // single member — so this was never a two-item group and is dropped.
+        // Both titles canonicalize to one member, so the group is dropped.
         #expect(canonical.count == 1)
         #expect(set.groups.isEmpty)
     }
 
-    /// A group whose members canonicalize apart must survive intact — the
-    /// dedupe above must not be over-eager.
+    /// The dedupe must not be over-eager.
     @Test("Distinct iStat gauges canonicalize apart and stay grouped")
     func distinctDynamicTitlesStayGrouped() {
         let bundle = MenuBarItemTag.iStatMenusStatusBundleID

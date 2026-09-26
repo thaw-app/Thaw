@@ -14,26 +14,17 @@ import Testing
 ///
 /// Covers:
 ///
-/// - `AutomationHookSettings.init`, which is entirely uncovered today. Its
-///   whole reason to exist is the `suppressPersist` latch: without it the
-///   two `didSet` observers would echo the freshly loaded hooks straight
-///   back to `UserDefaults` on every launch. That is asserted by planting
-///   bytes the encoder would never produce and checking they survive.
-/// - `HotkeysSettings.loadInitialState`'s decode-failure arm: a single
-///   corrupt binding must not take the other bindings down with it.
+/// - `AutomationHookSettings.init`'s `suppressPersist` latch, which stops the
+///   `didSet` observers echoing loaded hooks back to `UserDefaults` every launch.
+/// - `HotkeysSettings.loadInitialState`: one corrupt binding must not drop the rest.
 /// - `AutomationSettings.addCurrentApp`, the "whitelist this app" button.
 ///
-/// Every test routes through ``withScratchDefaults(sourceLocation:_:)``, so
-/// nothing here writes to the real `com.stonerl.Thaw` domain, and the suite
-/// is `.serialized` because that store is process-wide.
+/// Tests run through ``withScratchDefaults(sourceLocation:_:)`` and the suite is
+/// `.serialized` because that store is process-wide.
 ///
-/// Deliberate gaps: `HotkeysSettings.performSetup(with:)` and the encode
-/// failure arm in `configureObservers` are not covered — the first needs a
-/// live `AppState`, and the second needs `JSONEncoder` to fail on a
-/// `KeyCombination`, which it cannot. `AutomationSettings`' whitelist-change
-/// notification sink is also skipped: it hops through
-/// `receive(on: DispatchQueue.main)`, so observing it would mean waiting on
-/// a run loop turn.
+/// Gaps: `HotkeysSettings.performSetup(with:)` needs a live `AppState`; the encode
+/// failure arm needs `JSONEncoder` to fail on a `KeyCombination`, which it can't;
+/// the whitelist-change sink hops through `DispatchQueue.main`.
 @MainActor
 @Suite("Coverage sweep 4: settings model load paths", .serialized)
 struct CoverageSweep4Tests {
@@ -111,9 +102,8 @@ struct CoverageSweep4Tests {
 
     // MARK: - HotkeysSettings
 
-    /// A binding whose stored payload no longer decodes — a downgrade, a
-    /// hand-edited plist, a truncated write — must be dropped on its own
-    /// rather than aborting the load for every other action.
+    /// A binding that no longer decodes (downgrade, hand-edited plist, truncated
+    /// write) is dropped on its own without aborting the load.
     @Test("A corrupt stored binding is skipped without losing the others")
     func corruptBindingIsSkippedWithoutLosingTheOthers() throws {
         try withScratchDefaults { _ in
@@ -132,9 +122,8 @@ struct CoverageSweep4Tests {
         }
     }
 
-    /// `null` is a *valid* encoding of an unbound hotkey rather than a
-    /// corrupt one, so it decodes successfully and leaves the binding clear
-    /// — a different arm from the failure above.
+    /// `null` is a valid encoding of an unbound hotkey, so it decodes and clears the
+    /// binding, a different arm from the failure above.
     @Test("A stored null binding decodes to no binding")
     func storedNullBindingDecodesToNoBinding() throws {
         try withScratchDefaults { _ in

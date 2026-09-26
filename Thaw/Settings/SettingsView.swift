@@ -65,11 +65,8 @@ struct SettingsView: View {
 
     /// Simple Mode's overview, or the one pane something explicitly asked for.
     ///
-    /// There is no sidebar at all here: one screen is the whole point of Simple
-    /// Mode, and a sidebar listing a single item is just a sidebar. But flows
-    /// outside the window — a trigger notification, a settings link — still
-    /// navigate to a specific pane, and dropping them on the overview opens the
-    /// wrong destination. Honour the request, with a way back to the overview.
+    /// No sidebar in Simple Mode. Outside flows (a trigger notification, a
+    /// settings link) can still target one pane, so honour that with a way back.
     @ViewBuilder
     private var simpleMode: some View {
         if navigationState.settingsNavigationIdentifier == .general {

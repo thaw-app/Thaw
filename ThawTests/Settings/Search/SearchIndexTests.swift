@@ -8,14 +8,10 @@
 import Testing
 @testable import Thaw
 
-/// Covers the rules applied around the settings search index: the pane
-/// filter, the relevance sort, the disclosure mapping that decides which
-/// rows need a collapsed group expanded before they can be revealed, and the
-/// non-searchable allow-list.
-///
-/// The index contents themselves are data, so these assertions target the
-/// rules rather than pinning every row — a pinned row list would break on
-/// every copy change without catching a real defect.
+/// Covers the settings search index rules: pane filter, relevance sort,
+/// disclosure mapping for rows in collapsed groups, and the non-searchable
+/// allow-list. Assertions target the rules, not every row, so copy changes
+/// don't break them.
 @Suite("Settings search index")
 struct SearchIndexTests {
     // MARK: - entries
@@ -115,10 +111,9 @@ struct SearchIndexTests {
         ]
     )
     func gatedRowsRequestDisclosure(id: String) {
-        // These rows live inside a collapsed group in the Advanced pane.
-        // Without the disclosure, selecting the search result scrolls to a
-        // row the user cannot see. A row absent on this OS version is not a
-        // failure; the mapping is only asserted for the ones indexed here.
+        // These rows sit in a collapsed group in the Advanced pane, so without
+        // the disclosure the result scrolls to a hidden row. Rows absent on
+        // this OS version are skipped.
         guard let entry = SearchIndex.entries.first(where: { $0.id == id }) else {
             return
         }

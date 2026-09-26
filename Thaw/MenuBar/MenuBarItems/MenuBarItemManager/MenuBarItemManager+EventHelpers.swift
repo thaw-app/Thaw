@@ -27,17 +27,12 @@ extension MenuBarItemManager {
         case cannotComplete
         /// An event source cannot be created or is otherwise invalid.
         case invalidEventSource
-        /// The location of the mouse cannot be found.
         case missingMouseLocation
-        /// A failure during the creation of an event.
         case eventCreationFailure(MenuBarItem)
-        /// A timeout during an event operation.
         case eventOperationTimeout(MenuBarItem)
-        /// A menu bar item is not movable.
         case itemNotMovable(MenuBarItem)
         /// A timeout waiting for a menu bar item to respond to an event.
         case itemResponseTimeout(MenuBarItem)
-        /// A menu bar item's bounds cannot be found.
         case missingItemBounds(MenuBarItem)
         /// The destination anchor disappeared before the move could use it.
         /// This is a stale plan, not a failure of the item being moved.
@@ -48,28 +43,20 @@ extension MenuBarItemManager {
         /// A menu bar item's owning process is alive but not pumping its
         /// event loop, so it cannot acknowledge synthetic move events.
         case ownerUnresponsive(MenuBarItem)
-        /// A synthetic event came back through the session tap carrying a
-        /// different window than the one it was addressed to, meaning the
-        /// window server re-resolved it against whatever sits under the
-        /// clamped cursor position.
+        /// The event came back with a different window than it was addressed to:
+        /// WindowServer re-resolved it against whatever is under the clamped cursor.
         case eventWindowMismatch(MenuBarItem)
-        /// The destination's target item moved so far during the drag that
-        /// the plan describes an arrangement the bar no longer has. Retrying
-        /// would drag the item against geometry that has already changed,
-        /// which is how a failed batch walks the bar (#900).
+        /// The destination moved so far mid-drag that the plan no longer matches
+        /// the bar. Retrying against changed geometry walks the bar (#900).
         case staleDestination(MenuBarItem)
-        /// The user did not pause input before the caller-specific deadline.
-        /// Trigger moves treat this as a deferral rather than taking the
-        /// cursor away while the user is still interacting with the Mac.
+        /// The user didn't pause input before the deadline. Trigger moves defer
+        /// instead of taking the cursor mid-interaction.
         case inputPauseTimedOut(MenuBarItem)
         /// The condition which requested this move changed while the move was
         /// waiting or retrying. The obsolete drag must stop immediately.
         case moveSuperseded(MenuBarItem)
-        /// Every release put the item straight back at its starting origin:
-        /// Control Center restored the item's autosaved slot because its
-        /// source app never registered the drop. Observed to hold for
-        /// minutes at a time for one item — every press variant reverted the
-        /// same way — and then clear by itself, so retrying only costs time.
+        /// Control Center restored the autosaved slot because the source app never
+        /// registered the drop. It persists for minutes then clears, so retrying only costs time.
         case dropReverted(MenuBarItem)
         /// Another move held the bar for the whole gate wait. Says nothing
         /// about the item; callers treat it as a deferral.
@@ -173,11 +160,8 @@ extension MenuBarItemManager {
             case .itemNotMovable:
                 nil
             case let .dropReverted(item):
-                // An app with no bundle identifier — a bare executable such
-                // as a swift run build — is keyed by path in Control
-                // Center, which has refused every off-screen drop of such an
-                // item in the field. Say so, or the alert reads as a Thaw
-                // bug the next time around.
+                // Apps without a bundle ID (e.g. a swift run build) are keyed by path,
+                // and Control Center refuses their off-screen drops. Say so in the alert.
                 if let app = item.sourceApplication, app.bundleIdentifier == nil {
                     "macOS put \"\(item.displayName)\" back after every attempt. Its app has no bundle identifier (it runs as a bare executable), and macOS does not keep such items in a hidden section. Build it as an app bundle to test moving it."
                 } else {
@@ -195,13 +179,8 @@ extension MenuBarItemManager {
             indicatesUnresponsiveOwner ? .unresponsiveOwner : .other
         }
 
-        /// Whether this failure means the item's owner never acknowledged
-        /// the events we posted.
-        ///
-        /// Only failures that are specifically about the owner staying
-        /// silent count. cannotComplete is deliberately excluded: it is
-        /// the catch-all, and attributing it to the owner would mark items
-        /// over failures that had nothing to do with them.
+        /// Whether the owner never acknowledged our events. cannotComplete is
+        /// excluded: it's the catch-all and would mark items for unrelated failures.
         var indicatesUnresponsiveOwner: Bool {
             switch self {
             case .ownerUnresponsive, .eventOperationTimeout, .itemResponseTimeout:
@@ -215,11 +194,7 @@ extension MenuBarItemManager {
         }
     }
 
-    /// Returns a Boolean value that indicates whether the user has
-    /// paused input for at least the given duration.
-    ///
-    /// - Parameter duration: The duration that certain types of input
-    ///   events must not have occurred within in order to return true.
+    /// Whether the user has paused input for at least `duration`.
     nonisolated func hasUserPausedInput(for duration: Duration) -> Bool {
         NSEvent.modifierFlags.isEmpty &&
             !MouseHelpers.lastMovementOccurred(within: duration) &&
@@ -243,11 +218,8 @@ extension MenuBarItemManager {
         timeout: Duration? = nil,
         shouldContinue: (@MainActor () -> Bool)? = nil
     ) async throws -> InputPauseWaitResult {
-        // The pre-move input-pause window is configurable so users hit by repeated cursor
-        // "kidnapping" during menu-bar reordering can widen it. Reordering warps the real cursor,
-        // and a very short window lets warps slip through the micro-gaps between a user's own mouse
-        // moves when a churny app keeps changing its menu-bar items (see #750, #723, #736). The
-        // default preserves the previous 50 ms behaviour; override with:
+        // A short window lets cursor warps slip between the user's own mouse moves
+        // when an app churns its items (#750). Default 50 ms; override with:
         //   defaults write com.stonerl.Thaw inputPauseThresholdMs -int <milliseconds>
         let configuredPause = Duration.milliseconds(max(
             0,
@@ -271,38 +243,27 @@ extension MenuBarItemManager {
             }
         }
         do {
-            // waitTask is unstructured, so awaiting its value does not carry
-            // the caller's cancellation into it. Without the handler a caller
-            // cancelled while input stays active waits for a nil timeout that
-            // never arrives.
+            // waitTask is unstructured and doesn't inherit cancellation; without the
+            // handler a cancelled caller waits forever while input stays active.
             return try await withTaskCancellationHandler {
                 try await waitTask.value
             } onCancel: {
                 waitTask.cancel()
             }
         } catch {
-            // Only cancellation reaches here. Named so a log full of bare
-            // cannotComplete failures (#900) can tell this stage apart.
+            // Only cancellation reaches here; logged so this stage is identifiable.
             MenuBarItemManager.diagLog.debug("waitForUserInputPause: wait interrupted: \(error)")
             throw EventError.cannotComplete
         }
     }
 
-    /// Waits for a lull in user input before an automatic bulk apply
-    /// begins issuing its move sequence.
+    /// Waits for a lull in user input before an automatic bulk apply starts.
     ///
-    /// waitForUserToPauseInput gates each move; this gates the batch. The
-    /// distinction matters because a batch hides the cursor for its entire
-    /// length: dispatched the moment a late arrival is noticed, it can take
-    /// the pointer away mid-interaction and then contest it move by move
-    /// for the length of the sequence (#899, #723). Waiting for one real
-    /// lull up front costs nothing on an idle bar — the common case, where
-    /// the first poll already passes — and sidesteps the collision when the
-    /// bar is not idle.
+    /// waitForUserToPauseInput gates each move; this gates the batch, which
+    /// holds the cursor for its whole length and would otherwise fight the user (#899).
     ///
-    /// The cap is a deadline for this dispatch, not permission to override
-    /// active input. Reaching it returns false so a later cache/profile event
-    /// can retry. Cancellation also exits promptly for a newer apply.
+    /// Hitting the cap returns false so a later event can retry; it never
+    /// overrides active input.
     ///
     /// On by default at 300 ms; disable with:
     ///   defaults write com.stonerl.Thaw bulkApplyIdleThresholdMs -int 0
@@ -350,7 +311,6 @@ extension MenuBarItemManager {
         return false
     }
 
-    /// Returns the dynamic delay still required between move operations.
     nonisolated func moveOperationBufferDuration() async -> Duration {
         guard let timestamp = await lastMoveOperationTimestamp else {
             return .zero
@@ -358,8 +318,7 @@ extension MenuBarItemManager {
         return max(.milliseconds(25) - timestamp.duration(to: .now), .zero)
     }
 
-    /// Waits between move operations for a dynamic amount of time,
-    /// based on the timestamp of the last move operation.
+    /// Waits out the remaining buffer since the last move operation.
     nonisolated func waitForMoveOperationBuffer() async throws {
         let buffer = await moveOperationBufferDuration()
         if buffer > .zero {
@@ -373,10 +332,7 @@ extension MenuBarItemManager {
         }
     }
 
-    /// Waits for the given duration between event operations.
-    ///
-    /// Since most event operations must perform cleanup or otherwise
-    /// run to completion, this method ignores task cancellation.
+    /// Ignores cancellation, since most event operations must run to completion.
     nonisolated func eventSleep(for duration: Duration = .milliseconds(25)) async {
         let task = Task {
             try? await Task.sleep(for: duration)
@@ -386,12 +342,11 @@ extension MenuBarItemManager {
 
     /// Returns the current bounds for the given item, with a refresh fallback if the window is missing.
     nonisolated func getCurrentBounds(for item: MenuBarItem) async throws -> CGRect {
-        // First attempt: current windowID.
         if let bounds = Bridging.getWindowBounds(for: item.windowID) {
             return bounds
         }
 
-        // Fallback: refresh on-screen items and pick the matching tag (prefer same windowID, then non-clone).
+        // Prefer the same windowID, then a non-clone.
         let refreshed = await MenuBarItem.getMenuBarItems(option: .onScreen)
         if let refreshedItem = refreshed.first(where: { $0.windowID == item.windowID && $0.tag == item.tag }) ??
             refreshed.first(where: { $0.tag.matchesIgnoringWindowID(item.tag) && !$0.isSystemClone }) ??
@@ -403,7 +358,6 @@ extension MenuBarItemManager {
         throw EventError.missingItemBounds(item)
     }
 
-    /// Returns the current mouse location.
     nonisolated func getMouseLocation() throws -> CGPoint {
         guard let location = MouseHelpers.locationCoreGraphics else {
             throw EventError.missingMouseLocation
@@ -421,15 +375,8 @@ extension MenuBarItemManager {
         )
     }
 
-    /// Whether a previously cached source PID still belongs to a live
-    /// process.
-    ///
-    /// kill(pid, 0) is the same liveness probe postMoveEvents already
-    /// makes before addressing a target, kept in one named place so the
-    /// reconciliation guard and the event path agree about what "alive"
-    /// means. ESRCH is the only answer that means gone; EPERM says the
-    /// process exists but is not ours to signal, which still counts as
-    /// alive.
+    /// Whether a cached source PID still belongs to a live process. Only
+    /// ESRCH means gone; EPERM means it exists but isn't ours to signal.
     static nonisolated func previousPIDIsLive(_ pid: pid_t) -> Bool {
         if kill(pid, 0) == 0 {
             return true
@@ -439,13 +386,8 @@ extension MenuBarItemManager {
 
     /// The process a synthetic move event should be posted to.
     ///
-    /// ownerPID is the CG owner of the window being dragged. sourcePID
-    /// is the app whose status item it logically is. Before macOS 26 these
-    /// were the same process; on 26 Control Center hosts every status item
-    /// window, so preferring sourcePID posts to a process that does not
-    /// own the window under the cursor.
-    ///
-    /// Pure over its inputs.
+    /// On macOS 26 Control Center owns every status item window, so
+    /// sourcePID would target a process that doesn't own the dragged window.
     static nonisolated func eventTargetPID(
         sourcePID: pid_t?,
         ownerPID: pid_t,
@@ -578,18 +520,11 @@ extension MenuBarItemManager {
         }
     }
 
-    /// Returns whether rEvent is a stray echo of this operation's own
-    /// event: it carries the same eventSourceUserData — unique per posted
-    /// event, so a positive identification — but its window fields no longer
-    /// match the ones it was posted with.
+    /// Whether rEvent is our own event (same eventSourceUserData) with rewritten
+    /// window fields.
     ///
-    /// The window server re-resolves
-    /// mouseEventWindowUnderMousePointer* against whatever actually sits
-    /// under the cursor. For an item parked off the left edge, the posted
-    /// coordinates get clamped to the display's leftmost edge — under the
-    /// Apple menu — and the event comes back bound to that window instead.
-    /// Left in the stream it is delivered there, which is what surfaces as a
-    /// stray click at the top-left of the screen.
+    /// For items parked off the left edge, WindowServer clamps the point under
+    /// the Apple menu and rebinds the event there, causing a stray top-left click.
     private nonisolated func isStrayEcho(
         of rEvent: CGEvent,
         context: EventContinuationContext
@@ -603,10 +538,8 @@ extension MenuBarItemManager {
     /// Whether stray echoes of our own move events are dropped from the
     /// session stream before they can be delivered against the wrong window.
     ///
-    /// On by default; this only ever discards events that are already
-    /// misdirected — an echo whose window fields still match is passed
-    /// through untouched, so the scromble handshake is unaffected. Kill
-    /// switch, should it ever misfire:
+    /// Echoes with matching window fields pass through, so the scromble
+    /// handshake is unaffected. Kill switch:
     ///   defaults write com.stonerl.Thaw discardStrayMoveEvents -bool NO
     private nonisolated var discardsStrayMoveEvents: Bool {
         (Defaults.object(forKey: .discardStrayMoveEvents) as? Bool) ?? Defaults.DefaultValue.discardStrayMoveEvents
@@ -616,13 +549,8 @@ extension MenuBarItemManager {
     /// window than it was posted with should fail its operation immediately
     /// rather than let it run to timeout.
     ///
-    /// The mismatch is always logged; only the early failure is gated. The
-    /// window server re-resolves the mouseEventWindowUnderMousePointer*
-    /// fields against whatever actually sits under the cursor, so a mismatch
-    /// is the signature of a move whose coordinates were clamped — the
-    /// top-left/Apple-menu case for items parked off the left edge. Whether
-    /// that is always unrecoverable is unverified on real hardware, hence
-    /// the opt-in. Enable with:
+    /// A mismatch means the coordinates were clamped (the Apple-menu case). It's
+    /// always logged; failing early is opt-in because it's unverified on hardware:
     ///   defaults write com.stonerl.Thaw failFastOnEventWindowMismatch -bool YES
     private nonisolated var failsFastOnEventWindowMismatch: Bool {
         Defaults.bool(forKey: .failFastOnEventWindowMismatch)
@@ -675,21 +603,15 @@ extension MenuBarItemManager {
             option: .listenOnly
         ) { tap, rEvent in
             guard rEvent.matches(context.event, byIntegerFields: CGEventField.menuBarItemEventFields) else {
-                // eventSourceUserData is unique per posted event (see
-                // setUserData), so matching on it alone positively
-                // identifies this operation's own event. Getting here with
-                // that field equal means the event came back with the window
-                // fields rewritten — it was delivered against a different
-                // window than the one it addressed.
+                // eventSourceUserData is unique per event, so a match here means
+                // our event came back rebound to a different window.
                 if rEvent.matches(context.event, byIntegerFields: [.eventSourceUserData]) {
                     onMismatch?(rEvent)
                 }
                 return rEvent
             }
             onMatch(tap)
-            // Defensive: Since this EventTap is created with option: .listenOnly,
-            // mutating rEvent via setTargetPID is for parity only and will not
-            // affect the system event stream.
+            // No effect on a listen-only tap; kept for parity.
             rEvent.setTargetPID(context.pid)
             return rEvent
         }
@@ -788,14 +710,10 @@ extension MenuBarItemManager {
         }
     }
 
-    /// Creates a tap that removes stray echoes of this operation's own event
-    /// from the session stream, so they cannot be delivered against the
-    /// window the window server re-bound them to.
+    /// Drops stray echoes of our own event before they reach the rebound window.
     ///
-    /// Head-inserted and non-listen-only, so it runs before the tail-appended
-    /// handshake taps and can actually drop the event. This is safe with
-    /// respect to that handshake: those taps only act on echoes whose window
-    /// fields still match, and such echoes are passed through here untouched.
+    /// Head-inserted and non-listen-only so it runs before the handshake taps.
+    /// Those only act on matching echoes, which pass through here untouched.
     private nonisolated func makeStrayEventDiscardTap(
         context: EventContinuationContext
     ) -> EventTap {
@@ -956,8 +874,7 @@ extension MenuBarItemManager {
                 )
             } onCancel: {
                 currentInnerTask(from: innerTaskHolder)?.cancel()
-                // Directly resume the continuation; handles the common case where
-                // innerTask already finished before cancellation was delivered.
+                // innerTask often finishes before cancellation arrives, so resume directly.
                 let cont = currentContinuation(from: continuationHolder)
                 if let cont, didResume.tryClaimOnce() {
                     cont.resume(throwing: CancellationError())
@@ -969,14 +886,10 @@ extension MenuBarItemManager {
         } catch is TaskTimeoutError {
             throw EventError.eventOperationTimeout(item)
         } catch let error as EventError {
-            // Preserve failures raised from inside the continuation (e.g. a
-            // window mismatch) so callers can tell them apart from a generic
-            // failure and skip pointless retries.
+            // Keep specific failures (e.g. window mismatch) so callers can skip retries.
             throw error
         } catch {
-            // Cancellation of a superseded operation lands here. The
-            // underlying error used to be discarded, leaving #900's log a
-            // wall of indistinguishable cannotCompletes.
+            // Cancellation of a superseded operation lands here.
             MenuBarItemManager.diagLog.debug("postEvent: event wait for \(item.logString) failed: \(error)")
             throw EventError.cannotComplete
         }

@@ -13,32 +13,16 @@ import os
 
 /// A cache for the source process identifiers for menu bar item windows.
 ///
-/// We use the term "source process" to refer to the process that created
-/// a menu bar item. Originally, we used the CGWindowList API to get the
-/// window's owning process (`kCGWindowOwnerPID`), which was always the
-/// source process. However, as of macOS 26, item windows are owned by
-/// the Control Center.
+/// The "source process" is the process that created a menu bar item. As of
+/// macOS 26, item windows are owned by Control Center, so `kCGWindowOwnerPID`
+/// no longer identifies it and we resolve it through Accessibility instead.
+/// Accessibility calls block, so the work runs in this XPC service.
 ///
-/// We can find what we need using the Accessibility API, but doing it
-/// efficiently ends up being a fairly complex process. Since calls to
-/// Accessibility are thread blocking, we do most of the heavy lifting
-/// in a dedicated XPC service, which we then call asynchronously from
-/// the main app.
-///
-/// This type is an `actor`. Only the Combine observer wiring in
-/// `start()` (and its backing `cancellable` lazy var) is actually
-/// actor-isolated — that state had no synchronization of its own
-/// before this conversion. Everything else (`state`, `scanLock`, and
-/// the `CachedApplication` cache entries) was already protected by its
-/// own `OSAllocatedUnfairLock`, so those members and the methods that
-/// only touch them are marked `nonisolated`. This preserves the exact
-/// pre-actor concurrency semantics: cache-hit reads in `pidBody` can
-/// still proceed without waiting on an in-flight full AX scan, and
-/// `scanLock` (not actor isolation) is still what serializes full
-/// scans across concurrent callers. Making these methods actor-isolated
-/// instead would have serialized *all* calls — including fast
-/// cache-hit checks — behind any long-running blocking AX scan, which
-/// would have been a behavior change, not just a safety upgrade.
+/// Only the Combine wiring in `start()` (and `cancellable`) is actor-isolated.
+/// `state`, `scanLock`, and `CachedApplication` entries have their own
+/// `OSAllocatedUnfairLock`, so members that only touch them are `nonisolated`.
+/// Isolating them would serialize fast cache-hit reads behind blocking AX
+/// scans; `scanLock` is what serializes full scans.
 actor SourcePIDCache {
     private static let diagLog = DiagLog(category: "SourcePIDCache")
     /// An object that contains a running application and provides an
@@ -62,7 +46,6 @@ actor SourcePIDCache {
 
         private let lock = OSAllocatedUnfairLock(initialState: State())
 
-        /// The app's process identifier.
         var processIdentifier: pid_t {
             runningApp.processIdentifier
         }
@@ -98,11 +81,9 @@ actor SourcePIDCache {
         /// Whether an unexpired negative deadline would make
         /// ``getOrCreateExtrasMenuBar()`` skip its accessibility calls.
         ///
-        /// Diagnostics only, and sampled outside the lock that
-        /// ``getOrCreateExtrasMenuBar()`` takes, so it is a count rather
-        /// than a guarantee. It exists because a field log that reports
-        /// only "checked N apps" cannot distinguish a scan that probed the
-        /// whole system from one the negative cache spared.
+        /// Diagnostics only, sampled outside the lock that
+        /// ``getOrCreateExtrasMenuBar()`` takes, so it is a count rather than a
+        /// guarantee. It tells a full-system probe from one the negative cache spared.
         var isSkippingExtrasMenuBarProbe: Bool {
             lock.withLock { state in
                 guard state.extrasMenuBar == nil, let retryAfter = state.retryAfter else {
@@ -126,11 +107,9 @@ actor SourcePIDCache {
         /// application.
         ///
         /// - Parameter seed: What earlier sessions learned about this
-        ///   application, from ``ExtrasMenuBarProbeMemory``. Starting on a
-        ///   rung of the ladder rather than at the bottom is what keeps a
-        ///   cold start from re-probing the whole system; a seeded deadline
-        ///   still expires within seconds, so the memory is confirmed rather
-        ///   than believed.
+        ///   application, from ``ExtrasMenuBarProbeMemory``. Starting partway up
+        ///   the ladder keeps a cold start from re-probing the whole system; a
+        ///   seeded deadline still expires within seconds.
         init(_ runningApp: NSRunningApplication, seed: (misses: Int, initialTTL: Duration)? = nil) {
             self.runningApp = runningApp
             guard let seed else {
@@ -145,8 +124,7 @@ actor SourcePIDCache {
         /// Returns the accessibility element representing the app's extras
         /// menu bar, creating it if necessary.
         ///
-        /// When the element is first created, it gets stored for efficient
-        /// access on subsequent calls.
+        /// The element is cached after the first creation.
         func getOrCreateExtrasMenuBar() -> UIElement? {
             // Fast path: check cached state under the lock first.
             let now = ContinuousClock.now
@@ -178,10 +156,8 @@ actor SourcePIDCache {
                 let app = AXHelpers.application(for: runningApp),
                 let bar = AXHelpers.extrasMenuBar(for: app)
             else {
-                // App is reachable but has no extras menu bar. Bar it from
-                // the next scans rather than flagging it permanently: it may
-                // still register a status item later, so the deadline grows
-                // with each empty check instead of never expiring.
+                // No extras menu bar yet. It may register a status item later, so
+                // back off with a growing deadline instead of flagging it permanently.
                 lock.withLock {
                     if $0.extrasMenuBar == nil {
                         $0.consecutiveMisses += 1
@@ -201,7 +177,6 @@ actor SourcePIDCache {
         }
     }
 
-    /// State for the cache.
     private struct State {
         var apps = [CachedApplication]()
         var pids = [CGWindowID: pid_t]()
@@ -214,11 +189,9 @@ actor SourcePIDCache {
         var negativeUntil = [CGWindowID: ContinuousClock.Instant]()
 
         /// Consecutive full scans that have left each window unresolved.
-        /// Drives the negative-cache TTL ladder: early failures get short
-        /// deadlines so the app's startup settling window can retry while
-        /// AX trees are still warming up, repeat failures back off to the
-        /// steady-state TTL. Reset when a window resolves; pruned alongside
-        /// `negativeUntil` so it stays bounded.
+        /// Drives the negative-cache TTL ladder: short deadlines while AX trees
+        /// warm up at startup, then the steady-state TTL. Reset when a window
+        /// resolves; pruned alongside `negativeUntil`.
         var negativeFailures = [CGWindowID: Int]()
 
         /// Reorders the cached apps so that those that are confirmed
@@ -239,7 +212,6 @@ actor SourcePIDCache {
         }
     }
 
-    /// The shared cache.
     static let shared = SourcePIDCache()
 
     // The per-failure negative-cache deadline lives in
@@ -249,9 +221,8 @@ actor SourcePIDCache {
     /// How long a single app's extras-bar probe may take before the scan
     /// names it in the log.
     ///
-    /// Low enough that a handful of slow apps stand out inside a scan that
-    /// takes a few hundred milliseconds in total, high enough that a healthy
-    /// scan says nothing at all.
+    /// Low enough that slow apps stand out in a scan of a few hundred
+    /// milliseconds, high enough that a healthy scan logs nothing.
     private static let slowProbeThreshold: Duration = .milliseconds(50)
 
     /// Minimum interval between unresolved-diagnostic dumps for an unchanged
@@ -269,11 +240,8 @@ actor SourcePIDCache {
 
     /// The cache's protected state.
     ///
-    /// `nonisolated`: this is already synchronized by its own
-    /// `OSAllocatedUnfairLock` and does not need actor isolation on
-    /// top of that. Keeping it `nonisolated` lets fast cache-hit reads
-    /// run without waiting for the actor even while `start()`/cleanup
-    /// (which remain actor-isolated) are in flight.
+    /// `nonisolated`: its own `OSAllocatedUnfairLock` synchronizes it, so
+    /// cache-hit reads don't wait on the actor while `start()` or cleanup run.
     private nonisolated let state = OSAllocatedUnfairLock(initialState: State())
 
     /// What earlier sessions learned about which applications have an extras
@@ -292,7 +260,6 @@ actor SourcePIDCache {
     /// mechanism (not actor isolation) that serializes full AX scans.
     private nonisolated let scanLock = OSAllocatedUnfairLock(initialState: ())
 
-    /// Observer for running applications.
     private lazy var cancellable: AnyCancellable = {
         let runningAppsPublisher = NSWorkspace.shared.publisher(for: \.runningApplications)
             .map { _ in () }
@@ -307,12 +274,10 @@ actor SourcePIDCache {
             }
     }()
 
-    /// Creates the shared cache.
     private init() {
         Bridging.setProcessUnresponsiveTimeout(3)
     }
 
-    /// Performs cleanup of the cache state.
     private nonisolated func performCleanup() {
         autoreleasepool {
             performCleanupBody()
@@ -332,7 +297,6 @@ actor SourcePIDCache {
             let oldAppPids = Set(state.apps.map(\.processIdentifier))
             let terminatedPids = oldAppPids.subtracting(currentAppPids)
 
-            // Remove PID mappings for terminated apps
             for terminatedPid in terminatedPids {
                 state.pids = state.pids.filter { $0.value != terminatedPid }
             }
@@ -360,23 +324,13 @@ actor SourcePIDCache {
                 let pid = app.processIdentifier
 
                 if let app = appMappings[pid] {
-                    // Prefer the cached app, as it may have already done
-                    // the work to initialize its extras menu bar. Its
-                    // extras-bar negative deadline rides along: it expires on
-                    // its own schedule, so a status item registered after
-                    // launch is still discovered without re-probing every
-                    // app on the system each time this list changes.
+                    // Prefer the cached app: it may already hold its extras menu bar,
+                    // and its negative deadline carries over instead of re-probing.
                     result.apps.append(app)
                 } else {
-                    // App wasn't in the cache, so it must be new. An app the
-                    // memory has an opinion about starts partway up the
-                    // negative-cache ladder instead of at the bottom, which
-                    // is what keeps the first scan of a session off the ~155
-                    // of ~170 applications that have never had an extras
-                    // menu bar (#956).
-                    // Written as a lookup rather than a `flatMap` because
-                    // this line is already two closures deep, and `seed`
-                    // answers nil for a nil count on its own.
+                    // New app. One the probe memory knows starts partway up the
+                    // ladder, keeping the first scan off the ~155 of ~170 apps
+                    // that never have an extras menu bar (#956).
                     let rememberedMisses: Int? = if let bundleID = app.bundleIdentifier {
                         remembered[bundleID]
                     } else {
@@ -392,17 +346,13 @@ actor SourcePIDCache {
                     }
                 }
             }
-            // Carry negative state only for windows that are still unresolved.
-            // A scan driven by any one window resolves every window it can, so
-            // a previously negative-cached window may now hold a PID; keeping
-            // its failure count would start its next miss partway up the
-            // ladder instead of at the first rung.
+            // Carry negative state only for still-unresolved windows, so a window
+            // that has since resolved starts its next miss at the first rung.
             state.negativeUntil = carriedNegativeUntil.filter { state.pids[$0.key] == nil }
             state.negativeFailures = carriedNegativeFailures.filter {
                 state.negativeUntil[$0.key] != nil
             }
 
-            // Log cleanup activity
             if !terminatedPids.isEmpty {
                 SourcePIDCache.diagLog.info("Cleaned up PID cache entries for terminated processes: \(terminatedPids)")
             }
@@ -414,10 +364,8 @@ actor SourcePIDCache {
     /// Folds what this session has learned about extras menu bars back into
     /// the memory the next launch starts from.
     ///
-    /// Runs after every cleanup rather than at exit because the service has
-    /// no orderly shutdown: it is an on-demand XPC service that is killed
-    /// when the system decides it is idle, so anything not already written is
-    /// lost.
+    /// Runs after every cleanup rather than at exit: the system kills this
+    /// on-demand XPC service when idle, with no orderly shutdown.
     private nonisolated func recordExtrasMenuBarProbeResults(
         startingFrom remembered: [String: Int]
     ) {
@@ -426,10 +374,8 @@ actor SourcePIDCache {
             guard let bundleID = app.bundleIdentifier else {
                 return
             }
-            // Several processes can share a bundle identifier. The lowest
-            // count wins, so one instance publishing an extras menu bar
-            // speaks for the identifier — the direction that costs a probe
-            // rather than an unresolved item.
+            // Several processes can share a bundle identifier. The lowest count
+            // wins: a wasted probe is cheaper than an unresolved item.
             result[bundleID] = min(result[bundleID] ?? .max, app.consecutiveExtrasMenuBarMisses)
         }
 
@@ -442,7 +388,6 @@ actor SourcePIDCache {
         ExtrasMenuBarProbeStore.save(merged)
     }
 
-    /// Starts the observers for the cache.
     func start() {
         SourcePIDCache.diagLog.debug("Starting observers for source PID cache")
         _ = cancellable
@@ -454,10 +399,8 @@ actor SourcePIDCache {
     /// `pidBody` already caches **all** matched windows during its full
     /// AX scan, so after one call all resolvable PIDs are available.
     ///
-    /// The entire request is wrapped in an autoreleasepool. This XPC
-    /// service has no NSApplication, so autoreleased ObjC/CF objects from
-    /// WindowInfo creation, AX API calls, and CGS bridging would otherwise
-    /// accumulate on the GCD thread until process exit.
+    /// Wrapped in an autoreleasepool: this service has no NSApplication, so
+    /// autoreleased ObjC/CF objects would pile up on the GCD thread until exit.
     nonisolated func pids(for windows: [WindowInfo]) -> [pid_t?] {
         autoreleasepool {
             pidsBody(for: windows)
@@ -465,15 +408,8 @@ actor SourcePIDCache {
     }
 
     private nonisolated func pidsBody(for windows: [WindowInfo]) -> [pid_t?] {
-        // Drive the scan via an unresolved window in the batch, not via
-        // `windows.first`. pidBody returns early on a cache hit (line 292),
-        // so passing a cached window skips the AX traversal entirely.
-        // Once macOS 26 began routing some widgets through the marker-pair
-        // fallback that lives in pidBody's scan body, mid-session arrivals
-        // (new app launches that introduce a fresh nil-PID windowID) were
-        // never getting a scan: the first window in their batch was always
-        // an already-cached resolved one, and the scan only ever ran at
-        // session start.
+        // Drive the scan with an unresolved window, not `windows.first`: pidBody
+        // returns early on a cache hit, so mid-session arrivals would never scan.
         let now = ContinuousClock.now
         if let unresolved = windows.first(where: { needsScan($0, asOf: now) }) {
             _ = pidBody(for: unresolved)
@@ -490,13 +426,8 @@ actor SourcePIDCache {
     /// Split out of `pidsBody` so the search predicate, the lock, and the
     /// deadline comparison are not three closures deep.
     private nonisolated func needsScan(_ window: WindowInfo, asOf now: ContinuousClock.Instant) -> Bool {
-        // A window with no area cannot be matched to an accessibility
-        // element, so it must not start a scan on its own behalf: allowed to,
-        // it wakes a full traversal of every running app once per
-        // negative-cache TTL for the life of the session and never resolves.
-        // It is still resolved by a scan another window starts, and bounds
-        // are re-read on every request, so one that gains area later stops
-        // being skipped.
+        // A zero-area window can't match an AX element, so it must not start a
+        // scan itself: it would trigger a full traversal every TTL and never resolve.
         guard !window.isDegenerate else {
             return false
         }
@@ -526,8 +457,7 @@ actor SourcePIDCache {
 
         SourcePIDCache.diagLog.debug("SourcePIDCache.pid: cache miss for windowID \(window.windowID) title=\(window.title ?? "nil"), acquiring scan lock")
 
-        // Use a lock to ensure that only one thread performs the full AX traversal.
-        // This is critical when resolving many windows (e.g. 64) concurrently.
+        // Only one thread performs the full AX traversal, even with many concurrent windows.
         scanLock.lock()
         defer { scanLock.unlock() }
 
@@ -582,14 +512,8 @@ actor SourcePIDCache {
                 appsSkipped += 1
             }
             autoreleasepool {
-                // Accessibility reads are serviced by the *target* process,
-                // normally on its main thread, and are bounded only by the
-                // unresponsive timeout set in `init`. One busy app can
-                // therefore account for most of a scan's wall time. Naming
-                // the slow ones is what separates "the app list is too long"
-                // from "two apps are wedged" — the first calls for a
-                // narrower scan, the second for a shorter timeout, and a
-                // total alone cannot tell them apart.
+                // AX reads run on the target app's main thread, bounded only by the
+                // timeout set in `init`. Naming slow apps tells a long app list from a wedged app.
                 let probeStart = ContinuousClock.now
                 let bar = app.getOrCreateExtrasMenuBar()
                 let probeDuration = ContinuousClock.now - probeStart
@@ -604,28 +528,15 @@ actor SourcePIDCache {
                     return
                 }
                 appsWithBar += 1
-                // Thaw's own children are never skipped for being disabled.
-                // A collapsed section divider is deliberately disabled
-                // (ControlItem sets isEnabled = false in .hideSection so the
-                // spacer stays inert), which is its normal steady state — so
-                // skipping it here leaves Thaw unable to resolve its own
-                // control items for as long as the section stays collapsed.
-                // That kills both ControlItemPair fallbacks that key off
-                // sourcePID: the tag+PID match, and the AX-frame correlation,
-                // whose candidate predicate requires sourcePID == ourPID.
-                // Thaw then cannot identify its own dividers even with an
-                // exact positional match available (#899, and the
-                // "strategies 1 through 3 never fired" report in #895).
+                // Never skip Thaw's own disabled children: a collapsed divider is
+                // disabled on purpose (.hideSection), and skipping it breaks both
+                // sourcePID-based ControlItemPair fallbacks (#899, #895).
                 let isOwnApp = app.bundleIdentifier == thawBundleID
                 let children = AXHelpers.children(for: bar)
                 for child in children {
                     totalChildrenChecked += 1
-                    // Skip only children the app marks explicitly disabled. A
-                    // missing AXEnabled attribute (nil) is treated as enabled:
-                    // some status items hosted by Control Center (The Clock's
-                    // among them) never publish AXEnabled, and treating absent as
-                    // disabled would drop an otherwise exact positional match and
-                    // leave the item unresolved.
+                    // Skip only explicitly disabled children. Missing AXEnabled counts as
+                    // enabled: some Control Center-hosted items (the Clock) never publish it.
                     guard isOwnApp || AXHelpers.enabledAttribute(child) != false,
                           let childFrame = AXHelpers.frame(for: child)
                     else {
@@ -634,23 +545,11 @@ actor SourcePIDCache {
 
                     let childCenter = childFrame.center
 
-                    // Match this child to ANY window in our list, but skip
-                    // Control-Center-hosted generic slots. Control Center is the
-                    // CG owner for every CC-hosted NSStatusItem. When the matched
-                    // app is Control Center and the window title is a generic
-                    // Item-N slot, the spatial match only confirms the window is
-                    // CC-hosted; it does not identify the owning app. Writing
-                    // Control Center's PID would tag the item as a transient CC
-                    // widget (isTransientControlCenterItem true, canBeHidden
-                    // false), hiding it from profile management. Leaving it
-                    // unresolved lets the marker-pair pass below supply the real
-                    // owner PID; named CC items (BentoBox-0, Clock, WiFi,
-                    // NowPlaying) carry non-generic titles and resolve to Control
-                    // Center normally.
-                    //
-                    // On a single display the marker windows may never publish,
-                    // in which case the item stays unresolved for the session.
-                    // Accepted: a permanent mislabel is worse than no owner.
+                    // Skip Control Center-hosted generic Item-N slots: the match only
+                    // proves CC hosts it, and CC's PID would mark it a transient CC
+                    // widget that can't be hidden. The marker-pair pass supplies the
+                    // real owner. On one display markers may never publish, leaving
+                    // it unresolved; that beats a permanent mislabel.
                     if let matchedWindow = allWindows.first(where: {
                         $0.bounds.center.distance(to: childCenter) <= 1
                     }), !MarkerPairResolver.isCCHostedGenericSlot(
@@ -667,36 +566,10 @@ actor SourcePIDCache {
             }
         }
 
-        // Corroborated spatial fallback for Control-Center-hosted items
-        // whose own app DOES publish an extras-bar AX child, but offset from
-        // the CG window center by more than the strict 1pt pass tolerates.
-        // The hosting CG slot is wider than the real icon, so their centers
-        // diverge: AirBuddy's by ~2pt, SpamSieve's by up to ~8pt. Accept the
-        // nearest such child within a generous radius ONLY when the window's
-        // reverse-DNS title is in an owner relationship with the app's bundle
-        // identifier (HostedItemOwnership). The title corroboration, not the
-        // distance, is what makes this safe: a nearby unrelated neighbor
-        // (WireGuard's slot beside Updatest at ~2pt) fails the owner check and
-        // is left for later passes. Runs BEFORE marker-pair so items that have
-        // their own AX child are claimed here and never reach that fallback.
-        // Empirically the furthest correct owner-corroborated match across
-        // captured logs is ~15pt; 20 leaves margin while staying well inside
-        // a neighbor's slot. The owner check is the real guard.
-        // Exact-title PID resolution.
-        //
-        // Runs BEFORE the hosted-extras pass because it is the strongest
-        // signal available: a window whose title is the complete bundle
-        // identifier of a running application is naming its owner outright.
-        // The pass below finds the same app by title but then requires
-        // spatial confirmation against the app's AX children — and an item
-        // hosted by Control Center publishes no AXExtrasMenuBar of its own,
-        // which is why it is unresolved in the first place. The confirmation
-        // can never arrive, so those items fell through every pass (#854:
-        // com.microsoft.OneDrive, com.apple.TextInputMenuAgent, us.zoom.xos
-        // and seven more, all with a nil source PID in one log).
-        //
-        // Thaw and Control Center are excluded: attributing a widget to
-        // either is the misattribution every other pass is careful to avoid.
+        // Exact-title PID resolution, run first: a title equal to a running app's
+        // bundle ID names its owner outright. CC-hosted items publish no
+        // AXExtrasMenuBar, so the spatially confirmed pass below never resolves
+        // them (#854). Thaw and Control Center are never attributed.
         let attributableBundleIDs = apps.compactMap { app -> String? in
             guard let bundleID = app.bundleIdentifier,
                   bundleID != thawBundleID,
@@ -733,6 +606,12 @@ actor SourcePIDCache {
             }
         }
 
+        // Corroborated spatial fallback for CC-hosted items whose app does publish
+        // an extras-bar AX child, offset from the wider CG slot's center (AirBuddy
+        // ~2pt, SpamSieve ~8pt). The nearest child within 20pt is accepted only
+        // when the title passes HostedItemOwnership; that check, not the distance,
+        // rejects unrelated neighbors. Runs before marker-pair. Furthest correct
+        // match seen in logs is ~15pt.
         let hostedExtrasMatchRadius: CGFloat = 20
         for app in apps {
             if unresolvedWindows.isEmpty {
@@ -769,35 +648,17 @@ actor SourcePIDCache {
 
         // Marker-pair PID resolution.
         //
-        // On macOS 26 some widgets (Little Snitch's agent observed in
-        // the wild) have their NSStatusItem hosted by Control Center
-        // at the AX layer and do not publish an AXExtrasMenuBar of
-        // their own. The spatial CG-to-AX pass above cannot find a
-        // per-app extras child for them, so the icon stays unresolved
-        // and the namespace falls back to com.apple.controlcenter.
+        // On macOS 26 some widgets (Little Snitch's agent) are hosted by Control
+        // Center at the AX layer and publish no AXExtrasMenuBar, so the spatial
+        // pass can't resolve them. Each such widget also publishes a second CG
+        // "marker" window titled with its bundle ID, same size as the icon but at
+        // an unpredictable position, possibly on another display (hence this runs
+        // in the XPC, where allWindows spans every display).
         //
-        // Structurally, every NSStatusItem-style widget also publishes
-        // a SECOND CG window in the items-only list whose title is
-        // the widget's bundle identifier (verified empirically for
-        // at.obdev.littlesnitch.agent, com.rogueamoeba.soundsource,
-        // com.wireguard.macos, org.eduvpn.app, com.lighting.huesync,
-        // pl.maketheweb.cleanshotx, and others). This marker window
-        // has the same (width, height) as the on-screen icon but
-        // its position is non-deterministic across launches and can
-        // even sit on a different display, which is why this pass
-        // runs here in the XPC where allWindows spans every display
-        // rather than in the main app's per-call list.
-        //
-        // For each unresolved on-screen icon whose title is NOT
-        // bundle-ID-shaped (generic names like "Item-0", or empty),
-        // looks for the unique marker window with matching size and
-        // synthesizes the sourcePID by either using the marker's
-        // CG-layer owning PID (when it is neither Thaw itself nor
-        // Control Center) or by looking up the running app named by
-        // the marker's bundle-ID title. Multi-match cases are skipped
-        // to prevent misattribution. Thaw's own control items and
-        // self-registration windows are excluded so Thaw's PID can
-        // never be attributed to a third-party widget.
+        // For each unresolved icon with a generic title ("Item-0" or empty), find
+        // the unique same-size marker and take its owner PID (unless Thaw or CC)
+        // or the app its title names. Multiple matches are skipped, and Thaw's
+        // own windows are excluded so its PID never lands on a third-party widget.
         var markerWindowIDs = Set<CGWindowID>()
         if !unresolvedWindows.isEmpty {
             let markers = MarkerPairResolver.extractMarkers(
@@ -845,17 +706,9 @@ actor SourcePIDCache {
             }
         }
 
-        // Title-identity fallback for parked (off-screen) items.
-        //
-        // The spatial passes need an AX child near the CG window and the
-        // marker-pair pass only considers on-screen icons, so a widget whose
-        // window title is its own bundle identifier (Little Snitch's agent)
-        // becomes unresolvable the moment it is parked at off-screen
-        // coordinates — and an unresolvable hidden item can never be matched
-        // back to its saved section. An exact title == bundle-identifier
-        // match against a running application is direct ownership evidence
-        // that needs no geometry; the reverse-DNS shape requirement keeps
-        // generic slot titles (Item-0) away from the lookup.
+        // Title-identity fallback for parked (off-screen) items, which the spatial
+        // and marker-pair passes can't see. A title equal to a running app's bundle
+        // ID proves ownership without geometry; the reverse-DNS check skips Item-N.
         let unresolvedInfos = allWindows.filter {
             unresolvedWindows.contains($0.windowID) && !markerWindowIDs.contains($0.windowID)
         }
@@ -878,19 +731,10 @@ actor SourcePIDCache {
         let finalPID = state.withLock { $0.pids[window.windowID] }
         SourcePIDCache.diagLog.debug("SourcePIDCache.pid: batch resolution finished. Found \(totalMatchesFound) matches. Requested windowID \(window.windowID) -> PID \(finalPID.map { "\($0)" } ?? "nil") (checked \(appsChecked) apps, \(appsSkipped) skipped by negative cache, \(appsWithBar) with extras bar, \(totalChildrenChecked) children, took \(ContinuousClock.now - scanStart))")
 
-        // Negative-cache every window that survived the full scan unresolved,
-        // with a deadline that backs off as consecutive failures accumulate:
-        // short at first so the app's startup settling window can retry while
-        // AX trees are still warming up, then the steady-state TTL. A flat
-        // TTL here wedged resolution permanently — the first cold scan
-        // under-resolves, its deadline outlasts every retry the app makes,
-        // and no scan runs again (the app stops requesting once settled).
-        // Entries that expired, and entries whose window this scan resolved,
-        // are dropped on the same write, so both dictionaries stay bounded and
-        // a resolved window's next miss starts at the first rung. This runs
-        // unconditionally: a scan that resolves everything leaves
-        // unresolvedWindows empty, and that is exactly when the stale entries
-        // need clearing.
+        // Negative-cache unresolved windows with a backoff: short deadlines while AX
+        // trees warm up, then the steady-state TTL. A flat TTL wedged resolution for
+        // good, since the cold scan's deadline outlasted every app retry. Expired and
+        // now-resolved entries are dropped here, so this runs even when all resolved.
         let now = ContinuousClock.now
         let unresolvedSnapshot = unresolvedWindows
         state.withLock { state in
@@ -910,22 +754,11 @@ actor SourcePIDCache {
             }
         }
 
-        // Diagnostic dump for unresolved windows.
-        //
-        // When at least one window remains unresolved after the batch
-        // loop, log enough state to determine which of three failure
-        // modes is hitting: (a) the suspect app is absent from
-        // NSWorkspace runningApplications, (b) the app is present but
-        // does not expose AXExtrasMenuBar (the per-app menu extras
-        // attribute is unset on macOS 26 for some widgets), or (c)
-        // the app exposes extras but their frames are more than 1pt
-        // off-center from the unresolved CG window bounds (a HiDPI,
-        // multi-display, or coord-system mismatch).
-        //
-        // Quiet path on normal cycles where every window resolves.
-        // The diagnostic re-walks AX children, which can be expensive,
-        // so it only fires when there is actual unresolved state—and no more
-        // than once per interval for the same unresolved set.
+        // Diagnostic dump for unresolved windows. Distinguishes three failures:
+        // (a) the app is missing from runningApplications, (b) it exposes no
+        // AXExtrasMenuBar (unset on macOS 26 for some widgets), or (c) its extras
+        // are more than 1pt off the CG bounds (HiDPI, multi-display, coordinates).
+        // Re-walking AX is expensive, so it runs at most once per interval per set.
         var shouldDumpUnresolvedDiagnostics = false
         if !unresolvedWindows.isEmpty {
             let unresolvedSnapshot = unresolvedWindows
@@ -945,11 +778,7 @@ actor SourcePIDCache {
                 "SourcePIDCache diag: \(unresolvedWindows.count) window(s) unresolved after batch, dumping details"
             )
 
-            // Ad-hoc probe for specific bundles under investigation.
-            // Leave empty in normal builds; populate with bundle IDs
-            // when diagnosing a particular widget's resolution failure
-            // to see whether NSWorkspace sees it and whether it claims
-            // an extras menu bar of its own.
+            // Bundle IDs to probe while debugging one widget's resolution. Leave empty.
             let probeBundleIDs: Set<String> = []
             for bundleID in probeBundleIDs {
                 if let app = apps.first(where: { $0.bundleIdentifier == bundleID }) {
@@ -966,12 +795,8 @@ actor SourcePIDCache {
             let unresolvedWindowInfos = allWindows.filter { unresolvedWindows.contains($0.windowID) }
             for window in unresolvedWindowInfos {
                 let target = window.bounds.center
-                // Collect every extras-bar child across all apps as a candidate,
-                // not just the single closest, so the diagnostic shows whether the
-                // nearest match is unique or whether a competing child sits within
-                // the match radius. Paired with each candidate's enabled state and
-                // distance, this is usually enough to see why an item failed to
-                // resolve (wrong distance, missing AXEnabled, or ambiguity).
+                // Collect every extras-bar child, not just the closest, so the log
+                // shows competing candidates within the match radius.
                 var candidates: [(distance: CGFloat, label: String, frame: CGRect, enabled: Bool?)] = []
                 for app in apps {
                     guard let bar = app.getOrCreateExtrasMenuBar() else { continue }
@@ -986,10 +811,8 @@ actor SourcePIDCache {
                 let cgOwner = window.owningApplication.map { app in
                     "\(app.bundleIdentifier ?? app.localizedName ?? "?"):pid=\(app.processIdentifier)"
                 } ?? "nil"
-                // closestAXEnabled distinguishes a missing AXEnabled attribute (nil)
-                // from an explicitly disabled child, and nearest lists the top
-                // candidates with their owning app and enabled state, so a future
-                // unresolved item can be diagnosed from a single log line.
+                // closestAXEnabled tells a missing AXEnabled (nil) from an explicitly
+                // disabled child.
                 let nearestDesc = nearest.prefix(3).map {
                     "\($0.label)@\(String(format: "%.1f", $0.distance))(enabled=\($0.enabled.map { "\($0)" } ?? "nil"))"
                 }.joined(separator: ", ")
@@ -1001,9 +824,7 @@ actor SourcePIDCache {
             for app in apps {
                 guard let bar = app.getOrCreateExtrasMenuBar() else { continue }
                 let children = AXHelpers.children(for: bar)
-                // Include each child's raw enabled value (nil = attribute absent)
-                // next to its frame, so a child the matching pass excluded as
-                // explicitly disabled is visible here.
+                // Raw enabled value per child (nil = attribute absent).
                 let childDescs = children.compactMap { child -> String? in
                     guard let frame = AXHelpers.frame(for: child) else { return nil }
                     let enabled = AXHelpers.enabledAttribute(child).map { "\($0)" } ?? "nil"

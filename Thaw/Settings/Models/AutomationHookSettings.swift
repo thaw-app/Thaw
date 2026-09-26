@@ -11,9 +11,7 @@ import Observation
 
 /// Manages the two global profile hooks shown in AutomationSettingsPane.
 ///
-/// Per-profile hooks live inside each Profile JSON; the pane reads and
-/// writes them directly through ProfileManager and does not need to be
-/// mirrored here.
+/// Per-profile hooks live in each profile's JSON and go through ProfileManager.
 @MainActor
 @Observable
 final class AutomationHookSettings {
@@ -31,8 +29,7 @@ final class AutomationHookSettings {
         }
     }
 
-    /// True while loading from defaults; suppresses writeback in the
-    /// didSet so we do not echo the initial load back to disk.
+    /// Suppresses the didSet writeback while loading from defaults.
     @ObservationIgnored
     private var suppressPersist = false
 

@@ -10,34 +10,20 @@ import AppKit
 import Darwin
 import Foundation
 
-/// Engages zen mode for as long as the screen is being shown to someone else,
-/// then withdraws it — so a menu bar full of personal status items isn't the
-/// first thing an audience sees.
+/// Engages zen mode while the screen is being shown to someone else.
 ///
-/// ## What can and cannot be detected
+/// There's no public API to detect another process recording the screen
+/// (`CGDisplayIsCaptured` only reports legacy exclusive capture), so this
+/// covers:
 ///
-/// macOS 27 exposes no public way to ask whether another process is recording
-/// the screen: `CoreGraphics` offers only `CGDisplayIsCaptured`, which reports
-/// the legacy exclusive-capture mode rather than a ScreenCaptureKit stream,
-/// and ScreenCaptureKit has no observer for other clients. So this monitor
-/// covers the two states that *are* observable with public API:
+/// - Mirroring: `CGDisplayIsInMirrorSet`, on screen-parameter changes.
+/// - Screen sharing: `screensharingd` running, polled only while enabled.
 ///
-/// - **Mirroring** — `CGDisplayIsInMirrorSet`, the projector/TV case. Driven by
-///   `didChangeScreenParametersNotification`, so it costs nothing at rest.
-/// - **Screen sharing / remote management** — the presence of the system's
-///   `screensharingd`. There is no notification for it, so it is polled, and
-///   only while the setting is on.
-///
-/// Local recording by an app such as QuickTime, OBS, or a conferencing client
-/// is **not** covered, and deliberately isn't guessed at from a list of known
-/// recorder bundle identifiers: that list is wrong the moment it ships, and a
-/// zen mode that engages for the wrong app is worse than one that doesn't
-/// engage at all.
+/// Local recording (QuickTime, OBS) isn't guessed from a bundle ID list;
+/// engaging for the wrong app is worse than not engaging.
 @MainActor
 final class PresentationMonitor {
-    /// How often the screen-sharing daemon is looked for. Sharing sessions
-    /// last minutes, so a coarse interval is enough and keeps the process
-    /// enumeration off the critical path.
+    /// Coarse because sharing sessions last minutes.
     private static let pollInterval = Duration.seconds(5)
 
     private let diagLog = DiagLog(category: "PresentationMonitor")
@@ -73,9 +59,7 @@ final class PresentationMonitor {
     private func startObserving() {
         guard screenParametersTask == nil else { return }
 
-        // Same observer-owned-by-the-task shape as `DisplaySettingsManager`:
-        // the token is added when the task starts and removed when it ends,
-        // so nothing non-Sendable has to be stored on the class.
+        // The task owns the observer token, so nothing non-Sendable is stored.
         let (events, continuation) = AsyncStream<Void>.makeStream()
         screenParametersTask = Task { @MainActor [weak self] in
             let observer = NotificationCenter.default.addObserver(
@@ -115,16 +99,11 @@ final class PresentationMonitor {
     }
 
     private func evaluate() {
-        // Sample off the main actor: the screen-sharing check walks the whole
-        // process table, and this fires on a 5 s cadence. Sampling detached
-        // means two evaluations could otherwise land out of order and leave zen
-        // mode on a stale sample, so the previous round is cancelled first and a
-        // cancelled round never applies what it read.
+        // The process-table walk runs detached, so rounds can land out of
+        // order. Cancel the previous one; a cancelled round never applies.
         evaluateTask?.cancel()
         evaluateTask = Task { @MainActor [weak self] in
-            // Mirroring is an AppKit/CoreGraphics query that belongs on the
-            // main thread and costs nothing; only the process-table walk is
-            // worth detaching.
+            // Mirroring is cheap and belongs on the main thread.
             let mirroring = Self.isMirroring()
             let shared = await Task.detached(priority: .utility) {
                 Self.isScreenBeingShared()
@@ -151,23 +130,15 @@ final class PresentationMonitor {
 
     /// Whether the system's screen-sharing daemon is running.
     ///
-    /// `screensharingd` is launched on demand for the duration of a session
-    /// and is not an application, so it is invisible to `NSWorkspace`; the
-    /// process table is the only public place it shows up.
+    /// `screensharingd` isn't an application, so `NSWorkspace` can't see it.
     private static nonisolated func isScreenBeingShared() -> Bool {
         runningProcessNames().contains("screensharingd")
     }
 
     /// Every running process's short name.
     ///
-    /// Read through `sysctl(KERN_PROC_ALL)` rather than `proc_listallpids` +
-    /// `proc_name`: the latter cannot name a process it lacks privileges to
-    /// inspect, and on this system that silently hides 212 of 665 pids —
-    /// including every root daemon, which is exactly the category
-    /// `screensharingd` falls into. `sysctl` returns `p_comm` for all of them.
-    ///
-    /// `p_comm` is truncated to `MAXCOMLEN` (16) characters; the names matched
-    /// here are shorter than that.
+    /// Uses `sysctl(KERN_PROC_ALL)` because `proc_name` can't name root
+    /// daemons like `screensharingd`. `p_comm` is truncated to 16 characters.
     private static nonisolated func runningProcessNames() -> Set<String> {
         var mib: [Int32] = [CTL_KERN, KERN_PROC, KERN_PROC_ALL, 0]
         var size = 0
@@ -175,11 +146,8 @@ final class PresentationMonitor {
             return []
         }
 
-        // The table can grow between sizing and reading, so a single read is
-        // allowed to fail with the buffer now too small. Retrying with a fresh
-        // size matters for correctness, not just robustness: returning empty
-        // here reads as "not sharing" and would withdraw zen mode mid-session
-        // on a lost race.
+        // The table can grow between sizing and reading. Retry, since an empty
+        // result reads as "not sharing" and would drop zen mode mid-session.
         for _ in 0 ..< 3 {
             guard size > 0 else { return [] }
             let capacity = size / MemoryLayout<kinfo_proc>.stride + 16

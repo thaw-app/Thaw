@@ -69,7 +69,6 @@ struct MenuBarItemServiceTests {
 
         @Test("A sourcePIDs request keeps its window info across a round trip")
         func sourcePIDsRequestRoundTrip() throws {
-            // Create a WindowInfo manually for testing
             let windowInfo = try createTestWindowInfo()
             let original = MenuBarItemService.Request.sourcePIDs([windowInfo])
 

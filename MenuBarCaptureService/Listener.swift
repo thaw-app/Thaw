@@ -24,9 +24,7 @@ final nonisolated class Listener: @unchecked Sendable {
     private var captureCount = 0
 
     private init() {
-        // Intentionally empty: the Connection is a singleton whose state
-        // initializes at its property declarations, so there is nothing to
-        // do here. The private visibility keeps external callers on `shared`.
+        // Intentionally empty: singleton state initializes at its declarations.
     }
 
     deinit {
@@ -41,9 +39,7 @@ final nonisolated class Listener: @unchecked Sendable {
                 return .start
             case let .configureLogging(filePath, rotationPolicy):
                 if let rotationPolicy {
-                    // The app owns the shared log directory's retention, so
-                    // pruning here follows its policy instead of this
-                    // target's defaults.
+                    // Prune by the app's retention policy, not this target's defaults.
                     DiagnosticLogger.shared.setRotationPolicy(rotationPolicy)
                 }
                 guard let filePath else {
@@ -63,11 +59,8 @@ final nonisolated class Listener: @unchecked Sendable {
                     return nil
                 }
                 guard DiagnosticLogger.shared.attachToFile(at: requested) else {
-                    // Answering success here would leave the app believing
-                    // both processes share a file while this one keeps
-                    // writing to the previous segment — which retention
-                    // eventually deletes out from under it. Failing the
-                    // request makes the app retry.
+                    // Replying success would leave this process writing to the old
+                    // segment, which retention later deletes. Failing makes the app retry.
                     diagLog.error(
                         "Capture listener failed to attach diagnostic logging to \(requested.path)"
                     )

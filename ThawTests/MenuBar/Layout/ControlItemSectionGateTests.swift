@@ -10,25 +10,16 @@ import Testing
 @testable import Thaw
 
 /// Covers ``LayoutSolver/controlItemsAreInCanonicalOrder(visibleControlItemBounds:hiddenControlItemBounds:alwaysHiddenControlItemBounds:)``,
-/// the gate that stops a bulk apply from planning against a bar whose
-/// dividers have drifted out of order.
+/// which stops a bulk apply from planning against dividers that drifted out of order.
 ///
-/// #1027's restart produced exactly that state before any apply ran: the
-/// hidden divider parked far offscreen, and the live reading placed the
-/// visible control item inside the hidden section. The applies that
-/// dispatched anyway planned an unmanaged Battery into hidden and anchored
-/// moves on the scramble. The room gate (#868) could not see it — drifted
-/// dividers leave plenty of room — and a missing divider is deliberately
-/// not this gate's business (#849 owns that). The half that keeps the fix
-/// from becoming a bug of its own: a bar that cannot be verified passes,
-/// and the refusal paths pair the gate with recovery so a scrambled bar
-/// converges back instead of wedging.
+/// After a restart the hidden divider parked offscreen and the visible control
+/// item read inside hidden; applies planned an unmanaged Battery into hidden
+/// (#1027). The room gate (#868) cannot see drift, and a missing divider is #849's
+/// job. A bar that cannot be verified passes, and refusals pair with recovery so
+/// a scrambled bar converges instead of wedging.
 @Suite("Control item section gate")
 struct ControlItemSectionGateTests {
-    /// The healthy bar, at the scale of the apply-gate fixtures: the
-    /// always-hidden divider left of the hidden one, the chevron right of
-    /// it. Absent dividers (no chevron in the reading, always-hidden
-    /// disabled) leave the gate's verdict to the dividers that are present.
+    /// Absent dividers (no chevron, always-hidden disabled) leave the verdict to those present.
     @Test("Canonical dividers pass, including the apply-gate fixture geometry")
     func canonicalDividersPass() {
         #expect(LayoutSolver.controlItemsAreInCanonicalOrder(
@@ -48,10 +39,8 @@ struct ControlItemSectionGateTests {
         ))
     }
 
-    /// #1027's reading: the chevron sat entirely left of the hidden divider
-    /// (the log classified it into the hidden section), and in the same bar
-    /// a second cycle had the always-hidden divider drift right of the
-    /// hidden one. Each violation refuses on its own.
+    /// The chevron entirely left of the hidden divider, and on another cycle the
+    /// always-hidden divider right of it (#1027). Each refuses on its own.
     @Test("The #1027 divider states refuse")
     func fieldDividerStatesRefuse() {
         let hidden = CGRect(x: -5743, y: 0, width: 10, height: 22)
@@ -80,11 +69,8 @@ struct ControlItemSectionGateTests {
         #expect(!bothDrifted)
     }
 
-    /// Touching-but-ordered dividers pass: a chevron parked directly
-    /// against the hidden divider's trailing edge, and an always-hidden
-    /// divider butted against the hidden one's leading edge with the hidden
-    /// section empty. Both are ordinary collapsed-section geometry, and a
-    /// gate that refused them would refuse every collapsed bar.
+    /// A chevron against the hidden divider's trailing edge, or an always-hidden
+    /// divider against its leading edge, is ordinary collapsed geometry.
     @Test("Adjacent but ordered dividers pass")
     func adjacentOrderedDividersPass() {
         #expect(LayoutSolver.controlItemsAreInCanonicalOrder(
@@ -96,19 +82,13 @@ struct ControlItemSectionGateTests {
 
     // MARK: - Log-replay regression lock
 
-    /// Replays #1027's dispatch-time reading (thaw_2026-09-02_19-49-29.log,
-    /// 19:49:59.161): the bar had already collapsed to one visible item, and
-    /// the live reading placed the visible control item inside the hidden
-    /// section — the always-hidden divider's window was simultaneously read
-    /// under its degraded identity (`com.apple.controlcenter:com.stonerl.Thaw`)
-    /// in always-hidden. The gate must refuse that cycle; before the fix,
-    /// the apply dispatched against it and planned the unmanaged Battery
-    /// into hidden all over again.
+    /// Replays #1027's dispatch-time reading: one visible item left, the visible
+    /// control item read inside hidden, and the always-hidden divider read under its
+    /// degraded identity (`com.apple.controlcenter:com.stonerl.Thaw`). Before the fix
+    /// the apply planned Battery into hidden again.
     ///
-    /// The log records section membership rather than divider bounds, so the
-    /// chevron's bounds are synthesized to realize exactly the logged
-    /// classification: an item the reading calls hidden sits entirely left
-    /// of the hidden divider by that reading's own rules.
+    /// The log records sections, not bounds, so the chevron's bounds are synthesized
+    /// to reproduce the logged classification.
     @Test("The #1027 field cycle is refused")
     func fieldCycleIsRefused() throws {
         let log = """
@@ -126,10 +106,8 @@ struct ControlItemSectionGateTests {
             "Fixture must carry the visible control item inside hidden, as the field log did"
         )
 
-        // The hidden divider's bounds are unknowable from the log (it was
-        // parked offscreen), so stand in a divider at the origin and place
-        // the chevron entirely left of it, which is what "classified into
-        // the hidden section" means geometrically.
+        // The parked divider's bounds are unknown, so use one at the origin and put the
+        // chevron entirely left of it, which is what "classified hidden" means.
         let hiddenDivider = CGRect(x: 0, y: 0, width: 10, height: 22)
         let chevronInHidden = CGRect(x: -100, y: 0, width: 24, height: 22)
 
@@ -141,10 +119,7 @@ struct ControlItemSectionGateTests {
         #expect(!ordered)
     }
 
-    /// A settled cycle passes: the chevron in visible, the always-hidden
-    /// divider in always-hidden, exactly what a healthy boot logs. Guards
-    /// against a gate that refuses valid layouts — the failure mode that
-    /// would wedge applies at startup.
+    /// A healthy boot must pass, or applies wedge at startup.
     @Test("A settled field cycle passes")
     func settledCyclePasses() throws {
         let log = """

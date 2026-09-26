@@ -116,11 +116,8 @@ final nonisolated class HotkeyRegistry {
             &eventHandlerRef
         )
 
-        // Only retain the menu-tracking observers once the handler is
-        // actually installed. A failure leaves `eventHandlerRef` nil, so the
-        // next registration re-enters this function — storing them up front
-        // would add a duplicate pair of sinks on every retry, and each
-        // duplicate unregisters and re-registers every hotkey again.
+        // Retain the menu-tracking observers only once installed: a failed install
+        // is retried, and storing them earlier would duplicate the sinks each retry.
         guard status == noErr else {
             didBeginTrackingObserver.cancel()
             didEndTrackingObserver.cancel()
@@ -292,7 +289,6 @@ final nonisolated class HotkeyRegistry {
             return OSStatus(eventNotHandledErr)
         }
 
-        // create a hot key id from the event
         var hotKeyID = EventHotKeyID()
         let status = GetEventParameter(
             event,
@@ -304,13 +300,10 @@ final nonisolated class HotkeyRegistry {
             &hotKeyID
         )
 
-        // make sure creation was successful
         guard status == noErr else {
             return status
         }
 
-        // make sure the event signature matches our signature and
-        // that an event handler is registered for the event
         guard
             hotKeyID.signature == signature,
             let registration = state.withLockUnchecked({ $0.registrations[hotKeyID.id] }),
@@ -319,7 +312,6 @@ final nonisolated class HotkeyRegistry {
             return OSStatus(eventNotHandledErr)
         }
 
-        // all checks passed; perform the event handler
         registration.handler()
 
         return noErr

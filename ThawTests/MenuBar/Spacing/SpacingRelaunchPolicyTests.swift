@@ -9,13 +9,11 @@ import Foundation
 import Testing
 @testable import Thaw
 
-/// Covers the relaunch triage added for #1070.
+/// Covers the spacing relaunch triage (#1070).
 ///
-/// The spacing wave has to restart status item owners for a new
-/// NSStatusItemSpacing to show up right away, but a launch-constrained
-/// system binary that no LaunchAgent claims cannot be brought back once it
-/// is down: the respawn is SIGKILLed by AMFI and the item is gone until
-/// reboot. Those must never be terminated in the first place.
+/// A new NSStatusItemSpacing needs status item owners restarted, but a
+/// launch-constrained system binary no LaunchAgent claims can't come back:
+/// AMFI SIGKILLs the respawn and the item is gone until reboot.
 @Suite("Spacing relaunch policy")
 struct SpacingRelaunchPolicyTests {
     private func strategy(

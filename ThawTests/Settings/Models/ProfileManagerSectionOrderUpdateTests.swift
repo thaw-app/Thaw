@@ -10,13 +10,10 @@ import Testing
 @testable import Thaw
 
 /// Covers `ProfileManager.updateActiveProfileSectionOrder(_:identifiers:)`,
-/// which the Sort A→Z action (#936) uses to persist a sorted section into the
-/// active profile before re-applying, so `reapplyActiveProfile` reads the new
-/// order instead of the stale on-disk one.
+/// which Sort A→Z uses to persist a sorted section before re-applying, so
+/// `reapplyActiveProfile` reads the new order, not the stale on-disk one.
 ///
-/// Drives the real ProfileManager against an injected temporary profiles
-/// directory, mirroring ProfileManagerRearmIntegrationTests. Serialized
-/// because it swaps the process-wide Defaults store via withScratchDefaults.
+/// Serialized because withScratchDefaults swaps the process-wide Defaults store.
 @MainActor
 @Suite("Profile manager section-order update", .serialized)
 final class ProfileManagerSectionOrderUpdateTests {
@@ -61,10 +58,8 @@ final class ProfileManagerSectionOrderUpdateTests {
 
     @Test("A missing itemOrder is seeded from the full savedSectionOrder, not an empty dict")
     func missingItemOrderSeedsFromSavedSectionOrder() throws {
-        // A profile whose itemOrder is nil (legacy or pre-sort shape). The
-        // update must seed itemOrder from the complete savedSectionOrder so
-        // resolvedItemOrder keeps every section, instead of a single-section
-        // dict shadowing the rest.
+        // A nil itemOrder (legacy shape). The update must seed it from the full
+        // savedSectionOrder, or a single-section dict shadows the rest.
         let uidA = "com.example.appA:Item-0"
         let uidB = "com.example.appB:Item-0"
         var profile = makeProfile(savedSectionOrder: [

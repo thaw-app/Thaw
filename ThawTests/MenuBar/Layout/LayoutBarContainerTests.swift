@@ -97,10 +97,8 @@ struct LayoutBarItemActivationTests {
     }
 }
 
-/// A cross-container drop only inserts the dragged view into the destination,
-/// so the drag unit is resolved against both bars. The order those items are
-/// handed over in is the order the block move commits, which is why the source
-/// bar leads.
+/// A cross-container drop only inserts into the destination, so the drag unit is
+/// resolved against both bars. Handover order is commit order, so the source leads.
 @Suite("Cross-container group drag ordering")
 struct LayoutBarGroupResolutionOrderTests {
     private func item(_ bundleID: String, _ title: String, _ windowID: CGWindowID) -> MenuBarItem {
@@ -114,8 +112,7 @@ struct LayoutBarGroupResolutionOrderTests {
         let last = item("com.example.a", "3", 3)
         let unrelated = item("com.example.b", "1", 4)
 
-        // The dragged item shows up in the destination and is restored to the
-        // slot it left in the source before the unit is resolved.
+        // The dragged item appears in the destination and is restored to its source slot before resolving.
         let resolutionItems = LayoutBarPaddingView.groupResolutionItems(
             sourceItems: [first, dragged, last],
             destinationItems: [unrelated, dragged]

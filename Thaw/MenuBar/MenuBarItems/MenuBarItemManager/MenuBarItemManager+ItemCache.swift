@@ -14,12 +14,10 @@ import Cocoa
 extension MenuBarItemManager {
     /// Owns the menu bar item cache's cycle-to-cycle state.
     ///
-    /// A final class, not an actor, despite the historical name: every
-    /// access is confined to the manager's @MainActor isolation, which is
-    /// the only thing making the unsynchronized stored properties safe.
+    /// Not an actor despite the name: @MainActor confinement is what makes the
+    /// unsynchronized properties safe.
     final class CacheActor {
-        /// A list of the menu bar item window identifiers at the time
-        /// of the previous cache.
+        /// Window identifiers at the time of the previous cache.
         private(set) var cachedItemWindowIDs = [CGWindowID]()
 
         /// Confirmed window/source incarnations from the previous cache cycle.
@@ -27,39 +25,30 @@ extension MenuBarItemManager {
         /// without trusting a recycled window ID or PID by itself.
         private(set) var cachedSourcePIDBaselines = [CGWindowID: SourcePIDSeed]()
 
-        /// Window identifiers of the system clone windows seen in the most
-        /// recent cache cycle. cacheItemsIfNeeded filters these out of its
-        /// change comparison so a transient clone appearing or vanishing
-        /// doesn't read as a layout change and trigger a recache.
+        /// System clone windows from the last cycle. Filtered out of change
+        /// detection so a transient clone doesn't trigger a recache.
         private(set) var cachedCloneWindowIDs = Set<CGWindowID>()
 
-        /// Window identifiers of Control-Center-generic (Item-N) items seen
-        /// in the most recent cache cycle. These windows churn — Live
-        /// Activities and other transient Control Center widgets appear,
-        /// vanish, and get new windowIDs while the visible item count stays
-        /// stable — so applySavedLayout's windowID-change gate ignores their
-        /// disappearance instead of dispatching a full bulk apply (#736).
+        /// Control Center generic (Item-N) windows from the last cycle. Live
+        /// Activities churn their windowIDs, so their disappearance doesn't
+        /// trigger a bulk apply (#736).
         private(set) var cachedControlCenterGenericWindowIDs = Set<CGWindowID>()
 
         /// Source-PID seeds already written during this app session.
         private(set) var persistedSourcePIDSeeds: [SourcePIDSeed]?
 
-        /// Updates the list of cached menu bar item window identifiers.
         func updateCachedItemWindowIDs(_ itemWindowIDs: [CGWindowID]) {
             cachedItemWindowIDs = itemWindowIDs
         }
 
-        /// Updates the set of cached system clone window identifiers.
         func updateCachedCloneWindowIDs(_ ids: Set<CGWindowID>) {
             cachedCloneWindowIDs = ids
         }
 
-        /// Updates the set of cached Control-Center-generic window identifiers.
         func updateCachedControlCenterGenericWindowIDs(_ ids: Set<CGWindowID>) {
             cachedControlCenterGenericWindowIDs = ids
         }
 
-        /// Updates the confirmed window/source incarnations.
         func updateCachedSourcePIDBaselines(_ baselines: [CGWindowID: SourcePIDSeed]) {
             cachedSourcePIDBaselines = baselines
         }
@@ -71,9 +60,8 @@ extension MenuBarItemManager {
             return true
         }
 
-        /// Returns the last persisted snapshot, loading it once per process.
-        /// Priming this cache avoids one redundant defaults write on the first
-        /// successful enumeration after launch.
+        /// Loads the persisted snapshot once per process, which avoids a
+        /// redundant defaults write on the first enumeration.
         func persistedSourcePIDSeeds(from defaults: UserDefaults) -> [SourcePIDSeed] {
             if let persistedSourcePIDSeeds {
                 return persistedSourcePIDSeeds
@@ -85,29 +73,22 @@ extension MenuBarItemManager {
             return loaded
         }
 
-        /// Clears the list of cached menu bar item window identifiers.
         func clearCachedItemWindowIDs() {
             cachedItemWindowIDs.removeAll()
             cachedSourcePIDBaselines.removeAll()
-            // Clear clone IDs alongside the main set so the two don't drift.
-            // Leaving stale clone IDs here would let cacheItemsIfNeeded filter
-            // a recycled windowID out of its comparison before the recache
-            // that follows this reset repopulates the set.
+            // Stale clone IDs could filter a recycled windowID out of change detection.
             cachedCloneWindowIDs.removeAll()
             cachedControlCenterGenericWindowIDs.removeAll()
         }
     }
 
-    /// Cache for menu bar items.
     struct ItemCache: Hashable {
-        /// Storage for cached menu bar items, keyed by section.
         private var storage = [MenuBarSection.Name: [MenuBarItem]]()
 
         /// The identifier of the display with the active menu bar at
         /// the time this cache was created.
         let displayID: CGDirectDisplayID?
 
-        /// The cached menu bar items as an array.
         var managedItems: [MenuBarItem] {
             MenuBarSection.Name.allCases.reduce(into: []) { result, section in
                 guard let items = storage[section] else {
@@ -117,18 +98,14 @@ extension MenuBarItemManager {
             }
         }
 
-        /// Creates a cache with the given display identifier.
         init(displayID: CGDirectDisplayID?) {
             self.displayID = displayID
         }
 
-        /// Returns the managed menu bar items for the given section.
         func managedItems(for section: MenuBarSection.Name) -> [MenuBarItem] {
             self[section]
         }
 
-        /// Returns the address for the menu bar item with the given tag,
-        /// if it exists in the cache.
         func address(for tag: MenuBarItemTag) -> (section: MenuBarSection.Name, index: Int)? {
             for (section, items) in storage {
                 guard let index = items.firstIndex(matching: tag) else {
@@ -139,8 +116,6 @@ extension MenuBarItemManager {
             return nil
         }
 
-        /// Inserts the given menu bar item into the cache at the specified
-        /// destination.
         mutating func insert(_ item: MenuBarItem, at destination: MoveDestination) {
             let targetTag = destination.targetItem.tag
 
@@ -176,7 +151,6 @@ extension MenuBarItemManager {
             self[section].insert(item, at: index)
         }
 
-        /// Accesses the items in the given section.
         subscript(section: MenuBarSection.Name) -> [MenuBarItem] {
             get { storage[section, default: []] }
             set { storage[section] = newValue }
@@ -201,17 +175,8 @@ extension MenuBarItemManager {
             resolution != .axFrameCorrelation
         }
 
-        /// Creates a control item pair from already-known control items.
-        ///
-        /// Used by test fixtures and by callers that have already resolved the
-        /// hidden and always-hidden items themselves. Production discovery from
-        /// a live menu bar uses the failable initializer below.
-        ///
-        /// Marked nonisolated so test fixtures (compiled without the app
-        /// target's MainActor default) and other non-MainActor callers can
-        /// construct a pair from already-resolved items without a hop; the
-        /// failable init? below stays implicitly @MainActor since it
-        /// performs AX-frame correlation.
+        /// For tests and callers with already-resolved items; live discovery uses
+        /// the failable init. Nonisolated so tests can call it without a hop.
         nonisolated init(
             hidden: MenuBarItem,
             alwaysHidden: MenuBarItem?,
@@ -224,22 +189,16 @@ extension MenuBarItemManager {
 
         /// Creates a control item pair from a list of menu bar items.
         ///
-        /// Window IDs from this process's NSStatusItem windows are the
-        /// authoritative lookup when available. Tag and title lookup remain
-        /// fallbacks for startup, when those window IDs may not exist yet.
-        ///
-        /// On macOS 26 (Tahoe), all menu bar item windows are owned by Control
-        /// Center and the item title reported by kCGWindowName may differ from
-        /// the NSStatusItem autosaveName used to build the expected tag, so the
-        /// primary lookup can fail.
+        /// Our own NSStatusItem window IDs are authoritative; tag and title are
+        /// startup fallbacks. On macOS 26 Control Center owns every item window
+        /// and kCGWindowName can differ from the autosaveName.
         init?(
             items: inout [MenuBarItem],
             hiddenControlItemWindowID: CGWindowID? = nil,
             alwaysHiddenControlItemWindowID: CGWindowID? = nil
         ) {
-            // Primary lookup: match the windows this process created. Duplicate
-            // Thaw instances can produce identical titles; tag assignment then
-            // favors the lowest window ID, which may belong to another process.
+            // Duplicate Thaw instances share titles, and tag matching favors the
+            // lowest window ID, which may be another process's.
             if let hiddenWID = hiddenControlItemWindowID,
                let hiddenIndex = items.firstIndex(where: { $0.windowID == hiddenWID })
             {
@@ -253,22 +212,9 @@ extension MenuBarItemManager {
                 return
             }
 
-            // Authoritative recovery: ask the window server about the windows
-            // this process created, instead of searching the enumerated list
-            // for them.
-            //
-            // The primary lookup above can only match a control item that is
-            // in items, and it drops out whenever the window is parked
-            // far offscreen or filtered off the active space. The two
-            // fallbacks below then need identity channels — namespace, or a
-            // resolved sourcePID — that fail together exactly when the item
-            // service's PID resolution degrades, which is the same failure
-            // that stranded the window in the first place. That left frame
-            // correlation guessing at Thaw's own dividers (#923, #924, #927).
-            //
-            // Thaw holds these windows, so it does not have to guess. Only
-            // attempted when the caller supplied an authoritative ID, and
-            // only for a window the window server still knows.
+            // Ask WindowServer for our own windows when they're missing from
+            // items (parked offscreen or off the active space). The fallbacks
+            // below fail in exactly those conditions (#923).
             if let hiddenWID = hiddenControlItemWindowID,
                Self.shouldRecoverOwnControlItem(
                    authoritativeWindowID: hiddenWID,
@@ -288,14 +234,9 @@ extension MenuBarItemManager {
                 return
             }
 
-            // Duplicate same-title divider windows cannot be disambiguated by
-            // tag or source PID: on Tahoe, Control Center hosts both the stale
-            // and current windows, and enumeration stamps both as this process.
-            // AppKit may expose a synthetic windowNumber that does not fit in a
-            // CGWindowID, so the authoritative-ID paths above are unavailable.
-            // Only current-process AX frames can break the tie; otherwise keep
-            // the last-known-good cache instead of adopting an arbitrary (often
-            // older, lower-numbered) divider.
+            // On Tahoe, Control Center hosts stale and current same-title dividers,
+            // both stamped as ours, and the windowNumber may not fit a CGWindowID.
+            // Only our AX frames can break the tie; otherwise keep the last good cache.
             let ambiguousTitles = Self.ambiguousControlItemTitles(in: items)
             if !ambiguousTitles.isEmpty {
                 if let pair = Self.matchViaAXFrame(items: &items),
@@ -343,14 +284,8 @@ extension MenuBarItemManager {
                 return
             }
 
-            // Fallback 3 (strategy 4, #754): AX-frame correlation against
-            // Thaw's own AX elements. Thaw's control items are its own
-            // NSStatusItems, so their AX elements (reached via Thaw's own
-            // process, not any third party) carry frames that can be
-            // correlated against the candidate items' CG window bounds even
-            // when tag, title, and window ID all fail to match — this is
-            // the only strategy that lets Thaw identify its OWN control
-            // items when every CG-side identity channel has degraded.
+            // Fallback 3 (#754): correlate our own AX frames with window bounds.
+            // Works when every CG-side identity channel has degraded.
             if let pair = Self.matchViaAXFrame(items: &items) {
                 self.hidden = pair.hidden
                 self.alwaysHidden = pair.alwaysHidden
@@ -365,8 +300,6 @@ extension MenuBarItemManager {
         }
 
         /// Control-item titles that occur more than once in one enumeration.
-        /// A title is the stable channel available when AppKit's window number
-        /// is synthetic, but it cannot distinguish current and stale windows.
         static nonisolated func ambiguousControlItemTitles(
             in items: [MenuBarItem]
         ) -> Set<String> {
@@ -382,17 +315,8 @@ extension MenuBarItemManager {
             return Set(counts.compactMap { title, count in count > 1 ? title : nil })
         }
 
-        /// Whether to rebuild one of Thaw's own control items directly from
-        /// its window rather than continuing down the identity fallbacks.
-        ///
-        /// Only when the caller supplied an authoritative window ID and
-        /// that window is missing from the enumerated list. Present means the
-        /// primary lookup already claimed it; absent with an ID in hand is
-        /// precisely the case the fallbacks handle badly, because the
-        /// channels they depend on — namespace, resolved sourcePID — fail in
-        /// the same conditions that strand the window.
-        ///
-        /// Pure over its inputs.
+        /// Whether to rebuild a control item from its window instead of the
+        /// identity fallbacks: only when we have its ID but it's missing from the list.
         static nonisolated func shouldRecoverOwnControlItem(
             authoritativeWindowID: CGWindowID?,
             itemWindowIDs: Set<CGWindowID>
@@ -406,36 +330,15 @@ extension MenuBarItemManager {
         /// Resolves the always-hidden control item once the hidden divider is
         /// claimed.
         ///
-        /// With an authoritative window ID — Thaw's own NSStatusItem window
-        /// — the item is taken from the enumerated list when present. When
-        /// absent, it is recovered from the window server via
-        /// ownControlItem (#991): the window still exists while it is
-        /// parked offscreen (collapsed section) or filtered off the active
-        /// space, which is exactly the state the divider sits in across a
-        /// relaunch, when every profile apply needs it. Tag matching is
-        /// deliberately skipped in that case: a known-but-absent
-        /// authoritative ID must not adopt a lookalike window from a
-        /// duplicate Thaw instance. Without an authoritative ID, the
-        /// remaining list is tag-matched as before.
+        /// With our window ID, take the item from the list, or recover it from
+        /// WindowServer when parked offscreen (#991). Tag matching is skipped then,
+        /// so a duplicate Thaw instance's lookalike isn't adopted. Returns nil
+        /// when WindowServer doesn't know the window either.
         ///
-        /// recovery is the window-server lookup, a parameter so tests can
-        /// substitute a fixture — the unit target owns no real windows.
+        /// `recovery` is a parameter so tests can substitute a fixture.
         ///
-        /// Returns nil when the window is absent and unknown to the window
-        /// server (torn-down status item, disabled section) — the honest
-        /// answer; a stale ID must not be dressed up as a live item.
-        ///
-        /// Zero counts as no ID (kCGNullWindowID): a status item whose
-        /// window has not been created yet converts to it through
-        /// CGWindowID(exactly:), and recovering or window-matching against
-        /// it would only ever fail.
-        ///
-        /// Without a usable ID, the remaining list is matched by our own
-        /// process plus the canonical title first — the same identity
-        /// channel the pair's sourcePID fallback uses for the hidden
-        /// divider, and the one that still answers when the hosted title
-        /// drifts from the autosave name — falling back to plain tag
-        /// matching.
+        /// Zero (kCGNullWindowID) counts as no ID; unbuilt status items convert to it.
+        /// Without an ID, match our PID plus canonical title, then plain tag.
         static func resolveAlwaysHidden(
             in items: inout [MenuBarItem],
             authoritativeWindowID: CGWindowID?,
@@ -452,8 +355,6 @@ extension MenuBarItemManager {
             if let index = items.firstIndex(where: { $0.windowID == windowID }) {
                 return items.remove(at: index)
             }
-            // The ID is non-nil and absent from the list — the same decision
-            // shouldRecoverOwnControlItem encodes for the hidden divider.
             guard let recovered = recovery(windowID) else {
                 MenuBarItemManager.diagLog.debug(
                     "ControlItemPair: always-hidden window \(windowID) absent from the \(items.count)-item list and unknown to the window server"
@@ -466,13 +367,8 @@ extension MenuBarItemManager {
             return recovered
         }
 
-        /// Strategy 4: correlates Thaw's own AX element frames (from its own
-        /// extrasMenuBar, via NSRunningApplication.current) against the
-        /// candidate items' CG window bounds, using
-        /// AXIdentityCatalog.identity(for:in:)'s pure correlation. Confident
-        /// matches (>50% overlap of the smaller rect's area, no ties) select
-        /// the hidden and always-hidden control items exactly as strategies
-        /// 1–3 would.
+        /// Correlates our own AX frames with candidate window bounds. A confident
+        /// match is >50% overlap of the smaller rect, with no ties.
         private static func matchViaAXFrame(
             items: inout [MenuBarItem]
         ) -> (hidden: MenuBarItem, alwaysHidden: MenuBarItem?)? {
@@ -514,27 +410,13 @@ extension MenuBarItemManager {
                     index: index,
                     bounds: item.bounds,
                     isOwnProcess: item.sourcePID == ourPID,
-                    // The visible control item is own-process, so it is an
-                    // eligible candidate on frame alone. When the hidden
-                    // divider is absent from items — parked far offscreen,
-                    // or dropped by the active-space filter — it can be the
-                    // only own-process candidate left, and the hidden AX
-                    // frame correlates onto it. It is then returned AS the
-                    // hidden divider, and every section boundary downstream
-                    // is measured from the wrong window (#923, #924, #927).
-                    //
-                    // The filter on axFrames below excludes the visible
-                    // item from the frames being matched against; this
-                    // excludes it from the windows that can be selected.
-                    // Matched by title rather than window ID because title
-                    // survives the identity degradation that got us here:
-                    // it comes off the CG window, not from sourcePID.
+                    // With the hidden divider absent, the chevron can be the only
+                    // own-process candidate and get picked as the divider (#923).
+                    // Title, not sourcePID, survives the degradation that got us here.
                     isVisibleControlItem: item.title == visibleTitle
                 )
             }
-            // Exclude the visible control item's AX child before correlation
-            // so its frame can never confidently match a candidate and be
-            // returned as the hidden or always-hidden control item.
+            // The chevron's frame must never match as a divider.
             let axFrames = snapshot
                 .filter { identity in
                     identity.identifier != ControlItem.Identifier.visible.rawValue
@@ -569,31 +451,19 @@ extension MenuBarItemManager {
             return (hidden, alwaysHidden)
         }
 
-        /// A candidate item's bounds and own-process ownership, stripped
-        /// down to what selectViaAXFrame(candidates:axFrames:) needs so
-        /// it can be exercised with synthetic fixtures.
+        /// What selectViaAXFrame needs, so tests can use synthetic fixtures.
         struct CandidateFrame {
             let index: Int
             let bounds: CGRect
             let isOwnProcess: Bool
-            /// Whether this candidate is Thaw's visible control item, which
-            /// must never be selected as the hidden or always-hidden divider
-            /// however well its frame correlates.
+            /// Never selected as a divider, however well its frame correlates.
             var isVisibleControlItem = false
         }
 
-        /// Pure selection helper: correlates each of our own control items
-        /// (candidates where isOwnProcess is true) against axFrames in
-        /// AX order (left-to-right in the extras menu bar, matching the
-        /// order Thaw's own status items are enumerated in), so the first
-        /// confidently-correlated own-item becomes the hidden control item
-        /// and the second becomes the always-hidden one — the same relative
-        /// ordering the tag/title strategies assume, but derived from AX
-        /// position instead of a title that may no longer be trustworthy.
+        /// Matches own-process candidates to axFrames in AX (left-to-right)
+        /// order: the first match is the hidden divider, the second always-hidden.
         ///
-        /// Returns the matched candidate indices (1 or 2 of them, in
-        /// hidden/always-hidden order), or nil when no own-process
-        /// candidate correlates confidently with any AX frame.
+        /// Returns 1 or 2 indices in that order, or nil when nothing correlates.
         static nonisolated func selectViaAXFrame(
             candidates: [CandidateFrame],
             axFrames: [CGRect]
@@ -607,9 +477,7 @@ extension MenuBarItemManager {
                         && !candidate.isVisibleControlItem
                         && AXIdentityCatalog.identity(for: candidate.bounds, in: identity) != nil
                 }
-                // More than one candidate for a current-process frame is not
-                // corroboration. Refuse the whole correlation rather than let
-                // array/window-number order decide which divider is current.
+                // Several candidates for one frame: refuse rather than let array order decide.
                 guard matches.count <= 1 else { return nil }
                 guard let candidate = matches.first else { continue }
                 matchedIndices.append(candidate.index)
@@ -621,10 +489,8 @@ extension MenuBarItemManager {
         }
     }
 
-    /// Returns duplicate windows that claim this instance's control-item
-    /// title while its authoritative window is present in the same list.
-    /// Requiring the authoritative window makes the filter self-validating:
-    /// if a window number is stale or absent, nothing is discarded.
+    /// Duplicate windows claiming our control-item title. Only when our own
+    /// window is present, so a stale window number discards nothing.
     static nonisolated func ghostControlItemWindowIDs(
         in items: [MenuBarItem],
         ownWindowIDsByTitle: [String: CGWindowID]
@@ -639,10 +505,8 @@ extension MenuBarItemManager {
         return ghostIDs
     }
 
-    /// Converts an AppKit window number only when it is a positive, exactly
-    /// representable WindowServer identifier. Tahoe can surface larger
-    /// synthetic numbers whose low 32 bits are zero; truncating those values
-    /// can crash or accidentally target the null window.
+    /// Tahoe can report synthetic window numbers with zero low 32 bits;
+    /// truncating them can crash or target the null window.
     static nonisolated func windowServerID(windowNumber: Int) -> CGWindowID? {
         guard windowNumber > 0,
               let windowID = CGWindowID(exactly: windowNumber),
@@ -662,32 +526,12 @@ extension MenuBarItemManager {
     /// Returns windows that claim this instance's own namespace without
     /// being one of its status items.
     ///
-    /// Control Center can outlive the Thaw process whose status item it
-    /// hosted and keep serving that window. #1032's reporter carried one —
-    /// com.stonerl.Thaw:com.stonerl.Thaw, window 639 — across relaunches
-    /// until killall ControlCenter cleared it. Nothing about it is usable:
-    /// it captures no image, and a move anchored on it can never verify.
+    /// Control Center can keep serving a dead Thaw process's status item
+    /// across relaunches (#1032). It captures nothing, can't anchor a move,
+    /// and makes liveIdentitiesAreDegraded(_:) reject every reading.
     ///
-    /// Two things took it for real, and the second is what made the session
-    /// unusable. It was planned against as an unmanaged item, so live items
-    /// were moved relative to a window with no owner. And it is self-titled
-    /// under our own namespace, which is the first signal
-    /// LayoutSolver/liveIdentitiesAreDegraded(_:) reads as a bar-wide
-    /// kCGWindowName degradation — so 436 readings across the reporter's
-    /// three logs were rejected as degraded and the cache never left the
-    /// state it was in when the orphan appeared. Dropping the window here
-    /// keeps it out of that check, which already expects ghost windows to
-    /// be gone by the time it runs.
-    ///
-    /// Ownership is decided by window number, never by title, so one of our
-    /// control items whose title really has degraded stays in the reading
-    /// and still reaches the degradation check. Like
-    /// ghostControlItemWindowIDs(in:ownWindowIDsByTitle:), the filter is
-    /// self-validating: with none of our own windows present there is no
-    /// baseline to call anything an orphan against, so nothing is dropped.
-    ///
-    /// LayoutSolver applies the same rule to the persisted side, where
-    /// the misattribution is written rather than observed.
+    /// Decided by window number, never title, so a genuinely degraded control
+    /// item still reaches that check. With none of our windows present, nothing is dropped.
     static nonisolated func orphanedOwnNamespaceWindowIDs(
         in items: [MenuBarItem],
         ownWindowIDs: Set<CGWindowID>
@@ -722,8 +566,7 @@ extension MenuBarItemManager {
 
     @discardableResult
     private func dropOrphanedOwnNamespaceWindows(from items: inout [MenuBarItem]) -> Set<CGWindowID> {
-        // Window ownership, not the title, decides what is ours. A spacer
-        // whose window is up before its title answers here and nowhere else.
+        // Window ownership, not title: a new spacer's window appears before its title.
         let spacerManager = appState?.spacerManager
         let ownWindowIDs = Set(ownControlItemWindowIDsByTitle().values)
             .union(items.lazy.map(\.windowID).filter { spacerManager?.ownsWindowID($0) == true })
@@ -761,17 +604,14 @@ extension MenuBarItemManager {
         suppressAutomaticMoves: Bool = false,
         grace: Duration = controlCenterRelaunchGrace
     ) -> Bool {
-        // Layout-editor refreshes are read-and-publish passes. They must not
-        // advance the recovery episode or reach its status-item rebuild and
-        // automatic-recache side effects.
+        // Layout-editor refreshes must not advance recovery or trigger its side effects.
         guard !suppressAutomaticMoves else { return false }
         guard let hostUptime else { return true }
         return hostUptime >= grace
     }
 
-    /// Selects the exact newest host when launch handoff briefly exposes more
-    /// than one Control Center process. runningApplications has no ordering
-    /// contract, so using its first entry can select the process being retired.
+    /// Launch handoff can briefly show two Control Center processes, and
+    /// runningApplications is unordered, so pick the newest explicitly.
     static nonisolated func newestControlCenterGeneration(
         in generations: [ProcessGeneration]
     ) -> ProcessGeneration? {
@@ -789,9 +629,8 @@ extension MenuBarItemManager {
         generation.map { .seconds(max(0, now.timeIntervalSince($0.launchDate))) }
     }
 
-    /// Re-arms divider recovery when Control Center changes process generation.
-    /// The old process's spent rebuild latch cannot govern a new host whose
-    /// status-item windows are being created from scratch.
+    /// Re-arms divider recovery when Control Center restarts; the new host
+    /// builds its windows from scratch.
     @discardableResult
     static nonisolated func resetControlItemLookupEpisodeIfHostChanged(
         previous: ProcessGeneration?,
@@ -805,7 +644,6 @@ extension MenuBarItemManager {
         return true
     }
 
-    /// Context maintained during a menu bar item cache operation.
     struct CacheContext {
         let controlItems: ControlItemPair
 
@@ -845,10 +683,7 @@ extension MenuBarItemManager {
         mutating func findSection(for item: MenuBarItem) -> MenuBarSection.Name? {
             let itemBounds = Self.bestBounds(for: item)
 
-            // Strict-inequality fast path for items that lie entirely on
-            // one side of every boundary. Identical to the original
-            // semantics so well-behaved items keep their existing
-            // classification.
+            // Fast path: the item is entirely on one side of every boundary.
             if itemBounds.minX >= hiddenControlItemBounds.maxX {
                 return .visible
             }
@@ -865,18 +700,8 @@ extension MenuBarItemManager {
                 }
             }
 
-            // Fall-through: the item straddles at least one boundary.
-            // Control items are zero-width markers; any item whose
-            // physical bounds cross the marker's single X coordinate
-            // fails the strict inequalities above. This happens when a
-            // profile collapses a section by moving its control item
-            // into the items' physical range, or transiently while
-            // sections expand/collapse during section.show()/hide().
-            // Returning nil drops the item from the cache and from
-            // Phase 1's section sets, which causes the layout to skip
-            // the divider move it would otherwise prefer. Resolve every
-            // straddle case via midpoint: assign the item to whichever
-            // section its physical centre predominantly occupies.
+            // The item straddles a divider (a collapsed section, or mid show/hide).
+            // Returning nil would drop it from Phase 1, so classify by midpoint.
             let itemMid = (itemBounds.minX + itemBounds.maxX) / 2
             let hiddenMid = (hiddenControlItemBounds.minX + hiddenControlItemBounds.maxX) / 2
             if itemMid >= hiddenMid {
@@ -890,8 +715,7 @@ extension MenuBarItemManager {
         }
     }
 
-    /// Caches the given menu bar items, without ensuring that the provided
-    /// control items are correctly ordered.
+    /// Caches the items without checking the control item order.
     private func uncheckedCacheItems(
         items: [MenuBarItem],
         controlItems: ControlItemPair,
@@ -909,11 +733,8 @@ extension MenuBarItemManager {
         var invalidCount = 0
         var noSectionCount = 0
 
-        // Track which tags have already been cached to avoid duplicates.
-        // macOS can briefly report two windows for the same item during
-        // or shortly after a move operation (e.g. layout reset). We keep
-        // the first occurrence, which is the rightmost (items are reversed
-        // from the Window Server order).
+        // macOS can briefly report two windows for one item after a move.
+        // Keep the first, which is the rightmost.
         var seenTags = Set<MenuBarItemTag>()
 
         for item in items where context.isValidForCaching(item) {
@@ -930,12 +751,11 @@ extension MenuBarItemManager {
             }
 
             let matchingContext: TemporarilyShownItemContext? = {
-                // 1. Try exact tag match (includes windowID for non-system items).
+                // Exact tag match, including windowID for non-system items.
                 if let temp = temporarilyShownItemContexts.first(where: { $0.tag == item.tag }) {
                     return temp
                 }
-                // 2. Fallback: tag and PID match, but ONLY if the item is physically in the visible section
-                //    (identifying it as the 'shown' instance) and it originally belonged elsewhere.
+                // Tag and PID match, only for an item physically in visible that belongs elsewhere.
                 if let temp = temporarilyShownItemContexts.first(where: {
                     $0.tag.matchesIgnoringWindowID(item.tag) &&
                         $0.sourcePID == (item.sourcePID ?? item.ownerPID)
@@ -949,9 +769,7 @@ extension MenuBarItemManager {
             }()
 
             if let matchingContext {
-                // Cache temporarily shown items as if they were in their original locations.
-                // Keep track of them separately and use their return destinations to insert
-                // them into the cache once all other items have been handled.
+                // Cached at their return destinations once the rest are placed.
                 context.temporarilyShownItems.append((item, matchingContext.returnDestination))
                 continue
             }
@@ -975,7 +793,6 @@ extension MenuBarItemManager {
             }
         }
 
-        // Count invalid items
         for item in items where !context.isValidForCaching(item) {
             invalidCount += 1
         }
@@ -1004,37 +821,25 @@ extension MenuBarItemManager {
             return
         }
 
-        // midTransitionSection can suspend while a user move completes.
-        // Never publish or persist the observation it was validating if that
-        // move made the underlying geometry obsolete in the meantime.
+        // midTransitionSection can suspend while a user move makes this reading obsolete.
         guard snapshotIsCurrent() else { return }
 
-        // The always-hidden divider is what tells always-hidden items apart
-        // from hidden ones. If this cycle resolved the hidden divider but
-        // not the always-hidden one, findSection has already collapsed the
-        // always-hidden section into hidden; persisting that reading is what
-        // made #849 permanent.
+        // Without the always-hidden divider, findSection folds always-hidden into
+        // hidden; persisting that made #849 permanent.
         let alwaysHiddenSectionResolved = LayoutSolver.isAlwaysHiddenSectionResolved(
             hasAlwaysHiddenControlItem: context.controlItems.alwaysHidden != nil,
             isAlwaysHiddenSectionEnabled: appState?.menuBarManager
                 .section(withName: .alwaysHidden)?.isEnabled ?? false
         )
 
-        // Item bounds come from the window server in CoreGraphics space, so
-        // the frames they are tested against have to be CGDisplayBounds and
-        // not NSScreen.frame — the two disagree by a vertical flip.
+        // CGDisplayBounds, not NSScreen.frame: item bounds are in flipped CG space.
         let screenFrames = NSScreen.screens.map { CGDisplayBounds($0.displayID) }
 
-        // The hidden section is the span between the two dividers. When it
-        // closes to zero, findSection can no longer classify anything as
-        // .hidden by the strict test and the midpoint tie-break resolves
-        // on-screen items as .visible instead (#795, docked topology).
+        // A zero-width hidden span classifies on-screen items as visible (#795).
         let hiddenSectionHasRoom = LayoutSolver.hiddenSectionHasRoom(
             hiddenControlItemMinX: context.hiddenControlItemBounds.minX,
             alwaysHiddenControlItemMaxX: context.alwaysHiddenControlItemBounds.first?.maxX,
             savedHiddenItemCount: savedSectionOrder[sectionKey(for: .hidden)]?.count ?? 0,
-            // The cache's own reading, because the cache's own reading is what
-            // this path is deciding whether to persist.
             liveHiddenItemCount: context.cache[.hidden].count,
             hasVisibleItemParkedOffBar: LayoutSolver.hasVisibleItemParkedOffBar(
                 itemBounds: MenuBarSection.Name.allCases.flatMap { section in
@@ -1049,9 +854,7 @@ extension MenuBarItemManager {
            recoverCollapsedHiddenSectionIfNeeded(
                hiddenSectionHasRoom: hiddenSectionHasRoom,
                controlItems: context.controlItems,
-               // The dividers are excluded: a rebuild that only has the two
-               // control items to place cannot strand anything on the wrong
-               // side of the one it is rebuilding.
+               // Dividers excluded: with only them to place, a rebuild strands nothing.
                managedItemCount: context.cache.managedItems.count(where: { !$0.isControlItem })
            )
         {
@@ -1063,24 +866,18 @@ extension MenuBarItemManager {
             forcePersistSavedOrder: forcePersistSavedOrder
         ) else {
             MenuBarItemManager.diagLog.debug("Not updating menu bar item cache, as items haven't changed")
-            // Still an observed cycle: the settling stability check needs
-            // exactly these stable, no-op reads to count toward its early
-            // exit, or a bar that has settled reads as "no evidence" and
-            // settling runs to its full deadline.
+            // Still counts: settling's early exit needs these stable no-op reads.
             completedCacheCycles += 1
             return
         }
 
-        // Read before the assignment below overwrites it: the save gate needs
-        // to know whether the menu bar changed display between the cycle that
-        // produced the standing cache and this one (#958).
+        // Read before it's overwritten: the save gate checks for a display change (#958).
         let previousCacheDisplayID = itemCache.displayID
 
         if cacheChanged {
             itemCache = context.cache
 
-            // Remember what the resolved items are called, so the next launch
-            // can label them before its own source-PID scan lands (#956).
+            // Lets the next launch label items before its source-PID scan lands (#956).
             MenuBarItemNameMemory.remember(itemCache.managedItems)
         } else {
             MenuBarItemManager.diagLog.debug(
@@ -1088,8 +885,7 @@ extension MenuBarItemManager {
             )
         }
 
-        // Reset isRestoringItemOrder if it's been stuck for too long (10 seconds).
-        // This prevents stale flags from blocking saves after user manual moves.
+        // A stuck flag would block saves after manual moves.
         if isRestoringItemOrder, let timestamp = isRestoringItemOrderTimestamp, Date().timeIntervalSince(timestamp) > 10 {
             MenuBarItemManager.diagLog.debug("Resetting stale isRestoringItemOrder flag (timeout)")
             isRestoringItemOrder = false
@@ -1098,25 +894,16 @@ extension MenuBarItemManager {
 
         let hasPendingDivergence = pendingDivergenceObservedAt != nil
 
-        // Mirrors applySavedLayout's own cooldown. Whatever stops the restore
-        // has to stop the save, or the cycle that skips one and takes the
-        // other writes down a bar nobody arranged (#958).
-        //
-        // A move the user made themselves is exempt, and the exemption is
-        // load-bearing rather than a nicety: after a Layout-editor drag the
-        // live bar diverges from the saved order, and it is the save winning
-        // inside the cooldown that makes the drag the new saved order. Hold
-        // it back and the restore, once the cooldown lapses, reads the drag
-        // as drift and reverts it.
+        // Mirrors applySavedLayout's cooldown, or a cycle can save a bar nobody
+        // arranged (#958). User moves are exempt: the save must win so the
+        // restore doesn't later revert the drag as drift.
         let isWithinMoveCooldown = lastMoveOperationOccurred(within: .seconds(5)) &&
             !Self.saveCooldownExemptForUserMove(
                 lastMoveOperationTimestamp: lastMoveOperationTimestamp,
                 lastUserMoveOperationTimestamp: lastUserMoveOperationTimestamp
             )
 
-        // A relocation in progress. Both displays have to be known for the
-        // comparison to mean anything: a nil on either side is the ordinary
-        // first cycle, not a change.
+        // A relocation in progress. A nil on either side is just the first cycle.
         let menuBarDisplayChanged: Bool = if let previousCacheDisplayID,
                                              let currentDisplayID = context.cache.displayID
         {
@@ -1125,10 +912,7 @@ extension MenuBarItemManager {
             false
         }
 
-        // The bar after a batch that gave up partway is the batch's own
-        // wreckage, not a layout anyone chose. Recording it hands the next
-        // pass a target it just moved, which is how a failed apply turns
-        // into a bar that drifts a little further on every retry (#900).
+        // Saving a half-applied batch makes the bar drift further every retry (#900).
         if !suppressSavedOrderPersistence,
            context.controlItems.canRepositionControlItems,
            LayoutSolver.shouldPersistSavedOrder(
@@ -1147,28 +931,18 @@ extension MenuBarItemManager {
                )
            )
         {
-            // Don't persist if any items are in a transient blocked state (x=-1).
-            // Wait for the next cache cycle when bounds are reliable.
+            // Items at x=-1 are in a transient blocked state.
             let hasBlockedItems = MenuBarSection.Name.allCases.contains { section in
                 context.cache[section].contains { item in
                     let bounds = item.liveBounds
                     return bounds.origin.x == -1
                 }
             }
-            // Don't persist while the items straddle two displays. A cross-display
-            // cache is a menu bar relocation caught mid-flight, not a settled
-            // layout: macOS un-hides items as it moves them to the new screen, so
-            // capturing the section order now would bake those un-hidden items
-            // into the saved layout as if the user wanted them visible. Wait for
-            // the items to collapse back onto a single display.
+            // Items straddling two displays mean a relocation mid-flight, and macOS
+            // un-hides items as it moves them. Saving now bakes that in.
             //
-            // Only the visible section feeds the gate. Hidden and always-hidden
-            // items are parked left of the menu bar at arbitrary negative x, and
-            // a display positioned to the left of the main one owns that
-            // coordinate range, so parked items read as a second screen on a
-            // settled layout and this branch never stops firing. The visible
-            // section is never parked, and a genuine relocation splits it across
-            // screens just the same, so narrowing the input keeps the protection.
+            // Visible only: parked items sit at negative x, which a display left of
+            // main owns, so they'd always read as a second screen.
             let itemCenters = context.cache[.visible].map {
                 CGPoint(x: $0.bounds.midX, y: $0.bounds.midY)
             }
@@ -1196,39 +970,23 @@ extension MenuBarItemManager {
                 "Skipping saveSectionOrder; control items resolved only by provisional AX-frame correlation"
             )
         } else if !alwaysHiddenSectionResolved {
-            // Logged at warning level, and separately from the gate's other
-            // inputs, because this is the one that silently rewrites the
-            // user's layout when it goes wrong (#849). A run of these means
-            // the always-hidden divider keeps failing to resolve.
+            // Separate warning: this one silently rewrites the layout when wrong (#849).
             MenuBarItemManager.diagLog.warning(
                 "Skipping saveSectionOrder; always-hidden divider unresolved while its section is enabled"
             )
         } else if !hiddenSectionHasRoom {
-            // Same reasoning as above: this one is a geometry fault rather
-            // than a resolution fault, and it is worth being able to grep
-            // the two apart. A run of these means the dividers have
-            // collapsed and the menu bar is visibly wrong to the user, not
-            // merely at risk of a bad save.
+            // A geometry fault, kept greppable apart from the one above.
             MenuBarItemManager.diagLog.warning(
                 "Skipping saveSectionOrder; hidden section has zero width between the dividers (hidden.minX=\(context.hiddenControlItemBounds.minX) windowID=\(context.controlItems.hidden.windowID), alwaysHidden.maxX=\(context.alwaysHiddenControlItemBounds.first?.maxX.description ?? "nil") windowID=\(context.controlItems.alwaysHidden?.windowID.description ?? "nil"))"
             )
         } else if hasPendingDivergence {
-            // applySavedLayout observed a layout divergence on this cycle
-            // but is waiting for a second consecutive observation before
-            // correcting it. The current cache reflects a transient state
-            // (e.g. macOS rebuilding the bar after a space switch and
-            // re-exposing hidden items as visible); persisting it now
-            // would bake that transient state into the saved layout (#736).
-            // The arm clears once applySavedLayout confirms and runs its
-            // correction, after which the next cycle sees a settled layout.
+            // applySavedLayout is waiting for a second divergence reading. This
+            // cache may be transient (e.g. a space switch re-exposing hidden items) (#736).
             MenuBarItemManager.diagLog.warning(
                 "Skipping saveSectionOrder; layout divergence pending confirmation (applySavedLayout has not yet restored the cached layout)"
             )
         } else if isWithinMoveCooldown {
-            // Warning level like the rest: a run of these means the bar is
-            // being moved often enough that the save never gets a settled
-            // cycle, which is its own problem — but it is no longer the
-            // problem of a save landing on an unsettled bar (#958).
+            // A run of these means the bar never settles long enough to save (#958).
             MenuBarItemManager.diagLog.warning(
                 "Skipping saveSectionOrder; within the 5s move cooldown that applySavedLayout also honours"
             )
@@ -1237,10 +995,7 @@ extension MenuBarItemManager {
                 "Skipping saveSectionOrder; menu bar moved display since the standing cache (\(previousCacheDisplayID.map { "\($0)" } ?? "nil") -> \(context.cache.displayID.map { "\($0)" } ?? "nil")), relocation in progress"
             )
         } else if hasUnfinishedMoveBatch {
-            // Warning level, like the two above, because a run of these is
-            // the signature of a bar that cannot be restored at all: the
-            // apply keeps failing, so the saved order keeps being withheld,
-            // and the user sees their layout never take (#900).
+            // A run of these means the apply keeps failing and the layout never takes (#900).
             MenuBarItemManager.diagLog.warning(
                 "Skipping saveSectionOrder; the last bulk apply left planned moves unenacted, so the current arrangement is partial"
             )
@@ -1251,10 +1006,8 @@ extension MenuBarItemManager {
         completedCacheCycles += 1
     }
 
-    /// Whether a completed cache read must continue through the saved-order
-    /// persistence gates. A validated Layout-editor move may already have
-    /// published its settled geometry during validation, so its final refresh
-    /// must not stop merely because the cache value is identical.
+    /// A validated Layout-editor move may already have published its geometry,
+    /// so an identical cache must not stop its final refresh here.
     static nonisolated func shouldEvaluateSavedOrderPersistence(
         cacheChanged: Bool,
         forcePersistSavedOrder: Bool
@@ -1262,10 +1015,8 @@ extension MenuBarItemManager {
         cacheChanged || forcePersistSavedOrder
     }
 
-    /// Rebuilds the hidden divider after repeated, authoritative evidence
-    /// that stale geometry closed the hidden span.
-    /// The saved order remains untouched, so the next cache pass can restore
-    /// section membership through the normal saved-layout apply.
+    /// Rebuilds the hidden divider after repeated evidence that stale geometry
+    /// closed the hidden span. The saved order is untouched, so the next pass restores it.
     ///
     /// managedItemCount decides whether the rebuild may also re-stamp the
     /// seeded position. See canSeedRebuiltDividerPosition(managedItemCount:).
@@ -1274,8 +1025,7 @@ extension MenuBarItemManager {
         controlItems: ControlItemPair,
         managedItemCount: Int
     ) -> Bool {
-        // A provisional reading must not advance, reset, or re-arm the
-        // recovery episode. Only authoritative observations may mutate it.
+        // Only authoritative readings may touch the recovery episode.
         guard controlItems.canRepositionControlItems else {
             return false
         }
@@ -1315,13 +1065,8 @@ extension MenuBarItemManager {
 
     /// Why a cycle is asking the parked-divider recovery to look at H_ctrl.
     ///
-    /// The recovery used to take the Phase 1 boundary mismatch alone, which
-    /// made it unreachable in the state it exists to repair (#978): a
-    /// stranded divider reads as a zero-width hidden section, the zero-width
-    /// guards in applySavedLayout and applyProfileLayout return before
-    /// Phase 1 runs, so the mismatch was never computed and the streak never
-    /// advanced. A refusal is itself evidence an apply wanted the divider on
-    /// the bar and could not have it, so it counts the same as a mismatch.
+    /// A stranded divider makes the applies refuse before Phase 1, so a refusal
+    /// counts like a mismatch; otherwise recovery could never trigger (#978).
     nonisolated enum ParkedDividerTrigger {
         /// Phase 1 found items on the wrong side of H_ctrl.
         case boundaryMismatch(Int)
@@ -1349,12 +1094,8 @@ extension MenuBarItemManager {
     /// Rebuilds an authoritatively identified hidden divider after it remains
     /// parked through repeated layout cycles that need it on the bar.
     ///
-    /// "Parked" here means stranded: no edge of the divider's frame falls on
-    /// any display (LayoutSolver/isFullyOffScreen(bounds:screenFrames:)).
-    /// The leading-edge test is not enough — a healthy collapsed bar expands
-    /// H_ctrl into an offscreen-reaching spacer, and reading that as parked
-    /// would rebuild dividers that are doing their job (#978). Only a
-    /// divider pushed past every item has both edges offscreen.
+    /// "Parked" means no edge of the frame is on any display. A healthy
+    /// collapsed H_ctrl already reaches offscreen, so one edge isn't enough (#978).
     ///
     /// managedItemCount and the stored control item positions decide what
     /// the rebuild does with the autosaved position. See
@@ -1394,10 +1135,8 @@ extension MenuBarItemManager {
 
         Task { [weak self] in
             try? await Task.sleep(for: .milliseconds(100))
-            // The unfinished batch that exposed the parked divider may have
-            // stamped the move cooldown. This recovery owns its retry, so let
-            // the fresh divider reach applySavedLayout instead of committing
-            // its new window ID without verifying the saved boundary.
+            // The failed batch may have stamped the move cooldown; bypass it so
+            // applySavedLayout verifies the fresh divider.
             await self?.cacheItemsRegardless(
                 skipRecentMoveCheck: true,
                 bypassSavedLayoutCooldown: true
@@ -1409,31 +1148,20 @@ extension MenuBarItemManager {
     /// Clears the parked-divider streak, so the next strand starts counting
     /// from zero and is allowed its own rebuild.
     ///
-    /// Kept separate from the guard that discovers a healthy divider because
-    /// Phase 1 also has to clear it, and clearing it there on a zero mismatch
-    /// alone was half of why the recovery could never fire (#978): a divider
-    /// stranded while the visible/hidden boundary was consistent had its
-    /// streak reset on every cycle.
+    /// Separate because Phase 1 also clears it; clearing on a zero mismatch
+    /// alone reset a stranded divider's streak every cycle (#978).
     func resetParkedHiddenDividerRecovery() {
         parkedHiddenDividerMismatchStreak = 0
         didRecoverParkedHiddenDividerForCurrentMismatch = false
     }
 
-    /// Whether bundleID owns a menu bar item Thaw already tracks: an entry
-    /// in identifiers (each formatted "namespace:title") whose namespace is
-    /// exactly bundleID. The trailing ":" anchors the match so one bundle ID
-    /// can't be a loose prefix of another (org.x.fdm6 must not match
-    /// org.x.fdm6x:Item-0). Used to arm relaunch settling only for apps whose
-    /// status item actually churns the bar when they relaunch.
+    /// Whether bundleID owns a tracked item. The trailing ":" stops prefix
+    /// matches (org.x.fdm6 vs org.x.fdm6x:Item-0).
     static nonisolated func tracksMenuBarItem(bundleID: String, in identifiers: Set<String>) -> Bool {
         identifiers.contains { $0.hasPrefix(bundleID + ":") }
     }
 
-    /// A Boolean value indicating whether item's CG-side identity is
-    /// degraded: either a Control-Center generic Item-N placeholder title,
-    /// or a bundle-id-shaped title (reverse-DNS, three-plus dot-separated
-    /// components — the same shape 86f2514e's title-identity fallback
-    /// matches on the service side).
+    /// Degraded means a generic Item-N title or a reverse-DNS, bundle-ID-shaped one.
     private static func isDegradedIdentity(_ item: MenuBarItem) -> Bool {
         if item.tag.isControlCenterGenericItem {
             return true
@@ -1442,14 +1170,8 @@ extension MenuBarItemManager {
         return title.split(separator: ".").count >= 3
     }
 
-    /// Populates degradedItemAXIdentities for items whose CG-side
-    /// identity is degraded, at most once per cacheItemsRegardless pass
-    /// and only when at least one degraded item is present. Takes an
-    /// on-demand AX snapshot of Control Center and SystemUIServer (the hosts
-    /// responsible for the degraded cases this targets) and records the
-    /// confident correlation for each degraded item's window bounds.
-    ///
-    /// This map is additive and display-only — see its declaration.
+    /// Fills degradedItemAXIdentities from an AX snapshot of Control Center and
+    /// SystemUIServer, at most once per pass. Display-only.
     private func enrichDegradedItemIdentities(in items: [MenuBarItem]) {
         let degradedItems = items.filter(Self.isDegradedIdentity)
         guard !degradedItems.isEmpty else {
@@ -1532,9 +1254,6 @@ extension MenuBarItemManager {
     /// Records this enumeration's windowIDs and returns the set that counts as
     /// recently seen.
     ///
-    /// See recentItemWindowIDCycles for why continuity is judged over
-    /// several cycles rather than only the preceding one.
-    ///
     /// - Parameter items: The items enumerated this cycle, after clones and
     ///   ghost control windows have been dropped.
     ///
@@ -1548,12 +1267,7 @@ extension MenuBarItemManager {
         return recentItemWindowIDCycles.reduce(into: Set()) { $0.formUnion($1) }
     }
 
-    /// Caches the current menu bar items, regardless of whether the
-    /// items have changed since the previous cache.
-    ///
-    /// Before caching, this method ensures that the control items for
-    /// the hidden and always-hidden sections are correctly ordered,
-    /// arranging them into valid positions if needed.
+    /// Caches the current items unconditionally, fixing the control item order first.
     func cacheItemsRegardless(
         _ currentItemWindowIDs: [CGWindowID]? = nil,
         skipRecentMoveCheck: Bool = false,
@@ -1581,18 +1295,14 @@ extension MenuBarItemManager {
             return
         }
 
-        // Serialization gate: drop concurrent calls while a previous cache
-        // cycle is in flight. Without this, a call that starts during a
-        // relocation move by another call may snapshot pre-move positions.
+        // Drop concurrent calls, or one may snapshot pre-move positions.
         guard await cacheGate.begin() else {
             MenuBarItemManager.diagLog.debug("cacheItemsRegardless: serial cache operation already in progress, skipping")
             return
         }
         defer { Task { await cacheGate.end() } }
 
-        // Capture this only after the gate is ours. A cycle that was already
-        // in progress when this call arrived must not make an editor refresh
-        // look successful after this call itself was dropped.
+        // After the gate, so a dropped call can't claim an earlier cycle's success.
         let completedCyclesAtGateEntry = completedCacheCycles
         let moveTimestampAtGateEntry = lastMoveOperationTimestamp
         func snapshotIsCurrent(_ stage: String) -> Bool {
@@ -1612,13 +1322,8 @@ extension MenuBarItemManager {
             )
         }
 
-        // Ownership of the waiter (if any) defaults to this call. Some
-        // paths below (relocation hand-offs) hand ownership to a nested
-        // recache below. Resuming from defer means every exit path from
-        // here on — including early returns that cached nothing — releases
-        // the waiter rather than stranding it. A caller that bailed before
-        // the gate above never took ownership, so it cannot resume a waiter
-        // that isn't its to resume.
+        // Relocation hand-offs pass the waiter to a nested recache. The defer
+        // releases it on every other exit so it's never stranded.
         var ownsWaiter = true
         defer {
             if ownsWaiter, let waiterToken {
@@ -1638,8 +1343,7 @@ extension MenuBarItemManager {
         var items = enumeration.items
 
         if items.isEmpty {
-            // Retry once after a small delay if we got zero items. This can happen
-            // due to transient WindowServer glitches or during display reconfigurations.
+            // Transient WindowServer glitches and display changes can return nothing.
             MenuBarItemManager.diagLog.warning("cacheItemsRegardless: getMenuBarItems returned ZERO items, retrying in 250ms...")
             try? await Task.sleep(for: .milliseconds(250))
             enumeration = await MenuBarItem.getMenuBarItemsSnapshot(
@@ -1648,13 +1352,8 @@ extension MenuBarItemManager {
             )
             items = enumeration.items
 
-            // Still nothing, but the cache holds items. The menu bar does not
-            // empty itself, so this is the .activeSpace filter resolving a
-            // space ID that no longer matches the windows (a Space switch, a
-            // display reconfiguration). Replacing a populated cache with the
-            // empty reading is what blanks the layout editor mid-session
-            // (#851); hold the last known good cache and let the next cycle
-            // read the menu bar again.
+            // The bar doesn't empty itself; this is the .activeSpace filter using a
+            // stale space ID. Keep the last good cache, or the layout editor blanks (#851).
             if items.isEmpty, !itemCache.managedItems.isEmpty {
                 MenuBarItemManager.diagLog.warning(
                     "cacheItemsRegardless: getMenuBarItems returned ZERO items twice, keeping last-known-good cache of \(itemCache.managedItems.count) item(s)"
@@ -1663,10 +1362,8 @@ extension MenuBarItemManager {
             }
         }
 
-        // Layout-editor reconciliation only needs fresh geometry. Reuse a
-        // confirmed identity for the same live window so that its fast cache
-        // pass can skip the occasionally slow AX source-PID scan without
-        // turning every icon into a new Control Center placeholder.
+        // The editor only needs geometry; reusing confirmed identities skips the
+        // slow AX source-PID scan without turning icons into placeholders.
         if reuseCachedIdentities {
             items = Self.reusingCachedIdentities(
                 in: items,
@@ -1676,15 +1373,8 @@ extension MenuBarItemManager {
 
         MenuBarItemManager.diagLog.debug("cacheItemsRegardless: getMenuBarItems returned \(items.count) items")
 
-        // Drop System Status Item Clone windows before any downstream
-        // processing. These are transient duplicates the WindowServer
-        // spawns during screen capture and menu bar animations. Each one
-        // carries a fresh windowID and a nil source PID, and resolves to
-        // an unstable namespace, so they must never be cached, assigned to
-        // a section, placed via planUnmanagedPlacement, or moved. Removing
-        // them here also keeps their windowIDs out of the stored set
-        // below, so a clone appearing or vanishing can't trip the
-        // windowID-change trigger that dispatches a bulk re-layout.
+        // WindowServer spawns clone windows during capture and animations, with
+        // fresh IDs and no source PID. Drop them early so they never trip a re-layout.
         let cloneWindowIDs = Set(items.filter(\.isSystemClone).map(\.windowID))
         if !cloneWindowIDs.isEmpty {
             let cloneDescriptions = items.filter(\.isSystemClone).map(\.tag.description)
@@ -1692,26 +1382,15 @@ extension MenuBarItemManager {
             items.removeAll(where: \.isSystemClone)
         }
 
-        // A duplicate Thaw process (or windows left by one that crashed) can
-        // expose control-item titles under foreign window IDs. Exclude those
-        // windows from every cache decision so they cannot be treated as new
-        // unmanaged items or make the normal window-ID comparison churn.
+        // A duplicate or crashed Thaw can leave control-item titles on foreign windows.
         var ghostWindowIDs = dropGhostControlItemWindows(from: &items)
 
-        // A window Control Center kept serving for a Thaw process that is
-        // gone reads as one of ours and is nothing of the sort. Drop it
-        // before the degradation check below, which would otherwise read a
-        // single permanent orphan as the whole bar having lost its names,
-        // and hold a stale cache for as long as the orphan lasts (#1032).
+        // Drop orphans before the degradation check, which would read one as the
+        // whole bar losing its names (#1032).
         ghostWindowIDs.formUnion(dropOrphanedOwnNamespaceWindows(from: &items))
 
-        // A reading whose items are titled after their own owners identifies
-        // nothing, and caching it rewrites the whole bar under a second set of
-        // identifiers that no later reading will match (#881, #927). Same
-        // treatment as the empty reading above: this is a failed observation,
-        // not the bar changing, so hold the last known good cache and read
-        // again next cycle. Only once there is a cache to hold — on a first
-        // launch there is nothing better to fall back to.
+        // Items titled after their owners identify nothing; caching them rewrites
+        // the bar under IDs no later reading matches (#881). Keep the last good cache.
         if !itemCache.managedItems.isEmpty,
            LayoutSolver.liveIdentitiesAreDegraded(items.map { ($0.tag.namespace.description, $0.tag.title) })
         {
@@ -1721,22 +1400,14 @@ extension MenuBarItemManager {
             return
         }
 
-        // Enumeration is the slow portion of this pass. If any move landed
-        // while it was suspended, everything below was computed from the old
-        // bar and must be read-discard: do not update continuity ledgers,
-        // publish cache state, restore layout, or launch an automatic move.
+        // Enumeration is slow; if a move landed meanwhile, discard this reading entirely.
         guard snapshotIsCurrent("after item enumeration") else { return }
 
-        // Recorded only after clones and ghost windows are dropped, so their
-        // throwaway windowIDs never enter the continuity history.
+        // After dropping clones and ghosts, so their throwaway IDs stay out.
         let recentWindowIDs = recordRecentItemWindowIDs(items)
 
-        // Reconcile resolved sourcePIDs against previously known values to
-        // prevent transient resolution errors (e.g. stale AX data after item
-        // moves) from corrupting item identities. SourcePIDCache does spatial
-        // matching between CG windows and AX extras menu bar children, which
-        // can produce wrong matches when AX positions lag behind CG updates.
-        // A cached PID from a previous stable cycle is more trustworthy.
+        // SourcePIDCache matches CG windows to AX children spatially, which goes
+        // wrong when AX lags after a move. A PID from a stable cycle is more trustworthy.
         var provisionalSourcePIDSeeds = enumeration.appliedSourcePIDSeeds
         var didReconcileSourcePID = false
         if resolveSourcePID {
@@ -1805,21 +1476,14 @@ extension MenuBarItemManager {
             }
         }
 
-        // The reconciliation above can change an item's namespace while
-        // preserving its instanceIndex. If another live item already holds
-        // that (namespace, title, instanceIndex) identity, two items collide
-        // and windowless tag matching can select the wrong one. Regroup the
-        // instance indices over the reconciled namespaces.
+        // Reconciling can change a namespace but keep the instanceIndex, so two
+        // items can collide. Regroup the indices.
         if didReconcileSourcePID {
             MenuBarItem.assignStableInstanceIndices(to: &items, using: enumeration.windowsByID)
         }
 
-        // When sourcePID resolution changes an item's identifier (e.g. from
-        // com.apple.controlcenter:Item-0:4 to pl.maketheweb.cleanshotx:Item-0),
-        // the new identifier won't be in knownItemIdentifiers. Seed it now so
-        // the item isn't treated as a "new" item by relocateNewLeftmostItems.
-        // Skip items with unresolved sourcePID so the placeholder
-        // "com.apple.controlcenter" namespace never enters the persisted set.
+        // A newly resolved identifier would look new to relocateNewLeftmostItems.
+        // Skip unresolved sourcePIDs so the placeholder namespace is never persisted.
         if !previousWindowIDs.isEmpty {
             for item in items where previousWindowIDs.contains(item.windowID) && item.sourcePID != nil {
                 let identifier = "\(item.tag.namespace):\(item.tag.title)"
@@ -1839,21 +1503,11 @@ extension MenuBarItemManager {
             MenuBarItemManager.diagLog.error("cacheItemsRegardless: getMenuBarItems returned ZERO items even after retry; this is the root cause of 'Loading menu bar items' being stuck")
         }
 
-        // currentItemWindowIDs comes straight from the bridging window list
-        // and may still contain clone or ghost IDs. Keep the stored set in
-        // sync with the managed item set and ignore those transient IDs in
-        // the next raw-list comparison.
+        // The raw window list may still hold clone or ghost IDs.
         let itemWindowIDs = (currentItemWindowIDs ?? items.reversed().map(\.windowID))
             .filter { !cloneWindowIDs.contains($0) && !ghostWindowIDs.contains($0) }
-        // NOTE: cacheActor.updateCachedItemWindowIDs/updateCachedCloneWindowIDs
-        // are deliberately NOT called here. Committing them this early, before
-        // the ControlItemPair guard below is known to succeed, would make
-        // cacheItemsIfNeeded's change detector see cachedIDs == itemWindowIDs
-        // on the very next poll even though this cycle failed to find the
-        // control items. That desensitizes the detector right when recovery
-        // depends on it, since a failed cacheItemsRegardless call otherwise
-        // looks identical to a successful one from the detector's point of
-        // view. The commit happens only after the guard succeeds, below.
+        // Don't commit the window IDs yet: if the ControlItemPair guard fails, the
+        // change detector would stop firing right when recovery depends on it.
 
         await MainActor.run {
             MenuBarItemTag.Namespace.pruneUUIDCache(keeping: Set(itemWindowIDs))
@@ -1862,9 +1516,7 @@ extension MenuBarItemManager {
         }
         guard snapshotIsCurrent("after cache pruning") else { return }
 
-        // Obtain window IDs from the actual ControlItem objects so the
-        // fallback lookup in ControlItemPair can match by window ID when
-        // the tag-based and title-based lookups fail (macOS 26+).
+        // Lets ControlItemPair match by window ID when tag and title fail (macOS 26+).
         let hiddenControlItemWindowNumber = appState?.menuBarManager
             .controlItem(withName: .hidden)?.window?.windowNumber
         let alwaysHiddenControlItemWindowNumber = appState?.menuBarManager
@@ -1883,22 +1535,9 @@ extension MenuBarItemManager {
             alwaysHiddenControlItemWindowID: alwaysHiddenControlItemWID
         ) else {
             guard snapshotIsCurrent("before control-item recovery") else { return }
-            // Recovery path (#754): a failed lookup here used to wipe
-            // itemCache and commit the just-fetched window-ID snapshot to
-            // the change detector, which together made the failure
-            // permanent — the cache stayed empty, and cacheItemsIfNeeded
-            // saw no further change to re-drive a recache. Instead: keep
-            // the last-known-good itemCache (consumers key visible UI off
-            // areControlItemsMissing, not off an empty cache; see
-            // MenuBarLayoutSettingsPane), leave the window-ID snapshot
-            // uncommitted so the detector re-fires on the next poll, and
-            // count consecutive failures. After controlItemRebuildThreshold
-            // in a row, the backing NSStatusItems are rebuilt outright,
-            // since a lookup that keeps failing across independently
-            // triggered cache cycles means the status items themselves are
-            // gone (e.g. their windowNumber no longer matches any
-            // enumerated CG window ID), not that this one cycle raced a
-            // transient WindowServer update.
+            // Keep the last good cache and leave the window IDs uncommitted so the
+            // detector re-fires (#754). After controlItemRebuildThreshold failures in a
+            // row the status items themselves are gone, so rebuild them.
             if !suppressAutomaticMoves,
                Self.resetControlItemLookupEpisodeIfHostChanged(
                    previous: lastObservedControlCenterGeneration,
@@ -1945,12 +1584,8 @@ extension MenuBarItemManager {
                     appState?.menuBarManager.controlItem(withName: .alwaysHidden)?.recreateStatusItem()
                 }
                 didRebuildControlItemsForCurrentFailureEpisode = true
-                // Schedule one immediate recache so the freshly rebuilt
-                // status items are picked up right away rather than waiting
-                // for the next externally triggered cache cycle. Briefly wait
-                // first so the deferred cacheGate.end() from this cycle can
-                // complete (otherwise the recache is dropped at the gate) and
-                // the newly created NSStatusItems can register their windows.
+                // Recache now. The short wait lets this cycle's cacheGate.end() run,
+                // or the recache is dropped, and lets the new windows register.
                 Task { [weak self] in
                     try? await Task.sleep(for: .milliseconds(100))
                     await self?.cacheItemsRegardless()
@@ -1980,16 +1615,9 @@ extension MenuBarItemManager {
 
         MenuBarItemManager.diagLog.debug("cacheItemsRegardless: found control items, hidden windowID=\(controlItems.hidden.windowID), alwaysHidden=\(controlItems.alwaysHidden.map { "\($0.windowID)" } ?? "nil")")
 
-        // A display change can strand the always-hidden divider on another
-        // screen's menu bar while the hidden divider resolves fine.
-        // ControlItemPair models the missing divider as an optional, so the
-        // pair succeeds and the lookup-failure rebuild above never fires:
-        // #863's HDMI re-plug left alwaysHidden=nil for 12+ hours and the
-        // whole always-hidden section drained into visible. Only
-        // authoritative cycles may advance, reset, or re-arm the episode —
-        // a provisional correlation says nothing either way, the same rule
-        // the parked-divider streak applies — and a disabled section's
-        // absent divider is intentional, not a loss to recover from.
+        // A display change can strand the always-hidden divider on another screen
+        // while the pair still succeeds, so the rebuild above never fires (#863).
+        // Only authoritative cycles count; a disabled section's divider is absent on purpose.
         if !suppressAutomaticMoves, controlItems.canRepositionControlItems {
             if appState?.settings.advanced.enableAlwaysHiddenSection == true {
                 if controlItems.alwaysHidden == nil {
@@ -2043,10 +1671,7 @@ extension MenuBarItemManager {
                 MenuBarItemManager.diagLog.debug(
                     "Control-item reorder attempt reached moveGate; scheduling authoritative recache"
                 )
-                // A pure position change does not change the window-ID set, so
-                // cacheItemsIfNeeded cannot discover it. Hand the waiter to an
-                // explicit post-settle cycle instead of leaving itemCache at
-                // the geometry observed before the divider move.
+                // Position-only changes keep window IDs, so the detector can't see them.
                 ownsWaiter = false
                 Task { [weak self] in
                     try? await Task.sleep(for: MenuBarItemManager.uiSettleDelay)
@@ -2075,34 +1700,13 @@ extension MenuBarItemManager {
         }
         guard snapshotIsCurrent("after control-item order enforcement") else { return }
 
-        // App-relaunch detection: uniqueIdentifier is namespace:title
-        // (windowID-independent and stable across restarts), so a
-        // relaunched app keeps the same identifier and would be filtered
-        // out of newProfileItems by profileSortedItemIdentifiers in the
-        // late-arrival check below. A windowID not in previousWindowIDs
-        // for a profile-tracked item means the app re-registered its
-        // NSStatusItem at whatever position macOS chose, which is
-        // usually not the saved profile position. Drop such identifiers
-        // from the sorted snapshot so the late-arrival path picks them
-        // up. Run this BEFORE the relocate/restore early returns: those
-        // paths schedule a recache after which previousWindowIDs already
-        // contains the freshly registered windowID, and the signal would
-        // be lost.
+        // A relaunched app keeps its identifier but gets a new windowID and lands
+        // wherever macOS puts it. Drop it from the sorted snapshot so the
+        // late-arrival path picks it up. Must run before the early returns below,
+        // whose recache records the new windowID and loses the signal.
         //
-        // Position-check refinement: a fresh windowID does not always
-        // mean the item is at the wrong position. Idle wake, AX
-        // rebinding, and some app lifecycle events recreate the
-        // underlying NSStatusItem while macOS retains the original
-        // visual position. The earlier unconditional drop fired a
-        // full re-sort (which can replan many moves across the bar)
-        // on every such event, even when the item was already at its
-        // profile-expected section. Gate the drop on a section
-        // mismatch: keep items whose current section matches the
-        // profile spec, drop only items that genuinely landed in the
-        // wrong section. Items whose current section can't be
-        // determined (transient bounds during in-flight moves) fall
-        // through to the drop path, preserving the original
-        // conservative behaviour for ambiguous cases.
+        // Idle wake and AX rebinding also recreate status items in place, so only
+        // drop items in the wrong section. Undeterminable sections still drop.
         if !suppressAutomaticMoves,
            let activeLayout = activeProfileLayout,
            !activeProfileItemIdentifiers.isEmpty,
@@ -2113,10 +1717,6 @@ extension MenuBarItemManager {
             let hiddenMaxX = controlItems.hidden.bounds.maxX
             let ahBounds = controlItems.alwaysHidden?.bounds
 
-            // Build per-identifier expected-section lookup from the
-            // active profile spec. itemOrder is keyed by section
-            // string ("visible" / "hidden" / "alwaysHidden") with
-            // identifier arrays for each section.
             var expectedSectionByID = [String: String]()
             for (sectionKey, ids) in activeLayout.itemOrder {
                 for id in ids {
@@ -2124,13 +1724,8 @@ extension MenuBarItemManager {
                 }
             }
 
-            /// Spatial classification mirrors currentLayoutDivergesFromSaved:
-            /// visible is right of hiddenCtrl; alwaysHidden is left of
-            /// ahCtrl when present; hidden is between the two control
-            /// items (or anything left of hiddenCtrl when ahCtrl is
-            /// disabled). Items straddling a divider return nil to
-            /// avoid false positives during transient section
-            /// show/hide animations.
+            /// Mirrors currentLayoutDivergesFromSaved. Items straddling a divider
+            /// return nil to avoid false positives during show/hide animations.
             func sectionKey(for item: MenuBarItem) -> String? {
                 if item.bounds.minX >= hiddenMaxX {
                     return "visible"
@@ -2151,11 +1746,6 @@ extension MenuBarItemManager {
                               !previousWindowIDSet.contains(item.windowID),
                               activeProfileItemIdentifiers.contains(item.uniqueIdentifier)
                         else { return false }
-                        // If the item is already at its profile-
-                        // expected section, the windowID change was
-                        // benign; no re-sort needed. Items whose
-                        // current section can't be determined fall
-                        // through to the drop path.
                         if let expected = expectedSectionByID[item.uniqueIdentifier],
                            let current = sectionKey(for: item),
                            expected == current
@@ -2192,10 +1782,8 @@ extension MenuBarItemManager {
                 ownsWaiter = false
                 Task { [weak self] in
                     try? await Task.sleep(for: MenuBarItemManager.uiSettleDelay)
-                    // Carry the caller policy across the hand-off: this recache
-                    // is where the launch restore actually runs after a completed
-                    // relocation. A failed accepted attempt gets one read-and-
-                    // publish pass with movers suppressed so it cannot retry-loop.
+                    // The launch restore runs in this recache. After a failed accepted
+                    // attempt, movers are suppressed so it can't retry-loop.
                     await self?.cacheItemsRegardless(
                         skipRecentMoveCheck: true,
                         resolveSourcePID: resolveSourcePID,
@@ -2253,10 +1841,8 @@ extension MenuBarItemManager {
         }
         guard snapshotIsCurrent("after pending-item relocation check") else { return }
 
-        // Skip all restore logic during the startup settling period.
-        // The settling period prevents cascading icon moves when many apps
-        // load at login or restart in quick succession (app update checks).
-        // A final cacheItemsRegardless() after the period ends handles restore.
+        // Settling prevents cascading moves while many apps load at login;
+        // a final pass afterwards restores.
         guard !isInStartupSettling else {
             await uncheckedCacheItems(
                 items: items,
@@ -2268,32 +1854,17 @@ extension MenuBarItemManager {
                 snapshotIsCurrent: { snapshotIsCurrent("startup cache publish") }
             )
             guard snapshotIsCurrent("after startup cache publish") else { return }
-            // Absorb items that appear during settling into the profile
-            // snapshot so they aren't treated as late arrivals afterwards.
+            // So items appearing during settling aren't late arrivals afterwards.
             if !suppressAutomaticMoves, activeProfileLayout != nil {
                 for item in items where !item.isControlItem {
                     profileSortedItemIdentifiers.insert(item.uniqueIdentifier)
                 }
             }
 
-            // One early apply restricted to items we can already identify,
-            // rather than leaving the bar in macOS's arrangement for the
-            // whole settling period. Waiting for every sourcePID means the
-            // user watches an unsaved layout for as long as resolution takes
-            // — ~8 s on a dense bar (#881). Restricted so the items still
-            // being resolved are not move targets; the settling-end pass
-            // runs unrestricted and LCS leaves whatever this placed alone.
-            // The cooldown is bypassed rather than inherited from the caller.
-            // relocateThawIcon moves our own control item within the first
-            // ~100 ms of launch, so every settling poll that reaches here is
-            // inside the 5 s window that same launch just stamped, and no
-            // settling-period call site sets bypassSavedLayoutCooldown. In the
-            // #881 log the early apply was rejected at 19.457 for a cooldown
-            // stamped at 16.375 by relocateThawIcon, which left the reporter
-            // watching macOS's arrangement for the whole settling period and
-            // then the entire reorder as a visible sequence. Cascading
-            // re-applies, which is what the cooldown guards against, cannot
-            // happen here: this runs once per settling period.
+            // One early apply for already-identified items, instead of showing
+            // macOS's arrangement for all of settling (~8 s, #881).
+            // Bypasses the cooldown: relocateThawIcon stamps it within ~100 ms of
+            // launch, and this runs only once per settling period.
             if !skipSavedLayoutApply,
                !suppressAutomaticMoves,
                lastMoveOperationTimestamp == moveTimestampAtGateEntry,
@@ -2314,9 +1885,7 @@ extension MenuBarItemManager {
                         snapshotIsCurrent("early saved-layout apply preflight")
                     }
                 )
-                // Spend the one attempt only on a dispatch that happened. The
-                // flag used to be set before the call, so an apply rejected by
-                // a guard consumed it and no later poll retried.
+                // Only a real dispatch spends the one attempt.
                 if didApply {
                     didAttemptEarlySavedLayoutApply = true
                     MenuBarItemManager.diagLog.debug(
@@ -2336,23 +1905,10 @@ extension MenuBarItemManager {
             return
         }
 
-        // Unified saved-layout restore: dispatch the bulk apply path
-        // when window IDs have changed (app relaunch). applySavedLayout
-        // owns its own cooldown and guard checks; applyProfileLayout's
-        // body arms isRestoringItemOrder around the moves and drives
-        // its own follow-up recache. On rejection the flag is left
-        // false so saveSectionOrder can persist the current cache.
+        // Restore the saved layout when window IDs change (app relaunch).
         //
-        // The skipSavedLayoutApply gate exists so the post-apply
-        // refresh scheduled by scheduleDeferredCacheRefresh does NOT
-        // re-enter applySavedLayout. Without the gate the deferred
-        // refresh runs cacheItemsRegardless → applySavedLayout →
-        // dispatch → schedule another refresh, and because consecutive
-        // getMenuBarItems calls can return slightly different windowID
-        // sets (transient Apple Control Center widgets churn windowIDs
-        // even when the visible item count is stable),
-        // windowIDsChanged fires on every iteration and the bar enters
-        // an infinite no-op apply loop.
+        // skipSavedLayoutApply keeps the post-apply refresh from re-entering here.
+        // Control Center widgets churn windowIDs, so otherwise it loops forever.
         if !skipSavedLayoutApply,
            !suppressAutomaticMoves,
            lastMoveOperationTimestamp == moveTimestampAtGateEntry
@@ -2394,10 +1950,7 @@ extension MenuBarItemManager {
         )
         guard snapshotIsCurrent("after cache publish") else { return }
 
-        // Persist the resolved (possibly corrected) sourcePIDs for the next
-        // cache cycle so transient resolution errors can be detected.
-        // Only update when sourcePIDs were actually resolved; the settle-end
-        // fast restore (resolveSourcePID=false) must not overwrite the baseline.
+        // The settle-end fast restore resolves nothing and must not overwrite the baseline.
         if resolveSourcePID {
             let currentWindowIDs = Set(items.map(\.windowID))
             let currentControlCenterGeneration = SourcePIDSeedStore.currentControlCenterGeneration()
@@ -2474,7 +2027,6 @@ extension MenuBarItemManager {
             }
         }
 
-        // Detect late-arriving items that belong to the active profile.
         if !suppressAutomaticMoves,
            activeProfileLayout != nil,
            !activeProfileItemIdentifiers.isEmpty
@@ -2505,9 +2057,7 @@ extension MenuBarItemManager {
             MenuBarItemManager.diagLog.debug("cacheItemsRegardless: finished, cache now has \(self.itemCache.managedItems.count) managed items")
         }
 
-        // Keep the visible row inside the beside-notch budget regardless of
-        // whether a profile is active. Runs last so it sees the settled cache,
-        // and self-gates on every in-flight mover.
+        // Runs last so it sees the settled cache.
         guard snapshotIsCurrent("before notch-overflow rebalance") else { return }
         if !suppressAutomaticMoves {
             let notchRebalanceOutcome = await rebalanceNotchOverflowIfNeeded(
@@ -2521,10 +2071,7 @@ extension MenuBarItemManager {
                 MenuBarItemManager.diagLog.debug(
                     "Notch-overflow rebalance attempted item moves; scheduling authoritative recache"
                 )
-                // The cache above describes the pre-ejection geometry. Position
-                // moves keep their window IDs, so the change detector cannot
-                // discover the stale reading; explicitly hand the waiter and
-                // caller policy to a fresh post-settle cycle.
+                // Position moves keep window IDs, so hand the waiter to a fresh cycle.
                 ownsWaiter = false
                 Task { [weak self] in
                     try? await Task.sleep(for: MenuBarItemManager.uiSettleDelay)
@@ -2581,14 +2128,10 @@ extension MenuBarItemManager {
         }
     }
 
-    /// Performs the authoritative cache pass required before the Layout
-    /// editor may thaw its source and destination rows after a user move.
+    /// The cache pass the Layout editor needs before thawing its rows after a move.
     ///
-    /// Ordinary background refreshes deliberately drop when CacheGate is
-    /// busy. An editor move cannot: thawing from the old cache duplicates or
-    /// removes the transferred icon until a later timer happens to repair it.
-    /// Retry discrete attempts so the gate is released between each one and
-    /// nested relocation recaches cannot deadlock this caller.
+    /// Unlike background refreshes it can't be dropped at a busy CacheGate, or the
+    /// moved icon duplicates or vanishes. Discrete retries avoid deadlocking on nested recaches.
     func refreshCacheAfterLayoutEditorMove(
         timeout: Duration = .seconds(30),
         forcePersistSavedOrder: Bool = false
@@ -2627,32 +2170,18 @@ extension MenuBarItemManager {
         return false
     }
 
-    /// Caches the current menu bar items, if the items have changed
-    /// since the previous cache.
-    ///
-    /// Before caching, this method ensures that the control items for
-    /// the hidden and always-hidden sections are correctly ordered,
-    /// arranging them into valid positions if needed.
+    /// Caches the current items if they changed, fixing the control item order first.
     func cacheItemsIfNeeded() async {
         let rawWindowIDs = Bridging.getMenuBarWindowList(option: [.itemsOnly, .activeSpace])
-        // Exclude windowIDs already known to be system clones so their
-        // churn doesn't read as a layout change. A brand-new clone whose
-        // windowID hasn't been learned yet still triggers one recache,
-        // which resolves it, records it, and drops it; from then on its
-        // presence and removal are ignored.
+        // Known clones don't count as changes. A new clone costs one recache.
         let cloneIDs = cacheActor.cachedCloneWindowIDs
         let itemWindowIDs = cloneIDs.isEmpty
             ? rawWindowIDs
             : rawWindowIDs.filter { !cloneIDs.contains($0) }
         let cachedIDs = cacheActor.cachedItemWindowIDs
 
-        // An empty reading against a populated cache is a failed observation,
-        // not the menu bar emptying out. The .activeSpace filter resolves
-        // the space ID separately from the window list, so during a Space
-        // switch it matches the outgoing space and nothing passes the filter
-        // — the next reading, milliseconds later, returns the full set again.
-        // Treating the zero as real is what makes the layout editor blink its
-        // items away and back while it sits open (#851).
+        // During a Space switch the .activeSpace filter can match the outgoing
+        // space and return nothing. Treating that as real blinks the editor (#851).
         if itemWindowIDs.isEmpty, !cachedIDs.isEmpty {
             MenuBarItemManager.diagLog.debug(
                 "cacheItemsIfNeeded: ignoring empty window ID reading against \(cachedIDs.count) cached, likely a Space switch"
@@ -2661,12 +2190,8 @@ extension MenuBarItemManager {
         }
 
         if cachedIDs != itemWindowIDs {
-            // While control-item lookups keep failing, the uncommitted
-            // snapshot makes this branch fire on every poll; #933 measured
-            // 27 hours of full recaches every 3 seconds against a failure
-            // that was not going away. Skip silently inside the backoff
-            // window — each attempt that does run logs its failure with the
-            // streak count, so the lengthening gaps stay visible in the log.
+            // Failing lookups leave the snapshot uncommitted, so this fires every
+            // poll (#933). Back off; each real attempt logs the streak.
             if let backoff = Self.controlItemLookupRetryBackoff(
                 consecutiveFailures: controlItemLookupFailureStreak
             ),
@@ -2685,27 +2210,12 @@ extension MenuBarItemManager {
 
     /// Recaches when an item that had no source process last cycle has one now.
     ///
-    /// The window ID comparison above asks whether the set of items changed.
-    /// It cannot see a change in what is known about an item, and an item's
-    /// source process is not read off its window — it is resolved by an AX scan
-    /// in the XPC service that routinely misses on the first cold pass, because
-    /// other apps' accessibility trees are still warming up seconds after login.
+    /// Window IDs don't change when a source process resolves. The AX scan often
+    /// misses right after login, and without this the item stays "Menu Bar Item"
+    /// under Control Center until relaunch.
     ///
-    /// A miss is not cosmetic. MenuBarItem/hasProvisionalIdentity spells out
-    /// what an item is without its source: the namespace falls back to the owner
-    /// of the window, which on macOS 26 is Control Center for every hosted status
-    /// item, and the display name falls back to "Menu Bar Item". Both are wrong,
-    /// and both were permanent — the item's window never goes anywhere, so no
-    /// window ID ever changed, so nothing recached it, and a relaunch was the only
-    /// way to get the real name back.
-    ///
-    /// SourcePIDNegativeCachePolicy was built for exactly this: it shortens
-    /// the first retry deadlines so a warmer scan can land, and its own reasoning
-    /// names the failure it cannot fix from that side — "the app stops requesting
-    /// once settled". This is the app not stopping. The probe costs one XPC round
-    /// trip per tick while anything is still unresolved and nothing at all once
-    /// everything has resolved; the ladder is what bounds how often a request
-    /// behind it becomes a real scan.
+    /// Costs one XPC round trip per tick while anything is unresolved;
+    /// SourcePIDNegativeCachePolicy bounds how often that becomes a real scan.
     private func recacheIfSourceProcessesResolved(_ itemWindowIDs: [CGWindowID]) async {
         let probeWindowIDs = Self.windowIDsNeedingSourceResolution(
             cachedItems: itemCache.managedItems,
@@ -2715,9 +2225,7 @@ extension MenuBarItemManager {
             return
         }
 
-        // Second guard on the same rule as the filter above, against a title
-        // this side can see and a cached item cannot: a duplicate Thaw process
-        // can leave control-item windows behind under foreign window IDs.
+        // A duplicate Thaw can leave control-item windows under foreign IDs.
         let windows = WindowInfo.createWindows(from: probeWindowIDs)
             .filter { !($0.title?.hasPrefix("Thaw.ControlItem.") ?? false) }
         guard !windows.isEmpty else {
@@ -2741,19 +2249,12 @@ extension MenuBarItemManager {
     /// The item windows worth asking the service about: the ones the cache is
     /// holding without a source process.
     ///
-    /// Read from the cache rather than by differencing window IDs against the
-    /// resolved-PID map, because these are the items actually on display under a
-    /// provisional identity, and because the set can only shrink as they resolve
-    /// — a probe can never talk the cache into recaching what it just cached.
+    /// Read from the cache, so the set only shrinks as items resolve.
     ///
-    /// Control items are excluded for the reason
-    /// MenuBarItem/getMenuBarItems(on:option:resolveSourcePID:) excludes them
-    /// from resolution in the first place: their AX children are disabled
-    /// dividers, so a request for one is a guaranteed miss that can start a full
-    /// scan of every running app, and their PID is known locally anyway.
+    /// Control items are excluded: their AX children are disabled dividers, so a
+    /// request is a guaranteed miss that can scan every running app.
     ///
-    /// Restricted to currentWindowIDs so an item the cache is still holding
-    /// after its window is gone cannot keep the probe alive on its own.
+    /// Limited to currentWindowIDs so a vanished window can't keep the probe alive.
     static nonisolated func windowIDsNeedingSourceResolution(
         cachedItems: [MenuBarItem],
         currentWindowIDs: [CGWindowID]

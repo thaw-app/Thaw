@@ -11,21 +11,11 @@ import Cocoa
 final class LayoutBarScrollView: NSScrollView {
     private let paddingView: LayoutBarPaddingView
 
-    /// The layout view's arranged views.
-    ///
-    /// The views are laid out from left to right in the order that they appear in
-    /// the array. The ``spacing`` property determines the amount of space between
-    /// each view.
     var arrangedViews: [LayoutBarArrangedView] {
         get { paddingView.arrangedViews }
         set { paddingView.arrangedViews = newValue }
     }
 
-    /// Creates a layout bar scroll view with the given app state, section, and spacing.
-    ///
-    /// - Parameters:
-    ///   - appState: The shared app state instance.
-    ///   - section: The section whose items are represented.
     init(appState: AppState, section: MenuBarSection.Name) {
         self.paddingView = LayoutBarPaddingView(appState: appState, section: section)
 

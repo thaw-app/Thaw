@@ -9,14 +9,11 @@ import Foundation
 import Testing
 @testable import Thaw
 
-/// Covers the launchd label lookup added for #720.
+/// Covers the launchd label lookup (#720).
 ///
-/// Spotlight is a LaunchAgent whose binary carries a launch constraint
-/// permitting launchd as the only launching parent. Terminating it and
-/// launching the bundle ourselves gets the new process SIGKILLed at exec
-/// (`CODESIGNING` / Launch Constraint Violation), so the spacing relaunch
-/// wave has to restart those items through launchd instead - which means
-/// resolving the right label first.
+/// Agents like Spotlight only allow launchd as the launching parent, so
+/// relaunching the bundle ourselves gets SIGKILLed at exec (Launch Constraint
+/// Violation). The spacing wave restarts them through launchd by label.
 @Suite("System launch agent index")
 struct SystemLaunchAgentIndexTests {
     /// Writes `agents` as property lists into a fresh temporary directory
@@ -77,15 +74,9 @@ struct SystemLaunchAgentIndexTests {
         }
     }
 
-    /// The regression this type exists to prevent. Deriving the label from
-    /// the bundle identifier or the plist file name looks like it works
-    /// (`com.apple.Dock.plist` is right there) but produces
-    /// `com.apple.dock`, which launchd rejects with "Could not find
-    /// service". The real label is `com.apple.Dock.agent`, and it is only
-    /// readable from inside the plist. Time Machine
-    /// (`com.apple.timemachine.HelperAgent` -> `com.apple.TMHelperAgent`)
-    /// and screen sharing (`com.apple.SSMenuAgent` ->
-    /// `com.apple.screensharing.menuextra`) diverge even further.
+    /// The label is only readable from the plist. Deriving it from the bundle
+    /// ID or file name gives `com.apple.dock`, which launchd rejects ("Could
+    /// not find service"); the real label is `com.apple.Dock.agent`.
     @Test("The label comes from the plist, not the file name or bundle ID")
     func labelIsNotDerivedFromFileName() throws {
         try withAgentDirectory([
@@ -180,11 +171,8 @@ struct SystemLaunchAgentIndexTests {
         }
     }
 
-    /// Neither spelling of the path is under our control: the agent may
-    /// declare a symlink while `NSRunningApplication.executableURL` reports
-    /// the target, or the reverse. Both sides are canonicalized, so either
-    /// direction resolves. Normalizing only the lookup side left this case
-    /// falling through to the bundle-launch path the type exists to avoid.
+    /// The agent may declare a symlink while `NSRunningApplication.executableURL`
+    /// reports the target, or the reverse, so both sides are canonicalized.
     @Test("A symlinked program path resolves when looked up by its target")
     func symlinkedProgramPathResolvesFromTarget() throws {
         let tmp = FileManager.default.temporaryDirectory

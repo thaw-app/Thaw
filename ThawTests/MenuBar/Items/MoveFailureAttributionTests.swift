@@ -9,9 +9,8 @@ import Foundation
 import Testing
 @testable import Thaw
 
-/// How a move's failure is attributed once it leaves the engine: which
-/// failures the ledger may file as an owner that ignores events and how long
-/// a refusal by macOS keeps an item's saved slot.
+/// Which failures the ledger may file as an owner that ignores events, and how
+/// long a refusal by macOS keeps an item's saved slot.
 @MainActor
 @Suite("Move failure attribution")
 struct MoveFailureAttributionTests {
@@ -24,9 +23,8 @@ struct MoveFailureAttributionTests {
 
     // MARK: Ledger
 
-    /// The 13:00:51 mark: a timeout on a Control-Center-hosted item during a
-    /// reverting episode, filed for fourteen days against an owner that had
-    /// answered every press.
+    /// A Control Center-hosted item timed out while reverting and was filed for
+    /// fourteen days against an owner that had answered every press.
     @Test("A timeout on a Control-Center-hosted item is not the owner's silence")
     func hostedTimeoutIsNotFiledAgainstOwner() {
         let kind = MenuBarItemManager.ledgerFailureKind(
@@ -37,8 +35,7 @@ struct MoveFailureAttributionTests {
         #expect(kind == .other)
     }
 
-    /// The case the mark exists for: an app that owns its own window and
-    /// never acknowledges the events posted to it.
+    /// An app that owns its window and never acknowledges posted events.
     @Test("A timeout on an app-owned item is the owner's silence")
     func appOwnedTimeoutIsFiledAgainstOwner() {
         let kind = MenuBarItemManager.ledgerFailureKind(

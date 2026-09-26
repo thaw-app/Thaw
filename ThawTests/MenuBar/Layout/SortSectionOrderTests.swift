@@ -10,9 +10,8 @@ import Foundation
 import Testing
 @testable import Thaw
 
-/// Covers the alphabetical section sort added for #936: a section's items
-/// reorder by display name, localized and case-insensitive, so a crowded
-/// hidden section can be made scannable without dragging each icon.
+/// The alphabetical section sort (#936): localized, case-insensitive order by
+/// display name, so a crowded hidden section is scannable without dragging.
 @Suite("Sort section order")
 struct SortSectionOrderTests {
     private func item(_ bundleID: String, _ title: String, _ windowID: CGWindowID) -> MenuBarItem {
@@ -60,20 +59,16 @@ struct SortSectionOrderTests {
         #expect(LayoutSolver.sortedSectionIdentifiers([]) { $0.tag.title } == [])
     }
 
-    /// `applyProfileLayout` relaxes concealed-section order by default so
-    /// background work does not reorder off-screen items. Sort A→Z passes
-    /// `enforceConcealedSectionOrder: true` to skip that relaxation, so a
-    /// hidden/always-hidden sort reaches the bar instead of only persisting.
+    /// `applyProfileLayout` relaxes concealed order by default so background work
+    /// leaves off-screen items alone; Sort A→Z enforces it so a concealed sort reaches the bar.
     @Test("A concealed-section sort plans moves only when enforced")
     func concealedSortPlansMovesOnlyWhenEnforced() {
-        // Two hidden items the user wants in A→Z order; the bar holds them
-        // reversed. Visible stays put either way.
+        // The bar holds the two hidden items reversed; visible stays put.
         let sectionMap = ["a": "visible", "b": "hidden", "c": "hidden"]
         let current = ["a", "c", "b"]
         let desired = ["a", "b", "c"]
 
-        // Default path (background reapply): relaxation surrenders the
-        // hidden order, the LCS sees the bar as already correct, no moves.
+        // Background reapply: relaxation keeps the bar's hidden order, so no moves.
         let relaxed = LayoutSolver.relaxConcealedSectionOrder(
             desiredNoControls: desired,
             currentNoControls: current,
@@ -88,8 +83,7 @@ struct SortSectionOrderTests {
             ).isEmpty
         )
 
-        // Enforced path (Sort A->Z): the relaxation is skipped, so the LCS
-        // sees the sorted order and plans the swap.
+        // Sort A->Z skips relaxation, so the LCS plans the swap.
         #expect(
             !LayoutSolver.planLCSMoveSequence(
                 currentNoControls: current,
@@ -100,12 +94,9 @@ struct SortSectionOrderTests {
     }
 }
 
-/// Sort A->Z runs through two apply paths. With an active profile it calls
-/// `reapplyActiveProfile(enforceConcealedSectionOrder: true)`. With no active
-/// profile it reorders through the saved-layout apply, which relaxes
-/// concealed-section order by default, so the sort arms a one-shot flag the
-/// saved apply consumes. Without the flag a hidden/always-hidden sort
-/// persists to disk but never reaches the bar (#1116).
+/// Without an active profile, Sort A->Z goes through the saved-layout apply,
+/// which relaxes concealed order, so the sort arms a one-shot flag that apply
+/// consumes. Without it a concealed sort persists but never reaches the bar (#1116).
 @MainActor
 @Suite("Sort section, no active profile")
 final class SortSectionNoProfileTests {
@@ -129,12 +120,9 @@ final class SortSectionNoProfileTests {
         let sorted = manager.sortSection(.hidden)
 
         #expect(sorted != nil, "sortSection should sort the populated hidden section")
-        // The saved-order apply keys items by section key string; the sort
-        // sorts the live items by displayName so the returned identifiers
-        // come back in alphabetical order.
+        // Sorted by displayName, so identifiers come back alphabetical.
         #expect(sorted?.count == 3)
-        // The one-shot flag is armed for the cache cycle's saved-layout
-        // apply to consume.
+        // Armed for the next saved-layout apply to consume.
         #expect(
             manager.enforceConcealedSectionOrderOnNextSavedApply,
             "no-profile sort must arm enforcement for the saved-layout apply"

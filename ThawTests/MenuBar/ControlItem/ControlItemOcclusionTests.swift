@@ -17,8 +17,7 @@ import Testing
 /// corroborated readings taken outside the settling window.
 @Suite("Control item occlusion")
 struct ControlItemOcclusionTests {
-    /// A sample outside the display-change grace window, which is where all
-    /// samples that are meant to count come from.
+    /// A sample outside the display-change grace window.
     private func settledSample(
         isOccluded: Bool,
         isInMenuBar: Bool = true
@@ -36,7 +35,7 @@ struct ControlItemOcclusionTests {
         #expect(!evaluator.isOccluded)
     }
 
-    /// A single reading is not enough — that is the whole point of the type.
+    /// A single reading is not enough.
     @Test("One occluded sample does not change the verdict")
     func oneOccludedSampleDoesNotChangeTheVerdict() {
         var evaluator = ControlItemOcclusion.Evaluator()

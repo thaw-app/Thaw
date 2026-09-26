@@ -6,11 +6,9 @@
 //  Copyright (Thaw) © 2026 Toni Förster
 //  Licensed under the GNU GPLv3
 
-// Known warning: onGeometryChange's transform closure is @Sendable, and none
-// of the SDK's coordinate-space types (CoordinateSpaceProtocol conformers,
-// CoordinateSpace itself) are marked Sendable yet, so capturing the parameter
-// warns under approachable concurrency. The types are immutable value types;
-// revisit once the SDK annotates them.
+// Known warning: onGeometryChange's transform is @Sendable, but the SDK's
+// coordinate-space types aren't marked Sendable yet. They're immutable value
+// types; revisit once the SDK annotates them.
 import SwiftUI
 
 extension View {

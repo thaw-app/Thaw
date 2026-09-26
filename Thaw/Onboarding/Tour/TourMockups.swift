@@ -9,11 +9,7 @@ import AppKit
 import Observation
 import SwiftUI
 
-/// The demo menu bar's background treatment — mirrors Thaw's real
-/// `MenuBarShapeKind` options. Real Thaw calls these "Full" and "Split" (a
-/// single bar-wide shape vs. two independent leading/trailing shapes); this
-/// demo labels the split option "Pills" since that's what it looks like —
-/// two separate floating capsules with a gap between them.
+/// Mirrors `MenuBarShapeKind`: "Full" and "Split", labelled "Pills" here.
 private enum DemoBarStyle {
     case regular
     case gradient
@@ -27,16 +23,8 @@ private enum DemoBarStyle {
     }
 }
 
-/// A stand-in macOS menu bar: app label on the left, a cluster of "hidden"
-/// items that can fade in/out, a tappable divider (Thaw's control item), and
-/// a trailing cluster of always-visible items plus a clock. Shared by the
-/// management, appearance, hotkeys, and profiles slides so they all read as
-/// the same bar changing behavior, rather than four unrelated mockups.
-///
-/// `.pills` renders as two independent capsules (leading label, trailing
-/// controls) with a real gap between them — matching Thaw's actual "Split"
-/// shape kind, where the leading and trailing sides are separate shapes
-/// rather than one bar-wide one.
+/// A stand-in macOS menu bar shared by every feature slide, so they read as
+/// one bar changing behavior rather than four unrelated mockups.
 private struct DemoMenuBar: View {
     var hiddenSymbols: [String]
     var hiddenShown: Bool
@@ -142,9 +130,7 @@ private struct DemoMenuBar: View {
     }
 }
 
-/// The floating glass capsule HUD used below each demo bar to label or drive
-/// its interaction — mirrors the "ControlHUD" floating labels in Thaw's real
-/// onboarding tour.
+/// The floating glass capsule below each demo bar that labels or drives it.
 private struct SlideHUD<Content: View>: View {
     @ViewBuilder let content: Content
     var body: some View {
@@ -157,13 +143,8 @@ private struct SlideHUD<Content: View>: View {
 
 // MARK: - Restart Helper
 
-/// Cancels the in-flight animation task of a tour mockup and replaces it with
-/// a new one running `work`.
-///
-/// Every mockup model restarts the same way — cancel, reset its state, then
-/// drive a sleep-and-animate sequence — and each of those sequences checks
-/// `Task.isCancelled` between steps, so the previous task must be cancelled
-/// before the new one is stored.
+/// Cancels a mockup's in-flight animation task and replaces it with one
+/// running `work`.
 @MainActor
 func replaceRestartTask(
     _ task: inout Task<Void, Never>?,

@@ -17,9 +17,7 @@ extension MenuBarItemManager {
         case deferred
     }
 
-    /// Whether the user-facing presentation is allowed by the cooldown.
-    /// This decision gates only the alert or notification; report persistence
-    /// is never skipped because presentation is rate-limited.
+    /// Gates only the alert or notification; the report is always persisted.
     nonisolated enum AutomaticMoveFailurePresentationDecision: Equatable {
         case present
         case suppressSameItem(elapsed: TimeInterval)
@@ -61,9 +59,7 @@ extension MenuBarItemManager {
         case .missingItemBounds, .missingDestinationBounds, .menuTrackingActive,
              .staleDestination, .moveSuperseded, .moveEngineBusy,
              .unsafeMovePath, .inputPauseTimedOut:
-            // The item or destination changed, the user still owns the menu,
-            // or another transaction owns the bar. A fresh pass may produce
-            // a different valid plan, and no terminal malfunction is proven.
+            // The item, destination, or bar ownership changed; a fresh pass may still succeed.
             return .deferred
         case let .itemNotMovable(item):
             // A generic Control Center slot can become movable as soon as its
@@ -135,9 +131,8 @@ extension MenuBarItemManager {
         )
     }
 
-    /// Starts report generation outside a bulk move loop. The initial guard
-    /// runs in the caller's task so cancellation is not lost when the new task
-    /// is created.
+    /// Starts report generation outside a bulk move loop. The guard runs in the
+    /// caller's task so cancellation isn't lost when the new task starts.
     func enqueueAutomaticMoveFailureReport(
         of item: MenuBarItem,
         to destination: MoveDestination?,
@@ -189,9 +184,8 @@ extension MenuBarItemManager {
         )
         guard handlingPlan.shouldPersist else { return }
 
-        // Reserve an allowed presentation before report generation yields the
-        // main actor, so two simultaneous failures cannot both pass the burst
-        // gate. Persistence remains allowed for the suppressed one.
+        // Reserve before report generation yields the main actor, or two failures
+        // can both pass the burst gate. The suppressed one is still persisted.
         if handlingPlan.shouldPresent {
             automaticMoveFailureReports[key] = now
             lastAutomaticMoveFailureReport = now

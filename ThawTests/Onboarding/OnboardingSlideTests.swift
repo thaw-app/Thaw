@@ -14,10 +14,8 @@ import Testing
 struct ThawTourSlideTests {
     // MARK: - Ordering invariant
 
-    // The tour relies on a fixed slide order: `welcome` must be first, and
-    // the remaining slides loop back to `menuBarManagement` once the last
-    // one finishes. Reordering the enum would silently break that loop, so
-    // lock the endpoints here.
+    // The tour needs `welcome` first and loops back to `menuBarManagement`
+    // after the last slide, so reordering the enum would break the loop.
 
     @Test("Welcome is the first slide")
     func welcomeIsFirst() {

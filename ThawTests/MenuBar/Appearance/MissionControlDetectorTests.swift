@@ -10,10 +10,8 @@ import Testing
 @testable import Thaw
 
 /// Covers `MissionControlDetector.nextInterval(isActive:lastStepUpSignal:now:)`,
-/// the pure rate-selection function behind the detector's adaptive poll rate
-/// (plan 009). The rest of the detector polls the window server for real
-/// window displacement and isn't practically unit-testable; this is the one
-/// piece of its logic that is.
+/// the pure rate selection behind the detector's adaptive poll rate. The rest
+/// polls the window server.
 @MainActor
 @Suite("Mission control detector")
 struct MissionControlDetectorTests {

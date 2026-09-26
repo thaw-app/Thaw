@@ -160,7 +160,7 @@ struct AdvancedSettingsPane: View {
                 }
             }
             .task(id: settings.enableDiagnosticLogging) {
-                // Small yield to let the Combine sink create/close the log file first.
+                // Yield so the settings observer can create or close the log file first.
                 try? await Task.sleep(for: .milliseconds(50))
                 currentLogFileName = (
                     DiagnosticLogger.shared.currentLogFile
@@ -172,10 +172,8 @@ struct AdvancedSettingsPane: View {
 
     /// A number the user can either type or step through.
     ///
-    /// A value shown next to a stepper as plain text reads as something the app
-    /// filled in and the user cannot change, and clicking to the far end of a
-    /// range is slow. The field carries the value, the stepper nudges it, and
-    /// both answer to the same hidden label so VoiceOver names them.
+    /// Plain text next to a stepper reads as read-only, and stepping across a
+    /// range is slow. Both controls share a hidden label so VoiceOver names them.
     private func numberField(
         _ label: LocalizedStringKey,
         value: Binding<Int>,

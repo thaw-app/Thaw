@@ -10,19 +10,15 @@ import Foundation
 /// Removes potentially sensitive information from diagnostic text before it
 /// leaves the Mac.
 ///
-/// Reports keep app and menu bar identifiers plus display geometry because
-/// those values are needed to investigate move failures. Exact terms supplied
-/// by the caller remove account, network, device, and trigger values; general
-/// patterns provide a second layer for paths, addresses, and location pairs.
-/// Automated redaction is best effort, so callers must still ask the user to
-/// review a report before sharing it.
+/// Keeps app and menu bar identifiers and display geometry, which move-failure
+/// debugging needs. Caller-supplied exact terms go first; general patterns catch
+/// paths, addresses, and coordinates. Best effort, so callers must still ask the
+/// user to review a report before sharing it.
 nonisolated struct DiagnosticRedactor {
     /// An exact string to replace wherever it appears.
     struct Term: Hashable {
-        /// The text to remove.
         let value: String
 
-        /// What to put in its place.
         let placeholder: String
 
         init(_ value: String, placeholder: String) {
@@ -105,11 +101,8 @@ nonisolated struct DiagnosticRedactor {
         // IPv6 must run first: a full eight-group address can contain a
         // six-group substring that also satisfies the MAC-address pattern.
         result = result.replacing(#/\b(?:[0-9A-Fa-f]{2}[:-]){5}[0-9A-Fa-f]{2}\b/#, with: "<mac-address>")
-        // Values written after privacy-sensitive labels. This catches
-        // trigger-like values that can appear in a log without requiring the
-        // report code to depend on a particular automation implementation.
-        // The optional quote after the label covers JSON-style field names
-        // such as {"wifiSSID":"Home Network"}.
+        // Values after privacy-sensitive labels, without depending on a particular
+        // automation. The optional quote covers JSON keys such as {"wifiSSID":"Home Network"}.
         result = result.replacingOccurrences(
             of: #"(?i)\b(?:ssid|wifi(?:ssid|network)?|networkname|devicename|bluetoothdevice|audiodevice|focusmode|trigger(?:name|value)?|condition(?:name|value)?|script(?:path|output)|location(?:name|label)?)"?\s*[=:]\s*(?:\"[^\"\r\n]*\"|'[^'\r\n]*'|[^,;\r\n]+)"#,
             with: "<sensitive-value>",

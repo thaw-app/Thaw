@@ -9,25 +9,20 @@
 import AppKit
 import UserNotifications
 
-/// Manager for user notifications.
 @MainActor
 final class UserNotificationManager: NSObject {
     private let diagLog = DiagLog(category: "UserNotificationManager")
-    /// The shared app state.
     private(set) weak var appState: AppState?
 
-    /// The current notification center.
     var notificationCenter: UNUserNotificationCenter {
         .current()
     }
 
-    /// Performs the initial setup of the manager.
     func performSetup(with appState: AppState) {
         self.appState = appState
         notificationCenter.delegate = self
     }
 
-    /// Requests authorization to allow user notifications for the app.
     func requestAuthorization() {
         Task {
             do {
@@ -59,7 +54,6 @@ final class UserNotificationManager: NSObject {
         notificationCenter.add(request)
     }
 
-    /// Removes the notifications from Notification Center that match the given identifiers.
     func removeDeliveredNotifications(with identifiers: [UserNotificationIdentifier]) {
         notificationCenter.removeDeliveredNotifications(withIdentifiers: identifiers.map(\.rawValue))
     }

@@ -12,11 +12,10 @@ import Testing
 /// service's `Listener` and the app's `MenuBarItemServiceConnection` consult
 /// to decide whether a same-team peer requirement can ever be satisfied.
 ///
-/// The concrete identifier depends on how the binary under test was signed —
-/// a Developer ID build reports a team, an ad-hoc CI build reports `nil` —
-/// so the assertions cover the contract that holds either way: the lookup
-/// must not trap, must be stable across reads, and must never produce an
-/// empty or malformed team string.
+/// The identifier depends on how the binary was signed (Developer ID reports
+/// a team, an ad-hoc CI build reports `nil`), so the assertions cover what
+/// holds either way: no trap, stable reads, and never an empty or malformed
+/// team string.
 @Suite("Process code-signing identity")
 struct CodeSigningInfoTests {
     @Test("Resolving the team identifier does not trap")

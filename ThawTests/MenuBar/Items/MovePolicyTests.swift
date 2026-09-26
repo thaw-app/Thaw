@@ -9,11 +9,8 @@ import CoreGraphics
 import Testing
 @testable import Thaw
 
-/// Characterizes `MenuBarItemManager.MovePolicy`, the pure decision core of
-/// `move(item:to:)`: each attempt's observation is folded into the running
-/// state and answered with retry, succeed, or a named stop reason. The
-/// sequences below are the ones the field logs contain, replayed without a
-/// menu bar.
+/// `MenuBarItemManager.MovePolicy`, the pure decision core of `move(item:to:)`,
+/// replayed against sequences from field logs.
 @Suite("Move policy")
 struct MovePolicyTests {
     typealias Policy = MenuBarItemManager.MovePolicy
@@ -57,9 +54,8 @@ struct MovePolicyTests {
 
     // MARK: Refusal
 
-    /// The 13:28:55 drag: the item followed the press into the notch and the
-    /// release put it back at 1433 twice. Two reverts prove the refusal; one
-    /// is the warm-up press #881 documents.
+    /// The item followed the press into the notch and the release put it back at
+    /// 1433 twice. Two reverts prove the refusal; one is the warm-up press (#881).
     @Test("Two consecutive reverted releases stop the move as refused")
     func twoRevertsAreARefusal() {
         let reverted = Policy.Observation.displaced(revertedToStart: true, targetMinX: -3725)
@@ -75,16 +71,14 @@ struct MovePolicyTests {
 
     // MARK: Target movement
 
-    /// The #881 numbers: the target measured at -4222 on one attempt and at
-    /// 794 on the next, on a bar far narrower than that swing.
+    /// The target measured -4222 then 794, a swing wider than the bar (#881).
     @Test("A target that crossed a display width stops the move as moved")
     func displayWidthSwingIsStale() {
         let displaced = Policy.Observation.displaced(revertedToStart: false, targetMinX: 794)
         #expect(decisions([displaced], plannedTargetMinX: -4222) == [.stop(.targetMoved)])
     }
 
-    /// The #924/#927 sequence: an anchor driven from 1682 to 1650 over the
-    /// attempts while the item never landed.
+    /// An anchor driven from 1682 to 1650 while the item never landed (#924, #927).
     @Test("A target retreating on every attempt stops the move as retreating")
     func retreatingTargetIsCaught() {
         let steps: [CGFloat] = [1677, 1664, 1653]
@@ -123,8 +117,7 @@ struct MovePolicyTests {
         #expect(result == [.retry, .stop(.ownerSilent)])
     }
 
-    /// The 13:15:47 drag: the owner carried a standing unresponsive mark, so
-    /// the first timeout ended the move at once.
+    /// The owner already carried an unresponsive mark, so the first timeout ends the move.
     @Test("An owner with a silent record is not retried after another silence")
     func silentRecordStopsAtOnce() {
         let silent = Policy.Observation.failed(.ownerSilent)
@@ -272,8 +265,7 @@ struct MovePolicyTests {
         #expect(description.contains(expected), "\(reason.logString) threw \(description)")
     }
 
-    /// Silence rethrows the attempt's own timeout, so the caller keeps
-    /// seeing the error it saw before.
+    /// Silence rethrows the attempt's own timeout, so the caller sees the same error as before.
     @Test("Silence rethrows the attempt's own error")
     func silenceRethrowsTheAttemptError() {
         let item = makeItem()

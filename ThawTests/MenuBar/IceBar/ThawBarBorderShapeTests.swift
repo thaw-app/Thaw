@@ -12,13 +12,10 @@ import Testing
 /// Covers the geometry the Thaw Bar's clip and border share, and the path
 /// surgery that opens the top edge on square corners (#325).
 ///
-/// `path(in:)` drops the top edge by introspecting a closed
-/// `UnevenRoundedRectangle` path, which makes it sensitive to how SwiftUI
-/// happens to emit that path: which element the outline starts on, and
-/// whether the top corners land exactly on `minY`. These tests pin the
-/// observable result — an open outline with no top edge and both ends on the
-/// top corners — so a change in that emission order is caught here rather
-/// than as a stray line across the bar.
+/// `path(in:)` introspects a closed `UnevenRoundedRectangle` path, so it
+/// depends on how SwiftUI emits it: the starting element, and whether the
+/// top corners land exactly on `minY`. A change there shows up as a stray
+/// line across the bar.
 @Suite("Thaw Bar border shape")
 struct ThawBarBorderShapeTests {
     private let rect = CGRect(x: 0, y: 0, width: 200, height: 30)
@@ -40,11 +37,8 @@ struct ThawBarBorderShapeTests {
 
     // MARK: - Open outline
 
-    /// The point of the shape: no segment runs along the top of the rect.
-    ///
-    /// The reconstruction walks the remaining segments as one continuous
-    /// chain, so if the dropped edge were not at the start or end of the
-    /// traversal the join would draw the top edge straight back in.
+    /// The remaining segments are walked as one chain, so a dropped edge in
+    /// the middle of the traversal would be drawn straight back in.
     @Test("Omitting the top edge leaves no segment along the top", arguments: [
         RoundedCornerStyle.continuous, .circular,
     ])
@@ -145,8 +139,8 @@ struct ThawBarBorderShapeTests {
         #expect(clip.insetAmount == 0)
     }
 
-    /// Square ends: a continuous quarter-height radius, top edge kept — the
-    /// clip has to stay closed even where the border opens up.
+    /// Square ends: a continuous quarter-height radius. The clip stays closed
+    /// even where the border opens up.
     @Test("A square clip is a continuous quarter-height radius and stays closed")
     func squareClipGeometry() {
         let clip = ThawBarBorderShape.thawBarClip(height: 30, hasRoundedShape: false)
@@ -155,8 +149,7 @@ struct ThawBarBorderShapeTests {
         #expect(!clip.omitTopEdge)
     }
 
-    /// The border must inherit radius and style from the clip; drifting apart
-    /// is what leaves the stroke floating off the clipped edge.
+    /// Otherwise the stroke floats off the clipped edge.
     @Test("The border inherits the clip's radius and style", arguments: [true, false])
     func borderInheritsClipGeometry(hasRoundedShape: Bool) {
         let clip = ThawBarBorderShape.thawBarClip(height: 30, hasRoundedShape: hasRoundedShape)
@@ -186,8 +179,7 @@ struct ThawBarBorderShapeTests {
         )
     }
 
-    /// Half the stroke width of inset is what keeps the stroke centred on the
-    /// clip edge instead of straddling it.
+    /// Half a stroke width of inset keeps the stroke from straddling the clip edge.
     @Test("The border sits half a stroke width inside the clip")
     func borderSitsInsideClip() {
         let clipBounds = Outline(

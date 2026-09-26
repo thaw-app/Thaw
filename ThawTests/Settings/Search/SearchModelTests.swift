@@ -80,9 +80,8 @@ struct SearchModelTests {
 
     @Test("A German query matches the entry whose German title it names")
     func germanQueryMatchesTranslatedTitle() throws {
-        // "Einloggen" appears only in the German rendering of
-        // "Launch at Login" — nothing in the English index contains it, so a
-        // hit proves the translated title is what was indexed.
+        // "Einloggen" appears only in the German title of "Launch at Login",
+        // so a hit proves the translated title was indexed.
         let german = try Self.localizationBundle("de")
         let results = SearchModel.rankedEntries(for: "Einloggen", bundle: german)
 

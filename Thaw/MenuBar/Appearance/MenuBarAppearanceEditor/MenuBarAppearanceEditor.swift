@@ -153,10 +153,8 @@ struct MenuBarAppearanceEditor: View {
         }
     }
 
-    /// Shown while Reduce Transparency is on, because the system then draws an
-    /// opaque menu bar that hides everything the overlay paints behind it.
-    /// Painting on top instead is not an option: it would cover the menu bar
-    /// items too. See ``MenuBarOverlayPanel/updateWindowLevel()``.
+    /// Shown while Reduce Transparency is on, since the opaque menu bar hides
+    /// the overlay. See ``MenuBarOverlayPanel/updateWindowLevel()``.
     private var reduceTransparencyWarning: some View {
         SettingsWarningPill(
             title: "Menu bar effects are hidden by Reduce Transparency",
@@ -618,11 +616,8 @@ private struct StaticShapeEditor: View {
 
 /// The section that forks the Thaw Bar's appearance away from the menu bar's.
 ///
-/// The two have always matched so they read as one surface, and they still do
-/// until the toggle here is switched on. Note that this sits outside the
-/// light/dark split: the panel takes one set of values regardless of the
-/// system appearance, because a floating panel is not trying to blend into
-/// anything that changes underneath it.
+/// They match until the toggle is on. Outside the light/dark split: a floating
+/// panel doesn't blend into anything that changes with the appearance.
 private struct ThawBarAppearanceEditor: View {
     @Binding var configuration: MenuBarAppearanceConfigurationV2
 

@@ -9,24 +9,14 @@ import Foundation
 import Testing
 @testable import Thaw
 
-/// Covers ``AppSettings``' reset surface: every reset must return the
-/// properties it owns to `Defaults.DefaultValue`, and must not reach outside
-/// its own pane.
+/// Covers ``AppSettings``' reset surface: every reset returns the properties
+/// it owns to `Defaults.DefaultValue` and stays inside its own pane.
 ///
-/// `AppSettings` is built without an `AppState`, so the `appState?.…` hops in
-/// `resetAppearance()` and `resetAdvanced()` are no-ops here — those lines
-/// still execute, but the assertions below only cover the settings the
-/// resetter owns directly.
+/// Built without an `AppState`, so the `appState?.…` hops in
+/// `resetAppearance()` and `resetAdvanced()` are no-ops here.
 ///
-/// The sub-models persist on `didSet`, so every test runs against a scratch
-/// defaults store rather than the app's real domain.
-///
-/// This suite used to snapshot and restore the whole persistent domain in
-/// `init`/`deinit`. Swift Testing builds a fresh suite instance per test, so
-/// that wipe ran once per test and raced every other suite reading `Defaults`
-/// -- `AutomationSettingsTests` failed roughly one run in nine because of it.
-/// `withScratchDefaults` takes a process-wide lock and never touches the real
-/// domain, which removes both problems.
+/// Uses `withScratchDefaults`, not an `init`/`deinit` snapshot of the real
+/// domain: that ran per test and raced every other suite reading `Defaults`.
 @MainActor
 @Suite("Settings resetter")
 struct SettingsResetterTests {
@@ -106,21 +96,14 @@ struct SettingsResetterTests {
         }
     }
 
-    /// Regression: `resetAdvanced()` used to omit six persisted
-    /// `AdvancedSettings` booleans, so a reset silently left them at whatever
-    /// the user had toggled them to. Each previously-omitted boolean is flipped
-    /// off its default, reset, then checked back to `Defaults.DefaultValue`.
-    /// `hideApplicationMenus` and `showMenuBarTooltips` stay in as controls —
-    /// they already reset before the fix and must keep doing so.
-    ///
-    /// `automaticArrangementEnabled` and `moveCursorToRevealedItem` reopened
-    /// the same hole: both landed after the original fix and were persisted,
-    /// user-facing, and absent from the reset. Any boolean added to
-    /// `AdvancedSettings` belongs in both `resetAdvanced()` and this test.
+    /// `resetAdvanced()` once omitted persisted booleans, leaving them as the
+    /// user set them. `hideApplicationMenus` and `showMenuBarTooltips` stay in
+    /// as controls. Any boolean added to `AdvancedSettings` belongs in both
+    /// `resetAdvanced()` and this test.
     @Test("Resetting Advanced restores every persisted boolean")
     func resetAdvancedRestoresEveryBoolean() throws {
         try withSettings { settings in
-            // Previously-omitted booleans — flip each off its default.
+            // Previously omitted booleans: flip each off its default.
             settings.advanced.useOptionClickToShowAlwaysHiddenSection = !Defaults.DefaultValue.useOptionClickToShowAlwaysHiddenSection
             settings.advanced.useDoubleClickToShowAlwaysHiddenSection = !Defaults.DefaultValue.useDoubleClickToShowAlwaysHiddenSection
             settings.advanced.enableSecondaryContextMenuQuit = !Defaults.DefaultValue.enableSecondaryContextMenuQuit
@@ -129,7 +112,7 @@ struct SettingsResetterTests {
             settings.advanced.useAXClickDelivery = !Defaults.DefaultValue.useAXClickDelivery
             settings.advanced.automaticArrangementEnabled = !Defaults.DefaultValue.automaticArrangementEnabled
             settings.advanced.moveCursorToRevealedItem = !Defaults.DefaultValue.moveCursorToRevealedItem
-            // Controls — already reset before the fix; keep them covered.
+            // Controls that already reset before the fix.
             settings.advanced.hideApplicationMenus = !Defaults.DefaultValue.hideApplicationMenus
             settings.advanced.showMenuBarTooltips = !Defaults.DefaultValue.showMenuBarTooltips
 

@@ -8,13 +8,9 @@
 import AppKit
 
 enum MacOSCompatibilityWarning {
-    /// The first macOS this build does not support, and the one the rewrite
-    /// on ``UpdateChannel/alpha`` is built against.
-    ///
-    /// The two readings are the same number for the same reason: the alert
-    /// below tells the user that support for this release arrives through the
-    /// alpha channel, so the version that triggers the warning has to be the
-    /// version that makes that channel selectable.
+    /// The first macOS this build doesn't support, and the one the rewrite on
+    /// ``UpdateChannel/alpha`` targets. They match because the alert sends users of
+    /// this release to the alpha channel, so that version must make it selectable.
     static nonisolated let firstUnsupportedMajorVersion = 27
 
     static nonisolated func shouldShow(for version: OperatingSystemVersion) -> Bool {
@@ -38,20 +34,12 @@ enum MacOSCompatibilityWarning {
         let action: Action
     }
 
-    /// The prompt for a system, or `nil` when the system is supported and no
-    /// alert is due.
+    /// The prompt for a system, or `nil` when it's supported.
     ///
-    /// The alpha offer needs somewhere to send the subscription, so
-    /// `canSubscribe` reports whether an updates manager reached the call.
-    /// Alpha availability is checked against the running system rather than
-    /// assumed: the alert must not offer a channel it cannot select. Both
-    /// readings come from ``firstUnsupportedMajorVersion``, so the offer
-    /// stands whenever the alert appears; the check is what keeps the alert
-    /// honest if the two ever part.
-    ///
-    /// The warning fires on every release from the unsupported one onward, so
-    /// the copy names the macOS actually running rather than the first one
-    /// this build turned away.
+    /// `canSubscribe` says whether an updates manager reached the call. Alpha
+    /// availability is checked against the running system so the alert never offers
+    /// a channel it can't select. The copy names the running macOS, since the warning
+    /// fires on every release from the unsupported one onward.
     static nonisolated func prompt(
         for version: OperatingSystemVersion,
         canSubscribe: Bool

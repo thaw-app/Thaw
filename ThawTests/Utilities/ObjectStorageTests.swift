@@ -11,15 +11,11 @@ import Testing
 /// Covers ``ObjectStorage``, the Objective-C associated-object wrapper used to
 /// hang extra state off framework classes the app does not own.
 ///
-/// Two properties carry the weight here and neither is visible from a call
-/// site. The first is key identity: the lookup key is the storage instance's
-/// own address, so two storages of the same `Value` type must not read each
-/// other's entries — if that ever regressed, unrelated pieces of the app would
-/// silently share a slot. The second is the strong/weak split: `set(_:for:)`
-/// retains, `weakSet(_:for:)` boxes the value in a private `WeakReference` so
-/// the association does not extend the value's lifetime. Both are lifetime
-/// behavior, so the tests assert through `weak var` observers rather than
-/// through the returned values.
+/// Two properties matter and neither is visible from a call site. Key
+/// identity: the key is the storage instance's own address, so two storages
+/// of the same `Value` type must not share a slot. Strong/weak: `set(_:for:)`
+/// retains, while `weakSet(_:for:)` boxes the value in a `WeakReference`.
+/// Both are lifetime behavior, so tests assert through `weak var` observers.
 @MainActor
 @Suite("Object storage")
 struct ObjectStorageTests {

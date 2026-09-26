@@ -13,18 +13,11 @@ import Testing
 /// Covers ``MenuBarTintKind``, the stored discriminator for how the menu bar
 /// overlay is tinted.
 ///
-/// The raw values are a persisted format: they sit inside every encoded
-/// `MenuBarAppearancePartialConfiguration`, in the Thaw Bar's per-display
-/// configurations, and in profiles exported by earlier builds. Reordering the
-/// cases would silently repaint a user's menu bar — `.gradient` becoming
-/// `.glass` costs nothing at compile time — so the raw values are pinned here
-/// rather than left to declaration order.
+/// The raw values are persisted in appearance configurations and exported
+/// profiles, so reordering the cases would silently repaint a user's menu bar.
 ///
-/// The hand-written `init(from:)` is the other half. It exists specifically to
-/// reject a raw value this build does not know, which is what a downgrade from
-/// a future release produces. Decoding has to throw there rather than fall back
-/// to `.noTint`, otherwise a downgrade-then-upgrade round trip silently
-/// discards the user's tint choice.
+/// `init(from:)` must throw on a raw value from a future build rather than
+/// fall back to `.noTint`, or a downgrade-then-upgrade loses the tint choice.
 @MainActor
 @Suite("Menu bar tint kind")
 struct MenuBarTintKindTests {
@@ -129,8 +122,8 @@ struct MenuBarTintKindTests {
         #expect(decoded == MenuBarTintKind.allCases)
     }
 
-    /// A raw value from a future build has to fail loudly rather than resolve
-    /// to a neighbouring case.
+    /// A raw value from a future build must fail rather than resolve to a
+    /// neighbouring case.
     @Test("An unknown raw value is rejected rather than defaulted")
     func unknownRawValueIsRejected() {
         #expect(throws: DecodingError.self) {
@@ -152,8 +145,7 @@ struct MenuBarTintKindTests {
         }
     }
 
-    /// The rejection is a `dataCorrupted` error specifically, which is what the
-    /// callers that recover from a bad payload match on.
+    /// Callers that recover from a bad payload match on `dataCorrupted`.
     @Test("The rejection is reported as corrupted data")
     func rejectionIsReportedAsCorruptedData() throws {
         let error = #expect(throws: DecodingError.self) {

@@ -41,9 +41,8 @@ struct MenuBarLayoutGroupsSection: View {
     private var groupRows: [GroupRow] {
         let manager = appState.itemGroupManager
 
-        // User groups come straight from the store, so one whose app is not
-        // running keeps its row — and its "not running" members — instead of
-        // vanishing until the app is launched again.
+        // User groups come from the store, so one whose app isn't running
+        // keeps its row and its "not running" members.
         var rows = manager.groupSet.groups.map { group in
             GroupRow(
                 origin: .user(group.id),
@@ -182,9 +181,8 @@ struct MenuBarLayoutGroupsSection: View {
                         .font(.callout)
                         .foregroundStyle(liveItem(identifier) == nil ? .secondary : .primary)
                     if liveItem(identifier) == nil {
-                        // A quit app keeps its membership — losing a group
-                        // because an app was closed would be the worst possible
-                        // failure here — so say why it looks inactive.
+                        // A quit app keeps its membership, so say why it looks
+                        // inactive.
                         Text("not running")
                             .font(.caption)
                             .foregroundStyle(.secondary)

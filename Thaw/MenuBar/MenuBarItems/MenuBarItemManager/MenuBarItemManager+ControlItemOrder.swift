@@ -16,10 +16,9 @@ import Cocoa
 extension MenuBarItemManager {
     /// Result of one cache-driven move helper.
     ///
-    /// A failed attempt still needs one authoritative cache read because
-    /// synthetic events may have changed position before verification failed.
-    /// It must not immediately rerun the same automatic helper, however, or a
-    /// persistent refusal becomes an unbounded recache/retry chain.
+    /// A failed attempt still needs one cache read, since the events may have
+    /// moved the item. It must not rerun the helper, or a persistent refusal
+    /// becomes an endless recache/retry chain.
     enum CacheDrivenMoveOutcome: Equatable {
         case noAttempt
         case completed
@@ -38,10 +37,8 @@ extension MenuBarItemManager {
         }
     }
 
-    /// Reference box recording whether a queued move was accepted by its
-    /// preflight. ``MoveOptions/shouldBegin`` escapes the call frame — it is
-    /// stored in the options struct — so a captured local cannot be mutated
-    /// from inside the closure.
+    /// Records whether a queued move passed preflight. ``MoveOptions/shouldBegin``
+    /// is stored in the options struct, so it can't mutate a captured local.
     private final class MoveAttemptAcceptanceRecorder {
         var didAcceptMoveAttempt = false
         var didAcceptCurrentMove = false
@@ -50,10 +47,8 @@ extension MenuBarItemManager {
     /// Relocates any newly appearing items that macOS placed to the left
     /// of our control items back into the visible section.
     ///
-    /// Returns whether no move began, a move completed, or an accepted move
-    /// later failed. Even a failed attempt may have displaced the item, so
-    /// callers must follow every accepted attempt with an authoritative
-    /// recache without persisting that possibly partial geometry.
+    /// A failed attempt may still have displaced the item, so callers must
+    /// recache after every accepted attempt without persisting that geometry.
     func relocateNewLeftmostItems(
         _ items: [MenuBarItem],
         controlItems: ControlItemPair,
@@ -71,10 +66,8 @@ extension MenuBarItemManager {
         }
 
         if suppressNextNewLeftmostItemRelocation {
-            // Seed known identifiers so these baseline items won't be treated as "new"
-            // on subsequent cache passes, then clear the suppression flag.
-            // Skip items with unresolved sourcePID so the placeholder
-            // "com.apple.controlcenter" namespace never enters the persisted set.
+            // Skip unresolved sourcePIDs so the placeholder "com.apple.controlcenter"
+            // namespace never enters the persisted set.
             let identifiers = items
                 .filter { !$0.isControlItem && $0.sourcePID != nil }
                 .map { "\($0.tag.namespace):\($0.tag.title)" }
@@ -84,14 +77,9 @@ extension MenuBarItemManager {
             return .noAttempt
         }
 
-        // During startup settling, the first cache pass may have items tagged
-        // with wrong namespaces (e.g. com.apple.controlcenter when sourcePID
-        // hasn't resolved yet). Using those wrong tags to build hiddenTags /
-        // alwaysHiddenTags causes ALL items to appear as "new" on the next
-        // pass with correct sourcePIDs, triggering a destructive relocation
-        // cascade that moves every hidden/always-hidden item to visible.
-        // Seed identifiers and skip relocation; the settling-end restore pass
-        // will handle correct placement.
+        // During settling, tags can carry the placeholder namespace until sourcePID
+        // resolves. Using them makes every item look new on the next pass and
+        // cascades every hidden item to visible. The settling-end pass places them.
         if isInStartupSettling {
             // Skip items with unresolved sourcePID so the placeholder
             // "com.apple.controlcenter" namespace never enters the persisted set.
@@ -101,17 +89,9 @@ extension MenuBarItemManager {
             knownItemIdentifiers.formUnion(identifiers)
             persistKnownItemIdentifiers()
 
-            // The Thaw icon is exempt from the deferral above. macOS can
-            // restore our two control items in the wrong relative order,
-            // parking the visible one left of the hidden divider — i.e.
-            // off screen. Waiting for the settling-end pass to correct that
-            // leaves the menu bar with no Thaw icon for as long as settling
-            // runs, which is ~8 s when Control Center is slow to hand out
-            // source PIDs, and reads as the app having crashed (#881).
-            //
-            // Safe to act on early because it turns only on geometry and our
-            // own control item's tag; it is the namespace tags of *other*
-            // items that aren't trustworthy yet.
+            // macOS can restore our control items swapped, parking the Thaw icon
+            // off screen for all of settling (~8 s), which looks like a crash (#881).
+            // Safe early: it relies only on geometry and our own tag.
             if let thawIcon = LayoutSolver.planThawIconMove(
                 items: items,
                 hiddenBounds: bestBounds(for: controlItems.hidden)
@@ -125,15 +105,11 @@ extension MenuBarItemManager {
             return .noAttempt
         }
 
-        // Cached hidden / always-hidden tags from the prior cache cycle.
-        // The planner uses these to short-circuit re-relocating items
-        // already placed in a hidden section.
+        // Lets the planner skip items already placed in a hidden section.
         let hiddenTags = Set(itemCache[.hidden].map(\.tag))
         let alwaysHiddenTags = Set(itemCache[.alwaysHidden].map(\.tag))
 
-        // Pre-compute live state for the planner. hiddenBounds and the
-        // section classification both require the live Window Server;
-        // computing them here keeps planLeftmostMove pure over its inputs.
+        // Live WindowServer reads happen here so planLeftmostMove stays pure.
         let hiddenBounds = bestBounds(for: controlItems.hidden)
         var sectionContext = CacheContext(
             controlItems: controlItems,
@@ -204,24 +180,18 @@ extension MenuBarItemManager {
             return .completed
 
         case let .newHideableItem(candidate, identifierToMark):
-            // Track this item so future cache cycles don't treat it as new.
             knownItemIdentifiers.insert(identifierToMark)
             persistKnownItemIdentifiers()
 
-            // Thaw's own spacers are placed by AppKit's autosave (seeded next
-            // to the Thaw icon) — relocating them like new third-party items
-            // would fight that position every cycle. Window ownership is the
-            // reliable check right after creation, when the cached tag can
-            // still be a generic "Item-0".
+            // Thaw's spacers are placed by AppKit autosave; relocating them would
+            // fight it every cycle. Window ownership works while the tag is still "Item-0".
             if MenuBarSpacerManager.isSpacerTag(candidate.tag)
                 || appState?.spacerManager.ownsWindowID(candidate.windowID) == true
             {
                 MenuBarItemManager.diagLog.info(
                     "Skipping new-item relocation for Thaw spacer \(candidate.logString)"
                 )
-                // Nothing was relocated: reporting an attempt would make the
-                // caller treat this cycle as interrupted and schedule an extra
-                // recache for a no-op. The spacer is already marked known.
+                // Reporting an attempt would schedule a pointless recache.
                 return .noAttempt
             }
 
@@ -231,9 +201,7 @@ extension MenuBarItemManager {
                 "Relocating new item \(candidate.logString) to \(effectiveNewItemsSection.logString)"
             )
 
-            // Skip items with no valid bounds (transient clone windows
-            // etc.). This live check stays in the orchestrator because
-            // it requires Bridging.
+            // Skip transient clone windows with no bounds.
             guard Bridging.getWindowBounds(for: candidate.windowID) != nil else {
                 MenuBarItemManager.diagLog.warning("Skipping relocation for \(candidate.logString); no valid bounds, likely transient")
                 return .noAttempt
@@ -288,24 +256,16 @@ extension MenuBarItemManager {
         }
     }
 
-    /// Moves the Thaw icon back to the right of the hidden divider, where it
-    /// is on screen. Shared by the startup-settling path and the regular
-    /// planner path, which reach the same decision from different inputs.
+    /// Moves the Thaw icon back right of the hidden divider, where it is on screen.
     private func relocateThawIcon(
         _ thawIcon: MenuBarItem,
         controlItems: ControlItemPair,
         shouldBeginMove: (@MainActor () -> Bool)? = nil
     ) async -> CacheDrivenMoveOutcome {
         let beginMove = shouldBeginMove
-        // The destination is the right of H_ctrl. When the divider itself is
-        // parked offscreen, that destination is in the parked zone: the drag
-        // strands the chevron beside it, invisible to the user (#958's
-        // 16:32:49.505 move dragged the chevron toward a divider parked at
-        // minX -3440). Worse, the move engine warps to the chevron's cached
-        // frame to start the drag, and a cached on-screen frame over a
-        // physically parked chevron clicks whatever item now occupies that
-        // frame. The #881 recovery this relocation exists for needs the
-        // divider on screen anyway; until it is, skipping is strictly better.
+        // With H_ctrl parked offscreen the drag strands the chevron there (#958),
+        // and warping to its stale cached frame clicks whatever item sits there now.
+        // Skip until the divider is back on screen.
         let screenFrames = NSScreen.screens.map { CGDisplayBounds($0.displayID) }
         if !LayoutSolver.isOnScreen(bounds: bestBounds(for: controlItems.hidden), screenFrames: screenFrames) {
             MenuBarItemManager.diagLog.warning(
@@ -350,14 +310,11 @@ extension MenuBarItemManager {
     /// Relocates items whose apps quit while they were temporarily shown
     /// in the visible section back to their original section.
     ///
-    /// When `temporarilyShow` moves an item to the visible section, macOS
-    /// persists that position. If the app quits before rehide can move it
-    /// back, the icon will reappear in the visible section on relaunch.
-    /// This method checks for such items and moves them back.
+    /// macOS persists the temporarily-shown position, so an app that quits
+    /// before rehide relaunches in visible.
     ///
-    /// Returns whether no move began, a move completed, or an accepted move
-    /// later failed. A failed accepted attempt can still leave position-only
-    /// geometry that the normal window-ID change detector cannot observe.
+    /// A failed accepted attempt can leave position-only changes the window-ID
+    /// change detector can't see.
     func relocatePendingItems(
         _ items: [MenuBarItem],
         controlItems: ControlItemPair,
@@ -375,24 +332,17 @@ extension MenuBarItemManager {
             return .noAttempt
         }
 
-        // Don't interfere with items that are currently temporarily shown ;
-        // those are handled by the normal rehide flow.
+        // Currently shown items are handled by the normal rehide flow.
         let activelyShownTags = Set(temporarilyShownItemContexts.map(\.tag.tagIdentifier))
 
         let hiddenBounds = bestBounds(for: controlItems.hidden)
 
-        // Pre-compute live per-item bounds for the planner's "already in
-        // hidden section" comparison. Done here so the planner stays pure
-        // over its inputs (no Bridging calls inside).
+        // Live bounds are read here so the planner stays pure.
         var boundsForWindowID = [CGWindowID: CGRect]()
         for item in items {
             boundsForWindowID[item.windowID] = bestBounds(for: item)
         }
 
-        // Extract fallback neighbor tags from temporarilyShownItemContexts.
-        // The planner only needs the tag-identifier → neighbor mapping;
-        // exposing the full context type to the planner would tangle its
-        // signature with private state.
         var fallbackNeighborByTagIdentifier = [String: MenuBarItemTag]()
         for context in temporarilyShownItemContexts {
             if let neighbor = context.fallbackNeighbor?.tag {
@@ -413,15 +363,11 @@ extension MenuBarItemManager {
             return attemptRecorder.didAcceptMoveAttempt ? .failedAttempt : .noAttempt
         }
 
-        // Iterate a snapshot of the dict keys so promotions of waitForRelaunch
-        // sentinels mid-loop don't disturb iteration. The planner is called
-        // per entry; the orchestrator handles persistence and re-runs after
-        // a promotion so the regular section path executes.
+        // Snapshot the keys: waitForRelaunch promotions mutate the dict mid-loop.
         let allTagIdentifiers = Array(pendingRelocations.keys)
         for tagIdentifier in allTagIdentifiers {
             guard let rawSectionString = pendingRelocations[tagIdentifier] else { continue }
 
-            // Parse the raw string into a typed PendingEntry for the planner.
             let entry: PendingLedger.PendingEntry
             if let sentinel = parseWaitForRelaunch(rawSectionString) {
                 entry = PendingLedger.PendingEntry(
@@ -452,9 +398,7 @@ extension MenuBarItemManager {
                 sentinelAgeCap: MenuBarItemManager.waitForRelaunchAgeCap
             )
 
-            // Handle a sentinel promotion in-place: rewrite pendingRelocations
-            // to the regular section key, persist, then re-run the planner
-            // for the same entry so the regular section path executes.
+            // Rewrite the sentinel to its section, persist, and re-run the planner.
             if case let .promoteWaitForRelaunch(promotedSection) = decision {
                 if let item = items.first(where: { entry.tagIdentifier == $0.tag.tagIdentifier }) {
                     MenuBarItemManager.diagLog.info(
@@ -483,10 +427,8 @@ extension MenuBarItemManager {
 
             switch decision {
             case let .move(item, destination):
-                // Reset the per-move flag: the recorder box outlives the
-                // loop, and a stale `true` from an earlier accepted move
-                // would misreport this iteration's own preflight rejection
-                // as a failed accepted move.
+                // The recorder outlives the loop; a stale `true` would misreport
+                // this preflight rejection as a failed accepted move.
                 attemptRecorder.didAcceptCurrentMove = false
                 let targetSection: MenuBarSection.Name = {
                     if case let .section(section) = entry.kind {
@@ -549,9 +491,7 @@ extension MenuBarItemManager {
                 pendingReturnDestinations.removeValue(forKey: tagIdentifier)
 
             case .promoteWaitForRelaunch:
-                // Unreachable: handled above by re-running the planner with
-                // the promoted entry. If the planner returns promote a
-                // second time we just leave the entry alone for next pass.
+                // Handled above. A second promote leaves the entry for next pass.
                 break
 
             case let .skip(reason):
@@ -572,14 +512,11 @@ extension MenuBarItemManager {
         return outcome()
     }
 
-    /// Returns the best-known bounds for a menu bar item.
     private func bestBounds(for item: MenuBarItem) -> CGRect {
         item.liveBounds
     }
 
-    /// Enforces the order of the given control items, ensuring that the
-    /// control item for the always-hidden section is positioned to the
-    /// left of control item for the hidden section.
+    /// Keeps the always-hidden control item left of the hidden one.
     func enforceControlItemOrder(
         controlItems: ControlItemPair,
         shouldBeginMove: (@MainActor () -> Bool)? = nil
@@ -601,11 +538,8 @@ extension MenuBarItemManager {
             return .noAttempt
         }
 
-        // Moving AH_ctrl to the left of a parked H_ctrl drops the entire
-        // always-hidden section into the parked zone with it. The inversion
-        // this enforces cannot be fixed while the reference divider is
-        // stranded; defer to the recovery paths the same way the boundary
-        // repair and the per-item moves do.
+        // Moving AH_ctrl left of a parked H_ctrl drags the whole always-hidden
+        // section into the parked zone. Defer to the recovery paths.
         let screenFrames = NSScreen.screens.map { CGDisplayBounds($0.displayID) }
         if !LayoutSolver.isOnScreen(bounds: bestBounds(for: hidden), screenFrames: screenFrames) {
             MenuBarItemManager.diagLog.warning(
@@ -650,13 +584,8 @@ extension MenuBarItemManager {
     /// visible section back beside the hidden divider.
     ///
     /// Pairs with ``recoverStrandedHiddenDividerBeforeRefusing(guardSource:controlItems:items:)``
-    /// on the divider-order refusal: that one un-parks the hidden divider,
-    /// this one undoes the #881 login-restoration shape where macOS returns
-    /// the chevron left of the hidden divider. Together they give a refused
-    /// apply a path back to the ordering its gate requires, so the refusal
-    /// defers rather than wedges. No-op when the chevron already sits right
-    /// of the hidden divider — which is also most refusals, because
-    /// repositioning the dividers is what re-classifies it.
+    /// so a divider-order refusal defers instead of wedging. This one undoes
+    /// macOS restoring the chevron left of the hidden divider at login (#881).
     func recoverMisplacedVisibleControlItem(
         controlItems: ControlItemPair,
         items: [MenuBarItem]
@@ -669,8 +598,7 @@ extension MenuBarItemManager {
         _ = await relocateThawIcon(misplaced, controlItems: controlItems)
     }
 
-    /// Returns a Boolean value that indicates whether any menu bar item
-    /// currently has a menu open.
+    /// Whether any menu bar item currently has a menu open.
     func isAnyMenuBarItemMenuOpen() async -> Bool {
         let cacheFreshness: Duration = .milliseconds(250)
 
@@ -691,7 +619,6 @@ extension MenuBarItemManager {
         let controlCenterBundleID = MenuBarItemTag.Namespace.controlCenter.description
 
         let task = Task.detached(priority: .utility) { () -> [MenuWindowCandidate] in
-            // Get all on-screen windows.
             let windows = WindowInfo.createWindows(option: .onScreen)
             let potentialMenuWindows = windows.filter { window in
                 guard window.isMenuRelated, window.title?.isEmpty ?? true else {
@@ -797,18 +724,15 @@ extension MenuBarItemManager {
         let matchedWindowIDs = await task.value
         menuOpenCheckTask = nil
         let result = applyMenuWindowPersistenceFilter(to: matchedWindowIDs)
-        // Cache negative results too: bulk move operations (applyProfileLayout)
-        // call this guard once per move, and re-enumerating on-screen windows
-        // for every move when no menu is open is the common, expensive case.
-        // Both polarities share the same freshness window.
+        // Cache negatives too: bulk moves call this once per move, and "no menu
+        // open" is the common, expensive case.
         menuOpenCheckCachedResult = result
         menuOpenCheckCachedAt = .now
         return result
     }
 
-    /// Updates first-seen tracking for the matched candidate windows and
-    /// returns whether any of them is fresh enough — or currently under the
-    /// pointer — to be a real open menu.
+    /// Updates first-seen tracking and returns whether any candidate is fresh
+    /// enough, or under the pointer, to be a real open menu.
     private func applyMenuWindowPersistenceFilter(to candidates: [MenuWindowCandidate]) -> Bool {
         let outcome = MenuBarItemManager.classifyMenuWindowCandidates(
             candidates: candidates,
@@ -830,24 +754,13 @@ extension MenuBarItemManager {
         return outcome.isMenuOpen
     }
 
-    /// Pure classification core for the open-menu probe: a candidate window
-    /// counts as an open menu while it is young, or at any age while the
-    /// pointer is inside it (a user interacting with a long-open menu, or
-    /// mid-drop on a shelf). Real menus are transient; persistent
-    /// status-level windows (Droppy's shelf, notch HUDs) stay on screen for
-    /// the app's whole lifetime and previously deferred every move
-    /// indefinitely. Windows already on screen at the first probe are
-    /// grandfathered as persistent, and entries for windows that
-    /// disappeared are pruned so a reused window ID starts fresh.
+    /// A candidate counts as an open menu while young, or at any age while the
+    /// pointer is inside it. Persistent status-level windows (Droppy's shelf,
+    /// notch HUDs) would otherwise defer every move. Windows present at the
+    /// first probe count as persistent; vanished IDs are pruned.
     ///
-    /// A display-sized candidate is never a menu, whatever its age and
-    /// wherever the pointer is. Drop-shelf utilities raise an invisible
-    /// menu-level drag-catcher over the whole screen during any drag
-    /// session — including the user's own drag inside the layout bar — and
-    /// a window that spans the display contains the pointer wherever it
-    /// goes, so the under-pointer rule held the probe open for as long as
-    /// the overlay stayed up and every drag the user made deferred itself
-    /// (#899's greyed-out layout bar).
+    /// A display-sized candidate is never a menu. Drop-shelf apps raise a
+    /// full-screen drag-catcher during any drag, which always contains the pointer (#899).
     static nonisolated func classifyMenuWindowCandidates(
         candidates: [MenuWindowCandidate],
         pointerLocation: CGPoint?,
@@ -892,9 +805,7 @@ extension MenuBarItemManager {
     /// Whether a window covers enough of a display it touches to be an
     /// overlay rather than a menu.
     ///
-    /// Half a display is far beyond any real menu — even a Wi-Fi picker
-    /// with a long network list stays a narrow column — while a
-    /// drag-catcher overlay covers all of one.
+    /// Half a display is far beyond any real menu; a drag-catcher overlay covers all of one.
     static nonisolated func isDisplaySizedWindow(_ bounds: CGRect, displayBounds: [CGRect]) -> Bool {
         guard !bounds.isEmpty else {
             return false

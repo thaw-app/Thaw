@@ -35,8 +35,7 @@ struct MenuBarSpacerTests {
 
     @Test("a user spacer tag is not a control item")
     func userSpacerTagIsNotControlItem() {
-        // User-created spacers must stay draggable, reorderable, and
-        // concealable — control items are none of those.
+        // User spacers must stay draggable, reorderable, and concealable; control items are none of those.
         let id = UUID()
         let tag = MenuBarItemTag(
             namespace: .thaw,
@@ -48,8 +47,7 @@ struct MenuBarSpacerTests {
 
     @Test("a section divider spacer tag is still a control item")
     func sectionDividerSpacerTagIsStillControlItem() {
-        // The section-divider spacers Thaw synthesizes for section hiding
-        // remain control items.
+        // Thaw's own section-divider spacers remain control items.
         let tag = MenuBarItemTag(
             namespace: .thaw,
             title: "\(ControlItem.Identifier.visible.rawValue).Spacer.0"

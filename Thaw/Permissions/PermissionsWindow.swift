@@ -8,8 +8,8 @@
 
 import SwiftUI
 
-/// The window that hosts the permissions decision — either the first-launch
-/// onboarding tour or, on later launches, the standalone permissions view.
+/// Hosts the first-launch onboarding tour, or the standalone permissions view
+/// on later launches.
 struct PermissionsWindow: Scene {
     let appState: AppState
 
@@ -39,15 +39,9 @@ struct PermissionsWindow: Scene {
         .environment(appState)
     }
 
-    /// During first launch, permissions are requested as the final step of
-    /// onboarding. Later on — say, if permissions get revoked — this window
-    /// shows the permissions step on its own, so re-granting access doesn't
-    /// send the user through the whole tour again.
-    ///
-    /// Both branches render the same view, so the screen a user meets when
-    /// permissions are revoked is the one they were onboarded with. Quit is
-    /// supplied only here: this window hides its close, minimize and zoom
-    /// buttons, and Continue is disabled until the required permissions are
+    /// After first launch, shows only the permissions step so re-granting
+    /// skips the tour. Quit is supplied here because this window hides its
+    /// title bar buttons and Continue stays disabled until permissions are
     /// granted, so it is the only way out for a user who declines.
     @ViewBuilder
     private var permissionsContent: some View {

@@ -11,16 +11,14 @@ import Foundation
 /// Owns the persisted ``MenuBarItemGroupSet`` and is the app-side entry point
 /// for resolving and editing menu bar item groups.
 ///
-/// The pure rules live in `MenuBarModel` (``MenuBarItemGroupSet``,
-/// ``MenuBarItemGroupResolver``); this type only adds persistence, publishing,
-/// and the app-layer conveniences that need live `MenuBarItem`s.
+/// The pure rules live in ``MenuBarItemGroupSet`` and
+/// ``MenuBarItemGroupResolver``; this adds persistence and publishing.
 @MainActor
 @Observable
 final class MenuBarItemGroupManager {
     static let diagLog = DiagLog(category: "MenuBarItemGroupManager")
 
-    /// The authored group state. Every mutation normalizes, publishes, and
-    /// persists in one step.
+    /// Every mutation normalizes, publishes, and persists in one step.
     private(set) var groupSet = MenuBarItemGroupSet.empty
 
     private let defaults: UserDefaults
@@ -37,8 +35,6 @@ final class MenuBarItemGroupManager {
 
     private func load() {
         guard let data = defaults.data(forKey: Self.storageKey) else {
-            // No key at all is the overwhelmingly common case and means
-            // "no groups" — identical behaviour to before this feature.
             return
         }
 
@@ -46,9 +42,7 @@ final class MenuBarItemGroupManager {
         do {
             decoded = try JSONDecoder().decode(MenuBarItemGroupSet.self, from: data)
         } catch {
-            // Deliberately do NOT remove the key: a future build may understand
-            // a payload this one cannot, and silently deleting a user's groups
-            // is far worse than starting empty for one launch.
+            // Keep the key: a future build may understand this payload.
             Self.diagLog.error("failed to decode persisted groups, starting empty: \(error)")
             return
         }
@@ -71,9 +65,7 @@ final class MenuBarItemGroupManager {
     }
 
     private func persist() {
-        // An empty set is the default, so clear the key rather than storing an
-        // empty document — that keeps `defaults read` output honest and makes
-        // "never used groups" indistinguishable from "reset groups".
+        // Clear the key rather than storing an empty document.
         guard groupSet != .empty else {
             defaults.removeObject(forKey: Self.storageKey)
             return
@@ -114,9 +106,7 @@ final class MenuBarItemGroupManager {
             .compactMap { items.indices.contains($0) ? items[$0] : nil }
     }
 
-    /// A name to show for `group`, falling back to the owning app when the user
-    /// has not named it. Derived rather than stored, so an app rename is picked
-    /// up without rewriting the store.
+    /// Falls back to the owning app's name when the group is unnamed.
     func displayName(for group: ResolvedGroup, in items: [MenuBarItem]) -> String {
         if let name = group.displayName {
             return name
@@ -168,9 +158,7 @@ final class MenuBarItemGroupManager {
         removeMemberIdentifier(item.uniqueIdentifier)
     }
 
-    /// Removes a member by identifier, for the case where no live item exists —
-    /// the owning app is not running, but the user still wants it out of the
-    /// group.
+    /// For members whose app isn't running.
     func removeMemberIdentifier(_ identifier: String) {
         var updated = groupSet
         updated.removeMember(identifier)
@@ -197,10 +185,8 @@ final class MenuBarItemGroupManager {
         case let .user(id):
             updated.rename(id: id, to: name)
         case .automatic:
-            // Editing an automatic cluster materializes it into a real user
-            // group carrying its current members. Deliberately NOT done for
-            // every cluster at launch: that would freeze the bundle's future
-            // items out of their own group forever.
+            // Materialize only on edit; doing it at launch would lock the
+            // bundle's future items out of their own group.
             guard let id = materialize(origin, members: members, in: &updated) else { return }
             updated.rename(id: id, to: name)
         }

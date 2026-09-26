@@ -9,22 +9,13 @@ import Testing
 @testable import Thaw
 
 /// Covers ``LayoutReconciler/applyUnmanagedPlacementsToDesired(placements:unmanagedUIDs:desiredFiltered:sectionMap:savedSectionOrder:controlUIDs:)``,
-/// the three-pass insertion that splices unmanaged items into the abstract
-/// desired-layout sequence during a profile apply.
+/// which splices unmanaged items into the desired sequence during a profile apply.
 ///
-/// `LayoutReconcilerTests` covers the reconciler's destination-resolution
-/// surface. This suite covers the sequence surgery, which is where the
-/// subtle bugs live: the function mutates a positional array while
-/// simultaneously deriving section bounds *from* that same array, so every
-/// insertion shifts the boundaries the next insertion depends on. Getting
-/// this wrong silently scrambles the user's menu bar.
+/// It mutates a positional array while deriving section bounds from it, so each
+/// insertion shifts the bounds the next one uses; mistakes silently scramble the bar.
 ///
-/// The function is pure — dictionaries and arrays in, a tuple out — so the
-/// suite drives it directly with no fixtures or system state.
-///
-/// Sequence convention throughout: index 0 is leftmost, and the array runs
-/// chevron → visible items → hidden control → hidden items → always-hidden
-/// control → always-hidden items.
+/// Index 0 is leftmost: chevron, visible items, hidden control, hidden items,
+/// always-hidden control, always-hidden items.
 @Suite("Layout reconciler unmanaged placement")
 struct LayoutReconcilerUnmanagedPlacementTests {
     // MARK: - Fixtures
@@ -33,15 +24,12 @@ struct LayoutReconcilerUnmanagedPlacementTests {
     private static let hiddenControl = "control:hidden"
     private static let alwaysHiddenControl = "control:alwaysHidden"
 
-    /// Full control set: chevron and always-hidden section both enabled.
     private static let allControls = ControlUIDs(
         visible: chevron,
         hidden: hiddenControl,
         alwaysHidden: alwaysHiddenControl
     )
 
-    /// Convenience wrapper so each test reads as inputs → outputs rather
-    /// than a wall of argument labels.
     private func apply(
         placements: [String: LayoutSolver.UnmanagedPlacement],
         unmanagedUIDs: [String],
@@ -101,8 +89,7 @@ struct LayoutReconcilerUnmanagedPlacementTests {
 
     @Test("A visible default placement ignores a chevron parked mid-section")
     func visibleDefaultIgnoresParkedChevron() {
-        // The chevron can sit anywhere in the visible section, so a default
-        // new item still belongs at the section start, not next to the icon.
+        // The chevron can sit anywhere in visible, so a default item still goes at the section start.
         let result = apply(
             placements: ["app:new": .newItemDefault(section: .visible)],
             unmanagedUIDs: ["app:new"],
@@ -177,8 +164,7 @@ struct LayoutReconcilerUnmanagedPlacementTests {
 
     @Test("A hidden placement falls to the end of the sequence when the hidden control is missing from it")
     func hiddenDefaultFallsToSequenceEndWhenControlAbsent() {
-        // The hidden control uid is declared but never appears in the
-        // sequence, so no boundary can be located.
+        // The hidden control uid is declared but absent, so no boundary exists.
         let result = apply(
             placements: ["app:new": .newItemDefault(section: .hidden)],
             unmanagedUIDs: ["app:new"],
@@ -230,8 +216,7 @@ struct LayoutReconcilerUnmanagedPlacementTests {
 
     @Test("A leftOfAnchor placement keeps its slot when the chevron trails the visible section (#1069)")
     func anchoredLeftOfAnchorWithTrailingChevron() {
-        // The bar from the reporter's log: the Thaw icon trails the visible
-        // section, and the New items badge sits left of its leftmost item.
+        // The reporter's bar: the Thaw icon trails visible, the New items badge sits left of its leftmost item.
         let result = apply(
             placements: [
                 "neat.software.Tim:Item-0": .newItemAnchored(
@@ -276,7 +261,7 @@ struct LayoutReconcilerUnmanagedPlacementTests {
             sectionMap: [caffeine: "visible", trickster: "visible", istatTime: "visible", Self.chevron: "visible"]
         )
 
-        // Where macOS put Tim before the apply ran, as logged.
+        // Where macOS put Tim before the apply, as logged.
         let moves = LayoutSolver.planLCSMoveSequence(
             currentNoControls: [caffeine, trickster, tim, istatTime, Self.chevron],
             desiredNoControls: applied.desiredFiltered.filter { $0 != Self.hiddenControl },
@@ -309,21 +294,13 @@ struct LayoutReconcilerUnmanagedPlacementTests {
 
     // MARK: - Pass 2: multiple anchored placements sharing one anchor
 
-    //
-    // `LayoutSolver.planUnmanagedPlacement` gives every unmanaged item that
-    // lacks a saved position the *same* `.newItemAnchored` placement — the
-    // user's configured NewItemsPlacement anchor — so several items sharing
-    // one anchor is the common case, not an edge case. These tests pin the
-    // contract that the group keeps its unmanagedUIDs relative order, which
-    // mirrors the order-preservation guarantee Pass 3 states explicitly.
+    // `planUnmanagedPlacement` gives every unanchored item the same `.newItemAnchored`
+    // placement, so shared anchors are common. The group keeps its unmanagedUIDs order.
 
     @Test("Several rightOfAnchor placements sharing one anchor keep their unmanagedUIDs order")
     func rightOfAnchorPlacementsPreserveUnmanagedOrder() {
-        // Inserting after the anchor does not shift it, so a naive rightOf
-        // pass re-derives the same `anchorIdx + 1` slot on every iteration
-        // and reverses the group ([anchor, second, first] instead of
-        // [anchor, first, second]). The pass must advance past the items
-        // already placed right of the anchor.
+        // Inserting after the anchor does not shift it, so a naive pass reuses
+        // `anchorIdx + 1` and reverses the group; it must advance past placed items.
         let result = apply(
             placements: [
                 "app:first": .newItemAnchored(
@@ -368,10 +345,8 @@ struct LayoutReconcilerUnmanagedPlacementTests {
 
     @Test("Several leftOfAnchor placements sharing one anchor keep their unmanagedUIDs order")
     func leftOfAnchorPlacementsPreserveUnmanagedOrder() {
-        // Mirror of the rightOf case. leftOf already preserves order
-        // because inserting before the anchor shifts it right, advancing
-        // the resolved anchor index. Pinned here so the rightOf fix cannot
-        // silently regress the leftOf path.
+        // leftOf already keeps order because each insert shifts the anchor right;
+        // pinned so the rightOf fix cannot regress it.
         let result = apply(
             placements: [
                 "app:first": .newItemAnchored(
@@ -396,11 +371,8 @@ struct LayoutReconcilerUnmanagedPlacementTests {
 
     @Test("An anchored placement with the sectionDefault relation ignores its anchor and lands at the section end")
     func anchoredSectionDefaultRelationLandsAtSectionEnd() {
-        // .sectionDefault means "no anchor preference", so the anchor uid
-        // riding along on the placement is not a positioning request. The
-        // item takes the same section-default position it would take if
-        // the anchor had vanished — here that is after "app:tail", not
-        // immediately right of the anchor.
+        // `.sectionDefault` ignores the anchor riding along, so the item goes after
+        // "app:tail" as if the anchor had vanished.
         let result = apply(
             placements: [
                 "app:new": .newItemAnchored(
@@ -441,10 +413,8 @@ struct LayoutReconcilerUnmanagedPlacementTests {
 
     @Test("An anchored placement whose anchor sits in a later section is clamped to the end of its own section")
     func anchoredPlacementIsClampedToSectionEndWhenAnchorIsLater() {
-        // The anchor lives in the hidden section but the placement names
-        // .visible, and the section map commits to .visible either way.
-        // The item stops at the visible section's end rather than
-        // following the anchor across the boundary.
+        // The anchor is in hidden but the placement names visible, so the item stops
+        // at visible's end instead of following the anchor.
         let result = apply(
             placements: [
                 "app:new": .newItemAnchored(
@@ -468,8 +438,7 @@ struct LayoutReconcilerUnmanagedPlacementTests {
 
     @Test("An anchored placement whose anchor sits in an earlier section is clamped to the start of its own section")
     func anchoredPlacementIsClampedToSectionStartWhenAnchorIsEarlier() {
-        // Mirror of the previous test in the other direction: the anchor
-        // is left of the hidden control, but the placement names .hidden.
+        // Mirror: the anchor is left of the hidden control, but the placement names hidden.
         let result = apply(
             placements: [
                 "app:new": .newItemAnchored(
@@ -570,8 +539,7 @@ struct LayoutReconcilerUnmanagedPlacementTests {
 
     @Test("A saved hidden placement is appended when the hidden control is missing from the sequence")
     func savedHiddenPlacementAppendsWhenHiddenControlAbsent() {
-        // The hidden control uid is declared but never appears, so the
-        // section start collapses to the end of the sequence.
+        // The hidden control uid is absent, so the section start collapses to the sequence end.
         let result = apply(
             placements: ["app:new": .saved(section: .hidden, index: 0)],
             unmanagedUIDs: ["app:new"],
@@ -657,10 +625,8 @@ struct LayoutReconcilerUnmanagedPlacementTests {
             savedSectionOrder: ["visible": ["app:saved"]]
         )
 
-        // The visible section's default slot is its start, where the "New
-        // items" badge sits, so a new item lands there ahead of a saved item
-        // that also targets the start. The saved pass still runs first; it is
-        // the shared slot that gives the default item the lead. (#1069)
+        // The "New items" badge sits at visible's start, so a new item lands there
+        // ahead of a saved item targeting the same slot, even though saved runs first.
         #expect(result.desiredFiltered == [
             Self.chevron, "app:default", "app:saved", Self.hiddenControl,
         ])
@@ -668,11 +634,8 @@ struct LayoutReconcilerUnmanagedPlacementTests {
 
     // MARK: - Caller invariant
 
-    // The caller invariant is that unmanagedUIDs and desiredFiltered are
-    // disjoint, which LayoutSolver.partitionUnmanagedUIDs guarantees.
-    // Nothing enforces it at the type level, so these tests pin the
-    // fail-safe: the placement is dropped and the desired layout's own
-    // decision for that uid stands, rather than the uid appearing twice.
+    // Callers keep unmanagedUIDs and desiredFiltered disjoint, but nothing enforces
+    // it, so an overlapping placement is dropped instead of duplicating the uid.
 
     @Test("A default placement for a uid already in the sequence is skipped rather than duplicating it")
     func defaultPlacementForAlreadyPresentUIDIsSkipped() {
@@ -705,8 +668,7 @@ struct LayoutReconcilerUnmanagedPlacementTests {
         #expect(result.desiredFiltered == [
             Self.chevron, "app:dup", Self.hiddenControl, "app:hidden",
         ])
-        // Skipping means not relabelling either: a uid the function did
-        // not move must not be tagged with a section it does not sit in.
+        // A uid the function did not move must not be tagged with a section it is not in.
         #expect(result.sectionMap["app:dup"] == "visible")
     }
 
@@ -724,12 +686,8 @@ struct LayoutReconcilerUnmanagedPlacementTests {
         ])
     }
 
-    /// The rightOf offset counts insertions, but the computed slot is then
-    /// clamped into the named section. When the anchor lives left of that
-    /// section, every slot clamps to the same section start, and counting
-    /// does not help: the second item is inserted at the start again, ahead
-    /// of the first, reversing exactly the group order #919 set out to
-    /// preserve.
+    /// The rightOf offset counts insertions, but when the anchor is left of the named
+    /// section every slot clamps to the section start, reversing the group (#919).
     @Test("rightOf items keep their order even when the anchor is outside their section")
     func rightOfAnchorOutsideSectionKeepsOrder() throws {
         let anchor = "vis1"
@@ -748,11 +706,8 @@ struct LayoutReconcilerUnmanagedPlacementTests {
         #expect(try #require(a) < b!, "newA was listed first in unmanagedUIDs, so it must stay left of newB")
     }
 
-    /// A leftOf insertion at the clamped section start shifts every item
-    /// already placed there one slot right. A landing site recorded as an
-    /// *index* goes stale at that moment: the next rightOf item's floor is
-    /// one slot low and it lands ahead of its predecessor, reversing the
-    /// group. The floor must follow the placed item, not its old index.
+    /// A leftOf insert at the clamped start shifts placed items right, so a landing
+    /// site stored as an index goes stale; the floor must follow the placed item.
     @Test("rightOf items keep their order when a leftOf insertion shifts the clamped section start")
     func rightOfAnchorKeepsOrderAcrossInterleavedLeftOfInsertion() throws {
         let anchor = "vis1"

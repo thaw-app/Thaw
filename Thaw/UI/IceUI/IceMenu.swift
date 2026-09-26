@@ -54,8 +54,8 @@ struct IceMenu<Title: View, Label: View, Content: View>: View {
         }
     }
 
-    /// Creates a compact glass menu with no external leading label — for
-    /// inline row/toolbar actions such as "Update" or an ellipsis control.
+    /// Creates a compact glass menu with no external label, for inline row or
+    /// toolbar actions such as "Update" or an ellipsis control.
     init(
         primaryAction: (() -> Void)? = nil,
         @ViewBuilder content: () -> Content,

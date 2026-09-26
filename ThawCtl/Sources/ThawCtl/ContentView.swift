@@ -164,7 +164,6 @@ struct ContentView: View {
 
     private var responsePanel: some View {
         VStack(spacing: 0) {
-            // Display UUID field
             HStack {
                 Text("Display UUID:")
                     .font(.caption)
@@ -178,7 +177,6 @@ struct ContentView: View {
 
             Divider()
 
-            // Timeline
             List {
                 ForEach(engine.log) { entry in
                     VStack(alignment: .leading, spacing: 2) {

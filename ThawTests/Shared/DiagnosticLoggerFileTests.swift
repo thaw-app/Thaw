@@ -10,26 +10,16 @@ import Testing
 @testable import Thaw
 
 /// Covers the on-disk half of ``DiagnosticLogger``: attaching to a file,
-/// appending instead of truncating, closing, and the retention pass that keeps
-/// a user's `~/Library/Logs/Thaw` directory from growing without bound.
+/// appending instead of truncating, closing, and log retention. Shared
+/// verbatim with the MenuBarItemService XPC target.
 ///
-/// This is the mechanism behind user-submitted diagnostics and it is shared
-/// verbatim with the MenuBarItemService XPC target, so the rotation and
-/// append-vs-truncate behaviour is worth pinning down.
+/// Every case drives the shared singleton at a temporary directory through
+/// `attachToFile(at:)`. `openLogFile()` and `isEnabled = true` stay uncovered
+/// because they would create a file in the real `~/Library/Logs/Thaw`.
 ///
-/// `attachToFile(at:)` is the only entry point that accepts a caller-supplied
-/// URL, so every case here drives the shared singleton at a per-test temporary
-/// directory. Nothing in this file writes to the real log directory: the
-/// fresh-mint `openLogFile()` path and everything reached through
-/// `isEnabled = true` are deliberately left uncovered because they would mint a
-/// file in the developer's own `~/Library/Logs/Thaw`. `logDirectory`,
-/// `latestLogFile` and `hasLogFiles` are likewise hard-wired to that path and
-/// are only read here, never written through.
-///
-/// The suite is `.serialized` because it mutates process-wide singleton state.
-/// Other suites may still run in parallel and emit `DiagLog` lines into the
-/// file we attached, so assertions check for containment rather than for exact
-/// file contents.
+/// `.serialized` because it mutates singleton state. Parallel suites may
+/// still write `DiagLog` lines into the attached file, so assertions check
+/// containment, not exact contents.
 @Suite("Diagnostic logger file handling", .serialized)
 struct DiagnosticLoggerFileTests {
     // MARK: Attaching
@@ -228,11 +218,9 @@ struct DiagnosticLoggerFileTests {
 
             DiagnosticLogger.shared.log(level: .info, category: "FileTests", message: dropped)
 
-            // Re-attach and push a marker through the same serial write queue.
-            // The queue is FIFO, so once the marker has landed anything
-            // enqueued before it would already be in the file — that turns the
-            // absence check below into an ordering guarantee rather than a race
-            // against a fixed sleep.
+            // Push a marker through the FIFO write queue. Once it lands, anything
+            // enqueued earlier is in the file, so the absence check below does not
+            // race a fixed sleep.
             DiagnosticLogger.shared.attachToFile(at: file)
             let marker = "marker-\(UUID().uuidString)"
             DiagnosticLogger.shared.log(level: .info, category: "FileTests", message: marker)
@@ -245,11 +233,8 @@ struct DiagnosticLoggerFileTests {
 
     // MARK: Retention
 
-    /// Pins the retention policy for one test.
-    ///
-    /// The policy lives on the shared logger, so a value left behind by another
-    /// suite would otherwise decide the outcome here. `withTemporaryLogDirectory`
-    /// puts the previous one back, so this test does not decide anyone else's.
+    /// Pins the retention policy for one test. The policy is shared, and
+    /// `withTemporaryLogDirectory` restores the previous one.
     private func useRetentionPolicy(retentionDays: Int, maxFileCount: Int = 50) {
         var policy = DiagnosticLogger.RotationPolicy()
         policy.retentionDays = retentionDays
@@ -448,15 +433,10 @@ struct DiagnosticLoggerFileTests {
     /// Runs `body` against a fresh temporary directory, then detaches the
     /// shared logger and removes the directory.
     ///
-    /// Detaching first matters: leaving the singleton holding a file handle on
-    /// a deleted temporary file would follow every later test in this process.
-    /// Teardown always lands on "disabled", never on the flag's previous value,
-    /// because re-enabling would run the fresh-mint path and drop a file in the
-    /// developer's real log directory.
-    ///
-    /// The rotation policy is process-wide too, so it is captured here and put
-    /// back on every exit path: a window pinned by one test would otherwise
-    /// follow whichever test runs next, in this suite or in a parallel one.
+    /// Detaching keeps the singleton from holding a handle on a deleted file.
+    /// Teardown always lands on "disabled", since re-enabling would create a
+    /// file in the real log directory. The process-wide rotation policy is
+    /// restored on every exit path.
     private func withTemporaryLogDirectory(_ body: (URL) async throws -> Void) async throws {
         let tmp = FileManager.default.temporaryDirectory
             .appendingPathComponent(UUID().uuidString, isDirectory: true)
@@ -474,11 +454,9 @@ struct DiagnosticLoggerFileTests {
     /// Creates `count` empty `.log` files dated one day apart, oldest first, and
     /// returns their names in that order.
     ///
-    /// Rotation orders by creation date, and files written back to back in a
-    /// loop can share a timestamp closely enough to make the survivor set
-    /// arbitrary — explicit dates keep it deterministic. All of them are dated
-    /// in the past so that a file opened during the test is unambiguously the
-    /// newest.
+    /// Rotation orders by creation date and files written in a loop can share a
+    /// timestamp, so explicit dates keep it deterministic. All are in the past
+    /// so a file opened during the test is the newest.
     @discardableResult
     private func seedAgedLogFiles(count: Int, in directory: URL) throws -> [String] {
         var names: [String] = []
@@ -516,11 +494,8 @@ struct DiagnosticLoggerFileTests {
     }
 
     /// Polls `condition` until it holds or `timeout` elapses, reporting whether
-    /// it ever held.
-    ///
-    /// Rotation and message writes are dispatched onto the logger's private
-    /// serial queue, which the test cannot join, so a bounded poll is the only
-    /// way to observe them without betting on a fixed sleep.
+    /// it ever held. The logger's serial queue cannot be joined, so this avoids
+    /// betting on a fixed sleep.
     private func waitUntil(timeout: Duration = .seconds(5), _ condition: () -> Bool) async -> Bool {
         let deadline = ContinuousClock.now.advanced(by: timeout)
         while ContinuousClock.now < deadline {

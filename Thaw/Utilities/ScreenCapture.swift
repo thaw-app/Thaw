@@ -75,22 +75,14 @@ nonisolated enum ScreenCapture {
 
     // MARK: Capture Window(s)
 
-    // NOTE: The synchronous captureWindows / captureWindow below intentionally
-    // route through SkyLight's private API (SLWindowListCreateImageFromArray)
-    // for offscreen menu-bar items. On macOS 26 SCShareableContent enumerates
-    // those windows, but SCK capture rejects them: SCContentFilter(display:
-    // including:) returns error -3812 (sourceRect outside display bounds) and
-    // SCContentFilter(desktopIndependentWindow:) returns -3811 (stream start
-    // failure). SkyLight is the only API on macOS 26 that can capture status-item
-    // windows positioned at large negative x. It leaks one CFMutableDictionary
-    // per call inside SLSWindowListCreateImageFromArrayProxying; live Hidden
-    // refresh therefore runs that path in MenuBarCaptureService, which exits
-    // after a capture budget so the leak can be reclaimed.
+    // NOTE: The sync captureWindows / captureWindow use SkyLight's private
+    // SLWindowListCreateImageFromArray for offscreen menu bar items. On macOS 26 SCK
+    // rejects them (-3812 with a display filter, -3811 with desktopIndependentWindow).
+    // SkyLight leaks one CFMutableDictionary per call, so live Hidden refresh runs it
+    // in MenuBarCaptureService, which exits after a capture budget to reclaim it.
     //
-    // The async captureWindowsAsync / captureWindowAsync below route through
-    // ScreenCaptureKit and are leak-free. Use those for any capture whose
-    // windows fit within display bounds (the menu-bar item cache paths
-    // pre-filter offscreen items and use the async path).
+    // The async variants use ScreenCaptureKit and don't leak. Use them for windows
+    // within display bounds.
 
     /// Captures a composite image of an array of windows.
     ///
@@ -103,10 +95,8 @@ nonisolated enum ScreenCapture {
     ///     Pass `nil` to capture the minimum rectangle that encloses the windows.
     ///   - option: Options that specify which parts of the windows are captured.
     static func captureWindows(with windowIDs: [CGWindowID], screenBounds: CGRect? = nil, option: CGWindowImageOption = []) -> CGImage? {
-        // Use SkyLight's private API (SLWindowListCreateImageFromArray) instead of
-        // the deprecated CGWindowListCreateImageFromArray, which is unavailable
-        // when targeting macOS 26+. ScreenCaptureKit still doesn't support
-        // capturing offscreen menu bar items or windows in other Spaces.
+        // SkyLight instead of CGWindowListCreateImageFromArray, which is unavailable on
+        // macOS 26+. SCK can't capture offscreen menu bar items or windows in other Spaces.
         return Bridging.captureWindowsImage(windowIDs: windowIDs, screenBounds: screenBounds, options: option)
     }
 
@@ -141,13 +131,9 @@ nonisolated enum ScreenCapture {
     ///
     /// - Parameters:
     ///   - windowID: The identifier of the window to exclude (capture everything below it).
-    ///   - screenBounds: The region to capture, in Core Graphics global
-    ///     display coordinates — top-left origin, y increasing downward, the
-    ///     convention `CGDisplayBounds(_:)` returns and
-    ///     `SCStreamConfiguration.sourceRect` expects. An AppKit rect taken
-    ///     from `NSScreen.frame` uses the opposite vertical origin; passing
-    ///     one here captures the band mirrored to the other edge of the
-    ///     display rather than failing (#1033).
+    ///   - screenBounds: The region in Core Graphics global display coordinates
+    ///     (top-left origin, as `CGDisplayBounds(_:)` returns). An AppKit rect from
+    ///     `NSScreen.frame` silently captures the mirrored band instead (#1033).
     ///   - displayID: The display to capture from.
     /// - Returns: The captured image, or nil if capture failed.
     static func captureScreenBelowWindow(
@@ -155,23 +141,19 @@ nonisolated enum ScreenCapture {
         screenBounds: CGRect,
         displayID: CGDirectDisplayID
     ) async throws -> CGImage? {
-        // Get shareable content (displays and windows)
         let content = try await getShareableContent()
 
-        // Find the target display
         guard let display = content.displays.first(where: { $0.displayID == displayID }) else {
             diagLog.warning("captureScreenBelowWindow: display not found for ID=\(displayID)")
             return nil
         }
 
-        // Find the window to exclude
         let excludedWindow = content.windows.first { $0.windowID == windowID }
 
         if excludedWindow == nil {
             diagLog.debug("captureScreenBelowWindow: window not found for ID=\(windowID), capturing full display")
         }
 
-        // Create filter: include display, exclude the specified window
         let filter = if let excludedWindow {
             SCContentFilter(
                 display: display,
@@ -181,7 +163,6 @@ nonisolated enum ScreenCapture {
             SCContentFilter(display: display, excludingWindows: [])
         }
 
-        // Configure stream for single frame capture.
         // sourceRect is in display-local points; width/height are in pixels.
         let displayFrame = display.frame
         let scale = Double(filter.pointPixelScale)
@@ -201,34 +182,26 @@ nonisolated enum ScreenCapture {
         let configuration = SCStreamConfiguration()
         // captureResolution is not used here; explicit width/height below take precedence.
         configuration.showsCursor = false
-        // Pin the pixel format so the buffer is deterministic across SDR/EDR
-        // displays. Left unset, an HDR display can hand back a 10-bit buffer that
-        // the CIImage → CGImage conversion renders subtly differently, an
-        // intermittent display-dependent color glitch. 32BGRA is the historical
-        // default and what the crop/compare path expects. Do NOT set
-        // `colorSpaceName` — it triggers an internal CoreGraphics tone-mapping
-        // pass that destructively clips color (learned from BetterCapture).
+        // Pin 32BGRA so the buffer matches on SDR and EDR displays; an HDR display can
+        // otherwise return a 10-bit buffer that renders differently. Don't set
+        // `colorSpaceName`: it triggers a CoreGraphics tone-mapping pass that clips color.
         configuration.pixelFormat = kCVPixelFormatType_32BGRA
         configuration.width = Int((screenBounds.width * scale).rounded())
         configuration.height = Int((screenBounds.height * scale).rounded())
         configuration.sourceRect = localSourceRect
 
-        // The captured pixel dimensions come out the same whichever vertical
-        // origin the caller used, so a mirrored band still looks healthy in
-        // every other line this function logs. Record the rects themselves so
-        // a misplaced capture is legible from a log alone (#1033).
+        // Pixel dimensions look healthy even for a mirrored band, so log the rects to
+        // make a misplaced capture visible (#1033).
         diagLog.debug(
             "captureScreenBelowWindow: screenBounds=\(screenBounds.debugDescription) "
                 + "displayFrame=\(displayFrame.debugDescription) "
                 + "sourceRect=\(localSourceRect.debugDescription)"
         )
 
-        // Create stream and capture frame
-        // Note: Caller owns the stream and is responsible for stopCapture().
+        // The caller owns the stream and must call stopCapture().
         let frameCaptor = FrameCaptor()
         let stream = SCStream(filter: filter, configuration: configuration, delegate: frameCaptor)
 
-        // Register FrameCaptor to receive sample buffers using shared serial queue
         try stream.addStreamOutput(frameCaptor, type: .screen, sampleHandlerQueue: FrameCaptor.sampleHandlerQueue)
 
         try await stream.startCapture()
@@ -254,13 +227,8 @@ nonisolated enum ScreenCapture {
         return image
     }
 
-    /// Helper to get shareable content using ScreenCaptureKit's async API.
-    ///
-    /// One capture tick can issue several independent calls (hosting-window
-    /// capture, display-strip capture, hosting frame probe), each of which
-    /// would otherwise trigger a full window/display enumeration.
-    /// `ShareableContentCache` coalesces calls within `maxAge` of each other
-    /// into a single underlying fetch.
+    /// Shareable content via `ShareableContentCache`: calls within `maxAge` share one
+    /// fetch, since one capture tick can issue several full enumerations.
     static func getShareableContent(maxAge: Duration = .milliseconds(150)) async throws -> SCShareableContent {
         let snapshot = try await shareableContentCache.content(
             maxAge: maxAge,
@@ -274,12 +242,8 @@ nonisolated enum ScreenCapture {
     /// Performs the underlying enumeration for ``getShareableContent(maxAge:)``
     /// on a cache miss.
     ///
-    /// `SCShareableContent.current` has no built-in cancellation, and this
-    /// runs inside `ShareableContentCache`'s shared fetch task, which
-    /// `awaitWithoutCancelling` deliberately shields from any one caller's
-    /// cancellation so joiners still get a result. A cancellation handler here
-    /// would therefore never fire, so there is none: the call simply runs to
-    /// completion and its result is cached.
+    /// No cancellation handler: `awaitWithoutCancelling` shields the shared fetch
+    /// from caller cancellation, so one would never fire.
     private static func fetchShareableContentUncached() async throws -> ShareableContentSnapshot {
         let content = try await SCShareableContent.current
         return ShareableContentSnapshot(content: content)

@@ -12,16 +12,10 @@ import SystemConfiguration
 
 /// Reads the current ``EnergyMode`` and observes changes to it.
 ///
-/// macOS publishes the settings in force for the active power source under
-/// `State:/IOKit/PowerManagement/CurrentSettings` in the dynamic store,
-/// which is where the `HighPowerMode` flag — the one mode with no API — can
-/// be read. Because that entry already switches contents when the machine
-/// moves between battery and AC, the value read here is the effective mode
-/// rather than a per-source preference.
-///
-/// Low Power Mode is taken from `ProcessInfo` rather than the same
-/// dictionary: it is the documented source, and it changes through a
-/// notification the state monitor already observes.
+/// `HighPowerMode` has no API; it's read from
+/// `State:/IOKit/PowerManagement/CurrentSettings` in the dynamic store, which
+/// already switches with the power source, so the value is the effective mode.
+/// Low Power Mode comes from `ProcessInfo`, the documented source.
 @MainActor
 final class EnergyModeMonitor {
     /// The dynamic store entry holding the settings in force for the active
@@ -33,18 +27,11 @@ final class EnergyModeMonitor {
     /// keys off.
     private static let highPowerModeKey = "HighPowerMode"
 
-    /// Whether this Mac offers High Power Mode.
+    /// Whether this Mac offers High Power Mode. Read once; it's a hardware property.
     ///
-    /// Read once: it is a property of the hardware, so it cannot change while
-    /// the app runs.
-    ///
-    /// Presence of the key is the signal. That it is *absent* on Macs without
-    /// the mode is inferred from `pmset`, which prints `powermode` only on
-    /// machines that have it and `lowpowermode` elsewhere — it has been
-    /// confirmed present on hardware that offers the mode, not confirmed
-    /// absent on hardware that doesn't. If that inference is wrong the
-    /// failure is benign: the picker offers High Power on a Mac that cannot
-    /// enter it, and the condition simply never matches.
+    /// Key presence is the signal. Absence on Macs without the mode is inferred from
+    /// `pmset`, not confirmed; if wrong, the picker offers High Power and the
+    /// condition never matches.
     static let isHighPowerModeSupported: Bool = currentSettings()?[highPowerModeKey] != nil
 
     private var store: SCDynamicStore?
@@ -137,11 +124,8 @@ final class EnergyModeMonitor {
         changeHandler = nil
     }
 
-    /// The session used for one-shot reads.
-    ///
-    /// Held rather than created per call: ``read`` runs on every power-state
-    /// and thermal notification, and a dynamic store session is a port pair,
-    /// not a free struct. Callback-free, so it is only ever polled.
+    /// Held rather than created per call: ``read`` runs on every power and thermal
+    /// notification, and a dynamic store session is a port pair. Only ever polled.
     private static let readStore: SCDynamicStore? = SCDynamicStoreCreate(
         nil,
         "com.stonerl.Thaw.energyModeRead" as CFString,

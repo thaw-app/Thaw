@@ -41,7 +41,6 @@ struct SectionedList<ItemID: Hashable>: View {
         return items[...(index - 1)].last { $0.isSelectable }
     }
 
-    /// Creates a sectioned list with the given selection, spacing, and items.
     init(selection: Binding<ItemID?>, items: Binding<[SectionedListItem<ItemID>]>, spacing: CGFloat = 0, isEditing: Bool = false) {
         self._selection = selection
         self._items = items

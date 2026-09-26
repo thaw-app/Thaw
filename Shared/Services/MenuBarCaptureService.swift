@@ -58,13 +58,9 @@ nonisolated extension MenuBarCaptureService {
 
     enum Request: Codable, Equatable {
         case start
-        /// Points the helper's diagnostic logger at `filePath`, or turns its
-        /// file logging off when `nil`. Sent at startup, and again whenever the
-        /// helper is out of date — a replaced session, or a log rotation.
-        ///
-        /// `rotationPolicy` carries the app's retention settings, so the helper
-        /// prunes the shared log directory by the same rules rather than by its
-        /// own defaults.
+        /// Points the helper's diagnostic logger at `filePath`, or turns file
+        /// logging off when `nil`. Sent at startup, on a replaced session, and on
+        /// log rotation. `rotationPolicy` makes the helper prune by the app's rules.
         case configureLogging(filePath: String?, rotationPolicy: DiagnosticLogger.RotationPolicy?)
         case captureBatch(CaptureBatchRequest)
         case recycle

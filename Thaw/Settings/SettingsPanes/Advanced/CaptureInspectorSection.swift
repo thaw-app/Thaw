@@ -11,16 +11,12 @@ import SwiftUI
 /// Shows the untreated frame Thaw captures, so granting Screen Recording comes
 /// with the ability to confirm the scope of what is observed.
 ///
-/// Ported (in reduced form) from thaw-next: that version reads the frames back
-/// out of the dedicated ThawCapture package; this one drives the app's own
-/// `ScreenCapture` primitives directly, so it shows exactly the pipeline this
-/// branch runs. Capture is manual rather than continuous — an inspector that
-/// reads the screen on a timer would make the privacy story worse, not better.
-/// Nothing here is written to disk.
+/// Drives the app's own `ScreenCapture` primitives, so it shows exactly the
+/// pipeline Thaw runs. Capture is manual, not on a timer, and nothing is
+/// written to disk.
 ///
-/// The copy has to state the scope exactly: Thaw reads a band across the top of
-/// the display, which really does contain the frontmost app's menus and the
-/// wallpaper behind the bar. Naming that is the honest half of the claim.
+/// The copy must state the scope exactly: the band includes the frontmost
+/// app's menus and the wallpaper behind the bar.
 struct CaptureInspectorSection: View {
     @Environment(AppState.self) private var appState: AppState
 
@@ -120,19 +116,14 @@ struct CaptureInspectorSection: View {
 
     /// Returns the menu bar band at the top of `displayBounds`.
     ///
-    /// `displayBounds` and the result are both in Core Graphics global display
-    /// coordinates — top-left origin — which is what
+    /// Both are in Core Graphics global coordinates (top-left origin), which
     /// ``ScreenCapture/captureScreenBelowWindow(excludingWindowID:screenBounds:displayID:)``
-    /// forwards to `SCStreamConfiguration.sourceRect`. The band therefore
-    /// starts at the display's own `minY` and grows downward.
+    /// passes to `SCStreamConfiguration.sourceRect`, so the band starts at
+    /// `minY` and grows down.
     ///
-    /// Building it from `NSScreen.frame` instead is the bug in #1033: AppKit
-    /// puts the origin at the bottom left, so `frame.maxY - menuBarHeight`
-    /// names the menu bar in AppKit terms and the bottom edge of the display
-    /// once it is read as a top-left-origin y. Nothing downstream can tell the
-    /// two apart — the band is the right size either way — so the inspector
-    /// captured whatever window sat at the bottom of the screen and presented
-    /// it as what Thaw reads.
+    /// Don't build it from `NSScreen.frame`: its bottom-left origin makes the
+    /// band land on the bottom of the display, at the right size, so nothing
+    /// downstream notices.
     static func menuBarBand(inDisplayBounds displayBounds: CGRect, menuBarHeight: CGFloat) -> CGRect {
         CGRect(
             x: displayBounds.minX,
@@ -161,9 +152,8 @@ struct CaptureInspectorSection: View {
         Task { @MainActor in
             defer { isCapturing = false }
             do {
-                // Excluding nothing: pass an impossible window ID so the whole
-                // band is read, exactly as the item pipeline sees it before it
-                // crops anything out.
+                // An impossible window ID excludes nothing, so the whole band
+                // is read as the item pipeline sees it before cropping.
                 guard let image = try await ScreenCapture.captureScreenBelowWindow(
                     excludingWindowID: 0,
                     screenBounds: frame,

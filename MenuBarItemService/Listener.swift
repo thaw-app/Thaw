@@ -16,16 +16,13 @@ import XPC
 /// target's default actor isolation is MainActor.
 final nonisolated class Listener: @unchecked Sendable {
     private let diagLog = DiagLog(category: "Listener")
-    /// The shared listener.
     static let shared = Listener()
 
-    /// The service name.
     private let name = MenuBarItemService.name
 
     /// The underlying XPC listener object.
     private var xpcListener: XPCListener?
 
-    /// Creates the shared listener.
     private init() {
         // Intentionally empty: this type is a singleton and is configured via `activate()`.
     }
@@ -34,7 +31,6 @@ final nonisolated class Listener: @unchecked Sendable {
         cancel()
     }
 
-    /// Handles a received message.
     private func handleMessage(_ message: XPCReceivedMessage) -> MenuBarItemService.Response? {
         do {
             let request = try message.decode(as: MenuBarItemService.Request.self)
@@ -55,11 +51,8 @@ final nonisolated class Listener: @unchecked Sendable {
                     diagLog.debug("Listener disabled diagnostic logging")
                     return .configureLogging
                 }
-                // Only attach to files inside the app's approved log
-                // directory. The path arrives from the XPC peer, and in
-                // teamless (ad-hoc) builds the listener has no peer
-                // requirement, so an arbitrary path could otherwise make
-                // this service open and append to any user-writable file.
+                // Only attach inside the approved log directory. Ad-hoc builds have no
+                // peer requirement, so a peer could otherwise point us at any writable file.
                 let requested = URL(fileURLWithPath: filePath)
                     .standardizedFileURL.resolvingSymlinksInPath()
                 let approvedDir = DiagnosticLogger.shared.logDirectory
@@ -71,10 +64,8 @@ final nonisolated class Listener: @unchecked Sendable {
                     return nil
                 }
                 guard DiagnosticLogger.shared.attachToFile(at: requested) else {
-                    // Answering success here would leave the app believing both
-                    // processes share a file while this one keeps writing to the
-                    // previous segment — which retention eventually deletes out
-                    // from under it. Failing the request makes the app retry.
+                    // Replying success would leave this process writing to the old
+                    // segment, which retention later deletes. Failing makes the app retry.
                     diagLog.error("Listener failed to attach diagnostic logging to \(requested.path)")
                     return nil
                 }
@@ -104,11 +95,8 @@ final nonisolated class Listener: @unchecked Sendable {
 
     /// Activates the listener.
     ///
-    /// Session peers must be signed with the same team identifier as the
-    /// service process. Builds signed without a team identifier
-    /// (ad-hoc/personal builds) activate without a peer requirement, since
-    /// `.isFromSameTeam()` can never be satisfied there and every session
-    /// would be cancelled before the first message.
+    /// Peers must share the service's team identifier. Ad-hoc builds skip the
+    /// peer requirement, since `.isFromSameTeam()` can never pass there.
     func activate() {
         guard xpcListener == nil else {
             diagLog.notice("Listener is already active")
@@ -132,7 +120,6 @@ final nonisolated class Listener: @unchecked Sendable {
         }
     }
 
-    /// Cancels the listener.
     func cancel() {
         diagLog.debug("Canceling listener")
         xpcListener.take()?.cancel()

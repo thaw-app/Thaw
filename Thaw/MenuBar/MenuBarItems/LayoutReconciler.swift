@@ -9,21 +9,12 @@ import CoreGraphics
 
 // MARK: - DesiredLayout
 
-/// A desired arrangement of menu bar items, expressed independently of
-/// any specific trigger (profile apply, saved-section restore, etc.).
+/// A desired arrangement of menu bar items, independent of what triggered
+/// it. Profiles and savedSectionOrder both reduce to this shape.
 ///
-/// DesiredLayout is the unifying value type that makes profile specs
-/// and savedSectionOrder structurally equivalent: both produce the same
-/// shape of per-section ordered identifiers plus a NewItemsPlacement
-/// fallback for items the user has never seen before. The reconciler
-/// compares this against an ObservedLayout and emits the moves needed
-/// to make reality match desire.
-///
-/// Pinned bundle IDs are only consumed by the profile-apply path; the
-/// restore path leaves them empty.
+/// Only profile apply uses the pinned bundle IDs.
 nonisolated struct DesiredLayout: Equatable {
-    /// For each section, an ordered list of uniqueIdentifiers. Index 0
-    /// is the leftmost-after-chevron position within the section.
+    /// Index 0 is the leftmost position after the chevron.
     var sectionOrder: [MenuBarSection.Name: [String]]
 
     /// Pinned bundle IDs that are part of a profile spec but not yet
@@ -31,13 +22,10 @@ nonisolated struct DesiredLayout: Equatable {
     var pinnedHiddenBundleIDs: Set<String>
     var pinnedAlwaysHiddenBundleIDs: Set<String>
 
-    /// Placement preference for items not in sectionOrder.
+    /// For items not in sectionOrder.
     var newItemsPlacement: MenuBarItemManager.NewItemsPlacement
 
-    /// Builds a DesiredLayout from a persisted savedSectionOrder
-    /// dictionary (string-keyed) and a NewItemsPlacement preference.
-    /// Used by the restore path where there is no profile spec, only
-    /// the recorded saved layout.
+    /// For the restore path, which has no profile spec.
     static func fromSavedSectionOrder(
         _ savedSectionOrder: [String: [String]],
         newItemsPlacement: MenuBarItemManager.NewItemsPlacement,
@@ -57,8 +45,7 @@ nonisolated struct DesiredLayout: Equatable {
         )
     }
 
-    /// Returns the sectionOrder as the persisted string-keyed dict
-    /// shape that existing LayoutSolver planners consume.
+    /// The string-keyed shape the LayoutSolver planners consume.
     var sectionOrderAsPersistedDict: [String: [String]] {
         var result: [String: [String]] = [:]
         for (section, ids) in sectionOrder {
@@ -71,7 +58,6 @@ nonisolated struct DesiredLayout: Equatable {
         return result
     }
 
-    /// Maps a persisted key string to its enum value.
     private static func sectionName(forPersistedKey key: String) -> MenuBarSection.Name? {
         switch key {
         case "visible": .visible
@@ -100,15 +86,10 @@ nonisolated struct ObservedLayout {
 
 // MARK: - ControlUIDs
 
-/// The three control item UIDs that mark section boundaries inside a
-/// desired-layout sequence. Planners that insert items relative to a
-/// section start, or compute per-section widths, take this as a single
-/// parameter rather than three loose strings.
+/// The control item UIDs that mark section boundaries in a desired layout.
 ///
-/// visible is the chevron UID and is absent when no chevron exists.
-/// alwaysHidden is absent when the user has disabled the always-hidden
-/// section. hidden is required because a working layout always has the
-/// hidden divider.
+/// visible is the chevron and may be absent; alwaysHidden is absent when
+/// that section is disabled. A working layout always has hidden.
 nonisolated struct ControlUIDs: Equatable {
     let visible: String?
     let hidden: String
@@ -120,27 +101,15 @@ nonisolated struct ControlUIDs: Equatable {
 /// Composes the LayoutSolver planners against a DesiredLayout /
 /// ObservedLayout pair to produce reconciliation decisions.
 ///
-/// LayoutReconciler does not own any state; it is a thin coordinator
-/// over the existing pure planners. The boundary it draws is intent:
-/// LayoutSolver answers "given these inputs, what is the next single
-/// move?" at the algorithm level; LayoutReconciler answers "given this
-/// desired layout and observed state, what is the next reconciliation
-/// step?" at the trigger level.
-///
-/// PendingLedger remains separate because pending-relocation decisions
-/// are not driven by DesiredLayout but by per-entry retry state. The
-/// temporality split from the previous refactor still holds.
+/// Stateless. LayoutSolver picks the next move from raw inputs; this works
+/// at the level of a desired layout. PendingLedger stays separate because
+/// it runs on per-entry retry state.
 nonisolated enum LayoutReconciler {
     /// Resolves an abstract LCSPlannedDestination against live items
     /// to produce a concrete MoveDestination.
     ///
-    /// Forms the bridge between LayoutSolver's UID-anchored decisions
-    /// and the move primitive's MenuBarItem-anchored inputs. The
-    /// orchestrator that already holds the live items list and control
-    /// item pair calls this just before invoking move(item:to:). If the
-    /// anchor uid named by the planner has disappeared mid-cycle (the
-    /// item quit, the cache reshuffled), falls back to the section
-    /// boundary.
+    /// Falls back to the section boundary if the anchor disappeared
+    /// mid-cycle.
     static func resolveDestination(
         _ abstract: LayoutSolver.LCSPlannedDestination,
         items: [MenuBarItem],
@@ -170,12 +139,8 @@ nonisolated enum LayoutReconciler {
     /// Returns the move destination at the boundary of the given
     /// section.
     ///
-    /// Always targets the section's own control item: items in each
-    /// section live to one side of that section's control item, so the
-    /// control item is the natural insertion point. Control items have
-    /// a permanent visible width when the divider style is .noDivider,
-    /// ensuring there is always a physical gap between adjacent
-    /// control items.
+    /// Always targets the section's control item. Even with .noDivider,
+    /// control items keep a visible width, so there's always a gap.
     static func boundaryDestination(
         for section: MenuBarSection.Name,
         controlItems: MenuBarItemManager.ControlItemPair
@@ -193,15 +158,8 @@ nonisolated enum LayoutReconciler {
         }
     }
 
-    /// Decides where each unmanaged item should land during a profile
-    /// apply, consulting the desired layout's sectionOrder for saved
-    /// positions and falling back to the NewItemsPlacement preference.
-    ///
-    /// Thin wrapper around LayoutSolver.planUnmanagedPlacement that
-    /// accepts a DesiredLayout instead of raw savedSectionOrder +
-    /// newItemsPlacement parameters. The result map is keyed by
-    /// uniqueIdentifier and consumed by the profile orchestrator to
-    /// position items in desiredFiltered.
+    /// Where each unmanaged item lands during a profile apply: its saved
+    /// position, else the NewItemsPlacement preference.
     static func unmanagedPlacementPlan(
         desired: DesiredLayout,
         unmanagedUIDs: [String],
@@ -219,32 +177,13 @@ nonisolated enum LayoutReconciler {
     /// positions chosen by unmanagedPlacementPlan, returning the updated
     /// sequence and section assignments.
     ///
-    /// Three-pass insertion: saved placements first (sorted by section
-    /// then savedIndex so left-to-right inserts land in the right
-    /// relative order), then anchored placements (positioned relative
-    /// to an existing UID), then default placements (appended at the
-    /// section end). The function is pure: it does not consult live
-    /// item state, only the abstract sequence the orchestrator has
-    /// already built.
+    /// Inserts saved placements, then anchored, then defaults. Pure.
     ///
-    /// The controlUIDs.visible field is the chevron UID, which marks
-    /// the start of the .visible section so unmanaged items never land
-    /// left of it.
+    /// Every uid in unmanagedUIDs must be absent from desiredFiltered. A uid
+    /// already present is skipped, since a duplicate is unrecoverable.
     ///
-    /// Caller invariant: every uid in unmanagedUIDs must be absent from
-    /// desiredFiltered. That is what "unmanaged" means, and it is what
-    /// LayoutSolver.partitionUnmanagedUIDs guarantees by filtering
-    /// currentFlat against the desired set. Nothing enforces it at the
-    /// type level, so a uid that is already in the sequence is skipped
-    /// rather than inserted again: a broken invariant degrades to "this
-    /// placement was ignored" instead of a duplicated item, which would
-    /// be corrupt layout state the planners downstream cannot recover
-    /// from. The uid keeps the position and section label the desired
-    /// layout already chose for it.
-    ///
-    /// An anchored placement is confined to the section it names, even
-    /// when its anchor uid lives elsewhere in the sequence, so that a
-    /// uid's position and its sectionMap entry can never disagree.
+    /// An anchored placement stays in the section it names, so position and
+    /// sectionMap can't disagree.
     static func applyUnmanagedPlacementsToDesired(
         placements: [String: LayoutSolver.UnmanagedPlacement],
         unmanagedUIDs: [String],
@@ -294,9 +233,8 @@ nonisolated enum LayoutReconciler {
                 return desiredFiltered.endIndex
             }
         }
-        /// Default insertion index for a section when no NewItemsPlacement
-        /// anchor applies. Mirrors `defaultNewItemsBadgeIndex` so the badge
-        /// and a new item's slot cannot disagree. (#1069)
+        /// Mirrors `defaultNewItemsBadgeIndex` so the badge and a new item's
+        /// slot can't disagree.
         func sectionDefaultIndex(for section: MenuBarSection.Name) -> Int {
             switch section {
             case .visible:
@@ -336,11 +274,8 @@ nonisolated enum LayoutReconciler {
             }
         }
 
-        // Pass 1: .saved placements, sorted by (section, savedIndex)
-        // so left-to-right insertions land in the right relative
-        // order. For each, find a predecessor in saved order that's
-        // already in desiredFiltered and insert after it; else
-        // insert at the section start.
+        // Pass 1: .saved, sorted so inserts keep their relative order.
+        // Insert after a saved-order predecessor, else at section start.
         var savedTuples: [(String, MenuBarSection.Name, Int)] = []
         for uid in unmanagedUIDs {
             if case let .saved(section, index) = placements[uid] {
@@ -354,8 +289,7 @@ nonisolated enum LayoutReconciler {
             return lhs.2 < rhs.2
         }
         for (uid, section, savedIndex) in savedTuples {
-            // Guards the caller invariant: inserting a uid the sequence
-            // already holds would duplicate it.
+            // Guards the caller invariant.
             if desiredFiltered.contains(uid) {
                 continue
             }
@@ -396,29 +330,10 @@ nonisolated enum LayoutReconciler {
             sectionMap[uid] = sectionKeyString(for: section)
         }
 
-        // Pass 2: .newItemAnchored placements. Insert relative to
-        // the anchor in desiredFiltered (left or right per relation).
-        // Track how many items have already been placed to the right of
-        // each anchor. `.leftOfAnchor` inserts *before* the anchor, which
-        // shifts the anchor right on every pass, so `firstIndex(of:)`
-        // resolves to the new position and successive leftOf items land
-        // after the previous one — preserving their unmanagedUIDs order.
-        // `.rightOfAnchor` inserts *after* the anchor, which leaves the
-        // anchor's index unchanged, so without this offset every rightOf
-        // item would re-derive the same `anchorIdx + 1` slot and reverse
-        // the group's relative order.
-        // Where the previous rightOf item for each anchor actually landed.
-        //
-        // The offset above assumes the computed slot survives the clamp
-        // below. When the anchor lives outside the section the placement
-        // names, it does not: every slot clamps to the same section start,
-        // counting insertions changes nothing, and each item is inserted
-        // ahead of the last — reversing the very group order this pass
-        // exists to preserve. Holding the previously placed *uid* and
-        // requiring the next to land after its current position makes the
-        // guarantee independent of whether the clamp fired — an index
-        // recorded at insert time goes stale as soon as a later leftOf
-        // insertion at or before it shifts the placed item right.
+        // Pass 2: .newItemAnchored. leftOf keeps order because the anchor
+        // shifts right; rightOf would reuse `anchorIdx + 1` and reverse.
+        // Track the last placed uid per anchor, not an index: the clamp
+        // can pin every slot to the section start, and indexes go stale.
         var lastRightOfAnchorUID = [String: String]()
         var rightOfAnchorInserted = [String: Int]()
         for uid in unmanagedUIDs {
@@ -433,28 +348,21 @@ nonisolated enum LayoutReconciler {
                 switch relation {
                 case .leftOfAnchor, .rightOfAnchor:
                     if let anchorIdx = desiredFiltered.firstIndex(of: anchorUID) {
-                        // Advance rightOf past the items already placed right
-                        // of this anchor so the group keeps its order, the way
-                        // leftOf does for free via the shifting anchor index.
                         let offset = relation == .rightOfAnchor
                             ? rightOfAnchorInserted[anchorUID, default: 0]
                             : 0
                         let anchored = relation == .leftOfAnchor
                             ? anchorIdx
                             : anchorIdx + 1 + offset
-                        // The anchor uid is not guaranteed to live in the
-                        // section this placement names, and the sectionMap
-                        // entry below commits to that section regardless.
-                        // Clamp so position and label cannot disagree.
+                        // The anchor may be in another section; clamp so
+                        // position and sectionMap agree.
                         insertIdx = min(max(anchored, sectionStartIndex(for: section)), sectionEnd)
                         placedRightOfAnchor = (relation == .rightOfAnchor)
                     } else {
                         insertIdx = sectionEnd
                     }
                 case .sectionDefault:
-                    // "No anchor preference": the anchor uid carried by the
-                    // placement is not a positioning request, so fall to the
-                    // same section-default position a missing anchor uses.
+                    // Not a positioning request; use the section default.
                     insertIdx = sectionEnd
                 }
                 if placedRightOfAnchor,
@@ -472,8 +380,7 @@ nonisolated enum LayoutReconciler {
             }
         }
 
-        // Pass 3: .newItemDefault placements, at the badge's default slot so
-        // a new item lands where the placeholder sits. (#1069)
+        // Pass 3: .newItemDefault, at the badge's default slot.
         var defaultInsertedCount = [MenuBarSection.Name: Int]()
         for uid in unmanagedUIDs {
             if case let .newItemDefault(section) = placements[uid] {

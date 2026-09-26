@@ -10,24 +10,18 @@ import SwiftUI
 /// The Thaw Bar's rounded-rectangle geometry, serving as both its clip and
 /// its border stroke.
 ///
-/// The clip and the stroke have to agree on corner radius and style or the
-/// border drifts off the clipped edge, so both are built by the factories
-/// below instead of by separately maintained expressions at each call site.
+/// Build both through the factories below, or the border drifts off the
+/// clipped edge.
 ///
-/// When square corners meet the display's rounded screen corners (#325),
-/// the top edge of the stroke would be clipped and look broken, so the
-/// border omits it and draws only the leading, trailing, and bottom edges.
+/// With square corners the top edge would be clipped by the screen's rounded
+/// corners, so the border omits it.
 nonisolated struct ThawBarBorderShape: InsettableShape {
-    /// Corner radius of the un-inset path.
     var cornerRadius: CGFloat
     /// Circular for fully rounded ends, continuous for square corners.
     var cornerStyle: RoundedCornerStyle = .continuous
-    /// When `true`, the path starts at the top-leading corner, runs down the
-    /// leading side, across the bottom, and up the trailing side — leaving the
-    /// top edge open.
+    /// Leaves the top edge open, starting at the top-leading corner.
     var omitTopEdge: Bool
-    /// Inset applied before constructing the path. Accumulated through
-    /// ``inset(by:)`` rather than set directly.
+    /// Accumulated through ``inset(by:)``.
     var insetAmount: CGFloat = 0
 
     /// The Thaw Bar's clip for a given content height: fully rounded ends get
@@ -43,9 +37,7 @@ nonisolated struct ThawBarBorderShape: InsettableShape {
 
     /// The border that traces ``thawBarClip(height:hasRoundedShape:)``.
     ///
-    /// Derived from the clip so the two cannot drift apart, inset by half the
-    /// stroke width so the stroke sits centred on the clip edge, and opened at
-    /// the top on square corners (#325).
+    /// Inset by half the stroke width so it sits centred on the clip edge.
     static func thawBarBorder(
         height: CGFloat,
         hasRoundedShape: Bool,
@@ -80,9 +72,7 @@ nonisolated struct ThawBarBorderShape: InsettableShape {
             return path
         }
 
-        // Top corners stay square (open edge); bottom corners follow
-        // `cornerStyle` so the stroke matches the clip path for both
-        // `.circular` and `.continuous`.
+        // Bottom corners follow `cornerStyle` to match the clip.
         let closed = UnevenRoundedRectangle(
             cornerRadii: RectangleCornerRadii(
                 topLeading: 0,
@@ -96,22 +86,15 @@ nonisolated struct ThawBarBorderShape: InsettableShape {
         return Self.openPathOmittingTopEdge(closed, in: drawRect)
     }
 
-    /// Drops the top edge of a closed rounded-rect path and reopens the
-    /// remaining outline so the stroke runs top-leading → bottom → top-trailing.
+    /// Drops the top edge of a closed rounded-rect path.
     ///
-    /// The source is a closed loop, but SwiftUI is free to begin that loop
-    /// anywhere on it — `UnevenRoundedRectangle` in fact begins partway down
-    /// the trailing edge — so the removed edge usually sits in the *middle* of
-    /// the emitted order. Walking that order directly would join the two loose
-    /// ends and draw the top edge straight back in, while losing the stretch of
-    /// trailing edge above the start point. The outline is therefore rebuilt as
-    /// a full loop, including the segment `closeSubpath` implies, and rotated
-    /// to begin just after the top edge before being reversed.
+    /// `UnevenRoundedRectangle` begins partway down the trailing edge, so the
+    /// top edge sits mid-sequence. The loop is rebuilt in full and rotated to
+    /// start just after the top edge, or the loose ends rejoin.
     private static func openPathOmittingTopEdge(_ closed: Path, in rect: CGRect) -> Path {
         let loop = segments(of: closed)
         guard let topEdge = loop.firstIndex(where: { isTopEdge($0, in: rect) }) else {
-            // Nothing recognizable to remove; a closed outline beats a mangled
-            // one, so draw the shape as it came.
+            // A closed outline beats a mangled one.
             return closed
         }
 
@@ -169,11 +152,8 @@ nonisolated struct ThawBarBorderShape: InsettableShape {
         return segments
     }
 
-    /// Whether a segment is the run along the top of `rect`.
-    ///
-    /// The width test matters: a zero-radius corner still emits curve elements,
-    /// they are just zero-length, and both of the top ones sit exactly on
-    /// `minY`. Without it the first of those would be mistaken for the edge.
+    /// A zero-radius corner still emits zero-length curves on `minY`, so the
+    /// width test is required.
     private static func isTopEdge(_ segment: Segment, in rect: CGRect) -> Bool {
         abs(segment.from.y - rect.minY) < 0.5
             && abs(segment.to.y - rect.minY) < 0.5

@@ -13,27 +13,16 @@ import Testing
 /// Coverage sweep, part 2: the small presentation-facing value types whose
 /// existing suites stopped at raw values and `Codable`.
 ///
-/// Covers:
-///
-/// - `IceBarLayout` — `id`, `localized`, and the string parser's rejection
-///   path. The parser accepts both case names and stringified raw values
-///   because it backs the `thaw://` settings URI, so an accepted alias set
-///   is part of that public surface.
-/// - `IceBarLocation.localized` (`IceBarLocationTests` covers everything
-///   else about the type).
-/// - `SectionDividerStyle.localized`.
-/// - `ControlItemImageSet.id`, which is `hashValue` rather than the name —
-///   worth pinning because a `List` selection keyed on it must survive two
-///   equal sets colliding.
-/// - `NavigationIdentifier`'s *default* `localized`, which no shipping
-///   conformer uses: `SettingsNavigationIdentifier` overrides it. The
-///   default is exercised through a test-local conformer.
+/// - `IceBarLayout`: `id`, `localized`, and the string parser's rejection path.
+///   The parser backs the `thaw://` URI, so its accepted aliases are public.
+/// - `IceBarLocation.localized` and `SectionDividerStyle.localized`.
+/// - `ControlItemImageSet.id`, which is `hashValue`, so a `List` selection keyed
+///   on it survives two equal sets colliding.
+/// - `NavigationIdentifier`'s default `localized`, via a test-local conformer.
 /// - `SecondsLabel` and `GlassIconBubble`'s defaulted members.
 ///
-/// Deliberate gaps: `IceBarLocation.iceIcon`'s label interpolates
-/// `Constants.displayName`, so it is asserted to be distinct from its
-/// siblings rather than compared against a rebuilt literal — reconstructing
-/// the interpolation in the test would only restate the implementation.
+/// Gap: `IceBarLocation.iceIcon` interpolates `Constants.displayName`, so it's
+/// only asserted distinct from its siblings.
 @MainActor
 @Suite("Coverage sweep 2: bar, divider and navigation display values")
 struct CoverageSweep2Tests {
@@ -157,10 +146,8 @@ struct CoverageSweep2Tests {
     @MainActor
     @Suite("NavigationIdentifier default label")
     struct NavigationIdentifierTests {
-        /// `SettingsNavigationIdentifier` supplies its own `localized`, so
-        /// the protocol's `RawValue == String` default is only reachable
-        /// through a conformer that does not. This exists to prove the
-        /// default keeps working for the next such conformer.
+        /// `SettingsNavigationIdentifier` overrides `localized`, so the protocol default
+        /// is only reachable through a conformer that doesn't. This keeps it working.
         @Test("A String-raw conformer labels itself with its raw value")
         func defaultLocalizedUsesTheRawValue() {
             #expect(SweepNavigationIdentifier.first.localized == LocalizedStringKey("First Destination"))

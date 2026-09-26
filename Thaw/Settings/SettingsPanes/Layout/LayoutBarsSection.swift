@@ -10,9 +10,6 @@ import SwiftUI
 
 /// The drag-to-arrange layout bars, shared by ``MenuBarLayoutSettingsPane``
 /// and ``SimpleModeSettingsPane``.
-///
-/// Extracted from the layout pane so both the full editor and Simple Mode
-/// render the exact same arranging surface (structure mirrors thaw-next).
 struct LayoutBarsSection: View {
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @Environment(AppState.self) private var appState: AppState
@@ -37,19 +34,15 @@ struct LayoutBarsSection: View {
         IceSection {
             if let editingDisplayName {
                 Text("Active display: \(editingDisplayName)")
-                    // Redrawn on the same signals LayoutBarPaddingView uses to
-                    // re-evaluate the notch indicator, so the title and the
-                    // bars below it can never disagree about which screen
-                    // they are describing.
+                    // Redrawn on the same signals as LayoutBarPaddingView's
+                    // notch indicator, so title and bars agree on the screen.
                     .id(displayTitleRefreshToken)
             }
         } content: {
             layoutBars
         } footer: {
-            // Native grouped Section footer beneath the bars. Interpolated so
-            // the four localized strings flow as one wrapping paragraph
-            // instead of four fixed lines (Text + is deprecated on macOS 26;
-            // each inner Text keeps its own localization key).
+            // Interpolated so the four localized strings wrap as one
+            // paragraph (Text + is deprecated on macOS 26).
             Text("\(Text("Drag to arrange your menu bar items into different sections.")) \(Text("Move the New Items badge to choose where newly detected items will appear.")) \(Text("Items can also be arranged by ⌘ Command + dragging them in the menu bar.")) \(Text("Click an item to open it. Hidden items are temporarily revealed."))")
                 .frame(maxWidth: .infinity, alignment: .leading)
         }
@@ -69,14 +62,9 @@ struct LayoutBarsSection: View {
 
     /// The name of the display whose layout the bars below are showing.
     ///
-    /// The editor has no display picker: it always reflects the screen that
-    /// currently owns the menu bar, which is what `LayoutBarContainer` and
-    /// `LayoutBarPaddingView` both read. On a single Mac that is invisible,
-    /// but with an external display as the primary the editor silently
-    /// describes a different screen than the user is picturing — and the
-    /// notch placeholder correctly disappearing is the symptom people
-    /// actually notice (#886). Naming the display makes the existing
-    /// behaviour legible instead of changing it.
+    /// The editor always reflects the screen that owns the menu bar. With an
+    /// external primary display that isn't the screen users expect (the notch
+    /// placeholder vanishes), so the title names it.
     private var editingDisplayName: String? {
         guard NSScreen.screens.count > 1 else {
             return nil

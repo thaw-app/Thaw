@@ -44,16 +44,12 @@ private var hasWindowServerSession: Bool {
 ///
 /// Every one of these extensions is declared without `nonisolated` in a module
 /// built with `SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor`, so the suites that
-/// touch them are pinned to the main actor. `CGImage` is the exception — that
+/// touch them are pinned to the main actor. `CGImage` is the exception: that
 /// extension is explicitly `nonisolated`.
 ///
-/// Deliberately out of reach here:
-///
-/// - `CGImage.averageColor`, `CGImage.isTransparent`, and
-///   `CGImage.detachedCopy` are covered by `CGImageAnalysisTests` and
-///   `CGImageDetachedCopyTests`.
-/// - `CGColor.brightness` cannot be driven down its `nil` branch: every color
-///   space that can be constructed from a unit test converts to RGB.
+/// `CGImage.averageColor`, `CGImage.isTransparent`, and
+/// `CGImage.detachedCopy` are covered by `CGImageAnalysisTests` and
+/// `CGImageDetachedCopyTests`.
 @Suite("Graphics extensions")
 struct ExtensionsGraphicsTests {
     // MARK: - CGColor
@@ -118,13 +114,9 @@ struct ExtensionsGraphicsTests {
     // MARK: - CGImage transparency trimming
 
     /// `trimmingTransparency(around:alphaThreshold:)` and its private
-    /// `TransparencyContext` are what turn a captured menu bar item into a
-    /// tightly cropped icon, so an off-by-one inset or a mishandled empty image
-    /// shows up as a visibly misaligned or missing item.
-    ///
-    /// The cases below assert on the trimmed *dimensions* rather than the
-    /// origin, which keeps them independent of the row order of the underlying
-    /// bitmap.
+    /// `TransparencyContext` turn a captured menu bar item into a tightly
+    /// cropped icon. The cases assert on the trimmed dimensions, not the
+    /// origin, so they do not depend on the bitmap's row order.
     @Suite("CGImage transparency trimming")
     struct TransparencyTrimmingTests {
         @Test("Clear margins are trimmed away from all four edges")

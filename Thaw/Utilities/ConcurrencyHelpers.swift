@@ -12,16 +12,12 @@ import os.lock
 
 // MARK: - Debounced Notification Task
 
-/// Starts a `MainActor` task that owns a notification observer feeding a
-/// debounced `AsyncChannel`: bursts of notifications posted to `center`
-/// coalesce over `interval`, then `action` runs once per burst.
+/// Starts a `MainActor` task that feeds `center` notifications into a debounced
+/// `AsyncChannel` and runs `action` once per burst coalesced over `interval`.
 ///
-/// The observer is registered before this returns — no notification can
-/// slip past during task startup — and is removed by the task's defer
-/// when it ends, so the non-Sendable observer token stays confined to
-/// this MainActor context. Cancel the returned task to stop observing;
-/// a repeated setup must cancel the previous task before starting a new
-/// one, or the old observer keeps yielding into its own stream.
+/// The observer is registered before this returns and removed when the task
+/// ends. Cancel the previous task before a repeated setup, or the old observer
+/// keeps yielding into its own stream.
 @MainActor
 func debouncedNotificationTask(
     center: NotificationCenter,

@@ -9,12 +9,9 @@ import CoreGraphics
 
 /// Perceptual image hashing for the image-comparison trigger condition.
 ///
-/// Uses a simple average hash (aHash): the image is downscaled to 8×8
-/// grayscale and each pixel becomes one bit of a 64-bit fingerprint based on
-/// whether it is brighter than the image average. Small rendering
-/// differences leave the hash mostly unchanged, while a meaningful change
-/// (e.g. a notification badge appearing) flips many bits — so comparison via
-/// Hamming distance is robust against noise.
+/// Average hash (aHash): downscale to 8×8 grayscale, one bit per pixel for
+/// brighter-than-average. Rendering noise flips few bits and a real change (a
+/// badge appearing) flips many, so compare by Hamming distance.
 enum ImageHashing {
     /// The side length of the downscaled hash grid.
     private static let side = 8
@@ -26,10 +23,8 @@ enum ImageHashing {
         var pixels = [UInt8](repeating: 0, count: count)
 
         let colorSpace = CGColorSpaceCreateDeviceGray()
-        // The buffer is bound for the whole lifetime of the context, not just
-        // for the initializer call: `draw` writes through it afterwards. An
-        // inout-to-pointer conversion is only valid for the duration of the
-        // call it is passed to, so the pointer has to stay in scope instead.
+        // `draw` writes through the buffer after init, and an inout-to-pointer
+        // conversion only lives for one call, so keep the pointer in scope.
         let rendered = pixels.withUnsafeMutableBytes { buffer -> Bool in
             guard let context = CGContext(
                 data: buffer.baseAddress,
@@ -81,10 +76,8 @@ enum ImageHashing {
         var pixels = [UInt8](repeating: 0, count: bytesPerRow * height)
         let bitmapInfo = CGBitmapInfo.byteOrder32Big.rawValue
             | CGImageAlphaInfo.premultipliedLast.rawValue
-        // The buffer is bound for the whole lifetime of the context, not just
-        // for the initializer call: `draw` writes through it afterwards. An
-        // inout-to-pointer conversion is only valid for the duration of the
-        // call it is passed to, so the pointer has to stay in scope instead.
+        // `draw` writes through the buffer after init, and an inout-to-pointer
+        // conversion only lives for one call, so keep the pointer in scope.
         let rendered = pixels.withUnsafeMutableBytes { buffer -> Bool in
             guard let context = CGContext(
                 data: buffer.baseAddress,

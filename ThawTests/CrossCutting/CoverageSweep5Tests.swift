@@ -17,24 +17,17 @@ import Testing
 ///
 /// Covers:
 ///
-/// - `PendingLedger.planPendingMove`'s three unreached destination arms —
-///   the fallback-neighbour resolution, the always-hidden section boundary
-///   with and without an always-hidden divider, and a `waitForRelaunch`
-///   sentinel whose item has not come back yet. `PlanPendingMoveTests`
-///   covers the stored-neighbour and hidden-boundary paths.
-/// - `MenuBarItemTag(persistenceKey:)` refusing an unknown namespace kind.
-///   The persistence key is the on-disk identity of a menu bar item in
-///   profiles and in the custom-name store, so its parser has to reject
-///   what it does not understand rather than guess a namespace.
+/// - `PendingLedger.planPendingMove`'s unreached arms: fallback-neighbour
+///   resolution, the always-hidden boundary with and without its divider, and a
+///   `waitForRelaunch` sentinel whose item hasn't returned.
+/// - `MenuBarItemTag(persistenceKey:)` refusing an unknown namespace kind; the key
+///   is an item's on-disk identity, so it must not guess.
 /// - `SearchEntry.localizedSection(bundle:)`.
 /// - `DispatchQueue.targetingGlobal(label:qos:attributes:)`.
 /// - `Permission`'s defaulted `openSettings` parameter.
 ///
-/// Deliberate gaps in the same files: `planPendingMove`'s
-/// `guard case let .section` fallthrough and its trailing `.visible` arm are
-/// both unreachable — `PendingEntry.Kind` has exactly two cases and the
-/// earlier `guard targetSection != .visible` already returned. They are
-/// defensive, not dead-by-mistake, so nothing here tries to reach them.
+/// Gap: `planPendingMove`'s `guard case let .section` fallthrough and trailing
+/// `.visible` arm are defensive and unreachable, so they aren't exercised.
 @MainActor
 @Suite("Coverage sweep 5: planner, tag and utility residue")
 struct CoverageSweep5Tests {
@@ -76,9 +69,8 @@ struct CoverageSweep5Tests {
             )
         }
 
-        /// The sentinel exists precisely because the owning app quit. Until
-        /// it relaunches there is no item to compare window IDs against, and
-        /// the entry has to survive to the next pass rather than be cleared.
+        /// The owning app quit, so there's no item to compare yet; the entry must
+        /// survive to the next pass.
         @Test("A waitForRelaunch sentinel whose item is still gone skips")
         func waitForRelaunchWithAbsentItemSkips() {
             let entry = PendingLedger.PendingEntry(
@@ -218,10 +210,8 @@ struct CoverageSweep5Tests {
     @MainActor
     @Suite("MenuBarItemTag persistence key parsing")
     struct TagParsingTests {
-        /// The three kinds are the stored format. Anything else is either a
-        /// key written by a newer build or a corrupted one, and either way
-        /// guessing a namespace would file the item under an identity that
-        /// is not its own.
+        /// The three kinds are the stored format. Anything else is from a newer build or
+        /// corrupt, and guessing would file the item under the wrong identity.
         @Test(
             "An unknown namespace kind is rejected",
             arguments: ["z:com.example.app:0:Status", "N:com.example.app:0:Status", ":com.example.app:0:Status"]
@@ -332,10 +322,8 @@ struct CoverageSweep5Tests {
     @MainActor
     @Suite("Permission defaults")
     struct PermissionDefaultsTests {
-        /// Constructed without `openSettings`, so the default closure — the
-        /// one that hands the URL to `NSWorkspace` — is what gets stored.
-        /// `settingsURL` is `nil` so `performRequest` exercises the
-        /// no-URL arm and nothing is ever actually opened.
+        /// Built without `openSettings`, so the default `NSWorkspace` closure is stored.
+        /// `settingsURL` is `nil`, so nothing is ever opened.
         @Test("A permission built without an opener still requests and polls")
         func defaultOpenSettingsIsInstalled() {
             var isGranted = false

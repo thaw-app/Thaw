@@ -10,15 +10,9 @@ import Foundation
 import Testing
 @testable import Thaw
 
-/// Characterization tests for PendingLedger.planPendingMove.
+/// PendingLedger.planPendingMove, the per-entry decision behind relocatePendingItems.
 ///
-/// Pins down the per-entry decision logic used by relocatePendingItems:
-/// actively-shown short-circuit, waitForRelaunch sentinel handling,
-/// item-already-hidden cleanup, destination resolution (stored neighbor →
-/// fallback neighbor → section boundary), and itemNotPresent skipping.
-///
-/// Coordinate convention: hidden divider at x=400, width=10. Items in
-/// "visible" sit at x >= 410. Items in "hidden" sit at x < 400.
+/// Hidden divider at x=400, width 10: visible items at x >= 410, hidden at x < 400.
 @Suite("Plan pending move")
 struct PlanPendingMoveTests {
     // MARK: - Helpers
@@ -64,8 +58,6 @@ struct PlanPendingMoveTests {
 
     // MARK: - Scenarios
 
-    /// A standard pending entry for a visible item produces a move to the
-    /// section boundary (no stored neighbor, no fallback).
     @Test("A standard entry for a visible item falls back to the section boundary")
     func standardEntryVisibleItemFallsBackToSectionBoundary() {
         let item = visibleItem(bundleID: "com.example.app", title: "Status", windowID: 800)
@@ -100,8 +92,6 @@ struct PlanPendingMoveTests {
         }
     }
 
-    /// A pending entry whose item is already in the hidden section
-    /// produces .clearEntry — no move needed.
     @Test("A standard entry whose item is already hidden clears the entry")
     func standardEntryAlreadyHiddenClearsEntry() {
         let item = hiddenItem(bundleID: "com.example.app", title: "Status", windowID: 801)
@@ -130,9 +120,7 @@ struct PlanPendingMoveTests {
         }
     }
 
-    /// When the item referenced by the pending entry is not in the current
-    /// items list, the planner emits .skip(.itemNotPresent) — the entry
-    /// stays in the dict for the next launch.
+    /// The entry stays for the next launch.
     @Test("An entry whose item is not present skips")
     func itemNotPresentSkips() {
         let entry = PendingLedger.PendingEntry(
@@ -156,8 +144,6 @@ struct PlanPendingMoveTests {
         #expect(decision == .skip(reason: .itemNotPresent))
     }
 
-    /// waitForRelaunch sentinel with the same windowID skips with
-    /// .waitForRelaunchActive.
     @Test("A waitForRelaunch sentinel with the same windowID skips")
     func waitForRelaunchSameWindowIDSkips() {
         let item = visibleItem(bundleID: "com.example.app", title: "Status", windowID: 802)
@@ -182,9 +168,7 @@ struct PlanPendingMoveTests {
         #expect(decision == .skip(reason: .waitForRelaunchActive))
     }
 
-    /// waitForRelaunch sentinel with a new windowID (app relaunched)
-    /// promotes the entry. The orchestrator persists the change and
-    /// re-runs the planner.
+    /// The app relaunched; the orchestrator persists the change and re-runs the planner.
     @Test("A waitForRelaunch sentinel with a new windowID promotes the entry")
     func waitForRelaunchNewWindowIDPromotes() {
         let item = visibleItem(bundleID: "com.example.app", title: "Status", windowID: 803)
@@ -213,13 +197,8 @@ struct PlanPendingMoveTests {
         }
     }
 
-    /// A waitForRelaunch sentinel whose windowID is unchanged but whose
-    /// setAt timestamp is older than the age cap promotes instead of
-    /// skipping. The source app never relaunched (same PID, same windowID
-    /// since boot), so the windowID-change exit can never fire; without the
-    /// age cap the item would be stuck off savedSectionOrder forever. The
-    /// cap lets the orchestrator promote it to a regular section entry so
-    /// the item can be moved and persisted. (#1079)
+    /// The app never relaunched, so the windowID never changes; without the age
+    /// cap the item would stay off savedSectionOrder forever (#1079).
     @Test("A stale waitForRelaunch sentinel promotes past the age cap")
     func waitForRelaunchStaleSentinelPromotes() {
         let item = visibleItem(bundleID: "com.example.app", title: "Status", windowID: 805)
@@ -252,11 +231,8 @@ struct PlanPendingMoveTests {
         }
     }
 
-    /// A sentinel with no setAt (old persisted format, pre-#1079) is treated
-    /// as stale on the next encounter and promoted, so a stuck sentinel
-    /// persisted before the timestamp shipped clears itself on the first
-    /// pass after upgrade instead of waiting for an app relaunch that never
-    /// comes. (#1079)
+    /// Pre-timestamp sentinels are stale on first encounter, so they clear after
+    /// upgrade instead of waiting for a relaunch that never comes (#1079).
     @Test("A waitForRelaunch sentinel with no timestamp promotes as stale")
     func waitForRelaunchNoTimestampPromotesAsStale() {
         let item = visibleItem(bundleID: "com.example.app", title: "Status", windowID: 806)
@@ -287,8 +263,7 @@ struct PlanPendingMoveTests {
         }
     }
 
-    /// An entry whose tag is currently in activelyShownTags skips with
-    /// .activelyShown — the rehide flow owns this item.
+    /// The rehide flow owns actively shown items.
     @Test("An actively shown entry is excluded")
     func activelyShownExclusion() {
         let item = visibleItem(bundleID: "com.example.app", title: "Status", windowID: 804)
@@ -313,8 +288,7 @@ struct PlanPendingMoveTests {
         #expect(decision == .skip(reason: .activelyShown))
     }
 
-    /// An entry whose recorded section is .visible produces .clearEntry —
-    /// there's no hidden destination to restore to.
+    /// There's no hidden destination to restore to.
     @Test("An entry recorded for the visible section short-circuits to clear")
     func visibleSectionShortCircuitsToClear() {
         let item = visibleItem(bundleID: "com.example.app", title: "Status", windowID: 805)
@@ -343,8 +317,6 @@ struct PlanPendingMoveTests {
         }
     }
 
-    /// A stored neighbor destination takes precedence over the fallback
-    /// neighbor and the section boundary.
     @Test("A stored neighbor takes precedence over the fallbacks")
     func storedNeighborTakesPrecedence() {
         let item = visibleItem(bundleID: "com.example.app", title: "Status", windowID: 806, x: 500)

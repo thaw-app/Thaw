@@ -56,10 +56,8 @@ final class ObjectStorage<Value> {
 
 /// An object containing a weak reference to another object.
 private final class WeakReference {
-    /// A weak reference to an object.
     private(set) weak var object: AnyObject?
 
-    /// Creates a weak reference to an object.
     init(_ object: AnyObject) {
         self.object = object
     }

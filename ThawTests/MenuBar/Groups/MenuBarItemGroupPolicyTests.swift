@@ -32,8 +32,8 @@ struct MenuBarItemGroupPolicyTests {
 
     // MARK: gather — the two safety properties
 
-    /// The structural guarantee that canonicalization can never silently lose
-    /// an item, swept across every drop position and group shape below.
+    /// Canonicalization must never lose an item, across every drop position
+    /// and group shape.
     @Test("gather is always a permutation of its input")
     func gatherIsAPermutation() {
         let order = ["a1", "x", "a2", "y", "a3", "z", "b1", "b2"]
@@ -51,8 +51,8 @@ struct MenuBarItemGroupPolicyTests {
         }
     }
 
-    /// If this failed, running canonicalization every cycle would rewrite state
-    /// forever — the `2e38d6c6` reorder-storm failure mode.
+    /// Otherwise canonicalization every cycle would rewrite state forever (a
+    /// reorder storm).
     @Test("gather is idempotent")
     func gatherIsIdempotent() {
         let groups = Policy.GroupSet(groups: [["a1", "a2", "a3"], ["b1", "b2"]])
@@ -267,8 +267,7 @@ struct MenuBarItemGroupPolicyTests {
         #expect(excluded.sections[.visible] == ["a1", "x", "a2"])
         #expect(!excluded.report.didChange)
 
-        // The default gathers every section, so this is the contrast that shows
-        // the parameter is doing the work.
+        // The default gathers every section, for contrast.
         let included = Policy.gather(groups: groups, inSections: sections)
         #expect(included.sections[.visible] == ["a1", "a2", "x"])
     }

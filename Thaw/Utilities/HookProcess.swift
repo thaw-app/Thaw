@@ -9,10 +9,6 @@ import Darwin
 import Foundation
 
 /// Process-group launcher shared by profile hooks and script-result triggers.
-///
-/// Extracted from the trigger branch's `HookRunner` rewrite so the trigger
-/// feature can reuse the process-group semantics without re-landing that
-/// file's unrelated refactor on top of the current `HookRunner`.
 extension HookRunner {
     /// Process wrapper that launches every hook in its own process group. A
     /// timeout can therefore terminate descendants a shell hook leaves in the
@@ -45,18 +41,14 @@ extension HookRunner {
             let stdoutWriteFD = standardOutput.fileHandleForWriting.fileDescriptor
             let stderrReadFD = standardError.fileHandleForReading.fileDescriptor
             let stderrWriteFD = standardError.fileHandleForWriting.fileDescriptor
-            // Close pipe readers before assigning either standard descriptor.
-            // A GUI-launched process can inherit stdout or stderr closed, in
-            // which case Pipe() may reuse fd 1 or 2 for one of those readers.
-            // Closing it after dup2 would otherwise close the child's newly
-            // connected stdout/stderr instead.
+            // Close pipe readers before any dup2. A GUI-launched process can inherit
+            // stdout/stderr closed, so Pipe() may reuse fd 1 or 2, and closing it after
+            // dup2 would close the child's new stdout/stderr.
             try check(posix_spawn_file_actions_addclose(&fileActions, stdoutReadFD))
             try check(posix_spawn_file_actions_addclose(&fileActions, stderrReadFD))
 
-            // Close each original writer immediately after its dup2. This
-            // avoids accidentally closing a standard descriptor that the
-            // next dup2 has just populated when a pipe writer itself reused
-            // fd 1 or 2.
+            // Close each writer right after its dup2, so a writer that reused fd 1 or 2
+            // can't close a descriptor the next dup2 just filled.
             try check(posix_spawn_file_actions_adddup2(&fileActions, stdoutWriteFD, STDOUT_FILENO))
             if stdoutWriteFD != STDOUT_FILENO {
                 try check(posix_spawn_file_actions_addclose(&fileActions, stdoutWriteFD))
@@ -75,12 +67,8 @@ extension HookRunner {
             )
         }
 
-        /// Establishes the child's own process group, then spawns it.
-        ///
-        /// Shared by both launchers, which differ only in how they wire the
-        /// standard descriptors: everything from the process group onward is
-        /// identical. A pgroup of zero creates a new group whose ID is the
-        /// spawned child PID, so signalling `-pid` reaps the complete hook
+        /// Puts the child in its own process group, then spawns it. A pgroup of zero
+        /// makes the child PID the group ID, so signalling `-pid` reaps the whole hook
         /// tree on cancellation or timeout.
         private static func spawnInOwnProcessGroup(
             executablePath: String,
@@ -228,11 +216,9 @@ extension HookRunner {
                 completedStatus = status
                 return status
             }
-            // A failure is termination, not "still running". `waitpid` returns
-            // -1 with ECHILD once the child has been reaped -- or when it was
-            // never ours to reap -- and reporting that as still-running leaves
-            // every caller polling `isRunning` in a loop that cannot end. Only
-            // a genuine "no state change yet" (result 0) means still running.
+            // Failure means terminated. `waitpid` returns -1 with ECHILD once reaped (or
+            // if never ours), and treating that as running traps `isRunning` pollers
+            // forever. Only result 0 means still running.
             if result == -1 {
                 completedStatus = -1
                 return -1

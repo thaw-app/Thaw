@@ -73,13 +73,10 @@ extension MenuBarItemManager {
         }
     }
 
-    /// Serializes cache operations to prevent races between concurrent
-    /// `cacheItemsRegardless` calls. When a relocation move is in flight,
-    /// a concurrent call could snapshot item positions before the move
-    /// completes, caching them in the wrong section.
+    /// Serializes `cacheItemsRegardless` so a concurrent call can't snapshot
+    /// positions mid-move and cache items in the wrong section.
     ///
-    /// Concurrent calls are dropped; the next trigger (space change,
-    /// periodic refresh, app launch notification) will pick up changes.
+    /// Concurrent calls are dropped; the next trigger picks up changes.
     actor CacheGate {
         private var isInProgress = false
 

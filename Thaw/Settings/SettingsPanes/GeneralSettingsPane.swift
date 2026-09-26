@@ -186,7 +186,7 @@ struct GeneralSettingsPane: View {
             }
 
             // Smart falls back to the same interval Timed uses; Focus rehides
-            // on activation and ignores it. (#1049)
+            // on activation and ignores it.
             if settings.rehideStrategy != .focusedApp {
                 IceSlider(
                     rehideIntervalKey,

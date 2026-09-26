@@ -110,10 +110,8 @@ final class AdvancedSettings {
 
     /// The interval between icon image refreshes in panels (Thaw Bar, search, layout).
     ///
-    /// Always held on the discrete grid the "Icon refresh rate" slider can
-    /// express: `0` (Off) or `1/n` for `n` in `1...maxIconRefreshRate`. Writes
-    /// from the slider, URI, profiles, and Defaults load are all snapped here
-    /// so the UI and the live-refresh loop never disagree.
+    /// Every write is snapped to the slider's grid, `0` (Off) or `1/n`, so the
+    /// UI and the live-refresh loop never disagree.
     var iconRefreshInterval = Defaults.DefaultValue.iconRefreshInterval {
         didSet {
             let normalized = Self.normalizedIconRefreshInterval(iconRefreshInterval)
@@ -155,14 +153,12 @@ final class AdvancedSettings {
             guard oldValue != enableDiagnosticLogging else { return }
             Defaults.set(enableDiagnosticLogging, forKey: .enableDiagnosticLogging)
             #if DEBUG
-                // Debug builds keep logging on regardless of profile swaps
-                // or user toggles so we never miss capture during dev.
+                // Debug builds always log.
                 DiagnosticLogger.shared.isEnabled = true
             #else
                 DiagnosticLogger.shared.isEnabled = enableDiagnosticLogging
             #endif
-            // The XPC service holds its own handle on the shared file, so a
-            // toggle has to reach it too: a file to follow, or nothing to stop.
+            // The XPC service holds its own handle on the log file.
             Task { await MenuBarItemService.Connection.shared.syncLogging() }
         }
     }
@@ -198,25 +194,18 @@ final class AdvancedSettings {
 
     /// True while ``loadInitialState()`` runs.
     ///
-    /// Assigning a loaded value trips that property's `didSet`, so without this
-    /// the service would be sent a policy once per setting, each one built from
-    /// a half-loaded model, before the connection has even started.
+    /// Stops each `didSet` from sending the service a half-loaded policy.
     @ObservationIgnored
     private var isLoadingInitialState = false
 
-    /// The largest log size the app will ask the logger for.
-    ///
-    /// Far above anything the settings stepper offers; it exists only so a
-    /// value read back from a profile or from UserDefaults cannot overflow the
-    /// conversion to bytes.
+    /// Only guards the conversion to bytes against overflow from stored values.
     private static let maxDiagnosticLogSizeMB = 1_000_000
 
-    /// Hands the current rotation settings to the diagnostic logger, and — once
-    /// the app is running — to the XPC service that shares the log directory.
+    /// Hands the current rotation settings to the diagnostic logger, and
+    /// optionally to the XPC service that shares the log directory.
     ///
     /// - Parameter pushingToService: Whether to forward the policy over XPC.
-    ///   Left off during initialization, when the connection has not started
-    ///   yet and `Connection.start()` sends the initial configuration anyway.
+    ///   Off during initialization; `Connection.start()` sends it anyway.
     func applyLogRotationPolicy(pushingToService: Bool = false) {
         DiagnosticLogger.shared.setRotationPolicy(
             Self.rotationPolicy(
@@ -237,9 +226,7 @@ final class AdvancedSettings {
         interval: LogRotationInterval
     ) -> DiagnosticLogger.RotationPolicy {
         var policy = DiagnosticLogger.RotationPolicy()
-        // Clamped before the multiplication: UserDefaults can hold values the
-        // stepper would never produce, and `UInt64(huge) * 1024 * 1024` traps
-        // on overflow.
+        // Clamp first: `UInt64(huge) * 1024 * 1024` traps on overflow.
         let megabytes = min(max(0, maxSizeMB), maxDiagnosticLogSizeMB)
         policy.maxFileSizeBytes = UInt64(megabytes) * 1024 * 1024
         policy.retentionDays = max(1, retentionDays)
@@ -249,10 +236,8 @@ final class AdvancedSettings {
 
     /// Reads a rotation policy straight out of the stored settings.
     ///
-    /// Diagnostic logging starts before this model is built, and opening a log
-    /// file prunes the directory. Without this the first prune of every launch
-    /// would run against the default retention and delete files that a longer
-    /// setting was meant to keep.
+    /// Logging starts before this model exists, and opening a log prunes the
+    /// directory; the default retention would delete files meant to be kept.
     static func persistedRotationPolicy() -> DiagnosticLogger.RotationPolicy {
         var maxSizeMB = Defaults.DefaultValue.diagnosticLogMaxSizeMB
         var retentionDays = Defaults.DefaultValue.diagnosticLogRetentionDays
@@ -282,13 +267,9 @@ final class AdvancedSettings {
     /// A Boolean value that controls whether Thaw rearranges the menu bar on
     /// its own initiative.
     ///
-    /// The escape hatch for bars where the automatic paths misbehave. When
-    /// off, the late-arrival re-sort and the saved-layout restore both stand
-    /// down; applying a profile still works, and items can still be arranged
-    /// by ⌘ Command + dragging them in the menu bar. Read at the single
-    /// choke point in `MenuBarItemManager.applyProfileLayout`, which is also
-    /// where the graduated responses (the idle gate, concealed-order
-    /// relaxation, unfinished-batch rationing) live.
+    /// When off, the late-arrival re-sort and saved-layout restore stand down;
+    /// profile applies still work. Read in
+    /// `MenuBarItemManager.applyProfileLayout`.
     var automaticArrangementEnabled = Defaults.DefaultValue.automaticArrangementEnabled {
         didSet {
             guard oldValue != automaticArrangementEnabled else { return }
@@ -299,11 +280,8 @@ final class AdvancedSettings {
     /// A Boolean value that controls whether the Thaw Bar is used to reveal
     /// hidden items while notch overflow has items ejected.
     ///
-    /// Expanding the hidden section inline cannot show items that overflow
-    /// ejected: they were ejected precisely because the visible row had no room
-    /// left beside the notch. When this is on, a display with ejected items
-    /// reveals through the Thaw Bar regardless of its per-display Thaw Bar
-    /// setting. Only affects displays that currently have ejected items.
+    /// Inline expansion can't show ejected items, since the row had no room.
+    /// Overrides the per-display Thaw Bar setting while items are ejected.
     var useThawBarOnNotchOverflow = Defaults.DefaultValue.useThawBarOnNotchOverflow {
         didSet {
             guard oldValue != useThawBarOnNotchOverflow else { return }
@@ -314,9 +292,7 @@ final class AdvancedSettings {
     /// A Boolean value that controls whether left-clicks on menu bar items
     /// from the IceBar are delivered via an accessibility action (AXShowMenu,
     /// falling back to AXPress) instead of a synthetic mouse click.
-    /// Default on and no longer surfaced in Settings; automatically falls
-    /// back to the synthetic click on any failure. Moves and right-clicks
-    /// are unaffected.
+    /// Not shown in Settings. Falls back to the synthetic click on failure.
     var useAXClickDelivery = Defaults.DefaultValue.useAXClickDelivery {
         didSet {
             guard oldValue != useAXClickDelivery else { return }
@@ -364,9 +340,8 @@ final class AdvancedSettings {
     /// A Boolean value that indicates whether the mouse pointer is moved to a
     /// menu bar item that was opened from the search panel.
     ///
-    /// Only the search panel warps the pointer. Opening an item from the Thaw
-    /// Bar means the pointer is already there, so moving it would only take it
-    /// somewhere the user did not put it.
+    /// Only the search panel warps; from the Thaw Bar the pointer is already
+    /// there.
     var moveCursorToRevealedItem = Defaults.DefaultValue.moveCursorToRevealedItem {
         didSet {
             guard oldValue != moveCursorToRevealedItem else { return }
@@ -377,11 +352,7 @@ final class AdvancedSettings {
     /// Whether menu bar items are drawn as their owning application's icon
     /// instead of a live capture.
     ///
-    /// Applies everywhere Thaw renders an item — the Thaw Bar, the layout
-    /// editor and the search panel. Distinct from the automatic fallback,
-    /// which only substitutes an icon where no capture exists: this asks for
-    /// icons even when a capture is available, for people who find live
-    /// previews noisy or would rather not have their menu bar sampled.
+    /// Unlike the automatic fallback, uses icons even when a capture exists.
     var alwaysUseAppIconForMenuBarItems = Defaults.DefaultValue.alwaysUseAppIconForMenuBarItems {
         didSet {
             guard oldValue != alwaysUseAppIconForMenuBarItems else { return }
@@ -392,8 +363,8 @@ final class AdvancedSettings {
     /// Whether an item that starts blinking while hidden briefly shows its
     /// section, so an alert raised behind the chevron is still seen.
     ///
-    /// Off by default. The verdict is a heuristic read off the item's own
-    /// pixels, and acting on a wrong one moves the bar the user arranged.
+    /// Off by default: the verdict is a pixel heuristic, and a wrong one moves
+    /// the user's bar.
     var surfaceItemsSeekingAttention = Defaults.DefaultValue.surfaceItemsSeekingAttention {
         didSet {
             guard oldValue != surfaceItemsSeekingAttention else { return }
@@ -405,33 +376,22 @@ final class AdvancedSettings {
     @ObservationIgnored
     private var cancellables = Set<AnyCancellable>()
 
-    /// The shared app state.
     @ObservationIgnored
     private(set) weak var appState: AppState?
 
-    /// Performs the initial setup of the model.
-    ///
-    /// The app state is only stored, never read, by this model: the setup it
-    /// performs is reading `Defaults` and subscribing to the Settings-URI
-    /// notification. The parameter is optional so that setup can be driven
-    /// without standing up an ``AppState``; the app always passes one.
+    /// `appState` is only stored, so it's optional for setup without one.
     func performSetup(with appState: AppState? = nil) {
         self.appState = appState
         loadInitialState()
         configureObservers()
     }
 
-    /// Loads the model's initial state.
     private func loadInitialState() {
         isLoadingInitialState = true
         defer { isLoadingInitialState = false }
-        // 1.x click-gesture migration (#1012): option-click and double-click
-        // on the menu bar toggled the always-hidden section unconditionally
-        // in 1.x. 2.0 replaced them with opt-in gates whose keys did not
-        // exist for upgraders, so the gestures silently stopped working —
-        // reported as "2.0 did not honor the settings from 1.2". Seed both
-        // gates on when they have never been explicitly set; an explicit
-        // choice (either value, including off) is never overwritten.
+        // 1.x migration: option-click and double-click always toggled
+        // always-hidden. Seed 2.0's opt-in gates on when never set; an
+        // explicit choice is never overwritten.
         if Defaults.object(forKey: .useOptionClickToShowAlwaysHiddenSection) == nil {
             Defaults.set(true, forKey: .useOptionClickToShowAlwaysHiddenSection)
         }
@@ -480,9 +440,7 @@ final class AdvancedSettings {
             searchSectionOrder = Self.sanitizedSearchSectionOrder(from: rawValues)
         }
 
-        // One authoritative apply once every setting is in place. The `didSet`
-        // observers tripped above each applied a partially loaded policy, and
-        // none of them reached the service.
+        // One apply once every setting is loaded.
         applyLogRotationPolicy()
     }
 
@@ -497,12 +455,7 @@ final class AdvancedSettings {
         return preferred + MenuBarSection.Name.allCases.filter { !preferred.contains($0) }
     }
 
-    /// Configures the internal observers for the model.
-    ///
-    /// Persistence for most properties is now driven by `didSet` on each
-    /// property (see above), replacing the previous `$property.persistToDefaults`
-    /// Combine pipelines. Only the Settings-URI notification subscription
-    /// remains Combine-based here.
+    /// Only the Settings-URI subscription; persistence is in each `didSet`.
     private func configureObservers() {
         cancellables = [
             NotificationCenter.observeSettingsChangesViaURI { [weak self] change in
@@ -513,7 +466,6 @@ final class AdvancedSettings {
 
     /// Handles settings changed externally via Settings URI scheme.
     private func handleExternalSettingsChange(_ change: ExternalSettingsChange) {
-        // Handle boolean values
         if let boolValue = change.boolValue {
             switch change.key {
             case "enableAlwaysHiddenSection":
@@ -560,7 +512,6 @@ final class AdvancedSettings {
             }
         }
 
-        // Handle double values
         if let doubleValue = change.doubleValue {
             switch change.key {
             case "showOnHoverDelay":

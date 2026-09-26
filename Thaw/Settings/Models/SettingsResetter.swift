@@ -23,9 +23,7 @@ extension AppSettings {
 
     /// Resets Appearance settings to their default values.
     func resetAppearance() {
-        // AppSettings doesn't have direct access to appearanceManager,
-        // but it is available on AppState.
-        // If we want to reset it from here, we need to go through appState.
+        // appearanceManager lives on AppState, not AppSettings.
         appState?.appearanceManager.configuration = Defaults.DefaultValue.menuBarAppearanceConfigurationV2
     }
 

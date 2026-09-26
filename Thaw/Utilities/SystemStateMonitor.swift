@@ -23,12 +23,9 @@ import SystemConfiguration
 /// ``SystemState``, starting only the monitors whose feature flag is
 /// enabled so disabled sources cost nothing.
 ///
-/// Event-driven sources (power, frontmost/running app, display, network)
-/// update the state immediately. App-running also gets a lightweight polling
-/// fallback because workspace launch/terminate notifications are not perfectly
-/// reliable. Heavier sources (audio output, Bluetooth, VPN, Wi-Fi SSID, Focus)
-/// are sampled on a single low-frequency poll while their flag is enabled.
-/// Trigger evaluation already debounces, so the poll latency is not user-visible.
+/// Event-driven sources update immediately; app-running also polls because
+/// workspace launch/terminate notifications aren't fully reliable. Heavier sources
+/// share one low-frequency poll; trigger evaluation debounces anyway.
 @MainActor
 final class SystemStateMonitor: ObservableObject {
     @Published private(set) var state = SystemState()
@@ -48,16 +45,14 @@ final class SystemStateMonitor: ObservableObject {
     private var screenObserver: NSObjectProtocol?
     private var systemLoadObservers = [NSObjectProtocol]()
 
-    /// Observes Energy Mode. `NSProcessInfoPowerStateDidChange` covers the
-    /// Low Power half; the High Power half changes silently as far as
-    /// notification centre is concerned, so it needs its own observer.
+    /// `NSProcessInfoPowerStateDidChange` covers Low Power only; High Power changes
+    /// without a notification, so it needs its own observer.
     private let energyModeMonitor = EnergyModeMonitor()
     private var pathMonitor: NWPathMonitor?
 
     /// The in-flight off-main polling round, so a slow sample cannot stack.
     private var polledSampleTask: Task<Void, Never>?
 
-    /// Poll timer for the sampled sources.
     private var pollTimer: Timer?
 
     /// IOBluetooth's paired-device query is blocking and may wait behind a
@@ -373,11 +368,9 @@ final class SystemStateMonitor: ObservableObject {
 
     // MARK: Location (for Wi-Fi SSID)
 
-    /// Requests Location authorization for reading the Wi-Fi SSID, creating
-    /// the authorizer on first use. Without authorization,
-    /// `CWWiFiClient.ssid()` returns `nil` on modern macOS even though the
-    /// call succeeds. The authorizer sets a delegate, which is required for
-    /// the system prompt to actually appear.
+    /// Requests Location authorization, creating the authorizer on first use.
+    /// Without it `CWWiFiClient.ssid()` returns `nil`. The authorizer sets a delegate,
+    /// which the system prompt needs to appear.
     func ensureLocationAuthorization() {
         let provider = locationProvider ?? LocationProvider()
         locationProvider = provider
@@ -400,13 +393,9 @@ final class SystemStateMonitor: ObservableObject {
     /// enabled, so `INFocusStatusCenter` can report the focus status.
     private func ensureFocusAuthorization() {
         if INFocusStatusCenter.default.authorizationStatus == .notDetermined {
-            // The authorization result is delivered through the shared
-            // INFocusStatusCenter.authorizationStatus, which the monitor
-            // already polls, so the completion is deliberately empty.
             INFocusStatusCenter.default.requestAuthorization { _ in
-                // Deliberately empty: the authorization outcome arrives
-                // through INFocusStatusCenter.authorizationStatus, which
-                // the monitor polls, so the completion has nothing to do.
+                // Deliberately empty: the result arrives through
+                // INFocusStatusCenter.authorizationStatus, which the monitor polls.
             }
         }
     }
@@ -500,12 +489,9 @@ final class SystemStateMonitor: ObservableObject {
 
     /// One round of the polled sources, gathered off the main actor.
     ///
-    /// Every field is written back unconditionally. The samplers already
-    /// yield the cleared value when their flag is off, and writing only the
-    /// enabled ones used to leave the last sampled value behind after a
-    /// source was disabled -- a stale SSID or "camera in use" could keep
-    /// satisfying a condition indefinitely. Bluetooth was the only source
-    /// that cleared itself.
+    /// Every field is written back unconditionally. Writing only enabled ones left
+    /// stale values (an SSID, "camera in use") satisfying conditions after a source
+    /// was disabled.
     private struct PolledSample {
         var audioOutputDeviceName: String?
         var isVPNActive = false
@@ -534,13 +520,9 @@ final class SystemStateMonitor: ObservableObject {
             refreshBluetoothState()
         }
 
-        // Off the main actor, for the same reason the Bluetooth enumeration
-        // already is. Every sampler below blocks to some degree: the Focus
-        // fallback reads a JSON file from disk, the recording-device checks
-        // enumerate every CoreMediaIO and CoreAudio device and query each
-        // one's streams, and the audio, VPN and SSID lookups are synchronous
-        // system queries. At a five-second cadence that is a recurring main
-        // -thread stall for the whole app, not just this monitor.
+        // Off the main actor: every sampler blocks (Focus reads a file, recording checks
+        // enumerate every CoreMediaIO/CoreAudio device, the rest are sync system queries),
+        // which at a 5s cadence stalls the whole app.
         polledSampleTask?.cancel()
         polledSampleTask = Task { @MainActor [weak self] in
             let sample = await Task.detached(priority: .utility) {
@@ -605,11 +587,8 @@ final class SystemStateMonitor: ObservableObject {
 
     /// Samples sources directly for the Developer pane's live readout.
     ///
-    /// Non-privacy-sensitive sources are always sampled so the readout shows
-    /// ground truth regardless of flags. Privacy-sensitive sources
-    /// (Bluetooth, Wi-Fi SSID) are only sampled when their flag is enabled,
-    /// so merely opening the Developer pane never triggers a Bluetooth or
-    /// Location permission prompt for a feature the user hasn't opted into.
+    /// Non-sensitive sources are always sampled. Bluetooth and Wi-Fi SSID only when
+    /// their flag is on, so opening the pane never raises a permission prompt.
     @MainActor
     static func fullSnapshot(flags: TriggerFeatureFlagsManager) async -> SystemState {
         let frontmost = NSWorkspace.shared.frontmostApplication?.bundleIdentifier
@@ -716,15 +695,10 @@ final class SystemStateMonitor: ObservableObject {
 
     /// Every paired device name, paired with whether it is connected now.
     ///
-    /// Reads the same source ``connectedBluetoothDeviceNames`` matches
-    /// against, which matters because a device's classic Bluetooth name is
-    /// not always the name System Settings displays — an AirPods set can
-    /// report a generic model name while Settings shows the personalised one.
-    /// The editor offers these strings so a user never has to guess which of
-    /// the two the matcher will see.
-    /// `nonisolated` so the settings editor can run it off the main thread:
-    /// the underlying call blocks, and can raise a TCC prompt. It touches
-    /// only IOBluetooth and locals, so it carries no actor state.
+    /// The same source ``connectedBluetoothDeviceNames`` matches against, since the
+    /// classic Bluetooth name can differ from System Settings (AirPods may report a
+    /// model name). `nonisolated` so it runs off the main thread: it blocks and can
+    /// raise a TCC prompt.
     static nonisolated func pairedBluetoothDeviceNames() -> [(name: String, isConnected: Bool)] {
         guard let devices = IOBluetoothDevice.pairedDevices() as? [IOBluetoothDevice] else {
             return []
@@ -896,11 +870,8 @@ final class SystemStateMonitor: ObservableObject {
 
     /// Detects an active Focus / Do Not Disturb.
     ///
-    /// Prefers the official `INFocusStatusCenter`, which reports whether a
-    /// Focus is currently silencing notifications (requires authorization,
-    /// requested when the Focus feature is enabled). Falls back to reading
-    /// the Do Not Disturb assertions store when the status is unavailable
-    /// (e.g. authorization not yet granted).
+    /// Prefers `INFocusStatusCenter` (needs authorization, requested when the feature
+    /// is enabled), falling back to the Do Not Disturb assertions store.
     static nonisolated func isFocusActive() -> Bool {
         // Only touch focusStatus when authorized: reading protected data
         // without authorization (and without the usage description) risks a
@@ -937,10 +908,8 @@ final class SystemStateMonitor: ObservableObject {
 /// CoreWLAN to read the Wi-Fi SSID) and, when started, the current
 /// coordinate (for the location trigger condition).
 ///
-/// A delegate is set in `init` — this is required for the authorization
-/// prompt to appear reliably. The manager is created on the main thread, so
-/// its delegate callbacks arrive on the main run loop and `currentLocation`
-/// is only ever touched there.
+/// A delegate is set in `init`; the authorization prompt needs it to appear
+/// reliably. Created on the main thread, so callbacks arrive on the main run loop.
 private final class LocationProvider: NSObject, CLLocationManagerDelegate {
     private let manager = CLLocationManager()
     private(set) var currentLocation: CLLocation?
@@ -993,9 +962,8 @@ private final class LocationProvider: NSObject, CLLocationManagerDelegate {
             // updates flow without waiting for the next startUpdating call.
             manager.startUpdatingLocation()
         } else {
-            // Authorization was granted before and has since been revoked.
-            // Without this the manager keeps requesting updates and failing
-            // each one for as long as the feature stays enabled.
+            // Authorization was revoked. Without this the manager keeps failing updates
+            // for as long as the feature stays enabled.
             stopUpdating()
         }
     }

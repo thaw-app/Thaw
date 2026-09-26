@@ -9,10 +9,8 @@ import Cocoa
 
 /// One exact launch of a process.
 ///
-/// A PID alone is not an identity: macOS reuses it after a process exits and
-/// across boots. Pairing it with `NSRunningApplication.launchDate` lets a
-/// persisted menu-bar attribution distinguish the process that originally
-/// owned the item from a later process that received the same numeric PID.
+/// macOS reuses PIDs, so the launch date tells the original owner apart from
+/// a later process with the same PID.
 nonisolated struct ProcessGeneration: Codable, Equatable, Hashable {
     let pid: pid_t
     let launchDate: Date
@@ -28,11 +26,8 @@ nonisolated struct SourceProcessIdentity: Equatable {
 /// Stable-enough evidence that a numeric window ID still describes the same
 /// hosted status-item window.
 ///
-/// Window IDs are recycled. Process generations prevent reuse across a Control
-/// Center restart, while this fingerprint rejects reuse within one host launch.
-/// Horizontal position is deliberately excluded because Thaw moves items and
-/// recreating its dividers can shift the whole bar. The menu-bar lane, size,
-/// title, owner name, and layer are expected to survive a Thaw-only relaunch.
+/// Window IDs are recycled; this rejects reuse within one host launch.
+/// Horizontal position is excluded because Thaw moves items.
 nonisolated struct SourcePIDWindowFingerprint: Codable, Equatable {
     private static let pointsPerUnit: CGFloat = 8
 
@@ -59,12 +54,10 @@ nonisolated struct SourcePIDWindowFingerprint: Codable, Equatable {
 
 /// A source-process attribution remembered for a menu bar window.
 ///
-/// On macOS 26, Control Center owns hosted item windows and Thaw resolves the
-/// process behind each one through Accessibility. An item window can outlive a
-/// Thaw process, so a confirmed attribution can bridge the next launch while
-/// that resolver warms up. A seed is accepted only while the host, window
-/// fingerprint, source process, and bounded observation period still match,
-/// and it never replaces a fresh resolution.
+/// On macOS 26 the Accessibility resolver is slow to warm up, and item
+/// windows outlive Thaw, so a seed bridges the next launch. Accepted only
+/// while host, fingerprint, source process, and age all match; never
+/// replaces a fresh resolution.
 nonisolated struct SourcePIDSeed: Codable, Equatable {
     let windowID: CGWindowID
     let windowOwnerGeneration: ProcessGeneration
@@ -93,19 +86,14 @@ nonisolated struct SourcePIDSeed: Codable, Equatable {
 nonisolated enum SourcePIDSeedStore {
     static let defaultsKey = "MenuBarItemManager.sourcePIDSeeds"
 
-    /// A seed is only a short cold-start bridge. Keeping it bounded prevents a
-    /// long-lived source process and Control Center from making a recycled,
-    /// same-shaped window ID look current indefinitely.
+    /// Bounded so a recycled, same-shaped window ID can't look current forever.
     static let maximumSeedAge: TimeInterval = 5 * 60
 
-    /// Avoid rewriting defaults on every cache pass while still refreshing a
-    /// continuously confirmed incarnation before its cold-start bridge ages
-    /// out. This is intentionally well below ``maximumSeedAge``.
+    /// Avoids rewriting defaults every pass. Well below ``maximumSeedAge``.
     static let seedRefreshInterval: TimeInterval = 60
 
-    /// Selects the exact newest host when launch handoff briefly exposes more
-    /// than one Control Center process. `runningApplications` has no ordering
-    /// contract, so using its first entry can select the process being retired.
+    /// A launch handoff can briefly show two Control Center processes, and
+    /// `runningApplications` has no ordering contract, so pick the newest.
     static func newestGeneration(in generations: [ProcessGeneration]) -> ProcessGeneration? {
         generations.max { lhs, rhs in
             if lhs.launchDate == rhs.launchDate {
@@ -326,10 +314,7 @@ nonisolated enum SourcePIDSeedStore {
     }
 
     /// Reuses a recent capture timestamp for an unchanged incarnation so the
-    /// cache does not write identical seed evidence to defaults every pass.
-    /// The timestamp is refreshed periodically, preserving a bounded but
-    /// continuously renewable bridge while live resolution keeps confirming
-    /// the same item.
+    /// cache doesn't rewrite identical seeds every pass.
     static func coalescingCaptureTimes(
         proposed: [SourcePIDSeed],
         previous: [CGWindowID: SourcePIDSeed],

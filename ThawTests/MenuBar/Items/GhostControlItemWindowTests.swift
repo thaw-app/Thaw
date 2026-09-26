@@ -220,10 +220,8 @@ struct GhostControlItemWindowTests {
         #expect(orphans.isEmpty)
     }
 
-    /// The orphan's title is indistinguishable from one of our control items
-    /// caught in a bar-wide kCGWindowName degradation, which is why
-    /// ownership is decided by window number. A degraded control item of
-    /// ours is kept, so it still reaches the degradation check.
+    /// The orphan's title matches one of our control items during a bar-wide
+    /// kCGWindowName degradation, so ownership is decided by window number.
     @Test("A control item of ours with a degraded title is kept")
     func orphanDetectionKeepsADegradedControlItem() {
         let degraded = item(
@@ -245,8 +243,7 @@ struct GhostControlItemWindowTests {
     }
 
     /// A spacer identified by title is ours even when its window number has
-    /// not been enumerated as one of ours; the manager answers for the
-    /// window-number case the tag cannot cover yet.
+    /// not been enumerated as one of ours.
     @Test("A user spacer is not an orphan")
     func orphanDetectionKeepsUserSpacers() {
         let spacerTitle = MenuBarSpacerManager.autosavePrefix + UUID().uuidString
@@ -267,11 +264,8 @@ struct GhostControlItemWindowTests {
         #expect(orphans.isEmpty)
     }
 
-    /// The reason the orphan had to go. Left in the reading it is a
-    /// self-titled item under our own namespace, which
-    /// liveIdentitiesAreDegraded reads as the whole bar having lost its
-    /// names — so every reading is discarded and the cache freezes for as
-    /// long as the orphan lasts.
+    /// Left in, the self-titled orphan makes liveIdentitiesAreDegraded
+    /// discard every reading, freezing the cache for as long as it lasts.
     @Test("Dropping the orphan clears the false degradation signal")
     func droppingTheOrphanClearsTheDegradationSignal() {
         let items = [

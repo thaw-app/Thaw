@@ -23,10 +23,8 @@ final class MenuBarManager {
 
     /// Per-screen wallpaper palettes, used by the adaptive gradient tint.
     ///
-    /// Kept separate from ``averageColors`` because the two answer different
-    /// questions off different samples: the average color matches the strip
-    /// of wallpaper directly behind the bar, while a palette has to see the
-    /// whole picture or a small subject never survives bucketing.
+    /// Separate from ``averageColors``: a palette samples the whole wallpaper,
+    /// or a small subject never survives bucketing.
     private(set) var wallpaperPalettes: [CGDirectDisplayID: WallpaperPalette] = [:]
 
     /// A Boolean value that indicates whether the menu bar is either always hidden
@@ -47,11 +45,9 @@ final class MenuBarManager {
     /// Reference to the settings window.
     private var settingsWindow: NSWindow?
 
-    /// Diagnostic logger for the menu bar manager.
     @ObservationIgnored
     private let diagLog = DiagLog(category: "MenuBarManager")
 
-    /// The shared app state.
     @ObservationIgnored
     private weak var appState: AppState?
 
@@ -63,27 +59,15 @@ final class MenuBarManager {
     /// `@Observable` rather than a Combine `ObservableObject`.
     private var displayConfigurationsObservationTask: Task<Void, Never>?
 
-    /// Task observing `settingsWindow`'s `isVisible` KVO stream (wave 3),
-    /// replacing the old `$settingsWindow.removeNil().map { $0.publisher(for:
-    /// \.isVisible) }.switchToLatest()` pipeline. `settingsWindow` is now a
-    /// plain `@Observable` property rather than a Combine `@Published` one,
-    /// so it no longer has a `$settingsWindow` publisher; the inner KVO
-    /// publisher on the resolved `NSWindow` is unrelated to Observation and
-    /// stays Combine, manually re-subscribed on each new non-nil window
-    /// value (mirroring `switchToLatest`'s behavior).
+    /// Task observing `settingsWindow`, re-subscribing the window's
+    /// `isVisible` KVO publisher for each new non-nil window.
     private var settingsWindowObservationTask: Task<Void, Never>?
 
     /// Task observing `appearanceManager.configuration` for adaptive-color
-    /// refresh start/stop (wave 3), replacing the old `$configuration.map {
-    /// ... }.removeDuplicates().sink` pipeline.
+    /// refresh start/stop.
     private var appearanceConfigurationObservationTask: Task<Void, Never>?
 
-    /// Task observing `itemManager.itemCache` (wave 4), which is
-    /// `@Observable` rather than a Combine `ObservableObject`, replacing the
-    /// old `$itemCache.debounce(for: .seconds(0.5), scheduler:
-    /// DispatchQueue.main).sink` pipeline. `Observations { }` is an
-    /// `AsyncSequence`, so the debounce is reproduced with AsyncAlgorithms'
-    /// `.debounce(for:)` instead.
+    /// Task observing `itemManager.itemCache`, debounced with AsyncAlgorithms.
     private var itemCacheHotkeyObservationTask: Task<Void, Never>?
 
     /// Task observing ``GeneralSettings/hideDockIconWhenToggling`` so an
@@ -193,7 +177,6 @@ final class MenuBarManager {
         sections.contains { !$0.isHidden }
     }
 
-    /// Performs the initial setup of the menu bar manager.
     func performSetup(with appState: AppState) {
         self.appState = appState
         configureCancellables()
@@ -207,7 +190,6 @@ final class MenuBarManager {
         rebuildItemHotkeys()
     }
 
-    /// Configures the internal observers for the manager.
     private func configureCancellables() {
         averageColorRefreshCancellable?.cancel()
         averageColorRefreshCancellable = nil
@@ -264,9 +246,7 @@ final class MenuBarManager {
                 )
             else {
                 if self?.appState?.settings.general.autoRehide == false {
-                    // Auto-rehide is off; no strategy fires. Not an error,
-                    // but the user may expect focus/timed to work without
-                    // the master toggle.
+                    // Auto-rehide is off, so no strategy fires.
                 }
                 return
             }
@@ -318,10 +298,8 @@ final class MenuBarManager {
                 }
             }
 
-            // Refresh per-item hotkeys when the set of menu bar items changes,
-            // so newly-arrived items become assignable. Debounced because the
-            // item cache ticks frequently and rebuilding on every tick would
-            // churn hotkey registrations.
+            // Rebuild per-item hotkeys so new items become assignable.
+            // Debounced to avoid churning registrations on every cache tick.
             let itemManager = appState.itemManager
             itemCacheHotkeyObservationTask = Task { [weak self] in
                 let changes = Observations { itemManager.itemCache }
@@ -353,8 +331,7 @@ final class MenuBarManager {
                         guard let self else { return }
                         if isVisible {
                             updateAverageColorInfo()
-                            // Start a visibility-gated 60s refresh to catch wallpaper changes
-                            // (macOS no longer posts a wallpaper change notification).
+                            // macOS no longer posts a wallpaper change notification.
                             averageColorRefreshCancellable = Timer.publish(every: 60, tolerance: 10, on: .main, in: .default)
                                 .autoconnect()
                                 .sink { [weak self] _ in
@@ -385,10 +362,8 @@ final class MenuBarManager {
         }
         .store(in: &c)
 
-        // Cache per-screen colors before display sleep so they can be restored
-        // on wake, preventing a white flash before the display settles and
-        // wallpaper renders. Uses screensDidSleep/Wake which fire on display
-        // sleep/wake (screen lock, idle timeout) AND system sleep (lid close).
+        // Cache colors before sleep to avoid a white flash on wake.
+        // screensDidSleep/Wake also fire for system sleep (lid close).
         NSWorkspace.shared.notificationCenter
             .publisher(for: NSWorkspace.screensDidSleepNotification)
             .sink { [weak self] _ in
@@ -398,9 +373,8 @@ final class MenuBarManager {
             }
             .store(in: &c)
 
-        // On display wake, restore pre-sleep colors immediately (no white flash),
-        // then poll every 1s until the captured color changes from the cached
-        // value and stabilizes (2 consecutive identical captures), or 10s max.
+        // On wake, restore cached colors, then poll every 1s until the color
+        // changes and holds for two captures, or 10s max.
         NSWorkspace.shared.notificationCenter
             .publisher(for: NSWorkspace.screensDidWakeNotification)
             .sink { [weak self] _ in
@@ -413,11 +387,8 @@ final class MenuBarManager {
                     return
                 }
 
-                // Restore pre-sleep colors so the bar never flashes white.
-                // Stamping a new pass drops any capture still in flight from
-                // before the sleep, so it cannot land afterwards and overwrite
-                // the restore with whatever the screen looked like on its way
-                // out.
+                // A new pass stamp drops any capture still in flight from
+                // before the sleep, so it can't overwrite the restore.
                 captureGeneration += 1
                 averageColors = cache
                 if let id = NSScreen.screenWithActiveMenuBar?.displayID,
@@ -426,7 +397,6 @@ final class MenuBarManager {
                     averageColorInfo = cached
                 }
 
-                // Poll every 1s until color changes from cache then stabilizes.
                 wakePollPrevColors = nil
                 wakePollStableCount = 0
                 wakePollDidChange = false
@@ -435,11 +405,7 @@ final class MenuBarManager {
                     .autoconnect()
                     .sink { [weak self] _ in
                         guard let self else { return }
-                        // Wraps the stabilization logic in a Task that awaits
-                        // updateAverageColorInfoAsync so the post-capture read
-                        // of averageColors sees the fresh values; the original
-                        // sync call returned before the fire-and-forget Tasks
-                        // populated state, defeating stabilization detection.
+                        // Await the capture so the read below sees fresh values.
                         Task { [weak self] in
                             guard let self else { return }
                             let elapsed = wakePollStartTime.map { Date().timeIntervalSince($0) } ?? 0
@@ -481,9 +447,7 @@ final class MenuBarManager {
             appearanceConfigurationObservationTask?.cancel()
             appearanceConfigurationObservationTask = Task { [weak self, weak appState] in
                 var previousRequirements: AdaptiveCaptureRequirements?
-                // Observed from the effective configuration for the same
-                // reason as updateAverageColorInfoAsync above: the adaptive
-                // start/stop gates must follow the per-Space override.
+                // Effective configuration, so the gates follow per-Space overrides.
                 let changes = Observations { appState?.appearanceManager.effectiveConfiguration }
                 for await config in changes {
                     guard let self else { return }
@@ -495,11 +459,8 @@ final class MenuBarManager {
                     case .unchanged:
                         continue
                     case .recapture:
-                        // The refresh is already running, but what it has to
-                        // sample changed: switching to the gradient tint asks
-                        // for a palette no earlier pass had a reason to take,
-                        // and leaving it to the 30-second poll would strand
-                        // the bar on the average-color fallback until then.
+                        // What to sample changed (e.g. the gradient tint needs
+                        // a palette); don't wait for the 30-second poll.
                         captureAdaptiveColorWithRetry()
                     case .start:
                         captureAdaptiveColorWithRetry()
@@ -508,10 +469,8 @@ final class MenuBarManager {
                             .sink { [weak self] _ in
                                 self?.updateAverageColorInfo()
                             }
-                        // The timer stays: a dynamic or aerial wallpaper
-                        // changes its pixels without rewriting the index the
-                        // monitor watches, so the poll is still the only
-                        // thing that catches those.
+                        // Keep the timer: dynamic and aerial wallpapers change
+                        // without touching the index the monitor watches.
                         wallpaperChangeMonitor.onChange = { [weak self] in
                             self?.captureAdaptiveColorWithRetry()
                         }
@@ -524,15 +483,9 @@ final class MenuBarManager {
                 }
             }
 
-            // Surface a hidden item that has started blinking for attention.
-            //
-            // This shows the section the item lives in rather than moving the
-            // item itself. Dragging a single item across the divider on a
-            // heuristic is the same shape as the repair loops that collapsed
-            // real menu bars (#958, #960): a wrong verdict there is a wrong
-            // move that persists. Showing a section is the path the hotkey and
-            // hover triggers already use, and the existing rehide timer undoes
-            // it on its own.
+            // Surface a hidden item blinking for attention by showing its
+            // section, never by moving it: a wrong heuristic move persists
+            // (#958, #960), while the rehide timer undoes a show.
             attentionObservationTask?.cancel()
             attentionObservationTask = Task { [weak self, weak appState] in
                 var previous: Set<MenuBarItemTag> = []
@@ -543,19 +496,13 @@ final class MenuBarManager {
                     let newlySeeking = tags.subtracting(previous)
                     guard !newlySeeking.isEmpty else { continue }
                     guard Defaults.bool(forKey: .surfaceItemsSeekingAttention) else { continue }
-                    // Zen mode is a standing request for a quiet menu bar, so
-                    // a blinking icon does not get to reopen a section the
-                    // user just sealed. The attention history is left alone
-                    // rather than cleared, so the item surfaces the next time
-                    // it asks with zen mode off.
+                    // Zen mode wins. History is kept so the item surfaces
+                    // later with zen mode off.
                     guard !isZenModeActive else { continue }
 
                     for tag in newlySeeking {
-                        // Separate "should I reveal the section" from "should
-                        // I clear this tag's record": a section.show() on the
-                        // first tag flips isHidden, and a hidden-only lookup
-                        // would then skip every sibling tag mapped to the same
-                        // section, leaving stale attention records behind.
+                        // Look up regardless of isHidden: the first show()
+                        // would otherwise skip clearing sibling tags' records.
                         guard let section = concealingSection(containing: tag, in: appState) else {
                             continue
                         }
@@ -565,16 +512,13 @@ final class MenuBarManager {
                             )
                             section.show()
                         }
-                        // Drop the history that triggered this, so the same
-                        // blink cannot re-show the section on every capture
-                        // while it stays visible.
+                        // So the same blink can't re-show on every capture.
                         appState.imageCache.clearAttention(for: tag)
                     }
                 }
             }
         }
 
-        // Hide application menus when a section is shown (if applicable).
         Publishers.MergeMany(sections.map(\.controlItem.$state))
             .receive(on: DispatchQueue.main)
             .sink { [weak self] _ in
@@ -602,16 +546,11 @@ final class MenuBarManager {
                     return
                 }
 
-                // Check if hidden or alwaysHidden section is being shown
                 let hiddenSection = self.section(withName: .hidden)
                 let alwaysHiddenSection = self.section(withName: .alwaysHidden)
 
-                // Use isHidden property - when section is shown, isHidden is false.
-                // A section presenting in the Thaw Bar expands nothing inline,
-                // so the application menus have no items to make room for. The
-                // guard above already covers the display-wide setting; this
-                // covers useThawBarForAlwaysHidden, where the always-hidden
-                // section is in the panel while the hidden section is inline.
+                // A section in the Thaw Bar expands nothing inline. This covers
+                // useThawBarForAlwaysHidden, where only one section is inline.
                 let panelSection = iceBarPanel.currentSection
                 let isShowingHiddenSection = (hiddenSection.map { !$0.isHidden } ?? false)
                     && panelSection != .hidden
@@ -619,7 +558,6 @@ final class MenuBarManager {
                     && panelSection != .alwaysHidden
 
                 if isShowingHiddenSection || isShowingAlwaysHiddenSection {
-                    // Use the screen with the active menu bar
                     guard let screen = NSScreen.screenWithActiveMenuBar ?? NSScreen.main else {
                         return
                     }
@@ -628,27 +566,23 @@ final class MenuBarManager {
                         // The window server needs time to update window positions after expansion.
                         try? await Task.sleep(for: .milliseconds(50))
 
-                        // Get the app menu frame for this screen
                         guard let appMenuFrame = screen.getApplicationMenuFrame() else {
                             return
                         }
 
-                        // Get ALL menu bar items
                         let allItems = await MenuBarItem.getMenuBarItems(option: .activeSpace)
 
-                        // Filter to items on THIS screen by comparing Y coordinate with app menu's Y
+                        // Items on this screen share the app menu's Y.
                         let menuBarY = appMenuFrame.origin.y
                         let screenItems = allItems.filter { item in
                             abs(item.bounds.origin.y - menuBarY) < 50
                         }
 
-                        // Get the control items for this screen
                         let hiddenControlItem = screenItems.first { $0.tag == .hiddenControlItem }
                         let alwaysHiddenControlItem = screenItems.first { $0.tag == .alwaysHiddenControlItem }
 
                         // Approximate hidden items width from control item positions.
 
-                        // Get control item bounds and hidden items width
                         var controlBounds: CGRect = .zero
                         var hiddenItemsWidth: CGFloat = 0
 
@@ -664,20 +598,16 @@ final class MenuBarManager {
                             }
                         }
 
-                        // The hidden section expands by replacing control item with hidden items
-                        // New rightmost = where hidden items end = control.minX + hiddenItemsWidth
+                        // The hidden items replace the control item when expanded.
                         let newRightmostPos = controlBounds.minX + hiddenItemsWidth
 
-                        // Use the actual app menu frame for needed space
                         let appMenuRightStart = appMenuFrame.maxX
 
-                        // Available space: if app menu extends into notch, add notch width; otherwise use visible frame
                         let spaceAvailableFromAppMenuEnd: CGFloat = if let notch = screen.frameOfNotch {
                             if appMenuRightStart > notch.minX {
-                                // App menu extends into notch, items get moved past notch
+                                // Items get moved past the notch.
                                 (notch.minX - appMenuRightStart) + (screen.visibleFrame.maxX - notch.maxX)
                             } else {
-                                // App menu doesn't extend into notch
                                 screen.visibleFrame.maxX - appMenuRightStart
                             }
                         } else {
@@ -686,7 +616,6 @@ final class MenuBarManager {
 
                         let spaceNeededFromAppMenuEnd = newRightmostPos - appMenuRightStart
 
-                        // If items would extend past screen edge, hide the app menu
                         if spaceNeededFromAppMenuEnd > spaceAvailableFromAppMenuEnd {
                             self.hideApplicationMenus()
                         }
@@ -704,12 +633,8 @@ final class MenuBarManager {
 
     /// What an appearance configuration needs sampled from the screen.
     ///
-    /// An adaptive background or tint needs the average color of the strip
-    /// behind the bar; the adaptive gradient needs a palette derived from the
-    /// wallpaper at its full height as well. Both live in one value so the
-    /// refresh observer can tell a switch between two adaptive kinds apart
-    /// from a switch into or out of adaptive mode, and so the retry loop knows
-    /// when a capture is actually complete.
+    /// One value, so the observer can tell a switch between adaptive kinds
+    /// from a switch in or out of adaptive mode.
     nonisolated struct AdaptiveCaptureRequirements: Equatable {
         /// Whether the average color of the menu bar strip is needed.
         let needsAverageColor: Bool
@@ -760,11 +685,8 @@ final class MenuBarManager {
     /// What the configuration the overlays actually render needs sampled, or
     /// `nil` without app state to resolve it from.
     ///
-    /// Resolved from the effective configuration, which is the active Space's
-    /// override when one exists. Gating on the shared configuration alone
-    /// meant a per-Space override that turns on an adaptive tint or background
-    /// never received a palette, and its panels permanently rendered the
-    /// average-color fallback.
+    /// Uses the effective configuration, so a per-Space override that turns
+    /// on adaptive color gets its samples.
     private var adaptiveCaptureRequirements: AdaptiveCaptureRequirements? {
         guard let appState else { return nil }
         return AdaptiveCaptureRequirements(
@@ -775,28 +697,20 @@ final class MenuBarManager {
     /// Updates the ``averageColorInfo`` and ``averageColors`` properties with
     /// the current average color of the menu bar background per screen.
     ///
-    /// Fire-and-forget shape preserved for the call sites that don't need to
-    /// read averageColors immediately after. Callers that DO need read-after
-    /// semantics (captureAdaptiveColorWithRetry, the wake-poll loop) must use
-    /// updateAverageColorInfoAsync directly so their read sees fresh state.
+    /// Fire-and-forget. Callers that read the result must await
+    /// updateAverageColorInfoAsync instead.
     func updateAverageColorInfo() {
         Task { [weak self] in
             await self?.updateAverageColorInfoAsync()
         }
     }
 
-    /// Awaitable variant of updateAverageColorInfo. Per-screen captures run
-    /// concurrently in a TaskGroup; the for-await loop collects results on the
-    /// @MainActor context, so all averageColors / averageColorInfo writes are
-    /// complete before the await returns.
-    ///
-    /// A pass that a newer one overtakes publishes nothing, so a read after
-    /// the await sees the newer pass's values instead of its own, and can
-    /// still come back incomplete while that pass is in flight.
+    /// Awaitable variant; all writes are done when it returns. A pass
+    /// overtaken by a newer one publishes nothing, so a read can still be
+    /// incomplete while the newer pass is in flight.
     func updateAverageColorInfoAsync() async {
         guard let appState, !areDisplaysAsleep else { return }
 
-        // Only update if we really need the color info
         let isSettingsVisible = settingsWindow?.isVisible == true
         let isIceBarVisible = appState.navigationState.isIceBarPresented
         let isSearchVisible = appState.navigationState.isSearchPresented
@@ -825,8 +739,6 @@ final class MenuBarManager {
         let windows = WindowInfo.createWindows(option: .onScreen)
         let activeDisplayID = NSScreen.screenWithActiveMenuBar?.displayID
 
-        // Resolve per-screen capture inputs synchronously on MainActor before
-        // fanning out; the SCK calls themselves are the only async work.
         var inputs = [(displayID: CGDirectDisplayID, windowIDs: [CGWindowID], bounds: CGRect, fullBounds: CGRect)]()
         for screen in targetScreens {
             let displayID = screen.displayID
@@ -841,14 +753,10 @@ final class MenuBarManager {
             inputs.append((displayID, windowIDs, bounds, wallpaperWindow.bounds))
         }
 
-        // Only pay for the second, full-height capture when something
-        // actually renders a palette.
         let needsPalette = requirements.needsPalette
 
-        // Stamp the pass. Captures from several passes can be in flight at
-        // once — the poll, a wallpaper change and a wake all start one — and
-        // a slow pass must not publish colors over the newer ones that
-        // replaced them.
+        // Several passes can be in flight; a slow one must not publish over
+        // a newer one.
         captureGeneration += 1
         let generation = captureGeneration
 
@@ -870,10 +778,8 @@ final class MenuBarManager {
 
                     var palette: WallpaperPalette?
                     if needsPalette, await !self.areDisplaysAsleep {
-                        // The strip above is one pixel tall by design, which
-                        // is enough to average and far too little to derive a
-                        // scheme from, so the palette re-captures at the
-                        // wallpaper's real height.
+                        // A one-pixel strip is too little for a palette, so
+                        // re-capture at the wallpaper's full height.
                         palette = await ScreenCapture.captureWindowsAsync(
                             with: input.windowIDs,
                             screenBounds: input.fullBounds,
@@ -889,13 +795,8 @@ final class MenuBarManager {
                 }
             }
 
-            // Collected on @MainActor (enclosing class isolation), so the
-            // averageColors / averageColorInfo writes below are safe and
-            // observable to read-after callers as soon as this await returns.
             for await result in group {
-                // A newer pass has taken over. Drain the rest of the group
-                // without publishing anything, rather than reinstating the
-                // state that pass has already moved on from.
+                // A newer pass has taken over; drain without publishing.
                 guard captureGeneration == generation else { continue }
                 guard let (displayID, info, palette) = result else { continue }
                 if averageColors[displayID] != info {
@@ -904,10 +805,8 @@ final class MenuBarManager {
                 if displayID == activeDisplayID, averageColorInfo != info {
                     averageColorInfo = info
                 }
-                // A failed palette capture leaves the previous one in place
-                // rather than clearing it, so a momentary miss does not drop
-                // the tint to nothing. A palette with no swatches counts as a
-                // failure: it renders as the average-color fallback anyway.
+                // Keep the previous palette on a failed or empty capture, so
+                // a momentary miss doesn't drop the tint.
                 if let palette, palette.primary != nil, wallpaperPalettes[displayID] != palette {
                     wallpaperPalettes[displayID] = palette
                 }
@@ -915,13 +814,9 @@ final class MenuBarManager {
         }
     }
 
-    /// Attempts to capture the adaptive color with retries when the initial
-    /// capture fails (e.g. during early app launch before the Window Server
-    /// is fully settled). Retries until every screen has everything the
-    /// current configuration renders from.
+    /// Retries until every screen has what the configuration renders from,
+    /// e.g. while WindowServer is still settling at launch.
     private func captureAdaptiveColorWithRetry() {
-        // Awaits each capture before checking the captured state so we don't
-        // burn retries on stale reads of fire-and-forget Task results.
         Task { [weak self] in
             guard let self else { return }
             for attempt in 0 ..< 10 {
@@ -939,14 +834,9 @@ final class MenuBarManager {
     /// Returns a Boolean value that indicates whether every screen holds the
     /// samples the current configuration needs.
     ///
-    /// The average color and the palette come from separate captures, and the
-    /// full-height one that yields the palette can fail on its own while the
-    /// one-pixel strip succeeds. Counting a screen that has a color but no
-    /// palette as captured would end the retries with the gradient tint stuck
-    /// on its average-color fallback.
+    /// The palette capture can fail on its own, so a color alone isn't
+    /// complete.
     private func hasCompleteAdaptiveCapture() -> Bool {
-        // Nothing can be captured without app state, so further attempts
-        // would only spin.
         guard let requirements = adaptiveCaptureRequirements else {
             return true
         }
@@ -993,7 +883,6 @@ final class MenuBarManager {
         editLayoutItem.target = self
         menu.addItem(editLayoutItem)
 
-        // Profiles submenu.
         if let appState, !appState.profileManager.profiles.isEmpty {
             menu.addItem(.separator())
 
@@ -1063,12 +952,8 @@ final class MenuBarManager {
     }
 
     @objc private func quitFromSecondaryContextMenu() {
-        // Defer NSApp.terminate until the main run loop is back in default mode.
-        // The action fires inside popUp's eventTracking-mode nested run loop, and
-        // popUp itself was invoked from a Task that is occupying the main actor.
-        // Scheduling in .default only ensures the block runs after popUp tracking
-        // unwinds and the enclosing Task completes, so terminate's wait loop can
-        // drain the restore and timeout Tasks scheduled by applicationShouldTerminate.
+        // Terminate only in .default mode, after popUp's tracking loop and its
+        // Task unwind, so applicationShouldTerminate's Tasks can drain.
         RunLoop.main.perform(inModes: [.default]) {
             MainActor.assumeIsolated {
                 NSApp.terminate(nil)
@@ -1105,10 +990,9 @@ final class MenuBarManager {
 
     /// Chooses the activation policy used while hiding application menus.
     ///
-    /// Hiding the frontmost app's menus requires becoming a regular app, which
-    /// shows Thaw in the Dock. When the user prefers a clean Dock, stay in
-    /// accessory instead — unless explicit UI has already requested regular
-    /// activation, in which case that request wins and the Dock icon stays.
+    /// Hiding menus needs `.regular`, which shows the Dock icon. With the
+    /// clean-Dock setting stay `.accessory`, unless explicit UI already asked
+    /// for `.regular`.
     static nonisolated func activationPolicyForHidingApplicationMenus(
         hideDockIconWhenToggling: Bool,
         explicitUIWantsRegularActivation: Bool,
@@ -1157,18 +1041,10 @@ final class MenuBarManager {
 
     /// Hides the application menus.
     ///
-    /// - Important: By default this uses `.regular` activation so Thaw can
-    ///   take over the application-menu extra, which briefly shows the app
-    ///   in the Dock. A manual toggle (hotkey or URL) always uses that path
-    ///   so the command still hides menus.
-    ///
-    ///   When ``GeneralSettings/hideDockIconWhenToggling`` is enabled,
-    ///   automatic overflow does not call this method; presentation falls
-    ///   back to the Thaw Bar instead. If this method does run with the
-    ///   setting on and not as a manual toggle, it stays in `.accessory`
-    ///   unless explicit UI has already requested `.regular`. A pending
-    ///   retry is cancelled or re-evaluated so it cannot hide that UI's
-    ///   Dock icon.
+    /// - Important: Uses `.regular` activation, which briefly shows the Dock
+    ///   icon; a manual toggle always does. With
+    ///   ``GeneralSettings/hideDockIconWhenToggling`` on, a non-manual call
+    ///   stays `.accessory` unless explicit UI already requested `.regular`.
     func hideApplicationMenus(manual: Bool = false) {
         guard let appState else {
             diagLog.error("Error hiding application menus: Missing app state")
@@ -1200,8 +1076,7 @@ final class MenuBarManager {
 
             appState.activate(withPolicy: policy)
 
-            // Force activation again after a micro-delay.
-            // The first activation after policy change can sometimes be ignored by the system.
+            // The first activation after a policy change can be ignored.
             try? await Task.sleep(for: .milliseconds(25))
             guard !Task.isCancelled, isHidingApplicationMenus else { return }
             let retryHideDockIcon = appState.settings.general.hideDockIconWhenToggling
@@ -1217,7 +1092,6 @@ final class MenuBarManager {
         }
     }
 
-    /// Shows the application menus.
     func showApplicationMenus() {
         cancelHideApplicationMenusActivationTask()
         guard let appState else {
@@ -1230,7 +1104,6 @@ final class MenuBarManager {
         isManuallyHidingApplicationMenus = false
     }
 
-    /// Toggles the visibility of the application menus.
     func toggleApplicationMenus() {
         if isHidingApplicationMenus {
             showApplicationMenus()
@@ -1266,11 +1139,8 @@ final class MenuBarManager {
         pendingHideActivationIsAccessory = false
     }
 
-    /// Settings, permissions, search, and the Thaw Bar all activate as a
-    /// regular app. A hide-Dock-icon retry must not overwrite that. The
-    /// current activation policy is the fallback for the 25 ms window after
-    /// explicit UI has already switched to `.regular` but before presentation
-    /// flags catch up.
+    /// Settings, permissions, search, and the Thaw Bar activate as regular.
+    /// The current policy covers the 25 ms before their flags catch up.
     private func explicitUIWantsRegularActivation(hideDockIconWhenToggling: Bool) -> Bool {
         guard let appState else { return false }
         if appState.explicitUIWantsRegularActivation {
@@ -1289,18 +1159,13 @@ final class MenuBarManager {
     /// exit. Session-only: zen mode never survives an app relaunch.
     private var sectionsRevealedBeforeZenMode: Set<MenuBarSection.Name> = []
 
-    /// The value of ``showOnHoverAllowed`` when zen mode was engaged, restored
-    /// on exit. A hotkey reveal locks hover off until the section rehides, and
-    /// leaving zen mode must not hand that lock back early.
+    /// Restored on exit, so a hotkey reveal's hover lock isn't released early.
     private var showOnHoverAllowedBeforeZenMode = true
 
-    /// Toggles zen mode: conceals the hidden and always-hidden sections and
-    /// locks reveal gestures until toggled again, then restores what was
-    /// showing before. Items are never moved between sections, so engaging or
-    /// leaving zen mode performs no layout writes and cannot disturb ordering.
+    /// Conceals the hidden sections and locks reveal gestures, then restores
+    /// what was showing. Never moves items, so it can't disturb ordering.
     func toggleZenMode() {
-        // An explicit toggle takes ownership away from the monitor: whatever
-        // the user just asked for outlives the end of a presentation.
+        // An explicit toggle outlives the end of a presentation.
         isZenModeEngagedAutomatically = false
         if isZenModeActive {
             deactivateZenMode()
@@ -1309,17 +1174,12 @@ final class MenuBarManager {
         }
     }
 
-    /// Whether the active zen mode was engaged by ``PresentationMonitor``
-    /// rather than by the user. Only an automatic engagement is automatically
-    /// withdrawn, so a manual zen mode is never cancelled by unplugging a
-    /// projector.
+    /// Only an automatic engagement is automatically withdrawn.
     private var isZenModeEngagedAutomatically = false
 
     /// Engages or withdraws zen mode on the monitor's behalf.
     ///
-    /// Idempotent in both directions, because the monitor re-evaluates its
-    /// signals on every display change and every poll rather than tracking
-    /// edges itself.
+    /// Idempotent: the monitor re-evaluates rather than tracking edges.
     func setAutomaticZenMode(_ isActive: Bool) {
         if isActive {
             guard !isZenModeActive else { return }
@@ -1333,8 +1193,7 @@ final class MenuBarManager {
     }
 
     private func activateZenMode() {
-        // Captured before the hides below, since each hide() re-enables hover
-        // reveal and would overwrite the value zen mode has to restore.
+        // Before the hides, since each hide() re-enables hover reveal.
         showOnHoverAllowedBeforeZenMode = showOnHoverAllowed
         var revealedNames = Set<MenuBarSection.Name>()
         for name in [MenuBarSection.Name.hidden, .alwaysHidden] {
@@ -1363,7 +1222,6 @@ final class MenuBarManager {
         sectionsRevealedBeforeZenMode = []
     }
 
-    /// Shows the layout editor panel.
     @objc private func showLayoutEditorPanel() {
         guard let screen = MenuBarLayoutEditorPanel.defaultScreen else {
             return
@@ -1373,12 +1231,10 @@ final class MenuBarManager {
         }
     }
 
-    /// Dismisses the layout editor panel.
     func dismissLayoutEditorPanel() {
         layoutEditorPanel.close()
     }
 
-    /// Shows the appearance editor panel.
     @objc private func showAppearanceEditorPanel() {
         guard let screen = MenuBarAppearanceEditorPanel.defaultScreen else {
             return
@@ -1393,7 +1249,6 @@ final class MenuBarManager {
         appearanceEditorPanel.close()
     }
 
-    /// Updates the ``lastShowTimestamp`` property.
     func updateLastShowTimestamp() {
         lastShowTimestamp = .now
     }
@@ -1441,16 +1296,8 @@ final class MenuBarManager {
         }
     }
 
-    /// Returns the menu bar section with the given name.
-    /// Returns the hidden section that currently contains the given item,
-    /// or `nil` when the item is already visible or is not on the bar.
-    ///
-    /// Only the concealing sections are considered: an item blinking in the
-    /// visible section has already been seen, so there is nothing to
-    /// surface.
-    /// The concealable section whose cache currently holds `tag`, regardless
-    /// of whether the section is shown. An item outside hidden/always-hidden
-    /// has no concealing section and returns `nil`.
+    /// The hidden or always-hidden section whose cache holds `tag`, whether
+    /// or not it is shown.
     private func concealingSection(
         containing tag: MenuBarItemTag,
         in appState: AppState
@@ -1468,7 +1315,6 @@ final class MenuBarManager {
         sections.first { $0.name == name }
     }
 
-    /// Returns the control item for the menu bar section with the given name.
     func controlItem(withName name: MenuBarSection.Name) -> ControlItem? {
         section(withName: name)?.controlItem
     }
@@ -1477,13 +1323,9 @@ final class MenuBarManager {
 
     /// Creates and reconciles the per-item hotkeys, then observes their changes.
     ///
-    /// Called during setup, whenever the item cache changes, and after a
-    /// profile is applied. Unlike the per-profile rebuild this is incremental:
-    /// existing hotkey instances are preserved so a frequent cache tick does
-    /// not tear down an in-use registration. A hotkey is created for every
-    /// item currently in the menu bar plus every identifier that still has a
-    /// saved binding (so a binding survives the owning app quitting), and is
-    /// dropped only when its identifier is neither present nor configured.
+    /// Incremental, so a cache tick doesn't tear down live registrations.
+    /// Covers present items plus saved bindings, so a binding survives its
+    /// app quitting.
     func rebuildItemHotkeys() {
         guard let appState else { return }
 
@@ -1491,9 +1333,7 @@ final class MenuBarManager {
         let dec = JSONDecoder()
         let enc = JSONEncoder()
 
-        // Only real, identifiable items are assignable: skip Thaw's own control
-        // items and items whose source app could not be resolved (their
-        // identifier is an unstable UUID).
+        // Skip control items and unresolved items, whose UUID is unstable.
         let presentIdentifiers = Set(
             appState.itemManager.itemCache.managedItems
                 .filter { !$0.isControlItem && $0.sourcePID != nil }
@@ -1503,7 +1343,6 @@ final class MenuBarManager {
 
         var newHotkeys = itemHotkeys
 
-        // Drop hotkeys for identifiers that are neither present nor configured.
         for (identifier, hotkey) in itemHotkeys where !wantedIdentifiers.contains(identifier) {
             hotkey.disable()
             hotkeyItemMap[ObjectIdentifier(hotkey)] = nil
@@ -1516,9 +1355,7 @@ final class MenuBarManager {
             }
 
             if let existing = newHotkeys[identifier] {
-                // Reconcile the live binding to the saved value (e.g. after a
-                // profile apply). Only assign when it actually differs so we
-                // avoid a redundant write back through the persistence sink.
+                // Only assign when it differs, to avoid a redundant write.
                 if existing.keyCombination != savedCombo {
                     existing.keyCombination = savedCombo
                 }
@@ -1530,10 +1367,7 @@ final class MenuBarManager {
             hotkey.keyCombination = savedCombo
             hotkeyItemMap[ObjectIdentifier(hotkey)] = identifier
 
-            // Observe future changes from HotkeyRecorder and persist them.
-            // Assigned after the initial keyCombination is set above, so —
-            // like the previous dropFirst() Combine pipeline — the initial
-            // value is never redundantly persisted.
+            // Assigned after the initial value so it isn't persisted again.
             hotkey.keyCombinationDidChange = { [weak self, weak hotkey] in
                 guard let self, let hotkey else { return }
                 var dict = Defaults.dictionary(forKey: .menuBarItemHotkeys) as? [String: Data] ?? [:]
@@ -1554,9 +1388,7 @@ final class MenuBarManager {
 
     /// Opens the menu of the menu bar item with the given identifier.
     ///
-    /// Resolves the live item from the current cache and routes it through the
-    /// shared activation path. No-ops if the item is not currently present
-    /// (e.g. its owning app has been quit).
+    /// No-op if the item isn't present.
     func openItem(withIdentifier identifier: String) {
         guard let appState else { return }
         guard let item = appState.itemManager.itemCache.managedItems.first(
@@ -1596,9 +1428,8 @@ struct MenuBarAverageColorInfo: Hashable {
     /// A Boolean value that indicates whether the menu bar has a
     /// bright color.
     ///
-    /// This value is `true` if ``brightness`` is above ``Constants.menuBarBrightnessThreshold``.
-    /// At the time of writing, if this value is `true`, the menu bar
-    /// draws its items with a darker appearance.
+    /// `true` above ``Constants.menuBarBrightnessThreshold``, where the menu
+    /// bar draws its items darker.
     var isBright: Bool {
         brightness > Constants.menuBarBrightnessThreshold
     }

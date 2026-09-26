@@ -14,19 +14,15 @@ import Testing
 /// `updateConfiguration`, the typed lookups built on it,
 /// `applyGlobalToAllKnownDisplays`, and the `allDisplays` ordering.
 ///
-/// The inheritance rule these share is the point: a display with no stored
-/// entry reads — and is *edited* — through ``globalConfiguration``, so
-/// changing one field on an unconfigured display must not silently reset the
+/// A display with no stored entry is read and edited through
+/// ``globalConfiguration``, so changing one field on it must not reset the
 /// others to the hardcoded defaults.
 ///
-/// `performSetup`, the spacing apply, and the external-notification observer
-/// all need a live `AppState` and are out of reach here.
-/// `DisplaySettingsManagerGlobalFallbackTests` covers the read side;
-/// `DisplaySettingsManagerSpacingGateTests` covers the apply gate.
+/// `performSetup`, the spacing apply, and the notification observer need a
+/// live `AppState` and aren't covered here.
 ///
 /// The manager persists through `didSet`, so each case runs inside
-/// `withScratchDefaults`: the writes land in a throwaway store instead of the
-/// developer's own display settings.
+/// `withScratchDefaults`.
 @MainActor
 @Suite("Display settings mutation", .serialized)
 struct DisplaySettingsManagerMutationTests {

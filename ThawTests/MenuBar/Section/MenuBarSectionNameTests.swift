@@ -86,10 +86,8 @@ struct MenuBarSectionNameTests {
 
     // MARK: - localized
 
-    // LocalizedStringKey is not Equatable and doesn't expose its key
-    // directly; comparing `String(describing:)` against a key built from
-    // the expected string is the closest meaningful check of which key
-    // `localized` actually returns.
+    // LocalizedStringKey is not Equatable, so compare `String(describing:)` against
+    // a key built from the expected string.
 
     @Test("visible exposes the \"Visible\" localized key")
     func localizedVisible() {

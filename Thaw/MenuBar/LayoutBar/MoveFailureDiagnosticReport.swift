@@ -11,16 +11,11 @@ import UniformTypeIdentifiers
 /// A self-contained, redacted description of a failed menu bar item move,
 /// offered from the failure alert for attaching to a bug report.
 ///
-/// A pasted log excerpt on its own cannot answer the questions that decide
-/// a move investigation: what the display looks like, what the rest of the
-/// bar looked like at the time, which settings the move engine ran under,
-/// and whether the same mechanics had just worked for another item. This
-/// gathers all of that into one text file and applies
-/// ``DiagnosticRedactor`` before the user reviews and shares it.
+/// Adds the display, the rest of the bar, and the move settings to the log
+/// excerpt, redacted with ``DiagnosticRedactor``.
 nonisolated struct MoveFailureDiagnosticReport {
     /// The move that failed.
     struct Failure {
-        /// The item that did not move.
         let item: MenuBarItem
 
         /// Where it was supposed to go, when the caller still knows.
@@ -29,7 +24,6 @@ nonisolated struct MoveFailureDiagnosticReport {
         /// The section the destination lies in, when the caller knows.
         let expectedSection: MenuBarSection.Name?
 
-        /// The error the move ended with.
         let error: any Error
 
         /// What the caller already tried, if anything.
@@ -50,10 +44,8 @@ nonisolated struct MoveFailureDiagnosticReport {
         }
     }
 
-    /// Log categories the excerpt keeps: everything about enumerating and
-    /// moving items, nothing that quotes a network, device, or script. The
-    /// window-list chatter in `Bridging` is left out as noise; the move
-    /// engine's own lines already summarize what each enumeration returned.
+    /// Enumeration and move categories only; nothing that quotes a network,
+    /// device, or script. `Bridging` is left out as noise.
     static let logCategories: Set<String> = [
         "AppState",
         "ControlItem",
@@ -81,19 +73,15 @@ nonisolated struct MoveFailureDiagnosticReport {
     /// Maximum on-disk log window read while building a report.
     static let logTailByteLimit = 2 * 1024 * 1024
 
-    /// The redacted report text.
     let text: String
 
-    /// A file name for the save panel.
     let suggestedFileName: String
 
     // MARK: Generation
 
-    /// Builds the report for a failed move against the app's current state.
     @MainActor
     static func generate(for failure: Failure, appState: AppState) async -> MoveFailureDiagnosticReport {
-        // Not `.onScreen`: items parked in a collapsed section are the ones
-        // a failed hidden-section move is usually about.
+        // Not `.onScreen`: collapsed sections are usually what failed.
         let liveItems = await MenuBarItem.getMenuBarItems(on: nil, option: .activeSpace, resolveSourcePID: false)
         let logger = DiagnosticLogger.shared
         let diagnosticLoggingWasEnabled = logger.isEnabled
@@ -125,12 +113,9 @@ nonisolated struct MoveFailureDiagnosticReport {
     /// Presents `alert` with an added "Save Diagnostic Report…" button and
     /// saves this report when it is chosen.
     ///
-    /// Shown as a sheet on `window` when there is one. An app-modal alert
-    /// holds the main actor for as long as it is up, and the move engine
-    /// runs on the main actor: in the field another move sat behind a
-    /// modal failure alert for fifteen seconds with its synthetic press
-    /// still down, and Control Center completed that orphaned drag by
-    /// removing the item from the bar. A sheet returns immediately.
+    /// Prefer a sheet: an app-modal alert blocks the main actor, and a move
+    /// stuck behind it with its synthetic press down let Control Center
+    /// remove the item from the bar.
     @MainActor
     func run(_ alert: NSAlert, in window: NSWindow? = nil) {
         let notice = String(
@@ -155,9 +140,7 @@ nonisolated struct MoveFailureDiagnosticReport {
     /// button, and returns the response value for that button.
     @MainActor
     static func configureButtons(on alert: NSAlert) -> NSApplication.ModalResponse {
-        // `NSAlert` supplies its default OK button lazily in some contexts.
-        // Loading the window makes `buttons` accurately reflect that button
-        // before we add another one.
+        // Loading the window materializes the lazy default OK button.
         _ = alert.window
         if let primaryButton = alert.buttons.first {
             primaryButton.title = String(localized: "OK")
@@ -167,9 +150,7 @@ nonisolated struct MoveFailureDiagnosticReport {
         let saveTitle = String(localized: "Save Diagnostic Report…")
         alert.addButton(withTitle: saveTitle)
         if alert.buttons.count == 1 {
-            // On older AppKit, adding a button can replace the lazily supplied
-            // default instead of appending to it. Add the second explicit
-            // button, then restore the primary title and order.
+            // Older AppKit can replace the lazy default instead of appending.
             alert.addButton(withTitle: saveTitle)
             alert.buttons[0].title = String(localized: "OK")
         }
@@ -179,7 +160,6 @@ nonisolated struct MoveFailureDiagnosticReport {
         )
     }
 
-    /// Writes the report to `url`.
     func write(to url: URL) throws {
         try text.write(to: url, atomically: true, encoding: .utf8)
     }
@@ -193,12 +173,8 @@ nonisolated struct MoveFailureDiagnosticReport {
     /// How many automatic reports are kept; the oldest are removed.
     static let automaticReportsKept = 20
 
-    /// Writes the report to the automatic diagnostics folder and removes old
-    /// automatic move reports beyond ``automaticReportsKept``.
-    ///
-    /// A suffix is added when two failures receive the same timestamp-based
-    /// name, so a burst never overwrites an earlier report before pruning can
-    /// account for it.
+    /// Writes to the automatic folder and prunes beyond
+    /// ``automaticReportsKept``. Same-timestamp names get a suffix.
     @discardableResult
     func writeToAutomaticReports(in directory: URL = Self.automaticReportsDirectory) throws -> URL {
         let fileManager = FileManager.default
@@ -304,9 +280,8 @@ nonisolated struct MoveFailureDiagnosticReport {
 
     // MARK: Log excerpt
 
-    /// Keeps the lines whose category is in ``logCategories``, newest
-    /// `limit` of them. A line that does not parse as a log line (the file
-    /// header, a continuation) is dropped.
+    /// Keeps the newest `limit` lines in ``logCategories``. Unparseable lines
+    /// are dropped.
     static func filterLogLines(_ lines: [String], limit: Int = logLineLimit) -> [String] {
         guard limit > 0 else { return [] }
         var kept: [String] = []
@@ -332,7 +307,6 @@ nonisolated struct MoveFailureDiagnosticReport {
         return String(match.1)
     }
 
-    /// The file name offered by the save panel.
     static func suggestedFileName(for date: Date) -> String {
         let formatter = DateFormatter()
         formatter.dateFormat = "yyyy-MM-dd-HHmmss"
@@ -344,7 +318,6 @@ nonisolated struct MoveFailureDiagnosticReport {
 // MARK: - Sections
 
 private extension MoveFailureDiagnosticReport {
-    /// Accumulates the report's lines.
     struct Writer {
         private(set) var lines: [String] = []
 
@@ -486,8 +459,7 @@ private extension MoveFailureDiagnosticReport {
                 writer.line("  \(compactDescription(of: item))")
             }
         }
-        // The control item's own window reference is often nil; the divider
-        // is still enumerable as a menu bar item by its tag.
+        // The control item's window is often nil; enumerate by tag.
         let dividers: [(name: MenuBarSection.Name, tag: MenuBarItemTag)] = [
             (.hidden, .hiddenControlItem),
             (.alwaysHidden, .alwaysHiddenControlItem),
@@ -565,9 +537,8 @@ private extension MoveFailureDiagnosticReport {
             + "width=\(format(item.bounds.width)) onScreen=\(item.isOnScreen) source=\(source)\(control)"
     }
 
-    /// The activation policy matters for the source app: a regular app whose
-    /// window is closed can be napped, and both revert episodes in the field
-    /// logs began right after a long idle stretch.
+    /// Includes the activation policy: a regular app with no window can be
+    /// napped, and field reverts followed long idle stretches.
     static func processDescription(_ pid: pid_t, application: NSRunningApplication?) -> String {
         guard let application else {
             return "pid \(pid) (not a running application)"

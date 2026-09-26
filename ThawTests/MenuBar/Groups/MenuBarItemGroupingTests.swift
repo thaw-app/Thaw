@@ -23,7 +23,6 @@ struct MenuBarItemGroupingTests {
 
     @Test
     func systemAndThawItemsAreNotGroupable() {
-        // Every MenuBarAgent module shares one namespace — must never group.
         // Thaw's own control item.
         #expect(!MenuBarItemGrouping.isGroupable(MenuBarItemTag.visibleControlItem))
         // UUID / clone namespaces are not bundle strings.
@@ -55,8 +54,7 @@ struct MenuBarItemGroupingTests {
 
     @Test
     func nonContiguousSameBundleItemsGroupByBundle() {
-        // Grouping is by bundle, not adjacency: A and A group across B so the
-        // whole bundle can be gathered and moved together.
+        // Grouping is by bundle, not adjacency, so A and A group across B.
         let tags = [tag("com.a", "1"), tag("com.b", "1"), tag("com.a", "2")]
         let groups = MenuBarItemGrouping.groups(in: tags)
         #expect(groups.count == 1)
@@ -67,7 +65,7 @@ struct MenuBarItemGroupingTests {
     @Test
     func systemItemBetweenMembersDoesNotBreakTheBundle() {
         // A non-groupable system item between two members does not split the
-        // bundle — the two A's still form one group (and the Clock is not a member).
+        // bundle, and the Clock is not a member.
         let tags = [
             tag("com.a", "1"),
             MenuBarItemTag(namespace: .controlCenter, title: "Clock"),
@@ -141,8 +139,7 @@ struct MenuBarItemGroupingTests {
 
     @Test
     func moveBlockIntoMiddle() {
-        // [A1 A2 X Y Z] move A-block to original index 3 (between Y and Z... in
-        // original space, index 3 is Y): lands before Y's original neighbor.
+        // [A1 A2 X Y Z] moving the A-block to original index 3 (Y) lands it before Y.
         let moved = MenuBarItemGrouping.moveBlock(
             ["A1", "A2", "X", "Y", "Z"],
             sourceRange: 0 ..< 2,

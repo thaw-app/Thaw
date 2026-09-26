@@ -44,9 +44,8 @@ struct PermissionTests {
         permission.performRequest()
         isGranted = true
 
-        // `onChange` fires on every poll tick, not once on transition.
-        // `confirmation` expects exactly one call and `resume` traps on a
-        // second, so latch the first grant and ignore every later tick.
+        // `onChange` fires on every poll tick, and `resume` traps on a second
+        // call, so latch the first grant and ignore later ticks.
         await confirmation("Permission grant is observed after polling restarts") { granted in
             await withCheckedContinuation { continuation in
                 var hasResumed = false

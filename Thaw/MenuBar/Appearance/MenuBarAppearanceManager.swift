@@ -20,12 +20,8 @@ final class MenuBarAppearanceManager {
 
     /// The current menu bar appearance configuration.
     ///
-    /// `didSet` persists the new value, replacing the old unthrottled
-    /// `$configuration.encode(encoder:).sink` pipeline — persistence always
-    /// ran on every change, so a direct `didSet` is a faithful replacement.
-    /// The throttled panel-reconfiguration reaction is handled separately by
-    /// `configurationPanelObservationTask` (wave 3), since it genuinely needs
-    /// rate-limiting and `didSet` has no equivalent.
+    /// `didSet` persists every change; panel reconfiguration is throttled
+    /// separately by `configurationPanelObservationTask`.
     var configuration = Defaults.DefaultValue.menuBarAppearanceConfigurationV2 {
         didSet {
             do {
@@ -51,8 +47,6 @@ final class MenuBarAppearanceManager {
     private(set) var effectiveConfiguration = Defaults.DefaultValue.menuBarAppearanceConfigurationV2
 
     /// The currently previewed partial configuration.
-    ///
-    /// `didSet` replaces the old (unthrottled) `$previewConfiguration.sink`.
     var previewConfiguration: MenuBarAppearancePartialConfiguration? {
         didSet {
             if let previewConfiguration {
@@ -75,11 +69,9 @@ final class MenuBarAppearanceManager {
     /// Whether the system is currently drawing an opaque menu bar because
     /// Accessibility's Reduce Transparency is enabled.
     ///
-    /// The overlay panel composites behind the menu bar, so an opaque menu
-    /// bar material swallows the tint, background, and shape entirely. There
-    /// is no placement that avoids this — see
-    /// ``MenuBarOverlayPanel/updateWindowLevel()`` — so the appearance editor
-    /// tells the user about it instead of silently doing nothing.
+    /// The overlay sits behind the menu bar, so an opaque material hides it
+    /// entirely (see ``MenuBarOverlayPanel/updateWindowLevel()``); the editor
+    /// warns the user instead.
     private(set) var isReduceTransparencyEnabled =
         NSWorkspace.shared.accessibilityDisplayShouldReduceTransparency
 
@@ -99,22 +91,11 @@ final class MenuBarAppearanceManager {
     @ObservationIgnored
     private var cancellables = Set<AnyCancellable>()
 
-    /// Task observing `configuration`, throttled to match the old
-    /// `$configuration.throttle(for: 0.1, scheduler: DispatchQueue.main,
-    /// latest: true)` pipeline that decides whether the overlay panels need
-    /// to be created or torn down (wave 3).
+    /// Task observing `configuration`, throttled to 0.1 s (latest value wins),
+    /// that creates or tears down the overlay panels.
     ///
-    /// `configuration` is now a plain `@Observable` property rather than a
-    /// Combine `@Published` one, so there's no `$configuration` publisher to
-    /// throttle directly. Instead, `Observations { configuration }` (an
-    /// `AsyncSequence`) is wrapped with AsyncAlgorithms' `_throttle(for:
-    /// latest:)`. The leading underscore is not a typo: in the pinned
-    /// swift-async-algorithms 1.1.5 revision, the rate-limiting throttle
-    /// overloads are still exposed under the underscored name pending
-    /// stabilization — `_throttle(for:latest:)` is the only public throttle
-    /// operator this package version actually provides. The `latest: true`
-    /// argument preserves the original's "coalesce to the newest value seen
-    /// during the interval" semantics.
+    /// `_throttle(for:latest:)` is not a typo: swift-async-algorithms 1.1.5
+    /// only exposes the throttle under the underscored name.
     private var configurationPanelObservationTask: Task<Void, Never>?
 
     /// The currently managed menu bar overlay panels.
@@ -122,10 +103,7 @@ final class MenuBarAppearanceManager {
 
     /// The shared Mission Control detector used by all overlay panels.
     ///
-    /// Owned here, alongside `overlayPanels`, rather than one per panel:
-    /// probing the window server for displacement is a synchronous IPC
-    /// call, and running it once for the whole app instead of once per
-    /// screen is the point of this type. See `MissionControlDetector`.
+    /// One for the whole app, not per panel: the probe is synchronous IPC.
     let missionControlDetector = MissionControlDetector()
 
     /// The amount to inset the menu bar if called for by the configuration.
@@ -177,10 +155,7 @@ final class MenuBarAppearanceManager {
     }
 
     /// The key the active Space's override is stored under: the persistent
-    /// key where one exists — it survives logout, while space IDs are
-    /// reassigned after a reboot and would silently re-target a saved
-    /// override at an unrelated Space — falling back to the session-scoped
-    /// space ID for Spaces that expose no persistent key.
+    /// key, since space IDs are reassigned after reboot, else the session space ID.
     private func activeSpaceOverrideKey() -> String {
         SpaceInfo(spaceID: activeSpaceID).persistentKey ?? String(activeSpaceID)
     }
@@ -192,11 +167,8 @@ final class MenuBarAppearanceManager {
 
     /// The configuration the appearance editor reads and writes.
     ///
-    /// The overlay panels render ``effectiveConfiguration``, so an edit made
-    /// while the active Space owns an override has to land on that override —
-    /// writing the shared ``configuration`` instead would change nothing the
-    /// user can see, and would quietly restyle every other Space to boot. With
-    /// no override in play this is the shared configuration, unchanged.
+    /// The active Space's override when it has one, since the panels render
+    /// ``effectiveConfiguration``; otherwise the shared ``configuration``.
     var editedConfiguration: MenuBarAppearanceConfigurationV2 {
         get {
             effectiveConfiguration
@@ -228,11 +200,8 @@ final class MenuBarAppearanceManager {
         updateEffectiveConfiguration()
     }
 
-    /// Drops overrides whose key no longer resolves to a Space the window
-    /// server manages: session-scoped space-ID fallback keys from earlier
-    /// sessions (stale after a reboot), and keys of Spaces that have since
-    /// been deleted. Runs on save, the one moment that is allowed to rewrite
-    /// the dictionary anyway.
+    /// Drops overrides whose key no longer resolves to a managed Space (stale
+    /// session keys, deleted Spaces). Runs on save.
     private func pruneUnresolvableSpaceOverrides(keeping key: String) {
         var managedKeys = Set(
             Bridging.getManagedSpaces().map { managedSpace in
@@ -270,13 +239,8 @@ final class MenuBarAppearanceManager {
             overrides: spaceOverrides,
             activeSpaceKey: activeSpaceOverrideKey()
         )
-        // Reconcile the panel lifecycle against the configuration now being
-        // rendered, mirroring `configurationPanelObservationTask` — which
-        // observes only the shared `configuration` and so never runs on a
-        // Space change. Without this, switching to a Space whose override
-        // first needs panels renders nothing (nothing creates them), and
-        // switching away keeps panels alive whose only justification was the
-        // override.
+        // `configurationPanelObservationTask` ignores Space changes, so reconcile
+        // panels here or an override that needs them renders nothing.
         if overlayPanels.isEmpty {
             configureOverlayPanels(with: effectiveConfiguration)
         } else if !needsOverlayPanels(for: effectiveConfiguration) {
@@ -336,7 +300,6 @@ final class MenuBarAppearanceManager {
                 if overlayPanels.isEmpty {
                     configureOverlayPanels(with: configuration)
                 } else if !needsOverlayPanels(for: configuration) {
-                    // Configuration no longer needs panels, close them
                     closeAllOverlayPanels()
                 }
             }
@@ -372,7 +335,6 @@ final class MenuBarAppearanceManager {
         with configuration: MenuBarAppearanceConfigurationV2,
         force: Bool = false
     ) {
-        // Close existing panels to prevent memory leaks and duplicate windows
         closeAllOverlayPanels()
 
         guard

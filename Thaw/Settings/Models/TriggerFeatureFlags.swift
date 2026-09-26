@@ -13,11 +13,9 @@ import SwiftUI
 
 /// An individually toggleable menu bar item trigger capability.
 ///
-/// Each feature gates both (a) whether its condition kind appears in the
-/// trigger editor and (b) whether its backing monitor runs. Features are
-/// independent of one another, so they can be enabled and debugged one at a
-/// time from the Developer settings pane. Battery/power conditions are
-/// always available and are intentionally not represented here.
+/// Each feature gates whether its condition kind appears in the trigger
+/// editor and whether its monitor runs. Battery/power conditions are always
+/// available and have no flag.
 enum TriggerFeature: String, CaseIterable, Identifiable {
     case frontmostApp
     case appRunning
@@ -120,9 +118,7 @@ enum TriggerFeature: String, CaseIterable, Identifiable {
 @Observable
 final class TriggerFeatureFlagsManager {
     /// Invoked whenever the enabled feature set changes, so the triggers
-    /// manager can re-evaluate. Replaces the Combine `objectWillChange`
-    /// subscription this used before the settings layer moved to the
-    /// `@Observable` macro.
+    /// manager can re-evaluate.
     @ObservationIgnored
     private var changeHandlers = [() -> Void]()
 
@@ -142,8 +138,7 @@ final class TriggerFeatureFlagsManager {
     }
 
     /// Whether the emergency "All Trigger Features Off" item is shown in the
-    /// menu bar dropdown. Defaults off so the dropdown stays uncluttered until
-    /// the developer explicitly opts into the emergency escape hatch.
+    /// menu bar dropdown. Off by default.
     var showsAllOffInMenuBarMenu = Defaults.bool(forKey: .showTriggerFeatureFlagsAllOffMenuItem) {
         didSet {
             Defaults.set(showsAllOffInMenuBarMenu, forKey: .showTriggerFeatureFlagsAllOffMenuItem)

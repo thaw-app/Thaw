@@ -28,14 +28,8 @@ extension MenuBarItemManager {
     }
 
     /// Creates and posts a series of events to click a menu bar item.
-    ///
-    /// - Parameters:
-    ///   - item: The menu bar item to click.
-    ///   - mouseButton: The mouse button to click the item with.
     private func postClickEvents(item: MenuBarItem, mouseButton: CGMouseButton) async throws {
-        // Try to acquire semaphore with timeout. 3.5 s covers legitimate slow
-        // operations (adaptive click cap is 1000 ms × 2 for double mouseUp =
-        // ~2 s of event work plus overhead).
+        // 3.5 s covers the slowest legit click: adaptive cap 1000 ms × 2 mouseUps, plus overhead.
         var acquiredSemaphore = false
         do {
             try await eventSemaphore.wait(timeout: .milliseconds(3500))
@@ -63,7 +57,6 @@ extension MenuBarItemManager {
         try permitLocalEvents()
 
         let clickTypes = getClickSubtypes(for: mouseButton)
-        // Use adaptive timeout based on app performance history
         let timeout = getClickOperationTimeout(for: item)
 
         MenuBarItemManager.diagLog.debug("postClickEvents: using timeout \(Int(timeout.milliseconds))ms for \(item.logString)")
@@ -85,12 +78,10 @@ extension MenuBarItemManager {
             throw EventError.eventCreationFailure(item)
         }
 
-        // Warp the cursor to the click point so the Window Server's hit-test
-        // matches the event coordinates rather than the cursor's current position.
+        // Warp so WindowServer hit-tests the event point, not the old cursor position.
         MouseHelpers.warpCursor(to: clickPoint)
-        // Small delay to let the Window Server process the warp before posting
-        // the event. Without this, the event can be routed using the cursor's
-        // old position (e.g. the Apple menu) instead of the warped target.
+        // Without this delay the event can be routed by the pre-warp cursor
+        // position (e.g. the Apple menu).
         try await Task.sleep(for: .milliseconds(10))
         MouseHelpers.hideCursor()
         defer {
@@ -112,7 +103,6 @@ extension MenuBarItemManager {
                 repeating: 2 // Double mouse up prevents invalid item state.
             )
 
-            // Update timeout cache with successful duration
             let successDuration = Duration.milliseconds(Date.now.timeIntervalSince(eventStartTime) * 1000)
             updateClickOperationTimeout(successDuration, for: item)
         } catch {
@@ -125,20 +115,15 @@ extension MenuBarItemManager {
                     repeating: 2 // Double mouse up prevents invalid item state.
                 )
             } catch {
-                // Catch this for logging purposes only. We want to propagate
-                // the original error.
+                // Log only; the original error is the one to propagate.
                 MenuBarItemManager.diagLog.error("Fallback failed with error: \(error)")
             }
             throw error
         }
     }
 
-    /// Activates a menu bar item by opening its menu, choosing the correct
-    /// path based on whether the item is currently on screen.
-    ///
-    /// On-screen items are clicked in place. Off-screen items (in the hidden
-    /// or always-hidden section) are routed through temporarilyShow, which
-    /// moves, clicks, and rehides the item internally.
+    /// Opens an item's menu. On-screen items are clicked in place; off-screen
+    /// ones go through temporarilyShow, which moves, clicks, and rehides them.
     ///
     /// - Parameters:
     ///   - item: The menu bar item to activate.
@@ -146,11 +131,9 @@ extension MenuBarItemManager {
     ///     off-screen items.
     func activate(item: MenuBarItem, on displayID: CGDirectDisplayID?) async {
         if Bridging.isWindowOnScreen(item.windowID) {
-            // Electron/Chromium tray items (e.g. Claude) ignore Thaw's synthetic
-            // mouse click, so open those via an Accessibility press. Every other
-            // app responds to the normal click, which also preserves its native
-            // open/close toggle and works with popover-style menus (e.g. Cap,
-            // Droppy) that a stray AX interaction would disturb.
+            // Electron tray items ignore synthetic clicks, so use an AX press. Everything
+            // else gets a real click, which keeps the native toggle and doesn't disturb
+            // popover menus (e.g. Cap, Droppy) the way AX can.
             if isElectronItem(item), pressItemViaAccessibility(item) {
                 MenuBarItemManager.diagLog.info("Activated \(item.logString) via AX press")
                 return
@@ -165,9 +148,8 @@ extension MenuBarItemManager {
         }
     }
 
-    /// Returns whether the item's owning app is an Electron app, detected by the
-    /// presence of the bundled Electron framework. Such apps ignore synthetic
-    /// mouse clicks on their tray icon and must be opened via an AX press.
+    /// Detected by the bundled Electron framework. These apps ignore synthetic
+    /// clicks on their tray icon and need an AX press.
     func isElectronItem(_ item: MenuBarItem) -> Bool {
         // Fall back to ownerPID so this works during startup before sourcePID
         // has been resolved.
@@ -181,9 +163,8 @@ extension MenuBarItemManager {
         return FileManager.default.fileExists(atPath: electronFramework.path)
     }
 
-    /// Attempts to open the item's menu by performing an Accessibility press on
-    /// its status item element. Returns false (so the caller can fall back to
-    /// a synthetic click) when the element cannot be resolved or the press fails.
+    /// Opens the item's menu with an AX press. Returns false when the element
+    /// can't be resolved or the press fails, so the caller can click instead.
     func pressItemViaAccessibility(_ item: MenuBarItem) -> Bool {
         // Fall back to ownerPID so this works during startup before sourcePID
         // has been resolved.
@@ -207,9 +188,8 @@ extension MenuBarItemManager {
         if children.count == 1 {
             target = children[0]
         } else {
-            // Use the item's live window bounds so the nearest-child match is not
-            // thrown off by a stale cached position (which would make an Electron
-            // item fall back to the synthetic click it ignores).
+            // Live bounds: a stale cached position can mismatch and send an
+            // Electron item to the synthetic click it ignores.
             let itemCenter = (item.liveBounds).center
             guard
                 let best = children.min(by: { lhs, rhs in
@@ -228,11 +208,6 @@ extension MenuBarItemManager {
         return AXHelpers.press(target)
     }
 
-    /// Clicks a menu bar item with the given mouse button.
-    ///
-    /// - Parameters:
-    ///   - item: The menu bar item to click.
-    ///   - mouseButton: The mouse button to click the item with.
     /// Clicks a menu bar item with the given mouse button.
     ///
     /// - Parameters:
@@ -263,11 +238,8 @@ extension MenuBarItemManager {
                 MenuBarItemManager.diagLog.debug("Activated \(item.logString) via AX click delivery")
                 return await ClickReactionVerifier.verify(against: snapshot)
             } catch {
-                // Last check before the fallback, because the fallback is a
-                // click and a click on an item that already opened its menu
-                // shuts it. The activator makes the same check between its own
-                // attempts; this covers the errors raised before it gets that
-                // far, where an action may still have landed.
+                // The fallback is a click, which would shut a menu that already
+                // opened. This covers errors thrown before the activator's own check.
                 let reaction = await ClickReactionVerifier.verify(against: snapshot)
                 if reaction.didReact {
                     MenuBarItemManager.diagLog.debug(
@@ -295,10 +267,8 @@ extension MenuBarItemManager {
             appState.hidEventManager.startAll()
         }
 
-        // An owner already known to ignore synthetic events gets one attempt
-        // instead of three. Retrying it only repeats the cursor warp that the
-        // user sees as the item jittering, and the extra attempts have never
-        // been what makes such an owner answer.
+        // Known-unresponsive owners get one attempt; retries only add visible
+        // cursor-warp jitter and have never made such an owner answer.
         let maxAttempts: Int = if failureLedger.isUnresponsive(item) {
             1
         } else {
@@ -316,12 +286,8 @@ extension MenuBarItemManager {
                 let clickDuration = Date.now.timeIntervalSince(clickStartTime)
                 MenuBarItemManager.diagLog.debug("Attempt \(n) succeeded in \(Int(clickDuration * 1000))ms, finished with click")
 
-                // The events landed. Whether the owner did anything with
-                // them is a separate question, and only a yes is allowed
-                // to clear a standing unresponsive mark: an owner that
-                // drops synthetic events acknowledges them exactly like
-                // one that acts on them, so crediting the post itself
-                // would forgive the very behaviour the mark records.
+                // Only an observed reaction clears the unresponsive mark: an owner
+                // that drops synthetic events acknowledges the post like one that acts.
                 let reaction = await ClickReactionVerifier.verify(against: snapshot)
                 if reaction.didReact {
                     failureLedger.recordSuccess(for: item)

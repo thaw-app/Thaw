@@ -12,30 +12,25 @@ import Foundation
 
 /// A user-authored group of menu bar items.
 ///
-/// Unlike the automatic clusters ``MenuBarItemGrouping`` derives from a shared
-/// bundle namespace, a user group has explicit identity and can span any number
-/// of bundles. Automatic clusters are recomputed from live tags on every layout
-/// pass and are never stored; only groups the user actually authored are.
+/// Unlike the automatic clusters ``MenuBarItemGrouping`` derives per bundle,
+/// a user group has explicit identity, can span bundles, and is stored.
 nonisolated struct MenuBarItemGroup: Codable, Equatable, Sendable, Identifiable {
-    /// Stable identity. Survives renames, membership changes, and the group
-    /// having no live members at all.
+    /// Survives renames, membership changes, and having no live members.
     let id: UUID
 
-    /// The user-chosen name, or `nil` to derive one at display time from the
-    /// members. Derived names are never stored, so an app rename is picked up.
+    /// `nil` derives a name from the members at display time, so an app
+    /// rename is picked up.
     var name: String?
 
     /// Canonical `tagIdentifier` strings, in authored left-to-right order.
     ///
-    /// Always canonicalized through ``MenuBarItemTag/canonicalPersistentIdentifiers(_:)``
-    /// — the *same* function the persisted section order is canonicalized with.
-    /// If the two ever disagree, membership silently dissolves for apps whose
-    /// titles churn (iStat Menus and friends), which is the single sharpest
-    /// failure mode in this model.
+    /// Canonicalized with ``MenuBarItemTag/canonicalPersistentIdentifiers(_:)``,
+    /// the same function as the persisted section order. If they disagree,
+    /// membership silently dissolves for apps whose titles churn (iStat Menus).
     private(set) var memberIdentifiers: [String]
 
     /// Whether the layout editor draws the group as one collapsed pill.
-    /// Presentation only — never affects the persisted section order.
+    /// Never affects the persisted section order.
     var isCollapsed: Bool
 
     init(
@@ -50,8 +45,7 @@ nonisolated struct MenuBarItemGroup: Codable, Equatable, Sendable, Identifiable 
         self.isCollapsed = isCollapsed
     }
 
-    /// Trims a display name, mapping blank to `nil` so "no name" has exactly one
-    /// representation. Mirrors how `MenuBarItem.customName` treats blanks.
+    /// Trims a name and maps blank to `nil`, like `MenuBarItem.customName`.
     static func normalizedName(_ name: String?) -> String? {
         guard let trimmed = name?.trimmingCharacters(in: .whitespacesAndNewlines),
               !trimmed.isEmpty
@@ -77,8 +71,6 @@ nonisolated struct MenuBarItemGroup: Codable, Equatable, Sendable, Identifiable 
         memberIdentifiers.removeAll { $0 == identifier }
     }
 
-    /// Reorders a member within the group, leaving every other member's
-    /// relative order untouched.
     mutating func moveMember(from source: Int, to destination: Int) {
         guard memberIdentifiers.indices.contains(source) else { return }
         var members = memberIdentifiers
@@ -98,24 +90,21 @@ nonisolated struct MenuBarItemGroup: Codable, Equatable, Sendable, Identifiable 
 /// The complete authored group state: every user group, plus the bundles whose
 /// automatic cluster the user has explicitly dissolved.
 ///
-/// Pure and `Codable` so it round-trips through defaults and profiles and can be
-/// unit-tested without AppKit, `AppState`, or a live menu bar.
+/// Pure so it round-trips through defaults and profiles and is testable
+/// without AppKit.
 nonisolated struct MenuBarItemGroupSet: Codable, Equatable, Sendable {
-    /// Bumped only for changes the decoder cannot absorb. A newer version than
-    /// this build understands is treated as "no groups" *without* rewriting the
-    /// stored value, so downgrading never destroys a newer build's data.
+    /// Bump only for changes the decoder can't absorb. A newer version reads
+    /// as "no groups" without rewriting the stored value, so downgrading
+    /// never destroys data.
     static let currentVersion = 1
 
     var version: Int
 
-    /// User groups in authored order. Order is meaningful: when two groups
-    /// claim the same identifier, the earlier one wins.
+    /// When two groups claim the same identifier, the earlier one wins.
     private(set) var groups: [MenuBarItemGroup]
 
-    /// Bundle namespace descriptions (`MenuBarItemTag.Namespace.description`)
-    /// whose automatic cluster the user dissolved. Without this, "Ungroup" on an
-    /// automatic cluster would be undone on the very next layout pass, since
-    /// automatic clusters are re-derived from live tags every time.
+    /// Namespaces whose automatic cluster the user dissolved. Without this,
+    /// "Ungroup" would be undone on the next layout pass.
     private(set) var suppressedAutomaticNamespaces: Set<String>
 
     static let empty = MenuBarItemGroupSet()
@@ -149,14 +138,10 @@ nonisolated struct MenuBarItemGroupSet: Codable, Equatable, Sendable {
     /// - a group left with fewer than two *stored* members is dropped;
     /// - names are trimmed, blank becoming `nil`.
     ///
-    /// Note the asymmetry that keeps this safe: fewer than two **stored**
-    /// members means the record was already degenerate and is dropped, but
-    /// fewer than two **resolvable** members merely means the owning app is not
-    /// running — those groups are kept untouched. Pruning on resolvability
-    /// would delete a user's group simply because they quit an app.
+    /// Prune on stored members, never on resolvable ones, or quitting an app
+    /// deletes the user's group.
     ///
-    /// Applied on decode, after every mutation, and before encode, so the
-    /// in-memory and on-disk forms are always identical.
+    /// Applied on decode, after every mutation, and before encode.
     func normalized() -> MenuBarItemGroupSet {
         var claimed = Set<String>()
         var normalizedGroups = [MenuBarItemGroup]()

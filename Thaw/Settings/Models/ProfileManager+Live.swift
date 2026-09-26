@@ -8,16 +8,11 @@
 
 import Cocoa
 
-/// The live half of ProfileManager: everything whose substance needs a
-/// running AppState — pushing snapshots into live managers, the spacing
-/// relaunch wave, WindowServer display identity via Bridging, Carbon hotkey
-/// registration, and Focus Filter intents. None of that can run in a unit
-/// test, so this file is excluded from coverage in sonar-project.properties.
+/// The live half of ProfileManager: everything that needs a running AppState.
+/// Excluded from coverage in sonar-project.properties.
 ///
-/// The measured half (ProfileManager.swift) keeps the manifest, file CRUD,
-/// capture, and every decision rule. New decision logic belongs there, not
-/// here; methods in this file should stay thin orchestration over measured
-/// primitives, mirroring the MenuBarItemManager / LayoutSolver split.
+/// Decision logic belongs in ProfileManager.swift; keep methods here as thin
+/// orchestration over it.
 extension ProfileManager {
     /// Sets up the manager with the app state and configures auto-switch.
     /// If the current display has an associated profile, it is applied
@@ -27,10 +22,8 @@ extension ProfileManager {
         lastActiveDisplayUUID = Bridging.getActiveMenuBarDisplayUUID()
         rebuildProfileHotkeys()
 
-        // Before anything can apply a profile. Once per build, because each
-        // build is the only thing that can widen what pruning recognizes as
-        // unmatchable — repeating it within a build would rewrite the same
-        // files to the same bytes on every launch.
+        // Before anything can apply a profile. Once per build, since only a
+        // new build can widen what pruning recognizes as unmatchable.
         repairPersistedLayoutsIfNeeded()
 
         // Note: profiles' didSet already calls rebuildProfileHotkeys() for
@@ -55,12 +48,9 @@ extension ProfileManager {
                 diagLog.debug("No active Focus Filter on startup: \(error)")
             }
             // No Focus Filter; fall back to display-based profile.
-            // The spacing apply runs unconditionally; its no-op guard
-            // skips the relaunch when on-disk values already match the
-            // active profile's offset, but if the user is booting on a
-            // display whose profile has a different offset than the last
-            // session left on-disk, the relaunch must happen here or the
-            // apps will continue rendering with the wrong spacing.
+            // The spacing apply runs unconditionally. It no-ops when on-disk
+            // values match, but booting on a display whose profile has a
+            // different offset needs the relaunch here.
             // A Space association wins over the display one at startup
             // for the same reason it does on a live switch.
             let startupSpaceKey = SpaceInfo.activeSpace().persistentKey
@@ -118,10 +108,8 @@ extension ProfileManager {
     /// inside applyOffset skips the relaunch when the on-disk values
     /// already match, so identical-offset switches cost nothing.
     ///
-    /// previousProfileID is the active profile ID before this apply was
-    /// initiated. Callers capture it before they overwrite
-    /// self.activeProfileID, so it can be surfaced to hooks via the
-    /// THAW_PREVIOUS_PROFILE_ID env var.
+    /// previousProfileID is the active ID before this apply, captured by
+    /// callers and passed to hooks as THAW_PREVIOUS_PROFILE_ID.
     func applyProfile(
         _ profile: Profile,
         to appState: AppState,
@@ -147,9 +135,7 @@ extension ProfileManager {
         let itemSectionMap = profile.menuBarLayout.resolvedItemSectionMap
         let itemOrder = profile.menuBarLayout.resolvedItemOrder
 
-        // Snapshot hook config before entering the task. Resolving
-        // global hooks inside the Task would still work; doing it now
-        // keeps the read on the main actor with the rest of the prep.
+        // Read hook config before the task to keep it on the main actor.
         let globalPre = HookScript.loadGlobal(.pre)
         let globalPost = HookScript.loadGlobal(.post)
         let profilePre = profile.automation?.preHook
@@ -168,8 +154,8 @@ extension ProfileManager {
         layoutTask = Task { [weak self] in
             defer { appState.itemManager.finishLayoutBatch(batchLease) }
 
-            // 1. Pre-hooks. Global runs first so it can do common setup;
-            //    profile-specific runs second so it can override or extend.
+            // Pre-hooks: global first for common setup, then the profile's
+            // own so it can override or extend.
             await HookRunner.runIfEnabled(globalPre, context: HookRunner.Context(
                 phase: .pre,
                 scope: .global,
@@ -193,20 +179,12 @@ extension ProfileManager {
                 return
             }
 
-            // 2. Snapshot apply: push profile settings into the running
-            //    app state.
             self?.applySnapshot(profile, to: appState)
 
-            // Take the offset from the configuration the snapshot just
-            // installed, rather than trusting whatever spacingManager
-            // happens to be holding. The push that normally keeps it in
-            // sync lives in configurations.didSet, which guards on
-            // oldValue != configurations, so applying a profile whose
-            // display configurations already match the live ones — the
-            // usual case, since the profile is where they came from —
-            // leaves the offset at its launch value of 0. applyOffset()
-            // below would then write the system default over the user's
-            // spacing and relaunch every menu bar app to do it.
+            // Read the offset from the configuration just installed, not
+            // spacingManager. configurations.didSet skips unchanged values,
+            // so a matching profile leaves the offset at its launch value of
+            // 0 and applyOffset() would relaunch every app to the default.
             let desiredOffset = appState.settings.displaySettings
                 .activeDisplaySpacingOffset
 
@@ -227,28 +205,15 @@ extension ProfileManager {
                 self?.diagLog.info("Active menu bar display unknown; deferring spacing for profile \(profile.name)")
             }
 
-            // Run the spacing apply BEFORE the layout pass. Otherwise the
-            // two race: applyOffset() kills and relaunches every menu bar
-            // app, so any positioning the layout task did up to that
-            // point is wiped when items reappear at the OS default
-            // insertion point. The no-op guard inside applyOffset()
-            // returns immediately when the on-disk values already match,
-            // so identical-offset switches add no latency.
+            // Apply spacing before the layout pass: applyOffset() relaunches
+            // every menu bar app, wiping any positioning done before it.
             //
-            // After the relaunch wave, restart a settling period so
-            // applyProfileLayout's wait-for-settling loop blocks until
-            // items have actually re-attached. Without this, the settling
-            // flag is false (no performSetup to set it), the wait passes
-            // through, and applyProfileLayout positions items that
-            // haven't come back yet, leaving them at OS-default positions.
+            // After a relaunch, restart settling so applyProfileLayout waits
+            // for items to re-attach instead of positioning absent ones.
 
-            // Preflight settling: flip isInStartupSettling on BEFORE the
-            // wave so cacheItemsRegardless skips late-arriver detection
-            // and scheduleProfileResort short-circuits while apps are
-            // dying and respawning. Without this, on a notch display
-            // each intermediate cache cycle triggers a partial full-sort
-            // that gets cancelled by the next; only the run after the
-            // wave settles produces the correct layout.
+            // Enter settling before the wave so late-arriver detection and
+            // profile re-sorts stand down while apps respawn. Otherwise, on a
+            // notch display, each intermediate cache cycle starts a sort.
             appState.itemManager.startSettlingPeriod(reason: "spacingRelaunch:preflight")
 
             let didRelaunch: Bool
@@ -298,9 +263,8 @@ extension ProfileManager {
                 }
             )
 
-            // 3. Post-hooks. Profile runs first (mirror of the pre order),
-            //    then global teardown. Cancellation skips both, since a
-            //    newer apply is taking over.
+            // Post-hooks: profile first, then global teardown. Cancellation
+            // skips both, since a newer apply is taking over.
             if Task.isCancelled {
                 if self?.layoutGeneration == generation {
                     self?.layoutTask = nil
@@ -340,13 +304,11 @@ extension ProfileManager {
         }
     }
 
-    /// Pushes the profile snapshot into the live app state. Split out so
-    /// applyProfile's task body stays readable.
+    /// Pushes the profile snapshot into the live app state.
     private func applySnapshot(_ profile: Profile, to appState: AppState) {
         profile.generalSettings.apply(to: appState.settings.general)
         profile.advancedSettings.apply(to: appState.settings.advanced)
 
-        // Apply hotkeys
         Defaults.set(profile.hotkeys, forKey: .hotkeys)
         for hotkey in appState.settings.hotkeys.hotkeys {
             guard let data = profile.hotkeys[hotkey.action.rawValue] else {
@@ -376,14 +338,11 @@ extension ProfileManager {
             appState.settings.displaySettings.configurations = profile.displayConfigurations
         }
 
-        // Apply the spacing-relaunch confirmation preferences
         appState.settings.displaySettings.confirmSpacingRelaunch = profile.confirmSpacingRelaunch
         appState.settings.displaySettings.unconfirmedSpacingProfileScope = profile.unconfirmedSpacingProfileScope
 
-        // Apply appearance configuration
         appState.appearanceManager.configuration = profile.appearanceConfiguration
 
-        // Apply custom names to UserDefaults.
         Defaults.set(
             profile.menuBarLayout.customNames,
             forKey: .menuBarItemCustomNames
@@ -411,7 +370,6 @@ extension ProfileManager {
     func rebuildProfileHotkeys() {
         guard let appState else { return }
 
-        // Disable existing profile hotkeys and clear state.
         for (_, hotkey) in profileHotkeys {
             hotkey.disable()
         }
@@ -427,7 +385,6 @@ extension ProfileManager {
             }
         }
 
-        // Load saved key combinations.
         let saved = Defaults.dictionary(forKey: .profileHotkeys) as? [String: Data] ?? [:]
         let dec = JSONDecoder()
         let enc = JSONEncoder()
@@ -441,7 +398,6 @@ extension ProfileManager {
             let hotkey = Hotkey(action: .profileApply)
             hotkey.performSetup(with: appState)
 
-            // Load saved key combination.
             if let data = saved[meta.id.uuidString],
                let combo = try? dec.decode(KeyCombination?.self, from: data)
             {
@@ -451,13 +407,10 @@ extension ProfileManager {
             // Map this hotkey to its profile ID for the perform() lookup.
             hotkeyProfileMap[ObjectIdentifier(hotkey)] = profileID
 
-            // Observe future changes from HotkeyRecorder. Assigned after the
-            // initial keyCombination is set above, so — like the previous
-            // dropFirst() Combine pipeline — the initial value is never
-            // redundantly persisted.
+            // Assigned after the initial keyCombination is set, so only later
+            // changes are persisted.
             hotkey.keyCombinationDidChange = { [weak self, weak hotkey] in
                 guard let self, let hotkey else { return }
-                // Persist.
                 var dict = Defaults.dictionary(forKey: .profileHotkeys) as? [String: Data] ?? [:]
                 if let combo = hotkey.keyCombination, let data = try? enc.encode(combo) {
                     dict[profileID.uuidString] = data
@@ -480,9 +433,8 @@ extension ProfileManager {
     /// associated with the new active display and applies it.
     /// Skipped when a Focus Filter profile is currently active.
     ///
-    /// Internal rather than private because startObservationTasks() — which
-    /// stays in the measured file so its wiring remains testable — installs
-    /// the closure that calls it.
+    /// Internal because startObservationTasks(), in the measured file,
+    /// installs the closure that calls it.
     func checkDisplayAndAutoSwitch() async {
         guard let currentUUID = Bridging.getActiveMenuBarDisplayUUID() else { return }
         guard currentUUID != lastActiveDisplayUUID else { return }
@@ -585,14 +537,9 @@ extension ProfileManager {
     /// Re-applies the currently active profile, driving its layout pass
     /// without changing which profile is active.
     ///
-    /// Used by DisplaySettingsManager.applyActiveDisplaySpacing after it
-    /// fires a relaunch wave whose menu bar items reattach at OS-default
-    /// positions: the auto-switch path doesn't fire when the active display
-    /// keeps the same associated profile, so without an explicit re-apply
-    /// the layout would never run and the items would stay where macOS put
-    /// them. The applyOffset inside layoutTask no-ops (the on-disk values
-    /// were just written), and the subsequent applyProfileLayout awaits
-    /// the in-flight expected-set settling before running.
+    /// Used after a relaunch wave reattaches items at OS-default positions.
+    /// Auto-switch doesn't fire when the display keeps its profile, so
+    /// without this the layout would never run.
     func reapplyActiveProfile(enforceConcealedSectionOrder: Bool = false) {
         guard let appState else { return }
         guard let activeID = activeProfileID else { return }

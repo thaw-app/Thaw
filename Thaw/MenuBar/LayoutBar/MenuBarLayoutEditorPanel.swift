@@ -9,8 +9,7 @@
 import Combine
 import SwiftUI
 
-/// A popover that contains a portable version of the menu bar
-/// layout editor interface.
+/// A popover with a portable version of the menu bar layout editor.
 @MainActor
 final class MenuBarLayoutEditorPanel: NSObject, NSPopoverDelegate {
     /// The default screen to show the popover on.
@@ -18,25 +17,20 @@ final class MenuBarLayoutEditorPanel: NSObject, NSPopoverDelegate {
         NSScreen.screenWithMouse ?? NSScreen.main
     }
 
-    /// The shared app state.
     private weak var appState: AppState?
 
-    /// Storage for internal observers.
     private var cancellables = Set<AnyCancellable>()
 
-    /// The underlying popover.
     private var popover: NSPopover?
 
     /// An invisible window used to anchor the popover to the top of the screen.
     private var anchorWindow: NSWindow?
 
-    /// Sets up the popover.
     func performSetup(with appState: AppState) {
         self.appState = appState
         configureObservers()
     }
 
-    /// Shows the popover on the given screen.
     func show(on screen: NSScreen, onDone: (() -> Void)? = nil) {
         guard
             let appState,
@@ -54,7 +48,6 @@ final class MenuBarLayoutEditorPanel: NSObject, NSPopoverDelegate {
         }
     }
 
-    /// Closes the popover if it is shown.
     func close() {
         popover?.performClose(nil)
         popover = nil
@@ -63,9 +56,8 @@ final class MenuBarLayoutEditorPanel: NSObject, NSPopoverDelegate {
     // MARK: NSPopoverDelegate
 
     func popoverDidClose(_ notification: Notification) {
-        // The close animates, so this can arrive after `show(on:onDone:)` has
-        // already put a new popover on the anchor window. Hiding the window
-        // then would pull it out from under the popover that just opened.
+        // The close animates, so this can arrive after a new popover opened
+        // on the anchor window.
         guard popover == nil || (notification.object as? NSPopover) === popover else {
             return
         }
@@ -96,9 +88,7 @@ final class MenuBarLayoutEditorPanel: NSObject, NSPopoverDelegate {
         let controller = NSHostingController(
             rootView: MenuBarLayoutEditorContentView(appState: appState, onDone: onDone)
         )
-        // The layout pane is a scrolling form, so unlike the appearance editor
-        // the height doesn't need to track a configuration; a fixed size wide
-        // enough for the layout bars is sufficient.
+        // A scrolling form, so a fixed size is enough.
         controller.preferredContentSize = NSSize(width: 680, height: 640)
         popover.contentViewController = controller
         popover.contentSize = controller.preferredContentSize

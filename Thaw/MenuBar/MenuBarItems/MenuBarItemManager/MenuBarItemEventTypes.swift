@@ -13,11 +13,8 @@ import Cocoa
 
 // MARK: - MenuBarItemEventType
 
-/// Event types for menu bar item events.
 nonisolated enum MenuBarItemEventType {
-    /// The event type for moving a menu bar item.
     case move(MoveSubtype)
-    /// The event type for clicking a menu bar item.
     case click(ClickSubtype)
 
     var cgEventType: CGEventType {
@@ -45,7 +42,6 @@ nonisolated enum MenuBarItemEventType {
 
     // MARK: Subtypes
 
-    /// Subtype for menu bar item move events.
     enum MoveSubtype: Equatable {
         case mouseDown
         case mouseDragged
@@ -60,7 +56,6 @@ nonisolated enum MenuBarItemEventType {
         }
     }
 
-    /// Subtype for menu bar item click events.
     enum ClickSubtype {
         case leftMouseDown
         case leftMouseUp
@@ -170,7 +165,6 @@ nonisolated extension CGMouseButton {
 // MARK: - Duration Helpers
 
 nonisolated extension Duration {
-    /// Returns the duration in milliseconds as a Double.
     var milliseconds: Double {
         let (seconds, attoseconds) = components
         return Double(seconds) * 1000 + Double(attoseconds) / 1_000_000_000_000_000
@@ -219,8 +213,6 @@ nonisolated extension CGEvent {
     }
 
     /// Posts the event to the given event tap location.
-    ///
-    /// - Parameter location: The event tap location to post the event to.
     func post(to location: EventTap.Location) {
         let type = self.type
         MenuBarItemManager.diagLog.debug(
@@ -237,9 +229,7 @@ nonisolated extension CGEvent {
         }
     }
 
-    /// Returns a Boolean value that indicates whether the given integer
-    /// fields from this event are equivalent to the same integer fields
-    /// from the specified event.
+    /// Whether the given integer fields match between this event and `other`.
     ///
     /// - Parameters:
     ///   - other: The event to compare with this event.
@@ -266,10 +256,9 @@ nonisolated extension CGEvent {
 
     /// Stamps the target window onto the event.
     ///
-    /// Move events additionally stamp the raw 0x33 `windowID` field. This was
-    /// A/B tested against external reports that the field can make WindowServer
-    /// discard event locations on pid-routed events; on real hardware moves are
-    /// more reliable with it, so it is unconditional.
+    /// Move events also stamp the raw 0x33 `windowID` field. Reports say it can
+    /// make WindowServer drop locations on pid-routed events, but A/B tests on
+    /// real hardware show moves are more reliable with it.
     private func setWindowID(_ windowID: CGWindowID, for type: MenuBarItemEventType) {
         let windowID = Int64(windowID)
 

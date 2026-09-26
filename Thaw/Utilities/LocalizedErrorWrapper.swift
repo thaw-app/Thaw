@@ -19,7 +19,6 @@ struct LocalizedErrorWrapper: LocalizedError {
     let helpAnchor: String?
     let recoverySuggestion: String?
 
-    /// Creates a wrapper with the given error.
     init(_ error: any Error) {
         if let error = error as? any LocalizedError {
             self.errorDescription = error.errorDescription

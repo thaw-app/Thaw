@@ -14,37 +14,28 @@ import SwiftUI
 
 final class IceBarPanel: NSPanel {
     private let diagLog = DiagLog(category: "IceBarPanel")
-    /// The shared app state.
     private weak var appState: AppState?
 
-    /// Manager for the Thaw Bar's color.
     private let colorManager = IceBarColorManager()
 
-    /// The currently displayed section.
     private(set) var currentSection: MenuBarSection.Name?
 
-    /// A Boolean value that indicates whether to show the panel at
-    /// the mouse pointer's location, regardless of the user's
-    /// settings.
+    /// Show at the mouse pointer regardless of the user's settings.
     private var hotkeyLocationOverride = false
 
-    /// Timestamp of most recent `show()`. Used to suppress
-    /// `didChangeScreenParametersNotification` auto-hide when the
-    /// user clicks an inactive screen's menubar (active menu bar
-    /// change posts that notification, racing with the show).
+    /// Suppresses the screen-parameters auto-hide that races with `show()`
+    /// when the user clicks an inactive screen's menu bar.
     private var lastShowTimestamp: Date?
 
     /// Display the Thaw Bar was last shown on. Cross-screen opens must drop
     /// the previous screen's icon captures (light/dark tint is baked in).
     private var lastShownDisplayID: CGDirectDisplayID?
 
-    /// Storage for internal observers.
     private var cancellables = Set<AnyCancellable>()
 
     /// Background cache task started when the panel is shown.
     private var cacheTask: Task<Void, Never>?
 
-    /// Creates a new Thaw Bar panel with Liquid Glass support.
     init() {
         super.init(
             contentRect: .zero,
@@ -68,22 +59,18 @@ final class IceBarPanel: NSPanel {
         self.canHide = false
     }
 
-    /// Sets up the panel.
     func performSetup(with appState: AppState) {
         self.appState = appState
         configureCancellables()
         colorManager.performSetup(with: self)
     }
 
-    /// Configures the internal observers.
     private func configureCancellables() {
         var c = Set<AnyCancellable>()
 
-        // Hide the panel when the active space or screen parameters change.
-        // Guard against didChangeScreenParametersNotification racing with
-        // show(): clicking an inactive screen's menubar activates it, which
-        // posts this notification. Without the guard, the notification would
-        // hide the panel immediately after show() opened it.
+        // Hide on space or screen changes. Clicking an inactive screen's menu
+        // bar posts a screen change right after show(), so that one is
+        // ignored.
         Publishers.Merge(
             NSWorkspace.shared.notificationCenter.publisher(for: NSWorkspace.activeSpaceDidChangeNotification),
             NotificationCenter.default.publisher(for: NSApplication.didChangeScreenParametersNotification)
@@ -100,7 +87,6 @@ final class IceBarPanel: NSPanel {
         }
         .store(in: &c)
 
-        // Update the panel's origin whenever its size changes.
         publisher(for: \.frame).map(\.size)
             .removeDuplicates()
             .sink { [weak self] _ in
@@ -168,8 +154,7 @@ final class IceBarPanel: NSPanel {
                 guard
                     lowerBound <= upperBound,
                     let controlItem = appState.itemManager.itemCache.managedItems.first(matching: .visibleControlItem),
-                    // Bridging API is more reliable than controlItem.frame in some
-                    // cases (like if the item is offscreen).
+                    // More reliable than controlItem.frame, e.g. offscreen.
                     let itemBounds = Bridging.getWindowBounds(for: controlItem.windowID)
                 else {
                     return originForRightOfScreen
@@ -226,16 +211,14 @@ final class IceBarPanel: NSPanel {
 
         hotkeyLocationOverride = triggeredByHotkey && appState.settings.general.iceBarLocationOnHotkey
 
-        // IMPORTANT: We must set the navigation state and current section
-        // before updating the caches.
+        // Must be set before updating the caches.
         appState.navigationState.isIceBarPresented = true
         currentSection = section
         lastShowTimestamp = Date()
 
-        // Menu bar icon light/dark tint is baked into the captured bitmaps.
-        // Restore this display's warm snapshot when we have one; otherwise clear
-        // wrong-display icons so the panel can still appear instantly (Loading)
-        // while a background SkyLight recapture fills the correct tint.
+        // Light/dark tint is baked into captures. Restore this display's
+        // snapshot, or clear the other display's icons and recapture in the
+        // background.
         let switchedDisplay = lastShownDisplayID.map { $0 != screen.displayID } ?? false
         let needsBackgroundRecapture = appState.imageCache.prepareImagesForThawBar(
             displayID: screen.displayID,
@@ -249,9 +232,8 @@ final class IceBarPanel: NSPanel {
         }
         lastShownDisplayID = screen.displayID
 
-        // Show the panel immediately. Never defer orderFront: setting
-        // currentSection without a visible panel makes isHidden flip to false,
-        // so a second click would call hide() instead of show().
+        // Never defer orderFront: currentSection without a visible panel
+        // makes a second click call hide() instead of show().
         contentView = IceBarHostingView(
             appState: appState,
             colorManager: colorManager,
@@ -261,14 +243,11 @@ final class IceBarPanel: NSPanel {
 
         updateOrigin(for: screen)
 
-        // Color manager must be updated after updating the panel's origin,
-        // but before it is shown.
+        // After updating the origin, before showing.
         colorManager.updateAllProperties(with: frame, screen: screen)
 
         orderFrontRegardless()
 
-        // Refresh color + icons in the background. Keep the settle delay so
-        // control-item positioning does not leave the hidden section empty.
         let panelFrame = frame
         let targetDisplayID = screen.displayID
         cacheTask?.cancel()
@@ -280,13 +259,9 @@ final class IceBarPanel: NSPanel {
             await appState.itemManager.rehideTemporarilyShownItems(force: true)
             guard !Task.isCancelled else { return }
 
-            // Settle delay: when the IceBar just opened on a screen that
-            // was previously inactive, the menu bar has moved screens and
-            // NSStatusItem windows (control item chevrons) are still
-            // positioning. Without this delay, cacheItemsIfNeeded can
-            // recache with stale/zero control item bounds, causing
-            // findSection() to misclassify all items as .visible and
-            // leave the hidden section cache empty ("No items…").
+            // On a newly active screen the control items are still moving.
+            // Caching now reads stale bounds, classifies everything as
+            // visible, and leaves the hidden section empty.
             try? await Task.sleep(for: .milliseconds(500))
             guard !Task.isCancelled else { return }
             await appState.itemManager.cacheItemsIfNeeded()
@@ -298,7 +273,6 @@ final class IceBarPanel: NSPanel {
         }
     }
 
-    /// Hides the panel.
     func hide() {
         if
             let name = currentSection,
@@ -395,8 +369,7 @@ private struct IceBarContentView: View {
         itemManager.itemCache.managedItems(for: section)
     }
 
-    /// The shape, tint and border to draw with, which is the menu bar's
-    /// unless the Thaw Bar has been given its own.
+    /// The menu bar's appearance unless the Thaw Bar has its own.
     private var appearance: ResolvedThawBarAppearance {
         configuration.resolvedThawBarAppearance
     }
@@ -439,9 +412,8 @@ private struct IceBarContentView: View {
     }
 
     private var itemMaxHeight: CGFloat? {
-        // Use the raw menu bar height so icons match their native size,
-        // regardless of any inset or padding applied to the bar shape.
-        // The clip shape trims any overflow.
+        // Raw menu bar height so icons keep native size; the clip shape trims
+        // overflow.
         let menuBarHeight = screen.getMenuBarHeightEstimate()
         return menuBarHeight > 0 ? menuBarHeight : nil
     }
@@ -453,9 +425,7 @@ private struct IceBarContentView: View {
 
     /// Per-column maximum widths for the grid layout.
     private var columnWidths: [CGFloat] {
-        // Zero-width placeholders (not []) during transient zero-height
-        // states: the grid body subscripts columnWidths[colIndex] whenever
-        // rows.count > 1, and an empty array would crash there.
+        // Not []: the grid subscripts columnWidths whenever rows.count > 1.
         guard let maxHeight = itemMaxHeight, maxHeight > 0 else {
             return Array(repeating: 0, count: gridColumns)
         }
@@ -471,9 +441,7 @@ private struct IceBarContentView: View {
                     hasCapture: cachedImage != nil,
                     prefersAppIcon: prefersAppIcon
                 ), let cachedImage else {
-                    // No capture: the item renders as a square app icon, so
-                    // reserve that width rather than dropping the column and
-                    // letting the grid collapse around a visible item.
+                    // No capture: reserve width for the square app icon.
                     return maxHeight * IceBarItemView.iconFallbackHeightRatio
                 }
                 let image = cachedImage.nsImage
@@ -493,7 +461,6 @@ private struct IceBarContentView: View {
         return max(available - totalPadding, contentHeight)
     }
 
-    /// Total intrinsic height of all items/rows for the current layout.
     private var totalContentHeight: CGFloat {
         switch layout {
         case .horizontal:
@@ -587,10 +554,8 @@ private struct IceBarContentView: View {
 
     @ViewBuilder
     private var content: some View {
-        // No Screen Recording branch here on purpose. Items without a capture
-        // render as their owning app's icon, which is the whole point of the
-        // fallback: the permission is documented as optional, and notch
-        // overflow can force this bar on without the user ever choosing it.
+        // No Screen Recording check on purpose: uncaptured items fall back to
+        // app icons, and notch overflow can force this bar on.
         if section == .alwaysHidden || section == .hidden, items.isEmpty {
             HStack {
                 if cacheGracePeriodActive {
@@ -756,8 +721,7 @@ private struct IceBarItemView: View {
     let hasRoundedShape: Bool
     let tooltipDelay: TimeInterval
     let isLightBackground: Bool
-    /// Mirrors `advanced.alwaysUseAppIconForMenuBarItems`. Threaded in like
-    /// `tooltipDelay` so the view re-renders when it is toggled.
+    /// Threaded in so the view re-renders when it is toggled.
     let prefersAppIcon: Bool
 
     private var pillCornerRadius: CGFloat {
@@ -775,9 +739,7 @@ private struct IceBarItemView: View {
             let panel = menuBarManager.iceBarPanel
             menuBarManager.section(withName: section)?.hide()
             Task {
-                // Wait until the IceBar panel is fully closed before checking
-                // item visibility. Uses KVO on isVisible so we resume as soon
-                // as the panel hides rather than busy-polling.
+                // Wait for the panel to close before checking visibility.
                 await panel.waitUntilClosed(timeout: .milliseconds(200))
                 if let liveItem = await liveOnScreenItem(matching: item, on: displayID) {
                     do {
@@ -785,14 +747,11 @@ private struct IceBarItemView: View {
                         let duration = Date.now.timeIntervalSince(clickStartTime)
                         IceBarItemView.diagLog.debug("leftClick: ✓ completed in \(Int(duration * 1000))ms (on-screen path)")
                     } catch {
-                        // Surfacing this matters: a swallowed error here is a
-                        // user click that silently does nothing.
                         IceBarItemView.diagLog.error("leftClick: failed for \(item.logString): \(error)")
                     }
                 } else {
-                    // temporarilyShow handles move, click, and fallback click
-                    // internally so that shownInterfaceWindow is always captured
-                    // regardless of which click attempt succeeds.
+                    // temporarilyShow owns the click and its fallback so
+                    // shownInterfaceWindow is always captured.
                     let result = await itemManager.temporarilyShow(item: item, clickingWith: .left, on: displayID, fastPath: true)
                     let duration = Date.now.timeIntervalSince(clickStartTime)
                     IceBarItemView.diagLog.debug("leftClick: completed in \(Int(duration * 1000))ms (temp-show path, result=\(result))")
@@ -814,8 +773,6 @@ private struct IceBarItemView: View {
                     do {
                         try await itemManager.click(item: liveItem, with: .right)
                     } catch {
-                        // Surfacing this matters: a swallowed error here is a
-                        // user click that silently does nothing.
                         IceBarItemView.diagLog.error("rightClick: failed for \(item.logString): \(error)")
                     }
                 } else {
@@ -829,18 +786,15 @@ private struct IceBarItemView: View {
     /// Re-fetches on-screen items and returns the live `MenuBarItem` whose
     /// tag+PID matches `item`, or `nil` if the item is not currently on-screen.
     ///
-    /// Matching by tag+PID rather than the cached `windowID` guards against
-    /// CGWindowID recycling after a long system sleep, which would otherwise
-    /// cause `isWindowOnScreen` to return a false positive for an unrelated window.
+    /// Matches by tag+PID because CGWindowIDs get recycled after a long sleep.
     private func liveOnScreenItem(matching item: MenuBarItem, on displayID: CGDirectDisplayID) async -> MenuBarItem? {
         let liveItems = await MenuBarItem.getMenuBarItems(on: displayID, option: .onScreen)
         guard let liveItem = liveItems.first(matchingTag: item.tag, pid: item.sourcePID ?? item.ownerPID) else { return nil }
         return Bridging.isWindowOnScreen(liveItem.windowID) ? liveItem : nil
     }
 
-    /// How much of the bar's height an app icon fills. Captures are drawn
-    /// at full height because they are already menu-bar-sized artwork; a
-    /// square app icon at full height reads as oversized next to them.
+    /// How much of the bar's height an app icon fills. A square icon at full
+    /// height looks oversized next to captures.
     static let iconFallbackHeightRatio: CGFloat = 0.82
 
     private func targetSize(for image: NSImage, usesAppIcon: Bool) -> CGSize {
@@ -854,19 +808,13 @@ private struct IceBarItemView: View {
         }
 
         if usesAppIcon {
-            // App icons are square and come at whatever size AppKit felt
-            // like; a capture's intrinsic size is meaningful, an icon's is
-            // not. Inset slightly so icons do not crowd the bar the way
-            // full-height glyphs would.
+            // An app icon's intrinsic size is meaningless, unlike a capture's.
             let side = maxHeight * Self.iconFallbackHeightRatio
             return CGSize(width: side, height: side)
         }
 
-        // Scale to fill the available height exactly. This handles both
-        // directions: shrinking oversized captures (e.g. multi-monitor with
-        // different scale factors) and growing undersized ones (e.g. 16"
-        // MacBook Pro where the captured item height can be smaller than the
-        // IceBar's content height derived from the full notch-area menu bar).
+        // Scale both ways: captures can be oversized across mixed scale
+        // factors, or undersized under a notch menu bar.
         let scale = maxHeight / intrinsic.height
         return CGSize(width: intrinsic.width * scale, height: maxHeight)
     }
@@ -1050,8 +998,7 @@ private struct IceBarItemClickView: NSViewRepresentable {
     }
 
     func updateNSView(_ nsView: Represented, context _: Context) {
-        // Keep the backing `NSView` in sync with SwiftUI updates; tooltip text,
-        // tooltip timing, and click handlers can all change after creation.
+        // Tooltips and click handlers can change after creation.
         nsView.update(
             item: item,
             tooltipDelay: tooltipDelay,

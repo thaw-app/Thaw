@@ -13,29 +13,16 @@ import Testing
 
 /// Coverage sweep, part 1: the menu bar *appearance* value types.
 ///
-/// Picks up the residue `MenuBarShapesTests`, `MenuBarTintKindTests` and
-/// `MenuBarAppearanceConfigurationTests` leave behind:
-///
-/// - every `localized` switch in `MenuBarShapes.swift`
-///   (`MenuBarShapeKind`, `MenuBarBackgroundKind`, `MenuBarGlassStyle`) —
-///   these are pure display mappings, but each arm is a separate branch and
-///   a mis-wired `case` ships a wrong label,
-/// - `MenuBarGlassStyle.nsGlassStyle`, the bridge to AppKit's
-///   `NSGlassEffectView.Style`,
-/// - `MenuBarShapeKind`'s **custom decoder** rejecting an out-of-range raw
-///   value. That decoder is the read side of a persisted format, so its
-///   refusal path is load-bearing: silently defaulting instead of throwing
-///   would let a corrupt appearance blob resurrect as `noShape`,
-/// - `MenuBarAppearanceConfigurationV1.hasRoundedShape` (the legacy Ice
-///   format read by `IceSettingsImporter`),
+/// - every `localized` switch in `MenuBarShapes.swift` (a mis-wired case ships
+///   a wrong label),
+/// - `MenuBarGlassStyle.nsGlassStyle`,
+/// - `MenuBarShapeKind`'s decoder rejecting an out-of-range raw value, so a
+///   corrupt blob can't resurrect as `noShape`,
+/// - `MenuBarAppearanceConfigurationV1.hasRoundedShape` (legacy Ice format),
 /// - `MenuBarAppearanceConfigurationV2.current`'s dynamic/static selection.
 ///
-/// Deliberate gap: `MenuBarAppearanceConfigurationV2.current` is exercised
-/// with *identical* light and dark configurations when `isDynamic` is true,
-/// so the assertion holds whichever way `SystemAppearance.current` resolves
-/// on the running machine. Which of the two arms runs is therefore not
-/// pinned here — only that a dynamic configuration reads from the
-/// mode-specific pair rather than from `staticConfiguration`.
+/// Gap: the dynamic case uses identical light and dark configurations, so which
+/// arm runs isn't pinned, only that it reads the pair, not `staticConfiguration`.
 @MainActor
 @Suite("Coverage sweep 1: menu bar appearance value types")
 struct CoverageSweep1Tests {
@@ -64,10 +51,8 @@ struct CoverageSweep1Tests {
             }
         }
 
-        /// The decoder is the read side of `MenuBarAppearanceConfigurationV2`
-        /// as it is persisted in `UserDefaults`, so an unknown raw value has
-        /// to fail loudly rather than fall back to a shape the user never
-        /// chose.
+        /// The decoder reads persisted `UserDefaults` data, so an unknown raw value must
+        /// fail loudly rather than fall back to a shape the user never chose.
         @Test("An out-of-range raw value is rejected rather than defaulted", arguments: [4, 99, -1])
         func decodingAnUnknownRawValueThrows(_ rawValue: Int) throws {
             let data = try JSONEncoder().encode(rawValue)
@@ -76,9 +61,8 @@ struct CoverageSweep1Tests {
             }
         }
 
-        /// Raw value 3 takes an explicit early-return arm in the decoder
-        /// rather than the generic `init(rawValue:)` lookup, so pin that the
-        /// two agree.
+        /// Raw value 3 takes an early-return arm rather than `init(rawValue:)`, so pin
+        /// that the two agree.
         @Test("Every in-range raw value decodes to the kind with that raw value", arguments: [0, 1, 2, 3])
         func decodingAnInRangeRawValueMatchesTheRawValueInit(_ rawValue: Int) throws {
             let data = try JSONEncoder().encode(rawValue)
@@ -112,9 +96,8 @@ struct CoverageSweep1Tests {
             }
         }
 
-        /// `defaultKind` is what a configuration falls back to when no
-        /// background was ever chosen, so a change here silently restyles
-        /// every existing install.
+        /// The fallback when no background was chosen; changing it restyles every
+        /// existing install.
         @Test("The app-level default background is none")
         func defaultKindIsNone() {
             #expect(MenuBarBackgroundKind.defaultKind == MenuBarBackgroundKind.none)
@@ -196,9 +179,8 @@ struct CoverageSweep1Tests {
             #expect(!configuration(shapeKind: .split, splitShapeInfo: squareSplit).hasRoundedShape)
         }
 
-        /// V1 predates the notch shape entirely; the enum case exists only
-        /// because it shares `MenuBarShapeKind` with V2, so the legacy
-        /// configuration must report it as unrounded rather than guessing.
+        /// V1 predates the notch shape; the case exists only via the shared enum, so
+        /// legacy must report it unrounded.
         @Test("A notch shape is not rounded in the legacy format")
         func notchShapeIsNeverRoundedInV1() {
             #expect(!configuration(shapeKind: .notch).hasRoundedShape)
@@ -228,10 +210,8 @@ struct CoverageSweep1Tests {
             #expect(configuration.current.borderWidth == 3)
         }
 
-        /// Light and dark are set to the same value so the expectation does
-        /// not depend on the appearance of the machine running the suite;
-        /// what it pins is that a dynamic configuration reads the pair and
-        /// never falls through to `staticConfiguration`.
+        /// Light and dark match so the result doesn't depend on the host's appearance;
+        /// this pins that a dynamic configuration never reads `staticConfiguration`.
         @Test("A dynamic configuration reads the mode pair, not the static one")
         func dynamicConfigurationIgnoresTheStaticConfiguration() {
             var configuration = MenuBarAppearanceConfigurationV2.defaultConfiguration

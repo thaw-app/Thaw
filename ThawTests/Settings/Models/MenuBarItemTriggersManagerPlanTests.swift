@@ -9,14 +9,12 @@ import Foundation
 import Testing
 @testable import Thaw
 
-/// Exercises the decision half of ``MenuBarItemTriggersManager``: the priority
-/// plan that resolves which trigger owns which item, the identifier resolution
-/// that survives an item being re-instanced, the runtime status the settings
-/// pane renders, and the legacy-target repair applied on load.
+/// Covers the decision half of ``MenuBarItemTriggersManager``: the priority
+/// plan, identifier resolution across re-instancing, runtime status, and the
+/// legacy-target repair on load.
 ///
-/// The manager runs without `performSetup`, so there is no live menu bar, item
-/// manager or system monitor behind any of this. Everything a plan needs is
-/// passed in: the state, the identifiers currently present, and the clock.
+/// Runs without `performSetup`. Everything a plan needs (state, present
+/// identifiers, clock) is passed in.
 @Suite("Menu bar item triggers priority plan")
 @MainActor
 struct MenuBarItemTriggersManagerPlanTests {
@@ -275,10 +273,8 @@ struct MenuBarItemTriggersManagerPlanTests {
 
     @Test("A met trigger outranks an unmet one on the same item, whatever the order")
     func metTriggerOutranksUnmetRegardlessOfOrder() {
-        // The unmet trigger is listed first, so priority order alone would
-        // give it the item. Met triggers are resolved before any hide
-        // fallback, which is what keeps a satisfied rule from being starved
-        // by a higher-priority rule that has nothing to say right now.
+        // The unmet trigger comes first, but met triggers resolve before any
+        // hide fallback, so an idle higher-priority rule can't starve a met one.
         let manager = makeManager()
         let unmet = makeTrigger(name: "Unmet", item: "item-a", condition: .onBatteryPower)
         let met = makeTrigger(name: "Met", item: "item-a", condition: .onACPower)
@@ -495,10 +491,8 @@ struct MenuBarItemTriggersManagerPlanTests {
 
     @Test("Exact-identifier ownership stays empty until an item cache resolves it")
     func exactOwnershipNeedsALiveItemCache() {
-        // `controlledIdentifiers` holds live identifiers, and every target is
-        // put through `resolvedPresentIdentifier` to get one. Without a live
-        // item cache nothing is present, so nothing resolves — and the base
-        // query below is the only one that can still answer.
+        // Targets resolve through `resolvedPresentIdentifier`. With no live
+        // item cache nothing resolves, so only the base query can answer.
         let manager = makeManager()
         let trigger = makeTrigger(name: "Battery", item: "item-a", baseIdentifier: "item-a")
         manager.add(trigger)

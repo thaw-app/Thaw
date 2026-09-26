@@ -15,17 +15,11 @@ struct IceWindow<Content: View>: Scene {
     @Environment(\.openWindow) private var openWindow
     @Environment(\.dismissWindow) private var dismissWindow
 
-    /// The window's identifier.
     let id: IceWindowIdentifier
 
-    /// The window's content view.
     let content: Content
 
-    /// Creates a window with an identifier constant.
-    ///
-    /// - Parameters:
-    ///   - id: A custom identifier constant.
-    ///   - content: The content view to display in the window.
+    /// Builds the content once, when the scene is created.
     init(id: IceWindowIdentifier, @ViewBuilder content: () -> Content) {
         self.id = id
         self.content = content()
@@ -33,12 +27,9 @@ struct IceWindow<Content: View>: Scene {
 
     var body: some Scene {
         windowScene.once {
-            // SwiftUI waits to create the underlying NSWindow until the scene
-            // is first presented. We may need a valid window reference before
-            // that point, so we open the window and immediately dismiss it.
-            //
-            // - Note: Both actions are called during the same run loop cycle,
-            //   so the window isn't actually opened.
+            // SwiftUI doesn't create the NSWindow until first presentation, and we
+            // may need it earlier. Opening and dismissing in one run loop cycle creates
+            // it without showing it.
             openWindow(id: id)
             dismissWindow(id: id)
         }
@@ -60,12 +51,10 @@ struct IceWindow<Content: View>: Scene {
 
 // MARK: - IceWindowIdentifier
 
-/// Custom identifier constants uses to create Ice's windows.
+/// Identifiers for Ice's windows.
 enum IceWindowIdentifier: String, CustomStringConvertible {
-    /// The identifier for Ice's main settings window.
     case settings = "SettingsWindow"
 
-    /// The identifier for Ice's permissions window.
     case permissions = "PermissionsWindow"
 
     /// The non-localized title of the corresponding window.
@@ -85,7 +74,6 @@ enum IceWindowIdentifier: String, CustomStringConvertible {
         LocalizedStringKey(titleString)
     }
 
-    /// A textual representation of the identifier.
     var description: String {
         rawValue
     }
@@ -94,9 +82,6 @@ enum IceWindowIdentifier: String, CustomStringConvertible {
 // MARK: - OpenWindowAction
 
 extension OpenWindowAction {
-    /// Opens the corresponding window for the given identifier.
-    ///
-    /// - Parameter id: An identifier for one of Ice's windows.
     func callAsFunction(id: IceWindowIdentifier) {
         callAsFunction(id: id.rawValue)
     }
@@ -105,9 +90,6 @@ extension OpenWindowAction {
 // MARK: - DismissWindowAction
 
 extension DismissWindowAction {
-    /// Dismisses the corresponding window for the given identifier.
-    ///
-    /// - Parameter id: An identifier for one of Ice's windows.
     func callAsFunction(id: IceWindowIdentifier) {
         callAsFunction(id: id.rawValue)
     }

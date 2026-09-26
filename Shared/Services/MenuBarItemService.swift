@@ -14,13 +14,9 @@ nonisolated enum MenuBarItemService {
 nonisolated extension MenuBarItemService {
     enum Request: Codable {
         case start
-        /// Points the service's diagnostic logger at `filePath`, or turns its
-        /// file logging off when `nil`. Sent at startup, again on every log
-        /// rotation, and whenever the user toggles diagnostic logging.
-        ///
-        /// `rotationPolicy` carries the app's retention settings, so the
-        /// service prunes the shared log directory by the same rules rather
-        /// than by its own defaults.
+        /// Points the service's diagnostic logger at `filePath`, or turns file
+        /// logging off when `nil`. Sent at startup, on rotation, and when the
+        /// user toggles logging. `rotationPolicy` makes the service prune by the app's rules.
         case configureLogging(filePath: String?, rotationPolicy: DiagnosticLogger.RotationPolicy?)
         case sourcePIDs([WindowInfo])
     }

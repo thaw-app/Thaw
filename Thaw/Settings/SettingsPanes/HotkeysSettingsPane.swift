@@ -131,9 +131,8 @@ private struct MenuBarItemHotkeyList: View {
                                 // Claim the bundle's full width so the flexible
                                 // spacer column below does not compress it.
                                 .fixedSize(horizontal: true, vertical: false)
-                            // Flexible spacer column: absorbs the slack so the
-                            // name and bundle stay compact on the left while the
-                            // recorder is pushed to the trailing edge.
+                            // Absorbs the slack so the recorder sits at the
+                            // trailing edge.
                             Color.clear
                                 .frame(maxWidth: .infinity, maxHeight: 1)
                             HotkeyRecorder(hotkey: row.hotkey) {

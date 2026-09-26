@@ -13,10 +13,8 @@ import UniformTypeIdentifiers
 
 // MARK: - Option value types
 
-/// A stable, value-type representation of a menu bar item that can be
-/// targeted by a trigger. Decoupling the picker's options from the live
-/// item cache keeps the SwiftUI `Picker` from rebuilding (and dropping an
-/// in-progress selection) on every cache publish.
+/// A value-type item option. Decoupled from the live cache so the `Picker`
+/// doesn't rebuild and drop an in-progress selection on every cache publish.
 struct TriggerItemOption: Hashable {
     let id: String
     let name: String
@@ -242,15 +240,9 @@ struct TriggersSettingsPane: View {
             refreshAppOptions()
             refreshBluetoothOptions()
         }
-        // Not `.onChange(of: itemManager.itemCache)`. `MenuBarItemManager` is
-        // @Observable and `itemCache` is an observed stored property, so
-        // reading it from `body` -- which `onChange(of:)` does -- registers a
-        // dependency on it and re-evaluates the whole pane on every cache
-        // publish. That is exactly what the comment on `itemManager` says this
-        // pane avoids, and it steals focus mid-edit. An `Observations`
-        // sequence started from `.task` watches the cache without `body` ever
-        // reading it, mirroring LayoutBarItemView. The debounce coalesces the
-        // bursts a cache cycle produces.
+        // Not `.onChange(of: itemManager.itemCache)`: reading it from `body` re-renders
+        // the whole pane on every cache publish and steals focus mid-edit. `Observations`
+        // from `.task` watches it without `body` (as in LayoutBarItemView), debounced.
         .task {
             let changes = Observations { itemManager.itemCache }
             for await _ in changes.debounce(for: .milliseconds(150)) {
@@ -398,18 +390,12 @@ struct TriggersSettingsPane: View {
             bluetoothOptions = []
             return
         }
-        // Off the main thread: `pairedDevices()` blocks on a semaphore inside
-        // IOBluetooth's CoreBluetooth coordinator, and on a Mac that has not
-        // granted Bluetooth access the same call raises a TCC prompt. Doing
-        // that on the main thread stalls the settings window behind a prompt
-        // it is also responsible for drawing.
+        // Off the main thread: `pairedDevices()` blocks on a semaphore in IOBluetooth
+        // and can raise a TCC prompt, which would stall the window that has to draw it.
         Task.detached(priority: .userInitiated) {
             let devices = SystemStateMonitor.pairedBluetoothDeviceNames()
-            // Collapse by name. The matcher compares names, so two paired
-            // devices reporting the same one (a second set of AirPods of the
-            // same model, say) would otherwise show as indistinguishable rows
-            // that select the same condition. Connected wins, so a device
-            // that is currently in use is labelled as such.
+            // Collapse by name, since the matcher compares names (two AirPods of the same
+            // model, say). Connected wins, so a device in use is labelled as such.
             var connectedByName = [String: Bool]()
             for device in devices {
                 connectedByName[device.name] = (connectedByName[device.name] ?? false) || device.isConnected
@@ -537,10 +523,8 @@ private struct TriggerPriorityDropDelegate: DropDelegate {
     @Binding var draggedTriggerID: UUID?
     @Binding var dropIndicator: TriggerDropIndicator?
 
-    /// Hovering only previews the reorder. `manager.triggers` has a `didSet`
-    /// that persists to `Defaults`, so committing here would write once per
-    /// row crossed and would leave the last hovered order behind when the
-    /// drag is cancelled or released outside any row.
+    /// Hovering only previews. `manager.triggers` persists in `didSet`, so committing
+    /// here writes once per row crossed and keeps the hovered order on cancel.
     func dropEntered(info: DropInfo) {
         guard info.hasItemsConforming(to: [.thawTriggerPriority]) else { return }
         guard let draggedTriggerID, draggedTriggerID != targetID else { return }
@@ -1020,19 +1004,14 @@ private struct TriggerRow: View {
         enabledKinds.contains(trigger.condition.kind) ? enabledKinds : enabledKinds + [trigger.condition.kind]
     }
 
-    /// Whether the Match control is shown.
-    ///
-    /// Shown whenever compound conditions are available — `None of` negates a
-    /// single condition, so it is useful before a second one exists — and
-    /// always shown when the combinator is not the default, so a setting can
-    /// never be left applied with no control to see or undo it.
+    /// Shown when compound conditions are available (`None of` is useful with one
+    /// condition), and whenever the combinator isn't the default so it can be undone.
     private var showsCombinatorPicker: Bool {
         compoundEnabled || trigger.combinator != .all
     }
 
-    /// The combinators offered. With a single condition, "All of" and
-    /// "Any of" are indistinguishable no-ops, so only the meaningful pair is
-    /// shown — plus the current selection, which is never hidden.
+    /// With one condition, "All of" and "Any of" are identical no-ops, so only the
+    /// meaningful pair is shown, plus the current selection.
     private var combinatorOptions: [TriggerCombinator] {
         let options: [TriggerCombinator] = trigger.additionalConditions.isEmpty
             ? [.all, .noneOf]
@@ -1055,10 +1034,8 @@ private struct TriggerRow: View {
             conditionPicker
             conditionEditor
 
-            // Existing extra conditions render even when the compound flag is
-            // off: `shouldReveal` still evaluates them, and the editor never
-            // hides an existing selection behind a disabled flag. Only the
-            // Add button below is flag-gated.
+            // Existing extra conditions render even with the compound flag off, since
+            // `shouldReveal` still evaluates them. Only the Add button is flag-gated.
             if compoundEnabled || !trigger.additionalConditions.isEmpty {
                 ForEach(Array(trigger.additionalConditions.indices), id: \.self) { index in
                     Divider()
@@ -1658,10 +1635,9 @@ private struct ConditionEditorView: View {
 /// The Bluetooth device picker, shared by the trigger row and the compound
 /// condition editor.
 ///
-/// Offers the names the matcher actually compares against. A device's classic
-/// Bluetooth name is not always the one System Settings shows — an AirPods set
-/// can report a generic model name — so a typed guess can silently never
-/// match. "Other…" keeps a device that isn't paired right now reachable.
+/// Offers the names the matcher compares. A classic Bluetooth name can differ
+/// from System Settings (AirPods may report a model name), so a typed guess can
+/// silently never match. "Other…" keeps an unpaired device reachable.
 private struct BluetoothDevicePicker: View {
     @Binding var name: String
     let options: [TriggerBluetoothOption]
@@ -1698,10 +1674,8 @@ private struct BluetoothDevicePicker: View {
                 )
             }
         }
-        // The condition rows are keyed by index, so deleting one shifts the
-        // next into this view's identity, carrying this state with it. Clear
-        // it whenever the value we are bound to names a listed device, which
-        // covers both that shift and an ordinary edit.
+        // Rows are keyed by index, so deleting one carries this state onto the next.
+        // Clear it whenever the bound value names a listed device.
         .onChange(of: name, initial: true) { _, newValue in
             if options.contains(where: { $0.name == newValue }) {
                 prefersCustomEntry = false
@@ -1713,9 +1687,8 @@ private struct BluetoothDevicePicker: View {
         .onAppear(perform: refreshOptions)
     }
 
-    /// A configured name that no longer appears in the list — an unpaired
-    /// device, or a value typed before this picker existed. Never hidden, or
-    /// opening the editor would quietly discard it.
+    /// A configured name missing from the list (unpaired, or typed before this
+    /// picker existed). Never hidden, or opening the editor would discard it.
     private var isUnlisted: Bool {
         !name.isEmpty && !options.contains { $0.name == name }
     }
@@ -1865,14 +1838,8 @@ private struct ScriptConditionEditor: View {
 
 // MARK: - ImageConditionEditor
 
-/// Editor for an image-comparison condition: pick a menu bar item to watch
-/// and capture a reference image of its icon.
-/// The "Watched item" picker shared by the two icon-watching editors.
-///
-/// Both need the same three-part menu: a placeholder while nothing is chosen,
-/// a row for an item that is stored but not currently on the bar, and the
-/// live items. Keeping one copy means a stored-but-absent item cannot start
-/// reading differently depending on which condition selected it.
+/// The "Watched item" picker shared by the two icon-watching editors. One copy
+/// keeps a stored-but-absent item reading the same whichever condition chose it.
 private struct WatchedItemPicker: View {
     let selection: Binding<String>
     let watchedID: String
@@ -1924,6 +1891,8 @@ private struct AttentionConditionEditor: View {
     }
 }
 
+/// Editor for an image-comparison condition: pick a menu bar item to watch
+/// and capture a reference image of its icon.
 private struct ImageConditionEditor: View {
     @Binding var condition: TriggerCondition
     let itemOptions: [TriggerItemOption]
@@ -2051,11 +2020,9 @@ private struct ImageConditionEditor: View {
 
 // MARK: - CommitTextField
 
-/// A text field that edits a local draft and commits to the bound value
-/// only on Enter or focus loss, so per-keystroke typing does not churn the
-/// settings object graph (which re-renders the whole settings window and
-/// steals focus). Focus is owned by the enclosing pane so clicking away
-/// dismisses the field.
+/// Edits a local draft and commits only on Enter or focus loss, since each commit
+/// re-renders the settings window and steals focus. The enclosing pane owns focus
+/// so clicking away dismisses the field.
 private struct CommitTextField: View {
     let title: String
     let prompt: String?

@@ -12,23 +12,13 @@ import Testing
 /// Coverage sweep, part 3: the `Defaults` facade accessors that no other
 /// suite reaches.
 ///
-/// `DefaultsKeyTests` pins the hidden diagnostic keys and their defaults;
-/// everything else in `Defaults.swift` is only ever exercised indirectly by
-/// whichever settings model happens to use it. `array(forKey:)`,
-/// `float(forKey:)` and `url(forKey:)` currently have no such caller, and
-/// `globalDomain` reads a *different* domain from every other accessor —
-/// which is the one thing about it worth pinning, because a facade that
-/// quietly read the app domain instead would still return a plausible
-/// dictionary.
+/// `array(forKey:)`, `float(forKey:)` and `url(forKey:)` have no other caller.
+/// `globalDomain` reads a different domain from every other accessor, which is
+/// worth pinning because reading the app domain would still look plausible.
 ///
-/// Every test routes through ``withScratchDefaults(sourceLocation:_:)``, so
-/// nothing here touches the developer's real `com.stonerl.Thaw` domain. The
-/// suite is `.serialized` for the reason that helper documents:
-/// `Defaults.store` is process-wide.
-///
-/// Deliberate gap: the accessors are key-agnostic pass-throughs, so each
-/// test picks a key whose stored type matches the accessor rather than
-/// asserting anything about that particular setting.
+/// Tests run through ``withScratchDefaults(sourceLocation:_:)`` and the suite is
+/// `.serialized` because `Defaults.store` is process-wide. The accessors are
+/// key-agnostic, so each test just picks a key of the matching type.
 @Suite("Coverage sweep 3: Defaults facade accessors", .serialized)
 struct CoverageSweep3Tests {
     @Test("array(forKey:) returns the stored array")
@@ -49,9 +39,8 @@ struct CoverageSweep3Tests {
         }
     }
 
-    /// A key holding something that is not an array must read as `nil`
-    /// rather than trapping — the value can be anything a settings URI or a
-    /// hand-edited plist put there.
+    /// A non-array value must read as `nil` rather than trap; a settings URI or a
+    /// hand-edited plist can put anything there.
     @Test("array(forKey:) is nil when the stored value is not an array")
     func arrayForKeyIsNilForAMismatchedType() throws {
         try withScratchDefaults { suite in
@@ -71,9 +60,7 @@ struct CoverageSweep3Tests {
         }
     }
 
-    /// `UserDefaults.float(forKey:)` has no optional form: an unset key
-    /// reads as zero, which is why every caller has to supply its own
-    /// default separately.
+    /// `UserDefaults.float(forKey:)` has no optional form, so an unset key reads as zero.
     @Test("float(forKey:) is zero for an unset key")
     func floatForKeyIsZeroWhenUnset() throws {
         try withScratchDefaults { _ in
@@ -100,9 +87,8 @@ struct CoverageSweep3Tests {
         }
     }
 
-    /// The point of `globalDomain` is that it reads `NSGlobalDomain` — the
-    /// defaults every app sees — and not the app's own domain. A value
-    /// written through the facade must therefore *not* show up in it.
+    /// `globalDomain` reads `NSGlobalDomain`, not the app's domain, so a value
+    /// written through the facade must not show up in it.
     @Test("globalDomain reads the shared domain rather than the app's own")
     func globalDomainDoesNotSeeTheAppDomain() throws {
         try withScratchDefaults { _ in

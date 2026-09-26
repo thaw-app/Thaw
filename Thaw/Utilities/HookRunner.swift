@@ -158,24 +158,15 @@ enum HookRunner {
 
         let clamped = hook.timeoutSeconds.clamped(to: 1.0 ... 300.0)
 
-        // Cancelling the subprocess runs this teardown sequence against the
-        // hook's whole process group, which is what bounds the run: a
-        // `#!/bin/sh` wrapper does not forward a signal to its own child and
-        // then wait for it, so signalling the wrapper alone left the real work
-        // running. Targeting the group reaches those descendants, and the
-        // implicit final kill that closes every sequence inherits the group
-        // from the last explicit step.
+        // Cancelling signals the hook's whole process group: a `#!/bin/sh` wrapper
+        // doesn't forward signals to its child, so signalling it alone left work running.
         //
-        // `createSession` is not optional here. Without it the hook stays in
-        // Thaw's own process group, and a group-targeted signal would be
-        // delivered to Thaw as well.
+        // `createSession` is required. Without it the hook shares Thaw's process group
+        // and the signal would hit Thaw too.
         //
-        // The signal is SIGTERM rather than SIGINT because a non-interactive
-        // `sh` starts background jobs with SIGINT ignored: `sleep 30 &`
-        // survived it while `sh` itself died, and Subprocess ends the sequence
-        // as soon as the process it launched exits, so the kill that closes
-        // the sequence never got the chance to run. A descendant that traps
-        // SIGTERM can still outlive the run for the same reason.
+        // SIGTERM, not SIGINT: non-interactive `sh` starts background jobs with SIGINT
+        // ignored, and Subprocess ends the sequence once the wrapper exits. A child that
+        // traps SIGTERM can still outlive the run.
         let platformOptions: PlatformOptions = {
             var options = PlatformOptions()
             options.createSession = true
@@ -185,16 +176,11 @@ enum HookRunner {
             return options
         }()
 
-        // Both arms report into a one-shot channel and the first value wins.
+        // Both arms report into a one-shot channel; the first value wins.
         //
-        // The subprocess deliberately runs in an unstructured task: as a
-        // structured child of a task group it would have to finish before
-        // the group could return, which handed the hook's own child process
-        // control over when `run` returns -- a `sleep 30` behind a 1s budget
-        // blocked the caller for the full 30s. Awaiting `Task.value` instead
-        // does not help either, since that await is not cancellable from the
-        // waiting side. The channel is what lets the wait end on time while
-        // the process finishes on its own.
+        // The subprocess runs unstructured on purpose: as a task-group child it had to
+        // finish before `run` returned (a `sleep 30` behind a 1s budget blocked 30s), and
+        // awaiting `Task.value` isn't cancellable from the waiting side.
         let (outcomes, continuation) = AsyncStream.makeStream(of: RaceOutcome.self)
 
         let subprocessTask = Task {

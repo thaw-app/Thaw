@@ -10,8 +10,8 @@ import Foundation
 import Testing
 @testable import Thaw
 
-/// Exercises ``CGImage.dominantColors(maximumCount:alphaThreshold:)`` —
-/// the pixel-sampling front end of the Adaptive Gradient tint — against
+/// Exercises ``CGImage.dominantColors(maximumCount:alphaThreshold:)``, the
+/// pixel-sampling front end of the Adaptive Gradient tint, against
 /// synthetic images with known pixel layouts.
 @Suite("Dominant color extraction")
 struct DominantColorsTests {
@@ -100,8 +100,8 @@ struct DominantColorsTests {
     func alphaThresholdClamps() throws {
         let image = try makeOpaqueImage(width: 4, height: 4)
 
-        // -1 clamps to 0 (every pixel counts); 2 clamps to 1 (only fully
-        // opaque pixels survive) — an opaque image renders for both.
+        // -1 clamps to 0 (every pixel counts) and 2 clamps to 1 (only fully
+        // opaque pixels survive); an opaque image renders for both.
         let low = image.dominantColors(alphaThreshold: -1)
         let high = image.dominantColors(alphaThreshold: 2)
 

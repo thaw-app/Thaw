@@ -13,9 +13,8 @@ import Testing
 /// Covers the read side of ``DisplaySettingsManager``'s inheritance rule: a
 /// display with no stored entry resolves through ``globalConfiguration``.
 ///
-/// `makeManager` trips the manager's persisting `didSet` observers, so each
-/// case runs inside `withScratchDefaults`: the writes land in a throwaway
-/// store instead of the developer's own display settings.
+/// `makeManager` trips the persisting `didSet` observers, so each case runs
+/// inside `withScratchDefaults`.
 @MainActor
 @Suite("Display settings global fallback", .serialized)
 final class DisplaySettingsManagerGlobalFallbackTests {
@@ -91,12 +90,9 @@ final class DisplaySettingsManagerGlobalFallbackTests {
         }
     }
 
-    /// The offset behind these cases is what gets pushed into
-    /// `MenuBarItemSpacingManager.offset` at launch, on a display transition,
-    /// and on a profile apply. A profile apply used to skip the push when the
-    /// incoming configurations matched the live ones, leaving the offset at
-    /// its launch value of 0 and relaunching every menu bar app to write the
-    /// system default over the user's spacing.
+    /// This offset is pushed into `MenuBarItemSpacingManager.offset` at launch,
+    /// on display transitions, and on profile apply. A skipped push leaves it
+    /// at 0 and relaunches every menu bar app over the user's spacing.
     @Test("The active display's offset comes from the global fallback")
     func activeDisplaySpacingOffsetFallsBackToGlobalConfiguration() throws {
         try withScratchDefaults { _ in
@@ -161,7 +157,7 @@ final class DisplaySettingsManagerGlobalFallbackTests {
             let manager = makeManager(configurations: ["UUID-A": explicit])
 
             // A stored entry comes back as-is, so the pane can mark the
-            // display as custom (#1045)...
+            // display as custom...
             #expect(manager.configurationOverride(forUUID: "UUID-A") == explicit)
             // ...and a display with no entry reads as having none, even
             // though the resolved configuration would equal the template.

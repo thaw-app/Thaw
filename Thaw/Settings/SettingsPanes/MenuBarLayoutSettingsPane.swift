@@ -17,10 +17,8 @@ struct MenuBarLayoutSettingsPane: View {
     @State private var isAdvancedExpanded = false
 
     var body: some View {
-        // Arranging items needs Accessibility, not Screen Recording. Without
-        // capture the layout bars render each item as its owning app's icon
-        // rather than a live glyph, which is enough to drag the right one, so
-        // the pane stays usable instead of refusing to open.
+        // Arranging needs Accessibility, not Screen Recording. Without capture
+        // the bars show app icons, which is enough to drag the right item.
         if appState.menuBarManager.isMenuBarHiddenBySystemUserDefaults {
             cannotArrange
         } else {
@@ -41,15 +39,11 @@ struct MenuBarLayoutSettingsPane: View {
                 )
             }
             .onAppear {
-                // Enable background cache prewarming while the layout settings
-                // pane is open.
                 appState.imageCache.markSettingsPaneOpened()
             }
             .onDisappear {
-                // Disable background cache prewarming once the layout settings
-                // pane is no longer visible, bounding how long perpetual
-                // background captures (including the leaking SkyLight offscreen
-                // path) can run (#759).
+                // Bounds how long background captures, including the leaking
+                // SkyLight offscreen path, can run.
                 appState.imageCache.markSettingsPaneClosed()
             }
         }
@@ -139,12 +133,8 @@ struct MenuBarLayoutSettingsPane: View {
         }
     }
 
-    /// Both strings are reused verbatim from the existing catalog so this
-    /// control ships fully translated: "Arrange menu bar items." and the
-    /// ⌘ Command + drag line already carry all 19 localizations. The
-    /// trailing period in the toggle label is the catalog's, not a slip —
-    /// matching the existing key exactly is what avoids a new translation
-    /// round.
+    /// Both strings reuse existing catalog keys verbatim so they ship
+    /// translated. The trailing period in the toggle label is the catalog's.
     private var alwaysUseAppIconForMenuBarItems: some View {
         Toggle(
             "Show app icons instead of live previews",

@@ -14,13 +14,8 @@ import Foundation
 final class ProfileManager {
     /// The manager's list of profile metadata.
     ///
-    /// `didSet` does not fire for assignments made from within this class's
-    /// own `init` (matching the previous `$profiles.dropFirst()` Combine
-    /// subscription, which skipped the value delivered at subscribe time).
-    /// It does fire for every later assignment, including ones made before
-    /// ``performSetup(with:)`` is called; ``rebuildProfileHotkeys()`` no-ops
-    /// via its `appState` guard in that case, same as before when no
-    /// subscription existed yet.
+    /// `didSet` doesn't fire in `init`. Before ``performSetup(with:)``,
+    /// ``rebuildProfileHotkeys()`` no-ops on its `appState` guard.
     private(set) var profiles: [ProfileMetadata] = [] {
         didSet {
             rebuildProfileHotkeys()
@@ -30,10 +25,8 @@ final class ProfileManager {
     /// The ID of the currently active profile, or `nil`.
     var activeProfileID: UUID?
 
-    // The members below would be private, but the live half of this class
-    // lives in ProfileManager+Live.swift (excluded from coverage; see
-    // sonar-project.properties), and an extension in another file cannot
-    // reach private members. None of them are part of the intended surface.
+    // Not private only because ProfileManager+Live.swift extends this class.
+    // None of these are part of the intended surface.
     let diagLog = DiagLog(category: "ProfileManager")
     private let encoder: JSONEncoder
     let decoder: JSONDecoder
@@ -110,17 +103,9 @@ final class ProfileManager {
         spaceChangeTask?.cancel()
     }
 
-    /// (Re)starts the three notification observation tasks. The observers
-    /// follow the pattern DisplaySettingsManager adopted:
-    /// `debouncedNotificationTask` wires a NotificationCenter observer into
-    /// an AsyncStream that `.debounce(for:)` coalesces, replacing Combine's
-    /// `.debounce(for:scheduler:)`.
-    ///
-    /// A repeated setup must not leave the previous task, and the observer
-    /// its defer owns, running; hence the cancel before each assignment.
-    ///
-    /// Extracted from `performSetup(with:)` — which needs a live `AppState`
-    /// — so the wiring stays exercisable in unit tests.
+    /// (Re)starts the notification observation tasks, cancelling any previous
+    /// ones so their observers don't keep running. Kept out of
+    /// `performSetup(with:)` so the wiring is testable without an `AppState`.
     func startObservationTasks() {
         // Listen for display changes to trigger auto-switch.
         screenParametersTask?.cancel()
@@ -213,11 +198,9 @@ final class ProfileManager {
 
     /// Captures the current configuration and saves it as a named profile.
     ///
-    /// Takes the three stores the capture actually reads — settings,
-    /// appearance, item manager — rather than the full app state, so the
-    /// save path can be exercised in tests without standing up an AppState
-    /// (the same seam as ``updateProfileLayout(id:itemManager:)``). The
-    /// `AppState` overload in ProfileManager+Live.swift forwards here.
+    /// Takes only the stores the capture reads so tests don't need an
+    /// AppState. The `AppState` overload in ProfileManager+Live.swift
+    /// forwards here.
     func saveProfile(
         name: String,
         settings: AppSettings,
@@ -261,32 +244,8 @@ final class ProfileManager {
 
     // MARK: - Persisted layout repair
 
-    /// Rewrites every profile on disk with its layout pruned.
-    ///
-    /// ``MenuBarItemManager`` repairs the saved section order it loads and
-    /// writes the result straight back, so a fix for a class of unmatchable
-    /// identifier reaches that store on the next launch. Profiles have only
-    /// ever been pruned on the way *out*, through
-    /// ``MenuBarLayoutSnapshot/resolvedItemOrder``, which leaves the damage on
-    /// disk and lets `armProfileState` seed the in-memory saved order from it
-    /// again at every startup. A profile is also the one copy the user can
-    /// re-apply by hand, so an unrepaired one reintroduces the entries a
-    /// repaired saved order just dropped.
-    ///
-    /// ``MenuBarLayoutSnapshot/itemSectionMap`` is filtered by the same
-    /// verdict rather than pruned independently: it is a second spelling of
-    /// the same layout, and `resolvedItemSectionMap` returns it verbatim when
-    /// present, so an entry pruned from the order but left in the map would
-    /// still be planned against.
-    ///
-    /// Files that fail to decode are left untouched and logged. A profile we
-    /// cannot read is not a profile we should overwrite.
-    ///
-    /// Runs ``repairPersistedLayouts()`` once per app build.
-    ///
-    /// The stamp is the build rather than a one-shot flag: a later build that
-    /// recognizes a new class of unmatchable identifier has to get another
-    /// pass over files an earlier build already declared clean.
+    /// Runs ``repairPersistedLayouts()`` once per app build, so a build that
+    /// recognizes a new class of unmatchable identifier gets another pass.
     func repairPersistedLayoutsIfNeeded() {
         let currentBuild = Bundle.main.object(forInfoDictionaryKey: "CFBundleVersion") as? String ?? "unknown"
         guard Defaults.string(forKey: .profileLayoutRepairBuild) != currentBuild else {
@@ -296,6 +255,17 @@ final class ProfileManager {
         Defaults.set(currentBuild, forKey: .profileLayoutRepairBuild)
     }
 
+    /// Rewrites every profile on disk with its layout pruned.
+    ///
+    /// Read-time pruning leaves the damage on disk, where `armProfileState`
+    /// seeds from it at startup and a manual re-apply brings entries back.
+    ///
+    /// ``MenuBarLayoutSnapshot/itemSectionMap`` is filtered by the same
+    /// verdict: `resolvedItemSectionMap` returns it verbatim, so an entry
+    /// left in the map would still be planned against.
+    ///
+    /// Files that fail to decode are left untouched and logged.
+    ///
     /// - Returns: The number of profiles rewritten.
     @discardableResult
     func repairPersistedLayouts() -> Int {
@@ -382,15 +352,10 @@ final class ProfileManager {
 
     /// Deletes a profile by its identifier.
     ///
-    /// A profile file that is already absent is treated as success: the
-    /// manifest entry is still removed. Leaving the entry behind would have
-    /// made the profile permanently undeletable, since a subsequent attempt
-    /// would throw on the same missing file.
-    ///
-    /// Any other removal failure (permissions, a busy volume) leaves both the
-    /// file and the manifest entry in place and rethrows. Dropping the entry
-    /// while the file survived would orphan it: nothing would reference it,
-    /// and nothing would ever clean it up.
+    /// An already-absent file counts as success and the manifest entry is
+    /// still removed, or the profile could never be deleted. Any other
+    /// failure keeps both file and entry and rethrows, so the file isn't
+    /// orphaned.
     func deleteProfile(id: UUID) throws {
         let url = profileURL(for: id)
 
@@ -476,7 +441,7 @@ final class ProfileManager {
     ) throws {
         guard let old = profiles.first(where: { $0.id == id }) else { return }
 
-        // Save as new profile first (captures all current state).
+        // Capture via a temp profile, then re-save it under the original identity.
         let tempName = "__temp_update__"
         try saveProfile(
             name: tempName,
@@ -486,7 +451,6 @@ final class ProfileManager {
         )
         guard let tempMeta = profiles.last, tempMeta.name == tempName else { return }
 
-        // Load the temp profile and re-save with original identity.
         var updated = try loadProfile(id: tempMeta.id)
         updated = Profile(
             id: id,
@@ -499,22 +463,17 @@ final class ProfileManager {
         let data = try encoder.encode(updated)
         try data.write(to: profileURL(for: id), options: .atomic)
 
-        // Remove temp profile.
         try? FileManager.default.removeItem(at: profileURL(for: tempMeta.id))
         profiles.removeAll { $0.id == tempMeta.id }
 
-        // Update metadata.
         if let index = profiles.firstIndex(where: { $0.id == id }) {
             profiles[index].modifiedAt = updated.modifiedAt
         }
         saveManifest()
 
-        // The profile's content was just captured from the running state, so
-        // it now IS the configuration in effect — mark it active. Without
-        // this the checkmark stays wherever it was and an updated profile
-        // reads as "not applied" even though applying it would change
-        // nothing (#904). Set before the re-arm below so its active-profile
-        // gate sees the freshly-updated profile as the one to re-arm for.
+        // The content was just captured from the running state, so it is the
+        // configuration in effect: mark it active. Set before the re-arm below
+        // so its active-profile gate sees this profile.
         activeProfileID = id
 
         // The live arrangement is unchanged by this save, so re-capturing it
@@ -551,20 +510,10 @@ final class ProfileManager {
             forKey: .menuBarItemHotkeys
         ) as? [String: Data] ?? [:]
 
-        // itemOrder must agree with savedSectionOrder; they are two
-        // representations of the same "where does each item belong?"
-        // question, and the apply pipeline assumes they are consistent.
-        // Deriving itemOrder by iterating itemCache directly produced
-        // a drift bug: closed apps preserved in savedSectionOrder
-        // (via planSectionOrder's closed-app merge) did not appear in
-        // itemOrder, and transient Control Center widgets did the
-        // opposite. On profile re-apply that drift caused
-        // closed-but-saved apps like jetbrains to be treated as
-        // unmanaged and routed through planUnmanagedPlacement instead
-        // of landing at their saved section. Delegating to
-        // MenuBarItemManager.computeSectionOrder runs the same filter
-        // and closed-app preservation, so the profile's itemOrder is
-        // a curated snapshot consistent with savedSectionOrder.
+        // itemOrder must agree with savedSectionOrder. Iterating itemCache
+        // directly dropped closed-but-saved apps and kept transient Control
+        // Center widgets, so re-apply treated those apps as unmanaged.
+        // computeSectionOrder applies the same filter and closed-app merge.
         let itemOrder = itemManager.computeSectionOrder(
             from: itemManager.itemCache
         )
@@ -629,13 +578,9 @@ final class ProfileManager {
 
     /// Decides whether updating profile updatedID under scope should
     /// refresh MenuBarItemManager's in-memory active-profile layout cache.
-    /// True only when the updated profile is the currently-active one and the
-    /// update captured a fresh layout (.all or .layoutOnly): a
-    /// configuration-only update changes no layout, and updating an inactive
-    /// profile must never touch live state. Without re-arming, an update writes
-    /// the new layout to disk but leaves the cache pointing at the pre-update
-    /// spec, so the next late-arrival re-sort reverts the bar until the profile
-    /// is manually re-applied.
+    /// True only when the updated profile is active and the update captured a
+    /// fresh layout (.all or .layoutOnly). Without re-arming, the next
+    /// late-arrival re-sort reverts the bar to the pre-update spec.
     static nonisolated func shouldRearmActiveLayout(
         updatedID: UUID,
         activeID: UUID?,
@@ -680,10 +625,7 @@ final class ProfileManager {
     }
 
     /// Updates only the menu bar layout of an existing profile. Takes the item
-    /// manager rather than the full app state: layout capture and re-arm need
-    /// nothing else, and the narrower dependency lets this be exercised in
-    /// tests without an AppState. Internal so the integration test can drive it
-    /// directly through the injected profiles directory.
+    /// manager rather than the app state so tests can drive it.
     func updateProfileLayout(id: UUID, itemManager: MenuBarItemManager) throws {
         var profile = try loadProfile(id: id)
         let layout = captureCurrentLayout(from: itemManager)
@@ -696,7 +638,7 @@ final class ProfileManager {
     /// Rewrites one section's order in the active profile's persisted layout
     /// to the given sorted identifiers, so a subsequent
     /// ``reapplyActiveProfile`` applies the new order instead of the stale
-    /// on-disk one. Used by the "Sort A→Z" action (#936), which writes the
+    /// on-disk one. Used by the "Sort A→Z" action, which writes the
     /// live ``savedSectionOrder`` first and then calls this so the profile
     /// and the live bar stay in sync. Returns true when an active profile
     /// was updated.
@@ -717,13 +659,9 @@ final class ProfileManager {
             var saved = layout.savedSectionOrder
             saved[key] = identifiers
             layout.savedSectionOrder = saved
-            // Initialize itemOrder from the full savedSectionOrder when it is
-            // absent, not an empty dictionary: resolvedItemOrder prefers a
-            // non-empty itemOrder and would otherwise shadow the complete
-            // saved order with a single-section dict, dropping every other
-            // section's tracking on reapply. The updated savedSectionOrder
-            // already carries the sorted section, so seeding from it keeps
-            // all sections present.
+            // Seed a missing itemOrder from the full savedSectionOrder. A
+            // single-section dict would shadow the complete order and drop
+            // every other section on reapply.
             if layout.itemOrder == nil {
                 layout.itemOrder = saved
             }

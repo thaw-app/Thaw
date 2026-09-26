@@ -223,8 +223,7 @@ struct DeveloperSettingsPane: View {
     }
 
     /// Why a Location-backed readout has no value, or `nil` once permission is
-    /// granted and the caller has to explain the gap itself. Shared by every
-    /// such readout so the two can't drift apart.
+    /// granted and the caller has to explain the gap itself.
     private func locationPermissionMessage() -> String? {
         switch systemMonitor.locationAuthorizationStatus {
         case .notDetermined:
@@ -245,7 +244,7 @@ struct DeveloperSettingsPane: View {
         return locationPermissionMessage() ?? "Locating…"
     }
 
-    /// Wi-Fi SSID value or, when unavailable, the reason — usually the
+    /// Wi-Fi SSID value or, when unavailable, the reason: usually the
     /// Location authorization state, since CoreWLAN needs it to read SSIDs.
     private func wifiSSIDValue(_ state: SystemState) -> String {
         guard flags.isEnabled(.wifiSSID) else { return "Enable flag to read" }

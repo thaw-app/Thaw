@@ -46,9 +46,7 @@ struct MenuBarItemIconFallbackTests {
         let first = MenuBarItemIconFallback.cachedAppIcon(forPID: ownPID)
         let second = MenuBarItemIconFallback.cachedAppIcon(forPID: ownPID)
 
-        // Identity, not equality: `.icon` builds a fresh NSImage per call, so
-        // two distinct instances would mean the cache is not holding and the
-        // bar would allocate one image per body evaluation.
+        // Identity, not equality: `.icon` builds a fresh NSImage per call.
         #expect(first === second)
     }
 
@@ -97,9 +95,7 @@ struct MenuBarItemIconFallbackTests {
             .systemUIServer,
             .textInputMenuAgent,
         ] {
-            // A resolvable source PID that must lose to the host: routing is by
-            // namespace, so a module never answers with the icon of whichever
-            // process happens to own its window.
+            // Routing is by namespace, so a resolvable source PID loses to the host.
             let item = item(namespace: namespace, title: "Module", sourcePID: ownPID)
             let icon = MenuBarItemIconFallback.appIcon(for: item)
 
@@ -119,8 +115,7 @@ struct MenuBarItemIconFallbackTests {
     @Test("An item with no app icon still renders something clickable")
     func alwaysProducesAnImage() {
         let item = item(namespace: .string("com.example.gone"), sourcePID: nil)
-        // A gap the user cannot click is the failure this whole path exists
-        // to avoid, so the generic glyph is required, not optional.
+        // A gap the user cannot click is worse, so the generic glyph is required.
         #expect(MenuBarItemIconFallback.appIcon(for: item) == nil)
         #expect(MenuBarItemIconFallback.image(for: item) != nil)
     }

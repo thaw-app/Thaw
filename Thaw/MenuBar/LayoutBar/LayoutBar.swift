@@ -18,9 +18,7 @@ struct LayoutBar: View {
         }
 
         func updateNSView(_: LayoutBarScrollView, context _: Context) {
-            // Intentionally empty: `LayoutBarScrollView` wires itself to shared
-            // state during initialization, so subsequent updates arrive through
-            // its internal observers rather than SwiftUI's representable hook.
+            // `LayoutBarScrollView` observes shared state itself.
         }
     }
 

@@ -9,15 +9,13 @@ import CoreGraphics
 import Testing
 @testable import Thaw
 
-/// Regression tests for issue #1033, where the Capture Inspector showed the
-/// reporter their frontmost app instead of their menu bar.
+/// Regression tests for #1033, where the Capture Inspector showed the
+/// frontmost app instead of the menu bar.
 ///
-/// The band handed to `ScreenCapture.captureScreenBelowWindow` becomes
-/// `SCStreamConfiguration.sourceRect`, which is top-left-origin. The inspector
-/// built it from `NSScreen.frame` — bottom-left-origin — so
-/// `frame.maxY - menuBarHeight` was read as a distance measured *down* from
-/// the top of the display and selected the bottom edge instead. Both readings
-/// produce a band of identical size, so nothing downstream could reject it.
+/// The band becomes `SCStreamConfiguration.sourceRect`, which is
+/// top-left-origin, but was built from bottom-left-origin `NSScreen.frame`,
+/// so it selected the bottom strip. Both bands have the same size, so
+/// nothing downstream could reject it.
 @Suite("Capture inspector band")
 struct CaptureInspectorBandTests {
     /// A 1728×1117pt built-in display at the Core Graphics global origin.

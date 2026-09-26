@@ -17,22 +17,15 @@ struct DisplaySettingsPane: View {
     @Environment(AppState.self) var appState: AppState
     @Bindable var displaySettings: DisplaySettingsManager
 
-    /// Per-display draft of the spacing slider, keyed by display UUID.
-    /// Until the user clicks Apply, dragging the slider only updates this
-    /// dictionary, it does not touch the saved configuration or trigger
-    /// any relaunches.
+    /// Per-display draft of the spacing slider, keyed by display UUID. Nothing
+    /// is saved or relaunched until the user clicks Apply.
     @State private var draftSpacing: [String: CGFloat] = [:]
-    /// Pending spacing apply held while the confirmation alert is shown.
-    /// Set by requestSpacingApply when a prompt is required; the alert binds
-    /// to its non-nil state. Nil when no alert is showing.
+    /// Pending spacing apply; the confirmation alert shows while non-nil.
     @State private var pendingSpacingApply: PendingSpacingApply?
-    /// Pending global broadcast held while the global confirmation alert
-    /// is shown. Set by requestGlobalApply; the alert binds to its
-    /// non-nil state. Nil when no alert is showing.
+    /// Pending global broadcast; the global confirmation alert shows while
+    /// non-nil.
     @State private var pendingGlobalApply: PendingGlobalApply?
-    /// Pending display-removal held while the confirmation alert is shown.
-    /// Set by the Remove button on a disconnected display; the alert binds
-    /// to its non-nil state. Nil when no alert is showing.
+    /// Pending display removal; the confirmation alert shows while non-nil.
     @State private var pendingDisplayRemoval: DisplaySettingsManager.DisplayInfo?
     @State private var errorMessage: String?
     @State private var showingError = false
@@ -175,7 +168,7 @@ struct DisplaySettingsPane: View {
     }
 
     /// One controls block driven by a display picker, instead of repeating
-    /// the identical block once per display (thaw-next's redesign).
+    /// the block once per display.
     @ViewBuilder
     private var perDisplayControls: some View {
         let displays = displaySettings.allDisplays()
@@ -201,10 +194,8 @@ struct DisplaySettingsPane: View {
         displayRow(for: selected)
     }
 
-    /// Whether the display has its own stored configuration, which takes
-    /// precedence over the global template (#1045): without this marker the
-    /// global toggles look broken, because editing the template does nothing
-    /// for displays that have custom settings.
+    /// Whether the display has its own stored configuration, which overrides
+    /// the global template. Without this marker the global toggles look broken.
     private func hasCustomConfiguration(_ display: DisplaySettingsManager.DisplayInfo) -> Bool {
         displaySettings.configurationOverride(forUUID: display.id) != nil
     }
@@ -322,7 +313,7 @@ struct DisplaySettingsPane: View {
         let canApply = draft != CGFloat(savedOffset)
         // macOS keeps one spacing for the whole system, and it follows the
         // display that hosts the menu bar: writing another display's value
-        // would either do nothing or silently restyle every display (#961).
+        // would either do nothing or silently restyle every display.
         let editsActiveDisplay = displaySettings.activeMenuBarDisplayUUID == display.id
 
         let sliderBinding = Binding<CGFloat>(
@@ -392,12 +383,9 @@ struct DisplaySettingsPane: View {
 
     // MARK: - Spacing Apply Confirmation
 
-    /// Routes both the Apply button and the inline reset button through a
-    /// single decision point. When no profile is active and the change is
-    /// for a non-active display, applies immediately (matches prior
-    /// behaviour). Otherwise stages a PendingSpacingApply so the .alert
-    /// can ask the user to choose between updating the active profile,
-    /// updating every profile, or cancelling.
+    /// Shared by the Apply and inline reset buttons. With no active profile
+    /// and a non-active display, applies immediately; otherwise stages a
+    /// PendingSpacingApply so the alert can ask which profiles to update.
     private func requestSpacingApply(
         for display: DisplaySettingsManager.DisplayInfo,
         offset: Double
@@ -436,11 +424,8 @@ struct DisplaySettingsPane: View {
         )
     }
 
-    /// Writes the new spacing to displaySettings.configurations. The
-    /// Combine sink in DisplaySettingsManager picks this up and drives the
-    /// relaunch wave on the next main-queue dispatch, so the caller is
-    /// expected to have already written the profile file when persisting
-    /// to a profile is desired.
+    /// Writes the new spacing to displaySettings.configurations, whose
+    /// `didSet` drives the relaunch wave. Write any profile file first.
     private func commitSpacing(displayID: String, offset: Double) {
         draftSpacing[displayID] = CGFloat(offset)
         displaySettings.performUserSpacingChange {
@@ -483,11 +468,9 @@ struct DisplaySettingsPane: View {
         }
     }
 
-    /// Revalidates a staged spacing request before acting on it. The alert is
-    /// asynchronous: the menu bar can move to another display while it is
-    /// open, and committing then would persist the old display's value while
-    /// the manager applies spacing from the new host. The request is cancelled
-    /// instead, and the slider snaps back to the saved value.
+    /// Revalidates a staged spacing request. The menu bar can move to another
+    /// display while the alert is open; the request is then cancelled and the
+    /// slider snaps back to the saved value.
     private func revalidatePendingSpacing(_ pending: PendingSpacingApply) -> Bool {
         guard displaySettings.activeMenuBarDisplayUUID == pending.displayID else {
             draftSpacing[pending.displayID] = CGFloat(
@@ -508,12 +491,9 @@ struct DisplaySettingsPane: View {
             Button(String(localized: "Update Active Profile"), role: .destructive) {
                 guard revalidatePendingSpacing(pending) else { return }
                 if let id = pending.activeProfileID {
-                    // updateProfile(scope:.configurationOnly) captures live
-                    // state, so the in-memory configuration must hold the new
-                    // value before the save. Snapshot the previous offset so
-                    // a save failure can roll the live state back instead of
-                    // leaving the new spacing applied without a matching
-                    // profile entry, which the next reapply would revert.
+                    // updateProfile captures live state, so commit before the
+                    // save, keeping the previous offset to roll back if the
+                    // save fails.
                     let previousOffset = displaySettings
                         .configuration(forUUID: pending.displayID)
                         .itemSpacingOffset
@@ -665,11 +645,8 @@ struct DisplaySettingsPane: View {
             get: { draftSpacing[Self.globalDraftKey] ?? CGFloat(savedOffset) },
             set: { newValue in
                 draftSpacing[Self.globalDraftKey] = newValue
-                // Stage the draft into the global template immediately so
-                // the Apply-to-All button broadcasts the spacing along with
-                // the other controls. The relaunch wave only fires when
-                // Apply-to-All writes to the per-display configurations,
-                // so this assignment is cheap.
+                // Stage into the global template now so Apply to All carries
+                // it. No relaunch fires until Apply to All writes displays.
                 displaySettings.globalConfiguration = displaySettings.globalConfiguration
                     .withItemSpacingOffset(Double(newValue))
             }
@@ -704,10 +681,8 @@ struct DisplaySettingsPane: View {
         }
     }
 
-    /// Returns true when the Apply-to-All button should be enabled. The
-    /// button activates when at least one known display has a configuration
-    /// that differs from the current global template; otherwise the
-    /// broadcast would be a no-op.
+    /// True when at least one known display differs from the global template,
+    /// so Apply to All would change something.
     private var canApplyGlobal: Bool {
         let target = displaySettings.globalConfiguration
         let displays = displaySettings.allDisplays()
@@ -744,10 +719,8 @@ struct DisplaySettingsPane: View {
         )
     }
 
-    /// Pushes the global template to every known display via the manager's
-    /// broadcast helper. The Combine sink in DisplaySettingsManager picks
-    /// the resulting configurations change up and drives the relaunch wave
-    /// for the active display on the next main-queue dispatch.
+    /// Pushes the global template to every known display. The configurations
+    /// `didSet` then drives the relaunch wave for the active display.
     private func commitGlobalApply() {
         displaySettings.performUserSpacingChange {
             displaySettings.applyGlobalToAllKnownDisplays()
@@ -772,9 +745,8 @@ struct DisplaySettingsPane: View {
     }
 
     /// Broadcasts the global template, then persists it to `id`'s profile.
-    /// Snapshots the previous configurations first so a save failure can
-    /// roll the live state back rather than leaving the broadcast applied
-    /// without a matching profile entry, which the next reapply would revert.
+    /// Snapshots the previous configurations so a save failure can roll the
+    /// live state back.
     private func updateActiveProfile(id: UUID) {
         let previousConfigurations = displaySettings.configurations
         commitGlobalApply()

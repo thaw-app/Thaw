@@ -18,12 +18,9 @@ import Testing
 struct TriggerScriptRunnerTests {
     /// Waits for `condition` to hold, up to `timeout`.
     ///
-    /// The runner's own teardown is not instantaneous -- SIGTERM, a 500 ms
-    /// pause, SIGINT, 100 ms, SIGKILL, then up to a second of group drain --
-    /// and `run` can return before the kernel has finished reaping. Asserting
-    /// the post-state immediately therefore races that budget and flakes on a
-    /// loaded machine. Polling keeps the assertion meaningful without pinning
-    /// it to a wall-clock guess.
+    /// The runner's teardown (SIGTERM, 500 ms, SIGINT, 100 ms, SIGKILL, then
+    /// up to a second of group drain) can outlast `run`, so asserting right
+    /// away flakes on a loaded machine.
     private func waitUntil(
         timeout: Duration = .seconds(5),
         _ condition: () -> Bool
@@ -51,15 +48,10 @@ struct TriggerScriptRunnerTests {
             ofItemAtPath: scriptURL.path
         )
 
-        // Descriptor 1 has to be genuinely closed for the duration of the
-        // launch: the behaviour under test is that `Pipe()` may then reuse it,
-        // which is what HookProcess's close-before-dup2 ordering guards
-        // against. That window is process-wide and spans a suspension point,
-        // so anything else in this process that opens a descriptor while it is
-        // open can land on 1 and be clobbered by the restore below. The suite
-        // is `.serialized`, which bounds the exposure to background work
-        // rather than to other tests. Restoring eagerly rather than only in
-        // the `defer` keeps the window to the runner call itself.
+        // Descriptor 1 must be genuinely closed during the launch so `Pipe()` may
+        // reuse it, which HookProcess's close-before-dup2 ordering guards against.
+        // That window is process-wide and spans a suspension point, so the suite is
+        // `.serialized` and the restore runs eagerly, not only in the `defer`.
         let savedStdout = Darwin.dup(STDOUT_FILENO)
         #expect(savedStdout >= 0)
         var restored = false

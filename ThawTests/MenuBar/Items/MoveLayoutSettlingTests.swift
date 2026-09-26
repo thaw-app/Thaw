@@ -9,9 +9,7 @@ import CoreGraphics
 import Testing
 @testable import Thaw
 
-/// The polling loop behind `waitForLayoutToSettle`: a landing is judged
-/// only once two consecutive readings of the bar agree, and never later
-/// than the poll budget.
+/// A landing is judged once two consecutive readings agree, and never later than the poll budget.
 @Suite("Move layout settling")
 struct MoveLayoutSettlingTests {
     @Test("Only a requested final refresh evaluates an unchanged cache for persistence")

@@ -92,8 +92,8 @@ struct MenuBarItemTriggerTests {
         let attention = TriggerCondition.make(kind: .itemSeekingAttention, preserving: image)
         #expect(attention.watchedItemIdentifier == watched)
 
-        // And back again -- the reference hash is gone, which is correct: it
-        // described a comparison this kind never made.
+        // And back again. The reference hash is gone, correctly: this kind
+        // never compared against it.
         let backToImage = TriggerCondition.make(kind: .imageChanged, preserving: attention)
         #expect(backToImage.watchedItemIdentifier == watched)
         #expect(backToImage.imageValue?.referenceHash == nil)
@@ -274,7 +274,7 @@ struct MenuBarItemTriggerTests {
 
     @Test("near location within radius")
     func nearLocationWithinRadius() {
-        // ~11m north of the target — inside a 150m radius.
+        // ~11m north of the target, inside a 150m radius.
         let condition = TriggerCondition.nearLocation(
             latitude: 37.3349, longitude: -122.0090, radiusMeters: 150, label: "Work"
         )
@@ -283,7 +283,7 @@ struct MenuBarItemTriggerTests {
 
     @Test("near location outside radius")
     func nearLocationOutsideRadius() {
-        // Cupertino target vs San Francisco current — far outside any radius.
+        // Cupertino target vs San Francisco current: far outside any radius.
         let condition = TriggerCondition.nearLocation(
             latitude: 37.3349, longitude: -122.0090, radiusMeters: 150, label: "Work"
         )
@@ -412,8 +412,8 @@ struct MenuBarItemTriggerTests {
         #expect(!TriggerCondition.lowPowerMode.isSatisfied(state: state()))
     }
 
-    /// The layout editor reads this per item on every redraw, so it is
-    /// memoized — it has to survive edits to the trigger list.
+    /// The layout editor reads this per item on every redraw, so it's
+    /// memoized and has to survive edits to the trigger list.
     @Test func controlledBaseIdentifiersTracksTriggerEdits() {
         let manager = makeManager()
         #expect(!manager.isControlledByTrigger(baseIdentifier: "com.example.Status"))
@@ -435,10 +435,9 @@ struct MenuBarItemTriggerTests {
         #expect(!manager.isControlledByTrigger(baseIdentifier: ""))
     }
 
-    /// A legacy target stored with an instance suffix and no captured base
-    /// must still read as owned when queried by the live base — the badge
-    /// and the tooltip resolve ownership through different paths, and they
-    /// have to agree.
+    /// A legacy target with an instance suffix and no captured base must still
+    /// read as owned by the live base. The badge and tooltip resolve ownership
+    /// through different paths and have to agree.
     @Test func legacySuffixedTargetWithoutBaseIsOwned() {
         let manager = makeManager()
         manager.triggers = [
@@ -648,8 +647,8 @@ struct MenuBarItemTriggerTests {
         }
     }
 
-    /// "Not Low Power" has to cover High Power too, not just Automatic —
-    /// the case that a plain inversion of the old boolean would get wrong.
+    /// "Not Low Power" covers High Power too, not just Automatic, which a
+    /// plain inversion of the old boolean gets wrong.
     @Test func notLowPowerCoversAutomaticAndHigh() {
         var low = state()
         low.energyMode = .low
@@ -990,10 +989,9 @@ struct MenuBarItemTriggerTests {
 
     @Test("default manager does not persist fixtures into real defaults")
     func defaultManagerDoesNotPersistFixtures() throws {
-        // A throwaway suite rather than per-key snapshot/restore. The restore
-        // was correct, but the window between mutation and restore was
-        // visible to anything else in the process reading this key, and an
-        // interrupted run left the developer's real preferences modified.
+        // A throwaway suite, not per-key restore: the restore window was
+        // visible to other readers, and an interrupted run left real
+        // preferences modified.
         try withScratchDefaults { _ in
             let manager = MenuBarItemTriggersManager()
             manager.triggers = [
@@ -1140,11 +1138,9 @@ struct MenuBarItemTriggerTests {
         #expect(plan.actions[lower.id] == nil)
     }
 
-    /// Battery hides like any other target. An earlier revision exempted the
-    /// Control Center Battery control from the hide branch, on the theory
-    /// that concealing it would turn off the system's own Show in Menu Bar
-    /// setting; that does not happen, and the exemption made a trigger
-    /// silently ignore the "Otherwise hide in" section the user picked.
+    /// Battery hides like any other target. Hiding the Control Center Battery
+    /// control doesn't turn off its Show in Menu Bar setting, and exempting it
+    /// silently ignored the "Otherwise hide in" section the user picked.
     @Test func priorityPlanHidesControlCenterBatteryWhenConditionClears() {
         let manager = makeManager()
         let trigger = MenuBarItemTrigger(

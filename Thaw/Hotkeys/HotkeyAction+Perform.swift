@@ -10,11 +10,8 @@ import Foundation
 
 /// Carries out a hotkey action against the live app.
 ///
-/// Split from the ``HotkeyAction`` case list because every branch here drives
-/// a running menu bar — sections, the search panel, per-display Ice Bar
-/// settings, application menus, and user notifications — none of which exists
-/// in a unit test. The case list, its raw values and ``settingsActions`` stay
-/// in the measured file; new decision logic belongs there, not here.
+/// Split from ``HotkeyAction`` because every branch drives a live menu bar,
+/// which unit tests lack. New decision logic belongs in the tested file.
 extension HotkeyAction {
     @MainActor
     func perform(appState: AppState) {

@@ -27,7 +27,6 @@ final class AutomationSettings {
 
     // MARK: - Types
 
-    /// Represents a whitelisted application.
     struct WhitelistedApp: Identifiable, Equatable {
         let bundleId: String
         let appName: String?
@@ -87,7 +86,6 @@ final class AutomationSettings {
         }
     }
 
-    /// Adds a bundle ID to the whitelist.
     func addToWhitelist(bundleId: String) {
         let trimmed = bundleId.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty else { return }
@@ -96,13 +94,11 @@ final class AutomationSettings {
         refreshWhitelist()
     }
 
-    /// Removes a bundle ID from the whitelist.
     func removeFromWhitelist(bundleId: String) {
         SettingsURIHandler.removeFromWhitelist(bundleId: bundleId)
         refreshWhitelist()
     }
 
-    /// Removes a whitelisted app at the specified index.
     func removeWhitelistedApp(at indexSet: IndexSet) {
         let appsToRemove = indexSet.compactMap { index -> String? in
             guard index < whitelistedApps.count else { return nil }

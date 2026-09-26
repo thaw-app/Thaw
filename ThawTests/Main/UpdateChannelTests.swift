@@ -11,16 +11,11 @@ import Testing
 
 /// Pins the channel split that separated alpha from beta.
 ///
-/// A single `AllowsBetaUpdates` flag used to return `["alpha", "beta"]`
-/// together, so there was no way to take release candidates without also
-/// taking the rewrite. Alpha and beta are now separate opt-ins on the one
-/// feed. Sparkle always includes the default channel in the allowed set, so
-/// no `allowedChannels` value can keep stable releases away from a
-/// subscriber; what keeps them from winning is that Sparkle offers the
-/// newest allowed item, and 3.x outranks anything the 2.x line can carry.
+/// Alpha and beta are separate opt-ins on one feed. Sparkle always allows
+/// the default channel, so stable releases lose only because Sparkle offers
+/// the newest allowed item and 3.x outranks 2.x.
 ///
-/// Serialized and run against a scratch defaults suite: the migration reads
-/// and writes real preference keys through the process-wide `Defaults.store`.
+/// Serialized: the migration writes through the process-wide `Defaults.store`.
 @Suite("Update channels", .serialized)
 struct UpdateChannelTests {
     /// Sparkle offers an item with no `sparkle:channel` to every subscriber,
@@ -30,13 +25,12 @@ struct UpdateChannelTests {
         #expect(UpdateChannel.stable.allowedSparkleChannels.isEmpty)
     }
 
-    /// The point of the split: beta must not pull alpha in with it.
+    /// Beta must not pull alpha in with it.
     @Test("Beta takes beta without alpha")
     func betaExcludesAlpha() {
         #expect(UpdateChannel.beta.allowedSparkleChannels == ["beta"])
     }
 
-    /// The other half of the split: alpha must not pull beta in with it.
     /// Alpha is a parallel track, not a superset of the release candidates.
     @Test("Alpha takes alpha without beta")
     func alphaExcludesBeta() {
@@ -70,8 +64,7 @@ struct UpdateChannelTests {
         #expect(cases == [.stable, .beta, .alpha])
     }
 
-    /// The warning and the channel have to move together: the alert points at
-    /// alpha, so a system that sees the alert must be able to select it.
+    /// The alert points at alpha, so a system that sees it must be able to select alpha.
     @Test("The warning and the alpha gate share a threshold", arguments: [25, 26, 27, 28])
     func warningAndAlphaGateAgree(majorVersion: Int) {
         let version = Self.version(majorVersion)
@@ -113,9 +106,8 @@ struct UpdateChannelTests {
         }
     }
 
-    /// Existing "Development" subscribers land on beta, not alpha. Migrating
-    /// them to alpha would push the rewrite onto people who opted into a
-    /// setting that predated it.
+    /// Existing "Development" subscribers opted in before the rewrite existed,
+    /// so they land on beta, not alpha.
     @Test("The superseded flag migrates to beta")
     func legacyFlagMigratesToBeta() throws {
         try withScratchDefaults { suite in
@@ -133,8 +125,7 @@ struct UpdateChannelTests {
         }
     }
 
-    /// Once the user has picked a channel, the superseded flag no longer
-    /// speaks for them — otherwise choosing alpha would read back as beta.
+    /// Otherwise choosing alpha would read back as beta.
     @Test("An explicit channel wins over the superseded flag")
     func explicitChannelWinsOverLegacyFlag() throws {
         try withScratchDefaults { suite in

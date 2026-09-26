@@ -17,9 +17,7 @@ struct MenuBarItemGroupResolutionTests {
 
     // MARK: Regression lock
 
-    /// While the store is empty in the field, resolution must be a faithful
-    /// superset of today's derivation — this is the gate for landing the
-    /// resolver swap without a behaviour change.
+    /// With an empty store, resolution must match automatic derivation exactly.
     @Test("An empty store reproduces automatic grouping exactly")
     func emptyStoreMatchesAutomaticGrouping() {
         let tags = [
@@ -47,10 +45,8 @@ struct MenuBarItemGroupResolutionTests {
         #expect(MenuBarItemGroupResolver.resolve(tags: tags, groupSet: .empty).isEmpty)
     }
 
-    /// `LayoutBarContainer` maps its non-item arranged views (the New Items
-    /// badge, opaque slots) onto a non-groupable placeholder tag before
-    /// resolving. Those placeholders must never become members, and must not
-    /// break the member indices of the real items around them.
+    /// `LayoutBarContainer` maps non-item views (New Items badge, opaque slots)
+    /// to a placeholder tag, which must not join or shift member indices.
     @Test("Non-groupable placeholders never join a group")
     func placeholdersNeverJoinAGroup() {
         let placeholder = MenuBarItemTag.visibleControlItem
@@ -84,8 +80,8 @@ struct MenuBarItemGroupResolutionTests {
 
         let resolved = MenuBarItemGroupResolver.resolve(tags: tags, groupSet: set)
 
-        // The user group claims one item from each bundle, leaving each bundle
-        // with a single unclaimed item — so neither automatic cluster forms.
+        // The user group leaves each bundle one unclaimed item, so neither
+        // automatic cluster forms.
         #expect(resolved.count == 1)
         #expect(resolved[0].origin.isUserAuthored)
         #expect(resolved[0].displayName == "Work")
@@ -140,7 +136,7 @@ struct MenuBarItemGroupResolutionTests {
         // Nothing of the user group is live, so only the automatic cluster shows.
         #expect(resolved.count == 1)
         #expect(resolved[0].origin == .automatic(.string("com.a")))
-        // The store is untouched — quitting an app must never destroy a group.
+        // Quitting an app must never destroy a group.
         #expect(set.groups.count == 1)
     }
 

@@ -10,12 +10,9 @@ import Testing
 
 /// Covers the pruning a profile's layout gets on the way out.
 ///
-/// A profile is captured from the live bar, so a capture taken while
-/// source-PID resolution was degraded bakes in identifiers that can never
-/// match a live item again. `MenuBarItemManager` already prunes the saved
-/// section order when it loads it (#788, #815), but nothing rewrote a
-/// profile — #881's reporter carried one holding four Control-Center-hosted
-/// entries with no title at all, and every apply planned against them.
+/// A capture taken while source-PID resolution was degraded bakes in
+/// identifiers that never match a live item again, and every apply planned
+/// against them (#881).
 @Suite("Profile layout pruning")
 struct ProfilePruningTests {
     /// The unidentifiable entries from #881's `547c9ba` log, as they appear
@@ -74,8 +71,8 @@ struct ProfilePruningTests {
 
     // MARK: - What must survive
 
-    /// A titled Control Center item is a real item — Wi-Fi, Clock, BentoBox —
-    /// and is only ever dropped when a real owner claims the same title.
+    /// A titled Control Center item (Wi-Fi, Clock, BentoBox) is real, and is
+    /// only dropped when a real owner claims the same title.
     @Test("A titled Control Center entry survives")
     func titledControlCenterEntrySurvives() {
         let snapshot = layout(itemOrder: [
@@ -156,16 +153,12 @@ struct UntitledEntryPruningTests {
     }
 }
 
-/// On a non-English-locale machine, Control Center's localized owner name
-/// ("Control Centre", "Kontrollzentrum") can land in the namespace when
-/// bundle-ID resolution fails transiently, minting ghosts like
-/// `Control Centre:Item-0:13`. The generic `Item-N` title is shared by every
-/// owner, so the existing claimed-title rule skips them and they persist
-/// forever, duplicating the canonical `com.apple.controlcenter:Item-N`
-/// entries and inflating the stale-identifier ledger's unmatched count.
-/// When the canonical `com.apple.controlcenter` namespace is present
-/// anywhere in the saved order, the localized alias copies are redundant
-/// and can be pruned. (#1080)
+/// On non-English systems, Control Center's localized owner name ("Control
+/// Centre", "Kontrollzentrum") can land in the namespace when bundle-ID
+/// resolution fails transiently, minting ghosts like `Control Centre:Item-0:13`.
+/// The shared `Item-N` title slips past the claimed-title rule, so they
+/// persist. When `com.apple.controlcenter` is present in the saved order, the
+/// aliases are pruned (#1080).
 @Suite("Localized Control Center ghost pruning")
 struct LocalizedControlCenterGhostPruningTests {
     @Test("A Control Centre alias ghost is pruned when the canonical namespace is present")
@@ -191,10 +184,8 @@ struct LocalizedControlCenterGhostPruningTests {
 
     @Test("A localized alias ghost is kept when no canonical entry exists")
     func localizedAliasGhostSurvivesWithoutCanonicalTwin() {
-        // No com.apple.controlcenter:* entry anywhere, and the title is
-        // not a known Control Center module name, so it may be the only
-        // identity a bundle-ID-less Control Center slot ever got. Deleting
-        // it would lose the user's placement (#949 protection).
+        // No com.apple.controlcenter entry and no known module title, so this
+        // may be the slot's only identity; deleting it loses placement (#949).
         let pruned = LayoutSolver.prunedSectionOrder(
             ["hidden": ["Control Centre:SomeUniqueApp"]],
             displayNameAliases: ["Control Centre"]
@@ -218,10 +209,8 @@ struct LocalizedControlCenterGhostPruningTests {
 
     @Test("An instance-indexed Item-N alias ghost is pruned when the canonical namespace is present")
     func instanceIndexedItemNGhostIsPruned() {
-        // The exact shape from #1080's report: Control Centre:Item-0:13, with
-        // the :N instance suffix the windowID-sort enumeration assigns. The
-        // alias rule prunes it alongside the canonical com.apple.controlcenter
-        // entries; the suffix does not protect it.
+        // The shape from #1080: the :N instance suffix the windowID-sort
+        // enumeration assigns doesn't protect it from the alias rule.
         let pruned = LayoutSolver.prunedSectionOrder(
             [
                 "hidden": [

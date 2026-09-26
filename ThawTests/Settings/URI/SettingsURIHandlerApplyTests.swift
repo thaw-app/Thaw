@@ -9,19 +9,13 @@ import Foundation
 import Testing
 @testable import Thaw
 
-/// Covers ``SettingsURIHandler``'s *apply* surface — the `set` and `toggle`
-/// actions and the notifications they post.
+/// Covers ``SettingsURIHandler``'s `set` and `toggle` actions and the
+/// notifications they post.
 ///
-/// `SettingsURIHandlerTests` covers the pure side (key tables, `parseBool`,
-/// `parseDouble`, `PerDisplayScope`). This suite drives the paths that
-/// actually mutate state, which is where the trust boundary lives: these
-/// functions run on behalf of a *third-party app* that sent a `thaw://` URL,
-/// so a malformed key, an out-of-range double, or a non-finite value has to
-/// be refused rather than written through to `Defaults`.
-///
-/// Every test body runs inside `withScratchDefaults`, so the handler's writes
-/// land in a throwaway store rather than the real `com.stonerl.Thaw` domain,
-/// and each test starts from an empty store.
+/// These run on behalf of a third-party app that sent a `thaw://` URL, so a
+/// malformed key, an out-of-range double, or a non-finite value must be
+/// refused rather than written to `Defaults`. Each test runs inside
+/// `withScratchDefaults`, starting from an empty throwaway store.
 @MainActor
 @Suite("Settings URI handler apply", .serialized)
 struct SettingsURIHandlerApplyTests {

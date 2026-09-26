@@ -8,14 +8,10 @@
 
 import Foundation
 
-/// A type that brings settings written by an earlier version of the app up to
-/// the current format.
+/// Brings settings written by an earlier app version up to the current format.
 ///
-/// Migrations for Ice's `0.8.0` through `0.11.13.1` releases used to live here.
-/// Thaw has only ever read its own defaults domain, `com.stonerl.Thaw`, and no
-/// Thaw release wrote those older formats into it, so none of them could run.
-/// Settings that do come from Ice arrive through ``IceSettingsImporter``, which
-/// converts them as it reads them.
+/// Ice-format settings arrive through ``IceSettingsImporter``, which converts
+/// them as it reads; Thaw's own domain never held the old Ice formats.
 @MainActor
 struct MigrationManager {
     private let diagLog = DiagLog(category: "Migration")
@@ -26,7 +22,6 @@ struct MigrationManager {
 // MARK: - Migrate All
 
 extension MigrationManager {
-    /// Performs all migrations.
     func migrateAll() {
         let results = [
             migratePerDisplayIceBar(),

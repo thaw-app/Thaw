@@ -14,41 +14,31 @@ import Synchronization
 nonisolated enum MouseHelpers {
     private static let diagLog = DiagLog(category: "MouseHelpers")
 
-    /// Cursor hide/show bookkeeping. The CGDisplayHideCursor /
-    /// CGDisplayShowCursor calls that hideCount mirrors are made inside
-    /// the same critical section, so the count and the window server's hide
-    /// state can never diverge through interleaving (a hide landing between
-    /// another thread's decrement and its show call used to strand the
-    /// cursor hidden until the watchdog fired).
+    /// Cursor hide/show bookkeeping. CGDisplayHideCursor/ShowCursor run inside the
+    /// same critical section, so the count and the window server's hide state can't
+    /// diverge (a hide between another thread's decrement and show stranded the cursor).
     private struct CursorState {
         var hideCount = 0
         /// The armed watchdog, if any. Sleeps until watchdogDeadline, then
         /// force-shows the cursor as the safety net against unbalanced hides.
         var watchdogTask: Task<Void, Never>?
-        /// Deadline of the armed watchdog, used to extend — never shorten —
-        /// coverage when nested holders request a longer timeout than the
-        /// first hide armed.
+        /// Deadline of the armed watchdog, so nested holders with a longer timeout
+        /// extend coverage but never shorten it.
         var watchdogDeadline: ContinuousClock.Instant = .now
-        /// Bumped whenever the watchdog is armed or cancelled. A fired
-        /// watchdog that lost the race with its own cancellation (already
-        /// executing, blocked on the lock) compares its captured generation
-        /// and becomes a no-op instead of force-showing a cursor a newer
-        /// holder legitimately hid.
+        /// Bumped on every arm or cancel. A fired watchdog that lost the race with its
+        /// cancellation compares generations and no-ops instead of undoing a newer hide.
         var generation = 0
     }
 
     private static let cursorState = Mutex(CursorState())
     private static let defaultWatchdogTimeout: Duration = .seconds(1)
 
-    /// Arms the watchdog, or extends it when the requested timeout reaches
-    /// past the currently scheduled deadline. Never shortens an armed
-    /// watchdog: a nested short-timeout hide must not cut the safety window
-    /// out from under an outer long-running holder (and vice versa, a
-    /// nested long-timeout hide extends the 1s default a shorter first
-    /// holder armed, so the watchdog can't force-show mid-operation).
+    /// Arms the watchdog, or extends it to a later deadline. Never shortens it: a
+    /// nested short hide can't cut an outer holder's window, and a nested long hide
+    /// extends a shorter first one.
     ///
-    /// Must be called while holding the cursorState lock. Returns whether
-    /// a new watchdog was scheduled so the caller can log outside the lock.
+    /// Call with the cursorState lock held. Returns whether a new watchdog was
+    /// scheduled so the caller can log outside the lock.
     private static func scheduleWatchdog(_ state: inout CursorState, after timeout: Duration) -> Bool {
         let deadline = ContinuousClock.now + timeout
         if state.watchdogTask != nil, state.watchdogDeadline >= deadline {
@@ -162,9 +152,8 @@ nonisolated enum MouseHelpers {
                 cancelWatchdog(&state)
             } else {
                 showFailure = result
-                // The count is already zero, so no later showCursor call
-                // will retry — keep the watchdog armed as the recovery path
-                // instead of leaving the cursor stranded hidden.
+                // The count is already zero, so no later showCursor will retry. Keep the
+                // watchdog armed so the cursor isn't stranded hidden.
                 _ = scheduleWatchdog(&state, after: defaultWatchdogTimeout)
             }
         }
@@ -185,9 +174,8 @@ nonisolated enum MouseHelpers {
         let result = CGWarpMouseCursorPosition(point)
         if result != .success {
             diagLog.warning("CGWarpMouseCursorPosition failed (error: \(result.rawValue)), falling back to CGEvent mouseMoved")
-            // Posting a mouseMoved event is more reliable than warp when a
-            // menu is tracking the cursor — the event updates the cursor
-            // position in the Window Server even if warp is blocked.
+            // Posting mouseMoved is more reliable than warp while a menu tracks the cursor;
+            // it updates the Window Server position even when warp is blocked.
             guard
                 let source = CGEventSource(stateID: .hidSystemState),
                 let event = CGEvent(
@@ -226,15 +214,11 @@ nonisolated enum MouseHelpers {
         return point
     }
 
-    /// Returns the cursor to point after an operation that moved it.
+    /// Returns the cursor to `point` after an operation that moved it.
     ///
-    /// An unconditional warp, matching what these call sites did before the
-    /// cursor work landed and what development does today. A richer version
-    /// once preferred the user's own position when they moved the mouse
-    /// mid-operation, backed by a hide-suspension mechanism in this type; it
-    /// arrived with the macOS 27 backport (#811) and left with the revert of
-    /// that backport (#857), so it should return with #811 rather than on its
-    /// own.
+    /// An unconditional warp. The version that preferred the user's own position came
+    /// with the macOS 27 backport (#811) and left with its revert (#857); it should
+    /// return with #811.
     ///
     /// - Parameter point: The point to move the cursor to in global
     ///   display coordinates.
@@ -288,12 +272,9 @@ nonisolated enum MouseHelpers {
         return .seconds(seconds) <= duration
     }
 
-    /// Whether a physical button press, release, or drag happened within
-    /// the interval. Covers left, right, and other buttons, and the drag
-    /// events a held-button move produces. `isButtonPressed()` alone misses
-    /// a press that happened during the window but was released before the
-    /// check, so the timestamped event types are what make a bulk layout
-    /// batch defer to a click that landed mid-sequence. (#1075 review)
+    /// Whether a physical press, release, or drag of any button happened within the
+    /// interval. `isButtonPressed()` misses a click released before the check, so these
+    /// timestamps are what make a bulk batch defer to a mid-sequence click.
     static func lastPointerButtonEventOccurred(
         within duration: Duration,
         stateID: CGEventSourceStateID = .combinedSessionState

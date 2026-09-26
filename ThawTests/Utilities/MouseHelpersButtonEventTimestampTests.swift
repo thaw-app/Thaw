@@ -11,9 +11,9 @@ import Testing
 @testable import Thaw
 
 /// Covers `MouseHelpers.lastPointerButtonEventOccurred` and its wiring into
-/// `physicalPointerInputOccurred`, the HID-timestamp detector added for the
-/// #1075 review so a click that landed mid-batch but was released before the
-/// check is still detected (isButtonPressed() alone misses those).
+/// `physicalPointerInputOccurred`: the HID-timestamp detector that catches a
+/// click that landed mid-batch but was released before the check
+/// (isButtonPressed() alone misses those).
 ///
 /// The detector reads live HID state via CGEventSource.secondsSinceLastEventType,
 /// which a unit test cannot plant deterministically. These tests pin the

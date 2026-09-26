@@ -20,16 +20,13 @@ class LayoutBarArrangedView: NSView {
 
     /// The container frozen when the drag began.
     ///
-    /// `oldContainerInfo` is populated only after a destination receives an
-    /// update. A drag cancelled before that point would otherwise leave its
-    /// source container frozen indefinitely, so retain the source separately
-    /// for the lifetime of the dragging session.
+    /// Kept separately because a drag cancelled before `oldContainerInfo` is
+    /// set would leave the source frozen forever.
     private weak var frozenSourceContainer: LayoutBarContainer?
 
     /// A Boolean value that indicates whether the view is currently inside a container.
     var hasContainer = false
 
-    /// A Boolean value that indicates whether the view is enabled.
     var isEnabled = true {
         didSet {
             needsDisplay = true
@@ -43,7 +40,6 @@ class LayoutBarArrangedView: NSView {
         }
     }
 
-    /// The average color info of the menu bar, used for adaptive coloring.
     var averageColorInfo: MenuBarAverageColorInfo? {
         didSet {
             needsDisplay = true
@@ -65,17 +61,14 @@ class LayoutBarArrangedView: NSView {
         nil
     }
 
-    /// Whether this container is the row where the current drag began.
-    /// Intermediate rows may thaw as soon as the pointer exits, but the
-    /// original row must stay frozen so a cache refresh does not insert a
+    /// The original row must stay frozen, or a cache refresh inserts a
     /// duplicate view behind the drag.
     func beganDragging(in container: LayoutBarContainer) -> Bool {
         frozenSourceContainer === container
     }
 
-    /// A row stays frozen while an asynchronous system move is being
-    /// verified. Starting another drag from that row would let the older move
-    /// thaw and reconcile it underneath the newer drag.
+    /// A row stays frozen while a move is verified; a new drag from it would
+    /// be reconciled underneath.
     var canBeginDraggingFromCurrentContainer: Bool {
         (superview as? LayoutBarContainer)?.canSetArrangedViews == true
     }
@@ -95,18 +88,14 @@ extension LayoutBarArrangedView: NSDraggingSource {
         if let container,
            let sourceIndex = container.arrangedViews.firstIndex(of: self)
         {
-            // Record the source synchronously. A quick cross-row drag can
-            // reach its destination before draggingUpdated gets a chance to
-            // populate this, which otherwise leaves the real source frozen
-            // and unavailable for final reconciliation.
+            // A quick cross-row drag can land before draggingUpdated sets
+            // this, leaving the source frozen.
             oldContainerInfo = (container, sourceIndex)
         }
 
         session.animatesToStartingPositionsOnCancelOrFail = false
 
-        // This callback is already delivered on the main thread. Set the
-        // placeholder synchronously so a short drag cannot end before a queued
-        // task turns the placeholder back on.
+        // Synchronous, so a short drag can't end before a queued task sets it.
         isDraggingPlaceholder = true
     }
 
@@ -121,11 +110,8 @@ extension LayoutBarArrangedView: NSDraggingSource {
 
         isDraggingPlaceholder = false
 
-        // Successful item drops keep both rows frozen until the asynchronous
-        // system move settles. Cancelled and rejected drops never start that
-        // task. Transfer the original view back before thawing either row;
-        // otherwise the source rebuilds a replacement from the old cache and
-        // the detached drag view is inserted beside it a moment later.
+        // Cancelled drops start no move. Put the view back before thawing, or
+        // the source rebuilds a replacement and the drag view lands beside it.
         if operation == [] {
             if let (container, index) = oldContainerInfo {
                 container.restoreArrangedViewAfterCancelledDrag(

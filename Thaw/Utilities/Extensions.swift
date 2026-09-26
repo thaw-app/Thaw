@@ -13,41 +13,24 @@ import SwiftUI
 // MARK: - Bundle
 
 nonisolated extension Bundle {
-    /// The bundle's copyright string.
-    ///
-    /// This accessor checks the bundle's `Info.plist` for a string value associated
-    /// with the "NSHumanReadableCopyright" key. If a valid value cannot be found for
-    /// the key, this accessor returns `nil`.
+    /// The bundle's `NSHumanReadableCopyright` value.
     var copyrightString: String? {
         object(forInfoDictionaryKey: "NSHumanReadableCopyright") as? String
     }
 
-    /// The bundle's display name.
-    ///
-    /// This accessor checks the bundle's `Info.plist` for a string value associated
-    /// with the "CFBundleDisplayName" key. If a valid value cannot be found for the
-    /// key, the same check is performed for the "CFBundleName" key. If a valid value
-    /// cannot be found for either key, this accessor returns `Thaw`.
+    /// `CFBundleDisplayName`, falling back to `CFBundleName`, then `Thaw`.
     var displayName: String {
         object(forInfoDictionaryKey: "CFBundleDisplayName") as? String ??
             object(forInfoDictionaryKey: "CFBundleName") as? String ??
             "Thaw"
     }
 
-    /// The bundle's version string.
-    ///
-    /// This accessor checks the bundle's `Info.plist` for a string value associated
-    /// with the "CFBundleShortVersionString" key. If a valid value cannot be found
-    /// for the key, this accessor returns `nil`.
+    /// The bundle's `CFBundleShortVersionString` value.
     var versionString: String? {
         object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String
     }
 
-    /// The bundle's build string.
-    ///
-    /// This accessor checks the bundle's `Info.plist` for a string value associated
-    /// with the "CFBundleVersion" key. If a valid value cannot be found for the key,
-    /// this accessor returns `nil`.
+    /// The bundle's `CFBundleVersion` value.
     var buildString: String? {
         object(forInfoDictionaryKey: "CFBundleVersion") as? String
     }
@@ -74,12 +57,11 @@ extension CGColor {
 nonisolated extension CGImage {
     // MARK: Color Averaging
 
-    /// Options that effect how colors are processed when computing
-    /// an average color.
+    /// Options that affect how colors are averaged.
     struct ColorAveragingOption: OptionSet {
         let rawValue: Int
 
-        /// Includes the alpha component in the resulting average.
+        /// Ignores the alpha component, so the average is opaque.
         static let ignoreAlpha = ColorAveragingOption(rawValue: 1 << 0)
     }
 
@@ -139,12 +121,8 @@ nonisolated extension CGImage {
             return nil
         }
 
-        // Convert the normalised [0, 1] threshold to an 8-bit component for the
-        // byte-wise comparison below. A pixel contributes when its alpha is
-        // greater than or equal to the threshold, so the smallest byte that can
-        // satisfy `byte >= 255 * threshold` is its ceiling; rounding to nearest
-        // would drop the boundary pixel whenever the fractional part of
-        // `255 * threshold` is below one half.
+        // The smallest 8-bit alpha satisfying `byte >= 255 * threshold` is the
+        // ceiling; rounding to nearest would drop boundary pixels.
         let alphaThreshold = UInt64((alphaThreshold.clamped(to: 0 ... 1) * 255).rounded(.up))
 
         var count = UInt64(width * height)
@@ -169,18 +147,13 @@ nonisolated extension CGImage {
             }
         }
 
-        // Every pixel was below the alpha threshold, so there is nothing to
-        // average. Dividing by the zero count below would hand back a CGColor
-        // whose components are all NaN, which reads as a valid color to every
-        // caller and poisons whatever it is blended into.
+        // Every pixel was below the alpha threshold. Dividing by zero would return
+        // an all-NaN CGColor that callers treat as valid.
         guard count > 0 else {
             return nil
         }
 
-        // Components are currently in integer format (0 to 255), but need
-        // to be converted to floating point (0 to 1). Makes more sense to
-        // scale the count up to match the components, rather than scale
-        // the components down to match the count.
+        // Components are 0-255; scale the count up rather than the components down.
         let scaledCount = CGFloat(count * 255)
 
         var components: [CGFloat] = [
@@ -197,12 +170,10 @@ nonisolated extension CGImage {
 
     /// Returns the image's dominant colors, most-covering first.
     ///
-    /// Samples at a coarse resolution and hands the pixels to
-    /// ``WallpaperPalette/derive(from:maximumCount:minimumSeparation:)``,
-    /// which holds the actual algorithm and its tests. A larger grid than
-    /// ``averageColor(using:alphaThreshold:option:)`` uses, because ten by
-    /// ten is enough to average but too few pixels for a small subject to
-    /// survive bucketing.
+    /// Samples coarsely and hands the pixels to
+    /// ``WallpaperPalette/derive(from:maximumCount:minimumSeparation:)``. The grid is
+    /// larger than ``averageColor(using:alphaThreshold:option:)``'s 10x10 so a small
+    /// subject survives bucketing.
     ///
     /// - Parameters:
     ///   - maximumCount: The most colors to return.
@@ -225,11 +196,9 @@ nonisolated extension CGImage {
         }()
 
         var data = [UInt32](repeating: 0, count: width * height)
-        // The buffer is bound for the whole lifetime of the context, not just
-        // for the initializer call: `draw` writes through it afterwards. An
-        // inout-to-pointer conversion is only valid for the duration of the
-        // call it is passed to, so the pointer has to stay in scope instead
-        // -- the same shape `ImageHashing.averageHash(_:)` uses.
+        // `draw` writes through the buffer after init, and an inout-to-pointer
+        // conversion only lives for one call, so keep the pointer in scope (as in
+        // `ImageHashing.averageHash(_:)`).
         let rendered = data.withUnsafeMutableBytes { buffer -> Bool in
             guard let context = CGContext(
                 data: buffer.baseAddress,
@@ -266,16 +235,9 @@ nonisolated extension CGImage {
 
     // MARK: Transparency Trimming
 
-    /// A bounds-validated, read-only view over the alpha channel of
-    /// row-major pixel data.
-    ///
-    /// Centralizes the buffer-length validation and index arithmetic that
-    /// the transparency scanning paths previously repeated by hand over raw
-    /// pointers: the failable initializer proves every alpha byte addressed
-    /// by the given geometry lies inside `bytes`, so the scanning methods
-    /// can't read out of bounds. The view holds an `UnsafeRawBufferPointer`
-    /// and must not outlive the memory it was created from; both call sites
-    /// scope it to the lifetime of the owning `CGContext` or `CFData`.
+    /// A bounds-validated, read-only view over the alpha channel of row-major pixel
+    /// data. The failable init proves every addressed alpha byte lies in `bytes`.
+    /// It must not outlive the owning `CGContext` or `CFData`.
     private nonisolated struct AlphaChannelView {
         private let bytes: UnsafeRawBufferPointer
         private let rowStride: Int
@@ -285,10 +247,8 @@ nonisolated extension CGImage {
         /// The byte value above which a pixel counts as opaque.
         private let threshold: UInt8
 
-        /// The image width, in pixels.
         let width: Int
 
-        /// The image height, in pixels.
         let height: Int
 
         /// Creates a view if every alpha byte addressed by the given
@@ -494,11 +454,9 @@ nonisolated extension CGImage {
 
     /// Returns a Boolean value that indicates whether the image is transparent.
     ///
-    /// Uses a zero-allocation fast path that reads alpha bytes directly from
-    /// the image's existing data provider, avoiding the cost of creating a
-    /// `CGContext`, drawing the image, and allocating a comparison buffer.
-    /// Only handles 32-bit RGBA/ARGB with known byte orders; falls back to
-    /// `TransparencyContext` for all other pixel formats.
+    /// Fast path reads alpha bytes straight from the data provider, skipping the
+    /// `CGContext`, draw, and buffer. Only 32-bit RGBA/ARGB with a known byte order;
+    /// other formats use `TransparencyContext`.
     ///
     /// - Parameter alphaThreshold: The maximum alpha value to consider transparent.
     func isTransparent(alphaThreshold: CGFloat = 0) -> Bool {
@@ -512,7 +470,7 @@ nonisolated extension CGImage {
             return isTransparentSlow(alphaThreshold: alphaThreshold)
         }
 
-        // No alpha channel — image is fully opaque.
+        // No alpha channel: fully opaque.
         switch alphaInfo {
         case .none, .noneSkipFirst, .noneSkipLast:
             return false
@@ -534,7 +492,7 @@ nonisolated extension CGImage {
         case .byteOrder32Big:
             isLittleEndian = false
         default:
-            // byteOrderDefault or 16-bit orders — fall back for safety.
+            // byteOrderDefault or 16-bit orders: fall back for safety.
             return isTransparentSlow(alphaThreshold: alphaThreshold)
         }
 
@@ -553,9 +511,7 @@ nonisolated extension CGImage {
             return isTransparentSlow(alphaThreshold: alphaThreshold)
         }
 
-        // Read alpha directly from existing pixel data.
-        // withExtendedLifetime ensures cfData (and thus the byte pointer) stays
-        // alive for the entire scan, preventing ARC from releasing it early.
+        // withExtendedLifetime keeps cfData, and so the byte pointer, alive for the scan.
         guard let cfData = dataProvider?.data,
               let dataPointer = CFDataGetBytePtr(cfData)
         else {
@@ -891,11 +847,8 @@ extension NSScreen {
 
     /// Returns the height of the menu bar on this screen.
     ///
-    /// Results are cached per-display. When the Menubar window is not found
-    /// (e.g. during startup before the Window Server has populated the list),
-    /// no sentinel is cached — the function returns nil and schedules a
-    /// deferred retry. Once the retry succeeds, subsequent calls return the
-    /// cached height. The cache is also cleared on display configuration
+    /// Cached per display. If the Menubar window isn't listed yet (e.g. at startup),
+    /// nothing is cached: returns nil and schedules a retry. Cleared on display
     /// changes via `invalidateMenuBarHeightCache()`.
     func getMenuBarHeight() -> CGFloat? {
         let id = displayID
@@ -941,14 +894,10 @@ extension NSScreen {
         return fallback
     }
 
-    /// Returns true when at least one menu bar status item is currently
-    /// rendered on-screen for the active space.
+    /// Returns true when at least one status item is on-screen for the active space.
     ///
-    /// Returns false when the menu bar is auto-hidden behind a fullscreen app
-    /// and not yet visually revealed. The menu bar window itself flips to
-    /// kCGWindowIsOnscreen at the start of the reveal sequence, well before
-    /// the status items become visible to the user; gating on the items list
-    /// more closely matches the perceived reveal state, which is what click
+    /// The menu bar window flips to kCGWindowIsOnscreen at the start of a fullscreen
+    /// reveal, well before items show; gating on items matches what click
     /// suppression needs.
     func isSystemMenuBarVisible() -> Bool {
         !Bridging.getMenuBarWindowList(option: [.onScreen, .activeSpace, .itemsOnly]).isEmpty
@@ -984,11 +933,8 @@ extension NSScreen {
     private func computeApplicationMenuFrame() -> CGRect? {
         let displayBounds = CGDisplayBounds(displayID)
 
-        // Accessibility API has trouble with secondary screens.
-        // If we are not on the main screen, we can construct a
-        // reasonable approximation.
+        // AX has trouble with secondary screens, so approximate there.
         if let mainScreen = NSScreen.main, self != mainScreen {
-            // Check if we can get the menu bar frame from the accessibility API.
             if
                 let menuBar = AXHelpers.element(at: displayBounds.origin),
                 AXHelpers.role(for: menuBar) == .menuBar
@@ -1003,8 +949,7 @@ extension NSScreen {
                     return CGRect(x: frame.minX, y: applicationMenuFrame.minY, width: applicationMenuFrame.width, height: applicationMenuFrame.height)
                 }
             }
-            // Fallback: If AX fails for secondary screen, use the main screen's raw menu width.
-            // No notch-capping here — callers apply any notch adjustments they need.
+            // Fallback: the main screen's raw menu width. Callers apply any notch capping.
             if let mainFrame = mainScreen.getApplicationMenuFrame() {
                 return CGRect(x: frame.minX, y: mainFrame.minY, width: mainFrame.width, height: mainFrame.height)
             }
@@ -1159,11 +1104,7 @@ nonisolated extension Sequence<MenuBarItem> {
 extension NSPanel {
     /// Waits until the panel is no longer visible, or until `timeout` elapses.
     ///
-    /// Uses KVO on `isVisible` rather than polling, so the caller is resumed
-    /// immediately when the panel hides with no busy-waiting on the main thread.
-    ///
-    /// Must be called on the main actor because `NSPanel.isVisible` is an
-    /// AppKit property that is only safe to read on the main thread.
+    /// Uses KVO on `isVisible`, not polling. Main actor only, since `isVisible` is AppKit state.
     @MainActor
     func waitUntilClosed(timeout: Duration = .milliseconds(200)) async {
         guard isVisible else { return }

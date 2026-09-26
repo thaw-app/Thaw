@@ -73,7 +73,7 @@ struct IceSection<Header: View, Content: View, Footer: View>: View {
         @ViewBuilder content: () -> Content
     ) where Header == Text, Footer == EmptyView {
         self.init(isBordered: isBordered) {
-            // No explicit font — the native grouped Section header styles it.
+            // No explicit font; the native grouped Section header styles it.
             Text(title)
         } content: {
             content()
@@ -81,15 +81,11 @@ struct IceSection<Header: View, Content: View, Footer: View>: View {
     }
 
     var body: some View {
-        // Native grouped Section. The OS provides the glass card, row insets,
-        // and separators between rows. `isBordered == false` opts out of the
-        // card via a cleared row background.
+        // Native grouped Section: the OS draws the card, insets, and separators.
+        // `isBordered == false` drops the card by clearing the row background.
         //
-        // - Important: Because this wraps a native `Section`, an `IceSection`
-        //   must be a direct child of a `List`/`Form` (e.g. the `Form` inside
-        //   ``IceForm``). Wrapping it in an intermediate container such as a
-        //   `VStack` collapses it into a single plain row, losing the grouped
-        //   card, insets, and separators.
+        // - Important: an `IceSection` must be a direct child of a `List`/`Form`
+        //   (e.g. inside ``IceForm``). Inside a `VStack` it collapses to one plain row.
         if isBordered {
             nativeSection
         } else {

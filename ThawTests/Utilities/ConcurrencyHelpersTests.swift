@@ -13,10 +13,9 @@ import Testing
 /// Covers the `Task` timeout helpers: `withTimeout`, the `Task(timeout:)`
 /// initializer, and `Task.detached(timeout:)`.
 ///
-/// Every case races a real sleep against a real budget, so the two sides are
-/// kept an order of magnitude apart — a 50 ms budget against a 5 s operation,
-/// or a 5 s budget against work that returns immediately. Nothing here
-/// asserts on elapsed wall-clock time, only on which side won.
+/// Every case races a real sleep against a real budget, kept an order of
+/// magnitude apart (50 ms against 5 s, or 5 s against immediate work).
+/// Assertions check which side won, never elapsed time.
 @Suite("Task timeout helpers")
 struct ConcurrencyHelpersTests {
     /// Comfortably longer than any operation that is meant to finish.
@@ -73,9 +72,9 @@ struct ConcurrencyHelpersTests {
             }
         }
 
-        // The cancellation is delivered after withTimeout has already thrown,
-        // so poll until the losing arm observes it — a fixed sleep would race
-        // scheduler latency. The deadline keeps a regression from hanging.
+        // The cancellation lands after withTimeout has thrown, so poll until the
+        // losing arm observes it; a fixed sleep would race scheduler latency.
+        // The deadline keeps a regression from hanging.
         let deadline = ContinuousClock.now + .seconds(5)
         while !observed.withLock({ $0 }), ContinuousClock.now < deadline {
             try await Task.sleep(for: .milliseconds(10))
@@ -158,11 +157,9 @@ struct ConcurrencyHelpersTests {
 /// `.debounce(for:)` wiring that ProfileManager's setup builds its
 /// notification tasks from.
 ///
-/// Each case posts into a private NotificationCenter, so nothing else in
-/// the process can feed the stream. Presence is asserted by polling
-/// against a generous deadline; absence is asserted after a settle
-/// window several times the debounce interval — the only alternative to
-/// waiting when the expectation is that nothing happens.
+/// Each case posts into a private NotificationCenter. Presence is asserted
+/// by polling against a generous deadline; absence after a settle window
+/// several times the debounce interval.
 @Suite("Debounced notification tasks", .timeLimit(.minutes(1)))
 @MainActor
 struct DebouncedNotificationTaskTests {

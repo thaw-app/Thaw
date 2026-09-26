@@ -9,13 +9,10 @@ import Foundation
 import Testing
 @testable import Thaw
 
-/// Covers ``AutomationSettings``' whitelist bookkeeping — the part of the
-/// Settings URI automation surface that is real logic rather than view code.
+/// Covers the whitelist bookkeeping in ``AutomationSettings``.
 ///
-/// The whitelist lives in `UserDefaults` through `SettingsURIHandler`, so
-/// every case that touches it runs inside `withScratchDefaults`: the model
-/// reads and writes a throwaway store instead of the developer's own
-/// automation settings, and each case starts from an empty domain.
+/// The whitelist lives in `UserDefaults` via `SettingsURIHandler`, so each
+/// case runs in `withScratchDefaults` against a throwaway, empty store.
 @MainActor
 @Suite("Automation settings", .serialized)
 struct AutomationSettingsTests {

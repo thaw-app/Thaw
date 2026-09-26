@@ -66,7 +66,7 @@ struct MouseHelpersCursorPointTests {
     }
 
     /// An item whose window has already gone away reads back as an empty
-    /// rect, whose center is the origin — a point that a display containing
+    /// rect, whose center is the origin, a point that a display containing
     /// the origin would otherwise accept.
     @Test("Empty bounds resolve to no point", arguments: [
         CGRect.zero,

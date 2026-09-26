@@ -8,22 +8,9 @@
 
 import SwiftUI
 
-// The measurable half of MenuBarSection, split out following the pattern the
-// coverage exclusions describe: extract the algorithm code into a file that
-// stays measured, then exclude the part whose substance cannot run in a unit
-// test. LayoutSolver, PendingLedger, AXIdentityCatalog and ClickReactionVerifier
-// came out of MenuBarItemManager the same way.
-//
-// Everything here is a value type or a function of its arguments: the section
-// names, the presentation modes, the notch gap, and the three rules that decide
-// how a section is shown. Covered by MenuBarSectionNameTests,
-// NotchOverflowRevealTests and MenuBarSectionGeometryTests.
-//
-// The AdvancedSettings-reading overload of forcesIceBarForNotchOverflow stays
-// in MenuBarSection.swift with the instance half -- show, hide, toggle,
-// updateControlItemState, and the rehide task and event monitor -- all of which
-// need a live ControlItem/NSStatusItem, an AppState and a real NSScreen. New
-// decision logic belongs here, not there.
+// The pure, unit-tested half of MenuBarSection. The instance half in
+// MenuBarSection.swift needs a live ControlItem, AppState and NSScreen, and is
+// excluded from coverage. New decision logic belongs here, not there.
 
 nonisolated extension MenuBarSection {
     /// The name of a menu bar section.
@@ -32,7 +19,6 @@ nonisolated extension MenuBarSection {
         case hidden
         case alwaysHidden
 
-        /// A string to show in the interface.
         var displayString: String {
             switch self {
             case .visible: "Visible"
@@ -41,7 +27,6 @@ nonisolated extension MenuBarSection {
             }
         }
 
-        /// A string to use for logging purposes.
         var logString: String {
             switch self {
             case .visible: "visible section"
@@ -50,7 +35,6 @@ nonisolated extension MenuBarSection {
             }
         }
 
-        /// Localized string key representation.
         var localized: LocalizedStringKey {
             switch self {
             case .visible: LocalizedStringKey("Visible")
@@ -62,11 +46,6 @@ nonisolated extension MenuBarSection {
 
     /// Whether notch overflow forces the Thaw Bar even though the display's own
     /// Thaw Bar setting is off.
-    ///
-    /// Split out as a pure function so the rule is testable without a live
-    /// menu bar. Requires overflow to be enabled, the "use the Thaw Bar while
-    /// items are overflowed" preference to be on, and items to actually be
-    /// ejected right now.
     static func forcesIceBarForNotchOverflow(
         overflowEnabled: Bool,
         useThawBarOnOverflow: Bool,
@@ -78,10 +57,7 @@ nonisolated extension MenuBarSection {
     /// Whether the given section presents in the Thaw Bar.
     ///
     /// `displayUsesThawBar` sends every section there. `alwaysHiddenUsesThawBar`
-    /// sends the always-hidden section alone, leaving the hidden section to
-    /// expand inline, which is the point of the setting: reaching the
-    /// always-hidden items inline means expanding the hidden section too,
-    /// since always-hidden items sit to the left of the hidden control item.
+    /// sends only always-hidden, since reaching it inline also expands hidden.
     ///
     /// Notch overflow can force the Thaw Bar on top of this; see
     /// ``forcesIceBarForNotchOverflow(overflowEnabled:useThawBarOnOverflow:hasEjectedItems:)``.
@@ -109,10 +85,8 @@ nonisolated extension MenuBarSection {
         case iceBar
     }
 
-    /// Calculates the contiguous width where status items can render inline.
-    /// On a notched display, macOS does not relocate an expanded status-item
-    /// run into the application-menu region left of the notch, so counting
-    /// both sides promises capacity that `ControlItem` cannot expose (#924).
+    /// The contiguous width where status items can render inline. On a notched
+    /// display, macOS won't move expanded items left of the notch (#924).
     static func usableInlineWidth(
         from appMenuRightEdge: CGFloat?,
         screenFrameMinX: CGFloat,
@@ -129,9 +103,8 @@ nonisolated extension MenuBarSection {
         return max(0, screenVisibleMaxX - clampedAppMenuRightEdge)
     }
 
-    /// Hiding application menus means becoming a regular app, which flashes
-    /// the Dock icon. The General setting that keeps the Dock clean therefore
-    /// disables that presentation path so overflow falls back to the Thaw Bar.
+    /// Hiding application menus makes Thaw a regular app, which flashes the
+    /// Dock icon, so the keep-Dock-clean setting disables it.
     static func allowsHidingApplicationMenus(
         hideApplicationMenus: Bool,
         hideDockIconWhenToggling: Bool

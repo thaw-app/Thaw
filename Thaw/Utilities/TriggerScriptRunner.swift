@@ -93,10 +93,8 @@ private nonisolated final class ScriptOutputAccumulator: @unchecked Sendable {
         return matchedExpectedOutputs
     }
 
-    /// Decodes arbitrary pipe chunks while retaining only a valid, incomplete
-    /// UTF-8 suffix. This keeps Unicode matching independent of kernel read
-    /// boundaries without allowing a malformed byte earlier in the chunk to
-    /// block later valid text.
+    /// Decodes pipe chunks, keeping only a valid incomplete UTF-8 suffix, so matching
+    /// doesn't depend on read boundaries and a malformed byte can't block later text.
     private func consumeSearchableText(from newData: Data) -> String {
         undecodedSearchBytes.append(newData)
         let bytes = [UInt8](undecodedSearchBytes)
@@ -213,7 +211,6 @@ enum TriggerScriptRunner {
             return nil
         }
 
-        // Race the process against the timeout.
         let timedOut = await withTaskGroup(of: Bool.self) { group -> Bool in
             group.addTask {
                 while process.isRunning {
@@ -241,14 +238,9 @@ enum TriggerScriptRunner {
             process.interrupt()
             try? await Task.sleep(for: .milliseconds(100))
             process.kill()
-            // `kill` returns before the kernel tears the group down. Wait for
-            // the group to drain so a returning timeout really does mean no
-            // descendant outlived the script.
-            //
-            // `isRunning` is polled alongside the group check because it is
-            // what reaps the direct child. Without it that child stays a
-            // zombie -- still a group member -- and the loop would burn its
-            // whole budget waiting for a process that has already exited.
+            // `kill` returns before the kernel tears the group down, so wait for it to
+            // drain. Poll `isRunning` too: it reaps the direct child, which otherwise stays a
+            // zombie group member and burns the whole budget.
             var groupDrainAttempts = 0
             var groupDrained = false
             while groupDrainAttempts < 40 {

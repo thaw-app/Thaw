@@ -23,20 +23,16 @@ extension MenuBarItemManager {
         var logString: String
     }
 
-    /// Whether an item participates in the beside-notch budget as a managed
-    /// item — i.e. Thaw can move it out of the way. Everything else (the clock,
-    /// immovable system extras) is charged against the budget as fixed
-    /// furniture instead.
+    /// Whether Thaw can move the item out of the way. Everything else (the clock,
+    /// immovable system extras) is charged against the budget as fixed width.
     static nonisolated func isBudgetedManagedItem(_ item: MenuBarItem) -> Bool {
         (item.canBeHidden || item.tag == .visibleControlItem) && item.isMovable
     }
 
-    /// Measures how much width the visible section actually has to the right of
-    /// the notch.
+    /// Measures how much width the visible section has right of the notch.
     ///
-    /// Shared by the profile-apply overflow phase and the continuous rebalance
-    /// pass so both decide against identical geometry. Reads live item bounds
-    /// only; the eject decision itself lives in
+    /// Shared by profile apply and the continuous rebalance so both see the
+    /// same geometry. The eject decision lives in
     /// ``LayoutSolver/planNotchOverflow(desiredFiltered:unmanagedUIDs:controlUIDs:sectionMap:uidWidths:availableWidth:)``.
     static func computeNotchOverflowBudget(
         items: [MenuBarItem],
@@ -45,35 +41,18 @@ extension MenuBarItemManager {
         spacingOffset: Int
     ) -> NotchOverflowBudget {
         let notchGap = MenuBarSection.notchGap
-        // Available space: from notch gap to Control Center's left edge.
         let ccItem = items.first(where: { $0.tag == .controlCenter })
         let rightBoundary = ccItem.map(\.bounds.minX) ?? screen.frame.maxX
         var availableWidth = rightBoundary - (notch.maxX + notchGap)
 
-        // NSStatusItemSpacing is recorded here for diagnostic logging
-        // only. macOS bakes the spacing into each status item's frame
-        // (verified empirically: item.bounds.width grows 1:1 with the
-        // spacing value), so item.bounds.width and the Control Center
-        // item's bounds.minX already account for it. Subtracting a
-        // separate (count - 1) * spacing gap here used to double-count
-        // the spacing and ejected items into hidden when the bar still
-        // had room, most visibly at the macOS default of 16.
+        // Logging only. macOS bakes NSStatusItemSpacing into each item's frame
+        // (width grows 1:1 with it), so subtracting it again double-counts.
         let userSpacing = CGFloat(max(0, 16 + spacingOffset))
 
-        // Subtract the layout footprint of items that occupy the visible area
-        // but that Thaw cannot move: the Clock / date-time display, BentoBox
-        // tray on systems that have it, and any immovable accessibility
-        // extras. They take real estate in the same way managed items do but
-        // are filtered out of the planner's uid list and would otherwise be
-        // invisible to the budget check.
-        // Transient system indicators (screen-recording AudioVideoModule,
-        // FaceTime call indicator, ScreenCaptureUI overlay) appear and
-        // disappear based on system events. Excluding them from the
-        // budget keeps the overflow decision tied to the user's
-        // permanent layout; otherwise, applying a profile while a
-        // recording or call indicator is showing temporarily forces
-        // a managed item out of visible, and that item won't come
-        // back when the indicator goes away.
+        // Subtract items Thaw can't move (clock, BentoBox, immovable extras);
+        // the planner's uid list doesn't include them.
+        // Transient indicators (recording, FaceTime, ScreenCaptureUI) are excluded,
+        // or a profile applied during a call ejects an item that never comes back.
         let transientTags: [MenuBarItemTag] = [
             .audioVideoModule,
             .faceTime,
@@ -113,28 +92,18 @@ extension MenuBarItemManager {
 
     /// Minimum interval between two continuous rebalance passes.
     ///
-    /// A pass moves items, which recaches, which re-enters this path. The
-    /// cooldown keeps that from becoming a loop when the geometry is right at
-    /// the budget boundary and an ejected item's departure frees exactly enough
-    /// room for the planner to want it back.
+    /// A pass moves items, which recaches and re-enters this path. Without the
+    /// cooldown it loops when an ejection frees just enough room to want the item back.
     private static let notchRebalanceCooldown: TimeInterval = 3
 
     /// Ejects items that no longer fit beside the notch into the hidden
     /// section, independently of any profile.
     ///
-    /// Overflow used to exist only as a phase of ``applyProfileLayout``, so an
-    /// item that arrived while no profile was active — or that belonged to no
-    /// profile — was never ejected and simply grew the visible row across the
-    /// notch. This pass runs off the cache-update tick instead, so a notched
-    /// main display keeps its visible row inside the beside-notch budget at all
-    /// times.
+    /// Runs off the cache-update tick, so items outside any profile are ejected too.
     ///
-    /// When a profile *is* active the pass defers to
-    /// ``scheduleProfileResort()``: a full apply re-runs the same planner while
-    /// also honouring the saved order, so ejecting here would fight it. That
-    /// handoff waits until the planner has actually found overflow — a pass
-    /// with nothing to do must return without arming anything, or it drives
-    /// the apply on every cache tick forever (#881).
+    /// With an active profile it defers to ``scheduleProfileResort()``, but
+    /// only once overflow is found; arming it with nothing to do re-runs the
+    /// apply on every cache tick forever (#881).
     func rebalanceNotchOverflowIfNeeded(
         items: [MenuBarItem],
         controlItems: ControlItemPair,
@@ -149,28 +118,20 @@ extension MenuBarItemManager {
             return .noAttempt
         }
 
-        // Never fight another mover. Each of these owns the layout while it
-        // runs and re-drives the cache when it finishes, so the next tick
-        // picks up any overflow that is still outstanding.
+        // Never fight another mover; each recaches when done, so the next tick
+        // picks up leftover overflow.
         guard !isApplyingProfileLayout,
               !isRestoringItemOrder,
               !isInStartupSettling,
               !isBulkApplyInProgress
         else { return .noAttempt }
 
-        // A temporarily-shown item is deliberately parked in visible for as
-        // long as the user is interacting with it. Ejecting it would cancel
-        // the reveal the user just asked for.
+        // Ejecting a temporarily-shown item would cancel the reveal the user asked for.
         guard temporarilyShownItemContexts.isEmpty else { return .noAttempt }
 
-        // If the bar just refused synthetic drags in a profile apply, the
-        // rebalance's own drags will fare no better — and each eject is a
-        // full move() with its own cursor hijack. Without this gate the
-        // rebalance fires on the very next cache tick after a failed apply,
-        // trying 10–17 items one by one, each failing the same way, for tens
-        // of seconds of dead pointer (#881, #907). The per-item failure-ledger
-        // backoff cannot help because the rebalance's items are typically
-        // different from the ones that failed in the batch.
+        // If the bar just refused a profile apply's drags, these fail too, each
+        // hijacking the cursor, for tens of seconds (#881, #907). The per-item
+        // ledger can't help: these are usually different items.
         guard isAutomaticBulkApplyPermitted(caller: "Notch overflow rebalance", quietly: true) else {
             return .noAttempt
         }
@@ -186,27 +147,15 @@ extension MenuBarItemManager {
             let notch = screen.frameOfNotch
         else { return .noAttempt }
 
-        // Mid-relocation between displays the item bounds straddle two screens
-        // and the budget cannot be trusted. Same guard the persist path uses,
-        // and the same input rule: only unparked items may feed it. Items left
-        // of the hidden divider are parked at arbitrary negative x, which lands
-        // inside a display positioned to the left of the main one and reads as
-        // a permanent spread.
+        // Mid-relocation the bounds straddle two screens and the budget can't be
+        // trusted. Only unparked items count: parked items sit at negative x,
+        // which can land on a display left of main and read as a permanent spread.
         //
-        // The divider comes from the caller's ControlItemPair rather than a
-        // lookup in items. Building that pair strips the hidden and
-        // always-hidden control items out of the array it is given, and the
-        // caller hands us that same stripped array, so searching it for
-        // .hiddenControlItem finds nothing and the filter would silently pass
-        // every parked item straight through.
+        // The divider comes from controlItems because `items` has the control
+        // items stripped; searching it would find nothing and pass every parked item.
         //
-        // Frames come from CGDisplayBounds, not NSScreen.frame, for the same
-        // reason as the other two call sites: item bounds are CoreGraphics
-        // (top-left origin, y growing downward) while NSScreen.frame is AppKit
-        // (bottom-left origin, y growing upward). Mixing them made every
-        // containment test wrong off the main display, which on a vertically
-        // stacked arrangement reads as no spread when the items really do
-        // straddle two screens.
+        // CGDisplayBounds, not NSScreen.frame: item bounds use top-left origin.
+        // Mixing them breaks containment off the main display.
         let hiddenControlItemMinX = controlItems.hidden.bounds.minX
         let unparkedItems = items.filter { $0.bounds.minX >= hiddenControlItemMinX }
         guard !LayoutSolver.itemsSpanMultipleDisplays(
@@ -272,12 +221,8 @@ extension MenuBarItemManager {
             availableWidth -= chevron.bounds.width
         }
 
-        // Every visible item counts as unmanaged here: with no profile active
-        // none of them has a saved position to protect, and the tiered rule
-        // degenerates to leftmost-first. With a profile active the tiering is
-        // wrong, but this call is only read for whether the set is empty, and
-        // that answer is the total footprint against the budget either way —
-        // the tiers decide which items are chosen, not whether any are.
+        // All visible items count as unmanaged, which makes the rule leftmost-first.
+        // With a profile active only emptiness is read, which the tiers don't affect.
         let result = LayoutSolver.planNotchOverflow(
             desiredFiltered: flat,
             unmanagedUIDs: visibleUIDs.filter { $0 != visibleCtrlUID },
@@ -292,19 +237,9 @@ extension MenuBarItemManager {
         )
         guard !result.overflowUIDs.isEmpty else { return .noAttempt }
 
-        // A profile apply is the better tool: it re-runs this same planner and
-        // restores the saved order at the same time.
-        //
-        // This hands off only once the planner has found real overflow. The
-        // handoff used to happen at the top of this method, before the
-        // cooldown and before the budget was ever computed, so a bar with a
-        // profile and a notch re-armed a full profile apply on every cache
-        // tick — and each apply recaches, which runs this pass again. #881's
-        // 08:41 log turned over 73 applies in four minutes on a bar that
-        // never once overflowed: the pass returned before reaching
-        // `computeNotchOverflowBudget`, so not one ejection was ever planned.
-        // The apply moved six items per pass on unrelated grounds, each move
-        // a synthetic drag that takes the cursor.
+        // A profile apply re-runs this planner and restores the saved order.
+        // Hand off only after real overflow is found; handing off earlier
+        // re-armed an apply on every cache tick (#881).
         if activeProfileLayout != nil {
             lastNotchRebalanceTimestamp = .now
             MenuBarItemManager.diagLog.info(
@@ -314,11 +249,8 @@ extension MenuBarItemManager {
             return .noAttempt
         }
 
-        // Bounce-back guard. Every UID the planner wants to eject is one this
-        // pass already ejected, yet they are back in visible — the move is not
-        // sticking (an owner that re-adds its item to the right of the divider,
-        // typically). Retrying on every cache tick would drag the bar forever,
-        // so stand down until something else changes the set.
+        // Every item to eject was already ejected and came back, so the move
+        // isn't sticking. Stand down until the set changes.
         if result.overflowUIDs.allSatisfy(notchOverflowEjectedUIDs.contains) {
             MenuBarItemManager.diagLog.debug(
                 "Notch overflow rebalance: standing down; all \(result.overflowUIDs.count) candidate(s) were already ejected once"
@@ -365,11 +297,8 @@ extension MenuBarItemManager {
         // one before it and the surviving visible order is preserved.
         for uid in result.overflowUIDs {
             guard let item = items.first(where: { $0.uniqueIdentifier == uid }) else { continue }
-            // The bounce-back guard above only covers ejections that landed.
-            // A candidate whose eject keeps failing would otherwise be
-            // re-dragged on every windowID change against unchanged geometry
-            // (#900) — the ledger's growing per-item window bounds that the
-            // same way it bounds the profile-layout moves.
+            // The bounce-back guard only covers ejections that landed. Without
+            // the ledger backoff a failing eject is re-dragged on every windowID change (#900).
             if failureLedger.isUnderBackoff(key: uid) {
                 MenuBarItemManager.diagLog.debug(
                     "Notch overflow rebalance: \(uid) under move-failure backoff, skipping"

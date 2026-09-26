@@ -12,7 +12,6 @@ import SwiftUI
 nonisolated struct AnyInsettableShape: InsettableShape {
     private let base: any InsettableShape
 
-    /// Creates a type-erased insettable shape.
     init(_ shape: some InsettableShape) {
         self.base = shape
     }

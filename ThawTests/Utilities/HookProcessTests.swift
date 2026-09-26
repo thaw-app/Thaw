@@ -103,15 +103,13 @@ struct HookProcessTests {
         pipe.fileHandleForWriting.closeFile()
         #expect(process.isRunning)
 
-        // The app's timeout ladder: TERM, then INT, then KILL. A courteous
-        // first signal cannot be relied on to end the child — the spawning
-        // process's signal mask is inherited, which is exactly why the
-        // ladder ends in SIGKILL — and the group must drain afterwards.
+        // The app's timeout ladder: TERM, INT, then KILL. The child inherits the
+        // spawner's signal mask, so a courteous signal may never end it, hence the
+        // final SIGKILL; the group must drain afterwards.
         //
-        // The courtesy rungs get a short wait rather than the full deadline:
-        // under a test host that inherited SIGTERM ignored they can never
-        // succeed, and spending the whole budget waiting for them leaves the
-        // uncancellable rung nothing left to run in.
+        // The courtesy rungs get a short wait: under a test host that ignores
+        // SIGTERM they never succeed, and the full deadline would leave the
+        // uncancellable rung no time to run.
         process.terminate()
         try await Self.waitUntilTerminated(process, timeout: .milliseconds(500))
         if process.isRunning {
@@ -279,10 +277,9 @@ struct HookProcessTests {
     /// How long the polling helpers wait before giving up and letting the
     /// caller's expectation report the failure.
     ///
-    /// A wall-clock deadline rather than a fixed iteration count: each pass
-    /// costs a 10 ms sleep *plus* scheduling, so on a loaded CI runner a
-    /// 500-iteration loop is worth well over the five seconds it reads as,
-    /// and the ladder above then overruns the budget it was sized for.
+    /// A wall-clock deadline, not an iteration count: on a loaded CI runner
+    /// each 10 ms pass costs far more, and the ladder above would overrun the
+    /// budget it was sized for.
     private static let pollTimeout = Duration.seconds(10)
 
     /// Polls until the direct child has been reaped, with a generous

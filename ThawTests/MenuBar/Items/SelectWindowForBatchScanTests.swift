@@ -9,28 +9,17 @@ import CoreGraphics
 import Testing
 @testable import Thaw
 
-/// Characterization tests for LayoutSolver.selectWindowForBatchScan,
-/// the helper that pidsBody uses to pick which window to hand to
-/// pidBody for the AX scan. pidBody returns immediately on a cache
-/// hit at its entry, so passing an already-cached window skips the
-/// scan body (and the marker-pair fallback) entirely. Picking an
-/// unresolved window forces the scan to execute and resolves every
-/// other unresolved window in the same batch by populating the cache
-/// during the AX traversal.
-///
-/// Regressions where the selection reverts to `windows.first` (or any
-/// other variant that can return a cached window) are caught by these
-/// tests.
+/// `LayoutSolver.selectWindowForBatchScan`, which picks the window pidsBody
+/// hands to pidBody. A cached window returns early and skips the AX scan, so
+/// the pick must be unresolved; one scan then resolves the whole batch.
+/// Guards against reverting to `windows.first`.
 @Suite("Select window for batch scan")
 struct SelectWindowForBatchScanTests {
-    /// Simple struct mirroring the WindowInfo fields the helper
-    /// actually depends on. Using a plain test type instead of
-    /// WindowInfo keeps the test focused on the selection algorithm.
+    /// Only the WindowInfo fields the helper reads.
     private struct FakeWindow: Equatable {
         let windowID: CGWindowID
     }
 
-    /// Empty input returns nil: no window to scan.
     @Test("An empty batch selects no window")
     func emptyBatchReturnsNil() {
         let result = LayoutSolver.selectWindowForBatchScan(
@@ -41,9 +30,7 @@ struct SelectWindowForBatchScanTests {
         #expect(result == nil)
     }
 
-    /// Every window cached: returns nil so pidsBody skips the scan.
-    /// This is the steady-state cycle after every menu bar item has
-    /// resolved.
+    /// The steady state once every item has resolved.
     @Test("A fully cached batch selects no window")
     func allCachedReturnsNil() {
         let windows = [
@@ -59,8 +46,7 @@ struct SelectWindowForBatchScanTests {
         #expect(result == nil)
     }
 
-    /// First window unresolved: returned. Trivial case, but also the
-    /// session-start scenario where the cache is empty.
+    /// Also the session-start case, when the cache is empty.
     @Test("An unresolved first window is selected")
     func firstUnresolvedReturnsFirst() {
         let windows = [
@@ -75,10 +61,8 @@ struct SelectWindowForBatchScanTests {
         #expect(result == windows[0])
     }
 
-    /// First cached, second unresolved: the second is returned. This
-    /// is the exact mid-session scenario the bug fix addresses: an
-    /// older resolved window leads the batch but a new app's freshly-
-    /// registered windowID later in the batch needs the scan.
+    /// The bug: an older resolved window leads the batch while a new app's window
+    /// later in it needs the scan.
     @Test("A cached first window is skipped for the unresolved second one")
     func firstCachedSecondUnresolvedReturnsSecond() {
         let windows = [
@@ -93,9 +77,6 @@ struct SelectWindowForBatchScanTests {
         #expect(result == windows[1])
     }
 
-    /// All cached except the last: returns the last. Mirrors a batch
-    /// where the only nil-PID widget is the one that just appeared
-    /// at a high-indexed position.
     @Test("An unresolved last window is selected when every earlier one is cached")
     func onlyLastUnresolvedReturnsLast() {
         let windows = [
@@ -111,10 +92,7 @@ struct SelectWindowForBatchScanTests {
         #expect(result == windows[2])
     }
 
-    /// Multiple unresolved: returns the first unresolved (left-to-
-    /// right). The order is the iteration order, not the order in
-    /// the cache. Important for predictability when several new
-    /// widgets register in the same cycle.
+    /// Iteration order, not cache order, so several new widgets resolve predictably.
     @Test("Several unresolved windows select the leftmost of them")
     func multipleUnresolvedReturnsFirstUnresolved() {
         let windows = [
@@ -132,11 +110,7 @@ struct SelectWindowForBatchScanTests {
         #expect(result == windows[1])
     }
 
-    /// Realistic mid-session shape observed in the field: the first
-    /// window is an old resolved item, and one or more later windows
-    /// (a chronic nil-PID widget plus newly-launched apps) are
-    /// unresolved. The selector must skip the cached head and return
-    /// one of the unresolved windows so the scan fires.
+    /// A field shape: an old resolved head, then a chronic nil-PID widget and new apps.
     @Test("A realistic mid-session batch skips its cached head")
     func realisticBatchSkipsCachedHead() {
         let windows = [

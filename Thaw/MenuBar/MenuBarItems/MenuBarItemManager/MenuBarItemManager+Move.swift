@@ -15,23 +15,17 @@ import os.lock
 // MARK: - Moving Items
 
 extension MenuBarItemManager {
-    /// Destinations for menu bar item move operations.
     nonisolated enum MoveDestination: Equatable {
-        /// The destination to the left of the given target item.
         case leftOfItem(MenuBarItem)
-        /// The destination to the right of the given target item.
         case rightOfItem(MenuBarItem)
 
-        /// The destination's target item.
         var targetItem: MenuBarItem {
             switch self {
             case let .leftOfItem(item), let .rightOfItem(item): item
             }
         }
 
-        /// Rebuilds the same logical side against a freshly enumerated
-        /// destination window. The plan retains its original identity while
-        /// event construction uses the newest record for that identity.
+        /// Same side, against the freshly enumerated destination window.
         func replacingTarget(with item: MenuBarItem) -> Self {
             switch self {
             case .leftOfItem:
@@ -43,41 +37,14 @@ extension MenuBarItemManager {
 
         /// Returns the drag point for placing an item relative to the target bounds.
         ///
-        /// Targets parked beyond the display's left edge use their vertical
-        /// midpoint so a synthetic event clamped to the edge cannot land on a
-        /// top Hot Corner. On-screen targets retain the existing top-edge
-        /// coordinate to avoid changing normal cursor-warp behavior.
+        /// Parked targets use their vertical midpoint so an event clamped to the
+        /// edge can't trigger a top Hot Corner.
         func targetPoint(in targetBounds: CGRect, on displayBounds: CGRect) -> CGPoint {
             let targetIsParkedOffscreen = targetBounds.maxX <= displayBounds.minX
             let targetY = targetIsParkedOffscreen ? targetBounds.midY : targetBounds.minY
-            // Dropping on a divider's own edge leaves AppKit free to choose
-            // either side of it, and in #923 it chose wrong every time:
-            // .leftOfItem(AH_ctrl) landed the item at the divider's minX + 1,
-            // one point into the section the user was dragging out of. Bias
-            // one point into the requested section so the synthetic event's
-            // target X is unambiguous.
-            //
-            // This was once gated to zero-width dividers, on the theory that
-            // a divider with span gives AppKit enough hit-test width to
-            // resolve the side on its own. The 21 August log kills that
-            // theory: the same reporter's AH_ctrl was thousands of points
-            // wide (parked, maxX ≤ 0, expanded to conceal the section) and
-            // the drop still landed at minX + 1 on attempts 1 and 5, with
-            // the ordinal check correctly rejecting both. A divider's width
-            // is its concealment mechanism, not hit-test slack; what matters
-            // is that the drop point is its edge, which is the boundary
-            // itself.
-            // The chevron was excluded once, on the theory that it is a
-            // control item but not a section boundary, so a drop on its
-            // edge resolves no ambiguity worth paying for. #1035 kills that
-            // theory as well. TemporaryShow anchors its reveal on the
-            // chevron with .leftOfItem, and the reporter's log has attempt 2
-            // planning targetMinX=837 and then finding the item at
-            // itemMinX=863 — landed to the chevron's right, the same
-            // wrong-side drop #923 described, caught by the same ordinal
-            // check. What makes a drop point ambiguous is that it is an
-            // item's own edge; whether that item happens to divide two
-            // sections has nothing to do with it.
+            // A drop on a control item's own edge lets AppKit pick either side,
+            // and it picks wrong (#923). Bias one point into the requested side.
+            // Applies to wide parked dividers and to the chevron too (#1035).
             let targetIsControlItem = targetItem.tag == .hiddenControlItem
                 || targetItem.tag == .alwaysHiddenControlItem
                 || targetItem.tag == .visibleControlItem
@@ -93,20 +60,11 @@ extension MenuBarItemManager {
         /// Whether a synthetic drag to this destination would press at a
         /// point that lies off every display.
         ///
-        /// targetPoint(in:on:) derives the drop point from the target's
-        /// leading or trailing edge, so a target parked in the off-screen
-        /// zone yields a press no owner is watching: the events are accepted,
-        /// AppKit drops the item beside the parked target, and the item is
-        /// stranded there. LayoutSolver/isOnScreen(bounds:screenFrames:)
-        /// is the matching test — it measures the leading edge, which is the
-        /// edge a drop point is built from.
+        /// A parked target strands the item beside it off-screen. Uses the leading
+        /// edge, like the drop point.
         ///
-        /// Answering true is not on its own a reason to refuse a move. A
-        /// collapsed section parks its divider and its items off-screen by
-        /// design, so every drop that conceals an item answers true and is
-        /// still correct. Callers pair this with the moved item's desired
-        /// section: only an item bound for the visible section is stranded
-        /// by a target that answers true.
+        /// Not on its own a reason to refuse: concealing drops land off-screen by
+        /// design. Only visible-bound items are stranded.
         func wouldLandOffScreen(screenFrames: [CGRect]) -> Bool {
             !LayoutSolver.isOnScreen(bounds: targetItem.bounds, screenFrames: screenFrames)
         }
@@ -120,17 +78,15 @@ extension MenuBarItemManager {
         }
     }
 
-    /// The event transport selected for one attempt. Parked and cross-notch
-    /// teleports are named separately so an unsafe faithful plan can never
-    /// silently collapse into the legacy press-at-destination path.
+    /// Parked and cross-notch teleports are named separately so an unsafe plan
+    /// can't silently fall back to press-at-destination.
     nonisolated enum MoveStrategy: Equatable, CustomStringConvertible {
         case teleport
         case faithfulDrag
         case parkedTeleport
         case crossNotchTeleport
-        /// Retry transport that opens the gesture on the source window and
-        /// releases at the destination. Some freshly re-registered status
-        /// items reject the usual press-at-destination teleport.
+        /// Presses on the source, releases at the destination. Some freshly
+        /// re-registered items reject the usual teleport.
         case sourceAnchoredTeleport
 
         var description: String {
@@ -143,10 +99,8 @@ extension MenuBarItemManager {
             }
         }
 
-        /// Whether this move releases at the point planned before the press
-        /// instead of a mid-hold snapshot. While a parked item is held, its
-        /// lane reads as reflowed by roughly a thousand points.
-        /// (#1074, #1102, #1104, #1133)
+        /// Whether to release at the pre-press point: while a parked item is held,
+        /// its lane reads as reflowed by ~1000 points (#1074).
         func keepsPlannedReleasePoint(
             targetDisposition: MoveEndpointDisposition
         ) -> Bool {
@@ -176,9 +130,8 @@ extension MenuBarItemManager {
         case rejectUnsafePath
     }
 
-    /// Logical placement of a move endpoint relative to the selected menu-bar
-    /// lane. Screen coordinates alone cannot identify parked items because a
-    /// physical display may legitimately sit to the selected display's left.
+    /// Screen coordinates can't identify parked items, since a real display may
+    /// sit left of the selected one.
     nonisolated enum MoveEndpointDisposition: Equatable {
         case selectedDisplay
         case parked
@@ -208,11 +161,8 @@ extension MenuBarItemManager {
                 : .otherDisplay(physicalDisplay.id)
         }
 
-        // kCGWindowIsOnscreen describes Space membership/compositing, not
-        // physical display containment. Tahoe can report it as true for a
-        // status item parked thousands of points left of every display.
-        // When an offscreen item geometrically overlaps a left display, the
-        // explicit parked lane remains authoritative.
+        // kCGWindowIsOnscreen is about Spaces, not displays; Tahoe reports it
+        // true for parked items. The parked lane wins over a left display.
         guard
             let parkedLaneYRange,
             let controlDividerX,
@@ -228,9 +178,7 @@ extension MenuBarItemManager {
     /// has been exhausted.
     nonisolated struct MoveDeadlineExceeded: Error, Equatable {}
 
-    /// One absolute budget shared by admission, gate waiting, event transport,
-    /// layout settling, and retries. Every nested wait receives only the time
-    /// still available to the transaction.
+    /// One absolute budget for the whole transaction; nested waits get only what's left.
     nonisolated struct MoveTransactionBudget {
         typealias Elapsed = @Sendable () -> Duration
         typealias Sleeper = @Sendable (Duration) async throws -> Void
@@ -329,10 +277,8 @@ extension MenuBarItemManager {
         return crosses ? .crossesNotch : .sameSafeSegment
     }
 
-    /// Selects a transport from explicit display membership and path safety.
-    /// A nil endpoint display means WindowServer has parked it off-screen;
-    /// a non-selected display means the plan is stale or cross-display and is
-    /// rejected instead of being teleported.
+    /// A nil endpoint display means parked off-screen; another display means a
+    /// stale or cross-display plan, which is rejected.
     static nonisolated func strictTransportDecision(
         faithfulDragEnabled: Bool,
         itemIsControlItem: Bool,
@@ -394,10 +340,7 @@ extension MenuBarItemManager {
         }
     }
 
-    /// Final coordinates used to create the opening and closing events for a
-    /// move. A teleport has no visible intermediate press: its mouse-down is
-    /// stamped directly at the destination, including when that destination
-    /// is parked off-screen.
+    /// A teleport's mouse-down is stamped at the destination, even a parked one.
     nonisolated struct MoveEventLocations: Equatable {
         let press: CGPoint
         let release: CGPoint
@@ -414,9 +357,7 @@ extension MenuBarItemManager {
         )
     }
 
-    /// Exact ordinal positions from one WindowServer snapshot. Verification
-    /// never falls back to a same-tag window, because a relaunched or cloned
-    /// item is not the endpoint whose move acquired the gate.
+    /// Never falls back to a same-tag window: a relaunch or clone isn't the endpoint.
     nonisolated struct MoveEndpointIndices: Equatable {
         let source: Int
         let destination: Int
@@ -439,9 +380,7 @@ extension MenuBarItemManager {
             return nil
         }
 
-        // An equal-X endpoint is mid-reflow or zero-width-overlapped. Giving
-        // it an arbitrary order by enumeration or window ID could certify the
-        // wrong side, so wait for a later settled snapshot instead.
+        // Equal X means mid-reflow; any tie-break could certify the wrong side.
         guard
             items.count(where: { $0.bounds.minX == sourceItem.bounds.minX }) == 1,
             items.count(where: { $0.bounds.minX == destinationItem.bounds.minX }) == 1
@@ -495,9 +434,8 @@ extension MenuBarItemManager {
         case recycledDestination
     }
 
-    /// Replaces endpoint records in a geometry snapshot without changing its
-    /// membership or order. The full-bar list can therefore skip source-PID
-    /// resolution while the two identities it acts on remain freshly resolved.
+    /// Lets the full-bar list skip source-PID resolution while the two endpoints
+    /// stay freshly resolved.
     static nonisolated func replacingMoveEndpoints(
         in snapshot: [MenuBarItem],
         with endpoints: [MenuBarItem]
@@ -571,12 +509,10 @@ extension MenuBarItemManager {
         }
     }
 
-    /// Serializes complete move transactions app-wide. Serializing only event
-    /// posts lets two independent retry loops undo each other between attempts.
+    /// Whole transactions, not just posts, or two retry loops undo each other.
     private static let moveGate = SimpleSemaphore(value: 1)
 
-    /// A blocked-item recovery may call move while its parent still owns the
-    /// gate; task-local ownership lets that nested move pass through safely.
+    /// Lets a blocked-item recovery move nested inside its parent pass the gate.
     @TaskLocal private static var holdsMoveGate = false
 
     /// Nested recovery moves inherit their parent's absolute deadline rather
@@ -627,9 +563,8 @@ extension MenuBarItemManager {
         }
     }
 
-    /// Polls until two consecutive readings agree, or the bounded poll count
-    /// is exhausted. The value and confirmation bit are returned separately
-    /// so a caller never mistakes a last, still-changing sample for settled.
+    /// Polls until two readings agree. The confirmation bit is separate so a
+    /// still-changing last sample isn't mistaken for settled.
     static nonisolated func settledReading<Value: Equatable>(
         maxPolls: Int,
         read: () async -> Value,
@@ -649,9 +584,8 @@ extension MenuBarItemManager {
         return (previous, false)
     }
 
-    /// Waits for the exact source and destination windows to stop moving
-    /// before judging their ordinal relationship. Control Center animates bar
-    /// reflow after release, so an immediate read can reject a correct drop.
+    /// Control Center animates the reflow after release, so an immediate read
+    /// can reject a correct drop.
     nonisolated func waitForLayoutToSettle(
         item: MenuBarItem,
         target: MenuBarItem,
@@ -704,33 +638,16 @@ extension MenuBarItemManager {
         }
     }
 
-    /// Returns the default timeout for move operations associated
-    /// with the given item.
-    ///
-    /// A budget, not a cost. waitForMoveEventResponse polls the item's
-    /// origin every 10ms and returns the instant it changes, so an owner that
-    /// answers promptly is charged what it takes and nothing more. Raising
-    /// these values cannot slow a move that works; it only buys time for one
-    /// that would otherwise have been abandoned while it was still going to
-    /// succeed.
-    ///
-    /// 100ms was too little to survive contention. In the #687 log, of the
-    /// twelve moves that landed, five needed a second or third attempt — the
-    /// owners were answering, just not inside the budget — and only twelve of
-    /// thirty-two moves landed at all. Startup is the worst case for this:
-    /// the source-PID scan and the restore wave compete for the same
-    /// main threads the AX and event round-trips have to be serviced on.
+    /// A budget, not a cost: the response poll returns as soon as the item moves.
+    /// 100 ms was too little under contention, worst at startup (#687).
     private func getDefaultMoveOperationTimeout(for item: MenuBarItem) -> Duration {
         if item.isBentoBox {
-            // Bento Boxes (i.e. Control Center groups) generally
-            // take a little longer to respond.
+            // Control Center groups respond a little slower.
             return .milliseconds(350)
         }
         return .milliseconds(250)
     }
 
-    /// Returns the cached timeout for move operations associated
-    /// with the given item.
     private func getMoveOperationTimeout(for item: MenuBarItem) -> Duration {
         if let timeout = moveOperationTimeouts[item.tag] {
             return timeout
@@ -738,26 +655,11 @@ extension MenuBarItemManager {
         return getDefaultMoveOperationTimeout(for: item)
     }
 
-    /// Merges a newly computed timeout with the one currently cached for an
-    /// item.
+    /// Growth is adopted as is; only shrinkage is smoothed. Smoothing growth
+    /// too crept up too slowly to help (#687).
     ///
-    /// Growth is adopted as computed; only shrinkage is smoothed against the
-    /// standing value. Averaging both directions halved every escalation step
-    /// and so undid the one nextMoveOperationTimeout had just decided on:
-    /// a budget escalating by half from 100ms reaches the ceiling in four
-    /// attempts, but smoothed it only reaches 476ms in eight, which is the
-    /// exact ladder the #687 log walks before giving up on 1Password
-    /// (0.1 → 0.125 → 0.156 → 0.195 → 0.244 → 0.305 → 0.381 → 0.476). The
-    /// attempts meant to be spent trying a bigger budget were spent creeping
-    /// toward one instead. Decay stays smoothed, because there the caution is
-    /// the point: one fast answer should not commit an owner to a budget it
-    /// cannot meet again.
-    ///
-    /// The floor is 75ms: waitForMoveEventResponse polls every 10ms, so a
-    /// budget below that leaves too little margin for system event latency and
-    /// causes itemResponseTimeout → retry cascades. The ceiling is a second,
-    /// which is what an escalating budget is allowed to cost before the item is
-    /// better classified as unresponsive than as slow.
+    /// Floor 75 ms, below which retry cascades start. Ceiling 1 s, past which
+    /// the item is unresponsive rather than slow.
     static nonisolated func mergedMoveOperationTimeout(
         proposed: Duration,
         current: Duration
@@ -766,24 +668,16 @@ extension MenuBarItemManager {
         return next.clamped(min: .milliseconds(75), max: .seconds(1))
     }
 
-    /// Watchdog duration that covers the worst case of a single move
-    /// call: every one of maxAttempts attempts spends its whole
-    /// operation timeout four times over (two event posts, two response
-    /// waits), budgets can escalate to the merged ceiling, and a failed
-    /// attempt posts one more fallback at a fixed 100 ms. The result never
-    /// drops below the historical flat 10 s, so ordinary moves keep the
-    /// same safety net while an escalated stubborn item no longer outlasts
-    /// the watchdog and force-shows the cursor mid-sequence.
-    ///
-    /// Extracted so the arithmetic is unit-testable without posting events.
+    /// Covers a single move's worst case: every attempt at the ceiling, four
+    /// waits each, plus a 100 ms fallback. Never below 10 s, so a slow item
+    /// can't outlast it and show the cursor mid-sequence.
     static nonisolated func cursorHideWatchdogTimeout(
         operationCeiling: Duration = .seconds(1),
         maxAttempts: Int = 8,
         fallbackPost: Duration = .milliseconds(100),
         floor: Duration = .seconds(10)
     ) -> Duration {
-        // Per attempt: two event posts + two response waits, all capped at
-        // the ceiling. One millisecond is 10^15 attoseconds.
+        // One millisecond is 10^15 attoseconds.
         let attosecondsPerMillisecond = 1_000_000_000_000_000.0
         let perAttemptComponents = operationCeiling.components
         let perAttemptMs = Double(perAttemptComponents.seconds) * 1000.0
@@ -797,8 +691,6 @@ extension MenuBarItemManager {
         return .milliseconds(Int(totalMs.rounded(.up)))
     }
 
-    /// Updates the cached timeout for move operations associated
-    /// with the given item.
     private func updateMoveOperationTimeout(_ timeout: Duration, for item: MenuBarItem) {
         moveOperationTimeouts[item.tag] = Self.mergedMoveOperationTimeout(
             proposed: timeout,
@@ -806,15 +698,12 @@ extension MenuBarItemManager {
         )
     }
 
-    /// Prunes the move operation timeouts cache, keeping only the entries
-    /// for the given valid tags.
     func pruneMoveOperationTimeouts(keeping validTags: Set<MenuBarItemTag>) {
         moveOperationTimeouts = moveOperationTimeouts.filter { validTags.contains($0.key) }
     }
 
-    /// Returns the default timeout for click operations based on the item's namespace.
     private func getDefaultClickOperationTimeout(for item: MenuBarItem) -> Duration {
-        // Known slow apps with dynamic content
+        // Slow apps with dynamic content.
         let slowAppBundleIDs = [
             "com.bitsplash.PasteNow",
             "com.charliemonroe.Downie-setapp",
@@ -831,7 +720,6 @@ extension MenuBarItemManager {
         return .milliseconds(350) // Default
     }
 
-    /// Returns the cached timeout for click operations associated with the given item.
     func getClickOperationTimeout(for item: MenuBarItem) -> Duration {
         if let timeout = clickOperationTimeouts[item.tag] {
             return timeout
@@ -839,7 +727,6 @@ extension MenuBarItemManager {
         return getDefaultClickOperationTimeout(for: item)
     }
 
-    /// Updates the cached timeout for click operations associated with the given item.
     func updateClickOperationTimeout(_ duration: Duration, for item: MenuBarItem) {
         let current = getClickOperationTimeout(for: item)
         let average = (duration + current) / 2
@@ -848,15 +735,11 @@ extension MenuBarItemManager {
         MenuBarItemManager.diagLog.debug("Updated click timeout for \(item.logString): \(Int(clamped.milliseconds))ms (measured: \(Int(duration.milliseconds))ms)")
     }
 
-    /// Prunes the click operation timeouts cache, keeping only the entries
-    /// for the given valid tags.
     func pruneClickOperationTimeouts(keeping validTags: Set<MenuBarItemTag>) {
         clickOperationTimeouts = clickOperationTimeouts.filter { validTags.contains($0.key) }
     }
 
-    /// Reads geometry only from the exact WindowServer window selected by the
-    /// move plan. A same-tag replacement may belong to a relaunch or clone and
-    /// must be left for a fresh cache cycle to plan.
+    /// Exact window only; a same-tag replacement is left for a fresh cache cycle.
     private nonisolated func exactMoveBounds(
         for item: MenuBarItem,
         isDestination: Bool = false
@@ -870,10 +753,8 @@ extension MenuBarItemManager {
         return bounds
     }
 
-    /// Refreshes both planned endpoint identities. Geometry-only validation
-    /// queries those windows plus Thaw's authoritative dividers; ordinal
-    /// landing checks additionally enumerate the bar without resolving every
-    /// item's source PID, then overlay the two resolved endpoint records.
+    /// Refreshes both endpoints. Ordinal checks also enumerate the bar without
+    /// source PIDs, then overlay the two resolved endpoints.
     private func resolveCurrentMoveEndpoints(
         source expectedSource: MenuBarItem,
         destination expectedDestination: MenuBarItem,
@@ -935,8 +816,7 @@ extension MenuBarItemManager {
         }
     }
 
-    /// Validates both endpoint locations and distinguishes a genuinely parked
-    /// status item from a window belonging to a physical display on the left.
+    /// Tells a parked item apart from a window on a display to the left.
     private func validateMoveEndpointGeometry(
         item: MenuBarItem,
         target: MenuBarItem,
@@ -1012,8 +892,6 @@ extension MenuBarItemManager {
         )
     }
 
-    /// Returns the target points for creating the events needed to
-    /// move a menu bar item to the given destination.
     private nonisolated func getTargetPoints(
         forMoving item: MenuBarItem,
         to destination: MoveDestination,
@@ -1033,28 +911,13 @@ extension MenuBarItemManager {
         return (start, end)
     }
 
-    /// Returns a Boolean value that indicates whether the given menu bar
-    /// item has the correct position, relative to the given destination.
-    /// Reports whether item is now the immediate neighbor of the
-    /// destination's target on the requested side.
+    /// Whether item is now the immediate neighbor of the destination's target
+    /// on the requested side.
     ///
-    /// This asks for the ordinal relationship rather than comparing
-    /// coordinates. The check used to re-read both rects independently and
-    /// compare them for exact CGFloat equality, which cannot succeed on a
-    /// bar that reflows: our own drag displaces the target too, so the item
-    /// lands where the target was and is then compared against where the
-    /// target now is. In the #881 log the target's measured minX swung from
-    /// -4222 to 794 between attempts while the item sat still, and all eight
-    /// attempts were spent re-dragging against a destination that had already
-    /// moved (#900).
+    /// Ordinal, not coordinates: our own drag displaces the target, so comparing
+    /// coordinates fails on a reflowing bar (#900). One snapshot, exact window IDs.
     ///
-    /// Reading one list fixes that: both operands come from the same snapshot,
-    /// so they cannot drift apart mid-check. Both endpoints are matched by
-    /// exact window ID; equal-X endpoints remain unverified rather than being
-    /// assigned an arbitrary order while the bar is reflowing.
-    ///
-    /// - Note: source PIDs are deliberately left unresolved. Only tags, window
-    ///   IDs and bounds are needed here, and this runs once per attempt.
+    /// - Note: source PIDs are left unresolved; only tags, IDs and bounds are needed.
     ///
     /// Main-actor isolated rather than nonisolated: the enumeration and the
     /// tag comparison both are, and hopping once per attempt costs nothing
@@ -1073,8 +936,7 @@ extension MenuBarItemManager {
         return Self.endpointsHaveCorrectPosition(endpoints, for: destination)
     }
 
-    /// Waits for a menu bar item to respond to a series of previously
-    /// posted move events.
+    /// Waits for a menu bar item to respond to previously posted move events.
     ///
     /// - Parameters:
     ///   - item: The item to check for a response.
@@ -1125,12 +987,7 @@ extension MenuBarItemManager {
         }
     }
 
-    /// Creates and posts a series of events to move a menu bar item
-    /// to the given destination.
-    ///
-    /// - Parameters:
-    ///   - item: The menu bar item to move.
-    ///   - destination: The destination to move the menu bar item.
+    /// Creates and posts the events that move a menu bar item to the destination.
     private func postMoveEvents(
         item: MenuBarItem,
         destination: MoveDestination,
@@ -1139,12 +996,8 @@ extension MenuBarItemManager {
         warpCursorAfter: Bool = true,
         preferSourceAnchoredTeleport: Bool = false
     ) async throws -> MoveEventsOutcome {
-        // Take the permit outside budget.run: run re-checks the deadline
-        // after its operation succeeds and can throw from that check, which
-        // would leave the permit held while this function reports failure —
-        // leaking it for the life of the process. timeout(for:) still
-        // refuses admission before the wait when the deadline has passed, and
-        // later budget.run/budget.sleep calls keep enforcing the deadline.
+        // Outside budget.run: its post-success deadline check can throw and leak
+        // the permit for the life of the process.
         let semaphoreAllowance = try budget.timeout(for: .milliseconds(3500))
         do {
             try await eventSemaphore.wait(timeout: semaphoreAllowance)
@@ -1159,8 +1012,7 @@ extension MenuBarItemManager {
             Task.detached { [eventSemaphore] in await eventSemaphore.signal() }
         }
 
-        // Event-transport admission can take seconds. Resolve both exact
-        // identities again before using any endpoint geometry.
+        // Admission can take seconds, so resolve both endpoints again.
         let initialEndpoints = try await resolveCurrentMoveEndpoints(
             source: item,
             destination: destination.targetItem,
@@ -1181,23 +1033,16 @@ extension MenuBarItemManager {
             on: displayID
         )
 
-        // Fast-fail if the target process is dead. CGEvent.tapCreateForPid
-        // silently produces an invalid Mach port for dead PIDs, causing every
-        // scrombleEvent to time out and burn the full 3.5 s semaphore budget.
+        // tapCreateForPid silently makes an invalid Mach port for a dead PID, and
+        // every scrombleEvent then burns the full 3.5 s budget.
         let eventPID = getEventPID(for: initialEndpoints.source)
         if kill(eventPID, 0) == -1, errno == ESRCH {
             MenuBarItemManager.diagLog.error("postMoveEvents: target PID \(eventPID) for \(item.logString) is dead; skipping move")
             throw EventError.cannotComplete
         }
 
-        // A process that is alive but not pumping its event loop never
-        // acknowledges the synthetic move, so every scrombleEvent below runs
-        // to its timeout and burns the full 3.5 s semaphore budget — with the
-        // semaphore held, that stalls every other item's move behind it.
-        // Little Snitch is the recurring case (it ships with GUI Scripting
-        // disabled), but this catches any hung owner. Bail out immediately
-        // instead; the caller's retry/backoff path picks the item up again
-        // once its owner starts responding.
+        // A hung owner never acknowledges, burning 3.5 s with the semaphore held
+        // and stalling every other move (e.g. Little Snitch). The caller's backoff retries.
         if Bridging.isProcessUnresponsive(eventPID) {
             MenuBarItemManager.diagLog.warning(
                 "postMoveEvents: target PID \(eventPID) for \(item.logString) is unresponsive; skipping move"
@@ -1234,52 +1079,29 @@ extension MenuBarItemManager {
                 : nil
         )
 
-        // Capture mouse location only when this call owns the cursor warp.
-        // When called from move(), the outer move() handles the single warp
-        // at the end of all attempts so the cursor doesn't oscillate per attempt.
+        // move() warps once after all attempts, so the cursor doesn't oscillate.
         let mouseLocation: CGPoint? = warpCursorAfter ? try getMouseLocation() : nil
         lastMoveOperationTimestamp = .now
-        // Skip the warp when the target is offscreen (negative-X items in
-        // hidden/always-hidden on notch displays). CGWarpMouseCursorPosition
-        // clamps to the display's leftmost edge, which sits under the Apple
-        // menu, and the resulting tracking events then route stray clicks
-        // there. The 20ms eventSleep that follows the warp is only needed
-        // when slow apps have to register the tracking events before the
-        // mouseDown; irrelevant offscreen.
+        // No warp for offscreen targets: CGWarpMouseCursorPosition clamps under
+        // the Apple menu and routes stray clicks there.
         let warpPoint = initialEventLocations.press
         let warpIsOnScreen = initialGeometry.target == .selectedDisplay
         if warpIsOnScreen {
-            // Load-bearing for event delivery — keep unconditionally, even
-            // during a bulk apply: the receiving app's tracking needs the
-            // cursor at the target location regardless of its visibility.
+            // Needed for delivery even during a bulk apply, hidden cursor or not.
             MouseHelpers.warpCursor(to: warpPoint)
         }
-        // During a bulk apply (applyProfileLayout's move sequence) the
-        // cursor is already held hidden for the whole sequence and
-        // restored once at its end (Phase 7). Hiding/showing again per
-        // item here is redundant churn and, if the outer hide's refcount
-        // is ever force-reset by its watchdog mid-sequence, is what turns
-        // into the cursor visibly "yanked" across every remaining item's
-        // move (#723). Skip it and rely on the sequence-level hide.
-        // Sampled once and reused by the defer below. Reading the flag a
-        // second time at defer time is not safe: a bulk apply can start
-        // while this move is parked on one of the awaits in between, which
-        // would pair a hide here with no show at all and strand the cursor
-        // hidden until the bulk apply's 30 s watchdog fires.
+        // A bulk apply hides the cursor for the whole sequence; hiding per item
+        // too visibly yanks it if the watchdog resets mid-sequence (#723).
+        // Sampled once: a bulk apply starting mid-move would strand the cursor hidden.
         let ownsCursorVisibility = !isBulkApplyInProgress
         if ownsCursorVisibility {
             MouseHelpers.hideCursor()
         }
-        // Keep an off-screen teleport's stamped press at the off-screen
-        // destination. Redirecting it to the notch midpoint made the real
-        // status-item window visibly jump to the center before the release.
+        // Redirecting an off-screen press made the item visibly jump to the center.
         defer {
             if let mouseLocation {
                 MouseHelpers.restoreCursorPosition(to: mouseLocation)
             }
-            // Mirrors the skipped hideCursor() above: during a bulk apply
-            // the sequence-level restoration (applyProfileLayout Phase 7)
-            // owns showing the cursor once, at the end.
             if ownsCursorVisibility {
                 MouseHelpers.showCursor()
             }
@@ -1289,8 +1111,7 @@ extension MenuBarItemManager {
             try await budget.sleep(for: .milliseconds(20))
         }
 
-        // The cursor-registration wait is the final intentional await before
-        // the press. Re-resolve and construct the events from fresh records.
+        // Last await before the press; rebuild from fresh records.
         let endpoints = try await resolveCurrentMoveEndpoints(
             source: item,
             destination: destination.targetItem,
@@ -1378,8 +1199,7 @@ extension MenuBarItemManager {
             budget: budget
         )
 
-        // From here the press may be down; a deadline guard posts a matching
-        // release even if the async attempt stops making progress.
+        // The press may be down; the guard releases it if the attempt stalls.
         releaseGuard.arm()
         do {
             if let dragPlan {
@@ -1411,8 +1231,7 @@ extension MenuBarItemManager {
                     )
                 }
 
-                // Reflow after the opening press can move the target edge.
-                // Release against a freshly validated endpoint snapshot.
+                // The press can reflow the target edge.
                 let releaseEndpoints = try await resolveCurrentMoveEndpoints(
                     source: item,
                     destination: destination.targetItem,
@@ -1483,8 +1302,7 @@ extension MenuBarItemManager {
                     }
                     releaseGuard.recordReleaseAttempt(delivered: true)
                 } catch let fallbackError {
-                    // Keep the guard armed so its independent raw post remains
-                    // the final release path.
+                    // The guard stays armed as the final release path.
                     MenuBarItemManager.diagLog.error("Fallback failed with error: \(fallbackError)")
                 }
             }
@@ -1511,9 +1329,7 @@ extension MenuBarItemManager {
         )
     }
 
-    /// Builds a faithful drag on the item's own menu-bar row. The strict
-    /// transport classifier has already proved both endpoints are on the
-    /// selected display and in one notch-safe segment.
+    /// Both endpoints are already proven to be on one display, in one notch-safe segment.
     private func faithfulDragSteps(
         itemBounds: CGRect,
         targetPoints: (start: CGPoint, end: CGPoint)
@@ -1526,8 +1342,7 @@ extension MenuBarItemManager {
         )
     }
 
-    /// Posts one coherent faithful drag, and always ends it with a release on
-    /// the bar before propagating a failure.
+    /// Always releases on the bar before propagating a failure.
     private func postFaithfulDragSteps(
         _ steps: [MoveGesture.Step],
         item: MenuBarItem,
@@ -1595,8 +1410,7 @@ extension MenuBarItemManager {
             )
         }
 
-        // Reflow can move the anchor while the button is held. Re-resolve and
-        // validate the exact release edge instead of using the planned one.
+        // Reflow can move the anchor while the button is held.
         let releaseEndpoints = try await resolveCurrentMoveEndpoints(
             source: item,
             destination: destination.targetItem,
@@ -1638,9 +1452,7 @@ extension MenuBarItemManager {
         }
         releaseGuard.recordReleaseAttempt(delivered: true)
 
-        // A revert returns to the start and therefore cannot be awaited as an
-        // origin change after release. Give the drop one short settling beat
-        // and re-resolve the exact source before reading its resting origin.
+        // A revert produces no origin change to await, so settle briefly and re-read.
         try await budget.sleep(for: .milliseconds(30))
         let restingEndpoints = try await resolveCurrentMoveEndpoints(
             source: item,
@@ -1655,47 +1467,37 @@ extension MenuBarItemManager {
         (Defaults.object(forKey: .faithfulDragMoves) as? Bool) ?? Defaults.DefaultValue.faithfulDragMoves
     }
 
-    /// Checks if a menu bar item is in a "blocked" state (positioned at x=-1 off-screen).
-    /// Items in this state are stuck and cannot be interacted with normally.
+    /// Blocked items sit at x=-1 and can't be interacted with normally.
     private nonisolated func isItemBlocked(_ item: MenuBarItem) async -> Bool {
         do {
             let bounds = try exactMoveBounds(for: item)
-            // x=-1 is the sentinel value macOS uses for "blocked" items
             return bounds.origin.x == -1
         } catch {
-            // If we can't get bounds, assume it's not blocked
             return false
         }
     }
 
-    /// Validates that an item moved to the hidden section didn't get stuck at x=-1.
-    /// If the item is blocked, attempts to restore it to the visible section.
+    /// Rescues an item that got stuck at x=-1 after a move into hidden.
     private func validateItemPositionAfterMove(
         item: MenuBarItem,
         destination: MoveDestination,
         on displayID: CGDirectDisplayID
     ) async {
-        // Only recover items that got stuck when targeting the hidden divider.
-        // Items placed adjacent to any other anchor are intentionally positioned;
-        // recovering them to visible would undo a correct move.
+        // Only moves targeting the hidden divider; others were placed on purpose.
         switch destination {
         case let .leftOfItem(anchor), let .rightOfItem(anchor):
             guard anchor.tag == .alwaysHiddenControlItem else { return }
         }
 
-        // Check if item got stuck at x=-1
         if await isItemBlocked(item) {
             MenuBarItemManager.diagLog.warning("Item \(item.logString) stuck at x=-1 after move - attempting recovery")
 
-            // Find the control item to use as anchor for recovery
             guard let appState else { return }
             guard let hiddenControlItem = appState.menuBarManager.controlItem(withName: .hidden)?.window else {
                 MenuBarItemManager.diagLog.error("Cannot recover item: missing hidden control item window")
                 return
             }
 
-            // Create a MenuBarItem representation of the control item for the destination
-            // We need to find it in the current cache
             let items = await MenuBarItem.getMenuBarItems(option: .activeSpace)
             guard
                 let hiddenWindowID = Self.windowServerID(
@@ -1707,7 +1509,6 @@ extension MenuBarItemManager {
                 return
             }
 
-            // Attempt to move the item back to the visible section
             do {
                 try await move(
                     item: item,
@@ -1722,19 +1523,13 @@ extension MenuBarItemManager {
         }
     }
 
-    /// Returns whether the given item is currently in the "blocked" state
-    /// (positioned at x=-1). Exposed so drag-failure callers can classify a
-    /// failed move without duplicating the sentinel check performed by
-    /// isItemBlocked.
+    /// Exposes isItemBlocked for drag-failure callers.
     func isItemCurrentlyBlocked(_ item: MenuBarItem) async -> Bool {
         await isItemBlocked(item)
     }
 
-    /// Attempts to move a blocked (x=-1) item back to the visible section,
-    /// immediately right of the hidden control item — the same safe-harbor
-    /// anchor used by restoreBlockedItemsToVisible and
-    /// validateItemPositionAfterMove. This does not retry the original
-    /// move; callers are responsible for retrying afterward if desired.
+    /// Moves a blocked item just right of the hidden divider. Doesn't retry the
+    /// original move; that's up to the caller.
     ///
     /// - Returns: true if the rescue move completed without throwing.
     func rescueBlockedItemToVisible(_ item: MenuBarItem) async -> Bool {
@@ -1760,25 +1555,18 @@ extension MenuBarItemManager {
     /// The outcome to take when a hidden-section drag's move throws after
     /// the drag handler's resample-and-verify pass.
     nonisolated enum HiddenDragFailureAction: Equatable {
-        /// The item actually reached its intended position; the throw was a
-        /// false alarm from verification racing macOS's own settle. No
-        /// alert needed.
+        /// The item landed; verification raced macOS's settle.
         case suppress
-        /// The item is stuck at the x=-1 sentinel. It can be rescued to the
-        /// visible section and the original move retried once.
+        /// Stuck at x=-1: rescue to visible and retry once.
         case rescueAndRetry
-        /// The hidden-section control item couldn't be resolved; recovery
-        /// is already running in the background (see plan 004). Show a
-        /// calm, specific message instead of the raw error.
+        /// The hidden divider couldn't be resolved and recovery is already running.
+        /// Show a specific message instead of the raw error.
         case alertControlItemsMissing
-        /// None of the above; show the raw error as before.
+        /// Show the raw error.
         case alertGeneric
     }
 
-    /// Pure classification of a failed hidden-section drag, used to decide
-    /// whether to suppress, rescue-and-retry, or alert (and with which
-    /// message). Precedence: reaching the position beats being blocked;
-    /// being blocked beats missing control items.
+    /// Precedence: landed beats blocked, blocked beats missing control items.
     static nonisolated func classifyHiddenDragFailure(
         reachedPosition: Bool,
         isBlocked: Bool,
@@ -1795,10 +1583,7 @@ extension MenuBarItemManager {
         }
     }
 
-    /// The tunables of a single synthetic-drag move. Every field defaults,
-    /// so callers pass only what they deviate from; the whole struct exists
-    /// so move and moveItem(withTagIdentifier:toSection:options:)
-    /// stay readable at the call site.
+    /// Every field defaults, so callers pass only what they change.
     struct MoveOptions {
         var requiredInputPause: Duration?
         var inputPauseTimeout: Duration?
@@ -1806,17 +1591,15 @@ extension MenuBarItemManager {
         var maxMoveAttempts: Int = 8
         var hideCursorAcrossAttempts: Bool = true
         var shouldProceed: (@MainActor () -> Bool)?
-        /// Evaluated once the move transaction owns the gate, before any
-        /// action is taken. Returning false supersedes a move that became
-        /// stale while it was queued behind another move.
+        /// Checked once the gate is held; false supersedes a move that went
+        /// stale while queued.
         var shouldBegin: (@MainActor () -> Bool)?
         /// Runs while the gate is still held, after the move finished but
         /// before another move may enter.
         var didFinishWhileHoldingGate: (@MainActor () -> Void)?
     }
 
-    /// The whole move yields the gate before the cursor watchdog and queued
-    /// callers give up, even when each individual attempt remains bounded.
+    /// Shorter than the cursor watchdog and queued callers' patience.
     static nonisolated let moveDeadline: Duration = .seconds(8)
 
     /// How long a synthetic press may remain down before its guard releases it.
@@ -1824,16 +1607,15 @@ extension MenuBarItemManager {
         (timeout * 6).clamped(min: .milliseconds(1500), max: .seconds(3))
     }
 
-    /// The immutable event data posted by a press-release guard. CGEvent
-    /// posting is thread-safe and the event is not mutated after arming.
+    /// @unchecked is safe: CGEvent posting is thread-safe and the event is
+    /// never mutated after arming.
     nonisolated struct PressReleaseEvents: @unchecked Sendable {
         let mouseUp: CGEvent
         let pid: pid_t
     }
 
-    /// Releases a synthetic press when an async move attempt stops making
-    /// progress. A dangling press can turn the user's next real click into the
-    /// end of a drag, including a drag that removes the status item.
+    /// Releases a stalled synthetic press. A dangling press turns the user's next
+    /// click into the end of a drag, which can even remove the status item.
     final nonisolated class PressReleaseGuard: Sendable {
         typealias Scheduler = @Sendable (
             _ deadline: Duration,
@@ -1873,8 +1655,7 @@ extension MenuBarItemManager {
             }
         }
 
-        /// Test seam for driving the watchdog without sleeping or posting a
-        /// real Core Graphics event.
+        /// Test seam: drives the watchdog without sleeping or posting events.
         init(
             deadline: Duration,
             item: MenuBarItem,
@@ -1928,8 +1709,7 @@ extension MenuBarItemManager {
             status.withLock(\.state)
         }
 
-        /// Cancels the independent safety post only after an acknowledged
-        /// mouse-up. A failed normal or fallback release leaves it armed.
+        /// Only an acknowledged mouse-up disarms the safety post.
         func recordReleaseAttempt(delivered: Bool) {
             guard delivered else {
                 return
@@ -1943,7 +1723,6 @@ extension MenuBarItemManager {
         }
     }
 
-    /// Builds the independent safety release for one attempt.
     private func makePressReleaseGuard(
         for item: MenuBarItem,
         mouseUp: CGEvent,
@@ -2100,11 +1879,7 @@ extension MenuBarItemManager {
 
     /// Moves a menu bar item to the given destination.
     ///
-    /// - Parameters:
-    ///   - item: The menu bar item to move.
-    ///   - destination: The destination to move the item to.
-    ///   - options: The move tunables; every field defaults, so callers only
-    ///     pass what they deviate from.
+    /// - Parameter options: The move tunables; every field defaults.
     func move(
         item: MenuBarItem,
         to destination: MoveDestination,
@@ -2114,8 +1889,7 @@ extension MenuBarItemManager {
     ) async throws {
         let budget = Self.currentMoveBudget ?? MoveTransactionBudget(limit: Self.moveDeadline)
 
-        // Admission waits for a bounded input lull before taking the app-wide
-        // permit. Nested recovery moves already own the gate.
+        // Nested recovery moves already own the gate.
         if !Self.holdsMoveGate {
             do {
                 try await Self.performWithMoveGate(
@@ -2146,12 +1920,8 @@ extension MenuBarItemManager {
                         } catch let error as EventError {
                             throw error
                         } catch is TaskTimeoutError {
-                            // The outer task's budget-derived allowance
-                            // elapsed before waitForUserToPauseInput's own
-                            // timeout could fire (it is unset or wider than
-                            // the allowance). That is still an input pause
-                            // timeout, so keep the deferral attribution
-                            // instead of reporting a generic failure.
+                            // The budget ran out before the pause wait's own
+                            // timeout; still an input-pause deferral.
                             MenuBarItemManager.diagLog.debug(
                                 "move: input did not pause within \(allowance) for \(item.logString)"
                             )
@@ -2166,8 +1936,7 @@ extension MenuBarItemManager {
                     },
                     didFinishWhileHoldingGate: options.didFinishWhileHoldingGate,
                     operation: {
-                        // Input can resume while queued. Recheck once without
-                        // waiting while the gate is held.
+                        // Input can resume while queued; recheck without waiting.
                         if !skipInputPause {
                             let pauseMs = max(
                                 0,
@@ -2209,27 +1978,19 @@ extension MenuBarItemManager {
             return
         }
 
-        // Evaluate once, only after the transaction owns the gate. A caller
-        // can reject a plan that became stale while queued without mistaking
-        // the move's own subsequent updates for supersession.
+        // Once, after taking the gate, so the move's own updates don't read as supersession.
         guard options.shouldBegin?() ?? true else {
             throw EventError.moveSuperseded(item)
         }
 
-        // System clone windows are transient WindowServer duplicates that
-        // must never be moved. Refuse here as a final safety net so no
-        // planning path can drag a phantom and displace real items. The
-        // planners filter clones earlier; this backstops every move caller.
-        // A no-op is correct: the clone has no managed position to restore
-        // and will vanish on its own, so there's nothing to fail or retry.
+        // Backstop: a dragged clone displaces real items. It vanishes on its own,
+        // so a no-op is correct.
         guard !item.isSystemClone else {
             MenuBarItemManager.diagLog.warning("Skipping move for \(item.logString) - system status item clone")
             return
         }
         guard item.isMovableAddressingWindowOwner else {
-            // The refusal used to be silent (#905): name the gate and the
-            // identifier the decision was made on, so a report can tell a
-            // static macOS prohibition from an identity-resolution failure.
+            // Tells a macOS prohibition apart from an identity-resolution failure (#905).
             MenuBarItemManager.diagLog.warning(
                 "move: refusing \(item.logString): \(item.immovabilityReason?.logDescription ?? "isMovable false with no named gate"); uniqueIdentifier=\(item.uniqueIdentifier), sourcePID=\(item.sourcePID.map(String.init) ?? "nil")"
             )
@@ -2243,9 +2004,7 @@ extension MenuBarItemManager {
             throw EventError.moveSuperseded(item)
         }
 
-        // Never drag an item while a menu bar item menu is tracking — a synthetic
-        // Cmd-drag tears down the user's interaction (Wi-Fi picker, input methods).
-        // Wait briefly for the menu to close; if it stays open, give up this attempt.
+        // A synthetic Cmd-drag tears down an open menu. Wait briefly, then give up.
         var menuWaitAttempts = 0
         while await isAnyMenuBarItemMenuOpen() {
             guard options.shouldProceed?() ?? true else {
@@ -2259,10 +2018,8 @@ extension MenuBarItemManager {
             try await budget.sleep(for: .milliseconds(250))
         }
 
-        // Allow right-of-item moves to proceed even when the item is at x=-1.
-        // validateItemPositionAfterMove uses exactly this path to rescue stuck
-        // items. Block all other moves: dragging a stuck item deeper into a
-        // hidden section could leave it in an unknown position.
+        // Right-of moves are the rescue path; anything else could drag a stuck
+        // item somewhere unknown.
         if await isItemBlocked(item) {
             guard case .rightOfItem = destination else {
                 MenuBarItemManager.diagLog.warning("Skipping move for \(item.logString) - item is blocked (x=-1)")
@@ -2271,7 +2028,6 @@ extension MenuBarItemManager {
             MenuBarItemManager.diagLog.debug("Proceeding with move of blocked \(item.logString); recovery to visible")
         }
 
-        // Determine display ID early.
         let resolvedDisplayID: CGDirectDisplayID = if let displayID {
             displayID
         } else if let window = appState.hidEventManager.bestScreen(appState: appState) {
@@ -2280,11 +2036,8 @@ extension MenuBarItemManager {
             Bridging.getActiveMenuBarDisplayID() ?? CGMainDisplayID()
         }
 
-        // The plan may have waited behind another move (admission, gate
-        // waiting). Resolve both endpoints again on the selected display and
-        // require the same window, owner, stable tag, and resolved source.
-        // A same-tag replacement needs a new plan; it is never a silent
-        // transport fallback.
+        // The plan may have waited in the queue. Require the same window, owner,
+        // tag, and source; a same-tag replacement needs a new plan.
         _ = try await resolveCurrentMoveEndpoints(
             source: item,
             destination: destination.targetItem,
@@ -2303,8 +2056,7 @@ extension MenuBarItemManager {
             try await budget.sleep(for: initialBuffer)
         }
 
-        // The buffer itself is an await; require the same exact endpoints
-        // again before the first verification or event.
+        // The buffer is an await, so check the endpoints again.
         let bufferedEndpoints = try await resolveCurrentMoveEndpoints(
             source: item,
             destination: destination.targetItem,
@@ -2331,19 +2083,8 @@ extension MenuBarItemManager {
         // during a layout reset when items required multiple attempts).
         let mouseLocation = options.hideCursorAcrossAttempts ? try getMouseLocation() : nil
         let cursorOwnershipStartedAt = ContinuousClock.now
-        // The default 1 s cursor-hide watchdog is too short for menu
-        // bar item moves, and the budget they can burn has grown: every
-        // attempt spends its whole timeout four times over (two event
-        // posts, two response waits), budgets escalate to the merged
-        // ceiling of one second per operation, and a failed attempt posts
-        // one more fallback at a fixed 100 ms. At the ceiling that is
-        // roughly 32 s for eight attempts — far past the old flat 10 s,
-        // whose comment still assumed "8 × ~500 ms". When the watchdog
-        // fires partway through, the cursor is force-shown at the
-        // synthetic event's last cursorPosition (mid-display, per the
-        // offscreen-target override below in postMoveEvents) and the user
-        // sees a brief cursor flash. The floor stays at 10 s so ordinary
-        // moves keep their safety net against genuinely stuck states.
+        // The default 1 s watchdog is far too short; a premature fire flashes the
+        // cursor mid-display. See cursorHideWatchdogTimeout.
         if options.hideCursorAcrossAttempts {
             let cursorWatchdog = try min(
                 options.watchdogTimeout ?? Self.cursorHideWatchdogTimeout(

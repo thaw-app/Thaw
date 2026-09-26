@@ -9,20 +9,16 @@ import Foundation
 
 /// Watches for desktop wallpaper changes and reports them as events.
 ///
-/// Adaptive appearance samples the pixels behind the menu bar, so it does
-/// not need to know *what* the wallpaper is — only *when* it changed. macOS
-/// posts no public notification for that, so this watches the file the
-/// system rewrites whenever the wallpaper is set.
+/// macOS posts no public notification for wallpaper changes, so this watches
+/// the file the system rewrites when the wallpaper is set.
 ///
-/// This is a latency improvement, not a correctness one: the periodic
-/// refresh in ``MenuBarManager`` already catches a new wallpaper within its
-/// poll interval, and still has to, because a dynamic or aerial wallpaper
-/// changes its pixels continuously without ever rewriting the index.
+/// Only a latency improvement: the periodic refresh in ``MenuBarManager``
+/// still has to run, because dynamic and aerial wallpapers change pixels
+/// without rewriting the index.
 @MainActor
 final class WallpaperChangeMonitor {
-    /// The wallpaper store index, rewritten by the system on every
-    /// wallpaper change. The path moved here in macOS 14; the older
-    /// `Dock/desktoppicture.db` no longer exists on the deployment target.
+    /// The wallpaper store index. The older `Dock/desktoppicture.db` no
+    /// longer exists on the deployment target.
     static let indexURL = URL(
         fileURLWithPath: NSHomeDirectory()
     )
@@ -40,40 +36,34 @@ final class WallpaperChangeMonitor {
     /// system's replacement of the index.
     private let restartRetryDelay: Duration = .milliseconds(500)
 
-    /// Called on the main actor after the wallpaper changes and the
-    /// debounce interval elapses.
+    /// Called on the main actor after the debounce interval elapses.
     var onChange: (() -> Void)?
 
-    /// Creates a monitor for the given file.
-    ///
     /// - Parameters:
-    ///   - url: The file to watch. Defaults to the system wallpaper index.
+    ///   - url: The file to watch.
     ///   - debounce: How long to coalesce writes. Setting a wallpaper
-    ///     rewrites the index several times in quick succession, and each
-    ///     rewrite would otherwise cost a screen capture.
+    ///     rewrites the index several times, each costing a screen capture.
     init(url: URL = WallpaperChangeMonitor.indexURL, debounce: Duration = .milliseconds(500)) {
         self.url = url
         self.debounce = debounce
     }
 
     deinit {
-        // `stop()` is main-actor isolated and deinit is not, so tear the
-        // descriptor down directly. The source's cancel handler cannot be
-        // relied on here because nothing will run it after deallocation.
+        // `stop()` is main-actor isolated and deinit is not, and the cancel
+        // handler won't run after deallocation, so close directly.
         debounceTask?.cancel()
         restartRetryTask?.cancel()
         source?.cancel()
     }
 
-    /// Starts watching. Does nothing if already watching.
+    /// Does nothing if already watching.
     func start() {
         guard source == nil else { return }
 
         descriptor = open(url.path, O_EVTONLY)
         guard descriptor >= 0 else {
-            // Absent on a fresh account until the user first sets a
-            // wallpaper. The periodic refresh covers this case, so this is
-            // a downgrade in latency rather than a failure.
+            // Absent on a fresh account until a wallpaper is set. The
+            // periodic refresh covers it.
             diagLog.debug("Wallpaper index not open-able at \(self.url.path); relying on periodic refresh")
             return
         }
@@ -83,18 +73,14 @@ final class WallpaperChangeMonitor {
             eventMask: [.write, .delete, .rename, .extend],
             queue: .main
         )
-        // Capture the source weakly: GCD retains its handler, so a strong
-        // capture here would form a cycle the source cannot break out of.
-        // `restart()` replaces the source on every atomic index replacement,
-        // so leaked sources would accumulate over a session.
+        // GCD retains its handler, so a strong capture would leak a source
+        // on every `restart()`.
         source.setEventHandler { [weak self, weak source] in
             guard let self, let source else { return }
             let events = source.data
             if events.contains(.delete) || events.contains(.rename) {
-                // The system replaces the index atomically rather than
-                // writing in place, so the descriptor now points at an
-                // unlinked inode. Re-open before reporting, or this fires
-                // exactly once per launch.
+                // The index is replaced atomically, leaving the descriptor on
+                // an unlinked inode. Re-open, or this fires once per launch.
                 restart()
             }
             scheduleChange()
@@ -107,7 +93,6 @@ final class WallpaperChangeMonitor {
         diagLog.debug("Watching wallpaper index at \(self.url.path)")
     }
 
-    /// Stops watching and releases the descriptor.
     func stop() {
         debounceTask?.cancel()
         debounceTask = nil
@@ -120,11 +105,8 @@ final class WallpaperChangeMonitor {
 
     /// Re-opens the watch after an atomic replacement.
     ///
-    /// The replacement is not instantaneous, so the re-open can run before the
-    /// new file is linked. Nothing else re-opens the watch, so a lost race
-    /// would otherwise leave the rest of the session on the periodic refresh
-    /// alone; retry once, after which the periodic refresh is the fallback it
-    /// always was.
+    /// The re-open can run before the new file is linked, so retry once
+    /// before falling back to the periodic refresh.
     private func restart() {
         restartRetryTask?.cancel()
         restartRetryTask = nil

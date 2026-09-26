@@ -81,19 +81,13 @@ final class MenuBarItemImageCache: @unchecked Sendable {
 
     /// A representation of a captured menu bar item image.
     nonisolated struct CapturedImage: Hashable {
-        /// The base image.
         let cgImage: CGImage
 
         /// The scale factor of the image at the time of capture.
         let scale: CGFloat
 
-        /// A value that differs when the image differs, used to spot an
-        /// item blinking for attention.
-        ///
-        /// Hashes the pixel data rather than the CGImage identity, so a
-        /// recapture of an unchanged icon fingerprints the same. Falls back
-        /// to the dimensions when the data provider yields nothing, which
-        /// costs sensitivity but never invents a difference.
+        /// Used to spot an item blinking for attention. Hashes pixel data, not
+        /// CGImage identity; falls back to dimensions when there's no data.
         var fingerprint: Int {
             var hasher = Hasher()
             hasher.combine(cgImage.width)
@@ -142,9 +136,7 @@ final class MenuBarItemImageCache: @unchecked Sendable {
         }
     }
 
-    /// The result of an image capture operation.
     private struct CaptureResult {
-        /// The successfully captured images.
         var images = [MenuBarItemTag: CapturedImage]()
 
         /// The menu bar items excluded from the capture.
@@ -161,11 +153,8 @@ final class MenuBarItemImageCache: @unchecked Sendable {
     /// The cached item images, keyed by their corresponding tags.
     private(set) var images = [MenuBarItemTag: CapturedImage]()
 
-    /// Display ID of the screen the current ``images`` were last captured for.
-    ///
-    /// Used by the Thaw Bar to drop stale bitmaps when opening on a different
-    /// screen: menu bar icon light/dark tint is baked into the capture, so
-    /// reusing another display's cache briefly shows the wrong icon colors.
+    /// Display the current ``images`` were captured for. The light/dark tint is
+    /// baked into the capture, so another display's cache shows wrong colors.
     private(set) var lastCaptureDisplayID: CGDirectDisplayID?
 
     /// Per-display icon snapshots so switching screens can restore the correct
@@ -175,9 +164,8 @@ final class MenuBarItemImageCache: @unchecked Sendable {
 
     /// Tracks which items are blinking for attention.
     ///
-    /// Deliberately not observable: it is fed on every capture, and the
-    /// verdict it produces is published through tagsSeekingAttention
-    /// instead, which only changes when the verdict does.
+    /// Not observable: it's fed on every capture. The verdict is published
+    /// through tagsSeekingAttention instead.
     @ObservationIgnored private var attentionDetector = MenuBarItemAttentionDetector()
 
     /// The items currently asking for attention.
@@ -185,10 +173,8 @@ final class MenuBarItemImageCache: @unchecked Sendable {
 
     /// Item identifiers watched by enabled attention-seeking triggers.
     ///
-    /// This is deliberately a set rather than a Boolean demand flag: when no
-    /// UI consumes a whole section, the live loop captures only these items.
-    /// The global "surface items seeking attention" setting remains separate
-    /// and continues to sample every concealed item.
+    /// A set, not a flag: with no UI consumer the live loop captures only these.
+    /// The global attention setting still samples every concealed item.
     @ObservationIgnored var attentionDetectionItemIdentifiers = Set<String>() {
         didSet {
             guard oldValue != attentionDetectionItemIdentifiers else { return }
@@ -199,12 +185,9 @@ final class MenuBarItemImageCache: @unchecked Sendable {
     /// Memoized results of trimmedImage(for:), keyed by tag, each paired
     /// with the CGImage it was derived from so a recapture invalidates it.
     ///
-    /// Deliberately not observable: this is derived data, and writing it from
-    /// inside a SwiftUI body — which is exactly where it is filled — must not
-    /// invalidate the view that just read it.
+    /// Not observable: it's filled from SwiftUI bodies and must not invalidate them.
     @ObservationIgnored private var trimmedImages = [MenuBarItemTag: (source: CGImage, image: NSImage)]()
 
-    /// Maximum number of images to cache to prevent memory growth
     private static let maxCacheSize = 200
 
     /// LRU tracking from least to most recently used.
@@ -233,51 +216,33 @@ final class MenuBarItemImageCache: @unchecked Sendable {
     private static nonisolated let maxFailuresBeforeBlacklist = 3
     private static nonisolated let blacklistCooldownSeconds: TimeInterval = 30 // 30 seconds
 
-    /// Queue to run cache operations.
     private let queue = DispatchQueue(
         label: "MenuBarItemImageCache",
         qos: .background
     )
 
-    /// Image capture options.
     private let captureOption: CGWindowImageOption = [
         .boundsIgnoreFraming, .bestResolution,
     ]
 
-    /// The shared app state.
     private weak var appState: AppState?
 
-    /// Storage for internal observers.
     private var cancellables = Set<AnyCancellable>()
 
-    /// Task observing AdvancedSettings.iconRefreshInterval, which is
-    /// @Observable rather than a Combine ObservableObject.
+    /// AdvancedSettings is @Observable, not a Combine ObservableObject.
     private var iconRefreshIntervalObservationTask: Task<Void, Never>?
 
-    /// Task observing AppNavigationState's properties (wave 3), which is
-    /// @Observable rather than a Combine ObservableObject.
+    /// AppNavigationState is @Observable, not a Combine ObservableObject.
     private var navigationStateObservationTask: Task<Void, Never>?
 
-    /// Task observing menuBarManager.averageColorInfo (wave 3), which is
-    /// @Observable rather than a Combine ObservableObject. Bridges into
-    /// colorChangeSubject so it can still participate in the
-    /// Publishers.MergeMany below.
+    /// Feeds colorChangeSubject so the @Observable averageColorInfo joins the Combine merge.
     private var averageColorInfoObservationTask: Task<Void, Never>?
 
-    /// Bridges averageColorInfoObservationTask's Observation-based updates
-    /// into the Combine Publishers.MergeMany pipeline in
-    /// configureCancellables().
     private let colorChangeSubject = PassthroughSubject<Void, Never>()
 
-    /// Task observing itemManager.itemCache (wave 4), which is
-    /// @Observable rather than a Combine ObservableObject. Bridges into
-    /// itemCacheChangeSubject so it can still participate in the
-    /// Publishers.MergeMany below.
+    /// Feeds itemCacheChangeSubject so the @Observable itemCache joins the Combine merge.
     private var itemCacheObservationTask: Task<Void, Never>?
 
-    /// Bridges itemCacheObservationTask's Observation-based updates into
-    /// the Combine Publishers.MergeMany pipeline in
-    /// configureCancellables().
     private let itemCacheChangeSubject = PassthroughSubject<Void, Never>()
 
     private var memoryPressureSource: DispatchSourceMemoryPressure?
@@ -296,9 +261,7 @@ final class MenuBarItemImageCache: @unchecked Sendable {
 
     /// Whether a window's bounds can contribute to a composite capture.
     ///
-    /// Both dimensions must be positive: the capture APIs omit degenerate
-    /// windows from the composite, so including one only corrupts the
-    /// geometry the composite is sliced with.
+    /// The capture APIs omit degenerate windows, so one would corrupt the slice geometry.
     static nonisolated func isCapturableBounds(_ bounds: CGRect) -> Bool {
         bounds.width > 0 && bounds.height > 0
     }
@@ -317,16 +280,10 @@ final class MenuBarItemImageCache: @unchecked Sendable {
     /// Reciprocal of maxIconRefreshRate.
     static nonisolated let minIconRefreshInterval: TimeInterval = 1.0 / maxIconRefreshRate
 
-    /// Tracks whether the MenuBarLayoutSettingsPane is currently open.
-    /// Used to gate background cache prewarming so captures only occur while the
-    /// user has the layout settings open, rather than staying stuck on for the
-    /// remaining lifetime of the process after the first open (#759).
+    /// Gates background prewarming so it stops when the layout pane closes (#759).
     private(set) var isSettingsPaneOpen = false
 
-    /// Whether the per-item hotkey list in the Hotkeys settings pane is expanded.
-    /// While collapsed, the pane has no visible item-icon consumer, so the live
-    /// capture loop stays off rather than paying the off-screen SkyLight capture
-    /// cost for items the user cannot see.
+    /// While collapsed nothing shows item icons, so the live capture loop stays off.
     private(set) var isItemHotkeyListExpanded = false {
         didSet {
             guard oldValue != isItemHotkeyListExpanded else { return }
@@ -334,7 +291,6 @@ final class MenuBarItemImageCache: @unchecked Sendable {
         }
     }
 
-    /// Updates isItemHotkeyListExpanded from the Hotkeys settings UI.
     func setItemHotkeyListExpanded(_ expanded: Bool) {
         guard isItemHotkeyListExpanded != expanded else {
             return
@@ -355,16 +311,13 @@ final class MenuBarItemImageCache: @unchecked Sendable {
 
     // MARK: Setup
 
-    /// Sets up the cache.
     @MainActor
     func performSetup(with appState: AppState) {
         self.appState = appState
         configureCancellables()
 
-        // Try to load cached images from disk
         loadFromDisk()
 
-        // Only prewarm if a visible consumer exists at setup time.
         // Background prewarming is gated by isSettingsPaneOpen.
         let hasVisible = hasVisibleCaptureConsumer()
         guard hasVisible else {
@@ -379,16 +332,13 @@ final class MenuBarItemImageCache: @unchecked Sendable {
         }
     }
 
-    /// Marks that the MenuBarLayoutSettingsPane has been opened.
-    /// Call this from the pane's onAppear or task modifier to enable background cache prewarming.
+    /// Call from the layout pane's onAppear to enable background prewarming.
     @MainActor
     func markSettingsPaneOpened() {
         isSettingsPaneOpen = true
     }
 
-    /// Marks that the MenuBarLayoutSettingsPane has been closed.
-    /// Call this from the pane's onDisappear to stop background cache prewarming
-    /// once the pane is no longer visible.
+    /// Call from the layout pane's onDisappear to stop background prewarming.
     @MainActor
     func markSettingsPaneClosed() {
         isSettingsPaneOpen = false
@@ -396,16 +346,13 @@ final class MenuBarItemImageCache: @unchecked Sendable {
 
     // MARK: Disk Persistence
 
-    /// Path to the cache file in Caches directory.
     private static var cacheFileURL: URL? {
         let cacheDir = FileManager.default.urls(for: .cachesDirectory, in: .userDomainMask).first
         return cacheDir?.appendingPathComponent("com.stonerl.thaw/imageCache.json")
     }
 
-    /// Maximum age of disk cache before it's considered stale (30 seconds).
     private static nonisolated let maxCacheAgeSeconds: TimeInterval = 30
 
-    /// Saves the image cache to disk for faster restart.
     func saveToDisk() {
         guard !images.isEmpty else { return }
 
@@ -448,7 +395,6 @@ final class MenuBarItemImageCache: @unchecked Sendable {
         }
     }
 
-    /// Loads cached images from disk.
     @MainActor
     private func loadFromDisk() {
         guard let url = Self.cacheFileURL,
@@ -464,7 +410,6 @@ final class MenuBarItemImageCache: @unchecked Sendable {
                       let timestamp = json["timestamp"] as? TimeInterval,
                       let imagesDict = json["images"] as? [String: String] else { return }
 
-                // Check if cache is stale (older than 30 seconds)
                 let cacheAge = Date().timeIntervalSince1970 - timestamp
                 if cacheAge > Self.maxCacheAgeSeconds {
                     MenuBarItemImageCache.diagLog.debug("Disk cache is \(Int(cacheAge))s old, deleting stale cache")
@@ -503,13 +448,11 @@ final class MenuBarItemImageCache: @unchecked Sendable {
         }
     }
 
-    /// Configures the internal observers for the cache.
     @MainActor
     private func configureCancellables() {
         var c = Set<AnyCancellable>()
 
         if let appState {
-            // Monitor system memory pressure
             memoryPressureSource?.cancel()
             let source = DispatchSource.makeMemoryPressureSource(
                 eventMask: [.warning, .critical],
@@ -533,10 +476,7 @@ final class MenuBarItemImageCache: @unchecked Sendable {
             .map { _ in () }
             .eraseToAnyPublisher()
 
-            // menuBarManager is now @Observable (wave 3), so it no longer
-            // has an $averageColorInfo publisher. colorChangeSubject is
-            // fed by averageColorInfoObservationTask (started below) and
-            // bridges those updates back into this Combine merge.
+            // Fed by averageColorInfoObservationTask, below.
             let colorChangePublisher: AnyPublisher<Void, Never> = colorChangeSubject
                 .eraseToAnyPublisher()
 
@@ -552,10 +492,7 @@ final class MenuBarItemImageCache: @unchecked Sendable {
                 }
             }
 
-            // itemManager is now @Observable (wave 4), so it no longer
-            // has a $itemCache publisher. itemCacheChangeSubject is fed
-            // by itemCacheObservationTask (started below) and bridges
-            // those updates back into this Combine merge.
+            // Fed by itemCacheObservationTask, below.
             let itemCacheChangePublisher: AnyPublisher<Void, Never> = itemCacheChangeSubject
                 .eraseToAnyPublisher()
 
@@ -582,9 +519,7 @@ final class MenuBarItemImageCache: @unchecked Sendable {
                 guard let self else {
                     return
                 }
-                // Only trigger capture if a visible consumer exists or the settings pane
-                // is currently open (itemCacheChangePublisher may indicate
-                // new items that the layout pane will need).
+                // The open layout pane may need new items, so it counts as a consumer.
                 let nav = self.makeNavigationStateSnapshot()
                 let hasVisible = self.hasVisibleCaptureConsumer(nav: nav)
                 let settingsOpen = self.isSettingsPaneOpen && !nav.prefersAppIcon
@@ -600,14 +535,7 @@ final class MenuBarItemImageCache: @unchecked Sendable {
             }
             .store(in: &c)
 
-            // Observe navigation state changes to start/stop live refresh.
-            // AppNavigationState is @Observable (wave 3) rather than a
-            // Combine ObservableObject, so this is observed via the
-            // Observations async sequence instead of its old
-            // $isIceBarPresented/etc. projections. The original pipeline
-            // debounced 50ms; since startLiveRefreshIfNeeded() is itself
-            // idempotent (guards internally against redundant starts), the
-            // debounce is dropped in favor of firing directly on each change.
+            // Starts/stops live refresh. No debounce: startLiveRefreshIfNeeded() is idempotent.
             navigationStateObservationTask = Task { @MainActor [weak self, navigationState = appState.navigationState] in
                 let changes = Observations {
                     (
@@ -624,15 +552,8 @@ final class MenuBarItemImageCache: @unchecked Sendable {
                 }
             }
 
-            // Start/stop the live refresh when the Hotkeys pane's per-item list
-            // is expanded or collapsed, since that gates its capture consumer.
-            // Replaced by isItemHotkeyListExpanded's didSet above now
-            // that this class is @Observable (no more $isItemHotkeyListExpanded
-            // Combine projection to subscribe to).
-
-            // Restart the live refresh loop when its cadence, global attention
-            // demand, or app-icon mode changes. The initial observation also
-            // starts global detection when there is no visible UI consumer.
+            // Restart the loop when cadence, attention demand, or app-icon mode
+            // changes. The first observation starts detection with no UI consumer.
             let advancedSettings = appState.settings.advanced
             iconRefreshIntervalObservationTask = Task { @MainActor [weak self] in
                 var previous: (interval: TimeInterval, globalAttention: Bool, prefersAppIcon: Bool)?
@@ -673,8 +594,7 @@ final class MenuBarItemImageCache: @unchecked Sendable {
         let prefersAppIcon: Bool
     }
 
-    /// Constructs a NavigationStateSnapshot from the current appState in a single MainActor hop.
-    /// Centralizes snapshot construction to avoid duplication across multiple call sites.
+    /// Builds a NavigationStateSnapshot in a single MainActor hop.
     @MainActor
     private func makeNavigationStateSnapshot() -> NavigationStateSnapshot {
         guard let appState else {
@@ -699,10 +619,8 @@ final class MenuBarItemImageCache: @unchecked Sendable {
         )
     }
 
-    /// Pure gating decision for whether a background (offscreen-inclusive) capture
-    /// cycle should proceed: either a visible consumer needs it, or the caller
-    /// explicitly requested a background capture while the layout settings pane
-    /// is currently open. Extracted for unit testing (#759).
+    /// A background capture runs only for a visible consumer, or when requested
+    /// while the layout pane is open (#759).
     static nonisolated func shouldAllowBackgroundCapture(
         hasVisibleConsumer: Bool,
         allowBackgroundCapture: Bool,
@@ -713,9 +631,8 @@ final class MenuBarItemImageCache: @unchecked Sendable {
 
     /// Returns the identifiers a section needs in the next live capture.
     ///
-    /// Visible consumers and global attention detection consume the complete
-    /// section. Trigger-only demand is intersected with the section's current
-    /// contents so unrelated icons never enter the capture batch.
+    /// Visible consumers and global attention take the whole section; trigger-only
+    /// demand is intersected with it so unrelated icons stay out of the batch.
     static nonisolated func requiredCaptureIdentifiers(
         availableIdentifiers: some Sequence<String>,
         consumerNeedsWholeSection: Bool,
@@ -737,16 +654,13 @@ final class MenuBarItemImageCache: @unchecked Sendable {
             return
         }
 
-        // Batch all navigation state reads into single MainActor hop
         let nav = await MainActor.run {
             makeNavigationStateSnapshot()
         }
 
         let hasVisibleConsumer = hasVisibleCaptureConsumer(nav: nav)
 
-        // Early-return unless a visible consumer exists or background capture is explicitly allowed.
-        // Background capture is gated by isSettingsPaneOpen to avoid unnecessary full-screen
-        // captures once the user has closed the layout settings pane (#759).
+        // Background capture is gated by isSettingsPaneOpen (#759).
         guard Self.shouldAllowBackgroundCapture(
             hasVisibleConsumer: hasVisibleConsumer,
             allowBackgroundCapture: allowBackgroundCapture,
@@ -766,7 +680,6 @@ final class MenuBarItemImageCache: @unchecked Sendable {
         }
     }
 
-    /// Returns whether any visible surface currently needs live item captures.
     private func hasVisibleCaptureConsumer(nav: NavigationStateSnapshot) -> Bool {
         // App-icon mode renders no capture, so no visible consumer needs one.
         if nav.prefersAppIcon {
@@ -783,16 +696,13 @@ final class MenuBarItemImageCache: @unchecked Sendable {
         case .menuBarLayout:
             return true
         case .hotkeys:
-            // Only the expanded per-item hotkey list consumes item icons. Read
-            // from the snapshot so this stays race-free when called off the main
-            // actor (e.g. from refreshVisibleConsumersOrPrewarmLayoutCache).
+            // Read from the snapshot so it stays race-free off the main actor.
             return nav.isItemHotkeyListExpanded
         default:
             return false
         }
     }
 
-    /// Convenience overload that reads current state on MainActor when no snapshot is provided.
     @MainActor
     private func hasVisibleCaptureConsumer() -> Bool {
         guard let appState else {
@@ -810,7 +720,6 @@ final class MenuBarItemImageCache: @unchecked Sendable {
         return hasVisibleCaptureConsumer(nav: nav)
     }
 
-    /// Starts or stops the live image refresh loop based on navigation state.
     @MainActor
     private func startLiveRefreshIfNeeded() {
         guard appState != nil else {
@@ -819,8 +728,7 @@ final class MenuBarItemImageCache: @unchecked Sendable {
             return
         }
 
-        // Compute visibility using centralized snapshot and helper to avoid duplication.
-        // Wrapping in Task since this is called from synchronous sink closures on main thread.
+        // Called from synchronous sink closures, hence the Task.
         Task { [weak self] in
             guard let self else { return }
             let nav = await MainActor.run {
@@ -832,7 +740,6 @@ final class MenuBarItemImageCache: @unchecked Sendable {
                 || globalAttentionDetection
 
             if needsRefresh {
-                // Already running — don't restart
                 guard self.liveRefreshTask == nil else { return }
                 MenuBarItemImageCache.diagLog.debug(
                     "Starting live refresh (iceBar=\(nav.isIceBarPresented), search=\(nav.isSearchPresented), settings=\(nav.isSettingsPresented), attentionTriggers=\(self.attentionDetectionItemIdentifiers.count), globalAttention=\(globalAttentionDetection))"
@@ -858,12 +765,8 @@ final class MenuBarItemImageCache: @unchecked Sendable {
 
     /// The centralized live refresh loop for image updates.
     ///
-    /// Runs a single capture loop that serves all consumer views (IceBar,
-    /// Search, Layout Settings) instead of each view running its own loop.
-    /// Heavy work (refreshImages) is @concurrent and runs on the
-    /// background pool — only navigation state reads happen on @MainActor.
-    /// Uses self.appState (weak property) to avoid retain cycle via
-    /// the task's async stack frame.
+    /// One loop serves every consumer view. refreshImages is @concurrent; only
+    /// navigation reads run on the main actor. Uses the weak appState to avoid a retain cycle.
     @MainActor
     private func runLiveRefreshLoop() async {
         MenuBarItemImageCache.diagLog.debug("Live refresh loop started")
@@ -891,14 +794,11 @@ final class MenuBarItemImageCache: @unchecked Sendable {
                 )
             }
 
-            // Determine which sections a visible UI consumer needs in full.
-            // Attention-trigger demand is applied per identifier below, so a
-            // single watched icon cannot expand this set to whole sections.
+            // Sections a UI consumer needs in full. Trigger demand is per identifier
+            // below, so one watched icon can't pull in a whole section.
             var consumerSections = Set<MenuBarSection.Name>()
             let isLayoutPane = nav.isSettingsPresented
                 && nav.settingsNavigationIdentifier == .menuBarLayout
-            // The Hotkeys pane only needs item icons while its per-item list
-            // disclosure is expanded.
             let isHotkeyListVisible = nav.isSettingsPresented
                 && nav.settingsNavigationIdentifier == .hotkeys
                 && isItemHotkeyListExpanded
@@ -932,9 +832,7 @@ final class MenuBarItemImageCache: @unchecked Sendable {
                 continue
             }
 
-            // Inspect every section so trigger-only demand can follow a watched
-            // item when it moves. Global attention intentionally retains full
-            // coverage of both concealed sections.
+            // Every section, so trigger demand follows a watched item that moves.
             let sections = MenuBarSection.Name.allCases
 
             if appState.itemManager.lastMoveOperationOccurred(within: .seconds(2))
@@ -1080,14 +978,10 @@ final class MenuBarItemImageCache: @unchecked Sendable {
 
     // MARK: Capturing Images
 
-    /// Captures a composite image of the given items, then crops out an image
-    /// for each item and returns the result.
+    /// Captures a composite image of the given items and crops out each one.
     ///
-    /// Accepts pre-fetched window bounds alongside each item to avoid a
-    /// redundant getWindowBounds system call and eliminate the TOCTOU race
-    /// where a window could move between bounds lookup and composite capture.
-    /// All items passed to this function are expected to be on-screen;
-    /// off-screen items should be pre-filtered by the caller.
+    /// Takes pre-fetched bounds to avoid a TOCTOU race between lookup and capture.
+    /// Items must be on-screen; the caller filters the rest.
     private nonisolated func compositeCapture(
         _ itemsWithBounds: [(item: MenuBarItem, bounds: CGRect)],
         scale: CGFloat
@@ -1099,12 +993,8 @@ final class MenuBarItemImageCache: @unchecked Sendable {
         var boundsUnion = CGRect.null
 
         for (item, bounds) in itemsWithBounds {
-            // Mirrors refreshImages: the capture APIs omit degenerate windows
-            // from the composite, so including one only corrupts the
-            // geometry the composite is sliced with — and since #990 the
-            // union width feeds the resolvedScale derivation, a degenerate
-            // bound would make the whole composite read as an implausible
-            // scale.
+            // A degenerate window corrupts the slice geometry and the union width
+            // that resolvedScale reads (#990).
             guard Self.isCapturableBounds(bounds) else {
                 MenuBarItemImageCache.diagLog.debug(
                     "compositeCapture: skipping degenerate bounds for \(item.logString) (\(bounds.width)x\(bounds.height))"
@@ -1117,8 +1007,6 @@ final class MenuBarItemImageCache: @unchecked Sendable {
             boundsUnion = boundsUnion.union(bounds)
         }
 
-        // Defensive guard: callers pre-filter empty arrays, but this protects
-        // against future misuse.
         guard !windowIDs.isEmpty else {
             return result
         }
@@ -1134,15 +1022,8 @@ final class MenuBarItemImageCache: @unchecked Sendable {
             return result
         }
 
-        // The capture backend picks the pixel scale, not Thaw: SCK captures
-        // at best resolution for whichever display owns the filter, and on a
-        // mixed-scale setup that need not be the display whose
-        // backingScaleFactor was handed in (#990: a 1.0x external beside a
-        // Retina display produced 2x pixels — "expected 522.0, got 1044" —
-        // the exact-equality guard rejected every composite, and the layout
-        // editor fell back to gray placeholders). Resolve the scale from the
-        // capture itself, the same check individualCapture already applies
-        // (#851/#736), and crop with it.
+        // SCK picks the scale of whichever display owns the filter, which on
+        // mixed-scale setups may not be the one passed in (#990). Read it from the capture.
         guard let effectiveScale = MenuBarItemImageCache.resolvedScale(
             imagePixelWidth: compositeImage.width,
             boundsWidth: boundsUnion.width,
@@ -1170,7 +1051,6 @@ final class MenuBarItemImageCache: @unchecked Sendable {
             "compositeCapture: composite image OK (\(compositeImage.width)x\(compositeImage.height)), cropping \(windowIDs.count) items"
         )
 
-        // Crop out each item from the composite.
         var cropSuccessCount = 0
         var cropNilCount = 0
         var cropTransparentCount = 0
@@ -1179,7 +1059,6 @@ final class MenuBarItemImageCache: @unchecked Sendable {
                 continue
             }
 
-            // Check if this item should be skipped due to repeated failures
             if shouldSkipCapture(for: item) {
                 MenuBarItemImageCache.diagLog.debug(
                     "Skipping composite capture for repeatedly failing item: \(item.logString)"
@@ -1209,7 +1088,6 @@ final class MenuBarItemImageCache: @unchecked Sendable {
                 continue
             }
 
-            // Record success
             cropSuccessCount += 1
             recordCaptureSuccess(for: item)
             result.images[item.tag] = CapturedImage(
@@ -1225,24 +1103,14 @@ final class MenuBarItemImageCache: @unchecked Sendable {
         return result
     }
 
-    /// Captures an image of each of the given items individually, then
-    /// returns the result.
     /// The scale a captured image was actually taken at, or nil when the
     /// image cannot be trusted at any scale.
     ///
-    /// expected is the scale of the display Thaw resolved for the menu
-    /// bar; the image's pixel width divided by the item's point width is the
-    /// scale the window server actually captured at. Normally they agree.
-    /// When they do not, the captured value is the truthful one — it is
-    /// measured from the image in hand rather than inferred from a display
-    /// that may not be the one ScreenCaptureKit chose.
+    /// Pixel width over point width is the real capture scale; when it
+    /// disagrees with `expected`, it wins, since SCK may have chosen another display.
     ///
-    /// A derived scale that is not near a real backing scale factor means
-    /// the bounds and the image describe different things (stale bounds, a
-    /// window resized mid-capture), so there is no safe scale to cache
-    /// under and the caller should drop the item. A missing icon is a
-    /// recoverable degraded state; a wrongly-scaled one is not, because it
-    /// gets cached and reused.
+    /// A derived scale off every real backing scale means stale bounds, so drop
+    /// the item: a missing icon recovers, a wrongly-scaled one gets cached.
     ///
     /// - Parameters:
     ///   - imagePixelWidth: Width of the captured image, in pixels.
@@ -1259,14 +1127,12 @@ final class MenuBarItemImageCache: @unchecked Sendable {
 
         let derived = CGFloat(imagePixelWidth) / boundsWidth
 
-        // Integer pixel widths make the derived value slightly noisy for
-        // narrow items, so compare with a tolerance rather than exactly.
+        // Integer pixel widths make narrow items noisy.
         if abs(derived - expected) <= scaleTolerance {
             return expected
         }
 
-        // Only trust a disagreement that lands on a real backing scale
-        // factor. Anything else is not a scale mismatch, it is bad input.
+        // Anything off a real backing scale is bad input, not a mismatch.
         return plausibleBackingScales.first { abs(derived - $0) <= scaleTolerance }
     }
 
@@ -1288,7 +1154,6 @@ final class MenuBarItemImageCache: @unchecked Sendable {
         var skippedCount = 0
 
         for item in items {
-            // Check if this item should be skipped due to repeated failures
             if shouldSkipCapture(for: item) {
                 MenuBarItemImageCache.diagLog.debug(
                     "Skipping capture for repeatedly failing item: \(item.logString)"
@@ -1319,15 +1184,8 @@ final class MenuBarItemImageCache: @unchecked Sendable {
                 continue
             }
 
-            // scale comes from the display Thaw believes owns the menu
-            // bar, but ScreenCaptureKit captures at the scale of whichever
-            // display it selects by frame intersection. On a mixed-scale
-            // multi-display setup those disagree, and caching an image under
-            // the wrong scale doubles every consumer's idea of its point
-            // size — the oversized Layout rows in #851/#736.
-            // compositeCapture and refreshImages both reject a
-            // pixel/point mismatch; this path did not, and it is precisely
-            // the fallback that runs after compositeCapture rejects one.
+            // SCK captures at the scale of the display it picks by frame intersection.
+            // On mixed-scale setups a wrong scale doubles the icon's size (#851).
             guard let resolvedScale = MenuBarItemImageCache.resolvedScale(
                 imagePixelWidth: image.width,
                 boundsWidth: item.bounds.width,
@@ -1347,7 +1205,6 @@ final class MenuBarItemImageCache: @unchecked Sendable {
                 )
             }
 
-            // Record success and cache
             capturedCount += 1
             recordCaptureSuccess(for: item)
             result.images[item.tag] = CapturedImage(
@@ -1366,13 +1223,11 @@ final class MenuBarItemImageCache: @unchecked Sendable {
         scale: CGFloat,
         appState: AppState
     ) async -> CaptureResult {
-        // Thaw's own control items always capture as transparent via
-        // CGWindowListCreateImage, so skip them to avoid the perpetual
-        // fail -> blacklist -> cooldown -> retry cycle.
+        // Our control items always capture transparent; skip them to avoid an
+        // endless fail/blacklist/retry cycle.
         let capturable = items.filter { !$0.isControlItem }
 
-        // Use individual capture after a move operation, since composite capture
-        // doesn't account for overlapping items.
+        // Composite capture doesn't handle the overlaps a move can leave.
         if await appState.itemManager.lastMoveOperationOccurred(
             within: .seconds(2)
         ) {
@@ -1380,32 +1235,22 @@ final class MenuBarItemImageCache: @unchecked Sendable {
             return await individualCapture(capturable, scale: scale)
         }
 
-        // Pre-filter off-screen items: hidden section items are positioned past
-        // the left edge of the screen. Including them in compositeCapture
-        // inflates boundsUnion → CGWindowListCreateImageFromArray returns an
-        // image narrower than expected → width mismatch → the whole composite
-        // fails for ALL items. Off-screen items are captured by the live
-        // refresh loop (refreshImages) instead, so we can safely skip them here.
-        //
-        // Note: isWindowOnScreen() cannot be used for this — macOS incorrectly
-        // reports hidden menu bar items as on-screen (known macOS behaviour).
+        // Off-screen items inflate boundsUnion and fail the whole composite on
+        // width. refreshImages captures them instead.
+        // isWindowOnScreen() can't be used: macOS reports hidden items as on-screen.
         let displayID = Bridging.getActiveMenuBarDisplayID() ?? CGMainDisplayID()
         let screenFrame = await MainActor.run {
             NSScreen.screens.first { $0.displayID == displayID }?.frame
         }
 
-        // Fetch window bounds once for all items. This single pass is reused for
-        // both the off-screen filter and the subsequent compositeCapture, avoiding
-        // a redundant system call and eliminating the TOCTOU race where a window
-        // could move between the two lookups.
+        // One bounds fetch for both the filter and compositeCapture avoids a TOCTOU race.
         var onScreenItemsWithBounds: [(item: MenuBarItem, bounds: CGRect)] = []
         var offScreenCount = 0
         var nilBoundsCount = 0
 
         for item in capturable {
             guard let bounds = Bridging.getWindowBounds(for: item.windowID) else {
-                // Window bounds unavailable — skip; neither composite nor
-                // individual capture can succeed without position info.
+                // No capture path works without bounds.
                 nilBoundsCount += 1
                 continue
             }
@@ -1449,8 +1294,7 @@ final class MenuBarItemImageCache: @unchecked Sendable {
             scale: scale
         )
 
-        // Merge the successfully captured images from each result. Keep excluded
-        // items as part of the result, so they can be logged elsewhere.
+        // Keep excluded items so they can be logged elsewhere.
         individualResult.images.merge(compositeResult.images) { _, new in new }
 
         return individualResult
@@ -1458,19 +1302,11 @@ final class MenuBarItemImageCache: @unchecked Sendable {
 
     /// Lightweight image refresh for the IceBar.
     ///
-    /// Performs a single composite capture and crops individual items.
-    /// Updates LRU access timestamps for refreshed images to keep them
-    /// consistent with the images dict (preventing LRU inconsistencies),
-    /// but skips full cache management (LRU eviction, failure tracking,
-    /// size enforcement, cleanup).
-    /// Skips @Published updates when images haven't changed visually.
+    /// One composite capture, cropped per item. Updates LRU order but skips
+    /// eviction, failure tracking, and cleanup, and skips unchanged images.
     ///
-    /// Marked @concurrent because nonisolated alone does not leave the
-    /// caller's actor under Approachable Concurrency (SE-0461
-    /// nonisolated(nonsending)): the bounds queries, the crop, and the
-    /// detached copies would otherwise run on the main thread alongside UI
-    /// work. Cache publication hops back through applyRefreshedImages,
-    /// which stays on the main actor.
+    /// @concurrent because nonisolated alone stays on the caller's actor
+    /// (SE-0461), which would put the capture work on the main thread.
     @concurrent
     nonisolated func refreshImages(
         of items: [MenuBarItem],
@@ -1490,19 +1326,8 @@ final class MenuBarItemImageCache: @unchecked Sendable {
             guard let bounds = Bridging.getWindowBounds(for: item.windowID) else {
                 continue
             }
-            // Degenerate windows must not reach the union. A zero-width or
-            // zero-height window contributes nothing to the composite — the
-            // capture APIs drop it, and cropping(to:) on an empty rect
-            // returns nil — but including it still corrupts the geometry the
-            // composite gets sliced against: parked off-screen it drags
-            // boundsUnion across the whole gap to its position, so the
-            // expected-width check below compares the composite of the real
-            // items against a union thousands of points wide and discards
-            // every batch.
-            //
-            // This holds whatever produced the degenerate bounds; the union
-            // and the slice loop below read the same storage, so a window that
-            // cannot contribute geometry must enter neither.
+            // A degenerate window parked off-screen stretches boundsUnion across
+            // the gap, and the width check then discards every batch.
             guard Self.isCapturableBounds(bounds) else {
                 MenuBarItemImageCache.diagLog.debug(
                     "refreshImages: skipping degenerate bounds for \(item.logString) (\(bounds.width)x\(bounds.height))"
@@ -1519,8 +1344,7 @@ final class MenuBarItemImageCache: @unchecked Sendable {
             return
         }
 
-        // Capture path: SCK is leak-free but display-bounded, so only use it
-        // when the caller knows all items are on-screen (visible section).
+        // SCK is leak-free but display-bounded, so only for on-screen items.
         let compositeImage = await ScreenCapture.captureWindowsAsync(
             with: windowIDs,
             option: captureOption
@@ -1530,10 +1354,7 @@ final class MenuBarItemImageCache: @unchecked Sendable {
             return
         }
 
-        // Same resolved-scale treatment as compositeCapture (#990): a 2x
-        // capture of a 1x display's strip is a good image, not a mismatch to
-        // skip. Skipping here starved the hidden/always-hidden strips of the
-        // layout editor entirely.
+        // A 2x capture of a 1x display is a good image, not a mismatch (#990).
         guard let effectiveScale = MenuBarItemImageCache.resolvedScale(
             imagePixelWidth: compositeImage.width,
             boundsWidth: boundsUnion.width,
@@ -1564,10 +1385,7 @@ final class MenuBarItemImageCache: @unchecked Sendable {
                 width: bounds.width * effectiveScale,
                 height: bounds.height * effectiveScale
             )
-            // No per-item isTransparent() here: the composite-level check
-            // above already rejects fully-transparent captures. Individual
-            // transparent crops are intentional spacers. Failure tracking
-            // lives in compositeCapture/individualCapture only.
+            // No per-item transparency check: transparent crops are spacers.
             guard let image = compositeImage.cropping(to: cropRect)?.detachedCopy() else {
                 continue
             }
@@ -1608,9 +1426,7 @@ final class MenuBarItemImageCache: @unchecked Sendable {
         await applyRefreshedImages(newImages)
     }
 
-    /// Captures a fresh batch for image-comparison triggers through the
-    /// recyclable helper process. Selection stays on the main actor; capture
-    /// and frame-to-image copies run on the concurrent executor.
+    /// Captures a fresh batch for image-comparison triggers via the helper process.
     func captureCurrentImages(
         forItemIdentifiers identifiers: Set<String>
     ) async -> [String: CGImage] {
@@ -1676,10 +1492,7 @@ final class MenuBarItemImageCache: @unchecked Sendable {
             updateAccessOrder(for: tag)
             updatedCount += 1
         }
-        // Every capture is recorded, changed or not: the detector needs the
-        // gaps between changes as much as the changes, and an item that has
-        // stopped blinking only stops qualifying once steady samples push
-        // the blink out of its window.
+        // Record unchanged captures too: steady samples are what age a blink out.
         recordForAttention(newImages)
         if updatedCount > 0 {
             MenuBarItemImageCache.diagLog.debug(
@@ -1727,8 +1540,6 @@ final class MenuBarItemImageCache: @unchecked Sendable {
         tagsSeekingAttention.remove(tag)
     }
 
-    /// Captures the images of the menu bar items in the given section and returns
-    /// a dictionary containing the images, keyed by their menu bar item tags.
     private func captureImages(
         for section: MenuBarSection.Name,
         scale: CGFloat,
@@ -1752,7 +1563,6 @@ final class MenuBarItemImageCache: @unchecked Sendable {
 
     // MARK: Failed Capture Management
 
-    /// Checks if an item should be skipped due to repeated capture failures.
     private nonisolated func shouldSkipCapture(for item: MenuBarItem) -> Bool {
         failedCapturesLock.withLock { dict in
             guard let failed = dict[item.tag] else {
@@ -1775,7 +1585,6 @@ final class MenuBarItemImageCache: @unchecked Sendable {
         }
     }
 
-    /// Records a capture failure for an item.
     private nonisolated func recordCaptureFailure(for item: MenuBarItem) {
         let now = Date()
         failedCapturesLock.withLock { dict in
@@ -1809,7 +1618,6 @@ final class MenuBarItemImageCache: @unchecked Sendable {
         }
     }
 
-    /// Records a successful capture for an item (resets failure count).
     private nonisolated func recordCaptureSuccess(for item: MenuBarItem) {
         let recovered = failedCapturesLock.withLock { dict in
             dict.removeValue(forKey: item.tag)
@@ -1821,9 +1629,7 @@ final class MenuBarItemImageCache: @unchecked Sendable {
         }
     }
 
-    /// Handles memory pressure events
     private func handleMemoryPressure() {
-        // Clear half the cache on memory warning
         if !images.isEmpty {
             let targetSize = images.count / 2
             let removeCount = images.count - targetSize
@@ -1873,7 +1679,6 @@ final class MenuBarItemImageCache: @unchecked Sendable {
 
     // MARK: Cache Access
 
-    /// Updates the access order for a given tag to mark it as most recently used.
     private func updateAccessOrder(for tag: MenuBarItemTag) {
         if accessOrder.contains(tag) {
             accessOrder.move(members: CollectionOfOne(tag), to: accessOrder.endIndex)
@@ -1884,9 +1689,8 @@ final class MenuBarItemImageCache: @unchecked Sendable {
 
     /// Gets an image from the cache and updates its access order.
     ///
-    /// For non-system items, falls back to a namespace+title match if the
-    /// exact tag (including windowID) is not found. This handles disk-loaded
-    /// entries where the windowID is unavailable.
+    /// Non-system items fall back to a namespace+title match, since disk-loaded
+    /// entries have no windowID.
     func image(for tag: MenuBarItemTag) -> CapturedImage? {
         guard let image = Self.image(for: tag, in: images) else {
             return nil
@@ -1916,12 +1720,8 @@ final class MenuBarItemImageCache: @unchecked Sendable {
     /// Returns the item's image with its transparent left and right margins
     /// trimmed off, ready to display at its captured scale.
     ///
-    /// Memoized. Trimming allocates a CGContext, draws the image into it,
-    /// and scans the result's alpha channel — cheap once, but its callers are
-    /// SwiftUI bodies that re-evaluate for every row on every keystroke, so
-    /// computing it on demand made the cost scale with item count × typing
-    /// speed. The memo is keyed on the CGImage the trim came from, so a
-    /// recapture (new icon state) still refreshes it.
+    /// Memoized per source CGImage: SwiftUI bodies call this for every row on
+    /// every keystroke.
     func trimmedImage(for tag: MenuBarItemTag) -> NSImage? {
         guard let captured = image(for: tag) else {
             trimmedImages.removeValue(forKey: tag)
@@ -1949,19 +1749,16 @@ final class MenuBarItemImageCache: @unchecked Sendable {
         return image
     }
 
-    /// Returns the current cache size for monitoring purposes.
     var cacheSize: Int {
         images.count
     }
 
-    /// Returns the number of tracked LRU entries for debugging.
     var lruEntryCount: Int {
         accessOrder.count
     }
 
-    /// Validates cache entries and removes items with invalid window IDs.
-    /// Tags in preserving are kept even if they are no longer in the item cache.
-    /// Returns the number of items removed during cleanup.
+    /// Removes entries with invalid window IDs, except tags in `preserving`.
+    /// Returns the number removed.
     @MainActor
     private func validateAndCleanupInvalidEntries(
         preserving preservedTags: Set<MenuBarItemTag> = []
@@ -1973,12 +1770,7 @@ final class MenuBarItemImageCache: @unchecked Sendable {
             appState.itemManager.itemCache.managedItems.map(\.tag)
         )
 
-        // Remove cache entries for items that don't exist in the item cache
-        // or have invalid/missing window information, but keep entries that
-        // are explicitly preserved (e.g. items with recent capture failures
-        // whose cached image should be retained).
-        // Use matchesIgnoringWindowID for non-system items so disk-loaded
-        // entries (which have no windowID) are not incorrectly evicted.
+        // matchesIgnoringWindowID keeps disk-loaded entries, which have no windowID.
         let invalidTags = images.keys.filter { tag in
             let isValid = if tag.isSystemItem {
                 allValidTags.contains(tag)
@@ -2008,8 +1800,7 @@ final class MenuBarItemImageCache: @unchecked Sendable {
         return removedCount
     }
 
-    /// Manually triggers cleanup of invalid cache entries.
-    /// This can be called when you suspect memory issues with orphaned entries.
+    /// Manually cleans up invalid entries.
     @MainActor
     func performCacheCleanup() {
         let removedCount = validateAndCleanupInvalidEntries()
@@ -2023,8 +1814,7 @@ final class MenuBarItemImageCache: @unchecked Sendable {
         )
     }
 
-    /// Logs detailed cache information for debugging memory issues.
-    /// This method is NOT called automatically - you must call it explicitly.
+    /// Logs cache details for debugging memory issues. Never called automatically.
     func logCacheStatus(_ context: String = "Manual check") {
         let imageSize = images.count
         let lruSize = accessOrder.count
@@ -2071,8 +1861,7 @@ final class MenuBarItemImageCache: @unchecked Sendable {
         return appState.itemManager.itemCache.displayID
     }
 
-    /// Updates the cache for the given sections, without checking whether
-    /// caching is necessary.
+    /// Updates the cache for the given sections unconditionally.
     ///
     /// - Parameter preferredDisplayID: When set (e.g. the Thaw Bar's screen),
     ///   capture from that display instead of the standing item-cache display.
@@ -2150,9 +1939,7 @@ final class MenuBarItemImageCache: @unchecked Sendable {
             )
 
             guard !sectionImages.isEmpty else {
-                // Expected for off-screen sections (e.g. hidden): live refresh
-                // (refreshImages) handles those items. Only a real concern for
-                // the visible section — check compositeCapture logs for details.
+                // Expected for off-screen sections, which refreshImages handles.
                 MenuBarItemImageCache.diagLog.debug(
                     "captureImages: no images captured for \(section.logString) (off-screen or transient failure)"
                 )
@@ -2167,7 +1954,6 @@ final class MenuBarItemImageCache: @unchecked Sendable {
             return
         }
 
-        // Get the set of valid item tags from all sections to clean up stale entries
         let allValidTags = Set(
             appState.itemManager.itemCache.managedItems.map(\.tag)
         )
@@ -2176,18 +1962,11 @@ final class MenuBarItemImageCache: @unchecked Sendable {
         await MainActor.run { [newImages, allValidTags, displayID] in
             let beforeCount = images.count
 
-            // Tags with recent capture failures should keep their cached images
-            // even if the item temporarily left the item cache (e.g. a transient
-            // menu bar item whose window briefly disappeared). This prevents
-            // the IceBar and search from showing empty icons while the item's
-            // app is still running.
+            // Keep images of recently failed tags; their window may have briefly
+            // vanished, and dropping them shows empty icons.
             let recentlyFailedTags = failedCapturesLock.withLock { Set($0.keys) }
 
-            // Remove images for items that no longer exist in the item cache,
-            // but preserve images for items that have recent capture failures
-            // (they may reappear shortly with a new window ID).
-            // Use matchesIgnoringWindowID for non-system items so disk-loaded
-            // entries are not incorrectly evicted when their windowID is nil.
+            // matchesIgnoringWindowID keeps disk-loaded entries, which have no windowID.
             images = images.filter { key, _ in
                 if key.isSystemItem {
                     return allValidTags.contains(key) || recentlyFailedTags.contains(key)
@@ -2196,19 +1975,13 @@ final class MenuBarItemImageCache: @unchecked Sendable {
                     containsTagMatchingIgnoringWindowID(recentlyFailedTags, target: key)
             }
 
-            // Additional cleanup: Remove entries with invalid window information,
-            // but again preserve recently-failed items.
             _ = validateAndCleanupInvalidEntries(preserving: recentlyFailedTags)
 
-            // Mark all newly captured images as most recently used
             for tag in newImages.keys {
                 updateAccessOrder(for: tag)
             }
 
-            // Remove old entries whose (namespace, title, instanceIndex) matches a
-            // new entry but with a different windowID. After a monitor reconnect,
-            // items may get new windowIDs, causing duplicate cache entries for the
-            // same logical item. Keep only the latest capture (newImages wins).
+            // A monitor reconnect gives items new windowIDs; drop the old duplicates.
             let newKeysSet = Set(newImages.keys)
             let staleKeys = images.keys.filter { oldKey in
                 guard !oldKey.isSystemItem, !newKeysSet.contains(oldKey) else {
@@ -2221,13 +1994,9 @@ final class MenuBarItemImageCache: @unchecked Sendable {
                 accessOrder.remove(tag)
             }
 
-            // Merge in the new images
             images.merge(newImages) { _, new in new }
 
-            // Enforce cache size limit using LRU eviction, but never evict
-            // items that still exist in the menu bar (valid item tags).
-            // This prevents thrashing the cache for visible items when
-            // many transient items come and go (e.g. monitor hotplug).
+            // Never evict live items, or transient churn (e.g. hotplug) thrashes them.
             if images.count > Self.maxCacheSize {
                 let protectedTags = allValidTags
                 let excessCount = images.count - Self.maxCacheSize
@@ -2248,21 +2017,18 @@ final class MenuBarItemImageCache: @unchecked Sendable {
                 }
             }
 
-            // Remove stale LRU entries for images that no longer exist.
             accessOrder = OrderedSet(accessOrder.lazy.filter { self.images[$0] != nil })
 
             let afterCount = images.count
             let finalAccessOrderCount = accessOrder.count
             let totalRemoved = beforeCount - afterCount
 
-            // Log cache status for monitoring (verbose only when needed)
             if afterCount > 30 || totalRemoved > 0 {
                 MenuBarItemImageCache.diagLog.info(
                     "Image cache: \(afterCount) images, LRU order: \(finalAccessOrderCount) entries (removed \(totalRemoved) stale+invalid images)"
                 )
             }
 
-            // Warning if cache and access order are out of sync
             if afterCount != finalAccessOrderCount {
                 MenuBarItemImageCache.diagLog.warning(
                     "Cache inconsistency: \(afterCount) cached images vs \(finalAccessOrderCount) LRU entries"
@@ -2297,7 +2063,6 @@ final class MenuBarItemImageCache: @unchecked Sendable {
             return
         }
 
-        // Use provided snapshot or construct one in a single MainActor hop
         let navSnapshot: NavigationStateSnapshot = if let nav {
             nav
         } else {
@@ -2310,7 +2075,7 @@ final class MenuBarItemImageCache: @unchecked Sendable {
             let hasVisibleConsumer = hasVisibleCaptureConsumer(nav: navSnapshot)
 
             guard hasVisibleConsumer else {
-                // This is the normal path when IceBar/search/settings are not visible — not an error
+                // Normal when nothing visible needs icons.
                 return
             }
         }
@@ -2327,7 +2092,7 @@ final class MenuBarItemImageCache: @unchecked Sendable {
                 return
             }
 
-            // Skip updates during layout reset to prevent stale cache between passes
+            // Avoids a stale cache between reset passes.
             if appState.itemManager.isResettingLayout {
                 MenuBarItemImageCache.diagLog.debug(
                     "Skipping item image cache because layout reset is in progress"
@@ -2347,7 +2112,6 @@ final class MenuBarItemImageCache: @unchecked Sendable {
             return
         }
 
-        // Use provided snapshot or construct one in a single MainActor hop
         let navSnapshot: NavigationStateSnapshot = if let nav {
             nav
         } else {
@@ -2373,7 +2137,6 @@ final class MenuBarItemImageCache: @unchecked Sendable {
         )
     }
 
-    /// Clears the images for the given section.
     @MainActor
     func clearImages(for section: MenuBarSection.Name) {
         guard let appState else {
@@ -2392,9 +2155,8 @@ final class MenuBarItemImageCache: @unchecked Sendable {
     /// Force-recaptures a section for a specific display, including off-screen
     /// (hidden / always-hidden) items via SkyLight.
     ///
-    /// Used when the Thaw Bar opens on a different screen than the standing
-    /// image cache: ``updateCacheWithoutChecks`` skips off-screen items, and
-    /// waiting for the live-refresh loop would leave a ~1s wrong-tint flash.
+    /// For the Thaw Bar opening on another screen: ``updateCacheWithoutChecks``
+    /// skips off-screen items, and waiting for live refresh flashes the wrong tint.
     @MainActor
     func recaptureSection(
         _ section: MenuBarSection.Name,
@@ -2419,8 +2181,7 @@ final class MenuBarItemImageCache: @unchecked Sendable {
                 await refreshImages(of: items, scale: scale, viaSCK: true)
                 lastSCKRefreshAt = ContinuousClock.now
             } else {
-                // Share the live-refresh offscreen cadence so IceBar opens
-                // cannot bypass the #759 SkyLight throttle.
+                // Shares the live-refresh cadence so opens can't bypass the SkyLight throttle (#759).
                 await awaitOffscreenRefreshSlot(for: section)
                 await refreshImages(of: items, scale: scale, viaSCK: false)
             }
@@ -2429,7 +2190,7 @@ final class MenuBarItemImageCache: @unchecked Sendable {
         storeImages(for: screen.displayID, capturedTags: items.map(\.tag))
     }
 
-    /// Waits for — then claims — the live-refresh offscreen slot for `section`.
+    /// Waits for, then claims, the live-refresh offscreen slot for `section`.
     @MainActor
     private func awaitOffscreenRefreshSlot(for section: MenuBarSection.Name) async {
         let interval = Duration.seconds(
@@ -2461,8 +2222,7 @@ final class MenuBarItemImageCache: @unchecked Sendable {
     /// Restores a warm per-display snapshot for the Thaw Bar, or clears the
     /// section when only another screen's bitmaps are available.
     ///
-    /// Call before the panel is ordered front so the first paint either has
-    /// the correct tint or a loading state — never the wrong screen's icons.
+    /// Call before ordering the panel front so it never paints another screen's icons.
     ///
     /// - Returns: `true` when a background recapture is still needed (cold or
     ///   incomplete warm restore).
@@ -2512,11 +2272,8 @@ final class MenuBarItemImageCache: @unchecked Sendable {
 
     /// Snapshots the tags a capture just produced for `displayID`.
     ///
-    /// The standing `images` cache also holds other sections' bitmaps, which
-    /// may belong to a different display. Recording the whole cache under
-    /// `displayID` would label another display's tint as this one's, so only
-    /// the captured tags are merged into that display's snapshot. Entries no
-    /// longer in `images` are dropped so the snapshot cannot accumulate.
+    /// Only the captured tags: `images` holds other sections' bitmaps, possibly
+    /// from another display. Entries gone from `images` are dropped.
     @MainActor
     func storeImages(
         for displayID: CGDirectDisplayID,
@@ -2589,7 +2346,6 @@ final class MenuBarItemImageCache: @unchecked Sendable {
         return items.contains { keys.contains($0.tag) }
     }
 
-    /// Clears all cached images and failure tracking.
     @MainActor
     func clearAll() {
         images.removeAll()
@@ -2601,8 +2357,7 @@ final class MenuBarItemImageCache: @unchecked Sendable {
 
     // MARK: Cache Failed
 
-    /// Returns a Boolean value that indicates whether caching menu bar items
-    /// failed for the given section.
+    /// Whether caching failed for the given section.
     @MainActor
     func cacheFailed(for section: MenuBarSection.Name) -> Bool {
         let hasPermission = ScreenCapture.cachedCheckPermissions()

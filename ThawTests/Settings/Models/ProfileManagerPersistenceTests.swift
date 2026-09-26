@@ -13,39 +13,24 @@ import Testing
 /// the on-disk manifest, the per-profile JSON files, and the menu bar
 /// layout it captures out of ``Defaults``.
 ///
-/// `ProfileManagerCRUDTests` already locks the happy paths of rename,
-/// duplicate, export/import, display association, hooks and the two
-/// broadcast writers, so nothing here repeats those. What is left — and
-/// what these tests target — is the damaged-state and error half of the
-/// same surface:
+/// `ProfileManagerCRUDTests` covers the happy paths. This suite covers the
+/// damaged-state and error half:
 ///
-/// - a manifest that will not decode, or that names a profile whose file
-///   is gone;
-/// - a profiles directory that does not exist yet, or whose path is
-///   occupied by a regular file;
-/// - the load-all-before-writing-any shape of the two broadcast writers,
-///   which is only observable when one profile in the middle of the batch
-///   fails to load;
-/// - ``ProfileManager/updateProfileLayout(id:itemManager:)``, the one
-///   capture path that needs no `AppState`, and therefore the only way to
-///   reach the `Defaults`-reading body of `captureCurrentLayout`;
-/// - the display-clearing overload of `setAssociatedDisplay`, which
-///   `ProfileManagerCRUDTests` never calls;
+/// - a manifest that won't decode, or names a profile whose file is gone;
+/// - a profiles directory that doesn't exist yet, or whose path is a file;
+/// - the load-all-before-writing shape of the two broadcast writers, only
+///   visible when a profile mid-batch fails to load;
+/// - ``ProfileManager/updateProfileLayout(id:itemManager:)``, the only
+///   capture path that needs no `AppState`;
+/// - the display-clearing overload of `setAssociatedDisplay`;
 /// - the display-ownership reconciliation inside `importProfile`.
 ///
-/// Every test that persists anything asserts through a *second*
-/// `ProfileManager` built over the same directory, so an in-memory-only
-/// change fails the test.
+/// Every persisting test asserts through a second `ProfileManager` over the
+/// same directory, so an in-memory-only change fails. Anything that needs a
+/// live `AppState` is out of reach.
 ///
-/// Deliberately out of reach: `applyProfile`, `applySnapshot`,
-/// `performSetup`, `saveProfile`, `updateProfileWithCurrentState`,
-/// `updateProfileConfiguration` and `rebuildProfileHotkeys` all require a
-/// live `AppState` (or, for the hotkey rebuild, an `AppState` to have been
-/// installed first) and cannot be driven from a unit test.
-///
-/// The suite is `.serialized` because `withScratchDefaults` swaps the
-/// process-wide `Defaults.store`; see the constraints documented on
-/// `ScratchDefaults.swift`.
+/// `.serialized` because `withScratchDefaults` swaps the process-wide
+/// `Defaults.store`.
 @MainActor
 @Suite("Profile manager persistence", .serialized)
 struct ProfileManagerPersistenceTests {
@@ -126,9 +111,8 @@ struct ProfileManagerPersistenceTests {
             #expect(exists)
             #expect(isDirectory.boolValue)
 
-            // The directory existing is not the point; the point is that a
-            // write into it survives, which is what a freshly installed
-            // copy of the app depends on.
+            // A write into the new directory has to survive; a fresh install
+            // depends on it.
             let bundleURL = tmp.appendingPathComponent("bundle.json")
             try writeBundle(
                 ProfileExportBundle(entries: [
@@ -391,9 +375,8 @@ struct ProfileManagerPersistenceTests {
     @Test("A layout update bumps the modification date in both the file and the manifest")
     func layoutUpdateBumpsTheModificationDateEverywhere() throws {
         var seed = makeProfile(named: "Desk")
-        // Whole seconds: the manager encodes dates as ISO 8601, which drops
-        // the fractional part, so a `Date()` would not survive a round trip
-        // for an equality check.
+        // Whole seconds: ISO 8601 encoding drops fractions, so a `Date()`
+        // wouldn't survive a round trip.
         seed.createdAt = Date(timeIntervalSince1970: 1_000_000)
         seed.modifiedAt = Date(timeIntervalSince1970: 1_000_000)
 

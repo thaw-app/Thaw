@@ -195,14 +195,12 @@ nonisolated enum SkyLightAPI {
         return handle
     }()
 
-    /// Type alias for SLWindowListCreateImageFromArray function
     typealias SLWindowListCreateImageFromArrayFn = @convention(c) (
         CGRect,
         CFArray,
         CGWindowImageOption
     ) -> Unmanaged<CGImage>?
 
-    /// Cached function pointer
     static let createImageFromArray: SLWindowListCreateImageFromArrayFn? = {
         guard let handle else {
             diagLog.error("Cannot load SLWindowListCreateImageFromArray: SkyLight framework handle is nil")

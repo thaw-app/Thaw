@@ -10,9 +10,9 @@ import Foundation
 import Testing
 @testable import Thaw
 
-/// Exercises ``MenuBarItemGroupManager`` — the persistence, publishing, and
-/// editing layer over the pure grouping rules — against an isolated defaults
-/// suite. The process-wide store is global, hence `.serialized`.
+/// Exercises ``MenuBarItemGroupManager``, the persistence and editing layer
+/// over the grouping rules, against an isolated defaults suite. Serialized
+/// because the store is process-wide.
 @Suite("Menu bar item group manager")
 @MainActor
 struct MenuBarItemGroupManagerTests {
@@ -125,8 +125,8 @@ struct MenuBarItemGroupManagerTests {
             manager.removeMember(c)
             #expect(manager.snapshot().groups.first?.memberIdentifiers.contains(c.uniqueIdentifier) == false)
 
-            // Removing a member by identifier works without a live item, too —
-            // and a group that drops below two members dissolves entirely.
+            // Removing by identifier works without a live item, and a group
+            // below two members dissolves.
             manager.removeMemberIdentifier(b.uniqueIdentifier)
             #expect(manager.snapshot().groups.isEmpty)
         }

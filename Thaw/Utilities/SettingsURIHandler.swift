@@ -16,17 +16,11 @@ import Security
 enum SettingsURIHandler {
     private static let diagLog = DiagLog(category: "SettingsURIHandler")
 
-    /// Tier 1: Safe boolean toggles that can be manipulated via URI
-    /// Global Boolean settings, each backed by a `Defaults.Key` in
-    /// ``keyMapping``.
+    /// Global Boolean settings, each backed by a `Defaults.Key` in ``keyMapping``.
     ///
-    /// Per-display Booleans do **not** belong here — they live only in
-    /// ``perDisplayKeys`` and are resolved through `DisplaySettingsManager`
-    /// rather than `Defaults`. `useIceBar` used to appear in both, which worked
-    /// only because every handler happens to test `perDisplayKeys` first; a new
-    /// call site consulting this table first would have found no mapping and
-    /// silently failed. `alwaysShowHiddenItems`, the other per-display Boolean,
-    /// was already absent, which is the shape both should have.
+    /// Per-display Booleans don't belong here; they live only in ``perDisplayKeys``
+    /// and resolve through `DisplaySettingsManager`. A key listed in both silently
+    /// fails for any call site that checks this table first.
     static let supportedBooleanKeys: [String] = [
         "autoRehide",
         "showOnClick",
@@ -132,8 +126,8 @@ enum SettingsURIHandler {
         /// The app resolved and its signature names this team identifier.
         case team(String)
 
-        /// The app resolved and its signature was read, but names no team
-        /// identifier — an ad-hoc signed build, or an Apple platform binary.
+        /// The app resolved and its signature was read, but names no team identifier
+        /// (an ad-hoc signed build, or an Apple platform binary).
         case noTeamIdentifier
 
         /// The app could not be resolved, or its signature could not be read,
@@ -170,7 +164,6 @@ enum SettingsURIHandler {
             return .unavailable
         }
 
-        // Extract team identifier from signing info
         if let teamId = info[kSecCodeInfoTeamIdentifier as String] as? String {
             return .team(teamId)
         }
@@ -197,11 +190,8 @@ enum SettingsURIHandler {
                 diagLog.warning("Settings URI: App \(bundleId) is now signed but was authorized as unsigned")
                 return false
             case .unavailable:
-                // An app that cannot be located reads exactly like the unsigned
-                // app the legacy entry was created for, so it is refused rather
-                // than assumed to be that app: a bundle ID is self-reported and
-                // anything can claim one that resolves to nothing. Approving the
-                // authorization prompt again lets the request through.
+                // An app that can't be located looks exactly like the unsigned legacy app, so
+                // refuse it: a bundle ID is self-reported. Re-approving the prompt lets it through.
                 diagLog.warning("Settings URI: Cannot read the signing identity of \(bundleId); refusing unsigned legacy entry")
                 return false
             }
@@ -245,7 +235,6 @@ enum SettingsURIHandler {
             return false
         }
 
-        // Verify code signature matches stored identity
         let signingIdentities = getSigningIdentities()
         let storedTeamId = signingIdentities[bundleId]
 
@@ -317,10 +306,8 @@ enum SettingsURIHandler {
             Defaults.set(whitelist, forKey: .settingsURIWhitelist)
         }
 
-        // Store signing identity if available. Re-authorizing an app that is
-        // already listed still has to record it: an entry stored without an
-        // identity would otherwise never heal, and keeps being verified against
-        // the far weaker unsigned-legacy rule.
+        // Record the identity even when re-authorizing a listed app, or an entry stored
+        // without one never heals and stays on the weaker unsigned-legacy rule.
         var identities = getSigningIdentities()
         let isNewIdentity = teamIdentifier != nil && identities[bundleId] != teamIdentifier
         if let teamId = teamIdentifier, isNewIdentity {
@@ -347,7 +334,6 @@ enum SettingsURIHandler {
         whitelist.removeAll { $0 == bundleId }
         Defaults.set(whitelist, forKey: .settingsURIWhitelist)
 
-        // Remove signing identity
         var identities = getSigningIdentities()
         identities.removeValue(forKey: bundleId)
         saveSigningIdentities(identities)
@@ -358,12 +344,10 @@ enum SettingsURIHandler {
 
     /// Gets the display name for a bundle ID.
     static func getAppName(for bundleId: String) -> String? {
-        // Try to find running app
         if let app = NSRunningApplication.runningApplications(withBundleIdentifier: bundleId).first {
             return app.localizedName
         }
 
-        // Try to get from bundle path
         if let url = NSWorkspace.shared.urlForApplication(withBundleIdentifier: bundleId),
            let bundle = Bundle(url: url)
         {
@@ -414,40 +398,33 @@ enum SettingsURIHandler {
     static func handleSet(key: String, value: String, sender: String?, displayUUID: String? = nil) -> Bool {
         diagLog.debug("Settings URI: set request - key=\(key), value=\(value), sender=\(sender ?? "unknown"), display=\(displayUUID ?? "none")")
 
-        // Validate key
         guard isValidSettingsKey(key) else {
             diagLog.warning("Settings URI: Invalid key '\(key)'")
             return false
         }
 
-        // Check if this is a per-display setting
         if perDisplayKeys.contains(key) {
             return handlePerDisplaySet(key: key, value: value, displayUUID: displayUUID)
         }
 
-        // Route to appropriate handler based on key type
         if doubleKeys.contains(key) {
             return handleDoubleSet(key: key, value: value)
         } else if enumKeys.contains(key) {
             return handleEnumSet(key: key, value: value)
         }
 
-        // Parse boolean value
         guard let boolValue = parseBool(value) else {
             diagLog.warning("Settings URI: Invalid boolean value '\(value)'")
             return false
         }
 
-        // Get the Defaults.Key
         guard let defaultsKey = keyMapping[key] else {
             diagLog.error("Settings URI: No mapping for key '\(key)'")
             return false
         }
 
-        // Apply the setting
         Defaults.set(boolValue, forKey: defaultsKey)
 
-        // Notify settings models that a value changed externally
         postSettingsDidChangeNotification(key: key, value: boolValue)
 
         diagLog.info("Settings URI: Set \(key) = \(boolValue)")
@@ -462,13 +439,11 @@ enum SettingsURIHandler {
             return false
         }
 
-        // Reject non-finite values (NaN, Infinity)
         guard doubleValue.isFinite else {
             diagLog.warning("Settings URI: Non-finite value '\(value)' not allowed for \(key)")
             return false
         }
 
-        // Validate and clamp to range
         let (minVal, maxVal) = doubleRanges[key] ?? (0, Double.greatestFiniteMagnitude)
         var valueToStore = Swift.max(minVal, Swift.min(doubleValue, maxVal))
 
@@ -483,16 +458,13 @@ enum SettingsURIHandler {
             valueToStore = AdvancedSettings.normalizedIconRefreshInterval(valueToStore)
         }
 
-        // Get the Defaults.Key
         guard let defaultsKey = keyMapping[key] else {
             diagLog.error("Settings URI: No mapping for key '\(key)'")
             return false
         }
 
-        // Apply the setting
         Defaults.set(valueToStore, forKey: defaultsKey)
 
-        // Notify settings models that a value changed externally
         postSettingsDidChangeNotification(key: key, doubleValue: valueToStore)
 
         diagLog.info("Settings URI: Set \(key) = \(valueToStore)")
@@ -525,19 +497,16 @@ enum SettingsURIHandler {
     /// useIceBar: affects active display only (or specific display if UUID provided)
     /// iceBarLocation, alwaysShowHiddenItems: affects all displays with IceBar enabled (or specific display if UUID provided)
     private static func handlePerDisplaySet(key: String, value: String, displayUUID: String?) -> Bool {
-        // If specific display UUID provided, use that
         if let uuid = displayUUID, !uuid.isEmpty {
             return handlePerDisplaySetForSpecificDisplay(key: key, value: value, displayUUID: uuid)
         }
 
-        // Otherwise use default scope behavior
         switch key {
         case "useIceBar":
             guard let boolValue = parseBool(value) else {
                 diagLog.warning("Settings URI: Invalid boolean value '\(value)' for useIceBar")
                 return false
             }
-            // Post notification for DisplaySettingsManager to handle active display
             postPerDisplaySettingsDidChangeNotification(key: key, value: boolValue, scope: .activeDisplay)
             diagLog.info("Settings URI: Set useIceBar = \(boolValue) on active display")
             return true
@@ -555,13 +524,10 @@ enum SettingsURIHandler {
             return true
 
         case "iceBarLocation":
-            // Parse IceBarLocation from string value
             guard let location = IceBarLocation.fromString(value) else {
                 diagLog.warning("Settings URI: Invalid iceBarLocation value '\(value)'. Valid: dynamic, mousePointer, iceIcon, leftAligned, rightAligned (or 0-4)")
                 return false
             }
-            // Post notification for DisplaySettingsManager to handle all enabled displays
-            // Use rawValue string for consistency
             postPerDisplaySettingsDidChangeNotification(key: key, stringValue: String(location.rawValue), scope: .allEnabledDisplays)
             diagLog.info("Settings URI: Set iceBarLocation = \(location) on all enabled displays")
             return true
@@ -571,7 +537,6 @@ enum SettingsURIHandler {
                 diagLog.warning("Settings URI: Invalid boolean value '\(value)' for alwaysShowHiddenItems")
                 return false
             }
-            // Post notification for DisplaySettingsManager to handle all displays without IceBar
             postPerDisplaySettingsDidChangeNotification(key: key, value: boolValue, scope: .allNonIceBarDisplays)
             diagLog.info("Settings URI: Set alwaysShowHiddenItems = \(boolValue) on all non-IceBar displays")
             return true
@@ -605,13 +570,11 @@ enum SettingsURIHandler {
     /// Logs a diagnostic and returns nil on either failure; returns the
     /// display's configuration on success.
     private static func validatedDisplayConfiguration(forUUID uuid: String) -> DisplayIceBarConfiguration? {
-        // Validate UUID format
         guard UUID(uuidString: uuid) != nil else {
             diagLog.warning("Settings URI: Invalid display UUID format '\(uuid)'")
             return nil
         }
 
-        // Validate display exists (connected or has persisted config)
         guard let configuration = getDisplayConfiguration(forUUID: uuid) else {
             diagLog.warning("Settings URI: Unknown display UUID '\(uuid)'")
             return nil
@@ -632,7 +595,6 @@ enum SettingsURIHandler {
                 diagLog.warning("Settings URI: Invalid boolean value '\(value)' for useIceBar")
                 return false
             }
-            // Post notification for specific display
             postPerDisplaySettingsDidChangeNotification(key: key, value: boolValue, scope: .specificDisplay(uuid: displayUUID))
             diagLog.info("Settings URI: Set useIceBar = \(boolValue) on display \(displayUUID)")
             return true
@@ -642,18 +604,15 @@ enum SettingsURIHandler {
                 diagLog.warning("Settings URI: Invalid boolean value '\(value)' for useThawBarForAlwaysHidden")
                 return false
             }
-            // Post notification for specific display
             postPerDisplaySettingsDidChangeNotification(key: key, value: boolValue, scope: .specificDisplay(uuid: displayUUID))
             diagLog.info("Settings URI: Set useThawBarForAlwaysHidden = \(boolValue) on display \(displayUUID)")
             return true
 
         case "iceBarLocation":
-            // Parse IceBarLocation from string value
             guard let location = IceBarLocation.fromString(value) else {
                 diagLog.warning("Settings URI: Invalid iceBarLocation value '\(value)'. Valid: dynamic, mousePointer, iceIcon, leftAligned, rightAligned (or 0-4)")
                 return false
             }
-            // Post notification for specific display
             postPerDisplaySettingsDidChangeNotification(key: key, stringValue: String(location.rawValue), scope: .specificDisplay(uuid: displayUUID))
             diagLog.info("Settings URI: Set iceBarLocation = \(location) on display \(displayUUID)")
             return true
@@ -663,7 +622,6 @@ enum SettingsURIHandler {
                 diagLog.warning("Settings URI: Invalid boolean value '\(value)' for alwaysShowHiddenItems")
                 return false
             }
-            // Post notification for specific display
             postPerDisplaySettingsDidChangeNotification(key: key, value: boolValue, scope: .specificDisplay(uuid: displayUUID))
             diagLog.info("Settings URI: Set alwaysShowHiddenItems = \(boolValue) on display \(displayUUID)")
             return true
@@ -697,37 +655,30 @@ enum SettingsURIHandler {
     static func handleToggle(key: String, sender: String?, displayUUID: String? = nil) -> Bool {
         diagLog.debug("Settings URI: toggle request - key=\(key), sender=\(sender ?? "unknown"), display=\(displayUUID ?? "none")")
 
-        // Validate key
         guard isValidSettingsKey(key) else {
             diagLog.warning("Settings URI: Invalid key '\(key)'")
             return false
         }
 
-        // Check if this is a per-display setting
         if perDisplayKeys.contains(key) {
             return handlePerDisplayToggle(key: key, displayUUID: displayUUID)
         }
 
-        // Verify this is a boolean setting (not double or enum)
         guard supportedBooleanKeys.contains(key) else {
             diagLog.warning("Settings URI: Cannot toggle non-boolean key '\(key)'. Use set action instead.")
             return false
         }
 
-        // Get the Defaults.Key
         guard let defaultsKey = keyMapping[key] else {
             diagLog.error("Settings URI: No mapping for key '\(key)'")
             return false
         }
 
-        // Get current value and toggle
         let currentValue = Defaults.bool(forKey: defaultsKey)
         let newValue = !currentValue
 
-        // Apply the setting
         Defaults.set(newValue, forKey: defaultsKey)
 
-        // Notify settings models that a value changed externally
         postSettingsDidChangeNotification(key: key, value: newValue)
 
         diagLog.info("Settings URI: Toggled \(key) from \(currentValue) to \(newValue)")
@@ -738,22 +689,15 @@ enum SettingsURIHandler {
     /// Handles toggling a per-display configuration value.
     /// Currently only supports useIceBar, useThawBarForAlwaysHidden and alwaysShowHiddenItems.
     private static func handlePerDisplayToggle(key: String, displayUUID: String?) -> Bool {
-        // If specific display UUID provided, use that
         if let uuid = displayUUID, !uuid.isEmpty {
-            // Validated exactly as `handlePerDisplaySetForSpecificDisplay`
-            // does. This used to accept anything containing a hyphen, so
-            // `toggle?key=useIceBar&display=a-b` posted a notification for a
-            // display that does not exist and reported success, while the
-            // equivalent `set` refused it. DisplaySettingsManager discards the
-            // notification either way, so the only effect was telling the
-            // caller a toggle had happened when none had.
+            // Validated like `handlePerDisplaySetForSpecificDisplay`. Accepting any
+            // hyphenated string reported success for displays that don't exist.
             guard validatedDisplayConfiguration(forUUID: uuid) != nil else {
                 return false
             }
 
             switch key {
             case "useIceBar":
-                // Post notification for DisplaySettingsManager to toggle specific display
                 postPerDisplaySettingsDidChangeNotification(key: key, toggle: true, scope: .specificDisplay(uuid: uuid))
                 diagLog.info("Settings URI: Toggled useIceBar on display \(uuid)")
                 return true
@@ -764,40 +708,33 @@ enum SettingsURIHandler {
                 return true
 
             case "alwaysShowHiddenItems":
-                // Post notification for DisplaySettingsManager to toggle specific display
                 postPerDisplaySettingsDidChangeNotification(key: key, toggle: true, scope: .specificDisplay(uuid: uuid))
                 diagLog.info("Settings URI: Toggled alwaysShowHiddenItems on display \(uuid)")
                 return true
 
             default:
-                // iceBarLocation doesn't support toggle
                 diagLog.warning("Settings URI: Toggle not supported for '\(key)'")
                 return false
             }
         }
 
-        // Default behavior without UUID
         switch key {
         case "useIceBar":
-            // Post notification for DisplaySettingsManager to toggle active display
             postPerDisplaySettingsDidChangeNotification(key: key, toggle: true, scope: .activeDisplay)
             diagLog.info("Settings URI: Toggled useIceBar on active display")
             return true
 
         case "useThawBarForAlwaysHidden":
-            // Post notification for DisplaySettingsManager to toggle on all non-IceBar displays
             postPerDisplaySettingsDidChangeNotification(key: key, toggle: true, scope: .allNonIceBarDisplays)
             diagLog.info("Settings URI: Toggled useThawBarForAlwaysHidden on all non-IceBar displays")
             return true
 
         case "alwaysShowHiddenItems":
-            // Post notification for DisplaySettingsManager to toggle on all non-IceBar displays
             postPerDisplaySettingsDidChangeNotification(key: key, toggle: true, scope: .allNonIceBarDisplays)
             diagLog.info("Settings URI: Toggled alwaysShowHiddenItems on all non-IceBar displays")
             return true
 
         default:
-            // iceBarLocation doesn't support toggle
             diagLog.warning("Settings URI: Toggle not supported for '\(key)'")
             return false
         }
@@ -917,22 +854,17 @@ enum SettingsURIHandler {
     ) -> Bool {
         let responseId = requestId ?? UUID().uuidString
 
-        // Validate response mechanism
         guard callback != nil || broadcast else {
             diagLog.warning("Settings URI Get: No response mechanism provided - provide callback=<url> or broadcast=true")
             return false
         }
 
-        // Gather requested data
         let response: [String: Any] = if let singleKey = key {
-            // Single key request
             handleSingleKeyGet(key: singleKey, displayUUID: displayUUID, requestId: responseId)
         } else {
-            // No key specified - error
             createErrorResponse(requestId: responseId, error: "No key specified", details: "Provide key=<name>")
         }
 
-        // Send response
         if let callbackURL = callback {
             // Full data sent via callback URL (direct to requesting app)
             return sendCallbackResponse(response: response, callback: callbackURL)
@@ -945,10 +877,8 @@ enum SettingsURIHandler {
             ]
             let delivered = sendBroadcastResponse(response: ackResponse)
 
-            // The acknowledgement is a fixed shape that carries no error detail,
-            // so a request that produced no data has to be reported through the
-            // return value instead of being masked by a delivered ack — same
-            // signal the callback path gives the dispatcher.
+            // The ack carries no error detail, so report a failed request through the
+            // return value, as the callback path does.
             let requestFailed = response["status"] as? String == "error"
             return delivered && !requestFailed
         }
@@ -983,7 +913,6 @@ enum SettingsURIHandler {
                 ],
             ]
         default:
-            // Individual setting
             if let value = getSettingValue(key: key, displayUUID: displayUUID) {
                 return [
                     "requestId": requestId,
@@ -999,17 +928,12 @@ enum SettingsURIHandler {
 
     /// Gets a single setting value with metadata.
     ///
-    /// `internal` rather than `private` so the test suite can pin the
-    /// `validValues` maps a `thaw://get` advertises. The function is a read
-    /// with no delivery side effects, so calling it directly never opens a
-    /// callback URL or posts a distributed notification — the two actions the
-    /// get suite otherwise avoids.
+    /// `internal` so tests can pin the `validValues` a `thaw://get` advertises. It's a
+    /// pure read, so calling it never opens a callback URL or posts a notification.
     static func getSettingValue(key: String, displayUUID: String?) -> [String: Any]? {
         // Handle per-display keys specially (not in keyMapping)
         if perDisplayKeys.contains(key) {
-            // Validate display UUID if provided
             guard let config = getDisplayConfiguration(forUUID: displayUUID) else {
-                // Unknown display UUID
                 return nil
             }
 
@@ -1054,7 +978,6 @@ enum SettingsURIHandler {
             }
         }
 
-        // Check if it's a boolean setting
         if supportedBooleanKeys.contains(key) {
             guard let defaultsKey = keyMapping[key] else { return nil }
             let value = Defaults.bool(forKey: defaultsKey)
@@ -1064,7 +987,6 @@ enum SettingsURIHandler {
             ]
         }
 
-        // Check if it's a double setting
         if doubleKeys.contains(key) {
             guard let defaultsKey = keyMapping[key] else { return nil }
             let value = Defaults.double(forKey: defaultsKey)
@@ -1079,7 +1001,6 @@ enum SettingsURIHandler {
             return result
         }
 
-        // Check if it's an enum setting
         if enumKeys.contains(key) {
             guard let defaultsKey = keyMapping[key] else { return nil }
             let rawValue = Defaults.integer(forKey: defaultsKey)
@@ -1106,28 +1027,24 @@ enum SettingsURIHandler {
     private static func getAllSettings(requestId: String) -> [String: Any] {
         var globalSettings: [String: [String: Any]] = [:]
 
-        // Boolean settings
         for key in supportedBooleanKeys where !perDisplayKeys.contains(key) {
             if let value = getSettingValue(key: key, displayUUID: nil) {
                 globalSettings[key] = value
             }
         }
 
-        // Double settings
         for key in doubleKeys {
             if let value = getSettingValue(key: key, displayUUID: nil) {
                 globalSettings[key] = value
             }
         }
 
-        // Enum settings
         for key in enumKeys {
             if let value = getSettingValue(key: key, displayUUID: nil) {
                 globalSettings[key] = value
             }
         }
 
-        // Per-display settings
         var displaysData: [String: [String: Any]] = [:]
         for screen in NSScreen.screens {
             guard let uuid = Bridging.getDisplayUUIDString(for: screen.displayID) else { continue }
@@ -1159,19 +1076,16 @@ enum SettingsURIHandler {
             ?? [:]
 
         if let uuid {
-            // Check if UUID matches a connected display
             let connectedUUIDs = NSScreen.screens.compactMap { Bridging.getDisplayUUIDString(for: $0.displayID) }
             let isConnected = connectedUUIDs.contains(uuid)
             let hasPersisted = configurations[uuid] != nil
 
-            // Return nil if UUID doesn't match any known display
             guard isConnected || hasPersisted else {
                 return nil
             }
             return configurations[uuid] ?? .defaultConfiguration
         }
 
-        // Use active display
         guard let activeDisplayID = Bridging.getActiveMenuBarDisplayID(),
               let activeUUID = Bridging.getDisplayUUIDString(for: activeDisplayID)
         else {
@@ -1224,7 +1138,6 @@ enum SettingsURIHandler {
 
     /// Gets a specific display by UUID.
     private static func getSpecificDisplay(uuid: String, requestId: String) -> [String: Any] {
-        // Find screen with matching UUID
         for screen in NSScreen.screens {
             guard let screenUUID = Bridging.getDisplayUUIDString(for: screen.displayID),
                   screenUUID == uuid else { continue }
@@ -1282,25 +1195,21 @@ enum SettingsURIHandler {
 
     /// Sends response via callback URL.
     private static func sendCallbackResponse(response: [String: Any], callback: String) -> Bool {
-        // Parse callback URL with URLComponents for safe composition
         guard var components = URLComponents(string: callback) else {
             diagLog.error("Settings URI Get: Invalid callback URL format: \(callback)")
             return false
         }
 
-        // Validate scheme exists
         guard let scheme = components.scheme?.lowercased(), !scheme.isEmpty else {
             diagLog.error("Settings URI Get: Callback URL missing scheme: \(callback)")
             return false
         }
 
-        // Reject dangerous schemes
         if blockedCallbackSchemes.contains(scheme) || scheme.hasPrefix("x-apple-") {
             diagLog.error("Settings URI Get: Callback URL scheme not allowed: \(scheme)")
             return false
         }
 
-        // Encode response as JSON
         guard let jsonData = try? JSONSerialization.data(withJSONObject: response, options: .sortedKeys),
               let jsonString = String(data: jsonData, encoding: .utf8)
         else {
@@ -1313,13 +1222,11 @@ enum SettingsURIHandler {
         queryItems.append(URLQueryItem(name: "data", value: jsonString))
         components.queryItems = queryItems
 
-        // Build final URL
         guard let callbackURL = components.url else {
             diagLog.error("Settings URI Get: Failed to compose callback URL")
             return false
         }
 
-        // Open callback URL
         let success = NSWorkspace.shared.open(callbackURL)
         if success {
             diagLog.info("Settings URI Get: Sent callback via scheme: \(scheme)")

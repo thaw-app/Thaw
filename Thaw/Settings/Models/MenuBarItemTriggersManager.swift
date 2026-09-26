@@ -104,11 +104,9 @@ final class MenuBarItemTriggersManager {
 
     /// Exact live identifiers currently owned by enabled, available triggers.
     ///
-    /// A stored property, deliberately: the layout editor's item views read
-    /// it per item on every redraw and observe it for changes, and only a
-    /// stored `@Observable` property both stays O(1) to read and registers a
-    /// dependency on every access. (A lazily memoized computed property does
-    /// neither reliably — a warm cache read touches no observable state.)
+    /// Stored on purpose: item views read it on every redraw, and only a
+    /// stored `@Observable` property is O(1) and registers a dependency on
+    /// every access. A memoized computed property's warm read registers none.
     private(set) var controlledIdentifiers = Set<String>()
 
     /// Per-source feature flags, also surfaced in the Developer pane.
@@ -153,8 +151,7 @@ final class MenuBarItemTriggersManager {
     @ObservationIgnored
     var cancellables = Set<AnyCancellable>()
 
-    /// Observation of the item cache, replacing the Combine `$itemCache`
-    /// subscription this used before `MenuBarItemManager` became @Observable.
+    /// Observation of the item cache.
     @ObservationIgnored
     var itemCacheObservationTask: Task<Void, Never>?
 
@@ -184,12 +181,9 @@ final class MenuBarItemTriggersManager {
     var isRefreshingImages = false
     var imagesNeedRefresh = false
 
-    /// Serializes all trigger-driven item moves. Each batch awaits the
-    /// previous one so synthetic-drag moves never overlap — overlapping
-    /// moves desync the move engine's cursor hide/show and can strand items.
-    /// Starts as an already-completed no-op task: an empty body is the
-    /// chain's "nothing is running yet" sentinel, and every batch awaits
-    /// it before beginning.
+    /// Serializes trigger-driven moves. Overlapping synthetic drags desync
+    /// the move engine's cursor hide/show and can strand items. Starts as a
+    /// completed no-op task.
     var moveChain = Task<Void, Never> { /* intentionally empty */ }
 
     let diagLog = DiagLog(category: "MenuBarItemTriggers")
@@ -368,17 +362,14 @@ final class MenuBarItemTriggersManager {
         }
     }
 
-    /// Recomputes ``controlledIdentifiers`` from the current triggers
-    /// and feature flags. Called from `triggers.didSet`, the feature-flag
-    /// change handler, the initializer (property observers don't run for an
-    /// init assignment), and every evaluation.
+    /// Recomputes ``controlledIdentifiers`` from the current triggers and
+    /// feature flags. The sole writer of ``controlledIdentifiers``; `init`
+    /// calls it too because property observers don't run there.
     ///
-    /// The sole writer of ``controlledIdentifiers``, deliberately. Ownership
-    /// means "an enabled, available trigger targets this item" — the same
-    /// question ``controllingTrigger(forIdentifier:)`` answers, so the badge,
-    /// the tooltip and this predicate cannot disagree. It is *not* the same
-    /// as "this item currently carries a plan action": an overridden trigger
-    /// emits no action yet still owns its target.
+    /// Ownership means an enabled, available trigger targets the item, the
+    /// same question ``controllingTrigger(forIdentifier:)`` answers. It is not
+    /// "the item carries a plan action": an overridden trigger emits no
+    /// action yet still owns its target.
     func refreshControlledIdentifiers() {
         let presentItems = appState?.itemManager.itemCache.managedItems ?? []
         let presentIdentifiers = Set(presentItems.map(\.tag.tagIdentifier))
@@ -406,12 +397,10 @@ final class MenuBarItemTriggersManager {
 
     /// Whether any enabled trigger owns the given item's placement.
     ///
-    /// A plain set-membership test is enough because the resolution already
-    /// happened when the set was built: ``refreshControlledIdentifiers``
-    /// puts every target through `resolvedPresentIdentifier`, so a legacy
-    /// target stored with a `:N` instance suffix and no captured base is
-    /// already recorded as the live identifier. Keeping this O(1) matters —
-    /// the layout editor calls it per item on every redraw.
+    /// A set lookup is enough: ``refreshControlledIdentifiers`` already
+    /// resolved every target, including legacy `:N` ones, to its live
+    /// identifier. Kept O(1) because the layout editor calls it per item on
+    /// every redraw.
     func isControlledByTrigger(identifier: String) -> Bool {
         !identifier.isEmpty && controlledIdentifiers.contains(identifier)
     }
@@ -430,7 +419,7 @@ final class MenuBarItemTriggersManager {
     /// only while its condition is met (see
     /// `MenuBarItemManager.setTriggerControlledItemIdentifiers`). For as long
     /// as it holds an item, that item's section is the trigger's to decide and
-    /// the saved layout is neither consulted for it nor updated from it — so
+    /// the saved layout is neither consulted for it nor updated from it, so
     /// the layout editor must not present the item as freely placeable.
     ///
     /// Returns the first match in priority order, which is the trigger the
@@ -639,9 +628,6 @@ final class MenuBarItemTriggersManager {
 
     // MARK: - Image comparison
 
-    /// Captures the current perceptual hash for every watched item used by an
-    /// enabled image-comparison condition (when the feature is on), updating
-    /// the cache and re-evaluating when any hash changes.
     /// Identifiers of items an attention condition currently reports as
     /// blinking, read straight from the image cache's detector rather than
     /// re-derived here.
@@ -676,14 +662,11 @@ final class MenuBarItemTriggersManager {
             return []
         }
         let decoder = JSONDecoder()
-        // Healthy path: strict decode of the whole array.
         if let triggers = try? decoder.decode([MenuBarItemTrigger].self, from: data) {
             return repairAndPersistLegacyIdentifiers(in: triggers)
         }
-        // A strict decode failed. Recover per element so a single corrupt or
-        // forward-incompatible trigger doesn't discard every other trigger —
-        // the next mutation would otherwise persist the empty array and make
-        // the loss permanent.
+        // Recover per element so one corrupt or newer trigger doesn't discard
+        // the rest; the next mutation would persist the loss.
         guard let lenient = try? decoder.decode([FailableTrigger].self, from: data) else {
             DiagLog(category: "MenuBarItemTriggers").error(
                 "Failed to decode menu bar item triggers; leaving persisted data untouched"

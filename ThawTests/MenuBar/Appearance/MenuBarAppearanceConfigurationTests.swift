@@ -199,11 +199,8 @@ struct MenuBarAppearanceConfigurationTests {
 
     // MARK: - MenuBarAppearanceV1MigrationTests
 
-    /// Tests for converting V1 appearance data — the format Ice used before its
-    /// `0.11.10` release — which reaches Thaw only through the Ice importer.
-    ///
-    /// `MenuBarAppearanceConfigurationV1` is main-actor isolated, as is the
-    /// importer that reads it, so these tests are too.
+    /// V1 appearance data (Ice before `0.11.10`) reaches Thaw only through the
+    /// Ice importer.
     @MainActor
     @Suite("V1 migration")
     struct MenuBarAppearanceV1MigrationTests {
@@ -264,9 +261,8 @@ struct MenuBarAppearanceConfigurationTests {
         }
     }
 
-    /// The Thaw Bar borrowed the menu bar's shape, tint and border for its
-    /// whole life before this, so the tests that matter here are the ones
-    /// pinning that it still does until someone opts out.
+    /// The Thaw Bar keeps borrowing the menu bar's shape, tint and border
+    /// until someone opts out.
     @MainActor
     @Suite("Thaw Bar appearance")
     struct ThawBarAppearanceTests {
@@ -347,8 +343,7 @@ struct MenuBarAppearanceConfigurationTests {
             #expect(!resolved.hasBorder)
         }
 
-        /// Switching the toggle on is meant to change nothing until something
-        /// is edited, which only holds if the seed round trips exactly.
+        /// Switching the toggle on must change nothing until something is edited.
         @Test("Seeding an override changes nothing on screen")
         func seedingIsInert() {
             let configuration = withMutableCopy(of: MenuBarAppearanceConfigurationV2.defaultConfiguration) { config in

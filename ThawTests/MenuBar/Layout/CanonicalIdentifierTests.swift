@@ -8,17 +8,12 @@
 import Testing
 @testable import Thaw
 
-/// Characterizes the migration that rewrites persisted identifiers after an
-/// item is renamed from its helper to the app the user installed.
-///
-/// Renaming changes `uniqueIdentifier`, so every entry already on disk
-/// under the helper's name stops matching. Little Snitch is both the only
-/// current alias and the item whose saved position users already struggle
-/// to keep (#372, #575, #643, #651, #709) — orphaning it would land the
-/// regression on the least forgiving case in the tracker.
+/// Rewrites persisted identifiers after an item is renamed from its helper to
+/// the installed app. Without it, every saved entry under the helper name stops
+/// matching; Little Snitch is the only alias and the item whose saved position
+/// users already struggle to keep.
 @Suite("Canonical identifier migration")
 struct CanonicalIdentifierTests {
-    /// The migration this exists for.
     @Test("A helper-named entry is rewritten to the app")
     func helperEntryRewritten() {
         #expect(
@@ -27,8 +22,7 @@ struct CanonicalIdentifierTests {
         )
     }
 
-    /// An instance index is part of the title portion and rides along
-    /// untouched, so two instances stay distinct after migration.
+    /// The instance index rides along, so two instances stay distinct.
     @Test("An instance index survives the rewrite")
     func instanceIndexSurvives() {
         #expect(
@@ -52,8 +46,7 @@ struct CanonicalIdentifierTests {
         #expect(LayoutSolver.canonicalIdentifier(identifier) == identifier)
     }
 
-    /// A bare namespace with no title still migrates rather than growing a
-    /// stray separator.
+    /// A bare namespace migrates without gaining a stray separator.
     @Test("A namespace with no separator migrates without gaining one")
     func bareNamespaceMigrates() {
         #expect(
@@ -62,9 +55,7 @@ struct CanonicalIdentifierTests {
         )
     }
 
-    /// An empty title is preserved as an empty title: pruning has its own
-    /// rule for those, and migration must not disguise one as a bare
-    /// namespace.
+    /// Pruning has its own rule for empty titles, so migration must not turn one into a bare namespace.
     @Test("An empty title keeps its separator")
     func emptyTitleKeepsSeparator() {
         #expect(
@@ -73,15 +64,14 @@ struct CanonicalIdentifierTests {
         )
     }
 
-    /// Migration is idempotent — it runs on every load.
+    /// Migration runs on every load, so it must be idempotent.
     @Test("Migrating twice changes nothing further")
     func migrationIsIdempotent() {
         let once = LayoutSolver.canonicalIdentifier("at.obdev.littlesnitch.agent:Item-0")
         #expect(LayoutSolver.canonicalIdentifier(once) == once)
     }
 
-    /// A NewItemsPlacement anchor saved under the helper name matches the
-    /// live item under the app name. (#1069)
+    /// A NewItemsPlacement anchor saved under the helper name matches the live app name.
     @Test("A helper-named anchor matches its canonical live identifier")
     func newItemsAnchorMatchesCanonicalized() {
         #expect(
@@ -98,9 +88,7 @@ struct CanonicalIdentifierTests {
         )
     }
 
-    /// Across a whole saved order: sections keep their keys, and order
-    /// within a section is preserved — entries are rewritten in place,
-    /// never rearranged (#885).
+    /// Entries are rewritten in place, never rearranged (#885).
     @Test("A saved order is migrated in place")
     func savedOrderMigratedInPlace() {
         let migrated = LayoutSolver.canonicalizedSectionOrder([
@@ -115,9 +103,7 @@ struct CanonicalIdentifierTests {
         #expect(migrated.keys.sorted() == ["alwaysHidden", "hidden", "visible"])
     }
 
-    /// The migration has to run *before* pruning, or the renamed entry is
-    /// discarded as unmatchable before it can be rescued. This pins the
-    /// composition the loader relies on.
+    /// Migration must run before pruning, or the renamed entry is discarded as unmatchable.
     @Test("Migrating before pruning preserves the renamed entry")
     func migrationSurvivesPruning() {
         let stored = ["visible": ["at.obdev.littlesnitch.agent:Item-0"]]

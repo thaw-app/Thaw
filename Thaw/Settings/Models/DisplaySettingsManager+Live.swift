@@ -10,18 +10,10 @@ import AsyncAlgorithms
 import Cocoa
 import Combine
 
-/// The live half of ``DisplaySettingsManager``: everything whose substance
-/// needs a running `AppState`, real `NSScreen`/WindowServer display state,
-/// the on-disk NSStatusItemSpacing global domain, or an app-modal alert.
-/// None of that can run in a unit test, so this file is excluded from
-/// coverage in sonar-project.properties.
-///
-/// The measured half (DisplaySettingsManager.swift) keeps persistence,
-/// lookup, mutation, URI handling, and every decision rule — including
-/// `shouldSkipSpacingApply`, which this file's observer consults. New
-/// decision logic belongs there, not here.
+/// The live half of ``DisplaySettingsManager``, excluded from coverage
+/// because it needs real display state, defaults, or modal alerts. New
+/// decision logic belongs in DisplaySettingsManager.swift, not here.
 extension DisplaySettingsManager {
-    /// Performs the initial setup of the manager.
     func performSetup(with appState: AppState) {
         self.appState = appState
         // Mirror the persisted mode first: capturing displays can apply
@@ -34,19 +26,10 @@ extension DisplaySettingsManager {
 
     /// Copies the active display's offset into the spacing manager at launch.
     ///
-    /// `MenuBarItemSpacingManager.offset` starts at 0 on every launch, and the
-    /// only thing that writes it is ``applyActiveDisplaySpacing(reason:)``,
-    /// which runs from a genuine display transition or from a `configurations`
-    /// change that passes the equality guard. Neither happens on a plain
-    /// launch, so the offset stays at 0 while the on-disk spacing reflects
-    /// whatever the user last applied. Anything reading the offset then reads
-    /// a value the machine isn't running: `applyProfile` pushes it back to the
-    /// system default in a relaunch wave, and the notch overflow budget in
-    /// `MenuBarItemManager` mis-measures by the difference.
-    ///
-    /// Seeding only. Calling `applyOffset()` here would fire a relaunch wave
-    /// at launch, and there is nothing to apply anyway: the seeded value is
-    /// the one already in effect.
+    /// Otherwise the offset stays 0 on a plain launch while disk holds the
+    /// user's value, so `applyProfile` would reset it and the notch overflow
+    /// budget would mis-measure. Seeds only: `applyOffset()` would fire a
+    /// relaunch wave for a value already in effect.
     private func seedSpacingOffsetFromActiveDisplay() {
         guard let appState else { return }
         let offset = activeDisplaySpacingOffset
@@ -59,14 +42,10 @@ extension DisplaySettingsManager {
         diagLog.debug("Seeded spacingManager.offset=\(offset) from the active display at setup")
     }
 
-    /// Merges info for currently-connected displays into the knownDisplays
-    /// cache. Idempotent and cheap; called on launch and on every
-    /// screen-parameters-changed notification so the cache always reflects
-    /// the latest known names.
+    /// Merges connected displays into the knownDisplays cache. Idempotent.
     ///
-    /// Skips screens whose localizedName is empty: that can happen for
-    /// mirrored slave displays or briefly during GPU/sleep transitions, and
-    /// caching such entries pollutes the Displays pane with anonymous rows.
+    /// Skips empty localizedName (mirrored displays, GPU/sleep transitions),
+    /// which would add anonymous rows to the Displays pane.
     private func captureCurrentlyConnectedDisplays() {
         var updated = knownDisplays
         var changed = false
@@ -83,12 +62,8 @@ extension DisplaySettingsManager {
                 updated[uuid] = entry
                 changed = true
             }
-            // Seed an entry for newly-detected displays from the current
-            // global template so first-time connections inherit the
-            // user's chosen defaults instead of falling through to
-            // DisplayIceBarConfiguration.defaultConfiguration at read time.
-            // Existing entries are left alone so per-display overrides
-            // are preserved across reconnects.
+            // New displays inherit the global template; existing entries keep
+            // their per-display overrides.
             if seededConfigurations[uuid] == nil {
                 seededConfigurations[uuid] = globalConfiguration
                 configurationsChanged = true
@@ -104,15 +79,10 @@ extension DisplaySettingsManager {
 
     // MARK: - System Spacing Seed
 
-    /// Default baseline for NSStatusItemSpacing and NSStatusItemSelectionPadding,
-    /// kept in sync with MenuBarItemSpacingManager.Key.defaultValue. Used to
-    /// translate on-disk system spacing into Thaw's relative offset model.
+    /// Must match MenuBarItemSpacingManager.Key.defaultValue.
     private static let systemSpacingDefault = 16
 
-    /// Reads the current system value for NSStatusItemSpacing from the byHost
-    /// global domain. Returns nil when the key is unset, letting callers
-    /// distinguish "user has explicitly configured spacing" from "macOS
-    /// default applies".
+    /// Reads NSStatusItemSpacing from the byHost global domain; nil when unset.
     private static func currentSystemSpacing() -> Int? {
         CFPreferencesCopyValue(
             "NSStatusItemSpacing" as CFString,
@@ -122,22 +92,9 @@ extension DisplaySettingsManager {
         ) as? Int
     }
 
-    /// When the user has manually set NSStatusItemSpacing outside of Thaw
-    /// (e.g. via a defaults write in Terminal), seed an entry for each
-    /// connected display whose itemSpacingOffset corresponds to that on-disk
-    /// value. Without this, applyActiveDisplaySpacing on first launch reads
-    /// the default offset of 0, computes target = 16, sees on-disk = N, and
-    /// fires a relaunch wave that rewrites the user's manual setting back to
-    /// 16. The seeded entries are written to Defaults inline because the
-    /// persistence sink is not yet wired at loadInitialState time; without
-    /// the explicit save, subsequent launches would re-seed on every start
-    /// instead of remembering the adopted value. The padding key is not
-    /// consulted because Thaw drives both keys from a single offset; users
-    /// whose padding diverges from spacing will see one normalising relaunch
-    /// on first launch but no recurring waves thereafter.
-    ///
-    /// Internal rather than private because `loadInitialState()` — which
-    /// stays in the measured file — calls it on first launch.
+    /// Adopts a NSStatusItemSpacing set outside Thaw, so first launch doesn't
+    /// fire a relaunch wave that resets it to 16. Saves to Defaults inline
+    /// because persistence isn't wired yet at loadInitialState time.
     func seedConfigurationsFromSystemSpacing() {
         guard let onDisk = Self.currentSystemSpacing(),
               onDisk != Self.systemSpacingDefault
@@ -170,36 +127,13 @@ extension DisplaySettingsManager {
 
     // MARK: - Observers
 
-    /// Configures the manager's non-persistence internal observers: the
-    /// debounced screen-parameters watcher and the Settings-URI notification
-    /// subscription. Property persistence is now driven by `didSet` on each
-    /// property (see the property declarations in the measured file),
-    /// replacing the previous `$property.persistToDefaults`/manual
-    /// `.dropFirst()` sinks.
+    /// Persistence is handled by each property's `didSet`, not here.
     private func configureObservers() {
         var c = Set<AnyCancellable>()
 
-        // Listen for display connect/disconnect to log changes, refresh the
-        // known-display cache, and re-derive the active display's spacing.
-        //
-        // Debounced because didChangeScreenParametersNotification fires
-        // repeatedly during a single user action: docking, lid close,
-        // monitor sleep/wake, KVM switch, Sidecar handshake, and external
-        // display flicker can each post several notifications within a
-        // few hundred milliseconds. Without the debounce, every flap
-        // could trigger a relaunch wave (the no-op guard catches the
-        // common case but does not cover oscillating values during the
-        // flap window). One second coalesces a single docking event into
-        // one apply.
-        //
-        // `debouncedNotificationTask` registers the observer before it
-        // returns, so a notification posted during task startup cannot slip
-        // past, and the task's defer removes it — the non-Sendable observer
-        // token stays off the class and the nonisolated deinit only needs
-        // to cancel the task.
-        //
-        // A repeated setup must not leave the previous task — and the
-        // NotificationCenter observer its defer owns — running.
+        // Debounced: docking, lid close, KVM switches and the like post
+        // several notifications within milliseconds, and each flap could
+        // otherwise fire a relaunch wave. Cancel any previous setup's task.
         screenParametersTask?.cancel()
         screenParametersTask = debouncedNotificationTask(
             center: .default,
@@ -220,12 +154,7 @@ extension DisplaySettingsManager {
             applyActiveDisplaySpacing(reason: "screenParametersChanged")
         }
 
-        // Re-deriving the active display's spacing whenever per-display
-        // configurations change (user edit, profile load) is now handled by
-        // `configurations`'s `didSet`. The no-op guard inside applyOffset()
-        // makes this free when on-disk already matches.
-
-        // Listen for external per-display settings changes via Settings URI
+        // External per-display settings changes via Settings URI.
         NotificationCenter.default
             .publisher(for: .perDisplaySettingsDidChangeViaURI)
             .receive(on: DispatchQueue.main)
@@ -239,16 +168,9 @@ extension DisplaySettingsManager {
 
     // MARK: - Spacing Apply
 
-    /// Reads the active display's spacing offset, syncs it into
-    /// spacingManager.offset, and triggers applyOffset. The no-op guard
-    /// inside applyOffset skips when on-disk values already match, so this
-    /// is safe to call on every configurations change. On a real relaunch
-    /// wave, kicks off a settling period so a subsequent applyProfileLayout
-    /// (e.g. from a profile switch) waits for items to re-attach before
-    /// moving them.
-    ///
-    /// Internal rather than private because `configurations`'s `didSet` —
-    /// which stays in the measured file — re-derives spacing through it.
+    /// Syncs the active display's offset and applies it. Safe on every change,
+    /// since applyOffset no-ops when disk already matches. A real relaunch
+    /// wave starts a settling period so layout waits for items to reattach.
     func applyActiveDisplaySpacing(reason: String) {
         guard let appState else { return }
         // A nil display resolves to the global template, not this display's spacing.
@@ -275,9 +197,8 @@ extension DisplaySettingsManager {
         appState.spacingManager.offset = desired
         Task { [weak self] in
             guard let self else { return }
-            // Preflight settling so intermediate late-arriver re-sorts and
-            // restore logic are suppressed while the wave runs. Cancelled
-            // below if applyOffset turns out to be a no-op.
+            // Suppress late-arriver re-sorts during the wave. Cancelled below
+            // if applyOffset is a no-op.
             appState.itemManager.startSettlingPeriod(reason: "spacingRelaunch:\(reason):preflight")
             do {
                 let outcome = try await appState.spacingManager.applyOffset()
@@ -286,12 +207,8 @@ extension DisplaySettingsManager {
                         reason: "spacingRelaunch:\(reason)",
                         expectedBundleIDs: outcome.recoveredBundleIDs
                     )
-                    // The relaunched apps reattach at OS-default positions.
-                    // Drive the active profile's layout pass so they end up
-                    // in the saved order. Auto-switch doesn't fire when the
-                    // associated profile is unchanged, so without this call
-                    // the post-settle path would only run cross-section
-                    // restore and leave within-section ordering untouched.
+                    // Relaunched apps reattach at default positions, and
+                    // auto-switch won't fire for an unchanged profile.
                     appState.profileManager.reapplyActiveProfile()
                 } else {
                     appState.itemManager.cancelSettlingPeriod(
@@ -302,10 +219,8 @@ extension DisplaySettingsManager {
                 appState.itemManager.cancelSettlingPeriod(
                     reason: "spacingRelaunch:\(reason):error"
                 )
-                // Roll back the bookkeeping so the next screen-parameter
-                // notification is not skipped as a same-display fire and can
-                // retry the failed apply. A newer apply may have overwritten
-                // it while applyOffset was in flight; its bookkeeping wins.
+                // Roll back so the next notification retries, unless a newer
+                // apply overwrote the bookkeeping meanwhile.
                 if lastAppliedActiveDisplayUUID == appliedUUID {
                     lastAppliedActiveDisplayUUID = previousAppliedUUID
                 }
@@ -330,12 +245,8 @@ extension DisplaySettingsManager {
         return presentSpacingRelaunchConfirmation()
     }
 
-    /// Presents an app-modal confirmation before an automatic apply fires
-    /// the relaunch wave. Returns true when the user approves the relaunch,
-    /// false when they cancel. Runs modally so it surfaces even with the
-    /// Settings window closed; ticking the suppression checkbox while pressing
-    /// Apply turns confirmSpacingRelaunch off so future applies relaunch
-    /// silently. Cancelling never changes that setting.
+    /// App-modal so it shows with Settings closed. Returns whether the user
+    /// approved. The suppression checkbox only takes effect on Apply.
     private func presentSpacingRelaunchConfirmation() -> Bool {
         NSApp.activate(ignoringOtherApps: true)
         let alert = NSAlert()

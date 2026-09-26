@@ -13,17 +13,12 @@ import Foundation
 extension MenuBarItemManager {
     /// The pure core of `move(item:to:)`.
     ///
-    /// `move` posts events and reads the bar; everything it *decides* — retry
-    /// or stop, and what to call the result — lives here, over plain values,
-    /// so a field log's sequence of attempts can be replayed in a unit test
-    /// and the verdict the user sees can be checked without a live menu bar.
+    /// `move` posts events and reads the bar; what it decides lives here over
+    /// plain values, so a field log's attempts can be replayed in a test.
     ///
-    /// Each attempt produces one ``Observation``. ``decide(after:state:configuration:)``
-    /// folds it into the running ``State`` and answers with a ``Decision``:
-    /// the move landed, another attempt is worth making, or it stops for a
-    /// named ``StopReason``. The reasons are deliberately specific, because
-    /// the callers report them to the user: a drop that macOS put back is not
-    /// an owner that never answered, and neither is a destination that moved.
+    /// Each attempt yields an ``Observation`` that
+    /// ``decide(after:state:configuration:)`` folds into ``State``. Stop
+    /// reasons are specific because callers report them to the user.
     nonisolated enum MovePolicy {
         /// What one attempt observed.
         nonisolated enum Observation: Equatable {
@@ -48,10 +43,8 @@ extension MenuBarItemManager {
             case itemGone
             /// The destination anchor no longer reports bounds.
             case destinationGone
-            /// The destination's identity no longer matches the plan: the
-            /// target window was recycled or the endpoint geometry is no
-            /// longer usable. Retrying would drag the item against geometry
-            /// the bar no longer has.
+            /// The target window was recycled or its geometry is unusable, so
+            /// retrying would drag against geometry the bar no longer has.
             case staleDestination
             /// The caller's condition changed; the move is obsolete.
             case superseded
@@ -102,14 +95,8 @@ extension MenuBarItemManager {
             /// The final attempt failed for an unclassified reason.
             case other
 
-            /// Whether the item could nevertheless be sitting at the
-            /// destination, so the verdict must be checked against the bar
-            /// before it is reported as a failure.
-            ///
-            /// Not for a refused drop, whose releases were observed putting
-            /// the item back; not for a vanished item; not for a superseded
-            /// move, whose caller no longer wants the answer; and not for a
-            /// hung owner, which never received a press.
+            /// Whether the item could still be at the destination, so the bar
+            /// must be checked before reporting a failure.
             var deservesFinalLandingCheck: Bool {
                 switch self {
                 case .targetMoved, .targetRetreating, .ownerAlwaysSilent, .ownerSilent, .overran, .budgetExhausted, .other:
@@ -200,11 +187,8 @@ extension MenuBarItemManager {
         /// Folds one attempt's observation into `state` and decides what
         /// `move` does next.
         ///
-        /// Order of the checks on a displaced item matters and mirrors the
-        /// evidence each one needs: a refusal is proven by the releases alone
-        /// (two in a row, so a single warm-up nudge does not count); a moved
-        /// target by one reading against the display width; a retreat by a
-        /// run of readings. Only then does the attempt budget decide.
+        /// Check order matters: refusal (two reverted releases), then a moved
+        /// target, then a retreat, and only then the attempt budget.
         static func decide(
             after observation: Observation,
             state: inout State,
@@ -266,12 +250,8 @@ extension MenuBarItemManager {
                 case .unsafePath:
                     return .stop(.unsafePath)
                 case .ownerSilent:
-                    // An owner with a standing record of ignoring synthetic
-                    // events gets no further attempts once it fails this way
-                    // again. Deliberately narrower than capping the budget up
-                    // front: the loop also retries when the owner *did*
-                    // respond but the item did not land, which is a different
-                    // failure and still deserves its full budget.
+                    // Stop only on silence, not up front: an owner that
+                    // responds without landing still gets its full budget.
                     if configuration.ownerHasSilentRecord {
                         return .stop(.ownerAlwaysSilent)
                     }
@@ -285,10 +265,8 @@ extension MenuBarItemManager {
         /// Whether a position match read *before* posting an attempt's events
         /// can be trusted as a landing.
         ///
-        /// On the first attempt it always can. On retries, the only case where
-        /// the match can be a coincidence is when the item being moved is
-        /// itself a zero-width control item whose bounds may have drifted onto
-        /// the target externally; those are gated on observed displacement.
+        /// On retries, a zero-width control item's bounds may have drifted onto
+        /// the target, so those need observed displacement.
         static func trustsPositionMatch(
             attempt: Int,
             anyEventsSucceeded: Bool,
@@ -300,17 +278,14 @@ extension MenuBarItemManager {
         /// Whether a move that has been running for `elapsed` may start
         /// another attempt.
         ///
-        /// Every attempt is bounded by the press-release guard, but eight
-        /// bounded attempts still add up; the move as a whole yields the bar
-        /// before the cursor watchdog and the callers waiting on the move
-        /// gate give up on it.
+        /// Bounded attempts still add up; yield before the cursor watchdog and
+        /// move-gate waiters give up.
         static func mayStartAnotherAttempt(elapsed: Duration, deadline: Duration) -> Bool {
             elapsed < deadline
         }
 
-        /// The reason `move` reports when it stops for `failure` on an attempt
-        /// it never got to observe (before posting), keeping the mapping in
-        /// one place with ``decide(after:state:configuration:)``.
+        /// Maps an error thrown before posting, kept beside
+        /// ``decide(after:state:configuration:)``.
         static func attemptFailure(for error: EventError) -> AttemptFailure {
             switch error {
             case .eventOperationTimeout, .itemResponseTimeout:
@@ -341,19 +316,12 @@ extension MenuBarItemManager {
 
     /// How the failure ledger should file a move error against the item.
     ///
-    /// The ledger's unresponsive-owner mark exists for an *app* that ignores
-    /// synthetic events — Little Snitch with GUI Scripting disabled is the
-    /// recurring case. It is earned by timeouts, and on macOS 26 every hosted
-    /// status item's events go to Control Center, not to the app: a timeout
-    /// there says Control Center did not relocate the window in time, which
-    /// happened for minutes at a stretch while an item's drops were being
-    /// reverted by macOS itself, and the field log shows an owner that
-    /// answered every press being marked as unresponsive for fourteen days
-    /// on the strength of two such timeouts. The mark is therefore filed
-    /// only when the owner the events reach is the item's own app.
+    /// The unresponsive mark is for an app that ignores synthetic events
+    /// (Little Snitch without GUI Scripting). On macOS 26 hosted items'
+    /// events reach Control Center, whose timeouts say nothing about the app,
+    /// so only file it when events reach the item's own app.
     ///
-    /// A provisional identity is never marked either: its key changes as
-    /// soon as the source process resolves, so the mark could not clear.
+    /// Never mark a provisional identity: its key changes on resolution.
     static nonisolated func ledgerFailureKind(
         for error: EventError,
         ownerIsControlCenter: Bool,
@@ -375,9 +343,8 @@ extension MenuBarItemManager {
     /// How long macOS's refusal of a move keeps the item's saved slot from
     /// being overwritten by wherever the refusal left it.
     ///
-    /// The refusing state observed in the field lasted about four minutes
-    /// and about one minute, and cleared by itself; a landing clears the
-    /// record sooner.
+    /// Observed refusals cleared by themselves within minutes; a landing
+    /// clears the record sooner.
     static nonisolated let refusedMoveLifetime: Duration = .seconds(10 * 60)
 
     /// Whether a recorded refusal still stands.

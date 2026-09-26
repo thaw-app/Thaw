@@ -23,9 +23,8 @@ struct MoveGatePreflightTests {
         )
     }
 
-    /// A manager without AppState cannot perform any live move. Reaching the
-    /// preflight's named error instead proves that the one-shot gate-owned
-    /// check runs before the mover touches AppState or WindowServer state.
+    /// A manager without AppState cannot move anything, so reaching the preflight's
+    /// error proves the gate check runs before AppState or WindowServer is touched.
     @Test("A rejected gate-owned preflight stops before live move work")
     func rejectedPreflightStopsBeforeLiveMoveWork() async {
         let manager = MenuBarItemManager()
@@ -61,8 +60,7 @@ struct MoveGatePreflightTests {
         #expect(events == ["preflight", "finish"])
     }
 
-    /// The semaphore is intentionally private. Exercise the exact exit helper
-    /// instead so this assertion has no scheduler or timing dependency.
+    /// The semaphore is private; exercise the exit helper so there is no timing dependency.
     @Test("Batch timestamp ownership updates before the move gate is released")
     func finishRunsBeforeRelease() {
         var events = [String]()

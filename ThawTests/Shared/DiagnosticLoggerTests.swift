@@ -118,9 +118,9 @@ struct DiagnosticLoggerLevelTests {
 /// Covers which log files ``DiagnosticLogger/filesToPrune(_:retentionDays:maxCount:now:protected:)``
 /// selects for deletion.
 ///
-/// The decision is pure — dates and URLs in, URLs out — so these run against
+/// The decision is pure (dates and URLs in, URLs out), so these run against
 /// paths that need not exist. Deleting the wrong file loses the log a user was
-/// about to attach to a bug report, so each rule is pinned separately.
+/// about to attach to a bug report.
 ///
 /// Reads only: nothing here reaches the shared ``DiagnosticLogger`` or the file
 /// system, so the suite is safe to run in parallel with the rest.
@@ -225,8 +225,8 @@ struct DiagnosticLoggerRetentionTests {
             protected: [current]
         )
 
-        // The protected file alone fills the cap, so nothing else may stay —
-        // and the subtraction that works that out must not go negative.
+        // The protected file alone fills the cap, so nothing else may stay, and
+        // the subtraction that works that out must not go negative.
         #expect(stale == [spare])
     }
 

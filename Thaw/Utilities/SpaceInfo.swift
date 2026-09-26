@@ -16,9 +16,6 @@ struct SpaceInfo: Hashable {
     /// A Boolean value that indicates whether the space is fullscreen.
     let isFullscreen: Bool
 
-    /// Creates a space with the given identifier.
-    ///
-    /// - Parameter spaceID: An identifier for a space.
     init(spaceID: CGSSpaceID) {
         self.spaceID = spaceID
         self.isFullscreen = Bridging.isSpaceFullscreen(spaceID)
@@ -40,13 +37,10 @@ struct SpaceInfo: Hashable {
         managedSpace?.persistentKey
     }
 
-    /// A human-readable label for the space, matching how Mission Control
-    /// numbers desktops. Spaces carry no user-facing name of their own.
+    /// A label matching how Mission Control numbers desktops; spaces have no name.
     ///
-    /// Resolved once and stored alongside the association rather than
-    /// recomputed, because the ordinal moves when the user reorders their
-    /// desktops and a label that silently renumbered itself would be worse
-    /// than one that is merely out of date.
+    /// Stored rather than recomputed: the ordinal moves when desktops are reordered,
+    /// and a silently renumbered label is worse than a stale one.
     var localizedLabel: String {
         guard let managedSpace else {
             return String(localized: "Current Space", comment: "Label for a Space that has not been published by the window server yet.")

@@ -9,16 +9,8 @@ import SwiftUI
 
 /// The entire settings surface while Simple Mode is on.
 ///
-/// One page, no navigation. Sections are ordered by how often someone in this
-/// mode needs them: arranging the bar is the reason the mode exists, the
-/// behavior rows change daily life, and app plumbing sits at the bottom next
-/// to a compact about footer. Everything the full window grows around — hover
-/// delays, rehide strategies, gesture variants — is tuning, and tuning is what
-/// turning Simple Mode off is for.
-///
-/// Nothing is disabled. Every other pane keeps its configuration and stays
-/// reachable through the settings URI, and turning Simple Mode off brings the
-/// full sidebar straight back.
+/// One page, sections ordered by how often they're needed. Other panes keep
+/// their settings and stay reachable through the settings URI.
 struct SimpleModeSettingsPane: View {
     @Environment(AppState.self) private var appState: AppState
     let itemManager: MenuBarItemManager

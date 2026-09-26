@@ -13,14 +13,9 @@ import Testing
 /// the prune runs on it, and the saved-order repair that drops such entries
 /// at load.
 ///
-/// #1027's reporter carried `com.techsmith.snagit.capturehelper:Battery` in
-/// their profile. A multi-display spatial skew in the source-PID resolution
-/// matched Control Center's Battery window to Snagit's helper; the resolved
-/// PID named the namespace, and the identifier persisted — every existing
-/// guard passed, because the PID did resolve (not provisional), the title
-/// was not a generic slot (not transient), and one wrong PID is not a
-/// majority event (#784's gate stayed quiet by design). Only the title says
-/// who owns the window.
+/// A multi-display spatial skew can match Control Center's Battery window to
+/// another app's PID, persisting `com.techsmith.snagit.capturehelper:Battery`
+/// (#1027). Every other guard passes, so only the title says who owns the window.
 @Suite("Misattributed Control Center module identity")
 struct ControlCenterModuleIdentityTests {
     private func tag(namespace: String, title: String) -> MenuBarItemTag {
@@ -30,7 +25,6 @@ struct ControlCenterModuleIdentityTests {
     // MARK: - isControlCenterModuleTitle
 
     /// Every module macOS itself titles, in the spelling it titles them.
-    /// The set is the predicate's whole truth, so pin its members.
     @Test("Every catalogued module title is recognized")
     func cataloguedTitlesAreRecognized() {
         let titles = [
@@ -59,9 +53,7 @@ struct ControlCenterModuleIdentityTests {
         }
     }
 
-    /// BentoBox modules carry an instance suffix; membership is a prefix
-    /// test there. The reporter's bar held `BentoBox-0` alongside the
-    /// corrupted Battery entry.
+    /// BentoBox modules carry an instance suffix, so membership is a prefix test.
     @Test("BentoBox instance suffixes are recognized")
     func bentoBoxSuffixesAreRecognized() {
         #expect(MenuBarItemTag.isControlCenterModuleTitle("BentoBox-0"))
@@ -69,9 +61,7 @@ struct ControlCenterModuleIdentityTests {
     }
 
     /// Generic slots and third-party titles are not Control Center modules.
-    /// `Item-0` is the case the rewrite must leave alone: Snagit's own item
-    /// really is `com.techsmith.snagit.capturehelper:Item-0`, and guessing
-    /// there would orphan a real item.
+    /// Snagit's own item really is `com.techsmith.snagit.capturehelper:Item-0`.
     @Test("Generic and app titles are not module titles")
     func genericTitlesAreNotModuleTitles() {
         #expect(!MenuBarItemTag.isControlCenterModuleTitle("Item-0"))
@@ -93,8 +83,8 @@ struct ControlCenterModuleIdentityTests {
             .isMisattributedControlCenterModule)
     }
 
-    /// Control Center's own modules resolve to Control Center's PID and
-    /// namespace — the resolved reading, which must stay manageable.
+    /// Control Center's own modules resolve to its PID and namespace and must
+    /// stay manageable.
     @Test("A module under Control Center's namespace is not misattributed")
     func moduleUnderControlCenterNamespaceIsNotMisattributed() {
         #expect(!MenuBarItemTag(namespace: .controlCenter, title: "Battery")
@@ -113,8 +103,7 @@ struct ControlCenterModuleIdentityTests {
             .isMisattributedControlCenterModule)
     }
 
-    /// Thaw's own control items never carry a module title, and neither do
-    /// its spacers; the predicate must stay quiet for both.
+    /// Thaw's control items and spacers never carry a module title.
     @Test("Control items and spacers are not misattributed")
     func controlItemsAndSpacersAreNotMisattributed() {
         #expect(!MenuBarItemTag.visibleControlItem.isMisattributedControlCenterModule)
@@ -126,8 +115,7 @@ struct ControlCenterModuleIdentityTests {
 
     // MARK: - canonicalControlCenterModuleIdentifier
 
-    /// The rewrite heals the reporter's exact entry, moving only the
-    /// namespace and carrying the title through verbatim.
+    /// The rewrite moves only the namespace and keeps the title verbatim.
     @Test("The field entry heals to Control Center's namespace")
     func fieldEntryHeals() {
         #expect(
@@ -137,8 +125,7 @@ struct ControlCenterModuleIdentityTests {
         )
     }
 
-    /// An instance index survives the rewrite intact — two BentoBox
-    /// modules keep their distinct spellings.
+    /// Two BentoBox modules keep their distinct spellings.
     @Test("Instance indexes survive the rewrite")
     func instanceIndexSurvivesRewrite() {
         #expect(
@@ -148,10 +135,8 @@ struct ControlCenterModuleIdentityTests {
         )
     }
 
-    /// A localized display-name namespace heals too: #949's en-GB machine
-    /// wrote `Control Centre:Battery` beside the canonical spelling, and
-    /// the rewrite merges the ghost into the canonical entry instead of
-    /// leaving it for the prune.
+    /// An en-GB machine writes `Control Centre:Battery` beside the canonical
+    /// spelling (#949); the rewrite merges it instead of leaving it for the prune.
     @Test("A display-name namespace heals to the canonical spelling")
     func displayNameNamespaceHeals() {
         #expect(
@@ -161,9 +146,8 @@ struct ControlCenterModuleIdentityTests {
         )
     }
 
-    /// The identity function for everything else: Control Center's own
-    /// entries, generic slots, app-titled items, and identifiers without a
-    /// title at all.
+    /// Control Center's own entries, generic slots, app-titled items, and
+    /// untitled identifiers pass through unchanged.
     @Test("Everything else passes through untouched")
     func everythingElsePassesThrough() {
         #expect(
@@ -190,11 +174,8 @@ struct ControlCenterModuleIdentityTests {
 
     // MARK: - Load-time repair seams
 
-    /// ``LayoutSolver/canonicalIdentifier(_:)`` is the migration pass that
-    /// runs over saved section orders at load, and it must leave the ghost
-    /// alone: renaming it here would merge it with the genuine spelling and
-    /// duplicate the entry, which is the wrong repair. The misattribution is
-    /// the prune's business, not the rename's.
+    /// ``LayoutSolver/canonicalIdentifier(_:)`` runs over saved orders at load
+    /// and must leave the ghost to the prune; renaming it would duplicate the entry.
     @Test("canonicalIdentifier leaves the ghost for the prune")
     func canonicalIdentifierLeavesGhostAlone() {
         #expect(
@@ -203,12 +184,9 @@ struct ControlCenterModuleIdentityTests {
         )
     }
 
-    /// The prune recognizes the ghost with no live twin to help it: the
-    /// title alone is the witness, which is the case the existing
-    /// claimed-title rule could not cover. #1027's reporter had no genuine
-    /// `com.apple.controlcenter:Battery` entry in the saved order at all —
-    /// the live module resolves nil more cycles than not, so nothing had
-    /// ever persisted the genuine spelling for the twin rule to find.
+    /// The prune recognizes the ghost by title alone. The live module often
+    /// resolves nil, so the genuine `com.apple.controlcenter:Battery` may never
+    /// have been saved for the twin rule to find.
     @Test("prunedSectionOrder drops the ghost with no twin present")
     func prunedSectionOrderDropsGhostWithoutTwin() {
         let pruned = LayoutSolver.prunedSectionOrder([
@@ -224,11 +202,9 @@ struct ControlCenterModuleIdentityTests {
         ])
     }
 
-    /// The genuine spelling survives, whether the ghost sits beside it or
-    /// in another section. The second half pins the real-owner scan: the
-    /// ghost must not count as the owner of the title "Battery", or the
-    /// provisional-duplicate rule would delete the genuine entry instead —
-    /// the exact wrong-side deletion #927 fixed for Thaw's own namespace.
+    /// The genuine spelling survives wherever the ghost sits. The ghost must
+    /// not count as owner of "Battery", or the provisional-duplicate rule
+    /// would delete the genuine entry instead.
     @Test("The genuine module entry survives its misattributed twin")
     func genuineEntrySurvivesMisattributedTwin() {
         let genuine = "com.apple.controlcenter:Battery"
@@ -245,10 +221,8 @@ struct ControlCenterModuleIdentityTests {
         #expect(acrossSections["alwaysHidden"] == [genuine])
     }
 
-    /// A third-party app's generic slot is indistinguishable from a
-    /// misattributed one by title alone. Snagit's own item really is
-    /// `com.techsmith.snagit.capturehelper:Item-0`, and the prune must not
-    /// orphan it.
+    /// Snagit's own item really is `com.techsmith.snagit.capturehelper:Item-0`,
+    /// and the prune must not orphan it.
     @Test("A generic slot under a foreign namespace survives the prune")
     func genericSlotSurvivesPrune() {
         let pruned = LayoutSolver.prunedSectionOrder([

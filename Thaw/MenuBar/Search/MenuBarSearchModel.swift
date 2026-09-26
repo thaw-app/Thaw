@@ -30,11 +30,8 @@ final class MenuBarSearchModel {
     @ObservationIgnored
     private var cancellables = Set<AnyCancellable>()
 
-    /// Monotonically incremented by updateAverageColorInfo and
-    /// clearAverageColorInfo. A capture in flight stamps the value it observed
-    /// and only writes averageColorInfo on completion if the value still
-    /// matches, so a late completion can't overwrite a freshly cleared value
-    /// or a newer capture's result.
+    /// Bumped on every capture and clear. A capture only writes its result if
+    /// the value still matches, so a late completion can't clobber newer state.
     private var captureGeneration: Int = 0
 
     let fuse = Fuse(threshold: 0.5)
@@ -53,14 +50,13 @@ final class MenuBarSearchModel {
         .compactMap { screen, isVisible in
             isVisible ? screen : nil
         }
-        .debounce(for: 0.1, scheduler: DispatchQueue.main) // Debounce to avoid rapid updates
+        .debounce(for: 0.1, scheduler: DispatchQueue.main)
         .sink { [weak self] screen in
             self?.updateAverageColorInfo(for: screen)
         }
         .store(in: &c)
 
-        // Clear average color when search panel closes to free memory
-        // and invalidate any in-flight capture from the open lifetime.
+        // Free the color on close and invalidate any in-flight capture.
         panel.publisher(for: \.isVisible)
             .filter { !$0 }
             .sink { [weak self] _ in
@@ -68,8 +64,7 @@ final class MenuBarSearchModel {
             }
             .store(in: &c)
 
-        // Clear on display changes to prevent stale color info and invalidate
-        // any in-flight capture targeting the previous screen geometry.
+        // Display changes invalidate captures of the old screen geometry.
         NotificationCenter.default
             .publisher(for: NSApplication.didChangeScreenParametersNotification)
             .sink { [weak self] _ in
@@ -80,8 +75,7 @@ final class MenuBarSearchModel {
         cancellables = c
     }
 
-    /// Clears averageColorInfo and invalidates any in-flight capture so a late
-    /// completion can't overwrite the cleared state with a stale value.
+    /// Clears averageColorInfo and invalidates any in-flight capture.
     private func clearAverageColorInfo() {
         captureGeneration += 1
         averageColorInfo = nil
@@ -101,10 +95,7 @@ final class MenuBarSearchModel {
         let windowIDs = [menuBarWindow.windowID, wallpaperWindow.windowID]
         let bounds = withMutableCopy(of: wallpaperWindow.bounds) { $0.size.height = 1 }
 
-        // Stamp our generation before suspending. If clearAverageColorInfo or
-        // a newer updateAverageColorInfo bumps the counter while we await, our
-        // completion is stale and must skip the write so we don't undo an
-        // intentional clear or clobber a fresher capture.
+        // Stamp the generation before suspending; see `captureGeneration`.
         captureGeneration += 1
         let generation = captureGeneration
 

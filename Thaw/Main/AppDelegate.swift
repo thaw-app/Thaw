@@ -11,7 +11,6 @@ import SwiftUI
 
 @MainActor
 final class AppDelegate: NSObject, NSApplicationDelegate {
-    /// The shared app state.
     let appState = AppState()
     private var isPreparingForTermination = false
     private var hasRepliedToTerminationRequest = false
@@ -21,10 +20,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     #if DEBUG
         /// Whether the app is running as an Xcode preview/playground.
         ///
-        /// Xcode sets one of these environment variables depending on the
-        /// Tools version and execution mode (newer versions report
-        /// `XCODE_RUNNING_FOR_PLAYGROUNDS` for SwiftUI previews). Checking
-        /// both keeps the guard working across versions.
+        /// Newer Xcode versions report `XCODE_RUNNING_FOR_PLAYGROUNDS` for
+        /// previews, so both variables are checked.
         private var isRunningForPreviews: Bool {
             let environment = ProcessInfo.processInfo.environment
             return environment["XCODE_RUNNING_FOR_PREVIEWS"] == "1" || environment["XCODE_RUNNING_FOR_PLAYGROUNDS"] == "1"
@@ -41,31 +38,21 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             }
         #endif
 
-        // Bound accessibility messaging before anything can create an element.
-        // Every AX call is synchronous IPC tied to the target's event loop, so an
-        // app that stops pumping it blocks us for the system default of six
-        // seconds — the delay behind #767. Healthy calls return in well under
-        // 100 ms, so a one second ceiling costs nothing and lets the fallback
-        // paths run while the user is still watching. Override with:
+        // Bound AX messaging before any element exists, or a stalled app blocks
+        // us for the six-second default (#767). Override with:
         //   defaults write com.stonerl.Thaw axMessagingTimeout -float <seconds>
         UIElement.defaultMessagingTimeout = Float(
             max(0, (Defaults.object(forKey: .axMessagingTimeout) as? Double) ?? Defaults.DefaultValue.axMessagingTimeout)
         )
 
-        // A direct launch (for example from Xcode) can bypass the usual
-        // single-instance behavior. Two live Thaw instances each register
-        // control items and then fight to restore their own saved layouts.
-        // Let the newly launched instance win so restart and update flows
-        // remain reliable.
+        // A direct launch (e.g. from Xcode) can bypass single-instance behavior,
+        // and two instances fight over layouts. The newest one wins.
         terminateOtherInstances()
 
-        // Initial chore work.
         NSSplitViewItem.swizzle()
         MigrationManager().migrateAll()
 
-        // Register thaw:// URL events early so external tools (e.g. Raycast)
-        // can trigger actions even when Thaw is not currently in the foreground;
-        // depending on the action, the app may still be activated as needed.
+        // Register thaw:// early so tools like Raycast work while Thaw is in the background.
         NSAppleEventManager.shared().setEventHandler(
             self,
             andSelector: #selector(handleURLAppleEvent(_:withReplyEvent:)),
@@ -97,7 +84,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         // Warn if another menu bar manager is running.
         ConflictingAppDetector.showWarningIfNeeded()
 
-        // Check if this is the first launch
         let isFirstLaunch = !Defaults.bool(forKey: .hasCompletedFirstLaunch)
 
         // Depending on the permissions state, either perform setup
@@ -114,13 +100,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             appState.performSetup(hasPermissions: false)
         }
 
-        // On first launch, walk the user through onboarding — its final step
-        // is where they decide whether to grant permissions, so there's no
-        // separate need to surface the permissions window here (PermissionsWindow
-        // shows the onboarding tour until first launch completes). Afterward,
-        // only resurface the plain permissions window if required permissions
-        // are missing (e.g. they were revoked), so a reset doesn't drag the
-        // user back through onboarding.
+        // First launch shows onboarding, whose last step handles permissions.
+        // Afterward, show the permissions window only if permissions are missing.
         if isFirstLaunch || appState.permissions.permissionsState == .missing {
             appState.openWindow(.permissions)
         }
@@ -227,7 +208,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             url.scheme?.lowercased() == "thaw"
         else { return }
 
-        // Extract sender bundle ID from the Apple Event
         let senderBundleId = extractSenderBundleId(from: event)
         handleURL(url, senderBundleId: senderBundleId)
     }
@@ -328,7 +308,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     /// Handles settings manipulation URLs (set/toggle).
     private func handleSettingsURL(_ url: URL, request: SettingsURIRequest, senderBundleId: String?) {
-        // Check if Settings URI feature is enabled
         guard SettingsURIHandler.isEnabled() else {
             appState.diagLog.debug("Settings URI is disabled, ignoring: \(url.absoluteString)")
             return
@@ -340,7 +319,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             return
         }
 
-        // Determine effective bundle ID (auto-detected or manual override)
         guard let effectiveBundleId = determineEffectiveBundleId(
             request: request,
             senderBundleId: senderBundleId
@@ -359,7 +337,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
         // Verify sender is whitelisted, or prompt for first-time authorization
         if !SettingsURIHandler.isWhitelisted(bundleIdentifier: effectiveBundleId) {
-            // Show confirmation dialog
             let approved = SettingsURIHandler.promptForAuthorization(bundleId: effectiveBundleId)
             guard approved else {
                 // Unauthorized - silent fail
@@ -367,7 +344,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             }
         }
 
-        // Process the settings URL
         switch request.route {
         case let .set(key, value, displayUUID):
             let success = SettingsURIHandler.handleSet(
@@ -401,7 +377,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         request: SettingsURIRequest,
         senderBundleId: String?
     ) -> String? {
-        // If we have auto-detected sender, use it
         if let sender = senderBundleId {
             return sender
         }
@@ -461,8 +436,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     /// Opens the settings window and activates the app.
     @objc func openSettingsWindow() {
-        // Always allow opening settings window from menu item clicks
-        // This ensures clicking app icon, dock icon or menu bar item works correctly
+        // Always allow opening settings from the app, Dock, or menu bar icon.
         appState.diagLog.debug("Opening settings window from app icon/dock/menu click")
 
         Task { @MainActor in

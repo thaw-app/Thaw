@@ -9,38 +9,21 @@ import Foundation
 import Testing
 @testable import Thaw
 
-/// Covers the ``ProfileManager`` failure paths that the existing suites step
-/// around: the two `do`/`catch` blocks that swallow an I/O error rather than
-/// propagating it (`ensureDirectoryExists`, `saveManifest`), and the
-/// already-active short circuit in `applyFocusFilterProfile`.
+/// Covers the ``ProfileManager`` failure paths other suites miss: the
+/// `do`/`catch` blocks that swallow I/O errors in `ensureDirectoryExists` and
+/// `saveManifest`, and the already-active short circuit in
+/// `applyFocusFilterProfile`.
 ///
-/// `ProfileManagerPersistenceTests` reaches the *corrupt manifest* and
-/// *occupied directory path* cases, but neither of those enters a catch block:
-/// a file sitting at the profiles-directory path makes `fileExists` return
-/// true, so `createDirectory` is never called. The cases here put a regular
-/// file at a *parent* component instead, so the directory genuinely cannot be
-/// created, and park a directory on the manifest path so the manifest write
-/// genuinely fails.
+/// A file at the profiles-directory path makes `fileExists` true and skips
+/// `createDirectory`, so these cases block a parent component instead, and
+/// park a directory on the manifest path so its write fails.
 ///
-/// Every failure case asserts through a *second* `ProfileManager` over the same
-/// directory. That reload is what proves the swallowed write really failed
-/// rather than quietly succeeding — an in-memory assertion alone would pass
-/// either way.
+/// Failure cases assert through a second `ProfileManager` over the same
+/// directory, since an in-memory assertion passes either way.
 ///
-/// Deliberate gaps, all of which need a live `AppState` that tests cannot
-/// stand up: `performSetup(with:)`, `saveProfile(name:from:)`,
-/// `applyProfile(_:to:previousProfileID:)` and its layout task,
-/// `applySnapshot(_:to:)`, `updateProfileWithCurrentState(id:appState:)`,
-/// `updateProfile(id:scope:appState:)`, `updateProfileConfiguration(id:appState:)`,
-/// `applyCurrentConfiguration(to:from:)`, `rebuildProfileHotkeys()` past its
-/// `appState` guard, `checkDisplayAndAutoSwitch()`,
-/// `handleFocusFilterDeactivated()`, `applyProfileForDisplay(uuid:)`, and the
-/// bodies of `reapplyActiveProfile()` and `applyFocusFilterProfile()` that run
-/// once an app state exists. `captureCurrentLayout`'s item-section inversion is
-/// unreachable too, for a different reason: it iterates
-/// `MenuBarItemManager.computeSectionOrder(from:)`, whose two inputs
-/// (`itemCache` and `savedSectionOrder`) are both private and only populated by
-/// that manager's own `performSetup(with:)`.
+/// Not covered: anything that needs a live `AppState`, and
+/// `captureCurrentLayout`'s item-section inversion, whose inputs are private
+/// to `MenuBarItemManager`.
 @MainActor
 @Suite("Profile manager deep coverage", .serialized)
 struct ProfileManagerDeepTests {
@@ -82,14 +65,10 @@ struct ProfileManagerDeepTests {
             let unreachable = try makeUncreatableDirectoryURL(in: tmp)
             let manager = ProfileManager(profilesDirectory: unreachable)
 
-            // `deleteProfile` swallows only `CocoaError.fileNoSuchFile`, on the
-            // grounds that an already-absent file means the work is done. Here
-            // the *parent* is not a directory, so removal fails with
-            // `NSFileWriteUnknownError` (512) instead and the error propagates.
-            //
-            // Worth pinning: the distinction is what stops a genuinely broken
-            // profiles directory from being reported to the caller as a
-            // successful delete.
+            // `deleteProfile` swallows only `CocoaError.fileNoSuchFile`. Here the
+            // parent isn't a directory, so removal fails with
+            // `NSFileWriteUnknownError` (512) and propagates, so a broken
+            // profiles directory isn't reported as a clean delete.
             #expect(throws: (any Error).self) {
                 try manager.deleteProfile(id: UUID())
             }
@@ -159,8 +138,7 @@ struct ProfileManagerDeepTests {
 
             manager.setAssociatedDisplay(uuid: "display-1", displayName: "Desk Display", forProfileID: profile.id)
 
-            // In memory the association took, because the association lives
-            // only in the manifest there is nowhere else for it to land.
+            // The association lives only in the manifest, so in memory it took.
             #expect(manager.profiles.first?.associatedDisplayUUID == "display-1")
             #expect(FileManager.default.fileExists(atPath: sentinel.path))
             #expect(ProfileManager(profilesDirectory: tmp).profiles.isEmpty)
@@ -187,13 +165,9 @@ struct ProfileManagerDeepTests {
 
     // MARK: - Focus Filter Re-Request
 
-    /// The already-active short circuit has no observable side effect that a
-    /// test without an `AppState` can read back: it flips the private
-    /// `focusFilterActive` flag, which is only consumed by the two private
-    /// auto-switch entry points. What is assertable is that a repeat request
-    /// must not disturb the active profile or schedule a second layout pass —
-    /// the profile is already applied, and re-applying it would churn every
-    /// menu bar item for nothing.
+    /// The short circuit only flips the private `focusFilterActive` flag. What
+    /// is assertable: a repeat request leaves the active profile alone and
+    /// schedules no second layout pass, which would churn every menu bar item.
     @Test("A focus filter request naming the already-active profile changes nothing")
     func focusFilterRequestForTheActiveProfileIsInert() async throws {
         let seed = makeProfile(named: "Focused")
@@ -263,12 +237,8 @@ struct ProfileManagerDeepTests {
     /// Returns a URL whose parent component is a regular file, so
     /// `createDirectory(withIntermediateDirectories:)` cannot succeed there.
     ///
-    /// This is the case `ProfileManagerPersistenceTests` cannot produce: it
-    /// occupies the profiles-directory path itself, which makes `fileExists`
-    /// answer true and skips the creation attempt entirely. Blocking a parent
-    /// instead leaves `fileExists` false and drives the failure into the catch.
-    /// It also fails identically for a root-run test host, unlike a
-    /// permissions-based block.
+    /// This leaves `fileExists` false and reaches the catch, and unlike a
+    /// permissions block it also fails for a root-run test host.
     private func makeUncreatableDirectoryURL(in directory: URL) throws -> URL {
         let blocker = directory.appendingPathComponent("occupied", isDirectory: false)
         try Data("not a directory".utf8).write(to: blocker, options: .atomic)
@@ -279,9 +249,8 @@ struct ProfileManagerDeepTests {
     /// manifest write fails: an atomic write renames its scratch file onto the
     /// destination, and a file can never be renamed over a directory.
     ///
-    /// Returns the sentinel inside that directory. Asserting the sentinel
-    /// survives proves the failed write left the occupied path alone rather
-    /// than clearing it out of the way.
+    /// Returns the sentinel inside, whose survival proves the failed write left
+    /// the occupied path alone.
     @discardableResult
     private func blockManifestPath(in directory: URL) throws -> URL {
         let fileManager = FileManager.default

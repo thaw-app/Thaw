@@ -10,35 +10,25 @@ import SwiftUI
 
 // MARK: - MenuBarSpacerManager
 
-/// Owns the user's spacer items: synthetic status items whose only job is
-/// occupying width between real items. Users position them like any other
-/// item (⌘-drag in the menu bar or via the layout editor).
-///
-/// The status-item mechanics — the autosave prefix that keeps spacers outside
-/// Thaw's own concealment, the two NSStatusItem Visible* defaults, and the
-/// requirement that the button carry a real image to be composited — are the
-/// ones the section-divider spacers validated.
+/// Owns the user's spacer items: status items that only occupy width between
+/// real items. Users position them like any other item.
 @MainActor
 @Observable
 final class MenuBarSpacerManager {
-    /// Deliberately NOT under Thaw.ControlItem. — that prefix marks Thaw's
-    /// immovable anchors (never drag sources, special-cased right-click).
+    /// Not under `Thaw.ControlItem.`, which marks Thaw's immovable anchors.
     /// Spacers are ordinary items: draggable, reorderable, concealable.
     static nonisolated let autosavePrefix = "Thaw.Spacer."
 
-    /// Whether a cached item tag belongs to one of Thaw's user-created
-    /// spacers, so capture consumers (layout editor, search) can identify
-    /// them. Distinct from the section-divider spacers, whose autosave names
-    /// sit under a control-item identifier and end in .Spacer.<index>.
+    /// Whether a cached tag is a user-created spacer. Section-divider spacers
+    /// are separate: they sit under a control-item identifier.
     static nonisolated func isSpacerTag(_ tag: MenuBarItemTag) -> Bool {
         tag.namespace == .thaw && tag.title.hasPrefix(autosavePrefix)
     }
 
     /// Whether one of the live spacer status items owns this window.
     ///
-    /// Identification by window is the reliable path right after creation:
-    /// the button window (and thus the cached tag's title) can lag behind,
-    /// leaving the tag a generic "Item-0" until the title lands.
+    /// Reliable right after creation, when the cached tag can still read as a
+    /// generic "Item-0" until the title lands.
     func ownsWindowID(_ windowID: CGWindowID) -> Bool {
         statusItems.values.contains { item in
             guard
@@ -82,8 +72,7 @@ final class MenuBarSpacerManager {
     }
 
     private func persist() {
-        // An empty set is the default, so clear the key rather than storing
-        // an empty array — keeps defaults read output honest.
+        // Clear the key rather than store an empty array.
         guard !spacers.isEmpty else {
             Defaults.set(nil, forKey: .menuBarSpacers)
             return
@@ -133,9 +122,8 @@ final class MenuBarSpacerManager {
         autosavePrefix + id.uuidString
     }
 
-    /// A slab at the requested width — transparent when no color is set.
-    /// The button must carry a real image either way; a contentless button is
-    /// composited as nothing.
+    /// The button needs a real image even when transparent; a contentless
+    /// button is composited as nothing.
     private static func spacerImage(width: CGFloat, color: IceColor?) -> NSImage {
         let image = NSImage(size: NSSize(width: width, height: 16), flipped: false) { rect in
             if let color, let fill = NSColor(cgColor: color.cgColor) {
@@ -166,8 +154,7 @@ final class MenuBarSpacerManager {
     }
 
     private func reconcileStatusItems() {
-        // Drop items whose spacer is gone, and clean up the autosave litter
-        // so removed spacers can't influence future layout.
+        // Also clear autosave leftovers so removed spacers can't affect layout.
         let wanted = Set(spacers.map(\.id))
         for (id, item) in statusItems where !wanted.contains(id) {
             NSStatusBar.system.removeStatusItem(item)
@@ -192,9 +179,8 @@ final class MenuBarSpacerManager {
 
             let name = Self.autosaveName(for: spacer.id)
 
-            // Seed new spacers just left of the Thaw icon — inside the visible
-            // region, so a freshly added spacer is never born into a concealed
-            // slot — and assert both visibility switches before creation.
+            // Seed new spacers just left of the Thaw icon so they are never
+            // born concealed, and set both visibility switches first.
             if ControlItemDefaults[.preferredPosition, name] == nil {
                 let thawIconPosition: CGFloat =
                     ControlItemDefaults[.preferredPosition, ControlItem.Identifier.visible.rawValue] ?? 0
@@ -209,9 +195,8 @@ final class MenuBarSpacerManager {
             item.button?.imageScaling = .scaleNone
             item.button?.toolTip = String(localized: "\(Constants.displayName) spacer")
             statusItems[spacer.id] = item
-            // The button window often doesn't exist yet at creation time;
-            // without the title, the item cache tags the spacer as a generic
-            // "Item-0" and can't identify it. Retry until the window is up.
+            // The button window often doesn't exist yet, and without a title
+            // the cache tags the spacer as "Item-0". Retry until it's up.
             assertWindowTitle(for: spacer.id, attempt: 0)
             applied[spacer.id] = spacer
             diagLog.info("Created spacer \(spacer.id), width=\(Int(spacer.width))pt")

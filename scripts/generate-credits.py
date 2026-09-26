@@ -17,7 +17,7 @@ import io
 import sys
 from pathlib import Path
 
-# --- Overrides -------------------------------------------------------------
+# Overrides
 
 # Restrict a member to specific source languages (Crowdin names).
 ONLY = {
@@ -41,7 +41,7 @@ EXTRA = {
     "Deutsch": ["Toni Forster (stonerl)"],
 }
 
-# --- Language mapping ------------------------------------------------------
+# Language mapping
 
 LANGUAGES = {
     "Indonesian": ("🇮🇩", "Bahasa Indonesia"),

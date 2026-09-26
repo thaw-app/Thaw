@@ -10,16 +10,13 @@ import Foundation
 import Testing
 @testable import Thaw
 
-/// Characterizes the `Sequence<MenuBarItem>` matching helpers, which are
-/// the identity vocabulary for re-finding an item across window-list
-/// snapshots.
+/// Covers the `Sequence<MenuBarItem>` helpers for re-finding an item across
+/// window-list snapshots.
 ///
-/// `first(matching:)` is exact tag equality — windowID included for
-/// non-system items. `first(matchingTag:pid:)` deliberately ignores
-/// windowIDs, which churn between fetches, and rests identity on the tag
-/// plus the effective PID (sourcePID, falling back to ownerPID). Getting
-/// the fallback wrong strands rehides and click refetches, so the
-/// semantics are pinned here.
+/// `first(matching:)` is exact tag equality, windowID included for non-system
+/// items. `first(matchingTag:pid:)` ignores windowIDs, which churn, and uses
+/// the tag plus sourcePID, falling back to ownerPID. A wrong fallback strands
+/// rehides and click refetches.
 @Suite("Menu bar item matching helpers")
 struct MenuBarItemMatchingTests {
     private func item(
