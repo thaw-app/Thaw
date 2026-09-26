@@ -59,6 +59,10 @@ extension MenuBarItemManager {
         /// The number of attempts that have been made to rehide the item.
         var rehideAttempts = 0
 
+        /// When the item's menu was first seen closed since its last
+        /// interaction. The user's hide-again delay counts from here.
+        var closedSince: Date?
+
         /// The number of times the item was not found on the active space.
         /// Tracked separately from ``rehideAttempts`` to allow more retries
         /// for the "item not found" case (the app may be on another space
@@ -910,6 +914,9 @@ extension MenuBarItemManager {
                 ($0, $0.interfaceState)
             }
             guard !interfaceStates.contains(where: { $0.1 == .showing }) else {
+                for context in temporarilyShownItemContexts {
+                    context.closedSince = nil
+                }
                 MenuBarItemManager.diagLog.debug("Menu bar item interface is shown, so waiting to rehide")
                 runRehideTimer(for: Self.rehidePollInterval)
                 return
@@ -943,6 +950,23 @@ extension MenuBarItemManager {
                 MenuBarItemManager.diagLog.debug("Found recent user input, so waiting to rehide")
                 runRehideTimer(for: Self.rehidePollInterval)
                 return
+            }
+
+            // The user's hide-again delay, counted from the menu closing, so
+            // an accidental click away leaves the item within reach (#342).
+            let delay = appState.settings.general.tempShowInterval
+            if delay > 0 {
+                let now = Date()
+                for context in temporarilyShownItemContexts where context.closedSince == nil {
+                    context.closedSince = now
+                }
+                let closedFor = temporarilyShownItemContexts
+                    .compactMap { $0.closedSince.map { now.timeIntervalSince($0) } }
+                    .min() ?? delay
+                if closedFor < delay {
+                    runRehideTimer(for: min(Self.rehidePollInterval, delay - closedFor))
+                    return
+                }
             }
         }
 

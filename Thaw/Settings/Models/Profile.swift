@@ -47,6 +47,9 @@ nonisolated struct GeneralSettingsSnapshot: Codable {
     var autoRehide: Bool
     var rehideStrategyRawValue: Int
     var rehideInterval: TimeInterval
+    /// Optional so profiles saved before the setting existed still decode;
+    /// a missing value leaves the current setting alone.
+    var tempShowInterval: TimeInterval?
 
     @MainActor
     static func capture(from settings: GeneralSettings) -> GeneralSettingsSnapshot {
@@ -65,7 +68,8 @@ nonisolated struct GeneralSettingsSnapshot: Codable {
             showOnScroll: settings.showOnScroll,
             autoRehide: settings.autoRehide,
             rehideStrategyRawValue: settings.rehideStrategy.rawValue,
-            rehideInterval: settings.rehideInterval
+            rehideInterval: settings.rehideInterval,
+            tempShowInterval: settings.tempShowInterval
         )
     }
 
@@ -93,6 +97,9 @@ nonisolated struct GeneralSettingsSnapshot: Codable {
             settings.rehideStrategy = strategy
         }
         settings.rehideInterval = rehideInterval
+        if let tempShowInterval {
+            settings.tempShowInterval = tempShowInterval
+        }
     }
 }
 

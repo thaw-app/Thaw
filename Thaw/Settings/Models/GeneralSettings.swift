@@ -194,6 +194,16 @@ final class GeneralSettings {
         }
     }
 
+    /// How long a hidden item opened from search or the Thaw Bar stays in the
+    /// menu bar after its menu closes, so an accidental click away does not
+    /// send it straight back.
+    var tempShowInterval = Defaults.DefaultValue.tempShowInterval {
+        didSet {
+            guard oldValue != tempShowInterval else { return }
+            Defaults.set(tempShowInterval, forKey: .tempShowInterval)
+        }
+    }
+
     /// Encoder for properties.
     @ObservationIgnored
     private let encoder = JSONEncoder()
@@ -238,6 +248,7 @@ final class GeneralSettings {
         Defaults.ifPresent(key: .showSettingDescriptions, assign: &showSettingDescriptions)
         Defaults.ifPresent(key: .hideDockIconWhenToggling, assign: &hideDockIconWhenToggling)
         Defaults.ifPresent(key: .rehideInterval, assign: &rehideInterval)
+        Defaults.ifPresent(key: .tempShowInterval, assign: &tempShowInterval)
 
         Defaults.ifPresent(key: .iceBarLocation) { rawValue in
             if let location = IceBarLocation(rawValue: rawValue) {
@@ -319,6 +330,8 @@ final class GeneralSettings {
 
             if key == "rehideInterval", rehideInterval != doubleValue {
                 rehideInterval = doubleValue
+            } else if key == "tempShowInterval", tempShowInterval != doubleValue {
+                tempShowInterval = doubleValue
             }
         }
 

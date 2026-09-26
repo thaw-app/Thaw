@@ -57,6 +57,7 @@ enum SettingsURIHandler {
     /// Double/numeric settings with ranges
     static let doubleKeys: [String] = [
         "rehideInterval",
+        "tempShowInterval",
         "showOnHoverDelay",
         "tooltipDelay",
         "iconRefreshInterval",
@@ -104,6 +105,7 @@ enum SettingsURIHandler {
         "searchIncludeAlwaysHidden": .searchIncludeAlwaysHidden,
         "moveCursorToRevealedItem": .moveCursorToRevealedItem,
         "rehideInterval": .rehideInterval,
+        "tempShowInterval": .tempShowInterval,
         "showOnHoverDelay": .showOnHoverDelay,
         "tooltipDelay": .tooltipDelay,
         "iconRefreshInterval": .iconRefreshInterval,
@@ -113,6 +115,7 @@ enum SettingsURIHandler {
     /// Valid ranges for double settings (min, max, default)
     private static let doubleRanges: [String: (min: Double, max: Double)] = [
         "rehideInterval": (1, 300),
+        "tempShowInterval": (0, 30),
         "showOnHoverDelay": (0, 5),
         "tooltipDelay": (0, 5),
         "iconRefreshInterval": (0, 1),

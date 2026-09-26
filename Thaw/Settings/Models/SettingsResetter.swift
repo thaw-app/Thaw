@@ -47,6 +47,7 @@ extension AppSettings {
         general.autoRehide = Defaults.DefaultValue.autoRehide
         general.rehideStrategy = Defaults.DefaultValue.rehideStrategy
         general.rehideInterval = Defaults.DefaultValue.rehideInterval
+        general.tempShowInterval = Defaults.DefaultValue.tempShowInterval
         general.simpleMode = Defaults.DefaultValue.simpleMode
         general.showSettingDescriptions = Defaults.DefaultValue.showSettingDescriptions
         general.hideDockIconWhenToggling = Defaults.DefaultValue.hideDockIconWhenToggling

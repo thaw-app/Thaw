@@ -175,6 +175,7 @@ nonisolated extension Defaults {
         static let hideDockIconWhenToggling = false
         static let rehideStrategy: RehideStrategy = .smart
         static let rehideInterval: TimeInterval = 15
+        static let tempShowInterval: TimeInterval = 0
 
         // MARK: Advanced Settings
 
@@ -274,6 +275,7 @@ nonisolated extension Defaults {
         case hideDockIconWhenToggling = "HideDockIconWhenToggling"
         case rehideStrategy = "RehideStrategy"
         case rehideInterval = "RehideInterval"
+        case tempShowInterval = "TempShowInterval"
         case displayIceBarConfigurations = "DisplayIceBarConfigurations"
         case globalDisplayConfiguration = "GlobalDisplayConfiguration"
         case knownDisplays = "KnownDisplays"

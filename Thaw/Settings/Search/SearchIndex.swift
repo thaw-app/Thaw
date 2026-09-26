@@ -469,6 +469,17 @@ nonisolated enum SearchIndex {
             property: .general("rehideInterval")
         ),
         SearchEntry(
+            id: "general.tempShowInterval",
+            titleKey: "Hide opened items again after",
+            titleText: "Hide opened items again after",
+            descriptionText: "How long a hidden menu bar item you open from search or the Thaw Bar stays in the menu bar after its menu closes.",
+            pane: .general,
+            sectionKey: "After revealing",
+            sectionText: "After revealing",
+            keywords: ["temp", "temporary", "temporarily shown", "hide again", "seconds", "delay"],
+            property: .general("tempShowInterval")
+        ),
+        SearchEntry(
             id: "advanced.useOptionClickToShowAlwaysHiddenSection",
             titleKey: "Use Option-click to open always-hidden section",
             titleText: "Use Option-click to open always-hidden section",

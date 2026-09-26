@@ -82940,6 +82940,12 @@
           }
         }
       }
+    },
+    "Hide opened items again after" : {
+      "comment" : "Label for the slider that sets how long a hidden menu bar item opened from search or the Thaw Bar stays in the menu bar after its menu closes."
+    },
+    "How long a hidden menu bar item you open from search or the %@ Bar stays in the menu bar after its menu closes." : {
+      "comment" : "Description of the \"Hide opened items again after\" setting. The argument is the app name."
     }
   },
   "version" : "1.1"

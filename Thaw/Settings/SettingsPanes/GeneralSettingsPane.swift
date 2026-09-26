@@ -145,6 +145,26 @@ struct GeneralSettingsPane: View {
         if settings.autoRehide {
             rehideStrategyPicker
         }
+        tempShowIntervalSlider
+    }
+
+    private var tempShowIntervalSlider: some View {
+        LabeledContent {
+            IceSlider(
+                value: $settings.tempShowInterval,
+                in: 0 ... 30,
+                step: 1
+            ) {
+                SecondsLabel(value: settings.tempShowInterval)
+            }
+        } label: {
+            Text("Hide opened items again after")
+                .frame(minWidth: maxSliderLabelWidth, alignment: .leading)
+                .onFrameChange { frame in
+                    maxSliderLabelWidth = max(maxSliderLabelWidth, frame.width)
+                }
+        }
+        .annotation("How long a hidden menu bar item you open from search or the \(Constants.displayName) Bar stays in the menu bar after its menu closes.")
     }
 
     private var rehideStrategyPicker: some View {
