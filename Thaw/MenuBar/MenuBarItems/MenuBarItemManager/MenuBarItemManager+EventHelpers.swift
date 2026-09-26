@@ -492,24 +492,7 @@ extension MenuBarItemManager {
         holder.withLock { $0 }
     }
 
-    private nonisolated func disableEventTaps(_ eventTaps: [EventTap]) {
-        for eventTap in eventTaps {
-            eventTap.disable()
-        }
-    }
-
-    private nonisolated func resumeCancellationIfNeeded(
-        state: EventContinuationState,
-        continuation: CheckedContinuation<Void, any Error>
-    ) {
-        if state.didResume.tryClaimOnce() {
-            continuation.resume(throwing: CancellationError())
-        }
-    }
-
-    /// Resumes the stored continuation by throwing error, if no other
-    /// path has resumed it yet. Used to fail an in-flight event operation
-    /// early instead of waiting out its timeout.
+    /// Fails an in-flight event operation early, unless something already resumed it.
     private nonisolated func resumeFailureIfNeeded(
         state: EventContinuationState,
         error: any Error

@@ -70,20 +70,6 @@ nonisolated struct DesiredLayout: Equatable {
 
 // MARK: - ObservedLayout
 
-/// A snapshot of the menu bar's current state, in the shape the
-/// reconciler needs.
-///
-/// ObservedLayout packages the inputs the orchestrator already
-/// computes (sometimes from Bridging / CacheContext, sometimes from
-/// instance state) into a single typed value, so the reconciler entry
-/// points have a clean signature.
-nonisolated struct ObservedLayout {
-    let items: [MenuBarItem]
-    let controlItems: MenuBarItemManager.ControlItemPair
-    let sectionByWindowID: [CGWindowID: MenuBarSection.Name]
-    let activelyShownTags: Set<String>
-}
-
 // MARK: - ControlUIDs
 
 /// The control item UIDs that mark section boundaries in a desired layout.

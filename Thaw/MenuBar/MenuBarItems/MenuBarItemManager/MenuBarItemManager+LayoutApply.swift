@@ -405,17 +405,7 @@ extension MenuBarItemManager {
         return failedMoves
     }
 
-    /// Wrapper for UI callers; kept separate for clarity in call sites.
-    @MainActor
-    func resetLayoutFromSettingsPane() async throws -> Int {
-        try await resetLayoutToFreshState()
-    }
-
-    /// Ends an in-flight settling period immediately. Used by paths that
-    /// pre-flight a settling period before a potentially-no-op spacing
-    /// apply: when applyOffset turns out not to relaunch anything, the
-    /// pre-flight is cancelled so subsequent restore logic isn't
-    /// suppressed unnecessarily.
+    /// Ends a pre-flighted settling period when a spacing apply relaunched nothing.
     ///
     /// Won't cancel one promoted by a real relaunch wave, or a duplicate
     /// screenParametersChanged would run applyProfileLayout on a half-populated cache.

@@ -1463,15 +1463,6 @@ nonisolated enum LayoutSolver {
         }
     }
 
-    /// Maps a section to its persisted key string.
-    private static nonisolated func sectionKeyFor(_ section: MenuBarSection.Name) -> String {
-        switch section {
-        case .visible: return "visible"
-        case .hidden: return "hidden"
-        case .alwaysHidden: return "alwaysHidden"
-        }
-    }
-
     // MARK: - State flag gates
 
     /// Persist only when no in-flight orchestrator owns the menu bar.

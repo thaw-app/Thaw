@@ -37,24 +37,6 @@ nonisolated extension Bridging {
 
     // MARK: Public Connection API
 
-    /// Returns a value from the main window server connection.
-    ///
-    /// - Parameter key: A key associated with a value in the main
-    ///   window server connection.
-    static func getConnectionProperty(forKey key: String) -> Any? {
-        var value: Unmanaged<CFTypeRef>?
-        let result = cgsCopyConnectionProperty(
-            getMainConnection(),
-            getMainConnection(),
-            key as CFString,
-            &value
-        )
-        if result != .success {
-            diagLog.error("cgsCopyConnectionProperty failed with error \(result.logString)")
-        }
-        return value?.takeRetainedValue()
-    }
-
     /// Sets a value in the main window server connection.
     ///
     /// - Parameters:
@@ -120,21 +102,6 @@ nonisolated extension Bridging {
             return nil
         }
         return CFUUIDCreateString(nil, uuid) as String?
-    }
-
-    /// Returns the display ID for a given UUID string.
-    /// - Parameter uuidString: The UUID string of the display.
-    /// - Returns: The display ID, or nil if not found.
-    static func getDisplayID(for uuidString: String) -> CGDirectDisplayID? {
-        guard let uuid = CFUUIDCreateFromString(nil, uuidString as CFString) else {
-            return nil
-        }
-        return getActiveDisplayList().first { displayID in
-            guard let displayUUID = getDisplayUUID(for: displayID) else {
-                return false
-            }
-            return CFEqual(displayUUID, uuid)
-        }
     }
 
     /// Returns the UUID string for the display with active menu bar.
@@ -300,23 +267,6 @@ nonisolated extension Bridging {
         }
         return result
     }
-
-    /// Returns a reboot-stable key for every space, keyed by space identifier.
-    static func getSpacePersistentKeys() -> [CGSSpaceID: String] {
-        var keys: [CGSSpaceID: String] = [:]
-        for space in getManagedSpaces() {
-            keys[space.spaceID] = space.persistentKey
-        }
-        return keys
-    }
-
-    /// Returns the reboot-stable key for the given space, if one is
-    /// available.
-    ///
-    /// - Parameter spaceID: An identifier for a space.
-    static func getSpacePersistentKey(for spaceID: CGSSpaceID) -> String? {
-        getManagedSpaces().first { $0.spaceID == spaceID }?.persistentKey
-    }
 }
 
 // MARK: - CGSWindow
@@ -357,30 +307,6 @@ nonisolated extension Bridging {
     static func isWindowOnSpace(_ windowID: CGWindowID, _ spaceID: CGSSpaceID) -> Bool {
         let list = getSpaceList(for: windowID, visibleSpacesOnly: false)
         return list.contains(spaceID)
-    }
-
-    /// Returns a Boolean value that indicates whether the given window
-    /// intersects the given display bounds.
-    ///
-    /// - Parameters:
-    ///   - windowID: An identifier for a window.
-    ///   - displayBounds: The bounds of a display.
-    static func windowIntersectsDisplayBounds(_ windowID: CGWindowID, _ displayBounds: CGRect) -> Bool {
-        if let windowBounds = getWindowBounds(for: windowID) {
-            return displayBounds.intersects(windowBounds)
-        }
-        return false
-    }
-
-    /// Returns a Boolean value that indicates whether the given window
-    /// is on the specified display.
-    ///
-    /// - Parameters:
-    ///   - windowID: An identifier for a window.
-    ///   - displayID: An identifier for a display.
-    static func isWindowOnDisplay(_ windowID: CGWindowID, _ displayID: CGDirectDisplayID) -> Bool {
-        let displayBounds = CGDisplayBounds(displayID)
-        return windowIntersectsDisplayBounds(windowID, displayBounds)
     }
 
     /// Returns a Boolean value that indicates whether the given window

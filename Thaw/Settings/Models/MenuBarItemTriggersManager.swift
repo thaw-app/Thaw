@@ -237,12 +237,6 @@ final class MenuBarItemTriggersManager {
         refreshControlledIdentifiers()
     }
 
-    /// The current aggregated system state (for live UI readouts), with
-    /// cached script results merged in.
-    var currentSystemState: SystemState {
-        evaluationState
-    }
-
     /// Returns the current reveal decision using the same live frontmost-app
     /// read used by the move engine.
     func shouldRevealNow(_ trigger: MenuBarItemTrigger) -> Bool {

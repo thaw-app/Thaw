@@ -1927,15 +1927,6 @@ final class MenuBarItemManager {
         return timestamp.duration(to: .now) <= duration
     }
 
-    /// Returns a Boolean value that indicates whether the user moved an item
-    /// themselves within the given duration.
-    func lastUserMoveOperationOccurred(within duration: Duration) -> Bool {
-        guard let timestamp = lastUserMoveOperationTimestamp else {
-            return false
-        }
-        return timestamp.duration(to: .now) <= duration
-    }
-
     /// Records an explicit user move, either a direct Cmd-drag or a completed
     /// drag in the Layout editor.
     ///

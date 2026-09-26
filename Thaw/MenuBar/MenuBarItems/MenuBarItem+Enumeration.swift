@@ -82,10 +82,6 @@ nonisolated extension MenuBarItem {
         let appliedSourcePIDSeeds: [CGWindowID: SourcePIDSeed]
         let windowsByID: [CGWindowID: WindowInfo]
         let controlCenterGeneration: ProcessGeneration?
-
-        var seededSourcePIDWindowIDs: Set<CGWindowID> {
-            Set(appliedSourcePIDSeeds.keys)
-        }
     }
 
     private static let diagLog = DiagLog(category: "MenuBarItem")

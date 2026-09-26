@@ -649,7 +649,6 @@ extension MenuBarItemManager {
 
         var cache: ItemCache
         var temporarilyShownItems = [(MenuBarItem, MoveDestination)]()
-        var relocatedItems = [MenuBarItem]()
         let hiddenControlItemBounds: CGRect
         let alwaysHiddenControlItemBounds: [CGRect]
 

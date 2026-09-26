@@ -29,8 +29,6 @@ nonisolated struct CGSSpaceMask: OptionSet {
 
     static let visible = CGSSpaceMask(rawValue: 1 << 16)
 
-    static let currentSpaceMask: CGSSpaceMask = [.includesUser, .includesCurrent]
-    static let otherSpacesMask: CGSSpaceMask = [.includesOthers, .includesCurrent]
     static let allSpacesMask: CGSSpaceMask = [.includesUser, .includesOthers, .includesCurrent]
     static let allVisibleSpacesMask: CGSSpaceMask = [.visible, .allSpacesMask]
 }
@@ -42,14 +40,6 @@ nonisolated func cgsMainConnectionID() -> CGSConnectionID
 
 @_silgen_name("CGSDefaultConnectionForThread")
 nonisolated func cgsDefaultConnectionForThread() -> CGSConnectionID
-
-@_silgen_name("CGSCopyConnectionProperty")
-nonisolated func cgsCopyConnectionProperty(
-    _ cid: CGSConnectionID,
-    _ targetCID: CGSConnectionID,
-    _ key: CFString,
-    _ outValue: inout Unmanaged<CFTypeRef>?
-) -> CGError
 
 @_silgen_name("CGSSetConnectionProperty")
 nonisolated func cgsSetConnectionProperty(

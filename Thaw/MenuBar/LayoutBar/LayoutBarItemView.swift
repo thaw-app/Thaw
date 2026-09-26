@@ -23,7 +23,6 @@ final class LayoutBarItemView: LayoutBarArrangedView {
         static let placeholderHorizontalInset: CGFloat = 2
         static let placeholderVerticalInset: CGFloat = 2
         static let iconInset: CGFloat = 2
-        static let fallbackSymbolPointSize: CGFloat = 11
         static let unresponsiveBadgeWidth: CGFloat = 15
         static let triggerBadgeWidth: CGFloat = 11
         static let triggerControlledFraction: CGFloat = 0.45

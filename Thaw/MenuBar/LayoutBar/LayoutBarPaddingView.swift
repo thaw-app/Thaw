@@ -405,40 +405,8 @@ final class LayoutBarPaddingView: NSView {
         }
     }
 
-    /// Puts the view and the bar back in order after a drag's move never
-    /// returned.
-    ///
-    /// Lives here rather than inside the watchdog task so its body is not a
-    /// third closure nested inside the two ``move(item:to:sourceContainer:)``
-    /// already opens.
-    private func recoverFromUnreturnedMove(
-        revealedSections: [MenuBarSection],
-        appState: AppState?
-    ) async {
-        await resetStabilizingStateIfNeeded()
-        if !revealedSections.isEmpty {
-            // The move never returned, so the completion path that
-            // re-conceals the sections revealed for the drag (#988)
-            // has not run and may never run. Restore them here, the
-            // same way, and give the spacer a beat to re-park the
-            // divider before the closing cache pass records the
-            // settled bar. Idempotent with a late completion: the
-            // restore recomputes the persisted presentation.
-            await MainActor.run {
-                for section in revealedSections {
-                    section.updateControlItemState(for: nil)
-                }
-            }
-            try? await Task.sleep(for: .milliseconds(250))
-        }
-        guard let appState else { return }
-        await appState.itemManager.cacheItemsRegardless(skipRecentMoveCheck: true)
-        await appState.imageCache.updateCacheWithoutChecks(sections: MenuBarSection.Name.allCases)
-    }
-
-    /// A frozen row accepts only the drag that already owns that freeze. This
-    /// prevents a second cross-row move from being reconciled by the first
-    /// move's eventual thaw.
+    /// A frozen row accepts only the drag that froze it, so the first move's
+    /// thaw can't reconcile a second.
     static nonisolated func canAcceptDrag(
         containerAllowsUpdates: Bool,
         beganInContainer: Bool,

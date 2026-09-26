@@ -84,15 +84,6 @@ struct SystemState: Equatable {
     /// The macOS Energy Mode currently in effect.
     var energyMode: EnergyMode
 
-    /// Whether macOS Low Power Mode is enabled.
-    ///
-    /// Read-only on purpose. A setter would have to invent a mode for
-    /// `false`, and picking `.automatic` would silently destroy `.high` —
-    /// assign ``energyMode`` instead.
-    var isLowPowerMode: Bool {
-        energyMode == .low
-    }
-
     /// The current system thermal pressure.
     var thermalState: ProcessInfo.ThermalState
 

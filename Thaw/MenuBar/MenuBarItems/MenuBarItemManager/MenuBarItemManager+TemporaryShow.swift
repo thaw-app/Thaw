@@ -87,12 +87,6 @@ extension MenuBarItemManager {
             case unknown
         }
 
-        /// A Boolean value that indicates whether the menu bar item's
-        /// interface is showing.
-        var isShowingInterface: Bool {
-            interfaceState == .showing
-        }
-
         /// What is currently known about the item's interface.
         var interfaceState: InterfaceState {
             // The tracked popup window is the most reliable signal.

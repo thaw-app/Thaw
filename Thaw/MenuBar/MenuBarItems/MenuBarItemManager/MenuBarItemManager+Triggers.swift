@@ -219,32 +219,6 @@ extension MenuBarItemManager {
         }
     }
 
-    /// Resolves a released trigger's fresh live identifier after a cache
-    /// refresh. Exact matching wins; a suffix-drift fallback is accepted only
-    /// when the live base identifier has one unambiguous candidate.
-    static nonisolated func unambiguousLiveIdentifier(
-        matching protectedIdentifier: String,
-        in liveIdentifiers: [String],
-        knownBaseIdentifiers: Set<String> = []
-    ) -> String? {
-        if liveIdentifiers.contains(protectedIdentifier) {
-            return protectedIdentifier
-        }
-        guard let protectedBaseID = MenuBarItemTag.resolvedBaseIdentifier(
-            for: protectedIdentifier,
-            knownBaseIdentifiers: knownBaseIdentifiers
-        ) else {
-            return nil
-        }
-        let candidates = liveIdentifiers.filter { identifier in
-            MenuBarItemTag.resolvedBaseIdentifier(
-                for: identifier,
-                knownBaseIdentifiers: knownBaseIdentifiers
-            ) == protectedBaseID
-        }
-        return candidates.count == 1 ? candidates[0] : nil
-    }
-
     enum TriggerMoveResult {
         /// A synthetic move was performed and verified.
         case moved

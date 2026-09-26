@@ -26,11 +26,6 @@ struct PowerState: Equatable {
     /// A Boolean value that indicates whether the battery is currently
     /// charging.
     var isCharging: Bool
-
-    /// A Boolean value that indicates whether the machine has a battery.
-    var hasBattery: Bool {
-        batteryPercentage != nil
-    }
 }
 
 extension PowerState {

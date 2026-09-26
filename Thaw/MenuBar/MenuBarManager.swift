@@ -1411,7 +1411,6 @@ struct MenuBarAverageColorInfo: Hashable {
     /// Sources used to compute the average color of the menu bar.
     enum Source: Hashable {
         case menuBarWindow
-        case desktopWallpaper
     }
 
     /// The average color of the menu bar

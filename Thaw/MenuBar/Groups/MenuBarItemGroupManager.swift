@@ -90,12 +90,6 @@ final class MenuBarItemGroupManager {
         MenuBarItemGroupResolver.resolve(tags: items.map(\.tag), groupSet: groupSet)
     }
 
-    /// The group containing `item` within `items`, if any.
-    func resolvedGroup(containing item: MenuBarItem, in items: [MenuBarItem]) -> ResolvedGroup? {
-        guard let index = items.firstIndex(where: { $0.tag == item.tag }) else { return nil }
-        return MenuBarItemGroupResolver.group(containing: index, tags: items.map(\.tag), groupSet: groupSet)
-    }
-
     /// The items a drag starting on `item` moves as one block, in `items` order.
     /// Returns just `item` when it belongs to no group.
     func dragUnit(for item: MenuBarItem, in items: [MenuBarItem]) -> [MenuBarItem] {
