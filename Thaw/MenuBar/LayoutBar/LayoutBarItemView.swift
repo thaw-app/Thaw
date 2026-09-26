@@ -152,9 +152,9 @@ final class LayoutBarItemView: LayoutBarArrangedView {
         super.init(frame: CGRect(origin: .zero, size: Self.preferredSize(for: item, image: initialImage)))
         unregisterDraggedTypes()
 
-        // Addressing the window's owner lifts the unresolved-placeholder
-        // reason, so the panel offers items it can actually move.
-        isEnabled = item.isMovableAddressingWindowOwner
+        isEnabled = item.isDraggableInLayoutEditor(
+            displayBounds: NSScreen.screens.map { CGDisplayBounds($0.displayID) }
+        )
 
         configureCancellables()
     }

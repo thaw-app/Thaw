@@ -92,6 +92,30 @@ nonisolated struct MenuBarItem: CustomStringConvertible {
         }
     }
 
+    /// Whether the layout editor may start a drag of this item.
+    ///
+    /// An unresolved Control Center slot parked off every display never takes
+    /// a drag, even one addressed to Control Center (#1190). It waits for an
+    /// AX alias instead.
+    func isDraggableInLayoutEditor(displayBounds: [CGRect]) -> Bool {
+        guard isMovableAddressingWindowOwner else {
+            return false
+        }
+        guard immovabilityReason == .unresolvedControlCenterPlaceholder else {
+            return true
+        }
+        let center = CGPoint(x: bounds.midX, y: bounds.midY)
+        return displayBounds.contains { $0.contains(center) }
+    }
+
+    /// Whether a drop may be placed beside this item.
+    ///
+    /// An unresolved Control Center slot can sit parked far from where the
+    /// editor shows it, so a drop beside it lands off-screen and reverts.
+    var isLayoutDropAnchor: Bool {
+        immovabilityReason != .unresolvedControlCenterPlaceholder
+    }
+
     /// A Boolean value that indicates whether this item can be moved.
     ///
     /// Defined through ``immovabilityReason`` so they can't disagree.

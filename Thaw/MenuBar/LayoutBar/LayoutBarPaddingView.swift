@@ -934,23 +934,37 @@ final class LayoutBarPaddingView: NSView {
     }
 
     private func nearestItem(toRightOf index: Int) -> MenuBarItem? {
-        guard arrangedViews.indices.contains(index + 1) else {
-            return nil
-        }
-        for candidateIndex in (index + 1) ..< arrangedViews.count {
-            if case let .item(item) = arrangedViews[candidateIndex].kind {
-                return item
-            }
-        }
-        return nil
+        Self.nearestDropAnchor(in: arrangedItemSlots, from: index, towardRight: true)
     }
 
     private func nearestItem(toLeftOf index: Int) -> MenuBarItem? {
-        guard arrangedViews.indices.contains(index - 1) else {
+        Self.nearestDropAnchor(in: arrangedItemSlots, from: index, towardRight: false)
+    }
+
+    /// The item behind each arranged view, `nil` for non-item views, index for index.
+    private var arrangedItemSlots: [MenuBarItem?] {
+        arrangedViews.map { view in
+            if case let .item(item) = view.kind {
+                return item
+            }
             return nil
         }
-        for candidateIndex in stride(from: index - 1, through: 0, by: -1) {
-            if case let .item(item) = arrangedViews[candidateIndex].kind {
+    }
+
+    /// The closest item on one side of `index` that a drop may sit beside.
+    ///
+    /// Slots skipped as anchors leave the drop to the section's divider
+    /// fallback when nothing else qualifies.
+    static nonisolated func nearestDropAnchor(
+        in slots: [MenuBarItem?],
+        from index: Int,
+        towardRight: Bool
+    ) -> MenuBarItem? {
+        let candidates = towardRight
+            ? Array(slots.indices.filter { $0 > index })
+            : Array(slots.indices.filter { $0 < index }.reversed())
+        for candidate in candidates {
+            if let item = slots[candidate], item.isLayoutDropAnchor {
                 return item
             }
         }
