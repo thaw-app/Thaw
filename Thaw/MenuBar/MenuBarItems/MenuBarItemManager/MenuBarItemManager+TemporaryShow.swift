@@ -529,17 +529,16 @@ extension MenuBarItemManager {
         let preMoveOrigin = Bridging.getWindowBounds(for: item.windowID)?.origin
 
         do {
-            // The fast path used to cap this at 2 attempts to keep a failing
-            // retry loop from being visible as jitter. #1035 is what that
-            // costs: the drop point was the chevron's own edge, AppKit was
-            // free to place the item on either side of it, and two attempts
-            // is one wrong guess away from giving up — which is exactly the
-            // regression the reporter bisected to 2.0.0-beta.2, where the
-            // cap was introduced. 1.2.0 gave this move the full budget and
-            // worked. The bias in ``MoveDestination/targetPoint(in:on:)``
-            // should make the first attempt land; the budget is the net
-            // under it, and it only costs time on the attempts that run.
-            try await move(item: item, to: moveDestination, on: resolvedDisplayID, skipInputPause: true)
+            // Full attempt budget, not a 2-attempt cap: AppKit can place the
+            // item on either side of the chevron's edge, and two attempts is
+            // one wrong guess from giving up (#1035).
+            try await move(
+                item: item,
+                to: moveDestination,
+                on: resolvedDisplayID,
+                skipInputPause: true,
+                options: .init(isUserInitiated: true)
+            )
         } catch {
             MenuBarItemManager.diagLog.error("Error showing item: \(error)")
 
@@ -855,8 +854,14 @@ extension MenuBarItemManager {
             }
 
             do {
-                try await move(item: item, to: destination, on: context.displayID, skipInputPause: true)
-                // Successfully rehidden; remove the pending relocation entry.
+                // Rehiding completes the user's reveal, so it is theirs too.
+                try await move(
+                    item: item,
+                    to: destination,
+                    on: context.displayID,
+                    skipInputPause: true,
+                    options: .init(isUserInitiated: true)
+                )
                 let tagIdentifier = context.tag.tagIdentifier
                 pendingRelocations.removeValue(forKey: tagIdentifier)
                 pendingReturnDestinations.removeValue(forKey: tagIdentifier)

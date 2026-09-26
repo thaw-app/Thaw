@@ -160,6 +160,10 @@ final class MenuBarItemManager {
     /// The single record of which items have been failing, and how.
     let failureLedger = MenuBarItemFailureLedger()
 
+    /// Pauses automatic moves when they run away: icon dancing or repeated
+    /// failed drags. Consulted by every move.
+    let moveCircuitBreaker = MoveCircuitBreaker()
+
     /// When each item's failed automatic move was last presented to the user.
     /// Reports are still written while this presentation cooldown is active.
     var automaticMoveFailureReports = [String: Date]()

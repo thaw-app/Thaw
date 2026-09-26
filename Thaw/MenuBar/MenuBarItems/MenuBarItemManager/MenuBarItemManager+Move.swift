@@ -1597,6 +1597,9 @@ extension MenuBarItemManager {
         /// Runs while the gate is still held, after the move finished but
         /// before another move may enter.
         var didFinishWhileHoldingGate: (@MainActor () -> Void)?
+        /// The user asked for this move, directly or by revealing an item.
+        /// It bypasses the move circuit breaker and, on landing, clears it.
+        var isUserInitiated = false
     }
 
     /// Shorter than the cursor watchdog and queued callers' patience.
@@ -1891,6 +1894,19 @@ extension MenuBarItemManager {
 
         // Nested recovery moves already own the gate.
         if !Self.holdsMoveGate {
+            // Runaway guard. Superseded, not failed: the item did nothing
+            // wrong, so no caller files the refusal against it.
+            if moveCircuitBreaker.isOpen {
+                if !options.isUserInitiated {
+                    MenuBarItemManager.diagLog.debug(
+                        "Move circuit breaker open; skipping automatic move of \(item.logString)"
+                    )
+                    throw EventError.moveSuperseded(item)
+                }
+                MenuBarItemManager.diagLog.info(
+                    "Move circuit breaker open; allowing the user's move of \(item.logString)"
+                )
+            }
             do {
                 try await Self.performWithMoveGate(
                     timeoutProvider: {
@@ -1974,6 +1990,9 @@ extension MenuBarItemManager {
                     throw EventError.moveTimedOut(item)
                 }
                 throw error
+            }
+            if options.isUserInitiated {
+                moveCircuitBreaker.noteUserOverride()
             }
             return
         }
@@ -2077,10 +2096,11 @@ extension MenuBarItemManager {
             return
         }
 
-        // Capture the original cursor position once so the cursor is warped
-        // back to it a single time after all attempts, rather than after each
-        // individual attempt (which caused the cursor to oscillate many times
-        // during a layout reset when items required multiple attempts).
+        if !options.isUserInitiated {
+            moveCircuitBreaker.note(.move(identifier: item.uniqueIdentifier))
+        }
+
+        // Warp back once after all attempts, not per attempt, or the cursor oscillates.
         let mouseLocation = options.hideCursorAcrossAttempts ? try getMouseLocation() : nil
         let cursorOwnershipStartedAt = ContinuousClock.now
         // The default 1 s watchdog is far too short; a premature fire flashes the
@@ -2245,6 +2265,9 @@ extension MenuBarItemManager {
             }
         }
 
+        if !options.isUserInitiated {
+            moveCircuitBreaker.note(.failedMove)
+        }
         try await concludeFailedMove(
             reason: stopReason ?? .other,
             item: item,

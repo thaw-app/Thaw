@@ -314,7 +314,7 @@ final class LayoutBarPaddingView: NSView {
                             item: item,
                             to: target,
                             skipInputPause: true,
-                            options: .init(watchdogTimeout: MenuBarItemManager.layoutWatchdogTimeout)
+                            options: .init(watchdogTimeout: MenuBarItemManager.layoutWatchdogTimeout, isUserInitiated: true)
                         )
                     } catch {
                         // Recover this member like a single move, then keep
@@ -572,7 +572,7 @@ final class LayoutBarPaddingView: NSView {
                     item: item,
                     to: destination,
                     skipInputPause: true,
-                    options: .init(watchdogTimeout: MenuBarItemManager.layoutWatchdogTimeout)
+                    options: .init(watchdogTimeout: MenuBarItemManager.layoutWatchdogTimeout, isUserInitiated: true)
                 )
                 guard isCurrentStabilization(generation) else { return }
                 appState.itemManager.removeTemporarilyShownItemFromCache(with: item.tag)
@@ -637,7 +637,7 @@ final class LayoutBarPaddingView: NSView {
                             item: item,
                             to: destination,
                             skipInputPause: true,
-                            options: .init(watchdogTimeout: MenuBarItemManager.layoutWatchdogTimeout)
+                            options: .init(watchdogTimeout: MenuBarItemManager.layoutWatchdogTimeout, isUserInitiated: true)
                         )
                         guard isCurrentStabilization(generation) else { return }
                         appState.itemManager.removeTemporarilyShownItemFromCache(with: item.tag)
@@ -812,7 +812,7 @@ final class LayoutBarPaddingView: NSView {
                     item: item,
                     to: destination,
                     skipInputPause: true,
-                    options: .init(watchdogTimeout: MenuBarItemManager.layoutWatchdogTimeout)
+                    options: .init(watchdogTimeout: MenuBarItemManager.layoutWatchdogTimeout, isUserInitiated: true)
                 )
                 // Arm the save-gate exemption before stabilizing so the
                 // retry persists.
@@ -1170,7 +1170,7 @@ final class LayoutBarPaddingView: NSView {
                     item: item,
                     to: destination,
                     skipInputPause: true,
-                    options: .init(watchdogTimeout: MenuBarItemManager.layoutWatchdogTimeout)
+                    options: .init(watchdogTimeout: MenuBarItemManager.layoutWatchdogTimeout, isUserInitiated: true)
                 )
                 guard isCurrentStabilization(generation) else { return false }
                 guard await appState.itemManager.refreshCacheAfterLayoutEditorMove() else {
