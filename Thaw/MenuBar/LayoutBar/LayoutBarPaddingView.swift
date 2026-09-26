@@ -297,8 +297,7 @@ final class LayoutBarPaddingView: NSView {
                 guard let self, !Task.isCancelled else { return }
                 await self.resetStabilizingStateIfNeeded(sourceContainer: sourceContainer)
                 guard let appState else { return }
-                await appState.itemManager.cacheItemsRegardless(skipRecentMoveCheck: true)
-                await appState.imageCache.updateCacheWithoutChecks(sections: MenuBarSection.Name.allCases)
+                await Self.recoverAfterUnreturnedMove(revealedSections: [], appState: appState)
             }
 
             var pendingMove: (item: MenuBarItem, destination: MenuBarItemManager.MoveDestination)?
@@ -511,28 +510,7 @@ final class LayoutBarPaddingView: NSView {
                     cancelOwningTask: true
                 ) else { return }
                 guard let appState else { return }
-                // Re-conceal revealed sections; the completion path may never
-                // run.
-                if !revealedSections.isEmpty {
-                    await MainActor.run {
-                        for section in revealedSections {
-                            section.updateControlItemState(for: nil)
-                        }
-                    }
-                    try? await Task.sleep(for: .milliseconds(250))
-                }
-                // Independent so mutual cancellation can't abort it. Retry
-                // until the old owner releases CacheGate; a one-shot refresh
-                // would likely be dropped.
-                Task { [weak appState] in
-                    guard let appState else { return }
-                    guard await appState.itemManager.refreshCacheAfterLayoutEditorMove() else {
-                        return
-                    }
-                    await appState.imageCache.updateCacheWithoutChecks(
-                        sections: MenuBarSection.Name.allCases
-                    )
-                }
+                await Self.recoverAfterUnreturnedMove(revealedSections: revealedSections, appState: appState)
             }
             defer { watchdogTask.cancel() }
             do {
@@ -853,6 +831,32 @@ final class LayoutBarPaddingView: NSView {
         return switch destination {
         case .leftOfItem: itemIndex + 1 == targetIndex
         case .rightOfItem: itemIndex == targetIndex + 1
+        }
+    }
+
+    /// Puts the bar back after a drag's move never returned, once the
+    /// watchdog has thawed the rows.
+    private static func recoverAfterUnreturnedMove(
+        revealedSections: [MenuBarSection],
+        appState: AppState
+    ) async {
+        // The completion path that re-conceals revealed sections may never run.
+        if !revealedSections.isEmpty {
+            await MainActor.run {
+                for section in revealedSections {
+                    section.updateControlItemState(for: nil)
+                }
+            }
+            try? await Task.sleep(for: .milliseconds(250))
+        }
+        // Independent so mutual cancellation can't abort it. Retry until the
+        // old owner releases CacheGate; a one-shot refresh would likely be dropped.
+        Task { [weak appState] in
+            guard let appState else { return }
+            guard await appState.itemManager.refreshCacheAfterLayoutEditorMove() else {
+                return
+            }
+            await appState.imageCache.updateCacheWithoutChecks(sections: MenuBarSection.Name.allCases)
         }
     }
 
