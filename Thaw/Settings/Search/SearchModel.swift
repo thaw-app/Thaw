@@ -77,13 +77,15 @@ final class SearchModel {
     private let searchItems = SearchIndex.entries.map { SearchItem(entry: $0) }
 
     /// Ranks the whole index against `query`, resolving titles against
-    /// `bundle`.
-    ///
-    /// Tests can't switch `Bundle.main`'s localization, so this takes the
-    /// bundle to verify translated matching.
+    /// `bundle`. Tests use it, since `Bundle.main` can't switch localization.
     static func rankedEntries(for query: String, bundle: Bundle) -> [SearchEntry] {
         let items = SearchIndex.entries.map { SearchItem(entry: $0, bundle: bundle) }
-        let results = Fuse(threshold: 0.5).searchSync(query, in: items, by: \.properties)
+        return rankedEntries(for: query, in: items, fuse: Fuse(threshold: 0.5))
+    }
+
+    /// Ranks `items` against `query`, best match first.
+    private static func rankedEntries(for query: String, in items: [SearchItem], fuse: Fuse) -> [SearchEntry] {
+        let results = fuse.searchSync(query, in: items, by: \.properties)
         let scored = results.map { (item: items[$0.index], diffScore: $0.diffScore) }
         return SearchIndex.sortedByRelevance(scored).map(\.entry)
     }
@@ -98,24 +100,18 @@ final class SearchModel {
             return
         }
 
-        let fuseResults = fuse.searchSync(query, in: searchItems, by: \.properties)
-
-        let scored = fuseResults.map { result in
-            (item: searchItems[result.index], diffScore: result.diffScore)
-        }
-
         // Rank globally by relevance, then group by pane preserving the rank
         // order within each pane. Pane order follows the best-scoring entry.
-        let ranked = SearchIndex.sortedByRelevance(scored)
+        let ranked = Self.rankedEntries(for: query, in: searchItems, fuse: fuse)
 
         var grouped: [SettingsNavigationIdentifier: [SearchEntry]] = [:]
         var paneOrder: [SettingsNavigationIdentifier] = []
-        for item in ranked {
-            let pane = item.entry.pane
+        for entry in ranked {
+            let pane = entry.pane
             if grouped[pane] == nil {
                 paneOrder.append(pane)
             }
-            grouped[pane, default: []].append(item.entry)
+            grouped[pane, default: []].append(entry)
         }
 
         displayedGroups = paneOrder.map { pane in
