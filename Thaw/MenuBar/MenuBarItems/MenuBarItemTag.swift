@@ -397,15 +397,9 @@ nonisolated extension MenuBarItemTag {
     /// The tag for the system "FaceTime" item.
     static let faceTime = MenuBarItemTag(namespace: .controlCenter, title: "FaceTime")
 
-    /// The tag for the system "Music Recognition" item.
-    static let musicRecognition = MenuBarItemTag(namespace: .controlCenter, title: "MusicRecognition")
-
     /// The tag for the system item that appears in the menu bar
     /// during recordings started by the macOS "Screenshot" tool.
     static let screenCaptureUI = MenuBarItemTag(namespace: .screenCaptureUI, title: "Item-0")
-
-    /// The tag for the system "Siri" item.
-    static let siri = MenuBarItemTag(namespace: .systemUIServer, title: "Siri")
 
     /// The tag for the system "SSMenuAgent" item (Screen Sharing menu extra).
     ///
@@ -413,9 +407,6 @@ nonisolated extension MenuBarItemTag {
     /// The item visually follows the cursor during the drag, but springs
     /// back to its original position on mouse-up.
     static let ssMenuAgent = MenuBarItemTag(namespace: .ssMenuAgent, title: "Item-0")
-
-    /// The tag for the system "Time Machine" item.
-    static let timeMachine = MenuBarItemTag(namespace: .systemUIServer, title: "com.apple.menuextra.TimeMachine")
 
     /// The tag for the system "Game Mode" item.
     static let gameMode = MenuBarItemTag(namespace: .gamePolicyAgent, title: "Item-0")

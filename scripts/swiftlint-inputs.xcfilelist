@@ -259,7 +259,6 @@ $(SRCROOT)/Thaw/Utilities/MacOSCompatibilityWarning.swift
 $(SRCROOT)/Thaw/Utilities/MaintenanceTools.swift
 $(SRCROOT)/Thaw/Utilities/Migration.swift
 $(SRCROOT)/Thaw/Utilities/MouseHelpers.swift
-$(SRCROOT)/Thaw/Utilities/ObjectStorage.swift
 $(SRCROOT)/Thaw/Utilities/PowerSourceMonitor.swift
 $(SRCROOT)/Thaw/Utilities/PowerState.swift
 $(SRCROOT)/Thaw/Utilities/Predicates.swift

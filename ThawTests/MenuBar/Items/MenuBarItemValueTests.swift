@@ -426,7 +426,11 @@ struct MenuBarItemValueTests {
 
         @Test("A SystemUIServer Time Machine item is reduced to \"Time Machine\"")
         func systemUIServerTimeMachineIsExtracted() {
-            let item = MenuBarItem.fixture(tag: .timeMachine, windowID: 38, sourcePID: testRunnerPID)
+            let item = MenuBarItem.fixture(
+                tag: namespacedTag(.systemUIServer, "com.apple.menuextra.TimeMachine"),
+                windowID: 38,
+                sourcePID: testRunnerPID
+            )
 
             #expect(item.autoDetectedName == "Time Machine")
         }
