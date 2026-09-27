@@ -23,8 +23,8 @@ final class MenuBarLayoutEditorPanel: NSObject, NSPopoverDelegate {
 
     private var popover: NSPopover?
 
-    /// An invisible window used to anchor the popover to the top of the screen.
-    private var anchorWindow: NSWindow?
+    /// Anchors the popover to the top of the screen.
+    private let anchorWindow = PopoverAnchorWindow()
 
     func performSetup(with appState: AppState) {
         self.appState = appState
@@ -34,7 +34,7 @@ final class MenuBarLayoutEditorPanel: NSObject, NSPopoverDelegate {
     func show(on screen: NSScreen, onDone: (() -> Void)? = nil) {
         guard
             let appState,
-            let anchorView = anchorView(for: screen)
+            let anchorView = anchorWindow.anchorView(for: screen)
         else {
             return
         }
@@ -61,7 +61,7 @@ final class MenuBarLayoutEditorPanel: NSObject, NSPopoverDelegate {
         guard popover == nil || (notification.object as? NSPopover) === popover else {
             return
         }
-        anchorWindow?.orderOut(nil)
+        anchorWindow.orderOut()
     }
 
     // MARK: Private
@@ -93,38 +93,6 @@ final class MenuBarLayoutEditorPanel: NSObject, NSPopoverDelegate {
         popover.contentViewController = controller
         popover.contentSize = controller.preferredContentSize
         return popover
-    }
-
-    private func anchorView(for screen: NSScreen) -> NSView? {
-        let window: NSWindow
-        if let anchorWindow {
-            window = anchorWindow
-        } else {
-            let newWindow = NSWindow(
-                contentRect: .init(origin: .zero, size: .init(width: 1, height: 1)),
-                styleMask: .borderless,
-                backing: .buffered,
-                defer: false
-            )
-            newWindow.isReleasedWhenClosed = false
-            newWindow.isOpaque = false
-            newWindow.backgroundColor = .clear
-            newWindow.level = .statusBar
-            newWindow.ignoresMouseEvents = true
-            newWindow.hasShadow = false
-            newWindow.contentView = NSView(
-                frame: .init(origin: .zero, size: .init(width: 1, height: 1))
-            )
-            anchorWindow = newWindow
-            window = newWindow
-        }
-
-        let frame = screen.visibleFrame
-        let origin = CGPoint(x: frame.midX, y: frame.maxY - window.frame.height)
-        window.setFrameOrigin(origin)
-        window.orderFrontRegardless()
-
-        return window.contentView
     }
 }
 

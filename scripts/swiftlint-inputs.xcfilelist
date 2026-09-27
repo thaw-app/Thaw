@@ -133,6 +133,7 @@ $(SRCROOT)/Thaw/MenuBar/MenuBarItems/XPCSession+CancellableSend.swift
 $(SRCROOT)/Thaw/MenuBar/MenuBarManager.swift
 $(SRCROOT)/Thaw/MenuBar/MenuBarSection.swift
 $(SRCROOT)/Thaw/MenuBar/MenuBarSectionLayout.swift
+$(SRCROOT)/Thaw/MenuBar/PopoverAnchorWindow.swift
 $(SRCROOT)/Thaw/MenuBar/PresentationMonitor.swift
 $(SRCROOT)/Thaw/MenuBar/Search/MenuBarSearchModel.swift
 $(SRCROOT)/Thaw/MenuBar/Search/MenuBarSearchPanel.swift
