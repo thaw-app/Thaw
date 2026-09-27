@@ -22072,8 +22072,8 @@
         },
         "pl" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Turn on Location in Trigger Sources and grant permission to capture your current location."
+            "state" : "translated",
+            "value" : "Włącz opcję „Lokalizacja” w sekcji „Źródła wyzwalaczy” i zezwól na pobranie danych o swojej bieżącej lokalizacji."
           }
         },
         "pt-BR" : {
@@ -23636,8 +23636,8 @@
         },
         "pl" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "This condition is turned off in Trigger Sources, so the trigger won't run."
+            "state" : "translated",
+            "value" : "Ten warunek jest wyłączony w Źródłach wyzwalaczy, więc wyzwalacz się nie uruchomi."
           }
         },
         "pt-BR" : {
@@ -24164,10 +24164,242 @@
       }
     },
     "This version of Thaw is not yet compatible with macOS %lld. Support is coming through the alpha and beta update channels, and preview builds are available on GitHub Releases." : {
-      "comment" : "Message of the alert shown on a macOS release this version doesn't support, when no updater is available to switch channels. The argument is the macOS major version."
+      "comment" : "Message of the alert shown on a macOS release this version doesn't support, when no updater is available to switch channels. The argument is the macOS major version.",
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "This version of Thaw is not yet compatible with macOS %lld. Support is coming through the alpha and beta update channels, and preview builds are available on GitHub Releases."
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "This version of Thaw is not yet compatible with macOS %lld. Support is coming through the alpha and beta update channels, and preview builds are available on GitHub Releases."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "This version of Thaw is not yet compatible with macOS %lld. Support is coming through the alpha and beta update channels, and preview builds are available on GitHub Releases."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "This version of Thaw is not yet compatible with macOS %lld. Support is coming through the alpha and beta update channels, and preview builds are available on GitHub Releases."
+          }
+        },
+        "hu" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "This version of Thaw is not yet compatible with macOS %lld. Support is coming through the alpha and beta update channels, and preview builds are available on GitHub Releases."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "This version of Thaw is not yet compatible with macOS %lld. Support is coming through the alpha and beta update channels, and preview builds are available on GitHub Releases."
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "This version of Thaw is not yet compatible with macOS %lld. Support is coming through the alpha and beta update channels, and preview builds are available on GitHub Releases."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "This version of Thaw is not yet compatible with macOS %lld. Support is coming through the alpha and beta update channels, and preview builds are available on GitHub Releases."
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "This version of Thaw is not yet compatible with macOS %lld. Support is coming through the alpha and beta update channels, and preview builds are available on GitHub Releases."
+          }
+        },
+        "nl" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "This version of Thaw is not yet compatible with macOS %lld. Support is coming through the alpha and beta update channels, and preview builds are available on GitHub Releases."
+          }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "This version of Thaw is not yet compatible with macOS %lld. Support is coming through the alpha and beta update channels, and preview builds are available on GitHub Releases."
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "This version of Thaw is not yet compatible with macOS %lld. Support is coming through the alpha and beta update channels, and preview builds are available on GitHub Releases."
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "This version of Thaw is not yet compatible with macOS %lld. Support is coming through the alpha and beta update channels, and preview builds are available on GitHub Releases."
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "This version of Thaw is not yet compatible with macOS %lld. Support is coming through the alpha and beta update channels, and preview builds are available on GitHub Releases."
+          }
+        },
+        "tr" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "This version of Thaw is not yet compatible with macOS %lld. Support is coming through the alpha and beta update channels, and preview builds are available on GitHub Releases."
+          }
+        },
+        "uk" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "This version of Thaw is not yet compatible with macOS %lld. Support is coming through the alpha and beta update channels, and preview builds are available on GitHub Releases."
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "This version of Thaw is not yet compatible with macOS %lld. Support is coming through the alpha and beta update channels, and preview builds are available on GitHub Releases."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "This version of Thaw is not yet compatible with macOS %lld. Support is coming through the alpha and beta update channels, and preview builds are available on GitHub Releases."
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "This version of Thaw is not yet compatible with macOS %lld. Support is coming through the alpha and beta update channels, and preview builds are available on GitHub Releases."
+          }
+        }
+      }
     },
     "This version of Thaw is not yet compatible with macOS %lld. Support is coming through the alpha and beta update channels, which carry the rewritten app. Thaw can switch you to beta updates and check for a build now. If none has been published yet, it opens the preview builds on GitHub." : {
-      "comment" : "Message of the alert shown on a macOS release this version doesn't support, offering to switch to beta updates. The argument is the macOS major version."
+      "comment" : "Message of the alert shown on a macOS release this version doesn't support, offering to switch to beta updates. The argument is the macOS major version.",
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "This version of Thaw is not yet compatible with macOS %lld. Support is coming through the alpha and beta update channels, which carry the rewritten app. Thaw can switch you to beta updates and check for a build now. If none has been published yet, it opens the preview builds on GitHub."
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "This version of Thaw is not yet compatible with macOS %lld. Support is coming through the alpha and beta update channels, which carry the rewritten app. Thaw can switch you to beta updates and check for a build now. If none has been published yet, it opens the preview builds on GitHub."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "This version of Thaw is not yet compatible with macOS %lld. Support is coming through the alpha and beta update channels, which carry the rewritten app. Thaw can switch you to beta updates and check for a build now. If none has been published yet, it opens the preview builds on GitHub."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "This version of Thaw is not yet compatible with macOS %lld. Support is coming through the alpha and beta update channels, which carry the rewritten app. Thaw can switch you to beta updates and check for a build now. If none has been published yet, it opens the preview builds on GitHub."
+          }
+        },
+        "hu" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "This version of Thaw is not yet compatible with macOS %lld. Support is coming through the alpha and beta update channels, which carry the rewritten app. Thaw can switch you to beta updates and check for a build now. If none has been published yet, it opens the preview builds on GitHub."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "This version of Thaw is not yet compatible with macOS %lld. Support is coming through the alpha and beta update channels, which carry the rewritten app. Thaw can switch you to beta updates and check for a build now. If none has been published yet, it opens the preview builds on GitHub."
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "This version of Thaw is not yet compatible with macOS %lld. Support is coming through the alpha and beta update channels, which carry the rewritten app. Thaw can switch you to beta updates and check for a build now. If none has been published yet, it opens the preview builds on GitHub."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "This version of Thaw is not yet compatible with macOS %lld. Support is coming through the alpha and beta update channels, which carry the rewritten app. Thaw can switch you to beta updates and check for a build now. If none has been published yet, it opens the preview builds on GitHub."
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "This version of Thaw is not yet compatible with macOS %lld. Support is coming through the alpha and beta update channels, which carry the rewritten app. Thaw can switch you to beta updates and check for a build now. If none has been published yet, it opens the preview builds on GitHub."
+          }
+        },
+        "nl" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "This version of Thaw is not yet compatible with macOS %lld. Support is coming through the alpha and beta update channels, which carry the rewritten app. Thaw can switch you to beta updates and check for a build now. If none has been published yet, it opens the preview builds on GitHub."
+          }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "This version of Thaw is not yet compatible with macOS %lld. Support is coming through the alpha and beta update channels, which carry the rewritten app. Thaw can switch you to beta updates and check for a build now. If none has been published yet, it opens the preview builds on GitHub."
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "This version of Thaw is not yet compatible with macOS %lld. Support is coming through the alpha and beta update channels, which carry the rewritten app. Thaw can switch you to beta updates and check for a build now. If none has been published yet, it opens the preview builds on GitHub."
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "This version of Thaw is not yet compatible with macOS %lld. Support is coming through the alpha and beta update channels, which carry the rewritten app. Thaw can switch you to beta updates and check for a build now. If none has been published yet, it opens the preview builds on GitHub."
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "This version of Thaw is not yet compatible with macOS %lld. Support is coming through the alpha and beta update channels, which carry the rewritten app. Thaw can switch you to beta updates and check for a build now. If none has been published yet, it opens the preview builds on GitHub."
+          }
+        },
+        "tr" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "This version of Thaw is not yet compatible with macOS %lld. Support is coming through the alpha and beta update channels, which carry the rewritten app. Thaw can switch you to beta updates and check for a build now. If none has been published yet, it opens the preview builds on GitHub."
+          }
+        },
+        "uk" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "This version of Thaw is not yet compatible with macOS %lld. Support is coming through the alpha and beta update channels, which carry the rewritten app. Thaw can switch you to beta updates and check for a build now. If none has been published yet, it opens the preview builds on GitHub."
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "This version of Thaw is not yet compatible with macOS %lld. Support is coming through the alpha and beta update channels, which carry the rewritten app. Thaw can switch you to beta updates and check for a build now. If none has been published yet, it opens the preview builds on GitHub."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "This version of Thaw is not yet compatible with macOS %lld. Support is coming through the alpha and beta update channels, which carry the rewritten app. Thaw can switch you to beta updates and check for a build now. If none has been published yet, it opens the preview builds on GitHub."
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "This version of Thaw is not yet compatible with macOS %lld. Support is coming through the alpha and beta update channels, which carry the rewritten app. Thaw can switch you to beta updates and check for a build now. If none has been published yet, it opens the preview builds on GitHub."
+          }
+        }
+      }
     },
     "This will reset all settings to their default values. This action cannot be undone." : {
       "comment" : "A message displayed in an alert when the user confirms resetting all settings.",
@@ -36174,7 +36406,123 @@
       }
     },
     "Switch to Beta Updates" : {
-      "comment" : "Button in the unsupported-macOS alert that switches the app to beta updates and checks for a compatible build."
+      "comment" : "Button in the unsupported-macOS alert that switches the app to beta updates and checks for a compatible build.",
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Switch to Beta Updates"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Switch to Beta Updates"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Switch to Beta Updates"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Switch to Beta Updates"
+          }
+        },
+        "hu" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Switch to Beta Updates"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Switch to Beta Updates"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Switch to Beta Updates"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Switch to Beta Updates"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Switch to Beta Updates"
+          }
+        },
+        "nl" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Switch to Beta Updates"
+          }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Switch to Beta Updates"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Switch to Beta Updates"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Switch to Beta Updates"
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Switch to Beta Updates"
+          }
+        },
+        "tr" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Switch to Beta Updates"
+          }
+        },
+        "uk" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Switch to Beta Updates"
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Switch to Beta Updates"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Switch to Beta Updates"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Switch to Beta Updates"
+          }
+        }
+      }
     },
     "System Default" : {
       "localizations" : {
@@ -45757,8 +46105,8 @@
         },
         "pl" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Automatically reveal a menu bar item while a condition is met, then hide it again when the condition no longer applies. Turn on more condition types in Trigger Sources."
+            "state" : "translated",
+            "value" : "Automatycznie pokazuj element paska menu, gdy dany warunek jest spełniony, a następnie ukrywaj go, gdy przestanie być spełniony. Włącz więcej typów warunków w sekcji Źródła wyzwalaczy."
           }
         },
         "pt-BR" : {
@@ -72541,8 +72889,8 @@
         },
         "pl" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Trigger Sources"
+            "state" : "translated",
+            "value" : "Źródła wyzwalaczy"
           }
         },
         "pt-BR" : {
@@ -81579,8 +81927,8 @@
         },
         "pl" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Turn on the trigger sources you want to use. Each one adds its conditions to the Triggers pane and starts a background monitor. Battery and power conditions are always available."
+            "state" : "translated",
+            "value" : "Aktywuj wybrane źródła wyzwalaczy. Po włączeniu każdego źródła jego warunki pojawią się w panelu Wyzwalacze, a monitorowanie w tle zostanie uruchomione. Warunki dotyczące baterii i zasilania są dostępne niezależnie od tego wyboru."
           }
         },
         "pt-BR" : {
@@ -82597,10 +82945,242 @@
       }
     },
     "Hide opened items again after" : {
-      "comment" : "Label for the slider that sets how long a hidden menu bar item opened from search or the Thaw Bar stays in the menu bar after its menu closes."
+      "comment" : "Label for the slider that sets how long a hidden menu bar item opened from search or the Thaw Bar stays in the menu bar after its menu closes.",
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Hide opened items again after"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Hide opened items again after"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Hide opened items again after"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Hide opened items again after"
+          }
+        },
+        "hu" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Hide opened items again after"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Hide opened items again after"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Hide opened items again after"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Hide opened items again after"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Hide opened items again after"
+          }
+        },
+        "nl" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Hide opened items again after"
+          }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Hide opened items again after"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Hide opened items again after"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Hide opened items again after"
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Hide opened items again after"
+          }
+        },
+        "tr" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Hide opened items again after"
+          }
+        },
+        "uk" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Hide opened items again after"
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Hide opened items again after"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Hide opened items again after"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Hide opened items again after"
+          }
+        }
+      }
     },
     "How long a hidden menu bar item you open from search or the %@ Bar stays in the menu bar after its menu closes." : {
-      "comment" : "Description of the \"Hide opened items again after\" setting. The argument is the app name."
+      "comment" : "Description of the \"Hide opened items again after\" setting. The argument is the app name.",
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "How long a hidden menu bar item you open from search or the %@ Bar stays in the menu bar after its menu closes."
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "How long a hidden menu bar item you open from search or the %@ Bar stays in the menu bar after its menu closes."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "How long a hidden menu bar item you open from search or the %@ Bar stays in the menu bar after its menu closes."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "How long a hidden menu bar item you open from search or the %@ Bar stays in the menu bar after its menu closes."
+          }
+        },
+        "hu" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "How long a hidden menu bar item you open from search or the %@ Bar stays in the menu bar after its menu closes."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "How long a hidden menu bar item you open from search or the %@ Bar stays in the menu bar after its menu closes."
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "How long a hidden menu bar item you open from search or the %@ Bar stays in the menu bar after its menu closes."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "How long a hidden menu bar item you open from search or the %@ Bar stays in the menu bar after its menu closes."
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "How long a hidden menu bar item you open from search or the %@ Bar stays in the menu bar after its menu closes."
+          }
+        },
+        "nl" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "How long a hidden menu bar item you open from search or the %@ Bar stays in the menu bar after its menu closes."
+          }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "How long a hidden menu bar item you open from search or the %@ Bar stays in the menu bar after its menu closes."
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "How long a hidden menu bar item you open from search or the %@ Bar stays in the menu bar after its menu closes."
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "How long a hidden menu bar item you open from search or the %@ Bar stays in the menu bar after its menu closes."
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "How long a hidden menu bar item you open from search or the %@ Bar stays in the menu bar after its menu closes."
+          }
+        },
+        "tr" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "How long a hidden menu bar item you open from search or the %@ Bar stays in the menu bar after its menu closes."
+          }
+        },
+        "uk" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "How long a hidden menu bar item you open from search or the %@ Bar stays in the menu bar after its menu closes."
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "How long a hidden menu bar item you open from search or the %@ Bar stays in the menu bar after its menu closes."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "How long a hidden menu bar item you open from search or the %@ Bar stays in the menu bar after its menu closes."
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "How long a hidden menu bar item you open from search or the %@ Bar stays in the menu bar after its menu closes."
+          }
+        }
+      }
     }
   },
   "version" : "1.1"
