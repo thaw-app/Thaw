@@ -7,13 +7,26 @@ The `release.yml` workflow reads the section matching the release tag
 (`## [tag]`) and uses it as the release notes for both the GitHub Release
 and the Sparkle appcast, unless overridden with the `release_notes` input.
 
-## [2.1.0-beta.6] - Unreleased
+## [2.1.0-beta.6] - 2026-09-26
 
 **macOS 26 only**
+
+Thaw stops rearranging your menu bar in a loop, drops into Always Hidden stay put, and macOS 27 users are pointed at the right update channel.
 
 ### New
 
 - **Opened items can stay a while after their menu closes.** A hidden item you open from search or the Thaw Bar went back as soon as its menu closed, so one click in the wrong place sent it away and you had to find it again. "Hide opened items again after" (Settings > General > After revealing) keeps it in the menu bar for up to 30 seconds after the menu closes. It starts at 0 seconds, which works as before. [#342](https://github.com/thaw-app/Thaw/issues/342)
+- **Thaw pauses its own moves when they go wrong.** When the menu bar kept putting an item back, Thaw could drag it again and again, so your icons shuffled around. Failed moves also kept hiding the pointer while Thaw retried. Thaw now notices both and pauses its automatic moves for a minute, and longer if it happens again. Your own drags always go through, and a drag that lands ends the pause.
+
+### Fixes
+
+1. **Items dropped into Always Hidden stay there.** When Always Hidden held only a Control Center item whose app Thaw couldn't identify, a dragged item landed off-screen and jumped back to the visible section. Layout now places the drop at the edge of the section, and no longer lets you drag that Control Center item while it's parked out of sight. [#1190](https://github.com/thaw-app/Thaw/issues/1190)
+2. **The Thaw icon stays put after reconnecting a display on a notched Mac.** While macOS briefly reported Control Center in the wrong place, Thaw could restore your saved layout against that position and move the Thaw icon far to the left. It now waits for the menu bar to settle first.
+
+### Updates
+
+- **The macOS 27 notice sends you to beta updates.** If you run this version on macOS 27, the notice now says support comes through the alpha and beta channels, and its button switches you to beta updates. Until the first 3.0 beta is out, the beta channel on macOS 27 also offers the 3.0 alphas, so there's always a build that runs. Nothing changes on macOS 26.
+- **Under the hood.** A large cleanup: shorter code comments, less unused code, and the biggest source files split up. None of it should change how Thaw behaves. If something does, please report it.
 
 ## [3.0.0-alpha.7] - 2026-09-25
 
