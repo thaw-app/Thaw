@@ -310,8 +310,10 @@ extension MenuBarItemManager {
             guard let self else { return }
             // Re-entering applySavedLayout would live-lock on windowID churn.
             await self.cacheItemsRegardless(
-                skipRecentMoveCheck: true,
-                skipSavedLayoutApply: true
+                options: .init(
+                    skipRecentMoveCheck: true,
+                    skipSavedLayoutApply: true
+                )
             )
             guard let appState = self.appState else { return }
             appState.imageCache.performCacheCleanup()

@@ -288,7 +288,7 @@ extension MenuBarItemManager {
         await withCheckedContinuation { (continuation: CheckedContinuation<Void, Never>) in
             let token = self.addBackgroundCacheWaiter(continuation)
             Task { [weak self] in
-                await self?.cacheItemsRegardless(skipRecentMoveCheck: true, waiterToken: token)
+                await self?.cacheItemsRegardless(options: .init(skipRecentMoveCheck: true), waiterToken: token)
             }
             // Watchdog: the cache call can bail before the gate or its nested recache
             // may never run. Whoever removes the token first resumes.

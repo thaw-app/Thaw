@@ -61,7 +61,7 @@ extension MenuBarItemManager {
         triggerReleaseRecacheTask = Task { [weak self] in
             try? await Task.sleep(for: .seconds(6))
             guard !Task.isCancelled, let self else { return }
-            await self.cacheItemsRegardless(skipRecentMoveCheck: true)
+            await self.cacheItemsRegardless(options: .init(skipRecentMoveCheck: true))
             // Don't clear the handle: it may belong to a newer release's task.
         }
     }

@@ -74,20 +74,33 @@ extension MenuBarItemManager {
         return recentItemWindowIDCycles.reduce(into: Set()) { $0.formUnion($1) }
     }
 
+    /// Flags that shape one cache pass. Every field defaults to a plain pass.
+    struct CacheOptions {
+        var skipRecentMoveCheck = false
+        var resolveSourcePID = true
+        var reuseCachedIdentities = false
+        var skipSavedLayoutApply = false
+        var suppressAutomaticMoves = false
+        var suppressSavedOrderPersistence = false
+        var bypassSavedLayoutCooldown = false
+        var forcePersistSavedOrder = false
+    }
+
     /// Caches the current items unconditionally, fixing the control item order first.
     func cacheItemsRegardless(
         _ currentItemWindowIDs: [CGWindowID]? = nil,
-        skipRecentMoveCheck: Bool = false,
-        resolveSourcePID: Bool = true,
-        reuseCachedIdentities: Bool = false,
-        skipSavedLayoutApply: Bool = false,
-        suppressAutomaticMoves: Bool = false,
-        suppressSavedOrderPersistence: Bool = false,
-        bypassSavedLayoutCooldown: Bool = false,
-        forcePersistSavedOrder: Bool = false,
+        options: CacheOptions = CacheOptions(),
         waiterToken: Int? = nil,
         cacheAttempt: CacheAttempt? = nil
     ) async {
+        let skipRecentMoveCheck = options.skipRecentMoveCheck
+        let resolveSourcePID = options.resolveSourcePID
+        let reuseCachedIdentities = options.reuseCachedIdentities
+        let skipSavedLayoutApply = options.skipSavedLayoutApply
+        let suppressAutomaticMoves = options.suppressAutomaticMoves
+        let suppressSavedOrderPersistence = options.suppressSavedOrderPersistence
+        let bypassSavedLayoutCooldown = options.bypassSavedLayoutCooldown
+        let forcePersistSavedOrder = options.forcePersistSavedOrder
         MenuBarItemManager.diagLog.debug(
             "cacheItemsRegardless: entering (skipRecentMoveCheck=\(skipRecentMoveCheck), hasCurrentItemWindowIDs=\(currentItemWindowIDs != nil), resolveSourcePID=\(resolveSourcePID), reuseCachedIdentities=\(reuseCachedIdentities), skipSavedLayoutApply=\(skipSavedLayoutApply), suppressAutomaticMoves=\(suppressAutomaticMoves), suppressSavedOrderPersistence=\(suppressSavedOrderPersistence), bypassSavedLayoutCooldown=\(bypassSavedLayoutCooldown), forcePersistSavedOrder=\(forcePersistSavedOrder))"
         )
@@ -483,17 +496,19 @@ extension MenuBarItemManager {
                 Task { [weak self] in
                     try? await Task.sleep(for: MenuBarItemManager.uiSettleDelay)
                     await self?.cacheItemsRegardless(
-                        skipRecentMoveCheck: true,
-                        resolveSourcePID: resolveSourcePID,
-                        reuseCachedIdentities: reuseCachedIdentities,
-                        skipSavedLayoutApply: skipSavedLayoutApply
-                            || controlItemOrderOutcome.shouldSuppressAutomaticMovesDuringRecache,
-                        suppressAutomaticMoves: suppressAutomaticMoves
-                            || controlItemOrderOutcome.shouldSuppressAutomaticMovesDuringRecache,
-                        suppressSavedOrderPersistence: suppressSavedOrderPersistence
-                            || controlItemOrderOutcome.shouldSuppressSavedOrderPersistenceDuringRecache,
-                        bypassSavedLayoutCooldown: bypassSavedLayoutCooldown,
-                        forcePersistSavedOrder: forcePersistSavedOrder,
+                        options: .init(
+                            skipRecentMoveCheck: true,
+                            resolveSourcePID: resolveSourcePID,
+                            reuseCachedIdentities: reuseCachedIdentities,
+                            skipSavedLayoutApply: skipSavedLayoutApply
+                                || controlItemOrderOutcome.shouldSuppressAutomaticMovesDuringRecache,
+                            suppressAutomaticMoves: suppressAutomaticMoves
+                                || controlItemOrderOutcome.shouldSuppressAutomaticMovesDuringRecache,
+                            suppressSavedOrderPersistence: suppressSavedOrderPersistence
+                                || controlItemOrderOutcome.shouldSuppressSavedOrderPersistenceDuringRecache,
+                            bypassSavedLayoutCooldown: bypassSavedLayoutCooldown,
+                            forcePersistSavedOrder: forcePersistSavedOrder
+                        ),
                         waiterToken: waiterToken
                     )
                 }
@@ -592,17 +607,19 @@ extension MenuBarItemManager {
                     // The launch restore runs in this recache. After a failed accepted
                     // attempt, movers are suppressed so it can't retry-loop.
                     await self?.cacheItemsRegardless(
-                        skipRecentMoveCheck: true,
-                        resolveSourcePID: resolveSourcePID,
-                        reuseCachedIdentities: reuseCachedIdentities,
-                        skipSavedLayoutApply: skipSavedLayoutApply
-                            || newLeftmostOutcome.shouldSuppressAutomaticMovesDuringRecache,
-                        suppressAutomaticMoves: suppressAutomaticMoves
-                            || newLeftmostOutcome.shouldSuppressAutomaticMovesDuringRecache,
-                        suppressSavedOrderPersistence: suppressSavedOrderPersistence
-                            || newLeftmostOutcome.shouldSuppressSavedOrderPersistenceDuringRecache,
-                        bypassSavedLayoutCooldown: bypassSavedLayoutCooldown,
-                        forcePersistSavedOrder: forcePersistSavedOrder,
+                        options: .init(
+                            skipRecentMoveCheck: true,
+                            resolveSourcePID: resolveSourcePID,
+                            reuseCachedIdentities: reuseCachedIdentities,
+                            skipSavedLayoutApply: skipSavedLayoutApply
+                                || newLeftmostOutcome.shouldSuppressAutomaticMovesDuringRecache,
+                            suppressAutomaticMoves: suppressAutomaticMoves
+                                || newLeftmostOutcome.shouldSuppressAutomaticMovesDuringRecache,
+                            suppressSavedOrderPersistence: suppressSavedOrderPersistence
+                                || newLeftmostOutcome.shouldSuppressSavedOrderPersistenceDuringRecache,
+                            bypassSavedLayoutCooldown: bypassSavedLayoutCooldown,
+                            forcePersistSavedOrder: forcePersistSavedOrder
+                        ),
                         waiterToken: waiterToken
                     )
                 }
@@ -629,17 +646,19 @@ extension MenuBarItemManager {
                 Task { [weak self] in
                     try? await Task.sleep(for: MenuBarItemManager.uiSettleDelay)
                     await self?.cacheItemsRegardless(
-                        skipRecentMoveCheck: true,
-                        resolveSourcePID: resolveSourcePID,
-                        reuseCachedIdentities: reuseCachedIdentities,
-                        skipSavedLayoutApply: skipSavedLayoutApply
-                            || pendingRelocationOutcome.shouldSuppressAutomaticMovesDuringRecache,
-                        suppressAutomaticMoves: suppressAutomaticMoves
-                            || pendingRelocationOutcome.shouldSuppressAutomaticMovesDuringRecache,
-                        suppressSavedOrderPersistence: suppressSavedOrderPersistence
-                            || pendingRelocationOutcome.shouldSuppressSavedOrderPersistenceDuringRecache,
-                        bypassSavedLayoutCooldown: bypassSavedLayoutCooldown,
-                        forcePersistSavedOrder: forcePersistSavedOrder,
+                        options: .init(
+                            skipRecentMoveCheck: true,
+                            resolveSourcePID: resolveSourcePID,
+                            reuseCachedIdentities: reuseCachedIdentities,
+                            skipSavedLayoutApply: skipSavedLayoutApply
+                                || pendingRelocationOutcome.shouldSuppressAutomaticMovesDuringRecache,
+                            suppressAutomaticMoves: suppressAutomaticMoves
+                                || pendingRelocationOutcome.shouldSuppressAutomaticMovesDuringRecache,
+                            suppressSavedOrderPersistence: suppressSavedOrderPersistence
+                                || pendingRelocationOutcome.shouldSuppressSavedOrderPersistenceDuringRecache,
+                            bypassSavedLayoutCooldown: bypassSavedLayoutCooldown,
+                            forcePersistSavedOrder: forcePersistSavedOrder
+                        ),
                         waiterToken: waiterToken
                     )
                 }
@@ -883,17 +902,19 @@ extension MenuBarItemManager {
                 Task { [weak self] in
                     try? await Task.sleep(for: MenuBarItemManager.uiSettleDelay)
                     await self?.cacheItemsRegardless(
-                        skipRecentMoveCheck: true,
-                        resolveSourcePID: resolveSourcePID,
-                        reuseCachedIdentities: reuseCachedIdentities,
-                        skipSavedLayoutApply: skipSavedLayoutApply
-                            || notchRebalanceOutcome.shouldSuppressAutomaticMovesDuringRecache,
-                        suppressAutomaticMoves: suppressAutomaticMoves
-                            || notchRebalanceOutcome.shouldSuppressAutomaticMovesDuringRecache,
-                        suppressSavedOrderPersistence: suppressSavedOrderPersistence
-                            || notchRebalanceOutcome.shouldSuppressSavedOrderPersistenceDuringRecache,
-                        bypassSavedLayoutCooldown: bypassSavedLayoutCooldown,
-                        forcePersistSavedOrder: forcePersistSavedOrder,
+                        options: .init(
+                            skipRecentMoveCheck: true,
+                            resolveSourcePID: resolveSourcePID,
+                            reuseCachedIdentities: reuseCachedIdentities,
+                            skipSavedLayoutApply: skipSavedLayoutApply
+                                || notchRebalanceOutcome.shouldSuppressAutomaticMovesDuringRecache,
+                            suppressAutomaticMoves: suppressAutomaticMoves
+                                || notchRebalanceOutcome.shouldSuppressAutomaticMovesDuringRecache,
+                            suppressSavedOrderPersistence: suppressSavedOrderPersistence
+                                || notchRebalanceOutcome.shouldSuppressSavedOrderPersistenceDuringRecache,
+                            bypassSavedLayoutCooldown: bypassSavedLayoutCooldown,
+                            forcePersistSavedOrder: forcePersistSavedOrder
+                        ),
                         waiterToken: waiterToken
                     )
                 }

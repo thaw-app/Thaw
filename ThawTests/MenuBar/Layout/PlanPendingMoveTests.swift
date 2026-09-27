@@ -68,11 +68,13 @@ struct PlanPendingMoveTests {
     ) -> PendingLedger.PendingMove {
         PendingLedger.planPendingMove(
             entry: entry,
-            items: items,
-            controlItems: controlItems,
-            hiddenBounds: hiddenBounds,
-            boundsForWindowID: [:],
-            activelyShownTags: [],
+            bar: PendingLedger.BarState(
+                items: items,
+                controlItems: controlItems,
+                hiddenBounds: hiddenBounds,
+                boundsForWindowID: [:],
+                activelyShownTags: []
+            ),
             returnInfo: returnInfo
         )
     }
@@ -89,11 +91,13 @@ struct PlanPendingMoveTests {
 
         let decision = PendingLedger.planPendingMove(
             entry: entry,
-            items: [item],
-            controlItems: pair(),
-            hiddenBounds: hiddenBounds,
-            boundsForWindowID: [:],
-            activelyShownTags: [],
+            bar: PendingLedger.BarState(
+                items: [item],
+                controlItems: pair(),
+                hiddenBounds: hiddenBounds,
+                boundsForWindowID: [:],
+                activelyShownTags: []
+            ),
             returnInfo: PendingLedger.PendingReturnInfo(
                 destinations: [:],
                 fallbackNeighbors: [:]
@@ -123,11 +127,13 @@ struct PlanPendingMoveTests {
 
         let decision = PendingLedger.planPendingMove(
             entry: entry,
-            items: [item],
-            controlItems: pair(),
-            hiddenBounds: hiddenBounds,
-            boundsForWindowID: [:],
-            activelyShownTags: [],
+            bar: PendingLedger.BarState(
+                items: [item],
+                controlItems: pair(),
+                hiddenBounds: hiddenBounds,
+                boundsForWindowID: [:],
+                activelyShownTags: []
+            ),
             returnInfo: PendingLedger.PendingReturnInfo(
                 destinations: [:],
                 fallbackNeighbors: [:]
@@ -151,11 +157,13 @@ struct PlanPendingMoveTests {
 
         let decision = PendingLedger.planPendingMove(
             entry: entry,
-            items: [],
-            controlItems: pair(),
-            hiddenBounds: hiddenBounds,
-            boundsForWindowID: [:],
-            activelyShownTags: [],
+            bar: PendingLedger.BarState(
+                items: [],
+                controlItems: pair(),
+                hiddenBounds: hiddenBounds,
+                boundsForWindowID: [:],
+                activelyShownTags: []
+            ),
             returnInfo: PendingLedger.PendingReturnInfo(
                 destinations: [:],
                 fallbackNeighbors: [:]
@@ -175,11 +183,13 @@ struct PlanPendingMoveTests {
 
         let decision = PendingLedger.planPendingMove(
             entry: entry,
-            items: [item],
-            controlItems: pair(),
-            hiddenBounds: hiddenBounds,
-            boundsForWindowID: [:],
-            activelyShownTags: [],
+            bar: PendingLedger.BarState(
+                items: [item],
+                controlItems: pair(),
+                hiddenBounds: hiddenBounds,
+                boundsForWindowID: [:],
+                activelyShownTags: []
+            ),
             returnInfo: PendingLedger.PendingReturnInfo(
                 destinations: [:],
                 fallbackNeighbors: [:]
@@ -200,11 +210,13 @@ struct PlanPendingMoveTests {
 
         let decision = PendingLedger.planPendingMove(
             entry: entry,
-            items: [item],
-            controlItems: pair(),
-            hiddenBounds: hiddenBounds,
-            boundsForWindowID: [:],
-            activelyShownTags: [],
+            bar: PendingLedger.BarState(
+                items: [item],
+                controlItems: pair(),
+                hiddenBounds: hiddenBounds,
+                boundsForWindowID: [:],
+                activelyShownTags: []
+            ),
             returnInfo: PendingLedger.PendingReturnInfo(
                 destinations: [:],
                 fallbackNeighbors: [:]
@@ -232,11 +244,13 @@ struct PlanPendingMoveTests {
 
         let decision = PendingLedger.planPendingMove(
             entry: entry,
-            items: [item],
-            controlItems: pair(),
-            hiddenBounds: hiddenBounds,
-            boundsForWindowID: [:],
-            activelyShownTags: [],
+            bar: PendingLedger.BarState(
+                items: [item],
+                controlItems: pair(),
+                hiddenBounds: hiddenBounds,
+                boundsForWindowID: [:],
+                activelyShownTags: []
+            ),
             returnInfo: PendingLedger.PendingReturnInfo(
                 destinations: [:],
                 fallbackNeighbors: [:]
@@ -264,11 +278,13 @@ struct PlanPendingMoveTests {
 
         let decision = PendingLedger.planPendingMove(
             entry: entry,
-            items: [item],
-            controlItems: pair(),
-            hiddenBounds: hiddenBounds,
-            boundsForWindowID: [:],
-            activelyShownTags: [],
+            bar: PendingLedger.BarState(
+                items: [item],
+                controlItems: pair(),
+                hiddenBounds: hiddenBounds,
+                boundsForWindowID: [:],
+                activelyShownTags: []
+            ),
             returnInfo: PendingLedger.PendingReturnInfo(
                 destinations: [:],
                 fallbackNeighbors: [:]
@@ -295,11 +311,13 @@ struct PlanPendingMoveTests {
 
         let decision = PendingLedger.planPendingMove(
             entry: entry,
-            items: [item],
-            controlItems: pair(),
-            hiddenBounds: hiddenBounds,
-            boundsForWindowID: [:],
-            activelyShownTags: [item.tag.tagIdentifier],
+            bar: PendingLedger.BarState(
+                items: [item],
+                controlItems: pair(),
+                hiddenBounds: hiddenBounds,
+                boundsForWindowID: [:],
+                activelyShownTags: [item.tag.tagIdentifier]
+            ),
             returnInfo: PendingLedger.PendingReturnInfo(
                 destinations: [:],
                 fallbackNeighbors: [:]
@@ -320,11 +338,13 @@ struct PlanPendingMoveTests {
 
         let decision = PendingLedger.planPendingMove(
             entry: entry,
-            items: [item],
-            controlItems: pair(),
-            hiddenBounds: hiddenBounds,
-            boundsForWindowID: [:],
-            activelyShownTags: [],
+            bar: PendingLedger.BarState(
+                items: [item],
+                controlItems: pair(),
+                hiddenBounds: hiddenBounds,
+                boundsForWindowID: [:],
+                activelyShownTags: []
+            ),
             returnInfo: PendingLedger.PendingReturnInfo(
                 destinations: [:],
                 fallbackNeighbors: [:]
@@ -349,11 +369,13 @@ struct PlanPendingMoveTests {
 
         let decision = PendingLedger.planPendingMove(
             entry: entry,
-            items: [item, neighbor],
-            controlItems: pair(),
-            hiddenBounds: hiddenBounds,
-            boundsForWindowID: [:],
-            activelyShownTags: [],
+            bar: PendingLedger.BarState(
+                items: [item, neighbor],
+                controlItems: pair(),
+                hiddenBounds: hiddenBounds,
+                boundsForWindowID: [:],
+                activelyShownTags: []
+            ),
             returnInfo: PendingLedger.PendingReturnInfo(
                 destinations: [
                     item.tag.tagIdentifier: [

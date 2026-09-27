@@ -25,12 +25,14 @@ extension MenuBarItemManager {
         while !Task.isCancelled {
             let attempt = CacheAttempt()
             await cacheItemsRegardless(
-                skipRecentMoveCheck: true,
-                resolveSourcePID: false,
-                reuseCachedIdentities: true,
-                skipSavedLayoutApply: true,
-                suppressAutomaticMoves: true,
-                forcePersistSavedOrder: forcePersistSavedOrder,
+                options: .init(
+                    skipRecentMoveCheck: true,
+                    resolveSourcePID: false,
+                    reuseCachedIdentities: true,
+                    skipSavedLayoutApply: true,
+                    suppressAutomaticMoves: true,
+                    forcePersistSavedOrder: forcePersistSavedOrder
+                ),
                 cacheAttempt: attempt
             )
             if attempt.didCompleteCycle {

@@ -64,21 +64,33 @@ nonisolated enum PendingLedger {
         let fallbackNeighbors: [String: MenuBarItemTag]
     }
 
+    /// The bar as observed this cycle, read once and shared by every entry.
+    struct BarState {
+        let items: [MenuBarItem]
+        let controlItems: MenuBarItemManager.ControlItemPair
+        let hiddenBounds: CGRect
+        /// Live bounds, which win over an item's cached bounds.
+        let boundsForWindowID: [CGWindowID: CGRect]
+        /// Tags the rehide flow currently owns.
+        let activelyShownTags: Set<String>
+    }
+
     // MARK: - Planner
 
     /// Computes the next pending-relocation decision for a single entry.
     /// Pure; state changes and moves stay with the orchestrator.
     static nonisolated func planPendingMove(
         entry: PendingEntry,
-        items: [MenuBarItem],
-        controlItems: MenuBarItemManager.ControlItemPair,
-        hiddenBounds: CGRect,
-        boundsForWindowID: [CGWindowID: CGRect],
-        activelyShownTags: Set<String>,
+        bar: BarState,
         returnInfo: PendingReturnInfo,
         now: Date = Date(),
         sentinelAgeCap: Duration? = nil
     ) -> PendingMove {
+        let items = bar.items
+        let controlItems = bar.controlItems
+        let hiddenBounds = bar.hiddenBounds
+        let boundsForWindowID = bar.boundsForWindowID
+        let activelyShownTags = bar.activelyShownTags
         if activelyShownTags.contains(entry.tagIdentifier) {
             return .skip(reason: .activelyShown)
         }

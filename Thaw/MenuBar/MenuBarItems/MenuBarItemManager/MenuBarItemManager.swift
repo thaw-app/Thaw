@@ -1585,7 +1585,7 @@ final class MenuBarItemManager {
                 if Task.isCancelled {
                     return
                 }
-                await cacheItemsRegardless(resolveSourcePID: false)
+                await cacheItemsRegardless(options: .init(resolveSourcePID: false))
                 if itemCache.displayID != nil {
                     if attempt > 1 {
                         MenuBarItemManager.diagLog.debug(
@@ -1594,7 +1594,7 @@ final class MenuBarItemManager {
                     }
                     // Resolve PIDs concurrently so restore isn't blocked.
                     Task { @MainActor [weak self] in
-                        await self?.cacheItemsRegardless(resolveSourcePID: true)
+                        await self?.cacheItemsRegardless(options: .init(resolveSourcePID: true))
                     }
                     break
                 }
@@ -1685,7 +1685,7 @@ final class MenuBarItemManager {
                 }
 
                 let cyclesBefore = completedCacheCycles
-                await cacheItemsRegardless(skipRecentMoveCheck: true, resolveSourcePID: true)
+                await cacheItemsRegardless(options: .init(skipRecentMoveCheck: true, resolveSourcePID: true))
                 let managedCount = itemCache.managedItems.count
                 let unresolved = itemCache.managedItems.count(where: { $0.sourcePID == nil })
                 let pidsOK = managedCount > 0 && unresolved <= 1
@@ -1771,15 +1771,19 @@ final class MenuBarItemManager {
             // clears the 1 s gate; applySavedLayout's 5 s gate needs the bypass
             // carried through the recache relocateNewLeftmostItems schedules.
             await cacheItemsRegardless(
-                skipRecentMoveCheck: true,
-                resolveSourcePID: false,
-                bypassSavedLayoutCooldown: true
+                options: .init(
+                    skipRecentMoveCheck: true,
+                    resolveSourcePID: false,
+                    bypassSavedLayoutCooldown: true
+                )
             )
             // Resolves source PIDs; never suppressed by the move cooldown.
             await cacheItemsRegardless(
-                skipRecentMoveCheck: true,
-                resolveSourcePID: true,
-                bypassSavedLayoutCooldown: true
+                options: .init(
+                    skipRecentMoveCheck: true,
+                    resolveSourcePID: true,
+                    bypassSavedLayoutCooldown: true
+                )
             )
         }
     }

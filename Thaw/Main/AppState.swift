@@ -365,7 +365,7 @@ final class AppState {
                     self.itemManager.startSettlingPeriod(reason: "displayDisconnect")
                     // Force item cache rebuild so displayID reflects current
                     // display geometry (items moved to remaining display).
-                    await self.itemManager.cacheItemsRegardless(skipRecentMoveCheck: true)
+                    await self.itemManager.cacheItemsRegardless(options: .init(skipRecentMoveCheck: true))
                     // Force image cache: remove entries for items no longer
                     // present, trigger re-capture for current display.
                     self.imageCache.performCacheCleanup()
@@ -379,7 +379,7 @@ final class AppState {
                     self.itemManager.startSettlingPeriod(reason: "displayConnect")
                     // Items keep their windowIDs when moving to new display.
                     // Item cache rebuild picks up new items on the added display.
-                    await self.itemManager.cacheItemsRegardless(skipRecentMoveCheck: true)
+                    await self.itemManager.cacheItemsRegardless(options: .init(skipRecentMoveCheck: true))
                     self.diagLog.info("Item cache refreshed after display connect")
                 }
             }

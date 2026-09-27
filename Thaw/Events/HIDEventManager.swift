@@ -1283,7 +1283,7 @@ extension HIDEventManager {
                 appState.itemManager.recordExternalMoveOperation()
                 Task { [weak appState] in
                     try? await Task.sleep(for: .milliseconds(500))
-                    await appState?.itemManager.cacheItemsRegardless(skipRecentMoveCheck: true)
+                    await appState?.itemManager.cacheItemsRegardless(options: .init(skipRecentMoveCheck: true))
                 }
             }
         }

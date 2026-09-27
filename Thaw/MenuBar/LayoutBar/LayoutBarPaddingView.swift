@@ -384,7 +384,7 @@ final class LayoutBarPaddingView: NSView {
             // Like a single move: re-anchor the badge and thaw both
             // containers, or the source stays at its mid-drag snapshot.
             if let appState = container.appState {
-                await appState.itemManager.cacheItemsRegardless(skipRecentMoveCheck: true)
+                await appState.itemManager.cacheItemsRegardless(options: .init(skipRecentMoveCheck: true))
             }
             await MainActor.run {
                 if let appState = self.container.appState,
@@ -484,7 +484,7 @@ final class LayoutBarPaddingView: NSView {
                         Self.diagLog.warning(
                             "Skipping drag of \(item.logString): destination divider \(targetItem.logString) is parked offscreen (\(targetBounds.map { "minX=\($0.minX)" } ?? "no window bounds")); section is collapsed"
                         )
-                        await appState.itemManager.cacheItemsRegardless(skipRecentMoveCheck: true)
+                        await appState.itemManager.cacheItemsRegardless(options: .init(skipRecentMoveCheck: true))
                         _ = await self.resetStabilizingStateIfNeeded(
                             generation: generation,
                             sourceContainer: sourceContainer
@@ -725,7 +725,7 @@ final class LayoutBarPaddingView: NSView {
         // cannotComplete can fire after the item already settled in place.
         // Resample and alert only if it isn't where the user dragged it.
         try? await Task.sleep(for: .milliseconds(250))
-        await appState.itemManager.cacheItemsRegardless(skipRecentMoveCheck: true)
+        await appState.itemManager.cacheItemsRegardless(options: .init(skipRecentMoveCheck: true))
         let reachedPosition = didItemReachIntendedPosition(
             item: item,
             destination: destination,
@@ -752,7 +752,7 @@ final class LayoutBarPaddingView: NSView {
             Self.diagLog.warning("\(item.logString) is blocked (x=-1); attempting one rescue-and-retry before alerting")
             _ = await appState.itemManager.rescueBlockedItemToVisible(item)
             try? await Task.sleep(for: .milliseconds(250))
-            await appState.itemManager.cacheItemsRegardless(skipRecentMoveCheck: true)
+            await appState.itemManager.cacheItemsRegardless(options: .init(skipRecentMoveCheck: true))
             do {
                 try await appState.itemManager.move(
                     item: item,

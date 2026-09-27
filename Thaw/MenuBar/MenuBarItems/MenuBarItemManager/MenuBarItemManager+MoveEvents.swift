@@ -335,12 +335,14 @@ extension MenuBarItemManager {
             if let dragPlan {
                 itemOrigin = try await postFaithfulDragSteps(
                     dragPlan,
-                    item: liveItem,
-                    source: source,
-                    startOrigin: itemOrigin,
+                    drag: FaithfulDragContext(
+                        item: liveItem,
+                        source: source,
+                        startOrigin: itemOrigin,
+                        openingEvent: mouseDown,
+                        releaseGuard: releaseGuard
+                    ),
                     timeout: timeout,
-                    openingEvent: mouseDown,
-                    releaseGuard: releaseGuard,
                     destination: destination,
                     on: displayID,
                     budget: budget
@@ -472,19 +474,30 @@ extension MenuBarItemManager {
         )
     }
 
+    /// The fixed inputs of one faithful drag, set up before its first step.
+    private struct FaithfulDragContext {
+        let item: MenuBarItem
+        let source: CGEventSource
+        let startOrigin: CGPoint
+        /// The already-built mouse down that opens the drag.
+        let openingEvent: CGEvent
+        let releaseGuard: PressReleaseGuard
+    }
+
     /// Always releases on the bar before propagating a failure.
     private func postFaithfulDragSteps(
         _ steps: [MoveGesture.Step],
-        item: MenuBarItem,
-        source: CGEventSource,
-        startOrigin: CGPoint,
+        drag: FaithfulDragContext,
         timeout: Duration,
-        openingEvent: CGEvent,
-        releaseGuard: PressReleaseGuard,
         destination: MoveDestination,
         on displayID: CGDirectDisplayID,
         budget: MoveTransactionBudget
     ) async throws -> CGPoint {
+        let item = drag.item
+        let source = drag.source
+        let startOrigin = drag.startOrigin
+        let openingEvent = drag.openingEvent
+        let releaseGuard = drag.releaseGuard
         guard steps.last?.subtype == .mouseUp else {
             throw EventError.eventCreationFailure(item)
         }

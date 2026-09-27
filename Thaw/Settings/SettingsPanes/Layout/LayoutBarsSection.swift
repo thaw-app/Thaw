@@ -156,7 +156,7 @@ struct LayoutBarsSection: View {
     }
 
     private func preloadLayoutCaches(includingImages: Bool) async {
-        await itemManager.cacheItemsRegardless(skipRecentMoveCheck: true)
+        await itemManager.cacheItemsRegardless(options: .init(skipRecentMoveCheck: true))
         guard !Task.isCancelled else {
             return
         }

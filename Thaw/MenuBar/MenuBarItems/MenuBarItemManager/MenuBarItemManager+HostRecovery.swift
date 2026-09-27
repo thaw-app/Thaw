@@ -94,7 +94,7 @@ extension MenuBarItemManager {
 
         Task { [weak self] in
             try? await Task.sleep(for: .milliseconds(100))
-            await self?.cacheItemsRegardless(skipRecentMoveCheck: true)
+            await self?.cacheItemsRegardless(options: .init(skipRecentMoveCheck: true))
         }
         return true
     }
@@ -174,8 +174,10 @@ extension MenuBarItemManager {
             // The failed batch may have stamped the move cooldown; bypass it so
             // applySavedLayout verifies the fresh divider.
             await self?.cacheItemsRegardless(
-                skipRecentMoveCheck: true,
-                bypassSavedLayoutCooldown: true
+                options: .init(
+                    skipRecentMoveCheck: true,
+                    bypassSavedLayoutCooldown: true
+                )
             )
         }
         return true

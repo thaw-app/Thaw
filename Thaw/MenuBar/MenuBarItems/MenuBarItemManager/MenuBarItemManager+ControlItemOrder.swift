@@ -342,6 +342,13 @@ extension MenuBarItemManager {
         for item in items {
             boundsForWindowID[item.windowID] = bestBounds(for: item)
         }
+        let bar = PendingLedger.BarState(
+            items: items,
+            controlItems: controlItems,
+            hiddenBounds: hiddenBounds,
+            boundsForWindowID: boundsForWindowID,
+            activelyShownTags: activelyShownTags
+        )
 
         var fallbackNeighborByTagIdentifier = [String: MenuBarItemTag]()
         for context in temporarilyShownItemContexts {
@@ -385,11 +392,7 @@ extension MenuBarItemManager {
 
             var decision = PendingLedger.planPendingMove(
                 entry: entry,
-                items: items,
-                controlItems: controlItems,
-                hiddenBounds: hiddenBounds,
-                boundsForWindowID: boundsForWindowID,
-                activelyShownTags: activelyShownTags,
+                bar: bar,
                 returnInfo: PendingLedger.PendingReturnInfo(
                     destinations: pendingReturnDestinations,
                     fallbackNeighbors: fallbackNeighborByTagIdentifier
@@ -411,11 +414,7 @@ extension MenuBarItemManager {
                 let promotedEntry = PendingLedger.PendingEntry(tagIdentifier: tagIdentifier, kind: .section(promotedSection))
                 decision = PendingLedger.planPendingMove(
                     entry: promotedEntry,
-                    items: items,
-                    controlItems: controlItems,
-                    hiddenBounds: hiddenBounds,
-                    boundsForWindowID: boundsForWindowID,
-                    activelyShownTags: activelyShownTags,
+                    bar: bar,
                     returnInfo: PendingLedger.PendingReturnInfo(
                         destinations: pendingReturnDestinations,
                         fallbackNeighbors: fallbackNeighborByTagIdentifier
