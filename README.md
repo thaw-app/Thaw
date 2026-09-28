@@ -38,6 +38,12 @@
 </p>
 
 <p align="center">
+  <a href="https://vercel.com/open-source-program">
+    <img alt="Vercel OSS Program" src="https://vercel.com/oss/program-badge-2026.svg" />
+  </a>
+</p>
+
+<p align="center">
   <a href="https://github.com/user-attachments/assets/9584065d-f840-4545-9a42-cfc5534b5ac3"><img alt="Thaw overview" src="https://github.com/user-attachments/assets/9584065d-f840-4545-9a42-cfc5534b5ac3" width="800" /></a>
 </p>
 
@@ -249,12 +255,6 @@ This project exists thanks to the people who contribute code and documentation. 
 Want to contribute? Start with [Ways to contribute](https://github.com/thaw-app/Thaw/issues/316). Pull requests are welcome against the `development` branch (see [Contributing](.github/CONTRIBUTING.md)).
 
 Open to partnerships, integrations, and sponsorships. [Get in touch](https://github.com/sponsors/stonerl).
-
-<br />
-<br />
-<a href="https://vercel.com/open-source-program">
-  <img alt="Vercel OSS Program" src="https://vercel.com/oss/program-badge-2026.svg" />
-</a>
 
 <p align="center">
   <a href="https://github.com/thaw-app/Thaw/graphs/contributors"><img alt="contributors" src="https://shieldcn.dev/contributors/thaw-app/Thaw.svg?title=false&amp;size=40&amp;names=true&amp;titleAlign=center&amp;limit=100&amp;mode=light&amp;font=space-grotesk&amp;watermark=true&amp;border=false" /></a>
