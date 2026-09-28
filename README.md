@@ -22,17 +22,17 @@
   <a href=".github/CONTRIBUTING.md">Contributing</a>
 </p>
 
-<div align="center">
-  <a href="https://trendshift.io/repositories/21173" target="_blank"><img src="https://trendshift.io/api/badge/repositories/21173" alt="thaw-app/Thaw | Trendshift" style="width: 150px; height: 33px;" width="150" height="33" /></a>
-  <a href="https://www.producthunt.com/products/thaw-2?embed=true&amp;utm_source=badge-featured&amp;utm_medium=badge&amp;utm_campaign=badge-thaw-3" target="_blank" rel="noopener noreferrer"><img alt="Thaw | Product Hunt" width="150" height="32" src="https://api.producthunt.com/widgets/embed-image/v1/featured.svg?post_id=1239794&amp;theme=light&amp;t=1788423441056"></a>
-  <a href="https://www.star-history.com/thaw-app/thaw" target="_blank"><picture><source media="(prefers-color-scheme: dark)" srcset="https://api.star-history.com/badge?repo=thaw-app/Thaw&amp;type=rank&amp;theme=dark" /><source media="(prefers-color-scheme: light)" srcset="https://api.star-history.com/badge?repo=thaw-app/Thaw&amp;type=rank" /><img alt="Star History Rank" src="https://api.star-history.com/badge?repo=thaw-app/Thaw&amp;type=rank" width="116" height="33" /></picture></a>
-</div>
-
 <p align="center">
   <a href="https://vercel.com/open-source-program">
     <img alt="Vercel OSS Program" src="https://vercel.com/oss/program-badge-2026.svg" />
   </a>
 </p>
+
+<div align="center">
+  <a href="https://trendshift.io/repositories/21173" target="_blank"><img src="https://trendshift.io/api/badge/repositories/21173" alt="thaw-app/Thaw | Trendshift" style="width: 150px; height: 33px;" width="150" height="33" /></a>
+  <a href="https://www.producthunt.com/products/thaw-2?embed=true&amp;utm_source=badge-featured&amp;utm_medium=badge&amp;utm_campaign=badge-thaw-3" target="_blank" rel="noopener noreferrer"><img alt="Thaw | Product Hunt" width="150" height="32" src="https://api.producthunt.com/widgets/embed-image/v1/featured.svg?post_id=1239794&amp;theme=light&amp;t=1788423441056"></a>
+  <a href="https://www.star-history.com/thaw-app/thaw" target="_blank"><picture><source media="(prefers-color-scheme: dark)" srcset="https://api.star-history.com/badge?repo=thaw-app/Thaw&amp;type=rank&amp;theme=dark" /><source media="(prefers-color-scheme: light)" srcset="https://api.star-history.com/badge?repo=thaw-app/Thaw&amp;type=rank" /><img alt="Star History Rank" src="https://api.star-history.com/badge?repo=thaw-app/Thaw&amp;type=rank" width="116" height="33" /></picture></a>
+</div>
 
 <p align="center">
   <a href="https://github.com/user-attachments/assets/9584065d-f840-4545-9a42-cfc5534b5ac3"><img alt="Thaw overview" src="https://github.com/user-attachments/assets/9584065d-f840-4545-9a42-cfc5534b5ac3" width="800" /></a>
