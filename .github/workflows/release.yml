@@ -7,17 +7,9 @@ on:
   workflow_dispatch:
     inputs:
       tag:
-        description: Existing release tag to publish (for example, 1.2.3 or 2.0.0-rc.1)
+        description: Existing release tag to publish (for example, 3.0.0-beta.1)
         required: true
         type: string
-      source:
-        description: Repository the tag is built from (thaw-next is the private macOS 27 codebase)
-        required: true
-        type: choice
-        default: Thaw
-        options:
-          - Thaw
-          - thaw-next
       channel:
         description: Sparkle channel (auto infers from tag suffix)
         required: true
@@ -110,11 +102,8 @@ jobs:
         id: source
         uses: ./.github/actions/checkout-source
         with:
-          source: ${{ inputs.source }}
           ref: refs/tags/${{ inputs.tag }}
           fetch-depth: 0
-          thaw-next-token: ${{ secrets.THAW_NEXT_READ_TOKEN }}
-          binary-package: ${{ vars.THAW_NEXT_BINARY_PACKAGE }}
 
       - name: Resolve tag and channel
         id: meta
@@ -168,19 +157,9 @@ jobs:
         env:
           TAG: ${{ steps.meta.outputs.tag }}
           RELEASE_NOTES_INPUT: ${{ inputs.release_notes }}
-          SOURCE_REPOSITORY: ${{ steps.source.outputs.repository }}
-          GH_TOKEN: ${{ github.token }}
         run: |
           set -euo pipefail
-          # The changelog lives here even for thaw-next builds, so fetch this
-          # repository's CHANGELOG.md at the dispatching ref.
-          own_changelog=""
-          if [[ "$SOURCE_REPOSITORY" != "$GITHUB_REPOSITORY" ]]; then
-            own_changelog="$RUNNER_TEMP/CHANGELOG.md"
-            gh api "repos/${GITHUB_REPOSITORY}/contents/CHANGELOG.md?ref=${GITHUB_SHA}" \
-              -H "Accept: application/vnd.github.raw" > "$own_changelog"
-          fi
-          OWN_CHANGELOG="$own_changelog" python3 - <<'PY'
+          python3 - <<'PY'
           import os
           import re
           import uuid
@@ -190,9 +169,8 @@ jobs:
           source = "release_notes input"
 
           # Without manual notes, use this tag's CHANGELOG.md section ("## [x.y.z]" to
-          # the next "## "), trying OWN_CHANGELOG first on cross-repo builds.
-          candidates = [os.environ.get("OWN_CHANGELOG", ""), "CHANGELOG.md", "Thaw/Resources/CHANGELOG.md"]
-          candidates = [p for p in candidates if p]
+          # the next "## ") from the checked-out release tag.
+          candidates = ["CHANGELOG.md", "Thaw/Resources/CHANGELOG.md"]
           changelog = next((p for p in candidates if os.path.isfile(p)), None)
           if not notes.strip() and changelog:
               text = open(changelog, encoding="utf-8").read()
@@ -218,44 +196,10 @@ jobs:
           print(f"Release notes source: {source}")
           PY
 
-      - name: Select Xcode
-        env:
-          XCODE_APP: Xcode_27
-          # thaw-next: the exact compiler its binary package was built with; the package
-          # has no library evolution, so a newer Xcode can't import it.
-          REQUIRED_SWIFT: ${{ steps.source.outputs.swift-compiler }}
-        run: |
-          set -euo pipefail
-          shopt -s nullglob
-          # A prefix, so a preview image's Xcode_27.0-beta.N.app is picked up
-          # as well as a final Xcode_27.0.app. The last glob match sorts highest.
-          candidates=(/Applications/"${XCODE_APP}"*.app)
-          if [[ ${#candidates[@]} -eq 0 ]]; then
-            echo "No /Applications/${XCODE_APP}*.app on this runner. Installed:"
-            ls -d /Applications/Xcode*.app || true
-            exit 1
-          fi
-          selected=""
-          if [[ -n "$REQUIRED_SWIFT" ]]; then
-            for candidate in "${candidates[@]}"; do
-              swiftc="$candidate/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/swiftc"
-              if [[ -x "$swiftc" ]] && "$swiftc" --version 2>/dev/null | grep -qF "$REQUIRED_SWIFT"; then
-                selected="$candidate"
-              fi
-            done
-            if [[ -z "$selected" ]]; then
-              echo "No installed Xcode carries ${REQUIRED_SWIFT}, which the binary package requires. Installed:"
-              for candidate in "${candidates[@]}"; do
-                swiftc="$candidate/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/swiftc"
-                echo "  $candidate: $("$swiftc" --version 2>/dev/null | head -1)"
-              done
-              exit 1
-            fi
-          else
-            selected="${candidates[${#candidates[@]}-1]}"
-          fi
-          sudo xcode-select -s "$selected/Contents/Developer"
-          xcodebuild -version
+      - name: Select latest installed Xcode (including betas)
+        uses: maxim-lobanov/setup-xcode@ed7a3b1fda3918c0306d1b724322adc0b8cc0a90 # v1.7.0
+        with:
+          xcode-version: latest
 
       - name: Configure signing
         uses: thaw-app/org-ci/actions/configure-signing@d90bbc87aa4dff91d3bc9e30fb6ceef0765bd986
@@ -271,7 +215,6 @@ jobs:
         with:
           apple-team-id: ${{ secrets.APPLE_TEAM_ID }}
           project-name: ${{ steps.source.outputs.project-name }}
-          workspace-name: ${{ steps.source.outputs.workspace-name }}
           scheme-name: Thaw
           deployment-target: ${{ steps.source.outputs.deployment-target }}
 
@@ -369,37 +312,12 @@ jobs:
           release-notes: ${{ steps.notes.outputs.body }}
           publish-appcast: "false"
 
-      # 2.x is the macOS 26 line; macOS 27 gets 3.0. generate_appcast rewrites
-      # the items it has archives for, so every run re-applies the cap to all
-      # 2.x items, and it is a no-op on items that already carry one.
-      - name: Keep 2.x releases off macOS 27
-        env:
-          APPCAST_PATH: ${{ steps.sparkle.outputs.appcast-path }}
-        run: |
-          python3 - "$APPCAST_PATH" <<'PY'
-          import re, sys
-          path = sys.argv[1]
-          xml = open(path, encoding="utf-8").read()
-          capped = []
-
-          def cap(match):
-              item = match.group(0)
-              version = re.search(r"<sparkle:shortVersionString>([^<]+)</sparkle:shortVersionString>", item)
-              if not version or not version.group(1).startswith("2."):
-                  return item
-              if "<sparkle:maximumSystemVersion>" in item:
-                  return item
-              minimum = re.search(r"([ \t]*)<sparkle:minimumSystemVersion>[^<]*</sparkle:minimumSystemVersion>\n", item)
-              if not minimum:
-                  sys.exit(f"{version.group(1)} has no minimumSystemVersion to anchor the cap on")
-              capped.append(version.group(1))
-              line = f"{minimum.group(1)}<sparkle:maximumSystemVersion>26.99</sparkle:maximumSystemVersion>\n"
-              return item[:minimum.end()] + line + item[minimum.end():]
-
-          xml = re.sub(r"<item>.*?</item>", cap, xml, flags=re.S)
-          open(path, "w", encoding="utf-8").write(xml)
-          print("Capped at macOS 26:", ", ".join(capped) if capped else "none")
-          PY
+      - name: Prepare appcasts
+        id: appcasts
+        uses: ./.github/actions/prepare-appcasts
+        with:
+          appcast-path: ${{ steps.sparkle.outputs.appcast-path }}
+          release-tag: ${{ steps.meta.outputs.tag }}
 
       - name: Collect update assets
         id: update-assets
@@ -415,9 +333,11 @@ jobs:
             printf '%s\n' "$delta" >> "$list"
           done
 
-          echo "files<<EOF" >> "$GITHUB_OUTPUT"
-          cat "$list" >> "$GITHUB_OUTPUT"
-          echo "EOF" >> "$GITHUB_OUTPUT"
+          {
+            echo "files<<EOF"
+            cat "$list"
+            echo "EOF"
+          } >> "$GITHUB_OUTPUT"
           echo "Update assets (dual-publish: thaw-app/updates + thaw-app/Thaw):"
           cat "$list"
 
@@ -485,108 +405,32 @@ jobs:
 
       - name: Publish appcast to updates gh-pages
         if: ${{ inputs.publish_appcast && inputs.publish_release && !inputs.dry_run }}
-        env:
-          TAG: ${{ steps.meta.outputs.tag }}
-          CHANNEL: ${{ steps.meta.outputs.channel }}
-          APPCAST_PATH: ${{ steps.sparkle.outputs.appcast-path }}
-          UPDATES_REPO: ${{ env.UPDATES_REPOSITORY }}
-          UPDATES_TOKEN: ${{ secrets.UPDATES_GITHUB_TOKEN }}
-        run: |
-          set -euo pipefail
+        uses: thaw-app/org-ci/actions/publish-file-to-branch@d90bbc87aa4dff91d3bc9e30fb6ceef0765bd986
+        with:
+          repository: ${{ env.UPDATES_REPOSITORY }}
+          branch: gh-pages
+          source-path: ${{ steps.appcasts.outputs.appcast-path }}
+          destination-path: appcast.xml
+          token: ${{ secrets.UPDATES_GITHUB_TOKEN }}
+          commit-message: "chore(sparkle): publish appcast for ${{ steps.meta.outputs.tag }} (${{ steps.meta.outputs.channel }})"
+          create-branch-if-missing: "true"
+          gitignore-allowlist: |
+            *
+            !appcast.xml
+            !.gitignore
 
-          work="$RUNNER_TEMP/updates-gh-pages-work"
-          remote="https://x-access-token:${UPDATES_TOKEN}@github.com/${UPDATES_REPO}.git"
-          max_attempts=5
-          attempt=1
-
-          while true; do
-            rm -rf "$work"
-
-            if git clone --depth 1 --branch gh-pages "$remote" "$work" 2>/dev/null; then
-              :
-            else
-              rm -rf "$work"
-              git clone --depth 1 "$remote" "$work"
-              git -C "$work" checkout --orphan gh-pages
-              git -C "$work" rm -rf . >/dev/null 2>&1 || true
-            fi
-
-            cp "$APPCAST_PATH" "$work/appcast.xml"
-            if [[ ! -f "$work/.gitignore" ]]; then
-              printf '*\n!appcast.xml\n!.gitignore\n' > "$work/.gitignore"
-            fi
-
-            git -C "$work" config user.name "github-actions[bot]"
-            git -C "$work" config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-            git -C "$work" add appcast.xml .gitignore
-            if git -C "$work" diff --staged --quiet; then
-              echo "appcast.xml unchanged"
-              exit 0
-            fi
-
-            git -C "$work" commit -m "chore(sparkle): publish appcast for ${TAG} (${CHANNEL})"
-
-            if git -C "$work" push origin HEAD:gh-pages; then
-              echo "Published appcast to ${UPDATES_REPO}@gh-pages"
-              exit 0
-            fi
-
-            if [[ "$attempt" -ge "$max_attempts" ]]; then
-              echo "Failed to push gh-pages after $max_attempts attempts"
-              exit 1
-            fi
-
-            echo "gh-pages push failed (attempt $attempt/$max_attempts); refetching…"
-            attempt=$((attempt + 1))
-            sleep $((attempt * 2))
-          done
-
-      - name: Mirror appcast to legacy stonerl Pages
-        if: ${{ inputs.publish_appcast && inputs.publish_release && !inputs.dry_run }}
-        env:
-          TAG: ${{ steps.meta.outputs.tag }}
-          CHANNEL: ${{ steps.meta.outputs.channel }}
-          APPCAST_PATH: ${{ steps.sparkle.outputs.appcast-path }}
-          LEGACY_REPO: ${{ env.LEGACY_APPCAST_REPOSITORY }}
-          LEGACY_TOKEN: ${{ secrets.LEGACY_APPCAST_TOKEN }}
-        run: |
-          set -euo pipefail
-
-          work="$RUNNER_TEMP/legacy-appcast-work"
-          remote="https://x-access-token:${LEGACY_TOKEN}@github.com/${LEGACY_REPO}.git"
-          max_attempts=3
-          attempt=1
-
-          while true; do
-            rm -rf "$work"
-            git clone --depth 1 --branch main "$remote" "$work"
-
-            cp "$APPCAST_PATH" "$work/appcast.xml"
-
-            git -C "$work" config user.name "github-actions[bot]"
-            git -C "$work" config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-            git -C "$work" add appcast.xml
-            if git -C "$work" diff --staged --quiet; then
-              echo "legacy appcast.xml unchanged"
-              exit 0
-            fi
-
-            git -C "$work" commit -m "chore(sparkle): mirror appcast for ${TAG} (${CHANNEL})"
-
-            if git -C "$work" push origin HEAD:main; then
-              echo "Mirrored appcast to ${LEGACY_REPO}@main"
-              exit 0
-            fi
-
-            if [[ "$attempt" -ge "$max_attempts" ]]; then
-              echo "Failed to push legacy appcast after $max_attempts attempts"
-              exit 1
-            fi
-
-            echo "legacy main push failed (attempt $attempt/$max_attempts); refetching…"
-            attempt=$((attempt + 1))
-            sleep $((attempt * 2))
-          done
+      # Keep historical 1.x entries and the 2.x line, never 3.x or newer.
+      - name: Mirror 2.x appcast to legacy stonerl Pages
+        if: ${{ inputs.publish_appcast && inputs.publish_release && !inputs.dry_run && startsWith(steps.meta.outputs.tag, '2.') }}
+        uses: thaw-app/org-ci/actions/publish-file-to-branch@d90bbc87aa4dff91d3bc9e30fb6ceef0765bd986
+        with:
+          repository: ${{ env.LEGACY_APPCAST_REPOSITORY }}
+          branch: main
+          source-path: ${{ steps.appcasts.outputs.legacy-appcast-path }}
+          destination-path: appcast.xml
+          token: ${{ secrets.LEGACY_APPCAST_TOKEN }}
+          commit-message: "chore(sparkle): mirror appcast for ${{ steps.meta.outputs.tag }} (${{ steps.meta.outputs.channel }})"
+          max-attempts: "3"
 
       - name: Dry run report
         if: ${{ inputs.dry_run }}
@@ -597,10 +441,12 @@ jobs:
           DMG_NAME: ${{ env.DMG_NAME }}
           SBOM_NAME: ${{ steps.sbom-meta.outputs.name }}
           SBOM_PATH: ${{ steps.sbom-meta.outputs.path }}
-          APPCAST_PATH: ${{ steps.sparkle.outputs.appcast-path }}
+          APPCAST_PATH: ${{ steps.appcasts.outputs.appcast-path }}
+          LEGACY_APPCAST_PATH: ${{ steps.appcasts.outputs.legacy-appcast-path }}
           UPDATE_FILES: ${{ steps.update-assets.outputs.files }}
           UPDATES_REPO: ${{ env.UPDATES_REPOSITORY }}
           LEGACY_REPO: ${{ env.LEGACY_APPCAST_REPOSITORY }}
+          MIRROR_LEGACY_APPCAST: ${{ startsWith(steps.meta.outputs.tag, '2.') }}
           WOULD_PUBLISH_APPCAST: ${{ inputs.publish_appcast && inputs.publish_release }}
           WOULD_DRAFT: ${{ !inputs.publish_release }}
         run: |
@@ -677,7 +523,7 @@ jobs:
           if [[ -f "$SBOM_PATH" ]]; then
             s "| Component | Version |"
             s "| --- | --- |"
-            python3 -c '
+            python3 - <<'PY'
           import json, os, sys
           d = json.load(open(os.environ["SBOM_PATH"]))
           comps = [c for c in d.get("components", []) if c.get("purl")]
@@ -687,20 +533,20 @@ jobs:
           if not comps:
               out.write("| _no packaged components found_ | n/a |\n")
           print("SBOM lists %d component(s)" % len(comps))
-          '
+          PY
           else
             s "_SBOM not generated._"
           fi
 
           # --- What the appcast push would change --------------------------------
           appcast_diff() {
-            local label="$1" url="$2" repo="$3"
+            local label="$1" url="$2" repo="$3" generated="$4"
             s ""
             s "## Appcast diff vs live \`${repo}\`"
             s ""
             s "Source: ${url}"
             s ""
-            if [[ ! -f "$APPCAST_PATH" ]]; then
+            if [[ ! -f "$generated" ]]; then
               s "_No appcast was generated._"
               return
             fi
@@ -710,18 +556,23 @@ jobs:
               s "The generated appcast would be published as-is."
               return
             fi
-            if diff -q "$live" "$APPCAST_PATH" >/dev/null 2>&1; then
+            if diff -q "$live" "$generated" >/dev/null 2>&1; then
               s "No change. The live appcast already matches what this run generated."
               return
             fi
             s '```diff'
             diff -u -L "live (${repo})" -L "generated (${TAG})" \
-              "$live" "$APPCAST_PATH" | head -200 >> "$GITHUB_STEP_SUMMARY" || true
+              "$live" "$generated" | head -200 >> "$GITHUB_STEP_SUMMARY" || true
             s '```'
           }
 
-          appcast_diff updates "https://thaw-app.github.io/updates/appcast.xml" "$UPDATES_REPO"
-          appcast_diff legacy "https://stonerl.github.io/Thaw/appcast.xml" "$LEGACY_REPO"
+          appcast_diff updates "https://thaw-app.github.io/updates/appcast.xml" "$UPDATES_REPO" "$APPCAST_PATH"
+          if [[ "$MIRROR_LEGACY_APPCAST" == "true" ]]; then
+            appcast_diff legacy "https://stonerl.github.io/Thaw/appcast.xml" "$LEGACY_REPO" "$LEGACY_APPCAST_PATH"
+          else
+            s ""
+            s "Legacy appcast mirror skipped: only 2.x releases publish to stonerl/Thaw."
+          fi
 
           s ""
           s "Full artifacts are attached to this run as \`dry-run-${TAG}\`."
@@ -737,7 +588,8 @@ jobs:
             build/${{ env.DMG_NAME }}.sha256
             ${{ steps.sbom-meta.outputs.path }}
             ${{ steps.sbom-meta.outputs.path }}.sha256
-            ${{ steps.sparkle.outputs.appcast-path }}
+            ${{ steps.appcasts.outputs.appcast-path }}
+            ${{ steps.appcasts.outputs.legacy-appcast-path }}
 
       - name: Cleanup keychain
         if: always()
@@ -823,6 +675,8 @@ jobs:
             exit 0
           fi
 
+          # $owner and $name are GraphQL variables, not shell expansions.
+          # shellcheck disable=SC2016
           categories="$(gh api graphql \
             -F owner="${GH_REPO%%/*}" -F name="${GH_REPO#*/}" \
             -f query='query($owner: String!, $name: String!) {

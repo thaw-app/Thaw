@@ -99,6 +99,10 @@ pass it as the action `token` input, because softprops v3 ignores `env: GITHUB_T
 
 ## Dispatching a release
 
+Releases build an existing tag in `thaw-app/Thaw`, using that tag's project,
+deployment target, dependencies, and changelog. There is no separate source
+repository or private-package token to configure.
+
 The workflow is `workflow_dispatch` only, and its **tag** input is free text:
 Actions `choice` inputs are a static list in the YAML, so they cannot be filled
 from the tags that exist. [`scripts/release.sh`](../scripts/release.sh) supplies
@@ -111,8 +115,25 @@ scripts/release.sh          # override the target with REPO=owner/repo
 ```
 
 Anything the script does can be done by hand from the Actions tab or with
-`gh workflow run release.yml -f tag=2.1.0 ...`; the script only removes the
-chance of dispatching a tag that does not exist.
+`gh workflow run release.yml -f tag=3.0.0-beta.1 ...`; the script only removes the
+chance of dispatching a tag that does not exist. A `3.0.0-beta.1` tag selects the
+beta channel automatically.
+
+### Xcode selection
+
+Release and DMG builds use `setup-xcode` with `xcode-version: latest` on the
+`xcode-27` runner. This selects the newest installed Xcode, including betas;
+it does not download versions that are absent from the runner. The action is
+pinned to a commit, but the Xcode version follows runner-image updates. Use an
+exact `xcode-version` instead if a release needs a fixed toolchain.
+
+### Building a DMG without releasing
+
+[`.github/workflows/build-dmg.yml`](../.github/workflows/build-dmg.yml) builds a
+signed, notarized DMG as an artifact retained for three days. Select the workflow
+branch to build its triggering commit, or set **ref** to another branch, tag, or
+commit in this repository. Leaving **ref** empty does not switch to the default
+branch. The `.build` PR command uses this behavior to build the PR branch.
 
 ### Release discussions
 
@@ -126,8 +147,8 @@ step 7. Setting it on the draft in step 5 would do nothing.
 Check **Dry run** when dispatching the workflow to build and report without
 publishing anything. Steps 1–3 run normally; steps 4–7 are skipped, so no
 GitHub Release is created (not even a draft), nothing is cosign-signed or
-attested, and no appcast is pushed to either `thaw-app/updates` or the legacy
-mirror.
+attested, and no appcast is pushed. For 3.x releases, `thaw-app/updates` is the
+only appcast destination; 2.x releases also mirror to the legacy repository.
 
 Signing and attestation are skipped deliberately: cosign keyless signing and
 GitHub Artifact Attestations write permanent, public Sigstore / attestation
@@ -138,13 +159,16 @@ The run's job summary then reports:
 - every asset that *would* be uploaded, to which repository, with size and
   SHA-256, and whether the release would be a draft or published;
 - the SBOM component inventory;
-- a unified diff of the generated `appcast.xml` against the currently live feeds
-  at `thaw-app.github.io/updates` and `stonerl.github.io/Thaw`, so you can see
-  exactly what an update push would change.
+- a unified diff of the generated `appcast.xml` against the live feed at
+  `thaw-app.github.io/updates`, plus the filtered legacy appcast against
+  `stonerl.github.io/Thaw` for 2.x releases only, so you can see exactly what
+  each update push would change.
 
 The DMG checksum, SBOM (+ checksum), and generated appcast are attached to the
-run as a `dry-run-<tag>` artifact for local inspection. The DMG itself is not
-attached, because it is large and is rebuilt by the real release run.
+run as a `dry-run-<tag>` artifact for local inspection. For 2.x releases, this
+also includes `legacy-appcast.xml`, the filtered feed destined for the mirror.
+The DMG itself is not attached, because it is large and is rebuilt by the real
+release run.
 
 Dry runs use a separate concurrency group, so they never queue behind or block a
 real release.
@@ -203,8 +227,8 @@ Promotion between stable and beta stays cheap, because they share a feed: to
 move a build from beta to stable, drop its `sparkle:channel` rather than
 publishing a second item for the same version. Beta subscribers already have
 that build and are offered nothing; stable subscribers pick it up. Two items
-sharing a version and differing only by channel is the case to avoid. It also
-reaches the mirrored legacy appcast.
+sharing a version and differing only by channel is the case to avoid. For 2.x
+releases, promotion also reaches the mirrored legacy appcast.
 
 Switching *away* from alpha does not roll a user back. The alpha app's version
 line is ahead of the shipping app's, so the stable feed offers nothing newer
@@ -215,14 +239,35 @@ worth saying wherever alpha is advertised.
 
 Older builds may still poll `https://stonerl.github.io/Thaw/appcast.xml`
 (GitHub Pages from [`stonerl/Thaw`](https://github.com/stonerl/Thaw) `main`,
-path `/appcast.xml`). Release CI **mirrors** the same signed `appcast.xml` to
-that repo after publishing to `thaw-app/updates`, so existing installs keep
-updating without an HTTP redirect. Bridge / new builds ship the
-`thaw-app.github.io/updates` `SUFeedURL` directly.
+path `/appcast.xml`). Only **2.x release tags** publish a filtered copy of
+`appcast.xml` to that repo after publishing to `thaw-app/updates`. The copy
+retains historical 1.x and 2.x entries with their existing enclosure signatures;
+3.x and newer entries are excluded. The canonical appcast is unchanged.
+**3.x releases never push to `stonerl/Thaw`** and do not require
+`LEGACY_APPCAST_TOKEN`. Existing installs
+must have moved to the `thaw-app.github.io/updates` `SUFeedURL` to receive the
+3.x release line.
 
 Historical enclosure URLs already in the appcast (for example old
 `stonerl/Thaw` release ZIP links) stay as-is so EdDSA signatures remain valid.
 Only **new** items point at `thaw-app/updates` releases.
+
+## Appcast preparation
+
+The local [`prepare-appcasts`](../.github/actions/prepare-appcasts/action.yml)
+action owns both appcast rules: reapply missing macOS 26 caps to 2.x entries,
+and generate a 1.x/2.x-only legacy feed when releasing a 2.x tag. It uses Python's
+standard-library XML parser without external dependencies. Its two output paths
+feed publishing, dry-run comparisons, and artifact uploads.
+
+`checkout-source` preserves the workflow branch's local actions before checking
+out the release tag, so older tags do not need to contain these helpers.
+
+Run the tests locally (no signing credentials or network access needed):
+
+```bash
+python3 -B -m unittest discover -s .github/actions/prepare-appcasts/tests -v
+```
 
 ## Related
 

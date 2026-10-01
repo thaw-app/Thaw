@@ -1,27 +1,18 @@
 name: Build DMG
 
 # Manual signed, notarized DMG as a short-lived artifact, never a release.
-# source=thaw-next needs THAW_NEXT_READ_TOKEN at repository level too.
 
 on:
   workflow_dispatch:
     inputs:
-      source:
-        description: Repository to build (thaw-next is the private macOS 27 codebase)
-        required: true
-        type: choice
-        default: Thaw
-        options:
-          - Thaw
-          - thaw-next
       ref:
-        description: Branch, tag, or commit to build (empty = the source repository's default branch)
+        description: Branch, tag, or commit to build (empty = the commit on the selected workflow branch)
         required: false
         type: string
         default: ""
 
 concurrency:
-  group: build-dmg-${{ inputs.source }}-${{ inputs.ref || github.ref }}
+  group: build-dmg-${{ inputs.ref || github.ref }}
   cancel-in-progress: true
 
 permissions:
@@ -47,49 +38,12 @@ jobs:
         id: source
         uses: ./.github/actions/checkout-source
         with:
-          source: ${{ inputs.source }}
           ref: ${{ inputs.ref }}
-          thaw-next-token: ${{ secrets.THAW_NEXT_READ_TOKEN }}
-          binary-package: ${{ vars.THAW_NEXT_BINARY_PACKAGE }}
 
-      - name: Select Xcode
-        env:
-          XCODE_APP: Xcode_27
-          # thaw-next: the exact compiler its binary package was built with; the package
-          # has no library evolution, so a newer Xcode can't import it.
-          REQUIRED_SWIFT: ${{ steps.source.outputs.swift-compiler }}
-        run: |
-          set -euo pipefail
-          shopt -s nullglob
-          # A prefix, so a preview image's Xcode_27.0-beta.N.app is picked up
-          # as well as a final Xcode_27.0.app. The last glob match sorts highest.
-          candidates=(/Applications/"${XCODE_APP}"*.app)
-          if [[ ${#candidates[@]} -eq 0 ]]; then
-            echo "No /Applications/${XCODE_APP}*.app on this runner. Installed:"
-            ls -d /Applications/Xcode*.app || true
-            exit 1
-          fi
-          selected=""
-          if [[ -n "$REQUIRED_SWIFT" ]]; then
-            for candidate in "${candidates[@]}"; do
-              swiftc="$candidate/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/swiftc"
-              if [[ -x "$swiftc" ]] && "$swiftc" --version 2>/dev/null | grep -qF "$REQUIRED_SWIFT"; then
-                selected="$candidate"
-              fi
-            done
-            if [[ -z "$selected" ]]; then
-              echo "No installed Xcode carries ${REQUIRED_SWIFT}, which the binary package requires. Installed:"
-              for candidate in "${candidates[@]}"; do
-                swiftc="$candidate/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/swiftc"
-                echo "  $candidate: $("$swiftc" --version 2>/dev/null | head -1)"
-              done
-              exit 1
-            fi
-          else
-            selected="${candidates[${#candidates[@]}-1]}"
-          fi
-          sudo xcode-select -s "$selected/Contents/Developer"
-          xcodebuild -version
+      - name: Select latest installed Xcode (including betas)
+        uses: maxim-lobanov/setup-xcode@ed7a3b1fda3918c0306d1b724322adc0b8cc0a90 # v1.7.0
+        with:
+          xcode-version: latest
 
       - name: Configure signing
         uses: thaw-app/org-ci/actions/configure-signing@6adcb3aa53a28cfa9d4cd2f55e2d5f5c75af980b
@@ -105,7 +59,6 @@ jobs:
         with:
           apple-team-id: ${{ secrets.APPLE_TEAM_ID }}
           project-name: ${{ steps.source.outputs.project-name }}
-          workspace-name: ${{ steps.source.outputs.workspace-name }}
           scheme-name: Thaw
           deployment-target: ${{ steps.source.outputs.deployment-target }}
 
@@ -125,7 +78,7 @@ jobs:
       - name: Upload DMG
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
-          name: Thaw-dmg-${{ inputs.source }}-${{ steps.source.outputs.commit }}
+          name: Thaw-dmg-${{ steps.source.outputs.commit }}
           path: build/${{ env.DMG_NAME }}
           retention-days: 3
 
