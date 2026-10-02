@@ -15,8 +15,10 @@ existing="$(gh release view "$tag" --repo "$repo" --json assets \
 for file in "$@"; do
   name="$(basename "$file")"
   digest="sha256:$(shasum -a 256 "$file" | cut -d' ' -f1)"
-  published="$(awk -F'\t' -v name="$name" '$1 == name { print $2; exit }' <<< "$existing")"
-  if [[ -z "$published" ]] && ! grep -qF "$name"$'\t' <<< "$existing"; then
+  # "present:<digest>" when the release has an asset with exactly this name.
+  match="$(awk -F'\t' -v name="$name" '$1 == name { print "present:" $2; exit }' <<< "$existing")"
+  published="${match#present:}"
+  if [[ -z "$match" ]]; then
     gh release upload "$tag" "$file" --repo "$repo"
     echo "uploaded ${name}"
   elif [[ "$published" == "$digest" ]]; then
