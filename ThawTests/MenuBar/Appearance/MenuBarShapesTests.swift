@@ -349,12 +349,14 @@ struct MenuBarShapesTests {
     @Suite("MenuBarGlassStyle")
     struct MenuBarGlassStyleTests {
         @Test("Each style maps to the matching AppKit glass style")
+        @available(macOS 26.0, *)
         func nsGlassStyleMapping() {
             #expect(MenuBarGlassStyle.regular.nsGlassStyle == NSGlassEffectView.Style.regular)
             #expect(MenuBarGlassStyle.clear.nsGlassStyle == NSGlassEffectView.Style.clear)
         }
 
         @Test("The two styles do not collapse onto one AppKit style")
+        @available(macOS 26.0, *)
         func nsGlassStyleMappingIsInjective() {
             #expect(MenuBarGlassStyle.regular.nsGlassStyle != MenuBarGlassStyle.clear.nsGlassStyle)
         }

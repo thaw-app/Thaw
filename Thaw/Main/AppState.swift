@@ -321,7 +321,7 @@ final class AppState {
             .store(in: &c)
 
         hidEventManagerObservationTask = Task { [weak self, weak hidEventManager] in
-            let changes = Observations { hidEventManager?.isDraggingMenuBarItem ?? false }
+            let changes = observedValues { hidEventManager?.isDraggingMenuBarItem ?? false }
             for await isDragging in changes {
                 guard let self else { return }
                 guard self.isDraggingMenuBarItem != isDragging else { continue }
@@ -332,7 +332,7 @@ final class AppState {
         // No throttle: these flags only flip on user navigation.
         navigationStateObservationTask = Task { [weak self] in
             guard let self else { return }
-            let changes = Observations { [navigationState] in
+            let changes = observedValues { [navigationState] in
                 (navigationState.isAppFrontmost, navigationState.isSettingsPresented)
             }
             for await (isAppFrontmost, isSettingsPresented) in changes {

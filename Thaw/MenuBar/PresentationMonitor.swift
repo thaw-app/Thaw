@@ -41,7 +41,7 @@ final class PresentationMonitor {
     func performSetup(with appState: AppState) {
         self.appState = appState
         settingTask = Task { @MainActor [weak self, advanced = appState.settings.advanced] in
-            let changes = Observations { advanced.autoZenWhileSharingScreen }
+            let changes = observedValues { advanced.autoZenWhileSharingScreen }
             for await isEnabled in changes {
                 guard let self else { return }
                 if isEnabled {

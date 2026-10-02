@@ -85,7 +85,7 @@ struct IceMenu<Title: View, Label: View, Content: View>: View {
     private var menuButton: some View {
         menu
             .menuStyle(.button)
-            .buttonStyle(.glass)
+            .thawGlassButtonStyle()
             .labelsHidden()
             .fixedSize()
     }

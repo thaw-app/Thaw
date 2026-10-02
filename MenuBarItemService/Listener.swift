@@ -97,9 +97,17 @@ final nonisolated class Listener: @unchecked Sendable {
     ///
     /// Peers must share the service's team identifier. Ad-hoc builds skip the
     /// peer requirement, since `.isFromSameTeam()` can never pass there.
+    ///
+    /// Before macOS 26 the listener stays down: each item window belongs to its
+    /// source app, so nothing needs the service.
     func activate() {
         guard xpcListener == nil else {
             diagLog.notice("Listener is already active")
+            return
+        }
+
+        guard #available(macOS 26.0, *) else {
+            diagLog.notice("Listener: not activating before macOS 26")
             return
         }
 

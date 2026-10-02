@@ -27,7 +27,7 @@ struct SettingsGlassButtonStyle: PrimitiveButtonStyle {
             configuration.label
                 .padding(.horizontal, 16)
         }
-        .buttonStyle(.glass)
+        .thawGlassButtonStyle()
         .buttonBorderShape(.roundedRectangle(radius: ThawRadius.card))
     }
 }

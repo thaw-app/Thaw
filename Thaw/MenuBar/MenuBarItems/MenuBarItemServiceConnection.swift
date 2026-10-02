@@ -34,6 +34,16 @@ extension MenuBarItemService {
 
         private let loggingSync: OSAllocatedUnfairLock<LoggingSyncState>
 
+        /// Whether the service runs at all. Before macOS 26 item windows are
+        /// owned by their source app, so nothing needs it.
+        static var isServiceAvailable: Bool {
+            if #available(macOS 26.0, *) {
+                true
+            } else {
+                false
+            }
+        }
+
         private init() {
             let queue = DispatchQueue.targetingGlobal(
                 label: "MenuBarItemService.Connection.queue",
@@ -50,6 +60,7 @@ extension MenuBarItemService {
         }
 
         func start() async {
+            guard Self.isServiceAvailable else { return }
             diagLog.debug("Starting MenuBarItemService connection")
 
             // Send the log file and retention policy before the start request,
@@ -83,6 +94,7 @@ extension MenuBarItemService {
         /// State is read at send time, so a notification queued before a
         /// rotation can't point the service at the replaced file.
         func syncLogging() async {
+            guard Self.isServiceAvailable else { return }
             // One sender at a time; other callers only mark work pending.
             let isSender = loggingSync.withLock { state -> Bool in
                 state.isPending = true
@@ -186,6 +198,7 @@ extension MenuBarItemService {
                 self.onInvalidate = onInvalidate
             }
 
+            @available(macOS 26.0, *)
             func getSession() throws -> XPCSession {
                 try sessionLock.withLock { session in
                     if let session {
@@ -274,6 +287,8 @@ extension MenuBarItemService {
         /// of the reply or cancellation handler resumes the continuation, so
         /// Task cancellation unblocks the caller immediately.
         func sendAsync(request: Request) async -> Response? {
+            // The service never activates its listener before macOS 26.
+            guard #available(macOS 26.0, *) else { return nil }
             let xpcSession: XPCSession
             do {
                 xpcSession = try storage.getSession()

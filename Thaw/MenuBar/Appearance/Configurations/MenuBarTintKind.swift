@@ -37,6 +37,16 @@ enum MenuBarTintKind: Int, CaseIterable, Identifiable {
         }
     }
 
+    /// The tints this system can draw. Glass needs macOS 26.
+    /// A stored glass selection stays listed so the picker still shows what is saved.
+    static func availableCases(keeping selection: MenuBarTintKind) -> [MenuBarTintKind] {
+        availableCases(supportsGlass: ThawGlass.isSupported, keeping: selection)
+    }
+
+    static func availableCases(supportsGlass: Bool, keeping selection: MenuBarTintKind? = nil) -> [MenuBarTintKind] {
+        supportsGlass || selection == .glass ? allCases : allCases.filter { $0 != .glass }
+    }
+
     /// Localized string key representation.
     var localized: LocalizedStringKey {
         switch self {

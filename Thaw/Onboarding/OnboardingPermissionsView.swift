@@ -68,7 +68,7 @@ struct ThawPermissionsView: View {
                                 .frame(maxWidth: .infinity)
                                 .frame(height: 36)
                         }
-                        .buttonStyle(.glass)
+                        .thawGlassButtonStyle()
                     }
 
                     Button {
@@ -79,7 +79,7 @@ struct ThawPermissionsView: View {
                             .frame(maxWidth: .infinity)
                             .frame(height: 36)
                     }
-                    .buttonStyle(.glassProminent)
+                    .thawGlassButtonStyle(prominent: true)
                     .disabled(!requiredGranted)
                 }
             }
@@ -147,12 +147,12 @@ private struct OnboardingPermissionCard: View {
                         .frame(maxWidth: .infinity)
                         .frame(height: 30)
                 }
-                .buttonStyle(.glass)
+                .thawGlassButtonStyle()
             }
         }
         .padding(14)
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
-        .glassEffect(.regular, in: RoundedRectangle(cornerRadius: ThawRadius.card))
+        .thawGlass(in: RoundedRectangle(cornerRadius: ThawRadius.card))
         .animation(.easeOut(duration: 0.3), value: permission.hasPermission)
     }
 }

@@ -219,6 +219,7 @@ $(SRCROOT)/Thaw/UI/IceUI/IcePicker.swift
 $(SRCROOT)/Thaw/UI/IceUI/IceSection.swift
 $(SRCROOT)/Thaw/UI/IceUI/IceSlider.swift
 $(SRCROOT)/Thaw/UI/IceUI/IceWindow.swift
+$(SRCROOT)/Thaw/UI/IceUI/ThawGlass.swift
 $(SRCROOT)/Thaw/UI/IceUI/ThawShadow.swift
 $(SRCROOT)/Thaw/UI/IceUI/ThawType.swift
 $(SRCROOT)/Thaw/UI/Modifiers/LocalEventMonitorModifier.swift

@@ -167,11 +167,11 @@ struct TriggersSettingsPane: View {
             refreshAppOptions()
             refreshBluetoothOptions()
         }
-        // Not `.onChange(of: itemManager.itemCache)`: reading it from `body` re-renders
-        // the whole pane on every cache publish and steals focus mid-edit. `Observations`
-        // from `.task` watches it without `body` (as in LayoutBarItemView), debounced.
+        // Not .onChange(of: itemManager.itemCache): reading it from body re-renders
+        // the whole pane on every cache publish and steals focus mid-edit. observedValues
+        // from .task watches it without body (as in LayoutBarItemView), debounced.
         .task {
-            let changes = Observations { itemManager.itemCache }
+            let changes = observedValues { itemManager.itemCache }
             for await _ in changes.debounce(for: .milliseconds(150)) {
                 refreshItemOptions()
             }

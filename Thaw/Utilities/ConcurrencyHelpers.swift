@@ -8,6 +8,7 @@
 
 import AsyncAlgorithms
 import Foundation
+import Observation
 import os.lock
 
 // MARK: - Debounced Notification Task
@@ -36,6 +37,80 @@ func debouncedNotificationTask(
         for await _ in events.debounce(for: interval) {
             await action()
         }
+    }
+}
+
+// MARK: - Observed Values
+
+/// The current value, then each change. Observations on macOS 26; before it, a re-armed
+/// withObservationTracking that keeps only the newest value, as Observations does.
+@MainActor
+func observedValues<Value: Sendable>(
+    _ value: @escaping @MainActor () -> Value
+) -> AsyncStream<Value> {
+    if #available(macOS 26.0, *) {
+        let changes = Observations { value() }
+        return AsyncStream(bufferingPolicy: .bufferingNewest(1)) { continuation in
+            let task = Task { @MainActor in
+                await forward(changes, to: continuation)
+            }
+            continuation.onTermination = { _ in task.cancel() }
+        }
+    }
+    return trackedValues(value)
+}
+
+@available(macOS 26.0, *)
+@MainActor
+private func forward<Value: Sendable>(
+    _ changes: Observations<Value, Never>,
+    to continuation: AsyncStream<Value>.Continuation
+) async {
+    for await newValue in changes {
+        continuation.yield(newValue)
+    }
+    continuation.finish()
+}
+
+/// The withObservationTracking stream observedValues uses before macOS 26.
+@MainActor
+func trackedValues<Value: Sendable>(
+    _ value: @escaping @MainActor () -> Value
+) -> AsyncStream<Value> {
+    AsyncStream(bufferingPolicy: .bufferingNewest(1)) { continuation in
+        let isFinished = OSAllocatedUnfairLock(initialState: false)
+        continuation.onTermination = { _ in markFinished(isFinished) }
+        trackObservedValue(value, into: continuation, isFinished: isFinished)
+    }
+}
+
+private nonisolated func markFinished(_ isFinished: OSAllocatedUnfairLock<Bool>) {
+    isFinished.withLock { $0 = true }
+}
+
+@MainActor
+private func trackObservedValue<Value: Sendable>(
+    _ value: @escaping @MainActor () -> Value,
+    into continuation: AsyncStream<Value>.Continuation,
+    isFinished: OSAllocatedUnfairLock<Bool>
+) {
+    guard !isFinished.withLock({ $0 }) else { return }
+    let newValue = withObservationTracking {
+        value()
+    } onChange: {
+        retrackObservedValue(value, into: continuation, isFinished: isFinished)
+    }
+    continuation.yield(newValue)
+}
+
+/// The onChange fires before the change lands, so the value is read again once it has.
+private nonisolated func retrackObservedValue<Value: Sendable>(
+    _ value: @escaping @MainActor () -> Value,
+    into continuation: AsyncStream<Value>.Continuation,
+    isFinished: OSAllocatedUnfairLock<Bool>
+) {
+    Task { @MainActor in
+        trackObservedValue(value, into: continuation, isFinished: isFinished)
     }
 }
 

@@ -24,10 +24,10 @@ struct MenuBarAppearanceEditor: View {
 
     var body: some View {
         bodyContent
-            .safeAreaBar(edge: .top, spacing: 0) {
+            .thawSafeAreaBar(edge: .top, spacing: 0) {
                 panelHeading
             }
-            .safeAreaBar(edge: .bottom, spacing: 0) {
+            .thawSafeAreaBar(edge: .bottom, spacing: 0) {
                 bottomBar
             }
     }
@@ -38,7 +38,7 @@ struct MenuBarAppearanceEditor: View {
             cannotEdit
         } else {
             mainForm
-                .scrollEdgeEffectStyle(.automatic, for: .vertical)
+                .thawScrollEdgeEffect(.automatic, for: .vertical)
                 .padding(.top, topPadding)
         }
     }
@@ -289,7 +289,7 @@ private struct UnlabeledBackgroundEditor: View {
         LabeledContent("Style") {
             HStack {
                 IcePicker("Background", selection: $configuration.backgroundKind) {
-                    ForEach(MenuBarBackgroundKind.allCases, id: \.self) { kind in
+                    ForEach(MenuBarBackgroundKind.availableCases(keeping: configuration.backgroundKind), id: \.self) { kind in
                         Text(kind.localized).tag(kind)
                     }
                 }
@@ -446,7 +446,7 @@ private struct UnlabeledShapeEditor: View {
         LabeledContent("Tint") {
             HStack {
                 IcePicker("Tint", selection: $configuration.tintKind) {
-                    ForEach(MenuBarTintKind.allCases) { tintKind in
+                    ForEach(MenuBarTintKind.availableCases(keeping: configuration.tintKind)) { tintKind in
                         Text(tintKind.localized).tag(tintKind)
                     }
                 }
@@ -776,7 +776,7 @@ private struct PreviewButtonStyle: ButtonStyle {
         configuration.label
             .padding(.horizontal, 10)
             .padding(.vertical, 3)
-            .glassEffect(.regular.interactive(), in: Capsule(style: .continuous))
+            .thawGlass(.interactive, in: Capsule(style: .continuous))
             .opacity(configuration.isPressed ? 0.7 : 1.0)
             .onChange(of: configuration.isPressed) { _, newValue in
                 isPressed = newValue

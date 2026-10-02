@@ -191,6 +191,7 @@ final nonisolated class Listener: @unchecked Sendable {
         }
     }
 
+    @available(macOS 26.0, *)
     private func uncheckedActivateWithSameTeamRequirement() throws {
         xpcListener = try XPCListener(service: name, requirement: .isFromSameTeam()) { request in
             request.accept { [self] message in
@@ -210,9 +211,15 @@ final nonisolated class Listener: @unchecked Sendable {
         )
     }
 
+    /// Before macOS 26 the listener stays down: without the peer requirement API,
+    /// any local process could capture windows under Thaw's Screen Recording grant.
     func activate() {
         guard xpcListener == nil else {
             diagLog.notice("Capture listener is already active")
+            return
+        }
+        guard #available(macOS 26.0, *) else {
+            diagLog.notice("Capture listener: not activating before macOS 26")
             return
         }
         do {

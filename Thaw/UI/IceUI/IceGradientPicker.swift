@@ -353,7 +353,7 @@ private struct IceGradientPickerHandle: View {
         if let stop {
             borderShape
                 .fill(Color(cgColor: stop.color))
-                .glassEffect(.regular.interactive(), in: borderShape)
+                .thawGlass(.interactive, in: borderShape)
                 .overlay(
                     borderShape.strokeBorder(isSelected ? AnyShapeStyle(.white.opacity(0.5)) : AnyShapeStyle(.separator), lineWidth: 1.0)
                 )

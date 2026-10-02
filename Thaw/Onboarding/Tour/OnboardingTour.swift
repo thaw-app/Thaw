@@ -39,7 +39,7 @@ struct ThawOnboardingTour: View {
     }
 
     var body: some View {
-        GlassEffectContainer {
+        ThawGlassContainer {
             VStack(spacing: 0) {
                 Spacer().frame(height: 19)
 
@@ -136,7 +136,7 @@ struct ThawOnboardingTour: View {
                     .font(.subheadline.weight(.semibold))
                     .frame(width: 140, height: 34)
             }
-            .buttonStyle(.glassProminent)
+            .thawGlassButtonStyle(prominent: true)
             .keyboardShortcut(.defaultAction)
         }
         .padding(.horizontal, 24)

@@ -287,7 +287,7 @@ final class MenuBarAppearanceManager {
 
         configurationPanelObservationTask?.cancel()
         configurationPanelObservationTask = Task { [weak self] in
-            let changes = Observations { [weak self] in self?.configuration }
+            let changes = observedValues { [weak self] in self?.configuration }
             for await configuration in changes._throttle(for: .milliseconds(100), latest: true) {
                 guard let self else {
                     return

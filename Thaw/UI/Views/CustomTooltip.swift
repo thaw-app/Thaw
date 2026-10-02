@@ -36,9 +36,20 @@ final class CustomTooltipPanel: NSPanel {
         return field
     }()
 
-    private let glassView: NSGlassEffectView = {
-        let view = NSGlassEffectView()
-        view.cornerRadius = 4
+    /// Liquid Glass on macOS 26, the tooltip material before.
+    private let glassView: NSView = {
+        if #available(macOS 26.0, *) {
+            let view = NSGlassEffectView()
+            view.cornerRadius = 4
+            view.translatesAutoresizingMaskIntoConstraints = false
+            return view
+        }
+        let view = NSVisualEffectView()
+        view.material = .toolTip
+        view.state = .active
+        view.wantsLayer = true
+        view.layer?.cornerRadius = 4
+        view.layer?.masksToBounds = true
         view.translatesAutoresizingMaskIntoConstraints = false
         return view
     }()
@@ -69,7 +80,17 @@ final class CustomTooltipPanel: NSPanel {
         labelContainer.translatesAutoresizingMaskIntoConstraints = false
         labelContainer.addSubview(label)
 
-        glassView.contentView = labelContainer
+        if #available(macOS 26.0, *), let glassView = glassView as? NSGlassEffectView {
+            glassView.contentView = labelContainer
+        } else {
+            glassView.addSubview(labelContainer)
+            NSLayoutConstraint.activate([
+                labelContainer.topAnchor.constraint(equalTo: glassView.topAnchor),
+                labelContainer.leadingAnchor.constraint(equalTo: glassView.leadingAnchor),
+                labelContainer.trailingAnchor.constraint(equalTo: glassView.trailingAnchor),
+                labelContainer.bottomAnchor.constraint(equalTo: glassView.bottomAnchor),
+            ])
+        }
         contentView.addSubview(glassView)
         self.contentView = contentView
 

@@ -319,7 +319,7 @@ final class MenuBarOverlayPanel: NSPanel, @unchecked Sendable {
             // isMissionControlActive's didSet also calls
             // updateAlphaForMenuBarVisibility(), combining it with this value.
             menuBarManagerObservationTask = Task { [weak self, weak appState] in
-                let changes = Observations { appState?.menuBarManager.isMenuBarHiddenBySystem ?? false }
+                let changes = observedValues { appState?.menuBarManager.isMenuBarHiddenBySystem ?? false }
                 for await isHidden in changes {
                     guard let self else { return }
                     self.cachedIsMenuBarHiddenBySystem = isHidden
@@ -330,7 +330,7 @@ final class MenuBarOverlayPanel: NSPanel, @unchecked Sendable {
             // Track the effective configuration so a per-Space override switches
             // the window level on Space change.
             appearanceConfigurationObservationTask = Task { [weak self, weak appState] in
-                let changes = Observations { appState?.appearanceManager.effectiveConfiguration }
+                let changes = observedValues { appState?.appearanceManager.effectiveConfiguration }
                 for await _ in changes {
                     guard let self else { return }
                     self.updateWindowLevel()
@@ -339,7 +339,7 @@ final class MenuBarOverlayPanel: NSPanel, @unchecked Sendable {
 
             // Mirror the shared MissionControlDetector.isActive into this panel.
             missionControlObservationTask = Task { [weak self, weak appState] in
-                let changes = Observations { appState?.appearanceManager.missionControlDetector.isActive ?? false }
+                let changes = observedValues { appState?.appearanceManager.missionControlDetector.isActive ?? false }
                 for await isActive in changes {
                     guard let self else { return }
                     self.isMissionControlActive = isActive
@@ -631,7 +631,14 @@ private final class MenuBarOverlayPanelContentView: NSView {
         isDraggingMenuBarItemObservationTask?.cancel()
     }
 
-    private lazy var tintGlassView: NSGlassEffectView = {
+    /// An NSView because NSGlassEffectView is macOS 26 only.
+    private var tintGlassStorage: NSView?
+
+    @available(macOS 26.0, *)
+    private var tintGlassView: NSGlassEffectView {
+        if let view = tintGlassStorage as? NSGlassEffectView {
+            return view
+        }
         let view = NSGlassEffectView()
         view.style = .regular
         view.cornerRadius = 0
@@ -647,8 +654,9 @@ private final class MenuBarOverlayPanelContentView: NSView {
             content.trailingAnchor.constraint(equalTo: view.trailingAnchor),
             content.bottomAnchor.constraint(equalTo: view.bottomAnchor),
         ])
+        tintGlassStorage = view
         return view
-    }()
+    }
 
     private lazy var tintGlassMaskLayer: CAShapeLayer = {
         let layer = CAShapeLayer()
@@ -707,7 +715,7 @@ private final class MenuBarOverlayPanelContentView: NSView {
             if let appState = overlayPanel.appState {
                 appearanceConfigurationObservationTask?.cancel()
                 appearanceConfigurationObservationTask = Task { [weak self, weak appState] in
-                    let changes = Observations { appState?.appearanceManager.effectiveConfiguration }
+                    let changes = observedValues { appState?.appearanceManager.effectiveConfiguration }
                     for await config in changes {
                         guard let self else { return }
                         guard let config else { continue }
@@ -718,7 +726,7 @@ private final class MenuBarOverlayPanelContentView: NSView {
                 previewConfigurationObservationTask?.cancel()
                 previewConfigurationObservationTask = Task { [weak self, weak appState] in
                     var previous: MenuBarAppearancePartialConfiguration?
-                    let changes = Observations { appState?.appearanceManager.previewConfiguration }
+                    let changes = observedValues { appState?.appearanceManager.previewConfiguration }
                     for await preview in changes {
                         guard let self else { return }
                         guard preview != previous else { continue }
@@ -729,7 +737,7 @@ private final class MenuBarOverlayPanelContentView: NSView {
 
                 averageColorsObservationTask?.cancel()
                 averageColorsObservationTask = Task { [weak self, weak appState] in
-                    let changes = Observations { appState?.menuBarManager.averageColors ?? [:] }
+                    let changes = observedValues { appState?.menuBarManager.averageColors ?? [:] }
                     for await colors in changes {
                         guard let self else { return }
                         guard let displayID = self.overlayPanel?.owningScreen.displayID else { continue }
@@ -739,7 +747,7 @@ private final class MenuBarOverlayPanelContentView: NSView {
 
                 wallpaperPalettesObservationTask?.cancel()
                 wallpaperPalettesObservationTask = Task { [weak self, weak appState] in
-                    let changes = Observations { appState?.menuBarManager.wallpaperPalettes ?? [:] }
+                    let changes = observedValues { appState?.menuBarManager.wallpaperPalettes ?? [:] }
                     for await palettes in changes {
                         guard let self else { return }
                         guard let displayID = self.overlayPanel?.owningScreen.displayID else { continue }
@@ -751,7 +759,7 @@ private final class MenuBarOverlayPanelContentView: NSView {
                 isDraggingMenuBarItemObservationTask?.cancel()
                 isDraggingMenuBarItemObservationTask = Task { [weak self, weak appState] in
                     var previous: Bool?
-                    let changes = Observations { appState?.isDraggingMenuBarItem }
+                    let changes = observedValues { appState?.isDraggingMenuBarItem }
                     for await isDragging in changes {
                         guard let self else { return }
                         guard let isDragging, isDragging != previous else { continue }
@@ -1279,7 +1287,9 @@ private final class MenuBarOverlayPanelContentView: NSView {
     private var isBackgroundGlassActive = false
 
     /// Adds or removes the glass container on the panel based on background kind.
+    /// Before macOS 26 there is no glass, and the picker hides the option.
     private func updateBackgroundGlass() {
+        guard #available(macOS 26.0, *) else { return }
         guard let panel = window as? MenuBarOverlayPanel else { return }
         if configuration.backgroundKind == .glass {
             if isBackgroundGlassActive {
@@ -1331,7 +1341,9 @@ private final class MenuBarOverlayPanelContentView: NSView {
     }
 
     /// Adds or removes the tint glass effect subview, masked to the shape path.
+    /// Before macOS 26 there is no glass, and the picker hides the option.
     private func updateTintGlass() {
+        guard #available(macOS 26.0, *) else { return }
         if configuration.tintKind == .glass, let shapeCGPath {
             if tintGlassView.superview == nil {
                 addSubview(tintGlassView, positioned: .above, relativeTo: nil)

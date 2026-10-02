@@ -50,7 +50,7 @@ extension MenuBarItemTriggersManager {
         // scheduleEvaluation(after:) coalesces the updates.
         itemCacheObservationTask?.cancel()
         itemCacheObservationTask = Task { @MainActor [weak self, weak appState] in
-            let changes = Observations { appState?.itemManager.itemCache }
+            let changes = observedValues { appState?.itemManager.itemCache }
             var isFirst = true
             for await _ in changes {
                 guard let self else { return }
@@ -68,7 +68,7 @@ extension MenuBarItemTriggersManager {
         // versa) without waiting for the next condition flip.
         alwaysHiddenObservationTask?.cancel()
         alwaysHiddenObservationTask = Task { @MainActor [weak self, weak appState] in
-            let changes = Observations { appState?.settings.advanced.enableAlwaysHiddenSection }
+            let changes = observedValues { appState?.settings.advanced.enableAlwaysHiddenSection }
             var previous: Bool??
             for await isEnabled in changes {
                 guard let self else { return }

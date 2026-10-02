@@ -1807,7 +1807,7 @@ final class MenuBarItemManager {
         // costs a plist write and a move batch.
         groupOrderObservationTask?.cancel()
         groupOrderObservationTask = Task { [weak self, weak appState] in
-            let changes = Observations { [weak appState] in
+            let changes = observedValues { [weak appState] in
                 appState?.itemGroupManager.groupSet
             }
             var isFirst = true
@@ -1896,7 +1896,7 @@ final class MenuBarItemManager {
         // presented, via either property changing.
         navigationStateObservationTask = Task { [weak self] in
             guard let appState = self?.appState else { return }
-            let changes = Observations { [weak navigationState = appState.navigationState] in
+            let changes = observedValues { [weak navigationState = appState.navigationState] in
                 (navigationState?.settingsNavigationIdentifier, navigationState?.isSettingsPresented)
             }
             for await (identifier, isPresented) in changes {

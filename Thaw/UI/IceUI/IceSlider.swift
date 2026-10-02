@@ -105,7 +105,7 @@ struct IceSlider<Value: BinaryFloatingPoint, ValueLabel: View>: View {
                 .animation(reduceMotion ? nil : .easeInOut(duration: 0.15), value: isLabelActive)
                 .allowsHitTesting(false)
             }
-            .glassEffect(.regular, in: borderShape)
+            .thawGlass(in: borderShape)
             .overlay(
                 borderShape.strokeBorder(.separator, lineWidth: 0.5)
             )

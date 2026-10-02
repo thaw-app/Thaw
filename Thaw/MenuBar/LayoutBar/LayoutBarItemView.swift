@@ -253,7 +253,7 @@ final class LayoutBarItemView: LayoutBarArrangedView {
             let tag = item.tag
             imageObservationTask = Task { @MainActor [weak self, weak appState] in
                 var previous: MenuBarItemImageCache.CapturedImage?
-                let changes = Observations { appState?.imageCache.images[tag] ?? nil }
+                let changes = observedValues { appState?.imageCache.images[tag] ?? nil }
                 for await image in changes {
                     guard let self else { return }
                     guard !MenuBarItemImageCache.CapturedImage.isVisuallyEqual(previous, image) else { continue }
@@ -268,7 +268,7 @@ final class LayoutBarItemView: LayoutBarArrangedView {
             appIconPreferenceObservationTask?.cancel()
             appIconPreferenceObservationTask = Task { @MainActor [weak self, weak appState] in
                 var previous: Bool?
-                let changes = Observations {
+                let changes = observedValues {
                     appState?.settings.advanced.alwaysUseAppIconForMenuBarItems
                 }
                 for await prefers in changes {
@@ -283,7 +283,7 @@ final class LayoutBarItemView: LayoutBarArrangedView {
             // `controlledIdentifiers` is stored so every read registers a
             // dependency. Read through `effectiveItem` to match `draw`.
             triggerObservationTask = Task { @MainActor [weak self, weak appState] in
-                let changes = Observations { [weak self, weak appState] in
+                let changes = observedValues { [weak self, weak appState] in
                     guard let self, let appState else { return false }
                     return appState.settings.triggers.isControlledByTrigger(
                         identifier: self.effectiveItem.tag.tagIdentifier

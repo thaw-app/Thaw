@@ -215,7 +215,7 @@ private struct HotkeyRecorderButtonStyle: ButtonStyle {
                     .lineLimit(1)
                     .foregroundStyle(.primary)
             }
-            .glassEffect(.regular.interactive(), in: borderShape)
+            .thawGlass(.interactive, in: borderShape)
             .contentShape([.interaction, .focusEffect], borderShape)
     }
 }

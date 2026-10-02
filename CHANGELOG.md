@@ -24,14 +24,14 @@ the items under New and Fixed.
 
 ## [Unreleased]
 
+### New
+
+- Thaw 2 runs on macOS 15 Sequoia again. Its windows use a plain material there instead of Liquid Glass, and the menu bar's glass background and tint aren't offered.
+- A General setting, Show Dock icon while Settings is open. Turn it off to keep Thaw out of the Dock and its recent apps when you open Settings and its other windows.
+
 ### Fixed
 
 - With the menu bar set to hide automatically, an item opened from the Thaw Bar could stay in the visible section until its app was relaunched. It now goes back once the menu bar shows again.
-### New
-
-- A General setting, Show Dock icon while Settings is open. Turn it off to keep Thaw out of the Dock and its recent apps when you open Settings and its other windows.
-### Fixed
-
 - After Thaw moved an item, the Thaw Bar could keep showing it in its old section for several minutes.
 - Rehiding an item while the mouse was moving could leave the pointer in the top-left corner of the screen, under the Apple menu.
 

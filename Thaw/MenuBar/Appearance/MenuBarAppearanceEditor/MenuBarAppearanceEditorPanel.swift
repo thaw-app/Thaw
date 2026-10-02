@@ -97,7 +97,7 @@ final class MenuBarAppearanceEditorPanel: NSObject, NSPopoverDelegate {
 
         appearanceConfigurationObservationTask?.cancel()
         appearanceConfigurationObservationTask = Task { [weak self, weak appState] in
-            let changes = Observations { appState?.appearanceManager.effectiveConfiguration }
+            let changes = observedValues { appState?.appearanceManager.effectiveConfiguration }
             for await _ in changes {
                 guard let self else { return }
                 self.updateContentSize()
@@ -146,7 +146,7 @@ private final class MenuBarAppearanceEditorHostingController: NSHostingControlle
         updatePreferredContentSize()
 
         appearanceConfigurationObservationTask = Task { [weak self, weak appState] in
-            let changes = Observations { appState?.appearanceManager.effectiveConfiguration }
+            let changes = observedValues { appState?.appearanceManager.effectiveConfiguration }
             for await _ in changes {
                 guard let self else { return }
                 self.updatePreferredContentSize()

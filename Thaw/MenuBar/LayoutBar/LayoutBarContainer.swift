@@ -100,7 +100,7 @@ final class LayoutBarContainer: NSView {
         if let appState {
             let itemManager = appState.itemManager
             itemCacheObservationTask = Task { [weak self] in
-                let changes = Observations {
+                let changes = observedValues {
                     (itemManager.itemCache, itemManager.newItemsPlacement)
                 }
                 for await (cache, _) in changes {
@@ -114,7 +114,7 @@ final class LayoutBarContainer: NSView {
             // `@Observable`, so observed separately from the Combine chain.
             let advancedSettings = appState.settings.advanced
             enableAlwaysHiddenSectionObservationTask = Task { [weak self] in
-                let changes = Observations { advancedSettings.enableAlwaysHiddenSection }
+                let changes = observedValues { advancedSettings.enableAlwaysHiddenSection }
                 for await _ in changes {
                     guard let self else { return }
                     setArrangedViews(items: itemManager.itemCache.managedItems(for: section))
@@ -123,7 +123,7 @@ final class LayoutBarContainer: NSView {
 
             averageColorInfoObservationTask = Task { [weak self, weak appState] in
                 var previous: MenuBarAverageColorInfo?
-                let changes = Observations { appState?.menuBarManager.averageColorInfo }
+                let changes = observedValues { appState?.menuBarManager.averageColorInfo }
                 for await colorInfo in changes {
                     guard let self else { return }
                     guard colorInfo != previous else { continue }

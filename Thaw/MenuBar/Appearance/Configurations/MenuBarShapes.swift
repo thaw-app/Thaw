@@ -152,6 +152,16 @@ nonisolated extension MenuBarBackgroundKind {
     ///
     /// Not `default`, which is a keyword and would need backticks.
     static let defaultKind = MenuBarBackgroundKind.none
+
+    /// The backgrounds this system can draw. Glass needs macOS 26.
+    /// A stored glass selection stays listed so the picker still shows what is saved.
+    static func availableCases(keeping selection: MenuBarBackgroundKind) -> [MenuBarBackgroundKind] {
+        availableCases(supportsGlass: ThawGlass.isSupported, keeping: selection)
+    }
+
+    static func availableCases(supportsGlass: Bool, keeping selection: MenuBarBackgroundKind? = nil) -> [MenuBarBackgroundKind] {
+        supportsGlass || selection == .glass ? allCases : allCases.filter { $0 != .glass }
+    }
 }
 
 /// A type that specifies which glass style to use for glass backgrounds and tints.
@@ -161,6 +171,7 @@ nonisolated enum MenuBarGlassStyle: Int, CaseIterable, Codable, Hashable {
     /// Clear glass effect.
     case clear = 1
 
+    @available(macOS 26.0, *)
     var nsGlassStyle: NSGlassEffectView.Style {
         switch self {
         case .regular: .regular

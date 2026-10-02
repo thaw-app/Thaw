@@ -195,6 +195,26 @@ nonisolated extension MenuBarItem {
         )
     }
 
+    /// Before macOS 26 each item window is owned by the app that created it,
+    /// so the owner PID is the source PID and nothing needs resolving.
+    @MainActor
+    private static func getMenuBarItemsByWindowOwner(
+        on display: CGDirectDisplayID?,
+        option: ListOption
+    ) -> EnumerationSnapshot {
+        let windows = getMenuBarItemWindows(on: display, option: option)
+        let windowsByID = Dictionary(windows.map { ($0.windowID, $0) }, uniquingKeysWith: { first, _ in first })
+        var items = windows.map { MenuBarItem(uncheckedItemWindow: $0) }
+        assignStableInstanceIndices(to: &items, using: windowsByID)
+        diagLog.debug("getMenuBarItemsByWindowOwner: created \(items.count) items")
+        return EnumerationSnapshot(
+            items: items,
+            appliedSourcePIDSeeds: [:],
+            windowsByID: windowsByID,
+            controlCenterGeneration: nil
+        )
+    }
+
     @available(macOS 26.0, *)
     @MainActor
     private static func getMenuBarItemsExperimental(
@@ -346,11 +366,15 @@ nonisolated extension MenuBarItem {
         diagLog.debug(
             "getMenuBarItems: starting (resolveSourcePID=\(resolveSourcePID))"
         )
-        let snapshot = await getMenuBarItemsExperimental(
-            on: display,
-            option: option,
-            resolveSourcePID: resolveSourcePID
-        )
+        let snapshot = if #available(macOS 26.0, *) {
+            await getMenuBarItemsExperimental(
+                on: display,
+                option: option,
+                resolveSourcePID: resolveSourcePID
+            )
+        } else {
+            getMenuBarItemsByWindowOwner(on: display, option: option)
+        }
         diagLog.debug("getMenuBarItems: returned \(snapshot.items.count) items")
         return snapshot
     }
