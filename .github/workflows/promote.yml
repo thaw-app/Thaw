@@ -260,8 +260,10 @@ jobs:
           stable_zip="$RUNNER_TEMP/promote/Thaw_${STABLE}.zip"
           cp "$ZIP_PATH" "$stable_zip"
           if gh release view "$STABLE" --repo "$UPDATES_REPOSITORY" >/dev/null 2>&1; then
-            echo "::notice::${STABLE} already exists on ${UPDATES_REPOSITORY}; re-uploading the same ZIP"
-            gh release upload "$STABLE" "$stable_zip" --repo "$UPDATES_REPOSITORY" --clobber
+            echo "::notice::${STABLE} already exists on ${UPDATES_REPOSITORY}; completing it"
+            "$GITHUB_WORKSPACE/.github/actions/prepare-appcasts/attach_release_assets.sh" \
+              "$UPDATES_REPOSITORY" "$STABLE" "$stable_zip"
+            gh release edit "$STABLE" --repo "$UPDATES_REPOSITORY" --draft=false >/dev/null
             exit 0
           fi
           gh release create "$STABLE" "$stable_zip" \
@@ -305,8 +307,11 @@ jobs:
           # Sparkle payloads stay on thaw-app/updates.
           rm -f "$assets"/*.zip "$assets"/*.delta
           if gh release view "$STABLE" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
-            echo "::notice::${STABLE} already exists; re-uploading the same assets"
-            gh release upload "$STABLE" "$assets"/* --repo "$GITHUB_REPOSITORY" --clobber
+            echo "::notice::${STABLE} already exists; completing it"
+            "$GITHUB_WORKSPACE/.github/actions/prepare-appcasts/attach_release_assets.sh" \
+              "$GITHUB_REPOSITORY" "$STABLE" "$assets"/*
+            gh release edit "$STABLE" --repo "$GITHUB_REPOSITORY" \
+              --notes-file "$NOTES_PATH" --draft=false --latest >/dev/null
             exit 0
           fi
           gh release create "$STABLE" "$assets"/* \
