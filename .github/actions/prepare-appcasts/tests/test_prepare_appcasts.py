@@ -87,6 +87,57 @@ class PrepareAppcastsTests(unittest.TestCase):
         self.assertEqual(versions(canonical), [])
         self.assertEqual(versions(legacy), [])
 
+    def test_channel_items_show_their_tag_and_promoted_items_keep_the_bundle_version(self):
+        def item(build, short, tag, channel):
+            channel = f"<sparkle:channel>{channel}</sparkle:channel>" if channel else ""
+            return f"""<item>
+  <sparkle:version>{build}</sparkle:version>
+  <sparkle:shortVersionString>{short}</sparkle:shortVersionString>
+  {channel}
+  <sparkle:minimumSystemVersion>26.0</sparkle:minimumSystemVersion>
+  <enclosure url="https://example.org/download/{tag}/Thaw_{tag}.zip" length="1" type="application/octet-stream"/>
+</item>"""
+
+        items = "".join([
+            item(64, "2.1.1", "2.1.1-rc.1", "beta"),  # built with its final version
+            item(63, "2.1.0", "2.1.0-rc.1", None),  # promoted: channel removed
+            item(62, "2.1.0-beta.6", "2.1.0-beta.6", "beta"),
+            item(56, "2.0.1", "2.0.1", None),
+        ])
+        xml = f'<rss xmlns:sparkle="{SPARKLE_NS}" version="2.0"><channel>{items}</channel></rss>'.encode()
+        canonical, legacy = prepare_appcasts(xml, "2.1.1-rc.1")
+        self.assertEqual(versions(canonical), ["2.1.1-rc.1", "2.1.0", "2.1.0-beta.6", "2.0.1"])
+        self.assertEqual(versions(legacy), versions(canonical))
+        self.assertEqual(prepare_appcasts(canonical, "2.1.1-rc.1"), (canonical, legacy))
+
+    def test_notes_generate_appcast_dropped_come_back_from_the_previous_feed(self):
+        def item(build, notes):
+            description = f"<description><![CDATA[{notes}]]></description>" if notes is not None else ""
+            return f"""<item>
+  <sparkle:version>{build}</sparkle:version>
+  <sparkle:shortVersionString>2.1.{build}</sparkle:shortVersionString>
+  <sparkle:minimumSystemVersion>26.0</sparkle:minimumSystemVersion>
+  {description}
+  <enclosure url="https://example.org/Thaw_2.1.{build}.zip" length="1" type="application/octet-stream"/>
+</item>"""
+
+        def wrap(*items):
+            body = "".join(items)
+            return f'<rss xmlns:sparkle="{SPARKLE_NS}" version="2.0"><channel>{body}</channel></rss>'.encode()
+
+        previous = wrap(item(2, "<p>Two & more</p>"), item(1, "<p>One</p>"))
+        generated = wrap(item(3, "<p>Three</p>"), item(2, None), item(1, ""))
+        canonical, _ = prepare_appcasts(generated, "2.1.3", previous)
+        with minidom.parseString(canonical) as document:
+            notes = {
+                item.getElementsByTagNameNS(SPARKLE_NS, "version")[0].firstChild.data:
+                    [node.firstChild.data for node in item.getElementsByTagName("description")]
+                for item in document.getElementsByTagName("item")
+            }
+        self.assertEqual(notes, {"3": ["<p>Three</p>"], "2": ["<p>Two & more</p>"], "1": ["<p>One</p>"]})
+        self.assertIn(b"<![CDATA[<p>Two & more</p>]]>", canonical)
+        self.assertEqual(prepare_appcasts(canonical, "2.1.3", previous)[0], canonical)
+
     def test_action_entry_point_outputs_paths_without_modifying_source(self):
         with tempfile.TemporaryDirectory() as directory:
             directory = Path(directory)

@@ -293,6 +293,23 @@ jobs:
             echo "dmg-digest=sha256:${dmg_hex}"
           } >> "$GITHUB_OUTPUT"
 
+      # generate_appcast drops the notes of prior archives it re-reads for
+      # deltas; Prepare appcasts restores them from this copy.
+      - name: Snapshot current appcast
+        id: previous-appcast
+        env:
+          GH_TOKEN: ${{ secrets.UPDATES_GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          path="$RUNNER_TEMP/appcast-before.xml"
+          if gh api "repos/${UPDATES_REPOSITORY}/contents/appcast.xml?ref=gh-pages" \
+            --jq .content 2>/dev/null | base64 -d > "$path" && [[ -s "$path" ]]; then
+            echo "path=$path" >> "$GITHUB_OUTPUT"
+          else
+            echo "::warning::No current appcast; notes of prior releases can't be restored"
+            echo "path=" >> "$GITHUB_OUTPUT"
+          fi
+
       - name: Sparkle ZIP and appcast
         id: sparkle
         uses: thaw-app/org-ci/actions/sparkle-release@d90bbc87aa4dff91d3bc9e30fb6ceef0765bd986
@@ -318,6 +335,7 @@ jobs:
         with:
           appcast-path: ${{ steps.sparkle.outputs.appcast-path }}
           release-tag: ${{ steps.meta.outputs.tag }}
+          previous-appcast-path: ${{ steps.previous-appcast.outputs.path }}
 
       - name: Collect update assets
         id: update-assets
