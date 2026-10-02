@@ -7,6 +7,9 @@ name: Promote
 # Sparkle offers an item with no sparkle:channel to everyone, so promotion
 # removes the candidate's channel in the feed. generate_appcast keeps an
 # existing item's channel on later runs, so the promotion sticks.
+#
+# Every step checks for its own result first, so a failed run can be rerun
+# with the same tag and picks up where it stopped.
 
 on:
   workflow_dispatch:
@@ -77,16 +80,21 @@ jobs:
           fi
           stable="${BASH_REMATCH[1]}"
 
-          if gh api "repos/${GITHUB_REPOSITORY}/git/ref/tags/${stable}" >/dev/null 2>&1; then
-            echo "::error::${stable} is already tagged"
-            exit 1
-          fi
           is_draft="$(gh release view "$TAG" --repo "$GITHUB_REPOSITORY" --json isDraft --jq .isDraft)"
           if [[ "$is_draft" != "false" ]]; then
             echo "::error::Release ${TAG} must be published before it can be promoted"
             exit 1
           fi
           commit="$(gh api "repos/${GITHUB_REPOSITORY}/commits/${TAG}" --jq .sha)"
+
+          # A rerun finds the stable tag it made last time; anything else is a conflict.
+          if stable_commit="$(gh api "repos/${GITHUB_REPOSITORY}/commits/${stable}" --jq .sha 2>/dev/null)"; then
+            if [[ "$stable_commit" != "$commit" ]]; then
+              echo "::error::${stable} is already tagged at ${stable_commit}, not ${TAG}'s ${commit}"
+              exit 1
+            fi
+            echo "::notice::${stable} already tags ${TAG}'s commit; resuming"
+          fi
 
           {
             echo "tag=$TAG"
@@ -138,8 +146,11 @@ jobs:
           mkdir -p "$dir"
           gh release download "$TAG" --repo "$UPDATES_REPOSITORY" \
             --pattern "Thaw_${TAG}.zip" --dir "$dir"
-          gh api "repos/${UPDATES_REPOSITORY}/contents/appcast.xml?ref=gh-pages" \
-            --jq .content | base64 -d > "$dir/appcast-before.xml"
+          # Raw, because the JSON form leaves content empty above 1 MB.
+          gh api -H "Accept: application/vnd.github.raw" \
+            "repos/${UPDATES_REPOSITORY}/contents/appcast.xml?ref=gh-pages" \
+            > "$dir/appcast-before.xml"
+          [[ -s "$dir/appcast-before.xml" ]] || { echo "::error::The current appcast is empty"; exit 1; }
           {
             echo "zip=$dir/Thaw_${TAG}.zip"
             echo "appcast=$dir/appcast-before.xml"
@@ -161,10 +172,13 @@ jobs:
           python3 - <<'PY'
           import os
           import plistlib
+          import sys
           import zipfile
           from xml.dom import Node, minidom
 
-          NS = "http://www.andymatuschak.org/xml-namespaces/sparkle"
+          sys.path.insert(0, ".github/actions/prepare-appcasts")
+          from prepare_appcasts import build_number, enclosure_tag, sparkle_elements, text, update_enclosures
+
           tag, stable = os.environ["TAG"], os.environ["STABLE"]
 
           with zipfile.ZipFile(os.environ["ZIP_PATH"]) as archive:
@@ -174,35 +188,35 @@ jobs:
           if short != stable:
               raise SystemExit(f"::error::{tag} was built as {short}, not {stable}; it can't be promoted without a rebuild")
 
-          def sparkle(item, name):
-              return [c for c in item.childNodes
-                      if c.nodeType == Node.ELEMENT_NODE and c.namespaceURI == NS and c.localName == name]
-
-          def text(element):
-              return "".join(n.data for n in element.childNodes
-                             if n.nodeType in (Node.TEXT_NODE, Node.CDATA_SECTION_NODE)).strip()
-
           def replace(element, node):
               for child in list(element.childNodes):
                   element.removeChild(child)
               element.appendChild(node)
 
           with minidom.parse(os.environ["APPCAST_PATH"]) as document:
-              items = [i for i in document.getElementsByTagName("item")
-                       if [text(v) for v in sparkle(i, "version")] == [build]]
+              # generate_appcast writes versions as item elements, never as
+              # enclosure attributes, so an item without them is not ours.
+              items = [i for i in document.getElementsByTagName("item") if build_number(i) == build]
               if len(items) != 1:
                   raise SystemExit(f"::error::Expected one feed item for build {build}, found {len(items)}")
               item = items[0]
-              channels = sparkle(item, "channel")
-              if not channels:
-                  raise SystemExit(f"::error::Build {build} has no channel; it is already stable")
+              if enclosure_tag(item) != tag:
+                  raise SystemExit(f"::error::Build {build}'s feed item downloads {enclosure_tag(item)}, not {tag}")
+              versions = sparkle_elements(item, "shortVersionString")
+              if len(versions) != 1:
+                  raise SystemExit(f"::error::Build {build}'s feed item has no sparkle:shortVersionString element")
+
+              channels = sparkle_elements(item, "channel")
+              already = not channels and text(versions[0]) == stable
+              if not channels and not already:
+                  raise SystemExit(f"::error::Build {build} is stable as {text(versions[0])}, not {stable}")
 
               for channel in channels:
                   spacing = channel.previousSibling
                   item.removeChild(channel)
                   if spacing and spacing.nodeType == Node.TEXT_NODE and not spacing.data.strip():
                       item.removeChild(spacing)
-              replace(sparkle(item, "shortVersionString")[0], document.createTextNode(stable))
+              replace(versions[0], document.createTextNode(stable))
 
               html = open(os.environ["NOTES_HTML"], encoding="utf-8").read()
               descriptions = item.getElementsByTagName("description")
@@ -211,7 +225,7 @@ jobs:
               else:
                   description = document.createElement("description")
                   description.appendChild(document.createCDATASection(html))
-                  item.insertBefore(description, item.getElementsByTagName("enclosure")[0])
+                  item.insertBefore(description, update_enclosures(item)[0])
               for link in item.getElementsByTagName("link"):
                   replace(link, document.createTextNode(os.environ["RELEASE_URL"]))
 
@@ -221,7 +235,8 @@ jobs:
 
           with open(os.environ["GITHUB_OUTPUT"], "a", encoding="utf-8") as f:
               f.write(f"appcast={path}\nbuild={build}\n")
-          print(f"{tag} (build {build}) promoted to {stable} in the feed")
+          state = "already promoted; refreshed" if already else "promoted"
+          print(f"{tag} (build {build}) {state} to {stable} in the feed")
           PY
 
       - name: Prepare appcasts
@@ -244,6 +259,11 @@ jobs:
           set -euo pipefail
           stable_zip="$RUNNER_TEMP/promote/Thaw_${STABLE}.zip"
           cp "$ZIP_PATH" "$stable_zip"
+          if gh release view "$STABLE" --repo "$UPDATES_REPOSITORY" >/dev/null 2>&1; then
+            echo "::notice::${STABLE} already exists on ${UPDATES_REPOSITORY}; re-uploading the same ZIP"
+            gh release upload "$STABLE" "$stable_zip" --repo "$UPDATES_REPOSITORY" --clobber
+            exit 0
+          fi
           gh release create "$STABLE" "$stable_zip" \
             --repo "$UPDATES_REPOSITORY" \
             --target main \
@@ -260,6 +280,11 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           set -euo pipefail
+          # Resolve versions already refused a tag at any other commit.
+          if gh api "repos/${GITHUB_REPOSITORY}/git/ref/tags/${STABLE}" >/dev/null 2>&1; then
+            echo "::notice::${STABLE} is already tagged"
+            exit 0
+          fi
           gh api --method POST "repos/${GITHUB_REPOSITORY}/git/refs" \
             -f ref="refs/tags/${STABLE}" -f sha="$COMMIT" >/dev/null
 
@@ -279,6 +304,11 @@ jobs:
           gh release download "$TAG" --repo "$GITHUB_REPOSITORY" --dir "$assets"
           # Sparkle payloads stay on thaw-app/updates.
           rm -f "$assets"/*.zip "$assets"/*.delta
+          if gh release view "$STABLE" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
+            echo "::notice::${STABLE} already exists; re-uploading the same assets"
+            gh release upload "$STABLE" "$assets"/* --repo "$GITHUB_REPOSITORY" --clobber
+            exit 0
+          fi
           gh release create "$STABLE" "$assets"/* \
             --repo "$GITHUB_REPOSITORY" \
             --verify-tag \

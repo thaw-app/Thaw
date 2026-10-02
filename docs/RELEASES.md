@@ -249,7 +249,8 @@ uploads the same ZIP as `Thaw_2.1.0.zip` to a `2.1.0` release on
 `2.1.0` on the candidate's commit; and publishes a `2.1.0` release with the
 candidate's DMG, SBOM, Sigstore bundles and provenance, which still verify
 because the bytes are the same. `generate_appcast --channel` only applies to
-items it creates, so later releases leave the promoted item alone.
+items it creates, so later releases leave the promoted item alone. Each step checks for its own
+result first, so a run that fails partway can be rerun with the same tag.
 
 Switching *away* from alpha does not roll a user back. The alpha app's version
 line is ahead of the shipping app's, so the stable feed offers nothing newer

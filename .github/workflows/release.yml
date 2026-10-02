@@ -302,12 +302,19 @@ jobs:
         run: |
           set -euo pipefail
           path="$RUNNER_TEMP/appcast-before.xml"
-          if gh api "repos/${UPDATES_REPOSITORY}/contents/appcast.xml?ref=gh-pages" \
-            --jq .content 2>/dev/null | base64 -d > "$path" && [[ -s "$path" ]]; then
+          # Raw, because the JSON form leaves content empty above 1 MB.
+          if gh api -H "Accept: application/vnd.github.raw" \
+            "repos/${UPDATES_REPOSITORY}/contents/appcast.xml?ref=gh-pages" \
+            > "$path" 2> "$RUNNER_TEMP/appcast-before.err" && [[ -s "$path" ]]; then
             echo "path=$path" >> "$GITHUB_OUTPUT"
-          else
-            echo "::warning::No current appcast; notes of prior releases can't be restored"
+          elif grep -q 'HTTP 404' "$RUNNER_TEMP/appcast-before.err"; then
+            echo "No appcast yet; nothing to restore"
             echo "path=" >> "$GITHUB_OUTPUT"
+          else
+            # Publishing without it would wipe the notes of every prior release.
+            cat "$RUNNER_TEMP/appcast-before.err"
+            echo "::error::Could not snapshot the current appcast"
+            exit 1
           fi
 
       - name: Sparkle ZIP and appcast

@@ -90,12 +90,17 @@ class PrepareAppcastsTests(unittest.TestCase):
     def test_channel_items_show_their_tag_and_promoted_items_keep_the_bundle_version(self):
         def item(build, short, tag, channel):
             channel = f"<sparkle:channel>{channel}</sparkle:channel>" if channel else ""
+            # Like the live feed: delta enclosures nest inside sparkle:deltas.
             return f"""<item>
   <sparkle:version>{build}</sparkle:version>
   <sparkle:shortVersionString>{short}</sparkle:shortVersionString>
   {channel}
   <sparkle:minimumSystemVersion>26.0</sparkle:minimumSystemVersion>
   <enclosure url="https://example.org/download/{tag}/Thaw_{tag}.zip" length="1" type="application/octet-stream"/>
+  <sparkle:deltas>
+    <enclosure url="https://example.org/download/{tag}/Thaw{build}-60.delta" sparkle:deltaFrom="60" length="1"/>
+    <enclosure url="https://example.org/download/{tag}/Thaw{build}-59.delta" sparkle:deltaFrom="59" length="1"/>
+  </sparkle:deltas>
 </item>"""
 
         items = "".join([

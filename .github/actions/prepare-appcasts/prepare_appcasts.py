@@ -36,8 +36,17 @@ def has_description(item):
     return any(text(node) for node in item.getElementsByTagName("description"))
 
 
+def update_enclosures(item):
+    # Direct children only: delta enclosures nest inside sparkle:deltas.
+    return [
+        child for child in item.childNodes
+        if child.nodeType == Node.ELEMENT_NODE and child.namespaceURI is None
+        and child.localName == "enclosure"
+    ]
+
+
 def enclosure_tag(item):
-    enclosures = item.getElementsByTagName("enclosure")
+    enclosures = update_enclosures(item)
     if len(enclosures) != 1:
         return None
     match = ENCLOSURE_TAG.search(enclosures[0].getAttribute("url").rsplit("/", 1)[-1])
@@ -70,7 +79,7 @@ def prepare_appcasts(
                 for empty in item.getElementsByTagName("description"):
                     item.removeChild(empty)
                 restored = document.importNode(descriptions[build], True)
-                enclosures = item.getElementsByTagName("enclosure")
+                enclosures = update_enclosures(item)
                 item.insertBefore(restored, enclosures[0] if enclosures else None)
 
             versions = sparkle_elements(item, "shortVersionString")
