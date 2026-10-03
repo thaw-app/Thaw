@@ -181,4 +181,4 @@ check above succeeds.
 
 - [ARCHITECTURE.md](ARCHITECTURE.md)
 - [ASSURANCE_CASE.md](ASSURANCE_CASE.md)
-- [Security notes](SECURITY_NOTES.md)
+- [Thaw/Floe Security Policy](https://github.com/thaw-app/.github/blob/main/.github/SECURITY.md)

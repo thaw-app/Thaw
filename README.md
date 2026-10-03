@@ -19,7 +19,7 @@
   <a href="#install">Install</a> ·
   <a href="#features">Features</a> ·
   <a href="#integrations">Integrations</a> ·
-  <a href="docs/CONTRIBUTOR_NOTES.md">Contributing</a>
+  <a href="https://github.com/thaw-app/.github/blob/main/.github/CONTRIBUTING.md">Contributing</a>
 </p>
 
 <p align="center">
@@ -243,7 +243,7 @@ Missing yours, or spotted something off? [Translate Thaw on Crowdin](https://cro
 
 This project exists thanks to the people who contribute code and documentation. Translations happen on Crowdin rather than in git, so translators are credited separately in [Credits](CREDITS.md).
 
-Want to contribute? Start with [Ways to contribute](https://github.com/thaw-app/Thaw/issues/316). Pull requests are welcome against the `development` branch (see [Contributing](docs/CONTRIBUTOR_NOTES.md)).
+Want to contribute? Start with [Ways to contribute](https://github.com/thaw-app/Thaw/issues/316). Pull requests are welcome against the `development` branch (see the shared [Thaw/Floe contribution policy](https://github.com/thaw-app/.github/blob/main/.github/CONTRIBUTING.md)).
 
 Open to partnerships, integrations, and sponsorships. [Get in touch](https://github.com/sponsors/stonerl).
 
@@ -253,11 +253,11 @@ Open to partnerships, integrations, and sponsorships. [Get in touch](https://git
 
 ## Project documentation
 
-- [Contributing](docs/CONTRIBUTOR_NOTES.md)
+- [Contributing](https://github.com/thaw-app/.github/blob/main/.github/CONTRIBUTING.md)
+- [Development](docs/DEVELOPMENT.md)
 - [Credits](CREDITS.md)
 - [Governance](.github/GOVERNANCE.md)
 - [Security policy](https://github.com/thaw-app/.github/blob/main/.github/SECURITY.md)
-- [Thaw security notes](docs/SECURITY_NOTES.md)
 - [Roadmap](docs/ROADMAP.md)
 - [Architecture](docs/ARCHITECTURE.md)
 - [Assurance case](docs/ASSURANCE_CASE.md)

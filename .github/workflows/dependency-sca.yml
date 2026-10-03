@@ -63,7 +63,7 @@ jobs:
               if not isinstance(reason, str) or not reason.strip():
                   errors.append(
                       f"IgnoredVulns id={vuln_id!r} requires a non-empty reason "
-                      "(see docs/SECURITY_NOTES.md § Dependency SCA policy)"
+                      "(see https://github.com/thaw-app/.github/blob/main/.github/SECURITY.md#dependency-findings)"
                   )
               ignore_until = entry.get("ignoreUntil")
               if ignore_until is None or (
@@ -71,7 +71,7 @@ jobs:
               ):
                   errors.append(
                       f"IgnoredVulns id={vuln_id!r} requires ignoreUntil "
-                      "(YYYY-MM-DD expiry; see docs/SECURITY_NOTES.md)"
+                      "(YYYY-MM-DD expiry; see https://github.com/thaw-app/.github/blob/main/.github/SECURITY.md#dependency-findings)"
                   )
 
           if errors:
