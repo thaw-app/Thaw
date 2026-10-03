@@ -181,4 +181,4 @@ check above succeeds.
 
 - [ARCHITECTURE.md](ARCHITECTURE.md)
 - [ASSURANCE_CASE.md](ASSURANCE_CASE.md)
-- [SECURITY.md](../.github/SECURITY.md)
+- [Security notes](SECURITY_NOTES.md)

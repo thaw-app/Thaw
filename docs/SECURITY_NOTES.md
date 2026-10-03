@@ -1,7 +1,6 @@
-# Security Policy
+# Thaw security notes
 
-Thank you for helping keep Thaw secure. We take the security of our users and
-their data seriously.
+The [organization Security Policy](https://github.com/thaw-app/.github/blob/main/.github/SECURITY.md) defines private reporting and coordinated disclosure. These notes describe Thaw's support window, security requirements, and dependency checks.
 
 ## Supported Versions
 
@@ -70,34 +69,9 @@ A longer argument (threat model, trust boundaries, design principles) lives in
   a specific mitigation.
 - Social engineering of maintainers outside the product.
 
-## Reporting a Vulnerability
+## Response target
 
-Please **do not** report security vulnerabilities through public GitHub issues.
-
-Use [GitHub Private Vulnerability Reporting](https://github.com/thaw-app/Thaw/security/advisories/new)
-when enabled for this repository.
-
-If private vulnerability reporting is unavailable, contact the Project Lead
-privately via the email or contact method on their GitHub profile.
-
-Include:
-
-- A detailed description of the vulnerability.
-- Steps to reproduce.
-- Your macOS version and Thaw version.
-- Potential impact.
-
-## Vulnerability response process
-
-1. Acknowledge the report within 48 hours (best effort).
-2. Triage severity, affected versions, and exploitability.
-3. Fix on a private branch when needed; prepare a release for the latest supported line.
-4. Credit reporters in the advisory / release notes unless they request anonymity ([OpenSSF vulnerability_report_credit](https://www.bestpractices.dev/)).
-5. Disclose via GitHub Security Advisories (and CVE when appropriate) after a fix is available or per coordinated timing with the reporter.
-6. Ask reporters to keep issues confidential until a mitigating release ships.
-
-We aim to fix critical, exploitable issues promptly; timelines depend on
-complexity and whether an OS update is also required.
+Thaw aims to acknowledge private reports within 48 hours (best effort). Fixes target the latest supported release line. Disclosure follows the organization policy, with CVEs when appropriate. Timelines depend on complexity and whether an OS update is required.
 
 ## Dependency SCA policy
 
@@ -153,7 +127,7 @@ Rules for maintainers:
 
 ### Related docs
 
-- Contributor expectations: [CONTRIBUTING.md](CONTRIBUTING.md) (§ SCA / SAST)
+- Contributor expectations: [Contributor notes](CONTRIBUTOR_NOTES.md#dependency-and-security-checks)
 - Release verification / provenance: [docs/VERIFYING_RELEASES.md](../docs/VERIFYING_RELEASES.md)
 
 ## Public vulnerability history

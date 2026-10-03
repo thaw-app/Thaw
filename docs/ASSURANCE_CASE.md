@@ -1,6 +1,6 @@
 # Thaw security assurance case
 
-This document argues that Thaw’s [security requirements](../.github/SECURITY.md)
+This document argues that Thaw’s [security requirements](SECURITY_NOTES.md)
 are met for its intended environment: a **local macOS menu bar utility** used by
 a single interactive user on their own Mac.
 
@@ -168,7 +168,7 @@ defect classes before merge.
 
 | Claim | Evidence |
 | --- | --- |
-| Private vuln reporting + response SLA | `.github/SECURITY.md` |
+| Private vuln reporting + response SLA | [Organization Security Policy](https://github.com/thaw-app/.github/blob/main/.github/SECURITY.md) and [Thaw security notes](SECURITY_NOTES.md#response-target) |
 | URI allowlist + signature binding | `Thaw/Utilities/SettingsURIHandler.swift`, `docs/URI_SCHEMES.md` |
 | Update authenticity | `SUFeedURL` / `SUPublicEDKey` in `Thaw/Resources/Info.plist`; Sparkle release actions |
 | Architecture | `docs/ARCHITECTURE.md` |

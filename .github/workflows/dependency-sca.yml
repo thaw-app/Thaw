@@ -63,7 +63,7 @@ jobs:
               if not isinstance(reason, str) or not reason.strip():
                   errors.append(
                       f"IgnoredVulns id={vuln_id!r} requires a non-empty reason "
-                      "(see .github/SECURITY.md § Dependency SCA policy)"
+                      "(see docs/SECURITY_NOTES.md § Dependency SCA policy)"
                   )
               ignore_until = entry.get("ignoreUntil")
               if ignore_until is None or (
@@ -71,7 +71,7 @@ jobs:
               ):
                   errors.append(
                       f"IgnoredVulns id={vuln_id!r} requires ignoreUntil "
-                      "(YYYY-MM-DD expiry; see .github/SECURITY.md)"
+                      "(YYYY-MM-DD expiry; see docs/SECURITY_NOTES.md)"
                   )
 
           if errors:

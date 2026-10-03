@@ -73,7 +73,7 @@ What does this PR change or add, and why?
 - [ ] I've documented new public APIs / non-obvious helpers.
 - [ ] I've updated documentation as needed.
 - [ ] This PR targets the `development` branch.
-- [ ] If this PR changes dependencies / lockfiles (`Package.resolved`, Actions pins, etc.), `dependency-sca` is green, or any `osv-scanner.toml` suppression includes both `reason` and `ignoreUntil` (see [SECURITY.md](SECURITY.md) § Dependency SCA policy).
+- [ ] If this PR changes dependencies / lockfiles (`Package.resolved`, Actions pins, etc.), `dependency-sca` is green, or any `osv-scanner.toml` suppression includes both `reason` and `ignoreUntil` (see [security notes](../docs/SECURITY_NOTES.md#dependency-sca-policy)).
 
 Test commands run:
 

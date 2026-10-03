@@ -139,5 +139,5 @@ and supply-chain review:
 
 - [ASSURANCE_CASE.md](ASSURANCE_CASE.md): threat model and security argument
 - [URI_SCHEMES.md](URI_SCHEMES.md): external URL/API surface
-- [SECURITY.md](../.github/SECURITY.md): security requirements and reporting
+- [Security notes](SECURITY_NOTES.md): security requirements and organization reporting policy
 - [GOVERNANCE.md](../.github/GOVERNANCE.md): project roles and org repo inventory
