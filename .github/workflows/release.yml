@@ -154,47 +154,13 @@ jobs:
 
       - name: Resolve release notes
         id: notes
-        env:
-          TAG: ${{ steps.meta.outputs.tag }}
-          RELEASE_NOTES_INPUT: ${{ inputs.release_notes }}
-        run: |
-          set -euo pipefail
-          python3 - <<'PY'
-          import os
-          import re
-          import uuid
-
-          tag = os.environ["TAG"]
-          notes = os.environ.get("RELEASE_NOTES_INPUT", "")
-          source = "release_notes input"
-
-          # Without manual notes, use this tag's CHANGELOG.md section ("## [x.y.z]" to
-          # the next "## ") from the checked-out release tag.
-          candidates = ["CHANGELOG.md", "Thaw/Resources/CHANGELOG.md"]
-          changelog = next((p for p in candidates if os.path.isfile(p)), None)
-          if not notes.strip() and changelog:
-              text = open(changelog, encoding="utf-8").read()
-              heading = re.compile(
-                  r"^##\s+\[?" + re.escape(tag) + r"\]?.*$", re.MULTILINE
-              )
-              match = heading.search(text)
-              if match:
-                  rest = text[match.end():]
-                  next_heading = re.search(r"^##\s+", rest, re.MULTILINE)
-                  section = rest[: next_heading.start()] if next_heading else rest
-                  notes = section.strip()
-                  source = changelog
-              else:
-                  source = f"none (no {changelog} section for {tag})"
-          elif not notes.strip():
-              source = "none (no release_notes input, no CHANGELOG.md)"
-
-          delimiter = f"notes_{uuid.uuid4().hex}"
-          with open(os.environ["GITHUB_OUTPUT"], "a", encoding="utf-8") as f:
-              f.write(f"body<<{delimiter}\n{notes}\n{delimiter}\n")
-
-          print(f"Release notes source: {source}")
-          PY
+        uses: thaw-app/org-ci/actions/release-notes@d6dce882eeefd199062c21ef6eb646428a255568
+        with:
+          tag: ${{ steps.meta.outputs.tag }}
+          release-notes: ${{ inputs.release_notes }}
+          changelog-paths: |
+            CHANGELOG.md
+            Thaw/Resources/CHANGELOG.md
 
       - name: Select latest installed Xcode (including betas)
         uses: maxim-lobanov/setup-xcode@ed7a3b1fda3918c0306d1b724322adc0b8cc0a90 # v1.7.0
