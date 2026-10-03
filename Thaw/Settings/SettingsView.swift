@@ -293,6 +293,8 @@ struct SettingsView: View {
                 hookSettings: appState.settings.automationHook,
                 advancedSettings: appState.settings.advanced
             )
+        case .triggers:
+            TriggersSettingsPane(manager: appState.appRunningTriggers)
         case .displays:
             DisplaySettingsPane(displaySettings: appState.settings.displaySettings)
         case .general:
@@ -500,8 +502,8 @@ private struct SettingsSidebar: View {
 /// The sidebar's direct destinations, one flat list with no headings.
 ///
 /// The basics (General, Layout, Visibility, Appearance, Thaw Bar) sit at the
-/// top. About opens from the overflow menu instead. Custom Status Icon is
-/// not a destination: it is an Experiments toggle. Scripts is an unbuilt
+/// top, with About last. Custom Status Icon is not a destination: it is an
+/// Experiments toggle. Scripts is an unbuilt
 /// placeholder, reachable through search only.
 enum SettingsSidebarPanes {
     /// One sidebar group: its direct destinations. Groups are separated by a
@@ -519,12 +521,10 @@ enum SettingsSidebarPanes {
     static let groups: [Group] = [
         // The basics sit at the top: the everyday surfaces (General, Menu Bar,
         // Appearance, Thaw Bar) need no heading.
-        // One flat list, the basics first. About is not a destination here:
-        // it opens from the toolbar's overflow menu.
         Group(panes: [
             .general, .menuBarLayout, .visibility, .menuBarAppearance, .thawBar,
-            .profiles, .hotkeys, .automation, .displays, .spaces,
-            .privacy, .theLab, .tools,
+            .profiles, .hotkeys, .automation, .triggers, .displays, .spaces,
+            .privacy, .theLab, .tools, .about,
         ]),
     ]
 
@@ -651,14 +651,14 @@ private struct SettingsSidebarPaneList: View {
     @Environment(\.colorScheme) private var colorScheme
 
     /// The accent, deepened in dark mode so a light one such as yellow keeps
-    /// its contrast against the white selected label.
-    private static func accent(for scheme: ColorScheme) -> Color {
-        scheme == .dark ? Color.accentColor.mix(with: .black, by: 0.3) : Color.accentColor
+    /// its contrast against the selected label.
+    private var accent: Color {
+        colorScheme == .dark ? Color.accentColor.mix(with: .black, by: 0.4) : Color.accentColor
     }
 
     private var selection: Binding<SettingsNavigationIdentifier?> {
         Binding {
-            // A pane opened from elsewhere, such as About, selects no row.
+            // Routes outside the sidebar, such as Scripts, select no row.
             SettingsSidebarPanes.all.contains(navigationState.settingsNavigationIdentifier)
                 ? navigationState.settingsNavigationIdentifier
                 : nil
@@ -685,24 +685,22 @@ private struct SettingsSidebarPaneList: View {
                 Label {
                     Text(identifier.localized)
                         .font(ThawType.detail.weight(.medium))
+                        .foregroundStyle(Color.primary)
                         .lineLimit(1)
                 } icon: {
                     identifier.iconResource.view
                         .font(ThawType.symbol.weight(.medium))
+                        .foregroundStyle(Color.secondary)
                         .frame(width: Self.iconColumn)
                 }
-                // The ThawUI type scale, with the accent only on the selected
-                // row's symbol and the rest secondary, the way the earlier
-                // glass rail drew them. The system still draws the selection.
-                // Applied per row, where the sidebar reads it.
-                .listItemTint(isSelected ? .preferred(Self.accent(for: colorScheme)) : .monochrome)
+                // Only the selection fill carries the accent. Applied per row,
+                // where the sidebar reads it.
+                .listItemTint(isSelected ? .preferred(accent) : .monochrome)
             }
         }
         .listStyle(.sidebar)
-        // The selection fill follows the same deepened accent: a light accent
-        // such as yellow comes out pale in dark mode, and the white label on
-        // it is hard to read.
-        .tint(Self.accent(for: colorScheme))
+        // The selection fill uses the same deepened accent.
+        .tint(accent)
         // Medium rows whatever the system's sidebar size: at Large the labels
         // and symbols crowd a settings window this narrow.
         .environment(\.sidebarRowSize, .medium)

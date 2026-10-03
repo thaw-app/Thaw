@@ -26,7 +26,9 @@ final class NativeAppHidingExperiment {
         let appListAccess = PickedFileAccess.controlCenterAppList
         return NativeAppHidingController(environment: .init(
             activateAccess: { appListAccess.activateIfNeeded() },
-            requestAccess: { appListAccess.requestAccessViaOpenPanel() }
+            requestAccess: { appListAccess.requestAccessViaOpenPanel() },
+            ownsBundle: ExtraVisibilityChannel.ownsBundle,
+            hideOwnedBundles: ExtraVisibilityChannel.hide
         ))
     }()
 

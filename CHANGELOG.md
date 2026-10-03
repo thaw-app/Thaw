@@ -7,6 +7,41 @@ The `release.yml` workflow reads the section matching the release tag
 (`## [tag]`) and uses it as the release notes for both the GitHub Release
 and the Sparkle appcast, unless overridden with the `release_notes` input.
 
+## [3.0.0-beta.2] - 2026-10-02
+
+**macOS 27 only · Build 112**
+
+### Added
+
+- Triggers can show selected menu bar items while an app runs, including in the background. When it quits, the items follow their saved layout again.
+
+### Fixed
+
+- Layout icon previews use current menu bar positions instead of repeatedly retrying stale screenshot coordinates. Movement and overlap checks still reject captures that could show a neighboring item.
+- Simple Mode keeps refreshing icon previews through the same capture loop as Layout, regardless of the last sidebar page.
+- Amphetamine and Rectangle keep their hidden-item identities across title changes and restarts, without merging distinct sibling items.
+- Items parked off the menu bar no longer add new overflow pressure unless macOS shows its own overflow control.
+- Appearance detects an automatically hiding menu bar on macOS 27.
+- Split appearance pills cover mirrored status items on secondary displays and follow their live leading edge after startup.
+- Clicking Thaw’s icon after it moves no longer dismisses the Thaw Bar as an outside click before reopening it.
+- Showing Live Activities and the camera indicator prevents conflicting assertion-based hiding of Clock, Control Center, and Siri.
+- Release notes and Credits use the same body and heading text styles as Settings instead of a separate oversized type scale.
+
+### Changed
+
+- Automatic overflow is off by default. Existing user preferences are unchanged.
+- A gold app icon and matching accent color.
+- About has a revised layout, a sidebar entry, and a Credits page for contributors and translators.
+
+### Removed
+
+- The Menu bar history experiment, including click history and unused-item suggestions. Previously recorded history is cleared on launch. Layout backups and hiding assignments are unaffected.
+
+### Development
+
+- Local builds compile the sibling PlatformRuntimeKit source checkout against the same MenuBarModel as Thaw.
+- `thaw-devrun.sh` reports build stages, saves full logs outside the checkout, supports `--verbose`, and verifies the launched process and diagnostic-logging preference.
+
 ## [3.0.0-beta.1] - 2026-10-01
 
 **macOS 27 only · Build 111 · First beta**

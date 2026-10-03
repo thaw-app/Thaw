@@ -1149,32 +1149,6 @@ extension MenuBarItemImageCache {
         await recaptureNow(sections: sections, ignoreRecentMove: skipRecentMoveCheck)
     }
 
-    /// The sections whose glyphs some on-screen surface is showing right now.
-    ///
-    /// Ordered by how narrow the demand is: Search only ever renders the
-    /// visible section, any settings pane can render all three, and ThawBar
-    /// renders exactly the one section it has open. An empty result means no
-    /// surface is displaying item images, which callers read as "capture
-    /// nothing", never as "capture everything".
-    ///
-    /// thawBarSection is passed in rather than read here so the caller keeps
-    /// the main-actor read of thawBarPanel on its own side.
-    private static nonisolated func sectionsOnDisplay(
-        for nav: NavigationStateSnapshot,
-        thawBarSection: MenuBarSection.Name?
-    ) -> [MenuBarSection.Name] {
-        if nav.isSearchPresented {
-            return [.visible]
-        }
-        if nav.isSettingsPresented {
-            return MenuBarSection.Name.allCases
-        }
-        if nav.isThawBarPresented, let thawBarSection {
-            return [thawBarSection]
-        }
-        return []
-    }
-
     /// Reads what is on screen and recaptures whatever it needs.
     ///
     /// The zero-argument form the observers and the setup path use: it works
@@ -1201,7 +1175,7 @@ extension MenuBarItemImageCache {
             : nil
 
         await recaptureIfWarranted(
-            sections: Self.sectionsOnDisplay(for: navSnapshot, thawBarSection: thawBarSection),
+            sections: navSnapshot.liveCaptureScope.sections(thawBarSection: thawBarSection),
             skipRecentMoveCheck: navSnapshot.isThawBarPresented,
             nav: navSnapshot
         )
@@ -1227,10 +1201,7 @@ extension MenuBarItemImageCache {
         let thawBarSection: MenuBarSection.Name? = navSnapshot.isThawBarPresented
             ? appState.menuBarManager.thawBarPanel.currentSection
             : nil
-        let sectionsNeedingDisplay = Self.sectionsOnDisplay(
-            for: navSnapshot,
-            thawBarSection: thawBarSection
-        )
+        let sectionsNeedingDisplay = navSnapshot.liveCaptureScope.sections(thawBarSection: thawBarSection)
 
         guard !sectionsNeedingDisplay.isEmpty else {
             return

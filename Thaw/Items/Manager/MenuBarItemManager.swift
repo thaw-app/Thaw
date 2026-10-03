@@ -446,16 +446,21 @@ final class MenuBarItemManager {
     ///
     /// The deficit holds while the same items compete for the bar and is
     /// dropped once an item arrives or leaves.
+    ///
+    /// Parked items only count while macOS shows its own overflow control.
+    /// An app switched off in System Settings parks at x == -1 too, and no
+    /// amount of concealing brings it back.
     static nonisolated func parkedLaneDeficit(
         previous: (width: CGFloat, visibleUIDs: Set<String>)?,
         parkedWidths: [CGFloat],
+        isNativeOverflowActive: Bool,
         modeledHeadroom: CGFloat,
         visibleUIDs: Set<String>,
         overflowUIDs: Set<String>
     ) -> (width: CGFloat, visibleUIDs: Set<String>)? {
         let membership = visibleUIDs.union(overflowUIDs)
         let carried = previous.flatMap { $0.visibleUIDs == membership ? $0.width : nil } ?? 0
-        guard !parkedWidths.isEmpty else {
+        guard isNativeOverflowActive, !parkedWidths.isEmpty else {
             return carried > 0 ? (carried, membership) : nil
         }
         let parked = parkedWidths.reduce(CGFloat.zero) { $0 + budgetWidth(forMeasuredWidth: $1) + 8 }

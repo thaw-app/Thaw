@@ -455,6 +455,23 @@ final class ThawBarPanel: NSPanel {
         }
     }
 
+    /// The live status window can move displays before the AX cache catches up.
+    /// Consuming that icon's mouse-down would close the panel before its action toggles it open again.
+    static nonisolated func isControlItemClick(
+        appKitLocation: CGPoint,
+        liveControlItemFrame: CGRect?,
+        quartzLocation: CGPoint?,
+        cachedControlItemFrame: CGRect?
+    ) -> Bool {
+        if let liveControlItemFrame, liveControlItemFrame.contains(appKitLocation) {
+            return true
+        }
+        if let quartzLocation, let cachedControlItemFrame {
+            return cachedControlItemFrame.contains(quartzLocation)
+        }
+        return false
+    }
+
     /// Exclude the Thaw icon from outside-click dismissal because its click toggles the panel.
     private func hideIfClickIsOutside() {
         // Test AppKit panel and Core Graphics anchor in their own coordinate spaces or the icon never matches.
@@ -464,9 +481,12 @@ final class ThawBarPanel: NSPanel {
         // With the icon off there is no icon to click, only its 2-pt stand-in.
         if let appState,
            appState.settings.general.showThawIcon,
-           let anchor = controlItemAnchorBounds(appState: appState),
-           let pointerLocation = MouseHelpers.locationCoreGraphics,
-           anchor.contains(pointerLocation)
+           Self.isControlItemClick(
+               appKitLocation: NSEvent.mouseLocation,
+               liveControlItemFrame: appState.menuBarManager.section(withName: .visible)?.controlItem.window?.frame,
+               quartzLocation: MouseHelpers.locationCoreGraphics,
+               cachedControlItemFrame: controlItemAnchorBounds(appState: appState)
+           )
         {
             return
         }

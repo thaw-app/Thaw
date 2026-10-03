@@ -10,33 +10,8 @@ import Foundation
 import MenuBarModel
 import PlatformRuntimeKit
 
-/// Pure idle-item and notch suggestions allow testing thresholds without a live menu bar.
+/// Notch suggestions can be evaluated without a live menu bar.
 nonisolated enum LayoutSuggestions {
-    /// How long an item must go unclicked before it is suggested for Hidden.
-    static let idleInterval: TimeInterval = 30 * 24 * 60 * 60
-
-    /// The key an item's usage record is stored under.
-    static func usageKey(for item: MenuBarItem) -> String {
-        MenuBarItemTag.canonicalPersistentIdentifier(item.tag.tagIdentifier)
-    }
-
-    /// Suggest only after a full idleInterval of observation; shorter records cannot prove inactivity.
-    /// Shortcuts and Thaw Bar clicks may be unseen, so this is a review suggestion, not a verdict.
-    static func unusedItems(
-        _ visibleItems: [MenuBarItem],
-        records: [String: HygieneItemRecord],
-        now: Date
-    ) -> [MenuBarItem] {
-        visibleItems.filter { item in
-            guard !item.isControlItem,
-                  let record = records[usageKey(for: item)],
-                  now.timeIntervalSince(record.firstSeen) >= idleInterval
-            else { return false }
-            let lastUse = record.lastActivated ?? record.firstSeen
-            return now.timeIntervalSince(lastUse) >= idleInterval
-        }
-    }
-
     /// Visible items a notch covers, per MenuBarNotchGeometry.
     static func itemsBehindNotch(_ visibleItems: [MenuBarItem], notchRects: [CGRect]) -> [MenuBarItem] {
         visibleItems.filter { item in
@@ -63,7 +38,6 @@ nonisolated enum LayoutSuggestions {
 @MainActor
 enum LayoutSuggestionDismissal {
     enum Kind: String {
-        case unusedItems
         case itemsBehindNotch
     }
 

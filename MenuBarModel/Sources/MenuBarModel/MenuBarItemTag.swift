@@ -195,7 +195,8 @@ public struct MenuBarItemTag: Hashable, CustomStringConvertible, Sendable, Codab
     /// Whether bundleID belongs to an app whose status-item titles are live
     /// text end to end and therefore cannot serve as identity at all.
     public static func hasVolatileTitles(_ bundleID: String) -> Bool {
-        volatileTitleBundleMatchers.contains { matcher in
+        // Amphetamine's single item alternates between Item-0, ∞ and 𝗧.
+        bundleID == "com.if.Amphetamine" || volatileTitleBundleMatchers.contains { matcher in
             bundleID.hasPrefix(matcher.prefix) && bundleID.hasSuffix(matcher.suffix)
         } || learnedVolatileTitleBundleIDs.withLock { $0.contains(bundleID) }
     }
@@ -567,12 +568,23 @@ public struct MenuBarItemTag: Hashable, CustomStringConvertible, Sendable, Codab
     }
 
     public static func canonicalTitle(namespace: Namespace, title: String) -> String {
-        guard case let .string(bundleID) = namespace,
-              let canonicalize = titleCanonicalizer(for: bundleID)
-        else {
+        guard case let .string(bundleID) = namespace else {
             return title
         }
-        return canonicalize(title)
+        return migratedAppKitPlaceholderTitle(bundleID: bundleID, title: title)
+            ?? titleCanonicalizer(for: bundleID)?(title)
+            ?? title
+    }
+
+    /// Rectangle owns one status item; its old AppKit placeholder became Item-0
+    /// when AX enumeration stopped accepting _NS identifiers. Do not generalize
+    /// to multi-item apps such as Keyboard Maestro. Keep this migration outside
+    /// the live-title registry so AX attribute precedence remains unchanged.
+    private static func migratedAppKitPlaceholderTitle(bundleID: String, title: String) -> String? {
+        guard bundleID == "com.knollsoft.Rectangle",
+              title.wholeMatch(of: /_NS:\d+/) != nil
+        else { return nil }
+        return "Item-0"
     }
 
     public static func canonicalPersistentIdentifier(_ identifier: String) -> String {
@@ -582,12 +594,19 @@ public struct MenuBarItemTag: Hashable, CustomStringConvertible, Sendable, Codab
             return identifier
         }
         let bundleID = String(identifier[..<separator])
+        let prefix = "\(bundleID):"
+        let suffix = String(identifier[identifier.index(after: separator)...])
+        // The first number belongs to AppKit's title, not to our instance index.
+        if let match = suffix.wholeMatch(of: /(_NS:\d+)(?::(\d+))?/),
+           let title = migratedAppKitPlaceholderTitle(bundleID: bundleID, title: String(match.1))
+        {
+            let instance = match.2.map { ":\($0)" } ?? ""
+            return "\(prefix)\(title)\(instance)"
+        }
         guard let canonicalize = titleCanonicalizer(for: bundleID) else {
             return identifier
         }
 
-        let prefix = "\(bundleID):"
-        let suffix = String(identifier[identifier.index(after: separator)...])
         // A clock's trailing minutes are not an instance index; splitting them would churn identity every minute.
         // Distinguish times by digits before the colon and two digits after it.
         if !suffix.contains(/\d{1,2}:\d{2}(?::\d{2})?$/),

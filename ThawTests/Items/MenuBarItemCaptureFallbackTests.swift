@@ -15,6 +15,95 @@ import ThawCapture
 @MainActor
 @Suite("Thumbnail capture fallback", .bug("https://github.com/thaw-app/Thaw/issues/1153"))
 struct MenuBarItemCaptureFallbackTests {
+    @Test("Layout and Simple Mode use the same fresh-position capture pipeline", arguments: [false, true])
+    func visibleCaptureRefreshesStalePositionsOnEveryPass(simpleMode: Bool) async throws {
+        let nav = MenuBarItemImageCache.NavigationStateSnapshot(
+            isThawBarPresented: false,
+            isSearchPresented: false,
+            isAppFrontmost: true,
+            isSettingsPresented: true,
+            settingsNavigationIdentifier: simpleMode ? .general : .menuBarLayout,
+            isItemHotkeyListExpanded: false,
+            isSimpleModeSettings: simpleMode
+        )
+        let sections = MenuBarItemImageCache.capturableSections(
+            from: nav.liveCaptureScope.sections(thawBarSection: nil),
+            usesVisibilityRestrictions: true,
+            revealedSection: nil
+        )
+        try #require(sections == [.visible])
+        let stale = makeItem(x: 1000)
+        let neighbour = makeItem(title: "Neighbour", x: 1000, windowID: 102)
+        let cache = MenuBarItemImageCache(screenIsLocked: { false })
+
+        // The log repeated old rectangles after the bar shifted left by 48pt.
+        // Keep the layout cache unchanged while the live position changes again.
+        for liveX: CGFloat in [952, 904] {
+            let current = makeItem(x: liveX)
+            let reader = try CaptureFixture(
+                hosting: nil,
+                strip: makeCapture(opaque: true, glyphX: liveX + 8),
+                geometry: .liveItems,
+                items: [current, neighbour]
+            )
+            let result = await cache.captureImages(
+                of: [stale], scale: 2, displayID: 42,
+                screenFrame: CGRect(x: 0, y: 0, width: 1470, height: 956),
+                freshBounds: MenuBarItemImageCache.shouldUseFreshBounds(for: sections[0], revealedSection: nil),
+                concealedIdentifiers: [], using: reader
+            )
+
+            let glyph = try #require(result.captured[stale.tag])
+            #expect(!glyph.isEffectivelyBlank)
+            #expect(result.unconditionallyInvalidatedTags.isEmpty)
+            #expect(await reader.captures == [.strip])
+            #expect(await reader.inventoryReadsAtCapture == [1])
+        }
+    }
+
+    @Test("An item absent from the fresh inventory cannot fall back to its cached rectangle")
+    func absentFreshItemSkipsScreenshot() async throws {
+        let item = makeItem()
+        let reader = try CaptureFixture(
+            hosting: makeCapture(opaque: false),
+            strip: makeCapture(opaque: true), items: []
+        )
+        let cache = MenuBarItemImageCache(screenIsLocked: { false })
+        let result = await cache.captureImages(
+            of: [item], scale: 2, displayID: 42, screenFrame: nil,
+            freshBounds: MenuBarItemImageCache.shouldUseFreshBounds(for: .visible, revealedSection: nil),
+            concealedIdentifiers: [], using: reader
+        )
+
+        #expect(result.captured.isEmpty)
+        #expect(result.invalidatedTags.isEmpty)
+        #expect(result.unreadable.isEmpty)
+        #expect(await reader.captures.isEmpty)
+    }
+
+    @Test("Fresh pre-capture positions do not bypass post-capture movement or ownership checks", arguments: [
+        CaptureFixture.Geometry.moved, .ambiguous,
+    ])
+    private func refreshedPositionsStillRequirePostCaptureValidation(geometry: CaptureFixture.Geometry) async throws {
+        let stale = makeItem(x: 1000)
+        let current = makeItem(x: 952)
+        let reader = try CaptureFixture(
+            hosting: makeCapture(opaque: false, glyphX: 960),
+            strip: makeCapture(opaque: true, glyphX: 960),
+            geometry: geometry, items: [current]
+        )
+        let cache = MenuBarItemImageCache(screenIsLocked: { false })
+        let result = await cache.captureImages(
+            of: [stale], scale: 2, displayID: 42, screenFrame: nil,
+            freshBounds: MenuBarItemImageCache.shouldUseFreshBounds(for: .visible, revealedSection: nil),
+            concealedIdentifiers: [], using: reader
+        )
+
+        #expect(result.captured.isEmpty)
+        #expect(await reader.captures == [.strip])
+        #expect(await reader.inventoryReadsAtCapture == [1])
+    }
+
     @Test("Locking during a capture discards pixels and failure verdicts", arguments: [CaptureFixture.Source.strip, .hosting, .barWindow], [false, true])
     private func lockDuringCaptureDiscardsThePass(source: CaptureFixture.Source, returnsPixels: Bool) async throws {
         let locked = OSAllocatedUnfairLock(initialState: false)
@@ -24,7 +113,11 @@ struct MenuBarItemCaptureFallbackTests {
             hosting: source == .hosting && returnsPixels ? pixels : nil,
             barWindow: source == .barWindow && returnsPixels ? pixels : nil,
             strip: source == .strip && returnsPixels ? pixels : nil,
-            onCapture: { if $0 == source { locked.withLock { $0 = true } } }
+            onCapture: {
+                if $0 == source {
+                    locked.withLock { $0 = true }
+                }
+            }
         )
         let cache = MenuBarItemImageCache(screenIsLocked: { locked.withLock { $0 } })
         let result = await cache.axBoundsCapture(
@@ -321,7 +414,7 @@ private actor CaptureFixture: MenuBarCaptureReading {
     }
 
     enum Geometry: Sendable {
-        case stable, unavailable, moved, ambiguous
+        case stable, unavailable, moved, ambiguous, liveItems
     }
 
     let hosting: ScreenCapture.MenuBarHostingCapture?
@@ -334,6 +427,8 @@ private actor CaptureFixture: MenuBarCaptureReading {
     private(set) var captures: [Source] = []
     private(set) var sourcesAtValidation: [Source] = []
     private(set) var validatedTags: [MenuBarItemTag] = []
+    private var inventoryReadCount = 0
+    private(set) var inventoryReadsAtCapture: [Int] = []
 
     init(
         hosting: ScreenCapture.MenuBarHostingCapture?,
@@ -375,12 +470,14 @@ private actor CaptureFixture: MenuBarCaptureReading {
 
     func displayStripCapture(displayID _: CGDirectDisplayID) async -> ScreenCapture.MenuBarHostingCapture? {
         captures.append(.strip)
+        inventoryReadsAtCapture.append(inventoryReadCount)
         onCapture(.strip)
         return strip
     }
 
     func menuBarItems(displayID _: CGDirectDisplayID) async -> [MenuBarItem] {
-        items
+        inventoryReadCount += 1
+        return items
     }
 
     func liveBounds(
@@ -399,6 +496,27 @@ private actor CaptureFixture: MenuBarCaptureReading {
             }), [])
         case .ambiguous:
             return ([:], Set(candidates.map(\.item.uniqueIdentifier)))
+        case .liveItems:
+            let entries = items.enumerated().map { index, item in
+                AXGeometryCatalog.Entry(
+                    ownerPID: item.ownerPID, itemIndex: index,
+                    identityTitle: item.tag.title, frame: item.bounds
+                )
+            }
+            var bounds = [String: CGRect]()
+            var ambiguous = Set<String>()
+            for candidate in candidates {
+                let item = candidate.item
+                switch AXGeometryCatalog.match(
+                    ownerPID: item.ownerPID, identityTitle: item.tag.title,
+                    bounds: candidate.bounds, in: entries
+                ) {
+                case let .frame(frame): bounds[item.uniqueIdentifier] = frame
+                case .ambiguous: ambiguous.insert(item.uniqueIdentifier)
+                case .unavailable: break
+                }
+            }
+            return (bounds, ambiguous)
         }
     }
 }

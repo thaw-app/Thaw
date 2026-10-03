@@ -275,7 +275,8 @@ extension MenuBarItemManager {
         // Native overflow proves the modeled headroom is wrong; subtract its control width plus one nominal item.
         // The probe remeasures each cycle; a modest deficit avoids Visible/Hidden oscillation.
         var effectiveAvailableWidth = availableWidth
-        if controller.isNativeOverflowActive(on: screen.displayID) {
+        let isNativeOverflowActive = controller.isNativeOverflowActive(on: screen.displayID)
+        if isNativeOverflowActive {
             let controlWidth = controller.nativeOverflowControlBounds(on: screen.displayID)
                 .map(\.width).max() ?? 0
             let deficit = controlWidth + Self.nominalStatusItemWidth
@@ -321,6 +322,7 @@ extension MenuBarItemManager {
         let parkedDeficit = Self.parkedLaneDeficit(
             previous: heldParkedLaneDeficit,
             parkedWidths: parkedWidths,
+            isNativeOverflowActive: isNativeOverflowActive,
             modeledHeadroom: effectiveAvailableWidth - trailingLaneItemWidth,
             visibleUIDs: Set(visibleLive.map(\.uniqueIdentifier)),
             overflowUIDs: overflowIdentifiers
@@ -331,6 +333,11 @@ extension MenuBarItemManager {
             )
         }
         heldParkedLaneDeficit = parkedDeficit
+        if !parkedWidths.isEmpty, !isNativeOverflowActive {
+            MenuBarItemManager.diagLog.debug(
+                "macOS 27 overflow: \(parkedWidths.count) visible item(s) off the bar without native overflow; not counted as a full bar"
+            )
+        }
         if let parkedDeficit {
             effectiveAvailableWidth = max(1, effectiveAvailableWidth - parkedDeficit.width)
         }

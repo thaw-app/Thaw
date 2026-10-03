@@ -124,14 +124,14 @@ struct FoldedMenuBar: View {
         }
     }
 
-    /// The section's name, in the accent while a drag hovers its bar.
+    /// The section's name, on an accent wash while a drag hovers its bar.
     private func sectionName(_ section: MenuBarSection.Name) -> some View {
         Text(section.localized)
             .font(.caption.weight(.semibold))
-            .foregroundStyle(
-                dragTargetSection == section
-                    ? AnyShapeStyle(Color.accentColor)
-                    : AnyShapeStyle(.primary)
+            .foregroundStyle(.primary)
+            .background(
+                Color.accentColor.opacity(dragTargetSection == section ? 0.22 : 0),
+                in: RoundedRectangle(cornerRadius: 4)
             )
             .fixedSize()
             .accessibilityAddTraits(.isHeader)

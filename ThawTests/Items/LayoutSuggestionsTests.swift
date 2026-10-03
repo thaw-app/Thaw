@@ -12,9 +12,6 @@ import Testing
 
 @Suite("Layout suggestions")
 struct LayoutSuggestionsTests {
-    private let now = Date(timeIntervalSinceReferenceDate: 1_000_000_000)
-    private let day: TimeInterval = 24 * 60 * 60
-
     private func item(_ title: String, x: CGFloat = 100) -> MenuBarItem {
         MenuBarItem(
             tag: MenuBarItemTag(namespace: .string("com.example.\(title)"), title: title),
@@ -25,41 +22,6 @@ struct LayoutSuggestionsTests {
             title: title,
             isOnScreen: true
         )
-    }
-
-    private func record(firstSeenDaysAgo: Double, lastClickedDaysAgo: Double?) -> HygieneItemRecord {
-        HygieneItemRecord(
-            firstSeen: now - firstSeenDaysAgo * day,
-            lastSeen: now,
-            lastActivated: lastClickedDaysAgo.map { now - $0 * day },
-            displayNameAtFirstSight: "x"
-        )
-    }
-
-    @Test("An item watched and unclicked for 30 days is suggested")
-    func suggestsIdleItems() {
-        let idle = item("Idle")
-        let records = [LayoutSuggestions.usageKey(for: idle): record(firstSeenDaysAgo: 45, lastClickedDaysAgo: 40)]
-        #expect(LayoutSuggestions.unusedItems([idle], records: records, now: now).count == 1)
-    }
-
-    @Test("A recently clicked item is not suggested")
-    func skipsRecentlyClicked() {
-        let used = item("Used")
-        let records = [LayoutSuggestions.usageKey(for: used): record(firstSeenDaysAgo: 45, lastClickedDaysAgo: 2)]
-        #expect(LayoutSuggestions.unusedItems([used], records: records, now: now).isEmpty)
-    }
-
-    @Test("An item watched for less than 30 days is never suggested, clicked or not")
-    func needsAFullWindowOfRecord() {
-        let new = item("New")
-        let records = [LayoutSuggestions.usageKey(for: new): record(firstSeenDaysAgo: 10, lastClickedDaysAgo: nil)]
-        #expect(LayoutSuggestions.unusedItems([new], records: records, now: now).isEmpty)
-    }
-
-    @Test("An item with no record is never suggested")
-    func needsARecord() {
-        #expect(LayoutSuggestions.unusedItems([item("Unknown")], records: [:], now: now).isEmpty)
     }
 
     @Test("Only items mostly under the notch are reported")

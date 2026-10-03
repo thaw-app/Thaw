@@ -60,17 +60,20 @@ nonisolated enum MenuBarSplitPillGeometry {
         stableTrailingBounds: CGRect,
         screenFrame: CGRect,
         revealedSection: MenuBarSection.Name?,
-        isTransitioning: Bool = false
+        isTransitioning: Bool = false,
+        sourceScreenFrame: CGRect? = nil
     ) -> (itemBounds: [CGRect], stableTrailingBounds: CGRect) {
-        // The probe covers only authored Visible items, not expanded or transitioning runs; a CG-global x cannot identify a display.
-        guard sample.screenFrame == screenFrame, revealedSection == nil, !isTransitioning else {
+        // Only the display that supplied these bounds may correct a mirrored pill's edge.
+        guard sample.screenFrame == screenFrame || sample.screenFrame == sourceScreenFrame,
+              revealedSection == nil, !isTransitioning
+        else {
             return (itemBounds, stableTrailingBounds)
         }
+        let edge = screenFrame.maxX - (sample.screenFrame.maxX - sample.x)
         guard let currentMinX = itemBounds.map(\.minX).min(),
-              abs(currentMinX - sample.x) >= 1,
+              abs(currentMinX - edge) >= 1,
               let reference = itemBounds.first
         else { return (itemBounds, stableTrailingBounds) }
-        let edge = sample.x
         var updated = itemBounds
         if edge > currentMinX {
             updated = itemBounds.compactMap { bounds in
@@ -255,9 +258,10 @@ nonisolated enum MenuBarSplitPillGeometry {
     static func trailingPillBounds(
         from items: [MenuBarItem],
         screenFrame: CGRect,
-        context: TrailingPillContext
+        context: TrailingPillContext,
+        mapBounds: (CGRect) -> CGRect = { $0 }
     ) -> [CGRect] {
-        var bounds = trailingPillBounds(from: items, context: context)
+        var bounds = trailingPillBounds(from: items, context: context).map(mapBounds)
         if !items.isEmpty, !bounds.isEmpty,
            !items.contains(where: { $0.tag.namespace == .menuBarAgent })
         {

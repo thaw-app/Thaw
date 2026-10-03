@@ -644,26 +644,41 @@ extension MenuBarItemImageCache {
             NSScreen.screen(for: displayID)?.frame
         }
 
-        let liveItems: [MenuBarItem]
+        return await captureImages(
+            of: capturable,
+            scale: scale,
+            displayID: displayID,
+            screenFrame: screenFrame,
+            freshBounds: freshBounds,
+            concealedIdentifiers: concealedIdentifiers
+        )
+    }
+
+    @concurrent
+    nonisolated func captureImages(
+        of items: [MenuBarItem],
+        scale: CGFloat,
+        displayID: CGDirectDisplayID,
+        screenFrame: CGRect?,
+        freshBounds: Bool,
+        concealedIdentifiers: Set<String>,
+        using reader: any MenuBarCaptureReading = LiveMenuBarCaptureReader()
+    ) async -> CapturePass {
+        guard !screenIsLocked(), !Task.isCancelled else { return CapturePass() }
         let liveBoundsByID: [String: CGRect]
         if freshBounds {
-            // Stale snapshot bounds of a reflowing item can crop across its
-            // neighbours. Scoped to the capture display.
-            liveItems = await MenuBarItem.getMenuBarItems(
-                on: displayID,
-                option: [.onScreen, .activeSpace]
-            )
+            let liveItems = await reader.menuBarItems(displayID: displayID)
+            guard !screenIsLocked(), !Task.isCancelled else { return CapturePass() }
             liveBoundsByID = Dictionary(
                 liveItems.map { ($0.uniqueIdentifier, $0.bounds) },
                 uniquingKeysWith: { first, _ in first }
             )
         } else {
-            liveItems = []
             liveBoundsByID = [:]
         }
 
         let axItems = Self.captureBounds(
-            for: capturable,
+            for: items,
             freshBounds: freshBounds,
             liveBoundsByID: liveBoundsByID,
             screenFrame: screenFrame
@@ -681,7 +696,8 @@ extension MenuBarItemImageCache {
             scale: scale,
             displayID: displayID,
             validateFreshBounds: freshBounds,
-            concealedIdentifiers: concealedIdentifiers
+            concealedIdentifiers: concealedIdentifiers,
+            using: reader
         )
     }
 
@@ -745,7 +761,7 @@ extension MenuBarItemImageCache {
             for: section,
             revealedSection: revealedSection
         )
-        if shouldUseFreshBounds {
+        if section != .visible, shouldUseFreshBounds {
             clearCaptureFailures(for: items)
         }
         // A stale item cache can let concealed items into this pass; the crop
@@ -756,8 +772,8 @@ extension MenuBarItemImageCache {
             of: items,
             scale: scale,
             appState: appState,
-            // Only revealed sections re-read bounds, since their items move
-            // during the reveal; an extra walk elsewhere can crop a neighbour.
+            // Re-read geometry before the screenshot, including visible items;
+            // the post-capture ownership check still rejects movement or ambiguity.
             freshBounds: shouldUseFreshBounds,
             concealedIdentifiers: concealedIdentifiers
         )

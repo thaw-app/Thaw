@@ -622,6 +622,7 @@ private final class MenuBarOverlayPanelContentView: NSView {
 
     /// Use fresh AXExtrasMenuBar geometry: Apple items may stay visible while Hidden, and conceal snapshots may retain stale bounds.
     private var cachedAXItemBounds: [CGRect] = []
+    private var cachedAXSourceScreenFrame: CGRect?
 
     /// Keep the concealed chevron separate so widening the trailing pill cannot pull the leading pill's clamp over real items.
     /// Zero during Hidden reveal, when cachedAXItemBounds already includes the chevron.
@@ -646,6 +647,7 @@ private final class MenuBarOverlayPanelContentView: NSView {
         publish: { [weak self] snapshot in
             guard let self else { return }
             cachedAXItemBounds = snapshot.itemBounds
+            cachedAXSourceScreenFrame = snapshot.sourceScreenFrame
             cachedChevronFrame = snapshot.chevronFrame
             // A read that began before the edge last moved describes the bar
             // as it was; the live edge is newer.
@@ -828,7 +830,8 @@ private final class MenuBarOverlayPanelContentView: NSView {
             stableTrailingBounds: lastStableTrailingPathBounds,
             screenFrame: panel.owningScreen.cgFrame,
             revealedSection: appState.menuBarManager.sectionController.revealedSection,
-            isTransitioning: appState.menuBarManager.isRevealHideTransitionActive
+            isTransitioning: appState.menuBarManager.isRevealHideTransitionActive,
+            sourceScreenFrame: cachedAXSourceScreenFrame
         )
         cachedAXItemBounds = updated.itemBounds
         lastStableTrailingPathBounds = updated.stableTrailingBounds
@@ -841,6 +844,7 @@ private final class MenuBarOverlayPanelContentView: NSView {
         guard overlayPanel != nil else {
             geometryRefresh.cancel()
             cachedAXItemBounds = []
+            cachedAXSourceScreenFrame = nil
             cachedChevronFrame = .zero
             return
         }
@@ -862,8 +866,6 @@ private final class MenuBarOverlayPanelContentView: NSView {
                 )
             }
         ), !Task.isCancelled else { return nil }
-        let items = snapshot.items.filter { $0.bounds.intersects(displayBounds) }
-
         let controller = overlayPanel?.appState?.menuBarManager.sectionController
         let context = MenuBarSplitPillGeometry.TrailingPillContext(
             revealedSection: controller?.revealedSection,
@@ -871,19 +873,11 @@ private final class MenuBarOverlayPanelContentView: NSView {
                 controller?.section(for: item) ?? .visible
             }
         )
-        let bounds = MenuBarSplitPillGeometry.trailingPillBounds(
-            from: items,
-            screenFrame: CGDisplayBounds(displayID),
+        return MenuBarAppearanceItems.geometry(
+            from: snapshot,
+            on: displayBounds,
+            displayBounds: NSScreen.allDisplayBoundsCG,
             context: context
-        )
-        let isRevealingHidden = controller?.revealedSection == .hidden
-            || controller?.revealedSection == .alwaysHidden
-        return MenuBarGeometryRefresh.Snapshot(
-            itemBounds: bounds,
-            chevronFrame: isRevealingHidden
-                ? .zero
-                : (items.first(where: { $0.tag.matchesVisibleControlItem })?.bounds ?? .zero),
-            readAt: snapshot.readAt
         )
     }
 

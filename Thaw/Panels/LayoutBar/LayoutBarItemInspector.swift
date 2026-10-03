@@ -157,9 +157,6 @@ struct LayoutBarItemInspector: View {
                 fact("Position", "\(position) of \(orderedItems.count)")
             }
             fact("Width", "\(Int(item.bounds.width.rounded())) pt")
-            if let lastClicked {
-                fact("Last clicked", lastClicked)
-            }
             if RuntimeModuleController.isGovernable(itemIdentifier: item.uniqueIdentifier) {
                 // Warn before changing the System Settings toggle, the only way macOS lets these modules hide.
                 Text("Hiding this turns off its switch in System Settings \(Constants.menuArrow) Menu Bar. \(Constants.displayName) turns it back on when you move it to Visible or quit.")
@@ -169,18 +166,6 @@ struct LayoutBarItemInspector: View {
                     .padding(.top, ThawSpacing.tight)
             }
         }
-    }
-
-    /// Nil without a hygiene record; "Not clicked since …" if no activation was observed.
-    /// Unobserved activations, such as shortcuts, leave no usage mark.
-    private var lastClicked: String? {
-        guard appState.hygieneAudit.isEnabled,
-              let record = appState.hygieneAudit.ledger.records[LayoutSuggestions.usageKey(for: item)]
-        else { return nil }
-        guard let date = record.lastActivated else {
-            return String(localized: "Not clicked since \(record.firstSeen.formatted(date: .abbreviated, time: .omitted))")
-        }
-        return date.formatted(.relative(presentation: .named))
     }
 
     private func fact(_ label: LocalizedStringKey, _ value: String) -> some View {

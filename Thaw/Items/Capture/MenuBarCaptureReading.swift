@@ -52,7 +52,9 @@ nonisolated struct LiveMenuBarCaptureReader: MenuBarCaptureReading {
     }
 
     func menuBarItems(displayID: CGDirectDisplayID) async -> [MenuBarItem] {
-        await MenuBarItem.getMenuBarItems(on: displayID, option: [.onScreen, .activeSpace])
+        // Position-store recoveries and retained inventory carry old rectangles,
+        // so neither can establish geometry for a new screenshot.
+        await MenuBarItem.getMenuBarItems(on: displayID, option: [.onScreen, .activeSpace], freshOnly: true)
     }
 
     func liveBounds(

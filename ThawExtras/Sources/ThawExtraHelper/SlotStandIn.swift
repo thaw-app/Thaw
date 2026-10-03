@@ -73,3 +73,17 @@ enum SlotStandInChannel {
         Notification.Name("\(parent).extra.slot.clicked")
     }
 }
+
+/// Which of Thaw's extra bundles it wants hidden. Must match Thaw's copy in
+/// SystemExtraStandIns.
+enum ExtraVisibilityChannel {
+    static func hiddenBundles(parent: String) -> Set<String> {
+        let file = SlotStandInChannel.folder(parent: parent).appending(path: "hidden-extras.txt")
+        guard let text = try? String(contentsOf: file, encoding: .utf8) else { return [] }
+        return Set(text.split(separator: "\n").map(String.init))
+    }
+
+    static func notification(parent: String) -> Notification.Name {
+        Notification.Name("\(parent).extra.visibility")
+    }
+}

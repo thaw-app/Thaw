@@ -8,8 +8,7 @@
 import Cocoa
 import MenuBarModel
 
-/// Brings settings written by older builds up to the current shape. Each step
-/// has its own "already migrated" flag, so it runs once per installation.
+/// Updates older settings and removes data for retired features.
 /// There are no Ice migrations: the app only reads its own defaults domain.
 @MainActor
 struct MigrationManager {
@@ -23,12 +22,23 @@ struct MigrationManager {
 extension MigrationManager {
     /// Runs every outstanding migration and logs whatever each one reported.
     func migrateAll() {
+        removeMenuBarHistory(from: Defaults.store)
         let results = [
             migratePerDisplayThawBar(),
         ]
         for case let .failureAndLogError(error) in results {
             diagLog.error("Migration failed with error \(error)")
         }
+    }
+}
+
+// MARK: - Remove Retired Menu Bar History
+
+extension MigrationManager {
+    func removeMenuBarHistory(from defaults: UserDefaults) {
+        defaults.removeObject(forKey: "EnableBarHygieneAudit")
+        defaults.removeObject(forKey: "MenuBarHygieneLedger")
+        defaults.removeObject(forKey: "LayoutSuggestions.dismissed.unusedItems")
     }
 }
 

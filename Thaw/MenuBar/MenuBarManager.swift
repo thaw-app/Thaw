@@ -338,26 +338,18 @@ final class MenuBarManager {
             .store(in: &bag)
     }
 
-    /// _HIHideMenuBar has no notification; reread it when the control window's vertical position changes bar geometry.
+    /// _HIHideMenuBar is true for the Always and On Desktop Only auto-hide options.
     private func observeSystemAutohideDefault(into bag: inout Set<AnyCancellable>) {
-        guard
-            let alwaysHiddenSection = section(withName: .alwaysHidden),
-            let window = alwaysHiddenSection.controlItem.window
-        else {
-            return
-        }
-        window.publisher(for: \.frame)
-            .map(\.origin.y)
-            .removeDuplicates()
+        DistributedNotificationCenter.default()
+            .publisher(for: DistributedNotificationCenter.menuBarHidingChangedNotification)
+            .replace(with: ())
+            .prepend(())
             .receive(on: DispatchQueue.main)
-            .sink { [weak self] _ in
-                guard
-                    let self,
-                    let isMenuBarHidden = Defaults.globalDomain["_HIHideMenuBar"] as? Bool
-                else {
+            .sink { [weak self] in
+                guard let self else {
                     return
                 }
-                isMenuBarHiddenBySystemUserDefaults = isMenuBarHidden
+                isMenuBarHiddenBySystemUserDefaults = Defaults.globalDomain["_HIHideMenuBar"] as? Bool ?? false
             }
             .store(in: &bag)
     }

@@ -154,7 +154,6 @@ $(SRCROOT)/Thaw/Items/Model/MenuBarItemCache+Liveness.swift
 $(SRCROOT)/Thaw/Items/Model/MenuBarItemGeometry.swift
 $(SRCROOT)/Thaw/Items/Model/MenuBarItemTag.swift
 $(SRCROOT)/Thaw/Items/Model/RunningApplicationSnapshot.swift
-$(SRCROOT)/Thaw/Items/Persistence/MenuBarHygieneLedger.swift
 $(SRCROOT)/Thaw/Items/Persistence/MenuBarItemFailureLedger.swift
 $(SRCROOT)/Thaw/Items/Persistence/PositionStoreHygiene.swift
 $(SRCROOT)/Thaw/Items/Persistence/PositionStoreItemSource.swift
@@ -162,8 +161,6 @@ $(SRCROOT)/Thaw/Items/Spacers/MenuBarSpacerManager.swift
 $(SRCROOT)/Thaw/Items/Spacers/OverflowSpacer.swift
 $(SRCROOT)/Thaw/Items/Spacing/MenuBarItemSpacingError.swift
 $(SRCROOT)/Thaw/Items/Spacing/MenuBarItemSpacingManager.swift
-$(SRCROOT)/Thaw/Items/Support/HygieneRosterDiff.swift
-$(SRCROOT)/Thaw/Items/Support/MenuBarHygieneAudit.swift
 $(SRCROOT)/Thaw/Items/Support/SimpleSemaphore.swift
 $(SRCROOT)/Thaw/Items/Support/WindowServerReading.swift
 $(SRCROOT)/Thaw/MenuBar/Appearance/Configurations/MenuBarAppearanceConfigurationV2.swift
@@ -276,6 +273,8 @@ $(SRCROOT)/Thaw/RecordingWatch/RecordingDeviceProbe.swift
 $(SRCROOT)/Thaw/RecordingWatch/RecordingWatchManager.swift
 $(SRCROOT)/Thaw/RecordingWatch/RecordingWatchScreen.swift
 $(SRCROOT)/Thaw/Settings/MenuBarSectionName+Localized.swift
+$(SRCROOT)/Thaw/Settings/Models/Automation/AppRunningTrigger.swift
+$(SRCROOT)/Thaw/Settings/Models/Automation/AppRunningTriggersManager.swift
 $(SRCROOT)/Thaw/Settings/Models/Automation/AutomationHookSettings.swift
 $(SRCROOT)/Thaw/Settings/Models/Automation/AutomationSettings.swift
 $(SRCROOT)/Thaw/Settings/Models/Automation/HookScript.swift
@@ -311,7 +310,6 @@ $(SRCROOT)/Thaw/Settings/Search/SettingsSearchNavigation.swift
 $(SRCROOT)/Thaw/Settings/SettingsPanes/AboutSettingsPane.swift
 $(SRCROOT)/Thaw/Settings/SettingsPanes/AcknowledgementsView.swift
 $(SRCROOT)/Thaw/Settings/SettingsPanes/Advanced/AlertRevealItemList.swift
-$(SRCROOT)/Thaw/Settings/SettingsPanes/Advanced/BarHygieneAuditSection.swift
 $(SRCROOT)/Thaw/Settings/SettingsPanes/AutomationSettingsPane.swift
 $(SRCROOT)/Thaw/Settings/SettingsPanes/CaptureInspectorSection.swift
 $(SRCROOT)/Thaw/Settings/SettingsPanes/ChangelogView.swift
@@ -347,6 +345,7 @@ $(SRCROOT)/Thaw/Settings/SettingsPanes/SpacesSettingsPane.swift
 $(SRCROOT)/Thaw/Settings/SettingsPanes/TheLabSettingsPane.swift
 $(SRCROOT)/Thaw/Settings/SettingsPanes/Tools/MenuBarLayoutBackupsSection.swift
 $(SRCROOT)/Thaw/Settings/SettingsPanes/ToolsSettingsPane.swift
+$(SRCROOT)/Thaw/Settings/SettingsPanes/TriggersSettingsPane.swift
 $(SRCROOT)/Thaw/Settings/SettingsPanes/WhatsNewView.swift
 $(SRCROOT)/Thaw/Settings/SettingsPanes/WidgetsSettingsPane.swift
 $(SRCROOT)/Thaw/Settings/SettingsView.swift

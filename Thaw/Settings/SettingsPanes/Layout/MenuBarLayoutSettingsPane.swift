@@ -666,7 +666,7 @@ struct CannotArrangeLayoutView: View {
     }
 }
 
-/// Isolate item-cache and usage reads for unclicked or notch-covered items to avoid re-diffing the whole form.
+/// Isolate notch-suggestion cache reads to avoid re-diffing the whole form.
 private struct LayoutSuggestionCards: View {
     @Environment(AppState.self) private var appState
     let itemManager: MenuBarItemManager
@@ -692,26 +692,6 @@ private struct LayoutSuggestionCards: View {
                 action: { MenuBarSearchItemActions.move(behindNotch, to: .hidden, appState: appState) },
                 onDismiss: { dismiss(.itemsBehindNotch) }
             )
-        }
-
-        // Usage suggestions require records from the enabled bar hygiene experiment.
-        if appState.hygieneAudit.isEnabled, !LayoutSuggestionDismissal.isQuiet(.unusedItems) {
-            let unused = LayoutSuggestions.unusedItems(
-                visibleItems,
-                records: appState.hygieneAudit.ledger.records,
-                now: .now
-            )
-            if !unused.isEmpty {
-                ThawFirstRunHint(
-                    systemImage: "clock",
-                    unused.count == 1
-                        ? "You haven't clicked \(LayoutSuggestions.names(of: unused)) in 30 days. Moving it to Hidden frees room in your menu bar."
-                        : "You haven't clicked \(LayoutSuggestions.names(of: unused)) in 30 days. Moving them to Hidden frees room in your menu bar.",
-                    actionTitle: "Move to Hidden",
-                    action: { MenuBarSearchItemActions.move(unused, to: .hidden, appState: appState) },
-                    onDismiss: { dismiss(.unusedItems) }
-                )
-            }
         }
     }
 

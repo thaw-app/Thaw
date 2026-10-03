@@ -59,6 +59,7 @@ final class AppState {
     /// Reveals concealed items temporarily when their icon changes.
     let alertRevealWatcher = MenuBarItemAlertRevealWatcher()
     let presentationMonitor = PresentationMonitor()
+    let appRunningTriggers = AppRunningTriggersManager()
 
     /// Owner of the user's menu bar spacer items.
     let spacerManager = MenuBarSpacerManager()
@@ -105,8 +106,6 @@ final class AppState {
     /// Lab recording watcher reads only public CoreAudio and CoreMediaIO state, independent of other subsystems.
     let recordingWatchManager = RecordingWatchManager()
 
-    /// Lab audit polls the published cache outside the manager to avoid perturbing discovery.
-    let hygieneAudit = MenuBarHygieneAudit()
     let applicationMenuCover = ApplicationMenuCover()
 
     /// Diagnostic logger for the app state.
@@ -205,6 +204,10 @@ final class AppState {
         diagLog.debug("bootstrap: starting imageCache setup")
         imageCache.activate(with: self)
         alertRevealWatcher.performSetup(with: self)
+        appRunningTriggers.start(
+            reveal: { [weak self] in self?.menuBarManager.sectionController.revealItemTemporarily($0) },
+            release: { [weak self] in self?.menuBarManager.sectionController.concealTemporarilyRevealedItem($0) }
+        )
         presentationMonitor.performSetup(with: self)
         spacerManager.performSetup(with: self)
         itemStandInSlots.performSetup(with: self)
@@ -221,7 +224,6 @@ final class AppState {
         swapBarManager.performSetup(with: self)
         controlItemPanel.performSetup(with: self)
         recordingWatchManager.performSetup(with: self)
-        hygieneAudit.performSetup(with: self)
         applicationMenuCover.performSetup(with: self)
         // The widget preview item exists only inside a running process, so
         // every launch re-publishes it when the user last left it enabled.

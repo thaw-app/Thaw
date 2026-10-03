@@ -405,7 +405,10 @@ final class MenuBarItemImageCache: @unchecked Sendable {
         revealedSection: MenuBarSection.Name?
     ) -> Bool {
         switch (section, revealedSection) {
-        case (.hidden, .hidden),
+        // Visible items also move when the capture indicator or a neighbour
+        // appears. Retrying their cached layout rectangles cannot recover.
+        case (.visible, _),
+             (.hidden, .hidden),
              (.hidden, .alwaysHidden),
              (.alwaysHidden, .alwaysHidden):
             true
@@ -578,15 +581,9 @@ final class MenuBarItemImageCache: @unchecked Sendable {
 
             // No debounce needed: startLiveRefreshIfNeeded() is idempotent.
             navigationStateObservationTask?.cancel()
-            navigationStateObservationTask = Task { @MainActor [weak self, navigationState = appState.navigationState] in
-                let changes = Observations {
-                    (
-                        navigationState.isThawBarPresented,
-                        navigationState.isSearchPresented,
-                        navigationState.isSettingsPresented,
-                        navigationState.settingsNavigationIdentifier,
-                        navigationState.isAppFrontmost
-                    )
+            navigationStateObservationTask = Task { @MainActor [weak self] in
+                let changes = Observations { [weak self] in
+                    self?.makeNavigationStateSnapshot().liveCaptureScope
                 }
                 for await _ in changes {
                     guard let self else { return }
@@ -674,6 +671,23 @@ final class MenuBarItemImageCache: @unchecked Sendable {
         return CaptureInvalidationKey(displayID: cache.displayID, entries: entries)
     }
 
+    /// One demand decision drives loop lifetime, periodic capture, and event-driven refresh.
+    nonisolated enum LiveCaptureScope: Equatable, Sendable {
+        case none
+        case visible
+        case allSections
+        case thawBar
+
+        func sections(thawBarSection: MenuBarSection.Name?) -> [MenuBarSection.Name] {
+            switch self {
+            case .none: []
+            case .visible: [.visible]
+            case .allSections: MenuBarSection.Name.allCases
+            case .thawBar: thawBarSection.map { [$0] } ?? []
+            }
+        }
+    }
+
     /// Snapshot of navigation state read in a single MainActor hop.
     struct NavigationStateSnapshot {
         let isThawBarPresented: Bool
@@ -685,6 +699,26 @@ final class MenuBarItemImageCache: @unchecked Sendable {
         /// Simple Mode has no sidebar, so the identifier above never names its
         /// pane and cannot answer for it.
         let isSimpleModeSettings: Bool
+
+        var liveCaptureScope: LiveCaptureScope {
+            if isSearchPresented {
+                return .visible
+            }
+            if isAppFrontmost, isSettingsPresented {
+                if isSimpleModeSettings {
+                    return .allSections
+                }
+                switch settingsNavigationIdentifier {
+                case .menuBarLayout, .thawBar:
+                    return .allSections
+                case .hotkeys where isItemHotkeyListExpanded:
+                    return .allSections
+                default:
+                    break
+                }
+            }
+            return isThawBarPresented ? .thawBar : .none
+        }
     }
 
     @MainActor
@@ -745,44 +779,13 @@ final class MenuBarItemImageCache: @unchecked Sendable {
 
     /// Returns whether any visible surface currently needs live item captures.
     func hasVisibleCaptureConsumer(nav: NavigationStateSnapshot) -> Bool {
-        if nav.isThawBarPresented || nav.isSearchPresented {
-            return true
-        }
-
-        guard nav.isAppFrontmost, nav.isSettingsPresented else {
-            return false
-        }
-        // Simple Mode's folded bar draws item glyphs like the Layout pane.
-        if nav.isSimpleModeSettings {
-            return true
-        }
-        switch nav.settingsNavigationIdentifier {
-        case .menuBarLayout, .thawBar:
-            return true
-        case .hotkeys:
-            // Read from the snapshot so this stays race-free off the main actor.
-            return nav.isItemHotkeyListExpanded
-        default:
-            return false
-        }
+        nav.liveCaptureScope != .none
     }
 
     /// Convenience overload that reads current state on MainActor when no snapshot is provided.
     @MainActor
     func hasVisibleCaptureConsumer() -> Bool {
-        guard let appState else {
-            return false
-        }
-        let nav = NavigationStateSnapshot(
-            isThawBarPresented: appState.navigationState.isThawBarPresented,
-            isSearchPresented: appState.navigationState.isSearchPresented,
-            isAppFrontmost: appState.navigationState.isAppFrontmost,
-            isSettingsPresented: appState.navigationState.isSettingsPresented,
-            settingsNavigationIdentifier: appState.navigationState.settingsNavigationIdentifier,
-            isItemHotkeyListExpanded: isItemHotkeyListExpanded,
-            isSimpleModeSettings: appState.navigationState.isSimpleModeSettings
-        )
-        return hasVisibleCaptureConsumer(nav: nav)
+        hasVisibleCaptureConsumer(nav: makeNavigationStateSnapshot())
     }
 
     /// Starts or stops the live image refresh loop based on navigation state.
@@ -808,7 +811,7 @@ final class MenuBarItemImageCache: @unchecked Sendable {
                 await MainActor.run { self.loadFromDiskIfNeeded() }
                 guard self.liveRefreshTask == nil else { return }
                 MenuBarItemImageCache.diagLog.debug(
-                    "Starting live refresh (thawBar=\(nav.isThawBarPresented), search=\(nav.isSearchPresented), settings=\(nav.isSettingsPresented))"
+                    "Starting live refresh (scope=\(nav.liveCaptureScope), simpleMode=\(nav.isSimpleModeSettings), thawBar=\(nav.isThawBarPresented), search=\(nav.isSearchPresented), settings=\(nav.isSettingsPresented))"
                 )
                 self.liveRefreshTask = Task { [weak self] in
                     guard let self else { return }
@@ -889,7 +892,7 @@ final class MenuBarItemImageCache: @unchecked Sendable {
             try? await Task.sleep(for: .milliseconds(ms))
             guard !Task.isCancelled else { break }
 
-            let nav = appState.navigationState
+            let nav = makeNavigationStateSnapshot()
 
             let displayID = appState.itemManager.itemDisplayID
                 ?? windowServer.activeMenuBarDisplayID()
@@ -899,22 +902,10 @@ final class MenuBarItemImageCache: @unchecked Sendable {
                 continue
             }
 
-            let sections: [MenuBarSection.Name]
-            let isLayoutPane = nav.isSettingsPresented
-                && (nav.settingsNavigationIdentifier == .menuBarLayout
-                    || nav.settingsNavigationIdentifier == .thawBar)
-            let isHotkeyListVisible = nav.isSettingsPresented
-                && nav.settingsNavigationIdentifier == .hotkeys
-                && isItemHotkeyListExpanded
-            if nav.isSearchPresented {
-                sections = [.visible]
-            } else if isLayoutPane || isHotkeyListVisible {
-                sections = MenuBarSection.Name.allCases
-            } else if nav.isThawBarPresented,
-                      let current = appState.menuBarManager.thawBarPanel.currentSection
-            {
-                sections = [current]
-            } else {
+            let sections = nav.liveCaptureScope.sections(
+                thawBarSection: appState.menuBarManager.thawBarPanel.currentSection
+            )
+            guard !sections.isEmpty else {
                 // Keep looping rather than break: ThawBar close() nils
                 // currentSection before isThawBarPresented, and the observer cancels us.
                 changelessStreak = 0

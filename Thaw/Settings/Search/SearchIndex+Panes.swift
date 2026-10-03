@@ -119,6 +119,14 @@ nonisolated extension SearchIndex {
             property: nil
         ),
         SearchEntry(
+            id: "pane.triggers",
+            title: "Triggers",
+            descriptionText: "Show menu bar items while an app is running.",
+            pane: .triggers,
+            keywords: ["trigger", "app running", "launch", "quit", "conditional", "show", "reveal"],
+            property: nil
+        ),
+        SearchEntry(
             id: "pane.tools",
             title: "Tools",
             descriptionText: nil,

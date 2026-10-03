@@ -162,6 +162,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         isPreparingForTermination = true
         hasRepliedToTerminationRequest = false
         appState.diagLog.info("Application asked to terminate - restoring blocked items asynchronously")
+        appState.appRunningTriggers.stop()
 
         Task { @MainActor in
             _ = await appState.itemManager.restoreBlockedItemsToVisible()
