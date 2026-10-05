@@ -150,10 +150,30 @@ extension MenuBarItemImageCache {
             try? await Task.sleep(for: MenuBarItemImageCache.idleTrimDelay)
             guard !Task.isCancelled, let self else { return }
             await MainActor.run {
-                guard !self.hasVisibleCaptureConsumer() else { return }
+                guard !self.hasVisibleCaptureConsumer(), !self.hasUnfocusedCaptureConsumer() else { return }
                 self.trimForIdle()
             }
         }
+    }
+
+    /// Whether a settings pane that draws glyphs is still on screen while another app is
+    /// frontmost. The live refresh rests then, but the pane keeps drawing the cache, so a
+    /// trim would turn every visible item into its app icon until Thaw is focused again.
+    @MainActor
+    func hasUnfocusedCaptureConsumer() -> Bool {
+        hasUnfocusedCaptureConsumer(nav: makeNavigationStateSnapshot())
+    }
+
+    func hasUnfocusedCaptureConsumer(nav: NavigationStateSnapshot) -> Bool {
+        hasVisibleCaptureConsumer(nav: NavigationStateSnapshot(
+            isThawBarPresented: nav.isThawBarPresented,
+            isSearchPresented: nav.isSearchPresented,
+            isAppFrontmost: true,
+            isSettingsPresented: nav.isSettingsPresented,
+            settingsNavigationIdentifier: nav.settingsNavigationIdentifier,
+            isItemHotkeyListExpanded: nav.isItemHotkeyListExpanded,
+            isSimpleModeSettings: nav.isSimpleModeSettings
+        ))
     }
 
     /// Drops the cache, except for glyphs only a reveal can refill, and hands
