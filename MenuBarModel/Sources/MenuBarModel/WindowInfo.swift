@@ -223,13 +223,6 @@ public extension WindowInfo {
         }
     }
 
-    /// Reads the window list and picks out one display's wallpaper window.
-    ///
-    /// - Parameter display: The display whose wallpaper is wanted.
-    static func wallpaperWindow(for display: CGDirectDisplayID) -> WindowInfo? {
-        wallpaperWindow(from: createWindows(option: .onScreen), for: display)
-    }
-
     // MARK: The Menu Bar Itself
 
     /// Picks the menu bar backdrop window for one display out of an

@@ -12,6 +12,33 @@ import Testing
 /// Live metric titles need canonical identities across builds, including Setapp, to avoid saved-layout churn.
 @Suite("Dynamic metric titles")
 struct DynamicMetricTitleTests {
+    @Test("Amphetamine's reported titles share one live and persisted identity", arguments: ["Item-0", "∞", "𝗧"])
+    func amphetamineTitlesShareIdentity(_ title: String) {
+        let bundleID = "com.if.Amphetamine"
+        let tag = MenuBarItemTag(namespace: .string(bundleID), title: title)
+        #expect(tag.tagIdentifier == "\(bundleID):Item")
+        #expect(MenuBarItemTag.canonicalPersistentIdentifier("\(bundleID):\(title)") == tag.tagIdentifier)
+    }
+
+    @Test("Amphetamine canonicalization preserves distinct instance indices")
+    func amphetamineInstancesStayDistinct() {
+        let bundleID = "com.if.Amphetamine"
+        let first = MenuBarItemTag(namespace: .string(bundleID), title: "∞", instanceIndex: 0)
+        let second = MenuBarItemTag(namespace: .string(bundleID), title: "𝗧", instanceIndex: 1)
+        #expect(first.tagIdentifier != second.tagIdentifier)
+        #expect(MenuBarItemTag.canonicalPersistentIdentifier("\(bundleID):𝗧:1") == second.tagIdentifier)
+        #expect(MenuBarItemTag.canonicalPersistentIdentifiers([
+            "\(bundleID):Item-0", "\(bundleID):∞", "\(bundleID):𝗧", "\(bundleID):𝗧:1",
+        ]) == [first.tagIdentifier, second.tagIdentifier])
+    }
+
+    @Test("The Amphetamine rule does not match other bundle IDs")
+    func amphetamineRuleMatchesExactBundle() {
+        #expect(MenuBarItemTag.hasVolatileTitles("com.if.Amphetamine"))
+        #expect(!MenuBarItemTag.hasVolatileTitles("com.if.Amphetamine.helper"))
+        #expect(!MenuBarItemTag.hasVolatileTitles("com.if.AmphetamineOther"))
+    }
+
     // MARK: Learned owners
 
     @Test("A learned owner's titles collapse like Dato's")
@@ -143,6 +170,16 @@ struct DynamicMetricTitleTests {
         #expect(
             MenuBarItemTag.canonicalPersistentIdentifier("\(bundle):CPU 42%:1")
                 == "\(bundle):CPU #%:1"
+        )
+    }
+
+    @Test("Untitled extras keep distinct Item-N identities")
+    func untitledExtrasStayDistinct() {
+        let bundle = "eu.exelban.Stats"
+        #expect(MenuBarItemTag.canonicalPersistentIdentifier("\(bundle):Item-5") == "\(bundle):Item-5")
+        #expect(
+            MenuBarItemTag.canonicalPersistentIdentifier("\(bundle):Item-1")
+                != MenuBarItemTag.canonicalPersistentIdentifier("\(bundle):Item-2")
         )
     }
 

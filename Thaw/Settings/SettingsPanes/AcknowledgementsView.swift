@@ -29,24 +29,26 @@ struct AcknowledgementsWindow: Scene {
 
 // MARK: - AcknowledgementsView
 
-/// In-app acknowledgements: the app's origins, then the library notices
-/// rendered from Acknowledgements.rtf, the same source as the PDF.
+/// Credits and origins, followed by library notices rendered from the
+/// bundled Acknowledgements.rtf.
 struct AcknowledgementsView: View {
     @Environment(\.openURL) private var openURL
 
     private enum Page: String, CaseIterable {
+        case credits
         case origins
         case licenses
 
         var item: ReadingPathItem {
             switch self {
+            case .credits: ReadingPathItem(id: rawValue, label: String(localized: "Credits"))
             case .origins: ReadingPathItem(id: rawValue, label: String(localized: "Origins"))
             case .licenses: ReadingPathItem(id: rawValue, label: String(localized: "Licenses"))
             }
         }
     }
 
-    @State private var selection: String? = Page.origins.rawValue
+    @State private var selection: String? = Page.credits.rawValue
 
     private static let originURL = URL(string: "https://github.com/jordanbaird/Ice")!
     private static let barometerURL = URL(string: "https://github.com/mackid1993/Barometer")!
@@ -74,7 +76,7 @@ struct AcknowledgementsView: View {
     }()
 
     private var page: Page {
-        Page(rawValue: selection ?? "") ?? .origins
+        Page(rawValue: selection ?? "") ?? .credits
     }
 
     var body: some View {
@@ -84,6 +86,8 @@ struct AcknowledgementsView: View {
             title: title
         ) {
             switch page {
+            case .credits:
+                credits
             case .origins:
                 origins
             case .licenses:
@@ -105,9 +109,30 @@ struct AcknowledgementsView: View {
 
     private var title: Text {
         switch page {
+        case .credits: Text("Credits")
         case .origins: Text("Origins")
         case .licenses: Text("Licenses")
         }
+    }
+
+    private var credits: some View {
+        VStack(alignment: .leading, spacing: 22) {
+            ReadingParagraph("Thank you to everyone who contributes code, documentation, and translations to Thaw.")
+
+            VStack(alignment: .leading, spacing: 12) {
+                Link(destination: Constants.contributorsURL) {
+                    Text("Contributors").underline()
+                }
+                Link(destination: Constants.translatorsURL) {
+                    Text("Translators").underline()
+                }
+            }
+            .font(ReadingPageType.body)
+            .buttonStyle(.plain)
+            .foregroundStyle(.primary)
+        }
+        .id(Page.credits)
+        .transition(.opacity)
     }
 
     private var origins: some View {

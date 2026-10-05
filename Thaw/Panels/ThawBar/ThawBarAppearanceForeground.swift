@@ -34,9 +34,13 @@ enum ThawBarAppearanceForeground {
         case .adaptive:
             result = result.tinted(by: adaptive, opacity: appearance.backgroundOpacity)
         case .glass:
-            result = glassSample(result, style: appearance.backgroundGlassStyle,
-                                 colored: appearance.backgroundGlassIsColored,
-                                 color: appearance.backgroundColor, opacity: appearance.backgroundOpacity)
+            result = glassSample(
+                result,
+                style: appearance.backgroundGlassStyle,
+                colored: appearance.backgroundGlassIsColored,
+                color: appearance.backgroundColor,
+                opacity: appearance.backgroundOpacity
+            )
         }
 
         switch appearance.tintKind {
@@ -54,9 +58,13 @@ enum ThawBarAppearanceForeground {
             let color = paletteAverage(palette) ?? adaptive
             result = result.tinted(by: color, opacity: appearance.tintOpacity)
         case .glass:
-            result = glassSample(result, style: appearance.tintGlassStyle,
-                                 colored: appearance.tintGlassIsColored,
-                                 color: appearance.tintColor, opacity: appearance.tintOpacity)
+            result = glassSample(
+                result,
+                style: appearance.tintGlassStyle,
+                colored: appearance.tintGlassIsColored,
+                color: appearance.tintColor,
+                opacity: appearance.tintOpacity
+            )
         }
         return result.isBright(for: screen) ? .black : .white
     }

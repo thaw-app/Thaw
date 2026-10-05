@@ -413,59 +413,6 @@ public nonisolated enum LayoutSolver {
         return .newHideableItem(candidate, identifierToMark: identifierToMark)
     }
 
-    // MARK: - Geometry readiness
-
-    /// Whether the menu bar geometry is settled enough to run a layout pass on
-    /// a notched display.
-    ///
-    /// rightBoundary is Control Center's left edge (or the screen's right edge
-    /// when Control Center is absent), the same value the notch-overflow budget
-    /// is derived from. A finite value to the right of the notch's right edge is
-    /// a valid layout anchor. A value at or left of the notch (or non-finite)
-    /// means Control Center was reported at a stale off-screen position, which
-    /// happens transiently during a display reconnect or Control Center widget
-    /// churn. Running the placement and move logic against that geometry
-    /// mis-positions the control items (the Thaw visible icon jumps to the far
-    /// left), so the pass must be deferred until the geometry settles.
-    public static nonisolated func isMenuBarGeometryReady(
-        rightBoundary: CGFloat,
-        notchMaxX: CGFloat
-    ) -> Bool {
-        rightBoundary.isFinite && rightBoundary > notchMaxX
-    }
-
-    /// Whether the given menu bar items currently occupy more than one display.
-    ///
-    /// Each center is matched to the screen frame that contains it. Frames and
-    /// centers are expected in the global CoreGraphics coordinate space
-    /// (top-left origin), so a secondary display above the main one has a
-    /// negative y origin. Centers that fall on no screen are intentionally
-    /// parked off-screen hidden items (the control item shoves them thousands
-    /// of points to the left) and are ignored. When the remaining on-screen
-    /// items resolve to more than one screen, the active menu bar is
-    /// relocating between displays: macOS migrates the status item windows
-    /// asynchronously. A bulk apply then resolves moves against different
-    /// displays and cannot converge, and a section order persisted then bakes
-    /// the transition into the saved layout. Both callers defer until the
-    /// items collapse back onto a single display.
-    public static nonisolated func itemsSpanMultipleDisplays(
-        itemCenters: [CGPoint],
-        screenFrames: [CGRect]
-    ) -> Bool {
-        guard screenFrames.count > 1 else { return false }
-        var hitScreens = Set<Int>()
-        for center in itemCenters {
-            guard let index = screenFrames.firstIndex(where: { $0.contains(center) }) else {
-                continue
-            }
-            hitScreens.insert(index)
-            if hitScreens.count > 1 {
-                return true
-            }
-        }
-        return false
-    }
-
     // MARK: - Notch overflow
 
     /// Decides which visible items must overflow into hidden to fit the
@@ -800,21 +747,11 @@ public nonisolated enum LayoutSolver {
 
     // MARK: - Identifier and key parsing
 
-    /// Extracts the baseID (namespace:title) prefix from a uniqueIdentifier.
-    private static nonisolated func baseID(forIdentifier id: String) -> String {
-        id.split(separator: ":", maxSplits: 2).prefix(2).joined(separator: ":")
-    }
-
     /// Maps a persisted section key string to its enum value. The persisted key
     /// is the enum's raw value, so this is MenuBarSectionName's own
     /// init?(rawValue:).
     private static nonisolated func sectionName(forPersistedKey key: String) -> MenuBarSectionName? {
         MenuBarSectionName(rawValue: key)
-    }
-
-    /// Maps a section to its persisted key string (its raw value).
-    private static nonisolated func sectionKeyFor(_ section: MenuBarSectionName) -> String {
-        section.rawValue
     }
 
     // MARK: - State flag gates
@@ -838,28 +775,5 @@ public nonisolated enum LayoutSolver {
             !isResettingLayout &&
             !isInStartupSettling &&
             !isApplyingProfileLayout
-    }
-
-    // MARK: - Batch PID scan window selection
-
-    /// Returns the first window in the batch whose windowID is not
-    /// already cached, or nil when every window is cached.
-    ///
-    /// Drives SourcePIDCache.pidsBody's decision about which window
-    /// to hand to pidBody for the AX scan. pidBody returns
-    /// immediately on a cache hit at its entry, so passing a cached
-    /// window means the scan body (including the marker-pair
-    /// fallback) never runs. Selecting an unresolved window forces
-    /// the scan path to execute and resolves every other unresolved
-    /// window in the same batch by populating the cache during the
-    /// AX traversal.
-    public static nonisolated func selectWindowForBatchScan<W>(
-        windows: [W],
-        windowID: (W) -> CGWindowID,
-        cachedPIDs: [CGWindowID: pid_t]
-    ) -> W? {
-        windows.first(where: { window in
-            cachedPIDs[windowID(window)] == nil
-        })
     }
 }

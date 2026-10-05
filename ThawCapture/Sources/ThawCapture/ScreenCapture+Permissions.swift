@@ -93,7 +93,10 @@ public extension ScreenCapture {
         }
     }
 
-    /// Complete exactly once with granted/prompted flags so declining does not open Settings; infer prompting by duration (macOS 15 can refuse instantly).
+    /// Complete exactly once with granted/prompted flags. CGRequestScreenCaptureAccess returns at once
+    /// while its alert stays up, so an ungranted request always reports prompted: opening Settings here
+    /// would put it behind the alert. When macOS answers without an alert, the next poll tick records a
+    /// decline and permission surfaces offer Settings instead.
     /// On macOS 27 this registers the app; an extra SCShareableContent request would prompt again after Deny.
     @MainActor
     static func requestPermissions(
@@ -109,22 +112,14 @@ public extension ScreenCapture {
             activate: { NSApp.activate(ignoringOtherApps: true) }
         )
 
-        let requestStarted = ContinuousClock.now
         let cgResult = CGRequestScreenCaptureAccess()
-        let promptElapsed = ContinuousClock.now - requestStarted
-        let prompted = cgResult || promptElapsed > promptShownThreshold
         setCachedPermissionResult(cgResult)
-        diagLog.debug(
-            "requestPermissions: CGRequestScreenCaptureAccess()=\(cgResult) after \(promptElapsed) → prompted=\(prompted)"
-        )
+        diagLog.debug("requestPermissions: CGRequestScreenCaptureAccess()=\(cgResult)")
 
         Task { @MainActor in
             try? await Task.sleep(for: .seconds(1))
             restoreActivationPolicy?()
         }
-        completion(cgResult, prompted)
+        completion(cgResult, !cgResult)
     }
-
-    /// Distinguish human prompt-response time from fast API refusal to prompt.
-    static nonisolated let promptShownThreshold: Duration = .milliseconds(750)
 }

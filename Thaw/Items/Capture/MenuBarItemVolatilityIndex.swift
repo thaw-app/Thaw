@@ -123,16 +123,6 @@ final class MenuBarItemVolatilityIndex {
         }
     }
 
-    /// The classification for an item, or Volatility.unknown if it has not
-    /// been observed enough.
-    func volatility(for tag: MenuBarItemTag) -> Volatility {
-        records[tag.tagIdentifier]?.volatility ?? .unknown
-    }
-
-    func record(for tag: MenuBarItemTag) -> Record? {
-        records[tag.tagIdentifier]
-    }
-
     /// Snapshot by tagIdentifier for off-main-actor disk loading without per-item actor hops.
     func classificationsByKey() -> [String: Volatility] {
         records.mapValues(\.volatility)

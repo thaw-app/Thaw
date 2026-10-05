@@ -43,6 +43,15 @@ nonisolated extension SearchIndex {
             property: nil
         ),
         SearchEntry(
+            id: "tools.restoreMissingMenuBarItems",
+            title: "Restore missing menu bar items",
+            descriptionText: String(localized: "Restore app visibility without resetting saved positions or section assignments."),
+            pane: .tools,
+            section: "Troubleshooting",
+            keywords: ["missing", "icons", "visibility", "recovery", "native", "hidden", "control center"],
+            property: nil
+        ),
+        SearchEntry(
             id: "tools.resetControlCenter",
             title: "Reset Control Center preferences",
             descriptionText: String(localized: "Quit Control Center and delete its preference files so system menu bar item state can rebuild."),

@@ -179,6 +179,13 @@ final class MenuBarAppearanceManager {
             for await configuration in changes._throttle(for: .milliseconds(100), latest: true) {
                 guard let self, let configuration else { return }
                 updateOverlayPanels(for: configuration)
+                // Partner apps mirror the look; they fetch it again on this.
+                DistributedNotificationCenter.default().postNotificationName(
+                    SharedAppearance.didChangeNotification,
+                    object: nil,
+                    userInfo: nil,
+                    deliverImmediately: true
+                )
             }
         }
     }
@@ -329,7 +336,6 @@ final class MenuBarAppearanceManager {
 private extension UserDefaults {
     /// The system's Liquid Glass tint, observable with key-value observing.
     /// The name has to match the preference key.
-    // swiftlint:disable:next identifier_name
     @objc dynamic var NSGlassTintAmount: Double {
         double(forKey: "NSGlassTintAmount")
     }

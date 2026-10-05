@@ -7,6 +7,7 @@
 
 import AXSwift6
 import Cocoa
+import ThawAXCore
 
 /// Validates frames with their process and AX root; equal rectangles need not share an owner.
 /// On-demand synchronous AX walks run on a private serial actor to avoid blocking MainActor or overlapping capture passes.
@@ -18,11 +19,13 @@ nonisolated enum AXGeometryCatalog {
         let frame: CGRect
 
         var isCollapsedThawDivider: Bool {
-            // Zero-length dividers can still publish a 2-point AX frame.
+            // Zero-length dividers, and the visible control while its icon is
+            // hidden, can still publish a 2-point AX frame that draws nothing.
             // The 3-point drag marker and expanded chevrons remain occluders.
             ownerPID == ProcessInfo.processInfo.processIdentifier
                 && (identityTitle == MenuBarItemTag.hiddenControlItem.title
-                    || identityTitle == MenuBarItemTag.alwaysHiddenControlItem.title)
+                    || identityTitle == MenuBarItemTag.alwaysHiddenControlItem.title
+                    || identityTitle == MenuBarItemTag.visibleControlItem.title)
                 && frame.width >= 0 && frame.width <= 2
         }
     }
@@ -60,9 +63,36 @@ nonisolated enum AXGeometryCatalog {
         }
         guard let display = title ?? description ?? identifier else { return nil }
         return MenuBarItemAXProvider.identityTitle(
-            namespace: namespace, identifier: identifier,
-            accessibilityDescription: description, displayTitle: display
+            namespace: namespace,
+            identifier: identifier,
+            accessibilityDescription: description,
+            displayTitle: display
         )
+    }
+
+    /// Keeps fallback numbering in AX child order, independent of on-screen order.
+    static func rootIdentityTitle(
+        namespace: MenuBarItemTag.Namespace,
+        attributes: AXHelpers.MenuBarChildAttributes,
+        descendants: [AXHelpers.MenuBarChildAttributes],
+        maximumItemHeight: CGFloat,
+        fallbackIndex: inout Int
+    ) -> String? {
+        if let identity = identityTitle(namespace: namespace, attributes: attributes, descendants: descendants) {
+            return identity
+        }
+        // MenuBarAgent's unnamed extras are transition noise, not inventory items.
+        guard namespace != .menuBarAgent,
+              MenuBarItemAXProvider.itemFrame(attributes.frame, maximumHeight: maximumItemHeight) != nil
+        else { return nil }
+        let identity = MenuBarItemAXProvider.identityTitle(
+            namespace: namespace,
+            identifier: nil,
+            accessibilityDescription: nil,
+            displayTitle: "Item-\(fallbackIndex)"
+        )
+        fallbackIndex += 1
+        return identity
     }
 
     static func match(ownerPID: pid_t, identityTitle: String, bounds: CGRect, in entries: [Entry]) -> Match {
@@ -168,6 +198,8 @@ nonisolated enum AXGeometryCatalog {
             for itemIndex in children.indices {
                 results.append(Entry(ownerPID: pid, itemIndex: itemIndex, identityTitle: nil, frame: .zero))
             }
+            let itemHeightCeiling = MenuBarItemAXProvider.maxItemHeight(menuBarHeight: NSScreen.tallestCachedMenuBarHeight)
+            var fallbackIndex = 0
             for (itemIndex, child) in children.enumerated() {
                 guard canContinue(until: deadline), visited < maxElementsVisited else { break }
                 try? child.setMessagingTimeout(messagingTimeout)
@@ -180,10 +212,25 @@ nonisolated enum AXGeometryCatalog {
                     try? inner.setMessagingTimeout(messagingTimeout)
                     innerAttributes.append(AXHelpers.descendantAttributes(for: inner, includingChildren: true))
                 }
-                let identity = identityTitle(namespace: namespace, attributes: attributes, descendants: innerAttributes)
-                walk(child, ownerPID: pid, itemIndex: itemIndex, identityTitle: identity,
-                     attributes: attributes, childAttributes: innerAttributes,
-                     depth: 1, visited: &visited, into: &results, deadline: deadline)
+                let identity = rootIdentityTitle(
+                    namespace: namespace,
+                    attributes: attributes,
+                    descendants: innerAttributes,
+                    maximumItemHeight: itemHeightCeiling,
+                    fallbackIndex: &fallbackIndex
+                )
+                walk(
+                    child,
+                    ownerPID: pid,
+                    itemIndex: itemIndex,
+                    identityTitle: identity,
+                    attributes: attributes,
+                    childAttributes: innerAttributes,
+                    depth: 1,
+                    visited: &visited,
+                    into: &results,
+                    deadline: deadline
+                )
             }
         }
         return results
@@ -217,17 +264,32 @@ nonisolated enum AXGeometryCatalog {
             for: element,
             includingChildren: depth < maxWalkDepth
         )
-        results.append(Entry(ownerPID: ownerPID, itemIndex: itemIndex,
-                             identityTitle: identityTitle, frame: attributes.frame ?? .zero))
+        // Clamped like discovery's item frames, so a crop is checked against the same rectangle.
+        let ceiling = MenuBarItemAXProvider.maxItemHeight(menuBarHeight: NSScreen.tallestCachedMenuBarHeight)
+        let frame = attributes.frame.map { AXPrimitives.itemFrame($0, maximumHeight: ceiling) ?? $0 } ?? .zero
+        results.append(Entry(
+            ownerPID: ownerPID,
+            itemIndex: itemIndex,
+            identityTitle: identityTitle,
+            frame: frame
+        ))
 
         guard depth < maxWalkDepth, canContinue(until: deadline) else { return }
         let children = attributes.children
         for (index, child) in children.enumerated() {
             guard visited < maxElementsVisited else { return }
             guard canContinue(until: deadline) else { return }
-            walk(child, ownerPID: ownerPID, itemIndex: itemIndex, identityTitle: identityTitle,
-                 attributes: childAttributes.flatMap { index < $0.count ? $0[index] : nil },
-                 depth: depth + 1, visited: &visited, into: &results, deadline: deadline)
+            walk(
+                child,
+                ownerPID: ownerPID,
+                itemIndex: itemIndex,
+                identityTitle: identityTitle,
+                attributes: childAttributes.flatMap { index < $0.count ? $0[index] : nil },
+                depth: depth + 1,
+                visited: &visited,
+                into: &results,
+                deadline: deadline
+            )
         }
     }
 

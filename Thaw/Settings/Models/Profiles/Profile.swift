@@ -357,6 +357,8 @@ nonisolated struct ProfileContent {
     var globalDisplayConfiguration: DisplayThawBarConfiguration
     var confirmSpacingRelaunch: Bool
     var unconfirmedSpacingProfileScope: SpacingProfileSaveScope
+    /// Nil in older profiles, which leave the current mode alone when applied.
+    var spacingApplyMode: SpacingApplyMode?
     var appearanceConfiguration: MenuBarAppearanceConfigurationV2
     var menuBarLayout: MenuBarLayoutSnapshot
     var automation: ProfileAutomation?
@@ -369,6 +371,7 @@ nonisolated struct ProfileContent {
         globalDisplayConfiguration: DisplayThawBarConfiguration = Defaults.DefaultValue.globalDisplayConfiguration,
         confirmSpacingRelaunch: Bool = Defaults.DefaultValue.confirmSpacingRelaunch,
         unconfirmedSpacingProfileScope: SpacingProfileSaveScope = Defaults.DefaultValue.unconfirmedSpacingProfileScope,
+        spacingApplyMode: SpacingApplyMode? = nil,
         appearanceConfiguration: MenuBarAppearanceConfigurationV2,
         menuBarLayout: MenuBarLayoutSnapshot,
         automation: ProfileAutomation? = nil
@@ -380,6 +383,7 @@ nonisolated struct ProfileContent {
         self.globalDisplayConfiguration = globalDisplayConfiguration
         self.confirmSpacingRelaunch = confirmSpacingRelaunch
         self.unconfirmedSpacingProfileScope = unconfirmedSpacingProfileScope
+        self.spacingApplyMode = spacingApplyMode
         self.appearanceConfiguration = appearanceConfiguration
         self.menuBarLayout = menuBarLayout
         self.automation = automation
@@ -401,6 +405,8 @@ nonisolated struct Profile: Codable, Identifiable {
     var globalDisplayConfiguration: DisplayThawBarConfiguration
     var confirmSpacingRelaunch: Bool
     var unconfirmedSpacingProfileScope: SpacingProfileSaveScope
+    /// Nil in older profiles, which leave the current mode alone when applied.
+    var spacingApplyMode: SpacingApplyMode?
     var appearanceConfiguration: MenuBarAppearanceConfigurationV2
     var menuBarLayout: MenuBarLayoutSnapshot
     var automation: ProfileAutomation?
@@ -425,6 +431,7 @@ nonisolated struct Profile: Codable, Identifiable {
             globalDisplayConfiguration: globalDisplayConfiguration,
             confirmSpacingRelaunch: confirmSpacingRelaunch,
             unconfirmedSpacingProfileScope: unconfirmedSpacingProfileScope,
+            spacingApplyMode: spacingApplyMode,
             appearanceConfiguration: appearanceConfiguration,
             menuBarLayout: menuBarLayout,
             automation: automation
@@ -445,6 +452,7 @@ nonisolated struct Profile: Codable, Identifiable {
         case globalDisplayConfiguration
         case confirmSpacingRelaunch
         case unconfirmedSpacingProfileScope
+        case spacingApplyMode
         case appearanceConfiguration
         case menuBarLayout
         case automation
@@ -468,6 +476,7 @@ nonisolated struct Profile: Codable, Identifiable {
         self.globalDisplayConfiguration = content.globalDisplayConfiguration
         self.confirmSpacingRelaunch = content.confirmSpacingRelaunch
         self.unconfirmedSpacingProfileScope = content.unconfirmedSpacingProfileScope
+        self.spacingApplyMode = content.spacingApplyMode
         self.appearanceConfiguration = content.appearanceConfiguration
         self.menuBarLayout = content.menuBarLayout
         self.automation = content.automation
@@ -516,6 +525,8 @@ nonisolated struct Profile: Codable, Identifiable {
             forKey: .unconfirmedSpacingProfileScope
         ) ?? Defaults.DefaultValue.unconfirmedSpacingProfileScope
 
+        spacingApplyMode = try container.decodeIfPresent(SpacingApplyMode.self, forKey: .spacingApplyMode)
+
         appearanceConfiguration = try container.decodeIfPresent(
             MenuBarAppearanceConfigurationV2.self,
             forKey: .appearanceConfiguration
@@ -531,10 +542,7 @@ nonisolated struct Profile: Codable, Identifiable {
             customNames: [:]
         )
 
-        automation = try container.decodeIfPresent(
-            ProfileAutomation.self,
-            forKey: .automation
-        )
+        automation = try container.decodeIfPresent(ProfileAutomation.self, forKey: .automation)
     }
 }
 

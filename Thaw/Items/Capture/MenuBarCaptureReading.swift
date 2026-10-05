@@ -23,6 +23,9 @@ nonisolated protocol MenuBarCaptureReading: Sendable {
 }
 
 nonisolated struct LiveMenuBarCaptureReader: MenuBarCaptureReading {
+    /// The item owners a geometry read refreshes. Empty reads every running app.
+    var geometryOwners: Set<pid_t> = []
+
     func captureBand(displayID: CGDirectDisplayID) async -> (frame: CGRect, menuMaxX: CGFloat?) {
         await MainActor.run {
             guard let screen = NSScreen.screen(for: displayID) else {
@@ -52,7 +55,15 @@ nonisolated struct LiveMenuBarCaptureReader: MenuBarCaptureReading {
     }
 
     func menuBarItems(displayID: CGDirectDisplayID) async -> [MenuBarItem] {
-        await MenuBarItem.getMenuBarItems(on: displayID, option: [.onScreen, .activeSpace])
+        await MenuBarItemImageCache.freshCaptureGeometry(
+            owners: geometryOwners,
+            readOwners: { await MenuBarItemAXProvider.menuBarItemsForCaptureConcurrent(knownOwners: $0) },
+            // Position-store recoveries and retained inventory carry old rectangles,
+            // so neither can establish geometry for a new screenshot.
+            discover: {
+                await MenuBarItem.getMenuBarItems(on: displayID, option: [.onScreen, .activeSpace], freshOnly: true)
+            }
+        )
     }
 
     func liveBounds(
@@ -102,6 +113,32 @@ nonisolated struct LiveMenuBarCaptureReader: MenuBarCaptureReading {
 }
 
 extension MenuBarItemImageCache {
+    /// The owners one capture's geometry read must refresh: the items being
+    /// cropped, plus every other known item, since any of them can sit beside one.
+    static nonisolated func captureGeometryOwners(
+        for targets: [MenuBarItem],
+        knownItems: [MenuBarItem],
+        recentItems: [MenuBarItem]
+    ) -> Set<pid_t> {
+        guard !targets.isEmpty else { return [] }
+        return Set((targets + knownItems + recentItems).map { $0.sourcePID ?? $0.ownerPID })
+    }
+
+    /// Fresh item geometry from the known owners alone, leaving new apps to the inventory scanner.
+    /// The owners read answers nil unless every known item owner was re-read, and then every app is walked.
+    static nonisolated func freshCaptureGeometry(
+        owners: Set<pid_t>,
+        readOwners: (Set<pid_t>) async -> [MenuBarItem]?,
+        discover: () async -> [MenuBarItem]
+    ) async -> [MenuBarItem] {
+        guard !owners.isEmpty else { return await discover() }
+        if let fresh = await readOwners(owners) {
+            return fresh
+        }
+        diagLog.debug("freshCaptureGeometry: known-owner read was incomplete; reading every app")
+        return await discover()
+    }
+
     /// The widest owner window with nonzero alpha anchored to this display's menu-bar band.
     static nonisolated func barWindow(
         for ownerPID: pid_t,

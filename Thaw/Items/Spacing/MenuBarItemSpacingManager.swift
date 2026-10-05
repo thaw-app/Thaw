@@ -68,6 +68,10 @@ final class MenuBarItemSpacingManager {
     /// Does not take effect until applyOffset() is called.
     var offset = 0
 
+    /// Whether a relaunch wave may run. Synced from DisplaySettingsManager and
+    /// enforced here so no caller of applyOffset can bypass it.
+    var spacingApplyMode: SpacingApplyMode = .relaunchApps
+
     /// Serializes overlapping applyOffset calls. The screen-change sink and
     /// the profile-load layoutTask can fire in the same frame on a display
     /// switch; queued, the second runs after the settling period has started,
@@ -245,11 +249,18 @@ final class MenuBarItemSpacingManager {
     /// no-op guard in applyOffsetLocked so callers can decide whether to
     /// prompt the user before a relaunch without performing the apply.
     func willRelaunch(forOffset offset: Int) -> Bool {
-        let targetSpacing = Key.spacing.defaultValue + offset
-        let targetPadding = Key.padding.defaultValue + offset
-        let onDiskSpacing = currentlyAppliedValue(forKey: .spacing)
-        let onDiskPadding = currentlyAppliedValue(forKey: .padding)
-        return onDiskSpacing != targetSpacing || onDiskPadding != targetPadding
+        // Write-only mode never fires a wave, whatever is on disk.
+        guard spacingApplyMode == .relaunchApps else {
+            return false
+        }
+        return !isOnDisk(offset: offset)
+    }
+
+    /// Whether the on-disk spacing and padding already match the offset,
+    /// regardless of the apply mode.
+    func isOnDisk(offset: Int) -> Bool {
+        currentlyAppliedValue(forKey: .spacing) == Key.spacing.defaultValue + offset
+            && currentlyAppliedValue(forKey: .padding) == Key.padding.defaultValue + offset
     }
 
     /// Applies the current offset.
@@ -265,10 +276,12 @@ final class MenuBarItemSpacingManager {
         let requestedOffset = offset
         try await applyOffsetSemaphore.wait()
         do {
+            // Read under the semaphore so a queued apply honors a mode changed while it waited.
+            let mayRelaunch = Self.mayRelaunchApps(mode: spacingApplyMode, requested: relaunchApps)
             let outcome = try await applyOffsetLocked(
                 offset: requestedOffset,
-                forceRelaunch: forceRelaunch,
-                relaunchApps: relaunchApps
+                forceRelaunch: forceRelaunch && mayRelaunch,
+                relaunchApps: mayRelaunch
             )
             await applyOffsetSemaphore.signal()
             MenuBarItemSpacingManager.diagLog.debug(
@@ -494,6 +507,14 @@ final class MenuBarItemSpacingManager {
             }
         }
         return stillMissing
+    }
+}
+
+extension MenuBarItemSpacingManager {
+    /// Whether an apply may relaunch apps. Write-only mode outranks every
+    /// caller's request, a forced reapply included.
+    static func mayRelaunchApps(mode: SpacingApplyMode, requested: Bool) -> Bool {
+        mode == .relaunchApps && requested
     }
 }
 

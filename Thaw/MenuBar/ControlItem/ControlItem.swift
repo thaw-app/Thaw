@@ -64,6 +64,10 @@ final class ControlItem: NSObject {
     private var offBandRecoveryCycle = 0
     private var offBandRecoveryExhausted = false
 
+    /// Why the visible item is still missing after recovery ran out, or nil
+    /// while it is seated or still being recovered.
+    @Published private(set) var placementBlock: PlacementBlock?
+
     private var menuController: ControlItemMenuController?
 
     private var nudge = MenuBarAgentNudge()
@@ -463,6 +467,36 @@ extension ControlItem {
         }
     }
 
+    /// Why the visible item stays out of the bar once the ladder is spent.
+    nonisolated enum PlacementBlock: Equatable {
+        /// macOS has Thaw switched off in its menu bar settings, which no
+        /// re-register can change.
+        case deniedBySystem
+        /// The item never landed and the switch could not be read.
+        case unknown
+    }
+
+    /// The block for what Control Center's switch reads. Pure, so the rule is
+    /// testable without the app list.
+    static nonisolated func placementBlock(systemAllowsThaw: Bool?) -> PlacementBlock {
+        systemAllowsThaw == false ? .deniedBySystem : .unknown
+    }
+
+    /// Records why the item is still missing and returns it.
+    @discardableResult
+    private func notePlacementBlocked() -> PlacementBlock {
+        let block = Self.placementBlock(systemAllowsThaw: MenuBarAllowState.ofThaw())
+        if placementBlock != block {
+            placementBlock = block
+            if block == .deniedBySystem {
+                diagLog.warning(
+                    "macOS has \(Constants.displayName) switched off in its menu bar settings; waiting for the switch instead of re-registering"
+                )
+            }
+        }
+        return block
+    }
+
     /// How long a rung has to prove itself before the next one fires.
     static nonisolated let offBandEscalationCooldown: TimeInterval = 5
 
@@ -525,6 +559,7 @@ extension ControlItem {
 
         case .exhausted:
             offBandRecoveryExhausted = true
+            notePlacementBlocked()
             diagLog.error(
                 "off-band recovery exhausted; a re-armed re-register retries in \(Self.republishRearmCooldown)"
             )
@@ -551,7 +586,7 @@ extension ControlItem {
         // A missing window is not health: re-register if the item is added,
         // only keep watching if the user turned it off.
         guard let frame = window?.frame else {
-            if isAddedToMenuBar {
+            if isAddedToMenuBar, notePlacementBlocked() != .deniedBySystem {
                 republishIfUnseated()
             }
             scheduleRepublishRearmRetry()
@@ -562,6 +597,12 @@ extension ControlItem {
             offBandRecoveryExhausted = false
             offBandRecoveryLevel = 0
             offBandRecoveryCycle = 0
+            placementBlock = nil
+            return
+        }
+        // A denial outlasts every fresh window, so only the switch is watched.
+        guard notePlacementBlocked() != .deniedBySystem else {
+            scheduleRepublishRearmRetry()
             return
         }
         switch republishIfUnseated() {
@@ -597,6 +638,7 @@ extension ControlItem {
         offBandRecoveryExhausted = false
         offBandRecoveryLevel = 0
         offBandRecoveryCycle = 0
+        placementBlock = nil
         Self.republishCounts[identifier] = nil
         Self.republishLastAttempt[identifier] = nil
         diagLog.notice(
@@ -683,6 +725,9 @@ extension ControlItem {
                     reassertVisibleIconImage()
                     noteDegenerateFrame()
                     return
+                }
+                if placementBlock != nil {
+                    placementBlock = nil
                 }
                 frame = measuredFrame
             }

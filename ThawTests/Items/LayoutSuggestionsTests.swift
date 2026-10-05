@@ -12,9 +12,6 @@ import Testing
 
 @Suite("Layout suggestions")
 struct LayoutSuggestionsTests {
-    private let now = Date(timeIntervalSinceReferenceDate: 1_000_000_000)
-    private let day: TimeInterval = 24 * 60 * 60
-
     private func item(_ title: String, x: CGFloat = 100) -> MenuBarItem {
         MenuBarItem(
             tag: MenuBarItemTag(namespace: .string("com.example.\(title)"), title: title),
@@ -27,41 +24,6 @@ struct LayoutSuggestionsTests {
         )
     }
 
-    private func record(firstSeenDaysAgo: Double, lastClickedDaysAgo: Double?) -> HygieneItemRecord {
-        HygieneItemRecord(
-            firstSeen: now - firstSeenDaysAgo * day,
-            lastSeen: now,
-            lastActivated: lastClickedDaysAgo.map { now - $0 * day },
-            displayNameAtFirstSight: "x"
-        )
-    }
-
-    @Test("An item watched and unclicked for 30 days is suggested")
-    func suggestsIdleItems() {
-        let idle = item("Idle")
-        let records = [LayoutSuggestions.usageKey(for: idle): record(firstSeenDaysAgo: 45, lastClickedDaysAgo: 40)]
-        #expect(LayoutSuggestions.unusedItems([idle], records: records, now: now).count == 1)
-    }
-
-    @Test("A recently clicked item is not suggested")
-    func skipsRecentlyClicked() {
-        let used = item("Used")
-        let records = [LayoutSuggestions.usageKey(for: used): record(firstSeenDaysAgo: 45, lastClickedDaysAgo: 2)]
-        #expect(LayoutSuggestions.unusedItems([used], records: records, now: now).isEmpty)
-    }
-
-    @Test("An item watched for less than 30 days is never suggested, clicked or not")
-    func needsAFullWindowOfRecord() {
-        let new = item("New")
-        let records = [LayoutSuggestions.usageKey(for: new): record(firstSeenDaysAgo: 10, lastClickedDaysAgo: nil)]
-        #expect(LayoutSuggestions.unusedItems([new], records: records, now: now).isEmpty)
-    }
-
-    @Test("An item with no record is never suggested")
-    func needsARecord() {
-        #expect(LayoutSuggestions.unusedItems([item("Unknown")], records: [:], now: now).isEmpty)
-    }
-
     @Test("Only items mostly under the notch are reported")
     func reportsItemsBehindTheNotch() {
         let notch = CGRect(x: 600, y: 0, width: 200, height: 37)
@@ -69,6 +31,32 @@ struct LayoutSuggestionsTests {
         let beside = item("Beside", x: 900)
         let result = LayoutSuggestions.itemsBehindNotch([under, beside], notchRects: [notch])
         #expect(result.map(\.title) == ["Under"])
+    }
+
+    private func littleSnitchItem() -> MenuBarItem {
+        MenuBarItem(
+            tag: MenuBarItemTag(namespace: .string(LayoutSuggestions.littleSnitchAgentBundleID), title: "Item-0"),
+            windowID: 2,
+            ownerPID: 200,
+            sourcePID: 200,
+            bounds: CGRect(x: 200, y: 0, width: 24, height: 24),
+            title: "Item-0",
+            isOnScreen: true
+        )
+    }
+
+    @Test("Little Snitch running without an enumerated item is reported")
+    func reportsMissingLittleSnitchItem() {
+        let running: Set = [LayoutSuggestions.littleSnitchAgentBundleID, "com.example.Other"]
+        #expect(LayoutSuggestions.littleSnitchItemIsMissing(runningBundleIDs: running, items: [item("Other")]))
+    }
+
+    @Test("Nothing is reported when its item is enumerated, when it is not running, or before any item is known")
+    func staysQuietOtherwise() {
+        let running: Set = [LayoutSuggestions.littleSnitchAgentBundleID]
+        #expect(!LayoutSuggestions.littleSnitchItemIsMissing(runningBundleIDs: running, items: [item("Other"), littleSnitchItem()]))
+        #expect(!LayoutSuggestions.littleSnitchItemIsMissing(runningBundleIDs: ["com.example.Other"], items: [item("Other")]))
+        #expect(!LayoutSuggestions.littleSnitchItemIsMissing(runningBundleIDs: running, items: []))
     }
 }
 

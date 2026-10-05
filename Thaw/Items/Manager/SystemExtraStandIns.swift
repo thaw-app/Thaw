@@ -72,6 +72,60 @@ enum SystemExtraStandIn: String, CaseIterable {
     }
 }
 
+// MARK: - Visibility
+
+/// Hides Thaw's extra bundles itself: Control Center's app list may have no record of them.
+/// Must match ExtraVisibilityChannel in ThawExtraHelper.
+@MainActor
+enum ExtraVisibilityChannel {
+    private static let log = DiagLog(category: "SystemExtraStandIn")
+    private static var lastHidden: Set<String>?
+
+    static func ownsBundle(_ bundleID: String) -> Bool {
+        bundleID.hasPrefix("\(ThawMenuBarIdentity.bundleIdentifier).extra.")
+    }
+
+    static var file: URL {
+        file(in: ItemStandInSlot.folder)
+    }
+
+    static func file(in folder: URL) -> URL {
+        folder.appending(path: "hidden-extras.txt")
+    }
+
+    static var notification: Notification.Name {
+        Notification.Name("\(ThawMenuBarIdentity.bundleIdentifier).extra.visibility")
+    }
+
+    static func hide(_ bundleIDs: Set<String>) {
+        hide(bundleIDs, folder: ItemStandInSlot.folder, announce: announceChange)
+    }
+
+    /// The folder and the announcement are parameters so tests write to a scratch folder and post nothing.
+    static func hide(_ bundleIDs: Set<String>, folder: URL, announce: () -> Void) {
+        guard bundleIDs != lastHidden else { return }
+        do {
+            try FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
+            try bundleIDs.sorted().joined(separator: "\n").write(to: file(in: folder), atomically: true, encoding: .utf8)
+        } catch {
+            log.error("could not write hidden extras: \(error.localizedDescription)")
+            return
+        }
+        lastHidden = bundleIDs
+        announce()
+        log.info("hidden extras: \(bundleIDs.sorted())")
+    }
+
+    private static func announceChange() {
+        DistributedNotificationCenter.default().postNotificationName(
+            notification,
+            object: nil,
+            userInfo: nil,
+            deliverImmediately: true
+        )
+    }
+}
+
 // MARK: - Launcher
 
 /// Starts and stops stand-in bundles, and gives each the original's place in

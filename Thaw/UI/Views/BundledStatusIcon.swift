@@ -64,9 +64,11 @@ enum BundledStatusIcon {
     private static func find(in bundleURL: URL) -> [Candidate] {
         guard let bundle = Bundle(url: bundleURL) else { return [] }
         let appIconNames = Set(
-            [bundle.object(forInfoDictionaryKey: "CFBundleIconFile") as? String,
-             bundle.object(forInfoDictionaryKey: "CFBundleIconName") as? String]
-                .compactMap { $0.map { ($0 as NSString).deletingPathExtension.lowercased() } }
+            [
+                bundle.object(forInfoDictionaryKey: "CFBundleIconFile") as? String,
+                bundle.object(forInfoDictionaryKey: "CFBundleIconName") as? String,
+            ]
+            .compactMap { $0.map { ($0 as NSString).deletingPathExtension.lowercased() } }
         )
         var seen = Set<String>()
         var result = [Candidate]()

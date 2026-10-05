@@ -2,10 +2,8 @@
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
-	<!-- The one entitlement Thaw itself asks for. Thaw is unsandboxed by
-	     necessity (it drives other processes' menu bar items through the
-	     accessibility APIs), so there is deliberately no app-sandbox key
-	     here: ENABLE_APP_SANDBOX stays NO for this target.
+	<!-- Thaw is unsandboxed because it drives other processes' menu bar
+	     items through Accessibility. ENABLE_APP_SANDBOX stays NO.
 
 	     The group id carries the team prefix (A7CKWF99ML.) rather than the
 	     "group." form. On macOS that is the recommended spelling: a
@@ -22,5 +20,8 @@
 	<array>
 		<string>A7CKWF99ML.com.stonerl.Thaw</string>
 	</array>
+	<!-- Recovery retains access only to the file the user selects. -->
+	<key>com.apple.security.files.bookmarks.app-scope</key>
+	<true/>
 </dict>
 </plist>

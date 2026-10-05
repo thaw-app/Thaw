@@ -84,15 +84,6 @@ nonisolated extension SearchIndex {
             property: .advanced("recordingWatchPlacement")
         ),
         SearchEntry(
-            id: "lab.enableBarHygieneAudit",
-            title: "Menu bar history",
-            descriptionText: String(localized: "Records when items appear in and disappear from your menu bar, so you can see what changed."),
-            pane: .theLab,
-            section: "Experiments",
-            keywords: ["history", "audit", "hygiene", "changes", "appeared", "new", "icon", "inventory", "log", "unused", "quiet"],
-            property: .advanced("enableBarHygieneAudit")
-        ),
-        SearchEntry(
             id: "lab.enableDesktopMenuHiding",
             title: "Hide Finder menus on the desktop",
             descriptionText: String(localized: "Covers the Finder's menu titles while the desktop is frontmost. The Apple menu stays."),

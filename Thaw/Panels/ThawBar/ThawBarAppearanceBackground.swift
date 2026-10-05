@@ -54,8 +54,12 @@ struct ThawBarAppearanceBackground: View {
         case .adaptive:
             adaptive.opacity(appearance.backgroundOpacity)
         case .glass:
-            glass(style: appearance.backgroundGlassStyle, colored: appearance.backgroundGlassIsColored,
-                  color: appearance.backgroundColor, opacity: appearance.backgroundOpacity)
+            glass(
+                style: appearance.backgroundGlassStyle,
+                colored: appearance.backgroundGlassIsColored,
+                color: appearance.backgroundColor,
+                opacity: appearance.backgroundOpacity
+            )
         }
     }
 
@@ -73,16 +77,23 @@ struct ThawBarAppearanceBackground: View {
         case .adaptiveGradient:
             if let primary = palette?.primary, let secondary = palette?.secondary {
                 LinearGradient(
-                    colors: [Color(.displayP3, red: primary.red, green: primary.green, blue: primary.blue),
-                             Color(.displayP3, red: secondary.red, green: secondary.green, blue: secondary.blue)],
-                    startPoint: .leading, endPoint: .trailing
+                    colors: [
+                        Color(.displayP3, red: primary.red, green: primary.green, blue: primary.blue),
+                        Color(.displayP3, red: secondary.red, green: secondary.green, blue: secondary.blue),
+                    ],
+                    startPoint: .leading,
+                    endPoint: .trailing
                 ).opacity(appearance.tintOpacity)
             } else {
                 adaptive.opacity(appearance.tintOpacity)
             }
         case .glass:
-            glass(style: appearance.tintGlassStyle, colored: appearance.tintGlassIsColored,
-                  color: appearance.tintColor, opacity: appearance.tintOpacity)
+            glass(
+                style: appearance.tintGlassStyle,
+                colored: appearance.tintGlassIsColored,
+                color: appearance.tintColor,
+                opacity: appearance.tintOpacity
+            )
         }
     }
 
@@ -145,10 +156,16 @@ private struct ThawBarGlassSurface: NSViewRepresentable, Equatable {
             regular.isHidden = config.style.usesShapeAwareSurface
             liquid.isHidden = !config.style.usesShapeAwareSurface
             if config.style.usesShapeAwareSurface {
-                liquid.update(path: config.shape.path(in: bounds).cgPath,
-                              isColored: config.colored, tintColor: config.color,
-                              tintOpacity: config.opacity, effectOpacity: config.style.effectOpacity,
-                              usesDarkFade: config.style.usesDarkFade, borderColor: nil, borderWidth: 0)
+                liquid.update(
+                    path: config.shape.path(in: bounds).cgPath,
+                    isColored: config.colored,
+                    tintColor: config.color,
+                    tintOpacity: config.opacity,
+                    effectOpacity: config.style.effectOpacity,
+                    usesDarkFade: config.style.usesDarkFade,
+                    borderColor: nil,
+                    borderWidth: 0
+                )
             } else {
                 regular.style = config.style.nsGlassStyle
                 regular.cornerRadius = config.shape.cornerRadius

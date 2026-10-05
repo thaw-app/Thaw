@@ -33,18 +33,6 @@ nonisolated enum ForegroundContrast {
     /// and the two are equal at sqrt(0.05 × 1.05) − 0.05.
     static let flipLuminance = (0.05 * 1.05).squareRoot() - 0.05
 
-    /// Whether black content contrasts more with color than white does.
-    ///
-    /// - Parameter color: The background the content is drawn on.
-    /// - Returns: true when black wins. Colors that cannot be expressed in
-    ///   sRGB report false, matching the app's dark-bar default of white.
-    static func prefersDarkContent(on color: CGColor) -> Bool {
-        guard let luminance = relativeLuminance(of: color) else {
-            return false
-        }
-        return prefersDarkContent(onLuminance: luminance)
-    }
-
     /// The same judgement for a background whose relative luminance is already
     /// known, a SwiftUI Color resolved to linear components, say.
     ///
@@ -128,7 +116,7 @@ nonisolated enum ForegroundContrast {
     /// needs one polarity into one that needs the other.
     ///
     /// - Parameter color: The color to convert.
-    private static func sRGBComponents(
+    static func sRGBComponents(
         of color: CGColor
     ) -> (red: Double, green: Double, blue: Double, alpha: Double)? {
         guard

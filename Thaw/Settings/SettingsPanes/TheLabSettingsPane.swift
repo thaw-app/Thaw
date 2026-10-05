@@ -34,7 +34,6 @@ struct TheLabSettingsPane: View {
             }
             ThawSection("Menu bar items") {
                 enableMenuBarItemDescenders
-                enableBarHygieneAudit
                 enableModuleStandIns
                 systemExtraTakeoverToggle(
                     "Replace Time Machine",
@@ -47,9 +46,6 @@ struct TheLabSettingsPane: View {
                     item: .textInput
                 )
                 enableDesktopMenuHiding
-            }
-            if settings.enableBarHygieneAudit {
-                BarHygieneAuditSection()
             }
             ThawSection("\(Constants.displayName)'s menu and icon") {
                 enableControlItemPanel
@@ -348,27 +344,6 @@ struct TheLabSettingsPane: View {
             return nil
         }
         return .display(uuid: uuid)
-    }
-
-    /// The only row that records anything, so the annotation says what and
-    /// where first. Switching it off wipes the record.
-    private var enableBarHygieneAudit: some View {
-        Toggle(isOn: $settings.enableBarHygieneAudit) {
-            HStack(spacing: ThawSpacing.compact) {
-                Text("Menu bar history")
-                ThawBadge.alpha
-            }
-        }
-        .annotation {
-            Text(
-                """
-                Keeps a list of when items appeared in and disappeared from your menu bar, so \
-                "when did this show up?" has an answer. Stored on this Mac in \
-                \(Constants.displayName)'s own settings and nowhere else, and cleared when you \
-                turn this off.
-                """
-            )
-        }
     }
 
     /// The annotation admits that without Screen Recording the cover falls

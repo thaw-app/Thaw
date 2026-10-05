@@ -20,6 +20,7 @@ struct ParkedLaneDeficitTests {
         let deficit = try #require(MenuBarItemManager.parkedLaneDeficit(
             previous: nil,
             parkedWidths: [32, 38, 38, 41],
+            isNativeOverflowActive: true,
             modeledHeadroom: 600,
             visibleUIDs: visible,
             overflowUIDs: []
@@ -34,9 +35,36 @@ struct ParkedLaneDeficitTests {
         let held = try #require(MenuBarItemManager.parkedLaneDeficit(
             previous: previous,
             parkedWidths: [],
+            isNativeOverflowActive: true,
             modeledHeadroom: 900,
             visibleUIDs: ["walld", "mole"],
             overflowUIDs: ["spark", "antishort", "cider", "slidepad"]
+        ))
+        #expect(held.width == 781)
+    }
+
+    @Test("Parked items without native overflow are not proof of a full bar")
+    func ignoresParkedItemsWithoutNativeOverflow() {
+        #expect(MenuBarItemManager.parkedLaneDeficit(
+            previous: nil,
+            parkedWidths: [32, 38, 38, 41],
+            isNativeOverflowActive: false,
+            modeledHeadroom: 600,
+            visibleUIDs: visible,
+            overflowUIDs: []
+        ) == nil)
+    }
+
+    @Test("A held deficit survives native overflow clearing")
+    func carriesWithoutNativeOverflow() throws {
+        let previous = (width: CGFloat(781), visibleUIDs: visible)
+        let held = try #require(MenuBarItemManager.parkedLaneDeficit(
+            previous: previous,
+            parkedWidths: [32],
+            isNativeOverflowActive: false,
+            modeledHeadroom: 900,
+            visibleUIDs: visible,
+            overflowUIDs: []
         ))
         #expect(held.width == 781)
     }
@@ -46,6 +74,7 @@ struct ParkedLaneDeficitTests {
         let deficit = try #require(MenuBarItemManager.parkedLaneDeficit(
             previous: nil,
             parkedWidths: [2],
+            isNativeOverflowActive: true,
             modeledHeadroom: 0,
             visibleUIDs: ["a"],
             overflowUIDs: []
@@ -59,6 +88,7 @@ struct ParkedLaneDeficitTests {
         #expect(MenuBarItemManager.parkedLaneDeficit(
             previous: previous,
             parkedWidths: [],
+            isNativeOverflowActive: true,
             modeledHeadroom: 500,
             visibleUIDs: ["a", "b"],
             overflowUIDs: []

@@ -42,8 +42,9 @@ extension DisplaySettingsPane {
             return
         }
 
-        // Confirmations off: save to the profile target the user picked.
-        if !displaySettings.confirmSpacingRelaunch {
+        // Confirmations off, or write-only mode with nothing to relaunch:
+        // save to the profile target the user picked.
+        if !displaySettings.confirmSpacingRelaunch || displaySettings.spacingApplyMode == .writeOnly {
             commitSpacingWithoutConfirmation(
                 displayID: display.id,
                 offset: offset,

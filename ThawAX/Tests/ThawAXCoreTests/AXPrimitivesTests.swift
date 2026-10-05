@@ -25,6 +25,31 @@ struct AXPrimitivesTests {
     }
 
     @Test
+    func `an item frame overflowing the bar is cut to the bar its centre implies`() {
+        // A 24 pt item reported as a 258 pt box centred on a 31 pt bar.
+        let frame = CGRect(x: 3411, y: -113.5, width: 24, height: 258)
+        #expect(AXPrimitives.itemFrame(frame, maximumHeight: 40, displayTop: 0)
+            == CGRect(x: 3411, y: 0, width: 24, height: 31))
+    }
+
+    @Test
+    func `popovers and off-centre boxes stay rejected`() {
+        // Hangs below the bar.
+        #expect(AXPrimitives.itemFrame(CGRect(x: 100, y: 24, width: 300, height: 250), maximumHeight: 40, displayTop: 0) == nil)
+        // Reaches above the display but its centre implies no bar.
+        #expect(AXPrimitives.itemFrame(CGRect(x: 100, y: -300, width: 24, height: 258), maximumHeight: 40, displayTop: 0) == nil)
+        // Display unknown.
+        #expect(AXPrimitives.itemFrame(CGRect(x: 100, y: -113.5, width: 24, height: 258), maximumHeight: 40, displayTop: nil) == nil)
+    }
+
+    @Test
+    func `an ordinary item frame is kept as is`() {
+        let frame = CGRect(x: 100, y: 3.5, width: 24, height: 24)
+        #expect(AXPrimitives.itemFrame(frame, maximumHeight: 40, displayTop: nil) == frame)
+        #expect(AXPrimitives.itemFrame(CGRect(x: 100, y: 0, width: 24, height: 0), maximumHeight: 40, displayTop: 0) == nil)
+    }
+
+    @Test
     func `press treats success as opened`() {
         var askedOwner = false
         let opened = AXPrimitives.press(perform: { .success }, ownerPID: {

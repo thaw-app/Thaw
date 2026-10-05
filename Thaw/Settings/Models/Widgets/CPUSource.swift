@@ -32,25 +32,6 @@ public struct CPUTickSnapshot: Sendable {
     public let cores: [CPUCoreTicks]
 }
 
-/// Apple Silicon core kind used for per-core labeling.
-public enum CPUCoreKind: String, Sendable {
-    case efficiency
-    case performance
-    case unknown
-}
-
-/// Static topology of the logical CPUs.
-public struct CoreTopology: Sendable {
-    /// Kind for each logical CPU, in scheduler order.
-    public let coreKinds: [CPUCoreKind]
-
-    /// Number of performance logical CPUs.
-    public let performanceCoreCount: Int
-
-    /// Number of efficiency logical CPUs.
-    public let efficiencyCoreCount: Int
-}
-
 /// Reads CPU counters and machine-wide CPU metadata from Mach and sysctl.
 public struct CPUSource: Sendable {
     /// Whether Mach reports at least one logical processor.
@@ -96,49 +77,6 @@ public struct CPUSource: Sendable {
             )
         }
         return CPUTickSnapshot(cores: cores)
-    }
-
-    /// Reads performance and efficiency logical-core counts.
-    public func topology() -> CoreTopology {
-        let total = ProcessInfo.processInfo.processorCount
-        let performanceCount = Self.integerSysctl("hw.perflevel0.logicalcpu") ?? 0
-        let efficiencyCount = Self.integerSysctl("hw.perflevel1.logicalcpu") ?? 0
-        guard performanceCount + efficiencyCount == total, efficiencyCount > 0 else {
-            return CoreTopology(
-                coreKinds: Array(repeating: .unknown, count: total),
-                performanceCoreCount: performanceCount,
-                efficiencyCoreCount: efficiencyCount
-            )
-        }
-
-        let coreKinds = (0 ..< total).map { index in
-            index < efficiencyCount ? CPUCoreKind.efficiency : CPUCoreKind.performance
-        }
-        return CoreTopology(
-            coreKinds: coreKinds,
-            performanceCoreCount: performanceCount,
-            efficiencyCoreCount: efficiencyCount
-        )
-    }
-
-    /// Reads elapsed time since boot.
-    public func uptime() -> TimeInterval? {
-        var bootTime = timeval()
-        var size = MemoryLayout<timeval>.size
-        guard sysctlbyname("kern.boottime", &bootTime, &size, nil, 0) == 0 else {
-            return nil
-        }
-        let boot = TimeInterval(bootTime.tv_sec) + TimeInterval(bootTime.tv_usec) / 1_000_000
-        return max(0, Date().timeIntervalSince1970 - boot)
-    }
-
-    private static func integerSysctl(_ name: String) -> Int? {
-        var value: Int32 = 0
-        var size = MemoryLayout<Int32>.size
-        guard sysctlbyname(name, &value, &size, nil, 0) == 0 else {
-            return nil
-        }
-        return Int(value)
     }
 }
 

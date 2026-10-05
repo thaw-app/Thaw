@@ -84,6 +84,37 @@ public enum AXPrimitives {
             frame.midX <= displayBounds.maxX
     }
 
+    /// The frame to inventory as a status item, or nil for a popover or panel.
+    ///
+    /// Some items report a box far taller than the bar, centred on it. Popovers hang below the
+    /// bar; a box that also reaches above its display's top edge is a mis-sized item, so it is
+    /// cut to the bar band its centre implies.
+    public static func itemFrame(_ frame: CGRect, maximumHeight: CGFloat, displayTop: CGFloat?) -> CGRect? {
+        guard frame.height > 0 else { return nil }
+        if frame.height <= maximumHeight {
+            return frame
+        }
+        guard let displayTop, frame.minY < displayTop else { return nil }
+        let barHeight = 2 * (frame.midY - displayTop)
+        guard barHeight > 0, barHeight <= maximumHeight else { return nil }
+        return CGRect(x: frame.minX, y: displayTop, width: frame.width, height: barHeight)
+    }
+
+    /// itemFrame(_:maximumHeight:displayTop:) against the display under the frame's centre,
+    /// looked up only for a frame over the ceiling.
+    public static func itemFrame(_ frame: CGRect, maximumHeight: CGFloat) -> CGRect? {
+        guard frame.height > maximumHeight else {
+            return itemFrame(frame, maximumHeight: maximumHeight, displayTop: nil)
+        }
+        var display: CGDirectDisplayID = 0
+        var count: UInt32 = 0
+        let center = CGPoint(x: frame.midX, y: frame.midY)
+        let top = CGGetDisplaysWithPoint(center, 1, &display, &count) == .success && count == 1
+            ? CGDisplayBounds(display).minY
+            : nil
+        return itemFrame(frame, maximumHeight: maximumHeight, displayTop: top)
+    }
+
     /// The element's frame, preferring AXFrame and falling back to
     /// AXPosition plus AXSize for elements that do not vend it.
     public static func frame(of element: AXUIElement) -> CGRect? {

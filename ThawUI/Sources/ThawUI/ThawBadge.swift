@@ -63,7 +63,7 @@ public struct ThawBadge: View {
     private var foreground: AnyShapeStyle {
         switch tone {
         case .neutral: AnyShapeStyle(.secondary)
-        case let .tinted(tint): AnyShapeStyle(tint)
+        case .tinted: AnyShapeStyle(.primary)
         }
     }
 

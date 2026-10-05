@@ -87,12 +87,3 @@ public enum ThawType {
     /// keep columns and changing values visually stable.
     public static let metric = Font.system(.callout, weight: .medium).monospacedDigit()
 }
-
-public extension View {
-    /// Renders this view's text as a numeric readout (see ThawType.metric).
-    func thawMetric() -> some View {
-        font(ThawType.metric)
-            .foregroundStyle(.secondary)
-            .fixedSize(horizontal: true, vertical: false)
-    }
-}

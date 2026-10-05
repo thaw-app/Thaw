@@ -8,8 +8,8 @@
 import Testing
 @testable import Thaw
 
-/// The sidebar is one flat list of direct destinations. About opens from the
-/// overflow menu; Scripts is a placeholder reachable only through search.
+/// The sidebar is one flat list of direct destinations, ending with About.
+/// Scripts is a placeholder reachable only through search.
 @MainActor
 @Suite("UX refresh navigation")
 struct UXRefreshNavigationTests {
@@ -20,15 +20,24 @@ struct UXRefreshNavigationTests {
         #expect(SettingsSidebarPanes.groups.count == 1, "Got: \(SettingsSidebarPanes.groups.count)")
         #expect(SettingsSidebarPanes.all == [
             .general, .menuBarLayout, .visibility, .menuBarAppearance, .thawBar,
-            .profiles, .hotkeys, .automation, .displays, .spaces,
-            .privacy, .theLab, .tools,
+            .profiles, .hotkeys, .automation, .triggers, .displays, .spaces,
+            .privacy, .theLab, .tools, .about,
         ], "Got: \(SettingsSidebarPanes.all)")
     }
 
-    @Test("About, Scripts and Advanced stay outside the sidebar")
+    @Test("About is visible by default and respects sidebar customization")
+    func aboutSidebarVisibility() {
+        let visible = SettingsSidebarPanes.visibleGroups(hidden: []).flatMap(\.panes)
+        #expect(visible.last == .about)
+
+        let customized = SettingsSidebarPanes.visibleGroups(hidden: [SettingsNavigationIdentifier.about.rawValue])
+            .flatMap(\.panes)
+        #expect(customized == visible.filter { $0 != .about })
+    }
+
+    @Test("Placeholder and absorbed panes stay outside the sidebar")
     func panesOutsideTheSidebar() {
         let all = Set(SettingsSidebarPanes.all)
-        #expect(!all.contains(.about), "About opens from the overflow menu")
         #expect(!all.contains(.scripts), "Scripts is a placeholder reachable via search only")
         #expect(!all.contains(.widgets), "Custom Status Icon is an Experiments toggle, not a sidebar destination")
         #expect(!all.contains(.advanced), "Advanced was dissolved into Menu Bar Behavior and Automation")
@@ -62,6 +71,7 @@ struct UXRefreshNavigationTests {
             "Profiles": .profiles,
             "Advanced": .advanced,
             "Automation": .automation,
+            "Triggers": .triggers,
             "Scripts": .scripts,
             "Widgets": .widgets,
             "The Lab": .theLab,
@@ -117,6 +127,7 @@ struct UXRefreshNavigationTests {
         let stayIDs: Set = [
             "displays.itemSpacing",
             "displays.confirmSpacingRelaunch",
+            "displays.spacingApplyMode",
         ]
         for entry in SearchIndex.entries where stayIDs.contains(entry.id) {
             #expect(entry.pane == .displays, "Entry \(entry.id) should stay on .displays, got \(entry.pane)")

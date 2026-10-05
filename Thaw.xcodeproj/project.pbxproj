@@ -437,7 +437,7 @@
 				7127A9FB2C4881BC00D99DEF /* XCRemoteSwiftPackageReference "Ifrit" */,
 				1ADDA61D49BE1BA7CA5EA059 /* XCRemoteSwiftPackageReference "swift-async-algorithms" */,
 				7A0DF10D46BE41C9B7301DBB /* XCRemoteSwiftPackageReference "swift-subprocess" */,
-				D27A00002F40000000000000 /* XCRemoteSwiftPackageReference "prk-bin" */,
+				D27A00002F40000000000000 /* XCLocalSwiftPackageReference "../PlatformRuntimeKit" */,
 				A4E38A6A423944089D70B9BB /* XCLocalSwiftPackageReference "MenuBarModel" */,
 				A7C4F0052F60000000000005 /* XCLocalSwiftPackageReference "ThawCapture" */,
 				A9E1F0012F70000000000001 /* XCLocalSwiftPackageReference "ThawUI" */,
@@ -560,17 +560,8 @@
 		};
 		1720D48F2BB9B60500A7AC63 /* SwiftLint */ = {
 			isa = PBXShellScriptBuildPhase;
-			inputFileListPaths = (
-				"$(SRCROOT)/scripts/swiftlint-inputs.xcfilelist",
-			);
-			inputPaths = (
-				"$(SRCROOT)/.swiftlint.yml",
-				"$(SRCROOT)/.swiftlint.baseline",
-			);
+			alwaysOutOfDate = 1;
 			name = SwiftLint;
-			outputPaths = (
-				"$(DERIVED_FILE_DIR)/swiftlint.stamp",
-			);
 			shellPath = /bin/sh;
 			shellScript = (
 				"if [[ \"$(uname -m)\" == arm64 ]]; then",
@@ -582,8 +573,6 @@
 				"else",
 				"  echo \"warning: SwiftLint not installed, download from https://github.com/realm/SwiftLint\"",
 				"fi",
-				"",
-				"touch \"$SCRIPT_OUTPUT_FILE_0\"",
 				"",
 			);
 		};
@@ -774,7 +763,7 @@
 				"CODE_SIGN_IDENTITY[sdk=macosx*]" = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
 				COMBINE_HIDPI_IMAGES = YES;
-				CURRENT_PROJECT_VERSION = 111;
+				CURRENT_PROJECT_VERSION = 112;
 				DEAD_CODE_STRIPPING = YES;
 				DEVELOPMENT_ASSET_PATHS = "";
 				DEVELOPMENT_TEAM = A7CKWF99ML;
@@ -782,7 +771,7 @@
 				ENABLE_HARDENED_RUNTIME = YES;
 				ENABLE_PREVIEWS = YES;
 				ENABLE_USER_SCRIPT_SANDBOXING = NO;
-				ENABLE_USER_SELECTED_FILES = readonly;
+				ENABLE_USER_SELECTED_FILES = readwrite;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = Thaw/Resources/Info.plist;
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.utilities";
@@ -793,7 +782,7 @@
 					"@executable_path/../Frameworks",
 				);
 				MACOSX_DEPLOYMENT_TARGET = 27.0;
-				MARKETING_VERSION = "3.0.0-beta.1";
+				MARKETING_VERSION = "3.0.0-beta.2";
 				PRODUCT_BUNDLE_IDENTIFIER = "com.stonerl.Thaw$(THAW_BUNDLE_ID_SUFFIX)";
 				INFOPLIST_KEY_CFBundleDisplayName = "Thaw$(THAW_PRODUCT_NAME_SUFFIX)";
 				PRODUCT_MODULE_NAME = Thaw;
@@ -820,7 +809,7 @@
 				"CODE_SIGN_IDENTITY[sdk=macosx*]" = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
 				COMBINE_HIDPI_IMAGES = YES;
-				CURRENT_PROJECT_VERSION = 111;
+				CURRENT_PROJECT_VERSION = 112;
 				DEAD_CODE_STRIPPING = YES;
 				DEVELOPMENT_ASSET_PATHS = "";
 				DEVELOPMENT_TEAM = A7CKWF99ML;
@@ -828,7 +817,7 @@
 				ENABLE_HARDENED_RUNTIME = YES;
 				ENABLE_PREVIEWS = YES;
 				ENABLE_USER_SCRIPT_SANDBOXING = NO;
-				ENABLE_USER_SELECTED_FILES = readonly;
+				ENABLE_USER_SELECTED_FILES = readwrite;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = Thaw/Resources/Info.plist;
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.utilities";
@@ -839,7 +828,7 @@
 					"@executable_path/../Frameworks",
 				);
 				MACOSX_DEPLOYMENT_TARGET = 27.0;
-				MARKETING_VERSION = "3.0.0-beta.1";
+				MARKETING_VERSION = "3.0.0-beta.2";
 				PRODUCT_BUNDLE_IDENTIFIER = "com.stonerl.Thaw$(THAW_BUNDLE_ID_SUFFIX)";
 				INFOPLIST_KEY_CFBundleDisplayName = "Thaw$(THAW_PRODUCT_NAME_SUFFIX)";
 				PRODUCT_MODULE_NAME = Thaw;
@@ -860,7 +849,7 @@
 			buildSettings = {
 				"CODE_SIGN_IDENTITY[sdk=macosx*]" = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 111;
+				CURRENT_PROJECT_VERSION = 112;
 				DEAD_CODE_STRIPPING = YES;
 				DEVELOPMENT_TEAM = A7CKWF99ML;
 				ENABLE_HARDENED_RUNTIME = YES;
@@ -872,7 +861,7 @@
 					"@executable_path/../Frameworks",
 				);
 				MACOSX_DEPLOYMENT_TARGET = 27.0;
-				MARKETING_VERSION = "3.0.0-beta.1";
+				MARKETING_VERSION = "3.0.0-beta.2";
 				PRODUCT_BUNDLE_IDENTIFIER = "com.stonerl.Thaw$(THAW_BUNDLE_ID_SUFFIX).MenuBarCaptureService";
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SKIP_INSTALL = YES;
@@ -888,7 +877,7 @@
 			buildSettings = {
 				"CODE_SIGN_IDENTITY[sdk=macosx*]" = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 111;
+				CURRENT_PROJECT_VERSION = 112;
 				DEAD_CODE_STRIPPING = YES;
 				DEVELOPMENT_TEAM = A7CKWF99ML;
 				ENABLE_HARDENED_RUNTIME = YES;
@@ -900,7 +889,7 @@
 					"@executable_path/../Frameworks",
 				);
 				MACOSX_DEPLOYMENT_TARGET = 27.0;
-				MARKETING_VERSION = "3.0.0-beta.1";
+				MARKETING_VERSION = "3.0.0-beta.2";
 				PRODUCT_BUNDLE_IDENTIFIER = "com.stonerl.Thaw$(THAW_BUNDLE_ID_SUFFIX).MenuBarCaptureService";
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SKIP_INSTALL = YES;
@@ -916,12 +905,12 @@
 			buildSettings = {
 				BUNDLE_LOADER = "$(TEST_HOST)";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 111;
+				CURRENT_PROJECT_VERSION = 112;
 				DEAD_CODE_STRIPPING = YES;
 				DEVELOPMENT_TEAM = A7CKWF99ML;
 				GENERATE_INFOPLIST_FILE = YES;
 				MACOSX_DEPLOYMENT_TARGET = 27.0;
-				MARKETING_VERSION = "3.0.0-beta.1";
+				MARKETING_VERSION = "3.0.0-beta.2";
 				PRODUCT_BUNDLE_IDENTIFIER = com.stonerl.Thaw.tests;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_APPROACHABLE_CONCURRENCY = YES;
@@ -937,12 +926,12 @@
 			buildSettings = {
 				BUNDLE_LOADER = "$(TEST_HOST)";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 111;
+				CURRENT_PROJECT_VERSION = 112;
 				DEAD_CODE_STRIPPING = YES;
 				DEVELOPMENT_TEAM = A7CKWF99ML;
 				GENERATE_INFOPLIST_FILE = YES;
 				MACOSX_DEPLOYMENT_TARGET = 27.0;
-				MARKETING_VERSION = "3.0.0-beta.1";
+				MARKETING_VERSION = "3.0.0-beta.2";
 				PRODUCT_BUNDLE_IDENTIFIER = com.stonerl.Thaw.tests;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_APPROACHABLE_CONCURRENCY = YES;
@@ -959,7 +948,7 @@
 				CODE_SIGN_ENTITLEMENTS = ThawControls/ThawControls.entitlements;
 				"CODE_SIGN_IDENTITY[sdk=macosx*]" = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 111;
+				CURRENT_PROJECT_VERSION = 112;
 				DEAD_CODE_STRIPPING = YES;
 				DEVELOPMENT_TEAM = A7CKWF99ML;
 				ENABLE_APP_SANDBOX = YES;
@@ -973,7 +962,7 @@
 					"@executable_path/../../../../Frameworks",
 				);
 				MACOSX_DEPLOYMENT_TARGET = 27.0;
-				MARKETING_VERSION = "3.0.0-beta.1";
+				MARKETING_VERSION = "3.0.0-beta.2";
 				PRODUCT_BUNDLE_IDENTIFIER = "com.stonerl.Thaw$(THAW_BUNDLE_ID_SUFFIX).ThawControls";
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SKIP_INSTALL = YES;
@@ -991,7 +980,7 @@
 				CODE_SIGN_ENTITLEMENTS = ThawControls/ThawControls.entitlements;
 				"CODE_SIGN_IDENTITY[sdk=macosx*]" = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 111;
+				CURRENT_PROJECT_VERSION = 112;
 				DEAD_CODE_STRIPPING = YES;
 				DEVELOPMENT_TEAM = A7CKWF99ML;
 				ENABLE_APP_SANDBOX = YES;
@@ -1005,7 +994,7 @@
 					"@executable_path/../../../../Frameworks",
 				);
 				MACOSX_DEPLOYMENT_TARGET = 27.0;
-				MARKETING_VERSION = "3.0.0-beta.1";
+				MARKETING_VERSION = "3.0.0-beta.2";
 				PRODUCT_BUNDLE_IDENTIFIER = "com.stonerl.Thaw$(THAW_BUNDLE_ID_SUFFIX).ThawControls";
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SKIP_INSTALL = YES;
@@ -1063,6 +1052,10 @@
 /* End XCConfigurationList section */
 
 /* Begin XCLocalSwiftPackageReference section */
+		D27A00002F40000000000000 /* XCLocalSwiftPackageReference "../PlatformRuntimeKit" */ = {
+			isa = XCLocalSwiftPackageReference;
+			relativePath = ../PlatformRuntimeKit;
+		};
 		A4E38A6A423944089D70B9BB /* XCLocalSwiftPackageReference "MenuBarModel" */ = {
 			isa = XCLocalSwiftPackageReference;
 			relativePath = MenuBarModel;
@@ -1138,14 +1131,6 @@
 				minimumVersion = 1.0.0;
 			};
 		};
-		D27A00002F40000000000000 /* XCRemoteSwiftPackageReference "prk-bin" */ = {
-			isa = XCRemoteSwiftPackageReference;
-			repositoryURL = "https://github.com/thaw-app/prk-bin";
-			requirement = {
-				kind = exactVersion;
-				version = 1.0.0;
-			};
-		};
 /* End XCRemoteSwiftPackageReference section */
 
 /* Begin XCSwiftPackageProductDependency section */
@@ -1201,12 +1186,12 @@
 		};
 		D27A00032F40000000000003 /* PlatformRuntimeKit */ = {
 			isa = XCSwiftPackageProductDependency;
-			package = D27A00002F40000000000000 /* XCRemoteSwiftPackageReference "prk-bin" */;
+			package = D27A00002F40000000000000 /* XCLocalSwiftPackageReference "../PlatformRuntimeKit" */;
 			productName = PlatformRuntimeKit;
 		};
 		D27A00042F40000000000004 /* PlatformRuntimeKit */ = {
 			isa = XCSwiftPackageProductDependency;
-			package = D27A00002F40000000000000 /* XCRemoteSwiftPackageReference "prk-bin" */;
+			package = D27A00002F40000000000000 /* XCLocalSwiftPackageReference "../PlatformRuntimeKit" */;
 			productName = PlatformRuntimeKit;
 		};
 		D578D4A98E514566A18944B0 /* MenuBarModel */ = {

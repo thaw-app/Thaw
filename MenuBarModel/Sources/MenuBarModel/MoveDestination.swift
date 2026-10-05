@@ -50,18 +50,3 @@ public enum MoveDestination: Equatable, Sendable {
         }
     }
 }
-
-/// Lives here for the same reason as MoveDestination.
-public enum LayoutResetDirection: Equatable, Sendable {
-    case toHidden
-    case toVisible
-
-    public func moveDestination(controlItems: ControlItemPair) -> MoveDestination {
-        switch self {
-        case .toHidden:
-            .leftOfItem(controlItems.hidden)
-        case .toVisible:
-            .rightOfItem(controlItems.hidden)
-        }
-    }
-}

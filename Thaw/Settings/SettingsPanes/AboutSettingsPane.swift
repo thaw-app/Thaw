@@ -9,14 +9,19 @@ import SwiftUI
 import ThawUI
 
 /// The About page: who Thaw is and which build this is, then one card for
-/// updates, then the ways out (news, bug reports, the rest behind a menu),
-/// with the copyright last. Every button shares one style and size.
+/// updates, then news and help actions. Project links and copyright form a
+/// quiet footer; badges and live repository statistics stay on the website.
 struct AboutSettingsPane: View {
     @Bindable var updatesManager: UpdatesManager
     @Environment(AppState.self) private var appState
     @Environment(\.openURL) private var openURL
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @Environment(\.colorScheme) private var colorScheme
+
+    private static let iconSize: CGFloat = 96
+
+    /// Half the icon, so the name beside it does not outweigh it.
+    private static let nameSize: CGFloat = 48
 
     @State private var applicationIcon = AboutSettingsPane.currentApplicationIcon()
     @State private var didCopy = false
@@ -29,10 +34,7 @@ struct AboutSettingsPane: View {
                 identity
                 updates
                 actions
-                Text(Constants.copyrightString)
-                    .font(.footnote)
-                    .foregroundStyle(ThawInk.supporting)
-                    .multilineTextAlignment(.center)
+                footer
             }
             .frame(maxWidth: 400)
             .padding(.horizontal, 24)
@@ -59,21 +61,27 @@ struct AboutSettingsPane: View {
     // MARK: Identity
 
     private var identity: some View {
-        VStack(spacing: 8) {
-            Image(nsImage: applicationIcon)
-                .resizable()
-                .scaledToFit()
-                .frame(width: 96, height: 96)
-                .accessibilityHidden(true)
-            Text(verbatim: Constants.displayName)
-                .font(.title.weight(.semibold))
-                .accessibilityAddTraits(.isHeader)
-            Text("Menu bar manager for macOS")
-                .font(.callout)
-                .foregroundStyle(ThawInk.supporting)
+        VStack(spacing: 16) {
+            VStack(spacing: 8) {
+                HStack(spacing: 12) {
+                    Text(verbatim: "Thaw")
+                        .font(.system(size: Self.nameSize, weight: .semibold))
+                        .accessibilityAddTraits(.isHeader)
+                    Image(nsImage: applicationIcon)
+                        .resizable()
+                        .scaledToFit()
+                        .frame(width: Self.iconSize, height: Self.iconSize)
+                        .accessibilityHidden(true)
+                }
+                Text("The open source menu bar manager for macOS")
+                    .font(.callout)
+                    .foregroundStyle(ThawInk.supporting)
+                    .multilineTextAlignment(.center)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
             details
-                .padding(.top, 8)
         }
+        .frame(maxWidth: .infinity)
     }
 
     // MARK: Details
@@ -83,7 +91,7 @@ struct AboutSettingsPane: View {
     private var details: some View {
         HStack(alignment: .firstTextBaseline, spacing: 10) {
             Grid(alignment: .leadingFirstTextBaseline, horizontalSpacing: 10, verticalSpacing: 6) {
-                detailRow("Version", value: Constants.versionString)
+                detailRow("Version", value: Constants.versionString, isPrimary: true)
                 detailRow("Build", value: Constants.buildString)
                 detailRow("Commit", value: Constants.commitString)
             }
@@ -103,13 +111,15 @@ struct AboutSettingsPane: View {
         }
     }
 
-    private func detailRow(_ label: LocalizedStringKey, value: String) -> some View {
+    private func detailRow(_ label: LocalizedStringKey, value: String, isPrimary: Bool = false) -> some View {
         GridRow {
             Text(label)
                 .foregroundStyle(ThawInk.supporting)
                 .gridColumnAlignment(.trailing)
             Text(verbatim: value)
                 .monospaced()
+                .fontWeight(isPrimary ? .medium : .regular)
+                .foregroundStyle(isPrimary ? Color.primary : ThawInk.supporting)
                 .textSelection(.enabled)
         }
     }
@@ -141,6 +151,41 @@ struct AboutSettingsPane: View {
         .controlSize(.regular)
     }
 
+    private var footer: some View {
+        VStack(spacing: 12) {
+            HStack(spacing: 12) {
+                Link(destination: Constants.repositoryURL) {
+                    Text("Source Code").underline()
+                }
+                footerSeparator
+                Button {
+                    appState.openWindow(.acknowledgements)
+                } label: {
+                    Text("Credits").underline()
+                }
+                footerSeparator
+                Link(destination: Constants.donateURL) {
+                    Text("Support Thaw").underline()
+                }
+            }
+            .buttonStyle(.plain)
+            .fixedSize(horizontal: false, vertical: true)
+
+            VStack(spacing: ThawSpacing.tight) {
+                Text(Constants.copyrightString)
+                Text(verbatim: "© 2026 Thaw-app")
+            }
+        }
+        .font(.footnote)
+        .foregroundStyle(ThawInk.supporting)
+        .multilineTextAlignment(.center)
+    }
+
+    private var footerSeparator: some View {
+        Text(verbatim: "·")
+            .accessibilityHidden(true)
+    }
+
     /// Pops the secondary destinations under the actions button, for both
     /// clicks and keyboard activation.
     private func showMoreMenu() {
@@ -152,11 +197,10 @@ struct AboutSettingsPane: View {
         }
         let appState = appState
         let openURL = openURL
-        menu.addItem(item(String(localized: "Support Thaw"), "heart") { openURL(Constants.donateURL) })
+        menu.addItem(item(String(localized: "Frequent Issues"), "questionmark.circle") { openURL(Constants.frequentIssuesURL) })
         menu.addItem(.separator())
         menu.addItem(item(String(localized: "Join the Discord"), "bubble.left.and.bubble.right") { openURL(Constants.discordURL) })
         menu.addItem(item(String(localized: "Help Translate"), "globe") { openURL(Constants.translateURL) })
-        menu.addItem(item(String(localized: "Source Code"), "chevron.left.forwardslash.chevron.right") { openURL(Constants.repositoryURL) })
         menu.addItem(.separator())
         menu.addItem(item(String(localized: "Acknowledgements"), "text.book.closed") { appState.openWindow(.acknowledgements) })
         guard let anchor = menuAnchor.view else { return }

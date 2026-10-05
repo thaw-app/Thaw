@@ -544,7 +544,7 @@ extension MenuBarItemManager {
     }
 
     /// Refusal checks, in the order they must run. Manual arrangement refuses
-    /// every move here, before the normalization defer. Lock screen, clones,
+    /// every move but an explicit Layout edit here, before the normalization defer. Lock screen, clones,
     /// the native chevron and store recoveries are no-ops; the rest throw so
     /// the caller knows.
     private func moveRefusal(
@@ -553,7 +553,7 @@ extension MenuBarItemManager {
         isUserInitiated: Bool,
         allowSectionBoundaryTarget: Bool
     ) -> MoveRefusal? {
-        guard !arrangementIsManual else {
+        guard !arrangementForbidsMoves else {
             MenuBarItemManager.diagLog.debug(
                 "Refusing move of \(item.logString): manual arrangement is on"
             )
@@ -1402,10 +1402,9 @@ extension MenuBarItemManager {
         orderedAs order: [MenuBarItem]? = nil,
         commit: () -> Void
     ) async {
-        // In Manual the bar decides membership, so a section change from Thaw
-        // would leave the item on the wrong side of the dividers. Thaw Bar Only
-        // items are exempt: macOS never draws them, so they have no side.
-        if arrangementIsManual, !items.allSatisfy(isThawBarOnly) {
+        // In Manual only an explicit Layout edit, which seats the item itself, may change a section.
+        // Thaw Bar Only items are exempt: macOS never draws them.
+        if arrangementForbidsMoves, !items.allSatisfy(isThawBarOnly) {
             MenuBarItemManager.diagLog.info(
                 "Section transition to \(section.logString) refused: manual arrangement is on"
             )
@@ -1568,7 +1567,7 @@ extension MenuBarItemManager {
         if let alwaysHidden = controlItems.alwaysHidden {
             liveItems.append(alwaysHidden)
         }
-        guard MenuBarPositionStoreProvider.current.move(
+        guard MenuBarPositionStoreProvider.forLayoutEdit.move(
             item: item,
             to: destination,
             liveItems: liveItems,
@@ -2279,8 +2278,8 @@ extension MenuBarItemManager {
             }
 
             // After a restriction reflow drags fail and strand collateral; the
-            // write above is enough.
-            if repairAfterRestriction {
+            // write above is enough. A write-only reason never drags at all.
+            if repairAfterRestriction || reason.isPositionWriteOnly {
                 continue
             }
 
@@ -2497,6 +2496,7 @@ extension MenuBarItemManager {
             circuitBreakerOpen: moveCircuitBreaker.isOpen,
             reason: reason,
             arrangementIsManual: arrangementIsManual,
+            isExplicitLayoutEdit: ExplicitLayoutEdit.isActive,
             nativeMenuBarDeferred: appState?.menuBarManager.shouldDeferBarMutation == true,
             isWithinSettleWindow: isWithinRestrictionReflowSettleWindow,
             repairAfterRestriction: repairAfterRestriction,
@@ -2522,7 +2522,7 @@ extension MenuBarItemManager {
             )
         case .manualArrangement:
             MenuBarItemManager.diagLog.debug(
-                "Skipping macOS 27 section order: manual arrangement, the user owns the order"
+                "Skipping macOS 27 section order: manual arrangement, and this pass is not a Layout edit"
             )
         case .nativeMenuBarUnavailable:
             MenuBarItemManager.diagLog.debug(
@@ -2634,7 +2634,7 @@ extension MenuBarItemManager {
                 items: liveItems,
                 desiredOrder: desiredOrder
             )
-            let reordered = MenuBarPositionStoreProvider.current.applyOrder(
+            let reordered = MenuBarPositionStoreProvider.forLayoutEdit.applyOrder(
                 desiredOrder: desiredOrder,
                 liveItems: liveItems,
                 experimentalSystemItemHiding: experimentalSystemItemHiding,
@@ -3046,7 +3046,7 @@ extension MenuBarItemManager {
         // Move the item, not the section: a full-band rewrite would replay
         // stale order and relocate unrelated items. Skip if a crossing wrote.
         if !storeMoved {
-            storeMoved = MenuBarPositionStoreProvider.current.move(
+            storeMoved = MenuBarPositionStoreProvider.forLayoutEdit.move(
                 item: item,
                 to: destination,
                 liveItems: liveItems,
@@ -3163,7 +3163,7 @@ extension MenuBarItemManager {
         if let refreshedItem = updated.first(where: {
             $0.tag.matchesIgnoringWindowID(item.tag)
         }),
-            MenuBarPositionStoreProvider.current.move(
+            MenuBarPositionStoreProvider.forLayoutEdit.move(
                 item: refreshedItem,
                 to: destination,
                 liveItems: updated,

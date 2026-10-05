@@ -98,9 +98,7 @@ struct PermissionStatusControl: View {
                     .foregroundStyle(.green)
                     .labelStyle(.titleAndIcon)
             } else {
-                Button("Grant Access") {
-                    permission.performRequest()
-                }
+                Button(requestTitle, action: request)
             }
         case .filled:
             if permission.hasPermission {
@@ -110,16 +108,31 @@ struct PermissionStatusControl: View {
                     .frame(maxWidth: .infinity)
                     .frame(height: 30)
             } else {
-                Button {
-                    permission.performRequest()
-                } label: {
-                    Text("Grant Access")
+                Button(action: request) {
+                    Text(requestTitle)
                         .font(ThawType.detail.weight(.semibold))
                         .frame(maxWidth: .infinity)
                         .frame(height: 30)
                 }
                 .buttonStyle(.glass)
             }
+        }
+    }
+
+    /// After a declined prompt macOS will not ask again, so the control leads to System Settings.
+    private var offersSettings: Bool {
+        permission.wasDeclined && permission.hasSettingsPane
+    }
+
+    private var requestTitle: LocalizedStringKey {
+        offersSettings ? "Open System Settings" : "Grant Access"
+    }
+
+    private func request() {
+        if offersSettings {
+            permission.openSettingsPane()
+        } else {
+            permission.performRequest()
         }
     }
 }

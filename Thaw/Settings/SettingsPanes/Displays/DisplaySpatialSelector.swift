@@ -222,7 +222,7 @@ private struct DisplayThumbnailShape: View {
             if let number, isConnected {
                 Text(verbatim: "\(number)")
                     .font(ThawType.metric)
-                    .foregroundStyle(isSelected ? AnyShapeStyle(Color.accentColor) : AnyShapeStyle(ThawInk.supporting))
+                    .foregroundStyle(isSelected ? AnyShapeStyle(.primary) : AnyShapeStyle(ThawInk.supporting))
                     .frame(maxHeight: .infinity)
             }
         }

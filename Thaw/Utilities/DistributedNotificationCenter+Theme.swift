@@ -11,4 +11,8 @@ extension DistributedNotificationCenter {
     /// Posted system-wide whenever the user switches between light and dark
     /// appearance.
     static let interfaceThemeChangedNotification = Notification.Name("AppleInterfaceThemeChangedNotification")
+
+    /// Posted system-wide when "Automatically hide and show the menu bar"
+    /// changes; _HIHideMenuBar already holds the new value.
+    static let menuBarHidingChangedNotification = Notification.Name("AppleInterfaceMenuBarHidingChangedNotification")
 }

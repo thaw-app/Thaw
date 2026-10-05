@@ -13,16 +13,11 @@ import MenuBarModel
 /// orchestration without a live WindowServer connection.
 nonisolated protocol WindowServerReading: Sendable {
     func activeMenuBarDisplayID() -> CGDirectDisplayID?
-    func windowBounds(for windowID: CGWindowID) -> CGRect?
 }
 
 /// Live WindowServer reads delegated through Bridging.
 nonisolated struct LiveWindowServerReader: WindowServerReading {
     func activeMenuBarDisplayID() -> CGDirectDisplayID? {
         Bridging.getActiveMenuBarDisplayID()
-    }
-
-    func windowBounds(for windowID: CGWindowID) -> CGRect? {
-        Bridging.getWindowBounds(for: windowID)
     }
 }

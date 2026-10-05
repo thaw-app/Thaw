@@ -179,23 +179,6 @@ final class LayoutBarFeedbackCenter {
         )
     }
 
-    /// A reorder dropped in the layout editor while arrangement mode is Manual.
-    ///
-    /// Thaw moves nothing in Manual, so the drop could only rewrite saved order
-    /// and then snap back. Name the setting instead of failing silently.
-    static nonisolated func manualArrangement() -> Refusal {
-        Refusal(
-            title: String(
-                localized: "Reordering is off",
-                comment: "Title shown when a layout-editor reorder is refused because arrangement mode is Manual"
-            ),
-            message: String(
-                localized: "Item arrangement is set to Manual, so \(Constants.displayName) only hides and shows items. To reorder from here, switch it to Automatic in Settings \(Constants.menuArrow) Layout, or ⌘-drag items in the menu bar yourself.",
-                comment: "Explanation shown when a layout-editor reorder is refused because arrangement mode is Manual"
-            )
-        )
-    }
-
     /// A group reorder whose physical AX moves did not settle.
     ///
     /// The model is canonical either way; what the user sees is a cluster that

@@ -246,13 +246,6 @@ struct ProfileSettingsPane: View {
 
     // MARK: - Actions
 
-    /// Binding setters cannot throw, so collect their manifest failures from the manager.
-    private func reportManifestFailure() {
-        if let message = profileManager.takeManifestError() {
-            errorMessage = message
-        }
-    }
-
     private func createProfile() {
         let name = newProfileName.trimmingCharacters(in: .whitespaces)
         guard !name.isEmpty else { return }
@@ -298,7 +291,9 @@ struct ProfileSettingsPane: View {
 
         // Warn only if applying the profile's display spacing would relaunch apps.
         let offset = Int(profile.globalDisplayConfiguration.itemSpacingOffset.rounded())
-        if appState.spacingManager.willRelaunch(forOffset: offset) {
+        // The profile's own mode is the one in effect by the time its spacing is applied.
+        let applyMode = profile.spacingApplyMode ?? appState.settings.displaySettings.spacingApplyMode
+        if applyMode == .relaunchApps, !appState.spacingManager.isOnDisk(offset: offset) {
             diff.relaunchingSpacingOffset = offset
         }
         return diff

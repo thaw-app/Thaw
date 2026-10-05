@@ -30,6 +30,27 @@ extension MenuBarItemManager {
         }
     }
 
+    /// The Visible order to keep when an arrival disturbed the items already on the bar, or nil to mirror as is.
+    /// A ⌘-drag leaves the item set unchanged, so only a pure arrival counts; the newcomer keeps its slot.
+    static nonisolated func visibleOrderPreservedAcrossArrival(
+        savedOrder: [String],
+        mirroredOrder: [String],
+        previousLive: Set<String>,
+        currentLive: Set<String>
+    ) -> [String]? {
+        guard currentLive != previousLive, currentLive.isSuperset(of: previousLive) else { return nil }
+        let savedStayed = savedOrder.filter(previousLive.contains)
+        let mirroredStayed = mirroredOrder.filter(previousLive.contains)
+        guard savedStayed != mirroredStayed,
+              savedStayed.count == mirroredStayed.count,
+              Set(savedStayed) == Set(mirroredStayed)
+        else { return nil }
+        var iterator = savedStayed.makeIterator()
+        return mirroredOrder.map { identifier in
+            previousLive.contains(identifier) ? (iterator.next() ?? identifier) : identifier
+        }
+    }
+
     /// User drops already verified their position; only structural edits and repairs need another rewrite.
     static nonisolated func shouldNormalizeStructureAfterMove(
         item: MenuBarItem,

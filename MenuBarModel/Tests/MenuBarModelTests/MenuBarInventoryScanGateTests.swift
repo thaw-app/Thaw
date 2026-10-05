@@ -99,4 +99,36 @@ struct MenuBarInventoryScanGateTests {
         #expect(foreground == "known owner", "Preemption must retain discovery progress")
         #expect(await background.value == "cancelled", "Discovery should stop at its current owner")
     }
+
+    @Test("A periodic reader waits for background discovery instead of cancelling it")
+    func periodicReaderDoesNotPreemptDiscovery() async {
+        let started = AsyncStream.makeStream(of: Void.self)
+        let release = AsyncStream.makeStream(of: Void.self)
+        let gate = MenuBarInventoryScanGate<String, String> { previous, scope, _ in
+            guard scope == .discovery else { return (previous.observations.first ?? "missing", previous) }
+            var state = previous
+            let pass = state.begin(owners: [1], priorityOwners: [])
+            state.didAttempt(owner: 1, generation: pass.generation)
+            state.record(["known owner"], owner: 1, generation: pass.generation)
+            started.continuation.yield(())
+            started.continuation.finish()
+            for await _ in release.stream {
+                break
+            }
+            return (Task.isCancelled ? "cancelled" : "completed", state)
+        }
+        let background = Task { await gate.snapshot(freshOnly: false) }
+        for await _ in started.stream {
+            break
+        }
+        let periodic = Task {
+            await gate.snapshot(freshOnly: true, scope: .requestedOwners, preemptsDiscovery: false)
+        }
+        // Long enough for the reader to reach the gate; a preempting gate
+        // cancels discovery there and fails the assertion below.
+        try? await Task.sleep(for: .milliseconds(100))
+        release.continuation.finish()
+        #expect(await background.value == "completed")
+        #expect(await periodic.value == "known owner", "The reader still gets a walk of its own afterwards")
+    }
 }

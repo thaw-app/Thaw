@@ -41,6 +41,16 @@ struct NativeAppHidingToggle: View {
                 }
             }
         }
+        if appState.menuBarManager.nativeAppHidingExperiment.previousSessionRecoveryFailed {
+            SettingsWarningPill(
+                title: "Some apps may still be hidden",
+                message: "\(Constants.displayName) couldn't read Control Center's settings at launch, so apps it hid earlier weren't shown again. Restore them from Tools.",
+                tint: .orange,
+                actionTitle: "Open Tools"
+            ) {
+                appState.navigationState.settingsNavigationIdentifier = .tools
+            }
+        }
     }
 
     /// Why this session went back to the usual hiding while the switch stays

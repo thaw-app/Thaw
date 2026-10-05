@@ -328,6 +328,30 @@ extension MenuBarItemManager {
         return RuntimeSectionController.anchoredSystemItemsTrail(in: newlyForcedVisible + authoredVisible)
     }
 
+    /// Whether item frames are stated against more than one display's bar.
+    ///
+    /// macOS 27 draws the item set on every bar, and an app's AX frame names whichever bar
+    /// it last laid out on. Frames from different bars share no x axis, so an order read
+    /// from them is meaningless. Parked and off-band frames are ignored.
+    static func framesSpanSeveralBars(_ items: [MenuBarItem], displays: [CGRect] = activeDisplayBounds()) -> Bool {
+        let bandHeight = MenuBarItemAXProvider.maxItemHeight(menuBarHeight: NSScreen.tallestCachedMenuBarHeight)
+        var bars = Set<Int>()
+        for item in items where item.isOnScreen && item.bounds.origin.x != -1 && !item.bounds.isEmpty {
+            let center = CGPoint(x: item.bounds.midX, y: item.bounds.midY)
+            if let bar = displays.firstIndex(where: { $0.contains(center) && center.y - $0.minY <= bandHeight }) {
+                bars.insert(bar)
+            }
+        }
+        return bars.count > 1
+    }
+
+    static func activeDisplayBounds() -> [CGRect] {
+        var ids = [CGDirectDisplayID](repeating: 0, count: 16)
+        var count: UInt32 = 0
+        guard CGGetActiveDisplayList(UInt32(ids.count), &ids, &count) == .success else { return [] }
+        return ids.prefix(Int(count)).map { CGDisplayBounds($0) }
+    }
+
     /// Left-to-right structural sequence for the position store. The Always
     /// Hidden divider is optional: macOS 27 can omit it from AX.
     static func structuralOrder(
@@ -448,6 +472,10 @@ extension MenuBarItemManager {
         // Startup settling still gates it: weight writes need a quiet bar.
         guard !arrangementIsManual || Self.visibleControlIsStranded(among: items),
               !isInStartupSettling else { return false }
+        guard !Self.framesSpanSeveralBars(items) else {
+            MenuBarItemManager.diagLog.debug("Skipping \(diagnosticContext): item frames span more than one bar")
+            return false
+        }
         // A batch weight write cannot fall back per item; when the agent
         // ignores the store it only refreshes the stale dictionary. The
         // reveal path physically reconciles via achievable moves instead.

@@ -25,7 +25,11 @@ struct PermissionPollingBudgetTests {
         var readCount = 0
     }
 
-    private func makePermission(stub: CheckStub, budget: Int) -> Permission {
+    private func makePermission(
+        stub: CheckStub,
+        budget: Int,
+        request: @escaping (@escaping @MainActor @Sendable (Bool, Bool) -> Void) -> Void = { _ in }
+    ) -> Permission {
         Permission(
             title: "Test Permission",
             iconName: "star",
@@ -37,7 +41,7 @@ struct PermissionPollingBudgetTests {
                 stub.readCount += 1
                 return stub.granted
             },
-            request: { _ in },
+            request: request,
             pollInterval: 3,
             ungrantedPollBudget: budget
         )
@@ -93,6 +97,19 @@ struct PermissionPollingBudgetTests {
         // leaves nothing armed.
         #expect(permission.hasPermission)
         #expect(!permission.isPolling)
+    }
+
+    @Test("a prompt still unanswered on the next tick becomes a decline")
+    func unansweredPromptBecomesDecline() {
+        let stub = CheckStub()
+        // Ungranted requests report prompted, as both system prompts return at once.
+        let permission = makePermission(stub: stub, budget: 10) { completion in completion(false, true) }
+        permission.performRequest()
+        #expect(!permission.wasDeclined)
+
+        permission.handlePollTick()
+        #expect(permission.wasDeclined)
+        #expect(permission.isPolling)
     }
 
     @Test("resume does not re-arm a granted permission")

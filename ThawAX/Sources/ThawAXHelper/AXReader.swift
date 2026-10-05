@@ -102,8 +102,8 @@ enum AXReader {
                     completed = false
                     break
                 }
-                guard let frame = AXPrimitives.frame(of: child), !frame.isNull, !frame.isEmpty else { continue }
-                guard frame.height > 0, frame.height <= maximumItemHeight else { continue }
+                guard let reported = AXPrimitives.frame(of: child), !reported.isNull, !reported.isEmpty else { continue }
+                guard let frame = AXPrimitives.itemFrame(reported, maximumHeight: maximumItemHeight) else { continue }
                 if let displayBounds, !AXPrimitives.frame(frame, isWithin: displayBounds) {
                     continue
                 }

@@ -202,7 +202,9 @@ extension MenuBarItemManager {
     ///   - item: The menu bar item to activate.
     ///   - displayID: The display whose menu bar hosts the item. Falls back to
     ///     the display currently showing the menu bar when the caller has none.
-    func activate(item: MenuBarItem, on displayID: CGDirectDisplayID?) async {
+    /// - Returns: .completed or .activationFailed.
+    @discardableResult
+    func activate(item: MenuBarItem, on displayID: CGDirectDisplayID?) async -> MenuBarItemActivationOutcome {
         guard let targetDisplayID = displayID
             ?? NSScreen.screenWithActiveMenuBar?.displayID
             ?? NSScreen.main?.displayID
@@ -210,9 +212,9 @@ extension MenuBarItemManager {
             MenuBarItemManager.diagLog.error(
                 "Cannot activate \(item.logString): no display resolved"
             )
-            return
+            return .activationFailed
         }
-        await clickConcealedItem(item: item, with: .left, on: targetDisplayID)
+        return await clickConcealedItem(item: item, with: .left, on: targetDisplayID)
     }
 
     /// Returns whether the item's owning app is an Electron app, detected by the

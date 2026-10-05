@@ -96,13 +96,19 @@ extension DisplaySettingsPane {
         } label: {
             Text("Menu bar item spacing")
         }
-        .annotation(
-            "Applying briefly relaunches apps with menu bar items so they pick up the new spacing."
-        )
+        .annotation(globalSpacingAnnotation)
         .onChange(of: savedOffset) { _, newValue in
             // Sync draft when the saved value changes externally
             // (profile load, reset).
             draftSpacing[Self.globalDraftKey] = CGFloat(newValue)
+        }
+    }
+
+    private var globalSpacingAnnotation: LocalizedStringKey {
+        if displaySettings.spacingApplyMode == .writeOnly {
+            "Applying writes the new spacing without restarting apps; the new spacing appears the next time each menu bar app starts."
+        } else {
+            "Applying briefly relaunches apps with menu bar items so they pick up the new spacing."
         }
     }
 
@@ -231,7 +237,11 @@ extension DisplaySettingsPane {
 
     func globalConfirmationMessage(for pending: PendingGlobalApply) -> String {
         let profileName = pending.activeProfileName ?? ""
-        let displayMessage = String(localized: "This will overwrite the settings of ^[\(pending.displayCount) display](inflect: true) with the global template. If the active display’s spacing changes, Thaw will relaunch each app with a menu bar item. Relaunching apps may cause unsaved input, progress, or transient app state to be lost.")
+        let displayMessage = if displaySettings.spacingApplyMode == .writeOnly {
+            String(localized: "This will overwrite the settings of ^[\(pending.displayCount) display](inflect: true) with the global template. If the active display’s spacing changes, the new spacing appears the next time each menu bar app starts, and apps are not restarted.")
+        } else {
+            String(localized: "This will overwrite the settings of ^[\(pending.displayCount) display](inflect: true) with the global template. If the active display’s spacing changes, Thaw will relaunch each app with a menu bar item. Relaunching apps may cause unsaved input, progress, or transient app state to be lost.")
+        }
         if pending.activeProfileID != nil {
             let profileInstruction = String(localized: "Save the global template to the active profile “\(profileName)”, or save it to every profile.")
             return "\(displayMessage) \(profileInstruction)"

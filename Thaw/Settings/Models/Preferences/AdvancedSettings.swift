@@ -187,6 +187,9 @@ final class AdvancedSettings {
     var enableNativeAppHiding = Defaults.DefaultValue.enableNativeAppHiding {
         didSet {
             guard oldValue != enableNativeAppHiding else { return }
+            if enableNativeAppHiding {
+                enableExperimentalSystemItemHiding = false
+            }
             Defaults.set(enableNativeAppHiding, forKey: .enableNativeAppHiding)
         }
     }
@@ -261,15 +264,6 @@ final class AdvancedSettings {
         }
     }
 
-    /// Record item arrivals and departures only while enabled; disabling clears the audit.
-    /// Records stay in Thaw's local preferences domain.
-    var enableBarHygieneAudit = Defaults.DefaultValue.enableBarHygieneAudit {
-        didSet {
-            guard oldValue != enableBarHygieneAudit else { return }
-            Defaults.set(enableBarHygieneAudit, forKey: .enableBarHygieneAudit)
-        }
-    }
-
     /// Cover Finder titles while the desktop is frontmost, leaving the Apple menu and Finder state unchanged.
     /// See ApplicationMenuCover for why this differs from hideApplicationMenus.
     var enableDesktopMenuHiding = Defaults.DefaultValue.enableDesktopMenuHiding {
@@ -279,11 +273,18 @@ final class AdvancedSettings {
         }
     }
 
-    /// Allows hidden assignments for Clock, Control Center, and Siri on macOS 27.
+    /// Clock, Control Center, and Siri require the assertion that native hiding releases.
     var enableExperimentalSystemItemHiding = Defaults.DefaultValue.enableExperimentalSystemItemHiding {
         didSet {
+            if enableNativeAppHiding, enableExperimentalSystemItemHiding {
+                enableExperimentalSystemItemHiding = false
+                // A queued URI notification may follow a persisted write, even when the model was already false.
+                Defaults.set(false, forKey: .enableExperimentalSystemItemHiding)
+                return
+            }
             guard oldValue != enableExperimentalSystemItemHiding else { return }
             Defaults.set(enableExperimentalSystemItemHiding, forKey: .enableExperimentalSystemItemHiding)
+            appState?.menuBarManager.sectionController.refresh()
         }
     }
 
@@ -366,7 +367,7 @@ final class AdvancedSettings {
         configureObservers()
     }
 
-    private func loadInitialState() {
+    func loadInitialState() {
         Defaults.ifPresent(key: .enableAlwaysHiddenSection, assign: &enableAlwaysHiddenSection)
         Defaults.ifPresent(key: .showAllSectionsOnUserDrag, assign: &showAllSectionsOnUserDrag)
         Defaults.ifPresent(key: .hideApplicationMenus, assign: &hideApplicationMenus)
@@ -379,6 +380,7 @@ final class AdvancedSettings {
         Defaults.ifPresent(key: .autoZenWhileSharingScreen, assign: &autoZenWhileSharingScreen)
         Defaults.ifPresent(key: .enableDiagnosticLogging, assign: &enableDiagnosticLogging)
         Defaults.ifPresent(key: .enableMenuBarItemOverflow, assign: &enableMenuBarItemOverflow)
+        Defaults.ifPresent(key: .enableNativeAppHiding, assign: &enableNativeAppHiding)
         Defaults.ifPresent(key: .enableExperimentalSystemItemHiding, assign: &enableExperimentalSystemItemHiding)
         Defaults.ifPresent(key: .enableExperimentalOverflowPrevention, assign: &enableExperimentalOverflowPrevention)
         Defaults.ifPresent(key: .alwaysUseAppIconForMenuBarItems, assign: &alwaysUseAppIconForMenuBarItems)
@@ -389,7 +391,6 @@ final class AdvancedSettings {
         Defaults.ifPresent(key: .swapOnThawIconClick, assign: &swapOnThawIconClick)
         Defaults.ifPresent(key: .enableControlItemPanel, assign: &enableControlItemPanel)
         Defaults.ifPresent(key: .fetchReleaseNotes, assign: &fetchReleaseNotes)
-        Defaults.ifPresent(key: .enableNativeAppHiding, assign: &enableNativeAppHiding)
         Defaults.ifPresent(key: .enableModuleStandIns, assign: &enableModuleStandIns)
         Defaults.ifPresent(key: .enableTimeMachineTakeover, assign: &enableTimeMachineTakeover)
         Defaults.ifPresent(key: .enableTimerTakeover, assign: &enableTimerTakeover)
@@ -406,7 +407,6 @@ final class AdvancedSettings {
                 recordingWatchPlacement = placement
             }
         }
-        Defaults.ifPresent(key: .enableBarHygieneAudit, assign: &enableBarHygieneAudit)
         Defaults.ifPresent(key: .enableDesktopMenuHiding, assign: &enableDesktopMenuHiding)
         Defaults.ifPresent(key: .menuBarOrderFulfillmentTimeout, assign: &menuBarOrderFulfillmentTimeout)
         Defaults.ifPresent(key: .searchIncludeVisible, assign: &searchIncludeVisible)
@@ -469,7 +469,7 @@ final class AdvancedSettings {
     }
 
     /// Handles settings changed externally via Settings URI scheme.
-    private func handleExternalSettingsChange(_ notification: Notification) {
+    func handleExternalSettingsChange(_ notification: Notification) {
         guard let key = notification.userInfo?["key"] as? String else {
             return
         }
@@ -512,8 +512,6 @@ final class AdvancedSettings {
                 enableRecordingWatch = boolValue
             case "zenModeWhileRecording":
                 zenModeWhileRecording = boolValue
-            case "enableBarHygieneAudit":
-                enableBarHygieneAudit = boolValue
             case "enableDesktopMenuHiding":
                 enableDesktopMenuHiding = boolValue
             case "searchIncludeVisible":
