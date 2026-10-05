@@ -128,6 +128,25 @@ struct AXGeometryCatalogTests {
         #expect(AXGeometryCatalog.match(ownerPID: 1, identityTitle: "CPU", bounds: rect, in: snapshot) == .frame(rect))
     }
 
+    @Test("Untitled siblings named Item-N each resolve to their own frame")
+    func untitledSiblingsResolveByMintedName() {
+        // Untitled roots of one owner, frames and indices from a live bar.
+        let frames: [(Int, CGRect)] = [
+            (5, CGRect(x: 1416, y: 3.5, width: 33, height: 24)),
+            (0, CGRect(x: 1449, y: 3.5, width: 77, height: 24)),
+            (3, CGRect(x: 1526, y: 3.5, width: 33, height: 24)),
+            (1, CGRect(x: 1559, y: 3.5, width: 36, height: 24)),
+        ]
+        let snapshot = frames.map {
+            AXGeometryCatalog.Entry(ownerPID: 1, itemIndex: $0.0, identityTitle: "Item-\($0.0)", frame: $0.1)
+        }
+        for (index, rect) in frames {
+            #expect(AXGeometryCatalog.match(ownerPID: 1, identityTitle: "Item-\(index)", bounds: rect, in: snapshot) == .frame(rect))
+        }
+        // A sibling's slot still cannot validate another item's crop.
+        #expect(AXGeometryCatalog.match(ownerPID: 1, identityTitle: "Item-5", bounds: frames[1].1, in: snapshot) == .ambiguous)
+    }
+
     @Test("A partial walk cannot turn anonymous siblings into one identified item")
     func unreadSiblingPreventsSingletonFallback() {
         let rect = CGRect(x: 100, y: 4.5, width: 24, height: 24)

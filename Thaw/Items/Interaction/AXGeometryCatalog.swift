@@ -168,6 +168,7 @@ nonisolated enum AXGeometryCatalog {
             for itemIndex in children.indices {
                 results.append(Entry(ownerPID: pid, itemIndex: itemIndex, identityTitle: nil, frame: .zero))
             }
+            var fallbackIndex = 0
             for (itemIndex, child) in children.enumerated() {
                 guard canContinue(until: deadline), visited < maxElementsVisited else { break }
                 try? child.setMessagingTimeout(messagingTimeout)
@@ -180,7 +181,19 @@ nonisolated enum AXGeometryCatalog {
                     try? inner.setMessagingTimeout(messagingTimeout)
                     innerAttributes.append(AXHelpers.descendantAttributes(for: inner, includingChildren: true))
                 }
-                let identity = identityTitle(namespace: namespace, attributes: attributes, descendants: innerAttributes)
+                var identity = identityTitle(namespace: namespace, attributes: attributes, descendants: innerAttributes)
+                // Discovery names untitled children Item-N, counting only those with a frame; mint the
+                // same name so an app with several untitled items can be told apart. MenuBarAgent's
+                // unnamed extras are transition noise that discovery skips differently.
+                if identity == nil, namespace != .menuBarAgent, let frame = attributes.frame, frame.height > 0 {
+                    identity = MenuBarItemAXProvider.identityTitle(
+                        namespace: namespace,
+                        identifier: nil,
+                        accessibilityDescription: nil,
+                        displayTitle: "Item-\(fallbackIndex)"
+                    )
+                    fallbackIndex += 1
+                }
                 walk(child, ownerPID: pid, itemIndex: itemIndex, identityTitle: identity,
                      attributes: attributes, childAttributes: innerAttributes,
                      depth: 1, visited: &visited, into: &results, deadline: deadline)
