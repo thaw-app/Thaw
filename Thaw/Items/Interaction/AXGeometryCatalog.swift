@@ -18,11 +18,13 @@ nonisolated enum AXGeometryCatalog {
         let frame: CGRect
 
         var isCollapsedThawDivider: Bool {
-            // Zero-length dividers can still publish a 2-point AX frame.
+            // Zero-length dividers, and the visible control while its icon is
+            // hidden, can still publish a 2-point AX frame that draws nothing.
             // The 3-point drag marker and expanded chevrons remain occluders.
             ownerPID == ProcessInfo.processInfo.processIdentifier
                 && (identityTitle == MenuBarItemTag.hiddenControlItem.title
-                    || identityTitle == MenuBarItemTag.alwaysHiddenControlItem.title)
+                    || identityTitle == MenuBarItemTag.alwaysHiddenControlItem.title
+                    || identityTitle == MenuBarItemTag.visibleControlItem.title)
                 && frame.width >= 0 && frame.width <= 2
         }
     }

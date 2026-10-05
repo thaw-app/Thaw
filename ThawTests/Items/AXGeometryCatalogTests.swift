@@ -57,8 +57,8 @@ struct AXGeometryCatalogTests {
         #expect(AXGeometryCatalog.match(ownerPID: 1, identityTitle: "Item-0", bounds: rect, in: snapshot) == .ambiguous)
     }
 
-    @Test("Collapsed Thaw dividers do not claim a neighbouring glyph", arguments: [
-        "Thaw.ControlItem.Hidden", "Thaw.ControlItem.AlwaysHidden",
+    @Test("Collapsed Thaw controls do not claim a neighbouring glyph", arguments: [
+        "Thaw.ControlItem.Hidden", "Thaw.ControlItem.AlwaysHidden", "Thaw.ControlItem.Visible",
     ])
     func collapsedDividerDoesNotInvalidateCrop(title: String) {
         // Droppy's live crop overlapped the 2-point divider by 1.5 points.
@@ -78,7 +78,7 @@ struct AXGeometryCatalogTests {
     @Test("Visible dividers and other processes still block overlapping crops", arguments: [
         ("Thaw.ControlItem.Hidden", CGFloat(3), true),
         ("Thaw.ControlItem.AlwaysHidden", CGFloat(16), true),
-        ("Thaw.ControlItem.Visible", CGFloat(2), true),
+        ("Thaw.ControlItem.Visible", CGFloat(21), true),
         ("Thaw.ControlItem.Hidden", CGFloat(2), false),
         ("Item-0", CGFloat(2), true),
     ])
