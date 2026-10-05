@@ -199,7 +199,6 @@ nonisolated enum Defaults {
             .addressMoveDragViaEventRecord: DefaultValue.addressMoveDragViaEventRecord,
             .useHeldCommandDrag: DefaultValue.useHeldCommandDrag,
             .useLCSSectionOrderPlanner: DefaultValue.useLCSSectionOrderPlanner,
-            .adaptiveDragFirstCooldown: DefaultValue.adaptiveDragFirstCooldown,
             .inputPauseThresholdMs: DefaultValue.inputPauseThresholdMs,
             .platformLimitationsAcknowledged: DefaultValue.platformLimitationsAcknowledged,
         ]
@@ -361,10 +360,6 @@ extension Defaults {
         /// On by default: plan section-order drags with the LCS planner, one
         /// move per misplaced item, instead of the pairwise walk.
         static let useLCSSectionOrderPlanner = true
-
-        /// On by default: after several ignored position writes, moves drag
-        /// straight away for a bounded cooldown, then probe the write again.
-        static let adaptiveDragFirstCooldown = true
 
         /// Input-idle window (ms) before a synthetic move warps the cursor, so
         /// it never lands between the user's own movements. Default: 50.
@@ -607,12 +602,6 @@ extension Defaults {
         ///
         /// Hidden diagnostic flag; not exposed in Settings. Default: true.
         case useLCSSectionOrderPlanner
-
-        /// Whether an ignored-write streak arms a bounded drag-first cooldown
-        /// (see DefaultValue.adaptiveDragFirstCooldown).
-        ///
-        /// Hidden diagnostic flag; not exposed in Settings. Default: true.
-        case adaptiveDragFirstCooldown
 
         /// Input-idle window (ms) required before a cursor-warping synthetic
         /// move (see DefaultValue.inputPauseThresholdMs).

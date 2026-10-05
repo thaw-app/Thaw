@@ -3080,16 +3080,11 @@ extension MenuBarItemManager {
         // captures mid-animation cache garbled slices. Verification re-stamps.
         moveActivity.noteMoveOperation()
 
-        // Feeds the drag-first cooldown on exit, only for nudged writes.
+        // Feeds the per-item write record on exit, only for nudged writes.
         var writeVerified = false
-        var observedBarMoved = false
         var observationUnavailable = false
         defer {
             if nudgeRan, !observationUnavailable {
-                recordPreferredPositionWriteObservation(
-                    verified: writeVerified,
-                    barMoved: observedBarMoved
-                )
                 if writeVerified {
                     ignoredPreferredWrites.noteVerified(item.uniqueIdentifier)
                 } else if !Task.isCancelled {
@@ -3131,7 +3126,6 @@ extension MenuBarItemManager {
             try Task.checkCancellation()
             return false
         }
-        observedBarMoved = observedBarMoved || firstWait.barMoved
         let updated = firstWait.items
         if destinationSatisfied(updated) {
             writeVerified = true
@@ -3209,7 +3203,6 @@ extension MenuBarItemManager {
                 try Task.checkCancellation()
                 return false
             }
-            observedBarMoved = observedBarMoved || retried.barMoved
             if destinationSatisfied(retried.items) {
                 writeVerified = true
                 moveActivity.noteMoveOperation()

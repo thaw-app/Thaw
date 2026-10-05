@@ -702,33 +702,9 @@ final class MenuBarItemManager {
     /// than inherit a stale count.
     var preferredPositionsIgnoredEvidence = 0
 
-    // MARK: Adaptive drag-first cooldown
-
-    /// Consecutive preferred-position writes this session whose nudge did NOT
-    /// move the bar, the accurate motion signal from
-    /// MenuBarItemManager.waitForMenuBarAgentLayout (a shared item shifted
-    /// ≥1 px), NOT the retired AX-bounds evidence. Any write that moves the bar
-    /// (whether or not it verifies) resets the run: it proves the agent is
-    /// reading the table.
-    var consecutiveIgnoredPreferredWrites = 0
-
     /// Items whose own writes the agent keeps ignoring. Session-scoped; never
     /// persisted.
     var ignoredPreferredWrites = IgnoredPreferredWrites()
-
-    /// When set and still in the future, move skips the cursor-free write
-    /// and goes straight to the synthetic drag, the drag-first behavior when the
-    /// agent has stopped honoring writes. Session-scoped; never persisted.
-    var dragFirstCooldownUntil: ContinuousClock.Instant?
-
-    /// Consecutive ignored writes that arm the drag-first cooldown.
-    static let dragFirstIgnoredThreshold = 1
-
-    /// How long the drag-first cooldown holds before the next move re-probes
-    /// the write path. Long enough to stop paying the ignored-write tax across
-    /// a burst of reorders, short enough that a newly-cooperating agent
-    /// re-enables the cursor-free path within a reorder or two.
-    static let dragFirstCooldownDuration: Duration = .seconds(30)
 
     /// Debounced physical application of a layout-pane visible-order edit.
     private var authoredVisibleOrderApplyTask: Task<Void, Never>?

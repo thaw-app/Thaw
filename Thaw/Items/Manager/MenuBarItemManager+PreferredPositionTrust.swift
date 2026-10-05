@@ -30,32 +30,6 @@ extension MenuBarItemManager {
         return value
     }
 
-    /// Feeds the drag-first cooldown from one preferred-position write. Safe
-    /// only because barMoved comes from the geometry poll, not stale AX bounds.
-    func recordPreferredPositionWriteObservation(verified: Bool, barMoved: Bool) {
-        if verified {
-            consecutiveIgnoredPreferredWrites = 0
-            dragFirstCooldownUntil = nil
-            return
-        }
-        if barMoved {
-            // The agent reacted, just not into the asked order yet.
-            consecutiveIgnoredPreferredWrites = 0
-            return
-        }
-        consecutiveIgnoredPreferredWrites += 1
-        if consecutiveIgnoredPreferredWrites >= Self.dragFirstIgnoredThreshold,
-           dragFirstCooldownUntil == nil
-        {
-            dragFirstCooldownUntil = .now + Self.dragFirstCooldownDuration
-            MenuBarItemManager.diagLog.info(
-                "MenuBarAgent ignored \(consecutiveIgnoredPreferredWrites) consecutive writes; " +
-                    "entering drag-first cooldown for " +
-                    "\(Int(Self.dragFirstCooldownDuration.components.seconds)) s"
-            )
-        }
-    }
-
     /// Opens a fresh convergence budget of visible drags after an authored
     /// pane edit commits.
     func noteAuthoredEditCommitted() {
