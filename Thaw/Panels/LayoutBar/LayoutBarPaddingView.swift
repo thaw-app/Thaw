@@ -460,9 +460,12 @@ final class LayoutBarPaddingView: NSView {
                     // Concealed occupants of visible slots (parked
                     // hiding-unsupported apps) are not draggable anchors;
                     // planning against them strands the move.
+                    // A hidden Thaw icon has no tile, so it is absent from the
+                    // desired order; the planner refuses a live set it cannot order.
+                    let desiredIDs = orderedItems.map(\.uniqueIdentifier)
                     let liveItems = appState.itemManager.managedItems(for: .visible)
                         .filter { $0.isOnScreen && !$0.bounds.isEmpty }
-                    let desiredIDs = orderedItems.map(\.uniqueIdentifier)
+                        .filter { !$0.tag.matchesVisibleControlItem || desiredIDs.contains($0.uniqueIdentifier) }
                     let achievableItems = MenuBarLayoutPlannerProvider.current.achievableOrderSegments(
                         items: liveItems,
                         desiredOrder: desiredIDs,
@@ -498,6 +501,12 @@ final class LayoutBarPaddingView: NSView {
                         // The requested order is either already live or would
                         // cross a fixed anchor. Persist only its achievable
                         // projection so reconciliation cannot retry forever.
+                        Self.diagLog.info(
+                            """
+                            Reorder of \(item.logString) has no achievable destination; \
+                            desired=\(desiredIDs) live=\(MenuBarLayoutPlannerProvider.current.orderDescription(liveItems))
+                            """
+                        )
                         controller?.setSectionOrder(from: achievableItems, for: .visible)
                         Task { await appState.itemManager.cacheItemsRegardless(skipRecentMoveCheck: true) }
                     }
