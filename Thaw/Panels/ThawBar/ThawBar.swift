@@ -44,6 +44,11 @@ final class ThawBarPanel: NSPanel {
     /// Opening icon bounds in cache-global coordinates; its horizontal center overrides normal placement.
     private var openingIconFrame: CGRect?
 
+    /// The pointer's x when the bar opened at the pointer. Resizes reposition the panel, and
+    /// re-reading a pointer that has since moved off empty menu bar space would resolve Dynamic
+    /// to the Thaw icon, or to the right edge while that icon is hidden.
+    private var openingPointerX: CGFloat?
+
     /// Override configured placement with the pointer location.
     private var hotkeyLocationOverride = false
 
@@ -265,6 +270,9 @@ final class ThawBarPanel: NSPanel {
         if let openingIconFrame, (screen.frame.minX ... screen.frame.maxX).contains(openingIconFrame.midX) {
             return CGPoint(x: (openingIconFrame.midX - frame.width / 2).clamped(to: xRange), y: y)
         }
+        if let openingPointerX {
+            return CGPoint(x: (openingPointerX - frame.width / 2).clamped(to: xRange), y: y)
+        }
 
         // A disabled icon falls back silently; logging normal behavior would repeat every layout pass.
         guard let resolved = concrete else {
@@ -333,6 +341,15 @@ final class ThawBarPanel: NSPanel {
         self.presentation = presentation
         folderMemberIdentifiers = presentation == .folder ? folderMembers : nil
         openingIconFrame = iconFrame
+        let location = appState.settings.displaySettings.thawBarLocation(for: screen.displayID)
+        let opensAtPointer = Self.concreteLocation(
+            for: location,
+            pointerInEmptyMenuBarSpace: location == .dynamic
+                && appState.hidEventManager.isMouseInsideEmptyMenuBarSpace(appState: appState, screen: screen),
+            hasPointerLocation: MouseHelpers.locationAppKit != nil,
+            showsThawIcon: appState.settings.general.showThawIcon
+        ) == .mousePointer
+        openingPointerX = opensAtPointer ? MouseHelpers.locationAppKit?.x : nil
 
         let menuBarHeight = screen.getMenuBarHeightEstimate()
         diagLog.notice("""
