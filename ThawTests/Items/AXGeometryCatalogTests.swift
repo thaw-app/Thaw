@@ -128,6 +128,90 @@ struct AXGeometryCatalogTests {
         #expect(AXGeometryCatalog.match(ownerPID: 1, identityTitle: "CPU", bounds: rect, in: snapshot) == .frame(rect))
     }
 
+    @Test("Untitled siblings get names in AX order, not screen order")
+    func untitledSiblingsResolveByMintedName() {
+        let frames = [
+            CGRect(x: 1449, y: 3.5, width: 77, height: 24),
+            CGRect(x: 1559, y: 3.5, width: 36, height: 24),
+            CGRect(x: 1416, y: 3.5, width: 33, height: 24),
+        ]
+        var fallbackIndex = 0
+        let snapshot = frames.enumerated().map { index, frame in
+            let identity = AXGeometryCatalog.rootIdentityTitle(
+                namespace: .string("eu.exelban.Stats"),
+                attributes: .init(frame: frame),
+                descendants: [],
+                maximumItemHeight: 40,
+                fallbackIndex: &fallbackIndex
+            )
+            return AXGeometryCatalog.Entry(ownerPID: 1, itemIndex: index, identityTitle: identity, frame: frame)
+        }
+        #expect(fallbackIndex == frames.count)
+        for (index, rect) in frames.enumerated() {
+            #expect(AXGeometryCatalog.match(ownerPID: 1, identityTitle: "Item-\(index)", bounds: rect, in: snapshot) == .frame(rect))
+        }
+        #expect(AXGeometryCatalog.match(ownerPID: 1, identityTitle: "Item-0", bounds: frames[1], in: snapshot) == .ambiguous)
+    }
+
+    @Test("Discovery-ineligible roots do not shift the next item's fallback name", arguments: [
+        CGRect?.none,
+        CGRect(x: 100, y: 0, width: 24, height: 0),
+        CGRect(x: 100, y: 24, width: 300, height: 250),
+        CGRect(x: 100, y: 0, width: 24, height: 41),
+    ])
+    func skippedRootsDoNotConsumeFallbackNames(skippedFrame: CGRect?) {
+        let namespace = MenuBarItemTag.Namespace.string("eu.exelban.Stats")
+        #expect(MenuBarItemAXProvider.itemFrame(skippedFrame, maximumHeight: 40) == nil)
+        var fallbackIndex = 0
+        let skippedIdentity = AXGeometryCatalog.rootIdentityTitle(
+            namespace: namespace,
+            attributes: .init(frame: skippedFrame),
+            descendants: [],
+            maximumItemHeight: 40,
+            fallbackIndex: &fallbackIndex
+        )
+        #expect(skippedIdentity == nil)
+        #expect(fallbackIndex == 0)
+
+        let frame = CGRect(x: 500, y: 0, width: 24, height: 40)
+        #expect(MenuBarItemAXProvider.itemFrame(frame, maximumHeight: 40) == frame)
+        let identity = AXGeometryCatalog.rootIdentityTitle(
+            namespace: namespace,
+            attributes: .init(frame: frame),
+            descendants: [],
+            maximumItemHeight: 40,
+            fallbackIndex: &fallbackIndex
+        )
+        #expect(identity == "Item-0")
+        #expect(fallbackIndex == 1)
+        let snapshot = [
+            AXGeometryCatalog.Entry(ownerPID: 1, itemIndex: 0, identityTitle: skippedIdentity, frame: skippedFrame ?? .zero),
+            AXGeometryCatalog.Entry(ownerPID: 1, itemIndex: 1, identityTitle: identity, frame: frame),
+        ]
+        #expect(AXGeometryCatalog.match(ownerPID: 1, identityTitle: "Item-0", bounds: frame, in: snapshot) == .frame(frame))
+    }
+
+    @Test("Named roots and unnamed MenuBarAgent roots leave fallback numbering alone")
+    func nonFallbackRootsDoNotConsumeNames() {
+        let frame = CGRect(x: 100, y: 0, width: 24, height: 24)
+        var fallbackIndex = 0
+        #expect(AXGeometryCatalog.rootIdentityTitle(
+            namespace: .string("com.example.app"),
+            attributes: .init(frame: frame),
+            descendants: [.init(identifier: "Status")],
+            maximumItemHeight: 40,
+            fallbackIndex: &fallbackIndex
+        ) == "Status")
+        #expect(AXGeometryCatalog.rootIdentityTitle(
+            namespace: .menuBarAgent,
+            attributes: .init(frame: frame),
+            descendants: [],
+            maximumItemHeight: 40,
+            fallbackIndex: &fallbackIndex
+        ) == nil)
+        #expect(fallbackIndex == 0)
+    }
+
     @Test("A partial walk cannot turn anonymous siblings into one identified item")
     func unreadSiblingPreventsSingletonFallback() {
         let rect = CGRect(x: 100, y: 4.5, width: 24, height: 24)

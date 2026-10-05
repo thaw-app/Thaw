@@ -21,30 +21,6 @@ private struct OnceAction {
     }
 }
 
-private struct OnceModifier: ViewModifier {
-    @State private var action: OnceAction
-
-    init(action: @escaping () -> Void) {
-        self.action = OnceAction(action: action)
-    }
-
-    func body(content: Content) -> some View {
-        content.onAppear {
-            action()
-        }
-    }
-}
-
-extension View {
-    /// Adds an action to perform exactly once, before the first
-    /// time the view appears.
-    ///
-    /// - Parameter action: The action to perform.
-    func once(perform action: @escaping () -> Void) -> some View {
-        modifier(OnceModifier(action: action))
-    }
-}
-
 private struct OnceScene<Content: Scene>: Scene {
     @State private var action: OnceAction
 

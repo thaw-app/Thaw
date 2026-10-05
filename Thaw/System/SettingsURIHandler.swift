@@ -13,7 +13,21 @@ import Security
 /// Handles settings manipulation via thaw:// URLs with whitelist-based security.
 @MainActor
 enum SettingsURIHandler {
-    private static let diagLog = DiagLog(category: "SettingsURIHandler")
+    static let diagLog = DiagLog(category: "SettingsURIHandler")
+
+    /// Tests use a private center so fixture writes cannot reach the running app's settings models.
+    static var settingsChangeNotificationCenter = NotificationCenter.default
+
+    /// Tests swap these so a response never opens a URL or reaches another process.
+    static var openCallbackURL: (URL) -> Bool = { NSWorkspace.shared.open($0) }
+    static var postBroadcastJSON: (String) -> Void = { json in
+        DistributedNotificationCenter.default().postNotificationName(
+            .settingsURIGetResponse,
+            object: nil,
+            userInfo: ["json": json],
+            deliverImmediately: true
+        )
+    }
 
     /// Keep global allow-lists, Defaults.Key mappings, and bounds together to prevent drift.
     /// Per-display settings live in DisplaySettingsManager and perDisplayKeys instead.
@@ -87,7 +101,6 @@ enum SettingsURIHandler {
         "fetchReleaseNotes": SettingURIEntry(defaultsKey: .fetchReleaseNotes, kind: .boolean, isWritable: true),
         "enableRecordingWatch": SettingURIEntry(defaultsKey: .enableRecordingWatch, kind: .boolean, isWritable: true),
         "zenModeWhileRecording": SettingURIEntry(defaultsKey: .zenModeWhileRecording, kind: .boolean, isWritable: true),
-        "enableBarHygieneAudit": SettingURIEntry(defaultsKey: .enableBarHygieneAudit, kind: .boolean, isWritable: true),
         "enableDesktopMenuHiding": SettingURIEntry(defaultsKey: .enableDesktopMenuHiding, kind: .boolean, isWritable: true),
 
         // MARK: - Search
@@ -130,13 +143,46 @@ enum SettingsURIHandler {
 
     // MARK: - Security
 
+    /// Apps from the same developer that may control settings without the authorization prompt.
+    /// Any app can claim a bundle ID, so the app must also carry this app's team ID.
+    static let builtInTrustedBundleIDs: Set<String> = ["com.thaw.floe"]
+
+    /// Whether a sender is trusted without asking: a built-in bundle ID signed by this app's team.
+    /// An unsigned build of either side has no team and is never trusted this way.
+    static func isBuiltInTrusted(bundleId: String, senderTeamID: String?, ownTeamID: String?) -> Bool {
+        guard builtInTrustedBundleIDs.contains(bundleId),
+              let senderTeamID, let ownTeamID
+        else { return false }
+        return senderTeamID == ownTeamID
+    }
+
+    /// Whether the installed app with this bundle ID is a built-in trusted sender.
+    /// Such a sender also works while the Settings URI feature is switched off.
+    /// The team lookups are parameters so the rule can be tested without a signed build.
+    static func isBuiltInTrustedSender(
+        bundleIdentifier: String?,
+        senderTeamID: (String) -> String? = { getTeamIdentifier(for: $0) },
+        ownTeamID: () -> String? = { teamIdentifier(ofAppAt: Bundle.main.bundleURL, logName: "this app") }
+    ) -> Bool {
+        guard let bundleIdentifier, builtInTrustedBundleIDs.contains(bundleIdentifier) else { return false }
+        return isBuiltInTrusted(
+            bundleId: bundleIdentifier,
+            senderTeamID: senderTeamID(bundleIdentifier),
+            ownTeamID: ownTeamID()
+        )
+    }
+
     /// Gets the team identifier for a bundle ID by checking the app's code signature.
     private static func getTeamIdentifier(for bundleId: String) -> String? {
         guard let appURL = NSWorkspace.shared.urlForApplication(withBundleIdentifier: bundleId) else {
             diagLog.debug("Settings URI: Cannot find app URL for \(bundleId)")
             return nil
         }
+        return teamIdentifier(ofAppAt: appURL, logName: bundleId)
+    }
 
+    /// The team identifier in the code signature of the app at appURL.
+    static func teamIdentifier(ofAppAt appURL: URL, logName bundleId: String) -> String? {
         var staticCode: SecStaticCode?
         let createStatus = SecStaticCodeCreateWithPath(appURL as CFURL, [], &staticCode)
         guard createStatus == errSecSuccess, let code = staticCode else {
@@ -191,10 +237,18 @@ enum SettingsURIHandler {
     }
 
     /// Checks if the sender is in the whitelist and has valid code signature.
-    static func isWhitelisted(bundleIdentifier: String?) -> Bool {
+    static func isWhitelisted(
+        bundleIdentifier: String?,
+        builtInTrust: (String) -> Bool = { isBuiltInTrustedSender(bundleIdentifier: $0) }
+    ) -> Bool {
         guard let bundleId = bundleIdentifier, !bundleId.isEmpty else {
             diagLog.warning("Settings URI: No sender bundle ID provided")
             return false
+        }
+
+        if builtInTrust(bundleId) {
+            diagLog.debug("Settings URI: Authorized built-in request from \(bundleId)")
+            return true
         }
 
         let whitelist = Defaults.stringArray(forKey: .settingsURIWhitelist) ?? []
@@ -399,9 +453,7 @@ enum SettingsURIHandler {
                 return false
             }
 
-            Defaults.set(boolValue, forKey: entry.defaultsKey)
-
-            postSettingsDidChangeNotification(key: key, value: boolValue)
+            guard applyBooleanSetting(boolValue, key: key, entry: entry) else { return false }
 
             diagLog.info("Settings URI: Set \(key) = \(boolValue)")
 
@@ -418,6 +470,18 @@ enum SettingsURIHandler {
             diagLog.warning("Settings URI: Key '\(key)' has an unsupported kind")
             return false
         }
+    }
+
+    private static func applyBooleanSetting(_ value: Bool, key: String, entry: SettingURIEntry) -> Bool {
+        if entry.defaultsKey == .enableExperimentalSystemItemHiding,
+           value, Defaults.bool(forKey: .enableNativeAppHiding)
+        {
+            diagLog.warning("Settings URI: Cannot enable system item hiding while native app hiding is enabled")
+            return false
+        }
+        Defaults.set(value, forKey: entry.defaultsKey)
+        postSettingsDidChangeNotification(key: key, value: value)
+        return true
     }
 
     /// Handles setting a double/numeric value with range validation.
@@ -609,9 +673,7 @@ enum SettingsURIHandler {
         let currentValue = effectiveBool(for: entry)
         let newValue = !currentValue
 
-        Defaults.set(newValue, forKey: entry.defaultsKey)
-
-        postSettingsDidChangeNotification(key: key, value: newValue)
+        guard applyBooleanSetting(newValue, key: key, entry: entry) else { return false }
 
         diagLog.info("Settings URI: Toggled \(key) from \(currentValue) to \(newValue)")
 
@@ -637,7 +699,7 @@ enum SettingsURIHandler {
 
     /// Posts a notification that a setting was changed externally via Settings URI.
     private static func postSettingsDidChangeNotification(key: String, value: Bool) {
-        NotificationCenter.default.post(
+        settingsChangeNotificationCenter.post(
             name: .settingsDidChangeViaURI,
             object: nil,
             userInfo: [
@@ -648,7 +710,7 @@ enum SettingsURIHandler {
     }
 
     private static func postSettingsDidChangeNotification(key: String, doubleValue: Double) {
-        NotificationCenter.default.post(
+        settingsChangeNotificationCenter.post(
             name: .settingsDidChangeViaURI,
             object: nil,
             userInfo: [
@@ -659,7 +721,7 @@ enum SettingsURIHandler {
     }
 
     private static func postSettingsDidChangeNotification(key: String, rawEnumValue: Int) {
-        NotificationCenter.default.post(
+        settingsChangeNotificationCenter.post(
             name: .settingsDidChangeViaURI,
             object: nil,
             userInfo: [
@@ -1068,7 +1130,7 @@ enum SettingsURIHandler {
     private static let blockedCallbackSchemes: Set<String> = ["file", "javascript", "data", "about", "blob"]
 
     /// Sends response via callback URL.
-    private static func sendCallbackResponse(response: [String: Any], callback: String) -> Bool {
+    static func sendCallbackResponse(response: [String: Any], callback: String) -> Bool {
         // Use URLComponents to compose callbacks safely.
         guard var components = URLComponents(string: callback) else {
             diagLog.error("Settings URI Get: Invalid callback URL format: \(callback)")
@@ -1101,7 +1163,7 @@ enum SettingsURIHandler {
             return false
         }
 
-        let success = NSWorkspace.shared.open(callbackURL)
+        let success = openCallbackURL(callbackURL)
         if success {
             diagLog.info("Settings URI Get: Sent callback via scheme: \(scheme)")
         } else {
@@ -1111,7 +1173,7 @@ enum SettingsURIHandler {
     }
 
     /// Sends response via distributed notification.
-    private static func sendBroadcastResponse(response: [String: Any]) -> Bool {
+    static func sendBroadcastResponse(response: [String: Any]) -> Bool {
         guard let jsonData = try? JSONSerialization.data(withJSONObject: response, options: .sortedKeys),
               let jsonString = String(data: jsonData, encoding: .utf8)
         else {
@@ -1119,12 +1181,7 @@ enum SettingsURIHandler {
             return false
         }
 
-        DistributedNotificationCenter.default().postNotificationName(
-            .settingsURIGetResponse,
-            object: nil,
-            userInfo: ["json": jsonString],
-            deliverImmediately: true
-        )
+        postBroadcastJSON(jsonString)
 
         diagLog.info("Settings URI Get: Broadcasted response via distributed notification")
         return true

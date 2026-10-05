@@ -7,6 +7,46 @@ The `release.yml` workflow reads the section matching the release tag
 (`## [tag]`) and uses it as the release notes for both the GitHub Release
 and the Sparkle appcast, unless overridden with the `release_notes` input.
 
+## [3.0.0-beta.2] - 2026-10-02
+
+**macOS 27 only · Build 112**
+
+### New
+
+- **Triggers can show items while an app runs**, even in the background. When it quits, they go back to your saved layout.
+- **Launchers can open menu bar items and apply profiles** through `thaw://` URLs. Floe works without setup.
+- **Restore missing menu bar items**, in Troubleshooting, brings back stuck items and keeps your saved layout.
+
+### Changed
+
+- **Automatic overflow is off by default.** If you set it yourself, your choice stays.
+- **A gold app icon** and a matching accent color.
+- **About has a new layout**, a sidebar entry and a Credits page.
+- **Release notes and Credits use the same text sizes as Settings.**
+- **Menu bar history is gone**, with its click history and unused-item suggestions. Thaw clears the recorded history on launch. Layout backups and hidden items are unaffected.
+
+### Fixed: missing icons and search
+
+- **Thaw says when macOS is blocking its icon.** A warning under "Show Thaw icon" points you to System Settings > Menu Bar. Reported by @promonteiro89 in [#1232](https://github.com/thaw-app/Thaw/issues/1232).
+- **Thaw warns when apps it hid are still hidden** after a launch where it couldn't show them again. The warning in General opens Tools, where you can restore them.
+- **Menu bar search keeps the keyboard** after a search with no matches, and when you open it again.
+
+### Fixed: items and previews
+
+- **Layout previews follow each item's current position.**
+- **Simple Mode previews stay up to date.**
+- **Amphetamine and Rectangle stay hidden** across title changes and restarts.
+- **Items parked off the menu bar no longer count toward overflow.**
+- **Clock, Control Center and Siri stay in view** with Live Activities and the camera indicator shown.
+
+### Fixed: appearance, Thaw Bar and Displays
+
+- **Appearance detects a menu bar that hides automatically.**
+- **Split pills cover status items on secondary displays.**
+- **Clicking Thaw's icon after it moves** no longer closes and reopens the Thaw Bar.
+- **The Thaw Bar no longer turns gray with black icons** when "Thaw Bar own look" is off.
+- **"When applying spacing" is back in Displays.** "Wait until next restart" saves the spacing without relaunching apps. [#1230](https://github.com/thaw-app/Thaw/issues/1230)
+
 ## [3.0.0-beta.1] - 2026-10-01
 
 **macOS 27 only · Build 111 · First beta**

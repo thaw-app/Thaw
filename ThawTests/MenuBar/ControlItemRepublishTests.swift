@@ -33,6 +33,15 @@ struct ControlItemRepublishTests {
         #expect(ControlItem.republishDecision(priorCount: 5) == .exhausted)
     }
 
+    /// Only a switch read as off is a denial; an unreadable list must keep
+    /// the re-register alive, since nothing says it cannot work.
+    @Test("Only a switch read as off counts as a denial")
+    func placementBlockFollowsSwitch() {
+        #expect(ControlItem.placementBlock(systemAllowsThaw: false) == .deniedBySystem)
+        #expect(ControlItem.placementBlock(systemAllowsThaw: true) == .unknown)
+        #expect(ControlItem.placementBlock(systemAllowsThaw: nil) == .unknown)
+    }
+
     @Test("Custom ceiling is honored")
     func customCeiling() {
         #expect(ControlItem.republishDecision(priorCount: 2, ceiling: 3) == .republish(attempt: 3))

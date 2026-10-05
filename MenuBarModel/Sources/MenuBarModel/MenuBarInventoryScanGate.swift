@@ -31,7 +31,8 @@ public actor MenuBarInventoryScanGate<Observation: Sendable, Snapshot: Sendable>
     public func snapshot(
         freshOnly: Bool,
         scope: MenuBarScanScope = .discovery,
-        priorityOwners: Set<Int32> = []
+        priorityOwners: Set<Int32> = [],
+        preemptsDiscovery: Bool = true
     ) async -> Snapshot? {
         let requestedAfter = latestID
         while let existing = inFlight {
@@ -42,7 +43,8 @@ public actor MenuBarInventoryScanGate<Observation: Sendable, Snapshot: Sendable>
                 let snapshot = await existing.task.value
                 return Task.isCancelled ? nil : snapshot
             }
-            if scope != .discovery, existing.scope == .discovery {
+            // A periodic reader waits instead, or its cadence would starve discovery.
+            if preemptsDiscovery, scope != .discovery, existing.scope == .discovery {
                 existing.task.cancel()
             }
             _ = await existing.task.value

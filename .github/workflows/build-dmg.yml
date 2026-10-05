@@ -10,9 +10,14 @@ on:
         required: false
         type: string
         default: ""
+      prk_ref:
+        description: PlatformRuntimeKit branch, tag, or commit to build from source
+        required: false
+        type: string
+        default: main
 
 concurrency:
-  group: build-dmg-${{ inputs.ref || github.ref }}
+  group: build-dmg-${{ inputs.ref || github.ref }}-${{ inputs.prk_ref || 'main' }}
   cancel-in-progress: true
 
 permissions:
@@ -26,6 +31,7 @@ jobs:
     env:
       APP_NAME: "Thaw.app"
       DMG_NAME: "Thaw-dev.dmg"
+      MENU_BAR_MODEL_PATH: ${{ github.workspace }}/Thaw/MenuBarModel
     steps:
       # A local composite action has to exist on disk before it can run, so
       # this sparse checkout brings in .github/actions and nothing else.
@@ -33,12 +39,45 @@ jobs:
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           sparse-checkout: .github/actions
+          persist-credentials: false
 
       - name: Checkout source
         id: source
         uses: ./.github/actions/checkout-source
         with:
           ref: ${{ inputs.ref }}
+          path: Thaw
+
+      - name: Check PRK checkout token
+        env:
+          PRK_TOKEN: ${{ secrets.THAW_NEXT_READ_TOKEN }}
+        run: |
+          if [[ -z "$PRK_TOKEN" ]]; then
+            echo "::error::Set THAW_NEXT_READ_TOKEN with Contents read access to thaw-app/PlatformRuntimeKit."
+            exit 1
+          fi
+
+      - name: Checkout PlatformRuntimeKit source
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          repository: thaw-app/PlatformRuntimeKit
+          ref: ${{ inputs.prk_ref || 'main' }}
+          token: ${{ secrets.THAW_NEXT_READ_TOKEN }}
+          path: PlatformRuntimeKit
+          persist-credentials: false
+
+      - name: Record source revisions
+        id: prk
+        env:
+          THAW_COMMIT: ${{ steps.source.outputs.commit }}
+        run: |
+          set -euo pipefail
+          prk_commit="$(git -C PlatformRuntimeKit rev-parse HEAD)"
+          echo "commit=$prk_commit" >> "$GITHUB_OUTPUT"
+          {
+            echo "## Source revisions"
+            printf 'Thaw: %s\n\nPlatformRuntimeKit: %s\n' "$THAW_COMMIT" "$prk_commit"
+          } >> "$GITHUB_STEP_SUMMARY"
 
       - name: Select latest installed Xcode (including betas)
         uses: maxim-lobanov/setup-xcode@ed7a3b1fda3918c0306d1b724322adc0b8cc0a90 # v1.7.0
@@ -78,7 +117,7 @@ jobs:
       - name: Upload DMG
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
-          name: Thaw-dmg-${{ steps.source.outputs.commit }}
+          name: Thaw-dmg-${{ steps.source.outputs.commit }}-${{ steps.prk.outputs.commit }}
           path: build/${{ env.DMG_NAME }}
           retention-days: 3
 

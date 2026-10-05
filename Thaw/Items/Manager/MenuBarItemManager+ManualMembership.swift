@@ -105,6 +105,35 @@ extension MenuBarItemManager {
         }
     }
 
+    /// Nothing restores a concealed section on reveal in Manual, so an explicit Layout edit writes its weights now.
+    /// A live section is left to the edit's own move, and Automatic to its reveal restore.
+    func writeConcealedOrderForManualEdit(in section: MenuBarSection.Name) {
+        guard arrangementIsManual, ExplicitLayoutEdit.isActive, section != .visible,
+              !menuBarAgentIgnoresPreferredPositions,
+              let controller = appState?.menuBarManager.sectionController
+        else { return }
+        let revealed = controller.revealedSection
+        guard revealed != section, !(section == .hidden && revealed == .alwaysHidden),
+              !refuseMenuBarMutationWhileScreenLocked("concealed order write")
+        else { return }
+        let cachedItems = itemCache.managedItems
+        let cachedIdentifiers = Set(cachedItems.map(\.uniqueIdentifier))
+        let desiredOrder = (controller.sectionItemOrder[section] ?? [])
+            .filter { controller.section(for: $0) == section && cachedIdentifiers.contains($0) }
+        guard desiredOrder.count > 1 else { return }
+        let changed = MenuBarPositionStoreProvider.forLayoutEdit.respaceOrder(
+            desiredOrder: desiredOrder,
+            liveItems: cachedItems,
+            experimentalSystemItemHiding: configuration.enableExperimentalSystemItemHiding,
+            mayRewriteAroundUnplaceableItems: true
+        )
+        guard !changed.isEmpty else { return }
+        commitPreferredPositionWrite(controller: controller)
+        MenuBarItemManager.diagLog.info(
+            "manual arrangement: wrote \(changed.count) concealed \(section.logString) weight(s) for a Layout edit"
+        )
+    }
+
     /// Waits for the position table to settle before adopting membership.
     func scheduleObservedMembershipAdoption(reason: String, afterUserDrag: Bool = false) {
         guard arrangementIsManual || afterUserDrag else { return }

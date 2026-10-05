@@ -154,10 +154,6 @@ final class RuntimeSectionContextAdapter: RuntimeSectionContext {
         await MenuBarItemAXProvider.nativeOverflowObservationConcurrent(on: displayID)
     }
 
-    /// Nothing to cover since the chevron cover was removed; kept while
-    /// released kits still require it.
-    func coverChevronPreemptively() {}
-
     func restoreVisibleControlItemAfterRestrictionChange() {
         appState?.menuBarManager
             .controlItem(withName: .visible)?

@@ -790,7 +790,10 @@ extension CGImage {
     /// resulting image.
     private static nonisolated func image(from context: CGContext, pixels: [UInt8]) -> CGImage? {
         guard let contextData = context.data else { return nil }
-        pixels.withUnsafeBytes { contextData.copyMemory(from: $0.baseAddress!, byteCount: pixels.count) }
+        pixels.withUnsafeBytes { bytes in
+            guard let baseAddress = bytes.baseAddress else { return }
+            contextData.copyMemory(from: baseAddress, byteCount: pixels.count)
+        }
         return context.makeImage()
     }
 

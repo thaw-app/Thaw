@@ -6,6 +6,7 @@
 //  Licensed under the GNU GPLv3
 
 import SwiftUI
+import ThawUI
 
 // General settings shared by GeneralSettingsPane and SimpleModeSettingsPane,
 // defined once so the two panes' explanations cannot drift.
@@ -41,6 +42,7 @@ struct LaunchAtLoginRow: View {
 struct ShowThawIconRow: View {
     @Environment(AppState.self) private var appState
     @Bindable var settings: GeneralSettings
+    @State private var placementBlock: ControlItem.PlacementBlock?
 
     /// Names only the gestures that currently do something: double-click needs
     /// Always Hidden, and the swap option changes what a click does.
@@ -62,8 +64,39 @@ struct ShowThawIconRow: View {
     var body: some View {
         Toggle("Show \(Constants.displayName) icon", isOn: $settings.showThawIcon)
             .annotation(gestureSummary)
+            .task {
+                guard let item = appState.menuBarManager.controlItem(withName: .visible) else { return }
+                for await block in item.$placementBlock.values {
+                    placementBlock = block
+                }
+            }
         if settings.showThawIcon {
             ThawIconPicker(settings: settings)
+            if let placementBlock {
+                missingIconPill(for: placementBlock)
+            }
+        }
+    }
+
+    /// Says why the icon is missing while the switch above reads on.
+    private func missingIconPill(for block: ControlItem.PlacementBlock) -> some View {
+        let title: LocalizedStringKey = switch block {
+        case .deniedBySystem: "macOS isn't allowing \(Constants.displayName) in the menu bar"
+        case .unknown: "The \(Constants.displayName) icon isn't in the menu bar"
+        }
+        let message: LocalizedStringKey = switch block {
+        case .deniedBySystem: "Switch \(Constants.displayName) back on in System Settings > Menu Bar."
+        case .unknown: "macOS may be blocking it. Check that \(Constants.displayName) is switched on in System Settings > Menu Bar."
+        }
+        return SettingsWarningPill(
+            title: title,
+            message: message,
+            tint: .orange,
+            actionTitle: "Open System Settings"
+        ) {
+            if let url = URL(string: "x-apple.systempreferences:com.apple.ControlCenter-Settings.extension") {
+                NSWorkspace.shared.open(url)
+            }
         }
     }
 }

@@ -108,6 +108,21 @@ final class MenuBarManager {
     @ObservationIgnored
     private let wallpaperChangeMonitor = WallpaperChangeMonitor()
 
+    /// The adaptive poll's cadence; the palette fallback derives from it rather than running its own timer.
+    private static let adaptiveRefreshInterval: TimeInterval = 30
+    private static let adaptiveRefreshTolerance: TimeInterval = 5
+
+    /// The shortest gap between two adaptive polls, so each poll finds the palette due however often strips are sampled.
+    static let paletteFallbackInterval: Duration = .seconds(adaptiveRefreshInterval - adaptiveRefreshTolerance)
+
+    /// Advances when the wallpaper may have been replaced; palettes captured under an older value are stale.
+    @ObservationIgnored
+    private var wallpaperGeneration = 0
+
+    /// What each published palette was captured from and when, keyed by display.
+    @ObservationIgnored
+    private var paletteRefreshStates: [CGDirectDisplayID: PaletteRefreshState] = [:]
+
     /// Generation checks prevent slow captures from overwriting newer samples or wake-restored colors.
     @ObservationIgnored
     private var captureGeneration = 0
@@ -338,26 +353,18 @@ final class MenuBarManager {
             .store(in: &bag)
     }
 
-    /// _HIHideMenuBar has no notification; reread it when the control window's vertical position changes bar geometry.
+    /// _HIHideMenuBar is true for the Always and On Desktop Only auto-hide options.
     private func observeSystemAutohideDefault(into bag: inout Set<AnyCancellable>) {
-        guard
-            let alwaysHiddenSection = section(withName: .alwaysHidden),
-            let window = alwaysHiddenSection.controlItem.window
-        else {
-            return
-        }
-        window.publisher(for: \.frame)
-            .map(\.origin.y)
-            .removeDuplicates()
+        DistributedNotificationCenter.default()
+            .publisher(for: DistributedNotificationCenter.menuBarHidingChangedNotification)
+            .replace(with: ())
+            .prepend(())
             .receive(on: DispatchQueue.main)
-            .sink { [weak self] _ in
-                guard
-                    let self,
-                    let isMenuBarHidden = Defaults.globalDomain["_HIHideMenuBar"] as? Bool
-                else {
+            .sink { [weak self] in
+                guard let self else {
                     return
                 }
-                isMenuBarHiddenBySystemUserDefaults = isMenuBarHidden
+                isMenuBarHiddenBySystemUserDefaults = Defaults.globalDomain["_HIHideMenuBar"] as? Bool ?? false
             }
             .store(in: &bag)
     }
@@ -516,7 +523,10 @@ final class MenuBarManager {
         )
         .receive(on: DispatchQueue.main)
         .sink { [weak self] in
-            guard let self, settingsWindow?.isVisible == true || isAdaptiveAppearanceActive else {
+            guard let self else { return }
+            // Count it even with no consumer, so a palette kept from before is not reused later.
+            wallpaperGeneration += 1
+            guard settingsWindow?.isVisible == true || isAdaptiveAppearanceActive else {
                 return
             }
             updateAverageColorInfo()
@@ -638,14 +648,20 @@ final class MenuBarManager {
                     captureAdaptiveColorWithRetry()
                 case .start:
                     captureAdaptiveColorWithRetry()
-                    adaptiveColorRefreshCancellable = Timer.publish(every: 30, tolerance: 5, on: .main, in: .default)
-                        .autoconnect()
-                        .sink { [weak self] _ in
-                            // Skip sleep ticks; wake restores banked colors and runs its own poll.
-                            guard let self, !displaysAreAsleep else { return }
-                            updateAverageColorInfo()
-                        }
+                    adaptiveColorRefreshCancellable = Timer.publish(
+                        every: Self.adaptiveRefreshInterval,
+                        tolerance: Self.adaptiveRefreshTolerance,
+                        on: .main,
+                        in: .default
+                    )
+                    .autoconnect()
+                    .sink { [weak self] _ in
+                        // Skip sleep ticks; wake restores banked colors and runs its own poll.
+                        guard let self, !displaysAreAsleep else { return }
+                        updateAverageColorInfo()
+                    }
                     wallpaperChangeMonitor.onChange = { [weak self] in
+                        self?.wallpaperGeneration += 1
                         self?.captureAdaptiveColorWithRetry()
                     }
                     wallpaperChangeMonitor.start()
@@ -781,7 +797,7 @@ final class MenuBarManager {
     }
 
     /// Awaitable refresh; color writes finish on MainActor before returning.
-    func updateAverageColorInfoAsync() async {
+    func updateAverageColorInfoAsync(for requestedDisplayID: CGDirectDisplayID? = nil) async {
         guard let appState, appState.navigationState.hasVisibleCaptureUI else { return }
 
         let isSettingsVisible = settingsWindow?.isVisible == true
@@ -789,7 +805,10 @@ final class MenuBarManager {
         let isAdaptiveActive = requirements?.isAdaptive ?? false
 
         let targetScreens: [NSScreen]
-        if isAdaptiveActive {
+        if let requestedDisplayID {
+            guard let screen = NSScreen.screen(for: requestedDisplayID) else { return }
+            targetScreens = [screen]
+        } else if isAdaptiveActive {
             targetScreens = NSScreen.managedScreens
         } else if isSettingsVisible {
             targetScreens = [settingsWindow?.screen].compactMap(\.self)
@@ -824,18 +843,36 @@ final class MenuBarManager {
             }
             // Recheck after suspension before publishing over a newer pass.
             guard captureGeneration == generation else { break }
-            let (_, info, palette) = result
+            let (_, info, paletteCapture) = result
             if averageColors[displayID] != info {
                 averageColors[displayID] = info
             }
             if displayID == activeDisplayID, averageColorInfo != info {
                 averageColorInfo = info
             }
-            // Retain the previous palette on misses or empty swatches to avoid losing tint or falling back to average color.
-            if let palette, palette.primary != nil, wallpaperPalettes[displayID] != palette {
-                wallpaperPalettes[displayID] = palette
+            if let paletteCapture {
+                publish(paletteCapture, for: displayID)
             }
         }
+    }
+
+    /// A palette with the inputs it was captured from.
+    private struct PaletteCapture {
+        let palette: WallpaperPalette
+        let state: PaletteRefreshState
+    }
+
+    private struct PaletteRefreshState {
+        let source: WallpaperPaletteRefreshPolicy.Source
+        let refreshedAt: ContinuousClock.Instant
+    }
+
+    /// Record the inputs only with the palette they produced, so a superseded pass cannot mark a stale palette fresh.
+    private func publish(_ capture: PaletteCapture, for displayID: CGDirectDisplayID) {
+        if wallpaperPalettes[displayID] != capture.palette {
+            wallpaperPalettes[displayID] = capture.palette
+        }
+        paletteRefreshStates[displayID] = capture.state
     }
 
     /// Each sample holds a capture ticket because this sampler can run without a surface opening the ordinary gate.
@@ -843,7 +880,7 @@ final class MenuBarManager {
         for displayID: CGDirectDisplayID,
         from windows: [WindowInfo],
         needsPalette: Bool
-    ) async -> (CGDirectDisplayID, MenuBarAverageColorInfo, WallpaperPalette?)? {
+    ) async -> (CGDirectDisplayID, MenuBarAverageColorInfo, PaletteCapture?)? {
         guard let sample = await ScreenCapture.withOneshotCaptureTicket({
             await MenuBarColorSampler.captureStrip(for: displayID, from: windows)
         }),
@@ -851,18 +888,48 @@ final class MenuBarManager {
         else {
             return nil
         }
-        var palette: WallpaperPalette?
+        var paletteCapture: PaletteCapture?
         if needsPalette {
-            // The one-pixel strip suffices for averaging, but a palette needs the wallpaper's full height.
-            palette = await ScreenCapture.withOneshotCaptureTicket {
-                await ScreenCapture.captureWindows(
-                    with: sample.windowIDs,
-                    screenBounds: sample.wallpaperBounds,
-                    option: .nominalResolution
-                )
-            }?.dominantColors()
+            paletteCapture = await capturePaletteIfStale(for: displayID, sample: sample, stripColor: color)
         }
-        return (displayID, MenuBarAverageColorInfo(color: color, source: .menuBarWindow), palette)
+        return (displayID, MenuBarAverageColorInfo(color: color, source: .menuBarWindow), paletteCapture)
+    }
+
+    /// Strip samples arrive every few seconds; the full-wallpaper capture runs only when the policy finds the palette stale.
+    private func capturePaletteIfStale(
+        for displayID: CGDirectDisplayID,
+        sample: MenuBarColorSampler.Sample,
+        stripColor: CGColor
+    ) async -> PaletteCapture? {
+        let source = WallpaperPaletteRefreshPolicy.Source(
+            wallpaperGeneration: wallpaperGeneration,
+            stripColor: stripColor,
+            wallpaperBounds: sample.wallpaperBounds,
+            isDarkAppearance: SystemAppearance.current == .dark
+        )
+        let now = ContinuousClock.now
+        // A display without a usable palette has nothing to reuse, whatever was recorded for it.
+        let state = wallpaperPalettes[displayID]?.primary == nil ? nil : paletteRefreshStates[displayID]
+        let reason = WallpaperPaletteRefreshPolicy.refreshReason(
+            previous: state?.source,
+            current: source,
+            timeSinceLastRefresh: state.map { now - $0.refreshedAt },
+            fallbackInterval: Self.paletteFallbackInterval
+        )
+        guard let reason else { return nil }
+        diagLog.debug("Refreshing wallpaper palette for display \(displayID): \(reason)")
+
+        // The one-pixel strip suffices for averaging, but a palette needs the wallpaper's full height.
+        let palette = await ScreenCapture.withOneshotCaptureTicket {
+            await ScreenCapture.captureWindows(
+                with: sample.windowIDs,
+                screenBounds: sample.wallpaperBounds,
+                option: .nominalResolution
+            )
+        }?.dominantColors()
+        // Retain the previous palette on misses or empty swatches to avoid losing tint or falling back to average color.
+        guard let palette, palette.primary != nil else { return nil }
+        return PaletteCapture(palette: palette, state: PaletteRefreshState(source: source, refreshedAt: now))
     }
 
     /// Retry early WindowServer capture failures until all screens have the required samples or the budget expires.
@@ -1436,6 +1503,8 @@ final class MenuBarManager {
 
     func setRevealHideTransitionActive(_ active: Bool) {
         revealHideTransitionActive = active
+        // Either edge of the transition moves the items, so the pill should follow closely.
+        leadingEdgeWatcher.expectChange()
     }
 
     /// Suppress width nudges and structural normalization during the transition or fixed settling window.
@@ -1564,12 +1633,6 @@ struct MenuBarAverageColorInfo: Hashable {
     /// WCAG relative luminance (0...1) for contrast floors; returns 0 if the color cannot convert to sRGB.
     var relativeLuminance: Double {
         ForegroundContrast.relativeLuminance(of: color) ?? 0
-    }
-
-    /// Switch at the contrast crossover to select the stronger foreground; see ForegroundContrast.
-    /// Thaw may use dark content on mid-gray bars while system items remain light.
-    var isBright: Bool {
-        relativeLuminance > Constants.menuBarBrightnessThreshold
     }
 
     /// A separate notch threshold allows darker foreground beside the notch, where content reads lighter.

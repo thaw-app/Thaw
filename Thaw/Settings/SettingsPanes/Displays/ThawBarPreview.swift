@@ -83,6 +83,10 @@ struct ThawBarPreview: View {
 
             ThawBarPreviewFooter(useThawBar: useThawBar, displayID: displayID)
         }
+        .task(id: previewScreen?.displayID) {
+            guard let screen = previewScreen else { return }
+            await appState.menuBarManager.updateAverageColorInfoAsync(for: screen.displayID)
+        }
     }
 
     // MARK: - Preview bar
@@ -92,6 +96,8 @@ struct ThawBarPreview: View {
         let items = hiddenItems
         let images = resolvedImages(for: items)
         let appearance = appState.appearanceManager.configuration.resolvedThawBarAppearance
+        let screen = previewScreen
+        let sample = screen.flatMap { appState.menuBarManager.averageColors[$0.displayID] }
         let clipShape = ThawBarBorderShape.thawBarClip(
             height: contentHeight,
             hasRoundedShape: appearance.hasRoundedShape
@@ -130,17 +136,17 @@ struct ThawBarPreview: View {
         .padding(.vertical, verticalPadding)
         .foregroundStyle(ThawBarAppearanceForeground.resolve(
             appearance: appearance,
-            sampledInfo: appState.menuBarManager.averageColorInfo,
-            adaptiveInfo: displayID.flatMap { appState.menuBarManager.averageColors[$0] },
-            palette: displayID.flatMap { appState.menuBarManager.wallpaperPalettes[$0] },
-            screen: displayID.flatMap { id in NSScreen.screen(for: id) }
+            sampledInfo: sample,
+            adaptiveInfo: sample,
+            palette: screen.flatMap { appState.menuBarManager.wallpaperPalettes[$0.displayID] },
+            screen: screen
         ))
         .background {
             ThawBarAppearanceBackground(
                 appearance: appearance,
-                sampledColor: appState.menuBarManager.averageColorInfo?.color,
-                adaptiveColor: displayID.flatMap { appState.menuBarManager.averageColors[$0]?.color },
-                palette: displayID.flatMap { appState.menuBarManager.wallpaperPalettes[$0] },
+                sampledColor: sample?.color,
+                adaptiveColor: sample?.color,
+                palette: screen.flatMap { appState.menuBarManager.wallpaperPalettes[$0.displayID] },
                 shape: clipShape
             )
         }

@@ -52,20 +52,6 @@ extension HIDEventManager {
         return false
     }
 
-    /// Finds the system Clock at a Core Graphics click location. Requiring both
-    /// the anchored-system classification and Clock's module identity
-    /// avoids intercepting a third-party item that happens to be titled Clock.
-    static func systemClockItem(
-        at location: CGPoint,
-        in items: [MenuBarItem]
-    ) -> MenuBarItem? {
-        let bands = NSScreen.screens.map { screen in
-            let display = CGDisplayBounds(screen.displayID)
-            return CGRect(x: display.minX, y: display.minY, width: display.width, height: screen.getMenuBarHeightEstimate())
-        }
-        return systemClockItem(at: location, in: items, menuBarBands: bands)
-    }
-
     /// AX can overstate the digital clock's height. Clip both native and
     /// mirrored frames to the destination bar, never the application below it.
     static nonisolated func systemClockItem(

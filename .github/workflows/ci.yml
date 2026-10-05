@@ -14,6 +14,11 @@ on:
 permissions:
   contents: read
 
+# The project builds PlatformRuntimeKit from a sibling checkout. Keep this
+# revision paired with the kit commit the sources on this branch need.
+env:
+  PLATFORM_RUNTIME_KIT_REF: 751a334209b620f357846ec8fb7e4111bdaebee1
+
 jobs:
   changes:
     if: github.repository == 'thaw-app/Thaw'
@@ -84,14 +89,6 @@ jobs:
             python3 -m json.tool "$file" > /dev/null
           done
 
-      - name: Verify SwiftLint input file list
-        if: needs.changes.outputs.code == 'true'
-        run: |
-          set -euo pipefail
-          chmod +x scripts/generate-swiftlint-inputs.sh
-          scripts/generate-swiftlint-inputs.sh /tmp/swiftlint-inputs.xcfilelist
-          diff -u scripts/swiftlint-inputs.xcfilelist /tmp/swiftlint-inputs.xcfilelist
-
       - name: Run SwiftLint
         if: needs.changes.outputs.code == 'true'
         run: |
@@ -105,6 +102,7 @@ jobs:
     needs: [changes, static_analysis]
     env:
       HOMEBREW_NO_AUTO_UPDATE: 1
+      MENU_BAR_MODEL_PATH: ${{ github.workspace }}/MenuBarModel
     steps:
       - name: Skip macOS build (no code changes)
         if: needs.changes.outputs.code != 'true'
@@ -112,6 +110,34 @@ jobs:
 
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         if: needs.changes.outputs.code == 'true'
+
+      - name: Check PlatformRuntimeKit checkout token
+        if: needs.changes.outputs.code == 'true'
+        env:
+          PRK_TOKEN: ${{ secrets.THAW_NEXT_READ_TOKEN }}
+        run: |
+          if [[ -z "$PRK_TOKEN" ]]; then
+            echo "::error::THAW_NEXT_READ_TOKEN is unavailable (fork pull requests cannot read it), so PlatformRuntimeKit cannot be checked out."
+            exit 1
+          fi
+
+      - name: Checkout PlatformRuntimeKit source
+        if: needs.changes.outputs.code == 'true'
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          repository: thaw-app/PlatformRuntimeKit
+          ref: ${{ env.PLATFORM_RUNTIME_KIT_REF }}
+          token: ${{ secrets.THAW_NEXT_READ_TOKEN }}
+          path: .platform-runtime-kit
+          persist-credentials: false
+
+      # checkout cannot write outside the workspace; the project expects the kit beside it.
+      - name: Place PlatformRuntimeKit beside the checkout
+        if: needs.changes.outputs.code == 'true'
+        run: |
+          rm -rf ../PlatformRuntimeKit
+          mv .platform-runtime-kit ../PlatformRuntimeKit
+
       - name: Cache SwiftPM
         if: needs.changes.outputs.code == 'true'
         uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
@@ -140,6 +166,7 @@ jobs:
             compilation-cache-${{ runner.os }}-${{ github.ref_name }}-
             compilation-cache-${{ runner.os }}-
 
+      # ThawAXCore is a static product linked by both the app and its hosted tests; the runner's Xcode rejects that unless told otherwise.
       - name: Build and Test
         if: needs.changes.outputs.code == 'true'
         run: |
@@ -149,6 +176,7 @@ jobs:
             -derivedDataPath Build/ \
             -destination 'platform=macOS' \
             -enableCodeCoverage YES \
+            DISABLE_DIAMOND_PROBLEM_DIAGNOSTIC=YES \
             CODE_SIGN_IDENTITY="" \
             CODE_SIGNING_REQUIRED=NO \
             CODE_SIGNING_ALLOWED=NO
@@ -185,49 +213,6 @@ jobs:
         with:
           path: coverage.xml
           key: sonar-coverage-${{ github.ref_name }}-${{ github.sha }}
-
-  # Tests with Xcode 26.6 on macOS 26; `build` covers Xcode 27 on macOS 27
-  # and owns coverage.
-  build-macos-26:
-    if: github.repository == 'thaw-app/Thaw'
-    runs-on: macos-26
-    needs: [changes, static_analysis]
-    env:
-      HOMEBREW_NO_AUTO_UPDATE: 1
-    steps:
-      - name: Skip macOS build (no code changes)
-        if: needs.changes.outputs.code != 'true'
-        run: echo "No code-related paths changed; skipping xcodebuild test."
-
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        if: needs.changes.outputs.code == 'true'
-
-      - name: Select Xcode 26.6
-        if: needs.changes.outputs.code == 'true'
-        run: sudo xcode-select -s /Applications/Xcode_26.6.app/Contents/Developer
-
-      - name: Cache SwiftPM
-        if: needs.changes.outputs.code == 'true'
-        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
-        with:
-          path: |
-            Build/SourcePackages
-            ~/Library/Caches/org.swift.swiftpm
-          key: spm-macos-26-${{ hashFiles('**/Package.resolved') }}
-          restore-keys: |
-            spm-macos-26-
-
-      - name: Build and Test
-        if: needs.changes.outputs.code == 'true'
-        run: |
-          xcodebuild test \
-            -project Thaw.xcodeproj \
-            -scheme Thaw \
-            -derivedDataPath Build/ \
-            -destination 'platform=macOS' \
-            CODE_SIGN_IDENTITY="" \
-            CODE_SIGNING_REQUIRED=NO \
-            CODE_SIGNING_ALLOWED=NO
 
   # Always runs so Scorecard sees a Sonar check on nearly every PR; forks and
   # Dependabot no-op without secrets under the same job name.

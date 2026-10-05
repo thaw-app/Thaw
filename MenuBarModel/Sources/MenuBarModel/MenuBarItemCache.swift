@@ -57,52 +57,6 @@ public struct MenuBarItemCache: Hashable, MenuBarSectionBucketed, Sendable {
         return nil
     }
 
-    /// Returns nil when the tag is absent from the cache.
-    public func address(for tag: MenuBarItemTag) -> (section: MenuBarSectionName, index: Int)? {
-        for (section, items) in storage {
-            guard let index = items.firstIndex(matching: tag) else {
-                continue
-            }
-            return (section, index)
-        }
-        return nil
-    }
-
-    public mutating func insert(_ item: MenuBarItem, at destination: MoveDestination) {
-        let targetTag = destination.targetItem.tag
-
-        if targetTag == .hiddenControlItem {
-            switch destination {
-            case .leftOfItem:
-                self[.hidden].append(item)
-            case .rightOfItem:
-                self[.visible].insert(item, at: 0)
-            }
-            return
-        }
-
-        if targetTag == .alwaysHiddenControlItem {
-            switch destination {
-            case .leftOfItem:
-                self[.alwaysHidden].append(item)
-            case .rightOfItem:
-                self[.hidden].insert(item, at: 0)
-            }
-            return
-        }
-
-        guard case (let section, var index)? = address(for: targetTag) else {
-            return
-        }
-
-        if case .rightOfItem = destination {
-            let range = self[section].startIndex ... self[section].endIndex
-            index = (index + 1).clamped(to: range)
-        }
-
-        self[section].insert(item, at: index)
-    }
-
     public subscript(section: MenuBarSectionName) -> [MenuBarItem] {
         get { storage[section, default: []] }
         set { storage[section] = newValue }

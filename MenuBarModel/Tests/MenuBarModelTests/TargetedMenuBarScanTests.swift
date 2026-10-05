@@ -47,6 +47,24 @@ struct TargetedMenuBarScanTests {
         #expect(state.freshObservations(generation: move.generation) == ["source", "fresh neighbour"])
     }
 
+    @Test("An excused slow neighbour completes move geometry without contributing stale items")
+    func excusedNeighbourCompletesGeometry() {
+        var state = MenuBarScanState<String>()
+        let first = state.begin(owners: [1, 2], priorityOwners: [])
+        for owner in first.owners {
+            state.didAttempt(owner: owner, generation: first.generation)
+            state.record(["old-\(owner)"], owner: owner, generation: first.generation)
+        }
+        let move = state.begin(owners: [1, 2], priorityOwners: [1], scope: .knownOwners)
+        state.didAttempt(owner: 1, generation: move.generation)
+        state.record(["source"], owner: 1, generation: move.generation)
+        #expect(!state.isComplete(move))
+        #expect(state.isComplete(move, excusing: [2]))
+        #expect(state.hasFreshKnownInventory(generation: move.generation, excusing: [2]))
+        #expect(!state.isComplete(move, excusing: [3]))
+        #expect(state.freshObservations(generation: move.generation) == ["source"])
+    }
+
     @Test("Previously empty owners are rediscovered after five seconds")
     func emptyOwnerKnowledgeExpires() {
         var state = MenuBarScanState<String>()

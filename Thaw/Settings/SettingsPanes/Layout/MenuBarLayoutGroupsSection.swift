@@ -106,15 +106,19 @@ struct MenuBarLayoutGroupsSection: View {
                 }
             ))
             if let color = style.color {
-                ColorPicker("Folder color", selection: Binding(
-                    get: { Color(nsColor: color) },
-                    set: { newColor in
-                        var updated = style
-                        updated.color = NSColor(newColor)
-                        folders.setStyle(updated, for: group.id)
-                    }
-                ), supportsOpacity: false)
-                    .labelsHidden()
+                ColorPicker(
+                    "Folder color",
+                    selection: Binding(
+                        get: { Color(nsColor: color) },
+                        set: { newColor in
+                            var updated = style
+                            updated.color = NSColor(newColor)
+                            folders.setStyle(updated, for: group.id)
+                        }
+                    ),
+                    supportsOpacity: false
+                )
+                .labelsHidden()
             }
             Spacer()
         }

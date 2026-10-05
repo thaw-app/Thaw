@@ -73,21 +73,38 @@ struct DisplaySettingsPane: View {
 
     @ViewBuilder
     private var confirmSpacingRelaunchControls: some View {
-        Toggle("Confirm before relaunching apps", isOn: $displaySettings.confirmSpacingRelaunch)
-            .annotation(
-                "Before a display change or spacing edit relaunches your menu bar apps, \(Constants.displayName) asks you to confirm.",
-                more: "Turn this off to apply spacing changes and relaunch apps without confirmation."
-            )
+        ThawPicker(
+            "When applying spacing",
+            selection: $displaySettings.spacingApplyMode
+        ) {
+            Text("Apply spacing immediately (restarts menu bar apps)")
+                .tag(SpacingApplyMode.relaunchApps)
+            Text("Wait until next restart (no apps restarted)")
+                .tag(SpacingApplyMode.writeOnly)
+        }
+        .annotation(
+            "macOS only reads menu bar spacing when a status item’s owner starts.",
+            more: "Restarting apps applies the change now; waiting leaves every app running and the new spacing appears the next time each app starts (after a restart, or when you reopen it)."
+        )
 
-        if !displaySettings.confirmSpacingRelaunch {
-            ThawPicker(
-                "Without confirmation, save spacing to",
-                selection: $displaySettings.unconfirmedSpacingProfileScope
-            ) {
-                Text("Active profile").tag(SpacingProfileSaveScope.activeProfile)
-                Text("All profiles").tag(SpacingProfileSaveScope.allProfiles)
+        // Write-only mode relaunches nothing, so there is nothing to confirm.
+        if displaySettings.spacingApplyMode == .relaunchApps {
+            Toggle("Confirm before relaunching apps", isOn: $displaySettings.confirmSpacingRelaunch)
+                .annotation(
+                    "Before a display change or spacing edit relaunches your menu bar apps, \(Constants.displayName) asks you to confirm.",
+                    more: "Turn this off to apply spacing changes and relaunch apps without confirmation."
+                )
+
+            if !displaySettings.confirmSpacingRelaunch {
+                ThawPicker(
+                    "Without confirmation, save spacing to",
+                    selection: $displaySettings.unconfirmedSpacingProfileScope
+                ) {
+                    Text("Active profile").tag(SpacingProfileSaveScope.activeProfile)
+                    Text("All profiles").tag(SpacingProfileSaveScope.allProfiles)
+                }
+                .annotation("When a profile is active, choose whether spacing changes save to the active profile or to every profile.")
             }
-            .annotation("When a profile is active, choose whether spacing changes save to the active profile or to every profile.")
         }
     }
 }

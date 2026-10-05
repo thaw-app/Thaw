@@ -99,8 +99,12 @@ public struct MenuBarScanState<Observation: Sendable>: Sendable {
 
     /// A rotating scan may skip previously empty owners, but never use stale
     /// item geometry or reconcile before every running owner was discovered.
-    public func hasFreshKnownInventory(generation: UInt64) -> Bool {
+    /// excused owners count as covered; their items are absent from freshObservations.
+    public func hasFreshKnownInventory(generation: UInt64, excusing excused: Set<Int32> = []) -> Bool {
         owners.allSatisfy { owner in
+            if excused.contains(owner) {
+                return true
+            }
             guard let items = retained[owner] else { return false }
             return items.isEmpty || observed[owner] == generation
         }
@@ -108,8 +112,10 @@ public struct MenuBarScanState<Observation: Sendable>: Sendable {
 
     /// Every owner selected for move geometry must answer in this pass,
     /// including explicitly requested owners that were previously empty.
-    public func isComplete(_ pass: Pass) -> Bool {
-        pass.generation == generation && pass.owners.allSatisfy { observed[$0] == pass.generation }
+    public func isComplete(_ pass: Pass, excusing excused: Set<Int32> = []) -> Bool {
+        pass.generation == generation && pass.owners.allSatisfy {
+            observed[$0] == pass.generation || excused.contains($0)
+        }
     }
 
     public func isComplete(generation: UInt64) -> Bool {

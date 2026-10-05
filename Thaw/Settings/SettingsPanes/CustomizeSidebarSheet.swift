@@ -16,7 +16,6 @@ import ThawUI
 /// at least one row), and the currently-selected pane can't be hidden (so
 /// hiding never orphans the detail).
 struct CustomizeSidebarSheet: View {
-    @Environment(AppState.self) private var envAppState
     @Environment(\.dismiss) private var dismiss
 
     private let appState: AppState

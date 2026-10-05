@@ -38,8 +38,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             }
         #endif
 
-        AXBatchDiagnostics.handler = { AXBridgeDiagnostics.record($0) }
-
         // Set AX timeout before creating elements: synchronous IPC can stall when a target stops pumping events.
         // Override with defaults write com.stonerl.Thaw axMessagingTimeout -float <seconds>.
         UIElement.defaultMessagingTimeout = Float(
@@ -152,6 +150,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     func applicationShouldTerminate(_ sender: NSApplication) -> NSApplication.TerminateReply {
+        if NativeVisibilityRecoveryLaunch.isHandingOff {
+            // Do not release reveal holds or run layout reconciliation during recovery handoff.
+            appState.menuBarManager.tearDownControlItemsForTermination()
+            return .terminateNow
+        }
         guard !isPreparingForTermination else {
             return .terminateLater
         }
@@ -162,6 +165,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         isPreparingForTermination = true
         hasRepliedToTerminationRequest = false
         appState.diagLog.info("Application asked to terminate - restoring blocked items asynchronously")
+        appState.appRunningTriggers.stop()
 
         Task { @MainActor in
             _ = await appState.itemManager.restoreBlockedItemsToVisible()
@@ -195,7 +199,17 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     func applicationWillTerminate(_: Notification) {
         appState.diagLog.info("Application will terminate")
-        appState.menuBarManager.nativeAppHidingExperiment.prepareForTermination()
+        if NativeVisibilityRecoveryLaunch.isHandingOff {
+            // Capture changes since launch began. Leave the original journal intact
+            // for recovery instead of clearing it through the normal cached reader.
+            do {
+                try NativeAppVisibilityRecovery().preserveRecoveryRecords()
+            } catch {
+                appState.diagLog.error("Could not checkpoint visibility recovery; original journal retained: \(error.localizedDescription)")
+            }
+        } else {
+            appState.menuBarManager.nativeAppHidingExperiment.prepareForTermination()
+        }
         appState.menuBarManager.systemExtraTakeover.prepareForTermination()
         // Balance the layout-table security scope before exit.
         MenuBarLayoutTableAccess.shared.release()
@@ -266,7 +280,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         let host = url.host?.lowercased() ?? ""
 
         switch host {
-        case "set", "toggle", "get", "authorize", "reveal-item":
+        case "set", "toggle", "get", "authorize", "reveal-item",
+             "list-items", "activate-item", "list-profiles", "apply-profile", "get-appearance":
             handleSettingsURL(url, host: host, senderBundleId: senderBundleId)
             return
         default:
@@ -339,7 +354,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     /// Handles settings manipulation URLs (set/toggle).
     private func handleSettingsURL(_ url: URL, host: String, senderBundleId: String?) {
-        guard SettingsURIHandler.isEnabled() else {
+        // A built-in trusted sender works out of the box; everyone else needs the feature on.
+        guard SettingsURIHandler.isEnabled()
+            || SettingsURIHandler.isBuiltInTrustedSender(bundleIdentifier: senderBundleId)
+        else {
             appState.diagLog.debug("Settings URI is disabled, ignoring: \(url.absoluteString)")
             return
         }
@@ -383,6 +401,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             handleGetURL(url, sender: effectiveBundleId)
         case "reveal-item":
             handleRevealItemURL(url, sender: effectiveBundleId)
+        case "list-items", "activate-item", "list-profiles", "apply-profile", "get-appearance":
+            handleLauncherURL(url, sender: effectiveBundleId)
         default:
             break
         }
@@ -507,6 +527,19 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         sectionController.revealItemTemporarily(identifier)
         sectionController.scheduleTemporaryItemConceal(identifier)
         appState.diagLog.info("Settings URI reveal-item: revealed \(identifier) for sender \(sender ?? "unknown")")
+    }
+
+    /// Handles the launcher operations, including get-appearance.
+    /// The work is async because activation and profile layout report an outcome once they finish.
+    private func handleLauncherURL(_ url: URL, sender: String?) {
+        guard let request = LauncherURIRequest(url: url) else {
+            appState.diagLog.warning("Launcher URI: invalid URL \(url.absoluteString)")
+            return
+        }
+        let state = appState
+        Task {
+            await SettingsURIHandler.handleLauncherRequest(request, sender: sender, appState: state)
+        }
     }
 
     /// Handles thaw://get?key=X&callback=Y URLs.

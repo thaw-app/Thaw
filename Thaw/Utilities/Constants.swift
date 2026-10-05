@@ -120,15 +120,6 @@ nonisolated enum Constants {
         /// the second sighting and rewrite the layout, visibly reordering icons.
         static let signatureStabilityGrace: Duration = .seconds(3)
 
-        /// How long a differing roster must hold before the bar hygiene audit
-        /// believes it. Deliberately much longer than
-        /// signatureStabilityGrace: that grace protects the cache, which
-        /// has to keep up with the bar, whereas nothing about writing down
-        /// "Slack added an item" is time-critical. It rides out flaps that
-        /// survive three seconds (an app relaunching mid-update, a login
-        /// storm's tail) rather than recording them.
-        static let hygieneConfirmationGrace: Duration = .seconds(10)
-
         /// Interval between polls while waiting for MenuBarAgent to relaunch and
         /// re-sort after a preferred-position write (batch reorder or single
         /// move). MenuBarAgent is a managed launch agent that relaunches within
@@ -192,6 +183,10 @@ nonisolated enum Constants {
     static let changelogURL: URL = requiredInfoPlistURL(changelogURLInfoPlistKey)
 
     static let issuesURL = repositoryURL.appendingPathComponent("issues")
+
+    static let frequentIssuesURL = repositoryURL.appending(path: "blob/development/FREQUENT_ISSUES.md")
+    static let contributorsURL = repositoryURL.appending(path: "graphs/contributors")
+    static let translatorsURL = repositoryURL.appending(path: "blob/development/CREDITS.md")
 
     /// The URL for sponsoring/donating.
     static let donateURL: URL = requiredInfoPlistURL(donateURLInfoPlistKey)

@@ -84,17 +84,6 @@ final class LayoutBarPaddingView: NSView {
         )
     }
 
-    /// Whether a layout-editor reorder must be refused because the person using
-    /// Thaw owns the arrangement: in Manual, committing it would only rewrite
-    /// saved order and then snap back. Refuse before the mutation.
-    private func refusesReorderInManualArrangement() -> Bool {
-        guard container.appState?.itemManager.arrangementIsManual == true else {
-            return false
-        }
-        container.appState?.layoutFeedback.post(LayoutBarFeedbackCenter.manualArrangement())
-        return true
-    }
-
     private func layoutWatchdogDuration() -> Duration {
         MenuBarItemManager.layoutWatchdogTimeout
     }
@@ -253,6 +242,11 @@ final class LayoutBarPaddingView: NSView {
     }
 
     override func performDragOperation(_ sender: NSDraggingInfo) -> Bool {
+        // A drop is the user arranging in Layout, the one move Manual allows.
+        ExplicitLayoutEdit.perform { performLayoutDrop(sender) }
+    }
+
+    private func performLayoutDrop(_ sender: NSDraggingInfo) -> Bool {
         if let handle = sender.draggingSource as? LayoutBarGroupHandleView {
             return performGroupHandleDrop(handle, sender: sender)
         }
@@ -443,16 +437,6 @@ final class LayoutBarPaddingView: NSView {
         }
 
         if let index = arrangedViews.firstIndex(of: draggingSource) {
-            // A same-section drop is a reorder, and Manual moves nothing, so
-            // refuse before saved order is rewritten.
-            if refusesReorderInManualArrangement() {
-                // Snap the preview back to the model's order rather than
-                // recording an arrangement the bar will never take.
-                draggingSource.hasContainer = false
-                container.acceptsViewUpdates = true
-                container.rebuildViews()
-                return false
-            }
             if sectionIsPhysicallyLive(container.section, controller: controller) {
                 if container.section == .visible,
                    let appState = container.appState
@@ -460,9 +444,12 @@ final class LayoutBarPaddingView: NSView {
                     // Concealed occupants of visible slots (parked
                     // hiding-unsupported apps) are not draggable anchors;
                     // planning against them strands the move.
+                    // A hidden Thaw icon has no tile, so it is absent from the
+                    // desired order; the planner refuses a live set it cannot order.
+                    let desiredIDs = orderedItems.map(\.uniqueIdentifier)
                     let liveItems = appState.itemManager.managedItems(for: .visible)
                         .filter { $0.isOnScreen && !$0.bounds.isEmpty }
-                    let desiredIDs = orderedItems.map(\.uniqueIdentifier)
+                        .filter { !$0.tag.matchesVisibleControlItem || desiredIDs.contains($0.uniqueIdentifier) }
                     let achievableItems = MenuBarLayoutPlannerProvider.current.achievableOrderSegments(
                         items: liveItems,
                         desiredOrder: desiredIDs,
@@ -498,6 +485,12 @@ final class LayoutBarPaddingView: NSView {
                         // The requested order is either already live or would
                         // cross a fixed anchor. Persist only its achievable
                         // projection so reconciliation cannot retry forever.
+                        Self.diagLog.info(
+                            """
+                            Reorder of \(item.logString) has no achievable destination; \
+                            desired=\(desiredIDs) live=\(MenuBarLayoutPlannerProvider.current.orderDescription(liveItems))
+                            """
+                        )
                         controller?.setSectionOrder(from: achievableItems, for: .visible)
                         Task { await appState.itemManager.cacheItemsRegardless(skipRecentMoveCheck: true) }
                     }
@@ -884,12 +877,6 @@ final class LayoutBarPaddingView: NSView {
     /// fall out of a handle drag.
     private func performGroupHandleDrop(_ handle: LayoutBarGroupHandleView, sender: NSDraggingInfo) -> Bool {
         if handle.sourceSection == container.section {
-            // Same as a single-item reorder: manual arrangement owns the
-            // order, so the group reorder is refused before it is committed.
-            guard !refusesReorderInManualArrangement() else {
-                restoreAfterGroupDrop(handle)
-                return false
-            }
             let dropX = container.convert(sender.draggingLocation, from: nil).x
             // The reorder path restores view updates itself (immediately for a
             // concealed section, or after its async move task for a live one).

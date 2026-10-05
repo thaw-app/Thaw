@@ -11013,6 +11013,9 @@
         }
       }
     },
+    "Contributors" : {
+
+    },
     "Control Center App List" : {
 
     },
@@ -11498,6 +11501,9 @@
           }
         }
       }
+    },
+    "Credits" : {
+
     },
     "Crop regions are the exact pixels Thaw reads for each menu bar item. Frames are shown once and never saved to disk." : {
 
@@ -16700,6 +16706,9 @@
 
     },
     "Free and open source" : {
+
+    },
+    "Frequent Issues" : {
 
     },
     "Full" : {
@@ -35984,6 +35993,9 @@
     "The menu bar is set to hide itself" : {
       "comment" : "Title of the Simple Mode pill shown while macOS auto-hides the menu bar."
     },
+    "The open source menu bar manager for macOS" : {
+
+    },
     "The other center symbols are decorative." : {
 
     },
@@ -37543,6 +37555,9 @@
           }
         }
       }
+    },
+    "Translators" : {
+
     },
     "Troubleshooting" : {
 

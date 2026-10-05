@@ -31,7 +31,24 @@ final class MenuBarLeadingEdgeWatcher {
 
     /// Short enough that a follower is at most half a second behind the bar,
     /// long enough that an idle bar costs two reads a second.
-    static let pollInterval = Duration.milliseconds(500)
+    nonisolated static let pollInterval = Duration.milliseconds(500)
+
+    /// The interval while the bar is changing, so a follower tracks a reflow within a few frames.
+    nonisolated static let fastPollInterval = Duration.milliseconds(60)
+
+    /// How long fast polling lasts after the last sign of change; a reflow lands in several steps.
+    nonisolated static let fastPollWindow = Duration.seconds(2)
+
+    @ObservationIgnored private(set) var fastPollUntil: ContinuousClock.Instant?
+
+    /// The wait before the next poll: fast inside the window after a change, idle otherwise.
+    static nonisolated func pollInterval(
+        now: ContinuousClock.Instant,
+        fastUntil: ContinuousClock.Instant?
+    ) -> Duration {
+        guard let fastUntil, now < fastUntil else { return pollInterval }
+        return fastPollInterval
+    }
 
     deinit {
         pollTask?.cancel()
@@ -46,13 +63,31 @@ final class MenuBarLeadingEdgeWatcher {
             // A walk may have changed which item is first.
             for await _ in Observations({ itemManager.managedItems.map(\.tag) }) {
                 self?.refindAnchor()
+                self?.expectChange()
             }
         }
+        startPolling()
+    }
+
+    private func startPolling() {
+        pollTask?.cancel()
         pollTask = Task { @MainActor [weak self] in
             while !Task.isCancelled {
-                try? await Task.sleep(for: Self.pollInterval, tolerance: .milliseconds(100))
+                let interval = Self.pollInterval(now: .now, fastUntil: self?.fastPollUntil)
+                try? await Task.sleep(for: interval, tolerance: interval / 5)
+                guard !Task.isCancelled else { return }
                 await self?.poll()
             }
+        }
+    }
+
+    /// Polls fast for a short while because the bar is about to change, such as on a reveal or hide.
+    /// Restarts the loop so the first fast read does not wait out an idle sleep.
+    func expectChange() {
+        let wasFast = fastPollUntil.map { ContinuousClock.now < $0 } ?? false
+        fastPollUntil = .now + Self.fastPollWindow
+        if !wasFast, pollTask != nil {
+            startPolling()
         }
     }
 
@@ -85,6 +120,8 @@ final class MenuBarLeadingEdgeWatcher {
         guard sample != leadingEdge else { return }
         diagLog.debug("leading edge moved \(leadingEdge.map { "\(Int($0.x))" } ?? "nil") → \(edge.map { "\(Int($0))" } ?? "nil")")
         leadingEdge = sample
+        // One move is usually the first of several.
+        fastPollUntil = .now + Self.fastPollWindow
     }
 
     /// Picks the element to watch: of the first visible item's owner, the

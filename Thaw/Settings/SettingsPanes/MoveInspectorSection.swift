@@ -5,7 +5,6 @@
 //  Copyright (Thaw) © 2026 Toni Förster
 //  Licensed under the GNU GPLv3
 
-import PlatformRuntimeKit
 import SwiftUI
 import ThawUI
 
@@ -21,19 +20,6 @@ import ThawUI
 struct MoveInspectorSection: View {
     @Environment(AppState.self) var appState
 
-    /// One row of the system's layout table.
-    private struct TableEntry: Identifiable {
-        let key: String
-        let weight: Int
-        var id: String {
-            key
-        }
-    }
-
-    @State private var tableEntries: [TableEntry] = []
-    @State private var tableAccessDenied = false
-    @State private var authoredBySection: [(section: String, identifiers: [String])] = []
-
     var body: some View {
         ThawSection("Recent item moves") {
             scopeDescription
@@ -43,9 +29,6 @@ struct MoveInspectorSection: View {
                 moveList
             }
         }
-        // systemLayoutTable below is parked, not wired: it compared the
-        // agent's table against Thaw's saved order behind a Full Disk Access
-        // offer the app no longer makes.
     }
 
     private var moveMonitor: MovePipelineMonitor {
@@ -170,90 +153,6 @@ struct MoveInspectorSection: View {
         let components = duration.components
         return Int(components.seconds) * 1000
             + Int(components.attoseconds / 1_000_000_000_000_000)
-    }
-
-    // MARK: macOS's saved menu bar layout
-
-    /// Thaw's authored order next to the agent's actual table, the diff that
-    /// answers "why is this item in the wrong place". Read-only, and only
-    /// readable with Full Disk Access: without it macOS refuses the file and
-    /// there is nothing to compare.
-    private var systemLayoutTable: some View {
-        ThawSection("macOS's saved menu bar layout") {
-            if tableAccessDenied {
-                Text("macOS protects its saved menu bar layout. Grant Menu Bar Layout Access on the Privacy page to compare it with \(Constants.displayName)'s saved layout.")
-                    .font(ThawType.footnote)
-                    .foregroundStyle(ThawInk.supporting)
-            } else if tableEntries.isEmpty, authoredBySection.isEmpty {
-                Text("Nothing read yet.")
-                    .font(ThawType.footnote)
-                    .foregroundStyle(ThawInk.supporting)
-            } else {
-                authoredBlock
-                tableBlock
-                refreshButton
-            }
-        }
-    }
-
-    private var authoredBlock: some View {
-        VStack(alignment: .leading, spacing: ThawSpacing.tight) {
-            Text("\(Constants.displayName)'s saved order").font(ThawType.caption.bold())
-            ForEach(authoredBySection, id: \.section) { entry in
-                VStack(alignment: .leading, spacing: ThawSpacing.hairline) {
-                    Text(entry.section).font(ThawType.micro).foregroundStyle(ThawInk.supporting)
-                    Text(entry.identifiers.joined(separator: " \(Constants.menuArrow) "))
-                        .font(ThawType.micro.monospaced())
-                        .textSelection(.enabled)
-                }
-            }
-        }
-        .frame(maxWidth: .infinity, alignment: .leading)
-    }
-
-    private var tableBlock: some View {
-        VStack(alignment: .leading, spacing: ThawSpacing.tight) {
-            Text("macOS's saved layout, by position").font(ThawType.caption.bold())
-            ForEach(tableEntries) { entry in
-                HStack(alignment: .firstTextBaseline) {
-                    Text("\(entry.weight)")
-                        .font(ThawType.micro.monospaced())
-                        .foregroundStyle(ThawInk.supporting)
-                        .frame(width: 48, alignment: .trailing)
-                    Text(entry.key)
-                        .font(ThawType.micro.monospaced())
-                        .textSelection(.enabled)
-                }
-            }
-        }
-        .frame(maxWidth: .infinity, alignment: .leading)
-    }
-
-    private var refreshButton: some View {
-        Button("Read Again") {
-            loadTableComparison()
-        }
-        .buttonStyle(.settingsGlass)
-    }
-
-    private func loadTableComparison() {
-        guard RuntimePreferenceStore.positionsDomainAccess() != .denied else {
-            tableAccessDenied = true
-            return
-        }
-        tableAccessDenied = false
-
-        let positions = RuntimePositionStore.currentPositions()
-        tableEntries = positions
-            .sorted { $0.value < $1.value }
-            .map { TableEntry(key: $0.key, weight: $0.value) }
-
-        let controller = appState.menuBarManager.sectionController
-        authoredBySection = MenuBarSection.Name.allCases.compactMap { section in
-            let identifiers = controller.sectionItemOrder[section] ?? []
-            guard !identifiers.isEmpty else { return nil }
-            return (section: section.rawValue, identifiers: identifiers)
-        }
     }
 }
 

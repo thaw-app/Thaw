@@ -343,15 +343,6 @@ public extension Bridging {
         }
         return result
     }
-
-    /// Returns the reboot-stable key for every space, keyed by space identifier.
-    static func getSpacePersistentKeys() -> [CGSSpaceID: String] {
-        var keys: [CGSSpaceID: String] = [:]
-        for space in getManagedSpaces() {
-            keys[space.spaceID] = space.persistentKey
-        }
-        return keys
-    }
 }
 
 // MARK: - SLSMenuBar
@@ -580,20 +571,6 @@ public extension Bridging {
     ///   - spaceID: The space to test against.
     static func isWindowOnSpace(_ windowID: CGWindowID, _ spaceID: CGSSpaceID) -> Bool {
         getSpaceList(for: windowID, visibleSpacesOnly: false).contains(spaceID)
-    }
-
-    /// Whether a window's frame overlaps a rectangle.
-    ///
-    /// - Parameters:
-    ///   - windowID: The window to measure.
-    ///   - displayBounds: The rectangle to test against, in global coordinates.
-    /// - Returns: false when the window has no readable frame; an unknown
-    ///   position is treated as no overlap rather than assumed overlap.
-    static func windowIntersectsDisplayBounds(_ windowID: CGWindowID, _ displayBounds: CGRect) -> Bool {
-        guard let frame = getWindowBounds(for: windowID) else {
-            return false
-        }
-        return displayBounds.intersects(frame)
     }
 
     /// Whether a window is genuinely visible somewhere on the desktop.

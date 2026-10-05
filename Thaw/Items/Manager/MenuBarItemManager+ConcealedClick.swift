@@ -16,14 +16,16 @@ extension MenuBarItemManager {
     /// every method presses or reveals the item where it sits. Apps answer
     /// different methods, so they are tried cheapest-first and the one that
     /// worked is remembered. Electron tray items take an AX press.
+    /// Returns .completed or .activationFailed; callers that only want the click can ignore it.
     @MainActor
+    @discardableResult
     func clickConcealedItem(
         item: MenuBarItem,
         with mouseButton: CGMouseButton,
         on displayID: CGDirectDisplayID
-    ) async {
+    ) async -> MenuBarItemActivationOutcome {
         guard let controller = appState?.menuBarManager.sectionController else {
-            return
+            return .activationFailed
         }
 
         // Opening an item on another display activates it; the repair pass must
@@ -48,10 +50,13 @@ extension MenuBarItemManager {
                 MenuBarItemManager.diagLog.info(
                     "clickConcealedItem: opened visible \(item.logString) via AX press"
                 )
-                return
+                // The press landed; nothing here watches what the owner did with it.
+                return .completed(reactionObserved: false)
             }
-            _ = try? await click(item: item, with: mouseButton)
-            return
+            guard let reaction = try? await click(item: item, with: mouseButton) else {
+                return .activationFailed
+            }
+            return .completed(reactionObserved: reaction.didReact)
         }
 
         // Closing an open menu removes a window, which reads as no reaction;
@@ -60,11 +65,11 @@ extension MenuBarItemManager {
         let menusBefore = ownerMenuWindowIDs(item)
         if mouseButton == .left, let opened = menusOpenedByClick[key], !opened.isDisjoint(with: menusBefore) {
             menusOpenedByClick[key] = nil
-            _ = await pressConcealedItemInPlace(item)
+            let reacted = await pressConcealedItemInPlace(item)
             MenuBarItemManager.diagLog.info(
                 "clickConcealedItem: \(item.logString) had its menu open; pressed once to close it"
             )
-            return
+            return .completed(reactionObserved: reacted)
         }
 
         // Apps answer different methods, so try them cheapest first, stop at
@@ -85,7 +90,7 @@ extension MenuBarItemManager {
                 )
                 menusOpenedByClick[key] = ownerMenuWindowIDs(item).subtracting(menusBefore)
                 rememberOpenMethod(method, for: identity)
-                return
+                return .completed(reactionObserved: true)
             }
             MenuBarItemManager.diagLog.debug(
                 "clickConcealedItem: \(method.rawValue) did not open \(item.logString); trying the next method"
@@ -100,6 +105,7 @@ extension MenuBarItemManager {
         )
         controller.revealItemTemporarily(item.uniqueIdentifier)
         controller.scheduleTemporaryItemConceal(item.uniqueIdentifier)
+        return .activationFailed
     }
 
     /// The owner's windows on screen at pop-up menu level. Not the status bar

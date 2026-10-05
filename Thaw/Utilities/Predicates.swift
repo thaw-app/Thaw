@@ -8,24 +8,10 @@
 import AppKit
 
 enum Predicates<Input> {
-    typealias ThrowingPredicate = (Input) throws -> Bool
-
     typealias NonThrowingPredicate = (Input) -> Bool
-
-    static func predicate(_ body: @escaping (Input) throws -> Bool) -> ThrowingPredicate {
-        return body
-    }
 
     static func predicate(_ body: @escaping (Input) -> Bool) -> NonThrowingPredicate {
         return body
-    }
-
-    static func predicate(_ body: @escaping () throws -> Bool) -> ThrowingPredicate {
-        predicate { _ in try body() }
-    }
-
-    static func predicate(_ body: @escaping () -> Bool) -> NonThrowingPredicate {
-        predicate { _ in body() }
     }
 }
 

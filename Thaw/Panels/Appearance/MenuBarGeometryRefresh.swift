@@ -14,6 +14,8 @@ final class MenuBarGeometryRefresh {
     struct Snapshot: Sendable {
         var itemBounds: [CGRect]
         var chevronFrame: CGRect
+        /// Only this display's live edge can update bounds mirrored onto another display.
+        var sourceScreenFrame: CGRect?
         /// When the bounds were read. A change seen after this is newer than
         /// the snapshot.
         var readAt: ContinuousClock.Instant = .now

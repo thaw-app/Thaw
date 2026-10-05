@@ -159,7 +159,7 @@ final class ThawBarPanel: NSPanel {
             }
             .store(in: &cancellables)
 
-        colorManager.performSetup(with: self)
+        colorManager.performSetup(with: self, appState: appState)
     }
 
     /// Nil when the panel is wider than the screen and no placement fits.
@@ -455,6 +455,23 @@ final class ThawBarPanel: NSPanel {
         }
     }
 
+    /// The live status window can move displays before the AX cache catches up.
+    /// Consuming that icon's mouse-down would close the panel before its action toggles it open again.
+    static nonisolated func isControlItemClick(
+        appKitLocation: CGPoint,
+        liveControlItemFrame: CGRect?,
+        quartzLocation: CGPoint?,
+        cachedControlItemFrame: CGRect?
+    ) -> Bool {
+        if let liveControlItemFrame, liveControlItemFrame.contains(appKitLocation) {
+            return true
+        }
+        if let quartzLocation, let cachedControlItemFrame {
+            return cachedControlItemFrame.contains(quartzLocation)
+        }
+        return false
+    }
+
     /// Exclude the Thaw icon from outside-click dismissal because its click toggles the panel.
     private func hideIfClickIsOutside() {
         // Test AppKit panel and Core Graphics anchor in their own coordinate spaces or the icon never matches.
@@ -464,9 +481,12 @@ final class ThawBarPanel: NSPanel {
         // With the icon off there is no icon to click, only its 2-pt stand-in.
         if let appState,
            appState.settings.general.showThawIcon,
-           let anchor = controlItemAnchorBounds(appState: appState),
-           let pointerLocation = MouseHelpers.locationCoreGraphics,
-           anchor.contains(pointerLocation)
+           Self.isControlItemClick(
+               appKitLocation: NSEvent.mouseLocation,
+               liveControlItemFrame: appState.menuBarManager.section(withName: .visible)?.controlItem.window?.frame,
+               quartzLocation: MouseHelpers.locationCoreGraphics,
+               cachedControlItemFrame: controlItemAnchorBounds(appState: appState)
+           )
         {
             return
         }
@@ -845,6 +865,7 @@ private struct ThawBarContentView: View {
                 menuBarManager: menuBarManager,
                 screen: screen,
                 appearance: thawBarAppearance,
+                overridesMenuBar: configuration.thawBarAppearance.overridesMenuBar,
                 shape: clipShape
             ) {
                 Group {
@@ -1097,14 +1118,21 @@ private struct ThawBarChrome<Content: View>: View {
     let menuBarManager: MenuBarManager
     let screen: NSScreen
     let appearance: ResolvedThawBarAppearance
+    let overridesMenuBar: Bool
     let shape: ThawBarBorderShape
     @ViewBuilder let content: Content
 
     var body: some View {
+        let sample = ThawBarColorManager.backgroundSample(
+            for: screen.displayID,
+            overridesMenuBar: overridesMenuBar,
+            sharedSamples: menuBarManager.averageColors,
+            localSample: colorManager.colorDisplayID == screen.displayID ? colorManager.colorInfo : nil
+        )
         content
             .foregroundStyle(ThawBarAppearanceForeground.resolve(
                 appearance: appearance,
-                sampledInfo: colorManager.colorInfo,
+                sampledInfo: sample,
                 adaptiveInfo: menuBarManager.averageColors[screen.displayID],
                 palette: menuBarManager.wallpaperPalettes[screen.displayID],
                 screen: screen
@@ -1112,7 +1140,7 @@ private struct ThawBarChrome<Content: View>: View {
             .background {
                 ThawBarAppearanceBackground(
                     appearance: appearance,
-                    sampledColor: colorManager.colorInfo?.color,
+                    sampledColor: sample?.color,
                     adaptiveColor: menuBarManager.averageColors[screen.displayID]?.color,
                     palette: menuBarManager.wallpaperPalettes[screen.displayID],
                     shape: shape

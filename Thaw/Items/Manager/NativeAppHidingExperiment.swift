@@ -22,11 +22,18 @@ final class NativeAppHidingExperiment {
         controller.lastError
     }
 
+    /// True while apps hidden in an earlier session could not be shown again at launch.
+    var previousSessionRecoveryFailed: Bool {
+        controller.previousSessionRecoveryFailed
+    }
+
     @ObservationIgnored private let controller: NativeAppHidingController = {
         let appListAccess = PickedFileAccess.controlCenterAppList
         return NativeAppHidingController(environment: .init(
             activateAccess: { appListAccess.activateIfNeeded() },
-            requestAccess: { appListAccess.requestAccessViaOpenPanel() }
+            requestAccess: { appListAccess.requestAccessViaOpenPanel() },
+            ownsBundle: ExtraVisibilityChannel.ownsBundle,
+            hideOwnedBundles: ExtraVisibilityChannel.hide
         ))
     }()
 

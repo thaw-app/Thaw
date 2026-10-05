@@ -41,14 +41,6 @@ nonisolated enum ClickReactionVerifier {
         var didReact: Bool {
             self != .unobserved
         }
-
-        /// The window the click opened, if one was seen.
-        var openedWindowID: CGWindowID? {
-            if case let .openedInterface(windowID) = self {
-                return windowID
-            }
-            return nil
-        }
     }
 
     /// The observable state of the world immediately before a click.

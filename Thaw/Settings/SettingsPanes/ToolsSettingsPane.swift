@@ -17,6 +17,7 @@ struct ToolsSettingsPane: View {
     @State private var currentLogFileName: String?
     @State private var pendingAction: MaintenanceToolAction?
     @State private var isBusy = false
+    @State private var confirmsVisibilityRecovery = false
     @State private var statusMessage: String?
     /// The tool whose row shows statusMessage, so a result reads beside
     /// the button that produced it rather than at the foot of the page.
@@ -59,6 +60,14 @@ struct ToolsSettingsPane: View {
 
             // These delete preferences, clear the cache, or quit apps.
             ThawSection("Troubleshooting") {
+                toolRow(
+                    title: "Missing menu bar items",
+                    detail: "Restore app visibility without resetting your layout. Normal hiding stops while a separate recovery window is open.",
+                    buttonTitle: "Restore Missing Items…"
+                ) {
+                    confirmsVisibilityRecovery = true
+                }
+
                 toolRow(
                     title: "Control Center preferences",
                     detail: "Quit Control Center and delete its preference files so the state of Apple's menu bar items can rebuild.",
@@ -134,6 +143,23 @@ struct ToolsSettingsPane: View {
             Button("Cancel", role: .cancel) {}
         } message: { action in
             Text(action.confirmationMessage)
+        }
+        .confirmationDialog("Open visibility recovery?", isPresented: $confirmsVisibilityRecovery, titleVisibility: .visible) {
+            Button("Quit Thaw and Open Recovery") {
+                Task {
+                    isBusy = true
+                    defer { isBusy = false }
+                    do {
+                        try await NativeVisibilityRecoveryLaunch.openRecovery()
+                    } catch {
+                        failedAction = nil
+                        errorMessage = error.localizedDescription
+                    }
+                }
+            }
+            Button("Cancel", role: .cancel) {}
+        } message: {
+            Text("Thaw will quit normal mode so neither hiding mechanism can interfere. Your saved layout is kept. Native hiding will remain off after recovery.")
         }
         .errorAlert(failedAction?.errorTitle ?? "Couldn’t run tool", message: $errorMessage, role: .cancel)
     }

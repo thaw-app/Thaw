@@ -10,38 +10,26 @@ import Foundation
 import MenuBarModel
 import PlatformRuntimeKit
 
-/// Pure idle-item and notch suggestions allow testing thresholds without a live menu bar.
+/// Notch suggestions can be evaluated without a live menu bar.
 nonisolated enum LayoutSuggestions {
-    /// How long an item must go unclicked before it is suggested for Hidden.
-    static let idleInterval: TimeInterval = 30 * 24 * 60 * 60
-
-    /// The key an item's usage record is stored under.
-    static func usageKey(for item: MenuBarItem) -> String {
-        MenuBarItemTag.canonicalPersistentIdentifier(item.tag.tagIdentifier)
-    }
-
-    /// Suggest only after a full idleInterval of observation; shorter records cannot prove inactivity.
-    /// Shortcuts and Thaw Bar clicks may be unseen, so this is a review suggestion, not a verdict.
-    static func unusedItems(
-        _ visibleItems: [MenuBarItem],
-        records: [String: HygieneItemRecord],
-        now: Date
-    ) -> [MenuBarItem] {
-        visibleItems.filter { item in
-            guard !item.isControlItem,
-                  let record = records[usageKey(for: item)],
-                  now.timeIntervalSince(record.firstSeen) >= idleInterval
-            else { return false }
-            let lastUse = record.lastActivated ?? record.firstSeen
-            return now.timeIntervalSince(lastUse) >= idleInterval
-        }
-    }
-
     /// Visible items a notch covers, per MenuBarNotchGeometry.
     static func itemsBehindNotch(_ visibleItems: [MenuBarItem], notchRects: [CGRect]) -> [MenuBarItem] {
         visibleItems.filter { item in
             !item.isControlItem && item.isOnScreen && MenuBarNotchGeometry.isOccluded(item, by: notchRects)
         }
+    }
+
+    /// Little Snitch's menu bar agent. Its icon is only enumerable while Little Snitch allows GUI scripting.
+    static let littleSnitchAgentBundleID = "at.obdev.littlesnitch.agent"
+
+    /// The app whose settings hold the GUI Scripting switch.
+    static let littleSnitchAppBundleID = "at.obdev.littlesnitch"
+
+    /// Whether Little Snitch is running while none of its items was enumerated.
+    /// An empty inventory proves nothing, so it never reports.
+    static func littleSnitchItemIsMissing(runningBundleIDs: Set<String>, items: [MenuBarItem]) -> Bool {
+        guard runningBundleIDs.contains(littleSnitchAgentBundleID), !items.isEmpty else { return false }
+        return !items.contains { "\($0.tag.namespace)" == littleSnitchAgentBundleID }
     }
 
     /// A short, locale-formatted list of names, with "and N more" past three.
@@ -63,8 +51,8 @@ nonisolated enum LayoutSuggestions {
 @MainActor
 enum LayoutSuggestionDismissal {
     enum Kind: String {
-        case unusedItems
         case itemsBehindNotch
+        case littleSnitchScriptingAccess
     }
 
     /// How long a dismissal holds.

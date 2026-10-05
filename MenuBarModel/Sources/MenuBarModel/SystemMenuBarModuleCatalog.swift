@@ -73,6 +73,12 @@ public enum SystemMenuBarModuleCatalog {
             controlCenterMenuExtraTitle: "com.apple.menuextra.focusmode",
             controlCenterPrefKey: "FocusModes"
         ),
+        SystemMenuBarModule(
+            name: "Sound",
+            titleAliases: ["Sound", "Volume", "com.apple.menuextra.sound", "com.apple.menuextra.volume"],
+            controlCenterMenuExtraTitle: "com.apple.menuextra.sound",
+            controlCenterPrefKey: "Sound"
+        ),
         // Modules with no Control Center per-host preference.
         SystemMenuBarModule(
             name: "Battery",
@@ -103,12 +109,6 @@ public enum SystemMenuBarModuleCatalog {
         SystemMenuBarModule(
             name: "Keyboard",
             titleAliases: ["Keyboard", "com.apple.menuextra.keyboard"],
-            controlCenterMenuExtraTitle: nil,
-            controlCenterPrefKey: nil
-        ),
-        SystemMenuBarModule(
-            name: "Sound",
-            titleAliases: ["Sound", "Volume", "com.apple.menuextra.sound", "com.apple.menuextra.volume"],
             controlCenterMenuExtraTitle: nil,
             controlCenterPrefKey: nil
         ),

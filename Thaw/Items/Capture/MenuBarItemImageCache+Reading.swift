@@ -321,6 +321,7 @@ extension MenuBarItemImageCache {
         overflowBounds: [CGRect],
         concealedIdentifiers: Set<String>,
         ambiguousIdentifiers: Set<String>,
+        forgivenTags: Set<MenuBarItemTag>,
         cropRectOwners: inout [CGRect: MenuBarItemTag],
         into result: inout CapturePass
     ) {
@@ -330,7 +331,7 @@ extension MenuBarItemImageCache {
         let scale = capture.scale
 
         for (item, bounds) in candidates {
-            if shouldSkipCapture(for: item) {
+            if !forgivenTags.contains(item.tag), shouldSkipCapture(for: item) {
                 result.unreadable.append(item)
                 continue
             }
@@ -479,7 +480,7 @@ extension MenuBarItemImageCache {
                     "axBoundsCapture: cropping failed for \(item.logString) " +
                         "rawCropRect=\(mapping.raw) clamped=\(cropRect)"
                 )
-                recordCaptureFailure(for: item)
+                result.failedCaptureItems.append(item)
                 result.unreadable.append(item)
                 continue
             }
@@ -588,7 +589,7 @@ extension MenuBarItemImageCache {
                 continue
             }
 
-            recordCaptureSuccess(for: item)
+            result.recoveredItems.append(item)
             cropRectOwners[cropRect] = item.tag
             result.captured[item.tag] = captured
         }
@@ -600,7 +601,9 @@ extension MenuBarItemImageCache {
         scale: CGFloat,
         appState: AppState,
         freshBounds: Bool = false,
-        concealedIdentifiers: Set<String> = []
+        concealedIdentifiers: Set<String> = [],
+        forgivenTags: Set<MenuBarItemTag> = [],
+        geometryOwners: Set<pid_t> = []
     ) async -> CapturePass {
         // Dividers capture as transparent; the visible Thaw icon crops from the
         // display strip like any Liquid Glass item. The recording indicator is
@@ -644,26 +647,44 @@ extension MenuBarItemImageCache {
             NSScreen.screen(for: displayID)?.frame
         }
 
-        let liveItems: [MenuBarItem]
+        return await captureImages(
+            of: capturable,
+            scale: scale,
+            displayID: displayID,
+            screenFrame: screenFrame,
+            freshBounds: freshBounds,
+            concealedIdentifiers: concealedIdentifiers,
+            forgivenTags: forgivenTags,
+            using: LiveMenuBarCaptureReader(geometryOwners: geometryOwners)
+        )
+    }
+
+    @concurrent
+    nonisolated func captureImages(
+        of items: [MenuBarItem],
+        scale: CGFloat,
+        displayID: CGDirectDisplayID,
+        screenFrame: CGRect?,
+        freshBounds: Bool,
+        concealedIdentifiers: Set<String>,
+        forgivenTags: Set<MenuBarItemTag> = [],
+        using reader: any MenuBarCaptureReading = LiveMenuBarCaptureReader()
+    ) async -> CapturePass {
+        guard !screenIsLocked(), !Task.isCancelled else { return CapturePass() }
         let liveBoundsByID: [String: CGRect]
         if freshBounds {
-            // Stale snapshot bounds of a reflowing item can crop across its
-            // neighbours. Scoped to the capture display.
-            liveItems = await MenuBarItem.getMenuBarItems(
-                on: displayID,
-                option: [.onScreen, .activeSpace]
-            )
+            let liveItems = await reader.menuBarItems(displayID: displayID)
+            guard !screenIsLocked(), !Task.isCancelled else { return CapturePass() }
             liveBoundsByID = Dictionary(
                 liveItems.map { ($0.uniqueIdentifier, $0.bounds) },
                 uniquingKeysWith: { first, _ in first }
             )
         } else {
-            liveItems = []
             liveBoundsByID = [:]
         }
 
         let axItems = Self.captureBounds(
-            for: capturable,
+            for: items,
             freshBounds: freshBounds,
             liveBoundsByID: liveBoundsByID,
             screenFrame: screenFrame
@@ -681,7 +702,9 @@ extension MenuBarItemImageCache {
             scale: scale,
             displayID: displayID,
             validateFreshBounds: freshBounds,
-            concealedIdentifiers: concealedIdentifiers
+            concealedIdentifiers: concealedIdentifiers,
+            forgivenTags: forgivenTags,
+            using: reader
         )
     }
 
@@ -745,9 +768,12 @@ extension MenuBarItemImageCache {
             for: section,
             revealedSection: revealedSection
         )
-        if shouldUseFreshBounds {
-            clearCaptureFailures(for: items)
-        }
+        // A reveal just put these back on the bar, so they get a fresh attempt
+        // whatever their record says. The pass only sets the record aside; it is
+        // forgotten when the pass commits, so a discarded pass forgives nothing.
+        let forgivenTags = section != .visible && shouldUseFreshBounds
+            ? Set(items.map(\.tag))
+            : []
         // A stale item cache can let concealed items into this pass; the crop
         // loop rejects them against this set.
         let concealedIdentifiers = appState.menuBarManager.sectionController
@@ -756,10 +782,16 @@ extension MenuBarItemImageCache {
             of: items,
             scale: scale,
             appState: appState,
-            // Only revealed sections re-read bounds, since their items move
-            // during the reveal; an extra walk elsewhere can crop a neighbour.
+            // Re-read geometry before the screenshot, including visible items;
+            // the post-capture ownership check still rejects movement or ambiguity.
             freshBounds: shouldUseFreshBounds,
-            concealedIdentifiers: concealedIdentifiers
+            concealedIdentifiers: concealedIdentifiers,
+            forgivenTags: forgivenTags,
+            geometryOwners: Self.captureGeometryOwners(
+                for: items,
+                knownItems: appState.itemManager.managedItems,
+                recentItems: appState.itemManager.onScreenItemSnapshot.items
+            )
         )
         if !captureResult.unreadable.isEmpty {
             MenuBarItemImageCache.diagLog.debug(

@@ -20,6 +20,7 @@ enum SettingsNavigationIdentifier: String, @MainActor NavigationIdentifier {
     case profiles = "Profiles"
     case advanced = "Advanced"
     case automation = "Automation"
+    case triggers = "Triggers"
     case scripts = "Scripts"
     case widgets = "Widgets"
     case theLab = "The Lab"
@@ -41,6 +42,7 @@ enum SettingsNavigationIdentifier: String, @MainActor NavigationIdentifier {
         case .advanced: "Advanced"
         // Raw value stays "Automation" for thaw:// compatibility.
         case .automation: "Automation"
+        case .triggers: "Triggers"
         case .scripts: "Scripts"
         case .widgets: "Custom Status Icon"
         case .theLab: "Experiments"
@@ -65,6 +67,7 @@ enum SettingsNavigationIdentifier: String, @MainActor NavigationIdentifier {
         case .profiles: "Saved layouts to switch between"
         case .advanced: "Advanced options"
         case .automation: "Shortcuts, URLs and other apps"
+        case .triggers: "Show items while an app runs"
         case .scripts: "Scripts"
         case .widgets: "A custom icon in the menu bar"
         case .theLab: "Features still in testing"
@@ -87,6 +90,7 @@ enum SettingsNavigationIdentifier: String, @MainActor NavigationIdentifier {
         case .profiles: .systemSymbol("person.crop.rectangle.stack")
         case .advanced: .systemSymbol("gearshape.2")
         case .automation: .systemSymbol("app.badge.checkmark")
+        case .triggers: .systemSymbol("app.connected.to.app.below.fill")
         case .scripts: .systemSymbol("curlybraces")
         case .widgets: .systemSymbol("square.grid.2x2")
         case .theLab: .systemSymbol("flask")
@@ -104,7 +108,7 @@ extension SettingsNavigationIdentifier {
         switch self {
         case .menuBarLayout, .visibility, .thawBar, .menuBarAppearance, .displays, .spaces: .blue
         case .general, .hotkeys, .profiles, .privacy: .teal
-        case .automation, .scripts, .widgets: .indigo
+        case .automation, .triggers, .scripts, .widgets: .indigo
         case .theLab, .advanced, .tools, .about: .gray
         }
     }

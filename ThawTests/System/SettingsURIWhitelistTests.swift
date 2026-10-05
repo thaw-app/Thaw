@@ -46,6 +46,17 @@ struct SettingsURIWhitelistTests {
 
     // MARK: - Who may write
 
+    @Test("A built-in app is trusted only when signed by this app's team")
+    func builtInTrustNeedsTheSameTeam() {
+        let floe = "com.thaw.floe"
+        #expect(SettingsURIHandler.isBuiltInTrusted(bundleId: floe, senderTeamID: "TEAM", ownTeamID: "TEAM"))
+        #expect(!SettingsURIHandler.isBuiltInTrusted(bundleId: floe, senderTeamID: "OTHER", ownTeamID: "TEAM"))
+        #expect(!SettingsURIHandler.isBuiltInTrusted(bundleId: floe, senderTeamID: nil, ownTeamID: "TEAM"))
+        #expect(!SettingsURIHandler.isBuiltInTrusted(bundleId: floe, senderTeamID: "TEAM", ownTeamID: nil))
+        #expect(!SettingsURIHandler.isBuiltInTrusted(bundleId: floe, senderTeamID: nil, ownTeamID: nil))
+        #expect(!SettingsURIHandler.isBuiltInTrusted(bundleId: "com.example.other", senderTeamID: "TEAM", ownTeamID: "TEAM"))
+    }
+
     @Test("An app that was never approved does not pass the gate")
     func unapprovedSenderIsRefused() throws {
         try withScratchDefaults { _ in

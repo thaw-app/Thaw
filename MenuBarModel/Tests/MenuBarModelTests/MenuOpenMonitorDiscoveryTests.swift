@@ -298,13 +298,15 @@ struct MenuOpenMonitorDiscoveryTests {
     func popupAwayFromBarNeverOpensMenu() async {
         let scene = Scene()
         scene.items = [item()]
-        scene.windows = [WindowInfo(
-            windowID: 5256,
-            ownerPID: 123_456,
-            bounds: CGRect(x: 420, y: 924, width: 331, height: 207),
-            layer: Int(CGWindowLevelForKey(.popUpMenuWindow)),
-            title: ""
-        )]
+        scene.windows = [
+            WindowInfo(
+                windowID: 5256,
+                ownerPID: 123_456,
+                bounds: CGRect(x: 420, y: 924, width: 331, height: 207),
+                layer: Int(CGWindowLevelForKey(.popUpMenuWindow)),
+                title: ""
+            ),
+        ]
         let monitor = scene.monitor()
         #expect(await monitor.isAnyMenuOpen() == false)
         // The popup belongs to the discovered owner, so only the geometry

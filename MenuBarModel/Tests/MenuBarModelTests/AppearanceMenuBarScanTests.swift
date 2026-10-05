@@ -30,7 +30,9 @@ struct AppearanceMenuBarScanTests {
             state.record(owner == 3 ? [] : ["icon-\(owner)"], owner: owner, generation: discovery.generation, at: now)
         }
         let appearance = state.begin(
-            owners: [1, 2, 3, 4], priorityOwners: [1], scope: .requestedOwners,
+            owners: [1, 2, 3, 4],
+            priorityOwners: [1],
+            scope: .requestedOwners,
             now: now + .seconds(10)
         )
         #expect(appearance.owners == [1])

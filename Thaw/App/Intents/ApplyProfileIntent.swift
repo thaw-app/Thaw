@@ -54,14 +54,7 @@ struct ApplyProfileIntent: AppIntent {
             throw ThawIntentError.profileNotFound
         }
 
-        let manager = appState.profileManager
-        let loaded = try manager.loadProfile(id: profileID)
-
-        // Capture the outgoing ID before assignment so hooks receive the correct THAW_PREVIOUS_PROFILE_ID.
-        let previousID = manager.activeProfileID
-        manager.activeProfileID = profileID
-        manager.applyProfile(loaded, to: appState, previousProfileID: previousID)
-        await manager.layoutTask?.value
+        let loaded = try await appState.profileManager.applyProfileAwaitingLayout(id: profileID, to: appState)
 
         // Keyboard and Stream Deck workflows have no visible dialog, so acknowledge them with the HUD.
         // Skip it when settings is key, since the Profiles pane already marks the active profile.
