@@ -37,6 +37,12 @@ nonisolated enum MenuBarItemAXProvider {
         max(minimumItemHeightCeiling, (menuBarHeight ?? 0).rounded(.up) + 1)
     }
 
+    /// Discovery and capture must skip the same frames to keep Item-N numbering aligned.
+    static func itemFrame(_ reported: CGRect?, maximumHeight: CGFloat) -> CGRect? {
+        guard let reported, reported.height > 0, reported.height <= maximumHeight else { return nil }
+        return reported
+    }
+
     /// Whether an AX-reported item frame lies on the given display.
     ///
     /// For locating a known item's seat, not for narrowing the inventory:
@@ -155,11 +161,8 @@ nonisolated enum MenuBarItemAXProvider {
                 // One message for all five attributes costs the same as the
                 // frame alone.
                 let attributes = AXHelpers.menuBarChildAttributes(for: child)
-                guard let frame = attributes.frame else {
-                    continue
-                }
                 // Skip incidental children (open popovers / panels).
-                guard frame.height > 0, frame.height <= itemHeightCeiling else {
+                guard let frame = Self.itemFrame(attributes.frame, maximumHeight: itemHeightCeiling) else {
                     continue
                 }
                 // No per-display filter: macOS 27 renders one status-item set on
@@ -595,10 +598,7 @@ nonisolated enum MenuBarItemAXProvider {
                         "descendants=\(descendantFrames.map { NSStringFromRect($0) })"
                 )
             }
-            guard let frame = attributes.frame else {
-                continue
-            }
-            guard frame.height > 0, frame.height <= itemHeightCeiling else {
+            guard let frame = Self.itemFrame(attributes.frame, maximumHeight: itemHeightCeiling) else {
                 continue
             }
             // Dormant: the live caller passes no bounds. Don't use it to narrow
