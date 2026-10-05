@@ -327,6 +327,113 @@ open "thaw://set?key=showOnHover&value=true&bundleId=com.apple.Terminal"
 
 The `bundleId` parameter is stripped/ignored in release builds. Remove it in production scripts.
 
+### Launcher Operations
+
+Four operations let a launcher list and drive menu bar items and profiles. The launcher queries, ranks, and picks an identifier; Thaw resolves it, acts, and reports the outcome. They pass the same feature toggle and whitelist as the settings URLs, and take the same `callback`, `broadcast`, and `requestId` parameters as `thaw://get`.
+
+Floe (`com.thaw.floe`) is trusted without the authorization prompt and works while the Settings URI feature is off, provided it is signed by the same team as Thaw. Any other sender needs the feature enabled and an approved entry in Automation.
+
+| URL | Parameters | Description |
+| --- | ---------- | ----------- |
+| `thaw://list-items` | `callback` or `broadcast` | Menu bar items that can be activated |
+| `thaw://activate-item` | `item-id` | Opens an item's menu, revealing it first if hidden |
+| `thaw://list-profiles` | `callback` or `broadcast` | Saved profiles and which one is active |
+| `thaw://apply-profile` | `profile-id` | Applies a saved profile and waits for its layout |
+
+```bash
+open "thaw://list-items?callback=myapp://thaw-response&requestId=1"
+open "thaw://activate-item?item-id=com.example.app%3AItem-0&callback=myapp://thaw-response&requestId=2"
+open "thaw://list-profiles?callback=myapp://thaw-response&requestId=3"
+open "thaw://apply-profile?profile-id=1B4E28BA-2FA1-11D2-883F-0016D3CCA427&callback=myapp://thaw-response&requestId=4"
+```
+
+`item-id` is an `id` from `list-items`, percent-encoded; `profile-id` is an `id` from `list-profiles`. The two actions run with or without a response mechanism. The two lists need one.
+
+Responses use the `thaw://get` envelope plus an `operation` field. `data` always carries a `version` (currently `1`); fields may be added without changing it. As with `thaw://get`, the full response goes only to the callback, and `broadcast=true` returns an acknowledgement.
+
+`list-items`:
+
+```json
+{
+  "requestId": "1",
+  "operation": "list-items",
+  "status": "success",
+  "data": {
+    "version": 1,
+    "items": [
+      {"id": "com.example.app:Item-0", "name": "Example", "section": "hidden", "bundleId": "com.example.app"}
+    ]
+  }
+}
+```
+
+`section` is `visible`, `hidden`, or `alwaysHidden`. `bundleId` is omitted when the owner is unknown.
+
+`activate-item`:
+
+```json
+{
+  "requestId": "2",
+  "operation": "activate-item",
+  "status": "success",
+  "data": {"version": 1, "itemId": "com.example.app:Item-0", "outcome": "completed", "reactionObserved": true}
+}
+```
+
+| `outcome` | `status` | Meaning |
+| --------- | -------- | ------- |
+| `completed` | `success` | The press or click was delivered. `reactionObserved` says whether the app was then seen opening a menu or window; an item that acts without opening one reports `false` |
+| `itemUnavailable` | `error` | No actionable item has that identifier, for example because its app quit |
+| `permissionMissing` | `error` | Thaw lacks Accessibility permission |
+| `activationFailed` | `error` | The item is present but did not respond to any activation method |
+
+`list-profiles`:
+
+```json
+{
+  "requestId": "3",
+  "operation": "list-profiles",
+  "status": "success",
+  "data": {
+    "version": 1,
+    "activeProfileId": "1B4E28BA-2FA1-11D2-883F-0016D3CCA427",
+    "profiles": [
+      {"id": "1B4E28BA-2FA1-11D2-883F-0016D3CCA427", "name": "Work", "isActive": true}
+    ]
+  }
+}
+```
+
+`activeProfileId` is omitted when no profile is active.
+
+`apply-profile`:
+
+```json
+{
+  "requestId": "4",
+  "operation": "apply-profile",
+  "status": "success",
+  "data": {"version": 1, "profileId": "1B4E28BA-2FA1-11D2-883F-0016D3CCA427", "outcome": "applied"}
+}
+```
+
+`outcome` is `applied`, `appliedWithoutLayout` (settings applied, but the layout could not run), `profileUnavailable`, or `applyFailed`. The last two have `status` `error`.
+
+An error response puts a stable code in `error` and a readable explanation in `details`. Failed actions also keep `data`, so the outcome is in one place either way. Besides the outcomes above, the codes are `invalidRequest` (a missing `item-id` or `profile-id`) and `permissionMissing` (for `list-items`, in place of an empty list):
+
+```json
+{
+  "requestId": "2",
+  "operation": "activate-item",
+  "status": "error",
+  "error": "itemUnavailable",
+  "details": "No actionable menu bar item has this identifier",
+  "data": {"version": 1, "itemId": "com.example.app:Item-0", "outcome": "itemUnavailable"}
+}
+```
+
+A callback is a response, not a command. Any app can open your callback URL, so accept one only when its `requestId` and `operation` match a request you sent and are still waiting on, and never act on a callback beyond completing that request.
+
 ### Raycast Settings Integration
 
 ```bash
@@ -352,6 +459,25 @@ Manage authorized apps in **Settings → Automation**:
 ### Error Handling
 
 Settings URI requests fail silently when the feature is disabled, the requesting app is not whitelisted (and the user denied authorization), the setting key is invalid, or the boolean value is not `true`/`false`/`1`/`0`/`yes`/`no`. Check Thaw's diagnostic logs for details.
+
+#### get-appearance
+
+`thaw://get-appearance?callback=<url>[&requestId=<id>]` returns the menu bar appearance resolved for the current color scheme, so a partner app can match it.
+
+```
+{"requestId":"5","operation":"get-appearance","status":"success",
+ "data":{"version":1,"colorScheme":"dark","shape":"full","hasRoundedShape":true,"hasShadow":true,
+  "border":{"color":{"red":0,"green":0,"blue":0,"alpha":1},"width":1,"style":"solid"},
+  "tint":{"kind":"solid","opacity":0.2,"color":{"red":0,"green":0,"blue":0,"alpha":1}},
+  "background":{"kind":"none","opacity":1}}}
+```
+
+- `shape` is `none`, `full`, `split` or `notch`.
+- A fill's `kind` is `none`, `solid`, `gradient`, `glass`, `adaptive` or (tint only) `adaptiveGradient`. The adaptive kinds follow the wallpaper and carry no color. `color` is present for `solid` and for colored glass, `stops` (each with `color` and `location` from 0 to 1) for `gradient`, and `glassStyle` (`regular`, `clear`, `liquid`, `dynamic`) with `glassIsColored` for `glass`.
+- Colors are sRGB components from 0 to 1.
+- `border` is omitted when the border is off; its `style` is `solid`, `dashed` or `dotted`.
+
+Thaw posts the distributed notification `com.stonerl.Thaw.appearanceDidChange` when the appearance changes. It carries no payload: fetch again. The values are for one color scheme, so also fetch again when the system switches between light and dark.
 
 ## Notes
 

@@ -666,7 +666,7 @@ struct CannotArrangeLayoutView: View {
     }
 }
 
-/// Isolate item-cache and usage reads for unclicked or notch-covered items to avoid re-diffing the whole form.
+/// Isolate notch-suggestion cache reads to avoid re-diffing the whole form.
 private struct LayoutSuggestionCards: View {
     @Environment(AppState.self) private var appState
     let itemManager: MenuBarItemManager
@@ -680,6 +680,7 @@ private struct LayoutSuggestionCards: View {
 
     // Hints suggest improvements, not failures; closing means "Not now" and suppresses them for a month.
     var body: some View {
+        // swiftlint:disable:next redundant_discardable_let
         let _ = dismissals
         let behindNotch = LayoutSuggestions.itemsBehindNotch(visibleItems, notchRects: MenuBarNotchGeometry.rects)
         if !behindNotch.isEmpty, !LayoutSuggestionDismissal.isQuiet(.itemsBehindNotch) {
@@ -693,26 +694,29 @@ private struct LayoutSuggestionCards: View {
                 onDismiss: { dismiss(.itemsBehindNotch) }
             )
         }
-
-        // Usage suggestions require records from the enabled bar hygiene experiment.
-        if appState.hygieneAudit.isEnabled, !LayoutSuggestionDismissal.isQuiet(.unusedItems) {
-            let unused = LayoutSuggestions.unusedItems(
-                visibleItems,
-                records: appState.hygieneAudit.ledger.records,
-                now: .now
+        if littleSnitchItemIsMissing, !LayoutSuggestionDismissal.isQuiet(.littleSnitchScriptingAccess) {
+            ThawFirstRunHint(
+                systemImage: "exclamationmark.triangle",
+                "Little Snitch is running, but \(Constants.displayName) can’t see its menu bar icon. In Little Snitch’s settings, under Security, turn on “Allow GUI Scripting access to Little Snitch.”",
+                actionTitle: "Open Little Snitch",
+                action: openLittleSnitch,
+                onDismiss: { dismiss(.littleSnitchScriptingAccess) }
             )
-            if !unused.isEmpty {
-                ThawFirstRunHint(
-                    systemImage: "clock",
-                    unused.count == 1
-                        ? "You haven't clicked \(LayoutSuggestions.names(of: unused)) in 30 days. Moving it to Hidden frees room in your menu bar."
-                        : "You haven't clicked \(LayoutSuggestions.names(of: unused)) in 30 days. Moving them to Hidden frees room in your menu bar.",
-                    actionTitle: "Move to Hidden",
-                    action: { MenuBarSearchItemActions.move(unused, to: .hidden, appState: appState) },
-                    onDismiss: { dismiss(.unusedItems) }
-                )
-            }
         }
+    }
+
+    private var littleSnitchItemIsMissing: Bool {
+        LayoutSuggestions.littleSnitchItemIsMissing(
+            runningBundleIDs: Set(NSWorkspace.shared.runningApplications.compactMap(\.bundleIdentifier)),
+            items: itemManager.managedItems
+        )
+    }
+
+    private func openLittleSnitch() {
+        guard let url = NSWorkspace.shared.urlForApplication(
+            withBundleIdentifier: LayoutSuggestions.littleSnitchAppBundleID
+        ) else { return }
+        NSWorkspace.shared.openApplication(at: url, configuration: NSWorkspace.OpenConfiguration())
     }
 
     private func dismiss(_ kind: LayoutSuggestionDismissal.Kind) {

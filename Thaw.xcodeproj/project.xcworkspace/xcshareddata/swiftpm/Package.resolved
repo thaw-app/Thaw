@@ -1,87 +1,78 @@
 {
-  "originHash": "0de4e0c74319c1c0eb183fecc7db69b5ec0d75c7d65682b687132c6f97d9acd9",
-  "pins": [
+  "originHash" : "e86f35e2360e11a42ae8b4901fce05e8a7c199180845e1b438c7e1697241ed80",
+  "pins" : [
     {
-      "identity": "axswift6",
-      "kind": "remoteSourceControl",
-      "location": "https://github.com/thaw-app/AXSwift6",
-      "state": {
-        "revision": "798afe6d2929d104beef6118c99bc77a3e45d4da",
-        "version": "0.5.2"
+      "identity" : "axswift6",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/thaw-app/AXSwift6",
+      "state" : {
+        "revision" : "798afe6d2929d104beef6118c99bc77a3e45d4da",
+        "version" : "0.5.2"
       }
     },
     {
-      "identity": "compactslider",
-      "kind": "remoteSourceControl",
-      "location": "https://github.com/buh/CompactSlider",
-      "state": {
-        "revision": "52a01bd09156152881c53ba235c862e3bf5690b1",
-        "version": "2.1.0"
+      "identity" : "compactslider",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/buh/CompactSlider",
+      "state" : {
+        "revision" : "52a01bd09156152881c53ba235c862e3bf5690b1",
+        "version" : "2.1.0"
       }
     },
     {
-      "identity": "ifrit",
-      "kind": "remoteSourceControl",
-      "location": "https://github.com/ukushu/Ifrit",
-      "state": {
-        "revision": "7c889a67bad90c5efefa56889b2d61bfbb831473",
-        "version": "4.0.0"
+      "identity" : "ifrit",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/ukushu/Ifrit",
+      "state" : {
+        "revision" : "7c889a67bad90c5efefa56889b2d61bfbb831473",
+        "version" : "4.0.0"
       }
     },
     {
-      "identity": "prk-bin",
-      "kind": "remoteSourceControl",
-      "location": "https://github.com/thaw-app/prk-bin",
-      "state": {
-        "revision": "b73389e8c7f32e7e06a0398cab0c4fee7c98fdc1",
-        "version": "1.0.0"
+      "identity" : "sparkle",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/sparkle-project/Sparkle",
+      "state" : {
+        "revision" : "eef1a539a373c1f1a320624b1130fc5de7b2e100",
+        "version" : "2.10.0"
       }
     },
     {
-      "identity": "sparkle",
-      "kind": "remoteSourceControl",
-      "location": "https://github.com/sparkle-project/Sparkle",
-      "state": {
-        "revision": "eef1a539a373c1f1a320624b1130fc5de7b2e100",
-        "version": "2.10.0"
+      "identity" : "swift-async-algorithms",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/apple/swift-async-algorithms",
+      "state" : {
+        "revision" : "3da39bbc4e687d4192af7c9cf4eab805745a0b9c",
+        "version" : "1.1.5"
       }
     },
     {
-      "identity": "swift-async-algorithms",
-      "kind": "remoteSourceControl",
-      "location": "https://github.com/apple/swift-async-algorithms",
-      "state": {
-        "revision": "3da39bbc4e687d4192af7c9cf4eab805745a0b9c",
-        "version": "1.1.5"
+      "identity" : "swift-collections",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/apple/swift-collections",
+      "state" : {
+        "revision" : "a0cb0954ecb21e4e31b0070e6ed5674e8556685a",
+        "version" : "1.6.0"
       }
     },
     {
-      "identity": "swift-collections",
-      "kind": "remoteSourceControl",
-      "location": "https://github.com/apple/swift-collections.git",
-      "state": {
-        "revision": "a0cb0954ecb21e4e31b0070e6ed5674e8556685a",
-        "version": "1.6.0"
+      "identity" : "swift-subprocess",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/swiftlang/swift-subprocess",
+      "state" : {
+        "revision" : "b3937ab85dd32f6e9435914599c1519074769c1a",
+        "version" : "1.0.0"
       }
     },
     {
-      "identity": "swift-subprocess",
-      "kind": "remoteSourceControl",
-      "location": "https://github.com/swiftlang/swift-subprocess",
-      "state": {
-        "revision": "b3937ab85dd32f6e9435914599c1519074769c1a",
-        "version": "1.0.0"
-      }
-    },
-    {
-      "identity": "swift-system",
-      "kind": "remoteSourceControl",
-      "location": "https://github.com/apple/swift-system",
-      "state": {
-        "revision": "b5544ba79a70a0cb3563e75bf26dc198d6b40ed3",
-        "version": "1.7.4"
+      "identity" : "swift-system",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/apple/swift-system",
+      "state" : {
+        "revision" : "b5544ba79a70a0cb3563e75bf26dc198d6b40ed3",
+        "version" : "1.7.4"
       }
     }
   ],
-  "version": 3
+  "version" : 3
 }

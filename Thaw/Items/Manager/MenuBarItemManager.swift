@@ -446,16 +446,21 @@ final class MenuBarItemManager {
     ///
     /// The deficit holds while the same items compete for the bar and is
     /// dropped once an item arrives or leaves.
+    ///
+    /// Parked items only count while macOS shows its own overflow control.
+    /// An app switched off in System Settings parks at x == -1 too, and no
+    /// amount of concealing brings it back.
     static nonisolated func parkedLaneDeficit(
         previous: (width: CGFloat, visibleUIDs: Set<String>)?,
         parkedWidths: [CGFloat],
+        isNativeOverflowActive: Bool,
         modeledHeadroom: CGFloat,
         visibleUIDs: Set<String>,
         overflowUIDs: Set<String>
     ) -> (width: CGFloat, visibleUIDs: Set<String>)? {
         let membership = visibleUIDs.union(overflowUIDs)
         let carried = previous.flatMap { $0.visibleUIDs == membership ? $0.width : nil } ?? 0
-        guard !parkedWidths.isEmpty else {
+        guard isNativeOverflowActive, !parkedWidths.isEmpty else {
             return carried > 0 ? (carried, membership) : nil
         }
         let parked = parkedWidths.reduce(CGFloat.zero) { $0 + budgetWidth(forMeasuredWidth: $1) + 8 }
@@ -662,16 +667,19 @@ final class MenuBarItemManager {
     /// cache pass. A new apply or an explicit user Command-drag clears it.
     var suppressSpatialOrderPersistenceAfterFailedApply = false
 
-    /// Whether the person using Thaw has taken arrangement into their own
-    /// hands (MenuBarArrangementMode.manual).
-    ///
-    /// In manual mode Thaw performs no moves and writes no preferred
-    /// positions: the order in the bar is whatever the user ⌘-dragged it to.
-    /// Hiding and revealing are untouched, they change what is on screen,
-    /// not where it sits. Read on the move and order-application paths, which
-    /// are the only two places that can disturb the bar's arrangement.
+    /// Whether the user has taken menu bar arrangement into their own hands (MenuBarArrangementMode.manual).
+    /// Every automatic path reads this; the explicit Layout edit path reads arrangementForbidsMoves instead.
     var arrangementIsManual: Bool {
         appState?.settings.advanced.menuBarArrangementMode == .manual
+    }
+
+    /// Whether Manual refuses a move asked for by the current task: all but an explicit Layout edit.
+    /// Only the guards a Layout drop, keyboard move, or sort passes through read this.
+    var arrangementForbidsMoves: Bool {
+        ExplicitLayoutEdit.manualArrangementForbidsMoves(
+            arrangementIsManual: arrangementIsManual,
+            isExplicitLayoutEdit: ExplicitLayoutEdit.isActive
+        )
     }
 
     /// Cached domain-access probe. The probe is a cheap open(), but it sits
@@ -729,6 +737,10 @@ final class MenuBarItemManager {
     /// cache tick re-mirrors the unchanged bar and contradicts it. Cleared
     /// after a reveal ordering pass runs with the authored order.
     var authoredVisibleOrderPendingPhysicalApply = false
+
+    /// The Visible items that were live when the order was last mirrored, so
+    /// the next mirror can tell an arrival from a ⌘-drag.
+    var lastMirroredLiveVisibleIdentifiers: Set<String>?
 
     /// How many ordering passes an authored pane edit gets before Thaw reports
     /// that the pane and the bar disagree. More than one because a pass can be
@@ -935,9 +947,10 @@ final class MenuBarItemManager {
     /// Concealed sections wait for reveal; completed single-item drops never
     /// call this. Recording and physical application must remain separate.
     func scheduleSectionOrderApply(for section: MenuBarSection.Name) {
-        // Manual arrangement refuses every move; an apply pass here would only
-        // burn the convergence budget and log a failure for a state change.
-        guard !arrangementIsManual else { return }
+        // Manual arrangement refuses every apply but an explicit Layout edit's;
+        // any other pass would only burn the convergence budget and log a failure.
+        guard !arrangementForbidsMoves else { return }
+        writeConcealedOrderForManualEdit(in: section)
         let identifiers = savedSectionOrder[sectionKey(for: section)] ?? []
         if section == .visible, !identifiers.isEmpty {
             authoredVisibleOrderPendingPhysicalApply = true
@@ -1013,6 +1026,140 @@ final class MenuBarItemManager {
         }
     }
 
+    /// Writes the recorded Visible order back after an arrival disturbed it.
+    /// Position writes only and a single attempt; if the bar does not follow, the next mirror records the bar.
+    func scheduleArrivalOrderRestore() {
+        guard !arrangementIsManual,
+              let controller = appState?.menuBarManager.sectionController
+        else { return }
+        let identifiers = savedSectionOrder[sectionKey(for: .visible)] ?? []
+        guard identifiers.count > 1 else { return }
+        authoredVisibleOrderPendingPhysicalApply = true
+        authoredVisibleOrderApplyTask?.cancel()
+        authoredVisibleOrderApplyTask = Task { @MainActor [weak self] in
+            // Let the arrival finish laying out before writing around it.
+            try? await Task.sleep(for: .seconds(1))
+            guard let self, !Task.isCancelled else { return }
+            defer {
+                // A cancelled predecessor must not clear its replacement.
+                if !Task.isCancelled {
+                    authoredVisibleOrderApplyTask = nil
+                    authoredVisibleOrderPendingPhysicalApply = false
+                }
+            }
+            MenuBarItemManager.diagLog.info(
+                "macOS 27: restoring recorded visible order after an arrival (\(identifiers.count) item(s))"
+            )
+            await applySectionItemOrder(
+                sections: [.visible],
+                controller: controller,
+                visibleOrderOverride: identifiers,
+                reason: .arrivalRestore
+            )
+            guard !Task.isCancelled else { return }
+            await cacheItemsRegardless(skipRecentMoveCheck: true)
+        }
+    }
+
+    /// Authored layout inputs for keeping automatic overflow out of the
+    /// persisted order.
+    ///
+    /// Automatic overflow files an authored-Visible item under Hidden in the
+    /// effective cache. Persisting that cache verbatim turns a cramped-display
+    /// moment into a permanent hide, so the persistence paths reinsert those
+    /// concealed items at their recorded Visible slots using the authored
+    /// assignment and order.
+    struct AuthoredLayoutProjection: Sendable {
+        /// Explicit authored assignments, keyed by canonical identifier.
+        /// Absence means Visible, matching the runtime's default.
+        var sectionAssignment: [String: MenuBarSectionName]
+        /// Recorded authored order per section, including overflowed Visible
+        /// slots that the effective cache has temporarily filed elsewhere.
+        var sectionOrder: [MenuBarSectionName: [String]]
+
+        nonisolated func authoredSection(for identifier: String) -> MenuBarSectionName {
+            sectionAssignment[MenuBarItemTag.canonicalPersistentIdentifier(identifier)] ?? .visible
+        }
+    }
+
+    /// Authored layout state the persistence projection reads from a section
+    /// controller. A plain value so tests run the exact production derivation
+    /// without a live runtime.
+    struct AuthoredLayoutSource: Sendable {
+        var sectionAssignment: [String: MenuBarSectionName]
+        var sectionItemOrder: [MenuBarSectionName: [String]]
+    }
+
+    /// The authored projection to use for persistence, or nil when there is no
+    /// runtime to consult (standalone/test configurations keep prior
+    /// semantics). The source override lets tests run this same derivation
+    /// without a live controller.
+    private func authoredLayoutProjection(for cache: ItemCache) -> AuthoredLayoutProjection? {
+        let source: AuthoredLayoutSource
+        if let override = authoredLayoutSourceOverride {
+            source = override
+        } else if let controller = appState?.menuBarManager.sectionController {
+            source = AuthoredLayoutSource(
+                sectionAssignment: controller.sectionAssignment,
+                sectionItemOrder: controller.sectionItemOrder
+            )
+        } else {
+            return nil
+        }
+        return Self.authoredLayoutProjection(for: cache, source: source)
+    }
+
+    /// Pure derivation and gate. The projection is only needed while the
+    /// effective cache still conceals an authored-Visible item. That also
+    /// covers the window after overflow is cleared but before the next
+    /// inventory walk publishes the restored membership, so a profile capture
+    /// in that window cannot record the item as Hidden. Once the cache catches
+    /// up the projection is a no-op and the gate returns nil.
+    static nonisolated func authoredLayoutProjection(
+        for cache: ItemCache,
+        source: AuthoredLayoutSource
+    ) -> AuthoredLayoutProjection? {
+        let projection = AuthoredLayoutProjection(
+            sectionAssignment: source.sectionAssignment,
+            sectionOrder: source.sectionItemOrder
+        )
+        guard hasConcealedAuthoredVisibleItem(in: cache, projection: projection) else {
+            return nil
+        }
+        return projection
+    }
+
+    /// Items eligible for savedSectionOrder: app items with a resolved
+    /// sourcePID, plus the visible control item, so reconciliation after a
+    /// restart can tell when macOS placed an app item on the wrong side of
+    /// it. The hidden and always-hidden dividers stay out; they are always
+    /// inserted into desiredFlat at the section boundary.
+    static nonisolated func isPersistable(_ item: MenuBarItem) -> Bool {
+        if item.tag == .visibleControlItem {
+            return true
+        }
+        return !item.isControlItem && item.sourcePID != nil
+    }
+
+    /// Whether any persistable, non-transient item the effective cache filed
+    /// outside Visible is authored Visible. That is exactly automatic
+    /// overflow, or a cache that has not yet caught up with its clearing.
+    static nonisolated func hasConcealedAuthoredVisibleItem(
+        in cache: ItemCache,
+        projection: AuthoredLayoutProjection
+    ) -> Bool {
+        for section in MenuBarSectionName.allCases where section != .visible {
+            for item in cache[section]
+                where isPersistable(item) && !item.isTransientControlCenterItem
+            {
+                if projection.authoredSection(for: item.uniqueIdentifier) == .visible {
+                    return true
+                }
+            }
+        }
+        return false
+    }
+
     /// Computes the per-section order dict from cache with the same filter and
     /// closed-app preservation saveSectionOrder uses, without writing it.
     ///
@@ -1026,19 +1173,20 @@ final class MenuBarItemManager {
     /// because their identifiers churn. planSectionOrder then merges in closed
     /// apps from the previous order, so a slot survives a quit.
     func computeSectionOrder(from cache: ItemCache) -> [String: [String]] {
-        var newOrder = [String: [String]]()
+        computeSectionOrder(from: cache, projection: authoredLayoutProjection(for: cache))
+    }
 
-        /// Items eligible for savedSectionOrder: app items with a resolved
-        /// sourcePID, plus the visible control item, so reconciliation after a
-        /// restart can tell when macOS placed an app item on the wrong side of
-        /// it. The hidden and always-hidden dividers stay out; they are always
-        /// inserted into desiredFlat at the section boundary.
-        func isPersistable(_ item: MenuBarItem) -> Bool {
-            if item.tag == .visibleControlItem {
-                return true
-            }
-            return !item.isControlItem && item.sourcePID != nil
-        }
+    /// The projection-aware computation. A nil projection keeps the effective
+    /// cache bucket as authority; a non-nil projection reinserts concealed
+    /// Visible slots at their recorded positions, so automatic overflow is
+    /// never written back as a hide. Membership stays cache-driven in every
+    /// other case, so a command-drag the controller has not adopted yet is
+    /// untouched.
+    func computeSectionOrder(
+        from cache: ItemCache,
+        projection: AuthoredLayoutProjection?
+    ) -> [String: [String]] {
+        var newOrder = [String: [String]]()
 
         var allCurrentIdentifiers = Set<String>()
         var allCurrentBaseIdentifiers = Set<String>()
@@ -1049,8 +1197,13 @@ final class MenuBarItemManager {
         // without bound and make the O(n²) merge pin a core, the macOS 27
         // reorder "storm").
         var allCurrentNamespaces = Set<String>()
+        // Every persistable, non-transient item by identifier, wherever the
+        // effective cache filed it. The authored projection uses this to find
+        // an overflowed Visible item that the cache has temporarily rebucketed
+        // into Hidden.
+        var persistableByIdentifier = [String: MenuBarItem]()
         for section in MenuBarSection.Name.allCases {
-            for item in cache[section] where isPersistable(item) {
+            for item in cache[section] where Self.isPersistable(item) {
                 // Always track base identifier so stale saved entries for
                 // transient items (Live Activities) get pruned by the
                 // isStaleInstanceIndex guard below and not re-injected.
@@ -1062,18 +1215,32 @@ final class MenuBarItemManager {
                 // ephemeral UIDs are never written to savedSectionOrder.
                 guard !item.isTransientControlCenterItem else { continue }
                 allCurrentIdentifiers.insert(item.uniqueIdentifier)
+                persistableByIdentifier[item.uniqueIdentifier] = item
             }
         }
 
         for section in MenuBarSection.Name.allCases {
             // Current identifiers for this section, in cache iteration
-            // order (which approximates left-to-right X order).
-            let currentInSection = cache[section]
+            // order (which approximates left-to-right X order). With an
+            // authored projection the membership comes from the user's
+            // assignment instead, so automatic overflow is not mistaken for a
+            // hide; the effective bucket stays authoritative without one.
+            let effective = cache[section]
                 .filter {
-                    isPersistable($0) &&
+                    Self.isPersistable($0) &&
                         !$0.isTransientControlCenterItem
                 }
-                .map(\.uniqueIdentifier)
+            let currentInSection: [String] = if let projection {
+                Self.authoredCurrentIdentifiers(
+                    for: section,
+                    effective: effective,
+                    persistableByIdentifier: persistableByIdentifier,
+                    savedSectionOrder: savedSectionOrder,
+                    projection: projection
+                )
+            } else {
+                effective.map(\.uniqueIdentifier)
+            }
 
             let oldSavedForSection = savedSectionOrder[sectionKey(for: section)] ?? []
 
@@ -1095,6 +1262,73 @@ final class MenuBarItemManager {
         }
 
         return canonicalizingGroups(in: newOrder, cache: cache)
+    }
+
+    /// The identifiers for `section`, in persistence order.
+    ///
+    /// The effective cache is the membership authority everywhere except the
+    /// automatic-overflow case: an authored-Visible item the cache filed under
+    /// Hidden is reinserted at its recorded Visible slot. Present items keep
+    /// the effective cache order, so a within-section reorder is untouched,
+    /// and no other section's membership is rewritten (always-hidden remains
+    /// governed by the backend's allowsAlwaysHidden mapping). Pure over inputs.
+    static nonisolated func authoredCurrentIdentifiers(
+        for section: MenuBarSectionName,
+        effective: [MenuBarItem],
+        persistableByIdentifier: [String: MenuBarItem],
+        savedSectionOrder: [String: [String]],
+        projection: AuthoredLayoutProjection
+    ) -> [String] {
+        // Drop authored-Visible items the effective cache filed outside
+        // Visible: those are automatic overflow and are reinserted into
+        // Visible below. Authored Hidden/Always Hidden membership is left as
+        // the backend bucketed it, so the allowsAlwaysHidden mapping stands.
+        let present = effective
+            .filter { section == .visible || projection.authoredSection(for: $0.uniqueIdentifier) != .visible }
+            .map(\.uniqueIdentifier)
+        guard section == .visible else { return present }
+
+        let presentSet = Set(present)
+        let concealed = persistableByIdentifier.values
+            .filter {
+                projection.authoredSection(for: $0.uniqueIdentifier) == .visible
+                    && !presentSet.contains($0.uniqueIdentifier)
+            }
+            .map(\.uniqueIdentifier)
+        guard !concealed.isEmpty else { return present }
+
+        let reference = projection.sectionOrder[.visible]
+            ?? savedSectionOrder[MenuBarSectionName.visible.rawValue]
+            ?? []
+        let concealedSet = Set(concealed)
+        // Recorded entries first so their relative order survives; identifiers
+        // the record has never seen keep a deterministic order.
+        let orderedConcealed = reference.filter { concealedSet.contains($0) }
+            + concealed.filter { !reference.contains($0) }.sorted()
+        return reinsertingConcealed(orderedConcealed, into: present, reference: reference)
+    }
+
+    /// Reinserts concealed identifiers into their recorded slots: each goes
+    /// after the closest identifier that precedes it in `reference` and
+    /// survives in `order`, or at the front when no predecessor survives.
+    /// Pure over inputs.
+    static nonisolated func reinsertingConcealed(
+        _ concealed: [String],
+        into order: [String],
+        reference: [String]
+    ) -> [String] {
+        var result = order
+        for identifier in concealed {
+            let insertAt: Int
+            if let referenceIndex = reference.firstIndex(of: identifier) {
+                let predecessor = reference[..<referenceIndex].last { result.contains($0) }
+                insertAt = predecessor.flatMap { result.firstIndex(of: $0).map { $0 + 1 } } ?? 0
+            } else {
+                insertAt = result.count
+            }
+            result.insert(identifier, at: min(insertAt, result.count))
+        }
+        return result
     }
 
     /// Applies the same group gathering RuntimeSectionController/commitOrder(reason:options:)
@@ -1125,20 +1359,6 @@ final class MenuBarItemManager {
             result[key] = gathered.order
         }
         return result
-    }
-
-    /// Extracts the current per-section item order from the given cache
-    /// and persists it to savedSectionOrder. Skips the write when the
-    /// order has not changed. Delegates the dict construction to
-    /// computeSectionOrder so the "what does the curated section order
-    /// look like?" question has a single answer used by both periodic
-    /// save and profile capture.
-    private func saveSectionOrder(from cache: ItemCache) {
-        let newOrder = computeSectionOrder(from: cache)
-        guard newOrder != savedSectionOrder else { return }
-        savedSectionOrder = newOrder
-        persistSavedSectionOrder()
-        MenuBarItemManager.diagLog.debug("Saved section order: \(newOrder.mapValues(\.count))")
     }
 
     /// Returns a persistable string key for the given section name (its raw
@@ -1470,6 +1690,11 @@ final class MenuBarItemManager {
     }
 
     private(set) weak var appState: AppState?
+
+    /// Authored layout state for the persistence projection. The app leaves
+    /// this nil and derives it from the live section controller; tests set it
+    /// to run the exact production derivation without a runtime.
+    @ObservationIgnored var authoredLayoutSourceOverride: AuthoredLayoutSource?
 
     /// The settings this component reads. MenuBarEngineConfiguration states
     /// why the engine holds this rather than AppState.

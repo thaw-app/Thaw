@@ -303,14 +303,6 @@ extension EventMonitor {
     }
 
     @discardableResult
-    static func startUniversal(
-        for mask: NSEvent.EventTypeMask,
-        handler: @escaping (NSEvent) -> NSEvent?
-    ) -> EventMonitor {
-        listening(universal(for: mask, handler: handler))
-    }
-
-    @discardableResult
     static func startPassive(
         for mask: NSEvent.EventTypeMask,
         scope: Scope,

@@ -218,11 +218,6 @@ enum LayoutBarKeyboard {
             appState.layoutFeedback.post(LayoutBarFeedbackCenter.itemNotMovable(itemName: view.item.displayName))
             return
         }
-        // Manual arrangement owns the order; the same refusal a drop posts.
-        guard !appState.itemManager.arrangementIsManual else {
-            appState.layoutFeedback.post(LayoutBarFeedbackCenter.manualArrangement())
-            return
-        }
         let section = container.section
         let items = LayoutBarPaddingView.layoutItemsForPersistence(from: container.arrangedViews)
         guard let index = items.firstIndex(where: { $0.tag == view.item.tag }) else { return }
@@ -360,7 +355,10 @@ enum LayoutBarKeyboard {
             }
             undoManager.setActionName(actionName)
         }
-        MenuBarSearchItemActions.move(item, to: target, appState: appState)
+        // A keyboard move in the layout bar is the user's own edit, so Manual lets it through like a drop.
+        ExplicitLayoutEdit.perform {
+            MenuBarSearchItemActions.move(item, to: target, appState: appState)
+        }
     }
 
     // MARK: Order commit
@@ -395,20 +393,23 @@ enum LayoutBarKeyboard {
         }
         let controller = appState.menuBarManager.sectionController
         controller.setSectionOrder(from: order, for: section)
-        appState.itemManager.scheduleSectionOrderApply(for: section)
-        Task { @MainActor in
-            if section != .visible,
-               let revealed = controller.revealedSection,
-               revealed == section || (section == .hidden && revealed == .alwaysHidden)
-            {
-                await appState.itemManager.applySectionItemOrder(
-                    sections: [section],
-                    controller: controller,
-                    whileRevealing: revealed,
-                    reason: .userReorder
-                )
+        // Marked here rather than at the key handler so undo and redo are explicit edits too.
+        ExplicitLayoutEdit.perform {
+            appState.itemManager.scheduleSectionOrderApply(for: section)
+            Task { @MainActor in
+                if section != .visible,
+                   let revealed = controller.revealedSection,
+                   revealed == section || (section == .hidden && revealed == .alwaysHidden)
+                {
+                    await appState.itemManager.applySectionItemOrder(
+                        sections: [section],
+                        controller: controller,
+                        whileRevealing: revealed,
+                        reason: .userReorder
+                    )
+                }
+                await appState.itemManager.cacheItemsRegardless(skipRecentMoveCheck: true)
             }
-            await appState.itemManager.cacheItemsRegardless(skipRecentMoveCheck: true)
         }
     }
 

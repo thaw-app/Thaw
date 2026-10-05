@@ -18,6 +18,8 @@ nonisolated enum SectionOrderApplyGate {
         let circuitBreakerOpen: Bool
         let reason: LayoutChangeReason
         let arrangementIsManual: Bool
+        /// Whether the calling task carries an explicit Layout edit; see ExplicitLayoutEdit.
+        let isExplicitLayoutEdit: Bool
         let nativeMenuBarDeferred: Bool
         let isWithinSettleWindow: Bool
         let repairAfterRestriction: Bool
@@ -34,6 +36,7 @@ nonisolated enum SectionOrderApplyGate {
             circuitBreakerOpen: Bool,
             reason: LayoutChangeReason,
             arrangementIsManual: Bool,
+            isExplicitLayoutEdit: Bool,
             nativeMenuBarDeferred: Bool,
             isWithinSettleWindow: Bool,
             repairAfterRestriction: Bool,
@@ -47,6 +50,7 @@ nonisolated enum SectionOrderApplyGate {
             self.circuitBreakerOpen = circuitBreakerOpen
             self.reason = reason
             self.arrangementIsManual = arrangementIsManual
+            self.isExplicitLayoutEdit = isExplicitLayoutEdit
             self.nativeMenuBarDeferred = nativeMenuBarDeferred
             self.isWithinSettleWindow = isWithinSettleWindow
             self.repairAfterRestriction = repairAfterRestriction
@@ -65,7 +69,7 @@ nonisolated enum SectionOrderApplyGate {
         case circuitBreakerOpen
         /// The reason accepts the settled order and may not move anything.
         case reasonAcceptsSettledOrder
-        /// Manual arrangement forbids Thaw from moving items, even for a profile or layout-pane drop.
+        /// Manual arrangement forbids every pass but the user's own Layout edit: a profile, reveal, or repair still moves nothing.
         case manualArrangement
         /// The native menu bar is unavailable or mid-transition.
         case nativeMenuBarUnavailable
@@ -96,7 +100,11 @@ nonisolated enum SectionOrderApplyGate {
         if !request.reason.permitsOrderEnforcement {
             return .reasonAcceptsSettledOrder
         }
-        if request.arrangementIsManual {
+        if ExplicitLayoutEdit.manualArrangementForbids(
+            arrangementIsManual: request.arrangementIsManual,
+            isExplicitLayoutEdit: request.isExplicitLayoutEdit,
+            reason: request.reason
+        ) {
             return .manualArrangement
         }
         if request.nativeMenuBarDeferred {

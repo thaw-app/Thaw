@@ -306,11 +306,15 @@ nonisolated enum MenuBarItemAXProvider {
             $0.bundleIdentifier == ourBundleID || $0.bundleIdentifier == SharedConstants.menuBarHostingBundleID
         }.map(\.processIdentifier))
         var state = previousState
+        let requiredOwners = controlPIDs.union(priorityPIDs)
         let pass = state.begin(
             owners: runningApps.map(\.processIdentifier),
-            priorityOwners: controlPIDs.union(priorityPIDs),
+            priorityOwners: requiredOwners,
             scope: scope
         )
+        // A chronically slow app must not refuse every move, so slow owners
+        // are excused from move geometry unless the move names them.
+        var slowOwners: [Int32: String] = [:]
         slowResponders.withLock { $0.retain(runningOwners: Set(appsByPID.keys)) }
         var truncated = false
         startLateAnswerPump()
@@ -391,6 +395,7 @@ nonisolated enum MenuBarItemAXProvider {
                 // Not observed, so the walk is incomplete; a complete-but-short
                 // answer would read its icon as departed until the cooldown ends.
                 truncated = true
+                slowOwners[ownerPID] = appBundleID
                 continue
             }
 
@@ -435,6 +440,7 @@ nonisolated enum MenuBarItemAXProvider {
                     "menuBarItems: \(appBundleID) exceeded its per-app deadline (miss \(strikes)); skipping it for \(cooldown)"
                 )
                 truncated = true
+                slowOwners[ownerPID] = appBundleID
                 // Publish the late answer for the next walk; until then the
                 // ledger holds off another probe of the owner.
                 Task {
@@ -454,13 +460,20 @@ nonisolated enum MenuBarItemAXProvider {
         let items = assemble(state.observations)
         let freshItems = assemble(state.freshObservations(generation: pass.generation))
         diagLog.debug("menuBarItems: inventory=\(items.count), fresh=\(freshItems.count), truncated=\(truncated)")
+        let excused = Set(slowOwners.keys).subtracting(requiredOwners)
+        let hasFreshMoveInventory = !Task.isCancelled && state.isComplete(pass, excusing: excused)
+            && state.hasFreshKnownInventory(generation: pass.generation, excusing: excused)
+        if hasFreshMoveInventory, !excused.isEmpty {
+            diagLog.info(
+                "menuBarItems: move geometry excuses slow owner(s) \(excused.compactMap { slowOwners[$0] }.sorted())"
+            )
+        }
         return (InventorySnapshot(
             items: items,
             freshItems: freshItems,
             completed: state.isComplete(generation: pass.generation),
             hasFreshKnownInventory: state.hasFreshKnownInventory(generation: pass.generation),
-            hasFreshMoveInventory: !Task.isCancelled && state.isComplete(pass)
-                && state.hasFreshKnownInventory(generation: pass.generation)
+            hasFreshMoveInventory: hasFreshMoveInventory
         ), state)
     }
 
@@ -754,6 +767,16 @@ nonisolated enum MenuBarItemAXProvider {
     static func menuBarItemsForAppearanceConcurrent(knownOwners: Set<pid_t>) async -> [MenuBarItem]? {
         guard let snapshot = await inventoryGate.snapshot(
             freshOnly: true, scope: .requestedOwners, priorityOwners: knownOwners
+        ), snapshot.hasFreshMoveInventory else { return nil }
+        return restoredIdentities(snapshot).freshItems
+    }
+
+    /// Re-reads the owners a thumbnail pass names. It runs every refresh tick,
+    /// so it waits out a discovery walk in flight rather than cancelling it.
+    @concurrent
+    static func menuBarItemsForCaptureConcurrent(knownOwners: Set<pid_t>) async -> [MenuBarItem]? {
+        guard let snapshot = await inventoryGate.snapshot(
+            freshOnly: true, scope: .requestedOwners, priorityOwners: knownOwners, preemptsDiscovery: false
         ), snapshot.hasFreshMoveInventory else { return nil }
         return restoredIdentities(snapshot).freshItems
     }

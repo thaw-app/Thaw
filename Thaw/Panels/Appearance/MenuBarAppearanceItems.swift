@@ -15,6 +15,41 @@ enum MenuBarAppearanceItems {
         let readAt: ContinuousClock.Instant
     }
 
+    static func geometry(
+        from snapshot: Snapshot,
+        on screenFrame: CGRect,
+        displayBounds: [CGRect],
+        context: MenuBarSplitPillGeometry.TrailingPillContext
+    ) -> MenuBarGeometryRefresh.Snapshot {
+        let items = snapshot.items.filter {
+            MenuBarItemGeometry.barScreen(holding: $0.bounds, among: displayBounds) != nil
+        }
+        func mirroredFrame(_ frame: CGRect) -> CGRect {
+            MirroredBarGeometry.frame(frame, on: screenFrame, displayBounds: displayBounds)
+        }
+        // AX reports one bar's frames even when macOS draws its status items on every display.
+        // Apply section/parking policy before translating drawing bounds, not managed item identities.
+        let bounds = MenuBarSplitPillGeometry.trailingPillBounds(
+            from: items,
+            screenFrame: screenFrame,
+            context: context,
+            mapBounds: mirroredFrame
+        )
+        let sourceScreens = Set(items.compactMap {
+            MenuBarItemGeometry.barScreen(holding: $0.bounds, among: displayBounds)
+        })
+        let isRevealingHidden = context.revealedSection == .hidden
+            || context.revealedSection == .alwaysHidden
+        return MenuBarGeometryRefresh.Snapshot(
+            itemBounds: bounds,
+            chevronFrame: isRevealingHidden
+                ? .zero
+                : (items.first(where: { $0.tag.matchesVisibleControlItem }).map { mirroredFrame($0.bounds) } ?? .zero),
+            sourceScreenFrame: sourceScreens.count == 1 ? sourceScreens.first : nil,
+            readAt: snapshot.readAt
+        )
+    }
+
     static func read(
         knownItems: [MenuBarItem],
         onScreenSnapshot: OnScreenItemSnapshot?,

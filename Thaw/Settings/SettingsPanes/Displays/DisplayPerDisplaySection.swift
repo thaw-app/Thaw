@@ -143,9 +143,7 @@ extension DisplaySettingsPane {
                 Text("Menu bar item spacing")
             }
         }
-        .annotation(
-            "Takes effect when this display is the active menu bar display. Applying it restarts menu bar apps so they load the new value, and each app can add its own padding, so gaps are not always identical."
-        )
+        .annotation(spacingRowAnnotation)
         .onChange(of: savedOffset) { _, newValue in
             // External changes, including profiles and URLs, replace the draft with the saved value.
             draftSpacing[display.id] = CGFloat(newValue)
@@ -153,7 +151,9 @@ extension DisplaySettingsPane {
 
         if isPending {
             spacingPendingStrip(for: display, draft: draft, savedOffset: savedOffset)
-        } else if display.id == displaySettings.activeMenuBarDisplayUUID {
+        } else if display.id == displaySettings.activeMenuBarDisplayUUID,
+                  displaySettings.spacingApplyMode == .relaunchApps
+        {
             LabeledContent {
                 Button(displaySettings.isReapplyingSpacing ? "Reapplying…" : "Reapply Spacing") {
                     displaySettings.reapplySpacing(forDisplayUUID: display.id)
@@ -171,6 +171,23 @@ extension DisplaySettingsPane {
                 systemImage: "exclamationmark.triangle.fill",
                 tint: .orange
             )
+        }
+    }
+
+    /// Write-only mode restarts nothing, so the copy must not promise a relaunch.
+    private var spacingRowAnnotation: LocalizedStringKey {
+        if displaySettings.spacingApplyMode == .writeOnly {
+            "Takes effect when this display is the active menu bar display. Applying it writes the new value without restarting apps; each app picks it up the next time it starts, and each app can add its own padding, so gaps are not always identical."
+        } else {
+            "Takes effect when this display is the active menu bar display. Applying it restarts menu bar apps so they load the new value, and each app can add its own padding, so gaps are not always identical."
+        }
+    }
+
+    private var spacingPendingNotice: LocalizedStringKey {
+        if displaySettings.spacingApplyMode == .writeOnly {
+            "Apps pick up the new spacing the next time they start"
+        } else {
+            "Applying relaunches apps with menu bar items"
         }
     }
 
@@ -201,7 +218,7 @@ extension DisplaySettingsPane {
                 .foregroundStyle(Color.accentColor)
                 .accessibilityHidden(true)
 
-            Text("Applying relaunches apps with menu bar items")
+            Text(spacingPendingNotice)
                 .font(ThawType.caption)
                 .foregroundStyle(ThawInk.supporting)
                 .fixedSize(horizontal: false, vertical: true)

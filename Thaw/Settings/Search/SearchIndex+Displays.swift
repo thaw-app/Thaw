@@ -74,5 +74,14 @@ nonisolated extension SearchIndex {
             keywords: ["confirm", "relaunch", "apps", "spacing", "restart"],
             property: nil
         ),
+        SearchEntry(
+            id: "displays.spacingApplyMode",
+            title: "When applying spacing",
+            descriptionText: String(localized: "Choose whether spacing changes restart menu bar apps immediately or wait until the next restart."),
+            pane: .displays,
+            section: "Menu bar item spacing",
+            keywords: ["spacing", "relaunch", "restart", "apps", "disable", "without", "immediate", "next restart"],
+            property: nil
+        ),
     ]
 }

@@ -161,12 +161,6 @@ final class MenuBarOverlayPanel: NSPanel {
         appState != nil && (alphaValue > 0 || missionControlProbe.isActive)
     }
 
-    /// Pure classification of the Exposé shield window, split out so it can be
-    /// unit-tested without a live window server.
-    static func isMissionControlShieldWindow(ownerName: String?, title: String?) -> Bool {
-        MissionControlShieldProbe.isShieldWindow(ownerName: ownerName, title: title)
-    }
-
     /// Transparent, nonactivating panel excluded from window menus and cycling; order it only when needsShow requests.
     init(appState: AppState, owningScreen: NSScreen) {
         self.appState = appState
@@ -424,6 +418,8 @@ final class MenuBarOverlayPanel: NSPanel {
     }
 
     private func refreshSystemMenuBarPresence() {
+        // Entering or leaving a fullscreen Space changes which level keeps the panel under the items.
+        updateWindowLevel()
         let absent = Self.isSystemMenuBarHidden(on: owningScreen)
         guard absent != isSystemMenuBarAbsent else { return }
         isSystemMenuBarAbsent = absent
@@ -516,11 +512,29 @@ final class MenuBarOverlayPanel: NSPanel {
     private func updateWindowLevel() {
         guard let appState else { return }
         let config = appState.appearanceManager.effectiveConfiguration
-        if config.current.tintKind != .noTint || config.shapeKind != .noShape || config.current.backgroundKind != .none {
-            level = NSWindow.Level(rawValue: Int(CGWindowLevelForKey(.statusWindow)) - 1)
-        } else {
-            level = .statusBar
+        let hasAppearance = config.current.tintKind != .noTint
+            || config.shapeKind != .noShape
+            || config.current.backgroundKind != .none
+        let newLevel = Self.overlayLevel(
+            hasAppearance: hasAppearance,
+            isFullscreenSpace: Self.isFullscreenSpace(on: owningScreen)
+        )
+        if level != newLevel {
+            level = newLevel
         }
+    }
+
+    private static func isFullscreenSpace(on screen: NSScreen) -> Bool {
+        guard let spaceID = Bridging.getCurrentSpaceID(for: screen.displayID) else { return false }
+        return Bridging.isSpaceFullscreen(spaceID)
+    }
+
+    /// The level that keeps an appearance under the menu bar's items.
+    /// A fullscreen Space draws its bar at the main-menu level, where an equal-level panel ordered front covers the items.
+    static nonisolated func overlayLevel(hasAppearance: Bool, isFullscreenSpace: Bool) -> NSWindow.Level {
+        guard hasAppearance else { return .statusBar }
+        let key: CGWindowLevelKey = isFullscreenSpace ? .mainMenuWindow : .statusWindow
+        return NSWindow.Level(rawValue: Int(CGWindowLevelForKey(key)) - 1)
     }
 
     override func isAccessibilityElement() -> Bool {
@@ -622,6 +636,7 @@ private final class MenuBarOverlayPanelContentView: NSView {
 
     /// Use fresh AXExtrasMenuBar geometry: Apple items may stay visible while Hidden, and conceal snapshots may retain stale bounds.
     private var cachedAXItemBounds: [CGRect] = []
+    private var cachedAXSourceScreenFrame: CGRect?
 
     /// Keep the concealed chevron separate so widening the trailing pill cannot pull the leading pill's clamp over real items.
     /// Zero during Hidden reveal, when cachedAXItemBounds already includes the chevron.
@@ -646,6 +661,7 @@ private final class MenuBarOverlayPanelContentView: NSView {
         publish: { [weak self] snapshot in
             guard let self else { return }
             cachedAXItemBounds = snapshot.itemBounds
+            cachedAXSourceScreenFrame = snapshot.sourceScreenFrame
             cachedChevronFrame = snapshot.chevronFrame
             // A read that began before the edge last moved describes the bar
             // as it was; the live edge is newer.
@@ -828,7 +844,8 @@ private final class MenuBarOverlayPanelContentView: NSView {
             stableTrailingBounds: lastStableTrailingPathBounds,
             screenFrame: panel.owningScreen.cgFrame,
             revealedSection: appState.menuBarManager.sectionController.revealedSection,
-            isTransitioning: appState.menuBarManager.isRevealHideTransitionActive
+            isTransitioning: appState.menuBarManager.isRevealHideTransitionActive,
+            sourceScreenFrame: cachedAXSourceScreenFrame
         )
         cachedAXItemBounds = updated.itemBounds
         lastStableTrailingPathBounds = updated.stableTrailingBounds
@@ -841,6 +858,7 @@ private final class MenuBarOverlayPanelContentView: NSView {
         guard overlayPanel != nil else {
             geometryRefresh.cancel()
             cachedAXItemBounds = []
+            cachedAXSourceScreenFrame = nil
             cachedChevronFrame = .zero
             return
         }
@@ -862,8 +880,6 @@ private final class MenuBarOverlayPanelContentView: NSView {
                 )
             }
         ), !Task.isCancelled else { return nil }
-        let items = snapshot.items.filter { $0.bounds.intersects(displayBounds) }
-
         let controller = overlayPanel?.appState?.menuBarManager.sectionController
         let context = MenuBarSplitPillGeometry.TrailingPillContext(
             revealedSection: controller?.revealedSection,
@@ -871,19 +887,11 @@ private final class MenuBarOverlayPanelContentView: NSView {
                 controller?.section(for: item) ?? .visible
             }
         )
-        let bounds = MenuBarSplitPillGeometry.trailingPillBounds(
-            from: items,
-            screenFrame: CGDisplayBounds(displayID),
+        return MenuBarAppearanceItems.geometry(
+            from: snapshot,
+            on: displayBounds,
+            displayBounds: NSScreen.allDisplayBoundsCG,
             context: context
-        )
-        let isRevealingHidden = controller?.revealedSection == .hidden
-            || controller?.revealedSection == .alwaysHidden
-        return MenuBarGeometryRefresh.Snapshot(
-            itemBounds: bounds,
-            chevronFrame: isRevealingHidden
-                ? .zero
-                : (items.first(where: { $0.tag.matchesVisibleControlItem })?.bounds ?? .zero),
-            readAt: snapshot.readAt
         )
     }
 

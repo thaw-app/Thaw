@@ -14,6 +14,7 @@ extension MenuBarItemImageCache {
         let displayID: CGDirectDisplayID
         let validateFreshBounds: Bool
         let concealedIdentifiers: Set<String>
+        let forgivenTags: Set<MenuBarItemTag>
         // Peer frames must come from the same enumeration as the crop rects,
         // not a later read that can mistake one moving item for two neighbors.
         let captureTimeBounds: [String: CGRect]
@@ -30,6 +31,7 @@ extension MenuBarItemImageCache {
         displayID: CGDirectDisplayID,
         validateFreshBounds: Bool,
         concealedIdentifiers: Set<String>,
+        forgivenTags: Set<MenuBarItemTag> = [],
         using reader: any MenuBarCaptureReading = LiveMenuBarCaptureReader()
     ) async -> CapturePass {
         guard !screenIsLocked(), !itemsWithBounds.isEmpty else { return CapturePass() }
@@ -38,6 +40,8 @@ extension MenuBarItemImageCache {
         let overflowBounds = await reader.overflowBounds(displayID: displayID)
         guard !screenIsLocked() else { return CapturePass() }
         var result = CapturePass()
+        // Staged, not applied: the ledger is read-only until the pass commits.
+        result.forgivenTags = forgivenTags
         let candidates = eligibleAXCaptureCandidates(
             itemsWithBounds, band: band, overflowBounds: overflowBounds, into: &result
         )
@@ -49,6 +53,7 @@ extension MenuBarItemImageCache {
             displayID: displayID,
             validateFreshBounds: validateFreshBounds,
             concealedIdentifiers: concealedIdentifiers,
+            forgivenTags: forgivenTags,
             captureTimeBounds: Dictionary(
                 candidates.map { ($0.item.uniqueIdentifier, $0.bounds) },
                 uniquingKeysWith: { first, _ in first }
@@ -110,22 +115,15 @@ extension MenuBarItemImageCache {
     ) async {
         let hosting = await readAXHostingCapture(candidates, displayID: context.displayID, using: reader, into: &result)
         guard !screenIsLocked() else { return }
-        if context.validateFreshBounds {
-            let items = await reader.menuBarItems(displayID: context.displayID)
-            guard !screenIsLocked() else { return }
-            context.postCaptureBounds = Dictionary(
-                items.map { ($0.uniqueIdentifier, $0.bounds) }, uniquingKeysWith: { first, _ in first }
-            )
-        }
-        context.overflowBounds += await reader.overflowBounds(displayID: context.displayID)
-        guard !screenIsLocked() else { return }
         var hostingOwners = [CGRect: MenuBarItemTag]()
         if let hosting {
+            guard let sourceContext = await contextAfterSource(context, using: reader) else { return }
+            context.overflowBounds = sourceContext.overflowBounds
             appendAXSourceCrops(
                 candidates,
                 capture: hosting,
                 source: .hosting,
-                context: context,
+                context: sourceContext,
                 cropRectOwners: &hostingOwners,
                 into: &result
             )
@@ -134,20 +132,47 @@ extension MenuBarItemImageCache {
         // A missing hosting capture must still reach this stage.
         let unresolved = candidates.filter { !result.captured.keys.contains($0.item.tag) }
         var windowOwners = [CGRect: MenuBarItemTag]()
-        for ownerPID in Set(unresolved.map(\.item.ownerPID)) {
+        for ownerPID in Set(unresolved.map(\.item.ownerPID)).sorted() {
             guard !screenIsLocked() else { return }
             let capture = await reader.barWindowCapture(ownerPID: ownerPID, displayID: context.displayID)
             guard !screenIsLocked() else { return }
             guard let capture else { continue }
+            // Each owner window is its own acquisition interval: the hosting
+            // read cannot vouch for pixels taken after it.
+            guard let sourceContext = await contextAfterSource(context, using: reader) else { return }
+            context.overflowBounds = sourceContext.overflowBounds
             appendAXSourceCrops(
                 unresolved.filter { $0.item.ownerPID == ownerPID },
                 capture: capture,
                 source: .barWindow,
-                context: context,
+                context: sourceContext,
                 cropRectOwners: &windowOwners,
                 into: &result
             )
         }
+    }
+
+    /// Geometry and overflow evidence read after one source's pixels arrived.
+    ///
+    /// The returned context belongs to that source alone, so a later source
+    /// never inherits positions read before its own screenshot. Overflow
+    /// evidence only accumulates, since a control that appeared during any
+    /// source can contaminate the crops. Nil when the screen locked meanwhile.
+    private nonisolated func contextAfterSource(
+        _ context: AXCropContext,
+        using reader: any MenuBarCaptureReading
+    ) async -> AXCropContext? {
+        var refreshed = context
+        if context.validateFreshBounds {
+            let items = await reader.menuBarItems(displayID: context.displayID)
+            guard !screenIsLocked() else { return nil }
+            refreshed.postCaptureBounds = Dictionary(
+                items.map { ($0.uniqueIdentifier, $0.bounds) }, uniquingKeysWith: { first, _ in first }
+            )
+        }
+        refreshed.overflowBounds += await reader.overflowBounds(displayID: context.displayID)
+        guard !screenIsLocked() else { return nil }
+        return refreshed
     }
 
     private nonisolated func readAXHostingCapture(
@@ -239,6 +264,7 @@ extension MenuBarItemImageCache {
             overflowBounds: context.overflowBounds,
             concealedIdentifiers: context.concealedIdentifiers,
             ambiguousIdentifiers: context.ambiguousIdentifiers,
+            forgivenTags: context.forgivenTags,
             cropRectOwners: &cropRectOwners,
             into: &result
         )

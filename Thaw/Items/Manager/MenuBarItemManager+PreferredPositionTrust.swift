@@ -56,22 +56,6 @@ extension MenuBarItemManager {
         }
     }
 
-    /// Whether this move should skip the cursor-free write because the agent
-    /// is in a drag-first cooldown. Side effect: an elapsed cooldown is cleared
-    /// so the next move probes the write again. Gated by a hidden flag (default on).
-    func shouldSkipPreferredPositionForDragFirst() -> Bool {
-        let enabled = Defaults.bool(forKey: .adaptiveDragFirstCooldown)
-        guard enabled else { return false }
-        guard let until = dragFirstCooldownUntil else { return false }
-        if ContinuousClock.now < until {
-            return true
-        }
-        // Cooldown elapsed: re-probe. It re-arms if writes are still ignored.
-        dragFirstCooldownUntil = nil
-        consecutiveIgnoredPreferredWrites = 0
-        return false
-    }
-
     /// Opens a fresh convergence budget of visible drags after an authored
     /// pane edit commits.
     func noteAuthoredEditCommitted() {

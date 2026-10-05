@@ -122,14 +122,15 @@ private struct MenuBarSearchContentView: View {
                     transaction.disablesAnimations = true
                 }
             }
-            .onAppear {
-                // A non-activating panel does not hand first responder to a
-                // SwiftUI text field synchronously, so the field is focused a
-                // beat later. The delay is load-bearing.
-                Task { @MainActor in
-                    try? await Task.sleep(for: .milliseconds(50))
-                    queryFieldIsFocused = true
-                }
+            .onChange(of: appState.navigationState.isSearchPresented, initial: true) { _, isPresented in
+                // The panel keeps this view between showings, so onAppear runs once.
+                guard isPresented else { return }
+                focusQueryField()
+            }
+            .onChange(of: hasNoMatches) {
+                // Swapping the rows for the empty state can cost the field the keyboard.
+                guard model.renameSession == nil else { return }
+                focusQueryField()
             }
             .onChange(of: model.searchText, initial: true) {
                 rebuildDisplayedItems()
@@ -188,6 +189,16 @@ private struct MenuBarSearchContentView: View {
     }
 
     // MARK: Query field
+
+    /// A non-activating panel hands a SwiftUI field first responder late, so the delay is load-bearing.
+    /// The flag is dropped first: it can read true after the field lost the keyboard.
+    private func focusQueryField() {
+        queryFieldIsFocused = false
+        Task { @MainActor in
+            try? await Task.sleep(for: .milliseconds(50))
+            queryFieldIsFocused = true
+        }
+    }
 
     private var queryField: some View {
         queryFieldChrome(queryFieldRow)

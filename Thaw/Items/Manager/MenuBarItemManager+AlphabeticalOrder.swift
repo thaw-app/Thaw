@@ -59,7 +59,7 @@ enum MenuBarItemAlphabeticalOrder {
 
 extension MenuBarItemManager {
     func sortItems(in section: MenuBarSection.Name, direction: MenuBarItemSortDirection) {
-        guard let appState, !arrangementIsManual else { return }
+        guard let appState else { return }
         let controller = appState.menuBarManager.sectionController
         let items = MenuBarBackendProvider.current.rebucket(
             itemCache,
@@ -73,19 +73,24 @@ extension MenuBarItemManager {
         )
         guard sorted.map(\.uniqueIdentifier) != items.map(\.uniqueIdentifier) else { return }
         controller.setSectionOrder(from: sorted, for: section)
-        scheduleSectionOrderApply(for: section)
         Self.diagLog.info("Alphabetical sort: section=\(section.rawValue) direction=\(String(describing: direction)) items=\(sorted.count)")
-        Task { @MainActor [weak self] in
-            guard let self else { return }
-            if section != .visible, let revealed = controller.revealedSection,
-               revealed == section || (section == .hidden && revealed == .alwaysHidden)
-            {
-                await applySectionItemOrder(
-                    sections: [section], controller: controller,
-                    whileRevealing: revealed, reason: .userReorder
-                )
+        // The sort menu is the user arranging in Layout, so Manual lets it move the items.
+        ExplicitLayoutEdit.perform {
+            scheduleSectionOrderApply(for: section)
+            Task { @MainActor [weak self] in
+                guard let self else { return }
+                if section != .visible, let revealed = controller.revealedSection,
+                   revealed == section || (section == .hidden && revealed == .alwaysHidden)
+                {
+                    await applySectionItemOrder(
+                        sections: [section],
+                        controller: controller,
+                        whileRevealing: revealed,
+                        reason: .userReorder
+                    )
+                }
+                await cacheItemsRegardless(skipRecentMoveCheck: true)
             }
-            await cacheItemsRegardless(skipRecentMoveCheck: true)
         }
     }
 }

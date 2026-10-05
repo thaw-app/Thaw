@@ -7,6 +7,7 @@
 
 import Foundation
 import Testing
+@testable import Thaw
 
 /// Inspect source to enforce the whitelist boundary without a live AppDelegate, sender Apple Event or modal alert.
 /// Missing declarations must fail so renames cannot silently disable enforcement; gate behaviour lives in SettingsURIWhitelistTests.
@@ -124,7 +125,7 @@ struct SettingsURIDispatchInventoryTests {
 
         // Each mutating action must be handed the bundle id the gate approved.
         // A call passing anything else is a route around the check.
-        for action in ["handleSetURL", "handleToggleURL", "handleRevealItemURL"] {
+        for action in ["handleSetURL", "handleToggleURL", "handleRevealItemURL", "handleLauncherURL"] {
             let calls = dispatch.filter { $0.contains("\(action)(") && !$0.contains("func \(action)(") }
             #expect(calls.count == 1, "Expected exactly one \(action) call in handleSettingsURL, found \(calls.count)")
             for call in calls {
@@ -153,6 +154,33 @@ struct SettingsURIDispatchInventoryTests {
                 "The unauthenticated route is no longer restricted to the version key"
             )
         }
+    }
+
+    @Test("Every launcher operation is routed through the whitelist gate")
+    func launcherOperationsAreGated() throws {
+        let lines = try Self.sourceLines("Thaw/App/AppDelegate.swift")
+        let router = try Self.body(of: "handleURL", in: lines)
+        let dispatch = try Self.body(of: "handleSettingsURL", in: lines)
+        let handler = try Self.body(of: "handleLauncherURL", in: lines)
+
+        // A host missing from the first list falls through to the ungated switch;
+        // one missing from the second passes the gate and then does nothing.
+        for operation in LauncherURIOperation.allCases {
+            let literal = "\"\(operation.rawValue)\""
+            #expect(
+                router.contains { $0.contains(literal) },
+                "\(operation.rawValue) is not routed to handleSettingsURL"
+            )
+            #expect(
+                dispatch.contains { $0.contains(literal) },
+                "\(operation.rawValue) is not dispatched after the whitelist check"
+            )
+        }
+
+        // handleLauncherURL is the only caller, so nothing else can reach the operations.
+        let callers = lines.filter { $0.contains("SettingsURIHandler.handleLauncherRequest(") }
+        #expect(callers.count == 1, "Expected one handleLauncherRequest call, found \(callers.count)")
+        #expect(handler.contains { $0.contains("SettingsURIHandler.handleLauncherRequest(") })
     }
 
     @Test("Callback URLs still refuse the schemes that can run code or read files")

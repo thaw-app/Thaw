@@ -48,7 +48,8 @@ final class AppNavigationState {
     }
 
     /// Keep capture off for panes such as General and About so they do not light the recording indicator.
-    /// Add capture panes here and to MenuBarItemImageCache.hasVisibleCaptureConsumer(nav:), which excludes Appearance.
+    /// This includes Appearance's background sampler; item-glyph demand uses
+    /// MenuBarItemImageCache.NavigationStateSnapshot.liveCaptureScope instead.
     private var settingsConsumesCapture: Bool {
         // Simple Mode opens on the folded bar, which draws real glyphs.
         if isSimpleModeSettings {

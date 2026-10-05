@@ -104,6 +104,16 @@ final class DisplaySettingsManager {
         }
     }
 
+    /// Whether a spacing change relaunches menu bar apps now or is only written for their next start.
+    /// Mirrored into MenuBarItemSpacingManager.spacingApplyMode, which enforces it.
+    var spacingApplyMode = Defaults.DefaultValue.spacingApplyMode {
+        didSet {
+            guard oldValue != spacingApplyMode else { return }
+            Defaults.set(spacingApplyMode.rawValue, forKey: .spacingApplyMode)
+            appState?.spacingManager.spacingApplyMode = spacingApplyMode
+        }
+    }
+
     /// Storage for internal observers.
     @ObservationIgnored
     private var cancellables = Set<AnyCancellable>()
@@ -153,6 +163,8 @@ final class DisplaySettingsManager {
     /// Performs the initial setup of the manager.
     func performSetup(with appState: AppState) {
         self.appState = appState
+        // Capturing displays below can apply spacing, which must see the saved mode.
+        appState.spacingManager.spacingApplyMode = spacingApplyMode
         configureObservers()
         captureCurrentlyConnectedDisplays()
     }
@@ -259,6 +271,11 @@ final class DisplaySettingsManager {
            let scope = SpacingProfileSaveScope(rawValue: raw)
         {
             unconfirmedSpacingProfileScope = scope
+        }
+        if let raw = Defaults.string(forKey: .spacingApplyMode),
+           let mode = SpacingApplyMode(rawValue: raw)
+        {
+            spacingApplyMode = mode
         }
     }
 
@@ -413,12 +430,28 @@ final class DisplaySettingsManager {
     /// applyProfileLayout waits for items to re-attach.
     func reapplySpacing(forDisplayUUID displayID: String) {
         guard !isReapplyingSpacing, displayID == activeMenuBarDisplayUUID else { return }
-        if confirmSpacingRelaunch, !presentSpacingRelaunchConfirmation() {
+        let needsConfirmation = Self.needsSpacingRelaunchConfirmation(
+            applyMode: spacingApplyMode,
+            confirmationsEnabled: confirmSpacingRelaunch
+        )
+        if needsConfirmation, !presentSpacingRelaunchConfirmation() {
             return
         }
         // The active display can change while the confirmation is on screen.
         guard displayID == activeMenuBarDisplayUUID else { return }
-        applyActiveDisplaySpacing(reason: "userReapply", forceRelaunch: true)
+        applyActiveDisplaySpacing(
+            reason: "userReapply",
+            forceRelaunch: spacingApplyMode == .relaunchApps
+        )
+    }
+
+    /// Whether to ask before a relaunch wave. Write-only mode relaunches
+    /// nothing, so it never asks, whatever the confirmation toggle says.
+    static func needsSpacingRelaunchConfirmation(
+        applyMode: SpacingApplyMode,
+        confirmationsEnabled: Bool
+    ) -> Bool {
+        applyMode == .relaunchApps && confirmationsEnabled
     }
 
     private func applyActiveDisplaySpacing(reason: String, forceRelaunch: Bool = false) {
@@ -781,14 +814,6 @@ final class DisplaySettingsManager {
 
     func thawBarLocation(for displayID: CGDirectDisplayID) -> ThawBarLocation {
         configuration(for: displayID).thawBarLocation
-    }
-
-    func thawBarLayout(for displayID: CGDirectDisplayID) -> ThawBarLayout {
-        configuration(for: displayID).thawBarLayout
-    }
-
-    func gridColumns(for displayID: CGDirectDisplayID) -> Int {
-        configuration(for: displayID).gridColumns
     }
 
     /// Whether hidden items should always be shown for the given display.

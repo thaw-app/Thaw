@@ -19,6 +19,7 @@ struct SectionOrderApplyGateTests {
         circuitBreakerOpen: Bool = false,
         reason: LayoutChangeReason = .revealRestore,
         arrangementIsManual: Bool = false,
+        isExplicitLayoutEdit: Bool = false,
         nativeMenuBarDeferred: Bool = false,
         isWithinSettleWindow: Bool = false,
         repairAfterRestriction: Bool = false,
@@ -33,6 +34,7 @@ struct SectionOrderApplyGateTests {
             circuitBreakerOpen: circuitBreakerOpen,
             reason: reason,
             arrangementIsManual: arrangementIsManual,
+            isExplicitLayoutEdit: isExplicitLayoutEdit,
             nativeMenuBarDeferred: nativeMenuBarDeferred,
             isWithinSettleWindow: isWithinSettleWindow,
             repairAfterRestriction: repairAfterRestriction,
@@ -112,12 +114,60 @@ struct SectionOrderApplyGateTests {
         )
     }
 
-    @Test("Manual arrangement outranks every reason, including authored edits")
-    func manualArrangement() {
+    @Test("Manual arrangement lets the user's own Layout edit through")
+    func manualArrangementAllowsAnExplicitLayoutEdit() {
+        #expect(
+            SectionOrderApplyGate.firstRejection(
+                makeRequest(reason: .userReorder, arrangementIsManual: true, isExplicitLayoutEdit: true)
+            ) == nil
+        )
+    }
+
+    @Test("Manual arrangement refuses a user reorder that no Layout edit carries")
+    func manualArrangementRefusesAnUnmarkedReorder() {
         #expect(
             SectionOrderApplyGate.firstRejection(
                 makeRequest(reason: .userReorder, arrangementIsManual: true)
             ) == .manualArrangement
+        )
+    }
+
+    @Test(
+        "Manual arrangement refuses every automatic reason, even inside a Layout edit's task",
+        arguments: [LayoutChangeReason.profileApply, .revealRestore, .settingChange, .arrivalRestore],
+        [false, true]
+    )
+    func manualArrangementRefusesAutomaticReasons(reason: LayoutChangeReason, isExplicitLayoutEdit: Bool) {
+        #expect(
+            SectionOrderApplyGate.firstRejection(
+                makeRequest(
+                    reason: reason,
+                    arrangementIsManual: true,
+                    isExplicitLayoutEdit: isExplicitLayoutEdit
+                )
+            ) == .manualArrangement
+        )
+    }
+
+    @Test("An observed change moves nothing in Manual either", arguments: [false, true])
+    func manualArrangementNeverEnforcesAnObservedChange(isExplicitLayoutEdit: Bool) {
+        #expect(
+            SectionOrderApplyGate.firstRejection(
+                makeRequest(
+                    reason: .externalChange,
+                    arrangementIsManual: true,
+                    isExplicitLayoutEdit: isExplicitLayoutEdit
+                )
+            ) == .reasonAcceptsSettledOrder
+        )
+    }
+
+    @Test("The Layout edit mark changes nothing in Automatic")
+    func automaticIgnoresTheLayoutEditMark() {
+        #expect(
+            SectionOrderApplyGate.firstRejection(
+                makeRequest(reason: .revealRestore, isExplicitLayoutEdit: true)
+            ) == nil
         )
     }
 
@@ -216,6 +266,7 @@ struct SectionOrderApplyGateTests {
             circuitBreakerOpen: true,
             reason: .externalChange,
             arrangementIsManual: false,
+            isExplicitLayoutEdit: false,
             nativeMenuBarDeferred: false,
             isWithinSettleWindow: false,
             repairAfterRestriction: false,

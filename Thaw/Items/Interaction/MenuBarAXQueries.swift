@@ -107,7 +107,7 @@ nonisolated enum MenuBarAXQueries {
         }
         guard length > 0 else { return false }
         let name = buffer.prefix { $0 != 0 }.map(UInt8.init)
-        return String(decoding: name, as: UTF8.self) == "WindowServer"
+        return String(bytes: name, encoding: .utf8) == "WindowServer"
     }
 
     // MARK: Presses

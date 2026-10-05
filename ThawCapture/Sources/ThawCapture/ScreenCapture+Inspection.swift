@@ -174,14 +174,6 @@ public extension ScreenCapture {
         }
     }
 
-    /// The capture options the menu bar item pipeline reads windows with.
-    ///
-    /// Defined here so an inspection cannot configure its capture differently
-    /// from the pipeline it claims to show.
-    static var menuBarItemCaptureOption: CGWindowImageOption {
-        [.boundsIgnoreFraming, .bestResolution]
-    }
-
     /// The region of a display Thaw reads, without reading it.
     ///
     /// Derived from the same function the capture configures itself with, so a

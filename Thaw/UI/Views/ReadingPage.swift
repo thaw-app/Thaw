@@ -177,13 +177,10 @@ struct ReadingPage<Content: View, Links: View>: View {
 
 // MARK: - ReadingPageType
 
-/// The reading pages' type scale: larger than the settings body because this
-/// is prose to be read top to bottom, not rows to be scanned.
-///
-/// Text styles, so the page follows the user's text size.
+/// Reading pages share the settings text styles; spacing separates long-form sections.
 enum ReadingPageType {
-    static let body = Font.system(.title2)
-    static let heading = Font.system(.title, weight: .semibold)
+    static let body = ThawType.body
+    static let heading = ThawType.heading
     static let lineSpacing: CGFloat = 6
     /// Wide on purpose: the page is the window, not a column inside it.
     static let columnWidth: CGFloat = 960

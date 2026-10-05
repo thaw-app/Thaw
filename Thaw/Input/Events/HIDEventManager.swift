@@ -346,23 +346,6 @@ final class HIDEventManager {
             modifierFlags: event.modifierFlags
         )
         handleSmartRehide(with: event, appState: appState, screen: screen)
-        noteHygieneActivation(appState: appState)
-    }
-
-    /// Tells the bar hygiene audit that a press landed on an item, so its
-    /// quiet list can distinguish "never touched here" from "not in the bar".
-    ///
-    /// A no-op unless the Lab flag is on, and it never consults the audit
-    /// before the cheap geometry read that rules out most presses.
-    /// clickLocation is not reused: it is AppKit-oriented, and item bounds
-    /// are Core Graphics rects.
-    private func noteHygieneActivation(appState: AppState) {
-        guard appState.hygieneAudit.isEnabled,
-              let location = MouseHelpers.locationCoreGraphics
-        else {
-            return
-        }
-        appState.hygieneAudit.noteActivation(at: location)
     }
 
     /// Records the Thaw icon's press-time modifiers, or clears a stale record

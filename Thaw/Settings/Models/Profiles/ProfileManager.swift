@@ -269,6 +269,7 @@ final class ProfileManager {
                 globalDisplayConfiguration: appState.settings.displaySettings.globalConfiguration,
                 confirmSpacingRelaunch: appState.settings.displaySettings.confirmSpacingRelaunch,
                 unconfirmedSpacingProfileScope: appState.settings.displaySettings.unconfirmedSpacingProfileScope,
+                spacingApplyMode: appState.settings.displaySettings.spacingApplyMode,
                 appearanceConfiguration: appState.appearanceManager.configuration,
                 menuBarLayout: captureCurrentLayout(
                     from: appState.itemManager,
@@ -480,6 +481,10 @@ final class ProfileManager {
         // created on another machine may not contain this display's UUID.
         appState.settings.displaySettings.globalConfiguration = profile.globalDisplayConfiguration
 
+        // Set before the configurations, whose change applies spacing under this mode.
+        if let spacingApplyMode = profile.spacingApplyMode {
+            appState.settings.displaySettings.spacingApplyMode = spacingApplyMode
+        }
         appState.settings.displaySettings.configurations = profile.displayConfigurations
         appState.settings.displaySettings.confirmSpacingRelaunch = profile.confirmSpacingRelaunch
         appState.settings.displaySettings.unconfirmedSpacingProfileScope = profile.unconfirmedSpacingProfileScope
@@ -672,7 +677,7 @@ final class ProfileManager {
     }
 
     /// Depend only on the item manager and defaults so capture and rearm tests need no AppState.
-    private func captureCurrentLayout(
+    func captureCurrentLayout(
         from itemManager: MenuBarItemManager,
         groups: MenuBarItemGroupSet
     ) -> MenuBarLayoutSnapshot {
@@ -742,6 +747,7 @@ final class ProfileManager {
         profile.globalDisplayConfiguration = appState.settings.displaySettings.globalConfiguration
         profile.confirmSpacingRelaunch = appState.settings.displaySettings.confirmSpacingRelaunch
         profile.unconfirmedSpacingProfileScope = appState.settings.displaySettings.unconfirmedSpacingProfileScope
+        profile.spacingApplyMode = appState.settings.displaySettings.spacingApplyMode
         profile.appearanceConfiguration = appState.appearanceManager.configuration
     }
 

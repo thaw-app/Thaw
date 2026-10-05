@@ -18,7 +18,7 @@ import PlatformRuntimeKit
 /// The seam is also where MenuBarArrangementMode.manual takes effect. Every
 /// path that could write a weight comes through here, so wrapping the store is
 /// what makes "Thaw never reorders" true for callers that have never heard of
-/// the setting, see ReadOnlyPositionStore.
+/// the setting, see ReadOnlyPositionStore. The one exception is forLayoutEdit.
 nonisolated enum MenuBarPositionStoreProvider {
     /// The live store. Held rather than rebuilt because current sits on the
     /// move and enumeration paths, and both wrappers are cheap only if they are
@@ -39,5 +39,12 @@ nonisolated enum MenuBarPositionStoreProvider {
     static var current: any MenuBarPositionStoring {
         let raw = Defaults.integer(forKey: .menuBarArrangementMode)
         return MenuBarArrangementMode(rawValue: raw) == .manual ? readOnly : live
+    }
+
+    /// The store for the writes an explicit Layout edit makes: live inside one, current otherwise.
+    /// Only the move, seat and section-apply writes ask for it, so repair paths stay read-only in Manual.
+    @MainActor
+    static var forLayoutEdit: any MenuBarPositionStoring {
+        ExplicitLayoutEdit.isActive ? live : current
     }
 }

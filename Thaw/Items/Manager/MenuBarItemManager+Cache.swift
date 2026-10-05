@@ -370,6 +370,29 @@ extension MenuBarItemManager {
         return context
     }
 
+    /// The recorded Visible order to keep after an arrival shuffled the items already there, or nil.
+    /// Offered only when a cursor-free write can put it back; otherwise the bar wins.
+    private func visibleOrderPreservedAcrossArrival(
+        mirrored: [String: [String]],
+        cache: ItemCache
+    ) -> [String]? {
+        let liveVisible = Set(cache[.visible].map(\.uniqueIdentifier))
+        let previousLiveVisible = lastMirroredLiveVisibleIdentifiers
+        lastMirroredLiveVisibleIdentifiers = liveVisible
+        guard !authoredVisibleOrderPendingPhysicalApply,
+              !arrangementIsManual,
+              !menuBarAgentIgnoresPreferredPositions,
+              let previousLiveVisible
+        else { return nil }
+        let visibleKey = sectionKey(for: .visible)
+        return Self.visibleOrderPreservedAcrossArrival(
+            savedOrder: savedSectionOrder[visibleKey] ?? [],
+            mirroredOrder: mirrored[visibleKey] ?? [],
+            previousLive: previousLiveVisible,
+            currentLive: liveVisible
+        )
+    }
+
     /// Mirror only settled, concealed geometry; reveal interleaving must not become saved order that reconciliation enforces.
     private func mirrorSavedSectionOrderIfSettled(from cache: ItemCache) {
         let isAnySectionRevealed = appState?.menuBarManager.sectionController.revealedSection != nil
@@ -393,13 +416,22 @@ extension MenuBarItemManager {
         // Mirror RuntimeSectionController membership and cached order to keep profiles, defaults, and layout bars synchronized.
         // Preserve pending authored Visible edits over old geometry; otherwise mirror command-drags the controller cannot observe (hidden sections have no live geometry).
         let mirrored = computeSectionOrder(from: cache)
+        let visibleKey = sectionKey(for: .visible)
+        let preservedVisible = visibleOrderPreservedAcrossArrival(mirrored: mirrored, cache: cache)
         let resolvedMirrored: [String: [String]] = if authoredVisibleOrderPendingPhysicalApply {
             mirrored.merging(
-                [MenuBarSection.Name.visible.rawValue: savedSectionOrder[sectionKey(for: .visible)] ?? []],
+                [MenuBarSection.Name.visible.rawValue: savedSectionOrder[visibleKey] ?? []],
                 uniquingKeysWith: { _, authored in authored }
             )
+        } else if let preservedVisible {
+            mirrored.merging([visibleKey: preservedVisible], uniquingKeysWith: { _, preserved in preserved })
         } else {
             mirrored
+        }
+        defer {
+            if preservedVisible != nil {
+                scheduleArrivalOrderRestore()
+            }
         }
         guard resolvedMirrored != savedSectionOrder else {
             return
@@ -594,6 +626,23 @@ extension MenuBarItemManager {
         skipRecentMoveCheck: Bool = false,
         resolveSourcePID: Bool = true,
         skipSavedLayoutApply: Bool = false
+    ) async {
+        // A cache pass is automatic work even when a Layout edit awaits it, so it never carries the edit's mark.
+        await ExplicitLayoutEdit.$isActive.withValue(false) {
+            await cacheItemsOutsideLayoutEdit(
+                currentItemWindowIDs,
+                skipRecentMoveCheck: skipRecentMoveCheck,
+                resolveSourcePID: resolveSourcePID,
+                skipSavedLayoutApply: skipSavedLayoutApply
+            )
+        }
+    }
+
+    private func cacheItemsOutsideLayoutEdit(
+        _ currentItemWindowIDs: [CGWindowID]?,
+        skipRecentMoveCheck: Bool,
+        resolveSourcePID: Bool,
+        skipSavedLayoutApply: Bool
     ) async {
         MenuBarItemManager.diagLog.debug(
             "cacheItemsRegardless: entering (skipRecentMoveCheck=\(skipRecentMoveCheck), hasCurrentItemWindowIDs=\(currentItemWindowIDs != nil), resolveSourcePID=\(resolveSourcePID), skipSavedLayoutApply=\(skipSavedLayoutApply))"

@@ -16,12 +16,16 @@ import ThawUI
 @Observable
 final class ThawBarColorManager {
     private(set) var colorInfo: MenuBarAverageColorInfo?
+    private(set) var colorDisplayID: CGDirectDisplayID?
 
     @ObservationIgnored
     private weak var thawBarPanel: ThawBarPanel?
 
     @ObservationIgnored
-    private var windowImage: CGImage?
+    private weak var appState: AppState?
+
+    @ObservationIgnored
+    private var windowImage: (displayID: CGDirectDisplayID, image: CGImage)?
 
     /// Monotonically incremented by updateWindowImage and clearWindowImage.
     /// A capture in flight stamps the value it observed; on completion it only
@@ -37,22 +41,28 @@ final class ThawBarColorManager {
     @ObservationIgnored
     private var periodicRefreshCancellable: AnyCancellable?
 
-    func performSetup(with thawBarPanel: ThawBarPanel) {
+    static func backgroundSample(
+        for displayID: CGDirectDisplayID,
+        overridesMenuBar: Bool,
+        sharedSamples: [CGDirectDisplayID: MenuBarAverageColorInfo],
+        localSample: MenuBarAverageColorInfo?
+    ) -> MenuBarAverageColorInfo? {
+        overridesMenuBar ? localSample : sharedSamples[displayID]
+    }
+
+    func performSetup(with thawBarPanel: ThawBarPanel, appState: AppState) {
         self.thawBarPanel = thawBarPanel
+        self.appState = appState
         stopPeriodicRefresh()
         cancellables.removeAll()
 
-        // Landing on a new main screen invalidates the sample strip; recapture
-        // it eagerly so the next color read has something current.
+        // A strip belongs to one display; never crop it with another display's frame.
         thawBarPanel.publisher(for: \.screen)
             .receive(on: DispatchQueue.main)
-            .sink { [weak self] screen in
-                guard let self, let screen, screen == .main else {
-                    return
-                }
-                Task { [weak self] in
-                    await self?.updateWindowImage(for: screen)
-                }
+            .sink { [weak self] _ in
+                guard let self else { return }
+                clearWindowImage()
+                refreshWhilePresented(animated: false)
             }
             .store(in: &cancellables)
 
@@ -66,7 +76,7 @@ final class ThawBarColorManager {
                     let thawBarPanel,
                     let screen = thawBarPanel.screen,
                     thawBarPanel.isVisible,
-                    screen == .main
+                    self.appState?.appearanceManager.configuration.thawBarAppearance.overridesMenuBar == true
                 else {
                     return
                 }
@@ -75,6 +85,16 @@ final class ThawBarColorManager {
                 }
             }
             .store(in: &cancellables)
+
+        let appearanceTask = Task { @MainActor [weak self, weak appState] in
+            let changes = Observations { appState?.appearanceManager.configuration.thawBarAppearance.overridesMenuBar }
+            for await _ in changes {
+                guard let self else { return }
+                clearWindowImage()
+                refreshWhilePresented(animated: false)
+            }
+        }
+        AnyCancellable { appearanceTask.cancel() }.store(in: &cancellables)
 
         // Space, display-parameter and theme changes all invalidate the strip.
         // Clear it first so a stale in-flight capture can't resurrect it, then
@@ -116,14 +136,12 @@ final class ThawBarColorManager {
             .store(in: &cancellables)
     }
 
-    /// Recaptures the sample strip and republishes the color, provided the
-    /// panel is currently visible on the main screen.
+    /// Hidden panels do not keep either sampling path active.
     private func refreshWhilePresented(animated: Bool) {
         guard
             let thawBarPanel,
             thawBarPanel.isVisible,
-            let screen = thawBarPanel.screen,
-            screen == .main
+            let screen = thawBarPanel.screen
         else {
             return
         }
@@ -136,7 +154,11 @@ final class ThawBarColorManager {
     /// not the previous cycle's leftover.
     private func captureThenPublish(frame: CGRect, screen: NSScreen, animated: Bool) {
         Task { [weak self] in
-            guard let self else { return }
+            guard let self, let appState else { return }
+            if !appState.appearanceManager.configuration.thawBarAppearance.overridesMenuBar {
+                await appState.menuBarManager.updateAverageColorInfoAsync(for: screen.displayID)
+                return
+            }
             await updateWindowImage(for: screen)
             if animated {
                 withThawAnimation(.default) {
@@ -187,7 +209,7 @@ final class ThawBarColorManager {
 
         let image = await MenuBarColorSampler.captureStrip(for: displayID, from: windows)?.image
         guard generation == windowImageGeneration, let image else { return }
-        windowImage = image
+        windowImage = (displayID, image)
     }
 
     /// Publishes the average color of the strip behind the panel.
@@ -197,9 +219,10 @@ final class ThawBarColorManager {
     /// outer half-panel-width at either screen edge), and a fixed window of
     /// pixels around the matching strip position is averaged.
     private func updateColorInfo(with frame: CGRect, screen: NSScreen) {
-        guard let image = windowImage else {
+        guard let capture = windowImage, capture.displayID == screen.displayID else {
             return
         }
+        let image = capture.image
 
         let sampleHalfWidth: CGFloat = 150
         let imageBounds = CGRect(x: 0, y: 0, width: image.width, height: image.height)
@@ -224,6 +247,7 @@ final class ThawBarColorManager {
         // Dragging across a uniform background resamples the same colour at
         // 10 Hz; an unchanged value must not animate the whole bar again.
         let info = MenuBarAverageColorInfo(color: averageColor, source: .menuBarWindow)
+        colorDisplayID = screen.displayID
         if colorInfo != info {
             colorInfo = info
         }

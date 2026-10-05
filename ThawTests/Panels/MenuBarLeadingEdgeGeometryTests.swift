@@ -47,6 +47,32 @@ struct MenuBarLeadingEdgeGeometryTests {
         #expect(updated.stableTrailingBounds == stable)
     }
 
+    @Test("A known mirrored source still cannot trim revealed or transitioning geometry", arguments: [false, true])
+    func mirroredEdgeRespectsTransitions(transitioning: Bool) {
+        let source = CGRect(x: 1000, y: 0, width: 1000, height: 800)
+        let updated = MenuBarSplitPillGeometry.followingVisibleEdge(
+            .init(x: 1210, screenFrame: source), itemBounds: items,
+            stableTrailingBounds: stable, screenFrame: screen,
+            revealedSection: transitioning ? nil : .hidden,
+            isTransitioning: transitioning, sourceScreenFrame: source
+        )
+        #expect(updated.itemBounds == items)
+        #expect(updated.stableTrailingBounds == stable)
+    }
+
+    @Test("A mirrored pill ignores edges from a different source display")
+    func unrelatedSourceDoesNotMoveMirroredPill() {
+        let source = CGRect(x: 1000, y: 0, width: 1000, height: 800)
+        let unrelated = CGRect(x: 2000, y: 0, width: 1000, height: 800)
+        let updated = MenuBarSplitPillGeometry.followingVisibleEdge(
+            .init(x: 2210, screenFrame: unrelated), itemBounds: items,
+            stableTrailingBounds: stable, screenFrame: screen, revealedSection: nil,
+            sourceScreenFrame: source
+        )
+        #expect(updated.itemBounds == items)
+        #expect(updated.stableTrailingBounds == stable)
+    }
+
     @Test(arguments: [CGFloat(80), CGFloat(210)])
     func concealedPillStillFollowsItsOwnVisibleEdge(edge: CGFloat) {
         let updated = MenuBarSplitPillGeometry.followingVisibleEdge(

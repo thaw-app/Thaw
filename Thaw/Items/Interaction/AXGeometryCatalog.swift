@@ -60,8 +60,10 @@ nonisolated enum AXGeometryCatalog {
         }
         guard let display = title ?? description ?? identifier else { return nil }
         return MenuBarItemAXProvider.identityTitle(
-            namespace: namespace, identifier: identifier,
-            accessibilityDescription: description, displayTitle: display
+            namespace: namespace,
+            identifier: identifier,
+            accessibilityDescription: description,
+            displayTitle: display
         )
     }
 
@@ -214,9 +216,18 @@ nonisolated enum AXGeometryCatalog {
                     maximumItemHeight: itemHeightCeiling,
                     fallbackIndex: &fallbackIndex
                 )
-                walk(child, ownerPID: pid, itemIndex: itemIndex, identityTitle: identity,
-                     attributes: attributes, childAttributes: innerAttributes,
-                     depth: 1, visited: &visited, into: &results, deadline: deadline)
+                walk(
+                    child,
+                    ownerPID: pid,
+                    itemIndex: itemIndex,
+                    identityTitle: identity,
+                    attributes: attributes,
+                    childAttributes: innerAttributes,
+                    depth: 1,
+                    visited: &visited,
+                    into: &results,
+                    deadline: deadline
+                )
             }
         }
         return results
@@ -250,17 +261,29 @@ nonisolated enum AXGeometryCatalog {
             for: element,
             includingChildren: depth < maxWalkDepth
         )
-        results.append(Entry(ownerPID: ownerPID, itemIndex: itemIndex,
-                             identityTitle: identityTitle, frame: attributes.frame ?? .zero))
+        results.append(Entry(
+            ownerPID: ownerPID,
+            itemIndex: itemIndex,
+            identityTitle: identityTitle,
+            frame: attributes.frame ?? .zero
+        ))
 
         guard depth < maxWalkDepth, canContinue(until: deadline) else { return }
         let children = attributes.children
         for (index, child) in children.enumerated() {
             guard visited < maxElementsVisited else { return }
             guard canContinue(until: deadline) else { return }
-            walk(child, ownerPID: ownerPID, itemIndex: itemIndex, identityTitle: identityTitle,
-                 attributes: childAttributes.flatMap { index < $0.count ? $0[index] : nil },
-                 depth: depth + 1, visited: &visited, into: &results, deadline: deadline)
+            walk(
+                child,
+                ownerPID: ownerPID,
+                itemIndex: itemIndex,
+                identityTitle: identityTitle,
+                attributes: childAttributes.flatMap { index < $0.count ? $0[index] : nil },
+                depth: depth + 1,
+                visited: &visited,
+                into: &results,
+                deadline: deadline
+            )
         }
     }
 

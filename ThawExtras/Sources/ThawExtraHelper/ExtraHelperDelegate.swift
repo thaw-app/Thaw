@@ -46,8 +46,9 @@ final class ExtraHelperDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate
             button.setAccessibilityIdentifier(role.autosaveName)
             button.setAccessibilityLabel(role.displayName)
         }
-        item.isVisible = true
         statusItem = item
+        // Read before the first show, so a hidden stand-in never flashes in.
+        observeVisibility(bundleID: bundleID)
 
         if let slot = role.slot, let parentID = ExtraRole.parentBundleIdentifier(of: bundleID), let button = item.button {
             // Thaw opens the real item; the stand-in has no menu of its own.
@@ -150,6 +151,32 @@ final class ExtraHelperDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate
         if let url = URL(string: "x-apple.systempreferences:com.apple.AirDrop-Handoff-Settings.extension") {
             NSWorkspace.shared.open(url)
         }
+    }
+
+    // MARK: Visibility
+
+    /// Thaw hides its own bundles: Control Center may have no record of a stand-in.
+    private func observeVisibility(bundleID: String) {
+        guard let parentID = ExtraRole.parentBundleIdentifier(of: bundleID) else {
+            statusItem?.isVisible = true
+            return
+        }
+        applyVisibility(bundleID: bundleID, parentID: parentID)
+        DistributedNotificationCenter.default().addObserver(
+            forName: ExtraVisibilityChannel.notification(parent: parentID),
+            object: nil,
+            queue: .main
+        ) { [weak self] _ in
+            MainActor.assumeIsolated {
+                self?.applyVisibility(bundleID: bundleID, parentID: parentID)
+            }
+        }
+    }
+
+    private func applyVisibility(bundleID: String, parentID: String) {
+        let isVisible = !ExtraVisibilityChannel.hiddenBundles(parent: parentID).contains(bundleID)
+        guard statusItem?.isVisible != isVisible else { return }
+        statusItem?.isVisible = isVisible
     }
 
     // MARK: Helpers
