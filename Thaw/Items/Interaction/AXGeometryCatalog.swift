@@ -7,6 +7,7 @@
 
 import AXSwift6
 import Cocoa
+import ThawAXCore
 
 /// Validates frames with their process and AX root; equal rectangles need not share an owner.
 /// On-demand synchronous AX walks run on a private serial actor to avoid blocking MainActor or overlapping capture passes.
@@ -217,8 +218,11 @@ nonisolated enum AXGeometryCatalog {
             for: element,
             includingChildren: depth < maxWalkDepth
         )
+        // Clamped like discovery's item frames, so a crop is checked against the same rectangle.
+        let ceiling = MenuBarItemAXProvider.maxItemHeight(menuBarHeight: NSScreen.tallestCachedMenuBarHeight)
+        let frame = attributes.frame.map { AXPrimitives.itemFrame($0, maximumHeight: ceiling) ?? $0 } ?? .zero
         results.append(Entry(ownerPID: ownerPID, itemIndex: itemIndex,
-                             identityTitle: identityTitle, frame: attributes.frame ?? .zero))
+                             identityTitle: identityTitle, frame: frame))
 
         guard depth < maxWalkDepth, canContinue(until: deadline) else { return }
         let children = attributes.children
