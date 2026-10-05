@@ -616,6 +616,10 @@ public struct MenuBarItemTag: Hashable, CustomStringConvertible, Sendable, Codab
     /// Keys "Module: data" on the module because localized status words and peripherals churn too; otherwise neutralizes numbers.
     /// - Note: A bare clock ("15:41") has no ": " and canonicalizes to "#:#".
     public static func canonicalIStatMetricTitle(_ raw: String) -> String {
+        // An untitled extra's Item-N is a stable identity that keys the position store, not a reading.
+        if raw.wholeMatch(of: /Item-\d+/) != nil {
+            return raw
+        }
         if let separator = raw.range(of: ": ") {
             let module = raw[..<separator.lowerBound].trimmingCharacters(in: .whitespaces)
             if !module.isEmpty {

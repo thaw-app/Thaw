@@ -146,6 +146,16 @@ struct DynamicMetricTitleTests {
         )
     }
 
+    @Test("Untitled extras keep distinct Item-N identities")
+    func untitledExtrasStayDistinct() {
+        let bundle = "eu.exelban.Stats"
+        #expect(MenuBarItemTag.canonicalPersistentIdentifier("\(bundle):Item-5") == "\(bundle):Item-5")
+        #expect(
+            MenuBarItemTag.canonicalPersistentIdentifier("\(bundle):Item-1")
+                != MenuBarItemTag.canonicalPersistentIdentifier("\(bundle):Item-2")
+        )
+    }
+
     @Test("Distinct gauges stay distinct")
     func distinctGaugesStayDistinct() {
         let bundle = "com.bjango.istatmenus-setapp.status"
