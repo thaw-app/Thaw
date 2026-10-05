@@ -212,6 +212,11 @@ class Permission: Identifiable {
         }
     }
 
+    /// Whether openSettingsPane() has a pane to open.
+    var hasSettingsPane: Bool {
+        settingsURL != nil
+    }
+
     /// No-op without a pane URL; call only for no-prompt fallback or an explicit user choice after decline.
     /// Never open Settings alongside a prompt or automatically after decline.
     func openSettingsPane() {
