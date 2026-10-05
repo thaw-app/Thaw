@@ -385,6 +385,10 @@ extension MenuBarItemManager {
         guard shouldPersistLayoutSnapshot else {
             return
         }
+        guard !Self.framesSpanSeveralBars(cache.managedItems) else {
+            MenuBarItemManager.diagLog.debug("Not mirroring section order: item frames span more than one bar")
+            return
+        }
 
         // Consolidate split groups before mirroring them back into savedSectionOrder.
         // Persistence guards ensure no move is in flight; healthy records incur no write or refresh.
