@@ -82,6 +82,14 @@ extension MenuBarItemImageCache {
             return false
         }
 
+        guard Self.isMenuBarOnScreen(displayID: displayID) else {
+            MenuBarItemImageCache.diagLog.debug(
+                "recaptureNow: menu bar on display \(displayID) is off screen; keeping prior images"
+            )
+            requestInventoryRefresh(reason: "menu bar on display \(displayID) is off screen")
+            return false
+        }
+
         let scale = screen.backingScaleFactor
 
         // Concealed macOS 27 sections have only stale snapshot bounds, so crop
@@ -138,6 +146,9 @@ extension MenuBarItemImageCache {
             unconditionallyInvalidatedTags.formUnion(sectionResult.unconditionallyInvalidatedTags)
 
             guard !sectionResult.captured.isEmpty else {
+                if section == .visible {
+                    requestInventoryRefresh(reason: "visible pass captured nothing")
+                }
                 // Expected for off-screen sections (e.g. hidden): live refresh
                 // (refreshImages) handles those items. Only a real concern for
                 // the visible section, check the capture logs for details.
@@ -450,6 +461,45 @@ extension MenuBarItemImageCache {
     /// Minimum point width for a crop that is trusted as a real status-item glyph.
     /// Narrower crops usually come from native overflow chevron bleed on macOS 27.
     static nonisolated let minimumTrustedGlyphWidth: CGFloat = 15
+
+    /// Asks for a fresh inventory walk, at most every 2 s.
+    ///
+    /// The capture display and item frames come from the last walk. With several displays
+    /// macOS moves or hides the active bar as focus changes, so until the next scheduled walk
+    /// every pass reads a bar the items have left and the panes keep their app icons.
+    @MainActor
+    func requestInventoryRefresh(reason: String) {
+        let now = ContinuousClock.now
+        if let last = lastInventoryRefreshRequest, now - last < .seconds(2) {
+            return
+        }
+        lastInventoryRefreshRequest = now
+        MenuBarItemImageCache.diagLog.debug("recaptureNow: \(reason); refreshing the item inventory")
+        Task { @MainActor [weak self] in
+            await self?.appState?.itemManager.cacheItemsRegardless(skipRecentMoveCheck: true)
+        }
+    }
+
+    /// Whether the menu bar host's bar window over display is on screen.
+    ///
+    /// macOS can slide a display's bar above its top edge while focus is on another display.
+    /// Capturing that display then reads blank pixels, and every glyph would fall back to its
+    /// app icon until the bar returns. Unknown geometry counts as on screen.
+    static func isMenuBarOnScreen(displayID: CGDirectDisplayID) -> Bool {
+        guard let host = NSRunningApplication.runningApplications(
+            withBundleIdentifier: SharedConstants.menuBarHostingBundleID
+        ).first else { return true }
+        let barFrames = Bridging.getMenuBarWindowIDs(forProcess: host.processIdentifier, skipWidthFilter: true)
+            .compactMap { Bridging.getWindowBounds(for: $0) }
+        return isBarOnScreen(barFrames: barFrames, display: CGDisplayBounds(displayID))
+    }
+
+    /// isMenuBarOnScreen(displayID:) over known frames: the bar windows spanning display's width.
+    static nonisolated func isBarOnScreen(barFrames: [CGRect], display: CGRect) -> Bool {
+        let bars = barFrames.filter { abs($0.minX - display.minX) < 1 && abs($0.width - display.width) < 1 }
+        guard !bars.isEmpty else { return true }
+        return bars.contains { $0.minY >= display.minY - 1 }
+    }
 
     /// Whether capture is a settled glyph worth keeping over a miss: not
     /// blank, and wide enough not to be native overflow chevron bleed.

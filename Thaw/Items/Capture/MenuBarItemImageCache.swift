@@ -170,6 +170,8 @@ final class MenuBarItemImageCache: @unchecked Sendable {
     /// queued behind it. Main actor only. See
     /// prewarmConcealedImages(sections:onlyMissingImages:).
     @ObservationIgnored var isConcealedPrewarmRunning = false
+    /// When recapture last asked for a fresh inventory walk; see requestInventoryRefresh(reason:).
+    @ObservationIgnored var lastInventoryRefreshRequest: ContinuousClock.Instant?
     @ObservationIgnored var concealedPrewarmWaiters = [CheckedContinuation<Void, Never>]()
 
     /// How many passes a live reflow may suppress before one runs regardless.
