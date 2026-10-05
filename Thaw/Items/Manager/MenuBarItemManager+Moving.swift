@@ -2995,6 +2995,12 @@ extension MenuBarItemManager {
             moveMonitor.recordStoreUnavailable()
             return false
         }
+        guard !ignoredPreferredWrites.skipsWrite(for: item.uniqueIdentifier) else {
+            MenuBarItemManager.diagLog.debug(
+                "MenuBarAgent ignored the last preferred-position writes for \(item.logString); dragging instead"
+            )
+            return false
+        }
 
         // The user's own move is the retry that clears the breaker, so it must
         // reach the store even during a cooldown; only automatic passes wait.
@@ -3084,6 +3090,11 @@ extension MenuBarItemManager {
                     verified: writeVerified,
                     barMoved: observedBarMoved
                 )
+                if writeVerified {
+                    ignoredPreferredWrites.noteVerified(item.uniqueIdentifier)
+                } else if !Task.isCancelled {
+                    ignoredPreferredWrites.noteUnverified(item.uniqueIdentifier)
+                }
             }
         }
 

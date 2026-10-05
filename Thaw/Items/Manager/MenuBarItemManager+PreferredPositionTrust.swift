@@ -103,3 +103,27 @@ extension MenuBarItemManager {
         )
     }
 }
+
+/// Items whose preferred-position writes MenuBarAgent keeps ignoring. Some
+/// items are never laid out by their weight (seen for a helper without a
+/// registered bundle), so every move paid the verification wait before its
+/// drag. Whether the bar moved is no verdict: items with live-width titles
+/// shift it all the time. After two unverified writes in a row the item goes
+/// straight to the drag; a verified write clears it.
+struct IgnoredPreferredWrites {
+    static let strikes = 2
+
+    private var counts: [String: Int] = [:]
+
+    func skipsWrite(for identifier: String) -> Bool {
+        counts[identifier, default: 0] >= Self.strikes
+    }
+
+    mutating func noteUnverified(_ identifier: String) {
+        counts[identifier, default: 0] += 1
+    }
+
+    mutating func noteVerified(_ identifier: String) {
+        counts[identifier] = nil
+    }
+}

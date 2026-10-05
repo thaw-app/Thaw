@@ -712,6 +712,10 @@ final class MenuBarItemManager {
     /// reading the table.
     var consecutiveIgnoredPreferredWrites = 0
 
+    /// Items whose own writes the agent keeps ignoring. Session-scoped; never
+    /// persisted.
+    var ignoredPreferredWrites = IgnoredPreferredWrites()
+
     /// When set and still in the future, move skips the cursor-free write
     /// and goes straight to the synthetic drag, the drag-first behavior when the
     /// agent has stopped honoring writes. Session-scoped; never persisted.
