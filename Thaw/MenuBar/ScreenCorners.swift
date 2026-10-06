@@ -6,6 +6,7 @@
 //  Licensed under the GNU GPLv3
 
 import AppKit
+import Combine
 import Observation
 
 /// Small black corner panels avoid a fullscreen overlay participating in every menu-bar window walk.
@@ -15,7 +16,7 @@ final class ScreenCorners {
     private weak var appState: AppState?
     private var panels: [NSPanel] = []
     private var observationTask: Task<Void, Never>?
-    private var screenObserver: NSObjectProtocol?
+    private var screenObserver: AnyCancellable?
 
     func performSetup(with appState: AppState) {
         self.appState = appState
@@ -24,13 +25,8 @@ final class ScreenCorners {
                 self?.reconcile()
             }
         }
-        screenObserver = NotificationCenter.default.addObserver(
-            forName: NSApplication.didChangeScreenParametersNotification,
-            object: nil,
-            queue: .main
-        ) { [weak self] _ in
-            MainActor.assumeIsolated { self?.reconcile() }
-        }
+        screenObserver = DisplayTopology.shared.screenParametersChanged
+            .sink { [weak self] in self?.reconcile() }
     }
 
     private func reconcile() {

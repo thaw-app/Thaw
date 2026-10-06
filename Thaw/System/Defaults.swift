@@ -570,7 +570,7 @@ extension Defaults {
 
         /// Seconds an accessibility message may block before it fails.
         ///
-        /// Applied to every element AXSwift6 creates. 0 restores the
+        /// Applied to every AXElement as it is wrapped. 0 restores the
         /// system default of six seconds.
         ///
         /// Hidden diagnostic flag; not exposed in Settings. Default: 1.0.

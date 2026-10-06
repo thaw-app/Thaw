@@ -219,22 +219,10 @@ final class MenuBarAppearanceManager {
         }
     }
 
-    /// A task-owned observer feeds debounced screen events, as in DisplaySettingsManager.configureObservers().
     private func observeScreenParameters() -> AnyCancellable {
-        let (screenParameterEvents, screenParameterContinuation) = AsyncStream<Void>.makeStream()
-        let task = Task { @MainActor [weak self] in
-            let observer = NotificationCenter.default.addObserver(
-                forName: NSApplication.didChangeScreenParametersNotification,
-                object: nil,
-                queue: .main
-            ) { _ in screenParameterContinuation.yield(()) }
-            defer { NotificationCenter.default.removeObserver(observer) }
-            for await _ in screenParameterEvents.debounce(for: .seconds(0.1)) {
-                guard let self else { return }
-                self.rebuildOverlayPanelsIfScreensMoved()
-            }
-        }
-        return AnyCancellable { task.cancel() }
+        DisplayTopology.shared.screenParametersChanged
+            .debounce(for: .seconds(0.1), scheduler: DispatchQueue.main)
+            .sink { [weak self] in self?.rebuildOverlayPanelsIfScreensMoved() }
     }
 
     /// Update accent-following surfaces when the system accent changes.

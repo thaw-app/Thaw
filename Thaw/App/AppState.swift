@@ -157,9 +157,6 @@ final class AppState {
     /// Watches navigationState's observable focus and Settings visibility.
     private var navigationStateObservationTask: Task<Void, Never>?
 
-    /// Track last known screen count to detect disconnects.
-    private var lastKnownScreenCount = NSScreen.managedScreens.count
-
     /// Prevent repeated restart attempts.
     private var isRestarting = false
 
@@ -475,55 +472,36 @@ final class AppState {
         }
     }
 
-    /// A task-owned observer feeds a debounced AsyncStream because macOS Notification is not Sendable for notifications(named:).
+    /// Display changes reach state in one order, each step finishing before the
+    /// next: hit-test caches, the item rescan (whose new display drives the
+    /// image refresh), spacing, then the display's profile.
     private func observeDisplayTopology() {
-        let (topologyEvents, topologyContinuation) = AsyncStream<Void>.makeStream()
-        let topologyTask = Task { @MainActor [weak self] in
-            let observer = NotificationCenter.default.addObserver(
-                forName: NSApplication.didChangeScreenParametersNotification,
-                object: nil,
-                queue: .main
-            ) { _ in topologyContinuation.yield(()) }
-            defer { NotificationCenter.default.removeObserver(observer) }
-            for await _ in topologyEvents.debounce(for: .seconds(0.5)) {
-                guard let self else { return }
-                self.handleDisplayTopologyChange()
-            }
-        }
-        cancellables.insert(AnyCancellable { topologyTask.cancel() })
+        DisplayTopology.shared.start(reactions: [
+            { [weak self] _ in self?.hidEventManager.handleDisplayTopologyChange() },
+            { [weak self] event in await self?.handleDisplayTopologyChange(event) },
+            { [weak self] event in self?.settings.displaySettings.handleDisplayTopologyChange(event) },
+            { [weak self] event in await self?.profileManager.handleDisplayTopologyChange(event) },
+        ])
     }
 
-    /// The debounced body of observeDisplayTopology().
-    private func handleDisplayTopologyChange() {
-        let count = NSScreen.managedScreens.count
-        defer { lastKnownScreenCount = count }
-        if count < lastKnownScreenCount {
-            diagLog.info("Display disconnected: refresh item cache + cleanup image cache")
-            Task { @MainActor [weak self] in
-                guard let self else { return }
-                // Wait for disconnect geometry to settle; a stale Control Center edge yields a negative overflow budget and persists hidden items as visible.
-                itemManager.startSettlingPeriod(reason: "displayDisconnect")
-                // Force item cache rebuild so displayID reflects current
-                // display geometry (items moved to remaining display).
-                await itemManager.cacheItemsRegardless(skipRecentMoveCheck: true)
-                // Force image cache: remove entries for items no longer
-                // present, trigger re-capture for current display.
-                imageCache.performCacheCleanup()
-                await imageCache.recaptureNow(sections: MenuBarSection.Name.allCases)
-                diagLog.info("Cache refresh complete after display disconnect")
-            }
-        } else if count > lastKnownScreenCount {
-            diagLog.info("Display connected: refresh item cache")
-            Task { @MainActor [weak self] in
-                guard let self else { return }
-                // Defer saved-layout restore until attached-display geometry settles, as on disconnect.
-                itemManager.startSettlingPeriod(reason: "displayConnect")
-                // Items keep their windowIDs when moving to new display.
-                // Item cache rebuild picks up new items on the added display.
-                await itemManager.cacheItemsRegardless(skipRecentMoveCheck: true)
-                diagLog.info("Item cache refreshed after display connect")
-            }
+    private func handleDisplayTopologyChange(_ event: DisplayTopology.Event) async {
+        let change = event.change
+        guard !change.isEmpty else { return }
+        if change.contains(.disconnected) {
+            // A stale Control Center edge yields a negative overflow budget and persists hidden items as visible.
+            itemManager.startSettlingPeriod(reason: "displayDisconnect")
+        } else if change.contains(.connected) {
+            // Defer saved-layout restore until attached-display geometry settles, as on disconnect.
+            itemManager.startSettlingPeriod(reason: "displayConnect")
         }
+        // Stamps the item cache with the display the bar is on now.
+        await itemManager.cacheItemsRegardless(skipRecentMoveCheck: true)
+        if change.contains(.disconnected) {
+            // Drop entries for items no longer present and recapture on the remaining display.
+            imageCache.performCacheCleanup()
+            await imageCache.recaptureNow(sections: MenuBarSection.Name.allCases)
+        }
+        diagLog.info("Display change \(event.generation) handled: item cache refreshed")
     }
 
     // MARK: - Windows

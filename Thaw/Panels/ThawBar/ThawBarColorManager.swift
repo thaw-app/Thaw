@@ -103,9 +103,7 @@ final class ThawBarColorManager {
             NSWorkspace.shared.notificationCenter
                 .publisher(for: NSWorkspace.activeSpaceDidChangeNotification)
                 .replace(with: ()),
-            NotificationCenter.default
-                .publisher(for: NSApplication.didChangeScreenParametersNotification)
-                .replace(with: ()),
+            DisplayTopology.shared.screenParametersChanged,
             DistributedNotificationCenter.default()
                 .publisher(for: DistributedNotificationCenter.interfaceThemeChangedNotification)
                 .replace(with: ())

@@ -33,7 +33,7 @@ profiles, and customizes menu bar appearance. It is a maintained fork of
 
 External dependencies are declared via Swift Package Manager and locked in
 `Thaw.xcodeproj/project.xcworkspace/xcshareddata/swiftpm/Package.resolved`
-(e.g. Sparkle, AXSwift, CompactSlider, Ifrit, LaunchAtLogin-Modern).
+(e.g. Sparkle, CompactSlider, Ifrit, LaunchAtLogin-Modern).
 
 ## Runtime components
 

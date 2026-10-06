@@ -5,10 +5,10 @@
 //  Copyright (Thaw) © 2026 Toni Förster
 //  Licensed under the GNU GPLv3
 
-import AXSwift6
 import MenuBarModel
 import PlatformRuntimeKit
 import SwiftUI
+import ThawAXCore
 
 @MainActor
 final class AppDelegate: NSObject, NSApplicationDelegate {
@@ -40,7 +40,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
         // Set AX timeout before creating elements: synchronous IPC can stall when a target stops pumping events.
         // Override with defaults write com.stonerl.Thaw axMessagingTimeout -float <seconds>.
-        UIElement.defaultMessagingTimeout = Float(
+        AXElement.defaultMessagingTimeout = Float(
             max(0, (Defaults.object(forKey: .axMessagingTimeout) as? Double) ?? 0)
         )
 

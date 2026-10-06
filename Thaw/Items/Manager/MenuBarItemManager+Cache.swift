@@ -656,7 +656,8 @@ extension MenuBarItemManager {
         }
 
         let previousWindowIDs = cacheCycleState.cachedItemWindowIDs
-        let displayID = Bridging.getActiveMenuBarDisplayID()
+        // Mid-change no connected display is active; keep the cache's display until the topology settles.
+        let displayID = DisplayTopology.resolveActiveDisplayID() ?? itemCache.displayID ?? Bridging.getActiveMenuBarDisplayID()
         MenuBarItemManager.diagLog.debug("cacheItemsRegardless: displayID=\(displayID.map { "\($0)" } ?? "nil"), previousWindowIDs count=\(previousWindowIDs.count)")
 
         let publicationGeneration = layoutPublication.generation

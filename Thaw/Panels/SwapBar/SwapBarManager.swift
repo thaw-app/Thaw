@@ -59,12 +59,10 @@ final class SwapBarManager {
         let cancellable = Publishers.Merge(
             NSWorkspace.shared.notificationCenter.publisher(
                 for: NSWorkspace.activeSpaceDidChangeNotification
-            ),
-            NotificationCenter.default.publisher(
-                for: NSApplication.didChangeScreenParametersNotification
-            )
+            ).replace(with: ()),
+            DisplayTopology.shared.screenParametersChanged
         )
-        .sink { [weak self] _ in
+        .sink { [weak self] in
             self?.currentDisplayID = nil
             self?.reposition()
         }

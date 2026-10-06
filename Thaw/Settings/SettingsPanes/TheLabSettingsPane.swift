@@ -69,7 +69,7 @@ struct TheLabSettingsPane: View {
                 }
             }
         }
-        .onReceive(NotificationCenter.default.publisher(for: NSApplication.didChangeScreenParametersNotification)) { _ in
+        .onReceive(DisplayTopology.shared.screenParametersChanged) {
             screenGeneration += 1
         }
     }

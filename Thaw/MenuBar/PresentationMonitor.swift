@@ -6,6 +6,7 @@
 //  Licensed under the GNU GPLv3
 
 import AppKit
+import Combine
 import Darwin
 import Foundation
 import MenuBarModel
@@ -38,7 +39,7 @@ final class PresentationMonitor {
     private weak var appState: AppState?
 
     private var settingTask: Task<Void, Never>?
-    private var screenParametersTask: Task<Void, Never>?
+    private var screenParametersObserver: AnyCancellable?
     private var pollTask: Task<Void, Never>?
 
     /// The last evaluated state, kept so a repeated signal doesn't re-log.
@@ -63,24 +64,10 @@ final class PresentationMonitor {
     }
 
     private func startObserving() {
-        guard screenParametersTask == nil else { return }
+        guard screenParametersObserver == nil else { return }
 
-        // Same observer-owned-by-the-task shape as DisplaySettingsManager:
-        // the token is added when the task starts and removed when it ends,
-        // so nothing non-Sendable has to be stored on the class.
-        let (events, continuation) = AsyncStream<Void>.makeStream()
-        screenParametersTask = Task { @MainActor [weak self] in
-            let observer = NotificationCenter.default.addObserver(
-                forName: NSApplication.didChangeScreenParametersNotification,
-                object: nil,
-                queue: .main
-            ) { _ in continuation.yield(()) }
-            defer { NotificationCenter.default.removeObserver(observer) }
-            for await _ in events {
-                guard let self else { break }
-                evaluate()
-            }
-        }
+        screenParametersObserver = DisplayTopology.shared.screenParametersChanged
+            .sink { [weak self] in self?.evaluate() }
 
         pollTask = Task { @MainActor [weak self] in
             while !Task.isCancelled {
@@ -94,8 +81,7 @@ final class PresentationMonitor {
     }
 
     private func stopObserving() {
-        screenParametersTask?.cancel()
-        screenParametersTask = nil
+        screenParametersObserver = nil
         pollTask?.cancel()
         pollTask = nil
         // Withdraw anything this monitor engaged; a manual zen mode is left

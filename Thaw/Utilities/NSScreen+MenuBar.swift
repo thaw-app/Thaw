@@ -253,7 +253,7 @@ extension NSScreen {
     ///   to the menu bar owner's AX tree, which only describes the main display.
     private func axApplicationMenuFrame(allowOwnerFallback: Bool) -> CGRect? {
         var menuBar = AXHelpers.element(at: CGDisplayBounds(displayID).origin).flatMap { element in
-            AXHelpers.role(for: element) == .menuBar ? element : nil
+            AXHelpers.roleString(for: element) == kAXMenuBarRole ? element : nil
         }
         if menuBar == nil, allowOwnerFallback {
             menuBar = NSWorkspace.shared.menuBarOwningApplication

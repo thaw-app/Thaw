@@ -6,7 +6,6 @@
 //  Licensed under the GNU GPLv3
 
 import AppKit
-import AXSwift6
 import CoreGraphics
 import Foundation
 import MenuBarModel

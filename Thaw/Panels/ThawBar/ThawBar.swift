@@ -146,10 +146,11 @@ final class ThawBarPanel: NSPanel {
 
         // Activating an inactive screen posts a screen-change notification; do not let it close a just-opened bar.
         Publishers.Merge(
-            NSWorkspace.shared.notificationCenter.publisher(for: NSWorkspace.activeSpaceDidChangeNotification),
-            NotificationCenter.default.publisher(for: NSApplication.didChangeScreenParametersNotification)
+            NSWorkspace.shared.notificationCenter.publisher(for: NSWorkspace.activeSpaceDidChangeNotification)
+                .replace(with: ()),
+            DisplayTopology.shared.screenParametersChanged
         )
-        .sink { [weak self] _ in
+        .sink { [weak self] in
             guard
                 let self,
                 let ts = lastShowTimestamp,

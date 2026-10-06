@@ -314,6 +314,8 @@ final class HIDEventManager {
             return false
         }
         lastActiveMenuBarDisplayID = currentMenuBarID
+        // The active bar moving posts no notification; the topology settles it with the rest.
+        DisplayTopology.shared.noteActiveBarMayHaveMoved()
         return true
     }
 

@@ -5,7 +5,6 @@
 //  Copyright (Thaw) © 2026 Toni Förster
 //  Licensed under the GNU GPLv3
 
-import AXSwift6
 import Cocoa
 import ThawAXCore
 
@@ -157,7 +156,7 @@ nonisolated enum AXGeometryCatalog {
 
     /// Messaging timeout applied to AX handles created here, so a
     /// non-responsive app can't block a snapshot indefinitely.
-    private static nonisolated let messagingTimeout: Float = 0.25
+    private static nonisolated let messagingTimeout = AXPrimitives.defaultMessagingTimeout
 
     /// Budget is checked between reads; an in-flight read can overrun by its timeout.
     /// Missing entries stay unvalidated, forcing capture fallback rather than a trusted crop.
@@ -174,12 +173,24 @@ nonisolated enum AXGeometryCatalog {
 
     /// Frames correlate host AX items with CG bounds; only PIDs and immutable results cross the actor boundary.
     /// The actor hop leaves the caller's executor, unlike nonisolated async with NonisolatedNonsendingByDefault.
+    /// AppKit answers reads of Thaw's own elements in-process and is not thread-safe,
+    /// so Thaw's own bar is walked on the main actor and every other host on the executor.
     static nonisolated func snapshot(hostProcessIdentifiers: [pid_t]) async -> [Entry] {
-        await GeometryWalkExecutor.shared.snapshot(hostProcessIdentifiers: hostProcessIdentifiers)
+        let deadline = ContinuousClock.now + snapshotBudget
+        let foreign = hostProcessIdentifiers.filter { !AXPrimitives.isOwnProcess($0) }
+        var entriesByPID = await Dictionary(grouping: GeometryWalkExecutor.shared.snapshot(
+            hostProcessIdentifiers: foreign,
+            deadline: deadline
+        ), by: \.ownerPID)
+        for pid in hostProcessIdentifiers where AXPrimitives.isOwnProcess(pid) {
+            entriesByPID[pid] = await MainActor.run {
+                performSnapshot(hostProcessIdentifiers: [pid], deadline: deadline)
+            }
+        }
+        return hostProcessIdentifiers.flatMap { entriesByPID[$0] ?? [] }
     }
 
-    fileprivate static func performSnapshot(hostProcessIdentifiers: [pid_t]) -> [Entry] {
-        let deadline = ContinuousClock.now + snapshotBudget
+    fileprivate static func performSnapshot(hostProcessIdentifiers: [pid_t], deadline: ContinuousClock.Instant) -> [Entry] {
         var results = [Entry]()
         var visited = 0
 
@@ -202,14 +213,14 @@ nonisolated enum AXGeometryCatalog {
             var fallbackIndex = 0
             for (itemIndex, child) in children.enumerated() {
                 guard canContinue(until: deadline), visited < maxElementsVisited else { break }
-                try? child.setMessagingTimeout(messagingTimeout)
+                child.setMessagingTimeout(messagingTimeout)
                 let namespace = MenuBarItemAXProvider.namespace(forBundleIdentifier: host.bundleIdentifier)
                 let attributes = AXHelpers.menuBarChildAttributes(for: child)
                 var innerAttributes = [AXHelpers.MenuBarChildAttributes]()
                 for inner in attributes.children {
                     guard canContinue(until: deadline),
                           visited + innerAttributes.count + 1 < maxElementsVisited else { break }
-                    try? inner.setMessagingTimeout(messagingTimeout)
+                    inner.setMessagingTimeout(messagingTimeout)
                     innerAttributes.append(AXHelpers.descendantAttributes(for: inner, includingChildren: true))
                 }
                 let identity = rootIdentityTitle(
@@ -243,7 +254,7 @@ nonisolated enum AXGeometryCatalog {
     /// Depth-limited, element-capped walk collecting frames from element
     /// and its children.
     private static nonisolated func walk(
-        _ element: UIElement,
+        _ element: AXElement,
         ownerPID: pid_t,
         itemIndex: Int,
         identityTitle: String?,
@@ -258,7 +269,7 @@ nonisolated enum AXGeometryCatalog {
         guard canContinue(until: deadline) else { return }
         visited += 1
 
-        try? element.setMessagingTimeout(messagingTimeout)
+        element.setMessagingTimeout(messagingTimeout)
 
         let attributes = attributes ?? AXHelpers.descendantAttributes(
             for: element,
@@ -336,7 +347,7 @@ nonisolated enum AXGeometryCatalog {
 private actor GeometryWalkExecutor {
     static let shared = GeometryWalkExecutor()
 
-    func snapshot(hostProcessIdentifiers: [pid_t]) -> [AXGeometryCatalog.Entry] {
-        AXGeometryCatalog.performSnapshot(hostProcessIdentifiers: hostProcessIdentifiers)
+    func snapshot(hostProcessIdentifiers: [pid_t], deadline: ContinuousClock.Instant) -> [AXGeometryCatalog.Entry] {
+        AXGeometryCatalog.performSnapshot(hostProcessIdentifiers: hostProcessIdentifiers, deadline: deadline)
     }
 }

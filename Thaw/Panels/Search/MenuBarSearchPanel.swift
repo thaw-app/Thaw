@@ -193,12 +193,10 @@ final class MenuBarSearchPanel: NSPanel {
         Publishers.Merge(
             NSWorkspace.shared.notificationCenter.publisher(
                 for: NSWorkspace.activeSpaceDidChangeNotification
-            ),
-            NotificationCenter.default.publisher(
-                for: NSApplication.didChangeScreenParametersNotification
-            )
+            ).replace(with: ()),
+            DisplayTopology.shared.screenParametersChanged
         )
-        .sink { [weak self] _ in self?.close() }
+        .sink { [weak self] in self?.close() }
         .store(in: &cancellables)
 
         // The mode is unknown until the first showing, so this runs in every

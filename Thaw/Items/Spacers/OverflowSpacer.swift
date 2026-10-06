@@ -5,10 +5,10 @@
 //  Copyright (Thaw) © 2026 Toni Förster
 //  Licensed under the GNU GPLv3
 
-import AXSwift6
 import Cocoa
 import Combine
 import MenuBarModel
+import ThawAXCore
 
 /// Debug instrument: can a wide spacer force the macOS 27 overflow chevron to
 /// appear inside the region Thaw manages instead of where the notch dictates?
@@ -61,7 +61,7 @@ final class OverflowSpacer {
         }
     }
 
-    private func dump(element: AXSwift6.UIElement, label: String, depth: Int, context: String) {
+    private func dump(element: AXElement, label: String, depth: Int, context: String) {
         guard depth <= 3 else { return }
         let attributes = AXHelpers.descendantAttributes(for: element, includingChildren: depth < 3)
         let role = attributes.role ?? "?"

@@ -5,9 +5,9 @@
 //  Copyright (Thaw) © 2026 Toni Förster
 //  Licensed under the GNU GPLv3
 
-import AXSwift6
 import Cocoa
 import MenuBarModel
+import ThawAXCore
 
 /// Diagnose stable item keys by recording raw AXExtrasMenuBar identity attributes in local JSON; no network upload.
 /// thaw://dump-items?callback=<url> writes to ~/Library/Logs/Thaw/ and returns only a path and per-app summary via URL.
@@ -77,23 +77,13 @@ enum ItemEnumerationDump {
             guard let app = AXHelpers.application(for: runningApp) else {
                 continue
             }
-            let bar: UIElement
-            do {
-                result = "extras menu bar absent"
-                guard let value: UIElement = try app.attribute(.extrasMenuBar) else { continue }
-                bar = value
-            } catch {
-                result = "extras menu bar failed: \(error)"
+            result = "extras menu bar absent or unreadable"
+            guard let bar = AXHelpers.extrasMenuBar(for: app) else { continue }
+            guard let children = AXHelpers.childrenIfAvailable(for: bar) else {
+                result = "extras menu bar children unreadable"
                 continue
             }
-            let children: [UIElement]
-            do {
-                children = try bar.arrayAttribute(.children) ?? []
-                result = "extras menu bar children=\(children.count)"
-            } catch {
-                result = "extras menu bar children failed: \(error)"
-                continue
-            }
+            result = "extras menu bar children=\(children.count)"
             guard !children.isEmpty else {
                 continue
             }

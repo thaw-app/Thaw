@@ -11,7 +11,7 @@ import CoreGraphics
 import Foundation
 
 /// Shared raw AX operations keep app and helper walks consistent using only system frameworks.
-/// The helper calls directly; AXHelpers bridges the app's AXSwift6 wrappers through action and owner closures.
+/// The helper calls them directly; the app reaches them through AXHelpers.
 public enum AXPrimitives {
     /// Bound AX round trips below the system's roughly six-second timeout so one hung app cannot stall reads or presses.
     public static let defaultMessagingTimeout: Float = 0.25
@@ -52,7 +52,7 @@ public enum AXPrimitives {
         )
     }
 
-    /// Closures bridge AXSwift6 wrappers that do not expose raw elements, sharing cannotComplete resolution.
+    /// The press ladder with the action and owner lookup as closures, so cannotComplete resolution can be tested.
     /// Query ownerPID only on cannotComplete to avoid an extra round trip on the common path.
     @discardableResult
     public static func press(
@@ -193,6 +193,13 @@ public enum AXPrimitives {
             return nil
         }
         return children(of: menuBar).compactMap { frame(of: $0) }
+    }
+
+    /// Whether pid is this process. AppKit answers AX reads of a process's own
+    /// elements in-process, and it is not thread-safe, so such reads must run
+    /// on the main thread.
+    public static func isOwnProcess(_ pid: pid_t) -> Bool {
+        pid == getpid()
     }
 
     // MARK: - MenuBarAgent

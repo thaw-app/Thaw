@@ -65,12 +65,10 @@ final class NotchPanelController {
         // A display change invalidates the anchor the descender was placed
         // against, and the item it belongs to may not even be on this screen
         // any more. Retract rather than leave it hanging somewhere stale.
-        NotificationCenter.default.publisher(
-            for: NSApplication.didChangeScreenParametersNotification
-        )
-        .debounce(for: .seconds(0.2), scheduler: DispatchQueue.main)
-        .sink { [weak self] _ in self?.dismiss() }
-        .store(in: &cancellables)
+        DisplayTopology.shared.screenParametersChanged
+            .debounce(for: .seconds(0.2), scheduler: DispatchQueue.main)
+            .sink { [weak self] in self?.dismiss() }
+            .store(in: &cancellables)
 
         if isEnabled {
             installHoverMonitors()

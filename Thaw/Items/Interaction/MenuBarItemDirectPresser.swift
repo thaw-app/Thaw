@@ -72,7 +72,7 @@ nonisolated enum MenuBarItemDirectPresser {
     /// The accessibility element at a screen point.
     ///
     /// Hit-tests because the tree walk cannot see elements such as the
-    /// notchless overflow chevron. Raw, since AXSwift6 seals its element.
+    /// notchless overflow chevron.
     private static func element(at point: CGPoint) -> AXUIElement? {
         AXHelpers.nativeElement(at: point)
     }

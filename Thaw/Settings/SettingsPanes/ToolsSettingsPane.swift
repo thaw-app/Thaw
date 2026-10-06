@@ -228,6 +228,11 @@ struct ToolsSettingsPane: View {
         statusAction = action
         defer { isBusy = false }
 
+        if action == .resetControlCenter || action == .resetMenuBarLayoutPositions {
+            // Killing the host mid-move strands the move's events.
+            await appState.itemManager.moveActivity.waitUntilIdle()
+        }
+
         do {
             switch action {
             case .resetSettings:

@@ -5,7 +5,6 @@
 //  Copyright (Thaw) © 2026 Toni Förster
 //  Licensed under the GNU GPLv3
 
-import AsyncAlgorithms
 import Cocoa
 import Combine
 import MenuBarModel
@@ -117,13 +116,6 @@ final class DisplaySettingsManager {
     /// Storage for internal observers.
     @ObservationIgnored
     private var cancellables = Set<AnyCancellable>()
-
-    /// Task backing the swift-async-algorithms screen-parameters debounce (see
-    /// configureObservers()). Held so it is cancelled in deinit,
-    /// matching the lifetime of the Combine cancellables above; its notification
-    /// observer is owned inside the task and removed when it ends.
-    @ObservationIgnored
-    private var screenParametersTask: Task<Void, Never>?
 
     @ObservationIgnored
     private let encoder = JSONEncoder()
@@ -331,13 +323,6 @@ final class DisplaySettingsManager {
         }
     }
 
-    deinit {
-        // Combine cancellables tear down automatically; the async-algorithms
-        // screen-parameters task is manually owned, so cancel it here. Ending
-        // the task runs its defer, which removes the notification observer.
-        screenParametersTask?.cancel()
-    }
-
     // MARK: - Persistence
 
     /// Encodes and persists configurations. Called from configurations's
@@ -354,47 +339,11 @@ final class DisplaySettingsManager {
     }
 
     /// Configures the manager's non-persistence internal observers: the
-    /// debounced screen-parameters watcher and the Settings-URI notification
-    /// subscription. Persistence is not here, it is driven by didSet on
-    /// each property (see the property declarations above).
+    /// Settings-URI notification subscription. Display changes arrive through
+    /// handleDisplayTopologyChange(_:). Persistence is not here, it is driven
+    /// by didSet on each property (see the property declarations above).
     private func configureObservers() {
         var c = Set<AnyCancellable>()
-
-        // Logs display connect/disconnect, refreshes the known-display cache and
-        // re-derives the active display's spacing.
-        //
-        // Debounced by one second because docking, lid close, sleep/wake, KVM
-        // switches, Sidecar and display flicker each post several notifications
-        // within a few hundred milliseconds, and each could trigger a relaunch
-        // wave (the no-op guard misses values that oscillate during the flap).
-        // The per-event skips below are continue, not loop exit.
-        let (screenParameterEvents, screenParameterContinuation) = AsyncStream<Void>.makeStream()
-        screenParametersTask = Task { @MainActor [weak self] in
-            // The observer is owned by this task: added when it starts and
-            // removed when it ends (cancellation ends the for-await loop, which
-            // runs the defer). This keeps the non-Sendable observer token off
-            // the class so the nonisolated deinit only needs to cancel the task.
-            let observer = NotificationCenter.default.addObserver(
-                forName: NSApplication.didChangeScreenParametersNotification,
-                object: nil,
-                queue: .main
-            ) { _ in screenParameterContinuation.yield(()) }
-            defer { NotificationCenter.default.removeObserver(observer) }
-            for await _ in screenParameterEvents.debounce(for: .seconds(1)) {
-                guard let self else { break }
-                diagLog.info("Screen parameters changed, \(NSScreen.managedScreens.count) screen(s) connected")
-                captureCurrentlyConnectedDisplays()
-                let currentUUID = Bridging.getActiveMenuBarDisplayUUID()
-                if Self.shouldSkipSpacingApply(
-                    currentActiveDisplayUUID: currentUUID,
-                    lastAppliedActiveDisplayUUID: lastAppliedActiveDisplayUUID
-                ) {
-                    diagLog.info("Active menu bar display unchanged (\(currentUUID ?? "nil")); skipping spacing apply")
-                    continue
-                }
-                applyActiveDisplaySpacing(reason: "screenParametersChanged")
-            }
-        }
 
         // Re-deriving spacing on per-display configuration changes lives in
         // configurations's didSet; applyOffset's no-op guard keeps it free.
@@ -409,6 +358,27 @@ final class DisplaySettingsManager {
             .store(in: &c)
 
         cancellables = c
+    }
+
+    /// Logs display connect/disconnect, refreshes the known-display cache and
+    /// re-derives the active display's spacing, after the item rescan.
+    ///
+    /// Screen-parameter events only: DisplayTopology settles a dock, lid,
+    /// sleep, KVM or Sidecar flap into one event, and the active bar following
+    /// focus between displays is not a reason to start a relaunch wave.
+    func handleDisplayTopologyChange(_ event: DisplayTopology.Event) {
+        guard event.source == .screenParameters else { return }
+        diagLog.info("Screen parameters changed, \(NSScreen.managedScreens.count) screen(s) connected")
+        captureCurrentlyConnectedDisplays()
+        let currentUUID = Bridging.getActiveMenuBarDisplayUUID()
+        if Self.shouldSkipSpacingApply(
+            currentActiveDisplayUUID: currentUUID,
+            lastAppliedActiveDisplayUUID: lastAppliedActiveDisplayUUID
+        ) {
+            diagLog.info("Active menu bar display unchanged (\(currentUUID ?? "nil")); skipping spacing apply")
+            return
+        }
+        applyActiveDisplaySpacing(reason: "screenParametersChanged")
     }
 
     /// Whether a screen-parameters change should be ignored because the active

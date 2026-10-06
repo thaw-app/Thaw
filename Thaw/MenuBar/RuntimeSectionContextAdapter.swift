@@ -5,10 +5,10 @@
 //  Copyright (Thaw) © 2026 Toni Förster
 //  Licensed under the GNU GPLv3
 
-import AXSwift6
 import Cocoa
 import MenuBarModel
 import PlatformRuntimeKit
+import ThawAXCore
 import ThawCapture
 
 @MainActor
@@ -135,15 +135,7 @@ final class RuntimeSectionContextAdapter: RuntimeSectionContext {
     }
 
     func activeMenuBarDisplayID() -> CGDirectDisplayID? {
-        // Ask the window server: AppKit is wrong with "Displays have separate
-        // Spaces" off and lags after a topology change. The bridge falls back
-        // to the main display, so an unbacked id means mid-change.
-        guard let displayID = Bridging.getActiveMenuBarDisplayID(),
-              connectedDisplayIDs().contains(displayID)
-        else {
-            return nil
-        }
-        return displayID
+        DisplayTopology.resolveActiveDisplayID()
     }
 
     func connectedDisplayIDs() -> Set<CGDirectDisplayID> {
@@ -323,7 +315,7 @@ final class RuntimeSectionContextAdapter: RuntimeSectionContext {
 
         let frame = AXHelpers.frame(for: element).map(NSStringFromRect) ?? "nil"
         let enabled = AXHelpers.enabledAttribute(element).map(String.init) ?? "nil"
-        let role = AXHelpers.role(for: element).map { "\($0)" } ?? "nil"
+        let role = AXHelpers.roleString(for: element) ?? "nil"
         let didPress = AXHelpers.press(element)
         diagLog.info(
             "hiddenTriggerAXPress[\(reason)]: didPress=\(didPress) " +
@@ -331,7 +323,7 @@ final class RuntimeSectionContextAdapter: RuntimeSectionContext {
         )
     }
 
-    private func controlAXElement(matching identifier: ControlItemIdentifier) -> UIElement? {
+    private func controlAXElement(matching identifier: ControlItemIdentifier) -> AXElement? {
         guard let runningApp = NSWorkspace.shared.runningApplications.first(where: {
             Constants.isThawOwnedBundleIdentifier($0.bundleIdentifier)
         }),
@@ -346,7 +338,7 @@ final class RuntimeSectionContextAdapter: RuntimeSectionContext {
         }
     }
 
-    private func resolvedAXIdentifier(for element: UIElement) -> String? {
+    private func resolvedAXIdentifier(for element: AXElement) -> String? {
         let attributes = AXHelpers.menuBarChildAttributes(for: element)
         return attributes.identifier?.runtimeNonEmpty
             ?? attributes.children

@@ -1332,10 +1332,8 @@ final class LayoutBarPaddingView: NSView {
             return
         }
 
-        NotificationCenter.default
-            .publisher(for: NSApplication.didChangeScreenParametersNotification)
-            .receive(on: DispatchQueue.main)
-            .sink { [weak self] _ in
+        DisplayTopology.shared.screenParametersChanged
+            .sink { [weak self] in
                 self?.updateNotchPresentation()
             }
             .store(in: &notchObservers)

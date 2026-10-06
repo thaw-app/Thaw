@@ -982,6 +982,8 @@ extension MenuBarItemImageCache {
         sources: RevealCaptureSources
     ) async {
         for batch in batches {
+            // A reveal during a move reflows the bar under the drag.
+            await moveActivity?.waitUntilIdle()
             guard !Task.isCancelled, !skipCaptureWhileScreenLocked("revealing capture batch") else { return }
 
             for item in batch {

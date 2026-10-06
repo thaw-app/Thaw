@@ -533,11 +533,8 @@ final class MenuBarItemImageCache: @unchecked Sendable {
             .map { _ in () }
             .eraseToAnyPublisher()
 
-            let screenChangePublisher: AnyPublisher<Void, Never> = NotificationCenter.default.publisher(
-                for: NSApplication.didChangeScreenParametersNotification
-            )
-            .map { _ in () }
-            .eraseToAnyPublisher()
+            // Display changes arrive through the item cache: DisplayTopology's
+            // rescan stamps the new display, which changes the invalidation key.
 
             // Bridges the observed item cache into the Combine merge below.
             let itemCacheChangeSubject = PassthroughSubject<Void, Never>()
@@ -562,7 +559,6 @@ final class MenuBarItemImageCache: @unchecked Sendable {
 
             Publishers.MergeMany([
                 spaceChangePublisher,
-                screenChangePublisher,
                 itemCacheChangePublisher,
             ])
             .debounce(

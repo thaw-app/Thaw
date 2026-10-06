@@ -2,15 +2,6 @@
   "originHash" : "e86f35e2360e11a42ae8b4901fce05e8a7c199180845e1b438c7e1697241ed80",
   "pins" : [
     {
-      "identity" : "axswift6",
-      "kind" : "remoteSourceControl",
-      "location" : "https://github.com/thaw-app/AXSwift6",
-      "state" : {
-        "revision" : "798afe6d2929d104beef6118c99bc77a3e45d4da",
-        "version" : "0.5.2"
-      }
-    },
-    {
       "identity" : "compactslider",
       "kind" : "remoteSourceControl",
       "location" : "https://github.com/buh/CompactSlider",

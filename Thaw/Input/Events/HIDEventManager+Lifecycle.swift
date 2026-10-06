@@ -107,20 +107,6 @@ extension HIDEventManager {
             }
             .store(in: &c)
 
-            // The item cache refreshes shortly after a display change.
-            NotificationCenter.default.publisher(
-                for: NSApplication.didChangeScreenParametersNotification
-            )
-            .sink { [weak self] _ in
-                NSScreen.invalidateMenuBarHeightCache()
-                NSScreen.cleanupDisconnectedDisplayCaches()
-                self?.windowBoundsLock.withLock { $0.removeAll() }
-                // Active-display changes can leave itemCache unchanged; do not
-                // wait for an item refresh to restore Clock's hit regions.
-                self?.refreshClockMenuBarBands()
-            }
-            .store(in: &c)
-
             // Entering or leaving a fullscreen Space adds or drops a band.
             NSWorkspace.shared.notificationCenter.publisher(
                 for: NSWorkspace.activeSpaceDidChangeNotification
@@ -150,5 +136,18 @@ extension HIDEventManager {
             }
         }
         healthCheckTimer?.tolerance = 2
+    }
+
+    /// The first reaction to a settled display change: drops geometry that
+    /// belongs to the old layout before the item rescan replaces it. The
+    /// bounds table is rebuilt rather than emptied, since a rescan that finds
+    /// the same items does not rebuild it.
+    func handleDisplayTopologyChange() {
+        NSScreen.invalidateMenuBarHeightCache()
+        NSScreen.cleanupDisconnectedDisplayCaches()
+        rebuildWindowBoundsLookupFromCurrentLayout()
+        // Active-display changes can leave itemCache unchanged; do not
+        // wait for an item refresh to restore Clock's hit regions.
+        refreshClockMenuBarBands()
     }
 }

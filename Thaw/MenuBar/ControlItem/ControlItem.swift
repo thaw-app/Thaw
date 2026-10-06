@@ -685,9 +685,8 @@ extension ControlItem {
 
         // A spent off-band ladder was measured against one bar geometry; a
         // display change rebuilds the bar, so let it retry.
-        NotificationCenter.default.publisher(for: NSApplication.didChangeScreenParametersNotification)
-            .receive(on: DispatchQueue.main)
-            .sink { [weak self] _ in
+        DisplayTopology.shared.screenParametersChanged
+            .sink { [weak self] in
                 self?.resetOffBandRecovery()
             }
             .store(in: &cancellables)

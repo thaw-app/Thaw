@@ -116,9 +116,8 @@ final class MenuBarSearchModel {
 
         // Clear on display changes to prevent stale color info and invalidate
         // any in-flight capture targeting the previous screen geometry.
-        NotificationCenter.default
-            .publisher(for: NSApplication.didChangeScreenParametersNotification)
-            .sink { [weak self] _ in
+        DisplayTopology.shared.screenParametersChanged
+            .sink { [weak self] in
                 self?.clearAverageColorInfo()
             }
             .store(in: &cancellables)

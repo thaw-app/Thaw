@@ -522,9 +522,7 @@ final class MenuBarManager {
             NSWorkspace.shared.notificationCenter
                 .publisher(for: NSWorkspace.activeSpaceDidChangeNotification)
                 .replace(with: ()),
-            NotificationCenter.default
-                .publisher(for: NSApplication.didChangeScreenParametersNotification)
-                .replace(with: ())
+            DisplayTopology.shared.screenParametersChanged
         )
         .receive(on: DispatchQueue.main)
         .sink { [weak self] in

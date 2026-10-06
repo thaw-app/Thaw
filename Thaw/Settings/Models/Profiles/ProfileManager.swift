@@ -117,21 +117,6 @@ final class ProfileManager {
         lastActiveDisplayUUID = Bridging.getActiveMenuBarDisplayUUID()
         rebuildProfileHotkeys()
 
-        let (screenParameterEvents, screenParameterContinuation) = AsyncStream<Void>.makeStream()
-        let displaySwitchTask = Task { @MainActor [weak self] in
-            let observer = NotificationCenter.default.addObserver(
-                forName: NSApplication.didChangeScreenParametersNotification,
-                object: nil,
-                queue: .main
-            ) { _ in screenParameterContinuation.yield(()) }
-            defer { NotificationCenter.default.removeObserver(observer) }
-            for await _ in screenParameterEvents.debounce(for: .seconds(1.5)) {
-                guard let self else { return }
-                await self.checkDisplayAndAutoSwitch()
-            }
-        }
-        cancellables.insert(AnyCancellable { displaySwitchTask.cancel() })
-
         // Debounce beyond the Space animation so rapid swipes apply only the final profile.
         let (spaceEvents, spaceContinuation) = AsyncStream<Void>.makeStream()
         let spaceSwitchTask = Task { @MainActor [weak self] in
@@ -1063,6 +1048,14 @@ final class ProfileManager {
     // MARK: - Auto-Switch
 
     /// Apply the new display's profile unless Focus or a Space association takes priority.
+    /// The last reaction to a settled display change, after the item rescan
+    /// and spacing. Screen-parameter events only, as before the topology: the
+    /// active bar following focus is not a reason to apply another layout.
+    func handleDisplayTopologyChange(_ event: DisplayTopology.Event) async {
+        guard event.source == .screenParameters else { return }
+        await checkDisplayAndAutoSwitch()
+    }
+
     private func checkDisplayAndAutoSwitch() async {
         guard let currentUUID = Bridging.getActiveMenuBarDisplayUUID() else { return }
         guard currentUUID != lastActiveDisplayUUID else { return }
