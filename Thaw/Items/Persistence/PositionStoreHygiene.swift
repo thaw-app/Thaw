@@ -19,7 +19,7 @@ enum PositionStoreHygiene {
     private static let candidatesKey = "MenuBarItemManager.positionStoreHygieneCandidates"
 
     /// The live store requires macOS 27, but the pruning rules can be tested independently.
-    static func pruneCurrentStore() {
+    static func pruneCurrentStore(permit: borrowing StoreWritePermit) {
         let store = MenuBarPositionStoreProvider.current
         prune(positions: store.readPositions()) { doomed in
             // Re-read before replacing the dictionary to preserve weights changed by the host in another process.
@@ -32,7 +32,7 @@ enum PositionStoreHygiene {
             for key in doomed {
                 positions.removeValue(forKey: key)
             }
-            store.writePositions(positions)
+            store.writePositions(positions, permit: permit)
             PositionStoreItemSource.invalidateStoreSnapshot()
         }
     }

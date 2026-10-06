@@ -121,12 +121,15 @@ extension MenuBarItemManager {
         let desiredOrder = (controller.sectionItemOrder[section] ?? [])
             .filter { controller.section(for: $0) == section && cachedIdentifiers.contains($0) }
         guard desiredOrder.count > 1 else { return }
-        let changed = MenuBarPositionStoreProvider.forLayoutEdit.respaceOrder(
-            desiredOrder: desiredOrder,
-            liveItems: cachedItems,
-            experimentalSystemItemHiding: configuration.enableExperimentalSystemItemHiding,
-            mayRewriteAroundUnplaceableItems: true
-        )
+        let changed = repairs.writeNow(.manualLayoutEdit, cause: .userEdit) { permit in
+            MenuBarPositionStoreProvider.forLayoutEdit.respaceOrder(
+                desiredOrder: desiredOrder,
+                liveItems: cachedItems,
+                experimentalSystemItemHiding: configuration.enableExperimentalSystemItemHiding,
+                mayRewriteAroundUnplaceableItems: true,
+                permit: permit
+            )
+        }
         guard !changed.isEmpty else { return }
         commitPreferredPositionWrite(controller: controller)
         MenuBarItemManager.diagLog.info(

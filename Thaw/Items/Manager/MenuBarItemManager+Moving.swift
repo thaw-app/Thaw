@@ -269,7 +269,7 @@ extension MenuBarItemManager {
         if !skipInputPause {
             guard await waitForUserToPauseInput(timeout: nil) else { throw CancellationError() }
         }
-        let fulfilled = try await withMenuBarMutation(isUserInitiated: isUserInitiated) {
+        let fulfilled = try await withMenuBarMutation(isUserInitiated: isUserInitiated) { permit in
             try await moveWhileHoldingMutation(
                 item: item,
                 to: destination,
@@ -278,7 +278,8 @@ extension MenuBarItemManager {
                 allowParkedOffMenuBarSource: allowParkedOffMenuBarSource,
                 anchorFallbacks: anchorFallbacks,
                 isUserInitiated: isUserInitiated,
-                allowSyntheticDrag: allowSyntheticDrag
+                allowSyntheticDrag: allowSyntheticDrag,
+                permit: permit
             )
         }
         // A window the host never laid out reports failure by construction, so only a
@@ -294,13 +295,14 @@ extension MenuBarItemManager {
 
     private func withMenuBarMutation<Result: Sendable>(
         isUserInitiated: Bool,
-        _ operation: () async throws -> Result
+        _ operation: (borrowing StoreWritePermit) async throws -> Result
     ) async throws -> Result {
         var awaitingUserMove = isUserInitiated
         if isUserInitiated {
             cancelPendingSectionOrderApply()
             structuralNormalizationTask?.cancel()
             structuralNormalizationTask = nil
+            repairs.withdraw(.structuralNormalization)
             pendingUserReorderCount += 1
         }
         defer {
@@ -308,14 +310,17 @@ extension MenuBarItemManager {
                 pendingUserReorderCount -= 1
             }
         }
-        let result = try await moveSerialSemaphore.withPermit {
+        let result = try await moveSerialSemaphore.withStoreWritePermit { permit in
             if awaitingUserMove {
                 pendingUserReorderCount -= 1
                 awaitingUserMove = false
             }
             layoutPublication.beginMutation()
             defer { layoutPublication.endMutation() }
-            return try await operation()
+            // A move that started alone keeps the passes out until it is done.
+            let laneHold = repairs.beginMove()
+            defer { repairs.endMove(laneHold) }
+            return try await operation(permit)
         }
         // A successful user mutation is the user's retry, so clear the breaker.
         // Boxed through Any because section transitions return Void.
@@ -336,7 +341,8 @@ extension MenuBarItemManager {
         allowParkedOffMenuBarSource: Bool = false,
         anchorFallbacks: [MoveDestination] = [],
         isUserInitiated: Bool = false,
-        allowSyntheticDrag: Bool = true
+        allowSyntheticDrag: Bool = true,
+        permit: borrowing StoreWritePermit
     ) async throws -> Bool {
         if let refusal = moveRefusal(
             item: item,
@@ -358,7 +364,7 @@ extension MenuBarItemManager {
                 destination: destination,
                 isUserInitiated: isUserInitiated
             ) {
-                scheduleStructuralNormalization()
+                scheduleStructuralNormalization(cause: .moveFulfilled)
             }
         }
         guard let appState else {
@@ -466,7 +472,8 @@ extension MenuBarItemManager {
             transitionSection: transitionSection,
             liveItems: liveItems,
             experimentalSystemItemHiding: experimentalSystemItemHiding,
-            isUserInitiated: isUserInitiated
+            isUserInitiated: isUserInitiated,
+            permit: permit
         ) {
             moveMonitor.recordStoreMove(
                 item: item.logString,
@@ -673,6 +680,7 @@ extension MenuBarItemManager {
     /// every section, so it pins the settled order as contiguous bands (the
     /// agent never persists ⌘-drags as weights). Idempotent once in sync.
     func scheduleStructuralNormalization(
+        cause: RepairOrchestrator.Cause,
         after: Duration = .milliseconds(800),
         deferralsRemaining: Int = 8
     ) {
@@ -680,7 +688,11 @@ extension MenuBarItemManager {
         structuralNormalizationTask = nil
         guard !isInStartupSettling, !moveCircuitBreaker.isOpen,
               !isNotificationCenterLayoutSuspended
-        else { return }
+        else {
+            repairs.withdraw(.structuralNormalization)
+            return
+        }
+        repairs.request(.structuralNormalization, cause: cause)
         structuralNormalizationTask = Task { @MainActor [weak self] in
             try? await Task.sleep(for: after)
             guard !Task.isCancelled, let self else { return }
@@ -709,6 +721,7 @@ extension MenuBarItemManager {
             else {
                 if deferralsRemaining > 0 {
                     scheduleStructuralNormalization(
+                        cause: .rearmed,
                         after: after,
                         deferralsRemaining: deferralsRemaining - 1
                     )
@@ -727,9 +740,21 @@ extension MenuBarItemManager {
                 settleWaits += 1
             }
             guard !Task.isCancelled else { return }
+            // Waiting is over; from here on this writes, so take the lane.
+            guard let hold = await repairs.enter(.structuralNormalization) else { return }
+            var hasLeftLane = false
+            defer {
+                if !hasLeftLane {
+                    repairs.leave(hold)
+                }
+            }
             guard layoutPublication.canPublish(generation: layoutPublication.generation) else {
                 if deferralsRemaining > 0 {
-                    scheduleStructuralNormalization(after: after, deferralsRemaining: deferralsRemaining - 1)
+                    scheduleStructuralNormalization(
+                        cause: .rearmed,
+                        after: after,
+                        deferralsRemaining: deferralsRemaining - 1
+                    )
                 }
                 return
             }
@@ -746,10 +771,16 @@ extension MenuBarItemManager {
                 // Siri needs one row repaired; no dividers required, which
                 // managedItems omits.
                 _ = moveCircuitBreaker.note(.storeWrite)
-                let changed = RuntimePositionStore.repairTrailingSiri(liveItems: settledItems)
+                let changed = PermittedPositionStore.repairTrailingSiri(
+                    liveItems: settledItems,
+                    permit: StoreWritePermit(hold)
+                )
                 if !changed.isEmpty {
                     appState.menuBarManager.sectionController.notePreferredPositionsSelfWrite()
                     moveActivity.noteMoveOperation()
+                    // The one write is made. The wait and the cache pass after it only read.
+                    hasLeftLane = true
+                    repairs.leave(hold)
                     try? await Task.sleep(for: .milliseconds(200))
                     guard !Task.isCancelled else { return }
                     await cacheItemsRegardless(skipRecentMoveCheck: true)
@@ -758,7 +789,11 @@ extension MenuBarItemManager {
             }
             guard let controlItems = controlItemPair(in: settledItems) else { return }
 
-            if restoreStructuralControlOrder(controlItems: controlItems, items: settledItems) {
+            if restoreStructuralControlOrder(
+                controlItems: controlItems,
+                items: settledItems,
+                permit: StoreWritePermit(hold)
+            ) {
                 moveActivity.noteMoveOperation()
             }
 
@@ -787,7 +822,8 @@ extension MenuBarItemManager {
                         // A volatile-title item (a live clock) must not veto
                         // this, or every reveal re-interleaves the band through
                         // the visible lane and overflows into the chevron.
-                        mayRewriteAroundUnplaceableItems: true
+                        mayRewriteAroundUnplaceableItems: true,
+                        permit: StoreWritePermit(hold)
                     )
                     trace?.finish(result: String(describing: changed))
                     if !changed.isEmpty {
@@ -801,7 +837,8 @@ extension MenuBarItemManager {
                 guard !refuseMenuBarMutationWhileScreenLocked("sibling-weight normalization") else { return }
                 _ = moveCircuitBreaker.note(.storeWrite)
                 let separated = MenuBarPositionStoreProvider.current.breakTiedSiblingWeights(
-                    liveItems: settledItems
+                    liveItems: settledItems,
+                    permit: StoreWritePermit(hold)
                 )
                 if !separated.isEmpty {
                     MenuBarItemManager.diagLog.info(
@@ -898,11 +935,14 @@ extension MenuBarItemManager {
         }
 
         if !arrangementIsManual,
-           restoreStructuralControlOrder(
-               controlItems: controlItems,
-               items: cachedItems,
-               diagnosticContext: "pre-reveal cached restore"
-           )
+           repairs.writeNow(.preRevealOrder, cause: .sectionRevealed, { permit in
+               restoreStructuralControlOrder(
+                   controlItems: controlItems,
+                   items: cachedItems,
+                   diagnosticContext: "pre-reveal cached restore",
+                   permit: permit
+               )
+           })
         {
             MenuBarItemManager.diagLog.info(
                 "macOS 27: prepared cached structural order before reveal"
@@ -915,7 +955,10 @@ extension MenuBarItemManager {
     /// intermediate orders. The agent re-allows items at remembered slots
     /// regardless of weight, so the loop still runs if members end up stranded.
     func synchronizeRevealedOrder(
-        revealing revealedSection: MenuBarSection.Name
+        revealing revealedSection: MenuBarSection.Name,
+        readBeforeTurn: [MenuBarItem]? = nil,
+        aftermath: RepairTurn.Aftermath? = nil,
+        permit: borrowing StoreWritePermit
     ) async {
         // Manual arrangement owns the order: a reveal shows the items where
         // the user last dragged them, and no structural write may re-seat
@@ -932,7 +975,7 @@ extension MenuBarItemManager {
         }
         // With the store inert the batch write does nothing; repair with drags.
         if menuBarAgentIgnoresPreferredPositions {
-            await reconcileSectionBoundaries(revealing: revealedSection)
+            await reconcileSectionBoundaries(revealing: revealedSection, aftermath: aftermath, permit: permit)
             return
         }
 
@@ -942,7 +985,7 @@ extension MenuBarItemManager {
             return
         }
 
-        let liveItems = await MenuBarItem.getMenuBarItems(option: .activeSpace)
+        let liveItems = if let readBeforeTurn { readBeforeTurn } else { await MenuBarItem.getMenuBarItems(option: .activeSpace) }
         guard !Task.isCancelled,
               appState.menuBarManager.sectionController.revealedSection == revealedSection
         else {
@@ -983,7 +1026,8 @@ extension MenuBarItemManager {
             let restored = await enforceControlItemOrder(
                 controlItems: controlItems,
                 items: structuralItems,
-                reason: .revealedLayoutRestore
+                reason: .revealedLayoutRestore,
+                permit: permit
             )
             if !restored {
                 MenuBarItemManager.diagLog.debug(
@@ -1035,13 +1079,14 @@ extension MenuBarItemManager {
             )
             // The reconcile applies the revealed sections' authored order
             // itself once the boundary holds.
-            await reconcileSectionBoundaries(revealing: revealedSection)
+            await reconcileSectionBoundaries(revealing: revealedSection, aftermath: aftermath, permit: permit)
             return
         }
         await applyAuthoredOrderForRevealedSections(
             revealedSection,
             controller: controller,
-            liveItems: wait.items
+            liveItems: wait.items,
+            permit: permit
         )
     }
 
@@ -1050,7 +1095,8 @@ extension MenuBarItemManager {
     private func applyAuthoredOrderForRevealedSections(
         _ revealedSection: MenuBarSection.Name,
         controller: any MenuBarSectionControlling,
-        liveItems: [MenuBarItem]
+        liveItems: [MenuBarItem],
+        permit: borrowing StoreWritePermit
     ) async {
         let sections: [MenuBarSection.Name] = switch revealedSection {
         case .alwaysHidden: [.hidden, .alwaysHidden]
@@ -1073,7 +1119,8 @@ extension MenuBarItemManager {
                 sections: disagreeing,
                 controller: controller,
                 whileRevealing: revealedSection,
-                reason: .revealRestore
+                reason: .revealRestore,
+                permit: permit
             )
             guard !Task.isCancelled else { return }
             liveItems = await MenuBarItem.getMenuBarItems(option: .activeSpace)
@@ -1156,7 +1203,9 @@ extension MenuBarItemManager {
     /// items without first moving them across a real divider. Runs only while a
     /// hidden section is revealed, because concealed items have no AX elements.
     func reconcileSectionBoundaries(
-        revealing revealedSection: MenuBarSection.Name
+        revealing revealedSection: MenuBarSection.Name,
+        aftermath: RepairTurn.Aftermath? = nil,
+        permit: borrowing StoreWritePermit
     ) async {
         // Manual arrangement owns the order: boundary repairs are automatic
         // reordering, which the user explicitly declined.
@@ -1186,7 +1235,8 @@ extension MenuBarItemManager {
             await enforceControlItemOrder(
                 controlItems: controlItems,
                 items: liveItems,
-                reason: .explicitLayoutRepair
+                reason: .explicitLayoutRepair,
+                permit: permit
             )
             // Re-walk only if a divider move was planned.
             if MenuBarLayoutPlannerProvider.current.dividerMoveDestination(
@@ -1336,7 +1386,8 @@ extension MenuBarItemManager {
             experimentalSystemItemHiding: experimentalSystemItemHiding,
             hiddenControlItemWindowID: controlItemWindowIDs.hidden,
             alwaysHiddenControlItemWindowID: controlItemWindowIDs.alwaysHidden,
-            whileRevealing: revealedSection
+            whileRevealing: revealedSection,
+            permit: permit
         )
         if strand.aborted {
             return
@@ -1359,7 +1410,8 @@ extension MenuBarItemManager {
             // nil uses the controller's authored order: with an edit pending,
             // the mirrored savedSectionOrder may predate it.
             visibleOrderOverride: nil,
-            reason: .revealRestore
+            reason: .revealRestore,
+            permit: permit
         )
         if sectionsToOrder.contains(.visible) {
             // Retire the edit only once the bar shows it, or the next cache
@@ -1381,7 +1433,12 @@ extension MenuBarItemManager {
             }
         }
 
-        await cacheItemsRegardless(skipRecentMoveCheck: true)
+        // The closing cache pass only reads. A caller that can run it after its turn takes it over.
+        if let aftermath {
+            aftermath.needsCachePass = true
+        } else {
+            await cacheItemsRegardless(skipRecentMoveCheck: true)
+        }
     }
 
     /// Writes the items' weights into the new section's band before the
@@ -1413,7 +1470,7 @@ extension MenuBarItemManager {
             return
         }
         do {
-            try await withMenuBarMutation(isUserInitiated: true) {
+            try await withMenuBarMutation(isUserInitiated: true) { permit in
                 if items.allSatisfy({
                     MenuBarBackendProvider.current.canAssign(
                         $0,
@@ -1421,7 +1478,7 @@ extension MenuBarItemManager {
                         experimentalSystemItemHiding: configuration.enableExperimentalSystemItemHiding
                     )
                 }) {
-                    await seatItemsWhileHoldingMutation(items, to: section, orderedAs: order)
+                    await seatItemsWhileHoldingMutation(items, to: section, orderedAs: order, permit: permit)
                 }
                 try Task.checkCancellation()
                 commit()
@@ -1436,7 +1493,8 @@ extension MenuBarItemManager {
     private func seatItemsWhileHoldingMutation(
         _ items: [MenuBarItem],
         to section: MenuBarSection.Name,
-        orderedAs order: [MenuBarItem]? = nil
+        orderedAs order: [MenuBarItem]? = nil,
+        permit: borrowing StoreWritePermit
     ) async {
         let movedIdentifiers = Set(items.map(\.uniqueIdentifier))
         var seatedIdentifiers = Set<String>()
@@ -1452,7 +1510,8 @@ extension MenuBarItemManager {
             let seated = seatItemForSectionTransition(
                 item,
                 to: section,
-                after: authored ?? previous
+                after: authored ?? previous,
+                permit: permit
             )
             if seated {
                 seatedIdentifiers.insert(item.uniqueIdentifier)
@@ -1489,7 +1548,8 @@ extension MenuBarItemManager {
                     transitionSection: section,
                     allowSectionBoundaryTarget: true,
                     isUserInitiated: true,
-                    allowSyntheticDrag: false
+                    allowSyntheticDrag: false,
+                    permit: permit
                 ) {
                     previousDragged = item
                     MenuBarItemManager.diagLog.info(
@@ -1557,7 +1617,8 @@ extension MenuBarItemManager {
     private func seatItemForSectionTransition(
         _ item: MenuBarItem,
         to section: MenuBarSection.Name,
-        after predecessor: MenuBarItem? = nil
+        after predecessor: MenuBarItem? = nil,
+        permit: borrowing StoreWritePermit
     ) -> Bool {
         guard let appState, let controlItems = lastKnownControlItems,
               let destination = sectionTransitionDestination(for: section, after: predecessor)
@@ -1571,7 +1632,8 @@ extension MenuBarItemManager {
             item: item,
             to: destination,
             liveItems: liveItems,
-            experimentalSystemItemHiding: configuration.enableExperimentalSystemItemHiding
+            experimentalSystemItemHiding: configuration.enableExperimentalSystemItemHiding,
+            permit: permit
         ) else {
             MenuBarItemManager.diagLog.debug(
                 "No pre-seat written for \(item.logString) into \(section.logString)"
@@ -1626,7 +1688,13 @@ extension MenuBarItemManager {
         // gathering runs inside the commit. A no-op commit writes nothing.
         controller.regatherGroups()
         // A group-set change is an edit the user just committed.
-        await applySectionItemOrder(sections: [.visible], controller: controller, reason: .userReorder)
+        guard let hold = await repairs.enterForUserEdit() else { return }
+        await applySectionItemOrder(
+            sections: [.visible],
+            controller: controller,
+            reason: .userReorder,
+            permit: StoreWritePermit(hold)
+        )
 
         // A permutation can leave other apps' weights between a group's
         // members. Respacing rewrites the segment, so only when interleaved.
@@ -1643,12 +1711,14 @@ extension MenuBarItemManager {
                 experimentalSystemItemHiding: configuration.enableExperimentalSystemItemHiding,
                 // A group edit is an explicit request; see the interleaved-
                 // unplaceable note in the structural normalization above.
-                mayRewriteAroundUnplaceableItems: true
+                mayRewriteAroundUnplaceableItems: true,
+                permit: StoreWritePermit(hold)
             )
             if !respaced.isEmpty {
                 commitPreferredPositionWrite(controller: controller)
             }
         }
+        repairs.leave(hold)
 
         await cacheItemsRegardless(skipRecentMoveCheck: true)
     }
@@ -1667,7 +1737,8 @@ extension MenuBarItemManager {
         experimentalSystemItemHiding: Bool,
         hiddenControlItemWindowID: CGWindowID?,
         alwaysHiddenControlItemWindowID: CGWindowID?,
-        whileRevealing revealedSection: MenuBarSection.Name?
+        whileRevealing revealedSection: MenuBarSection.Name?,
+        permit: borrowing StoreWritePermit
     ) async -> (items: [MenuBarItem], aborted: Bool, strandsRemaining: Bool) {
         guard !arrangementIsManual, !isInStartupSettling, !isUserArrangingMenuBar, !Task.isCancelled else {
             return (liveItems, true, false)
@@ -1818,7 +1889,8 @@ extension MenuBarItemManager {
                    item: strand,
                    to: destination,
                    liveItems: liveItems,
-                   experimentalSystemItemHiding: experimentalSystemItemHiding
+                   experimentalSystemItemHiding: experimentalSystemItemHiding,
+                   permit: permit
                )
             {
                 let verify = await verifyBoundaryRepairAfterWrite(
@@ -1846,7 +1918,8 @@ extension MenuBarItemManager {
                 alwaysHiddenControlItemWindowID: alwaysHiddenControlItemWindowID
             ), restoreStructuralControlOrder(
                 controlItems: controlItemsForNormalize,
-                items: itemsForNormalize
+                items: itemsForNormalize,
+                permit: permit
             ) {
                 let verify = await verifyBoundaryRepairAfterWrite(
                     strand: strand,
@@ -1879,11 +1952,12 @@ extension MenuBarItemManager {
                     items: liveItems,
                     desiredOrder: cluster.map(\.uniqueIdentifier)
                 )
-                let crossed = RuntimePositionStore.writeClusterBoundaryCrossing(
+                let crossed = PermittedPositionStore.writeClusterBoundaryCrossing(
                     items: cluster,
                     dividerItem: destination.targetItem,
                     side: crossingSide,
-                    liveItems: liveItems
+                    liveItems: liveItems,
+                    permit: permit
                 )
                 trace?.finish(result: "crossed=\(crossed)")
                 if crossed {
@@ -1925,7 +1999,8 @@ extension MenuBarItemManager {
                         // The boundary repair answers a reveal the user asked
                         // for; see the interleaved-unplaceable note in the
                         // structural normalization above.
-                        mayRewriteAroundUnplaceableItems: true
+                        mayRewriteAroundUnplaceableItems: true,
+                        permit: permit
                     )
                     trace?.finish(result: String(describing: changed))
                     if !changed.isEmpty {
@@ -2204,7 +2279,8 @@ extension MenuBarItemManager {
         repairAfterRestriction: Bool = false,
         visibleOrderOverride: [String]? = nil,
         reason: LayoutChangeReason,
-        preferredMoveUIDs: Set<String> = []
+        preferredMoveUIDs: Set<String> = [],
+        permit: borrowing StoreWritePermit
     ) async {
         // The skip gates are pure policy, in SectionOrderApplyGate; a pass
         // an earlier gate refuses never pays for the lazier reads.
@@ -2277,7 +2353,8 @@ extension MenuBarItemManager {
                     liveItems: liveItems,
                     experimentalSystemItemHiding: experimentalSystemItemHiding,
                     reason: reason,
-                    controller: controller
+                    controller: controller,
+                    permit: permit
                 )
                 liveItems = write.liveItems
                 didReorder = didReorder || write.didReorder
@@ -2608,7 +2685,8 @@ extension MenuBarItemManager {
         liveItems: [MenuBarItem],
         experimentalSystemItemHiding: Bool,
         reason: LayoutChangeReason,
-        controller: any MenuBarSectionControlling
+        controller: any MenuBarSectionControlling,
+        permit: borrowing StoreWritePermit
     ) async -> (liveItems: [MenuBarItem], didReorder: Bool) {
         // An arrival carries a far-side weight no permutation can fix, so the
         // structural write places members by authored position.
@@ -2620,7 +2698,8 @@ extension MenuBarItemManager {
                 structuralApplied = restoreStructuralControlOrder(
                     controlItems: controlItems,
                     items: liveItems,
-                    diagnosticContext: "section apply \(section.logString) reason=\(reason)"
+                    diagnosticContext: "section apply \(section.logString) reason=\(reason)",
+                    permit: permit
                 )
             }
         }
@@ -2647,7 +2726,8 @@ extension MenuBarItemManager {
                 // The order pass only reaches here under a reason the
                 // policy permits; see the interleaved-unplaceable note
                 // in the structural normalization above.
-                mayRewriteAroundUnplaceableItems: reason.permitsOrderEnforcement
+                mayRewriteAroundUnplaceableItems: reason.permitsOrderEnforcement,
+                permit: permit
             )
             trace?.finish(result: String(describing: reordered))
             if !reordered.isEmpty {
@@ -2995,7 +3075,8 @@ extension MenuBarItemManager {
         transitionSection: MenuBarSection.Name? = nil,
         liveItems: [MenuBarItem],
         experimentalSystemItemHiding: Bool,
-        isUserInitiated: Bool = false
+        isUserInitiated: Bool = false,
+        permit: borrowing StoreWritePermit
     ) async throws -> Bool {
         guard !menuBarAgentIgnoresPreferredPositions else {
             moveMonitor.recordStoreUnavailable()
@@ -3045,11 +3126,12 @@ extension MenuBarItemManager {
                 RuntimeLayoutCoordinator.sameAppCluster(of: item, in: liveItems)
                     .filter { sectionController.section(for: $0.uniqueIdentifier) == crossingSection }
             }
-            storeMoved = RuntimePositionStore.writeClusterBoundaryCrossing(
+            storeMoved = PermittedPositionStore.writeClusterBoundaryCrossing(
                 items: cluster.isEmpty ? [item] : cluster,
                 dividerItem: destination.targetItem,
                 side: crossingSide(of: destination),
-                liveItems: liveItems
+                liveItems: liveItems,
+                permit: permit
             )
             if storeMoved {
                 sectionController.notePreferredPositionsSelfWrite()
@@ -3065,7 +3147,8 @@ extension MenuBarItemManager {
                 experimentalSystemItemHiding: experimentalSystemItemHiding,
                 // A single-item request does not authorize moving neighbours
                 // around an item whose position the store cannot resolve.
-                mayRewriteAroundUnplaceableItems: false
+                mayRewriteAroundUnplaceableItems: false,
+                permit: permit
             )
         }
         trace?.finish(result: "storeMoved=\(storeMoved)")
@@ -3178,7 +3261,8 @@ extension MenuBarItemManager {
                 item: refreshedItem,
                 to: destination,
                 liveItems: updated,
-                experimentalSystemItemHiding: experimentalSystemItemHiding
+                experimentalSystemItemHiding: experimentalSystemItemHiding,
+                permit: permit
             )
         {
             commitPreferredPositionWrite(controller: appState?.menuBarManager.sectionController)

@@ -241,7 +241,7 @@ extension MenuBarItemManager {
 
         // Rebalance external item floods here; coalesce tasks so assertion reflow cannot trigger rebalance thrashing.
         if configuration.enableMenuBarItemOverflow == true {
-            scheduleOverflowRebalance(reason: .externalChange)
+            scheduleOverflowRebalance(cause: .cachePublished, reason: .externalChange)
         }
     }
 
@@ -432,9 +432,11 @@ extension MenuBarItemManager {
     /// Coalesce environment and cache rebalances to prevent assertion-reflow feedback.
     /// Run the merged request so later observations cannot weaken explicit or immediate intent.
     func scheduleOverflowRebalance(
+        cause: RepairOrchestrator.Cause,
         reason: LayoutChangeReason,
         immediate: Bool = false
     ) {
+        repairs.request(.overflowRebalance, cause: cause)
         let request = OverflowRebalanceRequest(reason: reason, immediate: immediate)
         overflowRebalancePendingRequest = request.merged(into: overflowRebalancePendingRequest)
         overflowRebalanceTask?.cancel()
@@ -442,11 +444,18 @@ extension MenuBarItemManager {
             guard let self else { return }
             try? await Task.sleep(for: .milliseconds(300))
             guard !Task.isCancelled else { return }
+            guard let hold = await self.repairs.enter(.overflowRebalance) else { return }
+            // Read after the wait, so requests merged while queued are honoured.
             let effective = self.overflowRebalancePendingRequest ?? request
+            let aftermath = RepairTurn.Aftermath()
             let didRebalance = await self.rebalanceOverflowIfNeeded(
                 reason: effective.reason,
-                immediate: effective.immediate
+                immediate: effective.immediate,
+                aftermath: aftermath,
+                permit: StoreWritePermit(hold)
             )
+            self.repairs.leave(hold)
+            await aftermath.readCacheIfOwed { await self.cacheItemsRegardless(skipRecentMoveCheck: true) }
             // Cancelled tasks leave merged intent for their replacements.
             guard !Task.isCancelled else { return }
             self.overflowRebalancePendingRequest = nil
@@ -849,7 +858,9 @@ extension MenuBarItemManager {
             await enforceControlItemOrder(
                 controlItems: controlItems,
                 items: items,
-                reason: .ambientCacheRefresh
+                reason: .ambientCacheRefresh,
+                // An ambient pass only observes; this permit is never spent.
+                permit: .unsequenced("ambient control order")
             )
             // Ambient enforcement only observes drift; schedule debounced normalization rather than waiting for explicit reveal or repair.
             scheduleStructuralNormalizationIfControlItemsOutOfOrder(

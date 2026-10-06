@@ -16,7 +16,7 @@ import MenuBarModel
 @MainActor
 struct PositionWriteTrace {
     private let id = UUID().uuidString
-    private let store: any MenuBarPositionStoring
+    private let store: PermittedPositionStore
     private let before: [String: Int]
     private static let log = DiagLog(category: "PositionWriteTrace")
 

@@ -277,6 +277,9 @@ final class MenuBarItemManager {
         structuralNormalizationTask = nil
         deferredLayoutReconcileTask?.cancel()
         deferredLayoutReconcileTask = nil
+        repairs.withdraw(.postRestrictionRepair)
+        repairs.withdraw(.structuralNormalization)
+        repairs.withdraw(.deferredLayoutReconcile)
     }
 
     @discardableResult
@@ -710,6 +713,9 @@ final class MenuBarItemManager {
     /// persisted.
     var ignoredPreferredWrites = IgnoredPreferredWrites()
 
+    /// Where work that rewrites the bar's order asks for its turn.
+    let repairs = RepairOrchestrator()
+
     /// Debounced physical application of a layout-pane visible-order edit.
     private var authoredVisibleOrderApplyTask: Task<Void, Never>?
 
@@ -925,6 +931,7 @@ final class MenuBarItemManager {
         authoredVisibleOrderApplyTask?.cancel()
         authoredVisibleOrderApplyTask = nil
         authoredVisibleOrderPendingPhysicalApply = false
+        repairs.withdraw(.arrivalOrderRestore)
     }
 
     /// Enacts a recorded layout that has not already been placed and verified.
@@ -945,6 +952,7 @@ final class MenuBarItemManager {
            let controller = appState?.menuBarManager.sectionController
         {
             authoredVisibleOrderApplyTask?.cancel()
+            repairs.withdraw(.arrivalOrderRestore)
             authoredVisibleOrderApplyTask = Task { @MainActor [weak self] in
                 // Debounce successive drops of one pane drag session.
                 try? await Task.sleep(for: .milliseconds(400))
@@ -969,13 +977,16 @@ final class MenuBarItemManager {
                         "macOS 27: applying authored visible order physically "
                             + "(\(identifiers.count) item(s), attempt \(attempt))"
                     )
+                    guard let hold = await repairs.enterForUserEdit() else { return }
                     await applySectionItemOrder(
                         sections: [.visible],
                         controller: controller,
                         whileRevealing: controller.revealedSection,
                         visibleOrderOverride: identifiers,
-                        reason: .userReorder
+                        reason: .userReorder,
+                        permit: StoreWritePermit(hold)
                     )
+                    repairs.leave(hold)
                     await cacheItemsRegardless(skipRecentMoveCheck: true)
                     guard !Task.isCancelled else { return }
                     let liveItems = await MenuBarItem.getMenuBarItems(option: .activeSpace)
@@ -1018,6 +1029,7 @@ final class MenuBarItemManager {
         else { return }
         let identifiers = savedSectionOrder[sectionKey(for: .visible)] ?? []
         guard identifiers.count > 1 else { return }
+        repairs.request(.arrivalOrderRestore, cause: .arrivalDisturbedOrder)
         authoredVisibleOrderPendingPhysicalApply = true
         authoredVisibleOrderApplyTask?.cancel()
         authoredVisibleOrderApplyTask = Task { @MainActor [weak self] in
@@ -1031,6 +1043,7 @@ final class MenuBarItemManager {
                     authoredVisibleOrderPendingPhysicalApply = false
                 }
             }
+            guard let hold = await repairs.enter(.arrivalOrderRestore) else { return }
             MenuBarItemManager.diagLog.info(
                 "macOS 27: restoring recorded visible order after an arrival (\(identifiers.count) item(s))"
             )
@@ -1038,8 +1051,10 @@ final class MenuBarItemManager {
                 sections: [.visible],
                 controller: controller,
                 visibleOrderOverride: identifiers,
-                reason: .arrivalRestore
+                reason: .arrivalRestore,
+                permit: StoreWritePermit(hold)
             )
+            repairs.leave(hold)
             guard !Task.isCancelled else { return }
             await cacheItemsRegardless(skipRecentMoveCheck: true)
         }
@@ -2041,6 +2056,7 @@ final class MenuBarItemManager {
         deferredLayoutReconcileTask?.cancel()
         deferredLayoutReconcileDue = due
         deferredLayoutReconcileCount += 1
+        repairs.request(.deferredLayoutReconcile, cause: .layoutApplyBlocked)
         MenuBarItemManager.diagLog.debug(
             "applySavedLayout: deferring reconcile \(delay) (\(reason))"
         )
@@ -2053,6 +2069,8 @@ final class MenuBarItemManager {
             guard let self else { return }
             deferredLayoutReconcileTask = nil
             deferredLayoutReconcileDue = nil
+            repairs.begin(.deferredLayoutReconcile)
+            defer { repairs.end(.deferredLayoutReconcile) }
             await cacheItemsRegardless(skipRecentMoveCheck: true)
         }
     }
@@ -2064,6 +2082,7 @@ final class MenuBarItemManager {
         deferredLayoutReconcileTask?.cancel()
         deferredLayoutReconcileTask = nil
         deferredLayoutReconcileDue = nil
+        repairs.withdraw(.deferredLayoutReconcile)
     }
 
     /// Notes that something moved an item without going through Thaw's own
@@ -2083,10 +2102,11 @@ final class MenuBarItemManager {
             authoredVisibleOrderApplyTask?.cancel()
             authoredVisibleOrderApplyTask = nil
             authoredVisibleOrderPendingPhysicalApply = false
+            repairs.withdraw(.arrivalOrderRestore)
             MenuBarItemManager.diagLog.info(
                 "User ⌘-drag supersedes the pending authored visible order"
             )
         }
-        scheduleStructuralNormalization()
+        scheduleStructuralNormalization(cause: .userDragEnded)
     }
 }

@@ -439,7 +439,7 @@ extension MenuBarItemManager {
                 + " (Siri misplaced=\(siriIsMisplaced), AH@\(ahX.map { String(describing: $0) } ?? "nil"), H@\(hX), V@\(vX));"
                 + " scheduling structural normalization"
         )
-        scheduleStructuralNormalization()
+        scheduleStructuralNormalization(cause: .structuralDriftObserved)
     }
 
     static nonisolated func trailingSiriIsMisplaced(in items: [MenuBarItem]) -> Bool {
@@ -473,7 +473,8 @@ extension MenuBarItemManager {
     func restoreStructuralControlOrder(
         controlItems: ControlItemPair,
         items: [MenuBarItem],
-        diagnosticContext: String = "structural restore"
+        diagnosticContext: String = "structural restore",
+        permit: borrowing StoreWritePermit
     ) -> Bool {
         // Same stranded-control exemption from Manual as enforceControlItemOrder.
         // Startup settling still gates it: weight writes need a quiet bar.
@@ -513,7 +514,7 @@ extension MenuBarItemManager {
             MenuBarItemManager.diagLog.debug(
                 "Skipping structural position rewrite: reveal/hide transition in flight"
             )
-            scheduleStructuralNormalization()
+            scheduleStructuralNormalization(cause: .revealHideTransition)
             return false
         }
 
@@ -560,7 +561,8 @@ extension MenuBarItemManager {
         let reordered = MenuBarPositionStoreProvider.current.applyControlItemOrder(
             desiredOrder: desiredOrder,
             opaqueVisibleKeys: opaqueKeys,
-            liveItems: items
+            liveItems: items,
+            permit: permit
         )
         trace?.finish(result: String(describing: reordered))
         guard !reordered.isEmpty else { return false }
@@ -577,7 +579,8 @@ extension MenuBarItemManager {
     func enforceControlItemOrder(
         controlItems: ControlItemPair,
         items: [MenuBarItem],
-        reason: StructuralControlOrderReason
+        reason: StructuralControlOrderReason,
+        permit: borrowing StoreWritePermit
     ) async -> Bool {
         // Manual owns the app order, but a stranded control item is still
         // reseated; the re-lay below moves only control items.
@@ -600,7 +603,8 @@ extension MenuBarItemManager {
         if restoreStructuralControlOrder(
             controlItems: controlItems,
             items: items,
-            diagnosticContext: "enforceControlItemOrder reason=\(reason)"
+            diagnosticContext: "enforceControlItemOrder reason=\(reason)",
+            permit: permit
         ) {
             didRestoreOrder = true
         }
