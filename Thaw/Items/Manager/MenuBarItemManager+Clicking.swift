@@ -5,7 +5,6 @@
 //  Copyright (Thaw) © 2026 Toni Förster
 //  Licensed under the GNU GPLv3
 
-import AXSwift6
 import Cocoa
 
 // @preconcurrency retained: CoreGraphics event types (CGEventSource/CGEvent) are

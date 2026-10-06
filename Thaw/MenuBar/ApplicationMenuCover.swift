@@ -5,11 +5,11 @@
 //  Copyright (Thaw) © 2026 Toni Förster
 //  Licensed under the GNU GPLv3
 
-import AXSwift6
 import Cocoa
 import Combine
 import MenuBarModel
 import Observation
+import ThawAXCore
 import ThawCapture
 
 /// Covers Finder's menu titles while the desktop is focused, with a strip
@@ -161,8 +161,8 @@ final class ApplicationMenuCover {
         else {
             return .notFinder
         }
-        let focused: UIElement? = try? app.attribute(.focusedWindow)
-        let subrole: String? = focused.flatMap { try? $0.attribute(.subrole) }
+        let focused = app.value(kAXFocusedWindowAttribute) as? AXElement
+        let subrole = focused?.value(kAXSubroleAttribute) as? String
         return DesktopFocusState.classify(
             frontmostBundleIdentifier: frontmost.bundleIdentifier,
             hasFocusedWindow: focused != nil,

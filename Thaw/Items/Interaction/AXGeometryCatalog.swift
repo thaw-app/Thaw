@@ -5,7 +5,6 @@
 //  Copyright (Thaw) © 2026 Toni Förster
 //  Licensed under the GNU GPLv3
 
-import AXSwift6
 import Cocoa
 import ThawAXCore
 
@@ -214,14 +213,14 @@ nonisolated enum AXGeometryCatalog {
             var fallbackIndex = 0
             for (itemIndex, child) in children.enumerated() {
                 guard canContinue(until: deadline), visited < maxElementsVisited else { break }
-                try? child.setMessagingTimeout(messagingTimeout)
+                child.setMessagingTimeout(messagingTimeout)
                 let namespace = MenuBarItemAXProvider.namespace(forBundleIdentifier: host.bundleIdentifier)
                 let attributes = AXHelpers.menuBarChildAttributes(for: child)
                 var innerAttributes = [AXHelpers.MenuBarChildAttributes]()
                 for inner in attributes.children {
                     guard canContinue(until: deadline),
                           visited + innerAttributes.count + 1 < maxElementsVisited else { break }
-                    try? inner.setMessagingTimeout(messagingTimeout)
+                    inner.setMessagingTimeout(messagingTimeout)
                     innerAttributes.append(AXHelpers.descendantAttributes(for: inner, includingChildren: true))
                 }
                 let identity = rootIdentityTitle(
@@ -255,7 +254,7 @@ nonisolated enum AXGeometryCatalog {
     /// Depth-limited, element-capped walk collecting frames from element
     /// and its children.
     private static nonisolated func walk(
-        _ element: UIElement,
+        _ element: AXElement,
         ownerPID: pid_t,
         itemIndex: Int,
         identityTitle: String?,
@@ -270,7 +269,7 @@ nonisolated enum AXGeometryCatalog {
         guard canContinue(until: deadline) else { return }
         visited += 1
 
-        try? element.setMessagingTimeout(messagingTimeout)
+        element.setMessagingTimeout(messagingTimeout)
 
         let attributes = attributes ?? AXHelpers.descendantAttributes(
             for: element,

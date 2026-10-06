@@ -6,7 +6,6 @@
 //  Licensed under the GNU GPLv3
 
 import AsyncAlgorithms
-import AXSwift6
 import Cocoa
 import MenuBarModel
 import os.lock
@@ -144,7 +143,7 @@ nonisolated enum MenuBarItemAXProvider {
             // The native overflow chevron, identified by AXOverflowButton or its
             // AXButton role (not its localized title) plus the memo's last-seen
             // frames. Any match drops the child.
-            let overflowControl: (elements: [AXSwift6.UIElement], frames: [CGRect]) = namespace == .menuBarAgent
+            let overflowControl: (elements: [AXElement], frames: [CGRect]) = namespace == .menuBarAgent
                 ? nativeOverflowControlSignature(bar: bar, on: display)
                 : ([], [])
             // Per-app fallback index so untitled items get distinct titles
@@ -541,7 +540,7 @@ nonisolated enum MenuBarItemAXProvider {
         }
 
         let namespace = namespace(for: runningApp)
-        let overflowControl: (elements: [AXSwift6.UIElement], frames: [CGRect]) = namespace == .menuBarAgent
+        let overflowControl: (elements: [AXElement], frames: [CGRect]) = namespace == .menuBarAgent
             ? nativeOverflowControlSignature(bar: bar, on: display)
             : ([], [])
         var fallbackIndex = 0
@@ -554,10 +553,10 @@ nonisolated enum MenuBarItemAXProvider {
                 ?? attributes.accessibilityDescription?.nonEmpty
                 ?? "child-\(childIndex)"
             if CaptureDiagnostics.shouldCompareFrame(ownerPID: runningApp.processIdentifier, identity: diagnosticIdentity) {
-                try? child.setMessagingTimeout(AXPrimitives.defaultMessagingTimeout)
+                child.setMessagingTimeout(AXPrimitives.defaultMessagingTimeout)
                 let singleFrame = AXHelpers.frame(for: child)
                 let descendantFrames = attributes.children.prefix(4).compactMap { descendant -> CGRect? in
-                    try? descendant.setMessagingTimeout(AXPrimitives.defaultMessagingTimeout)
+                    descendant.setMessagingTimeout(AXPrimitives.defaultMessagingTimeout)
                     return AXHelpers.descendantAttributes(for: descendant).frame
                 }
                 diagLog.debug(
@@ -638,7 +637,7 @@ nonisolated enum MenuBarItemAXProvider {
 
     /// Presses the first of the resolved elements that takes a press. One AX
     /// round trip per candidate, with no walk in front of it.
-    static func press(resolved elements: [UIElement]) -> Bool {
+    static func press(resolved elements: [AXElement]) -> Bool {
         for element in elements where AXHelpers.press(element) {
             return true
         }
@@ -1039,12 +1038,12 @@ nonisolated enum MenuBarItemAXProvider {
         guard let children = AXHelpers.childrenIfAvailable(for: bar) else {
             return .unavailable
         }
-        let descendants = children.flatMap { child -> [AXSwift6.UIElement] in
+        let descendants = children.flatMap { child -> [AXElement] in
             let childDescendants = AXHelpers.childrenIfAvailable(for: child) ?? []
             return [child] + childDescendants
         }
         var attributeReadFailed = false
-        let attributedControls = ([bar] + children).compactMap { element -> AXSwift6.UIElement? in
+        let attributedControls = ([bar] + children).compactMap { element -> AXElement? in
             guard let supportsOverflowButton = AXHelpers.supportsOverflowButton(element) else {
                 attributeReadFailed = true
                 return nil
@@ -1394,10 +1393,10 @@ nonisolated enum MenuBarItemAXProvider {
     /// element plus the memo's overflow frames. Memo-only because this runs
     /// inside the 4 Hz live loop.
     static func nativeOverflowControlSignature(
-        bar: AXSwift6.UIElement,
+        bar: AXElement,
         on display: CGDirectDisplayID?
-    ) -> (elements: [AXSwift6.UIElement], frames: [CGRect]) {
-        var elements = [AXSwift6.UIElement]()
+    ) -> (elements: [AXElement], frames: [CGRect]) {
+        var elements = [AXElement]()
         var frames = [CGRect]()
         if let button = AXHelpers.overflowButton(for: bar) {
             elements.append(button)
