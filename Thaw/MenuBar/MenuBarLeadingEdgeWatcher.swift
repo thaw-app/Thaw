@@ -186,7 +186,7 @@ final class MenuBarLeadingEdgeWatcher {
         within screen: CGRect
     ) -> LeadingEdgeAnchor? {
         let app = AXUIElementCreateApplication(pid)
-        AXUIElementSetMessagingTimeout(app, 0.25)
+        AXUIElementSetMessagingTimeout(app, AXPrimitives.defaultMessagingTimeout)
         var bar: AnyObject?
         guard AXUIElementCopyAttributeValue(app, "AXExtrasMenuBar" as CFString, &bar) == .success,
               // The type check is what makes the downcast below safe.

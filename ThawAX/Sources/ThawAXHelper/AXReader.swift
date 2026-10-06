@@ -17,7 +17,7 @@ import ThawAXCore
 /// thread. Reports attributes verbatim; identity is assembled by the app.
 enum AXReader {
     /// One hung app must not stall the whole walk.
-    private static let messagingTimeout: Float = 0.25
+    private static let messagingTimeout = AXPrimitives.defaultMessagingTimeout
     /// Fallback ceiling when the request names none. Children taller than this
     /// are popovers or panels, not status items.
     private static let defaultMaximumItemHeight: CGFloat = 40

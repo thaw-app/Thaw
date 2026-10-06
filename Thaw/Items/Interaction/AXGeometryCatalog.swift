@@ -156,7 +156,7 @@ nonisolated enum AXGeometryCatalog {
 
     /// Messaging timeout applied to AX handles created here, so a
     /// non-responsive app can't block a snapshot indefinitely.
-    private static nonisolated let messagingTimeout: Float = 0.25
+    private static nonisolated let messagingTimeout = AXPrimitives.defaultMessagingTimeout
 
     /// Budget is checked between reads; an in-flight read can overrun by its timeout.
     /// Missing entries stay unvalidated, forcing capture fallback rather than a trusted crop.
