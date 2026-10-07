@@ -57,6 +57,11 @@ struct SettingsView: View {
         .navigationTitle("")
         .onWindowChange { window in
             settingsWindow = window
+            if let window {
+                SettingsWindowDiagnostics.logWhenLaidOut(
+                    window, zoomPercent: zoomPercent, isSimpleMode: generalSettings.simpleMode
+                )
+            }
         }
         .onChange(of: generalSettings.simpleMode) { _, isSimpleMode in
             resizeSettingsWindow(forSimpleMode: isSimpleMode)
