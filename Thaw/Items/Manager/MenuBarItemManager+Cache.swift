@@ -273,8 +273,11 @@ extension MenuBarItemManager {
         var lastAnchoredRank = Int.min
         var sawAnchored = false
         for item in sortedLeftToRight {
+            // A concealed item's parked or phantom frame says nothing about the bar's order.
             guard !item.isControlItem,
-                  item.bounds.width >= MenuBarItemGeometry.phantomFramePeerMinimumWidth
+                  item.bounds.width >= MenuBarItemGeometry.phantomFramePeerMinimumWidth,
+                  !item.isParkedOffMenuBarBand(among: sortedLeftToRight),
+                  !item.hasPhantomFrame(among: sortedLeftToRight)
             else {
                 continue
             }
