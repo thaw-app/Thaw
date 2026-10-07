@@ -52,7 +52,11 @@ struct StatusIconNetworkTests {
         state.samples.network = .ethernet
         state.isLive = true
         let updatedMenu = publisher.makeMenu(for: state)
-        #expect(Array(updatedMenu.items.map(\.title).prefix(1 + state.details.count)) == [state.title] + state.details)
+        // NSMenuItem stores a no-break space, as in French "75 %", as a plain one.
+        func plain(_ text: String) -> String {
+            text.replacingOccurrences(of: "\u{00A0}", with: " ")
+        }
+        #expect(Array(updatedMenu.items.map(\.title).prefix(1 + state.details.count)).map(plain) == ([state.title] + state.details).map(plain))
         #expect(initialMenu.items.map(\.title) != updatedMenu.items.map(\.title))
         let action = try #require(updatedMenu.items.last)
         #expect(action.action != nil)
