@@ -345,6 +345,13 @@ extension MenuBarItemManager {
         return bars.count > 1
     }
 
+    /// Whether macOS has parked the Hidden divider off the bar, as it does while
+    /// a display reconnects. Which side of a parked divider an item reads on is
+    /// meaningless, so no order judged against it may be written.
+    static func dividerIsOffTheBar(_ controlItems: ControlItemPair, among items: [MenuBarItem]) -> Bool {
+        controlItems.hidden.isParkedOffMenuBarBand(among: items)
+    }
+
     static func activeDisplayBounds() -> [CGRect] {
         var ids = [CGDirectDisplayID](repeating: 0, count: 16)
         var count: UInt32 = 0
@@ -474,6 +481,10 @@ extension MenuBarItemManager {
               !isInStartupSettling else { return false }
         guard !Self.framesSpanSeveralBars(items) else {
             MenuBarItemManager.diagLog.debug("Skipping \(diagnosticContext): item frames span more than one bar")
+            return false
+        }
+        guard !Self.dividerIsOffTheBar(controlItems, among: items) else {
+            MenuBarItemManager.diagLog.debug("Skipping \(diagnosticContext): the Hidden divider is parked off the bar")
             return false
         }
         // A batch weight write cannot fall back per item; when the agent

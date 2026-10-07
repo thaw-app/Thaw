@@ -1684,6 +1684,12 @@ extension MenuBarItemManager {
             return (liveItems, false, false)
         }
 
+        // Every strand verdict and store write below is judged against the divider.
+        if Self.dividerIsOffTheBar(controlItems, among: liveItems) {
+            MenuBarItemManager.diagLog.debug("boundary repair: the Hidden divider is parked off the bar; skipping the pass")
+            return (liveItems, false, false)
+        }
+
         // When app menus wrap past the notch, evicted items leave stale frames
         // that read as stranded and every drag fails. Skip the pass, scoring no
         // trips, since a different item strands each time.
