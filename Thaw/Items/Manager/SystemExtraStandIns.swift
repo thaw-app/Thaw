@@ -67,6 +67,17 @@ enum SystemExtraStandIn: String, CaseIterable {
         }
     }
 
+    /// Whether a bundle identifier belongs to one of this app's stand-ins.
+    static nonisolated func owns(bundleIdentifier: String?, parent: String = ThawMenuBarIdentity.bundleIdentifier) -> Bool {
+        guard let bundleIdentifier else { return false }
+        return allCases.contains { "\(parent).extra.\($0.rawValue)" == bundleIdentifier }
+    }
+
+    /// The processes left once this app's running stand-ins are taken out.
+    static func removingStandIns(from pids: Set<pid_t>) -> Set<pid_t> {
+        pids.filter { !owns(bundleIdentifier: NSRunningApplication(processIdentifier: $0)?.bundleIdentifier) }
+    }
+
     var bundleURL: URL {
         Bundle.main.bundleURL.appending(path: "Contents/Library/Extras/\(bundleName).app")
     }
@@ -126,6 +137,18 @@ enum ExtraVisibilityChannel {
     }
 }
 
+// MARK: - Spacing restart
+
+/// Lets the spacing change reach the stand-in launcher without either owning the other.
+@MainActor
+enum StandInSpacingRestart {
+    static weak var launcher: SystemExtraStandInLauncher?
+
+    static func run() async {
+        await launcher?.restartRunning()
+    }
+}
+
 // MARK: - Launcher
 
 /// Starts and stops stand-in bundles, and gives each the original's place in
@@ -152,6 +175,7 @@ final class SystemExtraStandInLauncher: SystemExtraReplacementProviding {
     private var restarts: [SystemExtraStandIn: [Date]] = [:]
     private static let restartLimit = 3
     private static let restartWindow: TimeInterval = 30
+    private static let restartQuitTimeout: Duration = .seconds(3)
 
     func publish(item: SystemExtraItem, canonicalIdentifier: String, section: MenuBarSectionName) async throws {
         try await launch(SystemExtraStandIn(item), replacing: canonicalIdentifier, in: section)
@@ -181,6 +205,29 @@ final class SystemExtraStandInLauncher: SystemExtraReplacementProviding {
         watched[standIn] = nil
         for app in NSRunningApplication.runningApplications(withBundleIdentifier: standIn.bundleIdentifier) {
             app.terminate()
+        }
+    }
+
+    /// Restarts every running stand-in: macOS reads menu bar spacing only when an app starts.
+    /// A plain reopen would drop the parent argument, so they restart from here.
+    func restartRunning() async {
+        for (standIn, entry) in watched {
+            entry.observation.invalidate()
+            watched[standIn] = nil
+            entry.app.terminate()
+            let deadline = ContinuousClock.now + Self.restartQuitTimeout
+            while !entry.app.isTerminated, ContinuousClock.now < deadline {
+                try? await Task.sleep(for: .milliseconds(50))
+            }
+            if !entry.app.isTerminated {
+                entry.app.forceTerminate()
+            }
+            do {
+                try await open(standIn)
+                log.info("restarted \(standIn.rawValue) stand-in")
+            } catch {
+                log.error("\(standIn.rawValue) stand-in restart failed: \(error.localizedDescription)")
+            }
         }
     }
 

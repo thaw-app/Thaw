@@ -64,6 +64,7 @@ final class SystemExtraTakeoverCoordinator {
         self.settings = settings
         launcher.controller = controller
         launcher.markKnown = markKnown
+        StandInSpacingRestart.launcher = launcher
 
         for item in SystemExtraItem.allCases {
             observationTasks.append(Task { @MainActor [weak self] in
