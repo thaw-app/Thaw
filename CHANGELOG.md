@@ -7,6 +7,75 @@ The `release.yml` workflow reads the section matching the release tag
 (`## [tag]`) and uses it as the release notes for both the GitHub Release
 and the Sparkle appcast, unless overridden with the `release_notes` input.
 
+## [3.0.0-alpha.8] - 2026-10-07
+
+**macOS 27 only · Build 113**
+
+This build is mostly bug fixes. Features are frozen for the next two betas, which will only fix bugs.
+
+After you update:
+
+1. Open Settings > Layout and look at **Hiding method**. Your earlier choice carries over.
+2. If Thaw's icon is missing, open Settings. A warning takes you to System Settings > Menu Bar.
+3. If something looks wrong, [open an issue](https://github.com/thaw-app/Thaw/issues).
+
+### New
+
+- **Choose how items are hidden in one place.** Layout has a Hiding method picker. Native keeps Live Activities, the camera indicator and Apple's own items on the menu bar. Standard hides any app's items. Everything also hides Clock, Control Center and Siri. It replaces a switch in General and one in Layout. Prompted by Probert on Discord, who could no longer hide Control Center after updating. By @diazdesandi.
+- **Move and hide the Game Mode indicator.** Spotted in a screenshot from mrleblanc101 on Discord. By @diazdesandi.
+- **Layout marks items macOS removes on its own.** With Standard or Everything, macOS takes items you pinned from Control Center, such as Home, off the menu bar while other icons are hidden. Their tiles now carry a badge that says so. By @diazdesandi.
+
+### Changed
+
+- **An imported profile's scripts are switched off until you turn them on.** Applying a profile from a file used to run the scripts it named. They still come in with the profile, so you can read the path first. By @diazdesandi.
+- **Thaw changes the menu bar's order one step at a time.** Its repairs, reveals and moves used to write over each other. They now wait their turn, and what you ask for goes first. By @diazdesandi.
+- **The "out of reach" warning in Layout lists fewer apps and says what to do.** It leaves out apps you switched off in System Settings > Menu Bar and apps with no menu bar item right now. If an app's icon is missing too, quit and reopen that app. Otherwise relaunch Thaw; the button now says so. Reported by Andrew (andrwmai) on Discord, whose switched-off apps were listed on every launch. By @camguillory in [#1272](https://github.com/thaw-app/Thaw/pull/1272).
+
+### Changed: Settings
+
+- **Layout shows one warning at a time**, the most serious first. Its tips wait while something is broken. By @diazdesandi.
+- **No more alert at launch offering Native hiding.** The Hiding method picker explains both where you choose. By @diazdesandi.
+- **Hiding method explanations are two short lines each:** what a method keeps or hides, then what it costs. By @diazdesandi.
+- **"Allow hiding Apple's own menu bar items" is now the Everything method**, so Layout has one control for hiding, not two. By @diazdesandi.
+- **General says what hiding the Thaw icon does.** The section dividers shrink with it, and the note tells you what to do if items land in the wrong section. By @diazdesandi.
+
+### Fixed: hiding and sections
+
+- **New items go to the section you chose.** With New Items set to Hidden or Always Hidden, they used to stay in Visible. Fixed by @diazdesandi.
+- **Thaw records a ⌘-drag between sections.** It used to skip reading where you dropped the item. Found in a log from Keylag on Discord. Fixed by @diazdesandi.
+- **A ⌘-drag opens the sections**, so you have room to drop between the dividers. Reported by mrleblanc101 on Discord. Fixed by @diazdesandi.
+- **Native hiding stays chosen** after a launch where it could not start. It used to switch itself off. Reported by Keylag on Discord. Fixed by @diazdesandi.
+- **Thaw stops moving Home on every reveal.** With the Thaw icon hidden, the Hidden divider could report an old position, and Thaw kept pushing Home back across it. Fixed by @diazdesandi.
+
+### Fixed: order and moving
+
+- **Your order survives an unlock while displays reconnect.** Visible icons used to come back reversed, and some changed section. Fixed by @camguillory in [#1267](https://github.com/thaw-app/Thaw/pull/1267).
+- **Thaw keeps applying your layout.** Three of its checks could get stuck until you relaunched. Fixed by @diazdesandi.
+- **You can move items pinned from Control Center**, such as Home or a second Control Center. Reported by mrleblanc101 on Discord. Fixed by @diazdesandi.
+- **Stand-ins for Apple's items stay where you put them** after a relaunch, and they pick up a spacing change. Fixed by @diazdesandi.
+- **Moves start on a Mac with many apps running.** Fixed by @diazdesandi.
+
+### Fixed: Thaw's icon, the Thaw Bar and Tools
+
+- **Thaw stops trying to bring its icon back while macOS has it switched off.** The warning also shows in Layout, and when the Thaw icon is hidden. Fixed by @diazdesandi.
+- **Thaw keeps placing its icon when the icon has no window yet.** Fixed by @diazdesandi.
+- **Thaw's icon stays on a display to the left of your main one.** Fixed by @diazdesandi.
+- **Liquid and Dynamic glass reach the Thaw Bar's corners.** They fell short with square corners, in vertical and grid layouts, and on notched displays. Reported by Etsef Zale on Discord. Fixed by @diazdesandi.
+- **"Reset saved item positions" resets them on macOS 27.** Fixed by @camguillory in [#1269](https://github.com/thaw-app/Thaw/pull/1269).
+
+### Fixed: smaller things
+
+- **Thaw waits less for pictures of the menu bar.** Its capture helper used to quit after three idle seconds and took five to seven seconds to start again. It now stays up for 90 seconds. Fixed by @diazdesandi.
+- **"Move to" works in Manual arrangement.** Choosing a section for an item from its menu, from search or from the Thaw Bar was refused as if Thaw had decided to move it. Dragging in Layout already worked. Fixed by @diazdesandi.
+- **Thaw keeps its item pictures while none of its windows is open.** It used to throw them away and take them again. Fixed by @diazdesandi.
+- **A repair no longer holds up a reveal** while Thaw takes a picture of the menu bar. Fixed by @diazdesandi.
+- **A display change still restores your layout** when the spacing check has nothing to apply. Fixed by @camguillory in [#1268](https://github.com/thaw-app/Thaw/pull/1268).
+
+### Known issues
+
+- **Home and other pinned Control Center items leave the menu bar while Hidden is closed**, if you use Standard or Everything. Layout marks them. Thaw cannot keep them on the bar.
+- **Clicks in Settings land below the control on some Macs.** Reported by @n0tishaan in [#1265](https://github.com/thaw-app/Thaw/issues/1265) and @Mudflapper in [#1244](https://github.com/thaw-app/Thaw/issues/1244). This build logs the Settings window's size to help us find the cause.
+
 ## [3.0.0-beta.2] - 2026-10-06
 
 **macOS 27 only · Build 112**
