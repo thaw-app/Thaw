@@ -755,10 +755,15 @@ nonisolated enum MenuBarItemAXProvider {
     /// An incomplete pass must not prove adjacency or replace a saved order.
     @concurrent
     static func menuBarItemsForMoveConcurrent(priorityPIDs: Set<pid_t>) async -> [MenuBarItem]? {
-        guard let snapshot = await inventoryGate.snapshot(
-            freshOnly: true, scope: .knownOwners, priorityOwners: priorityPIDs
-        ), snapshot.hasFreshMoveInventory else { return nil }
-        return restoredIdentities(snapshot).freshItems
+        // Item owners first: re-probing every app whose empty answer has expired can spend the whole budget.
+        for scope in [MenuBarScanScope.itemOwners, .knownOwners] {
+            if let snapshot = await inventoryGate.snapshot(freshOnly: true, scope: scope, priorityOwners: priorityPIDs),
+               snapshot.hasFreshMoveInventory
+            {
+                return restoredIdentities(snapshot).freshItems
+            }
+        }
+        return nil
     }
 
     /// Re-reads the owners appearance already knows, skipping discovery's

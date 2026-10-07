@@ -12,6 +12,8 @@ public enum MenuBarScanScope: Sendable {
     case knownOwners
     /// Reads only the requested owners, so it never yields a complete inventory.
     case requestedOwners
+    /// Reads requested owners and those that own items. Complete only once discovery has read every running owner.
+    case itemOwners
 }
 
 /// Fair scheduling and per-process retention for a budgeted AX inventory.
@@ -60,6 +62,8 @@ public struct MenuBarScanState<Observation: Sendable>: Sendable {
                     true
                 case .requestedOwners:
                     priorityOwners.contains(owner)
+                case .itemOwners:
+                    priorityOwners.contains(owner) || retained[owner]?.isEmpty == false
                 case .knownOwners:
                     priorityOwners.contains(owner) || retained[owner]?.isEmpty != true
                         || attempted[owner] != observed[owner]
