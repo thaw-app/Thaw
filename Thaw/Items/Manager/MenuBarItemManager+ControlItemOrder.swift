@@ -189,6 +189,23 @@ extension MenuBarItemManager {
             }
 
             let destination = newItemsMoveDestination(for: controlItems, among: items)
+            let target = destination.targetItem
+            if let appState,
+               NewItemRoute(
+                   section: effectiveNewItemsSection,
+                   destinationIsDivider: target.isControlItem && target.tag != .visibleControlItem
+               ) == .assign
+            {
+                MenuBarItemManager.diagLog.info(
+                    "Assigning new item \(candidate.logString) to \(effectiveNewItemsSection.logString)"
+                )
+                if let refusal = appState.menuBarManager.setSection(effectiveNewItemsSection, items: [candidate]) {
+                    Self.refusedArrivalRelocations[arrivalIdentity] = Date()
+                    MenuBarItemManager.diagLog.info("Assignment of \(candidate.logString) was refused: \(refusal)")
+                    return false
+                }
+                return true
+            }
 
             MenuBarItemManager.diagLog.info(
                 "Relocating new item \(candidate.logString) to \(effectiveNewItemsSection.logString)"
