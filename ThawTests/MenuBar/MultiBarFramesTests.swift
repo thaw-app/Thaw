@@ -99,6 +99,37 @@ struct MultiBarFramesTests {
         #expect(!MenuBarItemManager.framesSpanSeveralBars(items, displays: Self.displays))
     }
 
+    @Test("A parked Hidden divider leaves the saved order untouched")
+    func parkedDividerDoesNotOverwriteSavedOrder() {
+        let key = "MenuBarItemManager.savedSectionOrder"
+        let previous = UserDefaults.standard.object(forKey: key)
+        defer { UserDefaults.standard.set(previous, forKey: key) }
+
+        let visible = [Self.item(x: 3209, windowID: 1), Self.item(x: 3378, windowID: 2)]
+        var cache = MenuBarItemCache(displayID: nil)
+        cache[.visible] = visible
+        let parked = MenuBarItem(
+            tag: .hiddenControlItem,
+            windowID: 9,
+            ownerPID: 501,
+            sourcePID: 501,
+            bounds: CGRect(x: 3100, y: 113.5, width: 2, height: 24),
+            title: ControlItemIdentifier.hidden.rawValue,
+            isOnScreen: true
+        )
+        let manager = MenuBarItemManager()
+        let saved = [MenuBarSectionName.visible.rawValue: visible.reversed().map(\.uniqueIdentifier)]
+        manager.savedSectionOrder = saved
+
+        manager.mirrorSavedSectionOrderIfSettled(
+            from: cache,
+            controlItems: ControlItemPair(hidden: parked, alwaysHidden: nil),
+            displays: Self.displays
+        )
+
+        #expect(manager.savedSectionOrder == saved)
+    }
+
     @Test("A Hidden divider parked off the bar blocks order writes")
     func parkedDividerIsOffTheBar() {
         func divider(y: CGFloat) -> MenuBarItem {

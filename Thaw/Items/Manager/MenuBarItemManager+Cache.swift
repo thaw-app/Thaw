@@ -234,7 +234,7 @@ extension MenuBarItemManager {
             isRestoringItemOrderTimestamp = nil
         }
 
-        mirrorSavedSectionOrderIfSettled(from: context.cache)
+        mirrorSavedSectionOrderIfSettled(from: context.cache, controlItems: context.controlItems)
         noteUnseenMenuBarHosts(in: context.cache)
 
         MenuBarItemManager.diagLog.debug("Updated menu bar item cache: visible=\(context.cache[.visible].count), hidden=\(context.cache[.hidden].count), alwaysHidden=\(context.cache[.alwaysHidden].count)")
@@ -366,6 +366,7 @@ extension MenuBarItemManager {
     /// Mirror only settled, concealed geometry; reveal interleaving must not become saved order that reconciliation enforces.
     func mirrorSavedSectionOrderIfSettled(
         from cache: ItemCache,
+        controlItems: ControlItemPair? = nil,
         displays: [CGRect] = activeDisplayBounds()
     ) {
         let isAnySectionRevealed = appState?.menuBarManager.sectionController.revealedSection != nil
@@ -384,6 +385,10 @@ extension MenuBarItemManager {
         // Concealed buckets retain old frames, which cannot describe the current bar.
         guard !Self.framesSpanSeveralBars(cache[.visible], displays: displays) else {
             MenuBarItemManager.diagLog.debug("Not mirroring section order: item frames span more than one bar")
+            return
+        }
+        if let controlItems, Self.dividerIsOffTheBar(controlItems, among: cache[.visible]) {
+            MenuBarItemManager.diagLog.debug("Not mirroring section order: the Hidden divider is parked off the bar")
             return
         }
 
