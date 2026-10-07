@@ -599,6 +599,13 @@ extension MenuBarItemManager {
             )
             return
         }
+        // The preflight joined a display or launch settling; that one owns its end.
+        if settlingKind == .event {
+            MenuBarItemManager.diagLog.debug(
+                "\(reason): settling cancel ignored; display or launch settling in flight"
+            )
+            return
+        }
         startupSettlingTask?.cancel()
         startupSettlingTask = nil
         isInStartupSettling = false

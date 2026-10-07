@@ -610,6 +610,10 @@ final class MenuBarItemManager {
         /// Suppresses restore while an applyOffset wave runs. The matching
         /// no-op path can cancel it.
         case preflight
+        /// Waits out a display change or app launch. A spacing preflight joins
+        /// it rather than replacing it, so a no-op apply cannot skip its
+        /// post-settle restore.
+        case event
         /// Waits for specific relaunched bundle IDs to reattach.
         case expectedSet
     }

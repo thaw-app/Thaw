@@ -29,15 +29,17 @@ extension MenuBarItemManager {
             .expectedSet
         } else if reason == "performSetup" {
             .cold
-        } else {
+        } else if reason.hasPrefix("spacingRelaunch") {
             .preflight
+        } else {
+            .event
         }
 
-        // Boot race: a preflight the boot path also starts must not demote a
-        // cold or expected-set settling. Keep the merged expected set.
+        // A weaker settling must not demote a stronger one in flight: a
+        // preflight yields to everything else, and a display change or launch
+        // yields to the boot and relaunch waits. Keep the merged expected set.
         if let existing = settlingKind,
-           incomingKind == .preflight,
-           existing == .cold || existing == .expectedSet
+           Self.settlingYields(incoming: incomingKind, to: existing)
         {
             settlingExpectedBundleIDs = mergedExpected
             MenuBarItemManager.diagLog.debug(
@@ -213,6 +215,14 @@ extension MenuBarItemManager {
             if reason == "performSetup" {
                 scheduleStartupLateItemRecheck()
             }
+        }
+    }
+
+    static func settlingYields(incoming: SettlingKind, to existing: SettlingKind) -> Bool {
+        switch incoming {
+        case .preflight: existing != .preflight
+        case .event: existing == .cold || existing == .expectedSet
+        case .cold, .expectedSet: false
         }
     }
 
