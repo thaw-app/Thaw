@@ -222,7 +222,7 @@ struct MenuBarItemCaptureFallbackTests {
     func allSourcesFail() async {
         let item = makeItem()
         let reader = CaptureFixture(hosting: nil, strip: nil)
-        let cache = MenuBarItemImageCache(screenIsLocked: { false })
+        let cache = MenuBarItemImageCache(screenIsLocked: { false }, captureIsAllowed: { true })
         let result = await cache.axBoundsCapture(
             [(item, item.bounds)],
             scale: 2,
