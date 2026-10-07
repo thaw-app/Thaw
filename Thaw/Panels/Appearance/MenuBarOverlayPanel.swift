@@ -78,7 +78,8 @@ final class MenuBarLiquidGlassContainerView: NSView {
         usesDarkFade: Bool,
         borderColor: CGColor?,
         borderWidth: Double,
-        borderStyle: MenuBarBorderStyle = .solid
+        borderStyle: MenuBarBorderStyle = .solid,
+        cornerRadius: CGFloat? = nil
     ) {
         let componentBounds = MenuBarLiquidGlassGeometry.componentBounds(of: path)
         while glassViews.count < componentBounds.count {
@@ -95,7 +96,9 @@ final class MenuBarLiquidGlassContainerView: NSView {
             }
             let componentBounds = componentBounds[index]
             glassView.frame = componentBounds
-            glassView.cornerRadius = min(componentBounds.width, componentBounds.height) / 2
+            glassView.cornerRadius = MenuBarLiquidGlassGeometry.glassCornerRadius(
+                for: componentBounds, pathCornerRadius: cornerRadius
+            )
             glassView.alphaValue = effectOpacity
             glassView.tintColor = isColored
                 ? NSColor(cgColor: tintColor)?.withAlphaComponent(tintOpacity)
