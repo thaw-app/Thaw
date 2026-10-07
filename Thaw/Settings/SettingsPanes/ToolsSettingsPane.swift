@@ -238,6 +238,7 @@ struct ToolsSettingsPane: View {
                 reportSuccess(String(localized: "Control Center preferences were reset."))
             case .resetMenuBarLayoutPositions:
                 let backup = try await MaintenanceTools.resetMenuBarLayoutPositions()
+                appState.itemManager.forgetStrandedRepairs()
                 backupsRefreshToken += 1
                 if let backup {
                     reportSuccess(
