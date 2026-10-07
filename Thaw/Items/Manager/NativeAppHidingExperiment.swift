@@ -9,8 +9,19 @@ import Foundation
 import Observation
 import PlatformRuntimeKit
 
-/// Follows the Lab switch for native app hiding, supplying the file grant and
-/// turning the switch off when NativeAppHidingController cannot start.
+/// What happens to the user's choice of native hiding when it cannot start.
+nonisolated enum NativeHidingStart {
+    /// A start that fails at launch keeps the choice. The read can fail then for reasons the user did
+    /// nothing to cause, such as a grant that did not resume after an update, and switching the choice
+    /// off silently loses it. The session falls back to the usual hiding and Settings says why.
+    /// A start the user just asked for goes back to off, so the switch shows what is running.
+    static func keepsChoice(afterFailedStartAtLaunch isLaunch: Bool) -> Bool {
+        isLaunch
+    }
+}
+
+/// Follows the switch for native app hiding, supplying the file grant and
+/// turning the switch off when the user turns it on and NativeAppHidingController cannot start.
 @MainActor
 @Observable
 final class NativeAppHidingExperiment {
@@ -53,10 +64,13 @@ final class NativeAppHidingExperiment {
         observationTask?.cancel()
         observationTask = Task { [weak self, weak settings] in
             guard let settings else { return }
+            // The first value is the stored choice as the app starts; later ones are the user's.
+            var isLaunch = true
             for await enabled in Observations({ settings.enableNativeAppHiding }) {
                 guard !Task.isCancelled, let self else { return }
+                defer { isLaunch = false }
                 if enabled {
-                    if !controller.enable() {
+                    if !controller.enable(), !NativeHidingStart.keepsChoice(afterFailedStartAtLaunch: isLaunch) {
                         settings.enableNativeAppHiding = false
                     }
                 } else {
