@@ -34,8 +34,8 @@ struct MenuBarLayoutSettingsPane: View {
     private static func outOfReachMessage(for bundleIDs: Set<String>) -> LocalizedStringKey {
         let names = appNames(for: bundleIDs)
         return bundleIDs.count == 1
-            ? "\(names) is running, but \(Constants.displayName) can't see its menu bar items, so it can't hide or arrange them. Relaunching \(Constants.displayName) fixes this."
-            : "\(names) are running, but \(Constants.displayName) can't see their menu bar items, so it can't hide or arrange them. Relaunching \(Constants.displayName) fixes this."
+            ? "\(names) is running, but \(Constants.displayName) can't see its menu bar items, so it can't hide or arrange them. If its icon is missing from the menu bar too, quit and reopen \(names). Otherwise, relaunch \(Constants.displayName)."
+            : "\(names) are running, but \(Constants.displayName) can't see their menu bar items, so it can't hide or arrange them. If their icons are missing from the menu bar too, quit and reopen them. Otherwise, relaunch \(Constants.displayName)."
     }
 
     private static func appNames(for bundleIDs: Set<String>) -> String {
