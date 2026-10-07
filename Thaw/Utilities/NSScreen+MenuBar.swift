@@ -139,6 +139,17 @@ extension NSScreen {
     }
 
     private static nonisolated let pendingRetryDisplays = OSAllocatedUnfairLock(initialState: Set<CGDirectDisplayID>())
+    private static nonisolated let displaysWarnedMissingBar = OSAllocatedUnfairLock(initialState: Set<CGDirectDisplayID>())
+
+    /// Whether a missing bar on this display is news. A display with no bar
+    /// is asked about many times a minute; it warns once until its bar is found.
+    static nonisolated func shouldWarnMissingMenuBar(on displayID: CGDirectDisplayID) -> Bool {
+        displaysWarnedMissingBar.withLock { $0.insert(displayID).inserted }
+    }
+
+    static nonisolated func noteMenuBarFound(on displayID: CGDirectDisplayID) {
+        _ = displaysWarnedMissingBar.withLock { $0.remove(displayID) }
+    }
 
     /// One pending retry per display, for when the Menubar window is not yet
     /// listed, such as at startup.
@@ -152,6 +163,7 @@ extension NSScreen {
                 let height = menuBarWindow.bounds.height
                 if height > 0 {
                     NSScreen.displayCache.withLock { $0.menuBarHeights[displayID] = height }
+                    noteMenuBarFound(on: displayID)
                     NSScreen.diagLog.debug("getMenuBarHeight: retry succeeded for display=\(displayID) height=\(Double(height))")
                 }
             }
@@ -171,7 +183,11 @@ extension NSScreen {
             return nil
         }
         guard let menuBarWindow = WindowInfo.menuBarWindow(for: id) else {
-            Self.diagLog.warning("getMenuBarHeight: display=\(id) no menu bar window found, scheduling retry")
+            if Self.shouldWarnMissingMenuBar(on: id) {
+                Self.diagLog.warning("getMenuBarHeight: display=\(id) no menu bar window found, scheduling retry")
+            } else {
+                Self.diagLog.debug("getMenuBarHeight: display=\(id) still has no menu bar window")
+            }
             NSScreen.scheduleMenuBarHeightRetry(for: id)
             return nil
         }
@@ -182,6 +198,7 @@ extension NSScreen {
             return nil
         }
         NSScreen.displayCache.withLock { $0.menuBarHeights[id] = height }
+        Self.noteMenuBarFound(on: id)
         Self.diagLog.debug("getMenuBarHeight: display=\(id) liveHeight=\(Double(height)) windowID=\(menuBarWindow.windowID)")
         return height
     }
