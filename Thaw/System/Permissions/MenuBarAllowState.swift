@@ -20,4 +20,14 @@ enum MenuBarAllowState {
         else { return nil }
         return try? NativeAppVisibilityStore().isAllowed(bundleID: ThawMenuBarIdentity.bundleIdentifier)
     }
+
+    /// The given apps whose switch is off. Empty when the list cannot be read. Never asks for access.
+    static func switchedOff(among bundleIDs: Set<String>) -> Set<String> {
+        guard !bundleIDs.isEmpty,
+              PickedFileAccess.controlCenterAppList.hasAccess
+              || PickedFileAccess.controlCenterVisibilityRecovery.hasAccess
+        else { return [] }
+        let store = NativeAppVisibilityStore()
+        return bundleIDs.filter { (try? store.isAllowed(bundleID: $0)) == false }
+    }
 }

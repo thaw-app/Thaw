@@ -247,6 +247,14 @@ nonisolated enum MenuBarItemAXProvider {
         initialState: [pid_t: AXError]()
     )
 
+    /// Former hosts whose last empty read was a plain answer: no extras bar, and no error or timeout.
+    /// Such an app has no items to show. One that timed out or failed is being missed.
+    static func processesAnsweringWithNoItems() -> Set<pid_t> {
+        loggedEmptyExtrasBarReads.withLock { logged in
+            Set(logged.filter { $0.value == .noValue || $0.value == .attributeUnsupported }.keys)
+        }
+    }
+
     private static let perAppWalkBudget = Duration.milliseconds(400)
 
     /// Late answers from apps that missed their deadline, merged by the next

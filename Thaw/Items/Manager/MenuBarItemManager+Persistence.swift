@@ -56,11 +56,17 @@ extension MenuBarItemManager {
         let nativelyHidden = appState?.menuBarManager.nativeHiddenBundleIDs ?? []
         let running = Set(bundlesByPID.values.filter(isTracked)).subtracting(nativelyHidden)
 
-        if tracker.update(seen: seen, running: running, now: .now) {
+        // An app switched off in System Settings, or one that answers with no items, is not being missed.
+        let candidates = tracker.candidates(seen: seen, running: running)
+        let answeredEmpty = MenuBarItemAXProvider.processesAnsweringWithNoItems()
+        let quiet = MenuBarAllowState.switchedOff(among: candidates)
+            .union(answeredEmpty.compactMap { bundlesByPID[$0] })
+
+        if tracker.update(seen: seen, running: running, quiet: quiet, now: .now) {
             let flagged = tracker.flagged
             if !flagged.isEmpty {
                 MenuBarItemManager.diagLog.warning(
-                    "menu bar items expected from running apps are not visible to the walk: \(flagged.sorted()); a relaunch has cleared this before"
+                    "menu bar items expected from running apps are not visible to the walk: \(flagged.sorted())"
                 )
             }
             unseenHostBundleIDs = flagged

@@ -39,20 +39,28 @@ nonisolated struct UnseenMenuBarHosts: Equatable {
     private var missingSince: [String: Date] = [:]
     private(set) var flagged: Set<String> = []
 
+    /// Hosts from the baseline that are running and missing from seen: the ones worth asking about.
+    func candidates(seen: Set<String>, running: Set<String>) -> Set<String> {
+        Set(expected.keys).intersection(running).subtracting(seen)
+    }
+
     init(expected: [String: Int]) {
         self.expected = expected
     }
 
     /// Updates from one settled inventory. seen and running are bundle
     /// identifiers. Returns whether flagged changed.
-    mutating func update(seen: Set<String>, running: Set<String>, now: Date) -> Bool {
+    ///
+    /// quiet holds running apps that show nothing and are not being missed: switched off in the
+    /// system's Menu Bar list, or asked and answering that they have no items. They are never flagged.
+    mutating func update(seen: Set<String>, running: Set<String>, quiet: Set<String> = [], now: Date) -> Bool {
         let previous = flagged
         for bundle in seen {
             expected[bundle] = 0
             missingSince[bundle] = nil
         }
         for bundle in expected.keys where !seen.contains(bundle) {
-            guard running.contains(bundle) else {
+            guard running.contains(bundle), !quiet.contains(bundle) else {
                 missingSince[bundle] = nil
                 continue
             }
