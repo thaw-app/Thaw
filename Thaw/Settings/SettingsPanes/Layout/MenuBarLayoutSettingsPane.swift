@@ -18,6 +18,8 @@ struct MenuBarLayoutSettingsPane: View {
     /// Why the out-of-reach warning's Relaunch did not happen, shown instead
     /// of a button that silently does nothing.
     @State private var relaunchErrorMessage: String?
+    /// Set while macOS has Thaw itself switched off in its menu bar settings.
+    @State private var isDeniedBySystem = false
 
     /// Refresh hidden occupancy from tags, not geometry, to avoid jitter; see MenuBarLayoutGroupsSection.
     @State private var isNothingHidden = false
@@ -83,6 +85,9 @@ struct MenuBarLayoutSettingsPane: View {
                         isLimitationsAcknowledged = true
                     }
                 )
+                if isDeniedBySystem {
+                    ThawPlacementWarning(block: .deniedBySystem)
+                }
                 if !hasScreenRecordingPermission {
                     SettingsWarningPill(
                         title: "Showing app icons",
@@ -159,6 +164,12 @@ struct MenuBarLayoutSettingsPane: View {
         )
         .onAppear {
             syncHidingAvailability()
+        }
+        .task {
+            guard let item = menuBarManager.controlItem(withName: .visible) else { return }
+            for await block in item.$placementBlock.values {
+                isDeniedBySystem = block == .deniedBySystem
+            }
         }
         .onReceive(NotificationCenter.default.publisher(for: NSApplication.didBecomeActiveNotification)) { _ in
             menuBarManager.sectionController.refreshHidingAvailability()

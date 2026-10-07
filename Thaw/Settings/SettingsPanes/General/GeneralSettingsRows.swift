@@ -73,19 +73,26 @@ struct ShowThawIconRow: View {
         if settings.showThawIcon {
             ThawIconPicker(settings: settings)
             if let placementBlock {
-                missingIconPill(for: placementBlock)
+                ThawPlacementWarning(block: placementBlock)
             }
+        } else if placementBlock == .deniedBySystem {
+            // The dividers are switched off with the icon, so this matters with the icon hidden too.
+            ThawPlacementWarning(block: .deniedBySystem)
         }
     }
+}
 
-    /// Says why the icon is missing while the switch above reads on.
-    private func missingIconPill(for block: ControlItem.PlacementBlock) -> some View {
+/// Says why Thaw's own items are missing from the menu bar, with the way to the switch.
+struct ThawPlacementWarning: View {
+    let block: ControlItem.PlacementBlock
+
+    var body: some View {
         let title: LocalizedStringKey = switch block {
         case .deniedBySystem: "macOS isn't allowing \(Constants.displayName) in the menu bar"
         case .unknown: "The \(Constants.displayName) icon isn't in the menu bar"
         }
         let message: LocalizedStringKey = switch block {
-        case .deniedBySystem: "Switch \(Constants.displayName) back on in System Settings > Menu Bar."
+        case .deniedBySystem: "\(Constants.displayName) can't hide or arrange anything until it is switched back on in System Settings > Menu Bar."
         case .unknown: "macOS may be blocking it. Check that \(Constants.displayName) is switched on in System Settings > Menu Bar."
         }
         return SettingsWarningPill(

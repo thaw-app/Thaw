@@ -164,6 +164,13 @@ struct ControlItemRepublishTests {
         #expect(!ControlItem.isDegenerateMenuBarFrame(seat, screenFrames: Self.screens))
     }
 
+    @Test("An added item with no window counts as off-band")
+    @MainActor
+    func missingWindowIsOffBand() {
+        // escalateIfStillOffBand stands a missing window in as an empty frame.
+        #expect(ControlItem.isDegenerateMenuBarFrame(.zero, screenFrames: Self.screens))
+    }
+
     @Test("Parked, empty, and off-screen frames are off-band")
     @MainActor
     func offBandFrames() {

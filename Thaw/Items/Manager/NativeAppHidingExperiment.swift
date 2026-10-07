@@ -32,7 +32,7 @@ final class NativeAppHidingExperiment {
         return NativeAppHidingController(environment: .init(
             activateAccess: { appListAccess.activateIfNeeded() },
             requestAccess: { appListAccess.requestAccessViaOpenPanel() },
-            ownsBundle: ExtraVisibilityChannel.ownsBundle,
+            ownsBundle: ExtraVisibilityChannel.keepsOffSystemList,
             hideOwnedBundles: ExtraVisibilityChannel.hide
         ))
     }()

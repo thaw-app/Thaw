@@ -105,6 +105,12 @@ enum ExtraVisibilityChannel {
         bundleID.hasPrefix("\(ThawMenuBarIdentity.bundleIdentifier).extra.")
     }
 
+    /// Bundles native hiding must not switch off in the system's Menu Bar list: the extras, which are
+    /// hidden through this channel, and Thaw itself, which would lose its icon and both dividers.
+    static func keepsOffSystemList(_ bundleID: String) -> Bool {
+        bundleID == ThawMenuBarIdentity.bundleIdentifier || ownsBundle(bundleID)
+    }
+
     static var file: URL {
         file(in: ItemStandInSlot.folder)
     }
@@ -122,7 +128,8 @@ enum ExtraVisibilityChannel {
     }
 
     /// The folder and the announcement are parameters so tests write to a scratch folder and post nothing.
-    static func hide(_ bundleIDs: Set<String>, folder: URL, announce: () -> Void) {
+    static func hide(_ requested: Set<String>, folder: URL, announce: () -> Void) {
+        let bundleIDs = requested.filter(ownsBundle)
         guard bundleIDs != lastHidden else { return }
         do {
             try FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
