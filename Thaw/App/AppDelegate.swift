@@ -108,7 +108,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             appState.openWindow(.permissions)
         } else {
             // Upgrade notes appear once per version, only outside the onboarding/permissions path.
-            NativeAppHidingOffer.presentIfNeeded(settings: appState.settings.advanced)
             appState.presentWhatsNewForUpgradeIfNeeded()
         }
     }

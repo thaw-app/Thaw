@@ -75,7 +75,12 @@ struct ShowThawIconRow: View {
             if let placementBlock {
                 ThawPlacementWarning(block: placementBlock)
             }
-        } else if placementBlock == .deniedBySystem {
+        } else {
+            Text("Hiding the icon also shrinks the section dividers to nothing. If items start landing in the wrong section, show the icon again.")
+                .font(.footnote)
+                .foregroundStyle(.secondary)
+        }
+        if !settings.showThawIcon, placementBlock == .deniedBySystem {
             // The dividers are switched off with the icon, so this matters with the icon hidden too.
             ThawPlacementWarning(block: .deniedBySystem)
         }

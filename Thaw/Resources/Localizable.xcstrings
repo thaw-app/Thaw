@@ -378,7 +378,7 @@
         }
       }
     },
-    "%@ can keep Live Activities and the camera indicator on the menu bar while apps are hidden, and stop hidden items from flashing when Notification Center opens. It's still in beta because it has had limited testing, but it's promising. You can change this any time in Settings > General." : {
+    "%@ can keep Live Activities and the camera indicator on the menu bar while apps are hidden, and stop hidden items from flashing when Notification Center opens. It's still in beta because it has had limited testing, but it's promising. You can change this any time in Settings > Layout, under Hiding method." : {
 
     },
     "%@ can only see clicks that land on the menu bar. An item you open with a keyboard shortcut, or that does its job without ever being clicked, will show up here, and that does not make it unused." : {

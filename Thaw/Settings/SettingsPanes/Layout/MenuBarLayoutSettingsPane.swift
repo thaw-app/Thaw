@@ -85,24 +85,20 @@ struct MenuBarLayoutSettingsPane: View {
                         isLimitationsAcknowledged = true
                     }
                 )
-                if isDeniedBySystem {
+                let banner = LayoutBanner.mostSerious(
+                    isDeniedBySystem: isDeniedBySystem,
+                    hasItemsOutOfReach: !itemManager.unseenHostBundleIDs.isEmpty,
+                    hasScreenRecording: hasScreenRecordingPermission
+                )
+                switch banner {
+                case .deniedBySystem:
                     ThawPlacementWarning(block: .deniedBySystem)
-                }
-                if !hasScreenRecordingPermission {
-                    SettingsWarningPill(
-                        title: "Showing app icons",
-                        message: "Add Screen Recording to see your real menu bar icons instead.",
-                        systemImage: "eye.slash",
-                        actionTitle: "Grant Access",
-                        action: { appState.permissions.screenRecording.performRequest() }
-                    )
-                }
-                if !itemManager.unseenHostBundleIDs.isEmpty {
+                case .outOfReach:
                     SettingsWarningPill(
                         title: "Some menu bar items are out of reach",
                         message: Self.outOfReachMessage(for: itemManager.unseenHostBundleIDs),
                         systemImage: "eye.trianglebadge.exclamationmark",
-                        actionTitle: "Relaunch",
+                        actionTitle: "Relaunch \(Constants.displayName)",
                         action: {
                             do {
                                 try AppRelauncher.relaunch()
@@ -111,14 +107,26 @@ struct MenuBarLayoutSettingsPane: View {
                             }
                         }
                     )
+                case .noScreenRecording:
+                    SettingsWarningPill(
+                        title: "Showing app icons",
+                        message: "Add Screen Recording to see your real menu bar icons instead.",
+                        systemImage: "eye.slash",
+                        actionTitle: "Grant Access",
+                        action: { appState.permissions.screenRecording.performRequest() }
+                    )
+                case nil:
+                    EmptyView()
                 }
-                LayoutSuggestionCards(itemManager: itemManager)
-                if showsHideByDragHint {
-                    ThawFirstRunHint(
-                        systemImage: "hand.draw",
-                        "Drag an icon into Hidden to tuck it away. Click \(Constants.displayName)'s icon in the menu bar to bring it back."
-                    ) {
-                        FirstRunHintStore.shared.dismiss(.hideByDrag)
+                if LayoutBanner.allowsTips(beside: banner) {
+                    LayoutSuggestionCards(itemManager: itemManager)
+                    if showsHideByDragHint {
+                        ThawFirstRunHint(
+                            systemImage: "hand.draw",
+                            "Drag an icon into Hidden to tuck it away. Click \(Constants.displayName)'s icon in the menu bar to bring it back."
+                        ) {
+                            FirstRunHintStore.shared.dismiss(.hideByDrag)
+                        }
                     }
                 }
                 LayoutBarsSection(itemManager: itemManager)
@@ -133,8 +141,9 @@ struct MenuBarLayoutSettingsPane: View {
                 isHidingUnavailable: isHidingUnavailable
             )
 
+            HidingMethodSection(settings: appState.settings.advanced, offersAppleItems: canArrangeLayout)
+
             if canArrangeLayout {
-                LayoutSystemItemControl(isEnabled: systemItemHidingBinding)
                 LayoutUnshowableItemControls(
                     general: appState.settings.general,
                     advanced: appState.settings.advanced
@@ -175,16 +184,6 @@ struct MenuBarLayoutSettingsPane: View {
             menuBarManager.sectionController.refreshHidingAvailability()
             syncHidingAvailability()
         }
-    }
-
-    private var systemItemHidingBinding: Binding<Bool> {
-        Binding(
-            get: { appState.settings.advanced.enableExperimentalSystemItemHiding },
-            set: { newValue in
-                appState.settings.advanced.enableExperimentalSystemItemHiding = newValue
-                appState.menuBarManager.sectionController.refresh()
-            }
-        )
     }
 }
 
@@ -411,35 +410,6 @@ struct LayoutBarsSection: View {
 
 /// macOS 27 hosts Apple items through a fragile move path; keep the explanation reachable behind the info button without crowding the row.
 /// Name affected items because "system items" can be mistaken for only Clock and Control Center.
-private struct LayoutSystemItemControl: View {
-    @Binding var isEnabled: Bool
-
-    var body: some View {
-        ThawSection {
-            Toggle("Allow hiding Apple’s own menu bar items", isOn: $isEnabled)
-                .annotation(
-                    "Covers the items macOS pins to the right: Clock, Control Center and Siri.",
-                    more: "Other built-in items are managed separately, and third-party items can always be hidden.\n\nWhile the Thaw Bar is off, hidden Clock, Control Center and Siri stay pinned to the right side of the layout. You can still switch them between visible and hidden."
-                )
-
-            disclaimer
-        }
-    }
-
-    /// Warn about the unreliable route only when enabled; blue denotes a limitation, not a failure.
-    @ViewBuilder
-    private var disclaimer: some View {
-        if isEnabled {
-            SettingsWarningPill(
-                title: "Apple's items move differently",
-                message: "macOS 27 draws them itself instead of letting each one place its own icon, so \(Constants.displayName) has to ask macOS to move them rather than moving them directly. Some refuse to move, some return to Visible on their own, and Clock and Control Center can only be hidden together with Siri.",
-                systemImage: "flask.fill",
-                tint: .blue
-            )
-        }
-    }
-}
-
 /// Keep missing-item controls on the arrangement pane so users can find them, with details behind info buttons.
 private struct LayoutUnshowableItemControls: View {
     @Bindable var general: GeneralSettings
