@@ -81,6 +81,15 @@ enum SystemExtraStandIn: String, CaseIterable {
     var bundleURL: URL {
         Bundle.main.bundleURL.appending(path: "Contents/Library/Extras/\(bundleName).app")
     }
+
+    /// The order with identifier right after original, or nil when the order
+    /// already holds identifier or lacks original and so should stay as it is.
+    static nonisolated func orderPlacing(_ identifier: String, after original: String, in order: [String]) -> [String]? {
+        guard !order.contains(identifier), let originalIndex = order.firstIndex(of: original) else { return nil }
+        var placed = order
+        placed.insert(identifier, at: originalIndex + 1)
+        return placed
+    }
 }
 
 // MARK: - Visibility
@@ -294,16 +303,12 @@ final class SystemExtraStandInLauncher: SystemExtraReplacementProviding {
             controller.setSection(section, identifier: identifier)
         }
         placed.insert(standIn)
-        var order = controller.sectionItemOrder[section] ?? []
         let canonicalOriginal = MenuBarItemTag.canonicalPersistentIdentifier(original)
-        guard let originalIndex = order.firstIndex(of: canonicalOriginal),
-              order.firstIndex(of: identifier) != originalIndex + 1
-        else {
+        guard let order = SystemExtraStandIn.orderPlacing(
+            identifier, after: canonicalOriginal, in: controller.sectionItemOrder[section] ?? []
+        ) else {
             return
         }
-        order.removeAll { $0 == identifier }
-        let insertAt = order.firstIndex(of: canonicalOriginal).map { $0 + 1 } ?? order.endIndex
-        order.insert(identifier, at: insertAt)
         controller.setSectionOrder(order, for: section)
     }
 }
