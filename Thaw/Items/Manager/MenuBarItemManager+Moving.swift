@@ -1050,9 +1050,11 @@ extension MenuBarItemManager {
             ) else {
                 return []
             }
+            // A divider whose frame stopped following the bar would call every item left of it stranded.
+            let seated = DividerSeat.settled(items: items, pair: pair, weight: DividerSeat.storeWeights(among: items))
             return Self.membersStrandedAcrossDivider(
-                items: items,
-                controlItems: pair,
+                items: seated.items,
+                controlItems: seated.pair,
                 sectionFor: { controller.section(for: $0) },
                 experimentalSystemItemHiding: experimentalSystemItemHiding,
                 isRepairSuppressed: {
@@ -1786,6 +1788,7 @@ extension MenuBarItemManager {
         // A phantom frame is a seat something else already occupies; dragging
         // from it grabs that other item. Logged once per pass per item.
         var loggedPhantomIDs = Set<String>()
+        var loggedStaleDivider = false
         func isPhantomStrand(_ item: MenuBarItem) -> Bool {
             guard item.hasPhantomFrame(among: liveItems) else { return false }
             if loggedPhantomIDs.insert(item.uniqueIdentifier).inserted {
@@ -1809,7 +1812,17 @@ extension MenuBarItemManager {
         }
 
         func failingStrands() -> [MenuBarItem] {
-            liveItems.filter { item in
+            let seated = DividerSeat.settled(
+                items: liveItems, pair: controlItems, weight: DividerSeat.storeWeights(among: liveItems)
+            )
+            if seated.moved, !loggedStaleDivider {
+                loggedStaleDivider = true
+                MenuBarItemManager.diagLog.info(
+                    "boundary repair: the Hidden divider reports x=\(Int(controlItems.hidden.bounds.minX)) against its weight; " +
+                        "judging the boundary from x=\(Int(seated.pair.hidden.bounds.minX))"
+                )
+            }
+            return liveItems.filter { item in
                 !item.isControlItem &&
                     !item.isSystemClone &&
                     !item.isNativeOverflowControl &&
@@ -1827,10 +1840,10 @@ extension MenuBarItemManager {
                         // neighbours the item stands among are invisible to it.
                         pendingPhysicalSeatIDs.contains(item.uniqueIdentifier) ||
                             !MenuBarLayoutPlannerProvider.current.liveOrderSatisfiesSectionBoundary(
-                                items: liveItems,
+                                items: seated.items,
                                 item: item,
                                 section: .visible,
-                                controlItems: controlItems,
+                                controlItems: seated.pair,
                                 experimentalSystemItemHiding: experimentalSystemItemHiding
                             )
                     )
