@@ -63,16 +63,17 @@ extension MenuBarItemManager {
             store.resolveKey(for: item, existingKeys: keys, positions: positions, liveItems: items)
                 .flatMap { positions[$0] }
         }
-        let controls = items.filter(\.isControlItem)
-        guard let visibleControl = controls.first(where: { $0.tag.matchesVisibleControlItem }).flatMap(weight),
-              let hiddenDivider = controls.first(where: { $0.tag == .hiddenControlItem }).flatMap(weight),
+        // The cache keeps the Visible control but drops both dividers, so those come from the last walk.
+        let dividers = lastKnownControlItems
+        guard let visibleControl = items.first(where: { $0.tag.matchesVisibleControlItem }).flatMap(weight),
+              let hiddenDivider = (dividers?.hidden).flatMap(weight),
               hiddenDivider != visibleControl
         else {
             MenuBarItemManager.diagLog.debug("observed membership (\(reason)): divider weights unavailable; skipping")
             return
         }
         let alwaysHiddenDivider = configuration.isAlwaysHiddenSectionEnabled
-            ? controls.first(where: { $0.tag == .alwaysHiddenControlItem }).flatMap(weight)
+            ? (dividers?.alwaysHidden).flatMap(weight)
             : nil
         let experimentalSystemItemHiding = configuration.enableExperimentalSystemItemHiding
 
