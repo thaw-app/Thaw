@@ -65,8 +65,8 @@ nonisolated enum MaintenanceTools {
         }
     }
 
-    /// Quits the menu bar hosting process and deletes its preference plist, so
-    /// every saved status-item position is rebuilt from scratch.
+    /// Quits the menu bar hosting process and deletes the files holding saved
+    /// status-item positions, so every position is rebuilt from scratch.
     ///
     /// A backup is written first and returned, because this discards the
     /// user's entire menu bar arrangement. cfprefsd is restarted before
@@ -90,6 +90,11 @@ nonisolated enum MaintenanceTools {
             at: preferences.appending(path: "\(hostingBundleID).plist"),
             using: fileManager
         )
+        // On macOS 27 the positions live in the MenuBar group container, not
+        // the plist above; delete every file the backup just captured.
+        for source in MenuBarLayoutBackups.liveSources(fileManager: fileManager) {
+            try removeItemIfExists(at: source, using: fileManager)
+        }
 
         let byHost = preferences.appending(path: "ByHost", directoryHint: .isDirectory)
         guard fileManager.fileExists(atPath: byHost.path(percentEncoded: false)) else {

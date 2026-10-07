@@ -22,6 +22,16 @@ extension MenuBarItemManager {
         return lastRestrictionChange.duration(to: .now) < Self.restrictionChangeLayoutSettleWindow
     }
 
+    /// Forgets every stranded verdict after a positions reset, since the bar
+    /// they described no longer exists. Otherwise the repair keeps skipping
+    /// items it gave up on before the reset.
+    func forgetStrandedRepairs() {
+        failureLedger.removeAll()
+        suppressedBoundaryRepairItemIDs.removeAll()
+        suppressedBoundaryRepairAt.removeAll()
+        boundaryRepairStrandTrips.removeAll()
+    }
+
     private func parkedSetAndBarMidY(in items: [MenuBarItem]) -> (barMidY: CGFloat?, parkedIDs: Set<CGWindowID>) {
         let barMidY = items.first(where: {
             $0.tag.matchesVisibleControlItem && $0.bounds.midY <= MenuBarItemGeometry.maxOnBarMidY
