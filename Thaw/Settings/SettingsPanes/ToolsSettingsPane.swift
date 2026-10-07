@@ -6,6 +6,7 @@
 //  Licensed under the GNU GPLv3
 
 import MenuBarModel
+import PlatformRuntimeKit
 import SwiftUI
 import ThawCapture
 import ThawUI
@@ -243,12 +244,19 @@ struct ToolsSettingsPane: View {
                 if let backup {
                     reportSuccess(
                         String(
-                            localized: "Saved item positions were reset. Backup saved as \(backup.url.lastPathComponent)."
+                            localized: "Saved item positions were reset. Backup saved as \(backup.url.lastPathComponent). Relaunching…"
                         )
                     )
                 } else {
-                    reportSuccess(String(localized: "Saved item positions were reset."))
+                    reportSuccess(String(localized: "Saved item positions were reset. Relaunching…"))
                 }
+                // Access granted to the old layout table does not carry over to
+                // the one the menu bar writes next, so relaunch once it exists.
+                let table = MenuBarLayoutTableAccess.tableURL.path(percentEncoded: false)
+                for _ in 0 ..< 60 where !FileManager.default.fileExists(atPath: table) {
+                    try? await Task.sleep(for: .milliseconds(500))
+                }
+                appState.restartSelf()
             case .quitAndClearCache:
                 await appState.imageCache.suspendDiskPersistenceForReset()
                 do {
@@ -324,7 +332,7 @@ private enum MaintenanceToolAction: Identifiable {
         case .resetControlCenter:
             "Control Center will quit and its preference files will be deleted. macOS usually relaunches it automatically."
         case .resetMenuBarLayoutPositions:
-            "Every menu bar item's saved position will be deleted and the menu bar will restart, so your whole arrangement is rebuilt from scratch. A backup is saved first, and Layout backups on this page can put it back."
+            "Every menu bar item's saved position will be deleted and the menu bar will restart, so your whole arrangement is rebuilt from scratch. A backup is saved first, and Layout backups on this page can put it back. \(Constants.displayName) relaunches afterward."
         case .quitAndClearCache:
             "\(Constants.displayName) will delete its cache folder and quit. Launch the app again afterward."
         case .resetPermissions:
