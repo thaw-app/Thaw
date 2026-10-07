@@ -98,4 +98,27 @@ struct MultiBarFramesTests {
         ]
         #expect(!MenuBarItemManager.framesSpanSeveralBars(items, displays: Self.displays))
     }
+
+    @Test("A Hidden divider parked off the bar blocks order writes")
+    func parkedDividerIsOffTheBar() {
+        func divider(y: CGFloat) -> MenuBarItem {
+            MenuBarItem(
+                tag: .hiddenControlItem,
+                windowID: 9,
+                ownerPID: 501,
+                sourcePID: 501,
+                bounds: CGRect(x: -570.5, y: y, width: 2, height: 24),
+                title: ControlItemIdentifier.hidden.rawValue,
+                isOnScreen: true
+            )
+        }
+        // Frames from a reconnect: the dividers parked at y 113.5 while Stats
+        // still read on the bar, so Stats looked stranded among hidden items.
+        let stats = Self.item(x: -400, windowID: 1)
+
+        let parked = divider(y: 113.5)
+        #expect(MenuBarItemManager.dividerIsOffTheBar(ControlItemPair(hidden: parked, alwaysHidden: nil), among: [parked, stats]))
+        let onBar = divider(y: 4.5)
+        #expect(!MenuBarItemManager.dividerIsOffTheBar(ControlItemPair(hidden: onBar, alwaysHidden: nil), among: [onBar, stats]))
+    }
 }
