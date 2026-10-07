@@ -161,7 +161,7 @@ public actor MenuBarCaptureServiceClient {
             if Task.isCancelled || !ScreenCapture.isCaptureUITicketCurrent(ticket) {
                 return nil
             }
-            guard let session = ensureSession() else {
+            guard let (session, token) = ensureSession() else {
                 return nil
             }
             do {
@@ -181,8 +181,11 @@ public actor MenuBarCaptureServiceClient {
                 }
                 // The helper exits after its capture budget and when the
                 // last session closes; a stale session fails here. Drop
-                // it and retry once, XPC relaunches the service.
-                invalidateSession(reason: "send failed: \(error)")
+                // it and retry once, XPC relaunches the service. A concurrent
+                // capture may already have replaced it; leave that one alone.
+                if token == sessionToken {
+                    invalidateSession(reason: "send failed: \(error)")
+                }
                 if attempt == 0 {
                     continue
                 }
@@ -267,9 +270,9 @@ public actor MenuBarCaptureServiceClient {
         }
     }
 
-    private func ensureSession() -> XPCSession? {
-        if let session {
-            return session
+    private func ensureSession() -> (session: XPCSession, token: UUID)? {
+        if let session, let sessionToken {
+            return (session, sessionToken)
         }
         let token = UUID()
         do {
@@ -287,7 +290,7 @@ public actor MenuBarCaptureServiceClient {
             Self.diagLog.debug("Opened MenuBarCaptureService session (\(self.serviceName))")
             session = created
             sessionToken = token
-            return created
+            return (created, token)
         } catch {
             Self.diagLog.error("Failed to open MenuBarCaptureService session: \(error)")
             return nil
