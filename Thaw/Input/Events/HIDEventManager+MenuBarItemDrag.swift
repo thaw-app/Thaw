@@ -58,8 +58,19 @@ extension HIDEventManager {
         guard configuration.showAllSectionsOnUserDrag else {
             return
         }
+        // Reveal through the section itself, inline: redrawing the dividers
+        // alone leaves the items put away and the dividers side by side.
+        let enabled = Set(appState.menuBarManager.sections.filter(\.isEnabled).map(\.name))
+        if let name = Self.sectionRevealedForDrag(enabled: enabled) {
+            appState.menuBarManager.section(withName: name)?.show(forcingInline: true)
+        }
         for section in appState.menuBarManager.sections {
             section.controlItem.state = .showSection
         }
+    }
+
+    /// The deepest section a drag opens, so every section is a drop target.
+    static nonisolated func sectionRevealedForDrag(enabled: Set<MenuBarSection.Name>) -> MenuBarSection.Name? {
+        [.alwaysHidden, .hidden].first(where: enabled.contains)
     }
 }
