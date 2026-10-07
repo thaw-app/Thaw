@@ -49,7 +49,9 @@ enum PositionStoreHygiene {
         let liveOwners = currentOwnerNames()
         let candidates = Set(positions.keys.filter { isDead($0, liveOwners: liveOwners) })
 
-        let doomed = candidates.intersection(previousCandidates)
+        // A misspelled pinned-module key names nothing the agent sorts, so it needs no second opinion.
+        let misspelled = positions.keys.filter(isMisspelledPinnedModuleKey)
+        let doomed = candidates.intersection(previousCandidates).union(misspelled)
         defaults.set(Array(candidates.subtracting(doomed)).sorted(), forKey: candidatesKey)
 
         guard !doomed.isEmpty else {
@@ -82,6 +84,13 @@ enum PositionStoreHygiene {
             }
         }
         return names
+    }
+
+    /// Whether key spells a pinned Control Center module by its accessibility title.
+    /// The agent sorts Home under module:BentoBox-1; an older build wrote the title form, which nothing reads.
+    static nonisolated func isMisspelledPinnedModuleKey(_ key: String) -> Bool {
+        guard let name = SystemMenuBarModuleCatalog.pinnedModuleName(inTitle: key) else { return false }
+        return key.hasSuffix("com.apple.menuextra.controlcenter-\(name)")
     }
 
     private static func isDead(_ key: String, liveOwners: Set<String>) -> Bool {
