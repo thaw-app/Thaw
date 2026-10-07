@@ -34,28 +34,25 @@ extension MenuBarItemManager {
     /// pane edit commits.
     func noteAuthoredEditCommitted() {
         layoutPublication.invalidate()
-        convergenceBudgetDeadline = .now + Self.convergenceBudget
-        convergenceSuppressedUntil = nil
+        convergence.open()
     }
 
     /// Whether automatic ordering passes are paused because the last authored
     /// edit's convergence budget ran out, so visible drags do not drip on for
-    /// minutes. The next authored edit reopens the budget.
+    /// minutes. See ``ConvergenceBudget``.
     func isConvergenceBudgetExhausted() -> Bool {
-        guard let deadline = convergenceBudgetDeadline else { return false }
-        let now = ContinuousClock.now
-        if now < deadline {
+        switch convergence.verdict() {
+        case .open:
             return false
-        }
-        if let suppressedUntil = convergenceSuppressedUntil, now < suppressedUntil {
+        case .paused:
+            return true
+        case .pauseBegan:
+            Self.diagLog.info(
+                "macOS 27 convergence budget exhausted; automatic section-order passes pause for "
+                    + "\(Int(ConvergenceBudget.pause.components.seconds)) s or until the next authored edit"
+            )
             return true
         }
-        convergenceSuppressedUntil = now + Self.convergencePostExpirySuppression
-        Self.diagLog.info(
-            "macOS 27 convergence budget exhausted; automatic section-order passes pause for " +
-                "\(Int(Self.convergencePostExpirySuppression.components.seconds)) s or until the next authored edit"
-        )
-        return true
     }
 
     func loadPreferredPositionsVerdict() {
@@ -83,21 +80,41 @@ extension MenuBarItemManager {
 /// registered bundle), so every move paid the verification wait before its
 /// drag. Whether the bar moved is no verdict: items with live-width titles
 /// shift it all the time. After two unverified writes in a row the item goes
-/// straight to the drag; a verified write clears it.
+/// straight to the drag. A verified write clears it, and after ``retryAfter``
+/// the write gets one more try.
 struct IgnoredPreferredWrites {
     static let strikes = 2
 
-    private var counts: [String: Int] = [:]
+    /// How long an item stays on the drag before its writes get one more try.
+    /// The agent can start honouring an item again, after its app relaunches
+    /// or the bar re-lays, and without a retry the item would stay on the
+    /// drag, and out of every automatic move, for the rest of the session.
+    static let retryAfter: Duration = .seconds(600)
 
-    func skipsWrite(for identifier: String) -> Bool {
-        counts[identifier, default: 0] >= Self.strikes
+    private struct Record {
+        var count: Int
+        var skipUntil: ContinuousClock.Instant?
     }
 
-    mutating func noteUnverified(_ identifier: String) {
-        counts[identifier, default: 0] += 1
+    private var records: [String: Record] = [:]
+
+    func skipsWrite(for identifier: String, at now: ContinuousClock.Instant = .now) -> Bool {
+        guard let skipUntil = records[identifier]?.skipUntil else { return false }
+        return now < skipUntil
+    }
+
+    mutating func noteUnverified(_ identifier: String, at now: ContinuousClock.Instant = .now) {
+        var record = records[identifier] ?? Record(count: 0)
+        if let skipUntil = record.skipUntil, now >= skipUntil {
+            // The retry failed too: one strike is enough to go back to the drag.
+            record.count = Self.strikes - 1
+        }
+        record.count += 1
+        record.skipUntil = record.count >= Self.strikes ? now + Self.retryAfter : nil
+        records[identifier] = record
     }
 
     mutating func noteVerified(_ identifier: String) {
-        counts[identifier] = nil
+        records[identifier] = nil
     }
 }

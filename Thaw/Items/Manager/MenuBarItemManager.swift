@@ -670,10 +670,6 @@ final class MenuBarItemManager {
     /// intent. See OverflowRebalanceRequest.
     var overflowRebalancePendingRequest: OverflowRebalanceRequest?
 
-    /// Prevents a failed physical layout apply from being committed by a later
-    /// cache pass. A new apply or an explicit user Command-drag clears it.
-    var suppressSpatialOrderPersistenceAfterFailedApply = false
-
     /// Whether the user has taken menu bar arrangement into their own hands (MenuBarArrangementMode.manual).
     /// Every automatic path reads this; the explicit Layout edit path reads arrangementForbidsMoves instead.
     var arrangementIsManual: Bool {
@@ -762,26 +758,8 @@ final class MenuBarItemManager {
         visibleMembersMissingRepublish.removeAll()
     }
 
-    // MARK: Convergence budget
-
-    /// How long one authored pane edit may keep spending automatic ordering
-    /// passes. Each pass on the macOS 27 drag channel is a visible drag on
-    /// the real bar, and every cache cycle can re-plan a boundary move whose
-    /// verification flaps against neighbours that have not moved yet, so one
-    /// edit could otherwise cascade drags for minutes.
-    static let convergenceBudget: Duration = .seconds(90)
-
-    /// After the budget runs out, automatic passes pause for this long
-    /// instead of resuming immediately (whose first re-plan is the same
-    /// boundary move the budget just gave up on). A new authored edit, a
-    /// reveal, or a restriction repair resets everything.
-    static let convergencePostExpirySuppression: Duration = .seconds(600)
-
-    /// When the current authored edit's convergence budget expires.
-    var convergenceBudgetDeadline: ContinuousClock.Instant?
-
-    /// How long automatic passes stay suppressed after a budget expiry.
-    var convergenceSuppressedUntil: ContinuousClock.Instant?
+    /// Bounds how long automatic ordering passes keep working on one authored edit.
+    var convergence = ConvergenceBudget()
 
     /// Debounced structural re-write after bar-changing activity settles.
     /// See MenuBarItemManager.scheduleStructuralNormalization(after:).
@@ -2094,7 +2072,6 @@ final class MenuBarItemManager {
     /// without this the arrangement reverts on the next assertion reflow.
     func recordExternalMoveOperation() {
         moveActivity.noteMoveOperation()
-        suppressSpatialOrderPersistenceAfterFailedApply = false
         // The user just placed an icon by hand. That outranks a pane edit Thaw
         // has not managed to enact, and it must, or an edit stuck pending would
         // keep the cache mirror from ever learning their arrangement.

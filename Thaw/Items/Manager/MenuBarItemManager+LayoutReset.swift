@@ -659,7 +659,6 @@ extension MenuBarItemManager {
         itemSectionMap: [String: String],
         itemOrder: [String: [String]]
     ) {
-        suppressSpatialOrderPersistenceAfterFailedApply = false
         guard case .profile = source else { return }
         pinnedHiddenBundleIDs = pinnedHidden
         pinnedAlwaysHiddenBundleIDs = pinnedAlwaysHidden
@@ -766,6 +765,10 @@ extension MenuBarItemManager {
             itemSectionMap: itemSectionMap,
             itemOrder: itemOrder
         )
+        // Every way out clears the gate. The early returns below used to leave
+        // it set, which kept saved-layout apply, normalization and the order
+        // mirror switched off until another profile applied.
+        defer { clearProfileState(source: source) }
 
         // Both apply sources must prevent the cache from saving intermediate positions.
         isRestoringItemOrder = true

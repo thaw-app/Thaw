@@ -373,8 +373,7 @@ extension MenuBarItemManager {
         displays: [CGRect] = activeDisplayBounds()
     ) {
         let isAnySectionRevealed = appState?.menuBarManager.sectionController.revealedSection != nil
-        let shouldPersistLayoutSnapshot = !suppressSpatialOrderPersistenceAfterFailedApply
-            && !isNotificationCenterLayoutSuspended
+        let shouldPersistLayoutSnapshot = !isNotificationCenterLayoutSuspended
             && !isAnySectionRevealed
             && LayoutSolver.shouldPersistSavedOrder(
                 isRestoringItemOrder: isRestoringItemOrder,
