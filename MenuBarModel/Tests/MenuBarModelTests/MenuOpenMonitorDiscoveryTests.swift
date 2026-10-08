@@ -350,3 +350,17 @@ struct MenuOpenMonitorDiscoveryTests {
         #expect(await monitor.isAnyMenuOpen())
     }
 }
+
+extension MenuOpenMonitorDiscoveryTests {
+    @Test("Another app's open menu is not this app's")
+    func anotherAppsMenuIsNotThisAppsMenu() async {
+        let scene = Scene()
+        scene.items = [item()]
+        let monitor = scene.monitor()
+        #expect(await monitor.isAnyMenuOpen() == false)
+
+        scene.windows = [panel(id: 2)]
+        #expect(await monitor.isMenuOpen(ownedBy: [123_456]))
+        #expect(await monitor.isMenuOpen(ownedBy: [654_321]) == false)
+    }
+}
