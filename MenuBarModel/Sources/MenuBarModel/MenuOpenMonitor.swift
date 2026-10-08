@@ -36,6 +36,9 @@ public final class MenuOpenMonitor {
     /// Only new windows of known owners enter; tracked menus survive item-cache gaps until their windows disappear.
     private var openMenuWindowIDs: Set<CGWindowID> = []
 
+    /// The owning process of each candidate window in the last probe.
+    private var candidateOwnerPIDs: [CGWindowID: pid_t] = [:]
+
     /// The first probe seeds the baseline rather than treating every existing candidate as new.
     private var hasBaseline = false
 
@@ -92,7 +95,8 @@ public final class MenuOpenMonitor {
                 menuBarStrips: strips,
                 windowSnapshot: self.windowSnapshot
             )
-            return self.reconcileAgainstBaseline(candidates: candidates)
+            self.candidateOwnerPIDs = candidates.ownerPIDs
+            return self.reconcileAgainstBaseline(candidates: (candidates.allIDs, candidates.ownedIDs))
         }
 
         checkTask = task
@@ -101,6 +105,13 @@ public final class MenuOpenMonitor {
         cachedResult = result
         cachedAt = ContinuousClock.now
         return result
+    }
+
+    /// Whether one of these processes has a menu open. Another app's menu does
+    /// not count, so a window that never closes cannot hold someone else's item.
+    public func isMenuOpen(ownedBy pids: Set<pid_t>) async -> Bool {
+        guard await isAnyMenuOpen() else { return false }
+        return openMenuWindowIDs.contains { candidateOwnerPIDs[$0].map(pids.contains) == true }
     }
 
     @concurrent
@@ -181,7 +192,7 @@ public final class MenuOpenMonitor {
         controlCenterBundleID: String,
         menuBarStrips: [CGRect],
         windowSnapshot: @Sendable () async -> [WindowInfo]
-    ) async -> (allIDs: Set<CGWindowID>, ownedIDs: Set<CGWindowID>) {
+    ) async -> (allIDs: Set<CGWindowID>, ownedIDs: Set<CGWindowID>, ownerPIDs: [CGWindowID: pid_t]) {
         let windows = await windowSnapshot()
         let potentialMenuWindows = windows.filter { window in
             guard window.isMenuRelated else { return false }
@@ -196,7 +207,7 @@ public final class MenuOpenMonitor {
             diagLog.debug(
                 "Menu open check: no candidate menu windows on screen"
             )
-            return ([], [])
+            return ([], [], [:])
         }
 
         let fastPathPIDs = Set(cachedItems.compactMap { item -> pid_t? in
@@ -228,7 +239,11 @@ public final class MenuOpenMonitor {
                 """
             )
         }
-        return (Set(potentialMenuWindows.map(\.windowID)), Set(owned.map(\.windowID)))
+        return (
+            Set(potentialMenuWindows.map(\.windowID)),
+            Set(owned.map(\.windowID)),
+            Dictionary(potentialMenuWindows.map { ($0.windowID, $0.ownerPID) }) { first, _ in first }
+        )
     }
 
     /// New eligible windows enter the open set; baseline banners do not, and tracked menus remain until disappearance.

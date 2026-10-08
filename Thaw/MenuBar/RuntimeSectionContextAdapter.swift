@@ -356,6 +356,19 @@ final class RuntimeSectionContextAdapter: RuntimeSectionContext {
     }
 }
 
+extension RuntimeSectionContextAdapter {
+    /// An item no longer in the cache has no known owner, so any open menu holds it.
+    func isMenuOpen(forItem identifier: String) async -> Bool {
+        let key = MenuBarItemTag.canonicalPersistentIdentifier(identifier)
+        guard let item = appState?.itemManager.managedItems.first(where: {
+            MenuBarItemTag.canonicalPersistentIdentifier($0.uniqueIdentifier) == key
+        }) else {
+            return await menuOpenMonitor.isAnyMenuOpen()
+        }
+        return await menuOpenMonitor.isMenuOpen(ownedBy: item.reactionPIDs)
+    }
+}
+
 private extension String {
     var runtimeNonEmpty: String? {
         trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? nil : self
