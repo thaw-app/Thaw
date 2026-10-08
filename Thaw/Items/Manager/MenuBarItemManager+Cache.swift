@@ -155,6 +155,8 @@ extension MenuBarItemManager {
             pruneSavedSectionOrderGhosts()
         }
 
+        // The process table read for this pass's publication, shared by the liveness filter and the unseen-host check.
+        var runningAtPublication: RunningApplicationSnapshot?
         while true {
             // Verify before the unchanged-cache guard: nonexistent icons recovered from the position store can produce a stable cache.
             if !observationOnly, let displayID {
@@ -208,13 +210,21 @@ extension MenuBarItemManager {
                 }
             }
 
+            // Read the process table off the main actor. The guard below runs after it,
+            // so a purge that lands during the read still stops this pass.
+            let running = await RunningApplicationSnapshot.current()
+            runningAtPublication = running
+
             // A sanity re-scan above can suspend while an owner exits. Check
             // again at publication so the old in-flight pass cannot undo purge.
             guard layoutPublication.canPublish(generation: publicationGeneration) else {
                 scheduleCoalescedCacheRerun()
                 return
             }
-            context.cache = context.cache.retainingRunningOwners()
+            context.cache = context.cache.retainingRunningOwners(
+                processIDs: running.processIDs,
+                bundleIdentifiers: running.bundleIdentifiers
+            )
             if let displayID {
                 recordVisibleControlObservation(items: items, displayID: displayID)
             }
@@ -235,7 +245,7 @@ extension MenuBarItemManager {
         }
 
         mirrorSavedSectionOrderIfSettled(from: context.cache, controlItems: context.controlItems)
-        noteUnseenMenuBarHosts(in: context.cache)
+        noteUnseenMenuBarHosts(in: context.cache, running: runningAtPublication ?? .readSystem())
 
         MenuBarItemManager.diagLog.debug("Updated menu bar item cache: visible=\(context.cache[.visible].count), hidden=\(context.cache[.hidden].count), alwaysHidden=\(context.cache[.alwaysHidden].count)")
 

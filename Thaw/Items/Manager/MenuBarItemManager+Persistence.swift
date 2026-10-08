@@ -33,7 +33,7 @@ extension MenuBarItemManager {
 
     /// Compares one settled inventory with the apps that hosted items last
     /// session, and publishes the ones still missing.
-    func noteUnseenMenuBarHosts(in cache: ItemCache) {
+    func noteUnseenMenuBarHosts(in cache: ItemCache, running: RunningApplicationSnapshot) {
         guard !isInStartupSettling, !areControlItemsMissing else { return }
         let key = UnseenMenuBarHosts.defaultsKey
         let defaults = UserDefaults.standard
@@ -44,11 +44,7 @@ extension MenuBarItemManager {
         func isTracked(_ bundle: String) -> Bool {
             !bundle.hasPrefix("com.apple.") && !bundle.hasPrefix(ourBundleID)
         }
-        let runningApps = NSWorkspace.shared.runningApplications
-        let bundlesByPID = Dictionary(
-            runningApps.compactMap { app in app.bundleIdentifier.map { (app.processIdentifier, $0) } },
-            uniquingKeysWith: { first, _ in first }
-        )
+        let bundlesByPID = running.bundleIdentifiersByPID
         let seen = Set(cache.managedItems.compactMap { item in
             bundlesByPID[item.sourcePID ?? item.ownerPID]
         }.filter(isTracked))
