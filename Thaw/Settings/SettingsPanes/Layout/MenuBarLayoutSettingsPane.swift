@@ -360,8 +360,8 @@ struct LayoutBarsSection: View {
                 .textCase(nil)
                 .font(nil)
                 .foregroundStyle(.primary)
-                // Offset the header inset so bars match the surrounding card width.
-                .padding(.horizontal, -10)
+                // Grouped Form rows stop growing at a fixed width; size from the scroll view less the Form's 20pt insets.
+                .containerRelativeFrame(.horizontal) { width, _ in width - 40 }
         } footer: {
             Text("Drag items between sections. Hold ⌘ Command to drag in the menu bar.")
                 .font(ThawType.footnote)
