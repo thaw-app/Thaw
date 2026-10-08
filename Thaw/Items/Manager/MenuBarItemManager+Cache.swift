@@ -338,7 +338,7 @@ extension MenuBarItemManager {
         )
         // Conceal snapshots survive exits; filter after rebucketing to avoid resurrecting departed items in both UIs.
         // Preserve assignments for relaunch placement.
-        context.cache = context.cache.retainingRunningOwners()
+        context.cache = context.cache.retainingRunningOwners().orderingOverflowStack(savedOrder: savedSectionOrder)
 
         return context
     }
