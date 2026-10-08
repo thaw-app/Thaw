@@ -1041,6 +1041,8 @@ extension MenuBarItemManager {
         let controller = appState.menuBarManager.sectionController
         let experimentalSystemItemHiding = appState.settings.advanced
             .enableExperimentalSystemItemHiding
+        // Read once: this runs on every poll of the settle wait, and nothing of Thaw's writes meanwhile.
+        let weightTable = StoredWeights.Table.read()
         let stranded: ([MenuBarItem]) -> [MenuBarItem] = { items in
             var discovery = items
             guard let pair = ControlItemPair(
@@ -1051,7 +1053,8 @@ extension MenuBarItemManager {
                 return []
             }
             // A divider whose frame stopped following the bar would call every item left of it stranded.
-            let seated = DividerSeat.settled(items: items, pair: pair, weight: StoredWeights(among: items).weight(of:))
+            let weights = StoredWeights(among: items, table: weightTable)
+            let seated = DividerSeat.settled(items: items, pair: pair, weight: weights.weight(of:))
             return Self.membersStrandedAcrossDivider(
                 items: seated.items,
                 controlItems: seated.pair,
