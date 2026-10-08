@@ -334,7 +334,7 @@ nonisolated enum MenuBarItemAXProvider {
             let elapsed = ContinuousClock.now - walkStart
             diagLog.info(
                 """
-                menuBarItems: \(scope == .discovery ? "discovery" : "targeted") walk \
+                menuBarItems: \(scope == .discovery ? "discovery" : scope == .settledOwners ? "settled" : "targeted") walk \
                 \(truncated ? "TRUNCATED" : "completed") in \(elapsed), \
                 probed \(appsProbed)/\(pass.owners.count) selected / \(runningApps.count) running app(s), \
                 \(appsWithExtrasBar) had an extras menu bar, budget \(globalBudget)
@@ -762,11 +762,26 @@ nonisolated enum MenuBarItemAXProvider {
         freshOnly: Bool = false,
         priorityPIDs: Set<pid_t> = []
     ) async -> InventorySnapshot {
+        let plan = InventoryWalkPlan.make(
+            requested: priorityPIDs,
+            drawnOwners: AXPrimitives.menuBarAgentDrawnOwners(),
+            lastFullWalk: fullWalks.lastFullWalk
+        )
+        // A settled read waits out a full walk in flight. Cancelling it would put off the one read that checks the shortcut.
         guard let snapshot = await inventoryGate.snapshot(
-            freshOnly: freshOnly, priorityOwners: priorityPIDs
+            freshOnly: freshOnly,
+            scope: plan.scope,
+            priorityOwners: plan.priorityOwners,
+            preemptsDiscovery: plan.scope == .discovery
         ) else { return .unavailable }
+        if plan.scope == .discovery, snapshot.completed || snapshot.hasFreshKnownInventory {
+            fullWalks.noteFullWalk()
+        }
         return restoredIdentities(snapshot)
     }
+
+    /// See InventoryWalkPlan.
+    private static let fullWalks = FullWalkLedger()
 
     /// See nativeOverflowControlBounds(on:).
     @concurrent
