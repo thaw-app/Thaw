@@ -749,9 +749,9 @@ extension ControlItem {
             .assign(to: &$onScreenFrame)
     }
 
-    /// Whether a measured frame means the item never landed in the menu bar.
-    private static func isDegenerateMenuBarFrame(_ frame: CGRect) -> Bool {
-        frame.midX <= 0 || frame.width <= 0 || frame.height <= 0
+    /// Whether a measured frame means the item never landed; judged by the screens, as a display left of the main one has negative x.
+    static func isDegenerateMenuBarFrame(_ frame: CGRect, screenFrames: [CGRect] = NSScreen.screens.map(\.frame)) -> Bool {
+        frame.width <= 0 || frame.height <= 0 || frame.origin.x == -1 || !(screenFrames.isEmpty || screenFrames.contains { $0.contains(CGPoint(x: frame.midX, y: frame.midY)) })
     }
 
     /// Tracks the settings that change how this control item looks or whether it
