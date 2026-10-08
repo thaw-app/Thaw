@@ -629,7 +629,7 @@ final class LayoutBarContainer: NSView {
         ).retainingRunningOwners(
             processIDs: Set(runningApplications.map(\.processIdentifier)),
             bundleIdentifiers: Set(runningApplications.compactMap(\.bundleIdentifier))
-        ).managedItems(for: section)
+        ).orderingOverflowStack(savedOrder: appState.itemManager.savedSectionOrder).managedItems(for: section)
             // Thaw Bar Only items have their own row.
             .filter { !appState.itemManager.isThawBarOnly($0) }
             // A switched-off Thaw icon stays registered at zero width so it can
