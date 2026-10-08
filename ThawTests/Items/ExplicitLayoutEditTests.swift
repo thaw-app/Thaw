@@ -121,4 +121,15 @@ struct ExplicitLayoutEditTests {
         Defaults.set(MenuBarArrangementMode.automatic.rawValue, forKey: key)
         #expect(!MenuBarPositionStoreProvider.forLayoutEdit.refusesOrdering)
     }
+
+    @Test("An edit asked for from a menu runs marked as explicit, so Manual lets it move")
+    @MainActor
+    func menuEditIsExplicit() async {
+        var wasActive = false
+        await ExplicitLayoutEdit.task { wasActive = ExplicitLayoutEdit.isActive }.value
+
+        #expect(wasActive)
+        #expect(!ExplicitLayoutEdit.isActive)
+        #expect(!ExplicitLayoutEdit.manualArrangementForbidsMoves(arrangementIsManual: true, isExplicitLayoutEdit: wasActive))
+    }
 }

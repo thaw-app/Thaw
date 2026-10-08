@@ -18,6 +18,14 @@ nonisolated enum ExplicitLayoutEdit {
         try $isActive.withValue(true, operation: edit)
     }
 
+    /// Starts the work of an edit the user asked for from a menu or a button, where there is no drop to wrap.
+    /// Without the mark, Manual refuses the move as if Thaw had decided on it.
+    @MainActor
+    @discardableResult
+    static func task(_ edit: @escaping @MainActor () async -> Void) -> Task<Void, Never> {
+        perform { Task { @MainActor in await edit() } }
+    }
+
     /// Whether Manual arrangement refuses a single move: everything but an explicit edit.
     static func manualArrangementForbidsMoves(
         arrangementIsManual: Bool,
