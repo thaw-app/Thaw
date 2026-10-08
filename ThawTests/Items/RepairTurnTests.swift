@@ -177,6 +177,19 @@ struct RepairTurnTests {
         #expect(reads == 1)
     }
 
+    @Test("A pass's closing read is owed to an aftermath when there is one, and made on the spot otherwise")
+    func closingReadIsOwedOrMade() async {
+        let aftermath = RepairTurn.Aftermath()
+        var reads = 0
+
+        await RepairTurn.Aftermath.closingRead(owedTo: aftermath) { reads += 1 }
+        #expect(reads == 0)
+        #expect(aftermath.needsCachePass)
+
+        await RepairTurn.Aftermath.closingRead(owedTo: nil) { reads += 1 }
+        #expect(reads == 1)
+    }
+
     @Test("A pass sees user work queue behind it, until it has left the lane")
     func passSeesWaitingUserWork() async throws {
         let repairs = RepairOrchestrator()

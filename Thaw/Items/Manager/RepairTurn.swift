@@ -14,15 +14,22 @@ enum RepairTurn {
     /// A reading older than this at admission is dropped: the bar may have changed on its own.
     static nonisolated let readStaleAfter: Duration = .milliseconds(500)
 
-    /// Whether a reading can still be planned from. It cannot once any writer has finished since the
-    /// read began, however short the wait: that writer changed the bar the reading describes.
-    private static func isStillCurrent(
-        plannedAt: UInt64,
-        readAt: ContinuousClock.Instant,
-        staleAfter: Duration,
-        on repairs: RepairOrchestrator
-    ) -> Bool {
-        repairs.writeGeneration == plannedAt && readAt.duration(to: .now) <= staleAfter
+    /// Reads the bar, then waits for the lane. The reading comes back nil when it can no longer be
+    /// planned from: it waited too long, or a writer finished after the read began and changed the bar it
+    /// describes. Nil overall means the task was cancelled while it queued.
+    private static func admit<Reading>(
+        _ work: RepairOrchestrator.Work,
+        priority: RepairLane.Priority,
+        on repairs: RepairOrchestrator,
+        readStaleAfter: Duration,
+        read: () async -> Reading?
+    ) async -> (hold: RepairLane.Hold, reading: Reading?)? {
+        let plannedAt = repairs.writeGeneration
+        let reading = await read()
+        let readAt = ContinuousClock.now
+        guard let hold = await repairs.enter(work, priority: priority) else { return nil }
+        let isCurrent = repairs.writeGeneration == plannedAt && readAt.duration(to: .now) <= readStaleAfter
+        return (hold, isCurrent ? reading : nil)
     }
 
     /// `write` gets nil when the reading went stale, by time or because another writer finished, and must be taken again.
@@ -35,12 +42,10 @@ enum RepairTurn {
         read: () async -> Reading?,
         write: (Reading?, borrowing StoreWritePermit) async -> Outcome
     ) async -> Outcome? {
-        let plannedAt = repairs.writeGeneration
-        let reading = await read()
-        let readAt = ContinuousClock.now
-        guard let hold = await repairs.enter(work, priority: priority) else { return nil }
-        let isFresh = isStillCurrent(plannedAt: plannedAt, readAt: readAt, staleAfter: readStaleAfter, on: repairs)
-        let outcome = await write(isFresh ? reading : nil, StoreWritePermit(hold))
+        guard let (hold, reading) = await admit(work, priority: priority, on: repairs, readStaleAfter: readStaleAfter, read: read) else {
+            return nil
+        }
+        let outcome = await write(reading, StoreWritePermit(hold))
         repairs.leave(hold)
         return outcome
     }
@@ -55,13 +60,11 @@ enum RepairTurn {
         read: () async -> Reading?,
         write: (Reading?, consuming StoreWritePermit, Writing) async -> Outcome
     ) async -> Outcome? {
-        let plannedAt = repairs.writeGeneration
-        let reading = await read()
-        let readAt = ContinuousClock.now
-        guard let hold = await repairs.enter(work, priority: priority) else { return nil }
-        let isFresh = isStillCurrent(plannedAt: plannedAt, readAt: readAt, staleAfter: readStaleAfter, on: repairs)
+        guard let (hold, reading) = await admit(work, priority: priority, on: repairs, readStaleAfter: readStaleAfter, read: read) else {
+            return nil
+        }
         let writing = Writing(hold: hold, repairs: repairs)
-        let outcome = await write(isFresh ? reading : nil, StoreWritePermit(hold), writing)
+        let outcome = await write(reading, StoreWritePermit(hold), writing)
         writing.end()
         return outcome
     }
@@ -72,6 +75,13 @@ enum RepairTurn {
     final class Aftermath {
         /// Set when the pass wrote and the item cache should be read again.
         var needsCachePass = false
+
+        /// Ends a pass with its closing read. A caller that gave an aftermath makes the read after its
+        /// turn, with the lane free; without one the read happens here, inside the lane.
+        static func closingRead(owedTo aftermath: Aftermath?, _ read: () async -> Void) async {
+            guard let aftermath else { return await read() }
+            aftermath.needsCachePass = true
+        }
 
         /// Makes the owed cache read, once the turn is over and the lane is free.
         func readCacheIfOwed(_ read: () async -> Void) async {

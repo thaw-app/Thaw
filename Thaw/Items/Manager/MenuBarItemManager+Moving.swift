@@ -1051,7 +1051,7 @@ extension MenuBarItemManager {
                 return []
             }
             // A divider whose frame stopped following the bar would call every item left of it stranded.
-            let seated = DividerSeat.settled(items: items, pair: pair, weight: DividerSeat.storeWeights(among: items))
+            let seated = DividerSeat.settled(items: items, pair: pair, weight: StoredWeights(among: items).weight(of:))
             return Self.membersStrandedAcrossDivider(
                 items: seated.items,
                 controlItems: seated.pair,
@@ -1435,12 +1435,7 @@ extension MenuBarItemManager {
             }
         }
 
-        // The closing cache pass only reads. A caller that can run it after its turn takes it over.
-        if let aftermath {
-            aftermath.needsCachePass = true
-        } else {
-            await cacheItemsRegardless(skipRecentMoveCheck: true)
-        }
+        await RepairTurn.Aftermath.closingRead(owedTo: aftermath) { await cacheItemsRegardless(skipRecentMoveCheck: true) }
     }
 
     /// Writes the items' weights into the new section's band before the
@@ -1813,7 +1808,7 @@ extension MenuBarItemManager {
 
         func failingStrands() -> [MenuBarItem] {
             let seated = DividerSeat.settled(
-                items: liveItems, pair: controlItems, weight: DividerSeat.storeWeights(among: liveItems)
+                items: liveItems, pair: controlItems, weight: StoredWeights(among: liveItems).weight(of:)
             )
             if seated.moved, !loggedStaleDivider {
                 loggedStaleDivider = true
@@ -2951,7 +2946,7 @@ extension MenuBarItemManager {
 
     /// Clamps a persisted fulfillment timeout to the Layout control's range.
     static nonisolated func clampedResortTimeout(_ timeout: TimeInterval) -> TimeInterval {
-        min(max(timeout, 1), 15)
+        timeout.clamped(to: 1 ... 15)
     }
 
     /// A cheap fingerprint of where every item currently sits. Comparing two of

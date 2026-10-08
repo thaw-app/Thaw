@@ -100,17 +100,4 @@ nonisolated enum DividerSeat {
             true
         )
     }
-
-    /// Reads each item's weight from the position table, or answers nil for all when the table cannot be read.
-    @MainActor
-    static func storeWeights(among items: [MenuBarItem]) -> (MenuBarItem) -> Int? {
-        let store = MenuBarPositionStoreProvider.current
-        guard store.positionsDomainIsAccessible() else { return { _ in nil } }
-        let positions = store.currentPositions()
-        let keys = Array(positions.keys)
-        return { item in
-            store.resolveKey(for: item, existingKeys: keys, positions: positions, liveItems: items)
-                .flatMap { positions[$0] }
-        }
-    }
 }

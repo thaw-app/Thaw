@@ -174,31 +174,10 @@ nonisolated enum MenuBarItemAXProvider {
                     continue
                 }
 
-                // Identity is kept apart from the live title. Some apps publish
-                // it on the button, so scan one level down, only when needed.
-                let directIdentifier = attributes.identifier?.nonEmpty
-                let directDescription = attributes.accessibilityDescription?.nonEmpty
-                let (childIdentifier, childDescription) = Self.descendantIdentity(
-                    of: attributes,
-                    directIdentifier: directIdentifier,
-                    directDescription: directDescription
-                )
-
-                // Direct attribution: the owning process is the app that
-                // published this child (fall back to the element's own PID).
                 let ownerPID = AXHelpers.pid(for: child) ?? runningApp.processIdentifier
                 let derived = Self.rawItem(
-                    namespace: namespace,
-                    identifier: directIdentifier,
-                    childIdentifier: childIdentifier,
-                    accessibilityDescription: directDescription,
-                    childDescription: childDescription,
-                    axTitle: attributes.title?.nonEmpty,
-                    fallbackIndex: fallbackIndex,
-                    bounds: frame,
-                    ownerPID: ownerPID
+                    for: attributes, namespace: namespace, frame: frame, ownerPID: ownerPID, fallbackIndex: &fallbackIndex
                 )
-                fallbackIndex = derived.fallbackIndex
                 guard let item = derived.item else {
                     diagLog.debug("menuBarItems: skipping native overflow control (title) title='\(derived.identityTitle)' frame=\(frame)")
                     continue
@@ -633,26 +612,10 @@ nonisolated enum MenuBarItemAXProvider {
                 continue
             }
 
-            let directIdentifier = attributes.identifier?.nonEmpty
-            let directDescription = attributes.accessibilityDescription?.nonEmpty
-            let (childIdentifier, childDescription) = Self.descendantIdentity(
-                of: attributes,
-                directIdentifier: directIdentifier,
-                directDescription: directDescription
-            )
             let ownerPID = AXHelpers.pid(for: child) ?? runningApp.processIdentifier
             let derived = Self.rawItem(
-                namespace: namespace,
-                identifier: directIdentifier,
-                childIdentifier: childIdentifier,
-                accessibilityDescription: directDescription,
-                childDescription: childDescription,
-                axTitle: attributes.title?.nonEmpty,
-                fallbackIndex: fallbackIndex,
-                bounds: frame,
-                ownerPID: ownerPID
+                for: attributes, namespace: namespace, frame: frame, ownerPID: ownerPID, fallbackIndex: &fallbackIndex
             )
-            fallbackIndex = derived.fallbackIndex
             guard let item = derived.item else {
                 continue
             }
@@ -1334,6 +1297,39 @@ nonisolated enum MenuBarItemAXProvider {
         guard namespace == .menuBarAgent else { return false }
         return MenuBarItemTag.isNativeOverflowControlTitle(identityTitle)
             || MenuBarItemTag.isNativeOverflowControlTitle(displayTitle)
+    }
+
+    /// Derives one extras-bar child's item for either walk, and advances the per-app fallback index.
+    ///
+    /// Identity is kept apart from the live title. Some apps publish it on the button, so the child is
+    /// scanned one level down, only when needed. The owner is the process that published the child.
+    private static func rawItem(
+        for attributes: AXHelpers.MenuBarChildAttributes,
+        namespace: MenuBarItemTag.Namespace,
+        frame: CGRect,
+        ownerPID: pid_t,
+        fallbackIndex: inout Int
+    ) -> (item: RawItem?, identityTitle: String) {
+        let directIdentifier = attributes.identifier?.nonEmpty
+        let directDescription = attributes.accessibilityDescription?.nonEmpty
+        let (childIdentifier, childDescription) = descendantIdentity(
+            of: attributes,
+            directIdentifier: directIdentifier,
+            directDescription: directDescription
+        )
+        let derived = rawItem(
+            namespace: namespace,
+            identifier: directIdentifier,
+            childIdentifier: childIdentifier,
+            accessibilityDescription: directDescription,
+            childDescription: childDescription,
+            axTitle: attributes.title?.nonEmpty,
+            fallbackIndex: fallbackIndex,
+            bounds: frame,
+            ownerPID: ownerPID
+        )
+        fallbackIndex = derived.fallbackIndex
+        return (derived.item, derived.identityTitle)
     }
 
     /// The per-child identity derivation shared by the in-process walk and the

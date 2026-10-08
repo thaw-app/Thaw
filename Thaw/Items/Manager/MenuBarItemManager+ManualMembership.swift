@@ -54,15 +54,10 @@ extension MenuBarItemManager {
     func adoptObservedMembership(reason: String, afterUserDrag: Bool = false) {
         guard arrangementIsManual || afterUserDrag, let appState else { return }
         let controller = appState.menuBarManager.sectionController
-        let store = MenuBarPositionStoreProvider.current
-        guard store.positionsDomainIsAccessible() else { return }
-        let positions = store.currentPositions()
         let items = itemCache.managedItems
-        let keys = Array(positions.keys)
-        func weight(of item: MenuBarItem) -> Int? {
-            store.resolveKey(for: item, existingKeys: keys, positions: positions, liveItems: items)
-                .flatMap { positions[$0] }
-        }
+        let weights = StoredWeights(among: items)
+        guard weights.isAvailable else { return }
+        let weight = weights.weight(of:)
         // The cache keeps the Visible control but drops both dividers, so those come from the last walk.
         let dividers = lastKnownControlItems
         guard let visibleControl = items.first(where: { $0.tag.matchesVisibleControlItem }).flatMap(weight),
@@ -82,8 +77,8 @@ extension MenuBarItemManager {
             guard item.tag.canBeHidden,
                   item.isMovable(experimentalSystemItemHiding: experimentalSystemItemHiding),
                   !isThawBarOnly(item),
-                  let itemWeight = weight(of: item),
-                  !store.isParkedWeight(itemWeight)
+                  let itemWeight = weight(item),
+                  !weights.isParked(itemWeight)
             else {
                 continue
             }

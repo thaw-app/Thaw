@@ -382,12 +382,7 @@ extension MenuBarItemManager {
                 preferredMoveUIDs: Set(unmanagedUIDs),
                 permit: permit
             )
-            // The closing cache pass only reads. A caller that can run it after its turn takes it over.
-            if let aftermath {
-                aftermath.needsCachePass = true
-            } else {
-                await cacheItemsRegardless(skipRecentMoveCheck: true)
-            }
+            await RepairTurn.Aftermath.closingRead(owedTo: aftermath) { await cacheItemsRegardless(skipRecentMoveCheck: true) }
         }
         return didChange
     }

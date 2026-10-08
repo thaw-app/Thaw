@@ -18,7 +18,7 @@ nonisolated enum MenuBarLiquidGlassGeometry {
     static func glassCornerRadius(for bounds: CGRect, pathCornerRadius: CGFloat? = nil) -> CGFloat {
         let capsule = min(bounds.width, bounds.height) / 2
         guard let pathCornerRadius else { return capsule }
-        return min(max(pathCornerRadius, 0), capsule)
+        return pathCornerRadius.clamped(min: 0, max: capsule)
     }
 
     static func componentBounds(of path: CGPath) -> [CGRect] {

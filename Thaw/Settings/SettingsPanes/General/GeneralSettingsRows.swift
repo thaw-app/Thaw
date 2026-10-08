@@ -101,7 +101,7 @@ struct ThawPlacementWarning: View {
             tint: .orange,
             actionTitle: "Open System Settings"
         ) {
-            if let url = URL(string: "x-apple.systempreferences:com.apple.ControlCenter-Settings.extension") {
+            if let url = Constants.menuBarSystemSettingsURL {
                 NSWorkspace.shared.open(url)
             }
         }
