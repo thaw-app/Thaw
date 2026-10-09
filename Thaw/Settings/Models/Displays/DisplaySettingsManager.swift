@@ -367,33 +367,20 @@ final class DisplaySettingsManager {
         // switches, Sidecar and display flicker each post several notifications
         // within a few hundred milliseconds, and each could trigger a relaunch
         // wave (the no-op guard misses values that oscillate during the flap).
-        // The per-event skips below are continue, not loop exit.
-        let (screenParameterEvents, screenParameterContinuation) = AsyncStream<Void>.makeStream()
-        screenParametersTask = Task { @MainActor [weak self] in
-            // The observer is owned by this task: added when it starts and
-            // removed when it ends (cancellation ends the for-await loop, which
-            // runs the defer). This keeps the non-Sendable observer token off
-            // the class so the nonisolated deinit only needs to cancel the task.
-            let observer = NotificationCenter.default.addObserver(
-                forName: NSApplication.didChangeScreenParametersNotification,
-                object: nil,
-                queue: .main
-            ) { _ in screenParameterContinuation.yield(()) }
-            defer { NotificationCenter.default.removeObserver(observer) }
-            for await _ in screenParameterEvents.debounce(for: .seconds(1)) {
-                guard let self else { break }
-                diagLog.info("Screen parameters changed, \(NSScreen.managedScreens.count) screen(s) connected")
-                captureCurrentlyConnectedDisplays()
-                let currentUUID = Bridging.getActiveMenuBarDisplayUUID()
-                if Self.shouldSkipSpacingApply(
-                    currentActiveDisplayUUID: currentUUID,
-                    lastAppliedActiveDisplayUUID: lastAppliedActiveDisplayUUID
-                ) {
-                    diagLog.info("Active menu bar display unchanged (\(currentUUID ?? "nil")); skipping spacing apply")
-                    continue
-                }
-                applyActiveDisplaySpacing(reason: "screenParametersChanged")
+        // A skipped event returns from this one run; the next event runs again.
+        screenParametersTask = NotificationCenter.default.eventsTask(named: NSApplication.didChangeScreenParametersNotification, debounce: .seconds(1)) { [weak self] in
+            guard let self else { return }
+            diagLog.info("Screen parameters changed, \(NSScreen.managedScreens.count) screen(s) connected")
+            captureCurrentlyConnectedDisplays()
+            let currentUUID = Bridging.getActiveMenuBarDisplayUUID()
+            if Self.shouldSkipSpacingApply(
+                currentActiveDisplayUUID: currentUUID,
+                lastAppliedActiveDisplayUUID: lastAppliedActiveDisplayUUID
+            ) {
+                diagLog.info("Active menu bar display unchanged (\(currentUUID ?? "nil")); skipping spacing apply")
+                return
             }
+            applyActiveDisplaySpacing(reason: "screenParametersChanged")
         }
 
         // Re-deriving spacing on per-display configuration changes lives in

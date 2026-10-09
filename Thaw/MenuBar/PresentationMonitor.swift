@@ -65,21 +65,9 @@ final class PresentationMonitor {
     private func startObserving() {
         guard screenParametersTask == nil else { return }
 
-        // Same observer-owned-by-the-task shape as DisplaySettingsManager:
-        // the token is added when the task starts and removed when it ends,
-        // so nothing non-Sendable has to be stored on the class.
-        let (events, continuation) = AsyncStream<Void>.makeStream()
-        screenParametersTask = Task { @MainActor [weak self] in
-            let observer = NotificationCenter.default.addObserver(
-                forName: NSApplication.didChangeScreenParametersNotification,
-                object: nil,
-                queue: .main
-            ) { _ in continuation.yield(()) }
-            defer { NotificationCenter.default.removeObserver(observer) }
-            for await _ in events {
-                guard let self else { break }
-                evaluate()
-            }
+        screenParametersTask = NotificationCenter.default.eventsTask(named: NSApplication.didChangeScreenParametersNotification) { [weak self] in
+            guard let self else { return }
+            evaluate()
         }
 
         pollTask = Task { @MainActor [weak self] in

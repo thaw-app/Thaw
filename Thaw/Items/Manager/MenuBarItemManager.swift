@@ -1565,39 +1565,21 @@ final class MenuBarItemManager {
         }
         .store(in: &registered)
 
-        let (terminateEvents, terminateContinuation) = AsyncStream<Void>.makeStream()
-        let terminateTask = Task { @MainActor [weak self] in
-            let observer = NSWorkspace.shared.notificationCenter.addObserver(
-                forName: NSWorkspace.didTerminateApplicationNotification,
-                object: nil,
-                queue: .main
-            ) { _ in terminateContinuation.yield(()) }
-            defer { NSWorkspace.shared.notificationCenter.removeObserver(observer) }
-            for await _ in terminateEvents.debounce(for: .seconds(1)) {
-                guard let self else { return }
-                MenuBarItemManager.diagLog.debug("App terminated, refreshing cache")
-                // Unconditional, like the launch path. cacheItemsIfNeeded is
-                // gated on the WindowServer menu bar window list, and an item
-                // published only as an AXExtrasMenuBar child owns no window, so
-                // its app can quit without moving that list and its row would
-                // outlive the owner.
-                await self.cacheItemsRegardless()
-            }
+        let terminateTask = NSWorkspace.shared.notificationCenter.eventsTask(named: NSWorkspace.didTerminateApplicationNotification, debounce: .seconds(1)) { [weak self] in
+            guard let self else { return }
+            MenuBarItemManager.diagLog.debug("App terminated, refreshing cache")
+            // Unconditional, like the launch path. cacheItemsIfNeeded is
+            // gated on the WindowServer menu bar window list, and an item
+            // published only as an AXExtrasMenuBar child owns no window, so
+            // its app can quit without moving that list and its row would
+            // outlive the owner.
+            await self.cacheItemsRegardless()
         }
         registered.insert(AnyCancellable { terminateTask.cancel() })
 
-        let (activateEvents, activateContinuation) = AsyncStream<Void>.makeStream()
-        let activateTask = Task { @MainActor [weak self] in
-            let observer = NSWorkspace.shared.notificationCenter.addObserver(
-                forName: NSWorkspace.didActivateApplicationNotification,
-                object: nil,
-                queue: .main
-            ) { _ in activateContinuation.yield(()) }
-            defer { NSWorkspace.shared.notificationCenter.removeObserver(observer) }
-            for await _ in activateEvents.debounce(for: .seconds(0.5)) {
-                guard let self else { return }
-                await self.cacheItemsIfNeeded()
-            }
+        let activateTask = NSWorkspace.shared.notificationCenter.eventsTask(named: NSWorkspace.didActivateApplicationNotification, debounce: .seconds(0.5)) { [weak self] in
+            guard let self else { return }
+            await self.cacheItemsIfNeeded()
         }
         registered.insert(AnyCancellable { activateTask.cancel() })
 

@@ -480,20 +480,11 @@ final class AppState {
         }
     }
 
-    /// A task-owned observer feeds a debounced AsyncStream because macOS Notification is not Sendable for notifications(named:).
+    /// Handles a display topology change once a burst of screen changes goes quiet.
     private func observeDisplayTopology() {
-        let (topologyEvents, topologyContinuation) = AsyncStream<Void>.makeStream()
-        let topologyTask = Task { @MainActor [weak self] in
-            let observer = NotificationCenter.default.addObserver(
-                forName: NSApplication.didChangeScreenParametersNotification,
-                object: nil,
-                queue: .main
-            ) { _ in topologyContinuation.yield(()) }
-            defer { NotificationCenter.default.removeObserver(observer) }
-            for await _ in topologyEvents.debounce(for: .seconds(0.5)) {
-                guard let self else { return }
-                self.handleDisplayTopologyChange()
-            }
+        let topologyTask = NotificationCenter.default.eventsTask(named: NSApplication.didChangeScreenParametersNotification, debounce: .seconds(0.5)) { [weak self] in
+            guard let self else { return }
+            self.handleDisplayTopologyChange()
         }
         cancellables.insert(AnyCancellable { topologyTask.cancel() })
     }

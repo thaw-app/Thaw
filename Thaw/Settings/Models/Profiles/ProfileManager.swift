@@ -117,35 +117,16 @@ final class ProfileManager {
         lastActiveDisplayUUID = Bridging.getActiveMenuBarDisplayUUID()
         rebuildProfileHotkeys()
 
-        let (screenParameterEvents, screenParameterContinuation) = AsyncStream<Void>.makeStream()
-        let displaySwitchTask = Task { @MainActor [weak self] in
-            let observer = NotificationCenter.default.addObserver(
-                forName: NSApplication.didChangeScreenParametersNotification,
-                object: nil,
-                queue: .main
-            ) { _ in screenParameterContinuation.yield(()) }
-            defer { NotificationCenter.default.removeObserver(observer) }
-            for await _ in screenParameterEvents.debounce(for: .seconds(1.5)) {
-                guard let self else { return }
-                await self.checkDisplayAndAutoSwitch()
-            }
+        let displaySwitchTask = NotificationCenter.default.eventsTask(named: NSApplication.didChangeScreenParametersNotification, debounce: .seconds(1.5)) { [weak self] in
+            guard let self else { return }
+            await self.checkDisplayAndAutoSwitch()
         }
         cancellables.insert(AnyCancellable { displaySwitchTask.cancel() })
 
         // Debounce beyond the Space animation so rapid swipes apply only the final profile.
-        let (spaceEvents, spaceContinuation) = AsyncStream<Void>.makeStream()
-        let spaceSwitchTask = Task { @MainActor [weak self] in
-            let center = NSWorkspace.shared.notificationCenter
-            let observer = center.addObserver(
-                forName: NSWorkspace.activeSpaceDidChangeNotification,
-                object: nil,
-                queue: .main
-            ) { _ in spaceContinuation.yield(()) }
-            defer { center.removeObserver(observer) }
-            for await _ in spaceEvents.debounce(for: .seconds(0.75)) {
-                guard let self else { return }
-                await self.checkSpaceAndAutoSwitch()
-            }
+        let spaceSwitchTask = NSWorkspace.shared.notificationCenter.eventsTask(named: NSWorkspace.activeSpaceDidChangeNotification, debounce: .seconds(0.75)) { [weak self] in
+            guard let self else { return }
+            await self.checkSpaceAndAutoSwitch()
         }
         cancellables.insert(AnyCancellable { spaceSwitchTask.cancel() })
 

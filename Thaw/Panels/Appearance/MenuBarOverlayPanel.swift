@@ -248,27 +248,18 @@ final class MenuBarOverlayPanel: NSPanel {
 
     /// Space changes reshow the panel and clear Mission Control state the probe may not detect.
     private func observeActiveSpaceChanges() -> AnyCancellable {
-        let (spaceChangeEvents, spaceChangeContinuation) = AsyncStream<Void>.makeStream()
-        let task = Task { @MainActor [weak self] in
-            let observer = NSWorkspace.shared.notificationCenter.addObserver(
-                forName: NSWorkspace.activeSpaceDidChangeNotification,
-                object: nil,
-                queue: .main
-            ) { _ in spaceChangeContinuation.yield(()) }
-            defer { NSWorkspace.shared.notificationCenter.removeObserver(observer) }
-            for await _ in spaceChangeEvents.debounce(for: .seconds(0.1)) {
-                guard let self else { return }
-                self.missionControlProbe.isActive = false
-                self.needsShow = true
-                // Fullscreen transitions change bar presence mid-animation; recheck after settling.
-                for delay in [Duration.zero, .milliseconds(400), .milliseconds(1200)] {
-                    do {
-                        try await Task.sleep(for: delay)
-                    } catch {
-                        return
-                    }
-                    self.refreshSystemMenuBarPresence()
+        let task = NSWorkspace.shared.notificationCenter.eventsTask(named: NSWorkspace.activeSpaceDidChangeNotification, debounce: .seconds(0.1)) { [weak self] in
+            guard let self else { return }
+            self.missionControlProbe.isActive = false
+            self.needsShow = true
+            // Fullscreen transitions change bar presence mid-animation; recheck after settling.
+            for delay in [Duration.zero, .milliseconds(400), .milliseconds(1200)] {
+                do {
+                    try await Task.sleep(for: delay)
+                } catch {
+                    return
                 }
+                self.refreshSystemMenuBarPresence()
             }
         }
         return AnyCancellable { task.cancel() }
