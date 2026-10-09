@@ -1734,6 +1734,9 @@ extension MenuBarItemManager {
         // from it grabs that other item. Logged once per pass per item.
         var loggedPhantomIDs = Set<String>()
         var loggedStaleDivider = false
+        // The position table as last read. Kept until a strand is attempted, since only an
+        // attempt writes; a pass with nothing to repair then reads the table once, not twice.
+        var weightTable: StoredWeights.Table?
         func isPhantomStrand(_ item: MenuBarItem) -> Bool {
             guard item.hasPhantomFrame(among: liveItems) else { return false }
             if loggedPhantomIDs.insert(item.uniqueIdentifier).inserted {
@@ -1757,8 +1760,10 @@ extension MenuBarItemManager {
         }
 
         func failingStrands() -> [MenuBarItem] {
+            let table = weightTable ?? .read()
+            weightTable = table
             let seated = DividerSeat.settled(
-                items: liveItems, pair: controlItems, weight: StoredWeights(among: liveItems).weight(of:)
+                items: liveItems, pair: controlItems, weight: StoredWeights(among: liveItems, table: table).weight(of:)
             )
             if seated.moved, !loggedStaleDivider {
                 loggedStaleDivider = true
@@ -1833,6 +1838,7 @@ extension MenuBarItemManager {
             }
 
             pass.recordAttempt(strand)
+            weightTable = nil
             // Rung 1, targeted store write, judged by the bar: a respace can
             // report success while straddling the divider. True means the item
             // is on the correct side; negating it would loop forever.
@@ -2325,14 +2331,16 @@ extension MenuBarItemManager {
                     MenuBarLayoutPlannerProvider.current.isEligibleForSectionOrder($0, section: section) &&
                         controller.section(for: $0) == section
                 }
-                for item in sectionItems where Self.isHiddenBySystemPreferences(item) {
+                // Asked once per item: the answer costs a process lookup and a read of another app's settings.
+                return sectionItems.filter { item in
+                    guard Self.isHiddenBySystemPreferences(item) else { return true }
                     if Self.loggedSystemHiddenItems.insert(item.uniqueIdentifier).inserted {
                         MenuBarItemManager.diagLog.notice(
                             "excluding \(item.logString): hidden by macOS (System Settings per-item toggle)"
                         )
                     }
+                    return false
                 }
-                return sectionItems.filter { !Self.isHiddenBySystemPreferences($0) }
             }
 
             // Confirm each move before it can anchor another; one replan is

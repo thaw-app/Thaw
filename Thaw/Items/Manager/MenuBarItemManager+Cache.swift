@@ -142,10 +142,18 @@ extension MenuBarItemManager {
         MenuBarItemManager.diagLog.debug("uncheckedCacheItems: processing \(items.count) items for caching")
         var items = items
         var sanityAttempts = 0
+        // The process table, read once off the main actor and shared by the liveness filter in bucketing,
+        // the one at publication and the unseen-host check. The guard after it stops a pass that a purge overtook.
+        var running = await RunningApplicationSnapshot.current()
+        guard layoutPublication.canPublish(generation: publicationGeneration) else {
+            scheduleCoalescedCacheRerun()
+            return
+        }
         var context = bucketedCacheContext(
             items: items,
             controlItems: controlItems,
-            displayID: displayID
+            displayID: displayID,
+            running: running
         )
 
         // One-shot, after items have settled so identifier shapes are final:
@@ -155,8 +163,6 @@ extension MenuBarItemManager {
             pruneSavedSectionOrderGhosts()
         }
 
-        // The process table read for this pass's publication, shared by the liveness filter and the unseen-host check.
-        var runningAtPublication: RunningApplicationSnapshot?
         while true {
             // Verify before the unchanged-cache guard: nonexistent icons recovered from the position store can produce a stable cache.
             if !observationOnly, let displayID {
@@ -179,6 +185,8 @@ extension MenuBarItemManager {
                 let maximumSanityAttempts = 2
                 if sanityAttempts < maximumSanityAttempts, !Task.isCancelled {
                     let snapshot = await MenuBarItemAXProvider.menuBarInventoryConcurrent(freshOnly: true)
+                    // An owner can exit during the re-scan, so the process table is read again with it.
+                    running = await RunningApplicationSnapshot.current()
                     guard snapshot.hasFreshKnownInventory,
                           layoutPublication.canPublish(generation: publicationGeneration)
                     else {
@@ -199,7 +207,8 @@ extension MenuBarItemManager {
                         context = bucketedCacheContext(
                             items: items,
                             controlItems: controlItems,
-                            displayID: displayID
+                            displayID: displayID,
+                            running: running
                         )
                         continue
                     }
@@ -209,11 +218,6 @@ extension MenuBarItemManager {
                     )
                 }
             }
-
-            // Read the process table off the main actor. The guard below runs after it,
-            // so a purge that lands during the read still stops this pass.
-            let running = await RunningApplicationSnapshot.current()
-            runningAtPublication = running
 
             // A sanity re-scan above can suspend while an owner exits. Check
             // again at publication so the old in-flight pass cannot undo purge.
@@ -245,7 +249,7 @@ extension MenuBarItemManager {
         }
 
         mirrorSavedSectionOrderIfSettled(from: context.cache, controlItems: context.controlItems)
-        noteUnseenMenuBarHosts(in: context.cache, running: runningAtPublication ?? .readSystem())
+        noteUnseenMenuBarHosts(in: context.cache, running: running)
 
         MenuBarItemManager.diagLog.debug("Updated menu bar item cache: visible=\(context.cache[.visible].count), hidden=\(context.cache[.hidden].count), alwaysHidden=\(context.cache[.alwaysHidden].count)")
 
@@ -309,7 +313,8 @@ extension MenuBarItemManager {
     private func bucketedCacheContext(
         items: [MenuBarItem],
         controlItems: ControlItemPair,
-        displayID: CGDirectDisplayID?
+        displayID: CGDirectDisplayID?,
+        running: RunningApplicationSnapshot
     ) -> CacheContext {
         var context = CacheContext(controlItems: controlItems, displayID: displayID)
 
@@ -348,7 +353,9 @@ extension MenuBarItemManager {
         )
         // Conceal snapshots survive exits; filter after rebucketing to avoid resurrecting departed items in both UIs.
         // Preserve assignments for relaunch placement.
-        context.cache = context.cache.retainingRunningOwners().orderingOverflowStack(savedOrder: savedSectionOrder)
+        context.cache = context.cache
+            .retainingRunningOwners(processIDs: running.processIDs, bundleIdentifiers: running.bundleIdentifiers)
+            .orderingOverflowStack(savedOrder: savedSectionOrder)
 
         return context
     }

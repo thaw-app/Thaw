@@ -35,15 +35,4 @@ extension MenuBarItemCache {
         }
         return cache
     }
-
-    /// Live process table variant of
-    /// retainingRunningOwners(processIDs:bundleIdentifiers:).
-    @MainActor
-    func retainingRunningOwners() -> Self {
-        let applications = NSWorkspace.shared.runningApplications.filter { !$0.isTerminated }
-        return retainingRunningOwners(
-            processIDs: Set(applications.map(\.processIdentifier)),
-            bundleIdentifiers: Set(applications.compactMap(\.bundleIdentifier))
-        )
-    }
 }
