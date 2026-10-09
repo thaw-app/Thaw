@@ -50,8 +50,10 @@ public extension AXPrimitives {
         }
         return children(of: window).map { child in
             // The item sits one or two levels down; the wrappers around it belong to the agent.
+            // Stop at the first element the agent does not own: reading below it asks that app,
+            // and for Thaw's own item AppKit would answer in-process, off the main thread.
             var leaf = child
-            while let next = children(of: leaf).first {
+            while pid(of: leaf) == agentPID, let next = children(of: leaf).first {
                 leaf = next
             }
             return MenuBarAgentWindow.Entry(
