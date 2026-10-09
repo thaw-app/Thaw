@@ -8,6 +8,7 @@
 import AppKit
 import MenuBarModel
 import Observation
+import ThawAXCore
 
 /// Follows the live left edge of the first visible menu bar item, so overlays
 /// like the appearance pill do not lag until the next cache walk.
@@ -31,13 +32,13 @@ final class MenuBarLeadingEdgeWatcher {
 
     /// Short enough that a follower is at most half a second behind the bar,
     /// long enough that an idle bar costs two reads a second.
-    nonisolated static let pollInterval = Duration.milliseconds(500)
+    static nonisolated let pollInterval = Duration.milliseconds(500)
 
     /// The interval while the bar is changing, so a follower tracks a reflow within a few frames.
-    nonisolated static let fastPollInterval = Duration.milliseconds(60)
+    static nonisolated let fastPollInterval = Duration.milliseconds(60)
 
     /// How long fast polling lasts after the last sign of change; a reflow lands in several steps.
-    nonisolated static let fastPollWindow = Duration.seconds(2)
+    static nonisolated let fastPollWindow = Duration.seconds(2)
 
     @ObservationIgnored private(set) var fastPollUntil: ContinuousClock.Instant?
 
@@ -103,7 +104,9 @@ final class MenuBarLeadingEdgeWatcher {
             refindAnchor()
             return
         }
-        let edge = await Self.read(anchor)
+        let edge = anchor.isOwnProcess
+            ? Self.position(of: anchor.element, within: anchor.screen, timeout: 0.25)
+            : await Self.read(anchor)
         guard let current = self.anchor,
               current.screen == anchor.screen, CFEqual(current.element, anchor.element)
         else { return }
@@ -114,7 +117,8 @@ final class MenuBarLeadingEdgeWatcher {
         }
         let sample = edge.map { MenuBarLeadingEdgeSample(x: $0, screenFrame: anchor.screen) }
         if let sample, let previous = leadingEdge,
-           sample.screenFrame == previous.screenFrame, abs(sample.x - previous.x) < 1 {
+           sample.screenFrame == previous.screenFrame, abs(sample.x - previous.x) < 1
+        {
             return
         }
         guard sample != leadingEdge else { return }
@@ -151,7 +155,10 @@ final class MenuBarLeadingEdgeWatcher {
         let pid = first.item.sourcePID ?? first.item.ownerPID
         let expected = first.item.bounds.minX
         anchorTask = Task { [weak self] in
-            let found = await Self.nearestChild(of: pid, to: expected, within: screen)
+            // Thaw's own elements are answered in-process by AppKit, which is not thread-safe.
+            let found = AXPrimitives.isOwnProcess(pid)
+                ? Self.findNearestChild(of: pid, to: expected, within: screen)
+                : await Self.nearestChild(of: pid, to: expected, within: screen)
             guard !Task.isCancelled else { return }
             self?.anchor = found
         }
@@ -170,6 +177,14 @@ final class MenuBarLeadingEdgeWatcher {
         to x: CGFloat,
         within screen: CGRect
     ) async -> LeadingEdgeAnchor? {
+        findNearestChild(of: pid, to: x, within: screen)
+    }
+
+    private static nonisolated func findNearestChild(
+        of pid: pid_t,
+        to x: CGFloat,
+        within screen: CGRect
+    ) -> LeadingEdgeAnchor? {
         let app = AXUIElementCreateApplication(pid)
         AXUIElementSetMessagingTimeout(app, 0.25)
         var bar: AnyObject?
@@ -224,6 +239,12 @@ nonisolated struct LeadingEdgeAnchor: @unchecked Sendable {
     // AXUIElement is an immutable CF handle, safe to use from any thread.
     let element: AXUIElement
     let screen: CGRect
+
+    /// Whether the element belongs to Thaw, whose own AX reads must stay on the main thread.
+    var isOwnProcess: Bool {
+        var pid: pid_t = 0
+        return AXUIElementGetPid(element, &pid) == .success && AXPrimitives.isOwnProcess(pid)
+    }
 }
 
 extension NSScreen {
