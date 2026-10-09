@@ -2842,11 +2842,23 @@ extension MenuBarItemManager {
         }
         // Move the item, not the section: a full-band rewrite would replay
         // stale order and relocate unrelated items. Skip if a crossing wrote.
+        // A closed section's items are not drawn, yet with Native hiding they report positions among
+        // the shown ones. They must not be picked as this item's neighbours.
+        let sectionController = appState?.menuBarManager.sectionController
+        let drawnPeers: ([MenuBarItem]) -> [MenuBarItem] = { peers in
+            StoreMovePeers.drawn(
+                among: peers,
+                moving: item,
+                target: destination.targetItem,
+                revealed: sectionController?.revealedSection,
+                section: { sectionController?.section(for: $0) ?? .visible }
+            )
+        }
         if !storeMoved {
             storeMoved = MenuBarPositionStoreProvider.forLayoutEdit.move(
                 item: item,
                 to: destination,
-                liveItems: liveItems,
+                liveItems: drawnPeers(liveItems),
                 experimentalSystemItemHiding: experimentalSystemItemHiding,
                 // A single-item request does not authorize moving neighbours
                 // around an item whose position the store cannot resolve.
@@ -2963,7 +2975,7 @@ extension MenuBarItemManager {
             MenuBarPositionStoreProvider.forLayoutEdit.move(
                 item: refreshedItem,
                 to: destination,
-                liveItems: updated,
+                liveItems: drawnPeers(updated),
                 experimentalSystemItemHiding: experimentalSystemItemHiding,
                 permit: permit
             )
