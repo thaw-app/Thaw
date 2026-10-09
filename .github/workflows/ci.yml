@@ -14,11 +14,6 @@ on:
 permissions:
   contents: read
 
-# The project builds PlatformRuntimeKit from a sibling checkout. Keep this
-# revision paired with the kit commit the sources on this branch need.
-env:
-  PLATFORM_RUNTIME_KIT_REF: 751a334209b620f357846ec8fb7e4111bdaebee1
-
 jobs:
   changes:
     if: github.repository == 'thaw-app/Thaw'
@@ -103,7 +98,6 @@ jobs:
     needs: [changes, static_analysis]
     env:
       HOMEBREW_NO_AUTO_UPDATE: 1
-      MENU_BAR_MODEL_PATH: ${{ github.workspace }}/MenuBarModel
     steps:
       - name: Skip macOS build (no code changes)
         if: needs.changes.outputs.code != 'true'
@@ -111,33 +105,6 @@ jobs:
 
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         if: needs.changes.outputs.code == 'true'
-
-      - name: Check PlatformRuntimeKit checkout token
-        if: needs.changes.outputs.code == 'true'
-        env:
-          PRK_TOKEN: ${{ secrets.THAW_NEXT_READ_TOKEN }}
-        run: |
-          if [[ -z "$PRK_TOKEN" ]]; then
-            echo "::error::THAW_NEXT_READ_TOKEN is unavailable (fork pull requests cannot read it), so PlatformRuntimeKit cannot be checked out."
-            exit 1
-          fi
-
-      - name: Checkout PlatformRuntimeKit source
-        if: needs.changes.outputs.code == 'true'
-        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          repository: thaw-app/PlatformRuntimeKit
-          ref: ${{ env.PLATFORM_RUNTIME_KIT_REF }}
-          token: ${{ secrets.THAW_NEXT_READ_TOKEN }}
-          path: .platform-runtime-kit
-          persist-credentials: false
-
-      # checkout cannot write outside the workspace; the project expects the kit beside it.
-      - name: Place PlatformRuntimeKit beside the checkout
-        if: needs.changes.outputs.code == 'true'
-        run: |
-          rm -rf ../PlatformRuntimeKit
-          mv .platform-runtime-kit ../PlatformRuntimeKit
 
       - name: Cache SwiftPM
         if: needs.changes.outputs.code == 'true'
