@@ -17,12 +17,19 @@ struct StoredWeights {
         fileprivate let positions: [String: Int]
         fileprivate let keys: [String]
 
+        /// A table with the given contents, for a caller that already holds a reading.
+        init(isAvailable: Bool, positions: [String: Int]) {
+            self.isAvailable = isAvailable
+            self.positions = positions
+            keys = Array(positions.keys)
+        }
+
         @MainActor
         static func read() -> Table {
             let store = MenuBarPositionStoreProvider.current
             let isAvailable = store.positionsDomainIsAccessible()
             let positions = isAvailable ? store.currentPositions() : [:]
-            return Table(isAvailable: isAvailable, positions: positions, keys: Array(positions.keys))
+            return Table(isAvailable: isAvailable, positions: positions)
         }
     }
 

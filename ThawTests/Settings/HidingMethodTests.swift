@@ -32,4 +32,18 @@ struct HidingMethodTests {
         #expect(!HidingMethod.standard.hidesAppleItems)
         #expect(!HidingMethod.native.hidesAppleItems)
     }
+
+    @Test("Every method has its own identity, name and explanation")
+    func methodsAreTellableApart() {
+        let methods = HidingMethod.allCases
+        #expect(Set(methods.map(\.id)).count == methods.count)
+        #expect(Set(methods.map { "\($0.localized)" }).count == methods.count)
+        #expect(Set(methods.map { "\($0.explanation)" }).count == methods.count)
+    }
+
+    @Test("Each explanation is two lines: what it does, then what it costs", arguments: HidingMethod.allCases)
+    func explanationHasTwoLines(method: HidingMethod) {
+        let text = "\(method.explanation)"
+        #expect(text.contains("\\n") || text.contains("\n"))
+    }
 }
