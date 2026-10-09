@@ -11,10 +11,14 @@
 /// slow ones off or makes a failed click on a fast one feel broken.
 nonisolated struct ClickTimeoutEstimator<Key: Hashable> {
     /// The opening guess for an item with no clicks on record.
-    static var defaultTimeout: Duration { .milliseconds(350) }
+    static var defaultTimeout: Duration {
+        .milliseconds(350)
+    }
 
     /// The bounds every learned estimate is held to.
-    static var range: ClosedRange<Duration> { .milliseconds(200) ... .milliseconds(1000) }
+    static var range: ClosedRange<Duration> {
+        .milliseconds(200) ... .milliseconds(1000)
+    }
 
     private var timeouts: [Key: Duration] = [:]
 

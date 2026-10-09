@@ -16,9 +16,13 @@ nonisolated struct RepublishAbsenceMemo {
 
     private var missingSince: [String: ContinuousClock.Instant] = [:]
 
-    var count: Int { missingSince.count }
+    var count: Int {
+        missingSince.count
+    }
 
-    var isEmpty: Bool { missingSince.isEmpty }
+    var isEmpty: Bool {
+        missingSince.isEmpty
+    }
 
     /// Whether this member was missing recently enough that a pass should not wait for it.
     func isKnownAbsent(_ identifier: String) -> Bool {

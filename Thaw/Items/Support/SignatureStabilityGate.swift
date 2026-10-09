@@ -19,7 +19,9 @@ nonisolated struct SignatureStabilityGate {
     private(set) var firstSeen: ContinuousClock.Instant?
 
     /// True while a difference is waiting out its grace.
-    var isPending: Bool { candidate != nil }
+    var isPending: Bool {
+        candidate != nil
+    }
 
     /// Scores one sample and says whether to recache now.
     ///

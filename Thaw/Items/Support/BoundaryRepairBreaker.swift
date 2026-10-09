@@ -23,7 +23,9 @@ nonisolated struct BoundaryRepairBreaker<ID: Hashable> {
     private var trips: [ID: Int] = [:]
     private var suppressedAt: [ID: Date] = [:]
 
-    var suppressedCount: Int { suppressedAt.count }
+    var suppressedCount: Int {
+        suppressedAt.count
+    }
 
     func isSuppressed(_ id: ID) -> Bool {
         suppressedAt[id] != nil

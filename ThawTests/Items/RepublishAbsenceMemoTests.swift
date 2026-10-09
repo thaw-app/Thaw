@@ -18,7 +18,7 @@ struct RepublishAbsenceMemoTests {
         let memo = RepublishAbsenceMemo()
 
         #expect(memo.isEmpty)
-        #expect(memo.count == 0)
+        #expect(memo.isEmpty)
         #expect(!memo.isKnownAbsent("a"))
     }
 

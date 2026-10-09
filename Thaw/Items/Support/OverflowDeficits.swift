@@ -25,7 +25,9 @@ nonisolated struct OverflowDeficits {
         /// The width withheld before this pass.
         let previousWidth: CGFloat?
 
-        var changed: Bool { width != previousWidth }
+        var changed: Bool {
+            width != previousWidth
+        }
     }
 
     private(set) var notchOcclusion: Held?

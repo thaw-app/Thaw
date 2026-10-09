@@ -18,10 +18,14 @@ nonisolated struct NotificationCenterLayoutHold {
     private var token: UUID?
     private var settleTask: Task<Void, Never>?
 
-    var isHeld: Bool { token != nil }
+    var isHeld: Bool {
+        token != nil
+    }
 
     /// Whether a settle has been started and has not yet lifted the hold or been superseded.
-    var isSettling: Bool { settleTask != nil }
+    var isSettling: Bool {
+        settleTask != nil
+    }
 
     /// Takes the hold, or renews it, and cancels any settle that was waiting to lift it.
     /// Returns true when nothing was held before.

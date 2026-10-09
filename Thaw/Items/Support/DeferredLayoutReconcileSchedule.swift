@@ -26,7 +26,9 @@ nonisolated struct DeferredLayoutReconcileSchedule {
     private(set) var deferrals = 0
 
     /// Whether a retry is armed and has not yet fired.
-    var isPending: Bool { task != nil }
+    var isPending: Bool {
+        task != nil
+    }
 
     /// Claims a retry delay from now, and returns when it is due, or nil when no new retry
     /// should be armed: the limit is reached, or a pending retry is already due no later. A
@@ -38,7 +40,9 @@ nonisolated struct DeferredLayoutReconcileSchedule {
     ) -> ContinuousClock.Instant? {
         guard deferrals < limit else { return nil }
         let candidate = now + delay
-        if let due, task != nil, due <= candidate { return nil }
+        if let due, task != nil, due <= candidate {
+            return nil
+        }
         task?.cancel()
         task = nil
         due = candidate
