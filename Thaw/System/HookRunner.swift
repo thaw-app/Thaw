@@ -8,6 +8,7 @@
 import Foundation
 import MenuBarModel
 import Subprocess
+import ThawCapture
 #if canImport(System)
     import System
 #else
@@ -74,14 +75,8 @@ enum HookRunner {
         let previousProfileName: String?
     }
 
-    /// Outcome of racing the subprocess against the timeout.
-    private enum RaceOutcome {
-        /// What the hook left behind, copied out of Subprocess's result, which
-        /// is noncopyable and so cannot be carried through the task group.
-        case completed(Completion)
-        case timedOut
-    }
-
+    /// What the hook left behind, copied out of Subprocess's result, which
+    /// is noncopyable and so cannot be carried out of the timeout.
     private struct Completion: Sendable {
         let terminationStatus: TerminationStatus
         let standardOutput: String?
@@ -175,57 +170,43 @@ enum HookRunner {
             return options
         }()
 
-        // Race the subprocess against a timeout task. Whichever finishes
-        // first wins; cancelAll() then cancels the other, which for the
-        // subprocess task triggers the teardown sequence above.
-        let outcome: RaceOutcome
+        // The structured timeout: when the deadline wins it cancels the
+        // subprocess, which runs the teardown sequence above, and only then
+        // returns.
+        let result: Completion
         do {
-            outcome = try await withThrowingTaskGroup(of: RaceOutcome.self) { group in
-                group.addTask {
-                    let result = try await Subprocess.run(
-                        .path(executablePath),
-                        arguments: Arguments(arguments),
-                        environment: environment,
-                        platformOptions: platformOptions,
-                        output: .string(limit: outputByteLimit),
-                        error: .string(limit: outputByteLimit)
-                    )
-                    return .completed(Completion(
-                        terminationStatus: result.terminationStatus,
-                        standardOutput: result.standardOutput,
-                        standardError: result.standardError
-                    ))
-                }
-                group.addTask {
-                    try await Task.sleep(for: .seconds(clamped))
-                    return .timedOut
-                }
-                defer { group.cancelAll() }
-                guard let first = try await group.next() else {
-                    throw CancellationError()
-                }
-                return first
+            result = try await Task<Completion, any Error>.withTimeout(.seconds(clamped)) {
+                let result = try await Subprocess.run(
+                    .path(executablePath),
+                    arguments: Arguments(arguments),
+                    environment: environment,
+                    platformOptions: platformOptions,
+                    output: .string(limit: outputByteLimit),
+                    error: .string(limit: outputByteLimit)
+                )
+                return Completion(
+                    terminationStatus: result.terminationStatus,
+                    standardOutput: result.standardOutput,
+                    standardError: result.standardError
+                )
             }
+        } catch is TaskTimeoutError {
+            throw HookError.timedOut(after: clamped)
         } catch is CancellationError {
             throw CancellationError()
         } catch {
             throw HookError.runFailed(path: hook.path, error: error)
         }
 
-        switch outcome {
-        case .timedOut:
-            throw HookError.timedOut(after: clamped)
-        case let .completed(result):
-            let stdout = (result.standardOutput ?? "").trimmingCharacters(in: .whitespacesAndNewlines)
-            let stderr = (result.standardError ?? "").trimmingCharacters(in: .whitespacesAndNewlines)
-            let exitStatus: Int32 = switch result.terminationStatus {
-            case let .exited(code): code
-            case let .signaled(code): code
-            }
-            guard result.terminationStatus.isSuccess else {
-                throw HookError.nonZeroExit(exitStatus)
-            }
-            return RunOutcome(exitStatus: exitStatus, stdout: stdout, stderr: stderr)
+        let stdout = (result.standardOutput ?? "").trimmingCharacters(in: .whitespacesAndNewlines)
+        let stderr = (result.standardError ?? "").trimmingCharacters(in: .whitespacesAndNewlines)
+        let exitStatus: Int32 = switch result.terminationStatus {
+        case let .exited(code): code
+        case let .signaled(code): code
         }
+        guard result.terminationStatus.isSuccess else {
+            throw HookError.nonZeroExit(exitStatus)
+        }
+        return RunOutcome(exitStatus: exitStatus, stdout: stdout, stderr: stderr)
     }
 }
