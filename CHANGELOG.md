@@ -1103,7 +1103,9 @@ Three things from the 2.1 preview line are still on their way to macOS 27. Anoth
 
 ---
 
-### Menu bar
+### New
+
+#### Menu bar
 
 - Manual arrangement: Thaw never moves an item. You arrange the bar yourself with ⌘-drag, Thaw records what it sees and confines itself to hiding. Classic menu bar manager experience.
 - Zen mode seals the whole bar with one hotkey. Reveals and hover tricks stand down until you toggle it back.
@@ -1114,26 +1116,26 @@ Three things from the 2.1 preview line are still on their way to macOS 27. Anoth
 - Presenter mode: with the camera and microphone watch on, the bar collapses to zen mode while either is in use and restores after. It works alongside zen mode while presenting.
 - Confirmations: a small capsule under the bar confirms the verbs that otherwise succeed invisibly (zen on, hidden items shown, profile applied).
 
-### Thaw Bar and appearance
+#### Thaw Bar and appearance
 
 - A Thaw Bar of its own: shape, tint, and border for the bar, independent of the menu bar it mirrors, and one per-display section instead of repeated blocks.
 - Adaptive Gradient tint builds a gradient from the wallpaper's two dominant colours instead of one average. Wallpaper changes re-tint the bar at once; the poll stays only for dynamic and aerial wallpapers.
 - Per-Space appearance overrides, so the bar can dress differently on each Space.
 
-### Layout
+#### Layout
 
 - A standalone layout editor opens on its own from a hotkey or a `thaw://` action, with glass chrome and last-pane restore. Items can be activated straight from it.
 - Hover spotlighting: resting on a tile in the layout pane lights the matching item in the real bar. Clicking it opens the inspector.
 - Displays as a spatial picker, arranged the way they sit on your desk, with per-display spacing applied inline.
 
-### Search and launchers
+#### Search and launchers
 
 - Search remembers. Recently activated items sit at the top of an empty query, and selecting a result spotlights the item in the real bar.
 - Item palette (Lab): a centred launcher for your menu bar items, hidden ones included. Type part of a name or the owning app and press Return.
 - Assisted item palette (Lab): a large list of every item right where the pointer is, with big rows to read and click.
 - Menu bar magnifier (Lab): rest the pointer on the bar and a blown-up slice appears below it. Each icon gets a large outline you can click, and the one you point at is named. Works without Screen Recording; the pixels need it.
 
-### Settings
+#### Settings
 
 - Simple Mode collapses Settings to one page, ordered by what you touch. Everything it hides is still there when you switch it off.
 - Sidebar by topic: Menu Bar, App, Automation, and More. Rows carry a plain glyph, groups fold, arrow keys move through rows and Return selects, and a profile strip pinned to the foot switches profiles without opening the Profiles pane.
@@ -1144,26 +1146,26 @@ Three things from the 2.1 preview line are still on their way to macOS 27. Anoth
 - Accessibility: Reduce Transparency, Increase Contrast, and Reduce Motion are honoured on every glass surface. Icon-only buttons have names, the sidebar rail is reachable by keyboard, selection is marked without relying on colour, and type sizes follow the Dynamic Type scale.
 - Layout backups can be restored inside Thaw, from the Tools pane.
 
-### Privacy
+#### Privacy
 
 - A Privacy pane: permissions, the capture inspector that shows exactly what the app reads from the screen, and every network call the app makes, each with a switch and one button to turn them all off. A test fails the build if a network client appears anywhere the list does not account for.
 - Camera and microphone watch (Lab): a banner names the app that took the microphone, and another says when a camera turns on. While either is in use, Thaw's menu lists what is using it. Banners can be pinned to a display, or follow the pointer, and placed left, centre, or right.
 - Menu bar history (Lab): when items appeared in and disappeared from the bar, stored in Thaw's own settings and cleared when the experiment is turned off.
 
-### Profiles and Spaces
+#### Profiles and Spaces
 
 - Per-Space profiles: bind a profile to a Space the way it binds to a display. Precedence is Focus Filter, then Space, then display.
 - Per-Space presentation: show or hide the bar per Space, and see which Space each rule belongs to.
 - A profile shows what applying it would change before you apply it.
 
-### Automation, Shortcuts, and the command line
+#### Automation, Shortcuts, and the command line
 
 - Rules: reveal on icon change with a cooldown, global and per-profile hooks that run a script when a profile applies, a script environment with its own variables and timeout, and a whitelist of apps allowed to change settings over `thaw://`.
 - Shortcuts and Spotlight: an action opens a chosen item's menu, revealing it first if hidden, alongside actions to reveal hidden items, toggle zen mode, and apply a profile.
 - Control Center widgets toggle hidden items and zen mode from Control Center.
 - A command-line client: `thawctl` drives the `thaw://` control plane from a terminal.
 
-### The Lab
+#### The Lab
 
 - A home for experiments you can opt into early. Turning any experiment off returns the app to normal, and each one says exactly what it does.
 - Menu bar overlay: your items drawn in a Thaw strip that appears when you point at the space they left, while the system bar keeps its app menus, clock, and modules.
@@ -1171,7 +1173,9 @@ Three things from the 2.1 preview line are still on their way to macOS 27. Anoth
 - Hide Finder menus on the desktop: clicking the desktop puts Finder's menus in the bar; this covers them until you switch away.
 - Transport bar: a floating capsule at the bottom of the display your pointer is on, with the active profile, the hidden and always-hidden toggles, zen mode, and a close button. It never takes focus.
 
-### Under the hood
+### Changed
+
+#### Under the hood
 
 - Rebuilt from the ground up on a new architecture. Thaw 3 is a new codebase, not a patched fork. The item manager cluster, AppState, MenuBarManager, the image cache, the layout bar, ControlItem, appearance, and search were written anew; the Ice-branded identifier vocabulary is Thaw's own, with persisted keys pinned so nothing you saved is lost; and the migrations that could never run are gone. The rewrite paid down years of technical debt at the same time: dead machinery and one-case abstractions are deleted, the engine sits behind explicit seams that can be tested in isolation, and the hot paths were rebuilt with performance in mind.
 - Reorders are planned as a diff. The engine computes the smallest set of moves against the live order instead of walking the bar pair by pair. The seconds of silence before a synthetic drag starts are gone, the native overflow chevron is treated as menu bar chrome rather than an item, and on a notched display concealed items are revealed for capture one at a time.
@@ -1686,7 +1690,22 @@ of whoever ran it.
 
 ---
 
-### Menu bar & layout
+### Changed
+
+#### XPC service
+
+- The single-window `sourcePID` request was dead wire protocol, since the batch request replaced it in production, yet its round-trip tests were the only wire-format coverage at all. The request is gone and the tests now exercise the batch case both sides actually use.
+
+#### Internal
+
+- `MenuBarItemManager.swift` (11,526 lines) is now a folder of per-concern files cut along its existing MARK seams, each importing only what it uses; sonar and the SwiftLint input list follow the new paths.
+- Item identity matching (tag plus effective PID), the click-target refetch chain, and live-bounds reads are single-sourced helpers instead of hand-rolled copies across the manager and the IceBar, the same drift that produced #943.
+- The test process points the `Defaults` facade at a scratch suite before any test runs, so no suite can write into the real `com.stonerl.Thaw` domain of whoever runs the tests. The tour-slide test that failed on Spanish-locale machines while passing on English CI is green everywhere.
+- The search panel reads `AppState` from its SwiftUI environment instead of reaching through the item manager's back-pointer, which no external caller uses anymore.
+
+### Fixed
+
+#### Menu bar & layout
 
 - The settling-period early apply no longer waits for settling to end while holding the serial cache gate. The wait deadlocked the pair both ways: when the launch cache cycle owned the gate, settling's early exit needed a cache cycle the held gate rejects, so it ran the full 60 s deadline with the item cache frozen on fallback tags: generic names in Thaw Bar and Search, and every click aborted with no return destination (#943). When the settling task's own poll owned the gate, the apply awaited the very task it was running on, and the deadline check inside that blocked loop could never fire, so the gate stayed held indefinitely and every later recache was rejected (#945).
 - Clicking an item whose cached tag predates source-PID resolution re-maps it onto its freshly fetched counterpart by windowID, so the click survives a stale cache snapshot instead of dying in the return-destination lookup (#943).
@@ -1694,21 +1713,13 @@ of whoever ran it.
 - Saved-order pruning no longer counts a localized display-name namespace as a real owner, and drops such a ghost when its canonical twin exists: the Control Center entry sharing its title, Thaw's own control items by their reserved titles, or a real owner claiming the same non-generic title. A display-name entry with no twin survives, since it may be the only identity a bundle-ID-less app ever got (#949).
 - The namespace fallback recovers a transiently nil bundle ID through the app's bundle URL before reaching for the window's owner name, so localized ghosts stop being minted in the first place (#949).
 
-### XPC service
+#### XPC service
 
 - The session cancellation handler cleared the stored session outside the lock that guarded every other access, and a handler outliving its session could clear a newer one created after it. Storage now synchronizes internally, and invalidation is identity-guarded so only the cancelled session is dropped.
-- The single-window `sourcePID` request was dead wire protocol, since the batch request replaced it in production, yet its round-trip tests were the only wire-format coverage at all. The request is gone and the tests now exercise the batch case both sides actually use.
 
-### Localization
+#### Localization
 
 - The Spanish descriptions for the Hotkeys & Automation tour slide and the New Items badge hint were empty strings marked translated. A catalog sweep found exactly these two; both are filled in the register the catalog already uses.
-
-### Internal
-
-- `MenuBarItemManager.swift` (11,526 lines) is now a folder of per-concern files cut along its existing MARK seams, each importing only what it uses; sonar and the SwiftLint input list follow the new paths.
-- Item identity matching (tag plus effective PID), the click-target refetch chain, and live-bounds reads are single-sourced helpers instead of hand-rolled copies across the manager and the IceBar, the same drift that produced #943.
-- The test process points the `Defaults` facade at a scratch suite before any test runs, so no suite can write into the real `com.stonerl.Thaw` domain of whoever runs the tests. The tour-slide test that failed on Spanish-locale machines while passing on English CI is green everywhere.
-- The search panel reads `AppState` from its SwiftUI environment instead of reaching through the item manager's back-pointer, which no external caller uses anymore.
 
 ## [2.0.0-rc.3] - 2026-08-15
 
@@ -1733,85 +1744,63 @@ so they land together.
 
 ---
 
-### Menu bar & layout
+### New
+
+#### Settings, profiles & onboarding
+
+- Independent shape and border settings for the menu bar overlay and Thaw Bar (#248, thanks @kn666).
+- Per-display option to route only the always-hidden section to Thaw Bar (#751, thanks @MashnoorKek).
+- Optional Advanced toggle moves the pointer onto a revealed search result, off by default (#769, thanks @brucemakes012).
+- New CLI: `Thaw --reset-layout` clears persisted order, pinning, and relocation bookkeeping and re-seeds divider positions without starting the app. It and the settings reset both clear the stale-identifier ledger.
+
+### Changed
 
 #### Cold start and settling
+
 - Launch restore bypasses the saved-layout and move cooldowns that launch itself stamped. `applySavedLayout` had been rejected on every launch by the cooldown its own chain created when it moved our control item (#881).
 - Early apply moves identities whose `sourcePID` has already resolved rather than waiting out the full resolution pass, which runs ~8 s on a dense bar while Control Center is slow to answer. The match is exact on `uniqueIdentifier`, so an unresolved sibling cannot be moved by mistake.
 - The Thaw icon relocates immediately when macOS parks it left of the hidden divider, instead of leaving the menu bar without a Thaw icon for the whole settling period.
 
 #### Move planning and storm bounds
+
 - The full-sort planner that rearranged the entire bar is gone. Bulk apply keeps the per-item and control-item paths (#885).
 - Move success is verified by adjacency in a single snapshot instead of exact `CGFloat` coordinate equality against a target that reflows mid-drag. Stale destinations abort rather than burn retries.
-- Failed move attempts no longer starve the operation timeout budget.
-- An unfinished bulk apply no longer writes its partial order into `savedSectionOrder`.
 - Automatic re-applies are capped: one retry after an unfinished batch, then a 60 s cooldown, and a batch abandons after three consecutive failures. Notch-overflow ejections now go through the failure ledger (#900).
 - An automatic bulk apply waits for a 300 ms lull in input before issuing its sequence, capped at 2 s so the batch still runs. A batch holds the cursor for its whole length, so one dispatched the instant a late arrival is noticed used to take the pointer mid-interaction and then contest it move by move (#899, #723).
 - Synthetic move events address the window's owner instead of the app that owns the item. On macOS 26 Control Center hosts every status item window, so those are different processes; addressing the host is what lets a slot with an unresolved owner move at all, and it clears move failures that were timing out against a process that did not own the drag (#900, #923, #924).
-- Bulk apply restores membership in the hidden and always-hidden sections but no longer reorders *within* them. Each of those moves costs a cursor hijack and a synthesised drag to land an item thousands of points off-screen, where Thaw Bar renders from the cache anyway. Dropping them is most of what shortens long batches on the bars where length hurts.
 - Parked off-screen items are excluded from the `H_ctrl` drag anchor, and a parked divider skips the boundary move and records ledger backoff (#899).
-- Late-arrival detection ignores unresolved identities, so a `sourcePID` flap no longer reads as a bar full of new items.
-- Display-sized overlay windows (Droppy's drag catcher, for one) are no longer treated as an open menu.
 - Diagnostics log a section-order digest instead of counts alone.
 
 #### Control items and identity
-- Control-item pairing no longer selects Thaw's visible chevron as the hidden divider. The mispair made the hidden section read zero width, so every item landed visible after a restart (#927), hidden icons left of the notch had no region to render into (#924), and layout-editor drags had no divider to verify against (#923).
+
 - Divider seeding and restore write through the section-divider guard, and hide or removal restores divider positions too (#890).
-- `preflightSetup` no longer re-stamps the hidden divider to `1` on every launch and status-item recreation. That second write had been draining `savedSectionOrder` across launches, 64/46/12 down to 42/52/12 in two clean starts (#895).
-- Source PID resolution no longer skips Thaw's own disabled dividers, which is the normal state of a collapsed section (#899).
 - AX-correlated identity can promote an unresolved Control Center placeholder, so layout-editor moves and saved order use the owning app's identifier (#905).
-- Owner-titled degraded readings (`bundleId:bundleId`) count as a failed observation rather than a new bar, so they stop minting a second identifier set (#881, #927).
-- Stale saved identifiers stop matching once the bar retires them, and foreign items are no longer namespaced under `com.stonerl.Thaw:`.
-- Source PIDs are re-asked when the first scan after login leaves items provisional, and a dead cached PID no longer wins over live resolution.
 - Silent move refusals log the stage, gate, and owner instead of a bare `cannotComplete` (#905).
 
 #### Persist gates
-- An emptied hidden section (everything dragged into Visible) no longer latches `hiddenSectionHasRoom` permanently read-only. A genuine collapse still refuses; parked off-display items are what tell the two apart (#868).
-- Temporarily shown items no longer register as layout drift, so opening a hidden item's menu stops dispatching a bulk apply that dumps the hidden section (#907).
+
 - The always-hidden display-spread gate ignores parked items. It had been skipping `saveSectionOrder` on every cache cycle on multi-display setups, 1088 skips and zero writes in one day of field logs, which left always-hidden items looking new and let quitting any app drag them back to Visible (#930, thanks @nightah).
-- LyricsX-style lyric titles collapse to a stable identity, so a song change stops minting new items (#815, thanks @yoodu).
-- Saved-layout entries that can never match a live item again are pruned.
 
----
-
-### Settings, profiles & onboarding
+#### Settings, profiles & onboarding
 
 - Profile list rows preview the saved layout next to the key behaviour settings (#887).
 - "Update All" marks a profile active when its capture matches the running state (#904).
 - Applying a profile uses that profile's spacing offset instead of a stale `0` (#903).
 - Profiles prune Control-Center-hosted empty-title identifiers that can never match a live item.
 - The layout editor names the display it is showing (#886).
-- Independent shape and border settings for the menu bar overlay and Thaw Bar (#248, thanks @kn666).
-- Per-display option to route only the always-hidden section to Thaw Bar (#751, thanks @MashnoorKek).
-- Optional Advanced toggle moves the pointer onto a revealed search result, off by default (#769, thanks @brucemakes012).
-- Sections holding nothing but the new-items badge accept drops again (#897, thanks @alvst).
 - Advanced settings reset clears every persisted boolean, not just some of them (#910, thanks @YuriNachos). The two toggles added later in this cycle, "Arrange menu bar items" and "Move the pointer to revealed items", are covered too; leaving automatic arrangement off and then resetting to defaults used to keep it off with nothing on screen to explain why layouts stopped restoring.
 - `leftAligned` and `rightAligned` accepted as valid `iceBarLocation` values (#911, thanks @YuriNachos).
 - Settings search weights un-inverted: title now outranks keywords (#918, thanks @YuriNachos).
 - Icon refresh rate normalized onto one grid shared by the slider, URI handler, live capture floor, and Defaults: off, or `1/n` seconds for integer `n` in 1…30 (#929, thanks @CamilleGuillory).
 - Relaunches after a revoked permission show the onboarding permissions flow rather than the pre-redesign `PermissionsView`.
-- Auto-rehide `focusedApp` and timed strategy guards restored after a merge dropped them.
-- New CLI: `Thaw --reset-layout` clears persisted order, pinning, and relocation bookkeeping and re-seeds divider positions without starting the app. It and the settings reset both clear the stale-identifier ledger.
 
----
-
-### Appearance, capture & IceBar
+#### Appearance, capture & IceBar
 
 - ScreenCaptureKit picks the display with the largest intersection and rejects zero-area ones, and refreshes shareable content when cached topology leaves a window looking orphaned (#794, thanks @bpresles).
-- Screen recording no longer pushes notch overflow into a `cannotComplete` ejection loop that holds the cursor (#935, thanks @Zophiekat).
 - IceBar color sampling survives a horizontal bar that overflows to full screen width; the inset-frame math falls back to panel center instead of dividing by zero (#915, thanks @YuriNachos).
 - `IceGradient.averageColor` returns `nil` on an all-nil sample count instead of averaging by zero (#914, thanks @YuriNachos).
 
----
-
-### Performance & memory
-
-- Change-detector recaches back off while control-item lookups keep failing, exponential and capped at 60 s. Each rebuild was leaking a CA fence Mach port on macOS 26; bounding the retry cadence stops the 47 GiB owned-unmapped growth reported against rc.2.1 (#933, thanks @slatlasdev). This bounds the storm, it does not patch AppKit's `NSSceneStatusItem`.
-- No-op status-item rewrites on state reassignment dropped, same leak class.
-
----
-
-### Platform & engineering
+#### Platform & engineering
 
 - `swift-subprocess` 1.0.0 adopted; the env trampoline is gone.
 - `AlphaChannelView` centralizes alpha-channel access and transparency scanning, so bounds validation happens in one place instead of in each `isTransparent` implementation.
@@ -1819,9 +1808,7 @@ so they land together.
 - Statement coverage raised toward 90% by splitting untestable live AppKit / WindowServer paths out of `ProfileManager` and `DisplaySettingsManager` and covering the decision logic that remains (#916).
 - New suites around the storm bounds: layout storm replay, move timeout, section-order digest, control-item seeding and recovery, stale destination, unfinished batch, early-apply restriction, parked divider, section geometry, placeholder alias, Thaw Bar routing.
 
----
-
-### Release, CI & docs
+#### Release, CI & docs
 
 - Workflows migrated to Blacksmith runners (#901), then narrowed to the release workflows.
 - CodeQL runs on GitHub-hosted macOS 26.
@@ -1830,7 +1817,45 @@ so they land together.
 - OpenSSF Best Practices badge moved from Silver to Gold; README badges and links reworked.
 - github-actions dependency group bumped (#926).
 
----
+### Fixed
+
+#### Move planning and storm bounds
+
+- Failed move attempts no longer starve the operation timeout budget.
+- An unfinished bulk apply no longer writes its partial order into `savedSectionOrder`.
+- Bulk apply restores membership in the hidden and always-hidden sections but no longer reorders *within* them. Each of those moves costs a cursor hijack and a synthesised drag to land an item thousands of points off-screen, where Thaw Bar renders from the cache anyway. Dropping them is most of what shortens long batches on the bars where length hurts.
+- Late-arrival detection ignores unresolved identities, so a `sourcePID` flap no longer reads as a bar full of new items.
+- Display-sized overlay windows (Droppy's drag catcher, for one) are no longer treated as an open menu.
+
+#### Control items and identity
+
+- Control-item pairing no longer selects Thaw's visible chevron as the hidden divider. The mispair made the hidden section read zero width, so every item landed visible after a restart (#927), hidden icons left of the notch had no region to render into (#924), and layout-editor drags had no divider to verify against (#923).
+- `preflightSetup` no longer re-stamps the hidden divider to `1` on every launch and status-item recreation. That second write had been draining `savedSectionOrder` across launches, 64/46/12 down to 42/52/12 in two clean starts (#895).
+- Source PID resolution no longer skips Thaw's own disabled dividers, which is the normal state of a collapsed section (#899).
+- Owner-titled degraded readings (`bundleId:bundleId`) count as a failed observation rather than a new bar, so they stop minting a second identifier set (#881, #927).
+- Stale saved identifiers stop matching once the bar retires them, and foreign items are no longer namespaced under `com.stonerl.Thaw:`.
+- Source PIDs are re-asked when the first scan after login leaves items provisional, and a dead cached PID no longer wins over live resolution.
+
+#### Persist gates
+
+- An emptied hidden section (everything dragged into Visible) no longer latches `hiddenSectionHasRoom` permanently read-only. A genuine collapse still refuses; parked off-display items are what tell the two apart (#868).
+- Temporarily shown items no longer register as layout drift, so opening a hidden item's menu stops dispatching a bulk apply that dumps the hidden section (#907).
+- LyricsX-style lyric titles collapse to a stable identity, so a song change stops minting new items (#815, thanks @yoodu).
+- Saved-layout entries that can never match a live item again are pruned.
+
+#### Settings, profiles & onboarding
+
+- Sections holding nothing but the new-items badge accept drops again (#897, thanks @alvst).
+- Auto-rehide `focusedApp` and timed strategy guards restored after a merge dropped them.
+
+#### Appearance, capture & IceBar
+
+- Screen recording no longer pushes notch overflow into a `cannotComplete` ejection loop that holds the cursor (#935, thanks @Zophiekat).
+
+#### Performance & memory
+
+- Change-detector recaches back off while control-item lookups keep failing, exponential and capped at 60 s. Each rebuild was leaking a CA fence Mach port on macOS 26; bounding the retry cadence stops the 47 GiB owned-unmapped growth reported against rc.2.1 (#933, thanks @slatlasdev). This bounds the storm, it does not patch AppKit's `NSSceneStatusItem`.
+- No-op status-item rewrites on state reassignment dropped, same leak class.
 
 ### Contributors
 
@@ -1899,20 +1924,25 @@ This RC is a large reliability and platform update: menu bar identity/ordering, 
 
 ---
 
-### Menu bar & layout
+### New
 
 #### Identity, ordering, and clicks
+
+- Optional AX click delivery (`useAXClickDelivery`, default off) with synthetic-click fallback.
+
+### Changed
+
+#### Identity, ordering, and clicks
+
 - Deterministic visual ordering with stable identifier tie-breaks (no more shuffle when `minX` ties).
 - Volatile metric titles (e.g. `CPU 12%` → `CPU 43%`) canonicalized so saved layouts and failure ledgers keep matching; prune stale title-variant saved entries that fueled reorder storms (#842, thanks @danielhopkins).
-- Stop provisional identities from scrambling saved layout (#863).
 - Failure ledger stamped with build version so marks clear on update; avoid exclusivity violation when persisting the ledger (thanks @VailElla).
 - Click reaction verification: success only if the owner shows a real UI reaction, not just event delivery.
-- AX identity catalog + ControlItemPair frame fallback (fixes silent hidden-section death when control items could not be identified, #754).
-- Optional AX click delivery (`useAXClickDelivery`, default off) with synthetic-click fallback.
 - Report control items the menu bar accepts but does not render (notch occlusion), with consecutive-sample confirmation (#570).
 - Unresponsive owner / window-mismatch error types for clearer click failure handling.
 
 #### Saved layout & persistence
+
 - Do not move items on untrustworthy observations (#849).
 - Block `saveSectionOrder` while layout divergence is still pending.
 - Do not persist collapsed hidden sections (#795).
@@ -1923,42 +1953,36 @@ This RC is a large reliability and platform update: menu bar identity/ordering, 
 - Revalidate hidden-section geometry before the move batch runs so apply does not proceed on a stale collapsed reading (#876).
 - Prefer exact saved identifiers; avoid ambiguous multi-instance divergence matches (#714 / #716, thanks @t4sh).
 - Defer apply/persist on unsettled or cross-display geometry; clear stuck profile flags (#702, #717, #743).
-- Restore unresolved-`sourcePID` gate in `applySavedLayout`.
 - Ignore unresolved Control Center placeholders (#810, thanks @VailElla).
 - Resolve parked items titled with their bundle ID (e.g. Little Snitch) (#709, #795 / #797, thanks @lathe-agent-oa).
-- Restore legacy profile layout snapshots (#778 / #779, thanks @ShiroKSH).
 - Delete profile manifest entries even when the file is already missing.
 - Negative-cache TTL for source PID lookups uses per-window backoff instead of a flat 60s (#856, thanks @lathe-agent-oa).
 
 #### Notch overflow
+
 - Only run overflow on the main display; fail closed if active menu bar display is unknown (#808 / #809, thanks @lathe-agent-oa).
 - Keep the visible control item in place during overflow (#742).
 - Keep overflow running outside profile applies.
-- Avoid redundant full-sort replays (#822, thanks @alvst).
 
 #### Moves, rehide, and multi-instance
+
 - Defer item moves while a menu bar item menu is tracking.
 - Require stable divergence; suppress bulk cursor warps (#705, #723, #736, #750).
-- Stop bulk-apply pointer hijack; release on user input.
 - Keep menu bar move events out of screen corners, which stops Hot Corner / Show Desktop false triggers (#625, #766 / #774, thanks @ZeterMordio).
 - Recover blocked items before alerting on hidden-section drags (#744).
 - Recover control items after lookup failure.
 - Bail instead of trapping on inverted control-item order.
 - Keep timed rehide armable after deferred rehide; anchor rehide to a neighbor in the item’s own section so temporarily shown items are not rehidden into Visible (#859 / #860, thanks @andredlng).
 - Prevent duplicate Thaw instances from competing (#821, thanks @alvst).
-- Avoid repeated source PID cache scans (#820, thanks @alvst).
 - Each layout-reset waiter gets its own cache continuation.
 - Configurable pre-move input-pause threshold (#756, thanks @subway-jack).
 - Fall back to Thaw Bar when hiding app menus under fullscreen (#740 / #741, thanks @auspic7).
 - Defer/stabilize moves that previously relocated system modules mid-interaction (e.g. AudioVideoModule / WeType, #746) and reduced cursor teleport / dance storms (#718, #723, #750).
 
----
-
-### Settings, profiles & onboarding
+#### Settings, profiles & onboarding
 
 - Settings UI redesign: native grouped forms, relocated options, refreshed Ice UI primitives, sidebar search.
 - Glass tour onboarding in first-launch and settings.
-- Unconfigured displays fall back to **global configuration** instead of hardcoded defaults (fixes spacing resets on Space/display changes).
 - Ice V1 appearance data converted at import time.
 - Cleared hotkey bindings removed instead of persisting JSON `null`.
 - Authorization retry allowed after denial (#780 / #781, thanks @VailElla).
@@ -1969,44 +1993,32 @@ This RC is a large reliability and platform update: menu bar identity/ordering, 
 - Unreachable Ice-era migrations removed.
 - Layout reset target picker with legacy section moves.
 
----
+#### Appearance, capture & IceBar
 
-### Appearance, capture & IceBar
-
-- Tint no longer covers menu bar items; tint renders above the menu bar under Reduce Transparency (#844, #700).
 - Capture bounds validated before WindowServer handoff (#759 / #813).
 - Individual captures use the captured scale (layout icon sizing, #703).
 - SCStream pinned to 32BGRA; shareable-content fetches coalesced.
 - Image cache: LRU/concurrency overhaul, lossless disk keys, rate-limited on-screen capture, stale display ID fallback (#749, thanks @hxu).
 - Memory: detach cropped glyphs, lower icon refresh, stop background captures (#680).
 - Tooltips stay above Thaw Bar / IceBar grid (#760 / #782, thanks @VailElla) with watchdog placement (#734).
-- Cursor restore after profile apply uses CoreGraphics space (fixes multi-monitor warp).
 - Virtual display resolver removed (brief resolution / screen-shrink side effects, #708).
 
----
-
-### Accessibility, hooks & events
+#### Accessibility, hooks & events
 
 - Bounded AX messaging timeouts in the item service and event path (#767).
 - Consolidated item failure ledgers; quieter expected `procNotFound`.
-- Hook timeouts bounded with process-group teardown; teardown restored after Subprocess 0.5 upgrade.
 - Mouse-moved handling throttled by time, not event count.
 - Shared/adaptive Mission Control detection (#777).
 - EventTap shared runtime state synchronized.
-- Clicking items in Thaw Bar no longer spikes CPU via runaway work (#757).
 
----
-
-### Performance
+#### Performance
 
 - Rate-limited on-screen image capture path.
 - Memoized per-row item search work.
 - Shared Mission Control detection.
 - Time-based mouse-moved throttle.
 
----
-
-### Platform & engineering
+#### Platform & engineering
 
 - Swift 6.2 packaging alignment.
 - MainActor default isolation on the app target.
@@ -2019,9 +2031,7 @@ This RC is a large reliability and platform update: menu bar identity/ordering, 
 - Broader unit coverage (settings, HID, replay, layout gates, URI, search, Swift Testing migration).
 - Sonar excludes Icon Composer bundles (thanks @VailElla).
 
----
-
-### Release, CI & docs
+#### Release, CI & docs
 
 - Sparkle payloads published to **`thaw-app/updates`** (#840); DMGs remain on GitHub Releases.
 - Appcast mirrored to legacy **stonerl Pages** (#843).
@@ -2030,7 +2040,40 @@ This RC is a large reliability and platform update: menu bar identity/ordering, 
 - README restyle/restructure; `RELEASES.md`, verifying releases, governance/security docs; contribution/install docs (thanks @t4sh); URI scheme docs (thanks @davidnichols-ops).
 - Crowdin / localization syncs (#694, #804–#807).
 
----
+### Fixed
+
+#### Identity, ordering, and clicks
+
+- Stop provisional identities from scrambling saved layout (#863).
+- AX identity catalog + ControlItemPair frame fallback (fixes silent hidden-section death when control items could not be identified, #754).
+
+#### Saved layout & persistence
+
+- Restore unresolved-`sourcePID` gate in `applySavedLayout`.
+- Restore legacy profile layout snapshots (#778 / #779, thanks @ShiroKSH).
+
+#### Notch overflow
+
+- Avoid redundant full-sort replays (#822, thanks @alvst).
+
+#### Moves, rehide, and multi-instance
+
+- Stop bulk-apply pointer hijack; release on user input.
+- Avoid repeated source PID cache scans (#820, thanks @alvst).
+
+#### Settings, profiles & onboarding
+
+- Unconfigured displays fall back to **global configuration** instead of hardcoded defaults (fixes spacing resets on Space/display changes).
+
+#### Appearance, capture & IceBar
+
+- Tint no longer covers menu bar items; tint renders above the menu bar under Reduce Transparency (#844, #700).
+- Cursor restore after profile apply uses CoreGraphics space (fixes multi-monitor warp).
+
+#### Accessibility, hooks & events
+
+- Hook timeouts bounded with process-group teardown; teardown restored after Subprocess 0.5 upgrade.
+- Clicking items in Thaw Bar no longer spikes CPU via runaway work (#757).
 
 ### Contributors
 
@@ -2082,20 +2125,25 @@ This RC is a large reliability and platform update: menu bar identity/ordering, 
 
 ---
 
-### Menu bar & layout
+### New
 
 #### Identity, ordering, and clicks
+
+- Optional AX click delivery (`useAXClickDelivery`, default off) with synthetic-click fallback.
+
+### Changed
+
+#### Identity, ordering, and clicks
+
 - Deterministic visual ordering with stable identifier tie-breaks (no more shuffle when `minX` ties).
 - Volatile metric titles (e.g. `CPU 12%` → `CPU 43%`) canonicalized so saved layouts and failure ledgers keep matching; prune stale title-variant saved entries that fueled reorder storms (#842, thanks @danielhopkins).
-- Stop provisional identities from scrambling saved layout (#863).
 - Failure ledger stamped with build version so marks clear on update; avoid exclusivity violation when persisting the ledger (thanks @VailElla).
 - Click reaction verification: success only if the owner shows a real UI reaction, not just event delivery.
-- AX identity catalog + ControlItemPair frame fallback (fixes silent hidden-section death when control items could not be identified, #754).
-- Optional AX click delivery (`useAXClickDelivery`, default off) with synthetic-click fallback.
 - Report control items the menu bar accepts but does not render (notch occlusion), with consecutive-sample confirmation (#570).
 - Unresponsive owner / window-mismatch error types for clearer click failure handling.
 
 #### Saved layout & persistence
+
 - Do not move items on untrustworthy observations (#849).
 - Block `saveSectionOrder` while layout divergence is still pending.
 - Do not persist collapsed hidden sections (#795).
@@ -2106,42 +2154,36 @@ This RC is a large reliability and platform update: menu bar identity/ordering, 
 - Revalidate hidden-section geometry before the move batch runs so apply does not proceed on a stale collapsed reading (#876).
 - Prefer exact saved identifiers; avoid ambiguous multi-instance divergence matches (#714 / #716, thanks @t4sh).
 - Defer apply/persist on unsettled or cross-display geometry; clear stuck profile flags (#702, #717, #743).
-- Restore unresolved-`sourcePID` gate in `applySavedLayout`.
 - Ignore unresolved Control Center placeholders (#810, thanks @VailElla).
 - Resolve parked items titled with their bundle ID (e.g. Little Snitch) (#709, #795 / #797, thanks @lathe-agent-oa).
-- Restore legacy profile layout snapshots (#778 / #779, thanks @ShiroKSH).
 - Delete profile manifest entries even when the file is already missing.
 - Negative-cache TTL for source PID lookups uses per-window backoff instead of a flat 60s (#856, thanks @lathe-agent-oa).
 
 #### Notch overflow
+
 - Only run overflow on the main display; fail closed if active menu bar display is unknown (#808 / #809, thanks @lathe-agent-oa).
 - Keep the visible control item in place during overflow (#742).
 - Keep overflow running outside profile applies.
-- Avoid redundant full-sort replays (#822, thanks @alvst).
 
 #### Moves, rehide, and multi-instance
+
 - Defer item moves while a menu bar item menu is tracking.
 - Require stable divergence; suppress bulk cursor warps (#705, #723, #736, #750).
-- Stop bulk-apply pointer hijack; release on user input.
 - Keep menu bar move events out of screen corners — stops Hot Corner / Show Desktop false triggers (#625, #766 / #774, thanks @ZeterMordio).
 - Recover blocked items before alerting on hidden-section drags (#744).
 - Recover control items after lookup failure.
 - Bail instead of trapping on inverted control-item order.
 - Keep timed rehide armable after deferred rehide; anchor rehide to a neighbor in the item’s own section so temporarily shown items are not rehidden into Visible (#859 / #860, thanks @andredlng).
 - Prevent duplicate Thaw instances from competing (#821, thanks @alvst).
-- Avoid repeated source PID cache scans (#820, thanks @alvst).
 - Each layout-reset waiter gets its own cache continuation.
 - Configurable pre-move input-pause threshold (#756, thanks @subway-jack).
 - Fall back to Thaw Bar when hiding app menus under fullscreen (#740 / #741, thanks @auspic7).
 - Defer/stabilize moves that previously relocated system modules mid-interaction (e.g. AudioVideoModule / WeType, #746) and reduced cursor teleport / dance storms (#718, #723, #750).
 
----
-
-### Settings, profiles & onboarding
+#### Settings, profiles & onboarding
 
 - **Settings UI redesign** (native grouped forms, relocated options, refreshed Ice UI primitives, sidebar search).
 - **Glass tour** onboarding in first-launch and settings.
-- Unconfigured displays fall back to **global configuration** instead of hardcoded defaults (fixes spacing resets on Space/display changes).
 - Ice V1 appearance data converted at import time.
 - Cleared hotkey bindings removed instead of persisting JSON `null`.
 - Authorization retry allowed after denial (#780 / #781, thanks @VailElla).
@@ -2152,44 +2194,32 @@ This RC is a large reliability and platform update: menu bar identity/ordering, 
 - Unreachable Ice-era migrations removed.
 - Layout reset target picker with legacy section moves.
 
----
+#### Appearance, capture & IceBar
 
-### Appearance, capture & IceBar
-
-- Tint no longer covers menu bar items; tint renders above the menu bar under Reduce Transparency (#844, #700).
 - Capture bounds validated before WindowServer handoff (#759 / #813).
 - Individual captures use the captured scale (layout icon sizing, #703).
 - SCStream pinned to 32BGRA; shareable-content fetches coalesced.
 - Image cache: LRU/concurrency overhaul, lossless disk keys, rate-limited on-screen capture, stale display ID fallback (#749, thanks @hxu).
 - Memory: detach cropped glyphs, lower icon refresh, stop background captures (#680).
 - Tooltips stay above Thaw Bar / IceBar grid (#760 / #782, thanks @VailElla) with watchdog placement (#734).
-- Cursor restore after profile apply uses CoreGraphics space (fixes multi-monitor warp).
 - Virtual display resolver removed (brief resolution / screen-shrink side effects, #708).
 
----
-
-### Accessibility, hooks & events
+#### Accessibility, hooks & events
 
 - Bounded AX messaging timeouts in the item service and event path (#767).
 - Consolidated item failure ledgers; quieter expected `procNotFound`.
-- Hook timeouts bounded with process-group teardown; teardown restored after Subprocess 0.5 upgrade.
 - Mouse-moved handling throttled by time, not event count.
 - Shared/adaptive Mission Control detection (#777).
 - EventTap shared runtime state synchronized.
-- Clicking items in Thaw Bar no longer spikes CPU via runaway work (#757).
 
----
-
-### Performance
+#### Performance
 
 - Rate-limited on-screen image capture path.
 - Memoized per-row item search work.
 - Shared Mission Control detection.
 - Time-based mouse-moved throttle.
 
----
-
-### Platform & engineering
+#### Platform & engineering
 
 - **Swift 6.2** packaging alignment.
 - MainActor default isolation on the app target.
@@ -2202,9 +2232,7 @@ This RC is a large reliability and platform update: menu bar identity/ordering, 
 - Broader unit coverage (settings, HID, replay, layout gates, URI, search, Swift Testing migration).
 - Sonar excludes Icon Composer bundles (thanks @VailElla).
 
----
-
-### Release, CI & docs
+#### Release, CI & docs
 
 - Sparkle payloads published to **`thaw-app/updates`** (#840); DMGs remain on GitHub Releases.
 - Appcast mirrored to legacy **stonerl Pages** (#843).
@@ -2213,7 +2241,40 @@ This RC is a large reliability and platform update: menu bar identity/ordering, 
 - README restyle/restructure; `RELEASES.md`, verifying releases, governance/security docs; contribution/install docs (thanks @t4sh); URI scheme docs (thanks @davidnichols-ops).
 - Crowdin / localization syncs (#694, #804–#807).
 
----
+### Fixed
+
+#### Identity, ordering, and clicks
+
+- Stop provisional identities from scrambling saved layout (#863).
+- AX identity catalog + ControlItemPair frame fallback (fixes silent hidden-section death when control items could not be identified, #754).
+
+#### Saved layout & persistence
+
+- Restore unresolved-`sourcePID` gate in `applySavedLayout`.
+- Restore legacy profile layout snapshots (#778 / #779, thanks @ShiroKSH).
+
+#### Notch overflow
+
+- Avoid redundant full-sort replays (#822, thanks @alvst).
+
+#### Moves, rehide, and multi-instance
+
+- Stop bulk-apply pointer hijack; release on user input.
+- Avoid repeated source PID cache scans (#820, thanks @alvst).
+
+#### Settings, profiles & onboarding
+
+- Unconfigured displays fall back to **global configuration** instead of hardcoded defaults (fixes spacing resets on Space/display changes).
+
+#### Appearance, capture & IceBar
+
+- Tint no longer covers menu bar items; tint renders above the menu bar under Reduce Transparency (#844, #700).
+- Cursor restore after profile apply uses CoreGraphics space (fixes multi-monitor warp).
+
+#### Accessibility, hooks & events
+
+- Hook timeouts bounded with process-group teardown; teardown restored after Subprocess 0.5 upgrade.
+- Clicking items in Thaw Bar no longer spikes CPU via runaway work (#757).
 
 ### Contributors
 
@@ -2268,10 +2329,10 @@ Experimental build for **macOS 27 (Golden Gate)** — not on the Sparkle update 
 
 ---
 
-### Highlights since Preview 4
+### Changed
 
 #### macOS 27 menu bar reliability
-- Stop Visible-section snap-back and Layout chevron glyph glitches
+
 - Dampen menu bar churn from recache / visible-control restore
 - Prune orphaned control-item position keys on startup
 - Capture Thaw’s own icon from the display strip
@@ -2282,27 +2343,43 @@ Experimental build for **macOS 27 (Golden Gate)** — not on the Sparkle update 
 - Group same-bundle items and exclude strip overlays
 
 #### Ice Bar / capture
-- Avoid native overflow arrow captures
+
 - Hide stale app-icon fallbacks
 - Coalesce shareable-content fetches
 - Icon fallback path; retire stale capture paths
 - Refine layout icon previews and adaptive icon presentation
 
 #### Memory / concurrency
+
 - Detach cropped glyph images before caching
 - Lower default icon refresh rate (10 fps → 4 fps)
 - Synchronize shared runtime state
 
 #### Settings / UI
+
 - Tools safety disclaimer
 - Reduce-motion-gated animations (Ice Bar, badge, tour)
 - Settings / Layout Bar cleanup and glass vocabulary unification
 - Profile delete confirmation alert hoisted to pane root
-- Automation URI warning icon fix
 - Localization: plural rules, punctuation, locale-safe timing labels
 
 #### Tooling
+
 - CI on Xcode 27 runners
+
+### Fixed
+
+#### macOS 27 menu bar reliability
+
+- Stop Visible-section snap-back and Layout chevron glyph glitches
+
+#### Ice Bar / capture
+
+- Avoid native overflow arrow captures
+
+#### Settings / UI
+
+- Automation URI warning icon fix
 
 ### Notes
 - Still experimental — expect edge cases on Public Betas; please report in [#737](https://github.com/stonerl/Thaw/discussions/737).
@@ -2394,13 +2471,10 @@ Experimental build for **macOS 27 (Golden Gate)** — not on the Sparkle update 
 
 ---
 
-### Thaw Preview 3 Release Notes
-
 Download [here](https://github.com/stonerl/Thaw/actions/runs/28287610903/artifacts/7924008392)
-
 [Backup](https://drive.proton.me/u/0/7w4Loq0NTcsxYG81gdbk9MXJvIXkXKLV8Yh_rFeln9DkBKWpGPpptQRgNecC2r4OIZKpIZ-4fdlvUDZ-znhX2w==/folder/MT_92-linBrSRLdydaoZhcjcQVdk01MY-XlQKmFEehCijZwPhKUgNkekw9rQ2E35P5TZeJAmVu-zVB7TQBRVZA==?r=/7w4Loq0NTcsxYG81gdbk9MXJvIXkXKLV8Yh_rFeln9DkBKWpGPpptQRgNecC2r4OIZKpIZ-4fdlvUDZ-znhX2w==/folder/a3sx9nb6seeps_q-U2nD-ARgDb8Z7OSkPw-KT5v_WilQLxvqbWvWV_Qe57vA-lX4Igq85I48_cy66TFoW-J-RQ==)
 
-#### Highlights
+### Highlights
 
 - Much more complete support for hiding, showing, and reordering menu bar items on macOS 27.
 - Hidden items, visible item order, and Thaw's own menu bar icon are restored more reliably after quitting and reopening Thaw.
@@ -2408,32 +2482,42 @@ Download [here](https://github.com/stonerl/Thaw/actions/runs/28287610903/artifac
 - Temporarily shown hidden items now respect the configured delay before being hidden again.
 - Hidden item icons and thumbnails are more reliable in Thaw Bar, Search, and the layout editor.
 
+### New
+
 #### macOS 27 Menu Bar Improvements
 
-- Improved hiding and restoring menu bar items on macOS 27, including items that quit, relaunch, or briefly disappear from the menu bar.
-- Fixed hidden item choices not being remembered after quitting and reopening Thaw.
-- Fixed visible item order not being restored correctly after relaunch.
-- Fixed Thaw's own menu bar icon not keeping its saved position after relaunch.
-- Fixed cases where the split pill appearance did not wrap Thaw's own menu bar icon.
-- Fixed cases where the split pill appearance stretched too far left across empty menu bar space.
-- Reduced flicker, misplaced bounds, and transient full-width overlay shapes while the menu bar is settling.
-- Improved behavior around dynamic menu bar items, including iStat Menus.
-- Improved behavior for Control Center, Clock, Sound, Wi-Fi, Bluetooth, Battery, Display, Keyboard, and similar Apple menu bar items.
 - Added preview support for hiding and reordering supported Apple system menu bar items on macOS 27.
 - Added safeguards so Thaw avoids repeatedly trying moves that macOS refuses.
 
 #### Hidden Items and Re-Hiding
 
 - Added a setting for how long temporarily shown hidden items stay visible before being hidden again.
+
+#### Settings and Profiles
+
+- Added macOS 27 preview options for experimental Apple system item hiding.
+
+#### Display and Layout Reliability
+
+- Added more protections around apps and system items that macOS does not allow Thaw to hide safely.
+
+### Changed
+
+#### macOS 27 Menu Bar Improvements
+
+- Improved hiding and restoring menu bar items on macOS 27, including items that quit, relaunch, or briefly disappear from the menu bar.
+- Reduced flicker, misplaced bounds, and transient full-width overlay shapes while the menu bar is settling.
+- Improved behavior around dynamic menu bar items, including iStat Menus.
+- Improved behavior for Control Center, Clock, Sound, Wi-Fi, Bluetooth, Battery, Display, Keyboard, and similar Apple menu bar items.
+
+#### Hidden Items and Re-Hiding
+
 - Re-hide timing now follows the configured delay more consistently.
 - Re-hide timers now pause while menus are open, reducing cases where an item hides while you are interacting with it.
-- Single-item temporary reveal is more reliable and no longer flashes entire hidden sections unnecessarily.
 - Always Hidden hotkeys are ignored when Always Hidden is unavailable or disabled, avoiding confusing no-op behavior.
 
 #### Thaw Bar, Search, and Icons
 
-- Fixed hidden item thumbnails being blank after opening Thaw Bar.
-- Fixed stale blank thumbnails being kept in the icon cache.
 - Improved prewarming for concealed sections so hidden item icons appear sooner.
 - Improved icon refresh after reordering items.
 - Reduced incorrect icon crops for concealed items.
@@ -2444,7 +2528,6 @@ Download [here](https://github.com/stonerl/Thaw/actions/runs/28287610903/artifac
 - Profiles now save and restore the temporarily shown item delay.
 - Resetting settings now restores the new delay setting to its default.
 - Imported Ice settings now include the new temporary-show timing option.
-- Added macOS 27 preview options for experimental Apple system item hiding.
 - Updated the macOS 27 preview help text in the About pane.
 
 #### Display and Layout Reliability
@@ -2453,9 +2536,27 @@ Download [here](https://github.com/stonerl/Thaw/actions/runs/28287610903/artifac
 - Improved behavior on notched displays and multi-display setups.
 - Improved layout handling while native macOS menu bar auto-hiding changes visibility.
 - Improved cursor-free reordering on macOS 27 to reduce visible cursor jumps.
-- Added more protections around apps and system items that macOS does not allow Thaw to hide safely.
 
-#### Known Limitations
+### Fixed
+
+#### macOS 27 Menu Bar Improvements
+
+- Fixed hidden item choices not being remembered after quitting and reopening Thaw.
+- Fixed visible item order not being restored correctly after relaunch.
+- Fixed Thaw's own menu bar icon not keeping its saved position after relaunch.
+- Fixed cases where the split pill appearance did not wrap Thaw's own menu bar icon.
+- Fixed cases where the split pill appearance stretched too far left across empty menu bar space.
+
+#### Hidden Items and Re-Hiding
+
+- Single-item temporary reveal is more reliable and no longer flashes entire hidden sections unnecessarily.
+
+#### Thaw Bar, Search, and Icons
+
+- Fixed hidden item thumbnails being blank after opening Thaw Bar.
+- Fixed stale blank thumbnails being kept in the icon cache.
+
+### Known issues
 
 - macOS 27 support is still preview. Apple system items and Control Center items do not behave like normal third-party menu bar items.
 - Some Apple system items may still resist hiding or reordering depending on macOS state and System Settings.
@@ -2784,17 +2885,21 @@ This beta brings **Swift 6 strict concurrency** adoption, eliminates several dea
 
 ## [2.0.0-beta.2] - 2026-04-25
 
-### What's Changed
-* fix(menu-bar): cache raw AX frame and remove ignoreNotch variant by @stonerl in https://github.com/stonerl/Thaw/pull/446
-* fix: use .contains() for modifier flag checks in ControlItem by @stonerl in https://github.com/stonerl/Thaw/pull/450
-* fix: hide dependent settings when always-hidden section is disabled by @stonerl in https://github.com/stonerl/Thaw/pull/451
-* fix(icebar): make item reveal reliable under CPU load by @stonerl in https://github.com/stonerl/Thaw/pull/452
-* refactor: replace timer/sleep races with event-driven panel-close and… by @stonerl in https://github.com/stonerl/Thaw/pull/453
-* fix: remove Material-era opacity reductions for Glass design by @stonerl in https://github.com/stonerl/Thaw/pull/457
-* [LOCALIZATION] Update of CS translation by wizaard based on 2.0.0 BETA1 by @wizaard88 in https://github.com/stonerl/Thaw/pull/454
-* New Crowdin updates by @stonerl in https://github.com/stonerl/Thaw/pull/459
-* fix(rehide): prevent permanent semaphore saturation from stuck items by @stonerl in https://github.com/stonerl/Thaw/pull/461
-* New Crowdin updates by @stonerl in https://github.com/stonerl/Thaw/pull/460
+### Changed
+
+- refactor: replace timer/sleep races with event-driven panel-close and… by @stonerl in https://github.com/stonerl/Thaw/pull/453
+- [LOCALIZATION] Update of CS translation by wizaard based on 2.0.0 BETA1 by @wizaard88 in https://github.com/stonerl/Thaw/pull/454
+- New Crowdin updates by @stonerl in https://github.com/stonerl/Thaw/pull/459
+- New Crowdin updates by @stonerl in https://github.com/stonerl/Thaw/pull/460
+
+### Fixed
+
+- fix(menu-bar): cache raw AX frame and remove ignoreNotch variant by @stonerl in https://github.com/stonerl/Thaw/pull/446
+- fix: use .contains() for modifier flag checks in ControlItem by @stonerl in https://github.com/stonerl/Thaw/pull/450
+- fix: hide dependent settings when always-hidden section is disabled by @stonerl in https://github.com/stonerl/Thaw/pull/451
+- fix(icebar): make item reveal reliable under CPU load by @stonerl in https://github.com/stonerl/Thaw/pull/452
+- fix: remove Material-era opacity reductions for Glass design by @stonerl in https://github.com/stonerl/Thaw/pull/457
+- fix(rehide): prevent permanent semaphore saturation from stuck items by @stonerl in https://github.com/stonerl/Thaw/pull/461
 
 **Full Changelog**: https://github.com/stonerl/Thaw/compare/2.0.0-beta.1...2.0.0-beta.2
 
@@ -2962,11 +3067,14 @@ Thaw now supports **17 languages** with 100% completion! A huge thank you to our
 
 ## [1.2.0-rc.4] - 2026-03-23
 
-* **Internationalization Updates:**
-    * Finalized Czech (CS) language updates for the 1.2.0 release cycle.
-    * [cite_start]Updated Turkish (TR) translations[cite: 2].
-* **Fixes:**
-    * Reverted "Robust Icon Position Handling" to address regression issues and maintain system stability while the feature is further refined.
+### Changed
+
+- Finalized Czech (CS) language updates for the 1.2.0 release cycle.
+- Updated Turkish (TR) translations.
+
+### Fixed
+
+- Reverted "Robust Icon Position Handling" to address regression issues and maintain system stability while the feature is further refined.
 
 **Full Changelog**: https://github.com/stonerl/Thaw/compare/1.2.0-rc.3...1.2.0-rc.4
 
@@ -3096,22 +3204,40 @@ Hello everyone,
 
 This beta focuses on modernizing the **Thaw Bar** visual experience to align with the latest macOS design language and significantly improving memory management during display changes.
 
-### Thaw Bar & Visuals
-* **Hover Highlights**: Added a subtle rounded-rectangle background highlight when hovering over items in the Thaw Bar (IceBar).
-* **Adaptive Styling**: Highlight colors now derive from actual menu bar brightness for perfect integration across all system appearances.
-* **Modern Geometry**: Increased the hover backdrop corner radius from 4pt to 16pt to better match macOS 26's design language.
-* **Refined Sizing**: Added vertical padding to the hover backdrop so it no longer extends the full height of the menu bar, matching the Ice icon's native appearance.
-* **Improved Interaction**: Increased backdrop opacity and implemented `NSTrackingArea` in `IceBarItemClickView` for more reliable mouse enter/exit detection.
+### New
 
-### Memory & Performance
-* **Wallpaper Optimization**: The app now skips periodic wallpaper captures when `showsMenuBarBackground` is enabled to reduce memory overhead.
-* **Aggressive Cleanup**: Added logic to clear stored wallpapers, `windowImage`, and `averageColorInfo` when panels are hidden or displays are changed.
-* **Display Stability**: Fixed memory growth issues by cleaning up caches for disconnected displays, specifically `menuBarHeightCache` and `applicationMenuFrameCache`.
-* **Leak Fixes**: Resolved a notification observer leak in the Search Panel and improved the `close()` routine to release all retained states.
+#### Thaw Bar & Visuals
 
-### Permissions & Localization
-* **Privacy Controls**: Screen recording permissions are now checked before enabling tooltips or search features; relevant controls are hidden if permissions aren't granted.
-* **I18n**: Updated the **German** translation.
+- **Hover Highlights**: Added a subtle rounded-rectangle background highlight when hovering over items in the Thaw Bar (IceBar).
+
+### Changed
+
+#### Thaw Bar & Visuals
+
+- **Adaptive Styling**: Highlight colors now derive from actual menu bar brightness for perfect integration across all system appearances.
+- **Modern Geometry**: Increased the hover backdrop corner radius from 4pt to 16pt to better match macOS 26's design language.
+- **Improved Interaction**: Increased backdrop opacity and implemented `NSTrackingArea` in `IceBarItemClickView` for more reliable mouse enter/exit detection.
+
+#### Memory & Performance
+
+- **Wallpaper Optimization**: The app now skips periodic wallpaper captures when `showsMenuBarBackground` is enabled to reduce memory overhead.
+- **Aggressive Cleanup**: Added logic to clear stored wallpapers, `windowImage`, and `averageColorInfo` when panels are hidden or displays are changed.
+
+#### Permissions & Localization
+
+- **Privacy Controls**: Screen recording permissions are now checked before enabling tooltips or search features; relevant controls are hidden if permissions aren't granted.
+- **I18n**: Updated the **German** translation.
+
+### Fixed
+
+#### Thaw Bar & Visuals
+
+- **Refined Sizing**: Added vertical padding to the hover backdrop so it no longer extends the full height of the menu bar, matching the Ice icon's native appearance.
+
+#### Memory & Performance
+
+- **Display Stability**: Fixed memory growth issues by cleaning up caches for disconnected displays, specifically `menuBarHeightCache` and `applicationMenuFrameCache`.
+- **Leak Fixes**: Resolved a notification observer leak in the Search Panel and improved the `close()` routine to release all retained states.
 
 ### New Contributors
 * @weihaog1 made their first contribution in https://github.com/stonerl/Thaw/pull/263
@@ -3693,13 +3819,18 @@ It feels like groundhog day 😁, a new release. This is the fourth and most lik
 
 This release primarily addresses bug-fixes for macOS 14/15 and should finally resolve #1.
 
-### Overview
+### New
 
-### Changes
+- Double-clicking the Thaw icon now reveals the always hidden section.
+
+### Changed
+
+- The settings importer now only shows up when old Ice settings are detected.
+
+### Fixed
+
 - On macOS 14/15 temporary icons should now show up again when the Thaw icon is enabled.
 - Rehiding temporary icons on macOS 14/15 do not trigger the "Apple Menu" anymore.
-- The settings importer now only shows up when old Ice settings are detected.
-- Double-clicking the Thaw icon now reveals the always hidden section.
 
 **Full Changelog**: https://github.com/stonerl/Thaw/compare/1.0.0-beta.3...1.0.0-beta.4
 
@@ -3713,16 +3844,19 @@ Hello everyone,
 
 A new day, a new beta :grin:. This is the third beta release of Thaw. The main focus for this was UI polish and minor bug fixes.
 
-### Overview
-#### Changes
+### Changed
+
 - The Menubar Appearance Editor is now again a pop-over window and automatically focused.
-- The importer now correctly imports the Hotkey bindings from Ice.
 - Thaw now restarts itself when a new display is connected to refresh its state.
 - All remaining Ice UI strings have been removed.
-- New icons now always show up in the visible section (see #4)
 - The "Check for updates automatically" window is now a modal inside the settings app.
-- Possibly fixes #1, but that needs to be tested since I cannot reproduce the issue.
 - The default Icon for Thaw in the menu bar is now the Ice Cube.
+
+### Fixed
+
+- The importer now correctly imports the Hotkey bindings from Ice.
+- New icons now always show up in the visible section (see #4)
+- Possibly fixes #1, but that needs to be tested since I cannot reproduce the issue.
 
 **Full Changelog**: https://github.com/stonerl/Thaw/compare/1.0.0-beta.2...1.0.0-beta.3
 
@@ -3746,11 +3880,14 @@ Hi everyone,
 
 This is the second beta release of Thaw. It mainly includes some cleanups since I forked but also some bug fixes and enhancements.
 
-### Overview
-#### Changes
+### New
+
 - New Icon based on the original.
 - Added `Command + ,` to quickly open settings directly from the search window.
 - Added an Importer for Ice settings.
+
+### Fixed
+
 - Fixed some issues with the timed and smart rehide strategy.
 - Fixed an issue where auto-hiding the menubar on external monitors would not show the hidden section or floating bar.
 - Fixed an issue where the cursor would suddenly disappear.
@@ -3777,18 +3914,20 @@ This is the initial release to get things going. There will be more beta release
 
 I currently don't have an ETA for a stable release. Furthermore, I won't work on new features as of now, since my primary focus is on fixing bugs. If you find any, please do not hesitate to report them.
 
-### Overview
+### Fixed
+
 #### This release mainly addresses the following issues:
+
 - Fix menu bar items not displaying when "Displays have separate spaces" is disabled on macOS 26 (Tahoe).
 - Fix crashes on macOS 26 (Tahoe).
 - Reduce high memory usage and memory leaks, especially in multi-monitor setups.
 - Reduce UI flicker on about page when interacting with control elements.
 
-#### Known Issues:
-- Smart and timed menu bar re-hiding does not function properly, especially in multi-monitor setups.
-- Still uses the old Ice icon.
+### Known issues
 
 **Full Changelog**: https://github.com/stonerl/Thaw/compare/ed5c972...690f6c3
+- Smart and timed menu bar re-hiding does not function properly, especially in multi-monitor setups.
+- Still uses the old Ice icon.
 
 ### Updates
 If you want to get future development updates, set the Update channel to `Development` in the about section.
