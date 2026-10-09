@@ -5,11 +5,8 @@ name: Clean Up Pull Request Caches
 # they age out, and a few of them are enough to evict the caches that
 # development relies on.
 on:
-  # pull_request_target, because a fork's pull_request token cannot delete
-  # caches. This workflow checks out and runs nothing from the pull request.
-  pull_request_target:
-    types: [closed]
-  # Sweeps the caches of every pull request that is already closed.
+  schedule:
+    - cron: "0 3 */2 * *" # Once every 2 days
   workflow_dispatch:
 
 permissions:
@@ -29,10 +26,9 @@ jobs:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
             const { owner, repo } = context.repo;
-            const closed = context.payload.pull_request?.number;
             const caches = await github.paginate(
               github.rest.actions.getActionsCacheList,
-              { owner, repo, per_page: 100, ...(closed ? { ref: `refs/pull/${closed}/merge` } : {}) },
+              { owner, repo, per_page: 100 },
             );
 
             const stillOpen = new Map();
@@ -41,13 +37,11 @@ jobs:
             for (const cache of caches) {
               const number = Number(/^refs\/pull\/(\d+)\/merge$/.exec(cache.ref)?.[1]);
               if (!number) continue;
-              if (number !== closed) {
-                if (!stillOpen.has(number)) {
-                  const { data } = await github.rest.pulls.get({ owner, repo, pull_number: number });
-                  stillOpen.set(number, data.state === "open");
-                }
-                if (stillOpen.get(number)) continue;
+              if (!stillOpen.has(number)) {
+                const { data } = await github.rest.pulls.get({ owner, repo, pull_number: number });
+                stillOpen.set(number, data.state === "open");
               }
+              if (stillOpen.get(number)) continue;
               try {
                 await github.rest.actions.deleteActionsCacheById({ owner, repo, cache_id: cache.id });
                 deleted++;
