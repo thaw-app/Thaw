@@ -28,9 +28,7 @@ extension MenuBarItemManager {
     /// items it gave up on before the reset.
     func forgetStrandedRepairs() {
         failureLedger.removeAll()
-        suppressedBoundaryRepairItemIDs.removeAll()
-        suppressedBoundaryRepairAt.removeAll()
-        boundaryRepairStrandTrips.removeAll()
+        boundaryRepairBreaker.rearmAll()
     }
 
     private func parkedSetAndBarMidY(in items: [MenuBarItem]) -> (barMidY: CGFloat?, parkedIDs: Set<CGWindowID>) {
@@ -190,9 +188,7 @@ extension MenuBarItemManager {
         let displayID = Bridging.getActiveMenuBarDisplayID() ?? CGMainDisplayID()
         let liveItemIDs = Set(liveItems.map(postRestrictionRepairItemID(for:)))
         postRestrictionUnrepairableItemIDs.formIntersection(liveItemIDs)
-        suppressedBoundaryRepairItemIDs.formIntersection(liveItemIDs)
-        suppressedBoundaryRepairAt = suppressedBoundaryRepairAt.filter { liveItemIDs.contains($0.key) }
-        boundaryRepairStrandTrips = boundaryRepairStrandTrips.filter { liveItemIDs.contains($0.key) }
+        boundaryRepairBreaker.prune(keeping: liveItemIDs)
 
         // A strand given up on in an earlier launch starts this one suppressed,
         // instead of repeating the failed passes that rewrite its neighbours'
@@ -204,8 +200,7 @@ extension MenuBarItemManager {
         for item in carriedStrands {
             let id = postRestrictionRepairItemID(for: item)
             seededStrandedRepairItemIDs.insert(id)
-            suppressedBoundaryRepairItemIDs.insert(id)
-            suppressedBoundaryRepairAt[id] = Date()
+            boundaryRepairBreaker.suppress(id)
         }
         if !carriedStrands.isEmpty {
             MenuBarItemManager.diagLog.info(
@@ -224,32 +219,25 @@ extension MenuBarItemManager {
                 )
                 selfInflictedDisplayChangeUntil = nil
             } else {
-                if !suppressedBoundaryRepairItemIDs.isEmpty {
+                if boundaryRepairBreaker.suppressedCount > 0 {
                     MenuBarItemManager.diagLog.info(
                         "post-restriction repair: display changed; re-arming " +
-                            "\(suppressedBoundaryRepairItemIDs.count) suppressed boundary strand(s)"
+                            "\(boundaryRepairBreaker.suppressedCount) suppressed boundary strand(s)"
                     )
                 }
-                suppressedBoundaryRepairItemIDs.removeAll()
-                boundaryRepairStrandTrips.removeAll()
-                suppressedBoundaryRepairAt.removeAll()
+                boundaryRepairBreaker.rearmAll()
             }
         }
         lastBoundaryRepairDisplayID = displayID
 
         // An expired suppression re-arms: the strand may have been fighting a
         // transient writer that has since settled.
-        let rearmable = suppressedBoundaryRepairAt.filter {
-            Date().timeIntervalSince($0.value) >= MenuBarItemManager.boundaryRepairSuppressionCooldown
-        }.keys
-        if !rearmable.isEmpty {
-            for id in rearmable {
-                suppressedBoundaryRepairItemIDs.remove(id)
-                suppressedBoundaryRepairAt[id] = nil
-                boundaryRepairStrandTrips[id] = nil
-            }
+        let rearmed = boundaryRepairBreaker.rearmExpired(
+            now: Date(), cooldown: MenuBarItemManager.boundaryRepairSuppressionCooldown
+        )
+        if rearmed > 0 {
             MenuBarItemManager.diagLog.info(
-                "post-restriction repair: suppression cooldown elapsed; re-arming \(rearmable.count) boundary strand(s)"
+                "post-restriction repair: suppression cooldown elapsed; re-arming \(rearmed) boundary strand(s)"
             )
         }
 
@@ -259,7 +247,7 @@ extension MenuBarItemManager {
             !$0.isControlItem &&
                 !$0.tag.isHidingUnsupported &&
                 !postRestrictionUnrepairableItemIDs.contains(postRestrictionRepairItemID(for: $0)) &&
-                !suppressedBoundaryRepairItemIDs.contains(postRestrictionRepairItemID(for: $0)) &&
+                !boundaryRepairBreaker.isSuppressed(postRestrictionRepairItemID(for: $0)) &&
                 !failureLedger.cannotCompleteMarked($0) &&
                 controller.section(for: $0) == .visible
         }
@@ -441,7 +429,7 @@ extension MenuBarItemManager {
         let onBandVisibleItems = afterItems.filter {
             !$0.isControlItem &&
                 !$0.tag.isHidingUnsupported &&
-                !suppressedBoundaryRepairItemIDs.contains(postRestrictionRepairItemID(for: $0)) &&
+                !boundaryRepairBreaker.isSuppressed(postRestrictionRepairItemID(for: $0)) &&
                 controller.section(for: $0) == .visible &&
                 !afterParkedIDs.contains($0.windowID)
         }
@@ -467,7 +455,7 @@ extension MenuBarItemManager {
             !$0.isControlItem &&
                 !$0.tag.isHidingUnsupported &&
                 !postRestrictionUnrepairableItemIDs.contains(postRestrictionRepairItemID(for: $0)) &&
-                !suppressedBoundaryRepairItemIDs.contains(postRestrictionRepairItemID(for: $0)) &&
+                !boundaryRepairBreaker.isSuppressed(postRestrictionRepairItemID(for: $0)) &&
                 !failureLedger.cannotCompleteMarked($0) &&
                 !failedUnparkIDs.contains($0.windowID) &&
                 controller.section(for: $0) == .visible &&

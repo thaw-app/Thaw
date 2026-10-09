@@ -254,29 +254,24 @@ final class MenuBarItemManager {
     /// once rather than on every pass. Cleared once the owner answers again.
     @ObservationIgnored var unresponsiveMoveOwners = Set<pid_t>()
 
-    private var notificationCenterLayoutToken: UUID?
-    private var notificationCenterLayoutSettleTask: Task<Void, Never>?
+    private var notificationCenterLayoutHold = NotificationCenterLayoutHold()
 
     var isNotificationCenterLayoutSuspended: Bool {
-        notificationCenterLayoutToken != nil
+        notificationCenterLayoutHold.isHeld
     }
 
     func beginNotificationCenterLayoutSuspension() {
-        notificationCenterLayoutSettleTask?.cancel()
-        notificationCenterLayoutSettleTask = nil
-        if notificationCenterLayoutToken == nil {
+        if notificationCenterLayoutHold.begin() {
             layoutPublication.beginMutation()
         } else {
             layoutPublication.invalidate()
         }
-        notificationCenterLayoutToken = UUID()
         postRestrictionRepairTask?.cancel()
         postRestrictionRepairTask = nil
         postRestrictionRepairNeedsRerun = false
         structuralNormalizationTask?.cancel()
         structuralNormalizationTask = nil
-        deferredLayoutReconcileTask?.cancel()
-        deferredLayoutReconcileTask = nil
+        deferredLayoutReconcile.cancelPending()
         repairs.withdraw(.postRestrictionRepair)
         repairs.withdraw(.structuralNormalization)
         repairs.withdraw(.deferredLayoutReconcile)
@@ -288,20 +283,16 @@ final class MenuBarItemManager {
             try await Task.sleep(for: .milliseconds(1200))
         }
     ) -> Task<Void, Never> {
-        let token = notificationCenterLayoutToken
-        notificationCenterLayoutSettleTask?.cancel()
-        let task = Task { @MainActor [weak self] in
-            do { try await settle() } catch { return }
-            guard let self, let token, !Task.isCancelled,
-                  notificationCenterLayoutToken == token
-            else { return }
-            notificationCenterLayoutToken = nil
-            notificationCenterLayoutSettleTask = nil
-            layoutPublication.endMutation()
-            noteRestrictionChange()
+        notificationCenterLayoutHold.settle { token in
+            Task { @MainActor [weak self] in
+                do { try await settle() } catch { return }
+                guard let self, !Task.isCancelled,
+                      notificationCenterLayoutHold.release(ifCurrent: token)
+                else { return }
+                layoutPublication.endMutation()
+                noteRestrictionChange()
+            }
         }
-        notificationCenterLayoutSettleTask = task
-        return task
     }
 
     /// Timestamp of the most recent runtime-kit restriction reflow.
@@ -318,27 +309,10 @@ final class MenuBarItemManager {
     /// because the layout-bar move cooldown blocks applySavedLayout.
     var postRestrictionRepairTask: Task<Void, Never>?
 
-    /// Re-runs the saved-layout reconciler once a transient guard expires.
-    ///
-    /// applySavedLayout declines for reasons that clear on their own: a move
-    /// cooldown, the restriction-reflow settle window, an in-flight ⌘-drag.
-    /// While the user is editing, every drop re-arms the 5 s cooldown and the
-    /// 10 s settle, so waiting for a cache cycle to land in a clear window
-    /// would never run the reconciler. Scheduling against the blocking
-    /// window's own expiry turns a decline into a deferral.
-    private var deferredLayoutReconcileTask: Task<Void, Never>?
-
-    /// When the pending deferred reconcile is due, so a second decline can keep
-    /// the earlier retry instead of pushing it further out.
-    private var deferredLayoutReconcileDue: ContinuousClock.Instant?
-
-    /// Consecutive deferrals without the reconciler managing to run. Bounded
-    /// because a reconcile whose own moves re-arm the move cooldown would
-    /// otherwise reschedule itself forever.
-    private var deferredLayoutReconcileCount = 0
-
-    /// Consecutive deferrals allowed before giving up until the next edit.
-    private static let deferredLayoutReconcileLimit = 5
+    /// The pending retry of the saved-layout reconciler after a transient
+    /// guard (the 5 s move cooldown, the 10 s restriction settle, an in-flight
+    /// ⌘-drag) made applySavedLayout decline, and its bounded retry budget.
+    private var deferredLayoutReconcile = DeferredLayoutReconcileSchedule()
 
     /// Set while a post-restriction repair pass is executing.
     var isRunningPostRestrictionRepair = false
@@ -529,12 +503,6 @@ final class MenuBarItemManager {
     var knownItemIdentifiers = Set<String>()
     /// Suppresses the next automatic relocation of newly seen leftmost items.
     var suppressNextNewLeftmostItemRelocation = false
-
-    /// Signature of the last macOS 27 divider move that failed. While the layout
-    /// is unchanged, enforceControlItemOrder skips re-attempting the identical
-    /// (unachievable) move so it doesn't loop every cache cycle, the source of
-    /// the idle "cursor pulled to the menu bar / icons shuffling" thrash.
-    var lastFailedDividerSignature: String?
 
     /// A candidate item signature seen to differ from the cache but not yet
     /// confirmed. cacheItemsIfNeeded requires a differing signature to persist,
@@ -808,8 +776,10 @@ final class MenuBarItemManager {
     /// relaunches with a new PID.
     var postRestrictionUnrepairableItemIDs = Set<PostRestrictionRepairItemID>()
 
-    /// How many passes in a row an item was attempted as a visible-boundary
-    /// strand and still failed its boundary check afterwards.
+    /// The visible-boundary repair's memory of each item: how many passes in a row
+    /// it failed, and whether the repair has given up on it for now. A suppression
+    /// clears when the item's owner quits, the display topology changes, its
+    /// cooldown passes, or on relaunch.
     ///
     /// A single failure is ordinary: a weight write needs a beat before
     /// MenuBarAgent re-seats the item, and a display reflow can strand an item
@@ -817,19 +787,7 @@ final class MenuBarItemManager {
     /// the ladder cannot place at all, and retrying it forever is what keeps
     /// the repair pass, and the item cache and capture pipeline behind it,
     /// awake on an otherwise idle machine.
-    var boundaryRepairStrandTrips: [PostRestrictionRepairItemID: Int] = [:]
-
-    /// Items whose visible-boundary repair has been given up on for this
-    /// session. Cleared when the item's owner quits (the prune below), when the
-    /// display topology changes, when the cooldown below expires, or on
-    /// relaunch.
-    var suppressedBoundaryRepairItemIDs = Set<PostRestrictionRepairItemID>()
-
-    /// When each suppression was issued, so a strand caught in a transient
-    /// fight (a respace writing against the repair during a restart's login
-    /// window) gets a fresh ladder after the cooldown instead
-    /// of staying buried until the user drags it by hand.
-    var suppressedBoundaryRepairAt: [PostRestrictionRepairItemID: Date] = [:]
+    var boundaryRepairBreaker = BoundaryRepairBreaker<PostRestrictionRepairItemID>()
 
     /// Items whose persisted stranded verdict has already seeded this
     /// session's suppression. Seeded once, so the cooldown and display-change
@@ -2021,45 +1979,29 @@ final class MenuBarItemManager {
     /// window started before now, so waiting it out from here is never early,
     /// only slightly late, and that is the safe direction.
     func scheduleDeferredLayoutReconcile(after delay: Duration, reason: String) {
-        guard deferredLayoutReconcileCount < Self.deferredLayoutReconcileLimit else {
-            return
-        }
-        let due = ContinuousClock.now + delay
-        if let pending = deferredLayoutReconcileDue,
-           deferredLayoutReconcileTask != nil,
-           pending <= due
-        {
-            return
-        }
-        deferredLayoutReconcileTask?.cancel()
-        deferredLayoutReconcileDue = due
-        deferredLayoutReconcileCount += 1
+        guard let due = deferredLayoutReconcile.claim(after: delay) else { return }
         repairs.request(.deferredLayoutReconcile, cause: .layoutApplyBlocked)
         MenuBarItemManager.diagLog.debug(
             "applySavedLayout: deferring reconcile \(delay) (\(reason))"
         )
-        deferredLayoutReconcileTask = Task { @MainActor [weak self] in
+        deferredLayoutReconcile.arm(Task { @MainActor [weak self] in
             do {
                 try await Task.sleep(until: due, clock: .continuous)
             } catch {
                 return
             }
             guard let self else { return }
-            deferredLayoutReconcileTask = nil
-            deferredLayoutReconcileDue = nil
+            deferredLayoutReconcile.fired()
             repairs.begin(.deferredLayoutReconcile)
             defer { repairs.end(.deferredLayoutReconcile) }
             await cacheItemsRegardless(skipRecentMoveCheck: true)
-        }
+        })
     }
 
     /// Clears the deferral bookkeeping once the reconciler gets to run, so the
     /// next blocked pass starts from a full retry budget.
     func noteLayoutReconcileRan() {
-        deferredLayoutReconcileCount = 0
-        deferredLayoutReconcileTask?.cancel()
-        deferredLayoutReconcileTask = nil
-        deferredLayoutReconcileDue = nil
+        deferredLayoutReconcile.reset()
         repairs.withdraw(.deferredLayoutReconcile)
     }
 

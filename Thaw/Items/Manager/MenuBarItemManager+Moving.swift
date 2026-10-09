@@ -1061,9 +1061,7 @@ extension MenuBarItemManager {
                 sectionFor: { controller.section(for: $0) },
                 experimentalSystemItemHiding: experimentalSystemItemHiding,
                 isRepairSuppressed: {
-                    self.suppressedBoundaryRepairItemIDs.contains(
-                        self.postRestrictionRepairItemID(for: $0)
-                    )
+                    self.boundaryRepairBreaker.isSuppressed(self.postRestrictionRepairItemID(for: $0))
                 }
             )
         }
@@ -1160,43 +1158,12 @@ extension MenuBarItemManager {
         }
     }
 
-    /// Whether a suppressed boundary repair still holds. With no timestamp it
-    /// holds until cleared, matching the strand pass, which only reads the set.
-    static nonisolated func boundaryRepairIsSuppressed(
-        suppressedAt: Date?,
-        now: Date,
-        cooldown: TimeInterval
-    ) -> Bool {
-        guard let suppressedAt else { return true }
-        return now.timeIntervalSince(suppressedAt) < cooldown
-    }
-
-    /// Counts consecutive failures. A repair or reaching tripLimit (which also
-    /// suppresses) resets it; nil trips removes the entry.
-    static nonisolated func boundaryRepairBreakerStep(
-        priorTrips: Int,
-        repaired: Bool,
-        tripLimit: Int
-    ) -> (trips: Int?, suppress: Bool) {
-        guard !repaired else { return (nil, false) }
-        let trips = priorTrips + 1
-        guard trips >= tripLimit else { return (trips, false) }
-        return (nil, true)
-    }
-
     /// Scores one reveal-time section boundary repair against the breaker the
     /// visible-strand pass uses.
     private func recordSectionBoundaryRepairOutcome(for item: MenuBarItem, repaired: Bool) {
         let id = postRestrictionRepairItemID(for: item)
-        let step = Self.boundaryRepairBreakerStep(
-            priorTrips: boundaryRepairStrandTrips[id] ?? 0,
-            repaired: repaired,
-            tripLimit: Self.boundaryRepairTripLimit
-        )
-        boundaryRepairStrandTrips[id] = step.trips
-        guard step.suppress else { return }
-        suppressedBoundaryRepairItemIDs.insert(id)
-        suppressedBoundaryRepairAt[id] = Date()
+        let outcome = boundaryRepairBreaker.record(repaired: repaired, for: id, tripLimit: Self.boundaryRepairTripLimit)
+        guard outcome.suppressed else { return }
         MenuBarItemManager.diagLog.warning(
             "macOS 27 section boundary repair: suppressing \(item.logString) after " +
                 "\(Self.boundaryRepairTripLimit) failed reveals for " +
@@ -1306,20 +1273,16 @@ extension MenuBarItemManager {
             // re-arms. The cooldown is checked here because those re-arms only
             // run on a restriction change.
             let repairID = postRestrictionRepairItemID(for: liveItem)
-            if suppressedBoundaryRepairItemIDs.contains(repairID) {
-                if Self.boundaryRepairIsSuppressed(
-                    suppressedAt: suppressedBoundaryRepairAt[repairID],
-                    now: Date(),
-                    cooldown: Self.boundaryRepairSuppressionCooldown
+            if boundaryRepairBreaker.isSuppressed(repairID) {
+                if boundaryRepairBreaker.suppressionHolds(
+                    for: repairID, now: Date(), cooldown: Self.boundaryRepairSuppressionCooldown
                 ) {
                     MenuBarItemManager.diagLog.debug(
                         "macOS 27 section boundary repair skipped for \(liveItem.logString): suppressed"
                     )
                     continue
                 }
-                suppressedBoundaryRepairItemIDs.remove(repairID)
-                suppressedBoundaryRepairAt[repairID] = nil
-                boundaryRepairStrandTrips[repairID] = nil
+                boundaryRepairBreaker.rearm(repairID)
             }
 
             // The ordinary move: a verified store write, then a drag, since the
@@ -1825,9 +1788,7 @@ extension MenuBarItemManager {
                     !item.isSystemClone &&
                     !item.isNativeOverflowControl &&
                     !isPhantomStrand(item) &&
-                    !suppressedBoundaryRepairItemIDs.contains(
-                        postRestrictionRepairItemID(for: item)
-                    ) &&
+                    !boundaryRepairBreaker.isSuppressed(postRestrictionRepairItemID(for: item)) &&
                     item.isPhysicallyOrderable(
                         experimentalSystemItemHiding: experimentalSystemItemHiding
                     ) &&
@@ -1995,7 +1956,7 @@ extension MenuBarItemManager {
                 uniqueIdentifier: strand.uniqueIdentifier,
                 ownerPID: strand.ownerPID
             )
-            if (boundaryRepairStrandTrips[strandTripsID] ?? 0) >= 1 {
+            if boundaryRepairBreaker.trips(for: strandTripsID) >= 1 {
                 let authored = controller.sectionItemOrder[.visible] ?? []
                 if authored.count > 1 {
                     let trace = tracePositionWrite(
@@ -2077,7 +2038,7 @@ extension MenuBarItemManager {
                 if let after,
                    abs(after.bounds.minX - dragItem.bounds.minX) < MenuBarItemGeometry.phantomFrameXTolerance
                 {
-                    boundaryRepairStrandTrips[strandTripsID, default: 0] += 1
+                    boundaryRepairBreaker.addTrip(for: strandTripsID)
                 }
                 MenuBarItemManager.diagLog.info(
                     "boundary repair: \(strand.logString) remains stranded after move (fulfilled=\(fulfilled))"
@@ -2098,7 +2059,7 @@ extension MenuBarItemManager {
                 if let after,
                    abs(after.bounds.minX - dragItem.bounds.minX) < MenuBarItemGeometry.phantomFrameXTolerance
                 {
-                    boundaryRepairStrandTrips[strandTripsID, default: 0] += 1
+                    boundaryRepairBreaker.addTrip(for: strandTripsID)
                     MenuBarItemManager.diagLog.info(
                         "boundary repair: \(strand.logString) never moved (x=\(Int(after.bounds.minX))); trapped or bounced"
                     )
@@ -2176,19 +2137,15 @@ extension MenuBarItemManager {
                 controlItems: controlItems,
                 experimentalSystemItemHiding: experimentalSystemItemHiding
             ) {
-                boundaryRepairStrandTrips[id] = nil
+                boundaryRepairBreaker.record(repaired: true, for: id, tripLimit: MenuBarItemManager.boundaryRepairTripLimit)
                 continue
             }
 
-            let trips = (boundaryRepairStrandTrips[id] ?? 0) + 1
-            guard trips >= MenuBarItemManager.boundaryRepairTripLimit else {
-                boundaryRepairStrandTrips[id] = trips
-                continue
-            }
-
-            boundaryRepairStrandTrips[id] = nil
-            suppressedBoundaryRepairItemIDs.insert(id)
-            suppressedBoundaryRepairAt[id] = Date()
+            let outcome = boundaryRepairBreaker.record(
+                repaired: false, for: id, tripLimit: MenuBarItemManager.boundaryRepairTripLimit
+            )
+            guard outcome.suppressed else { continue }
+            let trips = outcome.trips
             seededStrandedRepairItemIDs.insert(id)
             failureLedger.recordStrand(for: strand)
             MenuBarItemManager.diagLog.error(

@@ -269,37 +269,9 @@ extension MenuBarItemManager {
         Bridging.getWindowBounds(for: item.windowID) ?? item.bounds
     }
 
-    /// An order-independent signature of the item set plus the divider's
-    /// destination. Sorted because a failed drag still shuffles items, which
-    /// would otherwise reset the thrash guard every pass.
-    private static func dividerSignature(
-        items: [MenuBarItem],
-        destination: MoveDestination
-    ) -> String {
-        let ids = items
-            .filter { !$0.isSystemClone && !$0.isNativeOverflowControl }
-            .map { "\($0.tag.namespace):\($0.tag.title)" }
-            .sorted()
-            .joined(separator: "|")
-        let target = destination.targetItem.tag
-        return "\(ids)→\(target.namespace):\(target.title)"
-    }
-
     enum StructuralControlOrderReason {
-        case ambientCacheRefresh
         case revealedLayoutRestore
         case explicitLayoutRepair
-    }
-
-    static func shouldEnforceStructuralControlOrder(
-        for reason: StructuralControlOrderReason
-    ) -> Bool {
-        switch reason {
-        case .ambientCacheRefresh:
-            false
-        case .revealedLayoutRestore, .explicitLayoutRepair:
-            true
-        }
     }
 
     /// Visible-section structural sequence for macOS 27 preferred-position
@@ -602,15 +574,6 @@ extension MenuBarItemManager {
         // Manual owns the app order, but a stranded control item is still
         // reseated; the re-lay below moves only control items.
         guard !arrangementIsManual || Self.visibleControlIsStranded(among: items) else { return false }
-        // Ambient passes only observe; rewriting the permutation moved Thaw's
-        // control and made other icons oscillate. Explicit repair may rebuild.
-        if !Self.shouldEnforceStructuralControlOrder(for: reason) {
-            MenuBarItemManager.diagLog.debug(
-                "enforceControlItemOrder: skipping ambient structural position rewrite"
-            )
-            return false
-        }
-
         let hidden = controlItems.hidden
         var didRestoreOrder = false
 
@@ -633,7 +596,6 @@ extension MenuBarItemManager {
         ) else {
             // Zero-width section dividers are not ⌘-draggable on macOS 27;
             // concealment is assignment-driven instead of divider-relative.
-            lastFailedDividerSignature = nil
             return didRestoreOrder
         }
 
@@ -645,18 +607,6 @@ extension MenuBarItemManager {
             controlItems: controlItems,
             experimentalSystemItemHiding: experimentalSystemItemHiding
         ) else {
-            // Nothing to enforce: clear the thrash guard so a later divergence retries.
-            lastFailedDividerSignature = nil
-            return didRestoreOrder
-        }
-
-        // Divider-thrash guard: an unachievable move would re-fire the drag
-        // every cycle, pulling the cursor and shuffling icons while idle. Skip
-        // a failed move until the layout changes; forced callers bypass it.
-        let signature = Self.dividerSignature(items: items, destination: destination)
-        if case .ambientCacheRefresh = reason,
-           signature == lastFailedDividerSignature
-        {
             return didRestoreOrder
         }
 
@@ -670,10 +620,8 @@ extension MenuBarItemManager {
                 skipInputPause: true,
                 allowSectionBoundaryTarget: true
             )
-            lastFailedDividerSignature = nil
             didRestoreOrder = true
         } catch {
-            lastFailedDividerSignature = signature
             MenuBarItemManager.diagLog.error(
                 "Error enforcing macOS 27 hidden divider boundary: \(error)"
             )

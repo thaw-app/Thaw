@@ -864,14 +864,7 @@ extension MenuBarItemManager {
                 "cacheItemsRegardless: startup settling active, deferring structural control order"
             )
         } else {
-            await enforceControlItemOrder(
-                controlItems: controlItems,
-                items: items,
-                reason: .ambientCacheRefresh,
-                // An ambient pass only observes; this permit is never spent.
-                permit: .unsequenced("ambient control order")
-            )
-            // Ambient enforcement only observes drift; schedule debounced normalization rather than waiting for explicit reveal or repair.
+            // An ambient pass only observes drift; schedule debounced normalization rather than waiting for explicit reveal or repair.
             scheduleStructuralNormalizationIfControlItemsOutOfOrder(
                 controlItems: controlItems,
                 items: items,
