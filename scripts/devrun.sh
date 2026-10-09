@@ -1,7 +1,6 @@
 #!/usr/bin/env bash
 # Builds Thaw and installs it as /Applications/Thaw Debug.app
 # (com.stonerl.Thaw.debug), next to any released Thaw.
-# Requires the source checkout at ../PlatformRuntimeKit; builds it directly.
 #
 # macOS 27 attributes a status item to its app only when the app runs from
 # /Applications. Run from DerivedData, Thaw's own icon vanishes on hide.
@@ -56,7 +55,7 @@ PID_FILE="$LOG_DIR/app.pid"
 # Keep warnings visible while stage output is redirected to the log.
 exec 3>&2
 
-printf '%s · %s\nRuntime: ../PlatformRuntimeKit\nLog: %s\n\n' "$APP_NAME" "$CONFIG" "$LOG"
+printf '%s · %s\nLog: %s\n\n' "$APP_NAME" "$CONFIG" "$LOG"
 export MENU_BAR_MODEL_PATH="$PWD/MenuBarModel"
 
 # The suffixes rename the app, its XPC service and the controls extension.
@@ -118,11 +117,6 @@ run_stage() {
 }
 
 check_prerequisites() {
-    [[ -f ../PlatformRuntimeKit/Package.swift ]] || {
-        printf 'error: local runtime kit not found: %s/PlatformRuntimeKit/Package.swift\n' "$(dirname "$PWD")"
-        printf 'Place the PlatformRuntimeKit checkout beside this Thaw checkout.\n'
-        return 1
-    }
     command -v xcodebuild >/dev/null || {
         printf 'error: xcodebuild not found. Install Xcode and select it with xcode-select.\n'
         return 1
