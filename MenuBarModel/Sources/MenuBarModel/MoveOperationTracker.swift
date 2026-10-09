@@ -45,6 +45,13 @@ public final class MoveOperationTracker {
         inFlightCount > 0
     }
 
+    /// Returns once no move is in flight, or when the task is cancelled.
+    public func waitUntilIdle(pollingEvery interval: Duration = .milliseconds(100)) async {
+        while isInFlight, !Task.isCancelled {
+            try? await Task.sleep(for: interval)
+        }
+    }
+
     /// The instant of the most recent move operation, for callers computing
     /// custom buffers off it.
     public var lastInstant: ContinuousClock.Instant? {

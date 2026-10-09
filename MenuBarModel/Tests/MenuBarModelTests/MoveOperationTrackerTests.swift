@@ -56,4 +56,20 @@ struct MoveOperationTrackerTests {
         tracker.beginMoveOperation()
         #expect(tracker.isInFlight)
     }
+
+    @Test("Waiting returns only after the move in flight ends")
+    func waitUntilIdleWaitsForTheMove() async {
+        let tracker = MoveOperationTracker()
+        tracker.beginMoveOperation()
+        var returned = false
+        let waiter = Task {
+            await tracker.waitUntilIdle(pollingEvery: .milliseconds(5))
+            returned = true
+        }
+        try? await Task.sleep(for: .milliseconds(30))
+        #expect(!returned)
+        tracker.endMoveOperation()
+        await waiter.value
+        #expect(returned)
+    }
 }
