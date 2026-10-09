@@ -33,7 +33,7 @@ enum PendingPassTeardown<Owner: AnyObject> {
         _ passes: [Pass],
         of owner: Owner,
         on repairs: RepairOrchestrator,
-        alongside: () -> Void = {}
+        alongside: () -> Void = { /* Most callers cancel nothing else. */ }
     ) {
         for pass in passes {
             owner[keyPath: pass.task]?.cancel()
