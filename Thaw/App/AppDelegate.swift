@@ -47,7 +47,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         NSSplitViewItem.swizzle()
         MigrationManager().migrateAll()
 
-        // Overflow spacer is inert unless Thaw.debugOverflowSpacerWidth is positive; changes apply without relaunch.
+        // Overflow spacer is inert unless Thaw.debugOverflowSpacerWidth is positive; once the key exists, changes apply without relaunch.
         OverflowSpacer.shared.performSetup(with: appState)
 
         // Descenders observe their setting live and use app state to hit-test on-screen items.

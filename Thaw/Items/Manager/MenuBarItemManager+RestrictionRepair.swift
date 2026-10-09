@@ -421,6 +421,12 @@ extension MenuBarItemManager {
         guard !Task.isCancelled else { return false }
         appState.hidEventManager.refreshMenuBarItemBoundsLookup()
 
+        // No pulse, so nothing to confirm and no second read of the bar. A strand attempted
+        // above keeps the loop alive, since the agent needs a beat to re-seat it.
+        guard needsPulse else {
+            return strandNeedsRetry
+        }
+
         let afterItems = await MenuBarItem.getMenuBarItems(option: .activeSpace)
         guard !Task.isCancelled else { return false }
         let (_, afterParkedIDs) = parkedSetAndBarMidY(in: afterItems)
@@ -432,12 +438,6 @@ extension MenuBarItemManager {
                 !boundaryRepairBreaker.isSuppressed(postRestrictionRepairItemID(for: $0)) &&
                 controller.section(for: $0) == .visible &&
                 !afterParkedIDs.contains($0.windowID)
-        }
-
-        // No pulse, so no second screenshot. A strand attempted above keeps the
-        // loop alive, since the agent needs a beat to re-seat it.
-        guard needsPulse else {
-            return strandNeedsRetry
         }
 
         // Confirm the pulse resolved the blanks; true re-enters the retry loop.

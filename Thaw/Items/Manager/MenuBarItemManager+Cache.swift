@@ -779,13 +779,15 @@ extension MenuBarItemManager {
         // Seed corrected source-PID identities for known windows so relocation does not treat them as arrivals.
         // Skip unresolved PIDs to keep the placeholder Control Center namespace out of persisted identities.
         if !previousWindowIDs.isEmpty {
-            for item in items where previousWindowIDs.contains(item.windowID) && item.sourcePID != nil {
-                let identifier = item.uniqueIdentifier
-                if !knownItemIdentifiers.contains(identifier) {
-                    knownItemIdentifiers.insert(identifier)
-                }
+            let previous = Set(previousWindowIDs)
+            var learned = false
+            for item in items where previous.contains(item.windowID) && item.sourcePID != nil {
+                learned = knownItemIdentifiers.insert(item.uniqueIdentifier).inserted || learned
             }
-            persistKnownItemIdentifiers()
+            // Saved only when something was learned: the write posts a defaults change to every observer.
+            if learned {
+                persistKnownItemIdentifiers()
+            }
         }
 
         guard !Task.isCancelled else {

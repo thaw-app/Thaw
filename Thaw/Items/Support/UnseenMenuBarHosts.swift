@@ -28,9 +28,9 @@ nonisolated struct UnseenMenuBarHosts: Equatable {
     /// Where persisted() is kept between launches.
     static let defaultsKey = "MenuBarItemManager.expectedMenuBarHosts"
 
-    /// Whether bundleID had menu bar items when Thaw last ran.
-    static func wasHost(_ bundleID: String) -> Bool {
-        UserDefaults.standard.dictionary(forKey: defaultsKey)?[bundleID] != nil
+    /// The bundles that had menu bar items when Thaw last ran.
+    static func formerHosts() -> Set<String> {
+        Set(UserDefaults.standard.dictionary(forKey: defaultsKey)?.keys.map { $0 } ?? [])
     }
 
     /// Bundles expected to host items, with how many launches in a row each

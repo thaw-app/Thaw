@@ -13,7 +13,8 @@ import MenuBarModel
 /// Debug instrument: can a wide spacer force the macOS 27 overflow chevron to
 /// appear inside the region Thaw manages instead of where the notch dictates?
 ///
-/// Enable with a width in points (0 or no key removes it), observed live:
+/// Enable with a width in points (0 or no key removes it). Observed live once the key
+/// exists; the first time it is set, relaunch:
 /// defaults write com.stonerl.Thaw.debug Thaw.debugOverflowSpacerWidth -float 300
 /// Each change logs, under OverflowSpacer, where the chevron landed.
 ///
@@ -139,6 +140,9 @@ final class OverflowSpacer {
     func performSetup(with appState: AppState) {
         self.appState = appState
         apply()
+        // A debugging aid. The key is watched only once it has been set, so an install that
+        // never used it runs no timer; setting it for the first time needs a relaunch.
+        guard UserDefaults.standard.object(forKey: Defaults.Key.debugOverflowSpacerWidth.rawValue) != nil else { return }
         // Polled: didChangeNotification misses external defaults writes, and
         // KVO cannot observe a key containing dots.
         cancellable = Timer.publish(every: 1, tolerance: 0.1, on: .main, in: .common)

@@ -287,6 +287,8 @@ nonisolated enum MenuBarItemAXProvider {
         }
 
         let ourBundleID = Bundle.main.bundleIdentifier
+        // Read once per walk: the walk asks about nearly every app that answers empty.
+        let formerHosts = UnseenMenuBarHosts.formerHosts()
         let runningApps = NSWorkspace.shared.runningApplications.filter { !$0.isTerminated }
         let appsByPID = Dictionary(runningApps.map { ($0.processIdentifier, $0) }, uniquingKeysWith: { first, _ in first })
         let controlPIDs = Set(runningApps.filter {
@@ -393,7 +395,8 @@ nonisolated enum MenuBarItemAXProvider {
                     appBundleID: appBundleID,
                     display: nil,
                     displayBounds: nil,
-                    ourBundleID: ourBundleID
+                    ourBundleID: ourBundleID,
+                    formerHosts: formerHosts
                 )
             }
             let collectedResult = await withTaskGroup(
@@ -547,7 +550,8 @@ nonisolated enum MenuBarItemAXProvider {
         appBundleID: String,
         display: CGDirectDisplayID?,
         displayBounds: CGRect?,
-        ourBundleID: String?
+        ourBundleID: String?,
+        formerHosts: Set<String>
     ) -> [RawItem] {
         guard let app = AXHelpers.application(for: runningApp) else {
             return []
@@ -558,13 +562,13 @@ nonisolated enum MenuBarItemAXProvider {
                     "menuBarItems: Thaw (\(appBundleID)) has no AXExtrasMenuBar, control items cannot be discovered"
                 )
             }
-            logEmptyExtrasBarReadOnce(for: runningApp, appBundleID: appBundleID, hasBar: false)
+            logEmptyExtrasBarReadOnce(for: runningApp, appBundleID: appBundleID, hasBar: false, formerHosts: formerHosts)
             return []
         }
 
         let children = AXHelpers.children(for: bar)
         guard !children.isEmpty else {
-            logEmptyExtrasBarReadOnce(for: runningApp, appBundleID: appBundleID, hasBar: true)
+            logEmptyExtrasBarReadOnce(for: runningApp, appBundleID: appBundleID, hasBar: true, formerHosts: formerHosts)
             return []
         }
 
@@ -632,9 +636,10 @@ nonisolated enum MenuBarItemAXProvider {
     private static func logEmptyExtrasBarReadOnce(
         for runningApp: NSRunningApplication,
         appBundleID: String,
-        hasBar: Bool
+        hasBar: Bool,
+        formerHosts: Set<String>
     ) {
-        guard UnseenMenuBarHosts.wasHost(appBundleID) else { return }
+        guard formerHosts.contains(appBundleID) else { return }
         let pid = runningApp.processIdentifier
         let element = AXUIElementCreateApplication(pid)
         AXUIElementSetMessagingTimeout(element, AXPrimitives.defaultMessagingTimeout)
