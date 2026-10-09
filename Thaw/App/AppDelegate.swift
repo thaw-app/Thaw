@@ -31,6 +31,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     // MARK: NSApplicationDelegate Methods
 
     func applicationWillFinishLaunching(_: Notification) {
+        LiveApp.register(self)
         #if DEBUG
             // Don't perform setup if running as a preview.
             if isRunningForPreviews {

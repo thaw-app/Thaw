@@ -121,7 +121,7 @@ final class ControlCommandObserver {
     private static func dispatch(_ rawName: String) {
         guard
             let command = Command(rawValue: rawName),
-            let appState = (NSApp?.delegate as? AppDelegate)?.appState
+            let appState = LiveApp.appState
         else {
             return
         }
