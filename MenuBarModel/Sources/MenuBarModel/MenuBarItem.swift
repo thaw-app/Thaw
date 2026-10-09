@@ -37,7 +37,8 @@ public struct MenuBarItem: CustomStringConvertible, Sendable, Codable {
             (
                 experimentalSystemItemHiding &&
                     sectionManagementPolicy.isForcedVisible &&
-                    !tag.isAgentUngoverned
+                    !tag.isAgentUngoverned &&
+                    !tag.isLiveActivityPill
             )
     }
 
@@ -74,6 +75,10 @@ public struct MenuBarItem: CustomStringConvertible, Sendable, Codable {
         }
         if isMovable {
             return nil
+        }
+        // Forced-visible like the modules below, but no assertion makes macOS move it.
+        if tag.isLiveActivityPill {
+            return .systemAnchored
         }
 
         if sectionManagementPolicy.isForcedVisible {
