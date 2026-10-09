@@ -30,10 +30,16 @@ public enum MenuBarAgentWindow {
     /// While an item leaves, the window keeps an empty child for it for a moment: no owner of its
     /// own and no size. A read that holds one was taken mid-change, and so was an empty one.
     public static func drawnOwners(in entries: [Entry]) -> Set<pid_t>? {
+        settled(entries).map { Set($0.map(\.ownerPID)) }
+    }
+
+    /// The entries as given when they describe a bar at rest, or nil when the read was empty or
+    /// taken mid-change. Two settled reads that are equal describe a bar that has not moved.
+    public static func settled(_ entries: [Entry]) -> [Entry]? {
         guard !entries.isEmpty,
               entries.allSatisfy({ $0.frame.width > 0 && $0.frame.height > 0 })
         else { return nil }
-        return Set(entries.map(\.ownerPID))
+        return entries
     }
 
     /// The process that owns the item inside one child of the window.
@@ -75,6 +81,13 @@ public extension AXPrimitives {
                 frame: frame(of: child) ?? .zero
             )
         }
+    }
+
+    /// The bar as MenuBarAgent draws it right now, or nil when it could not be read or is mid-change.
+    static func menuBarAgentSettledEntries(
+        messagingTimeout: Float = defaultMessagingTimeout
+    ) -> [MenuBarAgentWindow.Entry]? {
+        menuBarAgentWindowEntries(messagingTimeout: messagingTimeout).flatMap(MenuBarAgentWindow.settled)
     }
 
     /// See MenuBarAgentWindow.drawnOwners(in:).

@@ -713,7 +713,12 @@ private final class MenuBarOverlayPanelContentView: NSView {
                     for await (full, preview) in changes {
                         guard let self else { return }
                         if fullConfiguration != full {
+                            let followedItems = fullConfiguration.shapeKind.followsItems
                             fullConfiguration = full
+                            // Start, or stop, reading the items when the shape starts or stops needing them.
+                            if full.shapeKind.followsItems != followedItems {
+                                scheduleAXItemBoundsRefresh(.immediate)
+                            }
                         }
                         if previewConfiguration != preview {
                             previewConfiguration = preview
@@ -858,7 +863,9 @@ private final class MenuBarOverlayPanelContentView: NSView {
     private func scheduleAXItemBoundsRefresh(
         _ event: MenuBarGeometryRefresh.Event = .geometryChanged
     ) {
-        guard overlayPanel != nil else {
+        // Only a shape drawn around the items needs to know where they are. A tint, border or
+        // shadow across the bar asks no app anything.
+        guard overlayPanel != nil, fullConfiguration.shapeKind.followsItems else {
             geometryRefresh.cancel()
             cachedAXItemBounds = []
             cachedAXSourceScreenFrame = nil
@@ -876,6 +883,8 @@ private final class MenuBarOverlayPanelContentView: NSView {
             knownItems: itemManager?.managedItems ?? [],
             onScreenSnapshot: itemManager?.onScreenItemSnapshot,
             notBefore: minimumReadTime,
+            drawnBar: { await MenuBarItemAXProvider.drawnBarConcurrent() },
+            memo: .shared,
             readOwners: { await MenuBarItemAXProvider.menuBarItemsForAppearanceConcurrent(knownOwners: $0) },
             discover: {
                 await MenuBarItem.getMenuBarItems(

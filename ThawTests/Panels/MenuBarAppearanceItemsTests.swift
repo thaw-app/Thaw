@@ -8,6 +8,7 @@
 import CoreGraphics
 import MenuBarModel
 import Testing
+import ThawAXCore
 @testable import Thaw
 
 @MainActor
@@ -67,6 +68,57 @@ struct MenuBarAppearanceItemsTests {
         ))
         #expect(result.items == items)
         #expect(result.readAt == onScreen.timestamp)
+    }
+
+    @Test("A bar that has not moved is not asked about twice")
+    func unchangedBarReusesTheLastOwnerRead() async throws {
+        let known = [item(1, x: 300), item(2, x: 400)]
+        let bar = [MenuBarAgentWindow.Entry(ownerPID: 1, frame: CGRect(x: 300, y: 0, width: 24, height: 30))]
+        let memo = MenuBarAppearanceItems.Memo()
+        var ownerReads = 0
+        func read(bar: [MenuBarAgentWindow.Entry]?, known: [MenuBarItem]) async -> MenuBarAppearanceItems.Snapshot? {
+            await MenuBarAppearanceItems.read(
+                knownItems: known, onScreenSnapshot: nil, notBefore: nil,
+                drawnBar: { bar }, memo: memo,
+                readOwners: { _ in ownerReads += 1; return known },
+                discover: { Issue.record("Known owners do not require discovery"); return [] }
+            )
+        }
+
+        let first = try #require(await read(bar: bar, known: known))
+        let second = try #require(await read(bar: bar, known: known))
+        #expect(ownerReads == 1)
+        #expect(second.items == first.items)
+        #expect(second.readAt >= first.readAt)
+
+        // A moved item, a different set of owners, or a bar that cannot be read each ask again.
+        let moved = [MenuBarAgentWindow.Entry(ownerPID: 1, frame: CGRect(x: 310, y: 0, width: 24, height: 30))]
+        _ = await read(bar: moved, known: known)
+        #expect(ownerReads == 2)
+        _ = await read(bar: moved, known: known + [item(3, x: 500)])
+        #expect(ownerReads == 3)
+        _ = await read(bar: nil, known: known + [item(3, x: 500)])
+        #expect(ownerReads == 4)
+        // An unreadable bar leaves nothing to compare the next read against.
+        _ = await read(bar: moved, known: known + [item(3, x: 500)])
+        #expect(ownerReads == 5)
+    }
+
+    @Test("A failed owner read is not remembered as the bar's geometry")
+    func failedOwnerReadIsNotRemembered() async {
+        let known = [item(1, x: 300)]
+        let bar = [MenuBarAgentWindow.Entry(ownerPID: 1, frame: CGRect(x: 300, y: 0, width: 24, height: 30))]
+        let memo = MenuBarAppearanceItems.Memo()
+        var ownerReads = 0
+        for answer in [nil, known] as [[MenuBarItem]?] {
+            _ = await MenuBarAppearanceItems.read(
+                knownItems: known, onScreenSnapshot: nil, notBefore: nil,
+                drawnBar: { bar }, memo: memo,
+                readOwners: { _ in ownerReads += 1; return answer },
+                discover: { [] }
+            )
+        }
+        #expect(ownerReads == 2)
     }
 
     @Test("An incomplete requested-owner read preserves the previous geometry")

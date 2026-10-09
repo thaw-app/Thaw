@@ -693,6 +693,12 @@ nonisolated enum MenuBarItemAXProvider {
         return nil
     }
 
+    /// The bar as MenuBarAgent draws it, read off the main actor. Nil when unreadable or mid-change.
+    @concurrent
+    static func drawnBarConcurrent() async -> [MenuBarAgentWindow.Entry]? {
+        AXPrimitives.menuBarAgentSettledEntries()
+    }
+
     /// Re-reads the owners appearance already knows, skipping discovery's
     /// probes of expired empty apps.
     @concurrent

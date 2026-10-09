@@ -32,6 +32,20 @@ struct MenuBarAgentWindowTests {
     }
 
     @Test
+    func `two reads of a bar that has not moved are equal, and a moved item makes them differ`() {
+        let bar = [entry(10, x: 100), entry(20, x: 140)]
+        #expect(MenuBarAgentWindow.settled(bar) == MenuBarAgentWindow.settled([entry(10, x: 100), entry(20, x: 140)]))
+        #expect(MenuBarAgentWindow.settled(bar) != MenuBarAgentWindow.settled([entry(10, x: 100), entry(20, x: 141)]))
+        #expect(MenuBarAgentWindow.settled(bar) != MenuBarAgentWindow.settled([entry(10, x: 100)]))
+    }
+
+    @Test
+    func `a read taken mid-change is not a settled bar`() {
+        #expect(MenuBarAgentWindow.settled([entry(10), .init(ownerPID: 1, frame: .zero)]) == nil)
+        #expect(MenuBarAgentWindow.settled([]) == nil)
+    }
+
+    @Test
     func `refuses an empty read`() {
         #expect(MenuBarAgentWindow.drawnOwners(in: []) == nil)
     }
