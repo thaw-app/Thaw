@@ -40,6 +40,42 @@ struct AXGeometryCatalogTests {
         ) == .frame(rect))
     }
 
+    /// Live on 2026-10-09. A Live Activity reports a container a point larger than itself among its
+    /// descendants. The container covers the whole crop, so it overlapped it by exactly as much as
+    /// the item's own frame did. That was read as a tie, the item got no live frame, and its picture
+    /// was never taken.
+    @Test("An item whose descendant frame encloses it still resolves to its own frame")
+    func enclosingDescendantDoesNotTieWithTheItem() {
+        let pill = "live-activity-pill-com.apple.chrono.WidgetRenderer-Activities"
+        let own = CGRect(x: 1338.9, y: 3, width: 109.6, height: 24)
+        let frames = [
+            own,
+            CGRect(x: 1391.05, y: 0, width: 60.5, height: 30),
+            CGRect(x: 1391, y: 0, width: 61, height: 30),
+            CGRect(x: 1391.5, y: 8, width: 57.3, height: 14.3),
+            CGRect(x: 1337.9, y: 1.5, width: 111.1, height: 27),
+        ]
+        #expect(AXGeometryCatalog.frame(overlapping: own, in: frames) == own)
+        #expect(AXGeometryCatalog.frame(overlapping: own, in: frames.reversed()) == own)
+
+        var snapshot = frames.map { AXGeometryCatalog.Entry(ownerPID: 907, itemIndex: 0, identityTitle: pill, frame: $0) }
+        snapshot.append(AXGeometryCatalog.Entry(
+            ownerPID: 907,
+            itemIndex: 1,
+            identityTitle: "com.apple.menuextra.audiovideo",
+            frame: CGRect(x: 1470, y: 0, width: 20, height: 30)
+        ))
+        #expect(AXGeometryCatalog.match(ownerPID: 907, identityTitle: pill, bounds: own, in: snapshot) == .frame(own))
+    }
+
+    @Test("Two different frames that fit the crop equally well are still a tie")
+    func equallyFittingFramesStayAmbiguous() {
+        let crop = CGRect(x: 100, y: 0, width: 24, height: 24)
+        let left = CGRect(x: 94, y: 0, width: 24, height: 24)
+        let right = CGRect(x: 106, y: 0, width: 24, height: 24)
+        #expect(AXGeometryCatalog.frame(overlapping: crop, in: [left, right]) == nil)
+    }
+
     @Test("Legacy identity resolution leaves Siri and other anonymous hosts alone")
     func legacyIdentityIsScoped() {
         #expect(AXGeometryCatalog.identityTitle(

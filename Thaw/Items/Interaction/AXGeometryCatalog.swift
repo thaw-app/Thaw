@@ -307,6 +307,10 @@ nonisolated enum AXGeometryCatalog {
 
     /// Selects the greatest intersection exceeding minOverlapFraction of the smaller rectangle.
     /// Returns nil for no confident candidate or a tie between distinct frames.
+    ///
+    /// Among frames that overlap the crop equally, the one closest to the crop's own size wins. An
+    /// item can report a descendant that encloses it, such as a Live Activity's container, a point
+    /// larger all round. Both cover the whole crop, and only the item's own frame is the crop's size.
     static nonisolated func frame(
         overlapping windowBounds: CGRect,
         in snapshot: [CGRect]
@@ -329,8 +333,16 @@ nonisolated enum AXGeometryCatalog {
                     best = (candidate, intersectionArea)
                     bestIsTied = false
                 } else if intersectionArea == current.area, candidate != current.frame {
-                    // Distinct tied frames are ambiguous; equal frames from a root and descendant give the same geometry.
-                    bestIsTied = true
+                    let excess = abs(candidateArea - targetArea)
+                    let currentExcess = abs(current.frame.width * current.frame.height - targetArea)
+                    if excess < currentExcess {
+                        best = (candidate, intersectionArea)
+                        bestIsTied = false
+                    } else if excess == currentExcess {
+                        // Distinct frames that fit equally are ambiguous; equal frames from a root and
+                        // descendant give the same geometry.
+                        bestIsTied = true
+                    }
                 }
             } else {
                 best = (candidate, intersectionArea)
