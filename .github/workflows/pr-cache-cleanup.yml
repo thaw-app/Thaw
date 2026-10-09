@@ -33,6 +33,7 @@ jobs:
 
             const stillOpen = new Map();
             let deleted = 0;
+            let failed = 0;
             let bytes = 0;
             for (const cache of caches) {
               const number = Number(/^refs\/pull\/(\d+)\/merge$/.exec(cache.ref)?.[1]);
@@ -47,7 +48,13 @@ jobs:
                 deleted++;
                 bytes += cache.size_in_bytes;
               } catch (error) {
+                // Already gone: evicted or deleted between the listing and now.
+                if (error.status === 404) continue;
                 console.error(`Could not delete ${cache.key}: ${error.message}`);
+                failed++;
               }
             }
             console.log(`Deleted ${deleted} cache(s), ${(bytes / 1073741824).toFixed(2)} GB`);
+            if (failed > 0) {
+              core.setFailed(`${failed} cache(s) could not be deleted`);
+            }
