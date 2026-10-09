@@ -2842,14 +2842,18 @@ extension MenuBarItemManager {
         }
         // Move the item, not the section: a full-band rewrite would replay
         // stale order and relocate unrelated items. Skip if a crossing wrote.
-        // A closed section's items are not drawn, yet with Native hiding they report positions among
-        // the shown ones. They must not be picked as this item's neighbours.
+        // An app macOS has hidden is not drawn, yet with Native hiding it reports a position among
+        // the shown items. It must not be picked as this item's neighbour. MenuBarAgent's window
+        // says what is drawn; the read is one process and a few milliseconds.
         let sectionController = appState?.menuBarManager.sectionController
+        let drawnOwners = await MenuBarItemAXProvider.drawnBarConcurrent().map { Set($0.map(\.ownerPID)) }
+        try Task.checkCancellation()
         let drawnPeers: ([MenuBarItem]) -> [MenuBarItem] = { peers in
             StoreMovePeers.drawn(
                 among: peers,
                 moving: item,
                 target: destination.targetItem,
+                drawnOwners: drawnOwners,
                 revealed: sectionController?.revealedSection,
                 section: { sectionController?.section(for: $0) ?? .visible }
             )
