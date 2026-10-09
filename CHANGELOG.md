@@ -57,12 +57,13 @@ After you update:
 - **You can move items pinned from Control Center**, such as Home or a second Control Center. Reported by mrleblanc101 on Discord. Fixed by @diazdesandi.
 - **Stand-ins for Apple's items stay where you put them** after a relaunch, and they pick up a spacing change. Fixed by @diazdesandi.
 - **Moves start on a Mac with many apps running.** Fixed by @diazdesandi.
+- **Layout shows items folded behind macOS's overflow arrow in your order.** The Visible bar used to show them in the order macOS stacked them. Fixed by @camguillory in [#1285](https://github.com/thaw-app/Thaw/pull/1285).
 
 ### Fixed: Thaw's icon, the Thaw Bar and Tools
 
 - **Thaw stops trying to bring its icon back while macOS has it switched off.** The warning also shows in Layout, and when the Thaw icon is hidden. Fixed by @diazdesandi.
 - **Thaw's icon shows up at launch on Macs where it sometimes did not.** Fixed by @diazdesandi.
-- **Thaw's icon stays on a display to the left of your main one.** Fixed by @diazdesandi.
+- **Thaw's icon stays on a display to the left of your main one**, and the menu bar stops shuffling around it. Fixed by @camguillory in [#1286](https://github.com/thaw-app/Thaw/pull/1286).
 - **Liquid and Dynamic glass reach the Thaw Bar's corners.** They fell short with square corners, in vertical and grid layouts, and on notched displays. Reported by Etsef Zale on Discord. Fixed by @diazdesandi.
 - **"Reset saved item positions" resets them on macOS 27.** Fixed by @camguillory in [#1269](https://github.com/thaw-app/Thaw/pull/1269).
 
@@ -73,6 +74,8 @@ After you update:
 - **Thaw keeps its item icons while none of its windows is open**, so they don't load again. Fixed by @diazdesandi.
 - **A reveal no longer waits behind Thaw's own repairs.** Fixed by @diazdesandi.
 - **A display change still restores your layout** when the spacing check has nothing to apply. Fixed by @camguillory in [#1268](https://github.com/thaw-app/Thaw/pull/1268).
+- **Layout's bars widen with the Settings window**, so long sections need less scrolling on a large display. Reported by @ylluminate in [#1277](https://github.com/thaw-app/Thaw/issues/1277). Fixed by @camguillory in [#1283](https://github.com/thaw-app/Thaw/pull/1283).
+- **Icons still load when Thaw's capture helper restarts** while two captures are running. Fixed by @camguillory in [#1271](https://github.com/thaw-app/Thaw/pull/1271).
 
 ### Fixed: Shortcuts, Spotlight and Control Center
 
