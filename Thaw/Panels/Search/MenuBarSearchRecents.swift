@@ -59,27 +59,19 @@ final class MenuBarSearchRecents {
     func resolve(in manager: MenuBarItemManager) -> [MenuBarItem] {
         let storedIdentifiers = identifiers
         guard !storedIdentifiers.isEmpty else { return [] }
-        let wanted = Set(storedIdentifiers)
-        var itemsBySection = [MenuBarItem]()
-        var seen = Set<String>()
-        // Iteration order is irrelevant to the result, recency order is
-        // preserved from storage; this loop only resolves identifiers.
+        // A canonical identifier can resolve more than once across sections
+        // while an item is mid-move; the first hit wins.
+        var itemsByIdentifier = [String: MenuBarItem]()
         for name in MenuBarSection.Name.allCases {
             for item in manager.managedItems(for: name) where !item.isControlItem {
                 guard let identifier = MenuBarItemTag.canonicalPersistentIdentifiers([item.tag.tagIdentifier]).first,
-                      wanted.contains(identifier)
+                      itemsByIdentifier[identifier] == nil
                 else { continue }
-                // A canonical identifier can legitimately resolve more than
-                // once across sections while an item is mid-move; first hit
-                // wins and duplicates are suppressed.
-                guard seen.insert(identifier).inserted else { continue }
-                itemsBySection.append(item)
+                itemsByIdentifier[identifier] = item
             }
         }
-        return itemsBySection.sorted { a, b in
-            let indexA = storedIdentifiers.firstIndex(of: MenuBarItemTag.canonicalPersistentIdentifiers([a.tag.tagIdentifier]).first ?? "") ?? .max
-            let indexB = storedIdentifiers.firstIndex(of: MenuBarItemTag.canonicalPersistentIdentifiers([b.tag.tagIdentifier]).first ?? "") ?? .max
-            return indexA < indexB
-        }
+        // Stored order is recency order. Taking each item out as it is used
+        // keeps an identifier stored twice from listing its item twice.
+        return storedIdentifiers.compactMap { itemsByIdentifier.removeValue(forKey: $0) }
     }
 }

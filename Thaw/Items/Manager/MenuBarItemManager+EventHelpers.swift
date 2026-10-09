@@ -382,19 +382,6 @@ extension MenuBarItemManager {
 
     // MARK: Continuation Boxes
 
-    private nonisolated func storeInnerTask(
-        _ task: Task<Void, Never>,
-        in holder: OSAllocatedUnfairLock<Task<Void, Never>?>
-    ) {
-        holder.withLock { $0 = task }
-    }
-
-    private nonisolated func currentInnerTask(
-        from holder: OSAllocatedUnfairLock<Task<Void, Never>?>
-    ) -> Task<Void, Never>? {
-        holder.withLock { $0 }
-    }
-
     /// The unchanging half of a barrier run: the event being delivered, the
     /// marker events that bracket it, and the two places they are posted to.
     private nonisolated struct EventContinuationContext {
@@ -419,21 +406,6 @@ extension MenuBarItemManager {
         let countHolder: OSAllocatedUnfairLock<Int>
         let outcome: OneShotContinuation<Void, any Error>
         let innerTaskHolder: OSAllocatedUnfairLock<Task<Void, Never>?>
-    }
-
-    private nonisolated func decrementCount(
-        in holder: OSAllocatedUnfairLock<Int>
-    ) -> Int {
-        holder.withLock {
-            $0 -= 1
-            return $0
-        }
-    }
-
-    private nonisolated func currentCount(
-        from holder: OSAllocatedUnfairLock<Int>
-    ) -> Int {
-        holder.withLock { $0 }
     }
 
     private nonisolated func makeContinuationTask(
@@ -495,7 +467,7 @@ extension MenuBarItemManager {
             option: .defaultTap
         ) { tap, rEvent in
             if rEvent.matches(context.entryEvent, byIntegerFields: [.eventSourceUserData]) {
-                _ = self.decrementCount(in: state.countHolder)
+                state.countHolder.withLock { $0 -= 1 }
                 context.event.post(to: context.sessionLocation)
                 return nil
             }
@@ -520,7 +492,7 @@ extension MenuBarItemManager {
             placement: .tailAppendEventTap,
             context: context
         ) { tap in
-            if self.currentCount(from: state.countHolder) <= 0 {
+            if state.countHolder.withLock { $0 } <= 0 {
                 tap.disable()
                 context.exitEvent.post(to: context.ownerLocation)
             } else {
@@ -564,7 +536,7 @@ extension MenuBarItemManager {
                 entryEvent: context.entryEvent,
                 ownerLocation: context.ownerLocation
             )
-            storeInnerTask(innerTask, in: state.innerTaskHolder)
+            state.innerTaskHolder.withLock { $0 = innerTask }
             if Task.isCancelled {
                 innerTask.cancel()
             }
@@ -648,7 +620,7 @@ extension MenuBarItemManager {
                     eventTaps: &eventTaps
                 )
             } onCancel: {
-                currentInnerTask(from: state.innerTaskHolder)?.cancel()
+                state.innerTaskHolder.withLock { $0 }?.cancel()
                 // Settle here as well. Cancellation routinely arrives after the
                 // inner task has already finished, and cancelling a task that
                 // is already done wakes nobody. Settling before the body has
