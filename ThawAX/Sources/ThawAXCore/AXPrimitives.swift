@@ -195,6 +195,13 @@ public enum AXPrimitives {
         return children(of: menuBar).compactMap { frame(of: $0) }
     }
 
+    /// Whether pid is this process. AppKit answers AX reads of a process's own
+    /// elements in-process, and it is not thread-safe, so such reads must run
+    /// on the main thread.
+    public static func isOwnProcess(_ pid: pid_t) -> Bool {
+        pid == getpid()
+    }
+
     // MARK: - MenuBarAgent
 
     /// The MenuBarAgent's process, which publishes the system status items.
