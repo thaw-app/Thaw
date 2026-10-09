@@ -41,6 +41,28 @@ struct ExtraVisibilityChannelTests {
         #expect(!ExtraVisibilityChannel.ownsBundle("com.example.app.extra.wifi"))
     }
 
+    @Test("Thaw and its extras are never handed to the system's Menu Bar list")
+    func thawIsKeptOffTheSystemList() {
+        let own = ThawMenuBarIdentity.bundleIdentifier
+        #expect(ExtraVisibilityChannel.keepsOffSystemList(own))
+        #expect(ExtraVisibilityChannel.keepsOffSystemList("\(own).extra.timer"))
+        #expect(!ExtraVisibilityChannel.keepsOffSystemList("\(own)Helper"))
+        #expect(!ExtraVisibilityChannel.keepsOffSystemList("com.example.app"))
+    }
+
+    @Test("Thaw's own bundle, kept off the system list, is not written to the extras list either")
+    func ownBundleIsNotWrittenAsAnExtra() throws {
+        try withScratchFolder { folder in
+            let extras = freshBundles("timer")
+            let own = ThawMenuBarIdentity.bundleIdentifier
+
+            ExtraVisibilityChannel.hide(extras.union([own]), folder: folder) {}
+
+            let written = try hiddenExtras(in: folder)
+            #expect(written == extras.sorted().joined(separator: "\n"))
+        }
+    }
+
     @Test("The helper finds the list and the signal under the names it derives from its parent")
     func fileAndSignalNamesMatchTheHelper() {
         let own = ThawMenuBarIdentity.bundleIdentifier

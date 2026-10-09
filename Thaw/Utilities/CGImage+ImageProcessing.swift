@@ -191,7 +191,7 @@ extension CGImage {
             self.rowStride = rowStride
             self.pixelStride = pixelStride
             self.alphaOffset = alphaOffset
-            self.threshold = UInt8(min(max(alphaThreshold * 255, 0), 255))
+            self.threshold = UInt8((alphaThreshold * 255).clamped(to: 0 ... 255))
         }
 
         func isPixelOpaque(row: Int, column: Int) -> Bool {

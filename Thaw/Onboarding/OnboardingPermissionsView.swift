@@ -64,8 +64,11 @@ struct ThawPermissionsView: View {
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
         // The onboarding window has no close button, so offer a small way out.
         .overlay(alignment: .bottomTrailing) {
-            if mode == .onboarding {
-                quitButton
+            HStack(spacing: 0) {
+                ReducedModeOfferButton()
+                if mode == .onboarding {
+                    quitButton
+                }
             }
         }
         .background(VisualEffectBackground())

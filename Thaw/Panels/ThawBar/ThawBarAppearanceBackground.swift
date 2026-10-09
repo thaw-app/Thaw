@@ -164,7 +164,9 @@ private struct ThawBarGlassSurface: NSViewRepresentable, Equatable {
                     effectOpacity: config.style.effectOpacity,
                     usesDarkFade: config.style.usesDarkFade,
                     borderColor: nil,
-                    borderWidth: 0
+                    borderWidth: 0,
+                    // The bar is not always a capsule, so the glass takes the clip's corners.
+                    cornerRadius: config.shape.cornerRadius - config.shape.insetAmount
                 )
             } else {
                 regular.style = config.style.nsGlassStyle

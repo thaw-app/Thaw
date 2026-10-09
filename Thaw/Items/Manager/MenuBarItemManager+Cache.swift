@@ -155,6 +155,8 @@ extension MenuBarItemManager {
             pruneSavedSectionOrderGhosts()
         }
 
+        // The process table read for this pass's publication, shared by the liveness filter and the unseen-host check.
+        var runningAtPublication: RunningApplicationSnapshot?
         while true {
             // Verify before the unchanged-cache guard: nonexistent icons recovered from the position store can produce a stable cache.
             if !observationOnly, let displayID {
@@ -208,13 +210,21 @@ extension MenuBarItemManager {
                 }
             }
 
+            // Read the process table off the main actor. The guard below runs after it,
+            // so a purge that lands during the read still stops this pass.
+            let running = await RunningApplicationSnapshot.current()
+            runningAtPublication = running
+
             // A sanity re-scan above can suspend while an owner exits. Check
             // again at publication so the old in-flight pass cannot undo purge.
             guard layoutPublication.canPublish(generation: publicationGeneration) else {
                 scheduleCoalescedCacheRerun()
                 return
             }
-            context.cache = context.cache.retainingRunningOwners()
+            context.cache = context.cache.retainingRunningOwners(
+                processIDs: running.processIDs,
+                bundleIdentifiers: running.bundleIdentifiers
+            )
             if let displayID {
                 recordVisibleControlObservation(items: items, displayID: displayID)
             }
@@ -235,13 +245,13 @@ extension MenuBarItemManager {
         }
 
         mirrorSavedSectionOrderIfSettled(from: context.cache, controlItems: context.controlItems)
-        noteUnseenMenuBarHosts(in: context.cache)
+        noteUnseenMenuBarHosts(in: context.cache, running: runningAtPublication ?? .readSystem())
 
         MenuBarItemManager.diagLog.debug("Updated menu bar item cache: visible=\(context.cache[.visible].count), hidden=\(context.cache[.hidden].count), alwaysHidden=\(context.cache[.alwaysHidden].count)")
 
         // Rebalance external item floods here; coalesce tasks so assertion reflow cannot trigger rebalance thrashing.
         if configuration.enableMenuBarItemOverflow == true {
-            scheduleOverflowRebalance(reason: .externalChange)
+            scheduleOverflowRebalance(cause: .cachePublished, reason: .externalChange)
         }
     }
 
@@ -373,8 +383,7 @@ extension MenuBarItemManager {
         displays: [CGRect] = activeDisplayBounds()
     ) {
         let isAnySectionRevealed = appState?.menuBarManager.sectionController.revealedSection != nil
-        let shouldPersistLayoutSnapshot = !suppressSpatialOrderPersistenceAfterFailedApply
-            && !isNotificationCenterLayoutSuspended
+        let shouldPersistLayoutSnapshot = !isNotificationCenterLayoutSuspended
             && !isAnySectionRevealed
             && LayoutSolver.shouldPersistSavedOrder(
                 isRestoringItemOrder: isRestoringItemOrder,
@@ -432,9 +441,11 @@ extension MenuBarItemManager {
     /// Coalesce environment and cache rebalances to prevent assertion-reflow feedback.
     /// Run the merged request so later observations cannot weaken explicit or immediate intent.
     func scheduleOverflowRebalance(
+        cause: RepairOrchestrator.Cause,
         reason: LayoutChangeReason,
         immediate: Bool = false
     ) {
+        repairs.request(.overflowRebalance, cause: cause)
         let request = OverflowRebalanceRequest(reason: reason, immediate: immediate)
         overflowRebalancePendingRequest = request.merged(into: overflowRebalancePendingRequest)
         overflowRebalanceTask?.cancel()
@@ -442,11 +453,18 @@ extension MenuBarItemManager {
             guard let self else { return }
             try? await Task.sleep(for: .milliseconds(300))
             guard !Task.isCancelled else { return }
+            guard let hold = await self.repairs.enter(.overflowRebalance) else { return }
+            // Read after the wait, so requests merged while queued are honoured.
             let effective = self.overflowRebalancePendingRequest ?? request
+            let aftermath = RepairTurn.Aftermath()
             let didRebalance = await self.rebalanceOverflowIfNeeded(
                 reason: effective.reason,
-                immediate: effective.immediate
+                immediate: effective.immediate,
+                aftermath: aftermath,
+                permit: StoreWritePermit(hold)
             )
+            self.repairs.leave(hold)
+            await aftermath.readCacheIfOwed { await self.cacheItemsRegardless(skipRecentMoveCheck: true) }
             // Cancelled tasks leave merged intent for their replacements.
             guard !Task.isCancelled else { return }
             self.overflowRebalancePendingRequest = nil
@@ -849,7 +867,9 @@ extension MenuBarItemManager {
             await enforceControlItemOrder(
                 controlItems: controlItems,
                 items: items,
-                reason: .ambientCacheRefresh
+                reason: .ambientCacheRefresh,
+                // An ambient pass only observes; this permit is never spent.
+                permit: .unsequenced("ambient control order")
             )
             // Ambient enforcement only observes drift; schedule debounced normalization rather than waiting for explicit reveal or repair.
             scheduleStructuralNormalizationIfControlItemsOutOfOrder(

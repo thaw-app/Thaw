@@ -136,7 +136,19 @@ final class AdvancedSettings {
             Defaults.set(enableMenuBarItemOverflow, forKey: .enableMenuBarItemOverflow)
             Task { @MainActor [weak self] in
                 guard let itemManager = self?.appState?.itemManager else { return }
-                if await itemManager.rebalanceOverflowIfNeeded(reason: .settingChange) {
+                itemManager.repairs.request(.overflowRebalance, cause: .settingChanged)
+                guard let hold = await itemManager.repairs.enter(.overflowRebalance, priority: .user) else {
+                    return
+                }
+                let aftermath = RepairTurn.Aftermath()
+                let didRebalance = await itemManager.rebalanceOverflowIfNeeded(
+                    reason: .settingChange,
+                    aftermath: aftermath,
+                    permit: StoreWritePermit(hold)
+                )
+                itemManager.repairs.leave(hold)
+                // One read covers both the pass's own closing read and the one a change asks for.
+                if didRebalance || aftermath.needsCachePass {
                     await itemManager.cacheItemsRegardless(skipRecentMoveCheck: true)
                 }
             }

@@ -42,6 +42,18 @@ struct ProfileAutomation: Codable, Hashable {
     var isEmpty: Bool {
         preHook == nil && postHook == nil
     }
+
+    /// The same hooks, switched off. For a profile that came from a file: its hooks name scripts
+    /// someone else chose, and applying the profile would run them. They stay listed, so the user
+    /// can read the path and switch each one on.
+    var disabledUntilApproved: ProfileAutomation {
+        func off(_ hook: HookScript?) -> HookScript? {
+            guard var hook else { return nil }
+            hook.isEnabled = false
+            return hook
+        }
+        return ProfileAutomation(preHook: off(preHook), postHook: off(postHook))
+    }
 }
 
 // MARK: - HookPhase / HookScope

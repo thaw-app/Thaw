@@ -41,7 +41,11 @@ private enum MenuBarCaptureServiceMain {
     /// reopens a session within a few hundred milliseconds when one surface
     /// closes and another opens, so exiting at once left the new request
     /// waiting out the full reply timeout on a dying process.
-    static let idleExitGrace: TimeInterval = 3
+    ///
+    /// Long enough to outlast the app's once-a-minute refresh as well. At three
+    /// seconds the helper was started 23 times in half an hour, and each cold
+    /// start kept a capture waiting for five to seven seconds.
+    static let idleExitGrace: TimeInterval = 90
 
     /// How long a single capture may run before the helper treats
     /// ScreenCaptureKit as wedged and dies so XPC relaunches a healthy one.

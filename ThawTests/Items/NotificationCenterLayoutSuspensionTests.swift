@@ -21,7 +21,7 @@ struct NotificationCenterLayoutSuspensionTests {
         let before = manager.layoutPublication.generation
         manager.beginNotificationCenterLayoutSuspension()
         manager.noteRestrictionChange()
-        manager.scheduleStructuralNormalization()
+        manager.scheduleStructuralNormalization(cause: .restrictionChanged)
         #expect(manager.postRestrictionRepairTask == nil)
         #expect(manager.structuralNormalizationTask == nil)
         #expect(!manager.layoutPublication.canPublish(generation: before))

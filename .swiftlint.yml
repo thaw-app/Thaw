@@ -69,6 +69,14 @@ custom_rules:
     name: Prefer Spaces Over Tabs
     message: "Indentation should use 4 spaces per indentation level instead of tabs"
     regex: ^\t
+  store_write_needs_permit:
+    name: Store Write Needs A Permit
+    message: "Write the position table through MenuBarPositionStoreProvider.current with a StoreWritePermit; see RepairOrchestrator"
+    regex: 'RuntimePositionStore\.(repairTrailingSiri|writeClusterBoundaryCrossing|applyOrder|respaceOrder)\(|MenuBarPositionStoreProvider\.forEngine'
+    excluded:
+      - Thaw/MenuBar/Backends
+      - Thaw/Items/Persistence/PositionStoreRecoveryEnvironment.swift
+    severity: error
 
 # The Ice attribution line is optional: files whose last remaining
 # Baird-authored lines have been replaced drop it, and files that still carry

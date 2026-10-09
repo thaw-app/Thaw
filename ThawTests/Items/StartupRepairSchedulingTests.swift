@@ -19,7 +19,7 @@ struct StartupRepairSchedulingTests {
         manager.isInStartupSettling = true
         defer { manager.structuralNormalizationTask?.cancel() }
 
-        manager.scheduleStructuralNormalization()
+        manager.scheduleStructuralNormalization(cause: .settled)
 
         #expect(manager.structuralNormalizationTask == nil)
     }
@@ -35,7 +35,7 @@ struct StartupRepairSchedulingTests {
         }
 
         manager.noteRestrictionChange()
-        manager.scheduleStructuralNormalization()
+        manager.scheduleStructuralNormalization(cause: .settled)
 
         #expect(manager.postRestrictionRepairTask != nil)
         #expect(manager.structuralNormalizationTask != nil)

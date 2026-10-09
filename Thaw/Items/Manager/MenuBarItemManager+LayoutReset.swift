@@ -100,7 +100,9 @@ extension MenuBarItemManager {
     func rebalanceOverflowIfNeeded(
         items liveItems: [MenuBarItem]? = nil,
         reason: LayoutChangeReason,
-        immediate: Bool = false
+        immediate: Bool = false,
+        aftermath: RepairTurn.Aftermath? = nil,
+        permit: borrowing StoreWritePermit
     ) async -> Bool {
         guard let appState else { return false }
         let controller = appState.menuBarManager.sectionController
@@ -377,9 +379,10 @@ extension MenuBarItemManager {
                 controller: controller,
                 visibleOrderOverride: freshestRecordedVisibleOrder(controller: controller),
                 reason: reason,
-                preferredMoveUIDs: Set(unmanagedUIDs)
+                preferredMoveUIDs: Set(unmanagedUIDs),
+                permit: permit
             )
-            await cacheItemsRegardless(skipRecentMoveCheck: true)
+            await RepairTurn.Aftermath.closingRead(owedTo: aftermath) { await cacheItemsRegardless(skipRecentMoveCheck: true) }
         }
         return didChange
     }
@@ -390,7 +393,8 @@ extension MenuBarItemManager {
         appState: AppState,
         itemSectionMap: [String: String],
         itemOrder: [String: [String]],
-        source: ApplySource
+        source: ApplySource,
+        permit: borrowing StoreWritePermit
     ) async -> Bool {
         let controller = appState.menuBarManager.sectionController
         guard controller.isOperational else {
@@ -415,13 +419,14 @@ extension MenuBarItemManager {
             await applySectionItemOrder(
                 sections: [.visible],
                 controller: controller,
-                reason: .profileApply
+                reason: .profileApply,
+                permit: permit
             )
         }
 
         let items = await MenuBarItem.getMenuBarItems(option: .activeSpace)
         // Assignment backends bypass legacy overflow; rebalance here to populate Hidden and Thaw Bar.
-        _ = await rebalanceOverflowIfNeeded(items: items, reason: .profileApply)
+        _ = await rebalanceOverflowIfNeeded(items: items, reason: .profileApply, permit: permit)
 
         MenuBarItemManager.diagLog.info(
             "applyProfileLayout (macOS 27): applied \(controller.sectionAssignment.count) assignment(s)"
@@ -649,7 +654,6 @@ extension MenuBarItemManager {
         itemSectionMap: [String: String],
         itemOrder: [String: [String]]
     ) {
-        suppressSpatialOrderPersistenceAfterFailedApply = false
         guard case .profile = source else { return }
         pinnedHiddenBundleIDs = pinnedHidden
         pinnedAlwaysHiddenBundleIDs = pinnedAlwaysHidden
@@ -736,6 +740,15 @@ extension MenuBarItemManager {
             return true
         }
 
+        // Taken before any state is armed, so a profile superseded while it
+        // queued leaves nothing behind. Held for the whole apply: repairs must
+        // not write between its assignment and its order.
+        repairs.request(.profileLayoutApply, cause: .profileApplied)
+        guard let hold = await repairs.enter(.profileLayoutApply, priority: .user) else {
+            return true
+        }
+        defer { repairs.leave(hold) }
+
         // MARK: Phase 1: persist state and arm in-flight flags
 
         // savedOrder keeps its source order and skips profile state; relocateNewLeftmostItems handles its late arrivals.
@@ -747,6 +760,10 @@ extension MenuBarItemManager {
             itemSectionMap: itemSectionMap,
             itemOrder: itemOrder
         )
+        // Every way out clears the gate. The early returns below used to leave
+        // it set, which kept saved-layout apply, normalization and the order
+        // mirror switched off until another profile applied.
+        defer { clearProfileState(source: source) }
 
         // Both apply sources must prevent the cache from saving intermediate positions.
         isRestoringItemOrder = true
@@ -770,7 +787,8 @@ extension MenuBarItemManager {
             appState: appState,
             itemSectionMap: itemSectionMap,
             itemOrder: itemOrder,
-            source: source
+            source: source,
+            permit: StoreWritePermit(hold)
         )
     }
 

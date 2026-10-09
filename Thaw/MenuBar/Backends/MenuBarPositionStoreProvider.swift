@@ -35,8 +35,18 @@ nonisolated enum MenuBarPositionStoreProvider {
     /// Read from Defaults rather than from AppState so the choice does not
     /// depend on settings having loaded, and so a caller deep in persistence
     /// need not reach for app state to get the right answer.
+    ///
+    /// Anyone may read through it; its writes ask for a StoreWritePermit.
     @MainActor
-    static var current: any MenuBarPositionStoring {
+    static var current: PermittedPositionStore {
+        PermittedPositionStore(wrapping: forEngine)
+    }
+
+    /// The same choice as current, as the bare protocol. Only for handing the
+    /// store to PlatformRuntimeKit, which takes the protocol and writes on its
+    /// own terms. App code reads and writes through current.
+    @MainActor
+    static var forEngine: any MenuBarPositionStoring {
         let raw = Defaults.integer(forKey: .menuBarArrangementMode)
         return MenuBarArrangementMode(rawValue: raw) == .manual ? readOnly : live
     }
@@ -44,7 +54,7 @@ nonisolated enum MenuBarPositionStoreProvider {
     /// The store for the writes an explicit Layout edit makes: live inside one, current otherwise.
     /// Only the move, seat and section-apply writes ask for it, so repair paths stay read-only in Manual.
     @MainActor
-    static var forLayoutEdit: any MenuBarPositionStoring {
-        ExplicitLayoutEdit.isActive ? live : current
+    static var forLayoutEdit: PermittedPositionStore {
+        PermittedPositionStore(wrapping: ExplicitLayoutEdit.isActive ? live : forEngine)
     }
 }

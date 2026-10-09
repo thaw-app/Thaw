@@ -277,31 +277,45 @@ private struct MenuBarSearchContentView: View {
     /// inspector lists everything with an empty query, so an empty list there
     /// means the walk found nothing, not that the user has not asked yet.
     ///
+    /// What both surfaces show while there is nothing to list yet, or nil once there is.
+    ///
     /// Screen Recording is deliberately absent: without it the rows render
     /// owning-app icons (the same fallback used for failed captures), so the
-    /// inspector works under Accessibility alone.
-    @ViewBuilder
-    private var inspectorContentArea: some View {
+    /// search works under Accessibility alone.
+    private var unavailableState: ThawEmptyState? {
         if !AXHelpers.isProcessTrusted() {
-            ThawEmptyState(
+            // Distinct from "nothing matched": without Accessibility the item
+            // walk returns an empty list, which would otherwise read as an
+            // empty menu bar.
+            return ThawEmptyState(
                 systemImage: "hand.raised",
                 title: "Accessibility is off",
                 caption: "\(Constants.displayName) needs Accessibility to list your menu bar items.",
                 actionTitle: "Grant Access",
                 action: { appState.permissions.accessibility.performRequest() }
             )
-        } else if itemManager.hasNoManagedItems {
-            ThawEmptyState(
+        }
+        if itemManager.hasNoManagedItems {
+            return ThawEmptyState(
                 systemImage: "menubar.rectangle",
                 title: "Reading your menu bar…",
                 isLoading: true
             )
-        } else if hasNoMatches {
-            ThawEmptyState(
+        }
+        if hasNoMatches {
+            return ThawEmptyState(
                 systemImage: "magnifyingglass",
                 title: "No items match",
                 caption: "Try part of the item's name or the app that owns it."
             )
+        }
+        return nil
+    }
+
+    @ViewBuilder
+    private var inspectorContentArea: some View {
+        if let unavailableState {
+            unavailableState
         } else {
             rowList
         }
@@ -309,29 +323,8 @@ private struct MenuBarSearchContentView: View {
 
     @ViewBuilder
     private var launcherContentArea: some View {
-        if !AXHelpers.isProcessTrusted() {
-            // Distinct from "nothing matched": without Accessibility the item
-            // walk returns an empty list, which would otherwise read as an
-            // empty menu bar.
-            ThawEmptyState(
-                systemImage: "hand.raised",
-                title: "Accessibility is off",
-                caption: "\(Constants.displayName) needs Accessibility to list your menu bar items.",
-                actionTitle: "Grant Access",
-                action: { appState.permissions.accessibility.performRequest() }
-            )
-        } else if itemManager.hasNoManagedItems {
-            ThawEmptyState(
-                systemImage: "menubar.rectangle",
-                title: "Reading your menu bar…",
-                isLoading: true
-            )
-        } else if hasNoMatches {
-            ThawEmptyState(
-                systemImage: "magnifyingglass",
-                title: "No items match",
-                caption: "Try part of the item's name or the app that owns it."
-            )
+        if let unavailableState {
+            unavailableState
         } else if model.displayedItems.isEmpty {
             ThawEmptyState(
                 systemImage: "clock",

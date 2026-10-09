@@ -107,18 +107,29 @@ struct ExplicitLayoutEditTests {
         defer { Defaults.set(saved, forKey: key) }
 
         Defaults.set(MenuBarArrangementMode.manual.rawValue, forKey: key)
-        #expect(MenuBarPositionStoreProvider.current is ReadOnlyPositionStore)
-        #expect(MenuBarPositionStoreProvider.forLayoutEdit is ReadOnlyPositionStore)
+        #expect(MenuBarPositionStoreProvider.current.refusesOrdering)
+        #expect(MenuBarPositionStoreProvider.forLayoutEdit.refusesOrdering)
         let insideEdit = ExplicitLayoutEdit.perform {
             (
-                MenuBarPositionStoreProvider.forLayoutEdit is ReadOnlyPositionStore,
-                MenuBarPositionStoreProvider.current is ReadOnlyPositionStore
+                MenuBarPositionStoreProvider.forLayoutEdit.refusesOrdering,
+                MenuBarPositionStoreProvider.current.refusesOrdering
             )
         }
         #expect(!insideEdit.0)
         #expect(insideEdit.1)
 
         Defaults.set(MenuBarArrangementMode.automatic.rawValue, forKey: key)
-        #expect(!(MenuBarPositionStoreProvider.forLayoutEdit is ReadOnlyPositionStore))
+        #expect(!MenuBarPositionStoreProvider.forLayoutEdit.refusesOrdering)
+    }
+
+    @Test("An edit asked for from a menu runs marked as explicit, so Manual lets it move")
+    @MainActor
+    func menuEditIsExplicit() async {
+        var wasActive = false
+        await ExplicitLayoutEdit.task { wasActive = ExplicitLayoutEdit.isActive }.value
+
+        #expect(wasActive)
+        #expect(!ExplicitLayoutEdit.isActive)
+        #expect(!ExplicitLayoutEdit.manualArrangementForbidsMoves(arrangementIsManual: true, isExplicitLayoutEdit: wasActive))
     }
 }

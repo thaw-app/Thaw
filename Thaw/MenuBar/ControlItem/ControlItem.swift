@@ -515,15 +515,21 @@ extension ControlItem {
     }
 
     private func escalateIfStillOffBand() {
-        guard let frame = window?.frame, Self.isDegenerateMenuBarFrame(frame) else {
-            return
-        }
+        // A missing window is not health: an item that is added and has none counts as off-band.
+        let frame = window?.frame ?? (isAddedToMenuBar ? CGRect.zero : nil)
+        guard let frame, Self.isDegenerateMenuBarFrame(frame) else { return }
         let now = Date.now
         guard now.timeIntervalSince(lastOffBandEscalation) >= Self.offBandEscalationCooldown else {
             noteDegenerateFrame()
             return
         }
         lastOffBandEscalation = now
+
+        // Switched off in System Settings: no rung can seat the item, so only the switch is watched.
+        if MenuBarAllowState.ofThaw() == false {
+            notePlacementBlocked()
+            return scheduleRepublishRearmRetry()
+        }
 
         switch Self.offBandRecoveryAction(
             takenInCycle: offBandRecoveryLevel,

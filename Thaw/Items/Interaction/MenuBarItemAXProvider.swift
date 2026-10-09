@@ -174,31 +174,10 @@ nonisolated enum MenuBarItemAXProvider {
                     continue
                 }
 
-                // Identity is kept apart from the live title. Some apps publish
-                // it on the button, so scan one level down, only when needed.
-                let directIdentifier = attributes.identifier?.nonEmpty
-                let directDescription = attributes.accessibilityDescription?.nonEmpty
-                let (childIdentifier, childDescription) = Self.descendantIdentity(
-                    of: attributes,
-                    directIdentifier: directIdentifier,
-                    directDescription: directDescription
-                )
-
-                // Direct attribution: the owning process is the app that
-                // published this child (fall back to the element's own PID).
                 let ownerPID = AXHelpers.pid(for: child) ?? runningApp.processIdentifier
                 let derived = Self.rawItem(
-                    namespace: namespace,
-                    identifier: directIdentifier,
-                    childIdentifier: childIdentifier,
-                    accessibilityDescription: directDescription,
-                    childDescription: childDescription,
-                    axTitle: attributes.title?.nonEmpty,
-                    fallbackIndex: fallbackIndex,
-                    bounds: frame,
-                    ownerPID: ownerPID
+                    for: attributes, namespace: namespace, frame: frame, ownerPID: ownerPID, fallbackIndex: &fallbackIndex
                 )
-                fallbackIndex = derived.fallbackIndex
                 guard let item = derived.item else {
                     diagLog.debug("menuBarItems: skipping native overflow control (title) title='\(derived.identityTitle)' frame=\(frame)")
                     continue
@@ -246,6 +225,14 @@ nonisolated enum MenuBarItemAXProvider {
     private static let loggedEmptyExtrasBarReads = OSAllocatedUnfairLock(
         initialState: [pid_t: AXError]()
     )
+
+    /// Former hosts whose last empty read was a plain answer: no extras bar, and no error or timeout.
+    /// Such an app has no items to show. One that timed out or failed is being missed.
+    static func processesAnsweringWithNoItems() -> Set<pid_t> {
+        loggedEmptyExtrasBarReads.withLock { logged in
+            Set(logged.filter { $0.value == .noValue || $0.value == .attributeUnsupported }.keys)
+        }
+    }
 
     private static let perAppWalkBudget = Duration.milliseconds(400)
 
@@ -347,7 +334,7 @@ nonisolated enum MenuBarItemAXProvider {
             let elapsed = ContinuousClock.now - walkStart
             diagLog.info(
                 """
-                menuBarItems: \(scope == .discovery ? "discovery" : "targeted") walk \
+                menuBarItems: \(scope == .discovery ? "discovery" : scope == .settledOwners ? "settled" : "targeted") walk \
                 \(truncated ? "TRUNCATED" : "completed") in \(elapsed), \
                 probed \(appsProbed)/\(pass.owners.count) selected / \(runningApps.count) running app(s), \
                 \(appsWithExtrasBar) had an extras menu bar, budget \(globalBudget)
@@ -625,26 +612,10 @@ nonisolated enum MenuBarItemAXProvider {
                 continue
             }
 
-            let directIdentifier = attributes.identifier?.nonEmpty
-            let directDescription = attributes.accessibilityDescription?.nonEmpty
-            let (childIdentifier, childDescription) = Self.descendantIdentity(
-                of: attributes,
-                directIdentifier: directIdentifier,
-                directDescription: directDescription
-            )
             let ownerPID = AXHelpers.pid(for: child) ?? runningApp.processIdentifier
             let derived = Self.rawItem(
-                namespace: namespace,
-                identifier: directIdentifier,
-                childIdentifier: childIdentifier,
-                accessibilityDescription: directDescription,
-                childDescription: childDescription,
-                axTitle: attributes.title?.nonEmpty,
-                fallbackIndex: fallbackIndex,
-                bounds: frame,
-                ownerPID: ownerPID
+                for: attributes, namespace: namespace, frame: frame, ownerPID: ownerPID, fallbackIndex: &fallbackIndex
             )
-            fallbackIndex = derived.fallbackIndex
             guard let item = derived.item else {
                 continue
             }
@@ -755,10 +726,15 @@ nonisolated enum MenuBarItemAXProvider {
     /// An incomplete pass must not prove adjacency or replace a saved order.
     @concurrent
     static func menuBarItemsForMoveConcurrent(priorityPIDs: Set<pid_t>) async -> [MenuBarItem]? {
-        guard let snapshot = await inventoryGate.snapshot(
-            freshOnly: true, scope: .knownOwners, priorityOwners: priorityPIDs
-        ), snapshot.hasFreshMoveInventory else { return nil }
-        return restoredIdentities(snapshot).freshItems
+        // Item owners first: re-probing every app whose empty answer has expired can spend the whole budget.
+        for scope in [MenuBarScanScope.itemOwners, .knownOwners] {
+            if let snapshot = await inventoryGate.snapshot(freshOnly: true, scope: scope, priorityOwners: priorityPIDs),
+               snapshot.hasFreshMoveInventory
+            {
+                return restoredIdentities(snapshot).freshItems
+            }
+        }
+        return nil
     }
 
     /// Re-reads the owners appearance already knows, skipping discovery's
@@ -786,11 +762,26 @@ nonisolated enum MenuBarItemAXProvider {
         freshOnly: Bool = false,
         priorityPIDs: Set<pid_t> = []
     ) async -> InventorySnapshot {
+        let plan = InventoryWalkPlan.make(
+            requested: priorityPIDs,
+            drawnOwners: AXPrimitives.menuBarAgentDrawnOwners(),
+            lastFullWalk: fullWalks.lastFullWalk
+        )
+        // A settled read waits out a full walk in flight. Cancelling it would put off the one read that checks the shortcut.
         guard let snapshot = await inventoryGate.snapshot(
-            freshOnly: freshOnly, priorityOwners: priorityPIDs
+            freshOnly: freshOnly,
+            scope: plan.scope,
+            priorityOwners: plan.priorityOwners,
+            preemptsDiscovery: plan.scope == .discovery
         ) else { return .unavailable }
+        if plan.scope == .discovery, snapshot.completed || snapshot.hasFreshKnownInventory {
+            fullWalks.noteFullWalk()
+        }
         return restoredIdentities(snapshot)
     }
+
+    /// See InventoryWalkPlan.
+    private static let fullWalks = FullWalkLedger()
 
     /// See nativeOverflowControlBounds(on:).
     @concurrent
@@ -1321,6 +1312,39 @@ nonisolated enum MenuBarItemAXProvider {
         guard namespace == .menuBarAgent else { return false }
         return MenuBarItemTag.isNativeOverflowControlTitle(identityTitle)
             || MenuBarItemTag.isNativeOverflowControlTitle(displayTitle)
+    }
+
+    /// Derives one extras-bar child's item for either walk, and advances the per-app fallback index.
+    ///
+    /// Identity is kept apart from the live title. Some apps publish it on the button, so the child is
+    /// scanned one level down, only when needed. The owner is the process that published the child.
+    private static func rawItem(
+        for attributes: AXHelpers.MenuBarChildAttributes,
+        namespace: MenuBarItemTag.Namespace,
+        frame: CGRect,
+        ownerPID: pid_t,
+        fallbackIndex: inout Int
+    ) -> (item: RawItem?, identityTitle: String) {
+        let directIdentifier = attributes.identifier?.nonEmpty
+        let directDescription = attributes.accessibilityDescription?.nonEmpty
+        let (childIdentifier, childDescription) = descendantIdentity(
+            of: attributes,
+            directIdentifier: directIdentifier,
+            directDescription: directDescription
+        )
+        let derived = rawItem(
+            namespace: namespace,
+            identifier: directIdentifier,
+            childIdentifier: childIdentifier,
+            accessibilityDescription: directDescription,
+            childDescription: childDescription,
+            axTitle: attributes.title?.nonEmpty,
+            fallbackIndex: fallbackIndex,
+            bounds: frame,
+            ownerPID: ownerPID
+        )
+        fallbackIndex = derived.fallbackIndex
+        return (derived.item, derived.identityTitle)
     }
 
     /// The per-child identity derivation shared by the in-process walk and the

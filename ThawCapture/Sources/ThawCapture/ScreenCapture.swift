@@ -35,6 +35,11 @@ public extension ScreenCapture {
 }
 
 public extension ScreenCapture {
+    /// Whether a capture asked for now would run. With no Thaw surface open it is refused, which is not a failed read.
+    static var acceptsCaptures: Bool {
+        captureUITicket() != nil
+    }
+
     /// Call synchronously whenever the set of visible capture consumers changes.
     /// Closing the final UI invalidates queued requests before stream cleanup runs.
     static func setCaptureUIActive(_ active: Bool) {

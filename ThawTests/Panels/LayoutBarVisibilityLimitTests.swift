@@ -18,7 +18,8 @@ struct LayoutBarVisibilityLimitTests {
         bundleID: String = "com.example.app",
         native: Bool = false,
         hidesOthers: Bool = true,
-        untracked: Set<String> = []
+        untracked: Set<String> = [],
+        pinned: Bool = false
     ) -> LayoutBarVisibilityLimit? {
         LayoutBarVisibilityLimit.limit(
             section: section,
@@ -26,8 +27,17 @@ struct LayoutBarVisibilityLimitTests {
             ownerBundleID: bundleID,
             nativeAppHidingActive: native,
             hidesOtherIcons: hidesOthers,
-            untrackedBundleIDs: untracked
+            untrackedBundleIDs: untracked,
+            isPinnedControlCenterModule: pinned
         )
+    }
+
+    @Test("A pinned Control Center item cannot show in Visible while others are hidden")
+    func pinnedModuleCannotShow() {
+        #expect(limit(section: .visible, pinned: true) == .pinnedModuleCannotShow)
+        #expect(limit(section: .visible, hidesOthers: false, pinned: true) == nil)
+        #expect(limit(section: .visible, native: true, pinned: true) == nil)
+        #expect(limit(section: .hidden, pinned: true) == nil)
     }
 
     @Test("An icon without a registered bundle cannot show in Visible while others are hidden")

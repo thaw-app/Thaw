@@ -16,7 +16,7 @@ extension PositionStoreItemSource.Environment {
     @MainActor
     static var thaw: Self {
         Self(
-            positionStore: { MenuBarPositionStoreProvider.current },
+            positionStore: { MenuBarPositionStoreProvider.forEngine },
             readHostingSurface: { items, displayID in
                 guard !ScreenLock.isLocked,
                       let capture = await ScreenCapture.captureMenuBarHostingWindowAsync(displayID: displayID),

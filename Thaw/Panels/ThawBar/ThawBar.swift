@@ -381,26 +381,19 @@ final class ThawBarPanel: NSPanel {
         lastShowTimestamp = Date()
 
         // Show cached data immediately; Observation renders background updates as they arrive.
+        let inputs = ThawBarHostingView.Inputs(
+            appState: appState,
+            colorManager: colorManager,
+            keyboardFocus: keyboardFocus,
+            screen: screen,
+            section: section,
+            showsOnlyThawBarOnlyItems: presentation.showsOnlyThawBarOnlyItems,
+            folderMembers: folderMemberIdentifiers
+        )
         if let hostingView = contentView as? ThawBarHostingView {
-            hostingView.update(
-                appState: appState,
-                colorManager: colorManager,
-                keyboardFocus: keyboardFocus,
-                screen: screen,
-                section: section,
-                showsOnlyThawBarOnlyItems: presentation.showsOnlyThawBarOnlyItems,
-                folderMembers: folderMemberIdentifiers
-            )
+            hostingView.update(inputs)
         } else {
-            contentView = ThawBarHostingView(
-                appState: appState,
-                colorManager: colorManager,
-                keyboardFocus: keyboardFocus,
-                screen: screen,
-                section: section,
-                showsOnlyThawBarOnlyItems: presentation.showsOnlyThawBarOnlyItems,
-                folderMembers: folderMemberIdentifiers
-            )
+            contentView = ThawBarHostingView(inputs)
         }
 
         // Measure before placement: a zero-size panel at the right edge has no NSWindow.screen for later repositioning.

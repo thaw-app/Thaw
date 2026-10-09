@@ -217,11 +217,14 @@ nonisolated extension SearchIndex {
         ),
         SearchEntry(
             id: "advanced.enableNativeAppHiding",
-            title: "Show Live Activities and the camera indicator",
-            descriptionText: String(localized: "Keeps Live Activities and the camera indicator on the menu bar while apps are hidden, and stops hidden items from flashing when Notification Center opens."),
-            pane: .general,
-            section: "Menu bar behavior",
-            keywords: ["live activities", "camera", "microphone", "indicator", "native", "hiding", "beta", "notification center"],
+            title: "Hiding method",
+            descriptionText: String(localized: "Native keeps Live Activities, the camera indicator and Apple’s own items on the menu bar. Standard hides any app’s items. Everything also hides Clock, Control Center and Siri."),
+            pane: .menuBarLayout,
+            section: "Hiding",
+            keywords: [
+                "live activities", "camera", "microphone", "indicator", "native", "standard", "everything", "hiding", "method", "beta",
+                "notification center", "clock", "control center", "siri",
+            ],
             property: .advanced("enableNativeAppHiding")
         ),
         SearchEntry(

@@ -119,7 +119,7 @@ enum BentoDemo: CaseIterable {
 /// reads at this size.
 private nonisolated func ramp(_ phase: Double, _ start: Double, _ end: Double) -> Double {
     guard end > start else { return phase >= end ? 1 : 0 }
-    let t = min(max((phase - start) / (end - start), 0), 1)
+    let t = ((phase - start) / (end - start)).clamped(to: 0 ... 1)
     return t * t * (3 - 2 * t)
 }
 

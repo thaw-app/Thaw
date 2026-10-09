@@ -52,6 +52,42 @@ struct UnseenMenuBarHostsTests {
         #expect(hosts.persisted() == ["a": 1])
     }
 
+    @Test("A host that shows nothing on purpose is not flagged, and keeps its place in the baseline")
+    func quietHostIsNotFlagged() {
+        var hosts = UnseenMenuBarHosts(expected: ["com.example.app": 1])
+        _ = hosts.update(seen: [], running: ["com.example.app"], quiet: ["com.example.app"], now: start)
+        let changed = hosts.update(
+            seen: [], running: ["com.example.app"], quiet: ["com.example.app"], now: start + delay * 2
+        )
+        #expect(!changed)
+        #expect(hosts.flagged.isEmpty)
+        #expect(hosts.persisted() == ["com.example.app": 1])
+    }
+
+    @Test("A flagged host that turns out to be quiet is dropped from the warning")
+    func quietClearsTheFlag() {
+        var hosts = UnseenMenuBarHosts(expected: ["com.example.app": 0])
+        _ = hosts.update(seen: [], running: ["com.example.app"], now: start)
+        _ = hosts.update(seen: [], running: ["com.example.app"], now: start + delay)
+        #expect(hosts.flagged == ["com.example.app"])
+
+        let changed = hosts.update(
+            seen: [], running: ["com.example.app"], quiet: ["com.example.app"], now: start + delay + 1
+        )
+        #expect(changed)
+        #expect(hosts.flagged.isEmpty)
+    }
+
+    @Test("A host that stops being quiet waits out the delay again")
+    func noLongerQuietStartsOver() {
+        var hosts = UnseenMenuBarHosts(expected: ["com.example.app": 0])
+        _ = hosts.update(seen: [], running: ["com.example.app"], quiet: ["com.example.app"], now: start)
+        _ = hosts.update(seen: [], running: ["com.example.app"], now: start + delay)
+        #expect(hosts.flagged.isEmpty)
+        _ = hosts.update(seen: [], running: ["com.example.app"], now: start + delay * 2)
+        #expect(hosts.flagged == ["com.example.app"])
+    }
+
     @Test("Hosts seen this session become the next session's baseline")
     func learnsNewHosts() {
         var hosts = UnseenMenuBarHosts(expected: [:])

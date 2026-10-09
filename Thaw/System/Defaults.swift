@@ -632,6 +632,11 @@ extension Defaults {
 
         case hasCompletedFirstLaunch
 
+        // MARK: Reduced Mode
+
+        case reducedModeChosen
+        case reducedModeHiddenBundleIDs
+
         // MARK: Updates Consent
 
         case hasSeenUpdateConsent

@@ -184,6 +184,9 @@ nonisolated enum Constants {
 
     static let issuesURL = repositoryURL.appendingPathComponent("issues")
 
+    /// System Settings > Menu Bar.
+    static let menuBarSystemSettingsURL = URL(string: "x-apple.systempreferences:com.apple.ControlCenter-Settings.extension")
+
     static let frequentIssuesURL = repositoryURL.appending(path: "blob/development/FREQUENT_ISSUES.md")
     static let contributorsURL = repositoryURL.appending(path: "graphs/contributors")
     static let translatorsURL = repositoryURL.appending(path: "blob/development/CREDITS.md")

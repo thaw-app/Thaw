@@ -54,25 +54,21 @@ extension MenuBarItemManager {
     func adoptObservedMembership(reason: String, afterUserDrag: Bool = false) {
         guard arrangementIsManual || afterUserDrag, let appState else { return }
         let controller = appState.menuBarManager.sectionController
-        let store = MenuBarPositionStoreProvider.current
-        guard store.positionsDomainIsAccessible() else { return }
-        let positions = store.currentPositions()
         let items = itemCache.managedItems
-        let keys = Array(positions.keys)
-        func weight(of item: MenuBarItem) -> Int? {
-            store.resolveKey(for: item, existingKeys: keys, positions: positions, liveItems: items)
-                .flatMap { positions[$0] }
-        }
-        let controls = items.filter(\.isControlItem)
-        guard let visibleControl = controls.first(where: { $0.tag.matchesVisibleControlItem }).flatMap(weight),
-              let hiddenDivider = controls.first(where: { $0.tag == .hiddenControlItem }).flatMap(weight),
+        let weights = StoredWeights(among: items)
+        guard weights.isAvailable else { return }
+        let weight = weights.weight(of:)
+        // The cache keeps the Visible control but drops both dividers, so those come from the last walk.
+        let dividers = lastKnownControlItems
+        guard let visibleControl = items.first(where: { $0.tag.matchesVisibleControlItem }).flatMap(weight),
+              let hiddenDivider = (dividers?.hidden).flatMap(weight),
               hiddenDivider != visibleControl
         else {
             MenuBarItemManager.diagLog.debug("observed membership (\(reason)): divider weights unavailable; skipping")
             return
         }
         let alwaysHiddenDivider = configuration.isAlwaysHiddenSectionEnabled
-            ? controls.first(where: { $0.tag == .alwaysHiddenControlItem }).flatMap(weight)
+            ? (dividers?.alwaysHidden).flatMap(weight)
             : nil
         let experimentalSystemItemHiding = configuration.enableExperimentalSystemItemHiding
 
@@ -81,8 +77,8 @@ extension MenuBarItemManager {
             guard item.tag.canBeHidden,
                   item.isMovable(experimentalSystemItemHiding: experimentalSystemItemHiding),
                   !isThawBarOnly(item),
-                  let itemWeight = weight(of: item),
-                  !store.isParkedWeight(itemWeight)
+                  let itemWeight = weight(item),
+                  !weights.isParked(itemWeight)
             else {
                 continue
             }
@@ -121,12 +117,15 @@ extension MenuBarItemManager {
         let desiredOrder = (controller.sectionItemOrder[section] ?? [])
             .filter { controller.section(for: $0) == section && cachedIdentifiers.contains($0) }
         guard desiredOrder.count > 1 else { return }
-        let changed = MenuBarPositionStoreProvider.forLayoutEdit.respaceOrder(
-            desiredOrder: desiredOrder,
-            liveItems: cachedItems,
-            experimentalSystemItemHiding: configuration.enableExperimentalSystemItemHiding,
-            mayRewriteAroundUnplaceableItems: true
-        )
+        let changed = repairs.writeNow(.manualLayoutEdit, cause: .userEdit) { permit in
+            MenuBarPositionStoreProvider.forLayoutEdit.respaceOrder(
+                desiredOrder: desiredOrder,
+                liveItems: cachedItems,
+                experimentalSystemItemHiding: configuration.enableExperimentalSystemItemHiding,
+                mayRewriteAroundUnplaceableItems: true,
+                permit: permit
+            )
+        }
         guard !changed.isEmpty else { return }
         commitPreferredPositionWrite(controller: controller)
         MenuBarItemManager.diagLog.info(

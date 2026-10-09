@@ -188,6 +188,9 @@ extension MenuBarItemImageCache {
             hostingFailureWarnedDisplays.withLock { _ = $0.remove(displayID) }
             return capture
         }
+        guard result.noteMissingCapture(of: candidates.map(\.item), captureWasAllowed: captureIsAllowed()) else {
+            return nil
+        }
         let firstFailure = hostingFailureWarnedDisplays.withLock { $0.insert(displayID).inserted }
         let message = "axBoundsCapture: captureMenuBarHostingWindowAsync failed for \(candidates.count) items"
         if firstFailure {
@@ -195,8 +198,6 @@ extension MenuBarItemImageCache {
         } else {
             Self.diagLog.debug(message)
         }
-        result.unreadable.append(contentsOf: candidates.map(\.item))
-        result.invalidatedTags.formUnion(candidates.map(\.item.tag))
         return nil
     }
 
@@ -210,9 +211,11 @@ extension MenuBarItemImageCache {
         let capture = await reader.displayStripCapture(displayID: context.displayID)
         guard !screenIsLocked() else { return }
         guard let capture, Self.isPlausibleAXCapture(capture) else {
-            Self.diagLog.warning("axBoundsCapture: captureMenuBarDisplayStripAsync failed for \(candidates.count) items")
-            result.unreadable.append(contentsOf: candidates.map(\.item))
-            result.invalidatedTags.formUnion(candidates.map(\.item.tag))
+            if result.noteMissingCapture(of: candidates.map(\.item), captureWasAllowed: captureIsAllowed()) {
+                Self.diagLog.warning("axBoundsCapture: captureMenuBarDisplayStripAsync failed for \(candidates.count) items")
+            } else {
+                Self.diagLog.debug("axBoundsCapture: capture refused for \(candidates.count) items; no Thaw surface is open")
+            }
             return
         }
         // A hosting enumeration cannot establish ownership of on-screen pixels.
@@ -277,5 +280,17 @@ extension MenuBarItemImageCache {
             windowFrame: capture.windowFrame,
             scale: capture.scale
         )
+    }
+}
+
+extension MenuBarItemImageCache.CapturePass {
+    /// Records items whose pixels did not arrive. A capture refused because no Thaw surface is open
+    /// proves nothing about the pictures already cached, so it records nothing and returns false.
+    @discardableResult
+    nonisolated mutating func noteMissingCapture(of items: [MenuBarItem], captureWasAllowed: Bool) -> Bool {
+        guard captureWasAllowed else { return false }
+        unreadable.append(contentsOf: items)
+        invalidatedTags.formUnion(items.map(\.tag))
+        return true
     }
 }

@@ -89,7 +89,7 @@ nonisolated enum ForegroundContrast {
         // Blended on the encoded channels, which is where SwiftUI and
         // AppKit blend a translucent fill; linearizing first would land on a
         // different color than the one actually on screen.
-        let alpha = min(max(opacity, 0), 1) * overlay.alpha
+        let alpha = opacity.clamped(to: 0 ... 1) * overlay.alpha
         let mix = { (over: Double, under: Double) in (over * alpha) + (under * (1 - alpha)) }
         return CGColor(
             srgbRed: mix(overlay.red, base.red),
@@ -103,7 +103,7 @@ nonisolated enum ForegroundContrast {
     ///
     /// - Parameter channel: Encoded channel value, from 0 to 1.
     private static func linearized(_ channel: Double) -> Double {
-        let channel = min(max(channel, 0), 1)
+        let channel = channel.clamped(to: 0 ... 1)
         return channel <= 0.04045
             ? channel / 12.92
             : pow((channel + 0.055) / 1.055, 2.4)

@@ -18,70 +18,39 @@ final class ThawBarHostingView: NSHostingView<ThawBarContentView> {
         (window as? ThawBarPanel)?.resizeToContent()
     }
 
-    init(
-        appState: AppState,
-        colorManager: ThawBarColorManager,
-        keyboardFocus: ThawBarKeyboardFocus,
-        screen: NSScreen,
-        section: MenuBarSection.Name,
-        showsOnlyThawBarOnlyItems: Bool,
-        folderMembers: [String]?
-    ) {
-        super.init(
-            rootView: Self.makeContentView(
-                appState: appState,
-                colorManager: colorManager,
-                keyboardFocus: keyboardFocus,
-                screen: screen,
-                section: section,
-                showsOnlyThawBarOnlyItems: showsOnlyThawBarOnlyItems,
-                folderMembers: folderMembers
-            )
-        )
+    /// What one showing of the Thaw Bar is built from.
+    struct Inputs {
+        let appState: AppState
+        let colorManager: ThawBarColorManager
+        let keyboardFocus: ThawBarKeyboardFocus
+        let screen: NSScreen
+        let section: MenuBarSection.Name
+        let showsOnlyThawBarOnlyItems: Bool
+        let folderMembers: [String]?
+    }
+
+    init(_ inputs: Inputs) {
+        super.init(rootView: Self.makeContentView(inputs))
     }
 
     /// Reuse the hosting graph with new inputs; rebuilding on each show grows process-lifetime SwiftUI caches.
-    func update(
-        appState: AppState,
-        colorManager: ThawBarColorManager,
-        keyboardFocus: ThawBarKeyboardFocus,
-        screen: NSScreen,
-        section: MenuBarSection.Name,
-        showsOnlyThawBarOnlyItems: Bool,
-        folderMembers: [String]?
-    ) {
-        rootView = Self.makeContentView(
-            appState: appState,
-            colorManager: colorManager,
-            keyboardFocus: keyboardFocus,
-            screen: screen,
-            section: section,
-            showsOnlyThawBarOnlyItems: showsOnlyThawBarOnlyItems,
-            folderMembers: folderMembers
-        )
+    func update(_ inputs: Inputs) {
+        rootView = Self.makeContentView(inputs)
     }
 
-    private static func makeContentView(
-        appState: AppState,
-        colorManager: ThawBarColorManager,
-        keyboardFocus: ThawBarKeyboardFocus,
-        screen: NSScreen,
-        section: MenuBarSection.Name,
-        showsOnlyThawBarOnlyItems: Bool,
-        folderMembers: [String]?
-    ) -> ThawBarContentView {
+    private static func makeContentView(_ inputs: Inputs) -> ThawBarContentView {
         ThawBarContentView(
-            appState: appState,
-            colorManager: colorManager,
-            keyboardFocus: keyboardFocus,
-            itemManager: appState.itemManager,
-            imageCache: appState.imageCache,
-            menuBarManager: appState.menuBarManager,
-            visibleControlItem: appState.menuBarManager.section(withName: .visible)?.controlItem,
-            screen: screen,
-            section: section,
-            showsOnlyThawBarOnlyItems: showsOnlyThawBarOnlyItems,
-            folderMembers: folderMembers
+            appState: inputs.appState,
+            colorManager: inputs.colorManager,
+            keyboardFocus: inputs.keyboardFocus,
+            itemManager: inputs.appState.itemManager,
+            imageCache: inputs.appState.imageCache,
+            menuBarManager: inputs.appState.menuBarManager,
+            visibleControlItem: inputs.appState.menuBarManager.section(withName: .visible)?.controlItem,
+            screen: inputs.screen,
+            section: inputs.section,
+            showsOnlyThawBarOnlyItems: inputs.showsOnlyThawBarOnlyItems,
+            folderMembers: inputs.folderMembers
         )
     }
 

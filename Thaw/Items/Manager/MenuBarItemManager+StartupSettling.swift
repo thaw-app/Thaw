@@ -61,6 +61,8 @@ extension MenuBarItemManager {
         postRestrictionRepairNeedsRerun = false
         structuralNormalizationTask?.cancel()
         structuralNormalizationTask = nil
+        repairs.withdraw(.postRestrictionRepair)
+        repairs.withdraw(.structuralNormalization)
         MenuBarItemManager.diagLog.debug("\(reason): settling period started (max duration: \(maxDuration))")
         // @MainActor ensures the flag flip and final cache call are never
         // interleaved with notification-triggered cache cycles between them.
@@ -183,7 +185,11 @@ extension MenuBarItemManager {
             // also settle through here.
             if !didRunPositionStoreHygiene {
                 didRunPositionStoreHygiene = true
-                PositionStoreHygiene.pruneCurrentStore()
+                repairs.request(.storeHygiene, cause: .settled)
+                if let hold = await repairs.enter(.storeHygiene) {
+                    PositionStoreHygiene.pruneCurrentStore(permit: StoreWritePermit(hold))
+                    repairs.leave(hold)
+                }
             }
 
             // The active display's profile, not savedSectionOrder, is the truth
@@ -209,8 +215,8 @@ extension MenuBarItemManager {
 
             // Repair only after the startup inventory and saved layout have
             // settled; intermediate login-item frames can overlap or be parked.
-            schedulePostRestrictionRepair()
-            scheduleStructuralNormalization()
+            schedulePostRestrictionRepair(cause: .settled)
+            scheduleStructuralNormalization(cause: .settled)
 
             if reason == "performSetup" {
                 scheduleStartupLateItemRecheck()
