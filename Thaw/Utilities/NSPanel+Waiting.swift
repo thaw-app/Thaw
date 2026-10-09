@@ -16,15 +16,9 @@ extension NSPanel {
     func waitUntilClosed(timeout: Duration = .milliseconds(200)) async {
         guard isVisible else { return }
 
-        await withTaskGroup(of: Void.self) { group in
-            group.addTask {
-                await self.waitForInvisibleWithKVO()
-            }
-            group.addTask {
-                try? await Task.sleep(for: timeout)
-            }
-            _ = await group.next()
-            group.cancelAll()
+        // The wait observes cancellation, so the timeout ends it.
+        try? await Task<Void, any Error>.withTimeout(timeout) {
+            await self.waitForInvisibleWithKVO()
         }
     }
 

@@ -12,6 +12,7 @@ import MenuBarModel
 import os.lock
 import PlatformRuntimeKit
 import ThawAXCore
+import ThawConcurrency
 
 typealias NativeOverflowObservation = PlatformRuntimeKit.NativeOverflowObservation
 
@@ -473,71 +474,21 @@ nonisolated enum MenuBarItemAXProvider {
         if Task.isCancelled {
             return nil
         }
-        let race = TimeoutRace<T>()
+        // Whichever lands first settles it, exactly once. A cancellation that lands before the
+        // continuation is registered is kept and answered on registration.
+        let outcome = OneShotContinuation<T?, Never>()
         return await withTaskCancellationHandler(operation: {
             await withCheckedContinuation { continuation in
-                race.awaitOutcome(continuation)
-                // Spawned after registration so the value side cannot settle
-                // before there is a continuation to settle. The watcher lives
-                // only as long as the blocked call does.
-                race.observeValue(of: task)
+                outcome.setContinuation(continuation)
+                // Spawned after registration. The watcher lives only as long
+                // as the blocked call does.
+                Task.detached(priority: .utility) {
+                    await outcome.settle(.success(task.value))
+                }
             }
         }, onCancel: {
-            race.cancel()
+            outcome.settle(.success(nil))
         })
-    }
-
-    /// Settles valueOrCancelled(of:) exactly once, whichever side lands first.
-    private final class TimeoutRace<T: Sendable>: @unchecked Sendable {
-        private enum State {
-            case open
-            case awaiting(CheckedContinuation<T?, Never>)
-            case cancelled
-        }
-
-        private let state = OSAllocatedUnfairLock<State>(initialState: .open)
-
-        /// Registers the continuation, or resumes it immediately with nil
-        /// when cancellation already won.
-        func awaitOutcome(_ continuation: CheckedContinuation<T?, Never>) {
-            let cancelledFirst = state.withLock { state -> Bool in
-                if case .cancelled = state {
-                    return true
-                }
-                state = .awaiting(continuation)
-                return false
-            }
-            if cancelledFirst {
-                continuation.resume(returning: nil)
-            }
-        }
-
-        /// Settles with the task's value when it arrives, unless cancellation
-        /// got there first.
-        func observeValue(of task: Task<T, Never>) {
-            Task.detached(priority: .utility) {
-                let value = await task.value
-                let continuation = self.state.withLock { state -> CheckedContinuation<T?, Never>? in
-                    guard case let .awaiting(continuation) = state else { return nil }
-                    state = .cancelled
-                    return continuation
-                }
-                continuation?.resume(returning: value)
-            }
-        }
-
-        /// Cancellation's settlement.
-        func cancel() {
-            let continuation = state.withLock { state -> CheckedContinuation<T?, Never>? in
-                guard case let .awaiting(continuation) = state else {
-                    state = .cancelled
-                    return nil
-                }
-                state = .cancelled
-                return continuation
-            }
-            continuation?.resume(returning: nil)
-        }
     }
 
     private typealias CollectAppResult = [RawItem]
