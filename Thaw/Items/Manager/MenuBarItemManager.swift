@@ -266,14 +266,9 @@ final class MenuBarItemManager {
         } else {
             layoutPublication.invalidate()
         }
-        postRestrictionRepairTask?.cancel()
-        postRestrictionRepairTask = nil
-        postRestrictionRepairNeedsRerun = false
-        structuralNormalizationTask?.cancel()
-        structuralNormalizationTask = nil
-        deferredLayoutReconcile.cancelPending()
-        repairs.withdraw(.postRestrictionRepair)
-        repairs.withdraw(.structuralNormalization)
+        PendingPassTeardown.callOff([.postRestrictionRepair, .structuralNormalization], of: self, on: repairs) {
+            deferredLayoutReconcile.cancelPending()
+        }
         repairs.withdraw(.deferredLayoutReconcile)
     }
 
@@ -516,20 +511,18 @@ final class MenuBarItemManager {
     /// item and for parked Visible items. See OverflowDeficits.
     var overflowDeficits = OverflowDeficits()
 
-    /// In-flight overflow rebalance task. Coalesces repeated post-cache rebalance
-    /// triggers so the assertion reflow from one rebalance cannot immediately
-    /// kick another, preventing the move→reflow→recache→move thrash cycle.
-    var overflowRebalanceTask: Task<Void, Never>?
-
-    /// The strongest request coalesced into the pending overflow rebalance.
+    /// The pending overflow rebalance: its in-flight task and the strongest
+    /// request coalesced into it.
     ///
-    /// scheduleOverflowRebalance replaces its in-flight task on every
-    /// call, so an explicit request (profile apply, setting flip) or an
-    /// immediate one (native-overflow probe transition) followed by a
-    /// cache-driven request would lose its intent. Merging every request here,
-    /// and clearing it only once a rebalance runs with it, preserves that
-    /// intent. See OverflowRebalanceRequest.
-    var overflowRebalancePendingRequest: OverflowRebalanceRequest?
+    /// scheduleOverflowRebalance replaces the task on every call. That
+    /// coalesces repeated post-cache triggers so the assertion reflow from one
+    /// rebalance cannot immediately kick another, preventing the
+    /// move→reflow→recache→move thrash cycle. It would also lose the intent of
+    /// an explicit request (profile apply, setting flip) or an immediate one
+    /// (native-overflow probe transition) followed by a cache-driven request,
+    /// so every request is merged into the pass and cleared only once a
+    /// rebalance runs with it. See OverflowRebalanceRequest.
+    var overflowRebalance = ScheduledPass<OverflowRebalanceRequest>(.overflowRebalance)
 
     /// Whether the user has taken menu bar arrangement into their own hands (MenuBarArrangementMode.manual).
     /// Every automatic path reads this; the explicit Layout edit path reads arrangementForbidsMoves instead.

@@ -13,7 +13,7 @@ import Testing
 /// policy that decides who may move items, independent of the AX pipeline.
 @Suite("External layout changes")
 struct ExternalLayoutChangeTests {
-    private typealias Request = MenuBarItemManager.OverflowRebalanceRequest
+    private typealias Request = OverflowRebalanceRequest
 
     @Test(
         "Only an explicit request may enforce order",

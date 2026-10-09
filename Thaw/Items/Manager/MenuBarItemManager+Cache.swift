@@ -452,48 +452,35 @@ extension MenuBarItemManager {
         reason: LayoutChangeReason,
         immediate: Bool = false
     ) {
-        repairs.request(.overflowRebalance, cause: cause)
         let request = OverflowRebalanceRequest(reason: reason, immediate: immediate)
-        overflowRebalancePendingRequest = request.merged(into: overflowRebalancePendingRequest)
-        overflowRebalanceTask?.cancel()
-        overflowRebalanceTask = Task { [weak self] in
-            guard let self else { return }
-            try? await Task.sleep(for: .milliseconds(300))
-            guard !Task.isCancelled else { return }
-            guard let hold = await self.repairs.enter(.overflowRebalance) else { return }
-            // Read after the wait, so requests merged while queued are honoured.
-            let effective = self.overflowRebalancePendingRequest ?? request
-            let aftermath = RepairTurn.Aftermath()
-            let didRebalance = await self.rebalanceOverflowIfNeeded(
-                reason: effective.reason,
-                immediate: effective.immediate,
-                aftermath: aftermath,
-                permit: StoreWritePermit(hold)
-            )
-            self.repairs.leave(hold)
-            await aftermath.readCacheIfOwed { await self.cacheItemsRegardless(skipRecentMoveCheck: true) }
-            // Cancelled tasks leave merged intent for their replacements.
-            guard !Task.isCancelled else { return }
-            self.overflowRebalancePendingRequest = nil
-            if didRebalance {
-                try? await Task.sleep(for: .milliseconds(200))
+        let merged = request.merged(into: overflowRebalance.intent)
+        overflowRebalance.request(merged, cause: cause, on: repairs)
+        overflowRebalance.arm { turn in
+            Task { [weak self] in
+                guard let self else { return }
+                try? await Task.sleep(for: .milliseconds(300))
                 guard !Task.isCancelled else { return }
-                await self.cacheItemsRegardless(skipRecentMoveCheck: true)
+                guard let hold = await self.repairs.enter(.overflowRebalance) else { return }
+                // Read after the wait, so requests merged while queued are honoured.
+                let effective = self.overflowRebalance.intent ?? request
+                let aftermath = RepairTurn.Aftermath()
+                let didRebalance = await self.rebalanceOverflowIfNeeded(
+                    reason: effective.reason,
+                    immediate: effective.immediate,
+                    aftermath: aftermath,
+                    permit: StoreWritePermit(hold)
+                )
+                self.repairs.leave(hold)
+                await aftermath.readCacheIfOwed { await self.cacheItemsRegardless(skipRecentMoveCheck: true) }
+                // Cancelled tasks leave merged intent for their replacements.
+                guard !Task.isCancelled else { return }
+                self.overflowRebalance.fulfil(turn)
+                if didRebalance {
+                    try? await Task.sleep(for: .milliseconds(200))
+                    guard !Task.isCancelled else { return }
+                    await self.cacheItemsRegardless(skipRecentMoveCheck: true)
+                }
             }
-        }
-    }
-
-    /// Pure merge policy for timing-independent tests: explicit reasons win and immediacy is sticky.
-    nonisolated struct OverflowRebalanceRequest: Equatable, Sendable {
-        var reason: LayoutChangeReason
-        var immediate: Bool
-
-        func merged(into pending: OverflowRebalanceRequest?) -> OverflowRebalanceRequest {
-            guard let pending else { return self }
-            return OverflowRebalanceRequest(
-                reason: pending.reason.permitsOrderEnforcement ? pending.reason : reason,
-                immediate: pending.immediate || immediate
-            )
         }
     }
 

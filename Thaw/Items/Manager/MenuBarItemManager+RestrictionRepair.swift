@@ -88,10 +88,7 @@ extension MenuBarItemManager {
         // Hiding still invalidates geometry, but manual arrangement never
         // schedules corrective pulses, unparking, or boundary moves.
         guard !arrangementIsManual, !isInStartupSettling, !isNotificationCenterLayoutSuspended else {
-            postRestrictionRepairTask?.cancel()
-            postRestrictionRepairTask = nil
-            postRestrictionRepairNeedsRerun = false
-            repairs.withdraw(.postRestrictionRepair)
+            PendingPassTeardown.callOff([.postRestrictionRepair], of: self, on: repairs)
             return
         }
         repairs.request(.postRestrictionRepair, cause: cause)

@@ -284,9 +284,7 @@ extension MenuBarItemManager {
         var awaitingUserMove = isUserInitiated
         if isUserInitiated {
             cancelPendingSectionOrderApply()
-            structuralNormalizationTask?.cancel()
-            structuralNormalizationTask = nil
-            repairs.withdraw(.structuralNormalization)
+            PendingPassTeardown.callOff([.structuralNormalization], of: self, on: repairs)
             pendingUserReorderCount += 1
         }
         defer {

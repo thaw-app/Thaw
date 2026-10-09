@@ -56,13 +56,7 @@ extension MenuBarItemManager {
         // The cancelled task exits without touching shared state.
         startupSettlingTask?.cancel()
         isInStartupSettling = true
-        postRestrictionRepairTask?.cancel()
-        postRestrictionRepairTask = nil
-        postRestrictionRepairNeedsRerun = false
-        structuralNormalizationTask?.cancel()
-        structuralNormalizationTask = nil
-        repairs.withdraw(.postRestrictionRepair)
-        repairs.withdraw(.structuralNormalization)
+        PendingPassTeardown.callOff([.postRestrictionRepair, .structuralNormalization], of: self, on: repairs)
         MenuBarItemManager.diagLog.debug("\(reason): settling period started (max duration: \(maxDuration))")
         // @MainActor ensures the flag flip and final cache call are never
         // interleaved with notification-triggered cache cycles between them.
