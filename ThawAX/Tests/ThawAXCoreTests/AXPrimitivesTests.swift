@@ -12,6 +12,13 @@ import Testing
 
 struct AXPrimitivesTests {
     @Test
+    func `only this process counts as its own`() {
+        #expect(AXPrimitives.isOwnProcess(getpid()))
+        #expect(!AXPrimitives.isOwnProcess(getppid()))
+        #expect(!AXPrimitives.isOwnProcess(0))
+    }
+
+    @Test
     func `frame is within uses the midpoint`() {
         let display = CGRect(x: 0, y: 0, width: 100, height: 100)
         #expect(AXPrimitives.frame(CGRect(x: 90, y: 90, width: 20, height: 20), isWithin: display))

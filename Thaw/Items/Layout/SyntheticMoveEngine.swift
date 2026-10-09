@@ -136,7 +136,8 @@ struct SyntheticMoveEngine {
 
         Self.diagLog.debug("Drag queue wait: \(ContinuousClock.now - queuedAt)")
         let source = try makeEventSource()
-        let onScreenFrames = NSScreen.screens.map(\.frame)
+        // Item bounds are top-left global; NSScreen frames are bottom-left and miss a display above the main one.
+        let onScreenFrames = NSScreen.allDisplayBoundsCG
 
         for attempt in 1 ... max(1, maxAttempts) {
             try Task.checkCancellation()
