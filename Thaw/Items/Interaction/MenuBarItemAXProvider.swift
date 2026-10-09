@@ -387,6 +387,16 @@ nonisolated enum MenuBarItemAXProvider {
             }
 
             state.didAttempt(owner: ownerPID, generation: pass.generation)
+            // AppKit answers reads of Thaw's own elements in-process and is not
+            // thread-safe. In-process answers cannot hang, so no deadline applies.
+            if AXPrimitives.isOwnProcess(ownerPID) {
+                let own = await MainActor.run {
+                    Self.collectApp(runningApp: runningApp, appBundleID: appBundleID, display: nil, displayBounds: nil, ourBundleID: ourBundleID)
+                }
+                appsWithExtrasBar += own.isEmpty ? 0 : 1
+                state.record(own, owner: ownerPID, generation: pass.generation)
+                continue
+            }
             let collected = Task.detached(priority: .userInitiated) {
                 Self.collectApp(
                     runningApp: runningApp,
