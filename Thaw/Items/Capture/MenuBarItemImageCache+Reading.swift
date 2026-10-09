@@ -184,6 +184,20 @@ extension MenuBarItemImageCache {
         }
     }
 
+    /// Whether bounds lie on a display's menu bar strip. With several displays, AX can
+    /// describe a bar other than the one captured; an item there says nothing about its picture.
+    static nonisolated func liesOnAMenuBar(_ bounds: CGRect, barHeight: CGFloat, displayBounds: [CGRect]) -> Bool {
+        displayBounds.contains { CGRect(x: $0.minX, y: $0.minY, width: $0.width, height: barHeight).intersects(bounds) }
+    }
+
+    /// Every active display's bounds, top-left global; callable off the main actor.
+    static nonisolated func activeDisplayBounds() -> [CGRect] {
+        var ids = [CGDirectDisplayID](repeating: 0, count: 16)
+        var count: UInt32 = 0
+        guard CGGetActiveDisplayList(16, &ids, &count) == .success else { return [] }
+        return ids.prefix(Int(count)).map(CGDisplayBounds)
+    }
+
     /// The share of an overflow control's width a crop must overlap before
     /// the chevron glyphs can appear inside it.
     ///
@@ -418,6 +432,16 @@ extension MenuBarItemImageCache {
                             "keeping the capture taken at \(bounds.debugDescription)"
                     )
                 }
+            }
+
+            if !windowFrame.intersects(bounds),
+               Self.liesOnAMenuBar(bounds, barHeight: windowFrame.height, displayBounds: Self.activeDisplayBounds())
+            {
+                MenuBarItemImageCache.diagLog.debug(
+                    "axBoundsCapture: \(item.logString) bounds \(bounds) are on another display's bar; keeping prior image"
+                )
+                result.unreadable.append(item)
+                continue
             }
 
             // macOS 27 parks concealed items far below the bar (y≈1428). Drop
