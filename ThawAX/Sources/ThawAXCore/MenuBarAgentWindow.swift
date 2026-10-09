@@ -35,6 +35,27 @@ public enum MenuBarAgentWindow {
         else { return nil }
         return Set(entries.map(\.ownerPID))
     }
+
+    /// The process that owns the item inside one child of the window.
+    ///
+    /// The wrappers around an item belong to the agent, and the first element that does not is the
+    /// item itself. The descent stops there and asks that element nothing. An item of this app's own
+    /// is answered in-process, on the calling thread, and AppKit's accessibility is main-thread only:
+    /// asking it for its children from a background walk crashed the app.
+    public static func ownerPID<Element>(
+        of child: Element,
+        agentPID: pid_t,
+        pid: (Element) -> pid_t?,
+        children: (Element) -> [Element]
+    ) -> pid_t {
+        var element = child
+        while true {
+            guard let owner = pid(element) else { return agentPID }
+            guard owner == agentPID else { return owner }
+            guard let next = children(element).first else { return agentPID }
+            element = next
+        }
+    }
 }
 
 public extension AXPrimitives {
@@ -49,13 +70,8 @@ public extension AXPrimitives {
             return nil
         }
         return children(of: window).map { child in
-            // The item sits one or two levels down; the wrappers around it belong to the agent.
-            var leaf = child
-            while let next = children(of: leaf).first {
-                leaf = next
-            }
-            return MenuBarAgentWindow.Entry(
-                ownerPID: pid(of: leaf) ?? agentPID,
+            MenuBarAgentWindow.Entry(
+                ownerPID: MenuBarAgentWindow.ownerPID(of: child, agentPID: agentPID, pid: pid(of:), children: children(of:)),
                 frame: frame(of: child) ?? .zero
             )
         }
