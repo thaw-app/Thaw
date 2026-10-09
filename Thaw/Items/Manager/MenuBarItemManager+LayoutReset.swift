@@ -251,7 +251,7 @@ extension MenuBarItemManager {
             if measured < MenuBarItemImageCache.minimumTrustedGlyphWidth {
                 collapsedWidthCount += 1
             }
-            uidWidths[item.uniqueIdentifier] = Self.budgetWidth(forMeasuredWidth: measured)
+            uidWidths[item.uniqueIdentifier] = OverflowDeficits.budgetWidth(forMeasuredWidth: measured)
         }
         if let visibleCtrl {
             uidWidths[visibleCtrl.uniqueIdentifier] = visibleCtrl.bounds.width
@@ -281,13 +281,12 @@ extension MenuBarItemManager {
         if isNativeOverflowActive {
             let controlWidth = controller.nativeOverflowControlBounds(on: screen.displayID)
                 .map(\.width).max() ?? 0
-            let deficit = controlWidth + Self.nominalStatusItemWidth
+            let deficit = controlWidth + OverflowDeficits.nominalStatusItemWidth
             effectiveAvailableWidth = max(1, availableWidth - deficit)
         }
 
         // A notch-covered control proves the budget is too large; only concealing more items makes room, not order repair.
-        let occlusionDeficit = Self.notchOcclusionDeficit(
-            previous: heldNotchOcclusionDeficit,
+        let occlusionDeficit = overflowDeficits.updateNotchOcclusion(
             occludedControlWidth: items
                 .filter { $0.isControlItem && MenuBarNotchGeometry.isOccluded($0, by: MenuBarNotchGeometry.rects) }
                 .map(\.bounds.width)
@@ -295,14 +294,13 @@ extension MenuBarItemManager {
             visibleUIDs: Set(visibleLive.map(\.uniqueIdentifier)),
             overflowUIDs: controller.overflowHiddenIdentifiers
         )
-        if occlusionDeficit?.width != heldNotchOcclusionDeficit?.width {
+        if occlusionDeficit.changed {
             MenuBarItemManager.diagLog.info(
-                "macOS 27 overflow: notch occlusion deficit \(occlusionDeficit?.width ?? 0) pt (was \(heldNotchOcclusionDeficit?.width ?? 0))"
+                "macOS 27 overflow: notch occlusion deficit \(occlusionDeficit.width ?? 0) pt (was \(occlusionDeficit.previousWidth ?? 0))"
             )
         }
-        heldNotchOcclusionDeficit = occlusionDeficit
-        if let occlusionDeficit {
-            effectiveAvailableWidth = max(1, effectiveAvailableWidth - occlusionDeficit.width)
+        if let width = occlusionDeficit.width {
+            effectiveAvailableWidth = max(1, effectiveAvailableWidth - width)
         }
 
         // Visible items parked at x == -1 indicate the bar had no room to draw them.
@@ -321,27 +319,25 @@ extension MenuBarItemManager {
                     && !concealedIdentifiers.contains(key)
             }
             .map(\.bounds.width)
-        let parkedDeficit = Self.parkedLaneDeficit(
-            previous: heldParkedLaneDeficit,
+        let parkedDeficit = overflowDeficits.updateParkedLane(
             parkedWidths: parkedWidths,
             isNativeOverflowActive: isNativeOverflowActive,
             modeledHeadroom: effectiveAvailableWidth - trailingLaneItemWidth,
             visibleUIDs: Set(visibleLive.map(\.uniqueIdentifier)),
             overflowUIDs: overflowIdentifiers
         )
-        if parkedDeficit?.width != heldParkedLaneDeficit?.width {
+        if parkedDeficit.changed {
             MenuBarItemManager.diagLog.info(
-                "macOS 27 overflow: \(parkedWidths.count) visible item(s) left off the bar; deficit \(parkedDeficit?.width ?? 0) pt (was \(heldParkedLaneDeficit?.width ?? 0))"
+                "macOS 27 overflow: \(parkedWidths.count) visible item(s) left off the bar; deficit \(parkedDeficit.width ?? 0) pt (was \(parkedDeficit.previousWidth ?? 0))"
             )
         }
-        heldParkedLaneDeficit = parkedDeficit
         if !parkedWidths.isEmpty, !isNativeOverflowActive {
             MenuBarItemManager.diagLog.debug(
                 "macOS 27 overflow: \(parkedWidths.count) visible item(s) off the bar without native overflow; not counted as a full bar"
             )
         }
-        if let parkedDeficit {
-            effectiveAvailableWidth = max(1, effectiveAvailableWidth - parkedDeficit.width)
+        if let width = parkedDeficit.width {
+            effectiveAvailableWidth = max(1, effectiveAvailableWidth - width)
         }
 
         let overflowResult = LayoutSolver.planNotchOverflow(

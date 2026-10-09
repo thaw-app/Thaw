@@ -321,27 +321,10 @@ final class MenuBarItemManager {
     /// more pass is owed once the current one finishes.
     var postRestrictionRepairNeedsRerun = false
 
-    /// Timestamps of recent macOS 27 section-order move failures, keyed by
-    /// "<item identity>|<destination>". An anchored system item (e.g.
-    /// Sound, Control Center) can sit between two items that a saved order
-    /// wants adjacent, making the move permanently unachievable via the
-    /// synthetic Command-drag. Without this backoff, applySavedLayout
-    /// re-detects the divergence every cache cycle and re-dispatches the same
-    /// doomed move forever, hijacking the cursor and disturbing the dragged
-    /// item's AX and rendering state.
-    var recentMoveFailures = [String: ContinuousClock.Instant]()
-
-    /// How long to suppress retrying a macOS 27 section-order move after it
-    /// fails, before giving the achievable-order solver another chance.
-    static let moveFailureBackoff: Duration = .seconds(30)
-
-    var recentItemMoveFailures = [String: ItemMoveFailureRecord]()
-
-    /// Consecutive verify-failures for one item→target that trip the breaker.
-    static let itemMoveFailureThreshold = 3
-
-    /// How long an item→target stays suppressed once the breaker trips.
-    static let itemMoveFailureCooldown: Duration = .seconds(30)
+    /// Which macOS 27 section-order drags failed lately. Without it,
+    /// applySavedLayout re-detects the divergence every cache cycle and
+    /// re-dispatches the same doomed move forever.
+    var moveFailures = MoveFailureMemory()
 
     /// Count of user-initiated reorders currently queued on (or holding)
     /// moveSerialSemaphore. The automatic per-pair reconcile loop in
@@ -361,7 +344,7 @@ final class MenuBarItemManager {
 
     /// How long to leave the visible control alone after an ambient restore
     /// attempt. The restore runs on every cache tick, and when MenuBarAgent
-    /// refuses or reverts the placement, moveFailureBackoff cannot
+    /// refuses or reverts the placement, MoveFailureMemory.backoff cannot
     /// suppress the retries: visibleControlRestoreMove keeps proposing a
     /// different neighbour, so every pass mints a fresh backoff key and Thaw
     /// re-nudges its own icon several times a second. The cooldown caps that
@@ -369,95 +352,18 @@ final class MenuBarItemManager {
     /// so the cooldown only bites during a thrash.
     static let visibleControlRestoreCooldown: Duration = .seconds(30)
 
-    /// Nominal width used for the macOS 27 overflow budget when an item's AX
-    /// bounds have collapsed to an untrusted sliver (see minimumTrustedGlyphWidth).
-    /// Matches the standard status-item footprint so the budget approximates the
-    /// real rendered width rather than the collapsed measurement.
-    static nonisolated let nominalStatusItemWidth: CGFloat = 24
-
-    /// Width to charge a non-control item against the macOS 27 overflow budget.
-    ///
-    /// macOS 27 collapses hidden/overflowed item AX bounds to a sliver, so the
-    /// measured width understates the real footprint and deflates the budget's
-    /// profile baseline. Below the trust threshold the item is charged a nominal
-    /// status-item width instead; otherwise the measured width is used as-is.
-    static nonisolated func budgetWidth(forMeasuredWidth measured: CGFloat) -> CGFloat {
-        measured < MenuBarItemImageCache.minimumTrustedGlyphWidth ? nominalStatusItemWidth : measured
-    }
-
-    /// The most budget a notch-covered control item may take back. Past five
-    /// items' worth, whatever still covers the icon is not a full bar, and
-    /// conceal-until-it-shows would empty the visible section.
-    static nonisolated let maximumNotchOcclusionDeficit: CGFloat = nominalStatusItemWidth * 5
-
-    /// The overflow budget to withhold for notch-covered control items.
-    ///
-    /// Each pass that finds a control item under the notch withholds its width
-    /// plus one nominal item on top of what earlier passes withheld, so the
-    /// conceal set grows until the icon clears the notch. The deficit then
-    /// holds while the same items compete for the bar, counting the ones it
-    /// concealed, and is dropped once an item arrives or leaves.
-    static nonisolated func notchOcclusionDeficit(
-        previous: (width: CGFloat, visibleUIDs: Set<String>)?,
-        occludedControlWidth: CGFloat,
-        visibleUIDs: Set<String>,
-        overflowUIDs: Set<String>
-    ) -> (width: CGFloat, visibleUIDs: Set<String>)? {
-        let membership = visibleUIDs.union(overflowUIDs)
-        let carried = previous.flatMap { $0.visibleUIDs == membership ? $0.width : nil } ?? 0
-        let width = occludedControlWidth > 0
-            ? min(maximumNotchOcclusionDeficit, carried + occludedControlWidth + nominalStatusItemWidth)
-            : carried
-        return width > 0 ? (width, membership) : nil
-    }
-
-    /// The overflow budget to withhold for Visible items macOS did not draw.
-    ///
-    /// On a full bar, a notched one in particular, macOS parks the items that
-    /// do not fit at x == -1 while the modeled budget can still show hundreds
-    /// of points of headroom. Parked items are proof the lane holds exactly
-    /// what it seats, so the pass that finds them withholds the whole modeled
-    /// headroom plus their width and gaps: the planner then conceals that much
-    /// from the left of Visible. A fixed per-item allowance was not enough,
-    /// since the model's error can be larger than any number of items.
-    ///
-    /// The deficit holds while the same items compete for the bar and is
-    /// dropped once an item arrives or leaves.
-    ///
-    /// Parked items only count while macOS shows its own overflow control.
-    /// An app switched off in System Settings parks at x == -1 too, and no
-    /// amount of concealing brings it back.
-    static nonisolated func parkedLaneDeficit(
-        previous: (width: CGFloat, visibleUIDs: Set<String>)?,
-        parkedWidths: [CGFloat],
-        isNativeOverflowActive: Bool,
-        modeledHeadroom: CGFloat,
-        visibleUIDs: Set<String>,
-        overflowUIDs: Set<String>
-    ) -> (width: CGFloat, visibleUIDs: Set<String>)? {
-        let membership = visibleUIDs.union(overflowUIDs)
-        let carried = previous.flatMap { $0.visibleUIDs == membership ? $0.width : nil } ?? 0
-        guard isNativeOverflowActive, !parkedWidths.isEmpty else {
-            return carried > 0 ? (carried, membership) : nil
-        }
-        let parked = parkedWidths.reduce(CGFloat.zero) { $0 + budgetWidth(forMeasuredWidth: $1) + 8 }
-        let width = max(carried, max(0, modeledHeadroom) + parked)
-        return width > 0 ? (width, membership) : nil
-    }
-
     /// The single record of which items have been failing, and how.
     ///
     /// This ledger bounds how long one operation retries an unresponsive owner
     /// and remembers a cannotComplete verdict across launches. It does not
     /// gate bulk apply: on macOS 27 that skip is the destination-scoped
-    /// recentMoveFailures backoff plus the item-scoped circuit
-    /// breaker (isItemMoveCircuitBreakerTripped(key:)), both checked in
-    /// applySectionItemOrder.
+    /// backoff plus the item-scoped circuit breaker, both held by
+    /// moveFailures and checked in applySectionItemOrder.
     let failureLedger = MenuBarItemFailureLedger()
 
     /// Per-item response times learned from previous clicks. See
     /// updateClickOperationTimeout(_:for:).
-    var clickOperationTimeouts = [MenuBarItemTag: Duration]()
+    var clickTimeouts = ClickTimeoutEstimator<MenuBarItemTag>()
     /// Admits one cache pass at a time; see CacheGate.
     let cacheGate = CacheGate()
 
@@ -504,20 +410,10 @@ final class MenuBarItemManager {
     /// Suppresses the next automatic relocation of newly seen leftmost items.
     var suppressNextNewLeftmostItemRelocation = false
 
-    /// A candidate item signature seen to differ from the cache but not yet
-    /// confirmed. cacheItemsIfNeeded requires a differing signature to persist,
-    /// unchanged, for Constants.MenuBarTuning.signatureStabilityGrace before
-    /// recaching, so a transient enumeration blip (a dynamic-title app
-    /// momentarily dropping its AX subtree, a marker/clone window flickering
-    /// during a reflow) does not trigger a full recache + assertion re-apply.
-    /// Genuine changes hold past the grace window and confirm; a flap reverts to
-    /// the cached signature and clears the gate. See signatureRecacheDecision.
-    var pendingItemSignatureCandidate: [String]?
-
-    /// When pendingItemSignatureCandidate was first observed. The candidate
-    /// only confirms once it has held continuously since this instant for the
-    /// stability grace; a changed difference resets both fields.
-    var pendingItemSignatureFirstSeen: ContinuousClock.Instant?
+    /// Makes cacheItemsIfNeeded wait for a differing signature to hold, unchanged, for
+    /// Constants.MenuBarTuning.signatureStabilityGrace before recaching, so a transient
+    /// enumeration blip does not trigger a full recache + assertion re-apply.
+    var signatureStabilityGate = SignatureStabilityGate()
 
     isolated deinit {
         cacheTickCancellable?.cancel()
@@ -616,12 +512,9 @@ final class MenuBarItemManager {
     /// Debounce for macOS 27 overflow rebalance (assignment backends skip legacy Phase 4).
     var lastOverflowRebalance: Date?
 
-    /// Width the overflow budget gives up because a notch covered one of
-    /// Thaw's own control items, and the visible items it was measured
-    /// against. Sticky until that set changes: dropping it the moment the icon
-    /// reappears re-admits the item that covered it, which covers it again.
-    var heldNotchOcclusionDeficit: (width: CGFloat, visibleUIDs: Set<String>)?
-    var heldParkedLaneDeficit: (width: CGFloat, visibleUIDs: Set<String>)?
+    /// Width the macOS 27 overflow budget gives up for a notch-covered control
+    /// item and for parked Visible items. See OverflowDeficits.
+    var overflowDeficits = OverflowDeficits()
 
     /// In-flight overflow rebalance task. Coalesces repeated post-cache rebalance
     /// triggers so the assertion reflow from one rebalance cannot immediately
@@ -702,28 +595,20 @@ final class MenuBarItemManager {
     /// path's own retry budget because each pass is already several seconds.
     static let authoredVisibleOrderApplyAttempts = 3
 
-    /// Visible members MenuBarAgent did not republish in time, stamped when
-    /// each was last missing.
-    ///
-    /// The ordering pass waits up to three seconds for every authored member
-    /// to be live. Without this, each following pass burns the same deadline
-    /// on the same absentee. Entries
-    /// expire so a member that returns is waited for again.
-    var visibleMembersMissingRepublish = [String: ContinuousClock.Instant]()
-
-    /// How long a failed republish is remembered.
-    static let missingRepublishMemory: Duration = .seconds(10)
+    /// Visible members MenuBarAgent did not republish in time, so later
+    /// ordering passes do not spend the wait on them again.
+    var missingRepublishMemo = RepublishAbsenceMemo()
 
     /// Drops the memo so the next ordering pass waits for every member again.
     /// The memo suppresses waits for automatic passes; a user-initiated change
     /// inheriting one drops members the pass never waited for.
     func forgetMissingRepublishMemory() {
-        guard !visibleMembersMissingRepublish.isEmpty else { return }
+        guard !missingRepublishMemo.isEmpty else { return }
         MenuBarItemManager.diagLog.debug(
-            "authored visible apply: clearing \(self.visibleMembersMissingRepublish.count) " +
+            "authored visible apply: clearing \(self.missingRepublishMemo.count) " +
                 "missing-republish memo entr(ies) for a user-initiated layout change"
         )
-        visibleMembersMissingRepublish.removeAll()
+        missingRepublishMemo.forget()
     }
 
     /// Bounds how long automatic ordering passes keep working on one authored edit.

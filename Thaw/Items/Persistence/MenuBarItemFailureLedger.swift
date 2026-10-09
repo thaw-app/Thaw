@@ -111,7 +111,7 @@ final class MenuBarItemFailureLedger {
     // MARK: Persisted verdicts
 
     /// Bounds single-operation retries, never direct requests; bulk apply uses separate backoff and circuit breakers.
-    /// On macOS 27, applySectionItemOrder checks destination-scoped recentMoveFailures and item-scoped breakers.
+    /// On macOS 27, applySectionItemOrder checks the destination-scoped backoff and item-scoped breaker in MoveFailureMemory.
     func isUnresponsive(_ item: MenuBarItem) -> Bool {
         isMarked(item, in: \.markDates)
     }

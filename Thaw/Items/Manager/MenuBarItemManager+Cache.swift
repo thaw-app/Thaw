@@ -826,7 +826,7 @@ extension MenuBarItemManager {
         }
 
         await MainActor.run {
-            self.pruneClickOperationTimeouts(keeping: Set(items.map(\.tag)))
+            self.clickTimeouts.prune(keeping: Set(items.map(\.tag)))
         }
 
         // Use ControlItem window IDs when macOS 26+ tag and title lookups fail.
@@ -935,36 +935,6 @@ extension MenuBarItemManager {
         }
     }
 
-    /// Require a continuously stable signature to avoid icon reorders from macOS 27 AX, restriction, and clone flapping; two quick samples are insufficient.
-    /// Gate only autonomous polls; app events and drags recache immediately.
-    /// - Parameters:
-    ///   - firstSeen: When pending was first observed (nil if no candidate).
-    ///   - now: The current instant, injected for testability.
-    ///   - grace: How long a difference must hold before it confirms.
-    /// - Returns: Whether to recache and the candidate/first-seen instant to retain; both nil clears the gate.
-    static func signatureRecacheDecision(
-        cached: [String],
-        current: [String],
-        pending: [String]?,
-        firstSeen: ContinuousClock.Instant?,
-        now: ContinuousClock.Instant,
-        grace: Duration
-    ) -> (recache: Bool, newPending: [String]?, newFirstSeen: ContinuousClock.Instant?) {
-        // Live state matches the cache: nothing to do, drop any stale candidate.
-        guard current != cached else {
-            return (recache: false, newPending: nil, newFirstSeen: nil)
-        }
-        // Preserve the streak's start until the same difference holds for the full grace window.
-        if let pending, let firstSeen, pending == current {
-            if now - firstSeen >= grace {
-                return (recache: true, newPending: nil, newFirstSeen: nil)
-            }
-            return (recache: false, newPending: current, newFirstSeen: firstSeen)
-        }
-        // First sighting, or the difference itself changed: (re)start the clock.
-        return (recache: false, newPending: current, newFirstSeen: now)
-    }
-
     /// Gate expensive AX walks with a cheap window-list comparison, then require a stable identity difference before rebuilding.
     func cacheItemsIfNeeded() async {
         // Window-list changes cover additions, removals, moves, reveals, and hides without an AX signature walk.
@@ -987,20 +957,16 @@ extension MenuBarItemManager {
         // Assertion-backed menu bar items use synthetic window IDs, so
         // compare stable visual-order identity instead of WindowServer IDs.
         let cachedSignature = cacheCycleState.cachedItemSignature
-        let decision = Self.signatureRecacheDecision(
+        // Gate only autonomous polls; app events and drags recache immediately.
+        let recache = signatureStabilityGate.shouldRecache(
             cached: cachedSignature,
             current: signature,
-            pending: pendingItemSignatureCandidate,
-            firstSeen: pendingItemSignatureFirstSeen,
-            now: .now,
             grace: Constants.MenuBarTuning.signatureStabilityGrace
         )
-        pendingItemSignatureCandidate = decision.newPending
-        pendingItemSignatureFirstSeen = decision.newFirstSeen
-        if decision.recache {
+        if recache {
             MenuBarItemManager.diagLog.debug("cacheItemsIfNeeded: item identities changed and confirmed (\(cachedSignature.count) cached vs \(signature.count) current), triggering recache")
             await cacheItemsRegardless(items.reversed().map(\.windowID))
-        } else if decision.newPending != nil {
+        } else if signatureStabilityGate.isPending {
             // AX-only changes may not alter the window list; drop the cheap gate so the next tick can confirm them.
             periodicWindowListSignature = nil
             MenuBarItemManager.diagLog.debug("cacheItemsIfNeeded: item identities differ (\(cachedSignature.count) cached vs \(signature.count) current); deferring recache until the difference holds for the stability grace")

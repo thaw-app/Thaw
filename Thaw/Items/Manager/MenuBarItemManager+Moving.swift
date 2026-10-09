@@ -17,26 +17,10 @@ extension MenuBarItemManager {
 }
 
 extension MenuBarItemManager {
-    /// The opening guess for an unknown item; apps differ tenfold in how fast
-    /// they open a menu, so each item learns its own.
-    private static let defaultClickOperationTimeout: Duration = .milliseconds(350)
-
-    func getClickOperationTimeout(for item: MenuBarItem) -> Duration {
-        clickOperationTimeouts[item.tag] ?? Self.defaultClickOperationTimeout
-    }
-
-    /// Moves the estimate halfway toward each observation, clamped so fast runs
-    /// cannot starve a slow day and one outlier cannot make clicks feel broken.
+    /// Feeds one successful click's duration into the item's learned timeout.
     func updateClickOperationTimeout(_ duration: Duration, for item: MenuBarItem) {
-        let blended = (duration + getClickOperationTimeout(for: item)) / 2
-        let clamped = blended.clamped(min: .milliseconds(200), max: .milliseconds(1000))
-        clickOperationTimeouts[item.tag] = clamped
+        let clamped = clickTimeouts.record(duration, for: item.tag)
         MenuBarItemManager.diagLog.debug("Updated click timeout for \(item.logString): \(Int(clamped.milliseconds))ms (measured: \(Int(duration.milliseconds))ms)")
-    }
-
-    /// Keeps the estimates from growing without bound over a long session.
-    func pruneClickOperationTimeouts(keeping validTags: Set<MenuBarItemTag>) {
-        clickOperationTimeouts = clickOperationTimeouts.filter { validTags.contains($0.key) }
     }
 
     /// The live bar without position-store recoveries, whose inferred frames
@@ -2447,14 +2431,9 @@ extension MenuBarItemManager {
                     }
                     continue
                 }
-                let itemFailureKey = Self.itemMoveFailureKey(
+                let rememberedMove = MoveFailureMemory.Move(
                     item: plannedMove.item,
                     destination: plannedMove.destination
-                )
-                let failureKey = Self.moveFailureKey(
-                    item: plannedMove.item,
-                    destination: plannedMove.destination,
-                    desiredOrder: desiredOrder
                 )
 
                 do {
@@ -2466,8 +2445,7 @@ extension MenuBarItemManager {
                         allowParkedOffMenuBarSource: repairAfterRestriction
                     )
                     guard fulfilled else {
-                        recentMoveFailures[failureKey] = .now
-                        recordItemMoveFailure(key: itemFailureKey)
+                        moveFailures.recordFailure(of: rememberedMove, desiredOrder: desiredOrder)
                         MenuBarItemManager.diagLog.debug(
                             "Could not fulfill macOS 27 section order move via preferred positions: " +
                                 "\(plannedMove.item.logString) → \(plannedMove.destination.logString)"
@@ -2479,15 +2457,13 @@ extension MenuBarItemManager {
                         break
                     }
                     plannedQueue?.confirmLastMove()
-                    recentMoveFailures.removeValue(forKey: failureKey)
-                    clearItemMoveFailure(key: itemFailureKey)
+                    moveFailures.recordSuccess(of: rememberedMove, desiredOrder: desiredOrder)
                     didReorder = true
                     MenuBarItemManager.diagLog.info(
                         "Applied macOS 27 achievable order in \(section.logString) for \(plannedMove.item.logString)"
                     )
                 } catch {
-                    recentMoveFailures[failureKey] = .now
-                    recordItemMoveFailure(key: itemFailureKey)
+                    moveFailures.recordFailure(of: rememberedMove, desiredOrder: desiredOrder)
                     MenuBarItemManager.diagLog.error(
                         "Failed to apply macOS 27 section order for \(plannedMove.item.logString): \(error)"
                     )
@@ -2602,13 +2578,11 @@ extension MenuBarItemManager {
     ) async -> (liveItems: [MenuBarItem], desiredOrder: [String]) {
         let wantedIDs = Set(desiredOrder)
         let now = ContinuousClock.now
-        visibleMembersMissingRepublish = visibleMembersMissingRepublish.filter {
-            $0.value.duration(to: now) < Self.missingRepublishMemory
-        }
+        missingRepublishMemo.expire(now: now)
         // Wait only for members that can still arrive; an empty wait
         // set is satisfied by the first enumeration.
         let knownAbsent = wantedIDs.filter {
-            visibleMembersMissingRepublish[$0] != nil || Self.namesPinnedSystemItem($0)
+            missingRepublishMemo.isKnownAbsent($0) || Self.namesPinnedSystemItem($0)
         }
         let awaitedIDs = wantedIDs.subtracting(knownAbsent)
         if !knownAbsent.isEmpty {
@@ -2625,16 +2599,11 @@ extension MenuBarItemManager {
         )
         let refreshed = presenceWait.items
         let liveIDs = Set(refreshed.map(\.uniqueIdentifier))
-        for identifier in wantedIDs.intersection(liveIDs) {
-            visibleMembersMissingRepublish.removeValue(forKey: identifier)
-        }
+        missingRepublishMemo.noteArrived(wantedIDs.intersection(liveIDs))
         var updatedOrder = desiredOrder
         let missing = wantedIDs.subtracting(liveIDs)
         if !missing.isEmpty {
-            let stamp = ContinuousClock.now
-            for identifier in missing {
-                visibleMembersMissingRepublish[identifier] = stamp
-            }
+            missingRepublishMemo.noteMissing(missing, at: .now)
             // Named, not counted: a count cannot say which app lagged.
             MenuBarItemManager.diagLog.warning(
                 "authored visible apply: \(missing.count) member(s) never republished; " +
@@ -2751,15 +2720,15 @@ extension MenuBarItemManager {
         // Item-scoped breaker, keyed on item, side and target, since an
         // overflowing bar changes the order-keyed backoff's key every pass.
         // User passes are exempt.
-        let itemFailureKey = Self.itemMoveFailureKey(
+        let rememberedMove = MoveFailureMemory.Move(
             item: plannedMove.item,
             destination: plannedMove.destination
         )
-        if !isUserInitiated, isItemMoveCircuitBreakerTripped(key: itemFailureKey) {
+        if !isUserInitiated, moveFailures.isBreakerTripped(for: rememberedMove) {
             MenuBarItemManager.diagLog.info(
                 "Circuit breaker: suppressing automatic macOS 27 drag for " +
                     "\(plannedMove.item.logString) \(plannedMove.destination.logString) " +
-                    "(\(recentItemMoveFailures[itemFailureKey]?.count ?? 0) recent verify-failures)"
+                    "(\(moveFailures.failureCount(for: rememberedMove)) recent verify-failures)"
             )
             return SectionDragSkip(reason: .circuitBreaker, endsMoveLoop: !usesPlan)
         }
@@ -2769,12 +2738,7 @@ extension MenuBarItemManager {
         if plannedMove.item.tag.isHidingUnsupported ||
             plannedMove.destination.targetItem.tag.isHidingUnsupported
         {
-            let failureKey = Self.moveFailureKey(
-                item: plannedMove.item,
-                destination: plannedMove.destination,
-                desiredOrder: desiredOrder
-            )
-            recentMoveFailures[failureKey] = .now
+            moveFailures.backOff(from: rememberedMove, desiredOrder: desiredOrder)
             MenuBarItemManager.diagLog.debug(
                 "Skipping synthetic drag for denylisted hiding-unsupported item in macOS 27 section order: " +
                     "\(plannedMove.item.logString) → \(plannedMove.destination.logString)"
@@ -2794,14 +2758,7 @@ extension MenuBarItemManager {
         // Some system extras (such as Sound) always reject the drag; without
         // backoff it replans every cycle in a cursor-warp loop. Repair passes
         // included: two failures already covered the retry.
-        let failureKey = Self.moveFailureKey(
-            item: plannedMove.item,
-            destination: plannedMove.destination,
-            desiredOrder: desiredOrder
-        )
-        if let lastFailure = recentMoveFailures[failureKey],
-           ContinuousClock.now - lastFailure < Self.moveFailureBackoff
-        {
+        if moveFailures.isBackingOff(from: rememberedMove, desiredOrder: desiredOrder) {
             MenuBarItemManager.diagLog.debug(
                 "Skipping recently-failed macOS 27 section order move for \(plannedMove.item.logString) \(plannedMove.destination.logString)"
             )
