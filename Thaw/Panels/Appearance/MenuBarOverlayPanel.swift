@@ -748,15 +748,12 @@ private final class MenuBarOverlayPanelContentView: NSView {
                 AnyCancellable { palettesTask.cancel() }
                     .store(in: &subscriptions)
 
-                // Hide during drags so the real menu bar remains visible; dedupe AppState observations manually.
+                // Hide during drags so the real menu bar remains visible.
                 let dragTask = Task { @MainActor [weak self, weak appState] in
                     guard let appState else { return }
-                    let changes = Observations { appState.isDraggingMenuBarItem }
-                    var previous: Bool?
+                    let changes = Observations { appState.isDraggingMenuBarItem }.removeDuplicates()
                     for await isDragging in changes {
                         guard let self else { return }
-                        guard isDragging != previous else { continue }
-                        previous = isDragging
                         fadeAlpha(to: isDragging ? 0 : 1)
                     }
                 }
@@ -776,14 +773,11 @@ private final class MenuBarOverlayPanelContentView: NSView {
                         .store(in: &subscriptions)
                 }
 
-                // Refresh macOS 27 physical AX geometry after cache changes; dedupe observations manually.
+                // Refresh macOS 27 physical AX geometry after cache changes.
                 let cacheTask = Task { @MainActor [weak self, itemManager = appState.itemManager] in
-                    let changes = Observations { itemManager.itemCache }
-                    var previous: MenuBarItemManager.ItemCache?
+                    let changes = Observations { itemManager.itemCache }.removeDuplicates()
                     for await cache in changes {
                         guard let self else { return }
-                        guard cache != previous else { continue }
-                        previous = cache
                         // Freeze so a transient AX read during the
                         // cache-change reflow doesn't flash wrong bounds.
                         splitPillGeometryFrozen = true

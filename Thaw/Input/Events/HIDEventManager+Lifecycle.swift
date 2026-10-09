@@ -7,6 +7,7 @@
 //
 
 import AppKit
+import AsyncAlgorithms
 import Combine
 import Foundation
 
@@ -73,14 +74,10 @@ extension HIDEventManager {
             }
 
             // An in-memory bounds lookup saves a Window Server call per event.
-            // Observations does not dedupe, so the loop compares by hand.
             let boundsTask = Task { @MainActor [weak self, itemManager = appState.itemManager] in
-                let changes = Observations { itemManager.itemCache }
-                var previous: MenuBarItemManager.ItemCache?
+                let changes = Observations { itemManager.itemCache }.removeDuplicates()
                 for await cache in changes {
                     guard let self else { return }
-                    guard cache != previous else { continue }
-                    previous = cache
                     rebuildWindowBoundsLookup(
                         from: cache,
                         including: itemManager.onScreenItemSnapshot.items

@@ -5,6 +5,7 @@
 //  Copyright (Thaw) © 2026 Toni Förster
 //  Licensed under the GNU GPLv3
 
+import AsyncAlgorithms
 import Cocoa
 import Combine
 import MenuBarModel
@@ -764,15 +765,12 @@ extension ControlItem {
     /// is in the bar at all.
     private func observeSettings(appState: AppState) {
         // A drag reveals the sections, which means the dividers have to
-        // redraw. AppState is @Observable; deduped by hand.
+        // redraw.
         let dragTask = Task { @MainActor [weak self, weak appState] in
             guard let appState else { return }
-            let changes = Observations { appState.isDraggingMenuBarItem }
-            var previous: Bool?
+            let changes = Observations { appState.isDraggingMenuBarItem }.removeDuplicates()
             for await isDragging in changes {
                 guard let self else { return }
-                guard isDragging != previous else { continue }
-                previous = isDragging
                 if isDragging {
                     updateStatusItem()
                 }
