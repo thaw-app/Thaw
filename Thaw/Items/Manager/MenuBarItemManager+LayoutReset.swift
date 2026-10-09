@@ -207,7 +207,7 @@ extension MenuBarItemManager {
         }
 
         let visibleSegment: [MenuBarItem] = if let visibleCtrl {
-            Self.structuralVisibleSegment(
+            ControlOrderRules.structuralVisibleSegment(
                 ordinaryVisibleItems: visibleLive,
                 visibleControl: visibleCtrl,
                 savedOrder: recordedVisibleOrder

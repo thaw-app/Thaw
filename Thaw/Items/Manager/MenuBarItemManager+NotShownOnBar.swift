@@ -7,26 +7,9 @@
 
 import MenuBarModel
 
-/// Visible items macOS does not actually draw on the bar.
-///
-/// MenuBarAgent can record an item's position and still lay it out under
-/// another item or off the bar. Decided from geometry alone.
+// MARK: - Not Shown On Bar
+
 extension MenuBarItemManager {
-    /// Consecutive cache passes an item has to look unshown before it counts.
-    /// A reflow puts items briefly on top of each other; a stuck one stays.
-    static let notShownStreakThreshold = 3
-
-    /// Whether item, assigned to Visible, sits where nothing can see it:
-    /// on a seat another item already occupies, or off the bar.
-    static nonisolated func looksNotShown(_ item: MenuBarItem, among peers: [MenuBarItem]) -> Bool {
-        guard !item.isControlItem, !item.isSystemClone else { return false }
-        guard item.bounds.width > 0, item.bounds.height > 0 else { return true }
-        if item.bounds.midY > MenuBarItemGeometry.maxOnBarMidY {
-            return true
-        }
-        return item.hasPhantomFrame(among: peers)
-    }
-
     /// Updates the streaks from the current inventory and publishes the
     /// items that have looked unshown long enough.
     func refreshItemsNotShownOnBar() {
@@ -35,11 +18,11 @@ extension MenuBarItemManager {
         // Thaw icon's seat. The Thaw icon itself is a visible item.
         let peers = visible
         var streaks = [MenuBarItemTag: Int]()
-        for item in visible where Self.looksNotShown(item, among: peers) {
+        for item in visible where NotShownOnBar.looksNotShown(item, among: peers) {
             streaks[item.tag] = (notShownStreaks[item.tag] ?? 0) + 1
         }
         notShownStreaks = streaks
-        let tags = Set(streaks.filter { $0.value >= Self.notShownStreakThreshold }.keys)
+        let tags = Set(streaks.filter { $0.value >= NotShownOnBar.notShownStreakThreshold }.keys)
         guard tags != itemsNotShownOnBarTags else { return }
         let added = tags.subtracting(itemsNotShownOnBarTags)
         if !added.isEmpty {

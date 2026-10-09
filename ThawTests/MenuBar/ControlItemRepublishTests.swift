@@ -113,16 +113,16 @@ struct ControlItemRepublishTests {
 
     @Test("Control item tags map to their sections")
     func controlTagsMapToSections() {
-        #expect(MenuBarItemManager.controlItemSectionName(for: .visibleControlItem) == .visible)
-        #expect(MenuBarItemManager.controlItemSectionName(for: .hiddenControlItem) == .hidden)
-        #expect(MenuBarItemManager.controlItemSectionName(for: .alwaysHiddenControlItem) == .alwaysHidden)
+        #expect(MoveTargeting.controlItemSectionName(for: .visibleControlItem) == .visible)
+        #expect(MoveTargeting.controlItemSectionName(for: .hiddenControlItem) == .hidden)
+        #expect(MoveTargeting.controlItemSectionName(for: .alwaysHiddenControlItem) == .alwaysHidden)
     }
 
     /// Only Thaw's own items can be re-registered; anything else must fall
     /// through to the ordinary move recovery.
     @Test("Foreign tags do not map to a section")
     func foreignTagsDoNotMap() {
-        #expect(MenuBarItemManager.controlItemSectionName(for: .audioVideoModule) == nil)
+        #expect(MoveTargeting.controlItemSectionName(for: .audioVideoModule) == nil)
     }
 
     /// Escalate by cost: position refresh, visibility toggle, then full status-item registration.

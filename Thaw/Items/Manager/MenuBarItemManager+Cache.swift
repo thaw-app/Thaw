@@ -276,37 +276,7 @@ extension MenuBarItemManager {
         let onScreen = cache.managedItems.filter {
             $0.isOnScreen && $0.bounds.width > 0 && displayBounds.intersects($0.bounds)
         }
-        return Self.anchoredTrailingViolation(in: MenuBarItem.sortByLeadingEdge(onScreen))
-    }
-
-    /// Reject reversed Control Center/Clock ranks or non-anchors right of the trailing group; normalization repairs stable Siri stranding.
-    /// Skip Thaw controls and sub-phantomFramePeerMinimumWidth slivers (including the intentionally zero-width icon); ranks also cover legacy spellings.
-    static nonisolated func anchoredTrailingViolation(
-        in sortedLeftToRight: [MenuBarItem]
-    ) -> String? {
-        var lastAnchoredRank = Int.min
-        var sawAnchored = false
-        for item in sortedLeftToRight {
-            // A concealed item's parked or phantom frame says nothing about the bar's order.
-            guard !item.isControlItem,
-                  item.bounds.width >= MenuBarItemGeometry.phantomFramePeerMinimumWidth,
-                  !item.isParkedOffMenuBarBand(among: sortedLeftToRight),
-                  !item.hasPhantomFrame(among: sortedLeftToRight)
-            else {
-                continue
-            }
-            let rank = MenuBarItemTag.anchoredSystemItemRank(item.tag)
-            if rank < 3 {
-                sawAnchored = true
-                guard rank >= lastAnchoredRank else {
-                    return "anchored items out of canonical order at \(item.logString)"
-                }
-                lastAnchoredRank = rank
-            } else if sawAnchored {
-                return "non-anchored \(item.logString) sits right of the anchored trailing group"
-            }
-        }
-        return nil
+        return ControlOrderRules.anchoredTrailingViolation(in: MenuBarItem.sortByLeadingEdge(onScreen))
     }
 
     /// Bucket without publishing so sanity retries reuse classification without reentering the cache pass.
@@ -375,7 +345,7 @@ extension MenuBarItemManager {
               let previousLiveVisible
         else { return nil }
         let visibleKey = sectionKey(for: .visible)
-        return Self.visibleOrderPreservedAcrossArrival(
+        return OrderRecording.visibleOrderPreservedAcrossArrival(
             savedOrder: savedSectionOrder[visibleKey] ?? [],
             mirroredOrder: mirrored[visibleKey] ?? [],
             previousLive: previousLiveVisible,
@@ -402,11 +372,11 @@ extension MenuBarItemManager {
             return
         }
         // Concealed buckets retain old frames, which cannot describe the current bar.
-        guard !Self.framesSpanSeveralBars(cache[.visible], displays: displays) else {
+        guard !ControlOrderRules.framesSpanSeveralBars(cache[.visible], displays: displays) else {
             MenuBarItemManager.diagLog.debug("Not mirroring section order: item frames span more than one bar")
             return
         }
-        if let controlItems, Self.dividerIsOffTheBar(controlItems, among: cache[.visible]) {
+        if let controlItems, ControlOrderRules.dividerIsOffTheBar(controlItems, among: cache[.visible]) {
             MenuBarItemManager.diagLog.debug("Not mirroring section order: the Hidden divider is parked off the bar")
             return
         }

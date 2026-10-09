@@ -709,7 +709,7 @@ final class LayoutBarPaddingView: NSView {
                         throw MenuBarItemManager.EventError.cannotComplete
                     }
                     try Task.checkCancellation()
-                    guard let completedOrder = MenuBarItemManager.sectionOrderAfterCompletedMove(
+                    guard let completedOrder = OrderRecording.sectionOrderAfterCompletedMove(
                         of: item,
                         proposedOrder: sectionOrderToCommit,
                         liveItems: liveItems

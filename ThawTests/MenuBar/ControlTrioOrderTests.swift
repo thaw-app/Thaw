@@ -13,10 +13,11 @@ import Testing
 /// Tests for the cheap "are the controls still Always-Hidden | Hidden |
 /// Visible?" question the reveal path asks before it re-lays the structural
 /// permutation.
+@MainActor
 struct ControlTrioOrderTests {
     @Test("the canonical Always-Hidden | Hidden | Visible order is recognised")
     func canonicalOrder() {
-        #expect(MenuBarItemManager.controlTrioInCanonicalOrder(
+        #expect(ControlOrderRules.controlTrioInCanonicalOrder(
             alwaysHidden: control(midX: 10),
             hidden: control(midX: 20),
             visible: control(midX: 30)
@@ -25,7 +26,7 @@ struct ControlTrioOrderTests {
 
     @Test("a reversed trio is not in order")
     func reversedOrder() {
-        #expect(!MenuBarItemManager.controlTrioInCanonicalOrder(
+        #expect(!ControlOrderRules.controlTrioInCanonicalOrder(
             alwaysHidden: control(midX: 30),
             hidden: control(midX: 20),
             visible: control(midX: 10)
@@ -34,12 +35,12 @@ struct ControlTrioOrderTests {
 
     @Test("a single inversion anywhere in the trio is rejected")
     func partialInversion() {
-        #expect(!MenuBarItemManager.controlTrioInCanonicalOrder(
+        #expect(!ControlOrderRules.controlTrioInCanonicalOrder(
             alwaysHidden: control(midX: 10),
             hidden: control(midX: 30),
             visible: control(midX: 20)
         ))
-        #expect(!MenuBarItemManager.controlTrioInCanonicalOrder(
+        #expect(!ControlOrderRules.controlTrioInCanonicalOrder(
             alwaysHidden: control(midX: 20),
             hidden: control(midX: 10),
             visible: control(midX: 30)
@@ -48,12 +49,12 @@ struct ControlTrioOrderTests {
 
     @Test("without an Always-Hidden divider only Hidden before Visible is required")
     func alwaysHiddenDisabled() {
-        #expect(MenuBarItemManager.controlTrioInCanonicalOrder(
+        #expect(ControlOrderRules.controlTrioInCanonicalOrder(
             alwaysHidden: nil,
             hidden: control(midX: 20),
             visible: control(midX: 30)
         ))
-        #expect(!MenuBarItemManager.controlTrioInCanonicalOrder(
+        #expect(!ControlOrderRules.controlTrioInCanonicalOrder(
             alwaysHidden: nil,
             hidden: control(midX: 30),
             visible: control(midX: 20)
@@ -62,7 +63,7 @@ struct ControlTrioOrderTests {
 
     @Test("a one-pixel tie a reflow leaves behind still reads as in order")
     func tieReadsAsInOrder() {
-        #expect(MenuBarItemManager.controlTrioInCanonicalOrder(
+        #expect(ControlOrderRules.controlTrioInCanonicalOrder(
             alwaysHidden: control(midX: 20),
             hidden: control(midX: 20),
             visible: control(midX: 20)

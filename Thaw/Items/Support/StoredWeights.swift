@@ -57,4 +57,23 @@ struct StoredWeights {
     func isParked(_ weight: Int) -> Bool {
         store.isParkedWeight(weight)
     }
+
+    /// Weights sort the whole bar; Hidden is beyond its divider away from Visible, Always Hidden beyond its own divider.
+    /// Everything else, including items beyond the Visible control, is Visible.
+    nonisolated static func observedSection(
+        weight: Int,
+        hiddenDivider: Int,
+        alwaysHiddenDivider: Int?,
+        visibleControl: Int
+    ) -> MenuBarSectionName {
+        // Hidden sits on the far side of its divider from the Visible control.
+        let hiddenIsHigher = hiddenDivider > visibleControl
+        func isBeyond(_ divider: Int) -> Bool {
+            hiddenIsHigher ? weight > divider : weight < divider
+        }
+        if let alwaysHiddenDivider, isBeyond(alwaysHiddenDivider) {
+            return .alwaysHidden
+        }
+        return isBeyond(hiddenDivider) ? .hidden : .visible
+    }
 }

@@ -30,25 +30,6 @@ extension MenuBarItemManager {
         scheduleObservedMembershipAdoption(reason: "⌘-drag", afterUserDrag: true)
     }
 
-    /// Weights sort the whole bar; Hidden is beyond its divider away from Visible, Always Hidden beyond its own divider.
-    /// Everything else, including items beyond the Visible control, is Visible.
-    static nonisolated func observedSection(
-        weight: Int,
-        hiddenDivider: Int,
-        alwaysHiddenDivider: Int?,
-        visibleControl: Int
-    ) -> MenuBarSectionName {
-        // Hidden sits on the far side of its divider from the Visible control.
-        let hiddenIsHigher = hiddenDivider > visibleControl
-        func isBeyond(_ divider: Int) -> Bool {
-            hiddenIsHigher ? weight > divider : weight < divider
-        }
-        if let alwaysHiddenDivider, isBeyond(alwaysHiddenDivider) {
-            return .alwaysHidden
-        }
-        return isBeyond(hiddenDivider) ? .hidden : .visible
-    }
-
     /// Adopt divider-weight membership without moving items: Manual after drags, mode switches, and launch; Automatic only after user drags.
     /// Leave unweighted, unhideable, Thaw Bar Only, and divider-slot items unchanged.
     func adoptObservedMembership(reason: String, afterUserDrag: Bool = false) {
@@ -82,7 +63,7 @@ extension MenuBarItemManager {
             else {
                 continue
             }
-            let observed = Self.observedSection(
+            let observed = StoredWeights.observedSection(
                 weight: itemWeight,
                 hiddenDivider: hiddenDivider,
                 alwaysHiddenDivider: alwaysHiddenDivider,

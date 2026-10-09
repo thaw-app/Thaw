@@ -44,8 +44,8 @@ struct OverflowOrderPersistenceTests {
     private static func source(
         order: [String],
         assignment: [String: MenuBarSectionName] = [:]
-    ) -> MenuBarItemManager.AuthoredLayoutSource {
-        MenuBarItemManager.AuthoredLayoutSource(
+    ) -> AuthoredLayoutSource {
+        AuthoredLayoutSource(
             sectionAssignment: assignment,
             sectionItemOrder: [.visible: order]
         )

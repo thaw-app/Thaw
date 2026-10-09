@@ -68,7 +68,7 @@ struct RevealStrandDetectionTests {
         let raycast = Self.app("com.raycast.macos", "Item-0", x: 450, windowID: 12)
         let items = [Self.hiddenDivider, dockDoor, shottr, raycast, Self.visibleControl]
 
-        let stranded = MenuBarItemManager.membersStrandedAcrossDivider(
+        let stranded = MoveTargeting.membersStrandedAcrossDivider(
             items: items,
             controlItems: Self.controlItems,
             sectionFor: { $0.tag == shottr.tag ? .hidden : .visible },
@@ -93,7 +93,7 @@ struct RevealStrandDetectionTests {
         }
 
         // Two hidden members standing right of the divider: both stranded.
-        let unfiltered = MenuBarItemManager.membersStrandedAcrossDivider(
+        let unfiltered = MoveTargeting.membersStrandedAcrossDivider(
             items: items,
             controlItems: Self.controlItems,
             sectionFor: sectionFor,
@@ -103,7 +103,7 @@ struct RevealStrandDetectionTests {
             == [dockDoor.uniqueIdentifier, shottr.uniqueIdentifier])
 
         // Suppressing one leaves the other to be repaired.
-        let filtered = MenuBarItemManager.membersStrandedAcrossDivider(
+        let filtered = MoveTargeting.membersStrandedAcrossDivider(
             items: items,
             controlItems: Self.controlItems,
             sectionFor: sectionFor,
@@ -122,7 +122,7 @@ struct RevealStrandDetectionTests {
         let weather = Self.app("com.apple.weather.menu", "Weather", x: 400, windowID: 22)
         let items = [proton, shottr, Self.hiddenDivider, weather, Self.visibleControl]
 
-        let stranded = MenuBarItemManager.membersStrandedAcrossDivider(
+        let stranded = MoveTargeting.membersStrandedAcrossDivider(
             items: items,
             controlItems: Self.controlItems,
             sectionFor: { $0.tag == shottr.tag ? .hidden : .visible },
@@ -139,7 +139,7 @@ struct RevealStrandDetectionTests {
         let raycast = Self.app("com.raycast.macos", "Item-0", x: 450, windowID: 32)
         let items = [shottr, Self.hiddenDivider, dockDoor, raycast, Self.visibleControl]
 
-        let stranded = MenuBarItemManager.membersStrandedAcrossDivider(
+        let stranded = MoveTargeting.membersStrandedAcrossDivider(
             items: items,
             controlItems: Self.controlItems,
             sectionFor: { $0.tag == shottr.tag ? .hidden : .visible },
@@ -155,7 +155,7 @@ struct RevealStrandDetectionTests {
         // items can be stranded.
         let items = [Self.visibleControl, Self.hiddenDivider]
 
-        let stranded = MenuBarItemManager.membersStrandedAcrossDivider(
+        let stranded = MoveTargeting.membersStrandedAcrossDivider(
             items: items,
             controlItems: Self.controlItems,
             sectionFor: { _ in .visible },
