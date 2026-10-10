@@ -18,10 +18,10 @@ import AppIntents
 import AppKit
 
 /// Shared lookup of the live AppState for every intent file in this folder.
-/// The conditional cast only covers launch ordering.
+/// Nil only before the app has finished launching. See LiveApp for why NSApp.delegate is not used.
 @MainActor
 func thawAppState() -> AppState? {
-    (NSApp?.delegate as? AppDelegate)?.appState
+    LiveApp.appState
 }
 
 // MARK: - Actions
@@ -110,7 +110,7 @@ struct OpenThawSettingsIntent: AppIntent {
 
     @MainActor
     func perform() async throws -> some IntentResult {
-        (NSApp?.delegate as? AppDelegate)?.openSettingsWindow()
+        LiveApp.delegate?.openSettingsWindow()
         return .result()
     }
 }

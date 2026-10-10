@@ -9,6 +9,7 @@ import Foundation
 import Testing
 @testable import Thaw
 
+@MainActor
 @Suite("Parked lane deficit")
 struct ParkedLaneDeficitTests {
     // Field fixture: four Visible items parked at x == -1 despite 924 pt modeled capacity for 324 pt of items.
@@ -17,7 +18,7 @@ struct ParkedLaneDeficitTests {
 
     @Test("Parked items withhold the whole modeled headroom plus their own width")
     func absorbsHeadroom() throws {
-        let deficit = try #require(MenuBarItemManager.parkedLaneDeficit(
+        let deficit = try #require(OverflowDeficits.parkedLaneDeficit(
             previous: nil,
             parkedWidths: [32, 38, 38, 41],
             isNativeOverflowActive: true,
@@ -32,7 +33,7 @@ struct ParkedLaneDeficitTests {
     @Test("Once the parked items are concealed the deficit carries, so they stay out")
     func carriesAfterConcealing() throws {
         let previous = (width: CGFloat(781), visibleUIDs: visible)
-        let held = try #require(MenuBarItemManager.parkedLaneDeficit(
+        let held = try #require(OverflowDeficits.parkedLaneDeficit(
             previous: previous,
             parkedWidths: [],
             isNativeOverflowActive: true,
@@ -45,7 +46,7 @@ struct ParkedLaneDeficitTests {
 
     @Test("Parked items without native overflow are not proof of a full bar")
     func ignoresParkedItemsWithoutNativeOverflow() {
-        #expect(MenuBarItemManager.parkedLaneDeficit(
+        #expect(OverflowDeficits.parkedLaneDeficit(
             previous: nil,
             parkedWidths: [32, 38, 38, 41],
             isNativeOverflowActive: false,
@@ -58,7 +59,7 @@ struct ParkedLaneDeficitTests {
     @Test("A held deficit survives native overflow clearing")
     func carriesWithoutNativeOverflow() throws {
         let previous = (width: CGFloat(781), visibleUIDs: visible)
-        let held = try #require(MenuBarItemManager.parkedLaneDeficit(
+        let held = try #require(OverflowDeficits.parkedLaneDeficit(
             previous: previous,
             parkedWidths: [32],
             isNativeOverflowActive: false,
@@ -71,7 +72,7 @@ struct ParkedLaneDeficitTests {
 
     @Test("A collapsed width is charged as a nominal item")
     func collapsedWidthIsNominal() throws {
-        let deficit = try #require(MenuBarItemManager.parkedLaneDeficit(
+        let deficit = try #require(OverflowDeficits.parkedLaneDeficit(
             previous: nil,
             parkedWidths: [2],
             isNativeOverflowActive: true,
@@ -79,13 +80,13 @@ struct ParkedLaneDeficitTests {
             visibleUIDs: ["a"],
             overflowUIDs: []
         ))
-        #expect(deficit.width == MenuBarItemManager.nominalStatusItemWidth + 8)
+        #expect(deficit.width == OverflowDeficits.nominalStatusItemWidth + 8)
     }
 
     @Test("An item arriving or leaving drops the deficit")
     func dropsOnMembershipChange() {
         let previous = (width: CGFloat(80), visibleUIDs: Set(["a", "b", "c"]))
-        #expect(MenuBarItemManager.parkedLaneDeficit(
+        #expect(OverflowDeficits.parkedLaneDeficit(
             previous: previous,
             parkedWidths: [],
             isNativeOverflowActive: true,

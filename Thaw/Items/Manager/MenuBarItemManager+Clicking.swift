@@ -123,7 +123,7 @@ extension MenuBarItemManager {
         try stopSuppressingLocalEvents()
 
         // Use adaptive timeout based on app performance history
-        let timeout = getClickOperationTimeout(for: item)
+        let timeout = clickTimeouts.timeout(for: item.tag)
 
         MenuBarItemManager.diagLog.debug("postClickEvents: using timeout \(Int(timeout.milliseconds))ms for \(item.logString)")
 

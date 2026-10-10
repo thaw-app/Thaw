@@ -30,10 +30,37 @@ public enum MenuBarAgentWindow {
     /// While an item leaves, the window keeps an empty child for it for a moment: no owner of its
     /// own and no size. A read that holds one was taken mid-change, and so was an empty one.
     public static func drawnOwners(in entries: [Entry]) -> Set<pid_t>? {
+        settled(entries).map { Set($0.map(\.ownerPID)) }
+    }
+
+    /// The entries as given when they describe a bar at rest, or nil when the read was empty or
+    /// taken mid-change. Two settled reads that are equal describe a bar that has not moved.
+    public static func settled(_ entries: [Entry]) -> [Entry]? {
         guard !entries.isEmpty,
               entries.allSatisfy({ $0.frame.width > 0 && $0.frame.height > 0 })
         else { return nil }
-        return Set(entries.map(\.ownerPID))
+        return entries
+    }
+
+    /// The process that owns the item inside one child of the window.
+    ///
+    /// The wrappers around an item belong to the agent, and the first element that does not is the
+    /// item itself. The descent stops there and asks that element nothing. An item of this app's own
+    /// is answered in-process, on the calling thread, and AppKit's accessibility is main-thread only:
+    /// asking it for its children from a background walk crashed the app.
+    public static func ownerPID<Element>(
+        of child: Element,
+        agentPID: pid_t,
+        pid: (Element) -> pid_t?,
+        children: (Element) -> [Element]
+    ) -> pid_t {
+        var element = child
+        while true {
+            guard let owner = pid(element) else { return agentPID }
+            guard owner == agentPID else { return owner }
+            guard let next = children(element).first else { return agentPID }
+            element = next
+        }
     }
 }
 
@@ -49,16 +76,18 @@ public extension AXPrimitives {
             return nil
         }
         return children(of: window).map { child in
-            // The item sits one or two levels down; the wrappers around it belong to the agent.
-            var leaf = child
-            while let next = children(of: leaf).first {
-                leaf = next
-            }
-            return MenuBarAgentWindow.Entry(
-                ownerPID: pid(of: leaf) ?? agentPID,
+            MenuBarAgentWindow.Entry(
+                ownerPID: MenuBarAgentWindow.ownerPID(of: child, agentPID: agentPID, pid: pid(of:), children: children(of:)),
                 frame: frame(of: child) ?? .zero
             )
         }
+    }
+
+    /// The bar as MenuBarAgent draws it right now, or nil when it could not be read or is mid-change.
+    static func menuBarAgentSettledEntries(
+        messagingTimeout: Float = defaultMessagingTimeout
+    ) -> [MenuBarAgentWindow.Entry]? {
+        menuBarAgentWindowEntries(messagingTimeout: messagingTimeout).flatMap(MenuBarAgentWindow.settled)
     }
 
     /// See MenuBarAgentWindow.drawnOwners(in:).

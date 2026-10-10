@@ -32,7 +32,74 @@ struct MenuBarAgentWindowTests {
     }
 
     @Test
+    func `two reads of a bar that has not moved are equal, and a moved item makes them differ`() {
+        let bar = [entry(10, x: 100), entry(20, x: 140)]
+        #expect(MenuBarAgentWindow.settled(bar) == MenuBarAgentWindow.settled([entry(10, x: 100), entry(20, x: 140)]))
+        #expect(MenuBarAgentWindow.settled(bar) != MenuBarAgentWindow.settled([entry(10, x: 100), entry(20, x: 141)]))
+        #expect(MenuBarAgentWindow.settled(bar) != MenuBarAgentWindow.settled([entry(10, x: 100)]))
+    }
+
+    @Test
+    func `a read taken mid-change is not a settled bar`() {
+        #expect(MenuBarAgentWindow.settled([entry(10), .init(ownerPID: 1, frame: .zero)]) == nil)
+        #expect(MenuBarAgentWindow.settled([]) == nil)
+    }
+
+    @Test
     func `refuses an empty read`() {
         #expect(MenuBarAgentWindow.drawnOwners(in: []) == nil)
+    }
+
+    /// A stand-in for an accessibility element: who owns it and what is under it.
+    private final class Node {
+        let pid: pid_t?
+        let kids: [Node]
+        var wasAskedForChildren = false
+        init(_ pid: pid_t?, _ kids: [Node] = []) {
+            self.pid = pid
+            self.kids = kids
+        }
+    }
+
+    private func owner(of child: Node, agent: pid_t = 1) -> pid_t {
+        MenuBarAgentWindow.ownerPID(of: child, agentPID: agent, pid: { $0.pid }, children: {
+            $0.wasAskedForChildren = true
+            return $0.kids
+        })
+    }
+
+    @Test
+    func `the owner is the first element under the wrappers that is not the agent's`() {
+        let button = Node(42)
+        #expect(owner(of: Node(1, [Node(1, [button])])) == 42)
+    }
+
+    @Test
+    func `the item itself is never asked for its children`() {
+        // An item of this app's own is answered on the calling thread; asking it anything from a background walk crashed.
+        let inside = Node(42)
+        let button = Node(42, [inside])
+        let wrapper = Node(1, [button])
+        #expect(owner(of: wrapper) == 42)
+        #expect(wrapper.wasAskedForChildren)
+        #expect(!button.wasAskedForChildren)
+        #expect(!inside.wasAskedForChildren)
+    }
+
+    @Test
+    func `one of Apple's own items, owned by the agent all the way down, belongs to the agent`() {
+        #expect(owner(of: Node(1, [Node(1, [Node(1)])])) == 1)
+    }
+
+    @Test
+    func `a child that is itself another app's element is that app's`() {
+        let child = Node(42, [Node(7)])
+        #expect(owner(of: child) == 42)
+        #expect(!child.wasAskedForChildren)
+    }
+
+    @Test
+    func `an element whose owner cannot be read counts as the agent's`() {
+        #expect(owner(of: Node(1, [Node(nil, [Node(42)])])) == 1)
     }
 }

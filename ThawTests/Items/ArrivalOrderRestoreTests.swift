@@ -9,6 +9,7 @@ import MenuBarModel
 import Testing
 @testable import Thaw
 
+@MainActor
 @Suite("Recorded order across an arrival")
 struct ArrivalOrderRestoreTests {
     private func preserved(
@@ -17,7 +18,7 @@ struct ArrivalOrderRestoreTests {
         previous: Set<String>,
         current: Set<String>
     ) -> [String]? {
-        MenuBarItemManager.visibleOrderPreservedAcrossArrival(
+        OrderRecording.visibleOrderPreservedAcrossArrival(
             savedOrder: saved,
             mirroredOrder: mirrored,
             previousLive: previous,

@@ -5,6 +5,7 @@
 //  Copyright (Thaw) © 2026 Toni Förster
 //  Licensed under the GNU GPLv3
 
+import AsyncAlgorithms
 import Cocoa
 import Combine
 import MenuBarModel
@@ -189,20 +190,12 @@ final class LayoutBarContainer: NSView {
             }
 
             // Group edits touch no item, so the cache observer misses them.
-            // Skipped while a drag has frozen updates. Dedupe by hand, since
-            // MenuBarItemGroupManager is @Observable.
+            // Skipped while a drag has frozen updates. The first value is the
+            // current one, so it is dropped.
             let groupSetTask = Task { @MainActor [weak self, itemGroupManager = appState.itemGroupManager] in
-                let changes = Observations { itemGroupManager.groupSet }
-                var previous: MenuBarItemGroupSet?
-                var isFirst = true
-                for await groupSet in changes {
+                let changes = Observations { itemGroupManager.groupSet }.removeDuplicates().dropFirst()
+                for await _ in changes {
                     guard let self else { return }
-                    defer { isFirst = false }
-                    guard !isFirst, groupSet != previous else {
-                        previous = groupSet
-                        continue
-                    }
-                    previous = groupSet
                     // Dropped even while frozen: the deferred thaw rebuilds the
                     // arrangement, but nothing in between may serve the old
                     // groups either.
@@ -218,34 +211,25 @@ final class LayoutBarContainer: NSView {
             // Switching the Thaw icon off or on changes no position and no
             // inventory, so nothing else here would rebuild for it.
             let showThawIconTask = Task { @MainActor [weak self, generalSettings = appState.settings.general] in
-                let changes = Observations { generalSettings.showThawIcon }
-                var previous: Bool?
-                for await showThawIcon in changes {
+                let changes = Observations { generalSettings.showThawIcon }.removeDuplicates().dropFirst()
+                for await _ in changes {
                     guard let self else { return }
-                    let changed = previous.map { $0 != showThawIcon } ?? false
-                    previous = showThawIcon
-                    if changed {
-                        rebuildViews()
-                    }
+                    rebuildViews()
                 }
             }
             AnyCancellable { showThawIconTask.cancel() }
                 .store(in: &subscriptions)
 
             // The badge is inked against the tinted bar like its neighbours.
-            // MenuBarManager is @Observable; dedupe by hand.
             let badgeColorTask = Task { @MainActor [weak self, menuBarManager = appState.menuBarManager, appearanceManager = appState.appearanceManager] in
                 let changes = Observations {
                     MenuBarStyleTint.background(
                         menuBarManager.averageColorInfo,
                         tintedBy: appearanceManager.configuration.current
                     )
-                }
-                var previous: MenuBarAverageColorInfo??
+                }.removeDuplicates()
                 for await colorInfo in changes {
                     guard let self else { return }
-                    guard colorInfo != previous else { continue }
-                    previous = colorInfo
                     if let badgeView = arrangedViews.first(where: { $0.isNewItemsBadge }) {
                         badgeView.averageColorInfo = colorInfo
                     }

@@ -47,7 +47,7 @@ struct ProfileOverflowPersistenceTests {
         let manager = MenuBarItemManager()
         manager.itemCache[.visible] = [a, c]
         manager.itemCache[.hidden] = [b]
-        manager.authoredLayoutSourceOverride = MenuBarItemManager.AuthoredLayoutSource(
+        manager.authoredLayoutSourceOverride = AuthoredLayoutSource(
             sectionAssignment: [:],
             sectionItemOrder: [.visible: [a, b, c].map(\.uniqueIdentifier)]
         )
@@ -72,7 +72,7 @@ struct ProfileOverflowPersistenceTests {
         let manager = MenuBarItemManager()
         manager.itemCache[.visible] = [a, c]
         manager.itemCache[.hidden] = [b]
-        manager.authoredLayoutSourceOverride = MenuBarItemManager.AuthoredLayoutSource(
+        manager.authoredLayoutSourceOverride = AuthoredLayoutSource(
             sectionAssignment: [:],
             sectionItemOrder: [.visible: [a, b, c].map(\.uniqueIdentifier)]
         )
@@ -93,7 +93,7 @@ struct ProfileOverflowPersistenceTests {
         let manager = MenuBarItemManager()
         manager.itemCache[.visible] = [a, c]
         manager.itemCache[.hidden] = [b]
-        manager.authoredLayoutSourceOverride = MenuBarItemManager.AuthoredLayoutSource(
+        manager.authoredLayoutSourceOverride = AuthoredLayoutSource(
             sectionAssignment: [b.uniqueIdentifier: .hidden],
             sectionItemOrder: [.visible: [a, c].map(\.uniqueIdentifier), .hidden: [b.uniqueIdentifier]]
         )

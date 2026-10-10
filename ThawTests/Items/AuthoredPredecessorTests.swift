@@ -10,7 +10,7 @@ import MenuBarModel
 import Testing
 @testable import Thaw
 
-/// MenuBarItemManager.authoredPredecessor(of:in:excluding:) picks the
+/// AuthoredOrder.authoredPredecessor(of:in:excluding:) picks the
 /// item a section arrival is seated behind. A multi-item drop seats its
 /// members one at a time, so a member must be allowed to anchor on the
 /// member seated just before it, or the group lands in reverse.
@@ -28,27 +28,27 @@ struct AuthoredPredecessorTests {
     @Test("A member seated earlier in the same drop anchors the next one")
     func seatedMemberAnchorsTheNext() {
         let unseated = Set([b.uniqueIdentifier])
-        let predecessor = MenuBarItemManager.authoredPredecessor(of: b, in: order, excluding: unseated)
+        let predecessor = AuthoredOrder.authoredPredecessor(of: b, in: order, excluding: unseated)
         #expect(predecessor?.uniqueIdentifier == a.uniqueIdentifier)
     }
 
     @Test("With nothing seated yet the first member anchors on the resident item")
     func firstMemberAnchorsOnResident() {
         let moving = Set([a, b].map(\.uniqueIdentifier))
-        let predecessor = MenuBarItemManager.authoredPredecessor(of: a, in: order, excluding: moving)
+        let predecessor = AuthoredOrder.authoredPredecessor(of: a, in: order, excluding: moving)
         #expect(predecessor?.uniqueIdentifier == x.uniqueIdentifier)
     }
 
     @Test("The first item in the order has no predecessor")
     func firstItemHasNoPredecessor() {
-        let predecessor = MenuBarItemManager.authoredPredecessor(of: x, in: order, excluding: [])
+        let predecessor = AuthoredOrder.authoredPredecessor(of: x, in: order, excluding: [])
         #expect(predecessor == nil)
     }
 
     @Test("An item the order does not list has no predecessor")
     func unlistedItemHasNoPredecessor() {
         let outsider = Self.item("Outsider", x: 500)
-        let predecessor = MenuBarItemManager.authoredPredecessor(of: outsider, in: order, excluding: [])
+        let predecessor = AuthoredOrder.authoredPredecessor(of: outsider, in: order, excluding: [])
         #expect(predecessor == nil)
     }
 

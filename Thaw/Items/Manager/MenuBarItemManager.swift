@@ -254,31 +254,21 @@ final class MenuBarItemManager {
     /// once rather than on every pass. Cleared once the owner answers again.
     @ObservationIgnored var unresponsiveMoveOwners = Set<pid_t>()
 
-    private var notificationCenterLayoutToken: UUID?
-    private var notificationCenterLayoutSettleTask: Task<Void, Never>?
+    private var notificationCenterLayoutHold = NotificationCenterLayoutHold()
 
     var isNotificationCenterLayoutSuspended: Bool {
-        notificationCenterLayoutToken != nil
+        notificationCenterLayoutHold.isHeld
     }
 
     func beginNotificationCenterLayoutSuspension() {
-        notificationCenterLayoutSettleTask?.cancel()
-        notificationCenterLayoutSettleTask = nil
-        if notificationCenterLayoutToken == nil {
+        if notificationCenterLayoutHold.begin() {
             layoutPublication.beginMutation()
         } else {
             layoutPublication.invalidate()
         }
-        notificationCenterLayoutToken = UUID()
-        postRestrictionRepairTask?.cancel()
-        postRestrictionRepairTask = nil
-        postRestrictionRepairNeedsRerun = false
-        structuralNormalizationTask?.cancel()
-        structuralNormalizationTask = nil
-        deferredLayoutReconcileTask?.cancel()
-        deferredLayoutReconcileTask = nil
-        repairs.withdraw(.postRestrictionRepair)
-        repairs.withdraw(.structuralNormalization)
+        PendingPassTeardown.callOff([.postRestrictionRepair, .structuralNormalization], of: self, on: repairs) {
+            deferredLayoutReconcile.cancelPending()
+        }
         repairs.withdraw(.deferredLayoutReconcile)
     }
 
@@ -288,20 +278,16 @@ final class MenuBarItemManager {
             try await Task.sleep(for: .milliseconds(1200))
         }
     ) -> Task<Void, Never> {
-        let token = notificationCenterLayoutToken
-        notificationCenterLayoutSettleTask?.cancel()
-        let task = Task { @MainActor [weak self] in
-            do { try await settle() } catch { return }
-            guard let self, let token, !Task.isCancelled,
-                  notificationCenterLayoutToken == token
-            else { return }
-            notificationCenterLayoutToken = nil
-            notificationCenterLayoutSettleTask = nil
-            layoutPublication.endMutation()
-            noteRestrictionChange()
+        notificationCenterLayoutHold.settle { token in
+            Task { @MainActor [weak self] in
+                do { try await settle() } catch { return }
+                guard let self, !Task.isCancelled,
+                      notificationCenterLayoutHold.release(ifCurrent: token)
+                else { return }
+                layoutPublication.endMutation()
+                noteRestrictionChange()
+            }
         }
-        notificationCenterLayoutSettleTask = task
-        return task
     }
 
     /// Timestamp of the most recent runtime-kit restriction reflow.
@@ -318,27 +304,10 @@ final class MenuBarItemManager {
     /// because the layout-bar move cooldown blocks applySavedLayout.
     var postRestrictionRepairTask: Task<Void, Never>?
 
-    /// Re-runs the saved-layout reconciler once a transient guard expires.
-    ///
-    /// applySavedLayout declines for reasons that clear on their own: a move
-    /// cooldown, the restriction-reflow settle window, an in-flight ⌘-drag.
-    /// While the user is editing, every drop re-arms the 5 s cooldown and the
-    /// 10 s settle, so waiting for a cache cycle to land in a clear window
-    /// would never run the reconciler. Scheduling against the blocking
-    /// window's own expiry turns a decline into a deferral.
-    private var deferredLayoutReconcileTask: Task<Void, Never>?
-
-    /// When the pending deferred reconcile is due, so a second decline can keep
-    /// the earlier retry instead of pushing it further out.
-    private var deferredLayoutReconcileDue: ContinuousClock.Instant?
-
-    /// Consecutive deferrals without the reconciler managing to run. Bounded
-    /// because a reconcile whose own moves re-arm the move cooldown would
-    /// otherwise reschedule itself forever.
-    private var deferredLayoutReconcileCount = 0
-
-    /// Consecutive deferrals allowed before giving up until the next edit.
-    private static let deferredLayoutReconcileLimit = 5
+    /// The pending retry of the saved-layout reconciler after a transient
+    /// guard (the 5 s move cooldown, the 10 s restriction settle, an in-flight
+    /// ⌘-drag) made applySavedLayout decline, and its bounded retry budget.
+    private var deferredLayoutReconcile = DeferredLayoutReconcileSchedule()
 
     /// Set while a post-restriction repair pass is executing.
     var isRunningPostRestrictionRepair = false
@@ -347,27 +316,10 @@ final class MenuBarItemManager {
     /// more pass is owed once the current one finishes.
     var postRestrictionRepairNeedsRerun = false
 
-    /// Timestamps of recent macOS 27 section-order move failures, keyed by
-    /// "<item identity>|<destination>". An anchored system item (e.g.
-    /// Sound, Control Center) can sit between two items that a saved order
-    /// wants adjacent, making the move permanently unachievable via the
-    /// synthetic Command-drag. Without this backoff, applySavedLayout
-    /// re-detects the divergence every cache cycle and re-dispatches the same
-    /// doomed move forever, hijacking the cursor and disturbing the dragged
-    /// item's AX and rendering state.
-    var recentMoveFailures = [String: ContinuousClock.Instant]()
-
-    /// How long to suppress retrying a macOS 27 section-order move after it
-    /// fails, before giving the achievable-order solver another chance.
-    static let moveFailureBackoff: Duration = .seconds(30)
-
-    var recentItemMoveFailures = [String: ItemMoveFailureRecord]()
-
-    /// Consecutive verify-failures for one item→target that trip the breaker.
-    static let itemMoveFailureThreshold = 3
-
-    /// How long an item→target stays suppressed once the breaker trips.
-    static let itemMoveFailureCooldown: Duration = .seconds(30)
+    /// Which macOS 27 section-order drags failed lately. Without it,
+    /// applySavedLayout re-detects the divergence every cache cycle and
+    /// re-dispatches the same doomed move forever.
+    var moveFailures = MoveFailureMemory()
 
     /// Count of user-initiated reorders currently queued on (or holding)
     /// moveSerialSemaphore. The automatic per-pair reconcile loop in
@@ -387,7 +339,7 @@ final class MenuBarItemManager {
 
     /// How long to leave the visible control alone after an ambient restore
     /// attempt. The restore runs on every cache tick, and when MenuBarAgent
-    /// refuses or reverts the placement, moveFailureBackoff cannot
+    /// refuses or reverts the placement, MoveFailureMemory.backoff cannot
     /// suppress the retries: visibleControlRestoreMove keeps proposing a
     /// different neighbour, so every pass mints a fresh backoff key and Thaw
     /// re-nudges its own icon several times a second. The cooldown caps that
@@ -395,95 +347,18 @@ final class MenuBarItemManager {
     /// so the cooldown only bites during a thrash.
     static let visibleControlRestoreCooldown: Duration = .seconds(30)
 
-    /// Nominal width used for the macOS 27 overflow budget when an item's AX
-    /// bounds have collapsed to an untrusted sliver (see minimumTrustedGlyphWidth).
-    /// Matches the standard status-item footprint so the budget approximates the
-    /// real rendered width rather than the collapsed measurement.
-    static nonisolated let nominalStatusItemWidth: CGFloat = 24
-
-    /// Width to charge a non-control item against the macOS 27 overflow budget.
-    ///
-    /// macOS 27 collapses hidden/overflowed item AX bounds to a sliver, so the
-    /// measured width understates the real footprint and deflates the budget's
-    /// profile baseline. Below the trust threshold the item is charged a nominal
-    /// status-item width instead; otherwise the measured width is used as-is.
-    static nonisolated func budgetWidth(forMeasuredWidth measured: CGFloat) -> CGFloat {
-        measured < MenuBarItemImageCache.minimumTrustedGlyphWidth ? nominalStatusItemWidth : measured
-    }
-
-    /// The most budget a notch-covered control item may take back. Past five
-    /// items' worth, whatever still covers the icon is not a full bar, and
-    /// conceal-until-it-shows would empty the visible section.
-    static nonisolated let maximumNotchOcclusionDeficit: CGFloat = nominalStatusItemWidth * 5
-
-    /// The overflow budget to withhold for notch-covered control items.
-    ///
-    /// Each pass that finds a control item under the notch withholds its width
-    /// plus one nominal item on top of what earlier passes withheld, so the
-    /// conceal set grows until the icon clears the notch. The deficit then
-    /// holds while the same items compete for the bar, counting the ones it
-    /// concealed, and is dropped once an item arrives or leaves.
-    static nonisolated func notchOcclusionDeficit(
-        previous: (width: CGFloat, visibleUIDs: Set<String>)?,
-        occludedControlWidth: CGFloat,
-        visibleUIDs: Set<String>,
-        overflowUIDs: Set<String>
-    ) -> (width: CGFloat, visibleUIDs: Set<String>)? {
-        let membership = visibleUIDs.union(overflowUIDs)
-        let carried = previous.flatMap { $0.visibleUIDs == membership ? $0.width : nil } ?? 0
-        let width = occludedControlWidth > 0
-            ? min(maximumNotchOcclusionDeficit, carried + occludedControlWidth + nominalStatusItemWidth)
-            : carried
-        return width > 0 ? (width, membership) : nil
-    }
-
-    /// The overflow budget to withhold for Visible items macOS did not draw.
-    ///
-    /// On a full bar, a notched one in particular, macOS parks the items that
-    /// do not fit at x == -1 while the modeled budget can still show hundreds
-    /// of points of headroom. Parked items are proof the lane holds exactly
-    /// what it seats, so the pass that finds them withholds the whole modeled
-    /// headroom plus their width and gaps: the planner then conceals that much
-    /// from the left of Visible. A fixed per-item allowance was not enough,
-    /// since the model's error can be larger than any number of items.
-    ///
-    /// The deficit holds while the same items compete for the bar and is
-    /// dropped once an item arrives or leaves.
-    ///
-    /// Parked items only count while macOS shows its own overflow control.
-    /// An app switched off in System Settings parks at x == -1 too, and no
-    /// amount of concealing brings it back.
-    static nonisolated func parkedLaneDeficit(
-        previous: (width: CGFloat, visibleUIDs: Set<String>)?,
-        parkedWidths: [CGFloat],
-        isNativeOverflowActive: Bool,
-        modeledHeadroom: CGFloat,
-        visibleUIDs: Set<String>,
-        overflowUIDs: Set<String>
-    ) -> (width: CGFloat, visibleUIDs: Set<String>)? {
-        let membership = visibleUIDs.union(overflowUIDs)
-        let carried = previous.flatMap { $0.visibleUIDs == membership ? $0.width : nil } ?? 0
-        guard isNativeOverflowActive, !parkedWidths.isEmpty else {
-            return carried > 0 ? (carried, membership) : nil
-        }
-        let parked = parkedWidths.reduce(CGFloat.zero) { $0 + budgetWidth(forMeasuredWidth: $1) + 8 }
-        let width = max(carried, max(0, modeledHeadroom) + parked)
-        return width > 0 ? (width, membership) : nil
-    }
-
     /// The single record of which items have been failing, and how.
     ///
     /// This ledger bounds how long one operation retries an unresponsive owner
     /// and remembers a cannotComplete verdict across launches. It does not
     /// gate bulk apply: on macOS 27 that skip is the destination-scoped
-    /// recentMoveFailures backoff plus the item-scoped circuit
-    /// breaker (isItemMoveCircuitBreakerTripped(key:)), both checked in
-    /// applySectionItemOrder.
+    /// backoff plus the item-scoped circuit breaker, both held by
+    /// moveFailures and checked in applySectionItemOrder.
     let failureLedger = MenuBarItemFailureLedger()
 
     /// Per-item response times learned from previous clicks. See
     /// updateClickOperationTimeout(_:for:).
-    var clickOperationTimeouts = [MenuBarItemTag: Duration]()
+    var clickTimeouts = ClickTimeoutEstimator<MenuBarItemTag>()
     /// Admits one cache pass at a time; see CacheGate.
     let cacheGate = CacheGate()
 
@@ -530,26 +405,10 @@ final class MenuBarItemManager {
     /// Suppresses the next automatic relocation of newly seen leftmost items.
     var suppressNextNewLeftmostItemRelocation = false
 
-    /// Signature of the last macOS 27 divider move that failed. While the layout
-    /// is unchanged, enforceControlItemOrder skips re-attempting the identical
-    /// (unachievable) move so it doesn't loop every cache cycle, the source of
-    /// the idle "cursor pulled to the menu bar / icons shuffling" thrash.
-    var lastFailedDividerSignature: String?
-
-    /// A candidate item signature seen to differ from the cache but not yet
-    /// confirmed. cacheItemsIfNeeded requires a differing signature to persist,
-    /// unchanged, for Constants.MenuBarTuning.signatureStabilityGrace before
-    /// recaching, so a transient enumeration blip (a dynamic-title app
-    /// momentarily dropping its AX subtree, a marker/clone window flickering
-    /// during a reflow) does not trigger a full recache + assertion re-apply.
-    /// Genuine changes hold past the grace window and confirm; a flap reverts to
-    /// the cached signature and clears the gate. See signatureRecacheDecision.
-    var pendingItemSignatureCandidate: [String]?
-
-    /// When pendingItemSignatureCandidate was first observed. The candidate
-    /// only confirms once it has held continuously since this instant for the
-    /// stability grace; a changed difference resets both fields.
-    var pendingItemSignatureFirstSeen: ContinuousClock.Instant?
+    /// Makes cacheItemsIfNeeded wait for a differing signature to hold, unchanged, for
+    /// Constants.MenuBarTuning.signatureStabilityGrace before recaching, so a transient
+    /// enumeration blip does not trigger a full recache + assertion re-apply.
+    var signatureStabilityGate = SignatureStabilityGate()
 
     isolated deinit {
         cacheTickCancellable?.cancel()
@@ -648,27 +507,22 @@ final class MenuBarItemManager {
     /// Debounce for macOS 27 overflow rebalance (assignment backends skip legacy Phase 4).
     var lastOverflowRebalance: Date?
 
-    /// Width the overflow budget gives up because a notch covered one of
-    /// Thaw's own control items, and the visible items it was measured
-    /// against. Sticky until that set changes: dropping it the moment the icon
-    /// reappears re-admits the item that covered it, which covers it again.
-    var heldNotchOcclusionDeficit: (width: CGFloat, visibleUIDs: Set<String>)?
-    var heldParkedLaneDeficit: (width: CGFloat, visibleUIDs: Set<String>)?
+    /// Width the macOS 27 overflow budget gives up for a notch-covered control
+    /// item and for parked Visible items. See OverflowDeficits.
+    var overflowDeficits = OverflowDeficits()
 
-    /// In-flight overflow rebalance task. Coalesces repeated post-cache rebalance
-    /// triggers so the assertion reflow from one rebalance cannot immediately
-    /// kick another, preventing the move→reflow→recache→move thrash cycle.
-    var overflowRebalanceTask: Task<Void, Never>?
-
-    /// The strongest request coalesced into the pending overflow rebalance.
+    /// The pending overflow rebalance: its in-flight task and the strongest
+    /// request coalesced into it.
     ///
-    /// scheduleOverflowRebalance replaces its in-flight task on every
-    /// call, so an explicit request (profile apply, setting flip) or an
-    /// immediate one (native-overflow probe transition) followed by a
-    /// cache-driven request would lose its intent. Merging every request here,
-    /// and clearing it only once a rebalance runs with it, preserves that
-    /// intent. See OverflowRebalanceRequest.
-    var overflowRebalancePendingRequest: OverflowRebalanceRequest?
+    /// scheduleOverflowRebalance replaces the task on every call. That
+    /// coalesces repeated post-cache triggers so the assertion reflow from one
+    /// rebalance cannot immediately kick another, preventing the
+    /// move→reflow→recache→move thrash cycle. It would also lose the intent of
+    /// an explicit request (profile apply, setting flip) or an immediate one
+    /// (native-overflow probe transition) followed by a cache-driven request,
+    /// so every request is merged into the pass and cleared only once a
+    /// rebalance runs with it. See OverflowRebalanceRequest.
+    var overflowRebalance = ScheduledPass<OverflowRebalanceRequest>(.overflowRebalance)
 
     /// Whether the user has taken menu bar arrangement into their own hands (MenuBarArrangementMode.manual).
     /// Every automatic path reads this; the explicit Layout edit path reads arrangementForbidsMoves instead.
@@ -734,28 +588,20 @@ final class MenuBarItemManager {
     /// path's own retry budget because each pass is already several seconds.
     static let authoredVisibleOrderApplyAttempts = 3
 
-    /// Visible members MenuBarAgent did not republish in time, stamped when
-    /// each was last missing.
-    ///
-    /// The ordering pass waits up to three seconds for every authored member
-    /// to be live. Without this, each following pass burns the same deadline
-    /// on the same absentee. Entries
-    /// expire so a member that returns is waited for again.
-    var visibleMembersMissingRepublish = [String: ContinuousClock.Instant]()
-
-    /// How long a failed republish is remembered.
-    static let missingRepublishMemory: Duration = .seconds(10)
+    /// Visible members MenuBarAgent did not republish in time, so later
+    /// ordering passes do not spend the wait on them again.
+    var missingRepublishMemo = RepublishAbsenceMemo()
 
     /// Drops the memo so the next ordering pass waits for every member again.
     /// The memo suppresses waits for automatic passes; a user-initiated change
     /// inheriting one drops members the pass never waited for.
     func forgetMissingRepublishMemory() {
-        guard !visibleMembersMissingRepublish.isEmpty else { return }
+        guard !missingRepublishMemo.isEmpty else { return }
         MenuBarItemManager.diagLog.debug(
-            "authored visible apply: clearing \(self.visibleMembersMissingRepublish.count) " +
+            "authored visible apply: clearing \(self.missingRepublishMemo.count) " +
                 "missing-republish memo entr(ies) for a user-initiated layout change"
         )
-        visibleMembersMissingRepublish.removeAll()
+        missingRepublishMemo.forget()
     }
 
     /// Bounds how long automatic ordering passes keep working on one authored edit.
@@ -808,8 +654,10 @@ final class MenuBarItemManager {
     /// relaunches with a new PID.
     var postRestrictionUnrepairableItemIDs = Set<PostRestrictionRepairItemID>()
 
-    /// How many passes in a row an item was attempted as a visible-boundary
-    /// strand and still failed its boundary check afterwards.
+    /// The visible-boundary repair's memory of each item: how many passes in a row
+    /// it failed, and whether the repair has given up on it for now. A suppression
+    /// clears when the item's owner quits, the display topology changes, its
+    /// cooldown passes, or on relaunch.
     ///
     /// A single failure is ordinary: a weight write needs a beat before
     /// MenuBarAgent re-seats the item, and a display reflow can strand an item
@@ -817,19 +665,7 @@ final class MenuBarItemManager {
     /// the ladder cannot place at all, and retrying it forever is what keeps
     /// the repair pass, and the item cache and capture pipeline behind it,
     /// awake on an otherwise idle machine.
-    var boundaryRepairStrandTrips: [PostRestrictionRepairItemID: Int] = [:]
-
-    /// Items whose visible-boundary repair has been given up on for this
-    /// session. Cleared when the item's owner quits (the prune below), when the
-    /// display topology changes, when the cooldown below expires, or on
-    /// relaunch.
-    var suppressedBoundaryRepairItemIDs = Set<PostRestrictionRepairItemID>()
-
-    /// When each suppression was issued, so a strand caught in a transient
-    /// fight (a respace writing against the repair during a restart's login
-    /// window) gets a fresh ladder after the cooldown instead
-    /// of staying buried until the user drags it by hand.
-    var suppressedBoundaryRepairAt: [PostRestrictionRepairItemID: Date] = [:]
+    var boundaryRepairBreaker = BoundaryRepairBreaker<PostRestrictionRepairItemID>()
 
     /// Items whose persisted stranded verdict has already seeded this
     /// session's suppression. Seeded once, so the cooldown and display-change
@@ -1038,35 +874,6 @@ final class MenuBarItemManager {
         }
     }
 
-    /// Authored layout inputs for keeping automatic overflow out of the
-    /// persisted order.
-    ///
-    /// Automatic overflow files an authored-Visible item under Hidden in the
-    /// effective cache. Persisting that cache verbatim turns a cramped-display
-    /// moment into a permanent hide, so the persistence paths reinsert those
-    /// concealed items at their recorded Visible slots using the authored
-    /// assignment and order.
-    struct AuthoredLayoutProjection: Sendable {
-        /// Explicit authored assignments, keyed by canonical identifier.
-        /// Absence means Visible, matching the runtime's default.
-        var sectionAssignment: [String: MenuBarSectionName]
-        /// Recorded authored order per section, including overflowed Visible
-        /// slots that the effective cache has temporarily filed elsewhere.
-        var sectionOrder: [MenuBarSectionName: [String]]
-
-        nonisolated func authoredSection(for identifier: String) -> MenuBarSectionName {
-            sectionAssignment[MenuBarItemTag.canonicalPersistentIdentifier(identifier)] ?? .visible
-        }
-    }
-
-    /// Authored layout state the persistence projection reads from a section
-    /// controller. A plain value so tests run the exact production derivation
-    /// without a live runtime.
-    struct AuthoredLayoutSource: Sendable {
-        var sectionAssignment: [String: MenuBarSectionName]
-        var sectionItemOrder: [MenuBarSectionName: [String]]
-    }
-
     /// The authored projection to use for persistence, or nil when there is no
     /// runtime to consult (standalone/test configurations keep prior
     /// semantics). The source override lets tests run this same derivation
@@ -1083,58 +890,7 @@ final class MenuBarItemManager {
         } else {
             return nil
         }
-        return Self.authoredLayoutProjection(for: cache, source: source)
-    }
-
-    /// Pure derivation and gate. The projection is only needed while the
-    /// effective cache still conceals an authored-Visible item. That also
-    /// covers the window after overflow is cleared but before the next
-    /// inventory walk publishes the restored membership, so a profile capture
-    /// in that window cannot record the item as Hidden. Once the cache catches
-    /// up the projection is a no-op and the gate returns nil.
-    static nonisolated func authoredLayoutProjection(
-        for cache: ItemCache,
-        source: AuthoredLayoutSource
-    ) -> AuthoredLayoutProjection? {
-        let projection = AuthoredLayoutProjection(
-            sectionAssignment: source.sectionAssignment,
-            sectionOrder: source.sectionItemOrder
-        )
-        guard hasConcealedAuthoredVisibleItem(in: cache, projection: projection) else {
-            return nil
-        }
-        return projection
-    }
-
-    /// Items eligible for savedSectionOrder: app items with a resolved
-    /// sourcePID, plus the visible control item, so reconciliation after a
-    /// restart can tell when macOS placed an app item on the wrong side of
-    /// it. The hidden and always-hidden dividers stay out; they are always
-    /// inserted into desiredFlat at the section boundary.
-    static nonisolated func isPersistable(_ item: MenuBarItem) -> Bool {
-        if item.tag == .visibleControlItem {
-            return true
-        }
-        return !item.isControlItem && item.sourcePID != nil
-    }
-
-    /// Whether any persistable, non-transient item the effective cache filed
-    /// outside Visible is authored Visible. That is exactly automatic
-    /// overflow, or a cache that has not yet caught up with its clearing.
-    static nonisolated func hasConcealedAuthoredVisibleItem(
-        in cache: ItemCache,
-        projection: AuthoredLayoutProjection
-    ) -> Bool {
-        for section in MenuBarSectionName.allCases where section != .visible {
-            for item in cache[section]
-                where isPersistable(item) && !item.isTransientControlCenterItem
-            {
-                if projection.authoredSection(for: item.uniqueIdentifier) == .visible {
-                    return true
-                }
-            }
-        }
-        return false
+        return AuthoredLayout.authoredLayoutProjection(for: cache, source: source)
     }
 
     /// Computes the per-section order dict from cache with the same filter and
@@ -1180,7 +936,7 @@ final class MenuBarItemManager {
         // into Hidden.
         var persistableByIdentifier = [String: MenuBarItem]()
         for section in MenuBarSection.Name.allCases {
-            for item in cache[section] where Self.isPersistable(item) {
+            for item in cache[section] where AuthoredLayout.isPersistable(item) {
                 // Always track base identifier so stale saved entries for
                 // transient items (Live Activities) get pruned by the
                 // isStaleInstanceIndex guard below and not re-injected.
@@ -1204,11 +960,11 @@ final class MenuBarItemManager {
             // hide; the effective bucket stays authoritative without one.
             let effective = cache[section]
                 .filter {
-                    Self.isPersistable($0) &&
+                    AuthoredLayout.isPersistable($0) &&
                         !$0.isTransientControlCenterItem
                 }
             let currentInSection: [String] = if let projection {
-                Self.authoredCurrentIdentifiers(
+                AuthoredLayout.authoredCurrentIdentifiers(
                     for: section,
                     effective: effective,
                     persistableByIdentifier: persistableByIdentifier,
@@ -1239,73 +995,6 @@ final class MenuBarItemManager {
         }
 
         return canonicalizingGroups(in: newOrder, cache: cache)
-    }
-
-    /// The identifiers for `section`, in persistence order.
-    ///
-    /// The effective cache is the membership authority everywhere except the
-    /// automatic-overflow case: an authored-Visible item the cache filed under
-    /// Hidden is reinserted at its recorded Visible slot. Present items keep
-    /// the effective cache order, so a within-section reorder is untouched,
-    /// and no other section's membership is rewritten (always-hidden remains
-    /// governed by the backend's allowsAlwaysHidden mapping). Pure over inputs.
-    static nonisolated func authoredCurrentIdentifiers(
-        for section: MenuBarSectionName,
-        effective: [MenuBarItem],
-        persistableByIdentifier: [String: MenuBarItem],
-        savedSectionOrder: [String: [String]],
-        projection: AuthoredLayoutProjection
-    ) -> [String] {
-        // Drop authored-Visible items the effective cache filed outside
-        // Visible: those are automatic overflow and are reinserted into
-        // Visible below. Authored Hidden/Always Hidden membership is left as
-        // the backend bucketed it, so the allowsAlwaysHidden mapping stands.
-        let present = effective
-            .filter { section == .visible || projection.authoredSection(for: $0.uniqueIdentifier) != .visible }
-            .map(\.uniqueIdentifier)
-        guard section == .visible else { return present }
-
-        let presentSet = Set(present)
-        let concealed = persistableByIdentifier.values
-            .filter {
-                projection.authoredSection(for: $0.uniqueIdentifier) == .visible
-                    && !presentSet.contains($0.uniqueIdentifier)
-            }
-            .map(\.uniqueIdentifier)
-        guard !concealed.isEmpty else { return present }
-
-        let reference = projection.sectionOrder[.visible]
-            ?? savedSectionOrder[MenuBarSectionName.visible.rawValue]
-            ?? []
-        let concealedSet = Set(concealed)
-        // Recorded entries first so their relative order survives; identifiers
-        // the record has never seen keep a deterministic order.
-        let orderedConcealed = reference.filter { concealedSet.contains($0) }
-            + concealed.filter { !reference.contains($0) }.sorted()
-        return reinsertingConcealed(orderedConcealed, into: present, reference: reference)
-    }
-
-    /// Reinserts concealed identifiers into their recorded slots: each goes
-    /// after the closest identifier that precedes it in `reference` and
-    /// survives in `order`, or at the front when no predecessor survives.
-    /// Pure over inputs.
-    static nonisolated func reinsertingConcealed(
-        _ concealed: [String],
-        into order: [String],
-        reference: [String]
-    ) -> [String] {
-        var result = order
-        for identifier in concealed {
-            let insertAt: Int
-            if let referenceIndex = reference.firstIndex(of: identifier) {
-                let predecessor = reference[..<referenceIndex].last { result.contains($0) }
-                insertAt = predecessor.flatMap { result.firstIndex(of: $0).map { $0 + 1 } } ?? 0
-            } else {
-                insertAt = result.count
-            }
-            result.insert(identifier, at: min(insertAt, result.count))
-        }
-        return result
     }
 
     /// Applies the same group gathering RuntimeSectionController/commitOrder(reason:options:)
@@ -1876,39 +1565,21 @@ final class MenuBarItemManager {
         }
         .store(in: &registered)
 
-        let (terminateEvents, terminateContinuation) = AsyncStream<Void>.makeStream()
-        let terminateTask = Task { @MainActor [weak self] in
-            let observer = NSWorkspace.shared.notificationCenter.addObserver(
-                forName: NSWorkspace.didTerminateApplicationNotification,
-                object: nil,
-                queue: .main
-            ) { _ in terminateContinuation.yield(()) }
-            defer { NSWorkspace.shared.notificationCenter.removeObserver(observer) }
-            for await _ in terminateEvents.debounce(for: .seconds(1)) {
-                guard let self else { return }
-                MenuBarItemManager.diagLog.debug("App terminated, refreshing cache")
-                // Unconditional, like the launch path. cacheItemsIfNeeded is
-                // gated on the WindowServer menu bar window list, and an item
-                // published only as an AXExtrasMenuBar child owns no window, so
-                // its app can quit without moving that list and its row would
-                // outlive the owner.
-                await self.cacheItemsRegardless()
-            }
+        let terminateTask = NSWorkspace.shared.notificationCenter.eventsTask(named: NSWorkspace.didTerminateApplicationNotification, debounce: .seconds(1)) { [weak self] in
+            guard let self else { return }
+            MenuBarItemManager.diagLog.debug("App terminated, refreshing cache")
+            // Unconditional, like the launch path. cacheItemsIfNeeded is
+            // gated on the WindowServer menu bar window list, and an item
+            // published only as an AXExtrasMenuBar child owns no window, so
+            // its app can quit without moving that list and its row would
+            // outlive the owner.
+            await self.cacheItemsRegardless()
         }
         registered.insert(AnyCancellable { terminateTask.cancel() })
 
-        let (activateEvents, activateContinuation) = AsyncStream<Void>.makeStream()
-        let activateTask = Task { @MainActor [weak self] in
-            let observer = NSWorkspace.shared.notificationCenter.addObserver(
-                forName: NSWorkspace.didActivateApplicationNotification,
-                object: nil,
-                queue: .main
-            ) { _ in activateContinuation.yield(()) }
-            defer { NSWorkspace.shared.notificationCenter.removeObserver(observer) }
-            for await _ in activateEvents.debounce(for: .seconds(0.5)) {
-                guard let self else { return }
-                await self.cacheItemsIfNeeded()
-            }
+        let activateTask = NSWorkspace.shared.notificationCenter.eventsTask(named: NSWorkspace.didActivateApplicationNotification, debounce: .seconds(0.5)) { [weak self] in
+            guard let self else { return }
+            await self.cacheItemsIfNeeded()
         }
         registered.insert(AnyCancellable { activateTask.cancel() })
 
@@ -2021,45 +1692,29 @@ final class MenuBarItemManager {
     /// window started before now, so waiting it out from here is never early,
     /// only slightly late, and that is the safe direction.
     func scheduleDeferredLayoutReconcile(after delay: Duration, reason: String) {
-        guard deferredLayoutReconcileCount < Self.deferredLayoutReconcileLimit else {
-            return
-        }
-        let due = ContinuousClock.now + delay
-        if let pending = deferredLayoutReconcileDue,
-           deferredLayoutReconcileTask != nil,
-           pending <= due
-        {
-            return
-        }
-        deferredLayoutReconcileTask?.cancel()
-        deferredLayoutReconcileDue = due
-        deferredLayoutReconcileCount += 1
+        guard let due = deferredLayoutReconcile.claim(after: delay) else { return }
         repairs.request(.deferredLayoutReconcile, cause: .layoutApplyBlocked)
         MenuBarItemManager.diagLog.debug(
             "applySavedLayout: deferring reconcile \(delay) (\(reason))"
         )
-        deferredLayoutReconcileTask = Task { @MainActor [weak self] in
+        deferredLayoutReconcile.arm(Task { @MainActor [weak self] in
             do {
                 try await Task.sleep(until: due, clock: .continuous)
             } catch {
                 return
             }
             guard let self else { return }
-            deferredLayoutReconcileTask = nil
-            deferredLayoutReconcileDue = nil
+            deferredLayoutReconcile.fired()
             repairs.begin(.deferredLayoutReconcile)
             defer { repairs.end(.deferredLayoutReconcile) }
             await cacheItemsRegardless(skipRecentMoveCheck: true)
-        }
+        })
     }
 
     /// Clears the deferral bookkeeping once the reconciler gets to run, so the
     /// next blocked pass starts from a full retry budget.
     func noteLayoutReconcileRan() {
-        deferredLayoutReconcileCount = 0
-        deferredLayoutReconcileTask?.cancel()
-        deferredLayoutReconcileTask = nil
-        deferredLayoutReconcileDue = nil
+        deferredLayoutReconcile.reset()
         repairs.withdraw(.deferredLayoutReconcile)
     }
 

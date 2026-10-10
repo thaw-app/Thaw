@@ -31,6 +31,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     // MARK: NSApplicationDelegate Methods
 
     func applicationWillFinishLaunching(_: Notification) {
+        LiveApp.register(self)
         #if DEBUG
             // Don't perform setup if running as a preview.
             if isRunningForPreviews {
@@ -47,7 +48,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         NSSplitViewItem.swizzle()
         MigrationManager().migrateAll()
 
-        // Overflow spacer is inert unless Thaw.debugOverflowSpacerWidth is positive; changes apply without relaunch.
+        // Overflow spacer is inert unless Thaw.debugOverflowSpacerWidth is positive; once the key exists, changes apply without relaunch.
         OverflowSpacer.shared.performSetup(with: appState)
 
         // Descenders observe their setting live and use app state to hit-test on-screen items.

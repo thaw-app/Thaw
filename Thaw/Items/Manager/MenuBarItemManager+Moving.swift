@@ -17,26 +17,10 @@ extension MenuBarItemManager {
 }
 
 extension MenuBarItemManager {
-    /// The opening guess for an unknown item; apps differ tenfold in how fast
-    /// they open a menu, so each item learns its own.
-    private static let defaultClickOperationTimeout: Duration = .milliseconds(350)
-
-    func getClickOperationTimeout(for item: MenuBarItem) -> Duration {
-        clickOperationTimeouts[item.tag] ?? Self.defaultClickOperationTimeout
-    }
-
-    /// Moves the estimate halfway toward each observation, clamped so fast runs
-    /// cannot starve a slow day and one outlier cannot make clicks feel broken.
+    /// Feeds one successful click's duration into the item's learned timeout.
     func updateClickOperationTimeout(_ duration: Duration, for item: MenuBarItem) {
-        let blended = (duration + getClickOperationTimeout(for: item)) / 2
-        let clamped = blended.clamped(min: .milliseconds(200), max: .milliseconds(1000))
-        clickOperationTimeouts[item.tag] = clamped
+        let clamped = clickTimeouts.record(duration, for: item.tag)
         MenuBarItemManager.diagLog.debug("Updated click timeout for \(item.logString): \(Int(clamped.milliseconds))ms (measured: \(Int(duration.milliseconds))ms)")
-    }
-
-    /// Keeps the estimates from growing without bound over a long session.
-    func pruneClickOperationTimeouts(keeping validTags: Set<MenuBarItemTag>) {
-        clickOperationTimeouts = clickOperationTimeouts.filter { validTags.contains($0.key) }
     }
 
     /// The live bar without position-store recoveries, whose inferred frames
@@ -55,47 +39,6 @@ extension MenuBarItemManager {
         } catch {
             return false
         }
-    }
-
-    /// Resolves the destination against the live bar: the anchor, then the
-    /// alternates captured at drop time, since the anchor can quit or rotate
-    /// its window ID. The first one present wins, rewritten to the live item.
-    ///
-    /// Nil rather than a throw, since the store write addresses the anchor by
-    /// key and only the drag needs a live frame.
-    static nonisolated func resolvedDestination(
-        for destination: MoveDestination,
-        fallbacks: [MoveDestination],
-        item: MenuBarItem,
-        among livePeers: [MenuBarItem]
-    ) -> MoveDestination? {
-        let chain = [destination] + fallbacks
-        for (index, candidate) in chain.enumerated() {
-            guard
-                let liveAnchor = livePeers.first(where: {
-                    !$0.isSystemClone && !$0.isNativeOverflowControl && $0.hasSameIdentity(as: candidate.targetItem)
-                })
-            else {
-                continue
-            }
-            let resolved: MoveDestination = switch candidate {
-            case .leftOfItem: .leftOfItem(liveAnchor)
-            case .rightOfItem: .rightOfItem(liveAnchor)
-            }
-            if index > 0 {
-                MenuBarItemManager.diagLog.warning(
-                    "Anchor \(destination.targetItem.logString) vanished mid-drop; " +
-                        "resolved \(item.logString) against alternate \(resolved.targetItem.logString)"
-                )
-            } else if resolved != destination {
-                MenuBarItemManager.diagLog.debug(
-                    "Anchor \(destination.targetItem.logString) rotated during rescan mid-drop; " +
-                        "re-resolved against live geometry"
-                )
-            }
-            return resolved
-        }
-        return nil
     }
 
     private static func targetsAlwaysHiddenDivider(_ destination: MoveDestination) -> Bool {
@@ -132,7 +75,7 @@ extension MenuBarItemManager {
             }
 
             let items = await MenuBarItem.getMenuBarItems(option: .activeSpace)
-            let anchor = Self.recoveryAnchor(
+            let anchor = MoveTargeting.recoveryAnchor(
                 stuck: item,
                 items: items,
                 hiddenControlItemWindowNumber: appState.menuBarManager.controlItem(withName: .hidden)?.window?.windowNumber,
@@ -169,42 +112,15 @@ extension MenuBarItemManager {
     /// Restores the re-publish budget of the control item behind item after
     /// a re-registered window provably seated.
     private func markControlItemSeated(_ item: MenuBarItem, in appState: AppState) {
-        guard let name = Self.controlItemSectionName(for: item.tag) else { return }
+        guard let name = MoveTargeting.controlItemSectionName(for: item.tag) else { return }
         appState.menuBarManager.controlItem(withName: name)?.markSeated()
-    }
-
-    /// Prefers the hidden control item. macOS 27 does not order the
-    /// zero-length window of an empty Hidden section, so the fallback is the
-    /// rightmost seated visible item other than the stuck one.
-    static nonisolated func recoveryAnchor(
-        stuck: MenuBarItem,
-        items: [MenuBarItem],
-        hiddenControlItemWindowNumber: Int?,
-        section: (MenuBarItem) -> MenuBarSection.Name?
-    ) -> MenuBarItem? {
-        if let hiddenControlItemWindowNumber,
-           let windowID = CGWindowID(exactly: hiddenControlItemWindowNumber),
-           let seated = items.first(where: { $0.windowID == windowID })
-        {
-            return seated
-        }
-        return items
-            .filter { candidate in
-                candidate.windowID != stuck.windowID
-                    && candidate.tag != .hiddenControlItem
-                    && candidate.tag != .alwaysHiddenControlItem
-                    && section(candidate) == .visible
-                    && candidate.bounds.minX >= 0
-                    && candidate.bounds.width > 0
-            }
-            .max { $0.bounds.maxX < $1.bounds.maxX }
     }
 
     /// Re-registers the status item behind item when the item names one of
     /// Thaw's control items, returning whether a re-publish happened.
     private func republishUnseatedControlItem(_ item: MenuBarItem) async -> Bool {
         guard let appState,
-              let name = Self.controlItemSectionName(for: item.tag),
+              let name = MoveTargeting.controlItemSectionName(for: item.tag),
               let controlItem = appState.menuBarManager.controlItem(withName: name)
         else {
             return false
@@ -213,15 +129,6 @@ extension MenuBarItemManager {
             return false
         }
         return true
-    }
-
-    static nonisolated func controlItemSectionName(for tag: MenuBarItemTag) -> MenuBarSection.Name? {
-        switch tag {
-        case .visibleControlItem: .visible
-        case .hiddenControlItem: .hidden
-        case .alwaysHiddenControlItem: .alwaysHidden
-        default: nil
-        }
     }
 
     /// Waits for a re-published control item to hold a real seat, up to about
@@ -300,9 +207,7 @@ extension MenuBarItemManager {
         var awaitingUserMove = isUserInitiated
         if isUserInitiated {
             cancelPendingSectionOrderApply()
-            structuralNormalizationTask?.cancel()
-            structuralNormalizationTask = nil
-            repairs.withdraw(.structuralNormalization)
+            PendingPassTeardown.callOff([.structuralNormalization], of: self, on: repairs)
             pendingUserReorderCount += 1
         }
         defer {
@@ -359,7 +264,7 @@ extension MenuBarItemManager {
         }
         var moveFulfilled = false
         defer {
-            if moveFulfilled, !Task.isCancelled, Self.shouldNormalizeStructureAfterMove(
+            if moveFulfilled, !Task.isCancelled, OrderRecording.shouldNormalizeStructureAfterMove(
                 item: item,
                 destination: destination,
                 isUserInitiated: isUserInitiated
@@ -417,7 +322,7 @@ extension MenuBarItemManager {
 
         // An unresolved anchor is not a refusal yet: the store write names it
         // by key. Only the drag path, which needs geometry, fails on it.
-        let liveDestination = Self.resolvedDestination(
+        let liveDestination = MoveTargeting.resolvedDestination(
             for: destination,
             fallbacks: anchorFallbacks,
             item: item,
@@ -707,7 +612,7 @@ extension MenuBarItemManager {
             let manualAllowsControlRelay: Bool = {
                 guard arrangementIsManual else { return true }
                 let settled = itemCache.managedItems
-                return !settled.isEmpty && Self.visibleControlIsStranded(among: settled)
+                return !settled.isEmpty && ControlOrderRules.visibleControlIsStranded(among: settled)
             }()
             guard manualAllowsControlRelay else {
                 MenuBarItemManager.diagLog.debug("structural normalization: skipping, manual arrangement is on")
@@ -767,7 +672,7 @@ extension MenuBarItemManager {
             let settledItems = itemCache.managedItems
             guard !settledItems.isEmpty else { return }
             if !arrangementIsManual, !menuBarAgentIgnoresPreferredPositions,
-               Self.trailingSiriIsMisplaced(in: settledItems) {
+               ControlOrderRules.trailingSiriIsMisplaced(in: settledItems) {
                 // Siri needs one row repaired; no dividers required, which
                 // managedItems omits.
                 _ = moveCircuitBreaker.note(.storeWrite)
@@ -995,7 +900,7 @@ extension MenuBarItemManager {
         // Mid-reveal the walk can miss members not yet re-allowed, and laddering
         // a partial run scrambles the bar. Complete it from the cache; the
         // strand check still reads the live walk.
-        let structuralItems = Self.completingPartialWalk(liveItems, with: itemCache.managedItems)
+        let structuralItems = AuthoredOrder.completingPartialWalk(liveItems, with: itemCache.managedItems)
         if structuralItems.count != liveItems.count {
             MenuBarItemManager.diagLog.debug(
                 "synchronizeRevealedOrder: live walk holds \(liveItems.count) item(s); " +
@@ -1013,7 +918,7 @@ extension MenuBarItemManager {
         // re-lay weights, which the host animates.
         let visibleControl = structuralItems.first { $0.tag.matchesVisibleControlItem }
         if let visibleControl,
-           Self.controlTrioInCanonicalOrder(
+           ControlOrderRules.controlTrioInCanonicalOrder(
                alwaysHidden: controlItems.alwaysHidden,
                hidden: controlItems.hidden,
                visible: visibleControl
@@ -1055,15 +960,13 @@ extension MenuBarItemManager {
             // A divider whose frame stopped following the bar would call every item left of it stranded.
             let weights = StoredWeights(among: items, table: weightTable)
             let seated = DividerSeat.settled(items: items, pair: pair, weight: weights.weight(of:))
-            return Self.membersStrandedAcrossDivider(
+            return MoveTargeting.membersStrandedAcrossDivider(
                 items: seated.items,
                 controlItems: seated.pair,
                 sectionFor: { controller.section(for: $0) },
                 experimentalSystemItemHiding: experimentalSystemItemHiding,
                 isRepairSuppressed: {
-                    self.suppressedBoundaryRepairItemIDs.contains(
-                        self.postRestrictionRepairItemID(for: $0)
-                    )
+                    self.boundaryRepairBreaker.isSuppressed(PostRestrictionRepairItemID($0))
                 }
             )
         }
@@ -1135,68 +1038,12 @@ extension MenuBarItemManager {
     /// How long a reveal may reflow before its result is judged.
     private static let revealStrandSettleBudget: Duration = .milliseconds(1500)
 
-    /// Live items on the wrong side of the hidden divider for their section.
-    /// Items no move could fix never count.
-    static nonisolated func membersStrandedAcrossDivider(
-        items: [MenuBarItem],
-        controlItems: ControlItemPair,
-        sectionFor: (MenuBarItem) -> MenuBarSection.Name,
-        experimentalSystemItemHiding: Bool,
-        isRepairSuppressed: (MenuBarItem) -> Bool = { _ in false }
-    ) -> [MenuBarItem] {
-        items.filter { item in
-            guard !item.isControlItem, !item.isSystemClone, !item.isNativeOverflowControl else { return false }
-            // An item the repair ladder has given up on cannot be moved by any
-            // weight, so repairing it here only re-seats its neighbours, and it
-            // strands again on the next reveal.
-            guard !isRepairSuppressed(item) else { return false }
-            return !MenuBarLayoutPlannerProvider.current.liveOrderSatisfiesSectionBoundary(
-                items: items,
-                item: item,
-                section: sectionFor(item),
-                controlItems: controlItems,
-                experimentalSystemItemHiding: experimentalSystemItemHiding
-            )
-        }
-    }
-
-    /// Whether a suppressed boundary repair still holds. With no timestamp it
-    /// holds until cleared, matching the strand pass, which only reads the set.
-    static nonisolated func boundaryRepairIsSuppressed(
-        suppressedAt: Date?,
-        now: Date,
-        cooldown: TimeInterval
-    ) -> Bool {
-        guard let suppressedAt else { return true }
-        return now.timeIntervalSince(suppressedAt) < cooldown
-    }
-
-    /// Counts consecutive failures. A repair or reaching tripLimit (which also
-    /// suppresses) resets it; nil trips removes the entry.
-    static nonisolated func boundaryRepairBreakerStep(
-        priorTrips: Int,
-        repaired: Bool,
-        tripLimit: Int
-    ) -> (trips: Int?, suppress: Bool) {
-        guard !repaired else { return (nil, false) }
-        let trips = priorTrips + 1
-        guard trips >= tripLimit else { return (trips, false) }
-        return (nil, true)
-    }
-
     /// Scores one reveal-time section boundary repair against the breaker the
     /// visible-strand pass uses.
     private func recordSectionBoundaryRepairOutcome(for item: MenuBarItem, repaired: Bool) {
-        let id = postRestrictionRepairItemID(for: item)
-        let step = Self.boundaryRepairBreakerStep(
-            priorTrips: boundaryRepairStrandTrips[id] ?? 0,
-            repaired: repaired,
-            tripLimit: Self.boundaryRepairTripLimit
-        )
-        boundaryRepairStrandTrips[id] = step.trips
-        guard step.suppress else { return }
-        suppressedBoundaryRepairItemIDs.insert(id)
-        suppressedBoundaryRepairAt[id] = Date()
+        let id = PostRestrictionRepairItemID(item)
+        let outcome = boundaryRepairBreaker.record(repaired: repaired, for: id, tripLimit: Self.boundaryRepairTripLimit)
+        guard outcome.suppressed else { return }
         MenuBarItemManager.diagLog.warning(
             "macOS 27 section boundary repair: suppressing \(item.logString) after " +
                 "\(Self.boundaryRepairTripLimit) failed reveals for " +
@@ -1305,21 +1152,17 @@ extension MenuBarItemManager {
             // Runs on every reveal, so it shares the strand pass's breaker and
             // re-arms. The cooldown is checked here because those re-arms only
             // run on a restriction change.
-            let repairID = postRestrictionRepairItemID(for: liveItem)
-            if suppressedBoundaryRepairItemIDs.contains(repairID) {
-                if Self.boundaryRepairIsSuppressed(
-                    suppressedAt: suppressedBoundaryRepairAt[repairID],
-                    now: Date(),
-                    cooldown: Self.boundaryRepairSuppressionCooldown
+            let repairID = PostRestrictionRepairItemID(liveItem)
+            if boundaryRepairBreaker.isSuppressed(repairID) {
+                if boundaryRepairBreaker.suppressionHolds(
+                    for: repairID, now: Date(), cooldown: Self.boundaryRepairSuppressionCooldown
                 ) {
                     MenuBarItemManager.diagLog.debug(
                         "macOS 27 section boundary repair skipped for \(liveItem.logString): suppressed"
                     )
                     continue
                 }
-                suppressedBoundaryRepairItemIDs.remove(repairID)
-                suppressedBoundaryRepairAt[repairID] = nil
-                boundaryRepairStrandTrips[repairID] = nil
+                boundaryRepairBreaker.rearm(repairID)
             }
 
             // The ordinary move: a verified store write, then a drag, since the
@@ -1502,7 +1345,7 @@ extension MenuBarItemManager {
         for item in items {
             // The authored predecessor seats a mid-band drop in place on the
             // first draw, not at the band edge.
-            let authored = Self.authoredPredecessor(
+            let authored = AuthoredOrder.authoredPredecessor(
                 of: item,
                 in: order,
                 excluding: movedIdentifiers.subtracting(seatedIdentifiers)
@@ -1568,20 +1411,6 @@ extension MenuBarItemManager {
         }
     }
 
-    /// The item immediately before item in an authored order, skipping the
-    /// ones moving with it that are not yet seated, or nil when it is first.
-    static func authoredPredecessor(
-        of item: MenuBarItem,
-        in order: [MenuBarItem]?,
-        excluding movedIdentifiers: Set<String>
-    ) -> MenuBarItem? {
-        guard
-            let order,
-            let index = order.firstIndex(where: { $0.uniqueIdentifier == item.uniqueIdentifier })
-        else { return nil }
-        return order[..<index].last { !movedIdentifiers.contains($0.uniqueIdentifier) }
-    }
-
     /// Where an item joining section goes: behind predecessor when one was
     /// just seated (so a group keeps its arrangement), else at the section's
     /// band boundary beside the relevant divider.
@@ -1645,13 +1474,6 @@ extension MenuBarItemManager {
             "Pre-seated \(item.logString) into the \(section.logString) band before the section change"
         )
         return true
-    }
-
-    /// Whether a persisted namespace:title identifier names an item macOS
-    /// pins, mirroring MenuBarItemTag.isNonConcealableSystemItem for the
-    /// case where only the identifier is in hand.
-    static nonisolated func namesPinnedSystemItem(_ identifier: String) -> Bool {
-        identifier.hasPrefix("com.apple.")
     }
 
     /// Whether the live bar already realizes desiredOrder for section, so the
@@ -1756,7 +1578,7 @@ extension MenuBarItemManager {
         }
 
         // Every strand verdict and store write below is judged against the divider.
-        if Self.dividerIsOffTheBar(controlItems, among: liveItems) {
+        if ControlOrderRules.dividerIsOffTheBar(controlItems, among: liveItems) {
             MenuBarItemManager.diagLog.debug("boundary repair: the Hidden divider is parked off the bar; skipping the pass")
             return (liveItems, false, false)
         }
@@ -1787,6 +1609,9 @@ extension MenuBarItemManager {
         // from it grabs that other item. Logged once per pass per item.
         var loggedPhantomIDs = Set<String>()
         var loggedStaleDivider = false
+        // The position table as last read. Kept until a strand is attempted, since only an
+        // attempt writes; a pass with nothing to repair then reads the table once, not twice.
+        var weightTable: StoredWeights.Table?
         func isPhantomStrand(_ item: MenuBarItem) -> Bool {
             guard item.hasPhantomFrame(among: liveItems) else { return false }
             if loggedPhantomIDs.insert(item.uniqueIdentifier).inserted {
@@ -1810,8 +1635,10 @@ extension MenuBarItemManager {
         }
 
         func failingStrands() -> [MenuBarItem] {
+            let table = weightTable ?? .read()
+            weightTable = table
             let seated = DividerSeat.settled(
-                items: liveItems, pair: controlItems, weight: StoredWeights(among: liveItems).weight(of:)
+                items: liveItems, pair: controlItems, weight: StoredWeights(among: liveItems, table: table).weight(of:)
             )
             if seated.moved, !loggedStaleDivider {
                 loggedStaleDivider = true
@@ -1825,9 +1652,7 @@ extension MenuBarItemManager {
                     !item.isSystemClone &&
                     !item.isNativeOverflowControl &&
                     !isPhantomStrand(item) &&
-                    !suppressedBoundaryRepairItemIDs.contains(
-                        postRestrictionRepairItemID(for: item)
-                    ) &&
+                    !boundaryRepairBreaker.isSuppressed(PostRestrictionRepairItemID(item)) &&
                     item.isPhysicallyOrderable(
                         experimentalSystemItemHiding: experimentalSystemItemHiding
                     ) &&
@@ -1888,6 +1713,7 @@ extension MenuBarItemManager {
             }
 
             pass.recordAttempt(strand)
+            weightTable = nil
             // Rung 1, targeted store write, judged by the bar: a respace can
             // report success while straddling the divider. True means the item
             // is on the correct side; negating it would loop forever.
@@ -1953,11 +1779,6 @@ extension MenuBarItemManager {
             // It bypasses the read-only wrapper, so manual mode is checked here.
             if !menuBarAgentIgnoresPreferredPositions, !arrangementIsManual {
                 let cluster = RuntimeLayoutCoordinator.sameAppCluster(of: strand, in: liveItems)
-                let crossingSide: RuntimePositionStore.BoundarySide = switch destination {
-                case .rightOfItem: .rightOfDivider
-                case .leftOfItem: .leftOfDivider
-                @unknown default: .rightOfDivider
-                }
                 let trace = tracePositionWrite(
                     context: "boundary repair cluster crossing \(destination.logString)",
                     items: liveItems,
@@ -1966,7 +1787,7 @@ extension MenuBarItemManager {
                 let crossed = PermittedPositionStore.writeClusterBoundaryCrossing(
                     items: cluster,
                     dividerItem: destination.targetItem,
-                    side: crossingSide,
+                    side: MoveTargeting.crossingSide(of: destination),
                     liveItems: liveItems,
                     permit: permit
                 )
@@ -1991,11 +1812,8 @@ extension MenuBarItemManager {
 
             // Rung 2.75, second pass only: once bar and weights diverge, single
             // drags get re-sorted back, so respace the whole visible ladder.
-            let strandTripsID = MenuBarItemManager.PostRestrictionRepairItemID(
-                uniqueIdentifier: strand.uniqueIdentifier,
-                ownerPID: strand.ownerPID
-            )
-            if (boundaryRepairStrandTrips[strandTripsID] ?? 0) >= 1 {
+            let strandTripsID = PostRestrictionRepairItemID(strand)
+            if boundaryRepairBreaker.trips(for: strandTripsID) >= 1 {
                 let authored = controller.sectionItemOrder[.visible] ?? []
                 if authored.count > 1 {
                     let trace = tracePositionWrite(
@@ -2077,7 +1895,7 @@ extension MenuBarItemManager {
                 if let after,
                    abs(after.bounds.minX - dragItem.bounds.minX) < MenuBarItemGeometry.phantomFrameXTolerance
                 {
-                    boundaryRepairStrandTrips[strandTripsID, default: 0] += 1
+                    boundaryRepairBreaker.addTrip(for: strandTripsID)
                 }
                 MenuBarItemManager.diagLog.info(
                     "boundary repair: \(strand.logString) remains stranded after move (fulfilled=\(fulfilled))"
@@ -2098,7 +1916,7 @@ extension MenuBarItemManager {
                 if let after,
                    abs(after.bounds.minX - dragItem.bounds.minX) < MenuBarItemGeometry.phantomFrameXTolerance
                 {
-                    boundaryRepairStrandTrips[strandTripsID, default: 0] += 1
+                    boundaryRepairBreaker.addTrip(for: strandTripsID)
                     MenuBarItemManager.diagLog.info(
                         "boundary repair: \(strand.logString) never moved (x=\(Int(after.bounds.minX))); trapped or bounced"
                     )
@@ -2166,7 +1984,7 @@ extension MenuBarItemManager {
         guard !arrangementIsManual, !Task.isCancelled else { return }
         var scored = Set<PostRestrictionRepairItemID>()
         for strand in attempted {
-            let id = postRestrictionRepairItemID(for: strand)
+            let id = PostRestrictionRepairItemID(strand)
             guard scored.insert(id).inserted else { continue }
 
             if MenuBarLayoutPlannerProvider.current.liveOrderSatisfiesSectionBoundary(
@@ -2176,19 +1994,15 @@ extension MenuBarItemManager {
                 controlItems: controlItems,
                 experimentalSystemItemHiding: experimentalSystemItemHiding
             ) {
-                boundaryRepairStrandTrips[id] = nil
+                boundaryRepairBreaker.record(repaired: true, for: id, tripLimit: MenuBarItemManager.boundaryRepairTripLimit)
                 continue
             }
 
-            let trips = (boundaryRepairStrandTrips[id] ?? 0) + 1
-            guard trips >= MenuBarItemManager.boundaryRepairTripLimit else {
-                boundaryRepairStrandTrips[id] = trips
-                continue
-            }
-
-            boundaryRepairStrandTrips[id] = nil
-            suppressedBoundaryRepairItemIDs.insert(id)
-            suppressedBoundaryRepairAt[id] = Date()
+            let outcome = boundaryRepairBreaker.record(
+                repaired: false, for: id, tripLimit: MenuBarItemManager.boundaryRepairTripLimit
+            )
+            guard outcome.suppressed else { continue }
+            let trips = outcome.trips
             seededStrandedRepairItemIDs.insert(id)
             failureLedger.recordStrand(for: strand)
             MenuBarItemManager.diagLog.error(
@@ -2384,14 +2198,16 @@ extension MenuBarItemManager {
                     MenuBarLayoutPlannerProvider.current.isEligibleForSectionOrder($0, section: section) &&
                         controller.section(for: $0) == section
                 }
-                for item in sectionItems where Self.isHiddenBySystemPreferences(item) {
+                // Asked once per item: the answer costs a process lookup and a read of another app's settings.
+                return sectionItems.filter { item in
+                    guard Self.isHiddenBySystemPreferences(item) else { return true }
                     if Self.loggedSystemHiddenItems.insert(item.uniqueIdentifier).inserted {
                         MenuBarItemManager.diagLog.notice(
                             "excluding \(item.logString): hidden by macOS (System Settings per-item toggle)"
                         )
                     }
+                    return false
                 }
-                return sectionItems.filter { !Self.isHiddenBySystemPreferences($0) }
             }
 
             // Confirm each move before it can anchor another; one replan is
@@ -2421,7 +2237,7 @@ extension MenuBarItemManager {
                 let plannedMove: (item: MenuBarItem, destination: MoveDestination, isBoundary: Bool)
                 if usesPlan {
                     if plannedQueue == nil {
-                        let queue = Self.planSectionMoves(
+                        let queue = SectionMovePlanning.planSectionMoves(
                             items: plannable,
                             desiredOrder: desiredOrder,
                             section: section,
@@ -2434,7 +2250,7 @@ extension MenuBarItemManager {
                         plannedQueue = LayoutMoveSequenceExecution(moves: queue)
                     }
                     guard var queue = plannedQueue else { break }
-                    let resolved = Self.nextResolvedPlannedMove(
+                    let resolved = SectionMovePlanning.nextResolvedPlannedMove(
                         from: &queue,
                         in: liveItems,
                         controlItems: controlItemPair(in: liveItems)
@@ -2490,14 +2306,9 @@ extension MenuBarItemManager {
                     }
                     continue
                 }
-                let itemFailureKey = Self.itemMoveFailureKey(
+                let rememberedMove = MoveFailureMemory.Move(
                     item: plannedMove.item,
                     destination: plannedMove.destination
-                )
-                let failureKey = Self.moveFailureKey(
-                    item: plannedMove.item,
-                    destination: plannedMove.destination,
-                    desiredOrder: desiredOrder
                 )
 
                 do {
@@ -2509,8 +2320,7 @@ extension MenuBarItemManager {
                         allowParkedOffMenuBarSource: repairAfterRestriction
                     )
                     guard fulfilled else {
-                        recentMoveFailures[failureKey] = .now
-                        recordItemMoveFailure(key: itemFailureKey)
+                        moveFailures.recordFailure(of: rememberedMove, desiredOrder: desiredOrder)
                         MenuBarItemManager.diagLog.debug(
                             "Could not fulfill macOS 27 section order move via preferred positions: " +
                                 "\(plannedMove.item.logString) → \(plannedMove.destination.logString)"
@@ -2522,15 +2332,13 @@ extension MenuBarItemManager {
                         break
                     }
                     plannedQueue?.confirmLastMove()
-                    recentMoveFailures.removeValue(forKey: failureKey)
-                    clearItemMoveFailure(key: itemFailureKey)
+                    moveFailures.recordSuccess(of: rememberedMove, desiredOrder: desiredOrder)
                     didReorder = true
                     MenuBarItemManager.diagLog.info(
                         "Applied macOS 27 achievable order in \(section.logString) for \(plannedMove.item.logString)"
                     )
                 } catch {
-                    recentMoveFailures[failureKey] = .now
-                    recordItemMoveFailure(key: itemFailureKey)
+                    moveFailures.recordFailure(of: rememberedMove, desiredOrder: desiredOrder)
                     MenuBarItemManager.diagLog.error(
                         "Failed to apply macOS 27 section order for \(plannedMove.item.logString): \(error)"
                     )
@@ -2645,13 +2453,11 @@ extension MenuBarItemManager {
     ) async -> (liveItems: [MenuBarItem], desiredOrder: [String]) {
         let wantedIDs = Set(desiredOrder)
         let now = ContinuousClock.now
-        visibleMembersMissingRepublish = visibleMembersMissingRepublish.filter {
-            $0.value.duration(to: now) < Self.missingRepublishMemory
-        }
+        missingRepublishMemo.expire(now: now)
         // Wait only for members that can still arrive; an empty wait
         // set is satisfied by the first enumeration.
         let knownAbsent = wantedIDs.filter {
-            visibleMembersMissingRepublish[$0] != nil || Self.namesPinnedSystemItem($0)
+            missingRepublishMemo.isKnownAbsent($0) || MoveTargeting.namesPinnedSystemItem($0)
         }
         let awaitedIDs = wantedIDs.subtracting(knownAbsent)
         if !knownAbsent.isEmpty {
@@ -2668,16 +2474,11 @@ extension MenuBarItemManager {
         )
         let refreshed = presenceWait.items
         let liveIDs = Set(refreshed.map(\.uniqueIdentifier))
-        for identifier in wantedIDs.intersection(liveIDs) {
-            visibleMembersMissingRepublish.removeValue(forKey: identifier)
-        }
+        missingRepublishMemo.noteArrived(wantedIDs.intersection(liveIDs))
         var updatedOrder = desiredOrder
         let missing = wantedIDs.subtracting(liveIDs)
         if !missing.isEmpty {
-            let stamp = ContinuousClock.now
-            for identifier in missing {
-                visibleMembersMissingRepublish[identifier] = stamp
-            }
+            missingRepublishMemo.noteMissing(missing, at: .now)
             // Named, not counted: a count cannot say which app lagged.
             MenuBarItemManager.diagLog.warning(
                 "authored visible apply: \(missing.count) member(s) never republished; " +
@@ -2794,15 +2595,15 @@ extension MenuBarItemManager {
         // Item-scoped breaker, keyed on item, side and target, since an
         // overflowing bar changes the order-keyed backoff's key every pass.
         // User passes are exempt.
-        let itemFailureKey = Self.itemMoveFailureKey(
+        let rememberedMove = MoveFailureMemory.Move(
             item: plannedMove.item,
             destination: plannedMove.destination
         )
-        if !isUserInitiated, isItemMoveCircuitBreakerTripped(key: itemFailureKey) {
+        if !isUserInitiated, moveFailures.isBreakerTripped(for: rememberedMove) {
             MenuBarItemManager.diagLog.info(
                 "Circuit breaker: suppressing automatic macOS 27 drag for " +
                     "\(plannedMove.item.logString) \(plannedMove.destination.logString) " +
-                    "(\(recentItemMoveFailures[itemFailureKey]?.count ?? 0) recent verify-failures)"
+                    "(\(moveFailures.failureCount(for: rememberedMove)) recent verify-failures)"
             )
             return SectionDragSkip(reason: .circuitBreaker, endsMoveLoop: !usesPlan)
         }
@@ -2812,12 +2613,7 @@ extension MenuBarItemManager {
         if plannedMove.item.tag.isHidingUnsupported ||
             plannedMove.destination.targetItem.tag.isHidingUnsupported
         {
-            let failureKey = Self.moveFailureKey(
-                item: plannedMove.item,
-                destination: plannedMove.destination,
-                desiredOrder: desiredOrder
-            )
-            recentMoveFailures[failureKey] = .now
+            moveFailures.backOff(from: rememberedMove, desiredOrder: desiredOrder)
             MenuBarItemManager.diagLog.debug(
                 "Skipping synthetic drag for denylisted hiding-unsupported item in macOS 27 section order: " +
                     "\(plannedMove.item.logString) → \(plannedMove.destination.logString)"
@@ -2837,14 +2633,7 @@ extension MenuBarItemManager {
         // Some system extras (such as Sound) always reject the drag; without
         // backoff it replans every cycle in a cursor-warp loop. Repair passes
         // included: two failures already covered the retry.
-        let failureKey = Self.moveFailureKey(
-            item: plannedMove.item,
-            destination: plannedMove.destination,
-            desiredOrder: desiredOrder
-        )
-        if let lastFailure = recentMoveFailures[failureKey],
-           ContinuousClock.now - lastFailure < Self.moveFailureBackoff
-        {
+        if moveFailures.isBackingOff(from: rememberedMove, desiredOrder: desiredOrder) {
             MenuBarItemManager.diagLog.debug(
                 "Skipping recently-failed macOS 27 section order move for \(plannedMove.item.logString) \(plannedMove.destination.logString)"
             )
@@ -2881,10 +2670,10 @@ extension MenuBarItemManager {
                 items: [], barMoved: false, cancelled: Task.isCancelled, observationUnavailable: true
             )
         }
-        let deadline = deadline ?? Self.menuBarAgentResortDeadline(
+        let deadline = deadline ?? LayoutWaitGeometry.menuBarAgentResortDeadline(
             timeout: configuration.menuBarOrderFulfillmentTimeout
         )
-        let originalGeometry = Self.layoutGeometrySignature(liveItems)
+        let originalGeometry = LayoutWaitGeometry.layoutGeometrySignature(liveItems)
         var barMoved = false
         // If nothing moved by earlyBailProbe the agent dropped the write.
         // Once anything moves, barMoved latches and the wait runs its course.
@@ -2917,9 +2706,9 @@ extension MenuBarItemManager {
                 )
             }
             liveItems = observedItems
-            if !barMoved, Self.layoutGeometryChanged(
+            if !barMoved, LayoutWaitGeometry.layoutGeometryChanged(
                 from: originalGeometry,
-                to: Self.layoutGeometrySignature(liveItems)
+                to: LayoutWaitGeometry.layoutGeometrySignature(liveItems)
             ) {
                 barMoved = true
             }
@@ -2936,45 +2725,6 @@ extension MenuBarItemManager {
         return MenuBarAgentLayoutWaitResult(
             items: liveItems, barMoved: barMoved, cancelled: false, observationUnavailable: false
         )
-    }
-
-    /// Converts the user-facing fulfillment window into a wall-clock deadline,
-    /// clamping malformed persisted values to the Layout control's range.
-    static nonisolated func menuBarAgentResortDeadline(
-        timeout: TimeInterval,
-        from start: ContinuousClock.Instant = ContinuousClock.now
-    ) -> ContinuousClock.Instant {
-        start + .seconds(clampedResortTimeout(timeout))
-    }
-
-    /// Clamps a persisted fulfillment timeout to the Layout control's range.
-    static nonisolated func clampedResortTimeout(_ timeout: TimeInterval) -> TimeInterval {
-        timeout.clamped(to: 1 ... 15)
-    }
-
-    /// A cheap fingerprint of where every item currently sits. Comparing two of
-    /// these tells a preferred-position write MenuBarAgent ignored (every origin
-    /// identical) from one it is still working through.
-    static nonisolated func layoutGeometrySignature(_ items: [MenuBarItem]) -> [String: CGFloat] {
-        items.reduce(into: [:]) { signature, item in
-            signature[item.uniqueIdentifier] = item.bounds.minX
-        }
-    }
-
-    /// Only an item present in both snapshots that moved at least epsilon
-    /// counts, so rows blinking in and out never read as motion.
-    static nonisolated func layoutGeometryChanged(
-        from original: [String: CGFloat],
-        to current: [String: CGFloat],
-        epsilon: CGFloat = 1
-    ) -> Bool {
-        for (identifier, x) in current {
-            guard let previous = original[identifier] else { continue }
-            if abs(x - previous) >= epsilon {
-                return true
-            }
-        }
-        return false
     }
 
     /// Waits for the re-sort after a batch applyOrder write, until section
@@ -3017,64 +2767,6 @@ extension MenuBarItemManager {
             }
         }
         return liveItems
-    }
-
-    /// The live walk plus every cached managed item it does not carry, matched
-    /// by tag regardless of window ID. Live geometry wins where both exist;
-    /// a cached member only fills a gap the assertion has not re-allowed yet.
-    static nonisolated func completingPartialWalk(
-        _ liveItems: [MenuBarItem],
-        with cachedItems: [MenuBarItem]
-    ) -> [MenuBarItem] {
-        let missing = cachedItems.filter { cached in
-            !liveItems.contains { $0.tag.matchesIgnoringWindowID(cached.tag) }
-        }
-        guard !missing.isEmpty else { return liveItems }
-        // Insert at the last-known frame, not appended, or a concealed item's
-        // slot lands in the visible lane. Never-rendered items go last.
-        return (liveItems + missing).enumerated()
-            .sorted { lhs, rhs in
-                let lhsMissing = lhs.element.bounds.isEmpty && !liveItems.contains { $0.tag.matchesIgnoringWindowID(lhs.element.tag) }
-                let rhsMissing = rhs.element.bounds.isEmpty && !liveItems.contains { $0.tag.matchesIgnoringWindowID(rhs.element.tag) }
-                switch (lhsMissing, rhsMissing) {
-                case (true, false): return false
-                case (false, true): return true
-                default:
-                    if lhs.element.bounds.minX != rhs.element.bounds.minX {
-                        return lhs.element.bounds.minX < rhs.element.bounds.minX
-                    }
-                    return lhs.offset < rhs.offset
-                }
-            }
-            .map(\.element)
-    }
-
-    /// authored with item moved beside the target, so a respace realizes the
-    /// move. Unchanged when the target is not in the record; a new arrival is
-    /// inserted. Control items are never applied: laddering one can invert
-    /// the dividers, and their seats are the structural pass's call.
-    static nonisolated func authoredOrder(
-        _ authored: [String],
-        applying destination: MoveDestination,
-        to item: MenuBarItem
-    ) -> [String] {
-        guard !item.isControlItem, !destination.targetItem.isControlItem else { return authored }
-        let itemID = item.uniqueIdentifier
-        let targetID = destination.targetItem.uniqueIdentifier
-        guard targetID != itemID, authored.contains(targetID) else { return authored }
-        var order = authored.filter { $0 != itemID }
-        guard let targetIndex = order.firstIndex(of: targetID) else { return authored }
-        order.insert(itemID, at: destination.isRightward ? targetIndex + 1 : targetIndex)
-        return order
-    }
-
-    /// The divider side a boundary-crossing write targets for destination.
-    private func crossingSide(of destination: MoveDestination) -> RuntimePositionStore.BoundarySide {
-        switch destination {
-        case .leftOfItem: return .leftOfDivider
-        case .rightOfItem: return .rightOfDivider
-        @unknown default: return .rightOfDivider
-        }
     }
 
     /// The cursor-free move: rewrite the agent's preferred-position weight.
@@ -3140,7 +2832,7 @@ extension MenuBarItemManager {
             storeMoved = PermittedPositionStore.writeClusterBoundaryCrossing(
                 items: cluster.isEmpty ? [item] : cluster,
                 dividerItem: destination.targetItem,
-                side: crossingSide(of: destination),
+                side: MoveTargeting.crossingSide(of: destination),
                 liveItems: liveItems,
                 permit: permit
             )
@@ -3150,11 +2842,27 @@ extension MenuBarItemManager {
         }
         // Move the item, not the section: a full-band rewrite would replay
         // stale order and relocate unrelated items. Skip if a crossing wrote.
+        // An app macOS has hidden is not drawn, yet with Native hiding it reports a position among
+        // the shown items. It must not be picked as this item's neighbour. MenuBarAgent's window
+        // says what is drawn; the read is one process and a few milliseconds.
+        let sectionController = appState?.menuBarManager.sectionController
+        let drawnOwners = await MenuBarItemAXProvider.drawnBarConcurrent().map { Set($0.map(\.ownerPID)) }
+        try Task.checkCancellation()
+        let drawnPeers: ([MenuBarItem]) -> [MenuBarItem] = { peers in
+            StoreMovePeers.drawn(
+                among: peers,
+                moving: item,
+                target: destination.targetItem,
+                drawnOwners: drawnOwners,
+                revealed: sectionController?.revealedSection,
+                section: { sectionController?.section(for: $0) ?? .visible }
+            )
+        }
         if !storeMoved {
             storeMoved = MenuBarPositionStoreProvider.forLayoutEdit.move(
                 item: item,
                 to: destination,
-                liveItems: liveItems,
+                liveItems: drawnPeers(liveItems),
                 experimentalSystemItemHiding: experimentalSystemItemHiding,
                 // A single-item request does not authorize moving neighbours
                 // around an item whose position the store cannot resolve.
@@ -3205,7 +2913,7 @@ extension MenuBarItemManager {
         // One budget for the whole preferred-position phase, shared by the
         // initial wait and the key-resolution retry below, so the caller can
         // fall back within the configured window.
-        let deadline = Self.menuBarAgentResortDeadline(
+        let deadline = LayoutWaitGeometry.menuBarAgentResortDeadline(
             timeout: configuration.menuBarOrderFulfillmentTimeout
         )
         // Bail early if the bar stays frozen past the probe, so the drag
@@ -3271,7 +2979,7 @@ extension MenuBarItemManager {
             MenuBarPositionStoreProvider.forLayoutEdit.move(
                 item: refreshedItem,
                 to: destination,
-                liveItems: updated,
+                liveItems: drawnPeers(updated),
                 experimentalSystemItemHiding: experimentalSystemItemHiding,
                 permit: permit
             )

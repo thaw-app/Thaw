@@ -27,7 +27,7 @@ struct TrailingSiriLayoutTests {
         let clock = item(MenuBarItemTag(namespace: .menuBarAgent, title: "Clock"), x: 220)
         let saved = hasSavedOrder ? [siri, app, visible, cc, clock].map(\.uniqueIdentifier) : []
 
-        let plan = MenuBarItemManager.structuralVisibleSegment(
+        let plan = ControlOrderRules.structuralVisibleSegment(
             ordinaryVisibleItems: [app, siri, cc, clock],
             visibleControl: visible,
             savedOrder: saved
@@ -41,10 +41,10 @@ struct TrailingSiriLayoutTests {
         let siri = item(.siri, x: 100)
         let visible = item(.visibleControlItem, x: 130)
         let cc = item(MenuBarItemTag(namespace: .menuBarAgent, title: "ControlCenter"), x: 160)
-        #expect(MenuBarItemManager.trailingSiriIsMisplaced(in: [siri, visible, cc]))
-        #expect(MenuBarItemManager.trailingSiriIsMisplaced(in: [item(.siri, x: 150), visible, cc]) == false)
-        #expect(MenuBarItemManager.trailingSiriIsMisplaced(in: [siri, item(.visibleControlItem, x: 130, onScreen: false), cc]) == false)
-        #expect(MenuBarItemManager.trailingSiriIsMisplaced(in: [visible, cc]) == false)
+        #expect(ControlOrderRules.trailingSiriIsMisplaced(in: [siri, visible, cc]))
+        #expect(ControlOrderRules.trailingSiriIsMisplaced(in: [item(.siri, x: 150), visible, cc]) == false)
+        #expect(ControlOrderRules.trailingSiriIsMisplaced(in: [siri, item(.visibleControlItem, x: 130, onScreen: false), cc]) == false)
+        #expect(ControlOrderRules.trailingSiriIsMisplaced(in: [visible, cc]) == false)
     }
 
     @Test
@@ -53,8 +53,8 @@ struct TrailingSiriLayoutTests {
         let app = item(MenuBarItemTag(namespace: .string("com.example.app"), title: "Item"), x: 130)
         let cc = item(MenuBarItemTag(namespace: .menuBarAgent, title: "ControlCenter"), x: 160)
         let clock = item(MenuBarItemTag(namespace: .menuBarAgent, title: "Clock"), x: 190)
-        #expect(MenuBarItemManager.anchoredTrailingViolation(in: [siri, app, cc, clock]) != nil)
-        #expect(MenuBarItemManager.anchoredTrailingViolation(in: [app, siri, cc, clock]) == nil)
+        #expect(ControlOrderRules.anchoredTrailingViolation(in: [siri, app, cc, clock]) != nil)
+        #expect(ControlOrderRules.anchoredTrailingViolation(in: [app, siri, cc, clock]) == nil)
     }
 
     @Test
@@ -71,7 +71,7 @@ struct TrailingSiriLayoutTests {
             isOnScreen: true
         )
         let onBar = item(MenuBarItemTag(namespace: .string("com.example.app"), title: "Item"), x: 300)
-        #expect(MenuBarItemManager.anchoredTrailingViolation(in: [cc, clock, parked]) == nil)
-        #expect(MenuBarItemManager.anchoredTrailingViolation(in: [cc, clock, onBar]) != nil)
+        #expect(ControlOrderRules.anchoredTrailingViolation(in: [cc, clock, parked]) == nil)
+        #expect(ControlOrderRules.anchoredTrailingViolation(in: [cc, clock, onBar]) != nil)
     }
 }

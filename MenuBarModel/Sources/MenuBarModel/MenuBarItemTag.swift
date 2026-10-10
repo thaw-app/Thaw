@@ -361,6 +361,7 @@ public struct MenuBarItemTag: Hashable, CustomStringConvertible, Sendable, Codab
 
         if isHidingUnsupported ||
             isAgentUngoverned ||
+            isLiveActivityPill ||
             isLayoutAnchoredSystemItem ||
             isMenuBarAgentItemForcedVisible ||
             (namespace != .menuBarAgent && isNonConcealableSystemItem && !isControlCenterGovernable)
@@ -401,7 +402,16 @@ public struct MenuBarItemTag: Hashable, CustomStringConvertible, Sendable, Codab
     }
 
     public var isMovable: Bool {
-        !isLayoutAnchoredSystemItem && !isAgentUngoverned && !isCaptureActivityIndicator
+        !isLayoutAnchoredSystemItem && !isAgentUngoverned && !isCaptureActivityIndicator && !isLiveActivityPill
+    }
+
+    /// A Live Activity, drawn by MenuBarAgent for whichever app started it.
+    ///
+    /// macOS places it: a weight written for it is ignored and a drag does not move it (seen live
+    /// on 2026-10-09, two ignored writes and two failed drags for one drop). It is shown, and is
+    /// neither moved nor hidden.
+    public var isLiveActivityPill: Bool {
+        namespace == .menuBarAgent && title.hasPrefix("live-activity-pill-")
     }
 
     /// System capture activity changes with ScreenCaptureKit sessions; it is

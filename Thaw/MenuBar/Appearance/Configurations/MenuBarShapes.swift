@@ -32,6 +32,12 @@ nonisolated enum MenuBarShapeKind: Int, CaseIterable, Identifiable {
         rawValue
     }
 
+    /// Whether the shape is drawn around the items, so drawing it needs to know where they are.
+    /// Every other shape spans the bar, or the bar up to the notch, wherever the items sit.
+    var followsItems: Bool {
+        self == .split
+    }
+
     /// The name shown for this kind in the settings UI.
     var localized: LocalizedStringKey {
         switch self {

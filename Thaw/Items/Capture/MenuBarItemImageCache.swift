@@ -13,111 +13,6 @@ import os.lock
 import PlatformRuntimeKit
 import ThawCapture
 
-/// One menu bar item's pixels as they were read off the screen, paired with the
-/// backing scale that was in effect at that moment.
-///
-/// The scale travels with the bitmap because the cache can outlive a move to
-/// a display with a different backing scale.
-///
-/// Unchecked Sendable: cgImage and scale are immutable, and presentationCache
-/// is only touched from main-actor members.
-struct MenuBarItemGlyphCapture: Hashable, @unchecked Sendable {
-    /// A reference box so the memoized trim survives copies of the value.
-    /// Only reached from main-actor members.
-    private final class PresentationCache: @unchecked Sendable {
-        var horizontallyTrimmedCGImage: CGImage?
-        var isSingleInkGlyph: Bool?
-    }
-
-    /// The raw crop, sized in device pixels.
-    let cgImage: CGImage
-
-    /// The display's backing scale when the crop was taken. Pixels divided
-    /// by this give points; it is not necessarily today's scale.
-    let scale: CGFloat
-
-    /// The memoized trim derived from this immutable capture.
-    private let presentationCache = PresentationCache()
-
-    /// cgImage measured in points rather than device pixels.
-    nonisolated var pointSize: CGSize {
-        CGSize(
-            width: CGFloat(cgImage.width) / scale,
-            height: CGFloat(cgImage.height) / scale
-        )
-    }
-
-    /// The crop with leading and trailing transparency removed. Stays
-    /// AppKit-free; wrapping it for a UI framework is the view layer's job.
-    ///
-    /// Memoized because view bodies read it continuously and each trim walks
-    /// the pixel buffer, which outruns the autorelease pool.
-    @MainActor
-    var horizontallyTrimmedCGImage: CGImage? {
-        if let cached = presentationCache.horizontallyTrimmedCGImage {
-            return cached
-        }
-        guard let trimmed = cgImage.trimmingTransparency(around: [
-            .minXEdge, .maxXEdge,
-        ]) else {
-            return nil
-        }
-        presentationCache.horizontallyTrimmedCGImage = trimmed
-        return trimmed
-    }
-
-    /// Whether the crop is one ink on transparency, so it can be re-inked
-    /// for a background other than the bar it was taken from. See
-    /// CGImage.isSingleInkGlyph(maximumChroma:maximumLuminanceSpread:).
-    /// Memoized for the same reason as horizontallyTrimmedCGImage.
-    @MainActor
-    var isSingleInkGlyph: Bool {
-        if let cached = presentationCache.isSingleInkGlyph {
-            return cached
-        }
-        let result = cgImage.isSingleInkGlyph()
-        presentationCache.isSingleInkGlyph = result
-        return result
-    }
-
-    /// Whether the capture is effectively blank for UI thumbnail purposes.
-    nonisolated var isEffectivelyBlank: Bool {
-        cgImage.isTransparent(alphaThreshold: 0.05)
-    }
-
-    /// Returns whether two optional captured images have equivalent visual content.
-    ///
-    /// Uses pointer equality on CGImage as a fast path, falling back to
-    /// dimension and pixel-data comparison when instances differ.
-    static func isVisuallyEqual(_ old: MenuBarItemGlyphCapture?, _ new: MenuBarItemGlyphCapture?) -> Bool {
-        guard let old, let new else { return old == nil && new == nil }
-        if old.cgImage === new.cgImage {
-            return true
-        }
-        guard old.scale == new.scale,
-              old.cgImage.width == new.cgImage.width,
-              old.cgImage.height == new.cgImage.height
-        else {
-            return false
-        }
-        guard let oldData = old.cgImage.dataProvider?.data,
-              let newData = new.cgImage.dataProvider?.data
-        else {
-            return false
-        }
-        return oldData == newData
-    }
-
-    static func == (lhs: MenuBarItemGlyphCapture, rhs: MenuBarItemGlyphCapture) -> Bool {
-        lhs.cgImage == rhs.cgImage && lhs.scale == rhs.scale
-    }
-
-    func hash(into hasher: inout Hasher) {
-        hasher.combine(cgImage)
-        hasher.combine(scale)
-    }
-}
-
 /// One item's published capture, observable on its own.
 ///
 /// Observing capturesByTag would wake every tile on any item's capture (a
@@ -183,50 +78,6 @@ final class MenuBarItemImageCache: @unchecked Sendable {
 
     /// How many passes a live reflow may suppress before one runs regardless.
     static nonisolated let maximumReflowSkips = 8
-
-    /// Everything one capture pass learned.
-    ///
-    /// The invalidation sets carry reads that prove the cached entry wrong;
-    /// without them a poisoned entry would survive every later pass.
-    struct CapturePass {
-        /// Crops this pass is willing to publish, keyed by item tag.
-        var captured = [MenuBarItemTag: MenuBarItemGlyphCapture]()
-
-        /// Items this pass could not read pixels for. Retained rather than
-        /// dropped so failure strikes and diagnostics can account for them.
-        var unreadable = [MenuBarItem]()
-
-        /// Tags this pass proved have no usable glyph, so the app icon shows
-        /// instead of a stale screenshot.
-        var invalidatedTags = Set<MenuBarItemTag>()
-
-        /// Tags dropped even when the prior looks settled. Governable system
-        /// extras are excluded: their glyph from before removal is still valid.
-        var unconditionallyInvalidatedTags = Set<MenuBarItemTag>()
-
-        /// Crop failures this pass observed, struck against the ledger only
-        /// once the pass is allowed to publish.
-        var failedCaptureItems = [MenuBarItem]()
-
-        /// Items whose crop succeeded, forgiven in the ledger on the same terms.
-        var recoveredItems = [MenuBarItem]()
-
-        /// Tags this pass attempted whatever their failure record said. The
-        /// record itself is forgotten on the same terms, so a discarded pass
-        /// leaves it alone and the next pass sets it aside again.
-        var forgivenTags = Set<MenuBarItemTag>()
-
-        /// Folds a later section's result into this pass.
-        mutating func absorb(_ section: CapturePass) {
-            captured.merge(section.captured) { _, new in new }
-            unreadable += section.unreadable
-            invalidatedTags.formUnion(section.invalidatedTags)
-            unconditionallyInvalidatedTags.formUnion(section.unconditionallyInvalidatedTags)
-            failedCaptureItems += section.failedCaptureItems
-            recoveredItems += section.recoveredItems
-            forgivenTags.formUnion(section.forgivenTags)
-        }
-    }
 
     /// The published cache itself: the most recent crop trusted for each item.
     ///
@@ -396,60 +247,6 @@ final class MenuBarItemImageCache: @unchecked Sendable {
         liveRefreshTask?.cancel()
         idleTrimTask?.cancel()
         diskLoadTask?.cancel()
-    }
-
-    // MARK: Display And Bounds Selection
-
-    /// Picks the display whose menu bar a capture should read from.
-    ///
-    /// Preference order matters: the display the item cache was built against
-    /// wins, because its item bounds are only meaningful there. Falling through
-    /// to the display currently owning the menu bar, and finally to the main
-    /// display, keeps a capture possible on a machine whose item cache has not
-    /// been populated yet.
-    static nonisolated func captureDisplayID(
-        itemCacheDisplayID: CGDirectDisplayID?,
-        activeMenuBarDisplayID: CGDirectDisplayID?,
-        mainDisplayID: CGDirectDisplayID
-    ) -> CGDirectDisplayID {
-        itemCacheDisplayID ?? activeMenuBarDisplayID ?? mainDisplayID
-    }
-
-    static nonisolated func shouldUseFreshBounds(
-        for section: MenuBarSection.Name,
-        revealedSection: MenuBarSection.Name?
-    ) -> Bool {
-        switch (section, revealedSection) {
-        // Visible items also move when the capture indicator or a neighbour
-        // appears. Retrying their cached layout rectangles cannot recover.
-        case (.visible, _),
-             (.hidden, .hidden),
-             (.hidden, .alwaysHidden),
-             (.alwaysHidden, .alwaysHidden):
-            true
-        default:
-            false
-        }
-    }
-
-    static nonisolated func captureBounds(
-        for items: [MenuBarItem],
-        freshBounds: Bool,
-        liveBoundsByID: [String: CGRect],
-        screenFrame: CGRect?
-    ) -> [(item: MenuBarItem, bounds: CGRect)] {
-        items.compactMap { item in
-            // NSScreen.frame is Y-up and AX bounds Y-down, so compare X only.
-            guard let bounds = freshBounds ? liveBoundsByID[item.uniqueIdentifier] : item.bounds,
-                  !bounds.isEmpty,
-                  screenFrame.map({ screen in
-                      screen.minX < bounds.maxX && bounds.minX < screen.maxX
-                  }) != false
-            else {
-                return nil
-            }
-            return (item, bounds)
-        }
     }
 
     // MARK: Activation
@@ -642,100 +439,6 @@ final class MenuBarItemImageCache: @unchecked Sendable {
 
     // MARK: Live Refresh
 
-    /// Cache state that requires a new capture. Position is left out because AX
-    /// jitter would otherwise drive a capture feedback loop.
-    nonisolated struct CaptureInvalidationKey: Equatable {
-        nonisolated struct Entry: Equatable, Comparable {
-            let section: String
-            let identifier: String
-            let windowID: CGWindowID
-            let width: CGFloat
-            let height: CGFloat
-            let isOnScreen: Bool
-
-            static func < (lhs: Entry, rhs: Entry) -> Bool {
-                if lhs.section != rhs.section {
-                    return lhs.section < rhs.section
-                }
-                if lhs.identifier != rhs.identifier {
-                    return lhs.identifier < rhs.identifier
-                }
-                return lhs.windowID < rhs.windowID
-            }
-        }
-
-        let displayID: CGDirectDisplayID?
-        let entries: [Entry]
-    }
-
-    static nonisolated func captureInvalidationKey(
-        _ cache: MenuBarItemManager.ItemCache
-    ) -> CaptureInvalidationKey {
-        let entries = MenuBarSection.Name.allCases.flatMap { section in
-            cache[section].map { item in
-                CaptureInvalidationKey.Entry(
-                    section: section.rawValue,
-                    identifier: item.uniqueIdentifier,
-                    windowID: item.windowID,
-                    width: item.bounds.width,
-                    height: item.bounds.height,
-                    isOnScreen: item.isOnScreen
-                )
-            }
-        }.sorted()
-        return CaptureInvalidationKey(displayID: cache.displayID, entries: entries)
-    }
-
-    /// One demand decision drives loop lifetime, periodic capture, and event-driven refresh.
-    nonisolated enum LiveCaptureScope: Equatable, Sendable {
-        case none
-        case visible
-        case allSections
-        case thawBar
-
-        func sections(thawBarSection: MenuBarSection.Name?) -> [MenuBarSection.Name] {
-            switch self {
-            case .none: []
-            case .visible: [.visible]
-            case .allSections: MenuBarSection.Name.allCases
-            case .thawBar: thawBarSection.map { [$0] } ?? []
-            }
-        }
-    }
-
-    /// Snapshot of navigation state read in a single MainActor hop.
-    struct NavigationStateSnapshot {
-        let isThawBarPresented: Bool
-        let isSearchPresented: Bool
-        let isAppFrontmost: Bool
-        let isSettingsPresented: Bool
-        let settingsNavigationIdentifier: SettingsNavigationIdentifier?
-        let isItemHotkeyListExpanded: Bool
-        /// Simple Mode has no sidebar, so the identifier above never names its
-        /// pane and cannot answer for it.
-        let isSimpleModeSettings: Bool
-
-        var liveCaptureScope: LiveCaptureScope {
-            if isSearchPresented {
-                return .visible
-            }
-            if isAppFrontmost, isSettingsPresented {
-                if isSimpleModeSettings {
-                    return .allSections
-                }
-                switch settingsNavigationIdentifier {
-                case .menuBarLayout, .thawBar:
-                    return .allSections
-                case .hotkeys where isItemHotkeyListExpanded:
-                    return .allSections
-                default:
-                    break
-                }
-            }
-            return isThawBarPresented ? .thawBar : .none
-        }
-    }
-
     @MainActor
     func makeNavigationStateSnapshot() -> NavigationStateSnapshot {
         guard let appState else {
@@ -840,31 +543,6 @@ final class MenuBarItemImageCache: @unchecked Sendable {
                 self.liveRefreshTask = nil
                 self.scheduleIdleTrim()
             }
-        }
-    }
-
-    /// Consecutive changeless passes before the tick interval starts backing
-    /// off, and the streak at which it reaches the 1 Hz floor.
-    private static let backoffGraceTicks = 5
-    private static let backoffFloorStreak = 60
-
-    /// Sleep for one live-refresh tick.
-    ///
-    /// SCK one-shot captures are the dominant transient memory cost and most
-    /// ticks change nothing, so changeless passes back off to at most 333 ms,
-    /// then 1 Hz. Any change resets the streak to the slider's rate.
-    static nonisolated func backedOffTickMilliseconds(
-        baseMilliseconds: Int,
-        changelessStreak: Int
-    ) -> Int {
-        let base = max(1, baseMilliseconds)
-        switch changelessStreak {
-        case ..<backoffGraceTicks:
-            return base
-        case ..<backoffFloorStreak:
-            return max(base, min(333, base * 3))
-        default:
-            return max(base, 1000)
         }
     }
 
@@ -1004,29 +682,6 @@ extension MenuBarItemImageCache {
     func updateAccessOrder(for tag: MenuBarItemTag) {
         accessCounter += 1
         accessTimestamps[tag] = accessCounter
-    }
-
-    /// Resolves the capture a consumer would draw for tag, and the key it is
-    /// filed under, without touching the access order.
-    ///
-    /// Falls back to a window-ID-insensitive match because disk-loaded and
-    /// idle-trimmed entries carry no window ID or an old one.
-    ///
-    /// Blank entries resolve to nothing, so every caller treats them as a miss.
-    static nonisolated func cachedCapture(
-        for tag: MenuBarItemTag,
-        in capturesByTag: [MenuBarItemTag: MenuBarItemGlyphCapture]
-    ) -> (tag: MenuBarItemTag, capture: MenuBarItemGlyphCapture)? {
-        if let capture = capturesByTag[tag], !capture.isEffectivelyBlank {
-            return (tag, capture)
-        }
-        guard !tag.isSystemItem,
-              let entry = capturesByTag.first(where: { $0.key.matchesIgnoringWindowID(tag) }),
-              !entry.value.isEffectivelyBlank
-        else {
-            return nil
-        }
-        return (entry.key, entry.value)
     }
 
     /// Gets an image from the cache and updates its access order.

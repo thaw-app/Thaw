@@ -13,6 +13,7 @@ import Testing
 
 /// The anchor a stuck-item recovery moves beside, and the fallbacks it walks
 /// when the hidden control item's window is not on the bar.
+@MainActor
 struct RecoveryAnchorTests {
     private let section: (MenuBarItem) -> MenuBarSection.Name? = { item in
         switch item.tag {
@@ -50,7 +51,7 @@ struct RecoveryAnchorTests {
         let hiddenControl = item("hidden", x: 900, windowID: 2, tag: .hiddenControlItem)
         let rightmost = item("Stats", x: 1000, windowID: 3)
 
-        let anchor = MenuBarItemManager.recoveryAnchor(
+        let anchor = MoveTargeting.recoveryAnchor(
             stuck: stuck,
             items: [stuck, hiddenControl, rightmost],
             hiddenControlItemWindowNumber: 2,
@@ -68,7 +69,7 @@ struct RecoveryAnchorTests {
         let middle = item("Alfred", x: 800, windowID: 3)
         let rightmost = item("Stats", x: 1000, windowID: 4)
 
-        let anchor = MenuBarItemManager.recoveryAnchor(
+        let anchor = MoveTargeting.recoveryAnchor(
             stuck: stuck,
             items: [stuck, middle, rightmost],
             // 0x3_0000_0000: a window the server never ordered.
@@ -84,7 +85,7 @@ struct RecoveryAnchorTests {
         let stuck = item("stuck", x: -1, windowID: 1, tag: .visibleControlItem)
         let rightmost = item("Stats", x: 1000, windowID: 4)
 
-        let anchor = MenuBarItemManager.recoveryAnchor(
+        let anchor = MoveTargeting.recoveryAnchor(
             stuck: stuck,
             items: [stuck, rightmost],
             hiddenControlItemWindowNumber: nil,
@@ -103,7 +104,7 @@ struct RecoveryAnchorTests {
         let zeroWidth = item("ghost", x: 700, windowID: 10, width: 0)
         let healthy = item("Stats", x: 1000, windowID: 11)
 
-        let anchor = MenuBarItemManager.recoveryAnchor(
+        let anchor = MoveTargeting.recoveryAnchor(
             stuck: stuck,
             items: [stuck, parkedDuplicate, zeroWidth, healthy],
             hiddenControlItemWindowNumber: nil,
@@ -122,7 +123,7 @@ struct RecoveryAnchorTests {
         let alwaysHiddenControl = item("alwaysHidden", x: 950, windowID: 3, tag: .alwaysHiddenControlItem)
         let healthy = item("Stats", x: 1000, windowID: 4)
 
-        let anchor = MenuBarItemManager.recoveryAnchor(
+        let anchor = MoveTargeting.recoveryAnchor(
             stuck: stuck,
             items: [stuck, hiddenControl, alwaysHiddenControl, healthy],
             hiddenControlItemWindowNumber: nil,
@@ -136,7 +137,7 @@ struct RecoveryAnchorTests {
     func nothingHealthyYieldsNil() {
         let stuck = item("stuck", x: -1, windowID: 1, tag: .visibleControlItem)
 
-        let anchor = MenuBarItemManager.recoveryAnchor(
+        let anchor = MoveTargeting.recoveryAnchor(
             stuck: stuck,
             items: [stuck],
             hiddenControlItemWindowNumber: nil,
@@ -155,7 +156,7 @@ struct RecoveryAnchorTests {
         let visible = item("Alfred", x: 800, windowID: 3)
         let concealed = item("DockDoor", x: 1200, windowID: 5)
 
-        let anchor = MenuBarItemManager.recoveryAnchor(
+        let anchor = MoveTargeting.recoveryAnchor(
             stuck: stuck,
             items: [stuck, visible, concealed],
             hiddenControlItemWindowNumber: nil,

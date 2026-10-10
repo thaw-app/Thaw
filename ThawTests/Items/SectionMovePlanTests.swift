@@ -13,7 +13,7 @@ import Testing
 @Suite("macOS 27 section move planning")
 @MainActor
 struct SectionMovePlanTests {
-    private typealias Move = MenuBarItemManager.PlannedSectionMove
+    private typealias Move = SectionMovePlanning.PlannedSectionMove
 
     @Test("Section restores compare live geometry with authored order", arguments: MenuBarSection.Name.allCases)
     func revealedHiddenOrderPlansFromLiveGeometry(section: MenuBarSection.Name) {
@@ -22,7 +22,7 @@ struct SectionMovePlanTests {
         let desired = [proton, codex].map(\.uniqueIdentifier)
 
         // The segmenter may return desired order; LCS must compare live geometry or visibility toggles can reverse the Hidden row.
-        let moves = MenuBarItemManager.planSectionMoves(
+        let moves = SectionMovePlanning.planSectionMoves(
             items: [proton, codex], // Enumeration order is not visual order.
             desiredOrder: desired,
             section: section,
@@ -59,7 +59,7 @@ struct SectionMovePlanTests {
     func matchingLiveGeometryNeedsNoMoves() {
         let a = item("a", x: 0)
         let b = item("b", x: 24)
-        let moves = MenuBarItemManager.planSectionMoves(
+        let moves = SectionMovePlanning.planSectionMoves(
             items: [b, a],
             desiredOrder: [a, b].map(\.uniqueIdentifier),
             section: .hidden,
@@ -82,7 +82,7 @@ struct SectionMovePlanTests {
             title: "Clock",
             isOnScreen: true
         )
-        let moves = MenuBarItemManager.planSectionMoves(
+        let moves = SectionMovePlanning.planSectionMoves(
             items: [c, clock, a, b],
             desiredOrder: [c, a, b].map(\.uniqueIdentifier),
             section: .visible,
@@ -102,7 +102,7 @@ struct SectionMovePlanTests {
 
     @Test("One displaced item yields one LCS move, not a bubble pass")
     func displacedItemMovesAlone() {
-        let moves = MenuBarItemManager.planSectionMoves(
+        let moves = SectionMovePlanning.planSectionMoves(
             segments: [["a", "x", "b", "c", "d"]],
             desiredOrder: ["a", "b", "c", "d", "x"],
             section: .visible
@@ -112,7 +112,7 @@ struct SectionMovePlanTests {
 
     @Test("Segments are planned independently and never cross each other")
     func segmentsPlanIndependently() {
-        let moves = MenuBarItemManager.planSectionMoves(
+        let moves = SectionMovePlanning.planSectionMoves(
             segments: [["b", "a"], ["d", "c"]],
             desiredOrder: ["a", "b", "c", "d"],
             section: .hidden
@@ -123,7 +123,7 @@ struct SectionMovePlanTests {
 
     @Test("Identifiers outside the segment are not planned for")
     func foreignDesiredIdentifiersAreIgnored() {
-        let moves = MenuBarItemManager.planSectionMoves(
+        let moves = SectionMovePlanning.planSectionMoves(
             segments: [["a", "b"]],
             desiredOrder: ["z", "a", "b", "y"],
             section: .visible
@@ -133,7 +133,7 @@ struct SectionMovePlanTests {
 
     @Test("A preferred mover is the one dragged when two subsequences tie")
     func preferredMoverWins() {
-        let moves = MenuBarItemManager.planSectionMoves(
+        let moves = SectionMovePlanning.planSectionMoves(
             segments: [["a", "n", "b"]],
             desiredOrder: ["a", "b", "n"],
             section: .visible,
@@ -147,7 +147,7 @@ struct SectionMovePlanTests {
         let a = item("a", namespace: "com.example.Cluster", x: 0)
         let b = item("b", namespace: "com.example.Cluster", x: 24)
         let c = item("c", namespace: "com.example.Other", x: 48)
-        let moves = MenuBarItemManager.planSectionMoves(
+        let moves = SectionMovePlanning.planSectionMoves(
             segments: [[a, b, c].map(\.uniqueIdentifier)],
             desiredOrder: [c, b, a].map(\.uniqueIdentifier),
             section: .visible
@@ -155,7 +155,7 @@ struct SectionMovePlanTests {
         var execution = LayoutMoveSequenceExecution(moves: moves)
 
         // b trails a's cluster and is skipped; a must not use b's unverified slot as an anchor.
-        let resolved = MenuBarItemManager.nextResolvedPlannedMove(
+        let resolved = SectionMovePlanning.nextResolvedPlannedMove(
             from: &execution,
             in: [a, b, c],
             controlItems: nil
@@ -172,13 +172,13 @@ struct SectionMovePlanTests {
         let c = item("c", x: 48)
         let x = item("x", x: 72)
         let y = item("y", x: 96)
-        let moves = MenuBarItemManager.planSectionMoves(
+        let moves = SectionMovePlanning.planSectionMoves(
             segments: [[a, b, c].map(\.uniqueIdentifier), [x, y].map(\.uniqueIdentifier)],
             desiredOrder: [c, b, a, y, x].map(\.uniqueIdentifier),
             section: .visible
         )
         var execution = LayoutMoveSequenceExecution(moves: moves)
-        let resolved = MenuBarItemManager.nextResolvedPlannedMove(
+        let resolved = SectionMovePlanning.nextResolvedPlannedMove(
             from: &execution,
             in: [a, b, x, y], // c disappeared after planning.
             controlItems: nil

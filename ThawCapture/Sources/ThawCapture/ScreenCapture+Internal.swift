@@ -61,7 +61,8 @@ actor ShareableContentCache {
         }
 
         if let inFlightTask {
-            return try await awaitWithoutCancelling(inFlightTask)
+            // Awaiting a task's value never cancels that task, so other callers keep their result.
+            return try await inFlightTask.value
         }
 
         let task = Task<ShareableContentSnapshot, any Error> {
@@ -69,7 +70,7 @@ actor ShareableContentCache {
         }
         inFlightTask = task
         do {
-            let content = try await awaitWithoutCancelling(task)
+            let content = try await task.value
             cached = (content, .now)
             inFlightTask = nil
             return content
@@ -77,16 +78,6 @@ actor ShareableContentCache {
             inFlightTask = nil
             throw error
         }
-    }
-
-    /// A caller cancelling must not cancel the shared task, other callers
-    /// may still be awaiting its result.
-    private func awaitWithoutCancelling(
-        _ task: Task<ShareableContentSnapshot, any Error>
-    ) async throws -> ShareableContentSnapshot {
-        try await withTaskCancellationHandler {
-            try await task.value
-        } onCancel: {}
     }
 }
 

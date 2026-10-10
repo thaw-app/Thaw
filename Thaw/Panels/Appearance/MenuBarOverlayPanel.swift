@@ -248,27 +248,18 @@ final class MenuBarOverlayPanel: NSPanel {
 
     /// Space changes reshow the panel and clear Mission Control state the probe may not detect.
     private func observeActiveSpaceChanges() -> AnyCancellable {
-        let (spaceChangeEvents, spaceChangeContinuation) = AsyncStream<Void>.makeStream()
-        let task = Task { @MainActor [weak self] in
-            let observer = NSWorkspace.shared.notificationCenter.addObserver(
-                forName: NSWorkspace.activeSpaceDidChangeNotification,
-                object: nil,
-                queue: .main
-            ) { _ in spaceChangeContinuation.yield(()) }
-            defer { NSWorkspace.shared.notificationCenter.removeObserver(observer) }
-            for await _ in spaceChangeEvents.debounce(for: .seconds(0.1)) {
-                guard let self else { return }
-                self.missionControlProbe.isActive = false
-                self.needsShow = true
-                // Fullscreen transitions change bar presence mid-animation; recheck after settling.
-                for delay in [Duration.zero, .milliseconds(400), .milliseconds(1200)] {
-                    do {
-                        try await Task.sleep(for: delay)
-                    } catch {
-                        return
-                    }
-                    self.refreshSystemMenuBarPresence()
+        let task = NSWorkspace.shared.notificationCenter.eventsTask(named: NSWorkspace.activeSpaceDidChangeNotification, debounce: .seconds(0.1)) { [weak self] in
+            guard let self else { return }
+            self.missionControlProbe.isActive = false
+            self.needsShow = true
+            // Fullscreen transitions change bar presence mid-animation; recheck after settling.
+            for delay in [Duration.zero, .milliseconds(400), .milliseconds(1200)] {
+                do {
+                    try await Task.sleep(for: delay)
+                } catch {
+                    return
                 }
+                self.refreshSystemMenuBarPresence()
             }
         }
         return AnyCancellable { task.cancel() }
@@ -713,7 +704,12 @@ private final class MenuBarOverlayPanelContentView: NSView {
                     for await (full, preview) in changes {
                         guard let self else { return }
                         if fullConfiguration != full {
+                            let followedItems = fullConfiguration.shapeKind.followsItems
                             fullConfiguration = full
+                            // Start, or stop, reading the items when the shape starts or stops needing them.
+                            if full.shapeKind.followsItems != followedItems {
+                                scheduleAXItemBoundsRefresh(.immediate)
+                            }
                         }
                         if previewConfiguration != preview {
                             previewConfiguration = preview
@@ -743,15 +739,12 @@ private final class MenuBarOverlayPanelContentView: NSView {
                 AnyCancellable { palettesTask.cancel() }
                     .store(in: &subscriptions)
 
-                // Hide during drags so the real menu bar remains visible; dedupe AppState observations manually.
+                // Hide during drags so the real menu bar remains visible.
                 let dragTask = Task { @MainActor [weak self, weak appState] in
                     guard let appState else { return }
-                    let changes = Observations { appState.isDraggingMenuBarItem }
-                    var previous: Bool?
+                    let changes = Observations { appState.isDraggingMenuBarItem }.removeDuplicates()
                     for await isDragging in changes {
                         guard let self else { return }
-                        guard isDragging != previous else { continue }
-                        previous = isDragging
                         fadeAlpha(to: isDragging ? 0 : 1)
                     }
                 }
@@ -771,14 +764,11 @@ private final class MenuBarOverlayPanelContentView: NSView {
                         .store(in: &subscriptions)
                 }
 
-                // Refresh macOS 27 physical AX geometry after cache changes; dedupe observations manually.
+                // Refresh macOS 27 physical AX geometry after cache changes.
                 let cacheTask = Task { @MainActor [weak self, itemManager = appState.itemManager] in
-                    let changes = Observations { itemManager.itemCache }
-                    var previous: MenuBarItemManager.ItemCache?
+                    let changes = Observations { itemManager.itemCache }.removeDuplicates()
                     for await cache in changes {
                         guard let self else { return }
-                        guard cache != previous else { continue }
-                        previous = cache
                         // Freeze so a transient AX read during the
                         // cache-change reflow doesn't flash wrong bounds.
                         splitPillGeometryFrozen = true
@@ -858,7 +848,9 @@ private final class MenuBarOverlayPanelContentView: NSView {
     private func scheduleAXItemBoundsRefresh(
         _ event: MenuBarGeometryRefresh.Event = .geometryChanged
     ) {
-        guard overlayPanel != nil else {
+        // Only a shape drawn around the items needs to know where they are. A tint, border or
+        // shadow across the bar asks no app anything.
+        guard overlayPanel != nil, fullConfiguration.shapeKind.followsItems else {
             geometryRefresh.cancel()
             cachedAXItemBounds = []
             cachedAXSourceScreenFrame = nil
@@ -876,6 +868,8 @@ private final class MenuBarOverlayPanelContentView: NSView {
             knownItems: itemManager?.managedItems ?? [],
             onScreenSnapshot: itemManager?.onScreenItemSnapshot,
             notBefore: minimumReadTime,
+            drawnBar: { await MenuBarItemAXProvider.drawnBarConcurrent() },
+            memo: .shared,
             readOwners: { await MenuBarItemAXProvider.menuBarItemsForAppearanceConcurrent(knownOwners: $0) },
             discover: {
                 await MenuBarItem.getMenuBarItems(

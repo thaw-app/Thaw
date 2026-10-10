@@ -12,6 +12,7 @@ import Testing
 
 /// Pins the rules for apps whose items sit in more than one section. macOS 27
 /// hides an app as a whole, so a concealed sibling hides the rest too.
+@MainActor
 struct SplitAppSectionTests {
     private func item(_ bundle: String, _ title: String, x: CGFloat) -> MenuBarItem {
         MenuBarItem(
@@ -30,7 +31,7 @@ struct SplitAppSectionTests {
         let shown = item("com.example.app", "A", x: 10)
         let hidden = item("com.example.app", "B", x: 40)
         let sections: [String: MenuBarSection.Name] = [shown.uniqueIdentifier: .visible, hidden.uniqueIdentifier: .hidden]
-        let result = MenuBarItemManager.concealingSiblingSection(
+        let result = AppSiblingSections.concealingSiblingSection(
             of: shown, among: [shown, hidden], section: { sections[$0.uniqueIdentifier] ?? .visible }
         )
         #expect(result == .hidden)
@@ -41,7 +42,7 @@ struct SplitAppSectionTests {
         let shown = item("com.example.app", "A", x: 10)
         let other = item("com.example.other", "B", x: 40)
         let sections: [String: MenuBarSection.Name] = [shown.uniqueIdentifier: .visible, other.uniqueIdentifier: .hidden]
-        #expect(MenuBarItemManager.concealingSiblingSection(
+        #expect(AppSiblingSections.concealingSiblingSection(
             of: shown, among: [shown, other], section: { sections[$0.uniqueIdentifier] ?? .visible }
         ) == nil)
     }
@@ -51,7 +52,7 @@ struct SplitAppSectionTests {
         let arriving = item("com.example.app", "New", x: 10)
         let a = item("com.example.app", "A", x: 40)
         let b = item("com.example.app", "B", x: 70)
-        #expect(MenuBarItemManager.sectionOfAppSiblings(
+        #expect(AppSiblingSections.sectionOfAppSiblings(
             of: arriving, among: [arriving, a, b], section: { $0.uniqueIdentifier == arriving.uniqueIdentifier ? .hidden : .visible }
         ) == .visible)
     }
@@ -62,7 +63,7 @@ struct SplitAppSectionTests {
         let a = item("com.example.app", "A", x: 40)
         let b = item("com.example.app", "B", x: 70)
         let sections: [String: MenuBarSection.Name] = [a.uniqueIdentifier: .visible, b.uniqueIdentifier: .hidden]
-        #expect(MenuBarItemManager.sectionOfAppSiblings(
+        #expect(AppSiblingSections.sectionOfAppSiblings(
             of: arriving, among: [arriving, a, b], section: { sections[$0.uniqueIdentifier] ?? .hidden }
         ) == nil)
     }

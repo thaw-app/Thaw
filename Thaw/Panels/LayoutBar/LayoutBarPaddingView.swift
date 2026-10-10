@@ -5,6 +5,7 @@
 //  Copyright (Thaw) © 2026 Toni Förster
 //  Licensed under the GNU GPLv3
 
+import AsyncAlgorithms
 import Cocoa
 import Combine
 import MenuBarModel
@@ -709,7 +710,7 @@ final class LayoutBarPaddingView: NSView {
                         throw MenuBarItemManager.EventError.cannotComplete
                     }
                     try Task.checkCancellation()
-                    guard let completedOrder = MenuBarItemManager.sectionOrderAfterCompletedMove(
+                    guard let completedOrder = OrderRecording.sectionOrderAfterCompletedMove(
                         of: item,
                         proposedOrder: sectionOrderToCommit,
                         liveItems: liveItems
@@ -1352,8 +1353,6 @@ final class LayoutBarPaddingView: NSView {
             }
             .store(in: &notchObservers)
 
-        // MenuBarManager is @Observable; the sequence already yields on the
-        // main actor and skips runs of equal values by hand.
         // The tint is part of the background the indicator is read against,
         // as it is for the items beside it.
         let colorTask = Task { @MainActor [weak self, menuBarManager = appState.menuBarManager, appearanceManager = appState.appearanceManager] in
@@ -1362,12 +1361,9 @@ final class LayoutBarPaddingView: NSView {
                     menuBarManager.averageColorInfo,
                     tintedBy: appearanceManager.configuration.current
                 )
-            }
-            var previous: MenuBarAverageColorInfo??
+            }.removeDuplicates()
             for await colorInfo in changes {
                 guard let self else { return }
-                guard colorInfo != previous else { continue }
-                previous = colorInfo
                 notchView?.averageColorInfo = colorInfo
             }
         }

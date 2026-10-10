@@ -5,6 +5,7 @@
 //  Copyright (Thaw) © 2026 Toni Förster
 //  Licensed under the GNU GPLv3
 
+import AsyncAlgorithms
 import Combine
 import MenuBarModel
 import Observation
@@ -228,16 +229,12 @@ final class MenuBarSearchPanel: NSPanel {
     // MARK: Selection spotlight
 
     /// The selection-driven counterpart of LayoutBarItemView's hover spotlight.
-    /// Deduped by hand, since Observations redelivers the current value first.
     private func observeSelectionForSpotlight() {
         selectionObservationTask?.cancel()
         selectionObservationTask = Task { @MainActor [weak self] in
             guard let self else { return }
-            let changes = Observations { self.model.selection }
-            var previous: MenuBarSearchModel.ItemID?
+            let changes = Observations { self.model.selection }.removeDuplicates()
             for await selection in changes {
-                guard selection != previous else { continue }
-                previous = selection
                 retargetSpotlight()
             }
         }

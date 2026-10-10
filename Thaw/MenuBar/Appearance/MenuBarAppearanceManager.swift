@@ -219,20 +219,11 @@ final class MenuBarAppearanceManager {
         }
     }
 
-    /// A task-owned observer feeds debounced screen events, as in DisplaySettingsManager.configureObservers().
+    /// Rebuilds the overlay panels once a burst of screen changes goes quiet.
     private func observeScreenParameters() -> AnyCancellable {
-        let (screenParameterEvents, screenParameterContinuation) = AsyncStream<Void>.makeStream()
-        let task = Task { @MainActor [weak self] in
-            let observer = NotificationCenter.default.addObserver(
-                forName: NSApplication.didChangeScreenParametersNotification,
-                object: nil,
-                queue: .main
-            ) { _ in screenParameterContinuation.yield(()) }
-            defer { NotificationCenter.default.removeObserver(observer) }
-            for await _ in screenParameterEvents.debounce(for: .seconds(0.1)) {
-                guard let self else { return }
-                self.rebuildOverlayPanelsIfScreensMoved()
-            }
+        let task = NotificationCenter.default.eventsTask(named: NSApplication.didChangeScreenParametersNotification, debounce: .seconds(0.1)) { [weak self] in
+            guard let self else { return }
+            self.rebuildOverlayPanelsIfScreensMoved()
         }
         return AnyCancellable { task.cancel() }
     }

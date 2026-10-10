@@ -15,7 +15,7 @@ struct RecordedVisibleOrderTests {
         let launchOrder = ["A", "B", "Thaw"]
         let draggedOrder = ["Thaw", "B", "A"]
         #expect(
-            MenuBarItemManager.freshestRecordedVisibleOrder(
+            ControlOrderRules.freshestRecordedVisibleOrder(
                 mirroredOrder: draggedOrder,
                 controllerOrder: launchOrder
             ) == draggedOrder
@@ -25,13 +25,13 @@ struct RecordedVisibleOrderTests {
     @Test("The controller supplies the order before the first cache snapshot")
     func controllerOrderIsFallback() {
         #expect(
-            MenuBarItemManager.freshestRecordedVisibleOrder(
+            ControlOrderRules.freshestRecordedVisibleOrder(
                 mirroredOrder: nil,
                 controllerOrder: ["A", "Thaw"]
             ) == ["A", "Thaw"]
         )
         #expect(
-            MenuBarItemManager.freshestRecordedVisibleOrder(
+            ControlOrderRules.freshestRecordedVisibleOrder(
                 mirroredOrder: nil,
                 controllerOrder: nil
             ).isEmpty
@@ -41,7 +41,7 @@ struct RecordedVisibleOrderTests {
     @Test("An explicitly empty mirror does not revive stale entries")
     func emptyMirrorWins() {
         #expect(
-            MenuBarItemManager.freshestRecordedVisibleOrder(
+            ControlOrderRules.freshestRecordedVisibleOrder(
                 mirroredOrder: [],
                 controllerOrder: ["A", "Thaw"]
             ).isEmpty

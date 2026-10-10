@@ -63,7 +63,7 @@ struct SectionOrderRecordingTests {
         let dockDoor = Self.item("DockDoor", x: 70)
         let b = Self.item("B", x: 100)
         let stalePane = [a, dockDoor, b, droppy]
-        let result = try #require(MenuBarItemManager.sectionOrderAfterCompletedMove(
+        let result = try #require(OrderRecording.sectionOrderAfterCompletedMove(
             of: dockDoor,
             proposedOrder: stalePane,
             liveItems: [b, dockDoor, a, droppy]
@@ -76,7 +76,7 @@ struct SectionOrderRecordingTests {
         let a = Self.item("A", x: 10)
         let absent = Self.item("Absent", x: 40)
         let b = Self.item("B", x: 70)
-        let result = try #require(MenuBarItemManager.sectionOrderAfterCompletedMove(
+        let result = try #require(OrderRecording.sectionOrderAfterCompletedMove(
             of: b,
             proposedOrder: [b, absent, a],
             liveItems: [a, b]
@@ -88,7 +88,7 @@ struct SectionOrderRecordingTests {
     func missingMoverDoesNotCommit() {
         let a = Self.item("A", x: 10)
         let b = Self.item("B", x: 40)
-        #expect(MenuBarItemManager.sectionOrderAfterCompletedMove(
+        #expect(OrderRecording.sectionOrderAfterCompletedMove(
             of: b, proposedOrder: [b, a], liveItems: [a]
         ) == nil)
     }
@@ -97,10 +97,10 @@ struct SectionOrderRecordingTests {
     func singleItemMoveDoesNotNormalizeStructure() {
         let a = Self.item("A", x: 10)
         let b = Self.item("B", x: 40)
-        #expect(!MenuBarItemManager.shouldNormalizeStructureAfterMove(
+        #expect(!OrderRecording.shouldNormalizeStructureAfterMove(
             item: b, destination: .leftOfItem(a), isUserInitiated: true
         ))
-        #expect(MenuBarItemManager.shouldNormalizeStructureAfterMove(
+        #expect(OrderRecording.shouldNormalizeStructureAfterMove(
             item: b, destination: .leftOfItem(a), isUserInitiated: false
         ))
     }
@@ -117,10 +117,10 @@ struct SectionOrderRecordingTests {
             title: ControlItemIdentifier.hidden.rawValue,
             isOnScreen: true
         )
-        #expect(MenuBarItemManager.shouldNormalizeStructureAfterMove(
+        #expect(OrderRecording.shouldNormalizeStructureAfterMove(
             item: a, destination: .leftOfItem(control), isUserInitiated: true
         ))
-        #expect(MenuBarItemManager.shouldNormalizeStructureAfterMove(
+        #expect(OrderRecording.shouldNormalizeStructureAfterMove(
             item: control, destination: .leftOfItem(a), isUserInitiated: true
         ))
     }

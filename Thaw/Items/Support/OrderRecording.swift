@@ -1,5 +1,5 @@
 //
-//  MenuBarItemManager+OrderRecording.swift
+//  OrderRecording.swift
 //  Project: Thaw
 //
 //  Copyright (Thaw) © 2026 Toni Förster
@@ -7,10 +7,14 @@
 
 import MenuBarModel
 
-extension MenuBarItemManager {
+/// What to write down as a section's order once the bar has changed under it.
+///
+/// A completed move and an arrival both leave the saved order behind the live bar. These rules
+/// decide which order survives, from the items alone, so they hold no state.
+nonisolated enum OrderRecording {
     /// Use observed order, not stale pane order; AX-missing members retain proposed slots.
     /// A vanished mover cannot commit; the controller still filters and preserves overflow.
-    static nonisolated func sectionOrderAfterCompletedMove(
+    static func sectionOrderAfterCompletedMove(
         of item: MenuBarItem,
         proposedOrder: [MenuBarItem],
         liveItems: [MenuBarItem]
@@ -32,7 +36,7 @@ extension MenuBarItemManager {
 
     /// The Visible order to keep when an arrival disturbed the items already on the bar, or nil to mirror as is.
     /// A ⌘-drag leaves the item set unchanged, so only a pure arrival counts; the newcomer keeps its slot.
-    static nonisolated func visibleOrderPreservedAcrossArrival(
+    static func visibleOrderPreservedAcrossArrival(
         savedOrder: [String],
         mirroredOrder: [String],
         previousLive: Set<String>,
@@ -52,7 +56,7 @@ extension MenuBarItemManager {
     }
 
     /// User drops already verified their position; only structural edits and repairs need another rewrite.
-    static nonisolated func shouldNormalizeStructureAfterMove(
+    static func shouldNormalizeStructureAfterMove(
         item: MenuBarItem,
         destination: MoveDestination,
         isUserInitiated: Bool

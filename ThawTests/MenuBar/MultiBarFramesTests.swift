@@ -35,13 +35,13 @@ struct MultiBarFramesTests {
     @Test("One item stated against the second bar is detected")
     func mixedBarsAreDetected() {
         let items = [Self.item(x: 1338, windowID: 1), Self.item(x: 1716, windowID: 2), Self.item(x: 3209, windowID: 3)]
-        #expect(MenuBarItemManager.framesSpanSeveralBars(items, displays: Self.displays))
+        #expect(ControlOrderRules.framesSpanSeveralBars(items, displays: Self.displays))
     }
 
     @Test("Items all on one bar are not")
     func singleBarIsNotMixed() {
         let items = [Self.item(x: 3209, windowID: 1), Self.item(x: 3378, windowID: 2)]
-        #expect(!MenuBarItemManager.framesSpanSeveralBars(items, displays: Self.displays))
+        #expect(!ControlOrderRules.framesSpanSeveralBars(items, displays: Self.displays))
     }
 
     @Test("Concealed snapshots on an old display do not block visible-order persistence")
@@ -96,7 +96,7 @@ struct MultiBarFramesTests {
             Self.item(x: -1, y: 1068, windowID: 2),
             Self.item(x: 7, y: 1068, windowID: 3),
         ]
-        #expect(!MenuBarItemManager.framesSpanSeveralBars(items, displays: Self.displays))
+        #expect(!ControlOrderRules.framesSpanSeveralBars(items, displays: Self.displays))
     }
 
     @Test("A parked Hidden divider leaves the saved order untouched")
@@ -148,8 +148,8 @@ struct MultiBarFramesTests {
         let stats = Self.item(x: -400, windowID: 1)
 
         let parked = divider(y: 113.5)
-        #expect(MenuBarItemManager.dividerIsOffTheBar(ControlItemPair(hidden: parked, alwaysHidden: nil), among: [parked, stats]))
+        #expect(ControlOrderRules.dividerIsOffTheBar(ControlItemPair(hidden: parked, alwaysHidden: nil), among: [parked, stats]))
         let onBar = divider(y: 4.5)
-        #expect(!MenuBarItemManager.dividerIsOffTheBar(ControlItemPair(hidden: onBar, alwaysHidden: nil), among: [onBar, stats]))
+        #expect(!ControlOrderRules.dividerIsOffTheBar(ControlItemPair(hidden: onBar, alwaysHidden: nil), among: [onBar, stats]))
     }
 }

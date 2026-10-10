@@ -12,6 +12,7 @@ import MenuBarModel
 import os.lock
 import PlatformRuntimeKit
 import ThawAXCore
+import ThawConcurrency
 
 typealias NativeOverflowObservation = PlatformRuntimeKit.NativeOverflowObservation
 
@@ -287,6 +288,8 @@ nonisolated enum MenuBarItemAXProvider {
         }
 
         let ourBundleID = Bundle.main.bundleIdentifier
+        // Read once per walk: the walk asks about nearly every app that answers empty.
+        let formerHosts = UnseenMenuBarHosts.formerHosts()
         let runningApps = NSWorkspace.shared.runningApplications.filter { !$0.isTerminated }
         let appsByPID = Dictionary(runningApps.map { ($0.processIdentifier, $0) }, uniquingKeysWith: { first, _ in first })
         let controlPIDs = Set(runningApps.filter {
@@ -391,7 +394,14 @@ nonisolated enum MenuBarItemAXProvider {
             // thread-safe. In-process answers cannot hang, so no deadline applies.
             if AXPrimitives.isOwnProcess(ownerPID) {
                 let own = await MainActor.run {
-                    Self.collectApp(runningApp: runningApp, appBundleID: appBundleID, display: nil, displayBounds: nil, ourBundleID: ourBundleID)
+                    Self.collectApp(
+                        runningApp: runningApp,
+                        appBundleID: appBundleID,
+                        display: nil,
+                        displayBounds: nil,
+                        ourBundleID: ourBundleID,
+                        formerHosts: formerHosts
+                    )
                 }
                 appsWithExtrasBar += own.isEmpty ? 0 : 1
                 state.record(own, owner: ownerPID, generation: pass.generation)
@@ -403,7 +413,8 @@ nonisolated enum MenuBarItemAXProvider {
                     appBundleID: appBundleID,
                     display: nil,
                     displayBounds: nil,
-                    ourBundleID: ourBundleID
+                    ourBundleID: ourBundleID,
+                    formerHosts: formerHosts
                 )
             }
             let collectedResult = await withTaskGroup(
@@ -480,71 +491,21 @@ nonisolated enum MenuBarItemAXProvider {
         if Task.isCancelled {
             return nil
         }
-        let race = TimeoutRace<T>()
+        // Whichever lands first settles it, exactly once. A cancellation that lands before the
+        // continuation is registered is kept and answered on registration.
+        let outcome = OneShotContinuation<T?, Never>()
         return await withTaskCancellationHandler(operation: {
             await withCheckedContinuation { continuation in
-                race.awaitOutcome(continuation)
-                // Spawned after registration so the value side cannot settle
-                // before there is a continuation to settle. The watcher lives
-                // only as long as the blocked call does.
-                race.observeValue(of: task)
+                outcome.setContinuation(continuation)
+                // Spawned after registration. The watcher lives only as long
+                // as the blocked call does.
+                Task.detached(priority: .utility) {
+                    await outcome.settle(.success(task.value))
+                }
             }
         }, onCancel: {
-            race.cancel()
+            outcome.settle(.success(nil))
         })
-    }
-
-    /// Settles valueOrCancelled(of:) exactly once, whichever side lands first.
-    private final class TimeoutRace<T: Sendable>: @unchecked Sendable {
-        private enum State {
-            case open
-            case awaiting(CheckedContinuation<T?, Never>)
-            case cancelled
-        }
-
-        private let state = OSAllocatedUnfairLock<State>(initialState: .open)
-
-        /// Registers the continuation, or resumes it immediately with nil
-        /// when cancellation already won.
-        func awaitOutcome(_ continuation: CheckedContinuation<T?, Never>) {
-            let cancelledFirst = state.withLock { state -> Bool in
-                if case .cancelled = state {
-                    return true
-                }
-                state = .awaiting(continuation)
-                return false
-            }
-            if cancelledFirst {
-                continuation.resume(returning: nil)
-            }
-        }
-
-        /// Settles with the task's value when it arrives, unless cancellation
-        /// got there first.
-        func observeValue(of task: Task<T, Never>) {
-            Task.detached(priority: .utility) {
-                let value = await task.value
-                let continuation = self.state.withLock { state -> CheckedContinuation<T?, Never>? in
-                    guard case let .awaiting(continuation) = state else { return nil }
-                    state = .cancelled
-                    return continuation
-                }
-                continuation?.resume(returning: value)
-            }
-        }
-
-        /// Cancellation's settlement.
-        func cancel() {
-            let continuation = state.withLock { state -> CheckedContinuation<T?, Never>? in
-                guard case let .awaiting(continuation) = state else {
-                    state = .cancelled
-                    return nil
-                }
-                state = .cancelled
-                return continuation
-            }
-            continuation?.resume(returning: nil)
-        }
     }
 
     private typealias CollectAppResult = [RawItem]
@@ -557,7 +518,8 @@ nonisolated enum MenuBarItemAXProvider {
         appBundleID: String,
         display: CGDirectDisplayID?,
         displayBounds: CGRect?,
-        ourBundleID: String?
+        ourBundleID: String?,
+        formerHosts: Set<String>
     ) -> [RawItem] {
         guard let app = AXHelpers.application(for: runningApp) else {
             return []
@@ -568,13 +530,13 @@ nonisolated enum MenuBarItemAXProvider {
                     "menuBarItems: Thaw (\(appBundleID)) has no AXExtrasMenuBar, control items cannot be discovered"
                 )
             }
-            logEmptyExtrasBarReadOnce(for: runningApp, appBundleID: appBundleID, hasBar: false)
+            logEmptyExtrasBarReadOnce(for: runningApp, appBundleID: appBundleID, hasBar: false, formerHosts: formerHosts)
             return []
         }
 
         let children = AXHelpers.children(for: bar)
         guard !children.isEmpty else {
-            logEmptyExtrasBarReadOnce(for: runningApp, appBundleID: appBundleID, hasBar: true)
+            logEmptyExtrasBarReadOnce(for: runningApp, appBundleID: appBundleID, hasBar: true, formerHosts: formerHosts)
             return []
         }
 
@@ -642,9 +604,10 @@ nonisolated enum MenuBarItemAXProvider {
     private static func logEmptyExtrasBarReadOnce(
         for runningApp: NSRunningApplication,
         appBundleID: String,
-        hasBar: Bool
+        hasBar: Bool,
+        formerHosts: Set<String>
     ) {
-        guard UnseenMenuBarHosts.wasHost(appBundleID) else { return }
+        guard formerHosts.contains(appBundleID) else { return }
         let pid = runningApp.processIdentifier
         let element = AXUIElementCreateApplication(pid)
         AXUIElementSetMessagingTimeout(element, AXPrimitives.defaultMessagingTimeout)
@@ -745,6 +708,12 @@ nonisolated enum MenuBarItemAXProvider {
             }
         }
         return nil
+    }
+
+    /// The bar as MenuBarAgent draws it, read off the main actor. Nil when unreadable or mid-change.
+    @concurrent
+    static func drawnBarConcurrent() async -> [MenuBarAgentWindow.Entry]? {
+        AXPrimitives.menuBarAgentSettledEntries()
     }
 
     /// Re-reads the owners appearance already knows, skipping discovery's

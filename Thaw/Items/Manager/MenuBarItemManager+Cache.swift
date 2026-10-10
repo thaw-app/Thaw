@@ -142,10 +142,18 @@ extension MenuBarItemManager {
         MenuBarItemManager.diagLog.debug("uncheckedCacheItems: processing \(items.count) items for caching")
         var items = items
         var sanityAttempts = 0
+        // The process table, read once off the main actor and shared by the liveness filter in bucketing,
+        // the one at publication and the unseen-host check. The guard after it stops a pass that a purge overtook.
+        var running = await RunningApplicationSnapshot.current()
+        guard layoutPublication.canPublish(generation: publicationGeneration) else {
+            scheduleCoalescedCacheRerun()
+            return
+        }
         var context = bucketedCacheContext(
             items: items,
             controlItems: controlItems,
-            displayID: displayID
+            displayID: displayID,
+            running: running
         )
 
         // One-shot, after items have settled so identifier shapes are final:
@@ -155,8 +163,6 @@ extension MenuBarItemManager {
             pruneSavedSectionOrderGhosts()
         }
 
-        // The process table read for this pass's publication, shared by the liveness filter and the unseen-host check.
-        var runningAtPublication: RunningApplicationSnapshot?
         while true {
             // Verify before the unchanged-cache guard: nonexistent icons recovered from the position store can produce a stable cache.
             if !observationOnly, let displayID {
@@ -179,6 +185,8 @@ extension MenuBarItemManager {
                 let maximumSanityAttempts = 2
                 if sanityAttempts < maximumSanityAttempts, !Task.isCancelled {
                     let snapshot = await MenuBarItemAXProvider.menuBarInventoryConcurrent(freshOnly: true)
+                    // An owner can exit during the re-scan, so the process table is read again with it.
+                    running = await RunningApplicationSnapshot.current()
                     guard snapshot.hasFreshKnownInventory,
                           layoutPublication.canPublish(generation: publicationGeneration)
                     else {
@@ -199,7 +207,8 @@ extension MenuBarItemManager {
                         context = bucketedCacheContext(
                             items: items,
                             controlItems: controlItems,
-                            displayID: displayID
+                            displayID: displayID,
+                            running: running
                         )
                         continue
                     }
@@ -209,11 +218,6 @@ extension MenuBarItemManager {
                     )
                 }
             }
-
-            // Read the process table off the main actor. The guard below runs after it,
-            // so a purge that lands during the read still stops this pass.
-            let running = await RunningApplicationSnapshot.current()
-            runningAtPublication = running
 
             // A sanity re-scan above can suspend while an owner exits. Check
             // again at publication so the old in-flight pass cannot undo purge.
@@ -245,7 +249,7 @@ extension MenuBarItemManager {
         }
 
         mirrorSavedSectionOrderIfSettled(from: context.cache, controlItems: context.controlItems)
-        noteUnseenMenuBarHosts(in: context.cache, running: runningAtPublication ?? .readSystem())
+        noteUnseenMenuBarHosts(in: context.cache, running: running)
 
         MenuBarItemManager.diagLog.debug("Updated menu bar item cache: visible=\(context.cache[.visible].count), hidden=\(context.cache[.hidden].count), alwaysHidden=\(context.cache[.alwaysHidden].count)")
 
@@ -272,44 +276,15 @@ extension MenuBarItemManager {
         let onScreen = cache.managedItems.filter {
             $0.isOnScreen && $0.bounds.width > 0 && displayBounds.intersects($0.bounds)
         }
-        return Self.anchoredTrailingViolation(in: MenuBarItem.sortByLeadingEdge(onScreen))
-    }
-
-    /// Reject reversed Control Center/Clock ranks or non-anchors right of the trailing group; normalization repairs stable Siri stranding.
-    /// Skip Thaw controls and sub-phantomFramePeerMinimumWidth slivers (including the intentionally zero-width icon); ranks also cover legacy spellings.
-    static nonisolated func anchoredTrailingViolation(
-        in sortedLeftToRight: [MenuBarItem]
-    ) -> String? {
-        var lastAnchoredRank = Int.min
-        var sawAnchored = false
-        for item in sortedLeftToRight {
-            // A concealed item's parked or phantom frame says nothing about the bar's order.
-            guard !item.isControlItem,
-                  item.bounds.width >= MenuBarItemGeometry.phantomFramePeerMinimumWidth,
-                  !item.isParkedOffMenuBarBand(among: sortedLeftToRight),
-                  !item.hasPhantomFrame(among: sortedLeftToRight)
-            else {
-                continue
-            }
-            let rank = MenuBarItemTag.anchoredSystemItemRank(item.tag)
-            if rank < 3 {
-                sawAnchored = true
-                guard rank >= lastAnchoredRank else {
-                    return "anchored items out of canonical order at \(item.logString)"
-                }
-                lastAnchoredRank = rank
-            } else if sawAnchored {
-                return "non-anchored \(item.logString) sits right of the anchored trailing group"
-            }
-        }
-        return nil
+        return ControlOrderRules.anchoredTrailingViolation(in: MenuBarItem.sortByLeadingEdge(onScreen))
     }
 
     /// Bucket without publishing so sanity retries reuse classification without reentering the cache pass.
     private func bucketedCacheContext(
         items: [MenuBarItem],
         controlItems: ControlItemPair,
-        displayID: CGDirectDisplayID?
+        displayID: CGDirectDisplayID?,
+        running: RunningApplicationSnapshot
     ) -> CacheContext {
         var context = CacheContext(controlItems: controlItems, displayID: displayID)
 
@@ -348,7 +323,9 @@ extension MenuBarItemManager {
         )
         // Conceal snapshots survive exits; filter after rebucketing to avoid resurrecting departed items in both UIs.
         // Preserve assignments for relaunch placement.
-        context.cache = context.cache.retainingRunningOwners().orderingOverflowStack(savedOrder: savedSectionOrder)
+        context.cache = context.cache
+            .retainingRunningOwners(processIDs: running.processIDs, bundleIdentifiers: running.bundleIdentifiers)
+            .orderingOverflowStack(savedOrder: savedSectionOrder)
 
         return context
     }
@@ -368,7 +345,7 @@ extension MenuBarItemManager {
               let previousLiveVisible
         else { return nil }
         let visibleKey = sectionKey(for: .visible)
-        return Self.visibleOrderPreservedAcrossArrival(
+        return OrderRecording.visibleOrderPreservedAcrossArrival(
             savedOrder: savedSectionOrder[visibleKey] ?? [],
             mirroredOrder: mirrored[visibleKey] ?? [],
             previousLive: previousLiveVisible,
@@ -395,11 +372,11 @@ extension MenuBarItemManager {
             return
         }
         // Concealed buckets retain old frames, which cannot describe the current bar.
-        guard !Self.framesSpanSeveralBars(cache[.visible], displays: displays) else {
+        guard !ControlOrderRules.framesSpanSeveralBars(cache[.visible], displays: displays) else {
             MenuBarItemManager.diagLog.debug("Not mirroring section order: item frames span more than one bar")
             return
         }
-        if let controlItems, Self.dividerIsOffTheBar(controlItems, among: cache[.visible]) {
+        if let controlItems, ControlOrderRules.dividerIsOffTheBar(controlItems, among: cache[.visible]) {
             MenuBarItemManager.diagLog.debug("Not mirroring section order: the Hidden divider is parked off the bar")
             return
         }
@@ -445,48 +422,35 @@ extension MenuBarItemManager {
         reason: LayoutChangeReason,
         immediate: Bool = false
     ) {
-        repairs.request(.overflowRebalance, cause: cause)
         let request = OverflowRebalanceRequest(reason: reason, immediate: immediate)
-        overflowRebalancePendingRequest = request.merged(into: overflowRebalancePendingRequest)
-        overflowRebalanceTask?.cancel()
-        overflowRebalanceTask = Task { [weak self] in
-            guard let self else { return }
-            try? await Task.sleep(for: .milliseconds(300))
-            guard !Task.isCancelled else { return }
-            guard let hold = await self.repairs.enter(.overflowRebalance) else { return }
-            // Read after the wait, so requests merged while queued are honoured.
-            let effective = self.overflowRebalancePendingRequest ?? request
-            let aftermath = RepairTurn.Aftermath()
-            let didRebalance = await self.rebalanceOverflowIfNeeded(
-                reason: effective.reason,
-                immediate: effective.immediate,
-                aftermath: aftermath,
-                permit: StoreWritePermit(hold)
-            )
-            self.repairs.leave(hold)
-            await aftermath.readCacheIfOwed { await self.cacheItemsRegardless(skipRecentMoveCheck: true) }
-            // Cancelled tasks leave merged intent for their replacements.
-            guard !Task.isCancelled else { return }
-            self.overflowRebalancePendingRequest = nil
-            if didRebalance {
-                try? await Task.sleep(for: .milliseconds(200))
+        let merged = request.merged(into: overflowRebalance.intent)
+        overflowRebalance.request(merged, cause: cause, on: repairs)
+        overflowRebalance.arm { turn in
+            Task { [weak self] in
+                guard let self else { return }
+                try? await Task.sleep(for: .milliseconds(300))
                 guard !Task.isCancelled else { return }
-                await self.cacheItemsRegardless(skipRecentMoveCheck: true)
+                guard let hold = await self.repairs.enter(.overflowRebalance) else { return }
+                // Read after the wait, so requests merged while queued are honoured.
+                let effective = self.overflowRebalance.intent ?? request
+                let aftermath = RepairTurn.Aftermath()
+                let didRebalance = await self.rebalanceOverflowIfNeeded(
+                    reason: effective.reason,
+                    immediate: effective.immediate,
+                    aftermath: aftermath,
+                    permit: StoreWritePermit(hold)
+                )
+                self.repairs.leave(hold)
+                await aftermath.readCacheIfOwed { await self.cacheItemsRegardless(skipRecentMoveCheck: true) }
+                // Cancelled tasks leave merged intent for their replacements.
+                guard !Task.isCancelled else { return }
+                self.overflowRebalance.fulfil(turn)
+                if didRebalance {
+                    try? await Task.sleep(for: .milliseconds(200))
+                    guard !Task.isCancelled else { return }
+                    await self.cacheItemsRegardless(skipRecentMoveCheck: true)
+                }
             }
-        }
-    }
-
-    /// Pure merge policy for timing-independent tests: explicit reasons win and immediacy is sticky.
-    nonisolated struct OverflowRebalanceRequest: Equatable, Sendable {
-        var reason: LayoutChangeReason
-        var immediate: Bool
-
-        func merged(into pending: OverflowRebalanceRequest?) -> OverflowRebalanceRequest {
-            guard let pending else { return self }
-            return OverflowRebalanceRequest(
-                reason: pending.reason.permitsOrderEnforcement ? pending.reason : reason,
-                immediate: pending.immediate || immediate
-            )
         }
     }
 
@@ -779,13 +743,15 @@ extension MenuBarItemManager {
         // Seed corrected source-PID identities for known windows so relocation does not treat them as arrivals.
         // Skip unresolved PIDs to keep the placeholder Control Center namespace out of persisted identities.
         if !previousWindowIDs.isEmpty {
-            for item in items where previousWindowIDs.contains(item.windowID) && item.sourcePID != nil {
-                let identifier = item.uniqueIdentifier
-                if !knownItemIdentifiers.contains(identifier) {
-                    knownItemIdentifiers.insert(identifier)
-                }
+            let previous = Set(previousWindowIDs)
+            var learned = false
+            for item in items where previous.contains(item.windowID) && item.sourcePID != nil {
+                learned = knownItemIdentifiers.insert(item.uniqueIdentifier).inserted || learned
             }
-            persistKnownItemIdentifiers()
+            // Saved only when something was learned: the write posts a defaults change to every observer.
+            if learned {
+                persistKnownItemIdentifiers()
+            }
         }
 
         guard !Task.isCancelled else {
@@ -824,7 +790,7 @@ extension MenuBarItemManager {
         }
 
         await MainActor.run {
-            self.pruneClickOperationTimeouts(keeping: Set(items.map(\.tag)))
+            self.clickTimeouts.prune(keeping: Set(items.map(\.tag)))
         }
 
         // Use ControlItem window IDs when macOS 26+ tag and title lookups fail.
@@ -864,14 +830,7 @@ extension MenuBarItemManager {
                 "cacheItemsRegardless: startup settling active, deferring structural control order"
             )
         } else {
-            await enforceControlItemOrder(
-                controlItems: controlItems,
-                items: items,
-                reason: .ambientCacheRefresh,
-                // An ambient pass only observes; this permit is never spent.
-                permit: .unsequenced("ambient control order")
-            )
-            // Ambient enforcement only observes drift; schedule debounced normalization rather than waiting for explicit reveal or repair.
+            // An ambient pass only observes drift; schedule debounced normalization rather than waiting for explicit reveal or repair.
             scheduleStructuralNormalizationIfControlItemsOutOfOrder(
                 controlItems: controlItems,
                 items: items,
@@ -940,36 +899,6 @@ extension MenuBarItemManager {
         }
     }
 
-    /// Require a continuously stable signature to avoid icon reorders from macOS 27 AX, restriction, and clone flapping; two quick samples are insufficient.
-    /// Gate only autonomous polls; app events and drags recache immediately.
-    /// - Parameters:
-    ///   - firstSeen: When pending was first observed (nil if no candidate).
-    ///   - now: The current instant, injected for testability.
-    ///   - grace: How long a difference must hold before it confirms.
-    /// - Returns: Whether to recache and the candidate/first-seen instant to retain; both nil clears the gate.
-    static func signatureRecacheDecision(
-        cached: [String],
-        current: [String],
-        pending: [String]?,
-        firstSeen: ContinuousClock.Instant?,
-        now: ContinuousClock.Instant,
-        grace: Duration
-    ) -> (recache: Bool, newPending: [String]?, newFirstSeen: ContinuousClock.Instant?) {
-        // Live state matches the cache: nothing to do, drop any stale candidate.
-        guard current != cached else {
-            return (recache: false, newPending: nil, newFirstSeen: nil)
-        }
-        // Preserve the streak's start until the same difference holds for the full grace window.
-        if let pending, let firstSeen, pending == current {
-            if now - firstSeen >= grace {
-                return (recache: true, newPending: nil, newFirstSeen: nil)
-            }
-            return (recache: false, newPending: current, newFirstSeen: firstSeen)
-        }
-        // First sighting, or the difference itself changed: (re)start the clock.
-        return (recache: false, newPending: current, newFirstSeen: now)
-    }
-
     /// Gate expensive AX walks with a cheap window-list comparison, then require a stable identity difference before rebuilding.
     func cacheItemsIfNeeded() async {
         // Window-list changes cover additions, removals, moves, reveals, and hides without an AX signature walk.
@@ -992,20 +921,16 @@ extension MenuBarItemManager {
         // Assertion-backed menu bar items use synthetic window IDs, so
         // compare stable visual-order identity instead of WindowServer IDs.
         let cachedSignature = cacheCycleState.cachedItemSignature
-        let decision = Self.signatureRecacheDecision(
+        // Gate only autonomous polls; app events and drags recache immediately.
+        let recache = signatureStabilityGate.shouldRecache(
             cached: cachedSignature,
             current: signature,
-            pending: pendingItemSignatureCandidate,
-            firstSeen: pendingItemSignatureFirstSeen,
-            now: .now,
             grace: Constants.MenuBarTuning.signatureStabilityGrace
         )
-        pendingItemSignatureCandidate = decision.newPending
-        pendingItemSignatureFirstSeen = decision.newFirstSeen
-        if decision.recache {
+        if recache {
             MenuBarItemManager.diagLog.debug("cacheItemsIfNeeded: item identities changed and confirmed (\(cachedSignature.count) cached vs \(signature.count) current), triggering recache")
             await cacheItemsRegardless(items.reversed().map(\.windowID))
-        } else if decision.newPending != nil {
+        } else if signatureStabilityGate.isPending {
             // AX-only changes may not alter the window list; drop the cheap gate so the next tick can confirm them.
             periodicWindowListSignature = nil
             MenuBarItemManager.diagLog.debug("cacheItemsIfNeeded: item identities differ (\(cachedSignature.count) cached vs \(signature.count) current); deferring recache until the difference holds for the stability grace")

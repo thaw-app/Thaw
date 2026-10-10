@@ -1308,7 +1308,7 @@ final class MenuBarManager {
         // Closed apps lack live items; treat unknown IDs as hideable unless macOS pins them.
         let base = swapTargetOrder ?? snapshot.itemOrder ?? [:]
         let order = Self.transmutedOrder(base) {
-            hideable[$0] ?? !MenuBarItemManager.namesPinnedSystemItem($0)
+            hideable[$0] ?? !MoveTargeting.namesPinnedSystemItem($0)
         }
         let visibleKey = MenuBarSectionName.visible.rawValue
         let hiddenKey = MenuBarSectionName.hidden.rawValue

@@ -10,11 +10,12 @@ import MenuBarModel
 import Testing
 @testable import Thaw
 
-/// MenuBarItemManager.authoredOrder(_:applying:to:) turns a section's
+/// AuthoredOrder.authoredOrder(_:applying:to:) turns a section's
 /// authored record into the order a cursor-free respace realizes. A
 /// layout-pane drop commits its new order only after the move succeeds, so
 /// the record the move reads still holds the pre-drag order; without this
 /// helper the write re-encodes that order and nothing visibly changes.
+@MainActor
 @Suite("Authored order with a move applied")
 struct AuthoredOrderApplyingDestinationTests {
     private let a = Self.item("A", x: 0)
@@ -28,39 +29,39 @@ struct AuthoredOrderApplyingDestinationTests {
 
     @Test("Left of a target puts the item immediately before it")
     func leftOfTarget() {
-        let order = MenuBarItemManager.authoredOrder(authored, applying: .leftOfItem(b), to: d)
+        let order = AuthoredOrder.authoredOrder(authored, applying: .leftOfItem(b), to: d)
         #expect(order == [a, d, b, c].map(\.uniqueIdentifier))
     }
 
     @Test("Right of a target puts the item immediately after it")
     func rightOfTarget() {
-        let order = MenuBarItemManager.authoredOrder(authored, applying: .rightOfItem(c), to: a)
+        let order = AuthoredOrder.authoredOrder(authored, applying: .rightOfItem(c), to: a)
         #expect(order == [b, c, a, d].map(\.uniqueIdentifier))
     }
 
     @Test("A move the record already reflects leaves it unchanged")
     func alreadySatisfied() {
-        let order = MenuBarItemManager.authoredOrder(authored, applying: .rightOfItem(a), to: b)
+        let order = AuthoredOrder.authoredOrder(authored, applying: .rightOfItem(a), to: b)
         #expect(order == authored)
     }
 
     @Test("An item the record does not list yet is inserted at its destination")
     func arrivingItemIsInserted() {
         let record = [a, b, c].map(\.uniqueIdentifier)
-        let order = MenuBarItemManager.authoredOrder(record, applying: .leftOfItem(c), to: d)
+        let order = AuthoredOrder.authoredOrder(record, applying: .leftOfItem(c), to: d)
         #expect(order == [a, b, d, c].map(\.uniqueIdentifier))
     }
 
     @Test("A target outside the record leaves it untouched")
     func foreignTargetIsIgnored() {
         let outsider = Self.item("Outsider", x: 500)
-        let order = MenuBarItemManager.authoredOrder(authored, applying: .leftOfItem(outsider), to: a)
+        let order = AuthoredOrder.authoredOrder(authored, applying: .leftOfItem(outsider), to: a)
         #expect(order == authored)
     }
 
     @Test("Targeting the item itself is a no-op")
     func selfTargetIsIgnored() {
-        let order = MenuBarItemManager.authoredOrder(authored, applying: .rightOfItem(b), to: b)
+        let order = AuthoredOrder.authoredOrder(authored, applying: .rightOfItem(b), to: b)
         #expect(order == authored)
     }
 
@@ -75,13 +76,13 @@ struct AuthoredOrderApplyingDestinationTests {
             title: ControlItemIdentifier.visible.rawValue,
             isOnScreen: true
         )
-        #expect(MenuBarItemManager.authoredOrder(authored, applying: .leftOfItem(a), to: control) == authored)
-        #expect(MenuBarItemManager.authoredOrder(authored, applying: .leftOfItem(control), to: d) == authored)
+        #expect(AuthoredOrder.authoredOrder(authored, applying: .leftOfItem(a), to: control) == authored)
+        #expect(AuthoredOrder.authoredOrder(authored, applying: .leftOfItem(control), to: d) == authored)
     }
 
     @Test("The record never gains a duplicate")
     func noDuplicates() {
-        let order = MenuBarItemManager.authoredOrder(authored, applying: .leftOfItem(a), to: c)
+        let order = AuthoredOrder.authoredOrder(authored, applying: .leftOfItem(a), to: c)
         #expect(order.count == authored.count)
         #expect(Set(order).count == order.count)
     }

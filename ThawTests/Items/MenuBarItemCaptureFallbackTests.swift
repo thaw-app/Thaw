@@ -518,7 +518,11 @@ actor CaptureGate {
     }
 }
 
-actor CaptureFixture: MenuBarCaptureReading {
+/// The conformance sits in an extension: on the declaration it makes the compiler infer `nonisolated`
+/// for the actor from the nonisolated protocol, which it then rejects when another file checks this type first.
+extension CaptureFixture: MenuBarCaptureReading {}
+
+actor CaptureFixture {
     enum Source: Equatable, Sendable {
         case hosting, barWindow, strip
     }

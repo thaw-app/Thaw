@@ -28,36 +28,7 @@ extension MenuBarItemManager {
     /// items it gave up on before the reset.
     func forgetStrandedRepairs() {
         failureLedger.removeAll()
-        suppressedBoundaryRepairItemIDs.removeAll()
-        suppressedBoundaryRepairAt.removeAll()
-        boundaryRepairStrandTrips.removeAll()
-    }
-
-    private func parkedSetAndBarMidY(in items: [MenuBarItem]) -> (barMidY: CGFloat?, parkedIDs: Set<CGWindowID>) {
-        let barMidY = items.first(where: {
-            $0.tag.matchesVisibleControlItem && $0.bounds.midY <= MenuBarItemGeometry.maxOnBarMidY
-        })?.bounds.midY
-            ?? items.first(where: {
-                $0.isControlItem && $0.bounds.width > 8 && $0.bounds.midY <= MenuBarItemGeometry.maxOnBarMidY
-            })?.bounds.midY
-
-        let parkedIDs = Set(items.compactMap { item -> CGWindowID? in
-            guard item.bounds.width > 0, item.bounds.height > 0 else { return item.windowID }
-            if item.bounds.midY > MenuBarItemGeometry.maxOnBarMidY {
-                return item.windowID
-            }
-            guard let barMidY else { return nil }
-            return abs(item.bounds.midY - barMidY) > MenuBarItemGeometry.maxDistanceFromBarMidY ? item.windowID : nil
-        })
-
-        return (barMidY, parkedIDs)
-    }
-
-    /// Internal because the visible-boundary repair pass keys its circuit
-    /// breaker on the same identity.
-    struct PostRestrictionRepairItemID: Hashable {
-        let uniqueIdentifier: String
-        let ownerPID: pid_t
+        boundaryRepairBreaker.rearmAll()
     }
 
     /// How long a Thaw press may take to flip the active display before a
@@ -68,13 +39,6 @@ extension MenuBarItemManager {
     func noteSelfInflictedDisplayChange() {
         selfInflictedDisplayChangeUntil = ContinuousClock.now.advanced(
             by: Self.selfInflictedDisplayChangeWindow
-        )
-    }
-
-    func postRestrictionRepairItemID(for item: MenuBarItem) -> PostRestrictionRepairItemID {
-        PostRestrictionRepairItemID(
-            uniqueIdentifier: item.uniqueIdentifier,
-            ownerPID: item.ownerPID
         )
     }
 
@@ -90,10 +54,7 @@ extension MenuBarItemManager {
         // Hiding still invalidates geometry, but manual arrangement never
         // schedules corrective pulses, unparking, or boundary moves.
         guard !arrangementIsManual, !isInStartupSettling, !isNotificationCenterLayoutSuspended else {
-            postRestrictionRepairTask?.cancel()
-            postRestrictionRepairTask = nil
-            postRestrictionRepairNeedsRerun = false
-            repairs.withdraw(.postRestrictionRepair)
+            PendingPassTeardown.callOff([.postRestrictionRepair], of: self, on: repairs)
             return
         }
         repairs.request(.postRestrictionRepair, cause: cause)
@@ -188,24 +149,21 @@ extension MenuBarItemManager {
         // A pulse can re-blank hiding-unsupported apps, so pulse only when
         // supported visible items are parked or blank.
         let displayID = Bridging.getActiveMenuBarDisplayID() ?? CGMainDisplayID()
-        let liveItemIDs = Set(liveItems.map(postRestrictionRepairItemID(for:)))
+        let liveItemIDs = Set(liveItems.map(PostRestrictionRepairItemID.init))
         postRestrictionUnrepairableItemIDs.formIntersection(liveItemIDs)
-        suppressedBoundaryRepairItemIDs.formIntersection(liveItemIDs)
-        suppressedBoundaryRepairAt = suppressedBoundaryRepairAt.filter { liveItemIDs.contains($0.key) }
-        boundaryRepairStrandTrips = boundaryRepairStrandTrips.filter { liveItemIDs.contains($0.key) }
+        boundaryRepairBreaker.prune(keeping: liveItemIDs)
 
         // A strand given up on in an earlier launch starts this one suppressed,
         // instead of repeating the failed passes that rewrite its neighbours'
         // order. Seeded once per item; the cooldown still re-arms it.
         let carriedStrands = liveItems.filter { item in
-            let id = postRestrictionRepairItemID(for: item)
+            let id = PostRestrictionRepairItemID(item)
             return !seededStrandedRepairItemIDs.contains(id) && failureLedger.strandedMarked(item)
         }
         for item in carriedStrands {
-            let id = postRestrictionRepairItemID(for: item)
+            let id = PostRestrictionRepairItemID(item)
             seededStrandedRepairItemIDs.insert(id)
-            suppressedBoundaryRepairItemIDs.insert(id)
-            suppressedBoundaryRepairAt[id] = Date()
+            boundaryRepairBreaker.suppress(id)
         }
         if !carriedStrands.isEmpty {
             MenuBarItemManager.diagLog.info(
@@ -224,32 +182,25 @@ extension MenuBarItemManager {
                 )
                 selfInflictedDisplayChangeUntil = nil
             } else {
-                if !suppressedBoundaryRepairItemIDs.isEmpty {
+                if boundaryRepairBreaker.suppressedCount > 0 {
                     MenuBarItemManager.diagLog.info(
                         "post-restriction repair: display changed; re-arming " +
-                            "\(suppressedBoundaryRepairItemIDs.count) suppressed boundary strand(s)"
+                            "\(boundaryRepairBreaker.suppressedCount) suppressed boundary strand(s)"
                     )
                 }
-                suppressedBoundaryRepairItemIDs.removeAll()
-                boundaryRepairStrandTrips.removeAll()
-                suppressedBoundaryRepairAt.removeAll()
+                boundaryRepairBreaker.rearmAll()
             }
         }
         lastBoundaryRepairDisplayID = displayID
 
         // An expired suppression re-arms: the strand may have been fighting a
         // transient writer that has since settled.
-        let rearmable = suppressedBoundaryRepairAt.filter {
-            Date().timeIntervalSince($0.value) >= MenuBarItemManager.boundaryRepairSuppressionCooldown
-        }.keys
-        if !rearmable.isEmpty {
-            for id in rearmable {
-                suppressedBoundaryRepairItemIDs.remove(id)
-                suppressedBoundaryRepairAt[id] = nil
-                boundaryRepairStrandTrips[id] = nil
-            }
+        let rearmed = boundaryRepairBreaker.rearmExpired(
+            now: Date(), cooldown: MenuBarItemManager.boundaryRepairSuppressionCooldown
+        )
+        if rearmed > 0 {
             MenuBarItemManager.diagLog.info(
-                "post-restriction repair: suppression cooldown elapsed; re-arming \(rearmable.count) boundary strand(s)"
+                "post-restriction repair: suppression cooldown elapsed; re-arming \(rearmed) boundary strand(s)"
             )
         }
 
@@ -258,12 +209,12 @@ extension MenuBarItemManager {
         let pulseCandidates = liveItems.filter {
             !$0.isControlItem &&
                 !$0.tag.isHidingUnsupported &&
-                !postRestrictionUnrepairableItemIDs.contains(postRestrictionRepairItemID(for: $0)) &&
-                !suppressedBoundaryRepairItemIDs.contains(postRestrictionRepairItemID(for: $0)) &&
+                !postRestrictionUnrepairableItemIDs.contains(PostRestrictionRepairItemID($0)) &&
+                !boundaryRepairBreaker.isSuppressed(PostRestrictionRepairItemID($0)) &&
                 !failureLedger.cannotCompleteMarked($0) &&
                 controller.section(for: $0) == .visible
         }
-        var liveParkedIDs = parkedSetAndBarMidY(in: liveItems).parkedIDs
+        var liveParkedIDs = ParkedItems.parkedSetAndBarMidY(in: liveItems).parkedIDs
         let prePulseParked = pulseCandidates.filter { liveParkedIDs.contains($0.windowID) }
         let prePulseOnBand = pulseCandidates.filter { !liveParkedIDs.contains($0.windowID) }
         // The picture came with the reading when there is one, so the lane does not wait on a capture.
@@ -289,7 +240,7 @@ extension MenuBarItemManager {
             }
             liveItems = await MenuBarItem.getMenuBarItems(option: .activeSpace)
             guard !arrangementIsManual, !Task.isCancelled else { return false }
-            liveParkedIDs = parkedSetAndBarMidY(in: liveItems).parkedIDs
+            liveParkedIDs = ParkedItems.parkedSetAndBarMidY(in: liveItems).parkedIDs
         } else if !needsPulse {
             MenuBarItemManager.diagLog.debug(
                 "post-restriction repair: pulse skipped, no non-hiding-unsupported items parked or blank"
@@ -303,7 +254,7 @@ extension MenuBarItemManager {
         let parkedVisible = liveItems.filter {
             !$0.isControlItem &&
                 !$0.tag.isHidingUnsupported &&
-                !postRestrictionUnrepairableItemIDs.contains(postRestrictionRepairItemID(for: $0)) &&
+                !postRestrictionUnrepairableItemIDs.contains(PostRestrictionRepairItemID($0)) &&
                 !failureLedger.cannotCompleteMarked($0) &&
                 controller.section(for: $0) == .visible &&
                 liveParkedIDs.contains($0.windowID)
@@ -344,7 +295,7 @@ extension MenuBarItemManager {
                 } catch EventError.destinationAnchorLost {
                     guard !arrangementIsManual, !Task.isCancelled else { return false }
                     failedUnparkIDs.insert(item.windowID)
-                    postRestrictionUnrepairableItemIDs.insert(postRestrictionRepairItemID(for: item))
+                    postRestrictionUnrepairableItemIDs.insert(PostRestrictionRepairItemID(item))
                     // Every anchor vanished mid-drop, which says nothing about
                     // the item, so suppress for the session only.
                     MenuBarItemManager.diagLog.warning(
@@ -353,7 +304,7 @@ extension MenuBarItemManager {
                 } catch let EventError.itemNotMovable(_, refusal) {
                     guard !arrangementIsManual, !Task.isCancelled else { return false }
                     failedUnparkIDs.insert(item.windowID)
-                    postRestrictionUnrepairableItemIDs.insert(postRestrictionRepairItemID(for: item))
+                    postRestrictionUnrepairableItemIDs.insert(PostRestrictionRepairItemID(item))
                     // Persist the verdict across relaunch, except for a refusal
                     // the user can lift in Settings.
                     if refusal == .requiresExperimentalHiding {
@@ -370,7 +321,7 @@ extension MenuBarItemManager {
                 } catch EventError.cannotComplete {
                     guard !arrangementIsManual, !Task.isCancelled else { return false }
                     failedUnparkIDs.insert(item.windowID)
-                    postRestrictionUnrepairableItemIDs.insert(postRestrictionRepairItemID(for: item))
+                    postRestrictionUnrepairableItemIDs.insert(PostRestrictionRepairItemID(item))
                     failureLedger.recordFailure(for: item, kind: .cannotComplete)
                     MenuBarItemManager.diagLog.warning(
                         "post-restriction repair: suppressing future repair pulses after move could not complete for \(item.logString)"
@@ -380,7 +331,7 @@ extension MenuBarItemManager {
                 } catch {
                     guard !arrangementIsManual, !Task.isCancelled else { return false }
                     failedUnparkIDs.insert(item.windowID)
-                    postRestrictionUnrepairableItemIDs.insert(postRestrictionRepairItemID(for: item))
+                    postRestrictionUnrepairableItemIDs.insert(PostRestrictionRepairItemID(item))
                     // A one-off error is not a persisted verdict, it may not
                     // mean the item is unmovable.
                     failureLedger.recordFailure(for: item, kind: .other)
@@ -433,23 +384,23 @@ extension MenuBarItemManager {
         guard !Task.isCancelled else { return false }
         appState.hidEventManager.refreshMenuBarItemBoundsLookup()
 
+        // No pulse, so nothing to confirm and no second read of the bar. A strand attempted
+        // above keeps the loop alive, since the agent needs a beat to re-seat it.
+        guard needsPulse else {
+            return strandNeedsRetry
+        }
+
         let afterItems = await MenuBarItem.getMenuBarItems(option: .activeSpace)
         guard !Task.isCancelled else { return false }
-        let (_, afterParkedIDs) = parkedSetAndBarMidY(in: afterItems)
+        let (_, afterParkedIDs) = ParkedItems.parkedSetAndBarMidY(in: afterItems)
         // Hiding-unsupported items are excluded: their transient blanks would
         // drive repeated pulses.
         let onBandVisibleItems = afterItems.filter {
             !$0.isControlItem &&
                 !$0.tag.isHidingUnsupported &&
-                !suppressedBoundaryRepairItemIDs.contains(postRestrictionRepairItemID(for: $0)) &&
+                !boundaryRepairBreaker.isSuppressed(PostRestrictionRepairItemID($0)) &&
                 controller.section(for: $0) == .visible &&
                 !afterParkedIDs.contains($0.windowID)
-        }
-
-        // No pulse, so no second screenshot. A strand attempted above keeps the
-        // loop alive, since the agent needs a beat to re-seat it.
-        guard needsPulse else {
-            return strandNeedsRetry
         }
 
         // Confirm the pulse resolved the blanks; true re-enters the retry loop.
@@ -466,8 +417,8 @@ extension MenuBarItemManager {
         let stillParked = afterItems.contains {
             !$0.isControlItem &&
                 !$0.tag.isHidingUnsupported &&
-                !postRestrictionUnrepairableItemIDs.contains(postRestrictionRepairItemID(for: $0)) &&
-                !suppressedBoundaryRepairItemIDs.contains(postRestrictionRepairItemID(for: $0)) &&
+                !postRestrictionUnrepairableItemIDs.contains(PostRestrictionRepairItemID($0)) &&
+                !boundaryRepairBreaker.isSuppressed(PostRestrictionRepairItemID($0)) &&
                 !failureLedger.cannotCompleteMarked($0) &&
                 !failedUnparkIDs.contains($0.windowID) &&
                 controller.section(for: $0) == .visible &&

@@ -5,6 +5,7 @@
 //  Copyright (Thaw) © 2026 Toni Förster
 //  Licensed under the GNU GPLv3
 
+import AsyncAlgorithms
 import Cocoa
 import Combine
 import MenuBarModel
@@ -580,16 +581,12 @@ final class LayoutBarItemView: LayoutBarArrangedView {
                 }
             }
 
-            // Observations emits the current preference first; manually deduplicate subsequent values.
             let advancedSettings = appState.settings.advanced
             alwaysUseAppIconObservationTask?.cancel()
             alwaysUseAppIconObservationTask = Task { @MainActor [weak self] in
-                var previous: Bool?
-                let changes = Observations { advancedSettings.alwaysUseAppIconForMenuBarItems }
+                let changes = Observations { advancedSettings.alwaysUseAppIconForMenuBarItems }.removeDuplicates()
                 for await alwaysUseAppIcon in changes {
                     guard let self else { return }
-                    guard previous != alwaysUseAppIcon else { continue }
-                    previous = alwaysUseAppIcon
                     let oldSize = frame.size
                     let newSize = preferredSizeForCurrentDisplayMode(cachedImage)
                     setFrameSize(newSize)
@@ -603,12 +600,9 @@ final class LayoutBarItemView: LayoutBarArrangedView {
             // Observe system-item hiding so draggability follows setting changes and corrects init before preferences load.
             systemItemHidingObservationTask?.cancel()
             systemItemHidingObservationTask = Task { @MainActor [weak self] in
-                var previous: Bool?
-                let changes = Observations { advancedSettings.enableExperimentalSystemItemHiding }
+                let changes = Observations { advancedSettings.enableExperimentalSystemItemHiding }.removeDuplicates()
                 for await enabled in changes {
                     guard let self else { return }
-                    guard previous != enabled else { continue }
-                    previous = enabled
                     self.isEnabled = LayoutBarPaddingView.acceptsLayoutDrag(of: self.item) &&
                         self.item.isMovable(experimentalSystemItemHiding: enabled)
                     self.configureAccessibility()
@@ -616,8 +610,7 @@ final class LayoutBarItemView: LayoutBarArrangedView {
                 }
             }
 
-            // MenuBarManager is @Observable; only brightness flips matter,
-            // so the derived flag is deduped by hand.
+            // Only brightness flips matter.
             brightnessObservationTask?.cancel()
             brightnessObservationTask = Task { @MainActor [weak self, menuBarManager = appState.menuBarManager, appearanceManager = appState.appearanceManager] in
                 // Tint can change ink preference even when the sampled background is unchanged.
@@ -627,12 +620,9 @@ final class LayoutBarItemView: LayoutBarArrangedView {
                         tintedBy: appearanceManager.configuration.current,
                         screen: nil
                     )
-                }
-                var previous: Bool?
+                }.removeDuplicates()
                 for await isBright in changes {
                     guard let self else { return }
-                    guard isBright != previous else { continue }
-                    previous = isBright
                     tintedImageCache.removeAll()
                     needsDisplay = true
                 }

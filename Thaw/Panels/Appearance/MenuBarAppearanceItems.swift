@@ -7,6 +7,7 @@
 
 import Foundation
 import MenuBarModel
+import ThawAXCore
 
 @MainActor
 enum MenuBarAppearanceItems {
@@ -50,10 +51,25 @@ enum MenuBarAppearanceItems {
         )
     }
 
+    /// The last owner read and the bar it described. Shared, since every display's overlay asks about
+    /// the same bar.
+    @MainActor
+    final class Memo {
+        static let shared = Memo()
+        fileprivate var last: (bar: [MenuBarAgentWindow.Entry], owners: Set<pid_t>, items: [MenuBarItem])?
+    }
+
+    /// - Parameters:
+    ///   - drawnBar: The bar as MenuBarAgent draws it now, or nil when that cannot be told. One read
+    ///     of one process, where asking the owners is one read per app.
+    ///   - memo: Where the last owner read is kept. With a bar that has not moved since, and the same
+    ///     owners to ask, that read is still true and the owners are not asked again.
     static func read(
         knownItems: [MenuBarItem],
         onScreenSnapshot: OnScreenItemSnapshot?,
         notBefore minimumReadTime: ContinuousClock.Instant?,
+        drawnBar: () async -> [MenuBarAgentWindow.Entry]? = { nil },
+        memo: Memo? = nil,
         readOwners: (Set<pid_t>) async -> [MenuBarItem]?,
         discover: () async -> [MenuBarItem]
     ) async -> Snapshot? {
@@ -70,7 +86,14 @@ enum MenuBarAppearanceItems {
             return Snapshot(items: recentItems, readAt: recentAt)
         }
         if !owners.isEmpty {
+            // Read before the owners are asked: a bar that moves in between leaves the memo describing
+            // the older bar, so the next read sees a difference and asks again.
+            let bar = await drawnBar()
+            if let bar, let last = memo?.last, last.bar == bar, last.owners == owners {
+                return Snapshot(items: last.items, readAt: readAt)
+            }
             guard let fresh = await readOwners(owners) else { return nil }
+            memo?.last = bar.map { ($0, owners, fresh) }
             return Snapshot(items: fresh, readAt: readAt)
         }
         return await Snapshot(items: discover(), readAt: readAt)
