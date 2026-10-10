@@ -172,6 +172,18 @@ jobs:
         with:
           xcode-version: latest
 
+      # A tag that pins SwiftLint runs it as a build phase, and the archive
+      # fails when that version is missing. Older tags have no installer.
+      - name: Install pinned SwiftLint
+        working-directory: ${{ steps.source.outputs.source-dir }}
+        run: |
+          if [ -f scripts/install-swiftlint.sh ]; then
+            sh scripts/install-swiftlint.sh
+            echo "$HOME/.local/bin" >> "$GITHUB_PATH"
+          else
+            echo "This tag does not pin SwiftLint; nothing to install."
+          fi
+
       - name: Configure signing
         uses: thaw-app/org-ci/actions/configure-signing@d90bbc87aa4dff91d3bc9e30fb6ceef0765bd986
         with:

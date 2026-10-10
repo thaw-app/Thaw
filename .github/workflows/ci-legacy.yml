@@ -283,13 +283,17 @@ jobs:
             echo "Using coverage.xml ($(wc -c < coverage.xml | tr -d ' ') bytes)"
           else
             echo "args=" >> "$GITHUB_OUTPUT"
-            echo "::warning::No coverage.xml available; Sonar will publish zero coverage for this analysis."
+            echo "::warning::No coverage.xml available; the Sonar scan is skipped unless this run built the code."
           fi
 
       # coverage.xml exists only if this run built or restored it, so keep
       # sonar.coverageReportPaths out of sonar-project.properties.
+      #
+      # A run that skipped the build and found no cached report has nothing to
+      # tell Sonar about coverage. Scanning anyway publishes 0% and turns the
+      # branch's quality gate red, so that run leaves the last analysis alone.
       - name: SonarQube Scan
-        if: env.SONAR_ENABLED == 'true'
+        if: env.SONAR_ENABLED == 'true' && (needs.changes.outputs.code == 'true' || steps.coverage.outputs.args != '')
         uses: SonarSource/sonarqube-scan-action@d209202bc7d53ff1cc128f7f907dac145c9d6ae9 # v8.3.0
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}

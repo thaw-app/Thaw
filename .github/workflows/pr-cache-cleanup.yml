@@ -1,0 +1,60 @@
+name: Clean Up Pull Request Caches
+
+# A pull request's caches are scoped to its merge ref, so nothing can read them
+# once it closes. They still count toward the repository's cache limit until
+# they age out, and a few of them are enough to evict the caches that
+# development relies on.
+on:
+  schedule:
+    - cron: "0 3 */2 * *" # Once every 2 days
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  delete-caches:
+    if: github.repository == 'thaw-app/Thaw'
+    runs-on: ubuntu-slim
+    permissions:
+      actions: write
+      pull-requests: read
+    steps:
+      - name: Delete caches of closed pull requests
+        uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9.0.0
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const { owner, repo } = context.repo;
+            const caches = await github.paginate(
+              github.rest.actions.getActionsCacheList,
+              { owner, repo, per_page: 100 },
+            );
+
+            const stillOpen = new Map();
+            let deleted = 0;
+            let failed = 0;
+            let bytes = 0;
+            for (const cache of caches) {
+              const number = Number(/^refs\/pull\/(\d+)\/merge$/.exec(cache.ref)?.[1]);
+              if (!number) continue;
+              if (!stillOpen.has(number)) {
+                const { data } = await github.rest.pulls.get({ owner, repo, pull_number: number });
+                stillOpen.set(number, data.state === "open");
+              }
+              if (stillOpen.get(number)) continue;
+              try {
+                await github.rest.actions.deleteActionsCacheById({ owner, repo, cache_id: cache.id });
+                deleted++;
+                bytes += cache.size_in_bytes;
+              } catch (error) {
+                // Already gone: evicted or deleted between the listing and now.
+                if (error.status === 404) continue;
+                console.error(`Could not delete ${cache.key}: ${error.message}`);
+                failed++;
+              }
+            }
+            console.log(`Deleted ${deleted} cache(s), ${(bytes / 1073741824).toFixed(2)} GB`);
+            if (failed > 0) {
+              core.setFailed(`${failed} cache(s) could not be deleted`);
+            }
