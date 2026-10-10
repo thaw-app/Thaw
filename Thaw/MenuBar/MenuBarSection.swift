@@ -256,7 +256,7 @@ final class MenuBarSection {
         controlItem.applyAppearanceNow()
     }
 
-    func show(triggeredByHotkey: Bool = false) {
+    func show(triggeredByHotkey: Bool = false, forcingInline: Bool = false) {
         // User reveals own the state; a racing capture prewarm must leave the section open.
         menuBarManager?.noteUserRevealOwnership()
         // Only the hover path marks its reveal after return to select the shorter hover hide.
@@ -276,7 +276,7 @@ final class MenuBarSection {
         if overflowsInline {
             diagLog.info("show(\(name.logString)): the items do not fit inline; using the Thaw Bar")
         }
-        if useThawBar || overflowsInline, let screen = screenForThawBar {
+        if !forcingInline, useThawBar || overflowsInline, let screen = screenForThawBar {
             for section in menuBarManager.sections {
                 section.desiredState = section.name == .visible ? .showSection : .hideSection
                 section.updateControlItemState(for: nil)

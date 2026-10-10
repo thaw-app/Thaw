@@ -36,7 +36,7 @@ final class MenuBarLayoutEditorPanel: NSObject, NSPopoverDelegate {
     /// The pointer wins over .main: the panel is summoned by a click or
     /// hotkey on a particular display, and the editor should appear there.
     static var defaultScreen: NSScreen? {
-        ScreenTopPopoverAnchor.defaultScreen
+        PopoverAnchor.defaultScreen
     }
 
     private weak var appState: AppState?
@@ -47,7 +47,7 @@ final class MenuBarLayoutEditorPanel: NSObject, NSPopoverDelegate {
     private var popover: NSPopover?
 
     /// The invisible window that hangs the popover off the top of the screen.
-    private let anchor = ScreenTopPopoverAnchor()
+    private let anchor = PopoverAnchor()
 
     /// Whether the editor is currently on screen.
     ///
@@ -100,7 +100,7 @@ final class MenuBarLayoutEditorPanel: NSObject, NSPopoverDelegate {
     func show(on screen: NSScreen, onDone: (() -> Void)? = nil) {
         guard
             let appState,
-            let anchorView = anchor.view(for: screen)
+            let anchorView = anchor.view(atTopOf: screen)
         else {
             return
         }

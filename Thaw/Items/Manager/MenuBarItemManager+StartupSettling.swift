@@ -29,15 +29,17 @@ extension MenuBarItemManager {
             .expectedSet
         } else if reason == "performSetup" {
             .cold
-        } else {
+        } else if reason.hasPrefix("spacingRelaunch") {
             .preflight
+        } else {
+            .event
         }
 
-        // Boot race: a preflight the boot path also starts must not demote a
-        // cold or expected-set settling. Keep the merged expected set.
+        // A weaker settling must not demote a stronger one in flight: a
+        // preflight yields to everything else, and a display change or launch
+        // yields to the boot and relaunch waits. Keep the merged expected set.
         if let existing = settlingKind,
-           incomingKind == .preflight,
-           existing == .cold || existing == .expectedSet
+           Self.settlingYields(incoming: incomingKind, to: existing)
         {
             settlingExpectedBundleIDs = mergedExpected
             MenuBarItemManager.diagLog.debug(
@@ -59,6 +61,8 @@ extension MenuBarItemManager {
         postRestrictionRepairNeedsRerun = false
         structuralNormalizationTask?.cancel()
         structuralNormalizationTask = nil
+        repairs.withdraw(.postRestrictionRepair)
+        repairs.withdraw(.structuralNormalization)
         MenuBarItemManager.diagLog.debug("\(reason): settling period started (max duration: \(maxDuration))")
         // @MainActor ensures the flag flip and final cache call are never
         // interleaved with notification-triggered cache cycles between them.
@@ -181,7 +185,11 @@ extension MenuBarItemManager {
             // also settle through here.
             if !didRunPositionStoreHygiene {
                 didRunPositionStoreHygiene = true
-                PositionStoreHygiene.pruneCurrentStore()
+                repairs.request(.storeHygiene, cause: .settled)
+                if let hold = await repairs.enter(.storeHygiene) {
+                    PositionStoreHygiene.pruneCurrentStore(permit: StoreWritePermit(hold))
+                    repairs.leave(hold)
+                }
             }
 
             // The active display's profile, not savedSectionOrder, is the truth
@@ -207,12 +215,20 @@ extension MenuBarItemManager {
 
             // Repair only after the startup inventory and saved layout have
             // settled; intermediate login-item frames can overlap or be parked.
-            schedulePostRestrictionRepair()
-            scheduleStructuralNormalization()
+            schedulePostRestrictionRepair(cause: .settled)
+            scheduleStructuralNormalization(cause: .settled)
 
             if reason == "performSetup" {
                 scheduleStartupLateItemRecheck()
             }
+        }
+    }
+
+    static func settlingYields(incoming: SettlingKind, to existing: SettlingKind) -> Bool {
+        switch incoming {
+        case .preflight: existing != .preflight
+        case .event: existing == .cold || existing == .expectedSet
+        case .cold, .expectedSet: false
         }
     }
 

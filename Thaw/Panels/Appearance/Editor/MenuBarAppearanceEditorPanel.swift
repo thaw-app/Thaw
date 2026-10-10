@@ -15,7 +15,7 @@ import SwiftUI
 final class MenuBarAppearanceEditorPanel: NSObject, NSPopoverDelegate {
     /// The default screen to show the popover on.
     static var defaultScreen: NSScreen? {
-        ScreenTopPopoverAnchor.defaultScreen
+        PopoverAnchor.defaultScreen
     }
 
     /// The app state this panel was set up with.
@@ -31,7 +31,7 @@ final class MenuBarAppearanceEditorPanel: NSObject, NSPopoverDelegate {
     private var popover: NSPopover?
 
     /// The invisible window that hangs the popover off the top of the screen.
-    private let anchor = ScreenTopPopoverAnchor()
+    private let anchor = PopoverAnchor()
 
     func performSetup(with appState: AppState) {
         self.appState = appState
@@ -41,7 +41,7 @@ final class MenuBarAppearanceEditorPanel: NSObject, NSPopoverDelegate {
     func show(on screen: NSScreen, onDone: (() -> Void)? = nil) {
         guard
             let appState,
-            let anchorView = anchor.view(for: screen)
+            let anchorView = anchor.view(atTopOf: screen)
         else {
             return
         }

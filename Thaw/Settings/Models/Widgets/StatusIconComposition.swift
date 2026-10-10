@@ -106,7 +106,7 @@ struct StatusIconSamples: Codable, Equatable {
             case .volume: volume
             case .cpu: cpu
             }
-            return value.isFinite ? min(max(value, 0), 1) : 0
+            return value.isFinite ? value.clamped(to: 0 ... 1) : 0
         }
         set {
             switch source {

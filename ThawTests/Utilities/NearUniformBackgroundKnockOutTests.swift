@@ -585,4 +585,36 @@ struct NearUniformBackgroundKnockOutTests {
         #expect(knocked != nil)
         #expect(knocked.map { Self.hasTransparentPixel($0) } ?? false)
     }
+
+    /// A white app tile filling most of the frame, on a bar whose blue drifts
+    /// across colour buckets. The tile is the icon, not the background.
+    @Test("A full-bleed white tile on a graded bar keeps its white")
+    func fullBleedTileOnGradedBarKeepsWhite() throws {
+        let width = 42
+        let height = 48
+        var pixels = [UInt8](repeating: 0, count: width * height * 4)
+        for y in 0 ..< height {
+            for x in 0 ..< width {
+                let i = (y * width + x) * 4
+                let inTile = x >= 5 && x < 37 && y >= 6 && y < 42
+                let inMark = x >= 14 && x < 28 && y >= 14 && y < 34
+                let rgb: (UInt8, UInt8, UInt8) = if inMark {
+                    (20, 24, 60)
+                } else if inTile {
+                    (250, 250, 250)
+                } else {
+                    (12, UInt8(90 + x / 3), 160)
+                }
+                pixels[i] = rgb.0
+                pixels[i + 1] = rgb.1
+                pixels[i + 2] = rgb.2
+                pixels[i + 3] = 255
+            }
+        }
+        let image = Self.makeImage(pixels: pixels, width: width, height: height)
+
+        let knocked = try #require(image.knockingOutNearUniformBackground())
+        #expect(Self.retainsBackground(knocked, background: (250 / 255, 250 / 255, 250 / 255)))
+        #expect(Self.hasTransparentPixel(knocked))
+    }
 }

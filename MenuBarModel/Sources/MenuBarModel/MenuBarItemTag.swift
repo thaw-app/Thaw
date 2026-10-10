@@ -70,6 +70,8 @@ public struct MenuBarItemTag: Hashable, CustomStringConvertible, Sendable, Codab
         if owner.hasPrefix("com.apple."), Self.isAppleAppOwnedBundle(owner) {
             return false
         }
+        // Game Mode's indicator is the one system agent item users may put away.
+        guard namespace != .gamePolicyAgent else { return false }
         return isSystemItem || owner.hasPrefix("com.apple.")
     }
 
@@ -715,7 +717,7 @@ public extension MenuBarItemTag {
 
     /// An array of tags for items that can be moved, but cannot be hidden.
     static var nonHideableItems: [MenuBarItemTag] {
-        [visibleControlItem, audioVideoModule, faceTime, screenCaptureUI, gameMode]
+        [visibleControlItem, audioVideoModule, faceTime, screenCaptureUI]
     }
 
     /// An array of tags for items representing Thaw's control items.
@@ -736,7 +738,6 @@ public extension MenuBarItemTag {
 
     /// Separate Apple/system agents that Thaw should display but not move.
     private static let fixedSystemAgentNamespaces: Set<Namespace> = [
-        .gamePolicyAgent,
         .screenCaptureUI,
         .ssMenuAgent,
     ]

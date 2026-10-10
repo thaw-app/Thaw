@@ -191,7 +191,7 @@ extension CGImage {
             self.rowStride = rowStride
             self.pixelStride = pixelStride
             self.alphaOffset = alphaOffset
-            self.threshold = UInt8(min(max(alphaThreshold * 255, 0), 255))
+            self.threshold = UInt8((alphaThreshold * 255).clamped(to: 0 ... 255))
         }
 
         func isPixelOpaque(row: Int, column: Int) -> Bool {
@@ -434,9 +434,15 @@ extension CGImage {
             return (nil, .indeterminate)
         }
 
+        // A bar with a slight gradient splits across buckets, so the ring can
+        // read as varying when every pixel sits close to the fill. Then a
+        // full-bleed icon tile a few pixels in would win the inset and be erased.
+        // Half the distance, so soft wallpaper still reads as varying.
+        let ringShare = max(ring.majorityShare, ring.share(within: maxColorDistance / 2))
+
         // A full-height frame reaches past the item pill into the wallpaper.
         // When a ring a few pixels in agrees on one fill, separate inside it.
-        if allowsInset, ring.majorityShare < 0.6,
+        if allowsInset, ringShare < 0.6,
            let inset = Self.betterFillInset(
                pixels: pixels,
                width: width,
@@ -454,7 +460,7 @@ extension CGImage {
         }
         // Without one dominant bucket the background varies, and a single
         // colour would leave most of it as glyph, so model it locally.
-        let varyingBackground = ring.majorityShare < 0.4
+        let varyingBackground = ringShare < 0.4
         let maxDistSq = maxColorDistance * maxColorDistance
 
         let background = BackgroundModel(ring: ring, varying: varyingBackground)
@@ -929,6 +935,20 @@ extension CGImage {
         /// One un-premultiplied sample per y, nil where the edge is transparent.
         let leftColumn: [(r: Int, g: Int, b: Int)?]
         let rightColumn: [(r: Int, g: Int, b: Int)?]
+
+        /// Share of opaque ring samples within distance of the fill, 0…1.
+        func share(within distance: CGFloat) -> Double {
+            let samples = (topRow + bottomRow + leftColumn + rightColumn).compactMap(\.self)
+            guard !samples.isEmpty else { return 0 }
+            let maxDistSq = Int(distance * distance)
+            let near = samples.count { sample in
+                let dr = sample.r - r
+                let dg = sample.g - g
+                let db = sample.b - b
+                return dr * dr + dg * dg + db * db <= maxDistSq
+            }
+            return Double(near) / Double(samples.count)
+        }
     }
 
     static nonisolated func estimateEdgeRing(

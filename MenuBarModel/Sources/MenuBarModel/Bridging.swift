@@ -124,7 +124,12 @@ public extension Bridging {
     /// retained; taking it unretained would leak a CFUUID on every call.
     private static func displayUUID(of displayID: CGDirectDisplayID) -> CFUUID? {
         guard let created = CGDisplayCreateUUIDFromDisplayID(displayID) else {
-            diagLog.error("CGDisplayCreateUUIDFromDisplayID returned nil for display \(displayID)")
+            // Expected for a display that just went away.
+            if CGDisplayIsActive(displayID) != 0 {
+                diagLog.error("CGDisplayCreateUUIDFromDisplayID returned nil for display \(displayID)")
+            } else {
+                diagLog.debug("CGDisplayCreateUUIDFromDisplayID returned nil for inactive display \(displayID)")
+            }
             return nil
         }
         return created.takeRetainedValue()

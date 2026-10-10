@@ -13,7 +13,6 @@ workflow = YAML.load_file("#{root}/.github/workflows/build-dmg.yml")
 job = workflow.fetch("jobs").fetch("build-dmg")
 steps = job.fetch("steps")
 source = steps.find { |step| step["id"] == "source" }.fetch("with")
-prk = steps.find { |step| step.dig("with", "repository") == "thaw-app/PlatformRuntimeKit" }.fetch("with")
 checkout = action.fetch("runs").fetch("steps").find { |step| step["uses"] }.fetch("with")
 
 raise "Root checkout compatibility lost" unless action.dig("inputs", "path", "default") == "."
@@ -21,23 +20,16 @@ raise "Checkout ignores path" unless checkout["path"] == '${{ inputs.path }}'
 raise "Source ref no longer defaults to dispatch SHA" unless checkout["ref"] == '${{ inputs.ref || github.sha }}'
 raise "Wrong source path" unless source["path"] == "Thaw"
 raise "Source ref not forwarded" unless source["ref"] == '${{ inputs.ref }}'
-raise "Wrong PRK path" unless prk["path"] == "PlatformRuntimeKit"
-raise "PRK ref not forwarded" unless prk["ref"] == "${{ inputs.prk_ref || 'main' }}"
-raise "Existing token not reused" unless prk["token"] == '${{ secrets.THAW_NEXT_READ_TOKEN }}'
 raise "Credentials persisted" unless checkout["persist-credentials"] == false &&
   steps.select { |step| step["uses"].to_s.start_with?("actions/checkout@") }
        .all? { |step| step.dig("with", "persist-credentials") == false }
-raise "Model identity mismatch" unless job.dig("env", "MENU_BAR_MODEL_PATH") == '${{ github.workspace }}/Thaw/MenuBarModel'
 upload = steps.find { |step| step["uses"].to_s.start_with?("actions/upload-artifact@") }.fetch("with")
 raise "Upload must contain only the DMG" unless upload["path"] == 'build/${{ env.DMG_NAME }}'
-raise "Artifact omits PRK revision" unless upload["name"].include?('${{ steps.prk.outputs.commit }}')
 
 scripts = {
   "metadata" => action["runs"]["steps"].find { |step| step["id"] == "meta" },
   "preserve" => action["runs"]["steps"].find { |step| step["name"] == "Set build actions aside" },
-  "restore" => action["runs"]["steps"].find { |step| step["name"] == "Restore build actions" },
-  "token" => steps.find { |step| step["name"] == "Check PRK checkout token" },
-  "revisions" => steps.find { |step| step["id"] == "prk" }
+  "restore" => action["runs"]["steps"].find { |step| step["name"] == "Restore build actions" }
 }
 raise "Metadata ignores path" unless scripts["metadata"].dig("env", "SOURCE_PATH") == '${{ inputs.path }}'
 scripts.each { |name, step| File.write("#{temp}/#{name}.sh", step.fetch("run")) }
@@ -114,27 +106,3 @@ bash "$TEMP_DIR/restore.sh"
 cmp "$ROOT/.github/actions/checkout-source/action.yml" "$ACTION_PATH/action.yml"
 grep -Fxq 'another action' "$(dirname "$ACTION_PATH")/other/action.yml"
 printf 'PASS: all bootstrap actions survive checking out an older source ref\n'
-
-if PRK_TOKEN='' bash "$TEMP_DIR/token.sh" > "$TEMP_DIR/token.log" 2>&1; then
-    printf 'Missing token unexpectedly succeeded\n' >&2
-    exit 1
-fi
-grep -Fq 'THAW_NEXT_READ_TOKEN' "$TEMP_DIR/token.log"
-PRK_TOKEN='test-token-not-a-secret' bash "$TEMP_DIR/token.sh" > "$TEMP_DIR/token.log" 2>&1
-[[ ! -s "$TEMP_DIR/token.log" ]]
-printf 'PASS: missing token fails clearly; a present token is not printed\n'
-
-mkdir -p "$TEMP_DIR/revisions/PlatformRuntimeKit"
-THAW_COMMIT=1111111111111111111111111111111111111111
-PRK_COMMIT=2222222222222222222222222222222222222222
-printf '%s\n' "$PRK_COMMIT" > "$TEMP_DIR/revisions/PlatformRuntimeKit/.fixture-commit"
-(
-    cd "$TEMP_DIR/revisions"
-    PATH="$TEMP_DIR/bin:$PATH" THAW_COMMIT="$THAW_COMMIT" \
-        GITHUB_OUTPUT="$TEMP_DIR/revisions/output" GITHUB_STEP_SUMMARY="$TEMP_DIR/revisions/summary" \
-        bash "$TEMP_DIR/revisions.sh"
-)
-grep -Fxq "commit=$PRK_COMMIT" "$TEMP_DIR/revisions/output"
-grep -Fq "$THAW_COMMIT" "$TEMP_DIR/revisions/summary"
-grep -Fq "$PRK_COMMIT" "$TEMP_DIR/revisions/summary"
-printf 'PASS: build summary records both source revisions\n'

@@ -330,7 +330,7 @@ final class MenuBarItemSpacingManager {
         await sleepIgnoringCancellation(for: .milliseconds(100))
 
         let items = await MenuBarItem.getMenuBarItems(option: .activeSpace)
-        let pids = Set(items.map { $0.sourcePID ?? $0.ownerPID })
+        let pids = SystemExtraStandIn.removingStandIns(from: Set(items.map { $0.sourcePID ?? $0.ownerPID }))
         MenuBarItemSpacingManager.diagLog.debug(
             "applyOffset relaunching \(pids.count) unique PIDs from \(items.count) menu bar items"
         )
@@ -374,6 +374,9 @@ final class MenuBarItemSpacingManager {
                 }
             }
         }
+
+        // Stand-ins are left out of the wave and restarted through their own launcher.
+        await StandInSpacingRestart.run()
 
         // Any pre-wave bundle ID without a fresh process gets a second chance
         // via NSWorkspace.openApplication(at:) with the captured bundleURL,

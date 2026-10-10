@@ -189,6 +189,23 @@ extension MenuBarItemManager {
             }
 
             let destination = newItemsMoveDestination(for: controlItems, among: items)
+            let target = destination.targetItem
+            if let appState,
+               NewItemRoute(
+                   section: effectiveNewItemsSection,
+                   destinationIsDivider: target.isControlItem && target.tag != .visibleControlItem
+               ) == .assign
+            {
+                MenuBarItemManager.diagLog.info(
+                    "Assigning new item \(candidate.logString) to \(effectiveNewItemsSection.logString)"
+                )
+                if let refusal = appState.menuBarManager.setSection(effectiveNewItemsSection, items: [candidate]) {
+                    Self.refusedArrivalRelocations[arrivalIdentity] = Date()
+                    MenuBarItemManager.diagLog.info("Assignment of \(candidate.logString) was refused: \(refusal)")
+                    return false
+                }
+                return true
+            }
 
             MenuBarItemManager.diagLog.info(
                 "Relocating new item \(candidate.logString) to \(effectiveNewItemsSection.logString)"
@@ -345,6 +362,13 @@ extension MenuBarItemManager {
         return bars.count > 1
     }
 
+    /// Whether macOS has parked the Hidden divider off the bar, as it does while
+    /// a display reconnects. Which side of a parked divider an item reads on is
+    /// meaningless, so no order judged against it may be written.
+    static func dividerIsOffTheBar(_ controlItems: ControlItemPair, among items: [MenuBarItem]) -> Bool {
+        controlItems.hidden.isParkedOffMenuBarBand(among: items)
+    }
+
     static func activeDisplayBounds() -> [CGRect] {
         var ids = [CGDirectDisplayID](repeating: 0, count: 16)
         var count: UInt32 = 0
@@ -432,7 +456,7 @@ extension MenuBarItemManager {
                 + " (Siri misplaced=\(siriIsMisplaced), AH@\(ahX.map { String(describing: $0) } ?? "nil"), H@\(hX), V@\(vX));"
                 + " scheduling structural normalization"
         )
-        scheduleStructuralNormalization()
+        scheduleStructuralNormalization(cause: .structuralDriftObserved)
     }
 
     static nonisolated func trailingSiriIsMisplaced(in items: [MenuBarItem]) -> Bool {
@@ -466,7 +490,8 @@ extension MenuBarItemManager {
     func restoreStructuralControlOrder(
         controlItems: ControlItemPair,
         items: [MenuBarItem],
-        diagnosticContext: String = "structural restore"
+        diagnosticContext: String = "structural restore",
+        permit: borrowing StoreWritePermit
     ) -> Bool {
         // Same stranded-control exemption from Manual as enforceControlItemOrder.
         // Startup settling still gates it: weight writes need a quiet bar.
@@ -474,6 +499,10 @@ extension MenuBarItemManager {
               !isInStartupSettling else { return false }
         guard !Self.framesSpanSeveralBars(items) else {
             MenuBarItemManager.diagLog.debug("Skipping \(diagnosticContext): item frames span more than one bar")
+            return false
+        }
+        guard !Self.dividerIsOffTheBar(controlItems, among: items) else {
+            MenuBarItemManager.diagLog.debug("Skipping \(diagnosticContext): the Hidden divider is parked off the bar")
             return false
         }
         // A batch weight write cannot fall back per item; when the agent
@@ -502,7 +531,7 @@ extension MenuBarItemManager {
             MenuBarItemManager.diagLog.debug(
                 "Skipping structural position rewrite: reveal/hide transition in flight"
             )
-            scheduleStructuralNormalization()
+            scheduleStructuralNormalization(cause: .revealHideTransition)
             return false
         }
 
@@ -549,7 +578,8 @@ extension MenuBarItemManager {
         let reordered = MenuBarPositionStoreProvider.current.applyControlItemOrder(
             desiredOrder: desiredOrder,
             opaqueVisibleKeys: opaqueKeys,
-            liveItems: items
+            liveItems: items,
+            permit: permit
         )
         trace?.finish(result: String(describing: reordered))
         guard !reordered.isEmpty else { return false }
@@ -566,7 +596,8 @@ extension MenuBarItemManager {
     func enforceControlItemOrder(
         controlItems: ControlItemPair,
         items: [MenuBarItem],
-        reason: StructuralControlOrderReason
+        reason: StructuralControlOrderReason,
+        permit: borrowing StoreWritePermit
     ) async -> Bool {
         // Manual owns the app order, but a stranded control item is still
         // reseated; the re-lay below moves only control items.
@@ -589,7 +620,8 @@ extension MenuBarItemManager {
         if restoreStructuralControlOrder(
             controlItems: controlItems,
             items: items,
-            diagnosticContext: "enforceControlItemOrder reason=\(reason)"
+            diagnosticContext: "enforceControlItemOrder reason=\(reason)",
+            permit: permit
         ) {
             didRestoreOrder = true
         }

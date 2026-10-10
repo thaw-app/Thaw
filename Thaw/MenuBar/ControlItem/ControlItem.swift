@@ -515,15 +515,21 @@ extension ControlItem {
     }
 
     private func escalateIfStillOffBand() {
-        guard let frame = window?.frame, Self.isDegenerateMenuBarFrame(frame) else {
-            return
-        }
+        // A missing window is not health: an item that is added and has none counts as off-band.
+        let frame = window?.frame ?? (isAddedToMenuBar ? CGRect.zero : nil)
+        guard let frame, Self.isDegenerateMenuBarFrame(frame) else { return }
         let now = Date.now
         guard now.timeIntervalSince(lastOffBandEscalation) >= Self.offBandEscalationCooldown else {
             noteDegenerateFrame()
             return
         }
         lastOffBandEscalation = now
+
+        // Switched off in System Settings: no rung can seat the item, so only the switch is watched.
+        if MenuBarAllowState.ofThaw() == false {
+            notePlacementBlocked()
+            return scheduleRepublishRearmRetry()
+        }
 
         switch Self.offBandRecoveryAction(
             takenInCycle: offBandRecoveryLevel,
@@ -749,9 +755,9 @@ extension ControlItem {
             .assign(to: &$onScreenFrame)
     }
 
-    /// Whether a measured frame means the item never landed in the menu bar.
-    private static func isDegenerateMenuBarFrame(_ frame: CGRect) -> Bool {
-        frame.midX <= 0 || frame.width <= 0 || frame.height <= 0
+    /// Whether a measured frame means the item never landed; judged by the screens, as a display left of the main one has negative x.
+    static func isDegenerateMenuBarFrame(_ frame: CGRect, screenFrames: [CGRect] = NSScreen.screens.map(\.frame)) -> Bool {
+        frame.width <= 0 || frame.height <= 0 || frame.origin.x == -1 || !(screenFrames.isEmpty || screenFrames.contains { $0.contains(CGPoint(x: frame.midX, y: frame.midY)) })
     }
 
     /// Tracks the settings that change how this control item looks or whether it

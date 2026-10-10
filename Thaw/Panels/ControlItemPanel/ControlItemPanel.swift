@@ -23,7 +23,7 @@ final class ControlItemPanelController: NSObject, NSPopoverDelegate {
 
     /// The invisible window that anchors the popover when the status item's
     /// button cannot.
-    private let anchor = ControlItemPopoverAnchor()
+    private let anchor = PopoverAnchor()
 
     /// Set when a bounds lookup failed for a window ID, so the next show does
     /// not pay for the same failing lookup before falling back.
@@ -84,7 +84,7 @@ final class ControlItemPanelController: NSObject, NSPopoverDelegate {
         {
             popover.show(relativeTo: button.bounds, of: button, preferredEdge: .minY)
         } else if let frame = anchorFrame(fallbackPoint: fallbackPoint),
-                  let anchorView = anchor.view(at: frame)
+                  let anchorView = anchor.view(at: frame.origin)
         {
             popover.show(relativeTo: anchorView.bounds, of: anchorView, preferredEdge: .minY)
         } else {
@@ -193,48 +193,5 @@ final class ControlItemPanelController: NSObject, NSPopoverDelegate {
                 self.hide()
             }
         }
-    }
-}
-
-// MARK: - ControlItemPopoverAnchor
-
-/// A one-pixel, click-through window that stands in for the status item's
-/// button when AppKit will not let the popover point at it.
-@MainActor
-private final class ControlItemPopoverAnchor {
-    private var window: NSWindow?
-
-    /// Moves the anchor to frame and returns the view a popover can be shown
-    /// relative to.
-    func view(at frame: CGRect) -> NSView? {
-        let window: NSWindow
-        if let anchorWindow = self.window {
-            window = anchorWindow
-        } else {
-            let newWindow = NSWindow(
-                contentRect: .init(origin: .zero, size: .init(width: 1, height: 1)),
-                styleMask: .borderless,
-                backing: .buffered,
-                defer: false
-            )
-            newWindow.isReleasedWhenClosed = false
-            newWindow.isOpaque = false
-            newWindow.backgroundColor = .clear
-            newWindow.level = .statusBar
-            newWindow.ignoresMouseEvents = true
-            newWindow.hasShadow = false
-            newWindow.contentView = NSView(
-                frame: .init(origin: .zero, size: .init(width: 1, height: 1))
-            )
-            self.window = newWindow
-            window = newWindow
-        }
-        window.setFrameOrigin(frame.origin)
-        window.orderFrontRegardless()
-        return window.contentView
-    }
-
-    func hide() {
-        window?.orderOut(nil)
     }
 }

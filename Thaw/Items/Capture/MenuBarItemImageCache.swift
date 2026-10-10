@@ -150,13 +150,17 @@ final class MenuBarItemImageCache: @unchecked Sendable {
     /// Seam over WindowServer reads; tests substitute a fake.
     let windowServer: any WindowServerReading
     nonisolated let screenIsLocked: @Sendable () -> Bool
+    /// Whether a capture asked for now would run; false while no Thaw surface is open.
+    nonisolated let captureIsAllowed: @Sendable () -> Bool
 
     init(
         windowServer: any WindowServerReading = LiveWindowServerReader(),
-        screenIsLocked: @escaping @Sendable () -> Bool = { ScreenLock.isLocked }
+        screenIsLocked: @escaping @Sendable () -> Bool = { ScreenLock.isLocked },
+        captureIsAllowed: @escaping @Sendable () -> Bool = { ScreenCapture.acceptsCaptures }
     ) {
         self.windowServer = windowServer
         self.screenIsLocked = screenIsLocked
+        self.captureIsAllowed = captureIsAllowed
     }
 
     /// Consecutive capture passes skipped because the bar was mid-reflow.

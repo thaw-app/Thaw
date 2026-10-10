@@ -67,8 +67,28 @@ enum SystemExtraStandIn: String, CaseIterable {
         }
     }
 
+    /// Whether a bundle identifier belongs to one of this app's stand-ins.
+    static nonisolated func owns(bundleIdentifier: String?, parent: String = ThawMenuBarIdentity.bundleIdentifier) -> Bool {
+        guard let bundleIdentifier else { return false }
+        return allCases.contains { "\(parent).extra.\($0.rawValue)" == bundleIdentifier }
+    }
+
+    /// The processes left once this app's running stand-ins are taken out.
+    static func removingStandIns(from pids: Set<pid_t>) -> Set<pid_t> {
+        pids.filter { !owns(bundleIdentifier: NSRunningApplication(processIdentifier: $0)?.bundleIdentifier) }
+    }
+
     var bundleURL: URL {
         Bundle.main.bundleURL.appending(path: "Contents/Library/Extras/\(bundleName).app")
+    }
+
+    /// The order with identifier right after original, or nil when the order
+    /// already holds identifier or lacks original and so should stay as it is.
+    static nonisolated func orderPlacing(_ identifier: String, after original: String, in order: [String]) -> [String]? {
+        guard !order.contains(identifier), let originalIndex = order.firstIndex(of: original) else { return nil }
+        var placed = order
+        placed.insert(identifier, at: originalIndex + 1)
+        return placed
     }
 }
 
@@ -83,6 +103,12 @@ enum ExtraVisibilityChannel {
 
     static func ownsBundle(_ bundleID: String) -> Bool {
         bundleID.hasPrefix("\(ThawMenuBarIdentity.bundleIdentifier).extra.")
+    }
+
+    /// Bundles native hiding must not switch off in the system's Menu Bar list: the extras, which are
+    /// hidden through this channel, and Thaw itself, which would lose its icon and both dividers.
+    static func keepsOffSystemList(_ bundleID: String) -> Bool {
+        bundleID == ThawMenuBarIdentity.bundleIdentifier || ownsBundle(bundleID)
     }
 
     static var file: URL {
@@ -102,7 +128,8 @@ enum ExtraVisibilityChannel {
     }
 
     /// The folder and the announcement are parameters so tests write to a scratch folder and post nothing.
-    static func hide(_ bundleIDs: Set<String>, folder: URL, announce: () -> Void) {
+    static func hide(_ requested: Set<String>, folder: URL, announce: () -> Void) {
+        let bundleIDs = requested.filter(ownsBundle)
         guard bundleIDs != lastHidden else { return }
         do {
             try FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
@@ -123,6 +150,18 @@ enum ExtraVisibilityChannel {
             userInfo: nil,
             deliverImmediately: true
         )
+    }
+}
+
+// MARK: - Spacing restart
+
+/// Lets the spacing change reach the stand-in launcher without either owning the other.
+@MainActor
+enum StandInSpacingRestart {
+    static weak var launcher: SystemExtraStandInLauncher?
+
+    static func run() async {
+        await launcher?.restartRunning()
     }
 }
 
@@ -152,6 +191,7 @@ final class SystemExtraStandInLauncher: SystemExtraReplacementProviding {
     private var restarts: [SystemExtraStandIn: [Date]] = [:]
     private static let restartLimit = 3
     private static let restartWindow: TimeInterval = 30
+    private static let restartQuitTimeout: Duration = .seconds(3)
 
     func publish(item: SystemExtraItem, canonicalIdentifier: String, section: MenuBarSectionName) async throws {
         try await launch(SystemExtraStandIn(item), replacing: canonicalIdentifier, in: section)
@@ -181,6 +221,29 @@ final class SystemExtraStandInLauncher: SystemExtraReplacementProviding {
         watched[standIn] = nil
         for app in NSRunningApplication.runningApplications(withBundleIdentifier: standIn.bundleIdentifier) {
             app.terminate()
+        }
+    }
+
+    /// Restarts every running stand-in: macOS reads menu bar spacing only when an app starts.
+    /// A plain reopen would drop the parent argument, so they restart from here.
+    func restartRunning() async {
+        for (standIn, entry) in watched {
+            entry.observation.invalidate()
+            watched[standIn] = nil
+            entry.app.terminate()
+            let deadline = ContinuousClock.now + Self.restartQuitTimeout
+            while !entry.app.isTerminated, ContinuousClock.now < deadline {
+                try? await Task.sleep(for: .milliseconds(50))
+            }
+            if !entry.app.isTerminated {
+                entry.app.forceTerminate()
+            }
+            do {
+                try await open(standIn)
+                log.info("restarted \(standIn.rawValue) stand-in")
+            } catch {
+                log.error("\(standIn.rawValue) stand-in restart failed: \(error.localizedDescription)")
+            }
         }
     }
 
@@ -247,16 +310,12 @@ final class SystemExtraStandInLauncher: SystemExtraReplacementProviding {
             controller.setSection(section, identifier: identifier)
         }
         placed.insert(standIn)
-        var order = controller.sectionItemOrder[section] ?? []
         let canonicalOriginal = MenuBarItemTag.canonicalPersistentIdentifier(original)
-        guard let originalIndex = order.firstIndex(of: canonicalOriginal),
-              order.firstIndex(of: identifier) != originalIndex + 1
-        else {
+        guard let order = SystemExtraStandIn.orderPlacing(
+            identifier, after: canonicalOriginal, in: controller.sectionItemOrder[section] ?? []
+        ) else {
             return
         }
-        order.removeAll { $0 == identifier }
-        let insertAt = order.firstIndex(of: canonicalOriginal).map { $0 + 1 } ?? order.endIndex
-        order.insert(identifier, at: insertAt)
         controller.setSectionOrder(order, for: section)
     }
 }

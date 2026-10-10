@@ -78,7 +78,8 @@ final class MenuBarLiquidGlassContainerView: NSView {
         usesDarkFade: Bool,
         borderColor: CGColor?,
         borderWidth: Double,
-        borderStyle: MenuBarBorderStyle = .solid
+        borderStyle: MenuBarBorderStyle = .solid,
+        cornerRadius: CGFloat? = nil
     ) {
         let componentBounds = MenuBarLiquidGlassGeometry.componentBounds(of: path)
         while glassViews.count < componentBounds.count {
@@ -95,7 +96,9 @@ final class MenuBarLiquidGlassContainerView: NSView {
             }
             let componentBounds = componentBounds[index]
             glassView.frame = componentBounds
-            glassView.cornerRadius = min(componentBounds.width, componentBounds.height) / 2
+            glassView.cornerRadius = MenuBarLiquidGlassGeometry.glassCornerRadius(
+                for: componentBounds, pathCornerRadius: cornerRadius
+            )
             glassView.alphaValue = effectOpacity
             glassView.tintColor = isColored
                 ? NSColor(cgColor: tintColor)?.withAlphaComponent(tintOpacity)
@@ -1087,12 +1090,9 @@ private final class MenuBarOverlayPanelContentView: NSView {
                 rect.fill()
             }
         case .gradient:
-            if let tintGradient = configuration.tintGradient
+            configuration.tintGradient
                 .withAlpha(configuration.tintOpacity)
-                .nsGradient(using: .displayP3)
-            {
-                tintGradient.draw(in: rect, angle: 0)
-            }
+                .draw(in: rect, using: .displayP3)
         case .adaptive:
             if let colorInfo = averageColorInfo,
                let color = NSColor(cgColor: colorInfo.color)?
@@ -1331,12 +1331,9 @@ private final class MenuBarOverlayPanelContentView: NSView {
                 rect.fill()
             }
         case .gradient:
-            if let gradient = configuration.backgroundGradient
+            configuration.backgroundGradient
                 .withAlpha(configuration.backgroundOpacity)
-                .nsGradient(using: .displayP3)
-            {
-                gradient.draw(in: rect, angle: 0)
-            }
+                .draw(in: rect, using: .displayP3)
         case .glass:
             break
         case .adaptive:

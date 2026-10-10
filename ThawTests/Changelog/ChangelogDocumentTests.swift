@@ -455,11 +455,12 @@ struct ChangelogDocumentTests {
 
         let calendar = Calendar(identifier: .gregorian)
         let dated = try #require(document.releases[0].date)
-        let parts = calendar.dateComponents(in: TimeZone.gmt, from: dated)
+        // The parser reads a release date as a local day.
+        let parts = calendar.dateComponents(in: TimeZone.current, from: dated)
         #expect((parts.year, parts.month, parts.day) == (2026, 9, 2))
 
         let spaced = try #require(document.releases[1].date)
-        let spacedParts = calendar.dateComponents(in: TimeZone.gmt, from: spaced)
+        let spacedParts = calendar.dateComponents(in: TimeZone.current, from: spaced)
         #expect((spacedParts.year, spacedParts.month, spacedParts.day) == (2026, 1, 15))
 
         #expect(document.releases[2].date == nil)

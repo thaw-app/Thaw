@@ -401,12 +401,16 @@ enum LayoutBarKeyboard {
                    let revealed = controller.revealedSection,
                    revealed == section || (section == .hidden && revealed == .alwaysHidden)
                 {
-                    await appState.itemManager.applySectionItemOrder(
+                    let itemManager = appState.itemManager
+                    guard let hold = await itemManager.repairs.enterForUserEdit() else { return }
+                    await itemManager.applySectionItemOrder(
                         sections: [section],
                         controller: controller,
                         whileRevealing: revealed,
-                        reason: .userReorder
+                        reason: .userReorder,
+                        permit: StoreWritePermit(hold)
                     )
+                    itemManager.repairs.leave(hold)
                 }
                 await appState.itemManager.cacheItemsRegardless(skipRecentMoveCheck: true)
             }

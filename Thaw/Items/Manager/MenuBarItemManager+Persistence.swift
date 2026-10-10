@@ -33,7 +33,7 @@ extension MenuBarItemManager {
 
     /// Compares one settled inventory with the apps that hosted items last
     /// session, and publishes the ones still missing.
-    func noteUnseenMenuBarHosts(in cache: ItemCache) {
+    func noteUnseenMenuBarHosts(in cache: ItemCache, running: RunningApplicationSnapshot) {
         guard !isInStartupSettling, !areControlItemsMissing else { return }
         let key = UnseenMenuBarHosts.defaultsKey
         let defaults = UserDefaults.standard
@@ -44,11 +44,7 @@ extension MenuBarItemManager {
         func isTracked(_ bundle: String) -> Bool {
             !bundle.hasPrefix("com.apple.") && !bundle.hasPrefix(ourBundleID)
         }
-        let runningApps = NSWorkspace.shared.runningApplications
-        let bundlesByPID = Dictionary(
-            runningApps.compactMap { app in app.bundleIdentifier.map { (app.processIdentifier, $0) } },
-            uniquingKeysWith: { first, _ in first }
-        )
+        let bundlesByPID = running.bundleIdentifiersByPID
         let seen = Set(cache.managedItems.compactMap { item in
             bundlesByPID[item.sourcePID ?? item.ownerPID]
         }.filter(isTracked))
@@ -56,11 +52,17 @@ extension MenuBarItemManager {
         let nativelyHidden = appState?.menuBarManager.nativeHiddenBundleIDs ?? []
         let running = Set(bundlesByPID.values.filter(isTracked)).subtracting(nativelyHidden)
 
-        if tracker.update(seen: seen, running: running, now: .now) {
+        // An app switched off in System Settings, or one that answers with no items, is not being missed.
+        let candidates = tracker.candidates(seen: seen, running: running)
+        let answeredEmpty = MenuBarItemAXProvider.processesAnsweringWithNoItems()
+        let quiet = MenuBarAllowState.switchedOff(among: candidates)
+            .union(answeredEmpty.compactMap { bundlesByPID[$0] })
+
+        if tracker.update(seen: seen, running: running, quiet: quiet, now: .now) {
             let flagged = tracker.flagged
             if !flagged.isEmpty {
                 MenuBarItemManager.diagLog.warning(
-                    "menu bar items expected from running apps are not visible to the walk: \(flagged.sorted()); a relaunch has cleared this before"
+                    "menu bar items expected from running apps are not visible to the walk: \(flagged.sorted())"
                 )
             }
             unseenHostBundleIDs = flagged

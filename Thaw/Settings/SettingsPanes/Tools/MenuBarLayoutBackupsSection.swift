@@ -222,6 +222,8 @@ struct MenuBarLayoutBackupsSection: View {
         isWorking = true
         statusMessage = nil
         defer { isWorking = false }
+        // Killing the host mid-move strands the move's events.
+        await appState.itemManager.moveActivity.waitUntilIdle()
 
         do {
             let outcome = try await MaintenanceTools.restoreMenuBarLayout(from: backup)

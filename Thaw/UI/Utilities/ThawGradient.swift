@@ -16,12 +16,40 @@ nonisolated struct ThawGradient: Codable, Hashable {
     ///   encoded representation. Renaming it invalidates stored settings.
     var stops: [ColorStop]
 
-    init(stops: [ColorStop] = []) {
+    /// The direction the stops run in, in degrees, as Floe counts them: 0 is
+    /// top to bottom, 90 leading to trailing, 180 bottom to top.
+    ///
+    /// - Important: Encoded under its property name, like stops.
+    var angle: Double
+
+    init(stops: [ColorStop] = [], angle: Double = ThawGradient.horizontalAngle) {
         self.stops = stops
+        self.angle = angle
+    }
+
+    /// Gradients saved before angle existed have no key for it.
+    init(from decoder: any Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        try self.init(
+            stops: container.decode([ColorStop].self, forKey: .stops),
+            angle: container.decodeIfPresent(Double.self, forKey: .angle) ?? Self.horizontalAngle
+        )
     }
 
     func withAlpha(_ alpha: CGFloat) -> ThawGradient {
-        ThawGradient(stops: stops.map { $0.withAlpha(alpha) })
+        ThawGradient(stops: stops.map { $0.withAlpha(alpha) }, angle: angle)
+    }
+
+    /// NSGradient counts from leading to trailing and, in an unflipped
+    /// context, turns the other way.
+    var drawingAngle: CGFloat {
+        CGFloat(angle - Self.horizontalAngle)
+    }
+
+    /// Paints along angle in an unflipped context.
+    @MainActor
+    func draw(in rect: CGRect, using colorSpace: NSColorSpace) {
+        nsGradient(using: colorSpace)?.draw(in: rect, angle: drawingAngle)
     }
 
     /// Skips stops that cannot be represented; nil when none are left.
@@ -48,6 +76,12 @@ nonisolated struct ThawGradient: Codable, Hashable {
     @MainActor
     func swiftUIView(using colorSpace: Color.RGBColorSpace) -> some View {
         GradientPreview(gradient: self, colorSpace: colorSpace)
+    }
+
+    /// Always left to right, for a track whose handles sit along its width.
+    @MainActor
+    func horizontalSwiftUIView(using colorSpace: Color.RGBColorSpace) -> some View {
+        GradientPreview(gradient: ThawGradient(stops: stops), colorSpace: colorSpace)
     }
 
     /// - Parameters:
@@ -139,6 +173,9 @@ nonisolated struct ThawGradient: Codable, Hashable {
 // MARK: ThawGradient Static Members
 
 nonisolated extension ThawGradient {
+    /// Leading to trailing, which is how every gradient painted before it had an angle.
+    static let horizontalAngle = 90.0
+
     static let defaultMenuBarTint = ThawGradient(stops: [
         .white(location: 0),
         .black(location: 1),
@@ -232,7 +269,7 @@ private struct GradientPreview: View {
                 return nil
             }
             return NSImage(size: size, flipped: false) { rect in
-                nsGradient.draw(in: rect, angle: 0)
+                nsGradient.draw(in: rect, angle: gradient.drawingAngle)
                 return true
             }
         }

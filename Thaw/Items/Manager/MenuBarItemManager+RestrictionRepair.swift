@@ -8,6 +8,7 @@
 import Cocoa
 import CoreGraphics
 import MenuBarModel
+import ThawCapture
 
 // MARK: - Restriction repair
 
@@ -20,6 +21,16 @@ extension MenuBarItemManager {
             return false
         }
         return lastRestrictionChange.duration(to: .now) < Self.restrictionChangeLayoutSettleWindow
+    }
+
+    /// Forgets every stranded verdict after a positions reset, since the bar
+    /// they described no longer exists. Otherwise the repair keeps skipping
+    /// items it gave up on before the reset.
+    func forgetStrandedRepairs() {
+        failureLedger.removeAll()
+        suppressedBoundaryRepairItemIDs.removeAll()
+        suppressedBoundaryRepairAt.removeAll()
+        boundaryRepairStrandTrips.removeAll()
     }
 
     private func parkedSetAndBarMidY(in items: [MenuBarItem]) -> (barMidY: CGFloat?, parkedIDs: Set<CGWindowID>) {
@@ -72,18 +83,20 @@ extension MenuBarItemManager {
     func noteRestrictionChange() {
         layoutPublication.invalidate()
         lastRestrictionChangeTimestamp = .now
-        schedulePostRestrictionRepair()
+        schedulePostRestrictionRepair(cause: .restrictionChanged)
     }
 
-    func schedulePostRestrictionRepair() {
+    func schedulePostRestrictionRepair(cause: RepairOrchestrator.Cause) {
         // Hiding still invalidates geometry, but manual arrangement never
         // schedules corrective pulses, unparking, or boundary moves.
         guard !arrangementIsManual, !isInStartupSettling, !isNotificationCenterLayoutSuspended else {
             postRestrictionRepairTask?.cancel()
             postRestrictionRepairTask = nil
             postRestrictionRepairNeedsRerun = false
+            repairs.withdraw(.postRestrictionRepair)
             return
         }
+        repairs.request(.postRestrictionRepair, cause: cause)
         // A repair pass re-applies the restriction and lands back here.
         // Cancelling it would escalate its in-flight write to a racing drag,
         // so coalesce into one more pass instead.
@@ -107,7 +120,7 @@ extension MenuBarItemManager {
                 self.isRunningPostRestrictionRepair = false
                 self.postRestrictionRepairNeedsRerun = false
             }
-            var stillParked = await self.repairVisibleLayoutAfterRestrictionChange()
+            guard var stillParked = await self.repairVisibleLayoutInRepairLane() else { return }
             var poll = 0
             while poll < 4, stillParked || self.postRestrictionRepairNeedsRerun {
                 self.postRestrictionRepairNeedsRerun = false
@@ -116,9 +129,29 @@ extension MenuBarItemManager {
                 } catch {
                     return
                 }
-                stillParked = await self.repairVisibleLayoutAfterRestrictionChange()
+                guard let parked = await self.repairVisibleLayoutInRepairLane() else { return }
+                stillParked = parked
                 poll += 1
             }
+        }
+    }
+
+    /// One repair pass inside the lane. The lane is given back between polls
+    /// so the passes queued behind it are not held up by the wait.
+    /// Nil when the task was superseded while it queued.
+    private func repairVisibleLayoutInRepairLane() async -> Bool? {
+        let read: () async -> PostRestrictionReading? = {
+            // A pass that will return at once must not take a picture first.
+            guard !self.arrangementIsManual, !self.isInStartupSettling, !self.isNotificationCenterLayoutSuspended,
+                  self.appState?.menuBarManager.shouldDeferBarMutation != true
+            else { return nil }
+            let displayID = Bridging.getActiveMenuBarDisplayID() ?? CGMainDisplayID()
+            let items = await MenuBarItem.getMenuBarItems(option: .activeSpace)
+            let capture = await ScreenCapture.captureMenuBarHostingWindowAsync(displayID: displayID)
+            return PostRestrictionReading(items: items, displayID: displayID, barCapture: capture)
+        }
+        return await RepairTurn.run(.postRestrictionRepair, on: repairs, read: read) { items, permit, writing in
+            await self.repairVisibleLayoutAfterRestrictionChange(readBeforeTurn: items, permit: permit, writing: writing)
         }
     }
 
@@ -126,7 +159,11 @@ extension MenuBarItemManager {
     /// On-band AX ghosts (tooltip works, icon missing) are fixed by pulsing the
     /// assertion; only truly parked items (y≈1400+) get a synthetic unpark.
     @discardableResult
-    private func repairVisibleLayoutAfterRestrictionChange() async -> Bool {
+    private func repairVisibleLayoutAfterRestrictionChange(
+        readBeforeTurn: PostRestrictionReading? = nil,
+        permit: consuming StoreWritePermit,
+        writing: RepairTurn.Writing
+    ) async -> Bool {
         guard !arrangementIsManual, !isInStartupSettling, !Task.isCancelled,
               !isNotificationCenterLayoutSuspended
         else { return false }
@@ -143,8 +180,10 @@ extension MenuBarItemManager {
         }
         let controller = appState.menuBarManager.sectionController
 
-        var liveItems = await MenuBarItem.getMenuBarItems(option: .activeSpace)
+        var liveItems = if let readBeforeTurn { readBeforeTurn.items } else { await MenuBarItem.getMenuBarItems(option: .activeSpace) }
         guard !arrangementIsManual, !Task.isCancelled else { return false }
+        // Nothing is written yet. Step aside for the user; the next poll retries.
+        guard !repairs.userWorkIsWaiting else { return true }
 
         // A pulse can re-blank hiding-unsupported apps, so pulse only when
         // supported visible items are parked or blank.
@@ -227,11 +266,15 @@ extension MenuBarItemManager {
         var liveParkedIDs = parkedSetAndBarMidY(in: liveItems).parkedIDs
         let prePulseParked = pulseCandidates.filter { liveParkedIDs.contains($0.windowID) }
         let prePulseOnBand = pulseCandidates.filter { !liveParkedIDs.contains($0.windowID) }
-        let prePulseBlank = await appState.imageCache.itemsRenderingBlank(
-            among: prePulseOnBand,
-            displayID: displayID
-        )
+        // The picture came with the reading when there is one, so the lane does not wait on a capture.
+        let prePulseBlank = if let readBeforeTurn, readBeforeTurn.covers(displayID) {
+            readBeforeTurn.blankTags(among: prePulseOnBand)
+        } else {
+            await appState.imageCache.itemsRenderingBlank(among: prePulseOnBand, displayID: displayID)
+        }
         guard !arrangementIsManual, !Task.isCancelled else { return false }
+        // Without a reading the blank check took a capture and can be slow. Still nothing written.
+        guard !writing.userWorkIsWaiting else { return true }
         let needsPulse = !prePulseParked.isEmpty || !prePulseBlank.isEmpty
 
         if needsPulse, !Task.isCancelled, controller.pulseRestrictionAfterReflow(liveItems: liveItems) {
@@ -282,6 +325,11 @@ extension MenuBarItemManager {
             )
             for item in MenuBarItem.sortByVisualCenter(unparkable) {
                 guard !arrangementIsManual, !Task.isCancelled else { return false }
+                // Each unpark is a move of its own, so the pass can stop between them.
+                guard !writing.userWorkIsWaiting else {
+                    MenuBarItemManager.diagLog.debug("post-restriction repair: stepping aside for user work between unparks")
+                    return true
+                }
                 let freshItems = await MenuBarItem.getMenuBarItems(option: .activeSpace)
                 guard !arrangementIsManual, !Task.isCancelled else { return false }
                 guard let currentAnchor = unparkAnchorAmong(liveItems: freshItems, controller: controller) else {
@@ -351,6 +399,10 @@ extension MenuBarItemManager {
         // hidden icons; the pane drag cannot move it while concealed, so this
         // pass places it.
         var strandNeedsRetry = false
+        guard !writing.userWorkIsWaiting else {
+            MenuBarItemManager.diagLog.debug("post-restriction repair: stepping aside for user work before the strand repair")
+            return true
+        }
         do {
             let controlItemWindowIDs = liveControlItemWindowIDs()
             let strand = await repairVisibleItemsSeatedAmongHidden(
@@ -359,7 +411,8 @@ extension MenuBarItemManager {
                 experimentalSystemItemHiding: appState.settings.advanced.enableExperimentalSystemItemHiding,
                 hiddenControlItemWindowID: controlItemWindowIDs.hidden,
                 alwaysHiddenControlItemWindowID: controlItemWindowIDs.alwaysHidden,
-                whileRevealing: nil
+                whileRevealing: nil,
+                permit: permit
             )
             guard !strand.aborted else { return false }
             liveItems = strand.items
@@ -370,6 +423,9 @@ extension MenuBarItemManager {
                 )
             }
         }
+
+        // Every write is done. What follows reads the result, so the next pass need not wait for it.
+        writing.end(permit)
 
         await cacheItemsRegardless(skipRecentMoveCheck: true, skipSavedLayoutApply: true)
         guard !Task.isCancelled else { return false }

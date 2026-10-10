@@ -56,4 +56,22 @@ struct TrailingSiriLayoutTests {
         #expect(MenuBarItemManager.anchoredTrailingViolation(in: [siri, app, cc, clock]) != nil)
         #expect(MenuBarItemManager.anchoredTrailingViolation(in: [app, siri, cc, clock]) == nil)
     }
+
+    @Test
+    func validationIgnoresConcealedFramesRightOfTheClock() {
+        let cc = item(MenuBarItemTag(namespace: .menuBarAgent, title: "ControlCenter"), x: 160)
+        let clock = item(MenuBarItemTag(namespace: .menuBarAgent, title: "Clock"), x: 190)
+        let parked = MenuBarItem(
+            tag: MenuBarItemTag(namespace: .string("com.example.hidden"), title: "Item"),
+            windowID: 2,
+            ownerPID: 2,
+            sourcePID: 2,
+            bounds: CGRect(x: 300, y: 1140, width: 38, height: 24),
+            title: "Item",
+            isOnScreen: true
+        )
+        let onBar = item(MenuBarItemTag(namespace: .string("com.example.app"), title: "Item"), x: 300)
+        #expect(MenuBarItemManager.anchoredTrailingViolation(in: [cc, clock, parked]) == nil)
+        #expect(MenuBarItemManager.anchoredTrailingViolation(in: [cc, clock, onBar]) != nil)
+    }
 }

@@ -82,12 +82,15 @@ extension MenuBarItemManager {
                 if section != .visible, let revealed = controller.revealedSection,
                    revealed == section || (section == .hidden && revealed == .alwaysHidden)
                 {
+                    guard let hold = await repairs.enterForUserEdit() else { return }
                     await applySectionItemOrder(
                         sections: [section],
                         controller: controller,
                         whileRevealing: revealed,
-                        reason: .userReorder
+                        reason: .userReorder,
+                        permit: StoreWritePermit(hold)
                     )
+                    repairs.leave(hold)
                 }
                 await cacheItemsRegardless(skipRecentMoveCheck: true)
             }

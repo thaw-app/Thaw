@@ -160,6 +160,17 @@ struct NativeOverflowContaminationTests {
         )
     }
 
+    @Test("an item on another display's bar lies on a menu bar; a parked one does not")
+    func otherDisplaysBarVersusParked() {
+        let displays = [CGRect(x: 0, y: 0, width: 1728, height: 1117), CGRect(x: -113, y: -1080, width: 1920, height: 1080)]
+        #expect(MenuBarItemImageCache.liesOnAMenuBar(
+            CGRect(x: 1390, y: -1076.5, width: 57, height: 24), barHeight: 40, displayBounds: displays
+        ))
+        #expect(!MenuBarItemImageCache.liesOnAMenuBar(
+            CGRect(x: 900, y: 1428, width: 24, height: 24), barHeight: 40, displayBounds: displays
+        ))
+    }
+
     @Test("the coverage threshold is honored")
     func coverageThresholdHonored() {
         // 9 of 24 points: below the default half-control coverage...

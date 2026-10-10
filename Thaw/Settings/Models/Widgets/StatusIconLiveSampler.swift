@@ -64,7 +64,7 @@ final class StatusIconLiveSampler: ObservableObject {
         guard let snapshot = wifiSource.read(),
               let rssi = snapshot.rssi else { return 0 }
         let normalized = Double(rssi + 100) / 70.0
-        return min(max(normalized, 0), 1)
+        return normalized.clamped(to: 0 ... 1)
     }
 
     // MARK: CPU

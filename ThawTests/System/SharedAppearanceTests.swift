@@ -66,6 +66,19 @@ struct SharedAppearanceTests {
         #expect(background.color == nil)
     }
 
+    @Test("A gradient fill carries its angle, and other fills carry none")
+    func gradientCarriesAngle() {
+        var configuration = MenuBarAppearancePartialConfiguration.defaultConfiguration
+        configuration.backgroundKind = .gradient
+        #expect(shared(configuration).background.angle == 90)
+
+        configuration.backgroundGradient.angle = 0
+        #expect(shared(configuration).background.angle == 0)
+
+        configuration.backgroundKind = .solid
+        #expect(shared(configuration).background.angle == nil)
+    }
+
     @Test("Glass names its style, and keeps its color only when colored")
     func glassCarriesStyle() {
         var configuration = MenuBarAppearancePartialConfiguration.defaultConfiguration

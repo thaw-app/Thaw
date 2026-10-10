@@ -36,7 +36,7 @@ nonisolated struct SharedAppearance: Encodable, Equatable {
 
     struct GradientStop: Encodable, Equatable {
         let color: Color
-        /// From 0 at the leading edge to 1 at the trailing edge.
+        /// From 0 at the start to 1 at the end, along the fill's direction.
         let location: Double
     }
 
@@ -47,6 +47,8 @@ nonisolated struct SharedAppearance: Encodable, Equatable {
         let opacity: Double
         let color: Color?
         let stops: [GradientStop]?
+        /// Degrees, set alongside stops: 0 runs top to bottom, 90 leading to trailing.
+        let angle: Double?
         let glassStyle: String?
         let glassIsColored: Bool?
     }
@@ -127,6 +129,7 @@ nonisolated extension SharedAppearance {
                     Color(stop.color).map { GradientStop(color: $0, location: Double(stop.location)) }
                 }
                 : nil,
+            angle: kind == "gradient" ? gradient.angle : nil,
             glassStyle: isGlass ? name(of: glassStyle) : nil,
             glassIsColored: isGlass ? glassIsColored : nil
         )

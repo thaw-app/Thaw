@@ -36,4 +36,44 @@ struct IgnoredPreferredWritesTests {
         writes.noteUnverified(item)
         #expect(!writes.skipsWrite(for: item))
     }
+
+    @Test("After the retry interval the write gets one more try")
+    func writeIsRetriedLater() {
+        var writes = IgnoredPreferredWrites()
+        let item = "helper:Item-0"
+        let start = ContinuousClock.now
+
+        writes.noteUnverified(item, at: start)
+        writes.noteUnverified(item, at: start)
+        #expect(writes.skipsWrite(for: item, at: start + IgnoredPreferredWrites.retryAfter - .seconds(1)))
+        #expect(!writes.skipsWrite(for: item, at: start + IgnoredPreferredWrites.retryAfter))
+    }
+
+    @Test("A retry the agent ignores too puts the item straight back on the drag")
+    func failedRetrySkipsAgain() {
+        var writes = IgnoredPreferredWrites()
+        let item = "helper:Item-0"
+        let start = ContinuousClock.now
+        writes.noteUnverified(item, at: start)
+        writes.noteUnverified(item, at: start)
+        let retry = start + IgnoredPreferredWrites.retryAfter
+
+        writes.noteUnverified(item, at: retry)
+        #expect(writes.skipsWrite(for: item, at: retry + .seconds(1)))
+        #expect(!writes.skipsWrite(for: item, at: retry + IgnoredPreferredWrites.retryAfter))
+    }
+
+    @Test("A retry the agent honours clears the record")
+    func honouredRetryClears() {
+        var writes = IgnoredPreferredWrites()
+        let item = "helper:Item-0"
+        let start = ContinuousClock.now
+        writes.noteUnverified(item, at: start)
+        writes.noteUnverified(item, at: start)
+        let retry = start + IgnoredPreferredWrites.retryAfter
+
+        writes.noteVerified(item)
+        writes.noteUnverified(item, at: retry)
+        #expect(!writes.skipsWrite(for: item, at: retry))
+    }
 }

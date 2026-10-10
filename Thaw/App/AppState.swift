@@ -238,6 +238,11 @@ final class AppState {
     /// - Parameter granted: True runs bootstrap with required grants; false keeps subsystems inert and opens permissions.
     func launch(withPermissions granted: Bool) {
         guard granted else {
+            if ReducedModeController.isChosen {
+                dismissWindow(.permissions)
+                ReducedModeController.shared.start(with: self)
+                return
+            }
             Task {
                 // The delegate is still inside its launch callback here;
                 // changing the activation policy out from under it races.

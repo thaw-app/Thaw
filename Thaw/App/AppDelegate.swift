@@ -104,11 +104,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         )
 
         // Never show onboarding and What's New together; onboarding already includes release notes.
-        if stage != .none {
+        if ReducedModeController.shared.isRunning {
+            // The reduced mode has no windows of its own and asks for nothing.
+        } else if stage != .none {
             appState.openWindow(.permissions)
         } else {
             // Upgrade notes appear once per version, only outside the onboarding/permissions path.
-            NativeAppHidingOffer.presentIfNeeded(settings: appState.settings.advanced)
             appState.presentWhatsNewForUpgradeIfNeeded()
         }
     }
@@ -278,6 +279,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     /// proxy-press?bundle=X presses a hosted item by owner, while toggle-layout-editor opens quick edit without Settings.
     private func handleURL(_ url: URL, senderBundleId: String? = nil) {
         let host = url.host?.lowercased() ?? ""
+
+        // Nothing below is set up while the reduced mode runs.
+        if ReducedModeController.shared.isRunning {
+            ReducedModeController.shared.handle(url)
+            return
+        }
 
         switch host {
         case "set", "toggle", "get", "authorize", "reveal-item",

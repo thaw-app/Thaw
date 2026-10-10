@@ -9,6 +9,18 @@ import Cocoa
 import MenuBarModel
 
 nonisolated enum MenuBarLiquidGlassGeometry {
+    /// The corner radius for the glass under one component of a path.
+    ///
+    /// A menu bar shape is a capsule, so half its shorter side fits. A Thaw Bar with square corners,
+    /// several rows, or the extra height it gets on a notched display is not one. A capsule of glass
+    /// under it stops short of the corners, and the tint and border drawn to the real path show there
+    /// with no glass behind them. Pass the path's own radius for such a shape.
+    static func glassCornerRadius(for bounds: CGRect, pathCornerRadius: CGFloat? = nil) -> CGFloat {
+        let capsule = min(bounds.width, bounds.height) / 2
+        guard let pathCornerRadius else { return capsule }
+        return pathCornerRadius.clamped(min: 0, max: capsule)
+    }
+
     static func componentBounds(of path: CGPath) -> [CGRect] {
         var bounds = [CGRect]()
         var component = CGMutablePath()

@@ -112,7 +112,7 @@ private struct ThawGradientTrack: View {
     }
 
     var body: some View {
-        gradient.swiftUIView(using: .displayP3)
+        gradient.horizontalSwiftUIView(using: .displayP3)
             .clipShape(trackShape)
             .overlay { trackShape.strokeBorder(.secondary) }
             .overlay { centerTick }

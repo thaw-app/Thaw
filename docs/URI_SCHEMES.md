@@ -473,7 +473,7 @@ Settings URI requests fail silently when the feature is disabled, the requesting
 ```
 
 - `shape` is `none`, `full`, `split` or `notch`.
-- A fill's `kind` is `none`, `solid`, `gradient`, `glass`, `adaptive` or (tint only) `adaptiveGradient`. The adaptive kinds follow the wallpaper and carry no color. `color` is present for `solid` and for colored glass, `stops` (each with `color` and `location` from 0 to 1) for `gradient`, and `glassStyle` (`regular`, `clear`, `liquid`, `dynamic`) with `glassIsColored` for `glass`.
+- A fill's `kind` is `none`, `solid`, `gradient`, `glass`, `adaptive` or (tint only) `adaptiveGradient`. The adaptive kinds follow the wallpaper and carry no color. `color` is present for `solid` and for colored glass, `stops` (each with `color` and `location` from 0 to 1) and `angle` (degrees: 0 runs top to bottom, 90 leading to trailing) for `gradient`, and `glassStyle` (`regular`, `clear`, `liquid`, `dynamic`) with `glassIsColored` for `glass`.
 - Colors are sRGB components from 0 to 1.
 - `border` is omitted when the border is off; its `style` is `solid`, `dashed` or `dotted`.
 

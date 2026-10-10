@@ -106,7 +106,7 @@ final class LayoutBarFeedbackCenter {
                 comment: "Title shown when an Apple item was refused because system item hiding is off"
             ),
             message: String(
-                localized: "It’s one of Apple’s own items, which macOS keeps in the menu bar unless \(Constants.displayName) asks it not to. Turn on “Allow hiding Apple’s own menu bar items” in Settings \(Constants.menuArrow) Layout to move it.",
+                localized: "It’s one of Apple’s own items, which macOS keeps in the menu bar unless \(Constants.displayName) asks it not to. Choose Everything under Hiding method in Settings \(Constants.menuArrow) Layout to move it.",
                 comment: "Explanation shown when an Apple item was refused because system item hiding is off"
             )
         )

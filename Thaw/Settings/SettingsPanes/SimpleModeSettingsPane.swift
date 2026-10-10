@@ -118,7 +118,7 @@ struct SimpleModeSettingsPane: View {
             systemImage: "menubar.arrow.up.rectangle",
             actionTitle: "Open System Settings"
         ) {
-            if let url = URL(string: "x-apple.systempreferences:com.apple.ControlCenter-Settings.extension") {
+            if let url = Constants.menuBarSystemSettingsURL {
                 NSWorkspace.shared.open(url)
             }
         }

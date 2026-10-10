@@ -1191,9 +1191,12 @@ final class ProfileManager {
         let bundle = try decoder.decode(ProfileExportBundle.self, from: data)
 
         for entry in bundle.entries {
+            // An imported hook must not run until the user has seen it and switched it on.
+            var content = entry.profile.content
+            content.automation = content.automation?.disabledUntilApproved
             let imported = Profile(
                 name: entry.profile.name,
-                content: entry.profile.content
+                content: content
             )
 
             let importedData = try encoder.encode(imported)

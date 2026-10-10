@@ -387,6 +387,9 @@ private struct UnlabeledAppearanceFillEditor: View {
 
     var body: some View {
         stylePicker
+        if style == .gradient {
+            gradientAngleSlider
+        }
         if style == .glass {
             glassStylePicker
         }
@@ -455,6 +458,20 @@ private struct UnlabeledAppearanceFillEditor: View {
                 .labelsHidden()
         case .none, .glass, .adaptive:
             EmptyView()
+        }
+    }
+
+    private var gradientAngleSlider: some View {
+        LabeledContent("Angle") {
+            ThawSlider(
+                value: binding(fields.gradient).angle,
+                in: 0 ... 360,
+                step: 1,
+                showsValue: false
+            ) {
+                Text("\(Int(configuration[keyPath: fields.gradient].angle.rounded()))°")
+            }
+            .help("0° runs top to bottom, 90° left to right")
         }
     }
 

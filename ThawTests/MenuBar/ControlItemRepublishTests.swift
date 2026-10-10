@@ -6,6 +6,7 @@
 //  Licensed under the GNU GPLv3
 //
 
+import CoreGraphics
 import MenuBarModel
 import Testing
 @testable import Thaw
@@ -145,5 +146,38 @@ struct ControlItemRepublishTests {
     func ladderExhausts() {
         #expect(ControlItem.offBandRecoveryAction(takenInCycle: 0, cycle: 2) == .exhausted)
         #expect(ControlItem.offBandRecoveryAction(takenInCycle: 2, cycle: 5) == .exhausted)
+    }
+
+    /// A 1920×1080 main display with a 1728×1117 display to its left, in
+    /// AppKit coordinates.
+    private static let screens = [
+        CGRect(x: 0, y: 0, width: 1920, height: 1080),
+        CGRect(x: -1728, y: -37, width: 1728, height: 1117),
+    ]
+
+    /// Every real frame on a display left of the main one has a negative x;
+    /// reading that as off-band runs the recovery ladder on a seated item.
+    @Test("A seat on a display left of the main one is not off-band")
+    @MainActor
+    func leftDisplaySeatIsNotOffBand() {
+        let seat = CGRect(x: -588, y: 1047, width: 1, height: 33)
+        #expect(!ControlItem.isDegenerateMenuBarFrame(seat, screenFrames: Self.screens))
+    }
+
+    @Test("An added item with no window counts as off-band")
+    @MainActor
+    func missingWindowIsOffBand() {
+        // escalateIfStillOffBand stands a missing window in as an empty frame.
+        #expect(ControlItem.isDegenerateMenuBarFrame(.zero, screenFrames: Self.screens))
+    }
+
+    @Test("Parked, empty, and off-screen frames are off-band")
+    @MainActor
+    func offBandFrames() {
+        // The leading-edge sentinel sits inside the left display here, so it needs its own check.
+        #expect(ControlItem.isDegenerateMenuBarFrame(CGRect(x: -1, y: 1047, width: 1, height: 33), screenFrames: Self.screens))
+        #expect(ControlItem.isDegenerateMenuBarFrame(CGRect(x: 0, y: 0, width: 1, height: 0), screenFrames: Self.screens))
+        #expect(ControlItem.isDegenerateMenuBarFrame(CGRect(x: -2000, y: 1047, width: 24, height: 33), screenFrames: Self.screens))
+        #expect(!ControlItem.isDegenerateMenuBarFrame(CGRect(x: 1130, y: 1050, width: 24, height: 30), screenFrames: Self.screens))
     }
 }

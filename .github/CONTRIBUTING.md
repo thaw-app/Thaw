@@ -87,17 +87,11 @@ Thaw 2.x ships for macOS 26 and 3.0 for macOS 27. CI runs this repository's test
 
 ### Getting started
 
-This branch builds PlatformRuntimeKit from a sibling source checkout. Building
-requires access to that private repository; do not copy its sources into Thaw.
-
-```text
-workspace/
-  Thaw/
-  PlatformRuntimeKit/
-```
-
-Both packages must use `Thaw/MenuBarModel`. The kit defaults to that sibling
-path; `scripts/devrun.sh` also sets `MENU_BAR_MODEL_PATH` explicitly.
+The project links PlatformRuntimeKit from the public
+[prk-bin](https://github.com/thaw-app/prk-bin) binary package, so no extra
+checkout is needed. Maintainers who point the project at a local kit checkout
+must not copy its sources into Thaw, and both packages must then use this
+`MenuBarModel`; `scripts/devrun.sh` sets `MENU_BAR_MODEL_PATH` to it.
 
 ```bash
 open Thaw.xcodeproj
@@ -107,32 +101,24 @@ open Thaw.xcodeproj
 
 ### Build a shareable DMG without a release
 
-Maintainers can run [Build DMG](workflows/build-dmg.yml) to build Thaw and
-PlatformRuntimeKit from sibling source checkouts. No PRK binary release is
-needed. The workflow signs and notarizes the app and DMG, uploads only the DMG
-for three days, and creates no tag or GitHub release.
+Maintainers can run [Build DMG](workflows/build-dmg.yml) to build a Thaw ref
+with the prk-bin version its `Package.resolved` pins. The workflow signs and
+notarizes the app and DMG, uploads only the DMG for three days, and creates no
+tag or GitHub release. Checkout credentials are not persisted. Only build
+reviewed refs: build scripts run in the signing job.
 
-Reuse the `THAW_NEXT_READ_TOKEN` Actions secret. Its token needs **Contents:
-read** access to `thaw-app/PlatformRuntimeKit`; for a fine-grained token, add
-that repository to its allowed repositories. The existing Apple signing and
-notarization secrets are unchanged. Checkout credentials are not persisted.
-Only build reviewed refs: source build scripts run in the signing job.
-
-After the desired commits exist on GitHub, replace these placeholders:
+After the desired commits exist on GitHub, replace this placeholder:
 
 ```bash
-gh workflow run build-dmg.yml -R thaw-app/Thaw \
-  --ref YOUR_WORKFLOW_BRANCH -f prk_ref=YOUR_PRK_COMMIT
+gh workflow run build-dmg.yml -R thaw-app/Thaw --ref YOUR_WORKFLOW_BRANCH
 ```
 
 `--ref` selects the workflow version and, by default, the Thaw source commit.
-The optional `ref` input selects a different Thaw branch, tag, or commit.
-`prk_ref` accepts a PRK branch, tag, or commit and defaults to `main`; use a full
-commit SHA for a repeatable build. Both resolved SHAs appear in the run summary
-and artifact name. Unpushed local commits cannot be built by GitHub Actions.
+The optional `ref` input selects a different Thaw branch, tag, or commit. The
+resolved SHA appears in the artifact name. Unpushed local commits cannot be
+built by GitHub Actions.
 
-This source-checkout setup applies to Build DMG, not the separate release or
-pull-request CI workflows. To check the checkout logic locally on macOS:
+To check the checkout logic locally on macOS:
 
 ```bash
 bash scripts/tests/test-build-dmg-source.sh

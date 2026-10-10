@@ -168,12 +168,21 @@ public enum SystemMenuBarModuleCatalog {
         moduleName(matching: title) == "Clock"
     }
 
+    /// The agent's name for a pinned Control Center module such as Home.
+    /// Accessibility publishes com.apple.menuextra.controlcenter-BentoBox-1; the agent sorts BentoBox-1.
+    public static func pinnedModuleName(inTitle title: String) -> String? {
+        guard let range = title.range(of: "-BentoBox-", options: .backwards) else { return nil }
+        let index = title[range.upperBound...]
+        guard !index.isEmpty, index.allSatisfy(\.isNumber) else { return nil }
+        return "BentoBox-\(index)"
+    }
+
     /// Canonical preferred-position key for a MenuBarAgent-hosted Apple module
     /// (e.g. module:WiFi).
     public static func trailingPositionsModuleKey(forTitle title: String) -> String {
         // AX publishes menu-extra ids, the agent sorts module: keys.
         // Display is persisted singular though its catalog name is plural.
-        let catalogName = moduleName(matching: title) ?? title
+        let catalogName = moduleName(matching: title) ?? pinnedModuleName(inTitle: title) ?? title
         let persistedName = catalogName == "Displays" ? "Display" : catalogName
         return "module:\(persistedName)"
     }

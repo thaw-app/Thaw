@@ -34,7 +34,6 @@ struct GeneralSettingsPane: View {
                         "Right-click an empty area of the menu bar to open a minimal version of \(Constants.displayName)'s menu.",
                         more: "Turn this off if another app also uses right-clicks on the menu bar."
                     )
-                NativeAppHidingToggle(settings: advancedSettings)
             }
         }
         .errorAlert("Couldn’t relaunch \(Constants.displayName)", message: $relaunchErrorMessage)

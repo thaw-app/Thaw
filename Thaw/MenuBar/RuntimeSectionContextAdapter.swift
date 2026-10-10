@@ -177,11 +177,13 @@ final class RuntimeSectionContextAdapter: RuntimeSectionContext {
     }
 
     func synchronizeVisibleItemGeometry(revealing section: MenuBarSectionName) async {
-        await appState?.itemManager.synchronizeRevealedOrder(revealing: section)
+        guard let itemManager = appState?.itemManager else { return }
+        await RevealTurns.restoreOrder(revealing: section, on: itemManager)
     }
 
     func reconcileSectionOrderAfterRecovery(revealing section: MenuBarSectionName) async {
-        await appState?.itemManager.reconcileSectionBoundaries(revealing: section)
+        guard let itemManager = appState?.itemManager else { return }
+        await RevealTurns.reconcileBoundaries(revealing: section, on: itemManager)
     }
 
     func prepareRevealedOrder() {
@@ -199,7 +201,11 @@ final class RuntimeSectionContextAdapter: RuntimeSectionContext {
     func scheduleNativeOverflowRebalance() {
         // The native overflow control appearing is something Thaw observed,
         // not a request to reorder: conceal at once, move nothing.
-        appState?.itemManager.scheduleOverflowRebalance(reason: .externalChange, immediate: true)
+        appState?.itemManager.scheduleOverflowRebalance(
+            cause: .nativeOverflowChanged,
+            reason: .externalChange,
+            immediate: true
+        )
     }
 
     func enableAlwaysHiddenSectionRevealIfNeeded() {
@@ -353,6 +359,19 @@ final class RuntimeSectionContextAdapter: RuntimeSectionContext {
             .compactMap { AXHelpers.descendantAttributes(for: $0).identifier?.runtimeNonEmpty }
             .first
             ?? attributes.title?.runtimeNonEmpty
+    }
+}
+
+extension RuntimeSectionContextAdapter {
+    /// An item no longer in the cache has no known owner, so any open menu holds it.
+    func isMenuOpen(forItem identifier: String) async -> Bool {
+        let key = MenuBarItemTag.canonicalPersistentIdentifier(identifier)
+        guard let item = appState?.itemManager.managedItems.first(where: {
+            MenuBarItemTag.canonicalPersistentIdentifier($0.uniqueIdentifier) == key
+        }) else {
+            return await menuOpenMonitor.isAnyMenuOpen()
+        }
+        return await menuOpenMonitor.isMenuOpen(ownedBy: item.reactionPIDs)
     }
 }
 

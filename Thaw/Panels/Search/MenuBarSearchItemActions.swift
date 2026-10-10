@@ -98,7 +98,8 @@ enum MenuBarSearchItemActions {
         let groupMembers = crossSectionGroupMembers(for: item, in: sourceSection, appState: appState)
         let members = groupMembers ?? [item]
 
-        Task {
+        // The user chose this from a menu, so it moves in Manual too.
+        ExplicitLayoutEdit.task {
             // Seat the weights in the destination band before the assertion
             // flips, or MenuBarAgent republishes the item on its old side of
             // the divider and the boundary repair drags it back seconds later.
@@ -143,7 +144,7 @@ enum MenuBarSearchItemActions {
             MenuBarBackendProvider.current.canAssign($0, to: section, experimentalSystemItemHiding: experimentalSystemItemHiding)
         }
         guard !assignable.isEmpty else { return }
-        Task {
+        ExplicitLayoutEdit.task {
             // Seated before the assertion flips, as for a single move.
             await appState.itemManager.seatItemsForSectionTransition(assignable, to: section) {
                 _ = appState.menuBarManager.setSection(section, items: assignable)

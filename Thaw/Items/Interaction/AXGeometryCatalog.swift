@@ -174,12 +174,24 @@ nonisolated enum AXGeometryCatalog {
 
     /// Frames correlate host AX items with CG bounds; only PIDs and immutable results cross the actor boundary.
     /// The actor hop leaves the caller's executor, unlike nonisolated async with NonisolatedNonsendingByDefault.
+    /// AppKit answers reads of Thaw's own elements in-process and is not thread-safe,
+    /// so Thaw's own bar is walked on the main actor and every other host on the executor.
     static nonisolated func snapshot(hostProcessIdentifiers: [pid_t]) async -> [Entry] {
-        await GeometryWalkExecutor.shared.snapshot(hostProcessIdentifiers: hostProcessIdentifiers)
+        let deadline = ContinuousClock.now + snapshotBudget
+        let foreign = hostProcessIdentifiers.filter { !AXPrimitives.isOwnProcess($0) }
+        var entriesByPID = await Dictionary(grouping: GeometryWalkExecutor.shared.snapshot(
+            hostProcessIdentifiers: foreign,
+            deadline: deadline
+        ), by: \.ownerPID)
+        for pid in hostProcessIdentifiers where AXPrimitives.isOwnProcess(pid) {
+            entriesByPID[pid] = await MainActor.run {
+                performSnapshot(hostProcessIdentifiers: [pid], deadline: deadline)
+            }
+        }
+        return hostProcessIdentifiers.flatMap { entriesByPID[$0] ?? [] }
     }
 
-    fileprivate static func performSnapshot(hostProcessIdentifiers: [pid_t]) -> [Entry] {
-        let deadline = ContinuousClock.now + snapshotBudget
+    fileprivate static func performSnapshot(hostProcessIdentifiers: [pid_t], deadline: ContinuousClock.Instant) -> [Entry] {
         var results = [Entry]()
         var visited = 0
 
@@ -336,7 +348,7 @@ nonisolated enum AXGeometryCatalog {
 private actor GeometryWalkExecutor {
     static let shared = GeometryWalkExecutor()
 
-    func snapshot(hostProcessIdentifiers: [pid_t]) -> [AXGeometryCatalog.Entry] {
-        AXGeometryCatalog.performSnapshot(hostProcessIdentifiers: hostProcessIdentifiers)
+    func snapshot(hostProcessIdentifiers: [pid_t], deadline: ContinuousClock.Instant) -> [AXGeometryCatalog.Entry] {
+        AXGeometryCatalog.performSnapshot(hostProcessIdentifiers: hostProcessIdentifiers, deadline: deadline)
     }
 }
