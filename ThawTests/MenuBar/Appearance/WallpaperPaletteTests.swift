@@ -55,8 +55,9 @@ struct WallpaperPaletteTests {
 
     @Test("Near-identical colors collapse to one swatch")
     func nearDuplicatesAreRejected() {
-        // Many near-identical blues. Without separation a gradient built from
-        // them looks like a flat fill.
+        // A sky: many blues a viewer would call the same blue. Without the
+        // separation step this returns five of them and a gradient built
+        // from it looks like a flat fill.
         let skyish = (0 ..< 5).map { index in
             Sample(red: 0.1, green: 0.2, blue: 0.8 + Double(index) * 0.01)
         }

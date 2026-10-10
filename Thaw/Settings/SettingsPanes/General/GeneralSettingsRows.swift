@@ -2,39 +2,113 @@
 //  GeneralSettingsRows.swift
 //  Project: Thaw
 //
-//  Copyright (Ice) © 2023–2025 Jordan Baird
 //  Copyright (Thaw) © 2026 Toni Förster
 //  Licensed under the GNU GPLv3
 
-import LaunchAtLogin
 import SwiftUI
+import ThawUI
 
-// General settings rows shared by ``GeneralSettingsPane`` and
-// ``SimpleModeSettingsPane``. Tuning rows (hover delay, rehide strategy,
-// always-hidden gestures) stay in ``GeneralSettingsPane``.
+// General settings shared by GeneralSettingsPane and SimpleModeSettingsPane,
+// defined once so the two panes' explanations cannot drift.
 
 // MARK: - LaunchAtLoginRow
 
 /// Whether the app starts with the user's session.
 struct LaunchAtLoginRow: View {
+    @Environment(AppState.self) private var appState
+
     var body: some View {
-        LaunchAtLogin.Toggle {
-            Text("Launch at Login")
+        let setting = appState.settings.launchAtLogin
+        Toggle("Launch at Login", isOn: Binding(
+            get: { setting.isEnabled },
+            set: { enabled in
+                Task { await setting.setEnabled(enabled) }
+            }
+        ))
+        .disabled(!setting.isLoaded || setting.isUpdating)
+        .task {
+            let activations = NotificationCenter.default.notifications(named: NSApplication.didBecomeActiveNotification)
+            await setting.refresh()
+            for await _ in activations {
+                await setting.refresh()
+            }
         }
     }
 }
 
-// MARK: - ShowIceIconRow
+// MARK: - ShowThawIconRow
 
 /// Whether the app's own menu bar icon is shown, and which icon it is.
-struct ShowIceIconRow: View {
+struct ShowThawIconRow: View {
+    @Environment(AppState.self) private var appState
     @Bindable var settings: GeneralSettings
+    @State private var placementBlock: ControlItem.PlacementBlock?
+
+    /// Names only the gestures that currently do something: double-click needs
+    /// Always Hidden, and the swap option changes what a click does.
+    private var gestureSummary: LocalizedStringKey {
+        let advanced = appState.settings.advanced
+        let doubleClickOpensAlwaysHidden = advanced.isAlwaysHiddenSectionEnabled
+        switch (advanced.swapOnThawIconClick, doubleClickOpensAlwaysHidden) {
+        case (false, true):
+            return "Click to show hidden items, double-click for Always Hidden, and right-click for settings."
+        case (false, false):
+            return "Click to show hidden items and right-click for settings."
+        case (true, true):
+            return "Click to swap shown and hidden items, double-click for Always Hidden, and right-click for settings."
+        case (true, false):
+            return "Click to swap shown and hidden items and right-click for settings."
+        }
+    }
 
     var body: some View {
-        Toggle("Show \(Constants.displayName) icon", isOn: $settings.showIceIcon)
-            .annotation("Show the \(Constants.displayName) icon in the menu bar. Click to show hidden items, double-click for always-hidden, and right-click for settings.")
-        if settings.showIceIcon {
-            IceIconPicker(settings: settings)
+        Toggle("Show \(Constants.displayName) icon", isOn: $settings.showThawIcon)
+            .annotation(gestureSummary)
+            .task {
+                guard let item = appState.menuBarManager.controlItem(withName: .visible) else { return }
+                for await block in item.$placementBlock.values {
+                    placementBlock = block
+                }
+            }
+        if settings.showThawIcon {
+            ThawIconPicker(settings: settings)
+            if let placementBlock {
+                ThawPlacementWarning(block: placementBlock)
+            }
+        } else {
+            Text("Hiding the icon also shrinks the section dividers to nothing. If items start landing in the wrong section, show the icon again.")
+                .font(.footnote)
+                .foregroundStyle(.secondary)
+        }
+        if !settings.showThawIcon, placementBlock == .deniedBySystem {
+            // The dividers are switched off with the icon, so this matters with the icon hidden too.
+            ThawPlacementWarning(block: .deniedBySystem)
+        }
+    }
+}
+
+/// Says why Thaw's own items are missing from the menu bar, with the way to the switch.
+struct ThawPlacementWarning: View {
+    let block: ControlItem.PlacementBlock
+
+    var body: some View {
+        let title: LocalizedStringKey = switch block {
+        case .deniedBySystem: "macOS isn't allowing \(Constants.displayName) in the menu bar"
+        case .unknown: "The \(Constants.displayName) icon isn't in the menu bar"
+        }
+        let message: LocalizedStringKey = switch block {
+        case .deniedBySystem: "\(Constants.displayName) can't hide or arrange anything until it is switched back on in System Settings > Menu Bar."
+        case .unknown: "macOS may be blocking it. Check that \(Constants.displayName) is switched on in System Settings > Menu Bar."
+        }
+        return SettingsWarningPill(
+            title: title,
+            message: message,
+            tint: .orange,
+            actionTitle: "Open System Settings"
+        ) {
+            if let url = Constants.menuBarSystemSettingsURL {
+                NSWorkspace.shared.open(url)
+            }
         }
     }
 }

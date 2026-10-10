@@ -1,0 +1,56 @@
+# This file is configured to match the project's SwiftLint rules.
+
+# --swift-version: Specify Swift version to enable all formatting features.
+--swift-version 6.0
+
+# --indent 4: Matches 'prefer_spaces_over_tabs' custom rule.
+--indent 4
+--tab-width 4
+--smart-tabs disabled
+
+# --max-width 0: Disables line-length wrapping, as 'line_length' is disabled in SwiftLint.
+--max-width 0
+
+# --trailing-commas always: Matches 'trailing_comma: mandatory_comma: true'.
+--trailing-commas always
+
+# --header ignore: SwiftLint's 'file_header' rule checks the header. The Ice
+# line belongs only on files that still contain Jordan Baird's code, so a single
+# literal template here would stamp it back onto every file.
+--header ignore
+
+# --enable isEmpty: Opt-in rule to match SwiftLint's 'empty_count'.
+--enable isEmpty
+
+# --modifier-order: Aligns with SwiftLint's preferred_modifier_order.
+--modifier-order override,open,public,package,internal,fileprivate,private,open(set),public(set),package(set),internal(set),fileprivate(set),private(set),mutating,nonmutating,lazy,final,required,convenience,static,class,weak,unowned,unowned(safe),unowned(unsafe),dynamic,optional,indirect,isolated,nonisolated,nonisolated(unsafe),borrowing,consuming,prefix,infix,postfix,async
+
+# These rules are too aggressive or cause conflicts and need to be disabled.
+--disable redundantEquatable
+--disable redundantSelf
+--disable redundantReturn
+
+# --disable redundantRawValues: raw values here are a stored format, not a
+# spelling. Defaults.Key's raw values are the literal UserDefaults key names on
+# disk, and the appearance enums' raw values sit inside every persisted profile.
+# Dropping a "redundant" one makes the stored name follow the Swift case name,
+# so a later rename would silently orphan every user's setting with no
+# compile-time complaint. DefaultsKeyTests pins those values for the same reason.
+--disable redundantRawValues
+
+# Explicitly disable specific wrapping behaviors to prevent alignment issues.
+--wrap-arguments disabled
+--wrap-collections disabled
+--wrap-conditions disabled
+
+
+# General formatting rules for consistency and modern Swift style
+
+# --self remove: Use implicit self, as is common practice.
+--self remove
+
+# --allman false: Use K&R style braces (opening brace on the same line).
+--allman false
+
+# --semicolons inline-only: Remove unnecessary semicolons.
+--semicolons inline-only

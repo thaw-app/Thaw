@@ -1,0 +1,87 @@
+name: Build DMG (Thaw 2)
+
+# Manual signed, notarized DMG as a short-lived artifact, never a release.
+
+on:
+  workflow_dispatch:
+    inputs:
+      ref:
+        description: Branch, tag, or commit to build (empty = the commit on the selected workflow branch)
+        required: false
+        type: string
+        default: ""
+
+concurrency:
+  group: build-dmg-legacy-${{ inputs.ref || github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  build-dmg:
+    if: github.repository == 'thaw-app/Thaw'
+    # GitHub-hosted Xcode 27 preview image (arm64); xcode-27-xlarge for more cores.
+    runs-on: xcode-27
+    env:
+      APP_NAME: "Thaw.app"
+      DMG_NAME: "Thaw2-dev.dmg"
+    steps:
+      # A local composite action has to exist on disk before it can run, so
+      # this sparse checkout brings in .github/actions and nothing else.
+      - name: Checkout build actions
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          sparse-checkout: legacy/.github/actions
+
+      - name: Checkout source
+        id: source
+        uses: ./legacy/.github/actions/checkout-source
+        with:
+          ref: ${{ inputs.ref }}
+
+      - name: Select latest installed Xcode (including betas)
+        uses: maxim-lobanov/setup-xcode@ed7a3b1fda3918c0306d1b724322adc0b8cc0a90 # v1.7.0
+        with:
+          xcode-version: latest
+
+      - name: Configure signing
+        uses: thaw-app/org-ci/actions/configure-signing@6adcb3aa53a28cfa9d4cd2f55e2d5f5c75af980b
+        with:
+          apple-application-cert: ${{ secrets.APPLE_APPLICATION_CERT }}
+          apple-application-cert-password: ${{ secrets.APPLE_APPLICATION_CERT_PASSWORD }}
+          apple-id: ${{ secrets.APPLE_ID }}
+          apple-id-password: ${{ secrets.APPLE_ID_PASSWORD }}
+          apple-team-id: ${{ secrets.APPLE_TEAM_ID }}
+
+      - name: Build
+        uses: thaw-app/org-ci/actions/build@6adcb3aa53a28cfa9d4cd2f55e2d5f5c75af980b
+        with:
+          apple-team-id: ${{ secrets.APPLE_TEAM_ID }}
+          project-name: ${{ steps.source.outputs.project-name }}
+          scheme-name: Thaw
+          deployment-target: ${{ steps.source.outputs.deployment-target }}
+
+      - name: Export Archive
+        uses: thaw-app/org-ci/actions/export-and-package@6adcb3aa53a28cfa9d4cd2f55e2d5f5c75af980b
+        with:
+          apple-team-id: ${{ secrets.APPLE_TEAM_ID }}
+          app-name: ${{ env.APP_NAME }}
+          dmg-name: ${{ env.DMG_NAME }}
+
+      - name: Notarize
+        uses: thaw-app/org-ci/actions/notarize-and-validate@6adcb3aa53a28cfa9d4cd2f55e2d5f5c75af980b
+        with:
+          dmg-name: ${{ env.DMG_NAME }}
+          app-name: ${{ env.APP_NAME }}
+
+      - name: Upload DMG
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: Thaw2-dmg-${{ steps.source.outputs.commit }}
+          path: build/${{ env.DMG_NAME }}
+          retention-days: 3
+
+      - name: Cleanup keychain
+        if: always()
+        run: security delete-keychain "$RUNNER_TEMP/buildagent.keychain" || true

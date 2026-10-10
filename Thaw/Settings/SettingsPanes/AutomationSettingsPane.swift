@@ -6,17 +6,21 @@
 //  Licensed under the GNU GPLv3
 
 import AppKit
+import MenuBarModel
 import SwiftUI
+import ThawUI
 import UniformTypeIdentifiers
 
 struct AutomationSettingsPane: View {
-    @Environment(AppState.self) var appState: AppState
-    @State private var settings = AutomationSettings()
-    @State private var hookSettings = AutomationHookSettings()
+    @Environment(AppState.self) var appState
+    @Bindable var settings: AutomationSettings
+    @Bindable var hookSettings: AutomationHookSettings
+    @Bindable var advancedSettings: AdvancedSettings
     @State private var newBundleId: String = ""
     @State private var isShowingAddError = false
     @State private var addErrorMessage = ""
     @State private var selectedHookProfileID: UUID?
+    @State private var hookErrorMessage: String?
     /// Bumped whenever a per-profile hook write completes, so SwiftUI
     /// re-reads the latest values from ProfileManager.
     @State private var profileHookRevision: Int = 0
@@ -25,7 +29,21 @@ struct AutomationSettingsPane: View {
     @State private var hookLabelWidth: CGFloat = 90
 
     var body: some View {
-        IceForm {
+        ThawForm {
+            // Everyday options first: what happens on its own as you work.
+            profileAutoSwitchSection
+
+            ThawSection("Presentation") {
+                Toggle("Enter Zen Mode while presenting", isOn: $advancedSettings.autoZenWhileSharingScreen)
+                    .annotation(
+                        "Hides your Hidden and Always Hidden items while a display is mirrored or your screen is shared, then brings them back.",
+                        more: "macOS offers no way to see that another app is recording the screen, so recordings are not covered."
+                    )
+            }
+
+            alertRevealSection
+
+            // Then the parts that talk to other apps and run your own code.
             enableSection
 
             if settings.isSettingsURIEnabled {
@@ -38,6 +56,7 @@ struct AutomationSettingsPane: View {
             profileHooksSection
             envVarsSection
         }
+        .errorAlert("Couldn’t save script", message: $hookErrorMessage)
         .onAppear {
             if selectedHookProfileID == nil {
                 selectedHookProfileID = appState.profileManager.activeProfileID
@@ -45,9 +64,8 @@ struct AutomationSettingsPane: View {
             }
         }
         .onChange(of: appState.profileManager.profiles) { _, updated in
-            // The selected profile can disappear (deleted, import-replaced).
-            // Fall back to the active profile, else the first remaining one,
-            // so the picker and HookRow bindings never point at a missing one.
+            // The selected profile can be deleted elsewhere; fall back to the
+            // active one, else the first, so bindings never dangle.
             let ids = Set(updated.map(\.id))
             if let current = selectedHookProfileID, !ids.contains(current) {
                 selectedHookProfileID = appState.profileManager.activeProfileID
@@ -59,32 +77,42 @@ struct AutomationSettingsPane: View {
         }
     }
 
+    // MARK: - Profile Auto-Switch
+
+    @ViewBuilder
+    private var profileAutoSwitchSection: some View {
+        // Only shown when profiles exist; an empty picker is noise.
+        if !appState.profileManager.profiles.isEmpty {
+            ProfileAutoSwitchControls(
+                profileManager: appState.profileManager,
+                errorMessage: $hookErrorMessage
+            )
+        }
+    }
+
     // MARK: - Enable Section
 
+    /// Opens the Advanced group. Off is the normal state, so it carries no
+    /// warning when off; the sections that depend on it simply stay hidden.
     private var enableSection: some View {
-        IceSection {
-            Toggle("Enable Settings URI Scheme", isOn: $settings.isSettingsURIEnabled)
-                .annotation("Allow external applications to read and modify \(Constants.displayName) settings via thaw:// URLs.")
-
-            if !settings.isSettingsURIEnabled {
-                SettingsWarningPill(
-                    title: "Settings URI disabled",
-                    message: "External apps cannot read or modify \(Constants.displayName) settings.",
-                    systemImage: "lock.circle.fill"
-                )
-            }
+        ThawSection {
+            Text("Advanced")
+                .font(ThawType.heading)
+        } content: {
+            Toggle("Allow other apps to change settings", isOn: $settings.isSettingsURIEnabled)
+                .annotation("Apps you approve can read and change \(Constants.displayName) settings by opening thaw:// links.")
         }
     }
 
     // MARK: - Whitelist Section
 
     private var whitelistSection: some View {
-        IceSection {
-            let count = String(localized: "apps \(settings.whitelistedApps.count)", comment: "Shows the number of whitelisted apps")
-            HStack(spacing: 6) {
-                Text("Whitelisted Applications")
+        ThawSection {
+            let count = String(localized: "apps \(settings.whitelistedApps.count)", comment: "Shows the number of allowed apps")
+            HStack(spacing: ThawSpacing.compact) {
+                Text("Allowed apps")
                 Text(verbatim: "(\(count))")
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(ThawInk.supporting)
             }
         } content: {
             if settings.whitelistedApps.isEmpty {
@@ -92,30 +120,30 @@ struct AutomationSettingsPane: View {
             } else {
                 ForEach(settings.whitelistedApps) { app in
                     whitelistedAppRow(app)
+                        .contextMenu {
+                            Button("Remove from Allowed Apps", role: .destructive) {
+                                settings.removeFromWhitelist(bundleId: app.bundleId)
+                            }
+                        }
                 }
             }
         }
     }
 
     private var emptyWhitelistView: some View {
-        VStack(alignment: .leading, spacing: 4) {
-            Text("No whitelisted apps")
-                .font(.body.weight(.medium))
-            Text("Apps that request settings access will appear here after you approve them.")
-                .font(.caption)
-                .foregroundStyle(.secondary)
-                .fixedSize(horizontal: false, vertical: true)
-        }
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .padding(.vertical, 4)
+        ThawEmptyState(
+            systemImage: "checkmark.shield",
+            title: "No allowed apps",
+            caption: "An app appears here after it asks to change settings and you approve it."
+        )
     }
 
     private func whitelistedAppRow(_ app: AutomationSettings.WhitelistedApp) -> some View {
-        HStack(spacing: 12) {
+        HStack(spacing: ThawSpacing.inset) {
             if let icon = app.icon {
                 Image(nsImage: icon)
                     .resizable()
-                    .aspectRatio(contentMode: .fit)
+                    .scaledToFit()
                     .frame(width: 28, height: 28)
             } else {
                 Image(systemName: "app.fill")
@@ -124,12 +152,12 @@ struct AutomationSettingsPane: View {
                     .foregroundStyle(.secondary)
             }
 
-            VStack(alignment: .leading, spacing: 2) {
+            VStack(alignment: .leading, spacing: ThawSpacing.hairline) {
                 Text(app.displayName)
-                    .font(.body.weight(.medium))
+                    .font(ThawType.label)
                 Text(app.bundleId)
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
+                    .font(ThawType.caption)
+                    .foregroundStyle(ThawInk.supporting)
                     .lineLimit(1)
             }
 
@@ -142,8 +170,8 @@ struct AutomationSettingsPane: View {
                     .foregroundStyle(.green)
             }
             .labelStyle(.titleAndIcon)
-            .font(.caption)
-            .foregroundStyle(.secondary)
+            .font(ThawType.caption)
+            .foregroundStyle(ThawInk.supporting)
 
             Button {
                 settings.removeFromWhitelist(bundleId: app.bundleId)
@@ -152,15 +180,15 @@ struct AutomationSettingsPane: View {
                     .foregroundStyle(.red)
             }
             .buttonStyle(.plain)
-            .help("Remove from whitelist")
-            .accessibilityLabel("Remove \(app.displayName) from whitelist")
+            .help("Remove from allowed apps")
+            .accessibilityLabel("Remove \(app.displayName) from allowed apps")
         }
     }
 
     private var addAppSection: some View {
-        IceSection("Add Application") {
-            HStack(spacing: 8) {
-                TextField("Bundle Identifier (e.g., iordv.Droppy)", text: $newBundleId)
+        ThawSection("Add an app") {
+            HStack(spacing: ThawSpacing.base) {
+                TextField("App bundle ID, e.g. com.example.App", text: $newBundleId)
                     .textFieldStyle(.roundedBorder)
 
                 Button("Add") {
@@ -183,8 +211,8 @@ struct AutomationSettingsPane: View {
 
             if isShowingAddError {
                 Text(addErrorMessage)
-                    .font(.caption)
-                    .foregroundStyle(.red)
+                    .font(ThawType.caption)
+                    .foregroundStyle(Color.warning)
             }
         }
     }
@@ -192,25 +220,25 @@ struct AutomationSettingsPane: View {
     // MARK: - About Section
 
     private var aboutSection: some View {
-        IceSection("How It Works") {
-            VStack(alignment: .leading, spacing: 8) {
-                numberedStep(1, "When an app sends a thaw:// URL to change settings, Thaw checks if that app is whitelisted.")
-                numberedStep(2, "If not whitelisted, you'll see a confirmation dialog showing the app name and what it wants to do.")
-                numberedStep(3, "If you approve, the app is permanently whitelisted and can modify settings anytime without asking again.")
+        ThawSection("Approving an app") {
+            VStack(alignment: .leading, spacing: ThawSpacing.base) {
+                numberedStep(1, "When an app opens a thaw:// link to change settings, \(Constants.displayName) checks whether you have allowed that app.")
+                numberedStep(2, "If you have not, you’ll see a confirmation dialog showing the app name and what it wants to do.")
+                numberedStep(3, "If you approve, the app is allowed permanently and can modify settings anytime without asking again.")
                 numberedStep(4, "You can remove apps from this list at any time to revoke their access.")
             }
-            .font(.caption)
-            .foregroundStyle(.secondary)
+            .font(ThawType.caption)
+            .foregroundStyle(ThawInk.supporting)
 
-            Text("Whitelisted apps can read settings, toggle boolean options, set numeric values (timers, delays), change enum settings (rehide strategy, \(Constants.displayName) Bar location), and modify per-display configurations. This includes auto-rehide, show on click/hover/scroll/double-click, \(Constants.displayName) Bar, hide application menus, enable always-hidden section, show tooltips, and diagnostic logging.")
-                .font(.caption)
-                .foregroundStyle(.secondary)
+            Text("Allowed apps can read and change most settings, such as how sections show and hide, the \(Constants.displayName) Bar, and per-display options.")
+                .font(ThawType.caption)
+                .foregroundStyle(ThawInk.supporting)
                 .fixedSize(horizontal: false, vertical: true)
         }
     }
 
     private func numberedStep(_ number: Int, _ text: LocalizedStringKey) -> some View {
-        HStack(alignment: .top, spacing: 8) {
+        HStack(alignment: .top, spacing: ThawSpacing.base) {
             Text(verbatim: "\(number).")
             Text(text)
         }
@@ -222,18 +250,18 @@ struct AutomationSettingsPane: View {
         let trimmed = newBundleId.trimmingCharacters(in: .whitespacesAndNewlines)
 
         guard !trimmed.isEmpty else {
-            showError("Bundle identifier cannot be empty.")
+            showError("Enter a bundle ID, like com.example.App.")
             return
         }
 
         guard AutomationSettings.isValidBundleId(trimmed) else {
-            showError("Invalid bundle identifier format. Should be like 'com.company.appname'.")
+            showError("That isn’t a bundle ID. Enter one like com.example.App.")
             return
         }
 
         let existing = settings.whitelistedApps.contains { $0.bundleId == trimmed }
         guard !existing else {
-            showError("'\(trimmed)' is already in the whitelist.")
+            showError("“\(trimmed)” is already allowed.")
             return
         }
 
@@ -250,20 +278,20 @@ struct AutomationSettingsPane: View {
     // MARK: - Hooks
 
     private var globalHooksSection: some View {
-        IceSection("Global Hooks") {
-            Text("Run a shell or AppleScript file before or after a profile switch. Hooks fire on every apply path: manual button, hotkey, display auto-switch, and Focus Filter.")
-                .font(.caption)
-                .foregroundStyle(.secondary)
+        ThawSection("Scripts for every profile") {
+            Text("Run a shell script or AppleScript before or after any profile switch: by hand, with a keyboard shortcut, when displays change, or from a Focus filter.")
+                .font(ThawType.caption)
+                .foregroundStyle(ThawInk.supporting)
                 .fixedSize(horizontal: false, vertical: true)
 
             HookRow(
-                label: "Pre-apply",
+                label: "Before switching",
                 hook: $hookSettings.globalPreHook,
                 labelWidth: hookLabelWidth
             )
 
             HookRow(
-                label: "Post-apply",
+                label: "After switching",
                 hook: $hookSettings.globalPostHook,
                 labelWidth: hookLabelWidth
             )
@@ -271,13 +299,13 @@ struct AutomationSettingsPane: View {
     }
 
     private var profileHooksSection: some View {
-        IceSection("Per-Profile Hooks") {
+        ThawSection("Scripts for one profile") {
             if appState.profileManager.profiles.isEmpty {
-                Text("No profiles saved yet. Create one in the Profiles tab to attach per-profile hooks.")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
+                Text("No profiles yet. Create one on the Profiles page to give it its own scripts.")
+                    .font(ThawType.caption)
+                    .foregroundStyle(ThawInk.supporting)
             } else {
-                IcePicker("Profile", selection: $selectedHookProfileID) {
+                ThawPicker("Profile", selection: $selectedHookProfileID) {
                     ForEach(appState.profileManager.profiles) { meta in
                         Text(meta.name).tag(Optional(meta.id))
                     }
@@ -285,20 +313,20 @@ struct AutomationSettingsPane: View {
 
                 if let profileID = selectedHookProfileID {
                     HookRow(
-                        label: "Pre-apply",
+                        label: "Before switching",
                         hook: bindingForProfileHook(profileID: profileID, phase: .pre),
                         labelWidth: hookLabelWidth
                     )
 
                     HookRow(
-                        label: "Post-apply",
+                        label: "After switching",
                         hook: bindingForProfileHook(profileID: profileID, phase: .post),
                         labelWidth: hookLabelWidth
                     )
 
-                    Text("These hooks run only when this profile is applied, after the global pre-hook and before the global post-hook.")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
+                    Text("These run only when switching to this profile, between the scripts for every profile: after their Before switching script and before their After switching one.")
+                        .font(ThawType.caption)
+                        .foregroundStyle(ThawInk.supporting)
                 }
             }
         }
@@ -306,20 +334,20 @@ struct AutomationSettingsPane: View {
     }
 
     private var envVarsSection: some View {
-        IceSection("Script Environment") {
+        ThawSection("Script environment") {
             Text("Environment variables passed to scripts")
-                .font(.caption)
-                .foregroundStyle(.secondary)
+                .font(ThawType.caption)
+                .foregroundStyle(ThawInk.supporting)
 
             Text(verbatim: "THAW_HOOK_PHASE, THAW_HOOK_SCOPE, THAW_PROFILE_ID, THAW_PROFILE_NAME, THAW_PREVIOUS_PROFILE_ID, THAW_PREVIOUS_PROFILE_NAME")
-                .font(.caption.monospaced())
-                .foregroundStyle(.secondary)
+                .font(ThawType.caption.monospaced())
+                .foregroundStyle(ThawInk.supporting)
                 .textSelection(.enabled)
                 .fixedSize(horizontal: false, vertical: true)
 
-            Text("Example: a bash pre-hook could `defaults write com.bjango.istatmenus5 ActiveProfile -string \"$THAW_PROFILE_NAME\"` to keep iStat Menus in sync with Thaw.")
-                .font(.caption)
-                .foregroundStyle(.secondary)
+            Text("Example: a Before switching script could run `defaults write com.bjango.istatmenus5 ActiveProfile -string \"$THAW_PROFILE_NAME\"` to keep iStat Menus in sync with \(Constants.displayName).")
+                .font(ThawType.caption)
+                .foregroundStyle(ThawInk.supporting)
                 .textSelection(.enabled)
                 .fixedSize(horizontal: false, vertical: true)
         }
@@ -339,8 +367,47 @@ struct AutomationSettingsPane: View {
                     DiagLog(category: "AutomationSettingsPane").error(
                         "Failed to save \(phase.rawValue) hook for profile \(profileID): \(error)"
                     )
+                    // The row would otherwise keep showing a hook that was
+                    // never written to the profile.
+                    hookErrorMessage = error.localizedDescription
                 }
             }
+        )
+    }
+
+    // MARK: - Reveal on Icon Change
+
+    private var alertRevealSection: some View {
+        ThawSection("Reveal on icon change") {
+            AlertRevealItemList()
+            // The list shows only a "hide an item first" note when nothing
+            // can reveal, and a cooldown for nothing would do nothing.
+            if hasAlertRevealCandidates {
+                alertRevealCooldown
+            }
+        }
+    }
+
+    /// Mirrors the rows AlertRevealItemList draws: any item in Hidden or
+    /// Always Hidden, or an opt-in whose item has since left the menu bar.
+    private var hasAlertRevealCandidates: Bool {
+        let cache = appState.itemManager.itemCache
+        return !(cache[.hidden] + cache[.alwaysHidden]).isEmpty
+            || !MenuBarItemAlertReveals.identifiers().isEmpty
+    }
+
+    private var alertRevealCooldown: some View {
+        SecondsSliderRow(
+            "Reveal cooldown",
+            value: $advancedSettings.menuBarItemAlertRevealCooldown,
+            in: 5 ... 300,
+            step: 5
+        )
+        .annotation(
+            """
+            The least time that passes before the same item can reveal itself again, \
+            so an icon that animates continuously can’t bounce in and out of the menu bar.
+            """
         )
     }
 }
@@ -362,8 +429,8 @@ private struct HookRow: View {
     let labelWidth: CGFloat
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 6) {
-            HStack(spacing: 8) {
+        VStack(alignment: .leading, spacing: ThawSpacing.compact) {
+            HStack(spacing: ThawSpacing.base) {
                 Text(label)
                     .lineLimit(1)
                     .fixedSize(horizontal: true, vertical: false)
@@ -378,8 +445,8 @@ private struct HookRow: View {
                     .frame(minWidth: labelWidth, alignment: .leading)
 
                 Text(displayPath)
-                    .font(.caption.monospaced())
-                    .foregroundStyle(hook == nil ? .secondary : .primary)
+                    .font(ThawType.caption.monospaced())
+                    .foregroundStyle(hook == nil ? ThawInk.supporting : Color.primary)
                     .lineLimit(1)
                     .truncationMode(.middle)
                     .frame(maxWidth: .infinity, alignment: .leading)
@@ -394,20 +461,21 @@ private struct HookRow: View {
                         .foregroundStyle(.red)
                 }
                 .buttonStyle(.plain)
-                .help("Clear hook")
+                .help("Remove script")
+                .accessibilityLabel("Remove script")
                 .opacity(hook == nil ? 0 : 1)
                 .allowsHitTesting(hook != nil)
                 .accessibilityHidden(hook == nil)
             }
 
             if hook != nil {
-                HStack(spacing: 16) {
+                HStack(spacing: ThawSpacing.gutter) {
                     Spacer().frame(width: labelWidth)
 
                     Toggle("Enabled", isOn: enabledBinding)
                         .toggleStyle(.checkbox)
 
-                    HStack(spacing: 4) {
+                    HStack(spacing: ThawSpacing.tight) {
                         Text("Timeout")
                         TextField(value: timeoutBinding, formatter: Self.timeoutFormatter) {
                             EmptyView()
@@ -420,18 +488,18 @@ private struct HookRow: View {
                         }
                         .labelsHidden()
                     }
-                    .font(.caption)
+                    .font(ThawType.caption)
 
                     Spacer()
                 }
 
                 if let warning = validationWarning {
-                    HStack(spacing: 6) {
+                    HStack(spacing: ThawSpacing.compact) {
                         Spacer().frame(width: labelWidth)
                         Image(systemName: "exclamationmark.triangle.fill")
                             .foregroundStyle(Color.warning)
                         Text(warning)
-                            .font(.caption)
+                            .font(ThawType.caption)
                             .foregroundStyle(Color.warning)
                     }
                 }
@@ -477,7 +545,7 @@ private struct HookRow: View {
         let ext = (path as NSString).pathExtension.lowercased()
         let appleScriptExts: Set = ["scpt", "applescript", "scptd"]
         if !appleScriptExts.contains(ext), !fm.isExecutableFile(atPath: path) {
-            return String(localized: "Not executable. Run \"chmod +x\" on the file.")
+            return String(localized: "Not executable. Run “chmod +x” on the file.")
         }
         return nil
     }
@@ -520,6 +588,10 @@ private struct HookRow: View {
 // MARK: - Preview
 
 #Preview {
-    AutomationSettingsPane()
-        .frame(width: 600, height: 500)
+    AutomationSettingsPane(
+        settings: AutomationSettings(),
+        hookSettings: AutomationHookSettings(),
+        advancedSettings: AdvancedSettings()
+    )
+    .frame(width: 600, height: 500)
 }

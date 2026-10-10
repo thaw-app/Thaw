@@ -230,32 +230,30 @@ that build and are offered nothing; stable subscribers pick it up. Two items
 sharing a version and differing only by channel is the case to avoid. For 2.x
 releases, promotion also reaches the mirrored legacy appcast.
 
-### Promoting a release candidate
-
-[`.github/workflows/promote.yml`](../.github/workflows/promote.yml) ships a
-published candidate as stable without rebuilding it. This only works for a
-candidate **built with its final version**: `MARKETING_VERSION = "2.1.0"`, a new
-build number, tagged `2.1.0-rc.1`. The version string is inside the signed app,
-so a build made as `2.1.0-rc.1` would say so in About forever, and the workflow
-refuses it. While the build is on the beta channel, appcast preparation shows
-the tag as its version, so testers still see `2.1.0-rc.1`.
-
-1. Add a `## [2.1.0]` section to `CHANGELOG.md` on `development`.
-2. Run **Promote** from `development` with **tag** `2.1.0-rc.1` (dry run first).
-
-It removes the item's channel, renames it `2.1.0` and gives it the stable notes;
-uploads the same ZIP as `Thaw_2.1.0.zip` to a `2.1.0` release on
-`thaw-app/updates`, so later stable releases can build deltas from it; tags
-`2.1.0` on the candidate's commit; and publishes a `2.1.0` release with the
-candidate's DMG, SBOM, Sigstore bundles and provenance, which still verify
-because the bytes are the same. `generate_appcast --channel` only applies to
-items it creates, so later releases leave the promoted item alone. Each step checks for its own
-result first, so a run that fails partway can be rerun with the same tag.
-
 Switching *away* from alpha does not roll a user back. The alpha app's version
 line is ahead of the shipping app's, so the stable feed offers nothing newer
 and Sparkle stays put. Returning to the shipping app is a reinstall, which is
 worth saying wherever alpha is advertised.
+
+### Getting alpha 7 users onto beta 1
+
+`3.0.0-alpha.7` (build 108, source stamp `b03a2c1-dirty`) sets
+`allowedChannels` to `alpha` and ignores saved channel preferences. Beta 1
+added a channel picker, but alpha 7 couldn't find the update because its
+appcast entry was tagged `beta`.
+
+The canonical appcast now lists `3.0.0-beta.1` (build 111) without a channel
+tag, so alpha 7 can find it. The signed download is unchanged, and there is
+still only one entry for this build. Its `minimumSystemVersion` stays at
+`27.0`: every channel on macOS 27 can receive it, including Stable, while
+macOS 26 remains excluded. The preparation action keeps this entry untagged
+on every release.
+
+Users who previously selected Alpha/Nightly still need to choose **Beta** in
+About Thaw after updating to receive later betas. The feed change cannot
+change their saved preference. Any future update that migrates that preference
+must also reach Alpha/Nightly subscribers; an update published only on Beta
+would leave them stuck again.
 
 ## Legacy installs
 
@@ -277,11 +275,9 @@ Only **new** items point at `thaw-app/updates` releases.
 ## Appcast preparation
 
 The local [`prepare-appcasts`](../.github/actions/prepare-appcasts/action.yml)
-action owns the appcast rules: reapply missing macOS 26 caps to 2.x entries,
-show a channel item's tag as its version (`2.1.0-rc.1` for a build made as
-`2.1.0`), restore the notes `generate_appcast` drops from every earlier archive
-it re-reads for deltas (from a snapshot of the feed taken before the run), and
-generate a 1.x/2.x-only legacy feed when releasing a 2.x tag. It uses Python's
+action reapplies missing macOS 26 caps to 2.x entries, keeps the beta 1 recovery
+bridge untagged, and generates a 1.x/2.x-only legacy feed when releasing a 2.x
+tag. It uses Python's
 standard-library XML parser without external dependencies. Its two output paths
 feed publishing, dry-run comparisons, and artifact uploads.
 

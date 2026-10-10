@@ -7,26 +7,33 @@
 
 import AppKit
 import SwiftUI
+import ThawUI
 
-/// An `NSVisualEffectView` that blends with whatever is behind the window,
-/// with the window made non-opaque so the blend shows through.
+/// A behind-window blend that also makes its window non-opaque, used as the
+/// onboarding ground. SwiftUI has no behind-window blend, so this is not a
+/// ThawGlass tier; content drawn over it uses .thawGlass(_:in:).
 struct VisualEffectBackground: NSViewRepresentable {
     func makeNSView(context _: Context) -> NSVisualEffectView {
         let view = NSVisualEffectView()
-        view.blendingMode = .behindWindow
-        view.material = .underWindowBackground
-        view.state = .active
+        configure(view)
         makeWindowTransparent(view)
         return view
     }
 
     func updateNSView(_ nsView: NSVisualEffectView, context _: Context) {
+        configure(nsView)
         makeWindowTransparent(nsView)
     }
 
+    private func configure(_ view: NSVisualEffectView) {
+        view.blendingMode = .behindWindow
+        view.material = .hudWindow
+        view.state = .active
+        view.isEmphasized = false
+    }
+
     private func makeWindowTransparent(_ view: NSView) {
-        // Deferred one turn: view.window is nil until the view is attached.
-        Task { @MainActor in
+        DispatchQueue.main.async {
             guard let window = view.window else { return }
             window.isOpaque = false
             window.backgroundColor = .clear
@@ -34,23 +41,24 @@ struct VisualEffectBackground: NSViewRepresentable {
     }
 }
 
-/// A small SF Symbol glyph, optionally on a frosted circular badge. Use
-/// `showBackground: false` in menu bar mockups, where real icons have no badge.
+/// A plain monochrome SF Symbol, drawn like a real status item so the mockup
+/// bars read as a menu bar rather than a row of buttons.
 struct GlassIconBubble: View {
     let symbol: String
     var size: CGFloat = 30
     var tint: Color = .primary
-    var showBackground: Bool = true
+    /// Ignored; kept so existing call sites still compile.
+    var showBackground: Bool = false
 
     var body: some View {
+        // Resizable, not font-sized: a font symbol centers its line box, so
+        // the glyph sits high. Scaling its own bounds centers the ink.
         Image(systemName: symbol)
-            .font(.system(size: size * 0.46, weight: .medium))
+            .resizable()
+            .scaledToFit()
+            .fontWeight(.medium)
             .foregroundStyle(tint.opacity(0.75))
+            .frame(width: size * 0.46, height: size * 0.46)
             .frame(width: size, height: size)
-            .background {
-                if showBackground {
-                    Circle().fill(.regularMaterial)
-                }
-            }
     }
 }

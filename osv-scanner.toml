@@ -1,5 +1,5 @@
 # OSV-Scanner suppressions for Thaw's dependency SCA gate.
-# Policy: https://github.com/thaw-app/.github/blob/main/.github/SECURITY.md#dependency-findings
+# Policy: .github/SECURITY.md § "Dependency SCA policy"
 #
 # Add an entry only when a finding is non-exploitable in Thaw's threat model
 # (or a fix is not yet available) and a maintainer has approved the waiver.

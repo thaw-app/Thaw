@@ -10,7 +10,7 @@ Thaw is run by a **small lead team** with shared **organization admin** access. 
 2. **Domain ownership:** Leads decide within their domain (see [Roles](#roles-and-responsibilities)). Cross-cutting changes (roadmap, licensing, security policy, breaking product behavior) need agreement among the reachable leads; the **Project Lead** has final say when consensus fails.
 3. **Consensus preferred:** Leads and maintainers seek rough consensus in issues/PRs (and Discord when useful) before escalating. Silence after a reasonable discussion window is treated as assent for non-breaking changes.
 4. **Organization:** Shared project assets and CI building blocks live under the [`thaw-app`](https://github.com/thaw-app) GitHub organization. All three **org owners** can administer org settings and org-owned repositories if any one owner is unavailable. The application repository is [thaw-app/Thaw](https://github.com/thaw-app/Thaw) (see [Repository migration](#repository-migration)).
-5. **Security:** Vulnerability handling follows the [organization Security Policy](https://github.com/thaw-app/.github/blob/main/.github/SECURITY.md). Public discussion of unfixed vulnerabilities is not appropriate.
+5. **Security:** Vulnerability handling follows [SECURITY.md](SECURITY.md). Public discussion of unfixed vulnerabilities is not appropriate.
 
 Forking remains always available under the GPL-3.0 license; governance here only describes how *this* project operates.
 
@@ -23,7 +23,7 @@ Forking remains always available under the GPL-3.0 license; governance here only
 | **Development Lead**   | [@nightah](https://github.com/nightah)                       | Engineering leadership for application code direction, review standards, and technical architecture |
 | **Organization owner** | [@stonerl](https://github.com/stonerl), [@nightah](https://github.com/nightah), [@diazdesandi](https://github.com/diazdesandi) | Admin of [`thaw-app`](https://github.com/thaw-app): org settings, membership, org-owned repos/assets; **continuity access** to release secrets and Environments under least privilege (see [Release secrets](#release-secrets)). The three leads above are the org owners |
 | **Maintainer**         | Write collaborators on [thaw-app/Thaw](https://github.com/thaw-app/Thaw) (including the leads) | Review/merge PRs; triage issues; approve routine releases when delegated; enforce Code of Conduct with the leads. **No** routine access to signing/notarization/Sparkle private keys unless also an org owner |
-| **Contributor**        | Anyone submitting issues, PRs, Crowdin translations, or docs | Follow [Thaw/Floe contribution policy](https://github.com/thaw-app/.github/blob/main/.github/CONTRIBUTING.md) and the [organization Code of Conduct](https://github.com/thaw-app/.github/blob/main/.github/CODE_OF_CONDUCT.md) |
+| **Contributor**        | Anyone submitting issues, PRs, Crowdin translations, or docs | Follow [CONTRIBUTING.md](CONTRIBUTING.md) and the [Code of Conduct](CODE_OF_CONDUCT.md) |
 | **Security contact**   | Project Lead (via [private vulnerability reporting](https://github.com/thaw-app/Thaw/security/advisories/new)); other leads may acknowledge and escalate | Acknowledge and coordinate vulnerability reports |
 
 Translations are reviewed via [Crowdin](https://crowdin.com/project/thaw), not via translation PRs.
@@ -150,8 +150,8 @@ Recovery of lost Apple account access follows Apple's account recovery; Sparkle 
 
 ## Related documents
 
-- [Contributing](https://github.com/thaw-app/.github/blob/main/.github/CONTRIBUTING.md)
-- [Code of Conduct](https://github.com/thaw-app/.github/blob/main/.github/CODE_OF_CONDUCT.md)
-- [Security Policy](https://github.com/thaw-app/.github/blob/main/.github/SECURITY.md)
+- [CONTRIBUTING.md](CONTRIBUTING.md)
+- [CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md)
+- [SECURITY.md](SECURITY.md)
 - [docs/ARCHITECTURE.md](../docs/ARCHITECTURE.md)
 - [docs/ASSURANCE_CASE.md](../docs/ASSURANCE_CASE.md)

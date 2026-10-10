@@ -1,0 +1,250 @@
+{
+	"color-space-for-untagged-svg-colors": "display-p3",
+	"fill-specializations": [
+		{
+			"value": {
+				"linear-gradient": [
+					"display-p3:1.00000,0.83922,0.40000,1.00000",
+					"display-p3:0.96863,0.69412,0.30196,1.00000"
+				],
+				"orientation": {
+					"start": {
+						"x": 0.5,
+						"y": 0
+					},
+					"stop": {
+						"x": 0.5,
+						"y": 0.7
+					}
+				}
+			}
+		},
+		{
+			"appearance": "dark",
+			"value": {
+				"linear-gradient": [
+					"display-p3:0.14902,0.13725,0.13333,1.00000",
+					"display-p3:0.03137,0.05882,0.05882,1.00000"
+				],
+				"orientation": {
+					"start": {
+						"x": 0.5,
+						"y": 0
+					},
+					"stop": {
+						"x": 0.5,
+						"y": 0.7
+					}
+				}
+			}
+		}
+	],
+	"groups": [
+		{
+			"layers": [
+				{
+					"fill-specializations": [
+						{
+							"value": {
+								"linear-gradient": [
+									"display-p3:0.94118,0.94118,0.94118,1.00000",
+									"srgb:0.94118,0.94118,0.94118,1.00000"
+								],
+								"orientation": {
+									"start": {
+										"x": 0.5,
+										"y": 0
+									},
+									"stop": {
+										"x": 0.5,
+										"y": 0.7
+									}
+								}
+							}
+						},
+						{
+							"appearance": "dark",
+							"value": {
+								"linear-gradient": [
+									"display-p3:1.00000,0.83922,0.40000,1.00000",
+									"display-p3:0.96863,0.69412,0.30196,1.00000"
+								],
+								"orientation": {
+									"start": {
+										"x": 0.5,
+										"y": 0
+									},
+									"stop": {
+										"x": 0.5,
+										"y": 0.7
+									}
+								}
+							}
+						}
+					],
+					"glass-specializations": [
+						{
+							"value": true
+						},
+						{
+							"appearance": "dark",
+							"value": true
+						}
+					],
+					"hidden": false,
+					"image-name": "innards.svg",
+					"name": "innards",
+					"position": {
+						"scale": 1.15,
+						"translation-in-points": [-1.2219968184767822, -14.5625]
+					}
+				}
+			],
+			"shadow": {
+				"kind": "neutral",
+				"opacity": 0.5
+			},
+			"translucency": {
+				"enabled": true,
+				"value": 0.75
+			}
+		},
+		{
+			"blur-material": 0.5,
+			"layers": [
+				{
+					"blend-mode-specializations": [
+						{
+							"appearance": "dark",
+							"value": "normal"
+						}
+					],
+					"fill-specializations": [
+						{
+							"value": {
+								"linear-gradient": [
+									"display-p3:0.96078,0.96078,0.96078,1.00000",
+									"srgb:1.00000,1.00000,1.00000,1.00000"
+								],
+								"orientation": {
+									"start": {
+										"x": 0.5,
+										"y": 0
+									},
+									"stop": {
+										"x": 0.5,
+										"y": 0.7
+									}
+								}
+							}
+						},
+						{
+							"appearance": "dark",
+							"value": {
+								"linear-gradient": [
+									"display-p3:1.00000,0.83922,0.40000,1.00000",
+									"display-p3:0.96863,0.69412,0.30196,1.00000"
+								],
+								"orientation": {
+									"start": {
+										"x": 0.5,
+										"y": 0
+									},
+									"stop": {
+										"x": 0.5,
+										"y": 0.7
+									}
+								}
+							}
+						},
+						{
+							"appearance": "tinted",
+							"value": {
+								"linear-gradient": [
+									"srgb:0.90196,0.90196,0.90196,1.00000",
+									"display-p3:0.92549,0.92549,1.00000,1.00000"
+								],
+								"orientation": {
+									"start": {
+										"x": 0.5,
+										"y": 0
+									},
+									"stop": {
+										"x": 0.5,
+										"y": 0.7
+									}
+								}
+							}
+						}
+					],
+					"glass-specializations": [
+						{
+							"value": true
+						},
+						{
+							"appearance": "dark",
+							"value": true
+						}
+					],
+					"image-name": "cube.svg",
+					"name": "cube",
+					"position": {
+						"scale": 1.2,
+						"translation-in-points": [0, 0]
+					}
+				}
+			],
+			"lighting": "individual",
+			"name": "Group",
+			"shadow-specializations": [
+				{
+					"value": {
+						"kind": "layer-color",
+						"opacity": 0.5
+					}
+				},
+				{
+					"appearance": "dark",
+					"value": {
+						"kind": "layer-color",
+						"opacity": 0.5
+					}
+				}
+			],
+			"specular-specializations": [
+				{
+					"value": true
+				},
+				{
+					"appearance": "dark",
+					"value": true
+				}
+			],
+			"translucency-specializations": [
+				{
+					"value": {
+						"enabled": true,
+						"value": 0.6
+					}
+				},
+				{
+					"appearance": "dark",
+					"value": {
+						"enabled": true,
+						"value": 0.5
+					}
+				},
+				{
+					"appearance": "tinted",
+					"value": {
+						"enabled": true,
+						"value": 0.3
+					}
+				}
+			]
+		}
+	],
+	"supported-platforms": {
+		"squares": ["macOS"]
+	}
+}

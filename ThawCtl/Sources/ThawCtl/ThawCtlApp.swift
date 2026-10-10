@@ -74,20 +74,26 @@ final class ThawCtlEngine {
 
     func sendSet(key: String, value: String, display: String = "") {
         var url = "thaw://set?key=\(key)&value=\(value)"
-        if !display.isEmpty { url += "&display=\(display)" }
+        if !display.isEmpty {
+            url += "&display=\(display)"
+        }
         send(url: url)
     }
 
     func sendToggle(key: String, display: String = "") {
         var url = "thaw://toggle?key=\(key)"
-        if !display.isEmpty { url += "&display=\(display)" }
+        if !display.isEmpty {
+            url += "&display=\(display)"
+        }
         send(url: url)
     }
 
     func sendGet(key: String, display: String = "") {
         let callback = "thawctl://response"
         var url = "thaw://get?key=\(key)&callback=\(callback)"
-        if !display.isEmpty { url += "&display=\(display)" }
+        if !display.isEmpty {
+            url += "&display=\(display)"
+        }
         send(url: url)
     }
 
@@ -97,5 +103,9 @@ final class ThawCtlEngine {
 
     func sendAction(_ action: String) {
         send(url: "thaw://\(action)")
+    }
+
+    func sendDumpItems() {
+        send(url: "thaw://dump-items?callback=thawctl://response")
     }
 }

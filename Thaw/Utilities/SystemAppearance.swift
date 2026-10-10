@@ -2,14 +2,13 @@
 //  SystemAppearance.swift
 //  Project: Thaw
 //
-//  Copyright (Ice) © 2023–2025 Jordan Baird
 //  Copyright (Thaw) © 2026 Toni Förster
 //  Licensed under the GNU GPLv3
 
 import SwiftUI
 
 /// A value corresponding to a light or dark appearance.
-enum SystemAppearance {
+enum SystemAppearance: Hashable {
     case light
     case dark
 
@@ -30,7 +29,7 @@ enum SystemAppearance {
     ]
 
     /// Returns the system appearance that exactly matches the given appearance,
-    /// or `nil` if the system appearance cannot be determined.
+    /// or nil if the system appearance cannot be determined.
     private static func exactMatch(for appearance: NSAppearance) -> SystemAppearance? {
         let name = appearance.name
         if systemDarkAppearanceNames.contains(name) {
@@ -43,7 +42,7 @@ enum SystemAppearance {
     }
 
     /// Returns the system appearance that best matches the given appearance,
-    /// or `nil` if the system appearance cannot be determined.
+    /// or nil if the system appearance cannot be determined.
     private static func bestMatch(for appearance: NSAppearance) -> SystemAppearance? {
         let lowercased = appearance.name.rawValue.lowercased()
         if lowercased.contains("dark") {
@@ -58,7 +57,7 @@ enum SystemAppearance {
     /// Returns the system appearance of the given appearance.
     ///
     /// If a system appearance cannot be found that matches the given appearance,
-    /// the ``light`` system appearance is returned.
+    /// the light system appearance is returned.
     private static func systemAppearance(for appearance: NSAppearance) -> SystemAppearance {
         if let match = exactMatch(for: appearance) {
             return match

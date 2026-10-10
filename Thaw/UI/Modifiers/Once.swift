@@ -2,7 +2,6 @@
 //  Once.swift
 //  Project: Thaw
 //
-//  Copyright (Ice) © 2023–2025 Jordan Baird
 //  Copyright (Thaw) © 2026 Toni Förster
 //  Licensed under the GNU GPLv3
 
@@ -19,28 +18,6 @@ private struct OnceAction {
         if let action = action.take() {
             action()
         }
-    }
-}
-
-private struct OnceModifier: ViewModifier {
-    @State private var action: OnceAction
-
-    init(action: @escaping () -> Void) {
-        self.action = OnceAction(action: action)
-    }
-
-    func body(content: Content) -> some View {
-        content.onAppear {
-            action()
-        }
-    }
-}
-
-extension View {
-    /// Adds an action to perform exactly once, before the first
-    /// time the view appears.
-    func once(perform action: @escaping () -> Void) -> some View {
-        modifier(OnceModifier(action: action))
     }
 }
 
@@ -63,6 +40,8 @@ private struct OnceScene<Content: Scene>: Scene {
 
 extension Scene {
     /// Adds an action to perform exactly once, when the scene appears.
+    ///
+    /// - Parameter action: The action to perform.
     func once(perform action: @escaping () -> Void) -> some Scene {
         OnceScene(content: self, action: action)
     }

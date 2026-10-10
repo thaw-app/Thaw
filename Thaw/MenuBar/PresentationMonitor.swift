@@ -2,28 +2,35 @@
 //  PresentationMonitor.swift
 //  Project: Thaw
 //
-//  Copyright (Ice) © 2023–2025 Jordan Baird
 //  Copyright (Thaw) © 2026 Toni Förster
 //  Licensed under the GNU GPLv3
 
 import AppKit
 import Darwin
 import Foundation
+import MenuBarModel
 
-/// Engages zen mode while the screen is being shown to someone else.
+/// Engages zen mode for as long as the screen is being shown to someone else,
+/// then withdraws it, so a menu bar full of personal status items isn't the
+/// first thing an audience sees.
 ///
-/// There's no public API to detect another process recording the screen
-/// (`CGDisplayIsCaptured` only reports legacy exclusive capture), so this
-/// covers:
+/// macOS 27 has no public way to ask whether another process is recording the
+/// screen: CGDisplayIsCaptured reports only the legacy exclusive-capture mode,
+/// and ScreenCaptureKit has no observer for other clients. So this covers the
+/// two publicly observable states. Mirroring (CGDisplayIsInMirrorSet, the
+/// projector case) follows didChangeScreenParametersNotification and costs
+/// nothing at rest. Screen sharing and remote management are detected by the
+/// presence of screensharingd, which has no notification and so is polled,
+/// only while the setting is on.
 ///
-/// - Mirroring: `CGDisplayIsInMirrorSet`, on screen-parameter changes.
-/// - Screen sharing: `screensharingd` running, polled only while enabled.
-///
-/// Local recording (QuickTime, OBS) isn't guessed from a bundle ID list;
-/// engaging for the wrong app is worse than not engaging.
+/// Local recording (QuickTime, OBS, conferencing apps) is deliberately not
+/// guessed at from a list of recorder bundle ids: such a list is wrong the
+/// moment it ships, and engaging for the wrong app is worse than not engaging.
 @MainActor
 final class PresentationMonitor {
-    /// Coarse because sharing sessions last minutes.
+    /// How often the screen-sharing daemon is looked for. Sharing sessions
+    /// last minutes, so a coarse interval is enough and keeps the process
+    /// enumeration off the critical path.
     private static let pollInterval = Duration.seconds(5)
 
     private let diagLog = DiagLog(category: "PresentationMonitor")
@@ -33,7 +40,6 @@ final class PresentationMonitor {
     private var settingTask: Task<Void, Never>?
     private var screenParametersTask: Task<Void, Never>?
     private var pollTask: Task<Void, Never>?
-    private var evaluateTask: Task<Void, Never>?
 
     /// The last evaluated state, kept so a repeated signal doesn't re-log.
     private var isPresenting = false
@@ -59,7 +65,9 @@ final class PresentationMonitor {
     private func startObserving() {
         guard screenParametersTask == nil else { return }
 
-        // The task owns the observer token, so nothing non-Sendable is stored.
+        // Same observer-owned-by-the-task shape as DisplaySettingsManager:
+        // the token is added when the task starts and removed when it ends,
+        // so nothing non-Sendable has to be stored on the class.
         let (events, continuation) = AsyncStream<Void>.makeStream()
         screenParametersTask = Task { @MainActor [weak self] in
             let observer = NotificationCenter.default.addObserver(
@@ -90,91 +98,78 @@ final class PresentationMonitor {
         screenParametersTask = nil
         pollTask?.cancel()
         pollTask = nil
-        evaluateTask?.cancel()
-        evaluateTask = nil
         // Withdraw anything this monitor engaged; a manual zen mode is left
-        // alone by `setAutomaticZenMode`.
+        // alone by setAutomaticZenMode.
         isPresenting = false
-        appState?.menuBarManager.setAutomaticZenMode(false)
+        appState?.menuBarManager.setAutomaticZenMode(false, reason: .screenSharing)
     }
 
     private func evaluate() {
-        // The process-table walk runs detached, so rounds can land out of
-        // order. Cancel the previous one; a cancelled round never applies.
-        evaluateTask?.cancel()
-        evaluateTask = Task { @MainActor [weak self] in
-            // Mirroring is cheap and belongs on the main thread.
-            let mirroring = Self.isMirroring()
-            let shared = await Task.detached(priority: .utility) {
-                Self.isScreenBeingShared()
-            }.value
-            let presenting = mirroring || shared
-            guard !Task.isCancelled, let self else { return }
-            defer { self.appState?.menuBarManager.setAutomaticZenMode(presenting) }
+        let presenting = Self.isMirroring() || Self.isScreenBeingShared()
+        defer { appState?.menuBarManager.setAutomaticZenMode(presenting, reason: .screenSharing) }
 
-            guard presenting != self.isPresenting else { return }
-            self.isPresenting = presenting
-            self.diagLog.info(presenting
-                ? "Screen is being presented or shared — engaging zen mode"
-                : "Presentation ended — withdrawing zen mode")
-        }
+        guard presenting != isPresenting else { return }
+        isPresenting = presenting
+        diagLog.info(presenting
+            ? "Screen is being presented or shared, engaging zen mode"
+            : "Presentation ended, withdrawing zen mode")
     }
 
     // MARK: - Signals
 
-    /// Whether any active display is part of a mirror set. Main-actor bound:
-    /// it reads `NSScreen.screens`.
+    /// Whether any active display is part of a mirror set.
     private static func isMirroring() -> Bool {
         NSScreen.screens.contains { CGDisplayIsInMirrorSet($0.displayID) != 0 }
     }
 
     /// Whether the system's screen-sharing daemon is running.
     ///
-    /// `screensharingd` isn't an application, so `NSWorkspace` can't see it.
-    private static nonisolated func isScreenBeingShared() -> Bool {
-        runningProcessNames().contains("screensharingd")
+    /// screensharingd is launched on demand for the duration of a session
+    /// and is not an application, so it is invisible to NSWorkspace; the
+    /// process table is the only public place it shows up.
+    private static func isScreenBeingShared() -> Bool {
+        isProcessRunning(named: "screensharingd")
     }
 
-    /// Every running process's short name.
+    /// Whether a process with the given short name is in the process table.
     ///
-    /// Uses `sysctl(KERN_PROC_ALL)` because `proc_name` can't name root
-    /// daemons like `screensharingd`. `p_comm` is truncated to 16 characters.
-    private static nonisolated func runningProcessNames() -> Set<String> {
+    /// Read through sysctl(KERN_PROC_ALL) rather than proc_listallpids +
+    /// proc_name, which cannot name processes it lacks privileges to inspect.
+    /// That silently hides every root daemon, screensharingd included; sysctl
+    /// returns p_comm for all of them.
+    ///
+    /// p_comm is truncated to MAXCOMLEN (16) characters; the names matched
+    /// here are shorter. The comparison runs in place against the C buffer,
+    /// because a String per process every poll was the loop's dominant cost.
+    private static func isProcessRunning(named target: String) -> Bool {
         var mib: [Int32] = [CTL_KERN, KERN_PROC, KERN_PROC_ALL, 0]
         var size = 0
         guard sysctl(&mib, 4, nil, &size, nil, 0) == 0, size > 0 else {
-            return []
+            return false
         }
 
-        // The table can grow between sizing and reading. Retry, since an empty
-        // result reads as "not sharing" and would drop zen mode mid-session.
-        for _ in 0 ..< 3 {
-            guard size > 0 else { return [] }
-            let capacity = size / MemoryLayout<kinfo_proc>.stride + 16
-            var processes = [kinfo_proc](repeating: kinfo_proc(), count: capacity)
-            var readSize = capacity * MemoryLayout<kinfo_proc>.stride
-            if sysctl(&mib, 4, &processes, &readSize, nil, 0) != 0 {
-                // Retry with whatever size the kernel reports now; the sizing
-                // call above already refreshed it once.
-                _ = sysctl(&mib, 4, nil, &size, nil, 0)
-                continue
-            }
+        // Ask for headroom: the table can grow between sizing and reading.
+        let capacity = size / MemoryLayout<kinfo_proc>.stride + 16
+        var processes = [kinfo_proc](repeating: kinfo_proc(), count: capacity)
+        size = capacity * MemoryLayout<kinfo_proc>.stride
+        guard sysctl(&mib, 4, &processes, &size, nil, 0) == 0 else {
+            return false
+        }
 
-            var names = Set<String>()
-            for index in 0 ..< (readSize / MemoryLayout<kinfo_proc>.stride) {
+        return target.withCString { targetBase in
+            for index in 0 ..< (size / MemoryLayout<kinfo_proc>.stride) {
                 var process = processes[index].kp_proc
-                let name = withUnsafeBytes(of: &process.p_comm) { raw -> String in
+                let matches = withUnsafeBytes(of: &process.p_comm) { raw -> Bool in
                     guard let base = raw.bindMemory(to: CChar.self).baseAddress else {
-                        return ""
+                        return false
                     }
-                    return String(cString: base)
+                    return strcmp(base, targetBase) == 0
                 }
-                if !name.isEmpty {
-                    names.insert(name)
+                if matches {
+                    return true
                 }
             }
-            return names
+            return false
         }
-        return []
     }
 }

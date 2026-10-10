@@ -6,59 +6,7 @@
 //  Licensed under the GNU GPLv3
 
 import SwiftUI
-
-// MARK: - SearchField
-
-/// Compact search field pinned above the settings sidebar content.
-struct SearchField: View {
-    @Environment(\.accessibilityReduceMotion) private var reduceMotion
-    @Binding var text: String
-    @FocusState private var isFocused: Bool
-
-    var body: some View {
-        let fieldShape = Capsule(style: .continuous)
-
-        HStack(spacing: 8) {
-            Image(systemName: "magnifyingglass")
-                .font(ThawType.symbol.weight(.medium))
-                .foregroundStyle(.secondary)
-
-            TextField(text: $text, prompt: Text("Search")) {
-                Text("Search")
-            }
-            .labelsHidden()
-            .textFieldStyle(.plain)
-            .font(ThawType.body)
-            .textContentType(.none)
-            .autocorrectionDisabled(true)
-            .writingToolsBehavior(.disabled)
-            .focused($isFocused)
-
-            Button {
-                text = ""
-            } label: {
-                Image(systemName: "xmark.circle.fill")
-                    .font(ThawType.symbol)
-                    .foregroundStyle(.tertiary)
-            }
-            .buttonStyle(.plain)
-            .opacity(text.isEmpty ? 0 : 1)
-            .allowsHitTesting(!text.isEmpty)
-            .accessibilityHidden(text.isEmpty)
-            .accessibilityLabel("Clear search")
-            .animation(reduceMotion ? nil : .easeOut(duration: 0.1), value: text.isEmpty)
-        }
-        .padding(.horizontal, 10)
-        .padding(.vertical, 6)
-        .background(.quaternary, in: fieldShape)
-        .overlay(
-            fieldShape.strokeBorder(.separator.opacity(isFocused ? 0.65 : 0.35), lineWidth: 0.5)
-        )
-        .padding(.horizontal, 12)
-        .padding(.top, 10)
-        .padding(.bottom, 8)
-    }
-}
+import ThawUI
 
 // MARK: - SearchResultsList
 
@@ -74,15 +22,15 @@ struct SearchResultsList: View {
                     if index > 0 {
                         Divider()
                             .opacity(0.45)
-                            .padding(.horizontal, 6)
-                            .padding(.vertical, 8)
+                            .padding(.horizontal, ThawSpacing.compact)
+                            .padding(.vertical, ThawSpacing.base)
                     }
 
                     SearchGroupSection(group: group, onSelect: onSelect)
                 }
             }
-            .padding(.horizontal, 10)
-            .padding(.bottom, 12)
+            .padding(.horizontal, ThawSpacing.row)
+            .padding(.bottom, ThawSpacing.inset)
         }
         .scrollContentBackground(.hidden)
     }
@@ -95,24 +43,25 @@ private struct SearchGroupSection: View {
     let onSelect: (SearchEntry) -> Void
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 3) {
-            HStack(spacing: 7) {
-                group.pane.iconResource.view
-                    .font(ThawType.detail.weight(.semibold))
+        VStack(alignment: .leading, spacing: ThawSpacing.tight) {
+            HStack(spacing: ThawSpacing.compact) {
+                // The same glyph the sidebar row shows, so a result group
+                // names its pane the way the sidebar does.
+                group.pane.iconResource.image
+                    .font(ThawType.symbol.weight(.medium))
                     .foregroundStyle(.secondary)
-                    .frame(width: 18, height: 18)
+                    .frame(width: 18, height: 16)
 
                 Text(group.pane.localized)
-                    .font(.caption.weight(.semibold))
+                    .font(ThawType.detail.weight(.semibold))
                     .foregroundStyle(.secondary)
             }
             .frame(maxWidth: .infinity, alignment: .leading)
-            .padding(.horizontal, 6)
-            .padding(.top, 4)
-            .padding(.bottom, 4)
+            .padding(.horizontal, ThawSpacing.compact)
+            .padding(.vertical, ThawSpacing.tight)
             .accessibilityAddTraits(.isHeader)
 
-            VStack(spacing: 2) {
+            VStack(spacing: ThawSpacing.hairline) {
                 ForEach(group.entries) { entry in
                     SearchResultButton(entry: entry) {
                         onSelect(entry)
@@ -126,15 +75,13 @@ private struct SearchGroupSection: View {
 // MARK: - SearchResultRowAppearance
 
 private enum SearchResultRowAppearance {
-    static let shape = RoundedRectangle(cornerRadius: 8, style: .continuous)
+    static let shape = RoundedRectangle(cornerRadius: ThawRadius.control, style: .continuous)
 }
 
 // MARK: - SearchResultButton
 
 /// Interactive search result row with hover and pressed feedback.
 private struct SearchResultButton: View {
-    @Environment(\.accessibilityReduceMotion) private var reduceMotion
-
     let entry: SearchEntry
     let action: () -> Void
 
@@ -150,15 +97,11 @@ private struct SearchResultButton: View {
         .buttonStyle(
             SearchResultButtonStyle(
                 isHovering: isHovering,
-                reduceMotion: reduceMotion,
                 rowShape: SearchResultRowAppearance.shape
             )
         )
-        .onHover { hovering in
-            withAnimation(reduceMotion ? nil : .easeOut(duration: 0.12)) {
-                isHovering = hovering
-            }
-        }
+        .onHover { isHovering = $0 }
+        .thawAnimation(ThawMotion.quick, value: isHovering)
     }
 }
 
@@ -169,23 +112,26 @@ private struct SearchResultRowContent: View {
     let isHovering: Bool
 
     var body: some View {
-        HStack(alignment: .center, spacing: 8) {
-            VStack(alignment: .leading, spacing: 3) {
+        HStack(alignment: .center, spacing: ThawSpacing.base) {
+            VStack(alignment: .leading, spacing: ThawSpacing.tight) {
                 Text(entry.titleKey)
                     .font(ThawType.body.weight(isHovering ? .medium : .regular))
                     .foregroundStyle(.primary)
                     .multilineTextAlignment(.leading)
                     .lineLimit(2)
 
+                // Section says where the row lives, description what it does.
                 if let sectionKey = entry.sectionKey {
                     Text(sectionKey)
                         .font(.caption)
                         .foregroundStyle(.secondary)
                         .lineLimit(1)
-                } else if let descriptionText = entry.descriptionText {
+                }
+                if let descriptionText = entry.descriptionText {
                     Text(descriptionText)
                         .font(.caption)
-                        .foregroundStyle(.tertiary)
+                        // .tertiary (~25% alpha) fails the text contrast floor.
+                        .foregroundStyle(ThawInk.supporting)
                         .multilineTextAlignment(.leading)
                         .lineLimit(2)
                 }
@@ -195,11 +141,13 @@ private struct SearchResultRowContent: View {
 
             Image(systemName: "chevron.right")
                 .font(ThawType.micro.weight(.semibold))
-                .foregroundStyle(isHovering ? Color.accentColor : Color.secondary.opacity(0.55))
+                // Vibrancy tiers rather than a hand-set opacity, so the
+                // chevron adapts to whatever is behind the glass.
+                .foregroundStyle(isHovering ? AnyShapeStyle(Color.accentColor) : AnyShapeStyle(.tertiary))
                 .offset(x: isHovering ? 1 : 0)
         }
-        .padding(.horizontal, 10)
-        .padding(.vertical, 8)
+        .padding(.horizontal, ThawSpacing.row)
+        .padding(.vertical, ThawSpacing.base)
         .frame(maxWidth: .infinity, alignment: .leading)
         .contentShape(SearchResultRowAppearance.shape)
     }
@@ -209,42 +157,26 @@ private struct SearchResultRowContent: View {
 
 private struct SearchResultButtonStyle: ButtonStyle {
     let isHovering: Bool
-    let reduceMotion: Bool
     let rowShape: RoundedRectangle
 
     func makeBody(configuration: Configuration) -> some View {
         configuration.label
             .background {
-                ZStack {
-                    rowShape
-                        .fill(.quaternary.opacity(fillOpacity(isPressed: configuration.isPressed)))
-
-                    rowShape
-                        .fill(Color.accentColor.opacity(accentOpacity(isPressed: configuration.isPressed)))
+                // Same selection wash as the sidebar pill, stronger on press.
+                if let strength = strength(isPressed: configuration.isPressed) {
+                    Color.clear
+                        .thawGlass(.selection(.accentColor, strength: strength), in: rowShape)
                 }
             }
             .opacity(configuration.isPressed ? 0.92 : 1)
-            .animation(reduceMotion ? nil : .easeOut(duration: 0.08), value: configuration.isPressed)
+            .thawAnimation(ThawMotion.instant, value: configuration.isPressed)
     }
 
-    private func fillOpacity(isPressed: Bool) -> Double {
+    private func strength(isPressed: Bool) -> ThawGlass.SelectionStrength? {
         if isPressed {
-            return 0.65
+            return .selected
         }
-        if isHovering {
-            return 0.42
-        }
-        return 0
-    }
-
-    private func accentOpacity(isPressed: Bool) -> Double {
-        if isPressed {
-            return 0.28
-        }
-        if isHovering {
-            return 0.16
-        }
-        return 0
+        return isHovering ? .hover : nil
     }
 }
 
@@ -252,19 +184,16 @@ private struct SearchResultButtonStyle: ButtonStyle {
 
 /// Empty state shown when a query returns no matches.
 struct SearchEmptyView: View {
-    var body: some View {
-        VStack(spacing: 10) {
-            Image(systemName: "magnifyingglass")
-                .font(ThawType.symbolLarge.weight(.light))
-                .foregroundStyle(.tertiary)
+    /// The query that came up empty, quoted back so the reader can see
+    /// what was actually searched, typos included.
+    var query: String = ""
 
-            Text("No settings found")
-                .font(.subheadline)
-                .foregroundStyle(.secondary)
-                .multilineTextAlignment(.center)
-        }
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .padding(.horizontal, 16)
-        .padding(.bottom, 24)
+    var body: some View {
+        let trimmed = query.trimmingCharacters(in: .whitespacesAndNewlines)
+        ThawEmptyState(
+            systemImage: "magnifyingglass",
+            title: trimmed.isEmpty ? "No settings found" : "No settings match “\(trimmed)”",
+            caption: "Try a shorter or broader term."
+        )
     }
 }

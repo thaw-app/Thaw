@@ -2,66 +2,119 @@
 //  MenuBarSection.swift
 //  Project: Thaw
 //
-//  Copyright (Ice) © 2023–2025 Jordan Baird
 //  Copyright (Thaw) © 2026 Toni Förster
 //  Licensed under the GNU GPLv3
 
-import SwiftUI
+import AppKit
+import MenuBarModel
+import os
+import QuartzCore
 
-/// A representation of a section in a menu bar.
 @MainActor
 final class MenuBarSection {
+    typealias Name = MenuBarSectionName
+
     let name: Name
 
-    /// The control item that manages the section.
     let controlItem: ControlItem
 
     private weak var appState: AppState?
 
-    /// A task that manages rehiding the section.
+    /// Captured at setup so rehide reads menu state without reaching through the item manager.
+    private var menuOpenMonitor: MenuOpenMonitor?
+
+    /// Engine-facing settings; see MenuBarEngineConfiguration for the dependency boundary.
+    private var configuration: any MenuBarEngineConfiguration = AppSettings.engineDefaults
+
     private var rehideTask: Task<Void, Never>?
+
+    /// Starts rehide when the mouse leaves the menu bar.
+    private var rehideMonitor: EventMonitor?
 
     private nonisolated let diagLog = DiagLog(category: "MenuBarSection")
 
-    /// A Boolean value that indicates whether the Thaw Bar should be used
-    /// on the current active display.
-    private var useIceBar: Bool {
+    private var useThawBar: Bool {
         guard let appState else { return false }
-        let screen = screenForIceBar
+        let screen = screenForThawBar
         let displayID = screen?.displayID ?? CGMainDisplayID()
-        let displaySettings = appState.settings.displaySettings
-        if Self.usesThawBar(
-            for: name,
-            displayUsesThawBar: displaySettings.useIceBar(for: displayID),
-            alwaysHiddenUsesThawBar: displaySettings.useThawBarForAlwaysHidden(for: displayID)
-        ) {
-            return true
+        return appState.menuBarManager.shouldUseThawBar(for: displayID)
+    }
+
+    /// The gap that macOS leaves to the left and right of the notch (in points).
+    static nonisolated let notchGap = MenuBarCapacitySnapshot.notchGap
+
+    /// The preferred way to present the section on the menu bar.
+    nonisolated enum PresentationMode: Equatable {
+        /// Show the items inline without modifying the application menus.
+        case inline
+        /// Show the items inline, but only after hiding the application menus.
+        case inlineHidingApplicationMenus
+        /// Fall back to the Thaw Bar.
+        case thawBar
+    }
+
+    /// Hiding app menus may recover enough space for inline presentation.
+    static nonisolated func presentationMode(
+        totalItemsWidth: CGFloat,
+        capacity: MenuBarCapacitySnapshot,
+        allowHidingApplicationMenus: Bool
+    ) -> PresentationMode {
+        if let inlineWidth = capacity.availableWidth(
+            in: .inline,
+            applicationMenus: .visible
+        ), totalItemsWidth <= inlineWidth {
+            return .inline
         }
-        return Self.forcesIceBarForNotchOverflow(
-            settings: appState.settings.advanced,
-            hasEjectedItems: appState.itemManager.hasNotchOverflowEjectedItems
-        )
+
+        guard allowHidingApplicationMenus else {
+            return .thawBar
+        }
+
+        if let inlineWidthWithoutAppMenus = capacity.availableWidth(
+            in: .inline,
+            applicationMenus: .hidden
+        ), totalItemsWidth <= inlineWidthWithoutAppMenus {
+            return .inlineHidingApplicationMenus
+        }
+
+        return .thawBar
     }
 
-    @MainActor
-    private static func forcesIceBarForNotchOverflow(
-        settings: AdvancedSettings,
-        hasEjectedItems: Bool
+    /// Unknown free width keeps inline reveal as the default, even when hiding app menus is allowed.
+    static nonisolated func overflowsInline(
+        totalItemsWidth: CGFloat,
+        capacity: MenuBarCapacitySnapshot,
+        allowHidingApplicationMenus: Bool
     ) -> Bool {
-        forcesIceBarForNotchOverflow(
-            overflowEnabled: settings.enableMenuBarItemOverflow,
-            useThawBarOnOverflow: settings.useThawBarOnNotchOverflow,
-            hasEjectedItems: hasEjectedItems
+        let menus: MenuBarCapacitySnapshot.ApplicationMenus = allowHidingApplicationMenus ? .hidden : .visible
+        guard let width = capacity.availableWidth(in: .inline, applicationMenus: menus) else {
+            return false
+        }
+        return totalItemsWidth > width
+    }
+
+    /// Inline items behind the native overflow chevron would be unreachable.
+    func overflowsInline(on screen: NSScreen) -> Bool {
+        guard let appState else { return false }
+        let capacity = MenuBarCapacitySnapshot.capture(
+            on: screen,
+            items: appState.itemManager.managedItems,
+            overflowControlBounds: appState.menuBarManager.sectionController
+                .nativeOverflowControlBounds(on: screen.displayID)
+        )
+        return Self.overflowsInline(
+            totalItemsWidth: totalItemsWidthToShow(),
+            capacity: capacity,
+            allowHidingApplicationMenus: configuration.hideApplicationMenus
         )
     }
 
-    /// Calculates the total width of the items that must be shown when the
-    /// section is expanded.
     private func totalItemsWidthToShow() -> CGFloat {
         guard let appState else { return 0 }
 
         let hiddenItems = appState.itemManager.itemCache[Name.hidden]
         let visibleItems = appState.itemManager.itemCache[Name.visible]
+            .filter { $0.tag != .controlCenter }
         let hiddenWidth = hiddenItems.reduce(0) { acc, item in acc + item.bounds.width }
         let visibleWidth = visibleItems.reduce(0) { acc, item in acc + item.bounds.width }
 
@@ -75,21 +128,21 @@ final class MenuBarSection {
         }
     }
 
-    /// Chooses how the section should be presented on the given screen.
-    private func presentationMode(on screen: NSScreen) -> PresentationMode {
-        guard let appState else { return .iceBar }
-        let appMenuFrame = screen.getApplicationMenuFrame()
+    func presentationMode(on screen: NSScreen) -> PresentationMode {
+        guard let appState else { return .thawBar }
+        let items = appState.itemManager.managedItems
+        let overflowBounds = appState.menuBarManager.sectionController
+            .nativeOverflowControlBounds(on: screen.displayID)
+        let capacity = MenuBarCapacitySnapshot.capture(
+            on: screen,
+            items: items,
+            overflowControlBounds: overflowBounds
+        )
 
         return Self.presentationMode(
             totalItemsWidth: totalItemsWidthToShow(),
-            appMenuRightEdge: appMenuFrame?.maxX,
-            screenFrameMinX: screen.frame.minX,
-            screenVisibleMaxX: screen.visibleFrame.maxX,
-            notchFrame: screen.frameOfNotch,
-            allowHidingApplicationMenus: Self.allowsHidingApplicationMenus(
-                hideApplicationMenus: appState.settings.advanced.hideApplicationMenus,
-                hideDockIconWhenToggling: appState.settings.general.hideDockIconWhenToggling
-            )
+            capacity: capacity,
+            allowHidingApplicationMenus: configuration.hideApplicationMenus
         )
     }
 
@@ -97,53 +150,38 @@ final class MenuBarSection {
         appState?.menuBarManager
     }
 
-    /// The best screen to show the Thaw Bar on.
-    ///
-    /// Always returns the screen with the active menu bar so that
-    /// clicking icons in the IceBar actually activates their popups.
-    private weak var screenForIceBar: NSScreen? {
+    /// Use the active menu bar's screen so icon clicks activate their popups.
+    private weak var screenForThawBar: NSScreen? {
         NSScreen.screenWithActiveMenuBar ?? NSScreen.main
     }
 
     /// The hiding state the user desires for the section.
-    @Published var desiredState: ControlItem.HidingState = .hideSection
+    var desiredState: ControlItem.HidingState = .hideSection
 
-    /// A Boolean value that indicates whether the section is hidden.
     var isHidden: Bool {
-        if useIceBar {
-            if controlItem.state == .showSection {
-                return false
-            }
-            switch name {
-            case .visible, .hidden:
-                return menuBarManager?.iceBarPanel.currentSection != .hidden
-            case .alwaysHidden:
-                return menuBarManager?.iceBarPanel.currentSection != .alwaysHidden
-            }
+        // An open Thaw Bar counts as revealed even while the assertion conceals its items.
+        // A second click must close it, not rerun prewarm and flash hidden items.
+        let presentedName = name == .alwaysHidden ? Name.alwaysHidden : Name.hidden
+        if let panel = menuBarManager?.thawBarPanel,
+           panel.presentation == .section,
+           panel.currentSection == presentedName
+        {
+            return false
         }
+        return appState?.menuBarManager.sectionController.isSectionHidden(name) ?? true
+    }
+
+    /// Visible and Hidden stay enabled even with zero-width controls because layout bars drive assignments.
+    /// Always Hidden requires user opt-in.
+    var isEnabled: Bool {
         switch name {
         case .visible, .hidden:
-            if menuBarManager?.iceBarPanel.currentSection == .hidden {
-                return false
-            }
-            return desiredState == .hideSection
+            true
         case .alwaysHidden:
-            if menuBarManager?.iceBarPanel.currentSection == .alwaysHidden {
-                return false
-            }
-            return desiredState == .hideSection
+            configuration.isAlwaysHiddenSectionEnabled
         }
     }
 
-    /// A Boolean value that indicates whether the section is enabled.
-    var isEnabled: Bool {
-        if case .visible = name {
-            return true
-        }
-        return controlItem.isAddedToMenuBar
-    }
-
-    /// The hotkey to toggle the section.
     var hotkey: Hotkey? {
         guard let hotkeys = appState?.settings.hotkeys else {
             return nil
@@ -174,42 +212,34 @@ final class MenuBarSection {
 
     func performSetup(with appState: AppState) {
         self.appState = appState
+        configuration = appState.settings
+        menuOpenMonitor = appState.itemManager.menuOpenMonitor
         controlItem.performSetup(with: appState)
         desiredState = controlItem.state
     }
 
-    /// Updates the state of the control item based on the desired state
-    /// and the current display configuration.
-    ///
-    /// - Parameter screen: The screen to use for the update. If `nil`, the
-    ///   best screen is determined automatically.
+    /// Flush appearance synchronously after assertion swaps; deferred divider width changes cause two animated reflows.
+    /// - Parameter screen: Screen to update for; nil selects the best screen automatically.
     func updateControlItemState(for screen: NSScreen? = nil) {
         guard let appState else { return }
 
         if desiredState == .showSection {
             controlItem.state = .showSection
+            controlItem.applyAppearanceNow()
             return
         }
 
-        // If the user wants to hide, check the current display config.
-        // Use screenWithMouse for instant reactivity when switching displays.
+        // Use screenWithMouse to react immediately when switching displays.
         guard let activeScreen = screen ?? NSScreen.screenWithMouse ?? NSScreen.screenWithActiveMenuBar ?? NSScreen.main else {
             controlItem.state = desiredState
+            controlItem.applyAppearanceNow()
             return
         }
 
         let displaySettings = appState.settings.displaySettings
-        let useIceBar = Self.usesThawBar(
-            for: name,
-            displayUsesThawBar: displaySettings.useIceBar(for: activeScreen.displayID),
-            alwaysHiddenUsesThawBar: displaySettings.useThawBarForAlwaysHidden(for: activeScreen.displayID)
-        )
-            || Self.forcesIceBarForNotchOverflow(
-                settings: appState.settings.advanced,
-                hasEjectedItems: appState.itemManager.hasNotchOverflowEjectedItems
-            )
+        let useThawBar = appState.menuBarManager.shouldUseThawBar(for: activeScreen.displayID)
 
-        // only apply alwaysShowHiddenItems when mouse + active menu bar on same screen
+        // Apply alwaysShowHiddenItems only when the mouse and active menu bar share a screen.
         let alwaysShow: Bool = if let menuBarScreen = NSScreen.screenWithActiveMenuBar,
                                   menuBarScreen.displayID == NSScreen.screenWithMouse?.displayID
         {
@@ -218,97 +248,54 @@ final class MenuBarSection {
             false
         }
 
-        if name == .hidden || name == .visible, alwaysShow, !useIceBar {
+        if alwaysShow, !useThawBar {
             controlItem.state = .showSection
         } else {
             controlItem.state = desiredState
         }
+        controlItem.applyAppearanceNow()
     }
 
-    func show(triggeredByHotkey: Bool = false) {
-        guard let menuBarManager, isHidden else {
+    func show(triggeredByHotkey: Bool = false, forcingInline: Bool = false) {
+        // User reveals own the state; a racing capture prewarm must leave the section open.
+        menuBarManager?.noteUserRevealOwnership()
+        // Only the hover path marks its reveal after return to select the shorter hover hide.
+        appState?.hidEventManager.isHoverReveal = false
+        guard let menuBarManager, isEnabled, isHidden else {
+            if name == .alwaysHidden {
+                diagLog.debug("show(alwaysHidden) aborted: menuBarManager=\(self.menuBarManager != nil), isEnabled=\(isEnabled), isHidden=\(isHidden)")
+            }
             return
         }
 
         menuBarManager.updateLastShowTimestamp()
 
-        guard controlItem.isAddedToMenuBar else {
-            return
+        // ThawBarPanel captures glyphs during a brief reveal and forwards clicks through revealClickAndConceal.
+        // Use it when requested or when inline items would be unreachable behind native overflow.
+        let overflowsInline = !useThawBar && (screenForThawBar.map { overflowsInline(on: $0) } ?? false)
+        if overflowsInline {
+            diagLog.info("show(\(name.logString)): the items do not fit inline; using the Thaw Bar")
         }
-
-        let shouldUseIceBarBasedOnSettings = useIceBar
-
-        var preferredPresentationMode: PresentationMode
-        if shouldUseIceBarBasedOnSettings {
-            preferredPresentationMode = .iceBar
-        } else if let screen = screenForIceBar {
-            preferredPresentationMode = presentationMode(on: screen)
-            // Hiding app menus activates Thaw, and activating in a fullscreen
-            // space makes macOS hide the menu bar (FB13544993). Use the Thaw
-            // Bar instead, which orders front without activating.
-            if
-                preferredPresentationMode == .inlineHidingApplicationMenus,
-                appState?.activeSpace.isFullscreen == true
-            {
-                diagLog.info("Fullscreen space active; falling back to Thaw Bar instead of hiding application menus")
-                preferredPresentationMode = .iceBar
-            }
-            switch preferredPresentationMode {
-            case .inline:
-                break
-            case .inlineHidingApplicationMenus:
-                diagLog.info("Showing items inline by hiding the application menus")
-            case .iceBar:
-                diagLog.info("Not enough space to show items inline, falling back to Thaw Bar")
-            }
-        } else {
-            preferredPresentationMode = .inline
-        }
-
-        if preferredPresentationMode == .iceBar {
-            // Collapse the hidden control items, but still update the visible
-            // one so it shows its alternate icon.
+        if !forcingInline, useThawBar || overflowsInline, let screen = screenForThawBar {
             for section in menuBarManager.sections {
-                switch section.name {
-                case .visible:
-                    section.desiredState = .showSection
-                case .hidden, .alwaysHidden:
-                    section.desiredState = .hideSection
-                }
+                section.desiredState = section.name == .visible ? .showSection : .hideSection
                 section.updateControlItemState(for: nil)
             }
-
-            if let screen = screenForIceBar {
-                switch name {
-                case .visible, .hidden:
-                    menuBarManager.iceBarPanel.show(
-                        section: .hidden,
-                        on: screen,
-                        triggeredByHotkey: triggeredByHotkey
-                    )
-                case .alwaysHidden:
-                    menuBarManager.iceBarPanel.show(
-                        section: .alwaysHidden,
-                        on: screen,
-                        triggeredByHotkey: triggeredByHotkey
-                    )
-                }
-                startRehideChecks()
-            }
-
+            menuBarManager.thawBarPanel.show(
+                section: name == .alwaysHidden ? .alwaysHidden : .hidden,
+                on: screen,
+                triggeredByHotkey: triggeredByHotkey
+            )
+            startRehideChecks()
             return
         }
 
-        menuBarManager.iceBarPanel.close()
-
-        if preferredPresentationMode == .inlineHidingApplicationMenus {
-            menuBarManager.hideApplicationMenus()
-        }
-
+        menuBarManager.thawBarPanel.close()
+        menuBarManager.sectionController.show(name)
         switch name {
         case .visible, .hidden:
-            for section in menuBarManager.sections where section.name != .alwaysHidden {
-                section.desiredState = .showSection
+            for section in menuBarManager.sections {
+                section.desiredState = section.name == .alwaysHidden ? .hideSection : .showSection
                 section.updateControlItemState(for: nil)
             }
         case .alwaysHidden:
@@ -317,24 +304,74 @@ final class MenuBarSection {
                 section.updateControlItemState(for: nil)
             }
         }
-
+        showThawBarOnlyCompanionIfNeeded()
+        refreshRevealedItemImages()
         startRehideChecks()
     }
 
+    /// Inline reveal cannot reach Thaw Bar Only items; show a companion bar that closes with the reveal.
+    private func showThawBarOnlyCompanionIfNeeded() {
+        guard let appState, let menuBarManager,
+              name != .visible,
+              appState.settings.general.showThawBarOnlyWithInlineReveal,
+              !appState.itemManager.thawBarOnlyItems.isEmpty,
+              let screen = screenForThawBar
+        else { return }
+        menuBarManager.thawBarPanel.show(section: .hidden, on: screen, presentation: .alongsideReveal)
+    }
+
+    /// Capture glyphs while the section is revealed to replace app-icon fallbacks in layout and search.
+    private func refreshRevealedItemImages() {
+        guard let appState else { return }
+        let revealedName = name == .alwaysHidden ? Name.alwaysHidden : Name.hidden
+        let sections: [Name] = revealedName == .alwaysHidden
+            ? Name.allCases
+            : [.visible, .hidden]
+
+        Task { @MainActor [weak appState] in
+            // Wait for revealed AX elements before capture.
+            // Skip boundary repair: preferred-position writes invalidate Thaw's hit target.
+            try? await Task.sleep(for: .milliseconds(500))
+            guard
+                let appState,
+                !Task.isCancelled,
+                appState.menuBarManager.sectionController.revealedSection == revealedName
+            else {
+                return
+            }
+
+            await appState.itemManager.cacheItemsRegardless(
+                skipRecentMoveCheck: true,
+                resolveSourcePID: false,
+                skipSavedLayoutApply: true
+            )
+
+            guard appState.menuBarManager.sectionController.revealedSection == revealedName else {
+                return
+            }
+            await appState.imageCache.recaptureNow(sections: sections)
+        }
+    }
+
     func hide() {
-        guard let menuBarManager, !isHidden else {
+        guard let menuBarManager else {
             return
         }
 
-        menuBarManager.iceBarPanel.close()
-        menuBarManager.showOnHoverAllowed = true
+        if !isHidden {
+            menuBarManager.sectionController.hideRevealedSections()
+            menuBarManager.thawBarPanel.close()
+        }
+        resetClosedPresentationState(using: menuBarManager)
+        stopRehideChecks()
+    }
 
+    private func resetClosedPresentationState(using menuBarManager: MenuBarManager) {
+        menuBarManager.showOnHoverAllowed = true
         for section in menuBarManager.sections {
             section.desiredState = .hideSection
             section.updateControlItemState(for: nil)
         }
-
-        stopRehideChecks()
     }
 
     func toggle(triggeredByHotkey: Bool = false) {
@@ -345,60 +382,156 @@ final class MenuBarSection {
         }
     }
 
-    /// Returns `true` when the mouse cursor is inside the menu bar or the
-    /// IceBar panel, meaning the section should not be rehidden yet.
+    /// Pointer activity in either bar defers rehide.
     private func isMouseInsideActiveArea() -> Bool {
         guard let appState else { return false }
         if let screen = appState.hidEventManager.bestScreen(appState: appState),
-           appState.hidEventManager.isMouseInsideMenuBar(appState: appState, screen: screen)
+           appState.hidEventManager.isMouseInsideMenuBarHoverBand(appState: appState, screen: screen)
         {
             return true
         }
-        if appState.hidEventManager.isMouseInsideIceBar(appState: appState) {
+        if appState.hidEventManager.isMouseInsideThawBar(appState: appState) {
             return true
         }
         return false
     }
 
-    /// Starts running checks to determine when to rehide the section.
     private func startRehideChecks() {
         rehideTask?.cancel()
-        rehideTask = nil
+        rehideMonitor?.stop()
 
         guard
             let appState,
-            appState.settings.general.autoRehide
+            configuration.autoRehide
         else {
             return
         }
 
-        switch appState.settings.general.rehideStrategy {
-        case .smart, .timed:
-            // The hide at the end of the interval defers (by restarting the
-            // checks) while the cursor is over the bar or Thaw Bar (#924), or
-            // while an item's menu is open.
-            let interval = appState.settings.general.rehideInterval
-            rehideTask = Task { [weak self, weak appState] in
-                try? await Task.sleep(for: .seconds(interval))
-                guard !Task.isCancelled, let self, let appState else { return }
-                if self.isMouseInsideActiveArea() {
-                    self.startRehideChecks()
-                    return
-                }
-                if await appState.itemManager.isAnyMenuBarItemMenuOpen() {
-                    self.startRehideChecks()
-                    return
-                }
-                self.hide()
+        switch configuration.rehideStrategy {
+        case .smart:
+            // The interval is a fallback for click-based smart rehide; task cancellation stops the wait.
+            rehideTask = makeRehideTask(interval: configuration.rehideInterval) { [weak self] in
+                self?.startRehideChecks()
             }
+        case .timed:
+            rehideMonitor = EventMonitor.universal(for: .mouseMoved) { [weak self, weak appState] event in
+                // Throttle: process at most ~20fps regardless of mouse polling rate.
+                enum Context {
+                    static let lastTime = OSAllocatedUnfairLock(initialState: TimeInterval(0))
+                }
+                let now = CACurrentMediaTime()
+                guard now - Context.lastTime.withLock({ $0 }) > 0.05 else { return event }
+                Context.lastTime.withLock { $0 = now }
+
+                guard
+                    let self,
+                    let appState,
+                    let screen = NSScreen.main
+                else {
+                    return event
+                }
+                let mouseInActiveArea =
+                    NSEvent.mouseLocation.y >= screen.visibleFrame.maxY ||
+                    appState.hidEventManager.isMouseInsideThawBar(appState: appState)
+
+                if !mouseInActiveArea {
+                    if rehideTask == nil {
+                        rehideTask = makeRehideTask(interval: configuration.rehideInterval) { [weak self] in
+                            self?.diagLog.debug("Open menu detected - restarting timed rehide task")
+                            await self?.restartTimedRehideTimer()
+                        }
+                    }
+                } else {
+                    rehideTask?.cancel()
+                    rehideTask = nil
+                }
+                return event
+            }
+
+            rehideMonitor?.start()
         case .focusedApp:
             break
         }
     }
 
-    /// Stops running checks to determine when to rehide the section.
+    /// Restarts the timed rehide task (used when a menu is detected).
+    @MainActor
+    private func restartTimedRehideTimer() async {
+        guard
+            appState != nil,
+            configuration.autoRehide,
+            case .timed = configuration.rehideStrategy
+        else {
+            return
+        }
+
+        rehideTask?.cancel()
+        rehideTask = makeRehideTask(interval: configuration.rehideInterval) { [weak self] in
+            self?.diagLog.debug("Open menu still detected - restarting timed rehide task again")
+            await self?.restartTimedRehideTimer()
+        }
+    }
+
+    /// Require a full eligible interval; active-area mouse movement restarts checks, open menus defer to onOpenMenu.
+    private func makeRehideTask(
+        interval: TimeInterval,
+        onOpenMenu: @escaping @MainActor () async -> Void
+    ) -> Task<Void, Never> {
+        Task { @MainActor [weak self, weak appState] in
+            guard
+                let self,
+                let appState,
+                await self.waitForContinuousRehideEligibility(
+                    appState: appState,
+                    interval: interval
+                )
+            else { return }
+            if self.isMouseInsideActiveArea() {
+                self.startRehideChecks()
+                return
+            }
+            if await menuOpenMonitor?.isAnyMenuOpen() == true {
+                await onOpenMenu()
+                return
+            }
+            self.hide()
+        }
+    }
+
+    /// Open-menu time does not count toward rehide, avoiding immediate collapse after a menu choice.
+    private func waitForContinuousRehideEligibility(
+        appState _: AppState,
+        interval: TimeInterval
+    ) async -> Bool {
+        let pollInterval: TimeInterval = 0.25
+        let clock = ContinuousClock()
+        var eligibleSince = clock.now
+
+        while !Task.isCancelled {
+            try? await Task.sleep(for: .seconds(pollInterval))
+            guard !Task.isCancelled else { return false }
+
+            if isMouseInsideActiveArea() {
+                return false
+            }
+
+            if await menuOpenMonitor?.isAnyMenuOpen() == true {
+                eligibleSince = clock.now
+                continue
+            }
+
+            if eligibleSince.duration(to: clock.now) >= .seconds(interval) {
+                return true
+            }
+        }
+
+        return false
+    }
+
     private func stopRehideChecks() {
         rehideTask?.cancel()
+        rehideMonitor?.stop()
         rehideTask = nil
+        rehideMonitor = nil
     }
 }

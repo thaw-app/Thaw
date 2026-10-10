@@ -8,20 +8,31 @@
 
 /* Begin PBXBuildFile section */
 		170423D92B56DE78004A2549 /* Sparkle in Frameworks */ = {isa = PBXBuildFile; productRef = 170423D82B56DE78004A2549 /* Sparkle */; };
-		175061912B1543DD003144CD /* LaunchAtLogin in Frameworks */ = {isa = PBXBuildFile; productRef = 175061902B1543DD003144CD /* LaunchAtLogin */; };
 		1787C4272B16890B002F50DF /* AXSwift6 in Frameworks */ = {isa = PBXBuildFile; productRef = 1787C4262B16890B002F50DF /* AXSwift6 */; };
 		17F71BB52B880B4500905CBA /* CompactSlider in Frameworks */ = {isa = PBXBuildFile; productRef = 17F71BB42B880B4500905CBA /* CompactSlider */; };
-		29808AAF4CA568551CD0CC6B /* Algorithms in Frameworks */ = {isa = PBXBuildFile; productRef = 168E1527A0B9100E8E1DA1E2 /* Algorithms */; };
 		7127A9FF2C4886D100D99DEF /* IfritStatic in Frameworks */ = {isa = PBXBuildFile; productRef = 7127A9FE2C4886D100D99DEF /* IfritStatic */; };
-		7168EE532E281CBC00FF9830 /* AXSwift6 in Frameworks */ = {isa = PBXBuildFile; productRef = 7168EE522E281CBC00FF9830 /* AXSwift6 */; };
-		7188A68C2E27F9ED008F131D /* MenuBarItemService.xpc in Embed XPC Services */ = {isa = PBXBuildFile; fileRef = 7188A6832E27F9ED008F131D /* MenuBarItemService.xpc */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
-		C4PT00012F3A100000000010 /* AXSwift6 in Frameworks */ = {isa = PBXBuildFile; productRef = C4PT00012F3A10000000000F /* AXSwift6 */; };
-		C4PT00012F3A100000000005 /* MenuBarCaptureService.xpc in Embed XPC Services */ = {isa = PBXBuildFile; fileRef = C4PT00012F3A100000000001 /* MenuBarCaptureService.xpc */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
-		765B9E4A97DD40A18EE1F15D /* Collections in Frameworks */ = {isa = PBXBuildFile; productRef = 6937234B615A4E0BA19DFCF5 /* Collections */; };
+		7188A6882E27F9ED008F131D /* ThawCapture in Frameworks */ = {isa = PBXBuildFile; productRef = 7188A6872E27F9ED008F131D /* ThawCapture */; };
+		7188A6892E27F9ED008F131D /* MenuBarCaptureService.xpc in Embed XPC Services */ = {isa = PBXBuildFile; fileRef = 7188A6842E27F9ED008F131D /* MenuBarCaptureService.xpc */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
 		9570E4A96CDEC0BEBAA5573F /* AsyncAlgorithms in Frameworks */ = {isa = PBXBuildFile; productRef = 43C5F05D006747974015EBD9 /* AsyncAlgorithms */; };
-		A6DC49597D7F903C5E1B425F /* Algorithms in Frameworks */ = {isa = PBXBuildFile; productRef = 84489DC7DD2441B27C7B8E6C /* Algorithms */; };
+		A7C4F0012F60000000000001 /* ThawCapture in Frameworks */ = {isa = PBXBuildFile; productRef = A7C4F0032F60000000000003 /* ThawCapture */; };
+		A9E1F0032F70000000000003 /* ThawUI in Frameworks */ = {isa = PBXBuildFile; productRef = A9E1F0022F70000000000002 /* ThawUI */; };
+		A7C4F0022F60000000000002 /* ThawCapture in Frameworks */ = {isa = PBXBuildFile; productRef = A7C4F0042F60000000000004 /* ThawCapture */; };
 		C9858DF951474BBA89EEC700 /* Subprocess in Frameworks */ = {isa = PBXBuildFile; productRef = F723B15E4E92458CA2A3A2D5 /* Subprocess */; };
-		9E4B7C2A5D8F1A3B6C0E4D72 /* SystemPackage in Frameworks */ = {isa = PBXBuildFile; productRef = 2C7E9A45F08D3B61C5E8A214 /* SystemPackage */; };
+		D27A00012F40000000000001 /* PlatformRuntimeKit in Frameworks */ = {isa = PBXBuildFile; productRef = D27A00032F40000000000003 /* PlatformRuntimeKit */; };
+		D27A00022F40000000000002 /* PlatformRuntimeKit in Frameworks */ = {isa = PBXBuildFile; productRef = D27A00042F40000000000004 /* PlatformRuntimeKit */; };
+		D85602169B8B4308ACEB30A0 /* MenuBarModel in Frameworks */ = {isa = PBXBuildFile; productRef = D578D4A98E514566A18944B0 /* MenuBarModel */; };
+		E2C0FFEE2F2C000000000001 /* MenuBarModel in Frameworks */ = {isa = PBXBuildFile; productRef = E2C0FFEE2F2C000000000003 /* MenuBarModel */; };
+		F1A2B3C42F50000000000001 /* MenuBarModel in Embed Frameworks */ = {isa = PBXBuildFile; productRef = D578D4A98E514566A18944B0 /* MenuBarModel */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
+		F1A2B3C42F50000000000002 /* MenuBarModel in Embed Frameworks */ = {isa = PBXBuildFile; productRef = C2D4E6A8B0C2D4E6A8B0C2D4 /* MenuBarModel */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
+		F3B1A2C4D5E6F7A8B9C0D1E3 /* MenuBarModel in Frameworks */ = {isa = PBXBuildFile; productRef = C2D4E6A8B0C2D4E6A8B0C2D4 /* MenuBarModel */; };
+		CC01A0002F8000000000000D /* ThawControls.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = CC01A0002F80000000000003 /* ThawControls.appex */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
+		A1A1A1A1A1A1A1A1A1A1A105 /* ThawAXCore in Frameworks */ = {isa = PBXBuildFile; productRef = A1A1A1A1A1A1A1A1A1A1A102 /* ThawAXCore */; };
+		A1A1A1A1A1A1A1A1A1A1A106 /* ThawAXClient in Frameworks */ = {isa = PBXBuildFile; productRef = A1A1A1A1A1A1A1A1A1A1A103 /* ThawAXClient */; };
+		A1A1A1A1A1A1A1A1A1A1A107 /* ThawAXHelper in Embed AX Helper */ = {isa = PBXBuildFile; productRef = A1A1A1A1A1A1A1A1A1A1A104 /* ThawAXHelper */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
+		E1E1E1E1E1E1E1E1E1E1E103 /* ThawExtraHelper in Embed Extra Helper */ = {isa = PBXBuildFile; productRef = E1E1E1E1E1E1E1E1E1E1E102 /* ThawExtraHelper */; };
+		A1A1A1A1A1A1A1A1A1A1A10A /* ThawAXCore in Frameworks */ = {isa = PBXBuildFile; productRef = A1A1A1A1A1A1A1A1A1A1A109 /* ThawAXCore */; };
+		B1B1B1B1B1B1B1B1B1B1B104 /* ThawLayout in Frameworks */ = {isa = PBXBuildFile; productRef = B1B1B1B1B1B1B1B1B1B1B102 /* ThawLayout */; };
+		B1B1B1B1B1B1B1B1B1B1B105 /* ThawLayout in Frameworks */ = {isa = PBXBuildFile; productRef = B1B1B1B1B1B1B1B1B1B1B103 /* ThawLayout */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -30,13 +41,6 @@
 			containerPortal = 716683222A767E6A006ABF84 /* Project object */;
 			proxyType = 1;
 			remoteGlobalIDString = 7188A6822E27F9ED008F131D;
-			remoteInfo = MenuBarItemService;
-		};
-		C4PT00012F3A100000000006 /* PBXContainerItemProxy */ = {
-			isa = PBXContainerItemProxy;
-			containerPortal = 716683222A767E6A006ABF84 /* Project object */;
-			proxyType = 1;
-			remoteGlobalIDString = C4PT00012F3A100000000002;
 			remoteInfo = MenuBarCaptureService;
 		};
 		E2TESTS0012F2C000000002 /* PBXContainerItemProxy */ = {
@@ -46,6 +50,13 @@
 			remoteGlobalIDString = 716683292A767E6A006ABF84;
 			remoteInfo = Thaw;
 		};
+		CC01A0002F8000000000000A /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 716683222A767E6A006ABF84 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = CC01A0002F80000000000002;
+			remoteInfo = ThawControls;
+		};
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXCopyFilesBuildPhase section */
@@ -54,57 +65,95 @@
 			dstPath = "$(CONTENTS_FOLDER_PATH)/XPCServices";
 			dstSubfolder = Product;
 			files = (
-				7188A68C2E27F9ED008F131D /* MenuBarItemService.xpc in Embed XPC Services */,
-				C4PT00012F3A100000000005 /* MenuBarCaptureService.xpc in Embed XPC Services */,
+				7188A6892E27F9ED008F131D /* MenuBarCaptureService.xpc in Embed XPC Services */,
 			);
 			name = "Embed XPC Services";
+		};
+		F1A2B3C42F50000000000003 /* Embed Frameworks */ = {
+			isa = PBXCopyFilesBuildPhase;
+			dstPath = "";
+			dstSubfolder = Frameworks;
+			files = (
+				F1A2B3C42F50000000000001 /* MenuBarModel in Embed Frameworks */,
+			);
+			name = "Embed Frameworks";
+		};
+		F1A2B3C42F50000000000004 /* Embed Frameworks */ = {
+			isa = PBXCopyFilesBuildPhase;
+			dstPath = "";
+			dstSubfolder = Frameworks;
+			files = (
+				F1A2B3C42F50000000000002 /* MenuBarModel in Embed Frameworks */,
+			);
+			name = "Embed Frameworks";
+		};
+		CC01A0002F8000000000000C /* Embed Foundation Extensions */ = {
+			isa = PBXCopyFilesBuildPhase;
+			dstPath = "$(CONTENTS_FOLDER_PATH)/PlugIns";
+			dstSubfolder = Product;
+			files = (
+				CC01A0002F8000000000000D /* ThawControls.appex in Embed Foundation Extensions */,
+			);
+			name = "Embed Foundation Extensions";
+		};
+		A1A1A1A1A1A1A1A1A1A1A108 /* Embed AX Helper */ = {
+			isa = PBXCopyFilesBuildPhase;
+			dstPath = "$(CONTENTS_FOLDER_PATH)/Helpers";
+			dstSubfolder = Product;
+			files = (
+				A1A1A1A1A1A1A1A1A1A1A107 /* ThawAXHelper in Embed AX Helper */,
+			);
+			name = "Embed AX Helper";
+		};
+		E1E1E1E1E1E1E1E1E1E1E104 /* Embed Extra Helper */ = {
+			isa = PBXCopyFilesBuildPhase;
+			dstPath = "$(CONTENTS_FOLDER_PATH)/Library/Extras";
+			dstSubfolder = Product;
+			files = (
+				E1E1E1E1E1E1E1E1E1E1E103 /* ThawExtraHelper in Embed Extra Helper */,
+			);
+			name = "Embed Extra Helper";
 		};
 /* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
 		7166832A2A767E6A006ABF84 /* Thaw.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Thaw.app; sourceTree = BUILT_PRODUCTS_DIR; };
-		7188A6832E27F9ED008F131D /* MenuBarItemService.xpc */ = {isa = PBXFileReference; explicitFileType = "wrapper.xpc-service"; includeInIndex = 0; path = MenuBarItemService.xpc; sourceTree = BUILT_PRODUCTS_DIR; };
-		C4PT00012F3A100000000001 /* MenuBarCaptureService.xpc */ = {isa = PBXFileReference; explicitFileType = "wrapper.xpc-service"; includeInIndex = 0; path = MenuBarCaptureService.xpc; sourceTree = BUILT_PRODUCTS_DIR; };
+		7188A6842E27F9ED008F131D /* MenuBarCaptureService.xpc */ = {isa = PBXFileReference; explicitFileType = "wrapper.xpc-service"; includeInIndex = 0; path = MenuBarCaptureService.xpc; sourceTree = BUILT_PRODUCTS_DIR; };
 		E2TESTS0012F2C000000001 /* ThawTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = ThawTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		CC01A0002F80000000000003 /* ThawControls.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = ThawControls.appex; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
-		7188A6912E27F9ED008F131D /* Exceptions for "MenuBarItemService" folder in "MenuBarItemService" target */ = {
-			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
-			membershipExceptions = (
-				Resources/Info.plist,
-			);
-			target = 7188A6822E27F9ED008F131D /* MenuBarItemService */;
-		};
-		C4PT00012F3A100000000004 /* Exceptions for "MenuBarCaptureService" folder in "MenuBarCaptureService" target */ = {
-			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
-			membershipExceptions = (
-				Resources/Info.plist,
-			);
-			target = C4PT00012F3A100000000002 /* MenuBarCaptureService */;
-		};
 		E2B782F92F2BF98100CF0BBD /* Exceptions for "Thaw" folder in "Thaw" target */ = {
 			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
 			membershipExceptions = (
 				Resources/Info.plist,
+				Thaw.entitlements,
 			);
 			target = 716683292A767E6A006ABF84 /* Thaw */;
+		};
+		7188A6862E27F9ED008F131D /* Exceptions for "MenuBarCaptureService" folder in "MenuBarCaptureService" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				Info.plist,
+			);
+			target = 7188A6822E27F9ED008F131D /* MenuBarCaptureService */;
+		};
+		CC01A0002F8000000000000E /* Exceptions for "ThawControls" folder in "ThawControls" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				Info.plist,
+				ThawControls.entitlements,
+			);
+			target = CC01A0002F80000000000002 /* ThawControls */;
 		};
 /* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
-		7188A6842E27F9ED008F131D /* MenuBarItemService */ = {
+		7188A6832E27F9ED008F131D /* MenuBarCaptureService */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
 			exceptions = (
-				7188A6912E27F9ED008F131D /* Exceptions for "MenuBarItemService" folder in "MenuBarItemService" target */,
-			);
-			path = MenuBarItemService;
-			sourceTree = "<group>";
-		};
-		C4PT00012F3A100000000003 /* MenuBarCaptureService */ = {
-			isa = PBXFileSystemSynchronizedRootGroup;
-			exceptions = (
-				C4PT00012F3A100000000004 /* Exceptions for "MenuBarCaptureService" folder in "MenuBarCaptureService" target */,
+				7188A6862E27F9ED008F131D /* Exceptions for "MenuBarCaptureService" folder in "MenuBarCaptureService" target */,
 			);
 			path = MenuBarCaptureService;
 			sourceTree = "<group>";
@@ -127,6 +176,14 @@
 			path = ThawTests;
 			sourceTree = "<group>";
 		};
+		CC01A0002F80000000000001 /* ThawControls */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+				CC01A0002F8000000000000E /* Exceptions for "ThawControls" folder in "ThawControls" target */,
+			);
+			path = ThawControls;
+			sourceTree = "<group>";
+		};
 /* End PBXFileSystemSynchronizedRootGroup section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -136,29 +193,36 @@
 				170423D92B56DE78004A2549 /* Sparkle in Frameworks */,
 				7127A9FF2C4886D100D99DEF /* IfritStatic in Frameworks */,
 				9570E4A96CDEC0BEBAA5573F /* AsyncAlgorithms in Frameworks */,
-				A6DC49597D7F903C5E1B425F /* Algorithms in Frameworks */,
-				765B9E4A97DD40A18EE1F15D /* Collections in Frameworks */,
-				9E4B7C2A5D8F1A3B6C0E4D72 /* SystemPackage in Frameworks */,
 				C9858DF951474BBA89EEC700 /* Subprocess in Frameworks */,
-				175061912B1543DD003144CD /* LaunchAtLogin in Frameworks */,
 				1787C4272B16890B002F50DF /* AXSwift6 in Frameworks */,
 				17F71BB52B880B4500905CBA /* CompactSlider in Frameworks */,
+				D85602169B8B4308ACEB30A0 /* MenuBarModel in Frameworks */,
+				A7C4F0012F60000000000001 /* ThawCapture in Frameworks */,
+				A9E1F0032F70000000000003 /* ThawUI in Frameworks */,
+				D27A00012F40000000000001 /* PlatformRuntimeKit in Frameworks */,
+				A1A1A1A1A1A1A1A1A1A1A105 /* ThawAXCore in Frameworks */,
+				A1A1A1A1A1A1A1A1A1A1A106 /* ThawAXClient in Frameworks */,
+				B1B1B1B1B1B1B1B1B1B1B104 /* ThawLayout in Frameworks */,
 			);
 		};
 		7188A6802E27F9ED008F131D /* Frameworks */ = {
 			isa = PBXFrameworksBuildPhase;
 			files = (
-				7168EE532E281CBC00FF9830 /* AXSwift6 in Frameworks */,
-				29808AAF4CA568551CD0CC6B /* Algorithms in Frameworks */,
-			);
-		};
-		C4PT00012F3A10000000000C /* Frameworks */ = {
-			isa = PBXFrameworksBuildPhase;
-			files = (
-				C4PT00012F3A100000000010 /* AXSwift6 in Frameworks */,
+				F3B1A2C4D5E6F7A8B9C0D1E3 /* MenuBarModel in Frameworks */,
+				7188A6882E27F9ED008F131D /* ThawCapture in Frameworks */,
 			);
 		};
 		E2TESTS0012F2C000000004 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			files = (
+				E2C0FFEE2F2C000000000001 /* MenuBarModel in Frameworks */,
+				A7C4F0022F60000000000002 /* ThawCapture in Frameworks */,
+				A1A1A1A1A1A1A1A1A1A1A10A /* ThawAXCore in Frameworks */,
+				B1B1B1B1B1B1B1B1B1B1B105 /* ThawLayout in Frameworks */,
+				D27A00022F40000000000002 /* PlatformRuntimeKit in Frameworks */,
+			);
+		};
+		CC01A0002F80000000000005 /* Frameworks */ = {
 			isa = PBXFrameworksBuildPhase;
 			files = (
 			);
@@ -171,8 +235,8 @@
 			children = (
 				7188A69E2E280BB4008F131D /* Shared */,
 				71BDFBE12C978E2A00EF145F /* Thaw */,
-				7188A6842E27F9ED008F131D /* MenuBarItemService */,
-				C4PT00012F3A100000000003 /* MenuBarCaptureService */,
+				7188A6832E27F9ED008F131D /* MenuBarCaptureService */,
+				CC01A0002F80000000000001 /* ThawControls */,
 				E2TESTS0012F2C000000003 /* ThawTests */,
 				7166832B2A767E6A006ABF84 /* Products */,
 			);
@@ -182,8 +246,8 @@
 			isa = PBXGroup;
 			children = (
 				7166832A2A767E6A006ABF84 /* Thaw.app */,
-				7188A6832E27F9ED008F131D /* MenuBarItemService.xpc */,
-				C4PT00012F3A100000000001 /* MenuBarCaptureService.xpc */,
+				7188A6842E27F9ED008F131D /* MenuBarCaptureService.xpc */,
+				CC01A0002F80000000000003 /* ThawControls.appex */,
 				E2TESTS0012F2C000000001 /* ThawTests.xctest */,
 			);
 			name = Products;
@@ -198,16 +262,21 @@
 			buildPhases = (
 				716683262A767E6A006ABF84 /* Sources */,
 				716683272A767E6A006ABF84 /* Frameworks */,
+				F1A2B3C42F50000000000003 /* Embed Frameworks */,
 				716683282A767E6A006ABF84 /* Resources */,
 				1720D48F2BB9B60500A7AC63 /* SwiftLint */,
 				7188A68D2E27F9ED008F131D /* Embed XPC Services */,
+				A1A1A1A1A1A1A1A1A1A1A108 /* Embed AX Helper */,
+				E1E1E1E1E1E1E1E1E1E1E104 /* Embed Extra Helper */,
+				E1E1E1E1E1E1E1E1E1E1E105 /* Wrap Extra Helpers */,
+				CC01A0002F8000000000000C /* Embed Foundation Extensions */,
 				170AD05A2BB9B60500A7AC63 /* Stamp Git SHA */,
 			);
 			buildRules = (
 			);
 			dependencies = (
 				7188A68B2E27F9ED008F131D /* PBXTargetDependency */,
-				C4PT00012F3A100000000007 /* PBXTargetDependency */,
+				CC01A0002F8000000000000B /* PBXTargetDependency */,
 			);
 			fileSystemSynchronizedGroups = (
 				7188A69E2E280BB4008F131D /* Shared */,
@@ -215,65 +284,50 @@
 			);
 			name = Thaw;
 			packageProductDependencies = (
-				175061902B1543DD003144CD /* LaunchAtLogin */,
 				1787C4262B16890B002F50DF /* AXSwift6 */,
 				170423D82B56DE78004A2549 /* Sparkle */,
 				17F71BB42B880B4500905CBA /* CompactSlider */,
 				7127A9FE2C4886D100D99DEF /* IfritStatic */,
 				43C5F05D006747974015EBD9 /* AsyncAlgorithms */,
-				84489DC7DD2441B27C7B8E6C /* Algorithms */,
+				D578D4A98E514566A18944B0 /* MenuBarModel */,
+				A7C4F0032F60000000000003 /* ThawCapture */,
+				A9E1F0022F70000000000002 /* ThawUI */,
+				D27A00032F40000000000003 /* PlatformRuntimeKit */,
 				F723B15E4E92458CA2A3A2D5 /* Subprocess */,
-				2C7E9A45F08D3B61C5E8A214 /* SystemPackage */,
+				A1A1A1A1A1A1A1A1A1A1A102 /* ThawAXCore */,
+				A1A1A1A1A1A1A1A1A1A1A103 /* ThawAXClient */,
+				A1A1A1A1A1A1A1A1A1A1A104 /* ThawAXHelper */,
+				B1B1B1B1B1B1B1B1B1B1B102 /* ThawLayout */,
+				E1E1E1E1E1E1E1E1E1E1E102 /* ThawExtraHelper */,
 			);
-			productName = Ice;
+			productName = Thaw;
 			productReference = 7166832A2A767E6A006ABF84 /* Thaw.app */;
 			productType = "com.apple.product-type.application";
 		};
-		7188A6822E27F9ED008F131D /* MenuBarItemService */ = {
+		7188A6822E27F9ED008F131D /* MenuBarCaptureService */ = {
 			isa = PBXNativeTarget;
-			buildConfigurationList = 7188A6902E27F9ED008F131D /* Build configuration list for PBXNativeTarget "MenuBarItemService" */;
+			buildConfigurationList = 7188A6902E27F9ED008F131D /* Build configuration list for PBXNativeTarget "MenuBarCaptureService" */;
 			buildPhases = (
 				7188A67F2E27F9ED008F131D /* Sources */,
 				7188A6802E27F9ED008F131D /* Frameworks */,
+				F1A2B3C42F50000000000004 /* Embed Frameworks */,
 				7188A6812E27F9ED008F131D /* Resources */,
 				170AD05B2BB9B60500A7AC64 /* Stamp Git SHA */,
 			);
 			buildRules = (
 			);
-			fileSystemSynchronizedGroups = (
-				7188A6842E27F9ED008F131D /* MenuBarItemService */,
-				7188A69E2E280BB4008F131D /* Shared */,
-			);
-			name = MenuBarItemService;
-			packageProductDependencies = (
-				7168EE522E281CBC00FF9830 /* AXSwift6 */,
-				168E1527A0B9100E8E1DA1E2 /* Algorithms */,
-			);
-			productName = MenuBarItemService;
-			productReference = 7188A6832E27F9ED008F131D /* MenuBarItemService.xpc */;
-			productType = "com.apple.product-type.xpc-service";
-		};
-		C4PT00012F3A100000000002 /* MenuBarCaptureService */ = {
-			isa = PBXNativeTarget;
-			buildConfigurationList = C4PT00012F3A10000000000A /* Build configuration list for PBXNativeTarget "MenuBarCaptureService" */;
-			buildPhases = (
-				C4PT00012F3A10000000000B /* Sources */,
-				C4PT00012F3A10000000000C /* Frameworks */,
-				C4PT00012F3A10000000000D /* Resources */,
-				C4PT00012F3A10000000000E /* Stamp Git SHA */,
-			);
-			buildRules = (
+			dependencies = (
 			);
 			fileSystemSynchronizedGroups = (
-				C4PT00012F3A100000000003 /* MenuBarCaptureService */,
-				7188A69E2E280BB4008F131D /* Shared */,
+				7188A6832E27F9ED008F131D /* MenuBarCaptureService */,
 			);
 			name = MenuBarCaptureService;
 			packageProductDependencies = (
-				C4PT00012F3A10000000000F /* AXSwift6 */,
+				C2D4E6A8B0C2D4E6A8B0C2D4 /* MenuBarModel */,
+				7188A6872E27F9ED008F131D /* ThawCapture */,
 			);
 			productName = MenuBarCaptureService;
-			productReference = C4PT00012F3A100000000001 /* MenuBarCaptureService.xpc */;
+			productReference = 7188A6842E27F9ED008F131D /* MenuBarCaptureService.xpc */;
 			productType = "com.apple.product-type.xpc-service";
 		};
 		E2TESTS0012F2C000000007 /* ThawTests */ = {
@@ -293,9 +347,36 @@
 				E2TESTS0012F2C000000003 /* ThawTests */,
 			);
 			name = ThawTests;
+			packageProductDependencies = (
+				E2C0FFEE2F2C000000000003 /* MenuBarModel */,
+				A7C4F0042F60000000000004 /* ThawCapture */,
+				A1A1A1A1A1A1A1A1A1A1A109 /* ThawAXCore */,
+				B1B1B1B1B1B1B1B1B1B1B103 /* ThawLayout */,
+				D27A00042F40000000000004 /* PlatformRuntimeKit */,
+			);
 			productName = ThawTests;
 			productReference = E2TESTS0012F2C000000001 /* ThawTests.xctest */;
 			productType = "com.apple.product-type.bundle.unit-test";
+		};
+		CC01A0002F80000000000002 /* ThawControls */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = CC01A0002F80000000000009 /* Build configuration list for PBXNativeTarget "ThawControls" */;
+			buildPhases = (
+				CC01A0002F80000000000004 /* Sources */,
+				CC01A0002F80000000000005 /* Frameworks */,
+				CC01A0002F80000000000006 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			fileSystemSynchronizedGroups = (
+				CC01A0002F80000000000001 /* ThawControls */,
+			);
+			name = ThawControls;
+			productName = ThawControls;
+			productReference = CC01A0002F80000000000003 /* ThawControls.appex */;
+			productType = "com.apple.product-type.app-extension";
 		};
 /* End PBXNativeTarget section */
 
@@ -313,7 +394,7 @@
 					7188A6822E27F9ED008F131D = {
 						CreatedOnToolsVersion = 26.0;
 					};
-					C4PT00012F3A100000000002 = {
+					CC01A0002F80000000000002 = {
 						CreatedOnToolsVersion = 26.0;
 					};
 					E2TESTS0012F2C000000007 = {
@@ -350,16 +431,19 @@
 			);
 			mainGroup = 716683212A767E6A006ABF84;
 			packageReferences = (
-				1750618F2B1543DD003144CD /* XCRemoteSwiftPackageReference "LaunchAtLogin-Modern" */,
 				1787C4252B16890B002F50DF /* XCRemoteSwiftPackageReference "AXSwift6" */,
 				170423D72B56DE78004A2549 /* XCRemoteSwiftPackageReference "Sparkle" */,
 				17F71BB32B880B4500905CBA /* XCRemoteSwiftPackageReference "CompactSlider" */,
 				7127A9FB2C4881BC00D99DEF /* XCRemoteSwiftPackageReference "Ifrit" */,
 				1ADDA61D49BE1BA7CA5EA059 /* XCRemoteSwiftPackageReference "swift-async-algorithms" */,
-				9DDA1A418DCA43C89DE5A80F /* XCRemoteSwiftPackageReference "swift-collections" */,
 				7A0DF10D46BE41C9B7301DBB /* XCRemoteSwiftPackageReference "swift-subprocess" */,
-				8B3D6F19C4A27E50B1D9F3E6 /* XCRemoteSwiftPackageReference "swift-system" */,
-				1FE809086FD6E22D3C218F67 /* XCRemoteSwiftPackageReference "swift-algorithms" */,
+				D27A00002F40000000000000 /* XCRemoteSwiftPackageReference "prk-bin" */,
+				A4E38A6A423944089D70B9BB /* XCLocalSwiftPackageReference "MenuBarModel" */,
+				A7C4F0052F60000000000005 /* XCLocalSwiftPackageReference "ThawCapture" */,
+				A9E1F0012F70000000000001 /* XCLocalSwiftPackageReference "ThawUI" */,
+				A1A1A1A1A1A1A1A1A1A1A101 /* XCLocalSwiftPackageReference "ThawAX" */,
+				B1B1B1B1B1B1B1B1B1B1B101 /* XCLocalSwiftPackageReference "ThawLayout" */,
+				E1E1E1E1E1E1E1E1E1E1E101 /* XCLocalSwiftPackageReference "ThawExtras" */,
 			);
 			preferredProjectObjectVersion = 100;
 			productRefGroup = 7166832B2A767E6A006ABF84 /* Products */;
@@ -367,8 +451,8 @@
 			projectRoot = "";
 			targets = (
 				716683292A767E6A006ABF84 /* Thaw */,
-				7188A6822E27F9ED008F131D /* MenuBarItemService */,
-				C4PT00012F3A100000000002 /* MenuBarCaptureService */,
+				7188A6822E27F9ED008F131D /* MenuBarCaptureService */,
+				CC01A0002F80000000000002 /* ThawControls */,
 				E2TESTS0012F2C000000007 /* ThawTests */,
 			);
 		};
@@ -385,12 +469,12 @@
 			files = (
 			);
 		};
-		C4PT00012F3A10000000000D /* Resources */ = {
+		E2TESTS0012F2C000000006 /* Resources */ = {
 			isa = PBXResourcesBuildPhase;
 			files = (
 			);
 		};
-		E2TESTS0012F2C000000006 /* Resources */ = {
+		CC01A0002F80000000000006 /* Resources */ = {
 			isa = PBXResourcesBuildPhase;
 			files = (
 			);
@@ -398,9 +482,22 @@
 /* End PBXResourcesBuildPhase section */
 
 /* Begin PBXShellScriptBuildPhase section */
+		E1E1E1E1E1E1E1E1E1E1E105 /* Wrap Extra Helpers */ = {
+			isa = PBXShellScriptBuildPhase;
+			alwaysOutOfDate = 1;
+			inputPaths = (
+				"$(TARGET_BUILD_DIR)/$(CONTENTS_FOLDER_PATH)/Library/Extras/ThawExtraHelper",
+			);
+			name = "Wrap Extra Helpers";
+			shellPath = /bin/zsh;
+			shellScript = "\"${SRCROOT}/scripts/wrap-extra-helpers.sh\"\n";
+		};
 		170AD05A2BB9B60500A7AC63 /* Stamp Git SHA */ = {
 			isa = PBXShellScriptBuildPhase;
 			alwaysOutOfDate = 1;
+			inputPaths = (
+				"$(TARGET_BUILD_DIR)/$(INFOPLIST_PATH)",
+			);
 			name = "Stamp Git SHA";
 			shellPath = /bin/sh;
 			shellScript = (
@@ -431,36 +528,9 @@
 		170AD05B2BB9B60500A7AC64 /* Stamp Git SHA */ = {
 			isa = PBXShellScriptBuildPhase;
 			alwaysOutOfDate = 1;
-			name = "Stamp Git SHA";
-			shellPath = /bin/sh;
-			shellScript = (
-				"set -eu",
-				"",
-				"if SHA=$(git -C \"${SRCROOT}\" rev-parse --short HEAD 2>/dev/null); then",
-				"    if ! git -C \"${SRCROOT}\" diff --quiet 2>/dev/null \\",
-				"       || ! git -C \"${SRCROOT}\" diff --cached --quiet 2>/dev/null; then",
-				"        SHA=\"${SHA}-dirty\"",
-				"    fi",
-				"else",
-				"    SHA=\"unknown\"",
-				"fi",
-				"",
-				"PLIST=\"${TARGET_BUILD_DIR}/${INFOPLIST_PATH}\"",
-				"if [ ! -f \"$PLIST\" ]; then",
-				"    echo \"warning: stamp-git-sha: plist not found at $PLIST\"",
-				"    exit 0",
-				"fi",
-				"",
-				"/usr/libexec/PlistBuddy -c \"Set :GitCommitSHA ${SHA}\" \"$PLIST\" 2>/dev/null \\",
-				"    || /usr/libexec/PlistBuddy -c \"Add :GitCommitSHA string ${SHA}\" \"$PLIST\"",
-				"",
-				"echo \"stamp-git-sha: stamped ${SHA} into ${PLIST}\"",
-				"",
+			inputPaths = (
+				"$(TARGET_BUILD_DIR)/$(INFOPLIST_PATH)",
 			);
-		};
-		C4PT00012F3A10000000000E /* Stamp Git SHA */ = {
-			isa = PBXShellScriptBuildPhase;
-			alwaysOutOfDate = 1;
 			name = "Stamp Git SHA";
 			shellPath = /bin/sh;
 			shellScript = (
@@ -490,26 +560,15 @@
 		};
 		1720D48F2BB9B60500A7AC63 /* SwiftLint */ = {
 			isa = PBXShellScriptBuildPhase;
-			inputFileListPaths = (
-				"$(SRCROOT)/scripts/swiftlint-inputs.xcfilelist",
-			);
+			alwaysOutOfDate = 1;
 			name = SwiftLint;
-			outputPaths = (
-				"$(DERIVED_FILE_DIR)/swiftlint.stamp",
-			);
 			shellPath = /bin/sh;
 			shellScript = (
-				"if [[ \"$(uname -m)\" == arm64 ]]; then",
-				"    export PATH=\"/opt/homebrew/bin:$PATH\"",
+				"if [ \"$(uname -m)\" = arm64 ]; then",
+				"    export PATH=\"$PATH:/opt/homebrew/bin\"",
 				"fi",
 				"",
-				"if which swiftlint > /dev/null; then",
-				"  swiftlint",
-				"else",
-				"  echo \"warning: SwiftLint not installed, download from https://github.com/realm/SwiftLint\"",
-				"fi",
-				"",
-				"touch \"$SCRIPT_OUTPUT_FILE_0\"",
+				"/bin/sh \"$SRCROOT/scripts/lint.sh\"",
 				"",
 			);
 		};
@@ -526,12 +585,12 @@
 			files = (
 			);
 		};
-		C4PT00012F3A10000000000B /* Sources */ = {
+		E2TESTS0012F2C000000005 /* Sources */ = {
 			isa = PBXSourcesBuildPhase;
 			files = (
 			);
 		};
-		E2TESTS0012F2C000000005 /* Sources */ = {
+		CC01A0002F80000000000004 /* Sources */ = {
 			isa = PBXSourcesBuildPhase;
 			files = (
 			);
@@ -541,18 +600,18 @@
 /* Begin PBXTargetDependency section */
 		7188A68B2E27F9ED008F131D /* PBXTargetDependency */ = {
 			isa = PBXTargetDependency;
-			target = 7188A6822E27F9ED008F131D /* MenuBarItemService */;
+			target = 7188A6822E27F9ED008F131D /* MenuBarCaptureService */;
 			targetProxy = 7188A68A2E27F9ED008F131D /* PBXContainerItemProxy */;
-		};
-		C4PT00012F3A100000000007 /* PBXTargetDependency */ = {
-			isa = PBXTargetDependency;
-			target = C4PT00012F3A100000000002 /* MenuBarCaptureService */;
-			targetProxy = C4PT00012F3A100000000006 /* PBXContainerItemProxy */;
 		};
 		E2TESTS0012F2C000000008 /* PBXTargetDependency */ = {
 			isa = PBXTargetDependency;
 			target = 716683292A767E6A006ABF84 /* Thaw */;
 			targetProxy = E2TESTS0012F2C000000002 /* PBXContainerItemProxy */;
+		};
+		CC01A0002F8000000000000B /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = CC01A0002F80000000000002 /* ThawControls */;
+			targetProxy = CC01A0002F8000000000000A /* PBXContainerItemProxy */;
 		};
 /* End PBXTargetDependency section */
 
@@ -599,7 +658,7 @@
 				EAGER_LINKING = YES;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
 				ENABLE_TESTABILITY = YES;
-				ENABLE_USER_SCRIPT_SANDBOXING = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = NO;
 				GCC_C_LANGUAGE_STANDARD = gnu11;
 				GCC_DYNAMIC_NO_PIC = NO;
 				GCC_NO_COMMON_BLOCKS = YES;
@@ -614,8 +673,8 @@
 				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
 				GCC_WARN_UNUSED_FUNCTION = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
-				INFOPLIST_KEY_NSHumanReadableCopyright = "Copyright © 2026 Toni Förster et al.\nCopyright © 2023–2025 Jordan Baird (Ice)";
-				MACOSX_DEPLOYMENT_TARGET = 26.0;
+				INFOPLIST_KEY_NSHumanReadableCopyright = "Copyright © 2026 Toni Förster et al.";
+				MACOSX_DEPLOYMENT_TARGET = 27.0;
 				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
 				MTL_FAST_MATH = YES;
 				ONLY_ACTIVE_ARCH = YES;
@@ -668,7 +727,7 @@
 				DEVELOPMENT_TEAM = K2ATHQPJDP;
 				ENABLE_NS_ASSERTIONS = NO;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
-				ENABLE_USER_SCRIPT_SANDBOXING = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = NO;
 				GCC_C_LANGUAGE_STANDARD = gnu11;
 				GCC_NO_COMMON_BLOCKS = YES;
 				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
@@ -677,8 +736,8 @@
 				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
 				GCC_WARN_UNUSED_FUNCTION = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
-				INFOPLIST_KEY_NSHumanReadableCopyright = "Copyright © 2026 Toni Förster et al.\nCopyright © 2023–2025 Jordan Baird (Ice)";
-				MACOSX_DEPLOYMENT_TARGET = 26.0;
+				INFOPLIST_KEY_NSHumanReadableCopyright = "Copyright © 2026 Toni Förster et al.";
+				MACOSX_DEPLOYMENT_TARGET = 27.0;
 				MTL_ENABLE_DEBUG_INFO = NO;
 				MTL_FAST_MATH = YES;
 				SDKROOT = macosx;
@@ -696,11 +755,11 @@
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				ASSETCATALOG_COMPILER_INCLUDE_ALL_APPICON_ASSETS = YES;
 				ASSETCATALOG_COMPILER_SKIP_APP_STORE_DEPLOYMENT = YES;
-				CODE_SIGN_ENTITLEMENTS = "";
-				"CODE_SIGN_IDENTITY[sdk=macosx*]" = "-";
+				CODE_SIGN_ENTITLEMENTS = Thaw/Thaw.entitlements;
+				"CODE_SIGN_IDENTITY[sdk=macosx*]" = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
 				COMBINE_HIDPI_IMAGES = YES;
-				CURRENT_PROJECT_VERSION = 63;
+				CURRENT_PROJECT_VERSION = 113;
 				DEAD_CODE_STRIPPING = YES;
 				DEVELOPMENT_ASSET_PATHS = "";
 				DEVELOPMENT_TEAM = A7CKWF99ML;
@@ -708,25 +767,30 @@
 				ENABLE_HARDENED_RUNTIME = YES;
 				ENABLE_PREVIEWS = YES;
 				ENABLE_USER_SCRIPT_SANDBOXING = NO;
-				ENABLE_USER_SELECTED_FILES = readonly;
+				ENABLE_USER_SELECTED_FILES = readwrite;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = Thaw/Resources/Info.plist;
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.utilities";
 				INFOPLIST_KEY_LSUIElement = YES;
-				INFOPLIST_KEY_NSHumanReadableCopyright = "Copyright © 2026 Toni Förster et al.\nCopyright © 2023–2025 Jordan Baird (Ice)";
+				INFOPLIST_KEY_NSHumanReadableCopyright = "Copyright © 2026 Toni Förster et al.";
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/../Frameworks",
 				);
-				MACOSX_DEPLOYMENT_TARGET = 26.0;
-				MARKETING_VERSION = "2.1.0";
-				PRODUCT_BUNDLE_IDENTIFIER = com.stonerl.Thaw;
-				PRODUCT_NAME = "$(TARGET_NAME)";
+				MACOSX_DEPLOYMENT_TARGET = 27.0;
+				MARKETING_VERSION = "3.0.0-alpha.8";
+				PRODUCT_BUNDLE_IDENTIFIER = "com.stonerl.Thaw$(THAW_BUNDLE_ID_SUFFIX)";
+				INFOPLIST_KEY_CFBundleDisplayName = "Thaw$(THAW_PRODUCT_NAME_SUFFIX)";
+				PRODUCT_MODULE_NAME = Thaw;
+				PRODUCT_NAME = "Thaw$(THAW_PRODUCT_NAME_SUFFIX)";
+				THAW_BUNDLE_ID_SUFFIX = "";
+				THAW_PRODUCT_NAME_SUFFIX = "";
 				SWIFT_APPROACHABLE_CONCURRENCY = YES;
 				SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor;
 				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_OBJC_BRIDGING_HEADER = "Thaw/Thaw-Bridging-Header.h";
 				SWIFT_STRICT_CONCURRENCY = complete;
-				SWIFT_VERSION = 6.2;
+				SWIFT_VERSION = 6.0;
 			};
 			name = Debug;
 		};
@@ -737,11 +801,11 @@
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				ASSETCATALOG_COMPILER_INCLUDE_ALL_APPICON_ASSETS = YES;
 				ASSETCATALOG_COMPILER_SKIP_APP_STORE_DEPLOYMENT = YES;
-				CODE_SIGN_ENTITLEMENTS = "";
-				"CODE_SIGN_IDENTITY[sdk=macosx*]" = "-";
+				CODE_SIGN_ENTITLEMENTS = Thaw/Thaw.entitlements;
+				"CODE_SIGN_IDENTITY[sdk=macosx*]" = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
 				COMBINE_HIDPI_IMAGES = YES;
-				CURRENT_PROJECT_VERSION = 63;
+				CURRENT_PROJECT_VERSION = 113;
 				DEAD_CODE_STRIPPING = YES;
 				DEVELOPMENT_ASSET_PATHS = "";
 				DEVELOPMENT_TEAM = A7CKWF99ML;
@@ -749,155 +813,86 @@
 				ENABLE_HARDENED_RUNTIME = YES;
 				ENABLE_PREVIEWS = YES;
 				ENABLE_USER_SCRIPT_SANDBOXING = NO;
-				ENABLE_USER_SELECTED_FILES = readonly;
+				ENABLE_USER_SELECTED_FILES = readwrite;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = Thaw/Resources/Info.plist;
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.utilities";
 				INFOPLIST_KEY_LSUIElement = YES;
-				INFOPLIST_KEY_NSHumanReadableCopyright = "Copyright © 2026 Toni Förster et al.\nCopyright © 2023–2025 Jordan Baird (Ice)";
+				INFOPLIST_KEY_NSHumanReadableCopyright = "Copyright © 2026 Toni Förster et al.";
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/../Frameworks",
 				);
-				MACOSX_DEPLOYMENT_TARGET = 26.0;
-				MARKETING_VERSION = "2.1.0";
-				PRODUCT_BUNDLE_IDENTIFIER = com.stonerl.Thaw;
-				PRODUCT_NAME = "$(TARGET_NAME)";
+				MACOSX_DEPLOYMENT_TARGET = 27.0;
+				MARKETING_VERSION = "3.0.0-alpha.8";
+				PRODUCT_BUNDLE_IDENTIFIER = "com.stonerl.Thaw$(THAW_BUNDLE_ID_SUFFIX)";
+				INFOPLIST_KEY_CFBundleDisplayName = "Thaw$(THAW_PRODUCT_NAME_SUFFIX)";
+				PRODUCT_MODULE_NAME = Thaw;
+				PRODUCT_NAME = "Thaw$(THAW_PRODUCT_NAME_SUFFIX)";
+				THAW_BUNDLE_ID_SUFFIX = "";
+				THAW_PRODUCT_NAME_SUFFIX = "";
 				SWIFT_APPROACHABLE_CONCURRENCY = YES;
 				SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor;
 				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_OBJC_BRIDGING_HEADER = "Thaw/Thaw-Bridging-Header.h";
 				SWIFT_STRICT_CONCURRENCY = complete;
-				SWIFT_VERSION = 6.2;
+				SWIFT_VERSION = 6.0;
 			};
 			name = Release;
 		};
-		7188A68E2E27F9ED008F131D /* Debug configuration for PBXNativeTarget "MenuBarItemService" */ = {
+		7188A6912E27F9ED008F131D /* Debug configuration for PBXNativeTarget "MenuBarCaptureService" */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
-				"CODE_SIGN_IDENTITY[sdk=macosx*]" = "-";
+				"CODE_SIGN_IDENTITY[sdk=macosx*]" = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
-				COMBINE_HIDPI_IMAGES = YES;
-				CURRENT_PROJECT_VERSION = 63;
+				CURRENT_PROJECT_VERSION = 113;
+				DEAD_CODE_STRIPPING = YES;
 				DEVELOPMENT_TEAM = A7CKWF99ML;
-				ENABLE_APP_SANDBOX = NO;
 				ENABLE_HARDENED_RUNTIME = YES;
-				ENABLE_USER_SCRIPT_SANDBOXING = NO;
-				GCC_C_LANGUAGE_STANDARD = gnu17;
 				GENERATE_INFOPLIST_FILE = YES;
-				INFOPLIST_FILE = MenuBarItemService/Resources/Info.plist;
-				INFOPLIST_KEY_NSHumanReadableCopyright = "Copyright © 2026 Toni Förster et al.\nCopyright © 2023–2025 Jordan Baird (Ice)";
-				LOCALIZATION_PREFERS_STRING_CATALOGS = YES;
-				MACOSX_DEPLOYMENT_TARGET = 26.0;
-				MARKETING_VERSION = "2.1.0";
-				PRODUCT_BUNDLE_IDENTIFIER = com.stonerl.Thaw.MenuBarItemService;
+				INFOPLIST_FILE = MenuBarCaptureService/Info.plist;
+				INFOPLIST_KEY_NSHumanReadableCopyright = "Copyright © 2026 Toni Förster et al.";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+				);
+				MACOSX_DEPLOYMENT_TARGET = 27.0;
+				MARKETING_VERSION = "3.0.0-alpha.8";
+				PRODUCT_BUNDLE_IDENTIFIER = "com.stonerl.Thaw$(THAW_BUNDLE_ID_SUFFIX).MenuBarCaptureService";
 				PRODUCT_NAME = "$(TARGET_NAME)";
-				REGISTER_APP_GROUPS = YES;
 				SKIP_INSTALL = YES;
-				STRING_CATALOG_GENERATE_SYMBOLS = YES;
-				SWIFT_ACTIVE_COMPILATION_CONDITIONS = "DEBUG $(inherited)";
 				SWIFT_APPROACHABLE_CONCURRENCY = YES;
-				SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor;
 				SWIFT_EMIT_LOC_STRINGS = YES;
 				SWIFT_STRICT_CONCURRENCY = complete;
-				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
-				SWIFT_VERSION = 6.2;
+				SWIFT_VERSION = 6.0;
 			};
 			name = Debug;
 		};
-		7188A68F2E27F9ED008F131D /* Release configuration for PBXNativeTarget "MenuBarItemService" */ = {
+		7188A6922E27F9ED008F131D /* Release configuration for PBXNativeTarget "MenuBarCaptureService" */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
-				"CODE_SIGN_IDENTITY[sdk=macosx*]" = "-";
+				"CODE_SIGN_IDENTITY[sdk=macosx*]" = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
-				COMBINE_HIDPI_IMAGES = YES;
-				CURRENT_PROJECT_VERSION = 63;
+				CURRENT_PROJECT_VERSION = 113;
+				DEAD_CODE_STRIPPING = YES;
 				DEVELOPMENT_TEAM = A7CKWF99ML;
-				ENABLE_APP_SANDBOX = NO;
 				ENABLE_HARDENED_RUNTIME = YES;
-				ENABLE_USER_SCRIPT_SANDBOXING = NO;
-				GCC_C_LANGUAGE_STANDARD = gnu17;
 				GENERATE_INFOPLIST_FILE = YES;
-				INFOPLIST_FILE = MenuBarItemService/Resources/Info.plist;
-				INFOPLIST_KEY_NSHumanReadableCopyright = "Copyright © 2026 Toni Förster et al.\nCopyright © 2023–2025 Jordan Baird (Ice)";
-				LOCALIZATION_PREFERS_STRING_CATALOGS = YES;
-				MACOSX_DEPLOYMENT_TARGET = 26.0;
-				MARKETING_VERSION = "2.1.0";
-				PRODUCT_BUNDLE_IDENTIFIER = com.stonerl.Thaw.MenuBarItemService;
+				INFOPLIST_FILE = MenuBarCaptureService/Info.plist;
+				INFOPLIST_KEY_NSHumanReadableCopyright = "Copyright © 2026 Toni Förster et al.";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+				);
+				MACOSX_DEPLOYMENT_TARGET = 27.0;
+				MARKETING_VERSION = "3.0.0-alpha.8";
+				PRODUCT_BUNDLE_IDENTIFIER = "com.stonerl.Thaw$(THAW_BUNDLE_ID_SUFFIX).MenuBarCaptureService";
 				PRODUCT_NAME = "$(TARGET_NAME)";
-				REGISTER_APP_GROUPS = YES;
 				SKIP_INSTALL = YES;
-				STRING_CATALOG_GENERATE_SYMBOLS = YES;
 				SWIFT_APPROACHABLE_CONCURRENCY = YES;
-				SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor;
 				SWIFT_EMIT_LOC_STRINGS = YES;
 				SWIFT_STRICT_CONCURRENCY = complete;
-				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
-				SWIFT_VERSION = 6.2;
-			};
-			name = Release;
-		};
-		C4PT00012F3A100000000008 /* Debug configuration for PBXNativeTarget "MenuBarCaptureService" */ = {
-			isa = XCBuildConfiguration;
-			buildSettings = {
-				"CODE_SIGN_IDENTITY[sdk=macosx*]" = "-";
-				CODE_SIGN_STYLE = Automatic;
-				COMBINE_HIDPI_IMAGES = YES;
-				CURRENT_PROJECT_VERSION = 53;
-				DEVELOPMENT_TEAM = A7CKWF99ML;
-				ENABLE_APP_SANDBOX = NO;
-				ENABLE_HARDENED_RUNTIME = YES;
-				ENABLE_USER_SCRIPT_SANDBOXING = NO;
-				GCC_C_LANGUAGE_STANDARD = gnu17;
-				GENERATE_INFOPLIST_FILE = YES;
-				INFOPLIST_FILE = MenuBarCaptureService/Resources/Info.plist;
-				INFOPLIST_KEY_NSHumanReadableCopyright = "Copyright © 2026 Toni Förster\nCopyright © 2023–2025 Jordan Baird (Ice) ";
-				LOCALIZATION_PREFERS_STRING_CATALOGS = YES;
-				MACOSX_DEPLOYMENT_TARGET = 26.0;
-				MARKETING_VERSION = "2.0.0";
-				PRODUCT_BUNDLE_IDENTIFIER = com.stonerl.Thaw.MenuBarCaptureService;
-				PRODUCT_NAME = "$(TARGET_NAME)";
-				REGISTER_APP_GROUPS = YES;
-				SKIP_INSTALL = YES;
-				STRING_CATALOG_GENERATE_SYMBOLS = YES;
-				SWIFT_ACTIVE_COMPILATION_CONDITIONS = "DEBUG $(inherited)";
-				SWIFT_APPROACHABLE_CONCURRENCY = YES;
-				SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor;
-				SWIFT_EMIT_LOC_STRINGS = YES;
-				SWIFT_STRICT_CONCURRENCY = complete;
-				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
-				SWIFT_VERSION = 6.2;
-			};
-			name = Debug;
-		};
-		C4PT00012F3A100000000009 /* Release configuration for PBXNativeTarget "MenuBarCaptureService" */ = {
-			isa = XCBuildConfiguration;
-			buildSettings = {
-				"CODE_SIGN_IDENTITY[sdk=macosx*]" = "-";
-				CODE_SIGN_STYLE = Automatic;
-				COMBINE_HIDPI_IMAGES = YES;
-				CURRENT_PROJECT_VERSION = 53;
-				DEVELOPMENT_TEAM = A7CKWF99ML;
-				ENABLE_APP_SANDBOX = NO;
-				ENABLE_HARDENED_RUNTIME = YES;
-				ENABLE_USER_SCRIPT_SANDBOXING = NO;
-				GCC_C_LANGUAGE_STANDARD = gnu17;
-				GENERATE_INFOPLIST_FILE = YES;
-				INFOPLIST_FILE = MenuBarCaptureService/Resources/Info.plist;
-				INFOPLIST_KEY_NSHumanReadableCopyright = "Copyright © 2026 Toni Förster\nCopyright © 2023–2025 Jordan Baird (Ice) ";
-				LOCALIZATION_PREFERS_STRING_CATALOGS = YES;
-				MACOSX_DEPLOYMENT_TARGET = 26.0;
-				MARKETING_VERSION = "2.0.0";
-				PRODUCT_BUNDLE_IDENTIFIER = com.stonerl.Thaw.MenuBarCaptureService;
-				PRODUCT_NAME = "$(TARGET_NAME)";
-				REGISTER_APP_GROUPS = YES;
-				SKIP_INSTALL = YES;
-				STRING_CATALOG_GENERATE_SYMBOLS = YES;
-				SWIFT_APPROACHABLE_CONCURRENCY = YES;
-				SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor;
-				SWIFT_EMIT_LOC_STRINGS = YES;
-				SWIFT_STRICT_CONCURRENCY = complete;
-				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
-				SWIFT_VERSION = 6.2;
+				SWIFT_VERSION = 6.0;
 			};
 			name = Release;
 		};
@@ -906,21 +901,19 @@
 			buildSettings = {
 				BUNDLE_LOADER = "$(TEST_HOST)";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 31;
+				CURRENT_PROJECT_VERSION = 113;
 				DEAD_CODE_STRIPPING = YES;
-				DEVELOPMENT_TEAM = 456BPWQ6U5;
+				DEVELOPMENT_TEAM = A7CKWF99ML;
 				GENERATE_INFOPLIST_FILE = YES;
-				INFOPLIST_KEY_NSHumanReadableCopyright = "Copyright © 2026 Toni Förster et al.\nCopyright © 2023–2025 Jordan Baird (Ice)";
-				INFOPLIST_KEY_NSPrincipalClass = TestBootstrap;
-				MACOSX_DEPLOYMENT_TARGET = 26.0;
-				MARKETING_VERSION = "1.3.0-beta.1";
-				PRODUCT_BUNDLE_IDENTIFIER = com.stonerl.ThawTests;
+				MACOSX_DEPLOYMENT_TARGET = 27.0;
+				MARKETING_VERSION = "3.0.0-alpha.8";
+				PRODUCT_BUNDLE_IDENTIFIER = com.stonerl.Thaw.tests;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_APPROACHABLE_CONCURRENCY = YES;
 				SWIFT_EMIT_LOC_STRINGS = NO;
 				SWIFT_STRICT_CONCURRENCY = complete;
-				SWIFT_VERSION = 6.2;
-				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/Thaw.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/Thaw";
+				SWIFT_VERSION = 6.0;
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/Thaw$(THAW_PRODUCT_NAME_SUFFIX).app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/Thaw$(THAW_PRODUCT_NAME_SUFFIX)";
 			};
 			name = Debug;
 		};
@@ -929,21 +922,83 @@
 			buildSettings = {
 				BUNDLE_LOADER = "$(TEST_HOST)";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 31;
+				CURRENT_PROJECT_VERSION = 113;
 				DEAD_CODE_STRIPPING = YES;
-				DEVELOPMENT_TEAM = 456BPWQ6U5;
+				DEVELOPMENT_TEAM = A7CKWF99ML;
 				GENERATE_INFOPLIST_FILE = YES;
-				INFOPLIST_KEY_NSHumanReadableCopyright = "Copyright © 2026 Toni Förster et al.\nCopyright © 2023–2025 Jordan Baird (Ice)";
-				INFOPLIST_KEY_NSPrincipalClass = TestBootstrap;
-				MACOSX_DEPLOYMENT_TARGET = 26.0;
-				MARKETING_VERSION = "1.3.0-beta.1";
-				PRODUCT_BUNDLE_IDENTIFIER = com.stonerl.ThawTests;
+				MACOSX_DEPLOYMENT_TARGET = 27.0;
+				MARKETING_VERSION = "3.0.0-alpha.8";
+				PRODUCT_BUNDLE_IDENTIFIER = com.stonerl.Thaw.tests;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_APPROACHABLE_CONCURRENCY = YES;
 				SWIFT_EMIT_LOC_STRINGS = NO;
 				SWIFT_STRICT_CONCURRENCY = complete;
-				SWIFT_VERSION = 6.2;
-				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/Thaw.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/Thaw";
+				SWIFT_VERSION = 6.0;
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/Thaw$(THAW_PRODUCT_NAME_SUFFIX).app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/Thaw$(THAW_PRODUCT_NAME_SUFFIX)";
+			};
+			name = Release;
+		};
+		CC01A0002F80000000000007 /* Debug configuration for PBXNativeTarget "ThawControls" */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_ENTITLEMENTS = ThawControls/ThawControls.entitlements;
+				"CODE_SIGN_IDENTITY[sdk=macosx*]" = "Apple Development";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 113;
+				DEAD_CODE_STRIPPING = YES;
+				DEVELOPMENT_TEAM = A7CKWF99ML;
+				ENABLE_APP_SANDBOX = YES;
+				ENABLE_HARDENED_RUNTIME = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = ThawControls/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = "Thaw Controls";
+				INFOPLIST_KEY_NSHumanReadableCopyright = "Copyright © 2026 Toni Förster et al.";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../../../../Frameworks",
+				);
+				MACOSX_DEPLOYMENT_TARGET = 27.0;
+				MARKETING_VERSION = "3.0.0-alpha.8";
+				PRODUCT_BUNDLE_IDENTIFIER = "com.stonerl.Thaw$(THAW_BUNDLE_ID_SUFFIX).ThawControls";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SKIP_INSTALL = YES;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_STRICT_CONCURRENCY = complete;
+				SWIFT_VERSION = 6.0;
+			};
+			name = Debug;
+		};
+		CC01A0002F80000000000008 /* Release configuration for PBXNativeTarget "ThawControls" */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_ENTITLEMENTS = ThawControls/ThawControls.entitlements;
+				"CODE_SIGN_IDENTITY[sdk=macosx*]" = "Apple Development";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 113;
+				DEAD_CODE_STRIPPING = YES;
+				DEVELOPMENT_TEAM = A7CKWF99ML;
+				ENABLE_APP_SANDBOX = YES;
+				ENABLE_HARDENED_RUNTIME = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = ThawControls/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = "Thaw Controls";
+				INFOPLIST_KEY_NSHumanReadableCopyright = "Copyright © 2026 Toni Förster et al.";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../../../../Frameworks",
+				);
+				MACOSX_DEPLOYMENT_TARGET = 27.0;
+				MARKETING_VERSION = "3.0.0-alpha.8";
+				PRODUCT_BUNDLE_IDENTIFIER = "com.stonerl.Thaw$(THAW_BUNDLE_ID_SUFFIX).ThawControls";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SKIP_INSTALL = YES;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_STRICT_CONCURRENCY = complete;
+				SWIFT_VERSION = 6.0;
 			};
 			name = Release;
 		};
@@ -966,19 +1021,11 @@
 			);
 			defaultConfigurationName = Release;
 		};
-		7188A6902E27F9ED008F131D /* Build configuration list for PBXNativeTarget "MenuBarItemService" */ = {
+		7188A6902E27F9ED008F131D /* Build configuration list for PBXNativeTarget "MenuBarCaptureService" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
-				7188A68E2E27F9ED008F131D /* Debug configuration for PBXNativeTarget "MenuBarItemService" */,
-				7188A68F2E27F9ED008F131D /* Release configuration for PBXNativeTarget "MenuBarItemService" */,
-			);
-			defaultConfigurationName = Release;
-		};
-		C4PT00012F3A10000000000A /* Build configuration list for PBXNativeTarget "MenuBarCaptureService" */ = {
-			isa = XCConfigurationList;
-			buildConfigurations = (
-				C4PT00012F3A100000000008 /* Debug configuration for PBXNativeTarget "MenuBarCaptureService" */,
-				C4PT00012F3A100000000009 /* Release configuration for PBXNativeTarget "MenuBarCaptureService" */,
+				7188A6912E27F9ED008F131D /* Debug configuration for PBXNativeTarget "MenuBarCaptureService" */,
+				7188A6922E27F9ED008F131D /* Release configuration for PBXNativeTarget "MenuBarCaptureService" */,
 			);
 			defaultConfigurationName = Release;
 		};
@@ -990,7 +1037,42 @@
 			);
 			defaultConfigurationName = Release;
 		};
+		CC01A0002F80000000000009 /* Build configuration list for PBXNativeTarget "ThawControls" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				CC01A0002F80000000000007 /* Debug configuration for PBXNativeTarget "ThawControls" */,
+				CC01A0002F80000000000008 /* Release configuration for PBXNativeTarget "ThawControls" */,
+			);
+			defaultConfigurationName = Release;
+		};
 /* End XCConfigurationList section */
+
+/* Begin XCLocalSwiftPackageReference section */
+		A4E38A6A423944089D70B9BB /* XCLocalSwiftPackageReference "MenuBarModel" */ = {
+			isa = XCLocalSwiftPackageReference;
+			relativePath = MenuBarModel;
+		};
+		A7C4F0052F60000000000005 /* XCLocalSwiftPackageReference "ThawCapture" */ = {
+			isa = XCLocalSwiftPackageReference;
+			relativePath = ThawCapture;
+		};
+		A9E1F0012F70000000000001 /* XCLocalSwiftPackageReference "ThawUI" */ = {
+			isa = XCLocalSwiftPackageReference;
+			relativePath = ThawUI;
+		};
+		A1A1A1A1A1A1A1A1A1A1A101 /* XCLocalSwiftPackageReference "ThawAX" */ = {
+			isa = XCLocalSwiftPackageReference;
+			relativePath = ThawAX;
+		};
+		E1E1E1E1E1E1E1E1E1E1E101 /* XCLocalSwiftPackageReference "ThawExtras" */ = {
+			isa = XCLocalSwiftPackageReference;
+			relativePath = ThawExtras;
+		};
+		B1B1B1B1B1B1B1B1B1B1B101 /* XCLocalSwiftPackageReference "ThawLayout" */ = {
+			isa = XCLocalSwiftPackageReference;
+			relativePath = ThawLayout;
+		};
+/* End XCLocalSwiftPackageReference section */
 
 /* Begin XCRemoteSwiftPackageReference section */
 		170423D72B56DE78004A2549 /* XCRemoteSwiftPackageReference "Sparkle" */ = {
@@ -998,22 +1080,14 @@
 			repositoryURL = "https://github.com/sparkle-project/Sparkle";
 			requirement = {
 				kind = upToNextMajorVersion;
-				minimumVersion = 2.9.6;
-			};
-		};
-		1750618F2B1543DD003144CD /* XCRemoteSwiftPackageReference "LaunchAtLogin-Modern" */ = {
-			isa = XCRemoteSwiftPackageReference;
-			repositoryURL = "https://github.com/sindresorhus/LaunchAtLogin-Modern";
-			requirement = {
-				kind = upToNextMajorVersion;
-				minimumVersion = 1.1.0;
+				minimumVersion = 2.10.0;
 			};
 		};
 		1787C4252B16890B002F50DF /* XCRemoteSwiftPackageReference "AXSwift6" */ = {
 			isa = XCRemoteSwiftPackageReference;
 			repositoryURL = "https://github.com/thaw-app/AXSwift6";
 			requirement = {
-				kind = upToNextMinorVersion;
+				kind = upToNextMajorVersion;
 				minimumVersion = 0.5.2;
 			};
 		};
@@ -1029,24 +1103,8 @@
 			isa = XCRemoteSwiftPackageReference;
 			repositoryURL = "https://github.com/apple/swift-async-algorithms";
 			requirement = {
-				kind = upToNextMajorVersion;
-				minimumVersion = 1.0.0;
-			};
-		};
-		1FE809086FD6E22D3C218F67 /* XCRemoteSwiftPackageReference "swift-algorithms" */ = {
-			isa = XCRemoteSwiftPackageReference;
-			repositoryURL = "https://github.com/apple/swift-algorithms";
-			requirement = {
-				kind = upToNextMajorVersion;
-				minimumVersion = 1.2.0;
-			};
-		};
-		8B3D6F19C4A27E50B1D9F3E6 /* XCRemoteSwiftPackageReference "swift-system" */ = {
-			isa = XCRemoteSwiftPackageReference;
-			repositoryURL = "https://github.com/apple/swift-system";
-			requirement = {
-				kind = upToNextMajorVersion;
-				minimumVersion = 1.4.0;
+				kind = exactVersion;
+				version = 1.1.5;
 			};
 		};
 		7127A9FB2C4881BC00D99DEF /* XCRemoteSwiftPackageReference "Ifrit" */ = {
@@ -1065,31 +1123,21 @@
 				minimumVersion = 1.0.0;
 			};
 		};
-		9DDA1A418DCA43C89DE5A80F /* XCRemoteSwiftPackageReference "swift-collections" */ = {
+		D27A00002F40000000000000 /* XCRemoteSwiftPackageReference "prk-bin" */ = {
 			isa = XCRemoteSwiftPackageReference;
-			repositoryURL = "https://github.com/apple/swift-collections";
+			repositoryURL = "https://github.com/thaw-app/prk-bin";
 			requirement = {
-				kind = upToNextMajorVersion;
-				minimumVersion = 1.6.0;
+				kind = exactVersion;
+				version = 1.1.0;
 			};
 		};
 /* End XCRemoteSwiftPackageReference section */
 
 /* Begin XCSwiftPackageProductDependency section */
-		168E1527A0B9100E8E1DA1E2 /* Algorithms */ = {
-			isa = XCSwiftPackageProductDependency;
-			package = 1FE809086FD6E22D3C218F67 /* XCRemoteSwiftPackageReference "swift-algorithms" */;
-			productName = Algorithms;
-		};
 		170423D82B56DE78004A2549 /* Sparkle */ = {
 			isa = XCSwiftPackageProductDependency;
 			package = 170423D72B56DE78004A2549 /* XCRemoteSwiftPackageReference "Sparkle" */;
 			productName = Sparkle;
-		};
-		175061902B1543DD003144CD /* LaunchAtLogin */ = {
-			isa = XCSwiftPackageProductDependency;
-			package = 1750618F2B1543DD003144CD /* XCRemoteSwiftPackageReference "LaunchAtLogin-Modern" */;
-			productName = LaunchAtLogin;
 		};
 		1787C4262B16890B002F50DF /* AXSwift6 */ = {
 			isa = XCSwiftPackageProductDependency;
@@ -1106,40 +1154,95 @@
 			package = 1ADDA61D49BE1BA7CA5EA059 /* XCRemoteSwiftPackageReference "swift-async-algorithms" */;
 			productName = AsyncAlgorithms;
 		};
-		6937234B615A4E0BA19DFCF5 /* Collections */ = {
-			isa = XCSwiftPackageProductDependency;
-			package = 9DDA1A418DCA43C89DE5A80F /* XCRemoteSwiftPackageReference "swift-collections" */;
-			productName = Collections;
-		};
 		7127A9FE2C4886D100D99DEF /* IfritStatic */ = {
 			isa = XCSwiftPackageProductDependency;
 			package = 7127A9FB2C4881BC00D99DEF /* XCRemoteSwiftPackageReference "Ifrit" */;
 			productName = IfritStatic;
 		};
-		7168EE522E281CBC00FF9830 /* AXSwift6 */ = {
+		7188A6872E27F9ED008F131D /* ThawCapture */ = {
 			isa = XCSwiftPackageProductDependency;
-			package = 1787C4252B16890B002F50DF /* XCRemoteSwiftPackageReference "AXSwift6" */;
-			productName = AXSwift6;
+			package = A7C4F0052F60000000000005 /* XCLocalSwiftPackageReference "ThawCapture" */;
+			productName = ThawCapture;
 		};
-		C4PT00012F3A10000000000F /* AXSwift6 */ = {
+		A7C4F0032F60000000000003 /* ThawCapture */ = {
 			isa = XCSwiftPackageProductDependency;
-			package = 1787C4252B16890B002F50DF /* XCRemoteSwiftPackageReference "AXSwift6" */;
-			productName = AXSwift6;
+			package = A7C4F0052F60000000000005 /* XCLocalSwiftPackageReference "ThawCapture" */;
+			productName = ThawCapture;
 		};
-		84489DC7DD2441B27C7B8E6C /* Algorithms */ = {
+		A7C4F0042F60000000000004 /* ThawCapture */ = {
 			isa = XCSwiftPackageProductDependency;
-			package = 1FE809086FD6E22D3C218F67 /* XCRemoteSwiftPackageReference "swift-algorithms" */;
-			productName = Algorithms;
+			package = A7C4F0052F60000000000005 /* XCLocalSwiftPackageReference "ThawCapture" */;
+			productName = ThawCapture;
+		};
+		A9E1F0022F70000000000002 /* ThawUI */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = A9E1F0012F70000000000001 /* XCLocalSwiftPackageReference "ThawUI" */;
+			productName = ThawUI;
+		};
+		C2D4E6A8B0C2D4E6A8B0C2D4 /* MenuBarModel */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = A4E38A6A423944089D70B9BB /* XCLocalSwiftPackageReference "MenuBarModel" */;
+			productName = MenuBarModel;
+		};
+		D27A00032F40000000000003 /* PlatformRuntimeKit */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = D27A00002F40000000000000 /* XCRemoteSwiftPackageReference "prk-bin" */;
+			productName = PlatformRuntimeKit;
+		};
+		D27A00042F40000000000004 /* PlatformRuntimeKit */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = D27A00002F40000000000000 /* XCRemoteSwiftPackageReference "prk-bin" */;
+			productName = PlatformRuntimeKit;
+		};
+		D578D4A98E514566A18944B0 /* MenuBarModel */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = A4E38A6A423944089D70B9BB /* XCLocalSwiftPackageReference "MenuBarModel" */;
+			productName = MenuBarModel;
+		};
+		E2C0FFEE2F2C000000000003 /* MenuBarModel */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = A4E38A6A423944089D70B9BB /* XCLocalSwiftPackageReference "MenuBarModel" */;
+			productName = MenuBarModel;
 		};
 		F723B15E4E92458CA2A3A2D5 /* Subprocess */ = {
 			isa = XCSwiftPackageProductDependency;
 			package = 7A0DF10D46BE41C9B7301DBB /* XCRemoteSwiftPackageReference "swift-subprocess" */;
 			productName = Subprocess;
 		};
-		2C7E9A45F08D3B61C5E8A214 /* SystemPackage */ = {
+		A1A1A1A1A1A1A1A1A1A1A102 /* ThawAXCore */ = {
 			isa = XCSwiftPackageProductDependency;
-			package = 8B3D6F19C4A27E50B1D9F3E6 /* XCRemoteSwiftPackageReference "swift-system" */;
-			productName = SystemPackage;
+			package = A1A1A1A1A1A1A1A1A1A1A101 /* XCLocalSwiftPackageReference "ThawAX" */;
+			productName = ThawAXCore;
+		};
+		A1A1A1A1A1A1A1A1A1A1A103 /* ThawAXClient */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = A1A1A1A1A1A1A1A1A1A1A101 /* XCLocalSwiftPackageReference "ThawAX" */;
+			productName = ThawAXClient;
+		};
+		A1A1A1A1A1A1A1A1A1A1A104 /* ThawAXHelper */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = A1A1A1A1A1A1A1A1A1A1A101 /* XCLocalSwiftPackageReference "ThawAX" */;
+			productName = ThawAXHelper;
+		};
+		E1E1E1E1E1E1E1E1E1E1E102 /* ThawExtraHelper */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = E1E1E1E1E1E1E1E1E1E1E101 /* XCLocalSwiftPackageReference "ThawExtras" */;
+			productName = ThawExtraHelper;
+		};
+		A1A1A1A1A1A1A1A1A1A1A109 /* ThawAXCore */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = A1A1A1A1A1A1A1A1A1A1A101 /* XCLocalSwiftPackageReference "ThawAX" */;
+			productName = ThawAXCore;
+		};
+		B1B1B1B1B1B1B1B1B1B1B102 /* ThawLayout */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = B1B1B1B1B1B1B1B1B1B1B101 /* XCLocalSwiftPackageReference "ThawLayout" */;
+			productName = ThawLayout;
+		};
+		B1B1B1B1B1B1B1B1B1B1B103 /* ThawLayout */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = B1B1B1B1B1B1B1B1B1B1B101 /* XCLocalSwiftPackageReference "ThawLayout" */;
+			productName = ThawLayout;
 		};
 /* End XCSwiftPackageProductDependency section */
 	};

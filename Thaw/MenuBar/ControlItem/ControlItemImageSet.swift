@@ -2,15 +2,48 @@
 //  ControlItemImageSet.swift
 //  Project: Thaw
 //
-//  Copyright (Ice) © 2023–2025 Jordan Baird
 //  Copyright (Thaw) © 2026 Toni Förster
 //  Licensed under the GNU GPLv3
 
 import SwiftUI
 
-/// A named set of control item images for the hidden and visible states.
+// MARK: - ControlItemImageSet
+
+/// Hidden and revealed icons are chosen and stored together because their directions or fills form a matched pair.
 nonisolated struct ControlItemImageSet: Codable, Hashable, Identifiable {
-    enum Name: String, Codable, Hashable {
+    /// The icon the user picked.
+    let name: Name
+
+    /// Shown while the section is concealed.
+    let hidden: ControlItemImage
+
+    /// Shown while the section is revealed.
+    let visible: ControlItemImage
+
+    var id: Int {
+        hashValue
+    }
+
+    init(name: Name, hidden: ControlItemImage, visible: ControlItemImage) {
+        self.name = name
+        self.hidden = hidden
+        self.visible = visible
+    }
+
+    /// Creates a set that shows the same image in both states.
+    init(name: Name, image: ControlItemImage) {
+        self.init(name: name, hidden: image, visible: image)
+    }
+}
+
+// MARK: - ControlItemImageSet.Name
+
+nonisolated extension ControlItemImageSet {
+    /// The identity of an icon, independent of the images that draw it.
+    ///
+    /// - Important: The raw values are persisted with the user's settings and
+    ///   must not change.
+    nonisolated enum Name: String, Codable, Hashable {
         case arrow = "Arrow"
         case chevron = "Chevron"
         case chevronDown = "Chevron (Down)"
@@ -21,6 +54,7 @@ nonisolated struct ControlItemImageSet: Codable, Hashable, Identifiable {
         case sunglasses = "Sunglasses"
         case custom = "Custom"
 
+        /// The name as it should be shown to the user.
         var localized: LocalizedStringKey {
             switch self {
             case .arrow: "Arrow"
@@ -35,75 +69,37 @@ nonisolated struct ControlItemImageSet: Codable, Hashable, Identifiable {
             }
         }
     }
-
-    let name: Name
-    let hidden: ControlItemImage
-    let visible: ControlItemImage
-
-    var id: Int {
-        hashValue
-    }
-
-    init(name: Name, hidden: ControlItemImage, visible: ControlItemImage) {
-        self.name = name
-        self.hidden = hidden
-        self.visible = visible
-    }
-
-    init(name: Name, image: ControlItemImage) {
-        self.init(name: name, hidden: image, visible: image)
-    }
 }
 
+// MARK: - Built-in icons
+
 nonisolated extension ControlItemImageSet {
-    /// The default image set for the Ice icon.
-    static let defaultIceIcon = ControlItemImageSet(
+    /// The icon a fresh install starts with.
+    static let defaultThawIcon = ControlItemImageSet(
         name: .iceCube,
         hidden: .catalog("IceCubeStroke"),
         visible: .catalog("IceCubeFill")
     )
 
-    /// The image sets that the user can choose to display in the Ice icon.
-    static let userSelectableIceIcons = [
-        ControlItemImageSet(
-            name: .arrow,
-            hidden: .symbol("arrowshape.left.fill"),
-            visible: .symbol("arrowshape.right.fill")
-        ),
-        ControlItemImageSet(
-            name: .chevron,
-            hidden: .symbol("chevron.left"),
-            visible: .symbol("chevron.right")
-        ),
-        ControlItemImageSet(
-            name: .chevronDown,
-            hidden: .symbol("chevron.down"),
-            visible: .symbol("chevron.up")
-        ),
-        ControlItemImageSet(
-            name: .door,
-            hidden: .symbol("door.left.hand.closed"),
-            visible: .symbol("door.left.hand.open")
-        ),
-        ControlItemImageSet(
-            name: .dot,
-            hidden: .catalog("DotFill"),
-            visible: .catalog("DotStroke")
-        ),
-        ControlItemImageSet(
-            name: .ellipsis,
-            hidden: .catalog("EllipsisFill"),
-            visible: .catalog("EllipsisStroke")
-        ),
-        ControlItemImageSet(
-            name: .iceCube,
-            hidden: .catalog("IceCubeStroke"),
-            visible: .catalog("IceCubeFill")
-        ),
-        ControlItemImageSet(
-            name: .sunglasses,
-            hidden: .symbol("sunglasses.fill"),
-            visible: .symbol("sunglasses")
-        ),
+    /// The icons offered in settings, in the order they are presented.
+    static let userSelectableThawIcons = [
+        symbols(.arrow, hidden: "arrowshape.left.fill", visible: "arrowshape.right.fill"),
+        symbols(.chevron, hidden: "chevron.left", visible: "chevron.right"),
+        symbols(.chevronDown, hidden: "chevron.down", visible: "chevron.up"),
+        symbols(.door, hidden: "door.left.hand.closed", visible: "door.left.hand.open"),
+        catalog(.dot, hidden: "DotFill", visible: "DotStroke"),
+        catalog(.ellipsis, hidden: "EllipsisFill", visible: "EllipsisStroke"),
+        catalog(.iceCube, hidden: "IceCubeStroke", visible: "IceCubeFill"),
+        symbols(.sunglasses, hidden: "sunglasses.fill", visible: "sunglasses"),
     ]
+
+    /// An icon drawn from two SF Symbols.
+    private static func symbols(_ name: Name, hidden: String, visible: String) -> ControlItemImageSet {
+        ControlItemImageSet(name: name, hidden: .symbol(hidden), visible: .symbol(visible))
+    }
+
+    /// - Important: Names must match imageset folders in Assets.xcassets/ControlItemImages; unchecked mismatches yield no runtime icon.
+    private static func catalog(_ name: Name, hidden: String, visible: String) -> ControlItemImageSet {
+        ControlItemImageSet(name: name, hidden: .catalog(hidden), visible: .catalog(visible))
+    }
 }

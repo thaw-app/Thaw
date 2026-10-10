@@ -17,8 +17,8 @@ on:
     branches:
       - development
     paths:
-      - "Fuzzing/**"
-      - "Thaw/Utilities/SettingsURIParser.swift"
+      - "legacy/Fuzzing/**"
+      - "legacy/Thaw/Utilities/SettingsURIParser.swift"
       - ".github/workflows/fuzz.yml"
 
 concurrency:
@@ -51,7 +51,7 @@ jobs:
       - name: Restore corpus
         uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
-          path: Fuzzing/Corpus/SettingsURI
+          path: legacy/Fuzzing/Corpus/SettingsURI
           key: fuzz-corpus-settingsuri-${{ github.run_id }}
           restore-keys: |
             fuzz-corpus-settingsuri-
@@ -61,22 +61,22 @@ jobs:
           set -euo pipefail
           # Calls swiftc directly: SwiftPM links with --defsym main=<Module>_main, which
           # -parse-as-library never emits. `swift build -DFUZZ_REPLAY` stays for macOS.
-          mkdir -p Fuzzing/.build/release
+          mkdir -p legacy/Fuzzing/.build/release
           swiftc -parse-as-library -O -sanitize=fuzzer,address \
-            -o Fuzzing/.build/release/FuzzSettingsURI \
-            Fuzzing/Sources/FuzzSettingsURI/*.swift
+            -o legacy/Fuzzing/.build/release/FuzzSettingsURI \
+            legacy/Fuzzing/Sources/FuzzSettingsURI/*.swift
 
       - name: Fuzz
         env:
           DURATION: ${{ inputs.duration || '300' }}
         run: |
           set -euo pipefail
-          mkdir -p Fuzzing/Corpus/SettingsURI artifacts
-          ./Fuzzing/.build/release/FuzzSettingsURI \
+          mkdir -p legacy/Fuzzing/Corpus/SettingsURI artifacts
+          ./legacy/Fuzzing/.build/release/FuzzSettingsURI \
             -max_total_time="$DURATION" \
             -print_final_stats=1 \
             -artifact_prefix=artifacts/ \
-            Fuzzing/Corpus/SettingsURI
+            legacy/Fuzzing/Corpus/SettingsURI
 
       # A crash or failed property leaves a reproducer behind. Keep it: it is
       # the input needed to turn the finding into a regression test.

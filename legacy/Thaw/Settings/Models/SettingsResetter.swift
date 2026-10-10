@@ -1,0 +1,103 @@
+//
+//  SettingsResetter.swift
+//  Project: Thaw
+//
+//  Copyright (Thaw) © 2026 Toni Förster
+//  Licensed under the GNU GPLv3
+
+import Foundation
+
+extension AppSettings {
+    /// Resets all settings to their default values.
+    func resetAllSettingsToDefaults() {
+        resetGeneral()
+        resetAdvanced()
+        resetHotkeys()
+        resetDisplay()
+        resetAppearance()
+        // Not a setting, but a learned verdict about the user's other apps.
+        // A reset is the one moment they explicitly ask for a clean slate,
+        // and it is the only way to clear a record from the UI.
+        appState?.itemManager.failureLedger.removeAll()
+    }
+
+    /// Resets Appearance settings to their default values.
+    func resetAppearance() {
+        // appearanceManager lives on AppState, not AppSettings.
+        appState?.appearanceManager.configuration = Defaults.DefaultValue.menuBarAppearanceConfigurationV2
+    }
+
+    /// Resets General settings to their default values.
+    func resetGeneral() {
+        general.showIceIcon = Defaults.DefaultValue.showIceIcon
+        general.iceIcon = Defaults.DefaultValue.iceIcon
+        general.lastCustomIceIcon = nil
+        general.customIceIconIsTemplate = Defaults.DefaultValue.customIceIconIsTemplate
+        general.useIceBar = Defaults.DefaultValue.useIceBar
+        general.useIceBarOnlyOnNotchedDisplay = Defaults.DefaultValue.useIceBarOnlyOnNotchedDisplay
+        general.iceBarLocation = Defaults.DefaultValue.iceBarLocation
+        general.iceBarLocationOnHotkey = Defaults.DefaultValue.iceBarLocationOnHotkey
+        general.showOnClick = Defaults.DefaultValue.showOnClick
+        general.showOnDoubleClick = Defaults.DefaultValue.showOnDoubleClick
+        general.showOnHover = Defaults.DefaultValue.showOnHover
+        general.showOnScroll = Defaults.DefaultValue.showOnScroll
+        general.autoRehide = Defaults.DefaultValue.autoRehide
+        general.rehideStrategy = Defaults.DefaultValue.rehideStrategy
+        general.rehideInterval = Defaults.DefaultValue.rehideInterval
+        general.tempShowInterval = Defaults.DefaultValue.tempShowInterval
+        general.simpleMode = Defaults.DefaultValue.simpleMode
+        general.showSettingDescriptions = Defaults.DefaultValue.showSettingDescriptions
+        general.hideDockIconWhenToggling = Defaults.DefaultValue.hideDockIconWhenToggling
+        appState?.itemGroupManager.apply(nil)
+    }
+
+    /// Resets Advanced settings to their default values.
+    func resetAdvanced() {
+        advanced.enableAlwaysHiddenSection = Defaults.DefaultValue.enableAlwaysHiddenSection
+        advanced.useOptionClickToShowAlwaysHiddenSection = Defaults.DefaultValue.useOptionClickToShowAlwaysHiddenSection
+        advanced.useDoubleClickToShowAlwaysHiddenSection = Defaults.DefaultValue.useDoubleClickToShowAlwaysHiddenSection
+        advanced.showAllSectionsOnUserDrag = Defaults.DefaultValue.showAllSectionsOnUserDrag
+        appState?.itemManager.updateNewItemsPlacement(section: .hidden, arrangedViews: [])
+        advanced.sectionDividerStyle = Defaults.DefaultValue.sectionDividerStyle
+        advanced.hideApplicationMenus = Defaults.DefaultValue.hideApplicationMenus
+        advanced.enableSecondaryContextMenu = Defaults.DefaultValue.enableSecondaryContextMenu
+        advanced.enableSecondaryContextMenuQuit = Defaults.DefaultValue.enableSecondaryContextMenuQuit
+        advanced.showOnHoverDelay = Defaults.DefaultValue.showOnHoverDelay
+        advanced.tooltipDelay = Defaults.DefaultValue.tooltipDelay
+        advanced.showMenuBarTooltips = Defaults.DefaultValue.showMenuBarTooltips
+        advanced.iconRefreshInterval = Defaults.DefaultValue.iconRefreshInterval
+        advanced.enableDiagnosticLogging = Defaults.DefaultValue.enableDiagnosticLogging
+        advanced.autoZenWhileSharingScreen = Defaults.DefaultValue.autoZenWhileSharingScreen
+        advanced.diagnosticLogMaxSizeMB = Defaults.DefaultValue.diagnosticLogMaxSizeMB
+        advanced.diagnosticLogRetentionDays = Defaults.DefaultValue.diagnosticLogRetentionDays
+        advanced.diagnosticLogRotationInterval = Defaults.DefaultValue.diagnosticLogRotationInterval
+        advanced.enableMenuBarItemOverflow = Defaults.DefaultValue.enableMenuBarItemOverflow
+        advanced.useThawBarOnNotchOverflow = Defaults.DefaultValue.useThawBarOnNotchOverflow
+        advanced.automaticArrangementEnabled = Defaults.DefaultValue.automaticArrangementEnabled
+        advanced.useAXClickDelivery = Defaults.DefaultValue.useAXClickDelivery
+        advanced.searchSectionOrder = AdvancedSettings.sanitizedSearchSectionOrder(
+            from: Defaults.DefaultValue.searchSectionOrder
+        )
+        advanced.searchIncludeVisible = Defaults.DefaultValue.searchIncludeVisible
+        advanced.searchIncludeHidden = Defaults.DefaultValue.searchIncludeHidden
+        advanced.searchIncludeAlwaysHidden = Defaults.DefaultValue.searchIncludeAlwaysHidden
+        advanced.moveCursorToRevealedItem = Defaults.DefaultValue.moveCursorToRevealedItem
+    }
+
+    /// Resets Hotkeys settings to their default values.
+    func resetHotkeys() {
+        Defaults.set(Defaults.DefaultValue.hotkeys, forKey: .hotkeys)
+        for hotkey in hotkeys.hotkeys {
+            hotkey.keyCombination = nil
+        }
+    }
+
+    /// Resets Display settings to their default values.
+    func resetDisplay() {
+        displaySettings.configurations = Defaults.DefaultValue.displayIceBarConfigurations
+        displaySettings.globalConfiguration = Defaults.DefaultValue.globalDisplayConfiguration
+        displaySettings.confirmSpacingRelaunch = Defaults.DefaultValue.confirmSpacingRelaunch
+        displaySettings.unconfirmedSpacingProfileScope = Defaults.DefaultValue.unconfirmedSpacingProfileScope
+        displaySettings.spacingApplyMode = Defaults.DefaultValue.spacingApplyMode
+    }
+}

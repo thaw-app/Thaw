@@ -8,9 +8,15 @@ concurrency:
 
 on:
   pull_request:
+    paths-ignore:
+      - "legacy/**"
+      - ".github/workflows/*-legacy.yml"
   push:
     branches:
       - development
+    paths-ignore:
+      - "legacy/**"
+      - ".github/workflows/*-legacy.yml"
   schedule:
     # Weekly hygiene scan (offset from Scorecard / CodeQL).
     - cron: "17 5 * * 1"
@@ -63,7 +69,7 @@ jobs:
               if not isinstance(reason, str) or not reason.strip():
                   errors.append(
                       f"IgnoredVulns id={vuln_id!r} requires a non-empty reason "
-                      "(see https://github.com/thaw-app/.github/blob/main/.github/SECURITY.md#dependency-findings)"
+                      "(see .github/SECURITY.md § Dependency SCA policy)"
                   )
               ignore_until = entry.get("ignoreUntil")
               if ignore_until is None or (
@@ -71,7 +77,7 @@ jobs:
               ):
                   errors.append(
                       f"IgnoredVulns id={vuln_id!r} requires ignoreUntil "
-                      "(YYYY-MM-DD expiry; see https://github.com/thaw-app/.github/blob/main/.github/SECURITY.md#dependency-findings)"
+                      "(YYYY-MM-DD expiry; see .github/SECURITY.md)"
                   )
 
           if errors:

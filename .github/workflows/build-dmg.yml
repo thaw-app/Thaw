@@ -33,17 +33,25 @@ jobs:
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           sparse-checkout: .github/actions
+          persist-credentials: false
 
       - name: Checkout source
         id: source
         uses: ./.github/actions/checkout-source
         with:
           ref: ${{ inputs.ref }}
+          path: Thaw
 
       - name: Select latest installed Xcode (including betas)
         uses: maxim-lobanov/setup-xcode@ed7a3b1fda3918c0306d1b724322adc0b8cc0a90 # v1.7.0
         with:
           xcode-version: latest
+
+      # The Thaw target's lint build phase requires the pinned SwiftLint on PATH.
+      - name: Install pinned SwiftLint
+        run: |
+          sh Thaw/scripts/install-swiftlint.sh
+          echo "$HOME/.local/bin" >> "$GITHUB_PATH"
 
       - name: Configure signing
         uses: thaw-app/org-ci/actions/configure-signing@6adcb3aa53a28cfa9d4cd2f55e2d5f5c75af980b

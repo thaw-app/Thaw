@@ -35,7 +35,9 @@ struct WallpaperChangeMonitorTests {
     /// latency instead of a spurious failure.
     private func waitForChange(_ counter: @MainActor () -> Int, from start: Int) async -> Bool {
         for _ in 0 ..< 100 {
-            if counter() > start { return true }
+            if counter() > start {
+                return true
+            }
             try? await Task.sleep(for: .milliseconds(50))
         }
         return false
@@ -63,8 +65,9 @@ struct WallpaperChangeMonitorTests {
             monitor.onChange = { changes += 1 }
             monitor.start()
 
-            // The system replaces the index rather than writing in place, so
-            // without a re-open the monitor goes deaf after the first change.
+            // How the system actually rewrites the index: the watched inode
+            // is unlinked rather than written in place. Without a re-open,
+            // the monitor would go deaf after this first replacement.
             try Data("first".utf8).write(to: url, options: .atomic)
             #expect(await waitForChange({ changes }, from: 0))
 
@@ -95,7 +98,7 @@ struct WallpaperChangeMonitorTests {
     }
 
     @Test("A missing file is tolerated rather than fatal")
-    func missingFileIsTolerated() async throws {
+    func missingFileIsTolerated() async {
         let url = URL.temporaryDirectory.appendingPathComponent("\(UUID().uuidString)/Index.plist")
         let monitor = WallpaperChangeMonitor(url: url)
         defer { monitor.stop() }

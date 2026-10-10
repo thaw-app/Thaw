@@ -7,6 +7,13 @@
 
 import SwiftUI
 
+/// The developer harness for the thaw:// control plane.
+///
+/// Not product UI and not localized: ThawCtl has no target in
+/// Thaw.xcodeproj, is built only by ThawCtl/build.sh, and never reaches a
+/// user's machine. The labels here are deliberately terse and speak in the
+/// URL scheme's own vocabulary, because the only reader is someone holding
+/// SettingsURIHandler.swift open next to it.
 struct ContentView: View {
     @State private var engine: ThawCtlEngine
 
@@ -56,7 +63,14 @@ struct ContentView: View {
                 }
                 HStack {
                     actionButton("App Menus", action: "toggle-application-menus")
+                    actionButton("Zen Mode", action: "toggle-zen-mode")
+                }
+                HStack {
                     actionButton("Settings", action: "open-settings")
+                    Button("Dump Item List") { engine.sendDumpItems() }
+                        .buttonStyle(.bordered)
+                        .controlSize(.small)
+                        .frame(maxWidth: .infinity)
                 }
             }
             .padding(4)
@@ -74,12 +88,12 @@ struct ContentView: View {
         GroupBox("Set Setting (thaw://set)") {
             VStack(spacing: 6) {
                 HStack {
-                    Text("Key:")
-                    TextField("e.g. autoRehide", text: $setKey)
+                    Text("Setting key:")
+                    TextField("Example: autoRehide", text: $setKey)
                         .textFieldStyle(.roundedBorder)
                         .font(.caption)
-                    Text("Val:")
-                    TextField("true/false", text: $setValue)
+                    Text("Value:")
+                    TextField("true or false", text: $setValue)
                         .textFieldStyle(.roundedBorder)
                         .font(.caption)
                         .frame(width: 70)
@@ -96,8 +110,8 @@ struct ContentView: View {
     private var toggleSection: some View {
         GroupBox("Toggle Setting (thaw://toggle)") {
             VStack(spacing: 6) {
-                Picker("Key:", selection: $toggleKey) {
-                    Text("Pick a key...").tag("")
+                Picker("Setting key:", selection: $toggleKey) {
+                    Text("Pick a key…").tag("")
                     ForEach(booleanKeys, id: \.self) { key in
                         Text(key).tag(key)
                     }
@@ -115,8 +129,8 @@ struct ContentView: View {
     private var getSection: some View {
         GroupBox("Get Setting (thaw://get → thawctl://callback)") {
             VStack(spacing: 6) {
-                Picker("Key:", selection: $getKey) {
-                    Text("Pick a key...").tag("")
+                Picker("Setting key:", selection: $getKey) {
+                    Text("Pick a key…").tag("")
                     ForEach(getKeys, id: \.self) { key in
                         Text(key).tag(key)
                     }
@@ -137,7 +151,7 @@ struct ContentView: View {
                 Button("Request Authorization") { engine.sendAuthorize() }
                     .buttonStyle(.bordered)
                     .controlSize(.small)
-                Text("Triggers whitelist dialog in Thaw")
+                Text("Asks Thaw to show its approval dialog for this app")
                     .font(.caption2)
                     .foregroundStyle(.secondary)
             }
@@ -145,30 +159,48 @@ struct ContentView: View {
         }
     }
 
+    /// Keep this list in step with SettingsURIHandler.keyTable in
+    /// Thaw/System/SettingsURIHandler.swift. ThawCtl is a separate package and
+    /// cannot import the app target, so the names are repeated rather than
+    /// derived.
     private var booleanKeys: [String] {
-        ["autoRehide", "showOnClick", "showOnDoubleClick", "showOnHover", "showOnScroll",
-         "useIceBarOnlyOnNotchedDisplay", "hideApplicationMenus", "enableAlwaysHiddenSection",
-         "useOptionClickToShowAlwaysHiddenSection", "useDoubleClickToShowAlwaysHiddenSection",
-         "enableSecondaryContextMenu", "showAllSectionsOnUserDrag", "showMenuBarTooltips",
-         "enableDiagnosticLogging", "customIceIconIsTemplate", "showIceIcon",
-         "iceBarLocationOnHotkey"]
+        [
+            "showThawIcon", "customThawIconIsTemplate", "simpleMode",
+            "showSettingDescriptions", "lockThawBarPosition", "showThawBarOnlyWithInlineReveal", "showThawBarOnlyLauncher",
+            "useThawBarOnlyOnNotchedDisplay", "thawBarLocationOnHotkey",
+            "showOnClick", "showOnHover", "showOnScroll",
+            "autoRehide", "enableAlwaysHiddenSection", "showAllSectionsOnUserDrag",
+            "hideApplicationMenus", "enableSecondaryContextMenu", "showMenuBarTooltips",
+            "autoZenWhileSharingScreen", "enableDiagnosticLogging",
+            "enableMenuBarItemOverflow", "enableExperimentalSystemItemHiding",
+            "enableExperimentalOverflowPrevention", "alwaysUseAppIconForMenuBarItems",
+            "enableMenuBarItemDescenders", "enableSwapBar", "enableControlItemPanel",
+            "fetchReleaseNotes", "enableRecordingWatch", "zenModeWhileRecording",
+            "enableDesktopMenuHiding",
+            "searchIncludeVisible", "searchIncludeHidden", "searchIncludeAlwaysHidden",
+        ]
     }
 
     private var getKeys: [String] {
-        ["all"] + booleanKeys + ["rehideInterval", "showOnHoverDelay", "tooltipDelay",
-                                 "iconRefreshInterval", "rehideStrategy", "useIceBar", "iceBarLocation",
-                                 "alwaysShowHiddenItems", "iceBarLayout", "gridColumns", "version", "displays"]
+        ["all"] + booleanKeys + [
+            "rehideInterval", "tempShowInterval", "showOnHoverDelay", "tooltipDelay",
+            "iconRefreshInterval", "menuBarItemAlertRevealCooldown",
+            "menuBarOrderFulfillmentTimeout", "rehideStrategy", "useThawBar",
+            "thawBarLocation", "alwaysShowHiddenItems", "thawBarLayout", "gridColumns",
+            "version", "displays",
+        ]
     }
 
     // MARK: - Response Panel
 
     private var responsePanel: some View {
         VStack(spacing: 0) {
+            // Display UUID field
             HStack {
-                Text("Display UUID:")
+                Text("Display UUID (optional):")
                     .font(.caption)
                     .foregroundStyle(.secondary)
-                TextField("(optional)", text: $displayUUID)
+                TextField("Paste a display UUID", text: $displayUUID)
                     .textFieldStyle(.roundedBorder)
                     .font(.caption)
                     .controlSize(.small)
@@ -177,6 +209,7 @@ struct ContentView: View {
 
             Divider()
 
+            // Timeline
             List {
                 ForEach(engine.log) { entry in
                     VStack(alignment: .leading, spacing: 2) {

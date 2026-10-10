@@ -2,102 +2,127 @@
 //  ToolsSettingsPane.swift
 //  Project: Thaw
 //
-//  Copyright (Ice) © 2023–2025 Jordan Baird
 //  Copyright (Thaw) © 2026 Toni Förster
 //  Licensed under the GNU GPLv3
 
+import MenuBarModel
+import PlatformRuntimeKit
 import SwiftUI
+import ThawCapture
+import ThawUI
 
 struct ToolsSettingsPane: View {
-    @Environment(AppState.self) private var appState: AppState
+    @Environment(AppState.self) private var appState
     @Bindable var settings: AdvancedSettings
 
     @State private var currentLogFileName: String?
     @State private var pendingAction: MaintenanceToolAction?
-    @State private var languageOverrideChanged = false
     @State private var isBusy = false
+    @State private var confirmsVisibilityRecovery = false
     @State private var statusMessage: String?
+    /// The tool whose row shows statusMessage, so a result reads beside
+    /// the button that produced it rather than at the foot of the page.
+    @State private var statusAction: MaintenanceToolAction?
     @State private var errorMessage: String?
+    @State private var failedAction: MaintenanceToolAction?
+    // The browser below reloads on this rather than watching the folder,
+    // because a reset is the only thing on this pane that writes a backup.
+    @State private var backupsRefreshToken = 0
 
     var body: some View {
-        IceForm {
-            SettingsWarningPill(
-                title: "Safe vs maintenance tools",
-                message: "Diagnostics and Onboarding are non-destructive. Reset and Troubleshooting can delete preferences, clear the cache, or quit apps.",
-                systemImage: "info.circle.fill",
-                tint: .blue
-            )
-            // A bare child of the grouped Form still gets a row card; clear
-            // it so the pill renders "alone" like section-footer pills.
-            .listRowBackground(Color.clear)
+        ThawForm {
+            // Everyday utilities first, then the ones that delete or reset
+            // something, with a reset of everything last. What the app
+            // observes lives on the Privacy pane, beside the permissions that
+            // allow it.
+            ThawSection("Onboarding") {
+                toolRow(
+                    title: "Welcome screens",
+                    detail: "Show the welcome, access, and setup screens again.",
+                    buttonTitle: "Show Again"
+                ) {
+                    appState.replayOnboarding()
+                }
+            }
 
-            IceSection("Diagnostics") {
+            // Non-destructive, but a level down from daily use.
+            ThawSection("Diagnostics") {
                 diagnosticLogging
             }
-            IceSection("Onboarding") {
+            // The move record is the log's live view, so it shows only while
+            // the log is being written.
+            if settings.enableDiagnosticLogging {
+                MoveInspectorSection()
+            }
+
+            // Above Troubleshooting because the positions reset there writes
+            // the backups this lists, and its copy points up to it.
+            MenuBarLayoutBackupsSection(refreshToken: backupsRefreshToken)
+
+            // These delete preferences, clear the cache, or quit apps.
+            ThawSection("Troubleshooting") {
                 toolRow(
-                    title: "Replay onboarding",
-                    detail: "Review the feature tour and permission setup again.",
-                    buttonTitle: "Replay Onboarding"
+                    title: "Missing menu bar items",
+                    detail: "Restore app visibility without resetting your layout. Normal hiding stops while a separate recovery window is open.",
+                    buttonTitle: "Restore Missing Items…"
                 ) {
-                    appState.isOnboardingPresented = true
+                    confirmsVisibilityRecovery = true
                 }
-            }
-            IceSection("Language") {
-                languageRow
-            }
-            IceSection("Reset") {
+
                 toolRow(
-                    title: "Reset all settings",
-                    detail: "Restore \(Constants.displayName) preferences to their defaults. Saved profiles and user data are not deleted. This cannot be undone.",
-                    buttonTitle: "Reset \(Constants.displayName)",
-                    role: .destructive
-                ) {
-                    pendingAction = .resetSettings
-                }
-            }
-            IceSection("Troubleshooting") {
-                toolRow(
-                    title: "Reset Control Center preferences",
-                    detail: "Quit Control Center and delete its preference files so system menu bar item state can rebuild.",
-                    buttonTitle: "Reset Control Center"
+                    title: "Control Center preferences",
+                    detail: "Quit Control Center and delete its preference files so the state of Apple's menu bar items can rebuild.",
+                    buttonTitle: "Reset Control Center…",
+                    role: .destructive,
+                    statusFor: .resetControlCenter
                 ) {
                     pendingAction = .resetControlCenter
                 }
 
+                // Saved positions live in the menu bar's own domain, not
+                // Control Center's, so the row above does not clear them and
+                // this one is a separate reset rather than a duplicate.
                 toolRow(
-                    title: "Reset menu bar layout positions",
-                    detail: "Quit the menu bar host and delete its saved item positions, so the menu bar arrangement rebuilds from scratch. Use this when items refuse to return to the menu bar after rearranging.",
-                    buttonTitle: "Reset Layout Positions",
-                    role: .destructive
+                    title: "Saved item positions",
+                    detail: "Delete macOS's saved menu bar layout and restart the menu bar so it rebuilds from scratch. Use this when items won't come back to the menu bar after you move them. A backup is saved first; restore it from Layout backups above.",
+                    buttonTitle: "Reset Positions…",
+                    role: .destructive,
+                    statusFor: .resetMenuBarLayoutPositions
                 ) {
                     pendingAction = .resetMenuBarLayoutPositions
                 }
 
                 toolRow(
-                    title: "Quit and clear cache",
+                    title: "Cache",
                     detail: "Delete \(Constants.displayName)'s cache folder, then quit the app.",
-                    buttonTitle: "Quit & Clear Cache",
-                    role: .destructive
+                    buttonTitle: "Quit and Clear Cache…",
+                    role: .destructive,
+                    statusFor: .quitAndClearCache
                 ) {
                     pendingAction = .quitAndClearCache
                 }
 
                 toolRow(
-                    title: "Reset permissions",
-                    detail: "Clear Accessibility and Screen Recording decisions for \(Constants.displayName), then quit so you can re-grant them on next launch.",
-                    buttonTitle: "Reset Permissions",
-                    role: .destructive
+                    title: "Permissions",
+                    detail: "Clear Accessibility and Screen Recording decisions for \(Constants.displayName), then quit so you can grant them again on next launch.",
+                    buttonTitle: "Reset Permissions…",
+                    role: .destructive,
+                    statusFor: .resetPermissions
                 ) {
                     pendingAction = .resetPermissions
                 }
             }
 
-            if let statusMessage {
-                Text(statusMessage)
-                    .font(.callout)
-                    .foregroundStyle(.secondary)
-                    .frame(maxWidth: .infinity, alignment: .leading)
+            ThawSection("Reset") {
+                toolRow(
+                    title: "All settings",
+                    detail: "Restore \(Constants.displayName) settings to their defaults. Saved profiles, allowed apps, and user data are not deleted. This cannot be undone.",
+                    buttonTitle: "Reset \(Constants.displayName)…",
+                    role: .destructive,
+                    statusFor: .resetSettings
+                ) {
+                    pendingAction = .resetSettings
+                }
             }
         }
         .disabled(isBusy)
@@ -110,175 +135,66 @@ struct ToolsSettingsPane: View {
         }
         .confirmationDialog(
             pendingAction?.confirmationTitle ?? "",
-            isPresented: Binding(
-                get: { pendingAction != nil },
-                set: {
-                    if !$0 {
-                        pendingAction = nil
-                    }
-                }
-            ),
-            titleVisibility: .visible,
-            presenting: pendingAction
+            item: $pendingAction,
+            titleVisibility: .visible
         ) { action in
             Button(action.confirmationButtonTitle, role: .destructive) {
                 Task { await perform(action) }
             }
-            Button("Cancel", role: .cancel) {
-                pendingAction = nil
-            }
+            Button("Cancel", role: .cancel) {}
         } message: { action in
             Text(action.confirmationMessage)
         }
-        .alert(
-            "Couldn't run tool",
-            isPresented: Binding(
-                get: { errorMessage != nil },
-                set: {
-                    if !$0 {
-                        errorMessage = nil
+        .confirmationDialog("Open visibility recovery?", isPresented: $confirmsVisibilityRecovery, titleVisibility: .visible) {
+            Button("Quit Thaw and Open Recovery") {
+                Task {
+                    isBusy = true
+                    defer { isBusy = false }
+                    do {
+                        try await NativeVisibilityRecoveryLaunch.openRecovery()
+                    } catch {
+                        failedAction = nil
+                        errorMessage = error.localizedDescription
                     }
                 }
-            )
-        ) {
-            Button("OK", role: .cancel) {
-                errorMessage = nil
             }
+            Button("Cancel", role: .cancel) {}
         } message: {
-            Text(errorMessage ?? "")
+            Text("Thaw will quit normal mode so neither hiding mechanism can interfere. Your saved layout is kept. Native hiding will remain off after recovery.")
         }
+        .errorAlert(failedAction?.errorTitle ?? "Couldn’t run tool", message: $errorMessage, role: .cancel)
     }
 
     private var diagnosticLogging: some View {
-        VStack(alignment: .leading, spacing: 12) {
+        VStack(alignment: .leading, spacing: ThawSpacing.inset) {
             Toggle(
-                "Enable diagnostic logging",
+                "Detailed logging",
                 isOn: $settings.enableDiagnosticLogging
             )
             .annotation {
                 Text(
                     """
-                    Writes detailed debug logs to a file for troubleshooting. \
-                    Log files are saved to ~/Library/Logs/Thaw/. \
-                    Disable when not needed to avoid unnecessary disk writes.
+                    Writes a detailed log to ~/Library/Logs/Thaw/ for troubleshooting, \
+                    and lists recent item moves below. Turn it off when you are done \
+                    to avoid needless disk writes. Short crash reports are saved even \
+                    when this is off.
                     """
                 )
             }
 
-            HStack(spacing: 12) {
-                if settings.enableDiagnosticLogging || DiagnosticLogger.shared.hasLogFiles {
-                    Button("Show Log Files in Finder") {
-                        NSWorkspace.shared.open(DiagnosticLogger.shared.logDirectory)
-                    }
+            HStack(spacing: ThawSpacing.inset) {
+                Button("Show Log Files in Finder") {
+                    NSWorkspace.shared.open(DiagnosticLogger.shared.logDirectory)
                 }
+                .buttonStyle(.settingsGlass)
 
                 if let currentLogFileName {
                     Text(currentLogFileName)
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
+                        .font(ThawType.caption)
+                        .foregroundStyle(ThawInk.supporting)
                 }
             }
         }
-    }
-
-    /// Sentinel for following the system language (no override).
-    private static let systemLanguageTag = "system"
-
-    /// The app's per-app language override, via the standard `AppleLanguages`
-    /// mechanism. Not a `Defaults.Key`; the key name is owned by macOS.
-    private var currentLanguageOverride: String {
-        guard let stored = (UserDefaults.standard.array(forKey: "AppleLanguages") as? [String])?.first else {
-            return Self.systemLanguageTag
-        }
-        // The stored value is whatever macOS was handed, which need not be one
-        // of the picker's tags: `en-GB` selects our `en` localization at
-        // runtime but matches no tag, leaving the picker blank.
-        return Self.availableLocalization(matching: stored) ?? Self.systemLanguageTag
-    }
-
-    /// The bundle localization a stored `AppleLanguages` value resolves to, or
-    /// `nil` when this build ships nothing for it.
-    private static func availableLocalization(matching identifier: String) -> String? {
-        let localizations = Bundle.main.localizations.filter { $0 != "Base" }
-        if localizations.contains(identifier) {
-            return identifier
-        }
-        guard let languageCode = Locale(identifier: identifier).language.languageCode?.identifier else {
-            return nil
-        }
-        // The bare language first (`en` for `en-GB`), then any regional variant
-        // of it (`pt-BR` for `pt`), which is how macOS resolves it too.
-        return localizations.first { $0 == languageCode }
-            ?? localizations.first { Locale(identifier: $0).language.languageCode?.identifier == languageCode }
-    }
-
-    @ViewBuilder
-    private var languageRow: some View {
-        let localizations = Bundle.main.localizations
-            .filter { $0 != "Base" }
-            .sorted { lhs, rhs in
-                displayName(forLanguage: lhs) < displayName(forLanguage: rhs)
-            }
-
-        IcePicker(
-            "App language",
-            selection: Binding(
-                get: { currentLanguageOverride },
-                set: { newValue in
-                    if newValue == Self.systemLanguageTag {
-                        UserDefaults.standard.removeObject(forKey: "AppleLanguages")
-                    } else {
-                        UserDefaults.standard.set([newValue], forKey: "AppleLanguages")
-                    }
-                    languageOverrideChanged = true
-                }
-            )
-        ) {
-            Text("System Default").tag(Self.systemLanguageTag)
-            ForEach(localizations, id: \.self) { code in
-                Text(displayName(forLanguage: code)).tag(code)
-            }
-        }
-        .annotation("Use \(Constants.displayName) in a different language than the system. Takes effect after a relaunch.")
-
-        if languageOverrideChanged {
-            HStack {
-                Text("The language change applies after \(Constants.displayName) relaunches.")
-                    .font(.callout)
-                    .foregroundStyle(.secondary)
-                Spacer()
-                Button("Relaunch Now") {
-                    relaunchApp()
-                }
-            }
-        }
-    }
-
-    /// The language's own name for itself (endonym), falling back to the code.
-    private func displayName(forLanguage code: String) -> String {
-        let locale = Locale(identifier: code)
-        return locale.localizedString(forIdentifier: code)?.localizedCapitalized ?? code
-    }
-
-    private func relaunchApp() {
-        // Reopen only after this PID exits: a second instance launched during
-        // teardown can leave multiple copies running. Foundation Process, not
-        // Subprocess, because Subprocess ties the child to the awaiting task,
-        // which dies with the app.
-        let pid = ProcessInfo.processInfo.processIdentifier
-        let bundlePath = Bundle.main.bundlePath
-        let process = Process()
-        process.executableURL = URL(fileURLWithPath: "/bin/sh")
-        process.arguments = [
-            "-c",
-            "while /bin/kill -0 \(pid) 2>/dev/null; do /bin/sleep 0.1; done; /usr/bin/open \"$1\"",
-            // `sh -c` assigns the first operand to $0, so the path goes second.
-            // As an argument, special characters in it stay out of the script.
-            "thaw-relaunch",
-            bundlePath,
-        ]
-        try? process.run()
-        NSApp.terminate(nil)
     }
 
     private func toolRow(
@@ -286,19 +202,22 @@ struct ToolsSettingsPane: View {
         detail: LocalizedStringKey,
         buttonTitle: LocalizedStringKey,
         role: ButtonRole? = nil,
+        statusFor tool: MaintenanceToolAction? = nil,
         action: @escaping () -> Void
     ) -> some View {
-        HStack(alignment: .top, spacing: 16) {
-            VStack(alignment: .leading, spacing: 4) {
+        VStack(alignment: .leading, spacing: ThawSpacing.compact) {
+            HStack(alignment: .top, spacing: ThawSpacing.gutter) {
                 Text(title)
-                Text(detail)
-                    .font(.footnote)
-                    .foregroundStyle(.secondary)
-                    .fixedSize(horizontal: false, vertical: true)
+                    .annotation(detail, spacing: ThawSpacing.tight, font: ThawType.footnote, foregroundStyle: ThawInk.supporting)
+                Button(buttonTitle, role: role, action: action)
+                    .buttonStyle(.settingsGlass)
             }
-            Spacer(minLength: 12)
-            Button(buttonTitle, role: role, action: action)
-                .buttonStyle(.settingsGlass)
+            if let tool, statusAction == tool, let statusMessage {
+                Text(statusMessage)
+                    .font(ThawType.detail)
+                    .foregroundStyle(ThawInk.supporting)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+            }
         }
     }
 
@@ -307,7 +226,13 @@ struct ToolsSettingsPane: View {
         pendingAction = nil
         isBusy = true
         statusMessage = nil
+        statusAction = action
         defer { isBusy = false }
+
+        if action == .resetControlCenter || action == .resetMenuBarLayoutPositions {
+            // Killing the host mid-move strands the move's events.
+            await appState.itemManager.moveActivity.waitUntilIdle()
+        }
 
         do {
             switch action {
@@ -318,10 +243,33 @@ struct ToolsSettingsPane: View {
                 try await MaintenanceTools.resetControlCenterPreferences()
                 reportSuccess(String(localized: "Control Center preferences were reset."))
             case .resetMenuBarLayoutPositions:
-                try await MaintenanceTools.resetMenuBarLayoutPositions()
-                reportSuccess(String(localized: "Menu bar layout positions were reset."))
+                let backup = try await MaintenanceTools.resetMenuBarLayoutPositions()
+                appState.itemManager.forgetStrandedRepairs()
+                backupsRefreshToken += 1
+                if let backup {
+                    reportSuccess(
+                        String(
+                            localized: "Saved item positions were reset. Backup saved as \(backup.url.lastPathComponent). Relaunching…"
+                        )
+                    )
+                } else {
+                    reportSuccess(String(localized: "Saved item positions were reset. Relaunching…"))
+                }
+                // Access granted to the old layout table does not carry over to
+                // the one the menu bar writes next, so relaunch once it exists.
+                let table = MenuBarLayoutTableAccess.tableURL.path(percentEncoded: false)
+                for _ in 0 ..< 60 where !FileManager.default.fileExists(atPath: table) {
+                    try? await Task.sleep(for: .milliseconds(500))
+                }
+                appState.restartSelf()
             case .quitAndClearCache:
-                try MaintenanceTools.clearAppCache()
+                await appState.imageCache.suspendDiskPersistenceForReset()
+                do {
+                    try MaintenanceTools.clearAppCache()
+                } catch {
+                    appState.imageCache.resumeDiskPersistenceAfterFailedReset()
+                    throw error
+                }
                 reportSuccess(String(localized: "Cache cleared. Quitting…"))
                 ApplicationTermination.request()
             case .resetPermissions:
@@ -330,6 +278,7 @@ struct ToolsSettingsPane: View {
                 ApplicationTermination.request()
             }
         } catch {
+            failedAction = action
             errorMessage = error.localizedDescription
         }
     }
@@ -355,9 +304,19 @@ private enum MaintenanceToolAction: Identifiable {
         switch self {
         case .resetSettings: String(localized: "Reset all settings?")
         case .resetControlCenter: String(localized: "Reset Control Center preferences?")
-        case .resetMenuBarLayoutPositions: String(localized: "Reset menu bar layout positions?")
+        case .resetMenuBarLayoutPositions: String(localized: "Reset saved item positions?")
         case .quitAndClearCache: String(localized: "Quit and clear cache?")
         case .resetPermissions: String(localized: "Reset permissions?")
+        }
+    }
+
+    var errorTitle: LocalizedStringKey {
+        switch self {
+        case .resetSettings: "Couldn’t reset settings"
+        case .resetControlCenter: "Couldn’t reset Control Center"
+        case .resetMenuBarLayoutPositions: "Couldn’t reset saved item positions"
+        case .quitAndClearCache: "Couldn’t clear the cache"
+        case .resetPermissions: "Couldn’t reset permissions"
         }
     }
 
@@ -365,8 +324,8 @@ private enum MaintenanceToolAction: Identifiable {
         switch self {
         case .resetSettings: "Reset"
         case .resetControlCenter: "Reset Control Center"
-        case .resetMenuBarLayoutPositions: "Reset Layout Positions"
-        case .quitAndClearCache: "Quit & Clear Cache"
+        case .resetMenuBarLayoutPositions: "Reset Positions"
+        case .quitAndClearCache: "Quit and Clear Cache"
         case .resetPermissions: "Reset Permissions"
         }
     }
@@ -374,11 +333,11 @@ private enum MaintenanceToolAction: Identifiable {
     var confirmationMessage: LocalizedStringKey {
         switch self {
         case .resetSettings:
-            "This will reset app preferences to their default values. Saved profiles and user data will not be deleted. This action cannot be undone."
+            "This will reset app settings to their default values. Saved profiles, allowed apps, and user data will not be deleted. This action cannot be undone."
         case .resetControlCenter:
             "Control Center will quit and its preference files will be deleted. macOS usually relaunches it automatically."
         case .resetMenuBarLayoutPositions:
-            "Every saved status-item position will be deleted and the menu bar host will quit, so your whole menu bar arrangement is rebuilt from scratch."
+            "Every menu bar item's saved position will be deleted and the menu bar will restart, so your whole arrangement is rebuilt from scratch. A backup is saved first, and Layout backups on this page can put it back. \(Constants.displayName) relaunches afterward."
         case .quitAndClearCache:
             "\(Constants.displayName) will delete its cache folder and quit. Launch the app again afterward."
         case .resetPermissions:

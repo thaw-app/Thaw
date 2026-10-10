@@ -2,7 +2,6 @@
 //  Swizzling.swift
 //  Project: Thaw
 //
-//  Copyright (Ice) © 2023–2025 Jordan Baird
 //  Copyright (Thaw) © 2026 Toni Förster
 //  Licensed under the GNU GPLv3
 
@@ -28,7 +27,7 @@ extension NSSplitViewItem {
     @objc private var swizzledCanCollapse: Bool {
         if
             let window = viewController.view.window,
-            window.identifier?.rawValue == IceWindowIdentifier.settings.rawValue
+            window.identifier?.rawValue == ThawWindowIdentifier.settings.rawValue
         {
             return false
         }

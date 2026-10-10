@@ -17,6 +17,23 @@ updates:
         patterns:
           - "*"
 
+  # Thaw 2 under legacy/ has its own Package.resolved.
+  - package-ecosystem: "swift"
+    directory: "/legacy"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+    open-pull-requests-limit: 10
+    labels:
+      - "dependencies"
+    assignees:
+      - "diazdesandi"
+    target-branch: "development"
+    groups:
+      swift-thaw-2:
+        patterns:
+          - "*"
+
   - package-ecosystem: "github-actions"
     directory: "/"
     schedule:

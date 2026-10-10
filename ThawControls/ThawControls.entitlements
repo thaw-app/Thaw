@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<!-- An appex has no choice about this one. -->
+	<key>com.apple.security.app-sandbox</key>
+	<true/>
+	<!-- Read side of the state channel. The controls read the JSON snapshot
+	     Thaw publishes into this suite so their toggles can render a truthful
+	     `isOn`; they never write it. Must match Thaw/Thaw.entitlements
+	     exactly, character for character, or the two processes silently get
+	     two different (empty) containers. -->
+	<key>com.apple.security.application-groups</key>
+	<array>
+		<string>A7CKWF99ML.com.stonerl.Thaw</string>
+	</array>
+</dict>
+</plist>

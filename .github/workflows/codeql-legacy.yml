@@ -1,0 +1,65 @@
+name: CodeQL (Thaw 2)
+
+on:
+  push:
+    branches:
+      - development
+    paths:
+      - "legacy/**"
+      - ".github/workflows/codeql-legacy.yml"
+  schedule:
+    # Weekly, offset from the hour to avoid GitHub's cron pileup.
+    - cron: "41 4 * * 1"
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  analyze:
+    if: github.repository == 'thaw-app/Thaw'
+    name: Analyze Swift
+    # CodeQL traces Swift builds under Rosetta, and macOS 27 ships some
+    # build tools (sandbox-exec, swift-plugin-server) as arm64 only.
+    runs-on: macos-26
+    timeout-minutes: 90
+    permissions:
+      security-events: write
+      contents: read
+      actions: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Initialize CodeQL
+        uses: github/codeql-action/init@2892aa5e19bbd11bc0cff5427e3b750a04d9e3c2 # v4.38.2
+        with:
+          languages: swift
+          build-mode: manual
+
+      - name: Select Xcode 26.6
+        run: sudo xcode-select -s /Applications/Xcode_26.6.app/Contents/Developer
+
+      # CodeQL traces this build to construct the database. Tests are not run;
+      # compilation is all the extractor needs.
+      - name: Build
+        run: |
+          set -euo pipefail
+          xcodebuild build \
+            -project legacy/Thaw.xcodeproj \
+            -scheme Thaw \
+            -derivedDataPath Build/ \
+            -destination 'platform=macOS' \
+            CODE_SIGN_IDENTITY="" \
+            CODE_SIGNING_REQUIRED=NO \
+            CODE_SIGNING_ALLOWED=NO
+
+      - name: Perform CodeQL Analysis
+        uses: github/codeql-action/analyze@2892aa5e19bbd11bc0cff5427e3b750a04d9e3c2 # v4.38.2
+        with:
+          category: "/language:swift/thaw-2"

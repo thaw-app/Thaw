@@ -15,7 +15,7 @@ def feed(*versions):
     items = "".join(
         f"""<item>
   <sparkle:shortVersionString>{version}</sparkle:shortVersionString>
-  <sparkle:minimumSystemVersion>26.0</sparkle:minimumSystemVersion>
+  <sparkle:minimumSystemVersion>{'27.0' if version.startswith(('3.', '4.')) else '26.0'}</sparkle:minimumSystemVersion>
   <description><![CDATA[<p>Notes & details</p>]]></description>
   <enclosure url="https://example.org/{version}.zip" sparkle:edSignature="signature-{version}" length="123" type="application/octet-stream"/>
 </item>"""
@@ -65,6 +65,39 @@ class PrepareAppcastsTests(unittest.TestCase):
         self.assertIn(b">26.99<", canonical)
         self.assertEqual(versions(canonical), ["3.0.0-beta.1", "2.0.1"])
 
+    def test_beta_one_recovery_bridge_is_untagged_on_every_release(self):
+        xml = feed("3.0.0-beta.1", "3.0.0-beta.2", "2.1.0-beta.6").replace(
+            b"</item>", b"<sparkle:channel>beta</sparkle:channel></item>"
+        )
+        for tag in ("3.0.0-beta.2", "2.1.0-beta.6"):
+            with self.subTest(tag=tag):
+                canonical, legacy = prepare_appcasts(xml, tag)
+                with minidom.parseString(canonical) as document:
+                    bridge, next_beta, legacy_beta = document.getElementsByTagName("item")
+                    self.assertEqual(len(bridge.getElementsByTagNameNS(SPARKLE_NS, "channel")), 0)
+                    for item in (next_beta, legacy_beta):
+                        self.assertEqual(item.getElementsByTagNameNS(SPARKLE_NS, "channel")[0].firstChild.data, "beta")
+                    self.assertEqual(bridge.getElementsByTagNameNS(SPARKLE_NS, "minimumSystemVersion")[0].firstChild.data, "27.0")
+                    enclosure = bridge.getElementsByTagName("enclosure")[0]
+                    self.assertEqual(enclosure.getAttributeNS(SPARKLE_NS, "edSignature"), "signature-3.0.0-beta.1")
+                    self.assertEqual(enclosure.getAttribute("url"), "https://example.org/3.0.0-beta.1.zip")
+                    self.assertEqual(enclosure.getAttribute("length"), "123")
+                self.assertEqual(prepare_appcasts(canonical, tag), (canonical, legacy))
+                if legacy is not None:
+                    self.assertEqual(versions(legacy), ["2.1.0-beta.6"])
+
+    def test_recovery_bridge_requires_macos_27(self):
+        xml = feed("3.0.0-beta.1").replace(b">27.0<", b">26.0<")
+        with self.assertRaisesRegex(ValueError, "recovery bridge requires macOS 27.0"):
+            prepare_appcasts(xml, "3.0.0-beta.2")
+
+    def test_recovery_bridge_with_alternate_namespace_prefix(self):
+        xml = feed("3.0.0-beta.1").replace(b"</item>", b"<sparkle:channel>beta</sparkle:channel></item>")
+        xml = xml.replace(b"sparkle:", b"s:").replace(b"xmlns:sparkle=", b"xmlns:s=")
+        canonical, _ = prepare_appcasts(xml, "3.0.0-beta.2")
+        self.assertNotIn(b"<s:channel>", canonical)
+        self.assertIn(b"<s:minimumSystemVersion>27.0</s:minimumSystemVersion>", canonical)
+
     def test_alternate_namespace_prefix(self):
         xml = feed("2.0.1").replace(b"sparkle:", b"s:").replace(b"xmlns:sparkle=", b"xmlns:s=")
         canonical, _ = prepare_appcasts(xml, "2.0.1")
@@ -86,62 +119,6 @@ class PrepareAppcastsTests(unittest.TestCase):
         canonical, legacy = prepare_appcasts(feed(), "2.0.1")
         self.assertEqual(versions(canonical), [])
         self.assertEqual(versions(legacy), [])
-
-    def test_channel_items_show_their_tag_and_promoted_items_keep_the_bundle_version(self):
-        def item(build, short, tag, channel):
-            channel = f"<sparkle:channel>{channel}</sparkle:channel>" if channel else ""
-            # Like the live feed: delta enclosures nest inside sparkle:deltas.
-            return f"""<item>
-  <sparkle:version>{build}</sparkle:version>
-  <sparkle:shortVersionString>{short}</sparkle:shortVersionString>
-  {channel}
-  <sparkle:minimumSystemVersion>26.0</sparkle:minimumSystemVersion>
-  <enclosure url="https://example.org/download/{tag}/Thaw_{tag}.zip" length="1" type="application/octet-stream"/>
-  <sparkle:deltas>
-    <enclosure url="https://example.org/download/{tag}/Thaw{build}-60.delta" sparkle:deltaFrom="60" length="1"/>
-    <enclosure url="https://example.org/download/{tag}/Thaw{build}-59.delta" sparkle:deltaFrom="59" length="1"/>
-  </sparkle:deltas>
-</item>"""
-
-        items = "".join([
-            item(64, "2.1.1", "2.1.1-rc.1", "beta"),  # built with its final version
-            item(63, "2.1.0", "2.1.0-rc.1", None),  # promoted: channel removed
-            item(62, "2.1.0-beta.6", "2.1.0-beta.6", "beta"),
-            item(56, "2.0.1", "2.0.1", None),
-        ])
-        xml = f'<rss xmlns:sparkle="{SPARKLE_NS}" version="2.0"><channel>{items}</channel></rss>'.encode()
-        canonical, legacy = prepare_appcasts(xml, "2.1.1-rc.1")
-        self.assertEqual(versions(canonical), ["2.1.1-rc.1", "2.1.0", "2.1.0-beta.6", "2.0.1"])
-        self.assertEqual(versions(legacy), versions(canonical))
-        self.assertEqual(prepare_appcasts(canonical, "2.1.1-rc.1"), (canonical, legacy))
-
-    def test_notes_generate_appcast_dropped_come_back_from_the_previous_feed(self):
-        def item(build, notes):
-            description = f"<description><![CDATA[{notes}]]></description>" if notes is not None else ""
-            return f"""<item>
-  <sparkle:version>{build}</sparkle:version>
-  <sparkle:shortVersionString>2.1.{build}</sparkle:shortVersionString>
-  <sparkle:minimumSystemVersion>26.0</sparkle:minimumSystemVersion>
-  {description}
-  <enclosure url="https://example.org/Thaw_2.1.{build}.zip" length="1" type="application/octet-stream"/>
-</item>"""
-
-        def wrap(*items):
-            body = "".join(items)
-            return f'<rss xmlns:sparkle="{SPARKLE_NS}" version="2.0"><channel>{body}</channel></rss>'.encode()
-
-        previous = wrap(item(2, "<p>Two & more</p>"), item(1, "<p>One</p>"))
-        generated = wrap(item(3, "<p>Three</p>"), item(2, None), item(1, ""))
-        canonical, _ = prepare_appcasts(generated, "2.1.3", previous)
-        with minidom.parseString(canonical) as document:
-            notes = {
-                item.getElementsByTagNameNS(SPARKLE_NS, "version")[0].firstChild.data:
-                    [node.firstChild.data for node in item.getElementsByTagName("description")]
-                for item in document.getElementsByTagName("item")
-            }
-        self.assertEqual(notes, {"3": ["<p>Three</p>"], "2": ["<p>Two & more</p>"], "1": ["<p>One</p>"]})
-        self.assertIn(b"<![CDATA[<p>Two & more</p>]]>", canonical)
-        self.assertEqual(prepare_appcasts(canonical, "2.1.3", previous)[0], canonical)
 
     def test_action_entry_point_outputs_paths_without_modifying_source(self):
         with tempfile.TemporaryDirectory() as directory:

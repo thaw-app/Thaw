@@ -1,0 +1,1147 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 100;
+	objects = {
+
+/* Begin PBXBuildFile section */
+		170423D92B56DE78004A2549 /* Sparkle in Frameworks */ = {isa = PBXBuildFile; productRef = 170423D82B56DE78004A2549 /* Sparkle */; };
+		175061912B1543DD003144CD /* LaunchAtLogin in Frameworks */ = {isa = PBXBuildFile; productRef = 175061902B1543DD003144CD /* LaunchAtLogin */; };
+		1787C4272B16890B002F50DF /* AXSwift6 in Frameworks */ = {isa = PBXBuildFile; productRef = 1787C4262B16890B002F50DF /* AXSwift6 */; };
+		17F71BB52B880B4500905CBA /* CompactSlider in Frameworks */ = {isa = PBXBuildFile; productRef = 17F71BB42B880B4500905CBA /* CompactSlider */; };
+		29808AAF4CA568551CD0CC6B /* Algorithms in Frameworks */ = {isa = PBXBuildFile; productRef = 168E1527A0B9100E8E1DA1E2 /* Algorithms */; };
+		7127A9FF2C4886D100D99DEF /* IfritStatic in Frameworks */ = {isa = PBXBuildFile; productRef = 7127A9FE2C4886D100D99DEF /* IfritStatic */; };
+		7168EE532E281CBC00FF9830 /* AXSwift6 in Frameworks */ = {isa = PBXBuildFile; productRef = 7168EE522E281CBC00FF9830 /* AXSwift6 */; };
+		7188A68C2E27F9ED008F131D /* MenuBarItemService.xpc in Embed XPC Services */ = {isa = PBXBuildFile; fileRef = 7188A6832E27F9ED008F131D /* MenuBarItemService.xpc */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
+		C4PT00012F3A100000000010 /* AXSwift6 in Frameworks */ = {isa = PBXBuildFile; productRef = C4PT00012F3A10000000000F /* AXSwift6 */; };
+		C4PT00012F3A100000000005 /* MenuBarCaptureService.xpc in Embed XPC Services */ = {isa = PBXBuildFile; fileRef = C4PT00012F3A100000000001 /* MenuBarCaptureService.xpc */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
+		765B9E4A97DD40A18EE1F15D /* Collections in Frameworks */ = {isa = PBXBuildFile; productRef = 6937234B615A4E0BA19DFCF5 /* Collections */; };
+		9570E4A96CDEC0BEBAA5573F /* AsyncAlgorithms in Frameworks */ = {isa = PBXBuildFile; productRef = 43C5F05D006747974015EBD9 /* AsyncAlgorithms */; };
+		A6DC49597D7F903C5E1B425F /* Algorithms in Frameworks */ = {isa = PBXBuildFile; productRef = 84489DC7DD2441B27C7B8E6C /* Algorithms */; };
+		C9858DF951474BBA89EEC700 /* Subprocess in Frameworks */ = {isa = PBXBuildFile; productRef = F723B15E4E92458CA2A3A2D5 /* Subprocess */; };
+		9E4B7C2A5D8F1A3B6C0E4D72 /* SystemPackage in Frameworks */ = {isa = PBXBuildFile; productRef = 2C7E9A45F08D3B61C5E8A214 /* SystemPackage */; };
+/* End PBXBuildFile section */
+
+/* Begin PBXContainerItemProxy section */
+		7188A68A2E27F9ED008F131D /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 716683222A767E6A006ABF84 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 7188A6822E27F9ED008F131D;
+			remoteInfo = MenuBarItemService;
+		};
+		C4PT00012F3A100000000006 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 716683222A767E6A006ABF84 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = C4PT00012F3A100000000002;
+			remoteInfo = MenuBarCaptureService;
+		};
+		E2TESTS0012F2C000000002 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 716683222A767E6A006ABF84 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 716683292A767E6A006ABF84;
+			remoteInfo = Thaw;
+		};
+/* End PBXContainerItemProxy section */
+
+/* Begin PBXCopyFilesBuildPhase section */
+		7188A68D2E27F9ED008F131D /* Embed XPC Services */ = {
+			isa = PBXCopyFilesBuildPhase;
+			dstPath = "$(CONTENTS_FOLDER_PATH)/XPCServices";
+			dstSubfolder = Product;
+			files = (
+				7188A68C2E27F9ED008F131D /* MenuBarItemService.xpc in Embed XPC Services */,
+				C4PT00012F3A100000000005 /* MenuBarCaptureService.xpc in Embed XPC Services */,
+			);
+			name = "Embed XPC Services";
+		};
+/* End PBXCopyFilesBuildPhase section */
+
+/* Begin PBXFileReference section */
+		7166832A2A767E6A006ABF84 /* Thaw.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Thaw.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		7188A6832E27F9ED008F131D /* MenuBarItemService.xpc */ = {isa = PBXFileReference; explicitFileType = "wrapper.xpc-service"; includeInIndex = 0; path = MenuBarItemService.xpc; sourceTree = BUILT_PRODUCTS_DIR; };
+		C4PT00012F3A100000000001 /* MenuBarCaptureService.xpc */ = {isa = PBXFileReference; explicitFileType = "wrapper.xpc-service"; includeInIndex = 0; path = MenuBarCaptureService.xpc; sourceTree = BUILT_PRODUCTS_DIR; };
+		E2TESTS0012F2C000000001 /* ThawTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = ThawTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+/* End PBXFileReference section */
+
+/* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
+		7188A6912E27F9ED008F131D /* Exceptions for "MenuBarItemService" folder in "MenuBarItemService" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				Resources/Info.plist,
+			);
+			target = 7188A6822E27F9ED008F131D /* MenuBarItemService */;
+		};
+		C4PT00012F3A100000000004 /* Exceptions for "MenuBarCaptureService" folder in "MenuBarCaptureService" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				Resources/Info.plist,
+			);
+			target = C4PT00012F3A100000000002 /* MenuBarCaptureService */;
+		};
+		E2B782F92F2BF98100CF0BBD /* Exceptions for "Thaw" folder in "Thaw" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				Resources/Info.plist,
+			);
+			target = 716683292A767E6A006ABF84 /* Thaw */;
+		};
+/* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
+
+/* Begin PBXFileSystemSynchronizedRootGroup section */
+		7188A6842E27F9ED008F131D /* MenuBarItemService */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+				7188A6912E27F9ED008F131D /* Exceptions for "MenuBarItemService" folder in "MenuBarItemService" target */,
+			);
+			path = MenuBarItemService;
+			sourceTree = "<group>";
+		};
+		C4PT00012F3A100000000003 /* MenuBarCaptureService */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+				C4PT00012F3A100000000004 /* Exceptions for "MenuBarCaptureService" folder in "MenuBarCaptureService" target */,
+			);
+			path = MenuBarCaptureService;
+			sourceTree = "<group>";
+		};
+		7188A69E2E280BB4008F131D /* Shared */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			path = Shared;
+			sourceTree = "<group>";
+		};
+		71BDFBE12C978E2A00EF145F /* Thaw */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+				E2B782F92F2BF98100CF0BBD /* Exceptions for "Thaw" folder in "Thaw" target */,
+			);
+			path = Thaw;
+			sourceTree = "<group>";
+		};
+		E2TESTS0012F2C000000003 /* ThawTests */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			path = ThawTests;
+			sourceTree = "<group>";
+		};
+/* End PBXFileSystemSynchronizedRootGroup section */
+
+/* Begin PBXFrameworksBuildPhase section */
+		716683272A767E6A006ABF84 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			files = (
+				170423D92B56DE78004A2549 /* Sparkle in Frameworks */,
+				7127A9FF2C4886D100D99DEF /* IfritStatic in Frameworks */,
+				9570E4A96CDEC0BEBAA5573F /* AsyncAlgorithms in Frameworks */,
+				A6DC49597D7F903C5E1B425F /* Algorithms in Frameworks */,
+				765B9E4A97DD40A18EE1F15D /* Collections in Frameworks */,
+				9E4B7C2A5D8F1A3B6C0E4D72 /* SystemPackage in Frameworks */,
+				C9858DF951474BBA89EEC700 /* Subprocess in Frameworks */,
+				175061912B1543DD003144CD /* LaunchAtLogin in Frameworks */,
+				1787C4272B16890B002F50DF /* AXSwift6 in Frameworks */,
+				17F71BB52B880B4500905CBA /* CompactSlider in Frameworks */,
+			);
+		};
+		7188A6802E27F9ED008F131D /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			files = (
+				7168EE532E281CBC00FF9830 /* AXSwift6 in Frameworks */,
+				29808AAF4CA568551CD0CC6B /* Algorithms in Frameworks */,
+			);
+		};
+		C4PT00012F3A10000000000C /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			files = (
+				C4PT00012F3A100000000010 /* AXSwift6 in Frameworks */,
+			);
+		};
+		E2TESTS0012F2C000000004 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			files = (
+			);
+		};
+/* End PBXFrameworksBuildPhase section */
+
+/* Begin PBXGroup section */
+		716683212A767E6A006ABF84 = {
+			isa = PBXGroup;
+			children = (
+				7188A69E2E280BB4008F131D /* Shared */,
+				71BDFBE12C978E2A00EF145F /* Thaw */,
+				7188A6842E27F9ED008F131D /* MenuBarItemService */,
+				C4PT00012F3A100000000003 /* MenuBarCaptureService */,
+				E2TESTS0012F2C000000003 /* ThawTests */,
+				7166832B2A767E6A006ABF84 /* Products */,
+			);
+			sourceTree = "<group>";
+		};
+		7166832B2A767E6A006ABF84 /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				7166832A2A767E6A006ABF84 /* Thaw.app */,
+				7188A6832E27F9ED008F131D /* MenuBarItemService.xpc */,
+				C4PT00012F3A100000000001 /* MenuBarCaptureService.xpc */,
+				E2TESTS0012F2C000000001 /* ThawTests.xctest */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
+
+/* Begin PBXNativeTarget section */
+		716683292A767E6A006ABF84 /* Thaw */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 716683392A767E6B006ABF84 /* Build configuration list for PBXNativeTarget "Thaw" */;
+			buildPhases = (
+				716683262A767E6A006ABF84 /* Sources */,
+				716683272A767E6A006ABF84 /* Frameworks */,
+				716683282A767E6A006ABF84 /* Resources */,
+				1720D48F2BB9B60500A7AC63 /* SwiftLint */,
+				7188A68D2E27F9ED008F131D /* Embed XPC Services */,
+				170AD05A2BB9B60500A7AC63 /* Stamp Git SHA */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				7188A68B2E27F9ED008F131D /* PBXTargetDependency */,
+				C4PT00012F3A100000000007 /* PBXTargetDependency */,
+			);
+			fileSystemSynchronizedGroups = (
+				7188A69E2E280BB4008F131D /* Shared */,
+				71BDFBE12C978E2A00EF145F /* Thaw */,
+			);
+			name = Thaw;
+			packageProductDependencies = (
+				175061902B1543DD003144CD /* LaunchAtLogin */,
+				1787C4262B16890B002F50DF /* AXSwift6 */,
+				170423D82B56DE78004A2549 /* Sparkle */,
+				17F71BB42B880B4500905CBA /* CompactSlider */,
+				7127A9FE2C4886D100D99DEF /* IfritStatic */,
+				43C5F05D006747974015EBD9 /* AsyncAlgorithms */,
+				84489DC7DD2441B27C7B8E6C /* Algorithms */,
+				F723B15E4E92458CA2A3A2D5 /* Subprocess */,
+				2C7E9A45F08D3B61C5E8A214 /* SystemPackage */,
+			);
+			productName = Ice;
+			productReference = 7166832A2A767E6A006ABF84 /* Thaw.app */;
+			productType = "com.apple.product-type.application";
+		};
+		7188A6822E27F9ED008F131D /* MenuBarItemService */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 7188A6902E27F9ED008F131D /* Build configuration list for PBXNativeTarget "MenuBarItemService" */;
+			buildPhases = (
+				7188A67F2E27F9ED008F131D /* Sources */,
+				7188A6802E27F9ED008F131D /* Frameworks */,
+				7188A6812E27F9ED008F131D /* Resources */,
+				170AD05B2BB9B60500A7AC64 /* Stamp Git SHA */,
+			);
+			buildRules = (
+			);
+			fileSystemSynchronizedGroups = (
+				7188A6842E27F9ED008F131D /* MenuBarItemService */,
+				7188A69E2E280BB4008F131D /* Shared */,
+			);
+			name = MenuBarItemService;
+			packageProductDependencies = (
+				7168EE522E281CBC00FF9830 /* AXSwift6 */,
+				168E1527A0B9100E8E1DA1E2 /* Algorithms */,
+			);
+			productName = MenuBarItemService;
+			productReference = 7188A6832E27F9ED008F131D /* MenuBarItemService.xpc */;
+			productType = "com.apple.product-type.xpc-service";
+		};
+		C4PT00012F3A100000000002 /* MenuBarCaptureService */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = C4PT00012F3A10000000000A /* Build configuration list for PBXNativeTarget "MenuBarCaptureService" */;
+			buildPhases = (
+				C4PT00012F3A10000000000B /* Sources */,
+				C4PT00012F3A10000000000C /* Frameworks */,
+				C4PT00012F3A10000000000D /* Resources */,
+				C4PT00012F3A10000000000E /* Stamp Git SHA */,
+			);
+			buildRules = (
+			);
+			fileSystemSynchronizedGroups = (
+				C4PT00012F3A100000000003 /* MenuBarCaptureService */,
+				7188A69E2E280BB4008F131D /* Shared */,
+			);
+			name = MenuBarCaptureService;
+			packageProductDependencies = (
+				C4PT00012F3A10000000000F /* AXSwift6 */,
+			);
+			productName = MenuBarCaptureService;
+			productReference = C4PT00012F3A100000000001 /* MenuBarCaptureService.xpc */;
+			productType = "com.apple.product-type.xpc-service";
+		};
+		E2TESTS0012F2C000000007 /* ThawTests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = E2TESTS0012F2C00000000D /* Build configuration list for PBXNativeTarget "ThawTests" */;
+			buildPhases = (
+				E2TESTS0012F2C000000005 /* Sources */,
+				E2TESTS0012F2C000000004 /* Frameworks */,
+				E2TESTS0012F2C000000006 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				E2TESTS0012F2C000000008 /* PBXTargetDependency */,
+			);
+			fileSystemSynchronizedGroups = (
+				E2TESTS0012F2C000000003 /* ThawTests */,
+			);
+			name = ThawTests;
+			productName = ThawTests;
+			productReference = E2TESTS0012F2C000000001 /* ThawTests.xctest */;
+			productType = "com.apple.product-type.bundle.unit-test";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		716683222A767E6A006ABF84 /* Project object */ = {
+			isa = PBXProject;
+			attributes = {
+				BuildIndependentTargetsInParallel = 1;
+				LastSwiftUpdateCheck = 2600;
+				LastUpgradeCheck = 2630;
+				TargetAttributes = {
+					716683292A767E6A006ABF84 = {
+						CreatedOnToolsVersion = 14.3.1;
+					};
+					7188A6822E27F9ED008F131D = {
+						CreatedOnToolsVersion = 26.0;
+					};
+					C4PT00012F3A100000000002 = {
+						CreatedOnToolsVersion = 26.0;
+					};
+					E2TESTS0012F2C000000007 = {
+						CreatedOnToolsVersion = 26.0;
+						TestTargetID = 716683292A767E6A006ABF84;
+					};
+				};
+			};
+			buildConfigurationList = 716683252A767E6A006ABF84 /* Build configuration list for PBXProject "Thaw" */;
+			developmentRegion = en;
+			hasScannedForEncodings = 0;
+			knownRegions = (
+				en,
+				"zh-Hans",
+				"zh-Hant",
+				de,
+				fr,
+				hu,
+				id,
+				es,
+				th,
+				tr,
+				ko,
+				it,
+				nl,
+				ru,
+				"pt-BR",
+				ja,
+				cs,
+				pl,
+				uk,
+				vi,
+				Base,
+			);
+			mainGroup = 716683212A767E6A006ABF84;
+			packageReferences = (
+				1750618F2B1543DD003144CD /* XCRemoteSwiftPackageReference "LaunchAtLogin-Modern" */,
+				1787C4252B16890B002F50DF /* XCRemoteSwiftPackageReference "AXSwift6" */,
+				170423D72B56DE78004A2549 /* XCRemoteSwiftPackageReference "Sparkle" */,
+				17F71BB32B880B4500905CBA /* XCRemoteSwiftPackageReference "CompactSlider" */,
+				7127A9FB2C4881BC00D99DEF /* XCRemoteSwiftPackageReference "Ifrit" */,
+				1ADDA61D49BE1BA7CA5EA059 /* XCRemoteSwiftPackageReference "swift-async-algorithms" */,
+				9DDA1A418DCA43C89DE5A80F /* XCRemoteSwiftPackageReference "swift-collections" */,
+				7A0DF10D46BE41C9B7301DBB /* XCRemoteSwiftPackageReference "swift-subprocess" */,
+				8B3D6F19C4A27E50B1D9F3E6 /* XCRemoteSwiftPackageReference "swift-system" */,
+				1FE809086FD6E22D3C218F67 /* XCRemoteSwiftPackageReference "swift-algorithms" */,
+			);
+			preferredProjectObjectVersion = 100;
+			productRefGroup = 7166832B2A767E6A006ABF84 /* Products */;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (
+				716683292A767E6A006ABF84 /* Thaw */,
+				7188A6822E27F9ED008F131D /* MenuBarItemService */,
+				C4PT00012F3A100000000002 /* MenuBarCaptureService */,
+				E2TESTS0012F2C000000007 /* ThawTests */,
+			);
+		};
+/* End PBXProject section */
+
+/* Begin PBXResourcesBuildPhase section */
+		716683282A767E6A006ABF84 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			files = (
+			);
+		};
+		7188A6812E27F9ED008F131D /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			files = (
+			);
+		};
+		C4PT00012F3A10000000000D /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			files = (
+			);
+		};
+		E2TESTS0012F2C000000006 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			files = (
+			);
+		};
+/* End PBXResourcesBuildPhase section */
+
+/* Begin PBXShellScriptBuildPhase section */
+		170AD05A2BB9B60500A7AC63 /* Stamp Git SHA */ = {
+			isa = PBXShellScriptBuildPhase;
+			alwaysOutOfDate = 1;
+			name = "Stamp Git SHA";
+			shellPath = /bin/sh;
+			shellScript = (
+				"set -eu",
+				"",
+				"if SHA=$(git -C \"${SRCROOT}\" rev-parse --short HEAD 2>/dev/null); then",
+				"    if ! git -C \"${SRCROOT}\" diff --quiet 2>/dev/null \\",
+				"       || ! git -C \"${SRCROOT}\" diff --cached --quiet 2>/dev/null; then",
+				"        SHA=\"${SHA}-dirty\"",
+				"    fi",
+				"else",
+				"    SHA=\"unknown\"",
+				"fi",
+				"",
+				"PLIST=\"${TARGET_BUILD_DIR}/${INFOPLIST_PATH}\"",
+				"if [ ! -f \"$PLIST\" ]; then",
+				"    echo \"warning: stamp-git-sha: plist not found at $PLIST\"",
+				"    exit 0",
+				"fi",
+				"",
+				"/usr/libexec/PlistBuddy -c \"Set :GitCommitSHA ${SHA}\" \"$PLIST\" 2>/dev/null \\",
+				"    || /usr/libexec/PlistBuddy -c \"Add :GitCommitSHA string ${SHA}\" \"$PLIST\"",
+				"",
+				"echo \"stamp-git-sha: stamped ${SHA} into ${PLIST}\"",
+				"",
+			);
+		};
+		170AD05B2BB9B60500A7AC64 /* Stamp Git SHA */ = {
+			isa = PBXShellScriptBuildPhase;
+			alwaysOutOfDate = 1;
+			name = "Stamp Git SHA";
+			shellPath = /bin/sh;
+			shellScript = (
+				"set -eu",
+				"",
+				"if SHA=$(git -C \"${SRCROOT}\" rev-parse --short HEAD 2>/dev/null); then",
+				"    if ! git -C \"${SRCROOT}\" diff --quiet 2>/dev/null \\",
+				"       || ! git -C \"${SRCROOT}\" diff --cached --quiet 2>/dev/null; then",
+				"        SHA=\"${SHA}-dirty\"",
+				"    fi",
+				"else",
+				"    SHA=\"unknown\"",
+				"fi",
+				"",
+				"PLIST=\"${TARGET_BUILD_DIR}/${INFOPLIST_PATH}\"",
+				"if [ ! -f \"$PLIST\" ]; then",
+				"    echo \"warning: stamp-git-sha: plist not found at $PLIST\"",
+				"    exit 0",
+				"fi",
+				"",
+				"/usr/libexec/PlistBuddy -c \"Set :GitCommitSHA ${SHA}\" \"$PLIST\" 2>/dev/null \\",
+				"    || /usr/libexec/PlistBuddy -c \"Add :GitCommitSHA string ${SHA}\" \"$PLIST\"",
+				"",
+				"echo \"stamp-git-sha: stamped ${SHA} into ${PLIST}\"",
+				"",
+			);
+		};
+		C4PT00012F3A10000000000E /* Stamp Git SHA */ = {
+			isa = PBXShellScriptBuildPhase;
+			alwaysOutOfDate = 1;
+			name = "Stamp Git SHA";
+			shellPath = /bin/sh;
+			shellScript = (
+				"set -eu",
+				"",
+				"if SHA=$(git -C \"${SRCROOT}\" rev-parse --short HEAD 2>/dev/null); then",
+				"    if ! git -C \"${SRCROOT}\" diff --quiet 2>/dev/null \\",
+				"       || ! git -C \"${SRCROOT}\" diff --cached --quiet 2>/dev/null; then",
+				"        SHA=\"${SHA}-dirty\"",
+				"    fi",
+				"else",
+				"    SHA=\"unknown\"",
+				"fi",
+				"",
+				"PLIST=\"${TARGET_BUILD_DIR}/${INFOPLIST_PATH}\"",
+				"if [ ! -f \"$PLIST\" ]; then",
+				"    echo \"warning: stamp-git-sha: plist not found at $PLIST\"",
+				"    exit 0",
+				"fi",
+				"",
+				"/usr/libexec/PlistBuddy -c \"Set :GitCommitSHA ${SHA}\" \"$PLIST\" 2>/dev/null \\",
+				"    || /usr/libexec/PlistBuddy -c \"Add :GitCommitSHA string ${SHA}\" \"$PLIST\"",
+				"",
+				"echo \"stamp-git-sha: stamped ${SHA} into ${PLIST}\"",
+				"",
+			);
+		};
+		1720D48F2BB9B60500A7AC63 /* SwiftLint */ = {
+			isa = PBXShellScriptBuildPhase;
+			inputFileListPaths = (
+				"$(SRCROOT)/scripts/swiftlint-inputs.xcfilelist",
+			);
+			name = SwiftLint;
+			outputPaths = (
+				"$(DERIVED_FILE_DIR)/swiftlint.stamp",
+			);
+			shellPath = /bin/sh;
+			shellScript = (
+				"if [[ \"$(uname -m)\" == arm64 ]]; then",
+				"    export PATH=\"/opt/homebrew/bin:$PATH\"",
+				"fi",
+				"",
+				"if which swiftlint > /dev/null; then",
+				"  swiftlint",
+				"else",
+				"  echo \"warning: SwiftLint not installed, download from https://github.com/realm/SwiftLint\"",
+				"fi",
+				"",
+				"touch \"$SCRIPT_OUTPUT_FILE_0\"",
+				"",
+			);
+		};
+/* End PBXShellScriptBuildPhase section */
+
+/* Begin PBXSourcesBuildPhase section */
+		716683262A767E6A006ABF84 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			files = (
+			);
+		};
+		7188A67F2E27F9ED008F131D /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			files = (
+			);
+		};
+		C4PT00012F3A10000000000B /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			files = (
+			);
+		};
+		E2TESTS0012F2C000000005 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			files = (
+			);
+		};
+/* End PBXSourcesBuildPhase section */
+
+/* Begin PBXTargetDependency section */
+		7188A68B2E27F9ED008F131D /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 7188A6822E27F9ED008F131D /* MenuBarItemService */;
+			targetProxy = 7188A68A2E27F9ED008F131D /* PBXContainerItemProxy */;
+		};
+		C4PT00012F3A100000000007 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = C4PT00012F3A100000000002 /* MenuBarCaptureService */;
+			targetProxy = C4PT00012F3A100000000006 /* PBXContainerItemProxy */;
+		};
+		E2TESTS0012F2C000000008 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 716683292A767E6A006ABF84 /* Thaw */;
+			targetProxy = E2TESTS0012F2C000000002 /* PBXContainerItemProxy */;
+		};
+/* End PBXTargetDependency section */
+
+/* Begin XCBuildConfiguration section */
+		716683372A767E6B006ABF84 /* Debug configuration for PBXProject "Thaw" */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
+				CLANG_ANALYZER_LOCALIZABILITY_NONLOCALIZED = YES;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++20";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COMPILATION_CACHE_ENABLE_CACHING = YES;
+				COPY_PHASE_STRIP = NO;
+				DEAD_CODE_STRIPPING = YES;
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				DEVELOPMENT_TEAM = K2ATHQPJDP;
+				EAGER_LINKING = YES;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_TESTABILITY = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu11;
+				GCC_DYNAMIC_NO_PIC = NO;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"DEBUG=1",
+					"$(inherited)",
+				);
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				INFOPLIST_KEY_NSHumanReadableCopyright = "Copyright © 2026 Toni Förster et al.\nCopyright © 2023–2025 Jordan Baird (Ice)";
+				MACOSX_DEPLOYMENT_TARGET = 26.0;
+				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
+				MTL_FAST_MATH = YES;
+				ONLY_ACTIVE_ARCH = YES;
+				SDKROOT = macosx;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = DEBUG;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+			};
+			name = Debug;
+		};
+		716683382A767E6B006ABF84 /* Release configuration for PBXProject "Thaw" */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
+				CLANG_ANALYZER_LOCALIZABILITY_NONLOCALIZED = YES;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++20";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COMPILATION_CACHE_ENABLE_CACHING = YES;
+				COPY_PHASE_STRIP = NO;
+				DEAD_CODE_STRIPPING = YES;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				DEVELOPMENT_TEAM = K2ATHQPJDP;
+				ENABLE_NS_ASSERTIONS = NO;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu11;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				INFOPLIST_KEY_NSHumanReadableCopyright = "Copyright © 2026 Toni Förster et al.\nCopyright © 2023–2025 Jordan Baird (Ice)";
+				MACOSX_DEPLOYMENT_TARGET = 26.0;
+				MTL_ENABLE_DEBUG_INFO = NO;
+				MTL_FAST_MATH = YES;
+				SDKROOT = macosx;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
+				SWIFT_COMPILATION_MODE = wholemodule;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_OPTIMIZATION_LEVEL = "-O";
+			};
+			name = Release;
+		};
+		7166833A2A767E6B006ABF84 /* Debug configuration for PBXNativeTarget "Thaw" */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				ASSETCATALOG_COMPILER_INCLUDE_ALL_APPICON_ASSETS = YES;
+				ASSETCATALOG_COMPILER_SKIP_APP_STORE_DEPLOYMENT = YES;
+				CODE_SIGN_ENTITLEMENTS = "";
+				"CODE_SIGN_IDENTITY[sdk=macosx*]" = "-";
+				CODE_SIGN_STYLE = Automatic;
+				COMBINE_HIDPI_IMAGES = YES;
+				CURRENT_PROJECT_VERSION = 63;
+				DEAD_CODE_STRIPPING = YES;
+				DEVELOPMENT_ASSET_PATHS = "";
+				DEVELOPMENT_TEAM = A7CKWF99ML;
+				ENABLE_APP_SANDBOX = NO;
+				ENABLE_HARDENED_RUNTIME = YES;
+				ENABLE_PREVIEWS = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = NO;
+				ENABLE_USER_SELECTED_FILES = readonly;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = Thaw/Resources/Info.plist;
+				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.utilities";
+				INFOPLIST_KEY_LSUIElement = YES;
+				INFOPLIST_KEY_NSHumanReadableCopyright = "Copyright © 2026 Toni Förster et al.\nCopyright © 2023–2025 Jordan Baird (Ice)";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+				);
+				MACOSX_DEPLOYMENT_TARGET = 26.0;
+				MARKETING_VERSION = "2.1.0";
+				PRODUCT_BUNDLE_IDENTIFIER = com.stonerl.Thaw;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_STRICT_CONCURRENCY = complete;
+				SWIFT_VERSION = 6.2;
+			};
+			name = Debug;
+		};
+		7166833B2A767E6B006ABF84 /* Release configuration for PBXNativeTarget "Thaw" */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				ASSETCATALOG_COMPILER_INCLUDE_ALL_APPICON_ASSETS = YES;
+				ASSETCATALOG_COMPILER_SKIP_APP_STORE_DEPLOYMENT = YES;
+				CODE_SIGN_ENTITLEMENTS = "";
+				"CODE_SIGN_IDENTITY[sdk=macosx*]" = "-";
+				CODE_SIGN_STYLE = Automatic;
+				COMBINE_HIDPI_IMAGES = YES;
+				CURRENT_PROJECT_VERSION = 63;
+				DEAD_CODE_STRIPPING = YES;
+				DEVELOPMENT_ASSET_PATHS = "";
+				DEVELOPMENT_TEAM = A7CKWF99ML;
+				ENABLE_APP_SANDBOX = NO;
+				ENABLE_HARDENED_RUNTIME = YES;
+				ENABLE_PREVIEWS = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = NO;
+				ENABLE_USER_SELECTED_FILES = readonly;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = Thaw/Resources/Info.plist;
+				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.utilities";
+				INFOPLIST_KEY_LSUIElement = YES;
+				INFOPLIST_KEY_NSHumanReadableCopyright = "Copyright © 2026 Toni Förster et al.\nCopyright © 2023–2025 Jordan Baird (Ice)";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+				);
+				MACOSX_DEPLOYMENT_TARGET = 26.0;
+				MARKETING_VERSION = "2.1.0";
+				PRODUCT_BUNDLE_IDENTIFIER = com.stonerl.Thaw;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_STRICT_CONCURRENCY = complete;
+				SWIFT_VERSION = 6.2;
+			};
+			name = Release;
+		};
+		7188A68E2E27F9ED008F131D /* Debug configuration for PBXNativeTarget "MenuBarItemService" */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				"CODE_SIGN_IDENTITY[sdk=macosx*]" = "-";
+				CODE_SIGN_STYLE = Automatic;
+				COMBINE_HIDPI_IMAGES = YES;
+				CURRENT_PROJECT_VERSION = 63;
+				DEVELOPMENT_TEAM = A7CKWF99ML;
+				ENABLE_APP_SANDBOX = NO;
+				ENABLE_HARDENED_RUNTIME = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = NO;
+				GCC_C_LANGUAGE_STANDARD = gnu17;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = MenuBarItemService/Resources/Info.plist;
+				INFOPLIST_KEY_NSHumanReadableCopyright = "Copyright © 2026 Toni Förster et al.\nCopyright © 2023–2025 Jordan Baird (Ice)";
+				LOCALIZATION_PREFERS_STRING_CATALOGS = YES;
+				MACOSX_DEPLOYMENT_TARGET = 26.0;
+				MARKETING_VERSION = "2.1.0";
+				PRODUCT_BUNDLE_IDENTIFIER = com.stonerl.Thaw.MenuBarItemService;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				REGISTER_APP_GROUPS = YES;
+				SKIP_INSTALL = YES;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = "DEBUG $(inherited)";
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_STRICT_CONCURRENCY = complete;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 6.2;
+			};
+			name = Debug;
+		};
+		7188A68F2E27F9ED008F131D /* Release configuration for PBXNativeTarget "MenuBarItemService" */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				"CODE_SIGN_IDENTITY[sdk=macosx*]" = "-";
+				CODE_SIGN_STYLE = Automatic;
+				COMBINE_HIDPI_IMAGES = YES;
+				CURRENT_PROJECT_VERSION = 63;
+				DEVELOPMENT_TEAM = A7CKWF99ML;
+				ENABLE_APP_SANDBOX = NO;
+				ENABLE_HARDENED_RUNTIME = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = NO;
+				GCC_C_LANGUAGE_STANDARD = gnu17;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = MenuBarItemService/Resources/Info.plist;
+				INFOPLIST_KEY_NSHumanReadableCopyright = "Copyright © 2026 Toni Förster et al.\nCopyright © 2023–2025 Jordan Baird (Ice)";
+				LOCALIZATION_PREFERS_STRING_CATALOGS = YES;
+				MACOSX_DEPLOYMENT_TARGET = 26.0;
+				MARKETING_VERSION = "2.1.0";
+				PRODUCT_BUNDLE_IDENTIFIER = com.stonerl.Thaw.MenuBarItemService;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				REGISTER_APP_GROUPS = YES;
+				SKIP_INSTALL = YES;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_STRICT_CONCURRENCY = complete;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 6.2;
+			};
+			name = Release;
+		};
+		C4PT00012F3A100000000008 /* Debug configuration for PBXNativeTarget "MenuBarCaptureService" */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				"CODE_SIGN_IDENTITY[sdk=macosx*]" = "-";
+				CODE_SIGN_STYLE = Automatic;
+				COMBINE_HIDPI_IMAGES = YES;
+				CURRENT_PROJECT_VERSION = 53;
+				DEVELOPMENT_TEAM = A7CKWF99ML;
+				ENABLE_APP_SANDBOX = NO;
+				ENABLE_HARDENED_RUNTIME = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = NO;
+				GCC_C_LANGUAGE_STANDARD = gnu17;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = MenuBarCaptureService/Resources/Info.plist;
+				INFOPLIST_KEY_NSHumanReadableCopyright = "Copyright © 2026 Toni Förster\nCopyright © 2023–2025 Jordan Baird (Ice) ";
+				LOCALIZATION_PREFERS_STRING_CATALOGS = YES;
+				MACOSX_DEPLOYMENT_TARGET = 26.0;
+				MARKETING_VERSION = "2.0.0";
+				PRODUCT_BUNDLE_IDENTIFIER = com.stonerl.Thaw.MenuBarCaptureService;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				REGISTER_APP_GROUPS = YES;
+				SKIP_INSTALL = YES;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = "DEBUG $(inherited)";
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_STRICT_CONCURRENCY = complete;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 6.2;
+			};
+			name = Debug;
+		};
+		C4PT00012F3A100000000009 /* Release configuration for PBXNativeTarget "MenuBarCaptureService" */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				"CODE_SIGN_IDENTITY[sdk=macosx*]" = "-";
+				CODE_SIGN_STYLE = Automatic;
+				COMBINE_HIDPI_IMAGES = YES;
+				CURRENT_PROJECT_VERSION = 53;
+				DEVELOPMENT_TEAM = A7CKWF99ML;
+				ENABLE_APP_SANDBOX = NO;
+				ENABLE_HARDENED_RUNTIME = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = NO;
+				GCC_C_LANGUAGE_STANDARD = gnu17;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = MenuBarCaptureService/Resources/Info.plist;
+				INFOPLIST_KEY_NSHumanReadableCopyright = "Copyright © 2026 Toni Förster\nCopyright © 2023–2025 Jordan Baird (Ice) ";
+				LOCALIZATION_PREFERS_STRING_CATALOGS = YES;
+				MACOSX_DEPLOYMENT_TARGET = 26.0;
+				MARKETING_VERSION = "2.0.0";
+				PRODUCT_BUNDLE_IDENTIFIER = com.stonerl.Thaw.MenuBarCaptureService;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				REGISTER_APP_GROUPS = YES;
+				SKIP_INSTALL = YES;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_STRICT_CONCURRENCY = complete;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 6.2;
+			};
+			name = Release;
+		};
+		E2TESTS0012F2C000000009 /* Debug configuration for PBXNativeTarget "ThawTests" */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 31;
+				DEAD_CODE_STRIPPING = YES;
+				DEVELOPMENT_TEAM = 456BPWQ6U5;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_NSHumanReadableCopyright = "Copyright © 2026 Toni Förster et al.\nCopyright © 2023–2025 Jordan Baird (Ice)";
+				INFOPLIST_KEY_NSPrincipalClass = TestBootstrap;
+				MACOSX_DEPLOYMENT_TARGET = 26.0;
+				MARKETING_VERSION = "1.3.0-beta.1";
+				PRODUCT_BUNDLE_IDENTIFIER = com.stonerl.ThawTests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_STRICT_CONCURRENCY = complete;
+				SWIFT_VERSION = 6.2;
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/Thaw.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/Thaw";
+			};
+			name = Debug;
+		};
+		E2TESTS0012F2C00000000A /* Release configuration for PBXNativeTarget "ThawTests" */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 31;
+				DEAD_CODE_STRIPPING = YES;
+				DEVELOPMENT_TEAM = 456BPWQ6U5;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_NSHumanReadableCopyright = "Copyright © 2026 Toni Förster et al.\nCopyright © 2023–2025 Jordan Baird (Ice)";
+				INFOPLIST_KEY_NSPrincipalClass = TestBootstrap;
+				MACOSX_DEPLOYMENT_TARGET = 26.0;
+				MARKETING_VERSION = "1.3.0-beta.1";
+				PRODUCT_BUNDLE_IDENTIFIER = com.stonerl.ThawTests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_STRICT_CONCURRENCY = complete;
+				SWIFT_VERSION = 6.2;
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/Thaw.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/Thaw";
+			};
+			name = Release;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		716683252A767E6A006ABF84 /* Build configuration list for PBXProject "Thaw" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				716683372A767E6B006ABF84 /* Debug configuration for PBXProject "Thaw" */,
+				716683382A767E6B006ABF84 /* Release configuration for PBXProject "Thaw" */,
+			);
+			defaultConfigurationName = Release;
+		};
+		716683392A767E6B006ABF84 /* Build configuration list for PBXNativeTarget "Thaw" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				7166833A2A767E6B006ABF84 /* Debug configuration for PBXNativeTarget "Thaw" */,
+				7166833B2A767E6B006ABF84 /* Release configuration for PBXNativeTarget "Thaw" */,
+			);
+			defaultConfigurationName = Release;
+		};
+		7188A6902E27F9ED008F131D /* Build configuration list for PBXNativeTarget "MenuBarItemService" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				7188A68E2E27F9ED008F131D /* Debug configuration for PBXNativeTarget "MenuBarItemService" */,
+				7188A68F2E27F9ED008F131D /* Release configuration for PBXNativeTarget "MenuBarItemService" */,
+			);
+			defaultConfigurationName = Release;
+		};
+		C4PT00012F3A10000000000A /* Build configuration list for PBXNativeTarget "MenuBarCaptureService" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				C4PT00012F3A100000000008 /* Debug configuration for PBXNativeTarget "MenuBarCaptureService" */,
+				C4PT00012F3A100000000009 /* Release configuration for PBXNativeTarget "MenuBarCaptureService" */,
+			);
+			defaultConfigurationName = Release;
+		};
+		E2TESTS0012F2C00000000D /* Build configuration list for PBXNativeTarget "ThawTests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				E2TESTS0012F2C000000009 /* Debug configuration for PBXNativeTarget "ThawTests" */,
+				E2TESTS0012F2C00000000A /* Release configuration for PBXNativeTarget "ThawTests" */,
+			);
+			defaultConfigurationName = Release;
+		};
+/* End XCConfigurationList section */
+
+/* Begin XCRemoteSwiftPackageReference section */
+		170423D72B56DE78004A2549 /* XCRemoteSwiftPackageReference "Sparkle" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/sparkle-project/Sparkle";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 2.9.6;
+			};
+		};
+		1750618F2B1543DD003144CD /* XCRemoteSwiftPackageReference "LaunchAtLogin-Modern" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/sindresorhus/LaunchAtLogin-Modern";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 1.1.0;
+			};
+		};
+		1787C4252B16890B002F50DF /* XCRemoteSwiftPackageReference "AXSwift6" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/thaw-app/AXSwift6";
+			requirement = {
+				kind = upToNextMinorVersion;
+				minimumVersion = 0.5.2;
+			};
+		};
+		17F71BB32B880B4500905CBA /* XCRemoteSwiftPackageReference "CompactSlider" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/buh/CompactSlider";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 2.1.0;
+			};
+		};
+		1ADDA61D49BE1BA7CA5EA059 /* XCRemoteSwiftPackageReference "swift-async-algorithms" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/apple/swift-async-algorithms";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 1.0.0;
+			};
+		};
+		1FE809086FD6E22D3C218F67 /* XCRemoteSwiftPackageReference "swift-algorithms" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/apple/swift-algorithms";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 1.2.0;
+			};
+		};
+		8B3D6F19C4A27E50B1D9F3E6 /* XCRemoteSwiftPackageReference "swift-system" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/apple/swift-system";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 1.4.0;
+			};
+		};
+		7127A9FB2C4881BC00D99DEF /* XCRemoteSwiftPackageReference "Ifrit" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/ukushu/Ifrit";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 4.0.0;
+			};
+		};
+		7A0DF10D46BE41C9B7301DBB /* XCRemoteSwiftPackageReference "swift-subprocess" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/swiftlang/swift-subprocess";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 1.0.0;
+			};
+		};
+		9DDA1A418DCA43C89DE5A80F /* XCRemoteSwiftPackageReference "swift-collections" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/apple/swift-collections";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 1.6.0;
+			};
+		};
+/* End XCRemoteSwiftPackageReference section */
+
+/* Begin XCSwiftPackageProductDependency section */
+		168E1527A0B9100E8E1DA1E2 /* Algorithms */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 1FE809086FD6E22D3C218F67 /* XCRemoteSwiftPackageReference "swift-algorithms" */;
+			productName = Algorithms;
+		};
+		170423D82B56DE78004A2549 /* Sparkle */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 170423D72B56DE78004A2549 /* XCRemoteSwiftPackageReference "Sparkle" */;
+			productName = Sparkle;
+		};
+		175061902B1543DD003144CD /* LaunchAtLogin */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 1750618F2B1543DD003144CD /* XCRemoteSwiftPackageReference "LaunchAtLogin-Modern" */;
+			productName = LaunchAtLogin;
+		};
+		1787C4262B16890B002F50DF /* AXSwift6 */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 1787C4252B16890B002F50DF /* XCRemoteSwiftPackageReference "AXSwift6" */;
+			productName = AXSwift6;
+		};
+		17F71BB42B880B4500905CBA /* CompactSlider */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 17F71BB32B880B4500905CBA /* XCRemoteSwiftPackageReference "CompactSlider" */;
+			productName = CompactSlider;
+		};
+		43C5F05D006747974015EBD9 /* AsyncAlgorithms */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 1ADDA61D49BE1BA7CA5EA059 /* XCRemoteSwiftPackageReference "swift-async-algorithms" */;
+			productName = AsyncAlgorithms;
+		};
+		6937234B615A4E0BA19DFCF5 /* Collections */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 9DDA1A418DCA43C89DE5A80F /* XCRemoteSwiftPackageReference "swift-collections" */;
+			productName = Collections;
+		};
+		7127A9FE2C4886D100D99DEF /* IfritStatic */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 7127A9FB2C4881BC00D99DEF /* XCRemoteSwiftPackageReference "Ifrit" */;
+			productName = IfritStatic;
+		};
+		7168EE522E281CBC00FF9830 /* AXSwift6 */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 1787C4252B16890B002F50DF /* XCRemoteSwiftPackageReference "AXSwift6" */;
+			productName = AXSwift6;
+		};
+		C4PT00012F3A10000000000F /* AXSwift6 */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 1787C4252B16890B002F50DF /* XCRemoteSwiftPackageReference "AXSwift6" */;
+			productName = AXSwift6;
+		};
+		84489DC7DD2441B27C7B8E6C /* Algorithms */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 1FE809086FD6E22D3C218F67 /* XCRemoteSwiftPackageReference "swift-algorithms" */;
+			productName = Algorithms;
+		};
+		F723B15E4E92458CA2A3A2D5 /* Subprocess */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 7A0DF10D46BE41C9B7301DBB /* XCRemoteSwiftPackageReference "swift-subprocess" */;
+			productName = Subprocess;
+		};
+		2C7E9A45F08D3B61C5E8A214 /* SystemPackage */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 8B3D6F19C4A27E50B1D9F3E6 /* XCRemoteSwiftPackageReference "swift-system" */;
+			productName = SystemPackage;
+		};
+/* End XCSwiftPackageProductDependency section */
+	};
+	rootObject = 716683222A767E6A006ABF84 /* Project object */;
+}

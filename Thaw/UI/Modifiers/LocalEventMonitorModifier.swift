@@ -2,45 +2,72 @@
 //  LocalEventMonitorModifier.swift
 //  Project: Thaw
 //
-//  Copyright (Ice) © 2023–2025 Jordan Baird
 //  Copyright (Thaw) © 2026 Toni Förster
 //  Licensed under the GNU GPLv3
 
-import Observation
 import SwiftUI
 
 private struct LocalEventMonitorModifier: ViewModifier {
+    /// Outside the main-actor model because the monitor callback is not
+    /// isolated and NSEvent is not Sendable. Unchecked: the callback and view
+    /// updates both run on the main thread, so accesses never overlap.
+    fileprivate final class Handler: @unchecked Sendable {
+        var action: (NSEvent) -> NSEvent? = { $0 }
+    }
+
     @MainActor
     @Observable
-    final class Model {
+    fileprivate final class Model {
+        /// The monitor tracks this flag through didSet, so the initial false
+        /// does not cost a redundant stop() before anything started.
         var isEnabled = false {
             didSet {
-                if isEnabled {
-                    monitor.start()
-                } else {
-                    monitor.stop()
-                }
+                guard oldValue != isEnabled else { return }
+                applyEnablement()
             }
         }
 
+        /// Replaced on every update pass. @State keeps the first Model, so a
+        /// captured handler would answer with the first pass's values forever.
+        /// Not observed: refreshing it must not trigger a re-render.
         @ObservationIgnored
-        private let monitor: EventMonitor
+        let handler = Handler()
 
-        init(mask: NSEvent.EventTypeMask, action: @escaping (NSEvent) -> NSEvent?) {
-            self.monitor = EventMonitor.local(for: mask, handler: action)
+        @ObservationIgnored
+        private var monitor: EventMonitor?
+
+        /// Builds the monitor on the first update pass, not in init:
+        /// State(wrappedValue:) evaluates its argument on every pass.
+        func configure(mask: NSEvent.EventTypeMask) {
+            guard monitor == nil else { return }
+            monitor = EventMonitor.local(for: mask) { [handler] event in
+                handler.action(event)
+            }
+            applyEnablement()
+        }
+
+        private func applyEnablement() {
+            guard let monitor else { return }
+            if isEnabled {
+                monitor.start()
+            } else {
+                monitor.stop()
+            }
         }
     }
 
-    @State private var model: Model
-    @Binding var isEnabled: Bool
+    @State private var model = Model()
 
-    init(mask: NSEvent.EventTypeMask, isEnabled: Binding<Bool>, action: @escaping (NSEvent) -> NSEvent?) {
-        self._model = State(wrappedValue: Model(mask: mask, action: action))
-        self._isEnabled = isEnabled
-    }
+    let mask: NSEvent.EventTypeMask
+    let isEnabled: Bool
+    let action: (NSEvent) -> NSEvent?
 
     func body(content: Content) -> some View {
-        content.onChange(of: isEnabled, initial: true) { _, newValue in
+        // Both writes are to @ObservationIgnored storage, so neither invalidates anything.
+        model.handler.action = action
+        model.configure(mask: mask)
+
+        return content.onChange(of: isEnabled, initial: true) { _, newValue in
             model.isEnabled = newValue
         }
     }
@@ -55,8 +82,8 @@ extension View {
     ///   - isEnabled: A Boolean value that determines whether the event monitor
     ///     is enabled.
     ///   - action: An action to perform when the event monitor receives events
-    ///     corresponding to `mask`.
+    ///     corresponding to mask.
     func localEventMonitor(mask: NSEvent.EventTypeMask, isEnabled: Bool = true, action: @escaping (NSEvent) -> NSEvent?) -> some View {
-        modifier(LocalEventMonitorModifier(mask: mask, isEnabled: .constant(isEnabled), action: action))
+        modifier(LocalEventMonitorModifier(mask: mask, isEnabled: isEnabled, action: action))
     }
 }

@@ -16,7 +16,7 @@
             <BuildableReference
                BuildableIdentifier = "primary"
                BlueprintIdentifier = "7188A6822E27F9ED008F131D"
-               BuildableName = "MenuBarItemService.xpc"
+               BuildableName = "MenuBarCaptureService.xpc"
                BlueprintName = "MenuBarItemService"
                ReferencedContainer = "container:Thaw.xcodeproj">
             </BuildableReference>
@@ -51,7 +51,7 @@
          <BuildableReference
             BuildableIdentifier = "primary"
             BlueprintIdentifier = "7188A6822E27F9ED008F131D"
-            BuildableName = "MenuBarItemService.xpc"
+            BuildableName = "MenuBarCaptureService.xpc"
             BlueprintName = "MenuBarItemService"
             ReferencedContainer = "container:Thaw.xcodeproj">
          </BuildableReference>

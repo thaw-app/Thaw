@@ -47,7 +47,8 @@ jobs:
           fi
 
           patterns='(\.swift$|(^|/)Package\.swift$|(^|/)Package\.resolved$|^sonar-project\.properties$|^\.swiftlint|^\.swiftformat|^Thaw\.xcodeproj/|^scripts/|\.xcstrings$|^\.github/workflows/ci\.yml$)'
-          if git diff --name-only "$range" | grep -E "$patterns" >/dev/null; then
+          # legacy/ is Thaw 2, checked by ci-legacy.yml.
+          if git diff --name-only "$range" | grep -v '^legacy/' | grep -E "$patterns" >/dev/null; then
             echo "code=true" >> "$GITHUB_OUTPUT"
             echo "Code-related paths changed."
           else
@@ -84,20 +85,13 @@ jobs:
             python3 -m json.tool "$file" > /dev/null
           done
 
-      - name: Verify SwiftLint input file list
-        if: needs.changes.outputs.code == 'true'
-        run: |
-          set -euo pipefail
-          chmod +x scripts/generate-swiftlint-inputs.sh
-          scripts/generate-swiftlint-inputs.sh /tmp/swiftlint-inputs.xcfilelist
-          diff -u scripts/swiftlint-inputs.xcfilelist /tmp/swiftlint-inputs.xcfilelist
-
       - name: Run SwiftLint
         if: needs.changes.outputs.code == 'true'
         run: |
+          bash scripts/tests/test-lint.sh
           docker run --rm -v "$PWD:/work" -w /work \
-            ghcr.io/realm/swiftlint:0.63.3@sha256:b70b763c949399cc3e4fdcfbc7588944d9503d498b6d96e853dfa07a944256e6 \
-            swiftlint --strict
+            ghcr.io/realm/swiftlint:0.65.1@sha256:f47e083201e47a136cda5ae847595bfe00226c444ca226fa74fa5dc648a9b057 \
+            /bin/sh scripts/lint.sh --strict
 
   build:
     if: github.repository == 'thaw-app/Thaw'
@@ -112,6 +106,7 @@ jobs:
 
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         if: needs.changes.outputs.code == 'true'
+
       - name: Cache SwiftPM
         if: needs.changes.outputs.code == 'true'
         uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
@@ -140,6 +135,14 @@ jobs:
             compilation-cache-${{ runner.os }}-${{ github.ref_name }}-
             compilation-cache-${{ runner.os }}-
 
+      # ThawAXCore is a static product linked by both the app and its hosted tests; the runner's Xcode rejects that unless told otherwise.
+      # The Thaw target's lint build phase requires the pinned SwiftLint on PATH.
+      - name: Install pinned SwiftLint
+        if: needs.changes.outputs.code == 'true'
+        run: |
+          sh scripts/install-swiftlint.sh
+          echo "$HOME/.local/bin" >> "$GITHUB_PATH"
+
       - name: Build and Test
         if: needs.changes.outputs.code == 'true'
         run: |
@@ -149,6 +152,7 @@ jobs:
             -derivedDataPath Build/ \
             -destination 'platform=macOS' \
             -enableCodeCoverage YES \
+            DISABLE_DIAMOND_PROBLEM_DIAGNOSTIC=YES \
             CODE_SIGN_IDENTITY="" \
             CODE_SIGNING_REQUIRED=NO \
             CODE_SIGNING_ALLOWED=NO
@@ -185,49 +189,6 @@ jobs:
         with:
           path: coverage.xml
           key: sonar-coverage-${{ github.ref_name }}-${{ github.sha }}
-
-  # Tests with Xcode 26.6 on macOS 26; `build` covers Xcode 27 on macOS 27
-  # and owns coverage.
-  build-macos-26:
-    if: github.repository == 'thaw-app/Thaw'
-    runs-on: macos-26
-    needs: [changes, static_analysis]
-    env:
-      HOMEBREW_NO_AUTO_UPDATE: 1
-    steps:
-      - name: Skip macOS build (no code changes)
-        if: needs.changes.outputs.code != 'true'
-        run: echo "No code-related paths changed; skipping xcodebuild test."
-
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        if: needs.changes.outputs.code == 'true'
-
-      - name: Select Xcode 26.6
-        if: needs.changes.outputs.code == 'true'
-        run: sudo xcode-select -s /Applications/Xcode_26.6.app/Contents/Developer
-
-      - name: Cache SwiftPM
-        if: needs.changes.outputs.code == 'true'
-        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
-        with:
-          path: |
-            Build/SourcePackages
-            ~/Library/Caches/org.swift.swiftpm
-          key: spm-macos-26-${{ hashFiles('**/Package.resolved') }}
-          restore-keys: |
-            spm-macos-26-
-
-      - name: Build and Test
-        if: needs.changes.outputs.code == 'true'
-        run: |
-          xcodebuild test \
-            -project Thaw.xcodeproj \
-            -scheme Thaw \
-            -derivedDataPath Build/ \
-            -destination 'platform=macOS' \
-            CODE_SIGN_IDENTITY="" \
-            CODE_SIGNING_REQUIRED=NO \
-            CODE_SIGNING_ALLOWED=NO
 
   # Always runs so Scorecard sees a Sonar check on nearly every PR; forks and
   # Dependabot no-op without secrets under the same job name.
@@ -282,18 +243,14 @@ jobs:
             echo "Using coverage.xml ($(wc -c < coverage.xml | tr -d ' ') bytes)"
           else
             echo "args=" >> "$GITHUB_OUTPUT"
-            echo "::warning::No coverage.xml available; the Sonar scan is skipped unless this run built the code."
+            echo "::warning::No coverage.xml available; Sonar will publish zero coverage for this analysis."
           fi
 
       # coverage.xml exists only if this run built or restored it, so keep
       # sonar.coverageReportPaths out of sonar-project.properties.
-      #
-      # A run that skipped the build and found no cached report has nothing to
-      # tell Sonar about coverage. Scanning anyway publishes 0% and turns the
-      # branch's quality gate red, so that run leaves the last analysis alone.
       - name: SonarQube Scan
-        if: env.SONAR_ENABLED == 'true' && (needs.changes.outputs.code == 'true' || steps.coverage.outputs.args != '')
-        uses: SonarSource/sonarqube-scan-action@d209202bc7d53ff1cc128f7f907dac145c9d6ae9 # v8.3.0
+        if: env.SONAR_ENABLED == 'true'
+        uses: SonarSource/sonarqube-scan-action@ba9859eae8dd6bd29e412f25ddbbef3d032000f4 # v8.2.2
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
         with:

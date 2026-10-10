@@ -1,8 +1,5 @@
 name: Prepare Thaw appcasts
-description: >-
-  Apply the macOS 26 cap to 2.x entries, show prerelease tags as their version,
-  restore notes generate_appcast dropped, and prepare the legacy feed for 2.x
-  releases.
+description: Apply the macOS 26 cap to 2.x entries and prepare the legacy feed for 2.x releases.
 
 inputs:
   appcast-path:
@@ -11,12 +8,6 @@ inputs:
   release-tag:
     description: Release tag; only 2.x releases produce a legacy feed
     required: true
-  previous-appcast-path:
-    description: >-
-      The feed as it was before this run. Items generate_appcast left without
-      notes get them back from here. Empty or missing skips the restore.
-    required: false
-    default: ""
 
 outputs:
   appcast-path:
@@ -36,5 +27,4 @@ runs:
         ACTION_PATH: ${{ github.action_path }}
         APPCAST_PATH: ${{ inputs.appcast-path }}
         RELEASE_TAG: ${{ inputs.release-tag }}
-        PREVIOUS_APPCAST_PATH: ${{ inputs.previous-appcast-path }}
       run: python3 "$ACTION_PATH/prepare_appcasts.py"

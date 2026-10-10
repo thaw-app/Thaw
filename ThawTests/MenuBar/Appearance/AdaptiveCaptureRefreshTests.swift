@@ -11,9 +11,12 @@ import Testing
 /// Covers what an appearance configuration asks the menu bar manager to sample,
 /// and what a change to it does to the running adaptive refresh.
 ///
-/// `.adaptive` and `.adaptiveGradient` are both adaptive, but only the
-/// gradient renders from a palette. Treating them as one state leaves the bar
-/// on its average-color fallback until an unrelated poll fires.
+/// The captures themselves need a window server and a real wallpaper, so what
+/// is pinned here is the decision in front of them. The case that matters is a
+/// move between two adaptive kinds: .adaptive and .adaptiveGradient are
+/// both adaptive, yet only the gradient renders from a palette, so treating the
+/// pair as one state leaves the bar on its average-color fallback until an
+/// unrelated poll happens to fire.
 @Suite("Adaptive capture refresh")
 struct AdaptiveCaptureRefreshTests {
     private func requirements(
@@ -58,6 +61,19 @@ struct AdaptiveCaptureRefreshTests {
         #expect(gradient.needsAverageColor)
         #expect(gradient.needsPalette)
         #expect(gradient.isAdaptive)
+    }
+
+    @Test("A presented adaptive Thaw Bar adds sampling demand and releases it when omitted")
+    func thawBarSamplingDemand() {
+        let menu = MenuBarAppearancePartialConfiguration.defaultConfiguration
+        var bar = menu
+        bar.tintKind = .adaptiveGradient
+        let presented = MenuBarManager.AdaptiveCaptureRequirements(configuration: menu, thawBarConfiguration: bar)
+        let closed = MenuBarManager.AdaptiveCaptureRequirements(configuration: menu)
+        #expect(presented.needsAverageColor)
+        #expect(presented.needsPalette)
+        #expect(!closed.isAdaptive)
+        #expect(MenuBarManager.adaptiveRefreshAction(from: presented, to: closed) == .stop)
     }
 
     // MARK: - Refresh Transitions

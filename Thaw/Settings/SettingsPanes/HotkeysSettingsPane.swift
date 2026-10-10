@@ -2,24 +2,31 @@
 //  HotkeysSettingsPane.swift
 //  Project: Thaw
 //
-//  Copyright (Ice) © 2023–2025 Jordan Baird
 //  Copyright (Thaw) © 2026 Toni Förster
 //  Licensed under the GNU GPLv3
 
 import SwiftUI
+import ThawUI
 
 struct HotkeysSettingsPane: View {
-    @Environment(AppState.self) var appState: AppState
+    @Environment(AppState.self) var appState
     let settings: HotkeysSettings
 
     var body: some View {
-        IceForm {
-            IceSection("Menu Bar Sections") {
+        // Read here, not inside the alert's binding, so the pane observes it.
+        let persistenceError = settings.lastPersistenceError
+
+        ThawForm {
+            ThawSection("Menu bar sections") {
                 hotkeyRecorder(forSection: .hidden)
                 hotkeyRecorder(forSection: .alwaysHidden)
+                hotkeyRecorder(forAction: .toggleSwap)
             }
-            IceSection("Menu Bar Items") {
+            ThawSection("Menu bar items") {
                 hotkeyRecorder(forAction: .searchMenuBarItems)
+                // Thaw Bar Only is unplugged for now.
+                // hotkeyRecorder(forAction: .showThawBarOnlyItems)
+                hotkeyRecorder(forAction: .showItemHints)
                 MenuBarItemHotkeyList(
                     menuBarManager: appState.menuBarManager,
                     itemManager: appState.itemManager,
@@ -27,18 +34,33 @@ struct HotkeysSettingsPane: View {
                 )
             }
             if !appState.profileManager.profiles.isEmpty {
-                IceSection("Profiles") {
+                ThawSection("Profiles") {
                     ForEach(appState.profileManager.profiles) { meta in
                         profileHotkeyRecorder(for: meta)
                     }
                 }
             }
-            IceSection("Other") {
-                hotkeyRecorder(forAction: .enableIceBar)
+            ThawSection("Other") {
+                hotkeyRecorder(forAction: .revealSystemMenuBar)
+                hotkeyRecorder(forAction: .enableThawBar)
                 hotkeyRecorder(forAction: .toggleApplicationMenus)
                 hotkeyRecorder(forAction: .toggleAutoRehide)
                 hotkeyRecorder(forAction: .toggleZenMode)
+                hotkeyRecorder(forAction: .toggleLayoutEditor)
             }
+        }
+        // The shortcut is written from a change callback that cannot throw, so
+        // a failed write reaches the user here rather than only the log.
+        .alert(
+            "Couldn’t save shortcut",
+            item: Binding(
+                get: { persistenceError },
+                set: { _ in settings.clearPersistenceError() }
+            )
+        ) { _ in
+            Button("OK") {}
+        } message: { message in
+            Text(message)
         }
     }
 
@@ -48,19 +70,29 @@ struct HotkeysSettingsPane: View {
             HotkeyRecorder(hotkey: hotkey) {
                 switch action {
                 case .toggleHiddenSection:
-                    Text("Toggle the hidden section")
+                    Text("Toggle the Hidden section")
                 case .toggleAlwaysHiddenSection:
-                    Text("Toggle the always-hidden section")
+                    Text("Toggle the Always Hidden section")
+                case .toggleSwap:
+                    Text("Swap shown and hidden items")
                 case .searchMenuBarItems:
                     Text("Search menu bar items")
-                case .enableIceBar:
-                    Text("Enable the \(Constants.displayName) Bar")
+                case .showThawBarOnlyItems:
+                    Text("Show Thaw Bar Only items")
+                case .showItemHints:
+                    Text("Open an item by letter")
+                case .revealSystemMenuBar:
+                    Text("Reveal the menu bar")
+                case .enableThawBar:
+                    Text("Turn \(Constants.displayName) Bar on or off")
                 case .toggleApplicationMenus:
                     Text("Toggle application menus")
                 case .toggleAutoRehide:
                     Text("Toggle automatic rehiding")
                 case .toggleZenMode:
-                    Text("Toggle zen mode")
+                    Text("Toggle Zen Mode")
+                case .toggleLayoutEditor:
+                    Text("Show Layout")
                 case .profileApply:
                     EmptyView()
                 case .openMenuBarItem:
@@ -93,10 +125,8 @@ struct HotkeysSettingsPane: View {
 
 // MARK: - MenuBarItemHotkeyList
 
-/// A collapsible list of per-item hotkey recorders. Each row pairs a menu bar
-/// item (icon and name) with a recorder that opens the item's menu when the
-/// hotkey fires. Items with a saved binding whose owning app is not currently
-/// running are still listed, marked unavailable, so the binding can be cleared.
+/// Per-item hotkeys that open an item's menu. Bindings for apps that are not
+/// running stay listed so they can be cleared.
 private struct MenuBarItemHotkeyList: View {
     let menuBarManager: MenuBarManager
     let itemManager: MenuBarItemManager
@@ -120,19 +150,15 @@ private struct MenuBarItemHotkeyList: View {
                                 .gridColumnAlignment(.center)
                             Text(row.name)
                                 .lineLimit(1)
-                                // Claim the name's full width so it is not
-                                // truncated by the flexible spacer column.
+                                // Keep the spacer column from truncating it.
                                 .fixedSize(horizontal: true, vertical: false)
                                 .foregroundStyle(row.item != nil ? .primary : .secondary)
                             Text(row.bundle)
                                 .font(.callout)
                                 .foregroundStyle(.secondary)
                                 .lineLimit(1)
-                                // Claim the bundle's full width so the flexible
-                                // spacer column below does not compress it.
                                 .fixedSize(horizontal: true, vertical: false)
-                            // Absorbs the slack so the recorder sits at the
-                            // trailing edge.
+                            // Absorbs the slack, pushing the recorder to the trailing edge.
                             Color.clear
                                 .frame(maxWidth: .infinity, maxHeight: 1)
                             HotkeyRecorder(hotkey: row.hotkey) {
@@ -146,39 +172,33 @@ private struct MenuBarItemHotkeyList: View {
         } label: {
             Text("Open menu bar items")
         }
-        // Tell the image cache whether this list is visible so it only runs the
-        // live capture loop while the disclosure is expanded.
+        // The image cache runs live capture only while the list is expanded.
         .onChange(of: isExpanded, initial: true) { _, expanded in
-            imageCache.setItemHotkeyListExpanded(expanded)
+            imageCache.isItemHotkeyListExpanded = expanded
             rebuildRows()
         }
         .onChange(of: itemManager.itemCache) { rebuildRows() }
         .onChange(of: menuBarManager.itemHotkeys) { rebuildRows() }
         .onDisappear {
-            imageCache.setItemHotkeyListExpanded(false)
+            imageCache.isItemHotkeyListExpanded = false
         }
         .task(id: isExpanded) {
-            // Item images for the hidden and always-hidden sections are not
-            // captured until something requests them. Prewarm all sections when
-            // the list is expanded so off-screen items show their real icon.
+            // Hidden sections are captured only on request, so prewarm them.
             guard isExpanded else { return }
-            await imageCache.updateCacheWithoutChecks(sections: MenuBarSection.Name.allCases)
+            await imageCache.recaptureNow(sections: MenuBarSection.Name.allCases)
         }
     }
 
     @ViewBuilder
     private func iconView(for row: Row) -> some View {
-        if let image = row.item.flatMap({ imageCache.images[$0.tag]?.nsImage }) {
-            // Render at the captured size (the nsImage already carries the
-            // item's scaled point size), matching the Layout pane rather than
-            // forcing a square that distorts wide items like Clock or Outlook.
-            Image(nsImage: image)
+        if let capture = row.item.flatMap({ imageCache.capturesByTag[$0.tag] }) {
+            // Captured size, not a square that would distort wide items.
+            Image(decorative: capture.cgImage, scale: capture.scale)
         } else {
-            // No captured image for an absent item; show a neutral placeholder
-            // sized to roughly the menu bar item height.
+            // Absent items have no capture.
             Image(systemName: "questionmark.square.dashed")
                 .resizable()
-                .aspectRatio(contentMode: .fit)
+                .scaledToFit()
                 .frame(height: 18)
                 .foregroundStyle(.secondary)
         }
@@ -196,11 +216,9 @@ private struct MenuBarItemHotkeyList: View {
         var rows: [Row] = []
         var seen = Set<String>()
 
-        // Present items grouped by section (visible, hidden, always-hidden),
-        // reversed within each section so the rightmost menu bar item (e.g. the
-        // clock) appears first.
+        // By section, reversed so the rightmost item (the clock) comes first.
         for section in MenuBarSection.Name.allCases {
-            for item in itemManager.itemCache.managedItems(for: section).reversed()
+            for item in itemManager.managedItems(for: section).reversed()
                 where !item.isControlItem && item.sourcePID != nil
             {
                 let id = item.uniqueIdentifier
@@ -217,9 +235,7 @@ private struct MenuBarItemHotkeyList: View {
             }
         }
 
-        // Configured-but-absent items (owning app not currently running).
-        // itemHotkeys is an unordered dictionary, so sort by name (then id) for
-        // a stable row order across renders.
+        // Bound items whose app is not running, sorted for a stable order.
         let customNames = Defaults.dictionary(forKey: .menuBarItemCustomNames) as? [String: String] ?? [:]
         let absent = menuBarManager.itemHotkeys
             .filter { id, hotkey in hotkey.keyCombination != nil && !seen.contains(id) }

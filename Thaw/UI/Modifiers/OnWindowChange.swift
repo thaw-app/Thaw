@@ -2,7 +2,6 @@
 //  OnWindowChange.swift
 //  Project: Thaw
 //
-//  Copyright (Ice) © 2023–2025 Jordan Baird
 //  Copyright (Thaw) © 2026 Toni Förster
 //  Licensed under the GNU GPLv3
 
@@ -41,7 +40,7 @@ extension View {
     ///
     /// - Parameter action: The action to perform when the view's window
     ///   changes. The closure passes the new window as a parameter. The
-    ///   new window can be `nil`.
+    ///   new window can be nil.
     func onWindowChange(perform action: @escaping (_ window: NSWindow?) -> Void) -> some View {
         background {
             WindowReaderView(action: action)
@@ -51,7 +50,7 @@ extension View {
     /// Updates the given binding when the view's window changes.
     ///
     /// - Parameter binding: The binding to update when the view's window
-    ///   changes. The new window can be `nil`.
+    ///   changes. The new window can be nil.
     func onWindowChange(update binding: Binding<NSWindow?>) -> some View {
         onWindowChange { window in
             binding.wrappedValue = window

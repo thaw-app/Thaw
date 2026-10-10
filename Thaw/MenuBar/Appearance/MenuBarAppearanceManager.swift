@@ -2,145 +2,139 @@
 //  MenuBarAppearanceManager.swift
 //  Project: Thaw
 //
-//  Copyright (Ice) © 2023–2025 Jordan Baird
 //  Copyright (Thaw) © 2026 Toni Förster
 //  Licensed under the GNU GPLv3
 
 import AsyncAlgorithms
 import Cocoa
 import Combine
+import MenuBarModel
 import Observation
 
-/// A manager for the appearance of the menu bar.
+/// Layers per-Space overrides over stored appearance settings and renders them in per-screen overlays.
 @MainActor
 @Observable
 final class MenuBarAppearanceManager {
     @ObservationIgnored
     private let diagLog = DiagLog(category: "MenuBarAppearanceManager")
 
-    /// The current menu bar appearance configuration.
-    ///
-    /// `didSet` persists every change; panel reconfiguration is throttled
-    /// separately by `configurationPanelObservationTask`.
+    /// Shared appearance settings persist in didSet; panels react separately through throttled effectiveConfiguration.
     var configuration = Defaults.DefaultValue.menuBarAppearanceConfigurationV2 {
         didSet {
-            do {
-                let data = try encoder.encode(configuration)
-                Defaults.set(data, forKey: .menuBarAppearanceConfigurationV2)
-            } catch {
-                diagLog.error("Error encoding menu bar appearance configuration: \(error)")
+            // Switching a surface to accent color must update it before the next system accent change.
+            let synced = configuration
+                .withAccentColor(Self.accentColor)
+                .withSystemGlass(tinted: Self.systemGlassIsTinted)
+            if synced != configuration {
+                configuration = synced
+                return
             }
-            updateEffectiveConfiguration()
+            guard oldValue != configuration else { return }
+            persist(configuration, forKey: .menuBarAppearanceConfigurationV2, label: "menu bar appearance configuration")
         }
     }
 
-    /// Appearance overrides applied while a specific Space is active, keyed
-    /// by the Space's persistent key — the reboot-stable identifier — with a
-    /// session-scoped `CGSSpaceID` fallback for Spaces that expose none.
-    private(set) var spaceOverrides: [String: MenuBarAppearanceConfigurationV2] = [:]
+    /// NSGlassTintAmount is 0 for Clear, 1 for Tinted, and intermediate during animation.
+    static var systemGlassIsTinted: Bool {
+        UserDefaults.standard.double(forKey: "NSGlassTintAmount") >= 0.5
+    }
+
+    /// The system accent color, in the color space the look is stored in.
+    static var accentColor: CGColor {
+        (NSColor.controlAccentColor.usingColorSpace(.sRGB) ?? .controlAccentColor).cgColor
+    }
+
+    /// Live editor preview replaces stored settings; nil when inactive.
+    var previewConfiguration: MenuBarAppearancePartialConfiguration? {
+        didSet {
+            reactToPreviewConfigurationChange()
+        }
+    }
+
+    /// Overrides keyed by stringified CGSSpaceID.
+    /// Launch restore also triggers didSet, harmlessly persisting the just-loaded data.
+    private(set) var spaceOverrides: [String: MenuBarAppearanceConfigurationV2] = [:] {
+        didSet {
+            guard oldValue != spaceOverrides else { return }
+            persist(spaceOverrides, forKey: .menuBarAppearanceSpaceOverrides, label: "per-Space appearance overrides")
+        }
+    }
+
+    /// didSet cannot throw; record encoding failures here so the editor warns about unsaved settings.
+    /// Nil when stored settings are current.
+    private(set) var lastPersistenceFailure: String?
 
     /// The most recently observed active Space.
     private(set) var activeSpaceID = SpaceInfo.activeSpace().spaceID
 
-    /// The configuration the overlay panels render: the active Space's
-    /// override when one exists, otherwise the shared `configuration`.
-    private(set) var effectiveConfiguration = Defaults.DefaultValue.menuBarAppearanceConfigurationV2
-
-    /// The currently previewed partial configuration.
-    var previewConfiguration: MenuBarAppearancePartialConfiguration? {
-        didSet {
-            if let previewConfiguration {
-                let needsPanels = previewConfiguration.hasShadow
-                    || previewConfiguration.borderOnMenuBar
-                    || effectiveConfiguration.shapeKind != .noShape
-                    || previewConfiguration.tintKind != .noTint
-                    || previewConfiguration.backgroundKind != .none
-                if overlayPanels.isEmpty, needsPanels {
-                    configureOverlayPanels(with: effectiveConfiguration, force: true)
-                }
-            } else {
-                if !needsOverlayPanels(for: effectiveConfiguration) {
-                    closeAllOverlayPanels()
-                }
-            }
-        }
+    /// Render the active Space's override, falling back to shared settings.
+    /// Observation tracks all three inputs through this computed property.
+    var effectiveConfiguration: MenuBarAppearanceConfigurationV2 {
+        Self.effectiveConfiguration(
+            base: configuration,
+            overrides: spaceOverrides,
+            activeSpaceID: activeSpaceID
+        )
     }
 
-    /// Whether the system is currently drawing an opaque menu bar because
-    /// Accessibility's Reduce Transparency is enabled.
-    ///
-    /// The overlay sits behind the menu bar, so an opaque material hides it
-    /// entirely (see ``MenuBarOverlayPanel/updateWindowLevel()``); the editor
-    /// warns the user instead.
-    private(set) var isReduceTransparencyEnabled =
-        NSWorkspace.shared.accessibilityDisplayShouldReduceTransparency
-
-    /// The shared app state.
     @ObservationIgnored
     private weak var appState: AppState?
 
-    /// Encoder for UserDefaults values.
     @ObservationIgnored
     private let encoder = JSONEncoder()
 
-    /// Decoder for UserDefaults values.
     @ObservationIgnored
     private let decoder = JSONDecoder()
 
-    /// Storage for internal observers.
+    /// Keeps the manager's Combine subscriptions alive.
     @ObservationIgnored
     private var cancellables = Set<AnyCancellable>()
 
-    /// Task observing `configuration`, throttled to 0.1 s (latest value wins),
-    /// that creates or tears down the overlay panels.
-    ///
-    /// `_throttle(for:latest:)` is not a typo: swift-async-algorithms 1.1.5
-    /// only exposes the throttle under the underscored name.
-    private var configurationPanelObservationTask: Task<Void, Never>?
+    /// _throttle is the pinned AsyncAlgorithms release's public throttle operator.
+    /// latest: true coalesces panel updates to the newest effectiveConfiguration.
+    @ObservationIgnored
+    private var panelRequirementsTask: Task<Void, Never>?
 
-    /// The currently managed menu bar overlay panels.
+    /// One overlay panel per managed screen, or empty when nothing needs painting.
     private(set) var overlayPanels = Set<MenuBarOverlayPanel>()
 
-    /// The shared Mission Control detector used by all overlay panels.
-    ///
-    /// One for the whole app, not per panel: the probe is synchronous IPC.
-    let missionControlDetector = MissionControlDetector()
+    /// Compare display frames to avoid rebuilding for brightness, HDR, colorspace, or relaunch notifications.
+    /// Unnecessary rebuilds blink the overlay and strand NSGlassEffectView composite appearances.
+    private var lastConfiguredScreenLayout: [CGDirectDisplayID: CGRect] = [:]
 
-    /// The amount to inset the menu bar if called for by the configuration.
-    let menuBarInsetAmount: CGFloat = 3.5
-
-    @MainActor
-    deinit {
-        configurationPanelObservationTask?.cancel()
+    private static func currentScreenLayout() -> [CGDirectDisplayID: CGRect] {
+        Dictionary(NSScreen.managedScreens.map { ($0.displayID, $0.frame) }) { first, _ in first }
     }
 
-    /// Performs initial setup of the manager.
+    /// Inset from the menu bar's edges for inset appearances.
+    let menuBarInsetAmount: CGFloat = 3.5
+
+    /// Call once to restore settings and start observing.
     func performSetup(with appState: AppState) {
         self.appState = appState
         loadInitialState()
         configureCancellables()
     }
 
-    /// Loads the initial values for the configuration.
+    /// Decode shared settings and overrides independently so one unreadable key does not block the other.
     private func loadInitialState() {
-        do {
-            if let data = Defaults.data(forKey: .menuBarAppearanceConfigurationV2) {
+        if let data = Defaults.data(forKey: .menuBarAppearanceConfigurationV2) {
+            do {
                 configuration = try decoder.decode(MenuBarAppearanceConfigurationV2.self, from: data)
+            } catch {
+                diagLog.error("Error decoding menu bar appearance configuration: \(error)")
             }
-        } catch {
-            diagLog.error("Error decoding menu bar appearance configuration: \(error)")
         }
-        do {
-            if let data = Defaults.data(forKey: .menuBarAppearanceSpaceOverrides) {
+        if let data = Defaults.data(forKey: .menuBarAppearanceSpaceOverrides) {
+            do {
                 spaceOverrides = try decoder.decode(
                     [String: MenuBarAppearanceConfigurationV2].self,
                     from: data
                 )
+            } catch {
+                diagLog.error("Error decoding per-Space appearance overrides: \(error)")
             }
-        } catch {
-            diagLog.error("Error decoding per-Space appearance overrides: \(error)")
         }
-        updateEffectiveConfiguration()
     }
 
     // MARK: Per-Space Overrides
@@ -149,225 +143,200 @@ final class MenuBarAppearanceManager {
     static nonisolated func effectiveConfiguration(
         base: MenuBarAppearanceConfigurationV2,
         overrides: [String: MenuBarAppearanceConfigurationV2],
-        activeSpaceKey: String
+        activeSpaceID: CGSSpaceID
     ) -> MenuBarAppearanceConfigurationV2 {
-        overrides[activeSpaceKey] ?? base
+        overrides[String(activeSpaceID)] ?? base
     }
 
-    /// The key the active Space's override is stored under: the persistent
-    /// key, since space IDs are reassigned after reboot, else the session space ID.
-    private func activeSpaceOverrideKey() -> String {
-        SpaceInfo(spaceID: activeSpaceID).persistentKey ?? String(activeSpaceID)
-    }
-
-    /// Whether the active Space renders a saved override.
     var activeSpaceHasOverride: Bool {
-        spaceOverrides[activeSpaceOverrideKey()] != nil
+        spaceOverrides[String(activeSpaceID)] != nil
     }
 
-    /// The configuration the appearance editor reads and writes.
-    ///
-    /// The active Space's override when it has one, since the panels render
-    /// ``effectiveConfiguration``; otherwise the shared ``configuration``.
-    var editedConfiguration: MenuBarAppearanceConfigurationV2 {
-        get {
-            effectiveConfiguration
-        }
-        set {
-            guard activeSpaceHasOverride else {
-                configuration = newValue
-                return
-            }
-            spaceOverrides[activeSpaceOverrideKey()] = newValue
-            persistSpaceOverrides()
-            updateEffectiveConfiguration()
-        }
-    }
-
-    /// Saves the shared configuration as the active Space's override.
+    /// Uses shared settings, not the current preview, for the Space override.
     func saveOverrideForActiveSpace() {
-        let key = activeSpaceOverrideKey()
-        spaceOverrides[key] = configuration
-        pruneUnresolvableSpaceOverrides(keeping: key)
-        persistSpaceOverrides()
-        updateEffectiveConfiguration()
+        spaceOverrides[String(activeSpaceID)] = configuration
     }
 
-    /// Removes the active Space's override, if any.
     func removeOverrideForActiveSpace() {
-        spaceOverrides[activeSpaceOverrideKey()] = nil
-        persistSpaceOverrides()
-        updateEffectiveConfiguration()
+        spaceOverrides[String(activeSpaceID)] = nil
     }
 
-    /// Drops overrides whose key no longer resolves to a managed Space (stale
-    /// session keys, deleted Spaces). Runs on save.
-    private func pruneUnresolvableSpaceOverrides(keeping key: String) {
-        var managedKeys = Set(
-            Bridging.getManagedSpaces().map { managedSpace in
-                managedSpace.persistentKey
-            }
-        )
-        managedKeys.insert(key)
-        let staleKeys = spaceOverrides.keys.filter { !managedKeys.contains($0) }
-        guard !staleKeys.isEmpty else { return }
-        for staleKey in staleKeys {
-            spaceOverrides.removeValue(forKey: staleKey)
-        }
-        diagLog.debug("Pruned \(staleKeys.count) stale per-Space appearance override(s)")
-    }
-
-    /// Removes every per-Space override.
     func removeAllSpaceOverrides() {
         spaceOverrides = [:]
-        persistSpaceOverrides()
-        updateEffectiveConfiguration()
     }
 
-    private func persistSpaceOverrides() {
-        do {
-            let data = try encoder.encode(spaceOverrides)
-            Defaults.set(data, forKey: .menuBarAppearanceSpaceOverrides)
-        } catch {
-            diagLog.error("Error encoding per-Space appearance overrides: \(error)")
-        }
-    }
-
-    private func updateEffectiveConfiguration() {
-        effectiveConfiguration = Self.effectiveConfiguration(
-            base: configuration,
-            overrides: spaceOverrides,
-            activeSpaceKey: activeSpaceOverrideKey()
-        )
-        // `configurationPanelObservationTask` ignores Space changes, so reconcile
-        // panels here or an override that needs them renders nothing.
-        if overlayPanels.isEmpty {
-            configureOverlayPanels(with: effectiveConfiguration)
-        } else if !needsOverlayPanels(for: effectiveConfiguration) {
-            closeAllOverlayPanels()
-        }
-    }
-
-    /// Configures the internal observers for the manager.
     private func configureCancellables() {
-        var c = Set<AnyCancellable>()
+        cancellables = [
+            observeScreenParameters(),
+            observeActiveSpace(),
+            observeAccentColor(),
+            observeSystemGlass(),
+        ]
 
+        panelRequirementsTask?.cancel()
+        panelRequirementsTask = Task { [weak self] in
+            let changes = Observations { [weak self] in self?.effectiveConfiguration }
+            for await configuration in changes._throttle(for: .milliseconds(100), latest: true) {
+                guard let self, let configuration else { return }
+                updateOverlayPanels(for: configuration)
+                // Partner apps mirror the look; they fetch it again on this.
+                DistributedNotificationCenter.default().postNotificationName(
+                    SharedAppearance.didChangeNotification,
+                    object: nil,
+                    userInfo: nil,
+                    deliverImmediately: true
+                )
+            }
+        }
+    }
+
+    /// Records encoding failures in lastPersistenceFailure instead of throwing.
+    private func persist(_ value: some Encodable, forKey key: Defaults.Key, label: String) {
+        do {
+            let data = try encoder.encode(value)
+            Defaults.set(data, forKey: key)
+            lastPersistenceFailure = nil
+        } catch {
+            diagLog.error("Error encoding \(label): \(error)")
+            lastPersistenceFailure = error.localizedDescription
+        }
+    }
+
+    private func rebuildOverlayPanelsIfScreensMoved() {
+        // Unchanged geometry needs no rebuild, avoiding overlay blinks and composite-appearance leaks.
+        if !overlayPanels.isEmpty,
+           Self.currentScreenLayout() == lastConfiguredScreenLayout
+        {
+            return
+        }
+        closeOverlayPanels()
+        configureOverlayPanels(with: configuration)
+    }
+
+    private func closeOverlayPanels() {
+        while let panel = overlayPanels.popFirst() {
+            panel.close()
+        }
+    }
+
+    /// A task-owned observer feeds debounced screen events, as in DisplaySettingsManager.configureObservers().
+    private func observeScreenParameters() -> AnyCancellable {
+        let (screenParameterEvents, screenParameterContinuation) = AsyncStream<Void>.makeStream()
+        let task = Task { @MainActor [weak self] in
+            let observer = NotificationCenter.default.addObserver(
+                forName: NSApplication.didChangeScreenParametersNotification,
+                object: nil,
+                queue: .main
+            ) { _ in screenParameterContinuation.yield(()) }
+            defer { NotificationCenter.default.removeObserver(observer) }
+            for await _ in screenParameterEvents.debounce(for: .seconds(0.1)) {
+                guard let self else { return }
+                self.rebuildOverlayPanelsIfScreensMoved()
+            }
+        }
+        return AnyCancellable { task.cancel() }
+    }
+
+    /// Update accent-following surfaces when the system accent changes.
+    private func observeAccentColor() -> AnyCancellable {
         NotificationCenter.default
-            .publisher(for: NSApplication.didChangeScreenParametersNotification)
-            .debounce(for: 0.1, scheduler: DispatchQueue.main)
+            .publisher(for: NSColor.systemColorsDidChangeNotification)
+            .receive(on: DispatchQueue.main)
             .sink { [weak self] _ in
-                guard let self else {
-                    return
-                }
-                closeAllOverlayPanels()
-                if Set(overlayPanels.map(\.owningScreen)) != Set(NSScreen.screens) {
-                    configureOverlayPanels(with: effectiveConfiguration)
-                }
+                guard let self else { return }
+                configuration = configuration.withAccentColor(Self.accentColor)
             }
-            .store(in: &c)
+    }
 
-        NSWorkspace.shared.notificationCenter
-            .publisher(for: NSWorkspace.accessibilityDisplayOptionsDidChangeNotification)
-            .debounce(for: 0.1, scheduler: DispatchQueue.main)
-            .sink { [weak self] _ in
-                self?.isReduceTransparencyEnabled =
-                    NSWorkspace.shared.accessibilityDisplayShouldReduceTransparency
+    /// No notification announces Liquid Glass changes; observe the preference directly.
+    private func observeSystemGlass() -> AnyCancellable {
+        UserDefaults.standard
+            .publisher(for: \.NSGlassTintAmount)
+            .map { $0 >= 0.5 }
+            .removeDuplicates()
+            .receive(on: DispatchQueue.main)
+            .sink { [weak self] tinted in
+                guard let self else { return }
+                configuration = configuration.withSystemGlass(tinted: tinted)
             }
-            .store(in: &c)
+    }
 
+    private func observeActiveSpace() -> AnyCancellable {
         NSWorkspace.shared.notificationCenter
             .publisher(for: NSWorkspace.activeSpaceDidChangeNotification)
             .receive(on: DispatchQueue.main)
             .sink { [weak self] _ in
-                guard let self else { return }
-                activeSpaceID = SpaceInfo.activeSpace().spaceID
-                updateEffectiveConfiguration()
+                self?.activeSpaceID = SpaceInfo.activeSpace().spaceID
             }
-            .store(in: &c)
-
-        configurationPanelObservationTask?.cancel()
-        configurationPanelObservationTask = Task { [weak self] in
-            let changes = Observations { [weak self] in self?.configuration }
-            for await configuration in changes._throttle(for: .milliseconds(100), latest: true) {
-                guard let self else {
-                    return
-                }
-                guard let configuration else {
-                    continue
-                }
-                // The overlay panels may not have been configured yet. Since some of the
-                // properties on the manager might call for them, try to configure now.
-                if overlayPanels.isEmpty {
-                    configureOverlayPanels(with: configuration)
-                } else if !needsOverlayPanels(for: configuration) {
-                    closeAllOverlayPanels()
-                }
-            }
-        }
-
-        cancellables = c
     }
 
-    /// Returns a Boolean value that indicates whether a set of overlay panels
-    /// is needed for the given configuration.
+    private func updateOverlayPanels(for configuration: MenuBarAppearanceConfigurationV2) {
+        // Build panels lazily when effects first need them.
+        if overlayPanels.isEmpty {
+            configureOverlayPanels(with: configuration)
+        } else if !needsOverlayPanels(for: configuration) {
+            closeOverlayPanels()
+        }
+    }
+
+    /// A preview can need overlays even when stored settings do not.
+    private func reactToPreviewConfigurationChange() {
+        if let preview = previewConfiguration {
+            let needsPanels = preview.hasShadow
+                || preview.hasBorder
+                || configuration.shapeKind != .noShape
+                || preview.tintKind != .noTint
+                || preview.backgroundKind != .none
+            if overlayPanels.isEmpty, needsPanels {
+                configureOverlayPanels(with: configuration, force: true)
+            }
+        } else {
+            if !needsOverlayPanels(for: configuration) {
+                closeOverlayPanels()
+            }
+        }
+    }
+
+    /// These effects are not system-painted; without them the menu bar needs no overlay.
     private func needsOverlayPanels(for configuration: MenuBarAppearanceConfigurationV2) -> Bool {
         let current = configuration.current
-        if current.hasShadow {
-            return true
-        }
-        if current.borderOnMenuBar {
-            return true
-        }
-        if configuration.shapeKind != .noShape {
-            return true
-        }
-        if current.tintKind != .noTint {
-            return true
-        }
-        if configuration.current.backgroundKind != .none {
-            return true
-        }
-        return false
+        return current.hasShadow
+            || current.hasBorder
+            || configuration.shapeKind != .noShape
+            || current.tintKind != .noTint
+            || configuration.current.backgroundKind != .none
     }
 
-    /// Configures the manager's overlay panels, if required by the given configuration.
+    /// Always rebuilds; when no effects are needed, clear the layout signature so future notifications retry.
+    /// - Parameter force: Build even when stored settings need no panels, as for a live preview.
     private func configureOverlayPanels(
         with configuration: MenuBarAppearanceConfigurationV2,
         force: Bool = false
     ) {
-        closeAllOverlayPanels()
+        // Close existing panels to prevent memory leaks and duplicate windows
+        closeOverlayPanels()
 
         guard
             let appState,
             force || needsOverlayPanels(for: configuration)
         else {
+            lastConfiguredScreenLayout = [:]
             return
         }
 
-        var overlayPanels = Set<MenuBarOverlayPanel>()
-        for screen in NSScreen.screens {
+        overlayPanels = Set(NSScreen.managedScreens.map { screen in
             let panel = MenuBarOverlayPanel(appState: appState, owningScreen: screen)
-            overlayPanels.insert(panel)
             panel.needsShow = true
-        }
-
-        self.overlayPanels = overlayPanels
-
-        // Mission Control displaces every on-screen window together, so one
-        // representative screen is enough to drive the shared detector for
-        // all panels.
-        if let representativeScreen = NSScreen.screens.first {
-            missionControlDetector.start(representativeScreen: representativeScreen)
-        }
+            return panel
+        })
+        lastConfiguredScreenLayout = Self.currentScreenLayout()
     }
+}
 
-    /// Closes all currently managed overlay panels and stops the shared
-    /// Mission Control detector, since nothing needs it while there are no
-    /// panels to drive.
-    private func closeAllOverlayPanels() {
-        while let panel = overlayPanels.popFirst() {
-            panel.close()
-        }
-        missionControlDetector.stop()
+private extension UserDefaults {
+    /// The system's Liquid Glass tint, observable with key-value observing.
+    /// The name has to match the preference key.
+    @objc dynamic var NSGlassTintAmount: Double {
+        double(forKey: "NSGlassTintAmount")
     }
 }

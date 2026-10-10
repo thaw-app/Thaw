@@ -7,39 +7,64 @@
 
 // MARK: - SearchWeights
 
-/// Field weights for a fuzzy-search `Searchable` conformance.
+/// Field weights for a fuzzy-search Searchable conformance.
 ///
-/// Fuse scales a field's diff score by `(1 - weight)` and lower scores rank
-/// higher, so a higher weight ranks that field's matches higher. Callers
-/// omit the `FuseProp` for fields they don't have.
+/// Fuse's diff score gets worse (higher) as weight increases, so a lower
+/// weight value means a match in that field ranks the result higher. Not
+/// every search surface has all three fields, menu bar item search, for
+/// example, has no keywords or description, so callers simply omit the
+/// FuseProp for any field they don't have.
 nonisolated struct SearchWeights {
     let title: Double
     let keywords: Double
     let description: Double
 
     /// The weighting used by the settings sidebar search
-    /// (``SearchModel``): a title match ranks above a keywords
+    /// (SearchModel): a title match ranks above a keywords
     /// match, which ranks above a description match.
-    static let settings = SearchWeights(title: 0.6, keywords: 0.3, description: 1.0)
+    static let settings = SearchWeights(title: 0.3, keywords: 0.6, description: 1.0)
 
-    /// The weighting used by menu bar item search (``MenuBarSearchPanel``),
-    /// which only matches on the item's display name. `1.0` is Ifrit's
-    /// `FuseProp` default weight.
+    /// The weighting used by the menu bar item palette
+    /// (PaletteCandidate), which matches three fields per item.
+    /// The slot names are metaphorical here: title carries the item's
+    /// display name, keywords its owning app, and description its
+    /// identity key, ordered so a name match outranks an app match, which
+    /// outranks a match on the raw identifier.
+    static let palette = SearchWeights(title: 0.3, keywords: 0.6, description: 1.0)
+
+    /// The weighting used by menu bar item search (MenuBarSearchPanel),
+    /// which only matches on the item's display name. 1.0 is Ifrit's
+    /// FuseProp default weight, preserved here so adopting SearchRanker
+    /// doesn't change menu-bar-item search ranking.
     static let menuBarItem = SearchWeights(title: 1.0, keywords: 1.0, description: 1.0)
 }
 
 // MARK: - SearchRanker
 
 /// Shared fuzzy-search ranking helpers, used by both the settings sidebar
-/// search (``SearchModel``) and menu bar item search
-/// (``MenuBarSearchPanel``) so the two surfaces can't silently drift apart.
+/// search (SearchModel) and menu bar item search
+/// (MenuBarSearchPanel) so the two surfaces can't silently drift apart.
 ///
-/// No `Ifrit` dependency, so its tests don't need Ifrit linked. Each surface
-/// still owns its `Fuse` instance and `Searchable` conformance.
+/// Deliberately has no dependency on Ifrit/Fuse so it (and the tests
+/// covering it) don't require linking Ifrit into the test target. Each
+/// search surface still owns its own Fuse instance and Searchable
+/// conformance; this only standardizes the weighting recipe and the
+/// relevance sort applied to Fuse's results.
 nonisolated enum SearchRanker {
-    /// Sorts by Fuse `diffScore`, which is `0` for a perfect match, lowest
-    /// first.
+    /// Pure relevance sort: Fuse's diffScore is 0 for a perfect match and grows
+    /// with worse matches. Extracted so it can be unit-tested without linking
+    /// Ifrit into the test target.
+    ///
+    /// Equal scores keep their input order. sorted(by:) is not documented as
+    /// stable, and ties are common (Fuse scores every equally good short name
+    /// the same), so without the tiebreak results could permute between runs.
     static func sortedByRelevance<T>(_ items: [(item: T, diffScore: Double)]) -> [T] {
-        items.sorted { $0.diffScore < $1.diffScore }.map(\.item)
+        items.enumerated()
+            .sorted { lhs, rhs in
+                lhs.element.diffScore == rhs.element.diffScore
+                    ? lhs.offset < rhs.offset
+                    : lhs.element.diffScore < rhs.element.diffScore
+            }
+            .map(\.element.item)
     }
 }

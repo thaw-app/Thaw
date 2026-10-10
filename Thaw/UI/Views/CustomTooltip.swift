@@ -9,18 +9,16 @@ import Cocoa
 
 // MARK: - CustomTooltipPanel
 
-/// A lightweight panel that mimics the native macOS tooltip appearance
-/// but allows full control over display timing.
+/// Native-looking tooltip with custom display timing.
 final class CustomTooltipPanel: NSPanel {
     static let shared = CustomTooltipPanel()
 
-    /// An opaque token identifying the current owner of the tooltip.
-    /// Only the owner that showed the tooltip can dismiss it.
+    /// Owner token prevents other owners from dismissing the shared tooltip.
     private(set) var currentOwner: AnyHashable?
 
-    /// Force-dismisses the tooltip after 10s without a `show(...)`, so a missed
-    /// hover-exit (stalled event tap, deallocated owner) can't strand it (#734).
-    private var hideWatchdog: Task<Void, Never>?
+    /// Missed hover exits must not strand the singleton onscreen.
+    /// Each show rearms the watchdog; it dismisses after 10 seconds without a refresh.
+    private var hideWatchdog: Timer?
 
     private let label: NSTextField = {
         let field = NSTextField(labelWithString: "")
@@ -53,9 +51,7 @@ final class CustomTooltipPanel: NSPanel {
         isOpaque = false
         backgroundColor = .clear
         hasShadow = true
-        // Must stay above IceBarPanel (`.mainMenu + 1`, see IceBar.swift) so
-        // Thaw Bar grid items can't obscure tooltips (#782); pinned by
-        // CustomTooltipPanelTests.
+        // Stay above ThawBarPanel's mainMenu + 1 level so grid items cannot obscure tooltips.
         level = .mainMenu + 2
         ignoresMouseEvents = true
         collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary, .stationary]
@@ -86,9 +82,7 @@ final class CustomTooltipPanel: NSPanel {
         ])
     }
 
-    /// Shows the tooltip with the given text near the specified screen point.
-    /// The `owner` token is used to prevent other callers from dismissing
-    /// a tooltip they didn't show.
+    /// The owner token prevents other callers from dismissing this tooltip.
     func show(text: String, near point: CGPoint, in screen: NSScreen?, owner: AnyHashable? = nil) {
         label.stringValue = text
         label.sizeToFit()
@@ -107,9 +101,7 @@ final class CustomTooltipPanel: NSPanel {
             screens: screens,
             preferred: screen?.frame
         ) else {
-            // The point is off every known screen (stale or parked bounds, #734). Don't
-            // show a tooltip we can't place, and dismiss any visible one so it doesn't linger.
-            dismiss()
+            // Stale or parked bounds outside all screens cannot place a tooltip safely.
             return
         }
 
@@ -118,19 +110,17 @@ final class CustomTooltipPanel: NSPanel {
         setFrameOrigin(origin)
         orderFrontRegardless()
 
-        // (Re)arm the watchdog on every show, so a stuck owner can never
-        // pin the tooltip on screen indefinitely (#734).
-        hideWatchdog?.cancel()
-        hideWatchdog = Task { [weak self] in
-            try? await Task.sleep(for: .seconds(10))
-            guard !Task.isCancelled else { return }
-            self?.forceDismiss()
+        // Rearm on every show to prevent a stuck owner from pinning the tooltip indefinitely.
+        hideWatchdog?.invalidate()
+        hideWatchdog = Timer.scheduledTimer(withTimeInterval: 10, repeats: false) { [weak self] _ in
+            Task { @MainActor in
+                self?.forceDismiss()
+            }
         }
     }
 
-    /// Origin for a panel of `panelSize` near `point`, clamped to the screen whose
-    /// `frame` contains `point`. Returns `nil` when none does (stale or parked
-    /// coordinates). `preferred` only breaks ties between overlapping screens.
+    /// Clamp to the screen containing point; return nil for stale or parked coordinates outside all screens.
+    /// preferred only breaks ties between overlapping screens that contain point.
     static nonisolated func placementOrigin(
         for panelSize: NSSize,
         near point: NSPoint,
@@ -162,40 +152,32 @@ final class CustomTooltipPanel: NSPanel {
         return origin
     }
 
-    /// Hides the tooltip immediately.
-    ///
-    /// If `owner` is provided, the tooltip is only dismissed when the
-    /// current owner matches. Pass `nil` to dismiss unconditionally.
+    /// Dismiss only for a matching owner; nil dismisses unconditionally.
     func dismiss(owner: AnyHashable? = nil) {
         if let owner, let currentOwner, owner != currentOwner {
             return
         }
         currentOwner = nil
         orderOut(nil)
-        hideWatchdog?.cancel()
+        hideWatchdog?.invalidate()
         hideWatchdog = nil
     }
 
-    /// Force-dismisses the tooltip regardless of owner, invoked by the
-    /// watchdog timer when no owner has dismissed it in time (#734).
+    /// The watchdog dismisses regardless of owner after its timeout.
     private func forceDismiss() {
         currentOwner = nil
         orderOut(nil)
-        hideWatchdog?.cancel()
+        hideWatchdog?.invalidate()
         hideWatchdog = nil
     }
 }
 
 // MARK: - CustomTooltipController
 
-/// A per-view controller that manages showing and hiding the shared
-/// tooltip panel with a configurable delay.
-///
-/// Each `NSView` that wants custom-delayed tooltips should own an
-/// instance of this controller.
+/// Each view needing delayed tooltips owns a controller for the shared panel.
 @MainActor
 final class CustomTooltipController {
-    private var timer: Task<Void, Never>?
+    private var timer: Timer?
     private weak var view: NSView?
 
     /// A unique identifier for this controller, used as the tooltip owner token.
@@ -209,7 +191,7 @@ final class CustomTooltipController {
     }
 
     isolated deinit {
-        timer?.cancel()
+        timer?.invalidate()
     }
 
     @MainActor
@@ -218,17 +200,17 @@ final class CustomTooltipController {
         if delay <= 0 {
             showNow()
         } else {
-            timer = Task { [weak self] in
-                try? await Task.sleep(for: .seconds(delay))
-                guard !Task.isCancelled else { return }
-                self?.showNow()
+            timer = Timer.scheduledTimer(withTimeInterval: delay, repeats: false) { [weak self] _ in
+                Task { @MainActor in
+                    self?.showNow()
+                }
             }
         }
     }
 
     @MainActor
     func cancel() {
-        timer?.cancel()
+        timer?.invalidate()
         timer = nil
         CustomTooltipPanel.shared.dismiss(owner: id)
     }
@@ -237,7 +219,6 @@ final class CustomTooltipController {
     private func showNow() {
         guard let view, let window = view.window else { return }
 
-        // Position the tooltip below the center of the view.
         let viewCenter = NSPoint(x: view.bounds.midX, y: view.bounds.minY)
         let windowPoint = view.convert(viewCenter, to: nil)
         let screenPoint = window.convertPoint(toScreen: windowPoint)

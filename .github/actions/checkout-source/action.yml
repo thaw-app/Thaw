@@ -10,6 +10,10 @@ inputs:
     description: Passed to actions/checkout
     required: false
     default: "1"
+  path:
+    description: Checkout directory relative to GITHUB_WORKSPACE
+    required: false
+    default: "."
 
 outputs:
   repository:
@@ -44,6 +48,7 @@ runs:
       with:
         ref: ${{ inputs.ref || github.sha }}
         fetch-depth: ${{ inputs.fetch-depth }}
+        path: ${{ inputs.path }}
         persist-credentials: false
 
     - name: Restore build actions
@@ -60,9 +65,14 @@ runs:
     - name: Resolve build settings
       id: meta
       shell: bash
+      env:
+        SOURCE_PATH: ${{ inputs.path }}
       run: |
         set -euo pipefail
         project_name="Thaw.xcodeproj"
+        if [[ "$SOURCE_PATH" != "." ]]; then
+          project_name="${SOURCE_PATH%/}/$project_name"
+        fi
         # Read the checked-out app's target, not the dispatch branch's settings
         # or a hard-coded OS version that could lower a newer release's minimum.
         project_json="$RUNNER_TEMP/thaw-project.json"
@@ -78,7 +88,7 @@ runs:
         print(release["buildSettings"]["MACOSX_DEPLOYMENT_TARGET"])
         PY
         )"
-        commit="$(git rev-parse HEAD)"
+        commit="$(git -C "$SOURCE_PATH" rev-parse HEAD)"
         {
           echo "commit=$commit"
           echo "project_name=$project_name"

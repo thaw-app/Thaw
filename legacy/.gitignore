@@ -1,0 +1,23 @@
+.build-benchmark
+.codex-home
+.cursorrules
+.DS_Store
+.idea/
+.lefthook.yml
+.swiftpm-overrides/**
+.vscode/
+*.dSYM
+*.ipa
+build/
+!.github/actions/build/
+!.github/actions/build/**
+DerivedData/
+Sparkle
+ThawCtl/.build/
+xcode-skills
+xcuserdata/
+plans/
+
+# Local badge mockups
+.tmp-badge-preview/
+default.profraw

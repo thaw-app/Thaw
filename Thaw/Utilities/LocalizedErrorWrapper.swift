@@ -2,15 +2,14 @@
 //  LocalizedErrorWrapper.swift
 //  Project: Thaw
 //
-//  Copyright (Ice) © 2023–2025 Jordan Baird
 //  Copyright (Thaw) © 2026 Toni Förster
 //  Licensed under the GNU GPLv3
 
 import Foundation
 
-/// A type that wraps the information of any error inside a `LocalizedError`.
+/// A type that wraps the information of any error inside a LocalizedError.
 ///
-/// If the error used to initialize the box is also a `LocalizedError`, its
+/// If the error used to initialize the box is also a LocalizedError, its
 /// information is passed through to the box. Otherwise, a description of the
 /// error is passed to the wrapper.
 struct LocalizedErrorWrapper: LocalizedError {
@@ -19,6 +18,7 @@ struct LocalizedErrorWrapper: LocalizedError {
     let helpAnchor: String?
     let recoverySuggestion: String?
 
+    /// Creates a wrapper with the given error.
     init(_ error: any Error) {
         if let error = error as? any LocalizedError {
             self.errorDescription = error.errorDescription

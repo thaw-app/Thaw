@@ -25,10 +25,10 @@ enum SettingsSearchNavigation {
         _ pane: SettingsNavigationIdentifier,
         navigationState: AppNavigationState
     ) {
-        navigationState.requestedSettingsDisclosure = nil
         guard navigationState.settingsNavigationIdentifier != pane else {
             return
         }
+        navigationState.requestedSettingsDisclosure = nil
         navigationState.settingsNavigationIdentifier = pane
     }
 

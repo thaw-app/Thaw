@@ -2,82 +2,126 @@
 //  HotkeyRecorder.swift
 //  Project: Thaw
 //
-//  Copyright (Ice) © 2023–2025 Jordan Baird
 //  Copyright (Thaw) © 2026 Toni Förster
 //  Licensed under the GNU GPLv3
 
 import SwiftUI
+import ThawUI
 
 // MARK: - HotkeyRecorder
 
+/// A two-part control that shows the key combination assigned to a hotkey and
+/// lets the user type a new one.
+///
+/// The wider half carries the current combination and starts a recording; the
+/// square half next to it cancels a recording in progress, or clears the
+/// combination when there is nothing to cancel.
 struct HotkeyRecorder<Label: View>: View {
-    @State private var model: HotkeyRecorderModel
+    /// What the control is showing at the moment.
+    private enum Phase {
+        /// Waiting for the user to type a combination.
+        case listening
+
+        /// A combination is assigned. The payload is nil only if the hotkey
+        /// somehow ended up enabled without one.
+        case assigned(KeyCombination?)
+
+        /// No combination is assigned.
+        case empty
+    }
+
+    private let hotkey: Hotkey
+
+    @State private var capture: KeyCapture
 
     private let label: Label
 
     init(hotkey: Hotkey, @ViewBuilder label: () -> Label) {
-        self._model = State(wrappedValue: HotkeyRecorderModel(hotkey: hotkey))
+        self.hotkey = hotkey
+        self._capture = State(wrappedValue: KeyCapture(hotkey: hotkey))
         self.label = label()
     }
 
+    private var phase: Phase {
+        if capture.isListening {
+            return .listening
+        }
+        if hotkey.isEnabled {
+            return .assigned(hotkey.keyCombination)
+        }
+        return .empty
+    }
+
     var body: some View {
-        @Bindable var model = model
         LabeledContent {
-            segmentStack
+            segments
         } label: {
             label
         }
         .alert(
-            "Hotkey is reserved by macOS",
-            isPresented: $model.isPresentingSystemReservedError
+            "macOS already uses this shortcut",
+            isPresented: $capture.isShowingReservedWarning
         ) {
-            Button("OK") {
-                model.isPresentingSystemReservedError = false
+            Button("Choose Another") {
+                capture.isShowingReservedWarning = false
             }
+        } message: {
+            Text("Record a different one, or turn this one off in System Settings \(Constants.menuArrow) Keyboard \(Constants.menuArrow) Keyboard Shortcuts.")
         }
     }
 
-    private var segmentStack: some View {
+    private var segments: some View {
         HStack(spacing: 1) {
-            leadingSegment
-            trailingSegment
+            displaySegment
+            actionSegment
         }
-        .frame(width: 132, height: 24)
+        .frame(minWidth: 132, idealWidth: 132, minHeight: 24, idealHeight: 24)
     }
 
-    private var leadingSegment: some View {
+    /// The wider half, which reports the current state and starts a recording.
+    private var displaySegment: some View {
         Button {
-            if model.isRecording {
-                model.stopRecording()
-            } else {
-                model.startRecording()
+            switch phase {
+            case .listening: capture.stop()
+            case .assigned, .empty: capture.start()
             }
         } label: {
-            leadingSegmentLabel
+            switch phase {
+            case .listening:
+                Text("Type Shortcut")
+            case let .assigned(keyCombination):
+                if let keyCombination {
+                    Text(keyCombination.displayValue)
+                } else {
+                    Text("Error")
+                }
+            case .empty:
+                Text("Record Shortcut")
+            }
         }
         .buttonStyle(
-            HotkeyRecorderButtonStyle(
-                segment: .leading,
-                isHighlighted: model.isRecording
+            SegmentButtonStyle(
+                side: .leading,
+                isHighlighted: capture.isListening
             )
         )
     }
 
-    private var trailingSegment: some View {
+    /// The square half, whose meaning depends on the phase: back out of a
+    /// recording, throw away an assigned combination, or start a recording.
+    private var actionSegment: some View {
         Button {
-            if model.isRecording {
-                model.stopRecording()
-            } else if model.hotkey.isEnabled {
-                model.hotkey.keyCombination = nil
-            } else {
-                model.startRecording()
+            switch phase {
+            case .listening: capture.stop()
+            case .assigned: hotkey.keyCombination = nil
+            case .empty: capture.start()
             }
         } label: {
-            trailingSegmentLabel
+            actionSegmentLabel
         }
         .buttonStyle(
-            HotkeyRecorderButtonStyle(
-                segment: .trailing,
+            SegmentButtonStyle(
+                side: .trailing,
                 isHighlighted: false
             )
         )
@@ -85,56 +129,46 @@ struct HotkeyRecorder<Label: View>: View {
     }
 
     @ViewBuilder
-    private var leadingSegmentLabel: some View {
-        if model.isRecording {
-            Text("Type Hotkey")
-        } else if model.hotkey.isEnabled {
-            if let keyCombination = model.hotkey.keyCombination {
-                Text(keyCombination.displayValue)
-            } else {
-                Text("ERROR")
-            }
-        } else {
-            Text("Record Hotkey")
+    private var actionSegmentLabel: some View {
+        // The insets differ because the symbols are drawn at different
+        // optical weights and would not otherwise look evenly sized.
+        let (symbol, description, inset): (String, String, CGFloat) = switch phase {
+        case .listening: ("escape", "Cancel", 6)
+        case .assigned: ("xmark", "Clear", 7.5)
+        case .empty: ("record.circle", "Record", 5.5)
         }
-    }
-
-    @ViewBuilder
-    private var trailingSegmentLabel: some View {
-        let (name, label, padding) = if model.isRecording {
-            ("escape", "Cancel", 6.0)
-        } else if model.hotkey.isEnabled {
-            ("xmark", "Clear", 7.5)
-        } else {
-            ("record.circle", "Record", 5.5)
-        }
-        Image(systemName: name)
+        Image(systemName: symbol)
             .resizable()
             .aspectRatio(1, contentMode: .fit)
-            .padding(padding)
-            .accessibilityLabel(label)
+            .padding(inset)
+            .accessibilityLabel(description)
     }
 }
 
-// MARK: - HotkeyRecorderModel
+// MARK: - KeyCapture
 
+/// Intercepts the next key press on behalf of a recorder and turns it into a
+/// key combination for a hotkey.
 @MainActor
 @Observable
-private final class HotkeyRecorderModel {
-    private(set) var isRecording = false
+private final class KeyCapture {
+    /// Whether key presses are currently being intercepted.
+    private(set) var isListening = false
 
-    var isPresentingSystemReservedError = false
+    /// Whether to warn that the combination just typed belongs to the system.
+    var isShowingReservedWarning = false
 
-    let hotkey: Hotkey
+    @ObservationIgnored
+    private let hotkey: Hotkey
 
-    /// `@ObservationIgnored`: the Observation macro cannot generate its
-    /// tracked-access init accessor for a `lazy` property.
     @ObservationIgnored
     private lazy var monitor = EventMonitor.local(for: .keyDown) { [weak self] event in
         guard let self else {
             return event
         }
-        handleKeyDown(event: event)
+        consider(event)
+        // Swallow the event either way: while recording, key presses are input
+        // to this control rather than to whatever has focus.
         return nil
     }
 
@@ -142,29 +176,40 @@ private final class HotkeyRecorderModel {
         self.hotkey = hotkey
     }
 
-    func startRecording() {
-        guard !isRecording else {
+    /// Begins intercepting key presses.
+    ///
+    /// The hotkey stands down for the duration, so the combination being
+    /// replaced cannot fire while the replacement is being typed.
+    func start() {
+        guard !isListening else {
             return
         }
         hotkey.disable()
         monitor.start()
-        isRecording = true
+        isListening = true
     }
 
-    func stopRecording() {
-        guard isRecording else {
+    /// Stops intercepting key presses and puts the hotkey back to work.
+    func stop() {
+        guard isListening else {
             return
         }
         monitor.stop()
         hotkey.enable()
-        isRecording = false
+        isListening = false
     }
 
-    private func handleKeyDown(event: NSEvent) {
+    /// Works out what an intercepted key press means.
+    ///
+    /// A bare Escape backs out of the recording. Everything else needs a
+    /// modifier that is not Shift, since a global hotkey on an unmodified key
+    /// would swallow ordinary typing everywhere.
+    private func consider(_ event: NSEvent) {
         let keyCombination = KeyCombination(event: event)
+
         guard !keyCombination.modifiers.isEmpty else {
             if keyCombination.key == .escape {
-                stopRecording()
+                stop()
             } else {
                 NSSound.beep()
             }
@@ -175,47 +220,51 @@ private final class HotkeyRecorderModel {
             return
         }
         guard !keyCombination.isSystemReserved else {
-            isPresentingSystemReservedError = true
+            isShowingReservedWarning = true
             return
         }
+
         hotkey.keyCombination = keyCombination
-        stopRecording()
+        stop()
     }
 }
 
-// MARK: - HotkeyRecorderButtonStyle
+// MARK: - SegmentButtonStyle
 
-private struct HotkeyRecorderButtonStyle: ButtonStyle {
-    enum Segment {
+/// The style shared by the recorder's two halves, which round off the outer
+/// end of the control and leave the inner end square.
+private struct SegmentButtonStyle: ButtonStyle {
+    /// The end of the control a segment sits at.
+    enum Side {
         case leading
         case trailing
     }
 
-    var segment: Segment
+    var side: Side
     var isHighlighted: Bool
 
-    private var radii: RectangleCornerRadii {
+    private var outline: some InsettableShape {
         let r: CGFloat = 6
-        return switch segment {
+        let radii = switch side {
         case .leading: RectangleCornerRadii(topLeading: r, bottomLeading: r)
         case .trailing: RectangleCornerRadii(bottomTrailing: r, topTrailing: r)
         }
-    }
-
-    private var borderShape: some InsettableShape {
-        UnevenRoundedRectangle(cornerRadii: radii, style: .continuous)
+        return UnevenRoundedRectangle(cornerRadii: radii, style: .continuous)
     }
 
     func makeBody(configuration: Configuration) -> some View {
-        let isProminent = configuration.isPressed != isHighlighted
+        // Pressing inverts the highlight, so a highlighted segment reads as
+        // pressed when it is released and vice versa.
+        let isFilled = configuration.isPressed != isHighlighted
+        let borderShape = outline
         borderShape
-            .fill(isProminent ? .tertiary : .quaternary)
+            .fill(isFilled ? .tertiary : .quaternary)
             .overlay {
                 configuration.label
                     .lineLimit(1)
                     .foregroundStyle(.primary)
             }
-            .glassEffect(.regular.interactive(), in: borderShape)
+            .thawGlass(.control, in: borderShape)
             .contentShape([.interaction, .focusEffect], borderShape)
     }
 }

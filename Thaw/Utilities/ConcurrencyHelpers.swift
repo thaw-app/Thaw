@@ -2,81 +2,23 @@
 //  ConcurrencyHelpers.swift
 //  Project: Thaw
 //
-//  Copyright (Ice) © 2023–2025 Jordan Baird
 //  Copyright (Thaw) © 2026 Toni Förster
 //  Licensed under the GNU GPLv3
 
-import AsyncAlgorithms
 import Foundation
-import os.lock
+import ThawCapture
 
-// MARK: - Debounced Notification Task
-
-/// Starts a `MainActor` task that feeds `center` notifications into a debounced
-/// `AsyncChannel` and runs `action` once per burst coalesced over `interval`.
-///
-/// The observer is registered before this returns and removed when the task
-/// ends. Cancel the previous task before a repeated setup, or the old observer
-/// keeps yielding into its own stream.
-@MainActor
-func debouncedNotificationTask(
-    center: NotificationCenter,
-    name: Notification.Name,
-    interval: Duration,
-    action: @escaping @MainActor () async -> Void
-) -> Task<Void, Never> {
-    let events = AsyncChannel<Void>()
-    let observer = center.addObserver(
-        forName: name,
-        object: nil,
-        queue: .main
-    ) { _ in Task { await events.send(()) } }
-    return Task { @MainActor in
-        defer { center.removeObserver(observer) }
-        for await _ in events.debounce(for: interval) {
-            await action()
-        }
-    }
-}
-
-// MARK: - Task Timeout
-
-/// An error that indicates that a task timed out.
-struct TaskTimeoutError: CustomStringConvertible, LocalizedError {
-    let description = "Task timed out before completion"
-    var errorDescription: String? {
-        description
-    }
-}
-
-nonisolated extension Task {
-    static func withTimeout<C: Clock>(
-        _ timeout: C.Instant.Duration,
-        tolerance: C.Instant.Duration? = nil,
-        clock: C = .continuous,
-        operation: @escaping @Sendable () async throws -> Success
-    ) async throws -> Success {
-        try await withThrowingTaskGroup(of: Success.self) { group in
-            group.addTask { try await operation() }
-            group.addTask {
-                try await _Concurrency.Task.sleep(for: timeout, tolerance: tolerance, clock: clock)
-                throw TaskTimeoutError()
-            }
-            guard let success = try await group.next() else {
-                throw _Concurrency.CancellationError()
-            }
-            group.cancelAll()
-            return success
-        }
-    }
-}
+/// The timeout type is shared with the capture package through
+/// ThawConcurrency. The alias keeps the name resolvable for the rest of the
+/// app, which does not import ThawCapture directly.
+typealias TaskTimeoutError = ThawConcurrency.TaskTimeoutError
 
 nonisolated extension Task where Failure == any Error {
     /// Runs the given throwing operation asynchronously as part of a
-    /// new _unstructured_ top-level task.
+    /// new unstructured top-level task.
     ///
     /// If the operation does not complete within the provided duration,
-    /// the task is cancelled and a ``TaskTimeoutError`` is thrown.
+    /// the task is cancelled and a TaskTimeoutError is thrown.
     ///
     /// - Parameters:
     ///   - timeout: The duration the operation must complete within.
@@ -101,10 +43,10 @@ nonisolated extension Task where Failure == any Error {
     }
 
     /// Runs the given throwing operation asynchronously as part of a
-    /// new _unstructured_ _detached_ top-level task.
+    /// new unstructured, detached top-level task.
     ///
     /// If the operation does not complete within the provided duration,
-    /// the task is cancelled and a ``TaskTimeoutError`` is thrown.
+    /// the task is cancelled and a TaskTimeoutError is thrown.
     ///
     /// - Parameters:
     ///   - timeout: The duration the operation must complete within.

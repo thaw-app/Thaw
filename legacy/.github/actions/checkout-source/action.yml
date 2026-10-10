@@ -1,0 +1,97 @@
+name: Checkout source
+description: Check out this repository and report its release build settings.
+
+inputs:
+  ref:
+    description: Branch, tag, or commit to check out (empty = triggering commit)
+    required: false
+    default: ""
+  fetch-depth:
+    description: Passed to actions/checkout
+    required: false
+    default: "1"
+
+outputs:
+  repository:
+    description: owner/name that was checked out
+    value: ${{ github.repository }}
+  commit:
+    description: Full commit SHA that was checked out
+    value: ${{ steps.meta.outputs.commit }}
+  source-dir:
+    description: Directory holding the Thaw 2 sources (legacy, or . for tags from before the move)
+    value: ${{ steps.meta.outputs.source_dir }}
+  project-name:
+    description: Xcode project to build
+    value: ${{ steps.meta.outputs.project_name }}
+  deployment-target:
+    description: MACOSX_DEPLOYMENT_TARGET from the app's Release configuration
+    value: ${{ steps.meta.outputs.deployment_target }}
+
+runs:
+  using: composite
+  steps:
+    # Release tags can predate the workflow's local actions. Keep the whole
+    # directory for later steps and the runner's post-job cleanup.
+    - name: Set build actions aside
+      shell: bash
+      env:
+        ACTION_PATH: ${{ github.action_path }}
+      run: |
+        set -euo pipefail
+        rm -rf "$RUNNER_TEMP/thaw-build-actions"
+        cp -R "$(dirname "$ACTION_PATH")" "$RUNNER_TEMP/thaw-build-actions"
+
+    - name: Checkout source
+      uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      with:
+        ref: ${{ inputs.ref || github.sha }}
+        fetch-depth: ${{ inputs.fetch-depth }}
+        persist-credentials: false
+
+    - name: Restore build actions
+      shell: bash
+      env:
+        ACTION_PATH: ${{ github.action_path }}
+      run: |
+        set -euo pipefail
+        actions_dir="$(dirname "$ACTION_PATH")"
+        mkdir -p "$(dirname "$actions_dir")"
+        rm -rf "$actions_dir"
+        cp -R "$RUNNER_TEMP/thaw-build-actions" "$actions_dir"
+
+    - name: Resolve build settings
+      id: meta
+      shell: bash
+      run: |
+        set -euo pipefail
+        # Thaw 2 lives under legacy/ since Thaw 3 took the repository root;
+        # tags from before that move still have it at the top level.
+        source_dir="."
+        if [[ -d legacy/Thaw.xcodeproj ]]; then
+          source_dir="legacy"
+        fi
+        project_name="$source_dir/Thaw.xcodeproj"
+        # Read the checked-out app's target, not the dispatch branch's settings
+        # or a hard-coded OS version that could lower a newer release's minimum.
+        project_json="$RUNNER_TEMP/thaw-project.json"
+        plutil -convert json -o "$project_json" "$project_name/project.pbxproj"
+        deployment_target="$(python3 - "$project_json" <<'PY'
+        import json, sys
+
+        objects = json.load(open(sys.argv[1]))["objects"]
+        target = next(o for o in objects.values()
+                      if o.get("isa") == "PBXNativeTarget" and o.get("name") == "Thaw")
+        configs = objects[target["buildConfigurationList"]]["buildConfigurations"]
+        release = next(objects[c] for c in configs if objects[c]["name"] == "Release")
+        print(release["buildSettings"]["MACOSX_DEPLOYMENT_TARGET"])
+        PY
+        )"
+        commit="$(git rev-parse HEAD)"
+        {
+          echo "commit=$commit"
+          echo "source_dir=$source_dir"
+          echo "project_name=$project_name"
+          echo "deployment_target=$deployment_target"
+        } >> "$GITHUB_OUTPUT"
+        echo "Checked out $GITHUB_REPOSITORY@$commit (macOS $deployment_target)"

@@ -1,5 +1,5 @@
 {
-  "originHash" : "2be03aa64a68214218a6f26290b37e200daf9b9ab868ac9aa05de6127169b03c",
+  "originHash" : "06c318808c5c5daf2d2d84af8222e519e59af80bc6687a53fa7e20ca7ccb9a5a",
   "pins" : [
     {
       "identity" : "axswift6",
@@ -29,11 +29,11 @@
       }
     },
     {
-      "identity" : "launchatlogin-modern",
+      "identity" : "prk-bin",
       "kind" : "remoteSourceControl",
-      "location" : "https://github.com/sindresorhus/LaunchAtLogin-Modern",
+      "location" : "https://github.com/thaw-app/prk-bin",
       "state" : {
-        "revision" : "a04ec1c363be3627734f6dad757d82f5d4fa8fcc",
+        "revision" : "4e0b405812048125a976e92b35f25e316b8eb81d",
         "version" : "1.1.0"
       }
     },
@@ -44,15 +44,6 @@
       "state" : {
         "revision" : "eef1a539a373c1f1a320624b1130fc5de7b2e100",
         "version" : "2.10.0"
-      }
-    },
-    {
-      "identity" : "swift-algorithms",
-      "kind" : "remoteSourceControl",
-      "location" : "https://github.com/apple/swift-algorithms",
-      "state" : {
-        "revision" : "87e50f483c54e6efd60e885f7f5aa946cee68023",
-        "version" : "1.2.1"
       }
     },
     {
@@ -74,15 +65,6 @@
       }
     },
     {
-      "identity" : "swift-numerics",
-      "kind" : "remoteSourceControl",
-      "location" : "https://github.com/apple/swift-numerics.git",
-      "state" : {
-        "revision" : "0c0290ff6b24942dadb83a929ffaaa1481df04a2",
-        "version" : "1.1.1"
-      }
-    },
-    {
       "identity" : "swift-subprocess",
       "kind" : "remoteSourceControl",
       "location" : "https://github.com/swiftlang/swift-subprocess",
@@ -96,8 +78,8 @@
       "kind" : "remoteSourceControl",
       "location" : "https://github.com/apple/swift-system",
       "state" : {
-        "revision" : "869129b7bf4ecc57b97d0193ad29690ca2134750",
-        "version" : "1.8.1"
+        "revision" : "b5544ba79a70a0cb3563e75bf26dc198d6b40ed3",
+        "version" : "1.7.4"
       }
     }
   ],

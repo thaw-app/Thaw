@@ -139,5 +139,5 @@ and supply-chain review:
 
 - [ASSURANCE_CASE.md](ASSURANCE_CASE.md): threat model and security argument
 - [URI_SCHEMES.md](URI_SCHEMES.md): external URL/API surface
-- [Thaw/Floe Security Policy](https://github.com/thaw-app/.github/blob/main/.github/SECURITY.md): reporting, support, and dependency requirements
+- [SECURITY.md](../.github/SECURITY.md): security requirements and reporting
 - [GOVERNANCE.md](../.github/GOVERNANCE.md): project roles and org repo inventory

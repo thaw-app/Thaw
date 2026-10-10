@@ -1,0 +1,302 @@
+name: CI (Thaw 2)
+# Thaw 2 (macOS 26) under legacy/. Paths are relative to the repository root.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.head_ref || github.ref }}
+  cancel-in-progress: true
+# Runs on every PR and push to development so Scorecard sees checks; the
+# macOS work stays gated on path detection below.
+on:
+  pull_request:
+  push:
+    branches:
+      - development
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  changes:
+    if: github.repository == 'thaw-app/Thaw'
+    runs-on: ubuntu-slim
+    outputs:
+      code: ${{ steps.filter.outputs.code }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+      - name: Detect code-related paths
+        id: filter
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [[ "${{ github.event_name }}" == "pull_request" ]]; then
+            git fetch --no-tags --depth=1 origin "${{ github.base_ref }}"
+            range="origin/${{ github.base_ref }}...HEAD"
+          elif [[ "${{ github.event_name }}" == "push" ]]; then
+            before="${{ github.event.before }}"
+            if [[ -z "$before" || "$before" =~ ^0+$ ]]; then
+              echo "code=true" >> "$GITHUB_OUTPUT"
+              echo "No usable before SHA; treating as code change."
+              exit 0
+            fi
+            range="${before}...${{ github.sha }}"
+          else
+            echo "code=true" >> "$GITHUB_OUTPUT"
+            echo "workflow_dispatch: treating as code change."
+            exit 0
+          fi
+
+          patterns='(^legacy/.*\.swift$|^legacy/(.*/)?Package\.(swift|resolved)$|^legacy/sonar-project\.properties$|^legacy/\.swiftlint|^legacy/\.swiftformat|^legacy/Thaw\.xcodeproj/|^legacy/scripts/|^legacy/.*\.xcstrings$|^legacy/\.github/actions/|^\.github/workflows/ci-legacy\.yml$)'
+          if git diff --name-only "$range" | grep -E "$patterns" >/dev/null; then
+            echo "code=true" >> "$GITHUB_OUTPUT"
+            echo "Code-related paths changed."
+          else
+            echo "code=false" >> "$GITHUB_OUTPUT"
+            echo "No code-related paths changed; heavy jobs will no-op."
+          fi
+
+  static_analysis:
+    needs: changes
+    if: github.repository == 'thaw-app/Thaw'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        if: needs.changes.outputs.code == 'true'
+        with:
+          fetch-depth: 0
+
+      - name: Skip lint (no code changes)
+        if: needs.changes.outputs.code != 'true'
+        run: echo "No code-related paths changed; skipping SwiftLint."
+
+      - name: Validate XCStrings
+        if: needs.changes.outputs.code == 'true' && github.event_name == 'pull_request'
+        shell: bash
+        run: |
+          set -euo pipefail
+          changed_files=$(git diff --name-only origin/${{ github.base_ref }}...HEAD | grep '^legacy/.*\.xcstrings$' || true)
+          if [ -z "$changed_files" ]; then
+            echo "No modified .xcstrings files."
+            exit 0
+          fi
+          for file in $changed_files; do
+            echo "Validating $file"
+            python3 -m json.tool "$file" > /dev/null
+          done
+
+      - name: Verify SwiftLint input file list
+        if: needs.changes.outputs.code == 'true'
+        run: |
+          set -euo pipefail
+          chmod +x legacy/scripts/generate-swiftlint-inputs.sh
+          legacy/scripts/generate-swiftlint-inputs.sh /tmp/swiftlint-inputs.xcfilelist
+          diff -u legacy/scripts/swiftlint-inputs.xcfilelist /tmp/swiftlint-inputs.xcfilelist
+
+      - name: Run SwiftLint
+        if: needs.changes.outputs.code == 'true'
+        run: |
+          docker run --rm -v "$PWD/legacy:/work" -w /work \
+            ghcr.io/realm/swiftlint:0.63.3@sha256:b70b763c949399cc3e4fdcfbc7588944d9503d498b6d96e853dfa07a944256e6 \
+            swiftlint --strict
+
+  build:
+    if: github.repository == 'thaw-app/Thaw'
+    runs-on: xcode-27
+    needs: [changes, static_analysis]
+    env:
+      HOMEBREW_NO_AUTO_UPDATE: 1
+    steps:
+      - name: Skip macOS build (no code changes)
+        if: needs.changes.outputs.code != 'true'
+        run: echo "No code-related paths changed; skipping xcodebuild test."
+
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        if: needs.changes.outputs.code == 'true'
+      - name: Cache SwiftPM
+        if: needs.changes.outputs.code == 'true'
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: |
+            Build/SourcePackages
+            ~/Library/Caches/org.swift.swiftpm
+          key: spm-legacy-${{ runner.os }}-${{ hashFiles('legacy/**/Package.resolved') }}
+          restore-keys: |
+            spm-legacy-${{ runner.os }}-
+
+      - name: Compute cache week
+        if: needs.changes.outputs.code == 'true'
+        id: cache-week
+        run: echo "week=$(date +%Y-%U)" >> "$GITHUB_OUTPUT"
+
+      # Persists Xcode's compilation cache so most of the build is cache hits. Keyed
+      # by week to rotate it; restore-keys start from last week's.
+      - name: Cache Swift compilation cache
+        if: needs.changes.outputs.code == 'true'
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: Build/CompilationCache.noindex
+          key: compilation-cache-legacy-${{ runner.os }}-${{ github.ref_name }}-${{ steps.cache-week.outputs.week }}
+          restore-keys: |
+            compilation-cache-legacy-${{ runner.os }}-${{ github.ref_name }}-
+            compilation-cache-legacy-${{ runner.os }}-
+
+      - name: Build and Test
+        if: needs.changes.outputs.code == 'true'
+        run: |
+          xcodebuild test \
+            -project legacy/Thaw.xcodeproj \
+            -scheme Thaw \
+            -derivedDataPath Build/ \
+            -destination 'platform=macOS' \
+            -enableCodeCoverage YES \
+            CODE_SIGN_IDENTITY="" \
+            CODE_SIGNING_REQUIRED=NO \
+            CODE_SIGNING_ALLOWED=NO
+
+      - name: Convert coverage to XML
+        if: needs.changes.outputs.code == 'true' && (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository)
+        env:
+          XCRESULTPARSER_VERSION: "2.0.1"
+        run: |
+          set -euo pipefail
+          curl -fsSL -o xcresultparser.zip \
+            "https://github.com/a7ex/xcresultparser/releases/download/${XCRESULTPARSER_VERSION}/xcresultparser.zip"
+          unzip -oq xcresultparser.zip
+          NEWEST_BUNDLE=$(ls -td Build/Logs/Test/*.xcresult 2>/dev/null | head -n1)
+          ./product/xcresultparser -c -o xml "$NEWEST_BUNDLE" > coverage.xml
+          # Sonar matches coverage by path on Linux, so rewrite this runner's absolute
+          # paths; the script fails if nothing resolves rather than report 0%.
+          python3 legacy/scripts/normalize-coverage.py coverage.xml "$GITHUB_WORKSPACE/legacy"
+
+      - name: Upload Coverage XML
+        if: needs.changes.outputs.code == 'true' && (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository)
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: coverage-data-legacy
+          path: coverage.xml
+          retention-days: 1
+          if-no-files-found: error
+
+      # Keeps the last report so docs-only pushes still feed Sonar instead of 0%.
+      # The key omits runner.os so the Linux sonarqube job can restore it.
+      - name: Cache Coverage XML for Sonar reuse
+        if: needs.changes.outputs.code == 'true' && (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository)
+        uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: coverage.xml
+          key: sonar-coverage-legacy-${{ github.ref_name }}-${{ github.sha }}
+
+  # Tests with Xcode 26.6 on macOS 26; `build` covers Xcode 27 on macOS 27
+  # and owns coverage.
+  build-macos-26:
+    if: github.repository == 'thaw-app/Thaw'
+    runs-on: macos-26
+    needs: [changes, static_analysis]
+    env:
+      HOMEBREW_NO_AUTO_UPDATE: 1
+    steps:
+      - name: Skip macOS build (no code changes)
+        if: needs.changes.outputs.code != 'true'
+        run: echo "No code-related paths changed; skipping xcodebuild test."
+
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        if: needs.changes.outputs.code == 'true'
+
+      - name: Select Xcode 26.6
+        if: needs.changes.outputs.code == 'true'
+        run: sudo xcode-select -s /Applications/Xcode_26.6.app/Contents/Developer
+
+      - name: Cache SwiftPM
+        if: needs.changes.outputs.code == 'true'
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: |
+            Build/SourcePackages
+            ~/Library/Caches/org.swift.swiftpm
+          key: spm-legacy-macos-26-${{ hashFiles('legacy/**/Package.resolved') }}
+          restore-keys: |
+            spm-legacy-macos-26-
+
+      - name: Build and Test
+        if: needs.changes.outputs.code == 'true'
+        run: |
+          xcodebuild test \
+            -project legacy/Thaw.xcodeproj \
+            -scheme Thaw \
+            -derivedDataPath Build/ \
+            -destination 'platform=macOS' \
+            CODE_SIGN_IDENTITY="" \
+            CODE_SIGNING_REQUIRED=NO \
+            CODE_SIGNING_ALLOWED=NO
+
+  # Always runs so Scorecard sees a Sonar check on nearly every PR; forks and
+  # Dependabot no-op without secrets under the same job name.
+  sonarqube:
+    needs: [changes, build]
+    if: github.repository == 'thaw-app/Thaw'
+    runs-on: ubuntu-latest
+    env:
+      # Forks and Dependabot get no SONAR_TOKEN on pull_request.
+      SONAR_ENABLED: ${{ github.actor != 'dependabot[bot]' && (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository) }}
+    steps:
+      - name: Skip SonarQube for fork / Dependabot PRs
+        if: env.SONAR_ENABLED != 'true'
+        run: |
+          echo "Skipping SonarQube analysis (fork or Dependabot PR; no SONAR_TOKEN access)"
+          echo "Analysis will be performed after merge to the default branch"
+
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        if: env.SONAR_ENABLED == 'true'
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Download Coverage XML
+        if: env.SONAR_ENABLED == 'true' && needs.changes.outputs.code == 'true'
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: coverage-data-legacy
+
+      # Docs/chore scans skip the build, so reuse the last cached report rather than
+      # let Sonar publish 0%.
+      - name: Restore cached Coverage XML
+        if: env.SONAR_ENABLED == 'true' && needs.changes.outputs.code != 'true'
+        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: coverage.xml
+          key: sonar-coverage-legacy-${{ github.ref_name }}-${{ github.sha }}
+          restore-keys: |
+            sonar-coverage-legacy-${{ github.ref_name }}-
+            sonar-coverage-legacy-${{ github.base_ref || 'development' }}-
+            sonar-coverage-legacy-development-
+          fail-on-cache-miss: false
+
+      - name: Resolve Sonar coverage args
+        if: env.SONAR_ENABLED == 'true'
+        id: coverage
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [[ -f coverage.xml ]]; then
+            echo "args=-Dsonar.coverageReportPaths=$GITHUB_WORKSPACE/coverage.xml" >> "$GITHUB_OUTPUT"
+            echo "Using coverage.xml ($(wc -c < coverage.xml | tr -d ' ') bytes)"
+          else
+            echo "args=" >> "$GITHUB_OUTPUT"
+            echo "::warning::No coverage.xml available; the Sonar scan is skipped unless this run built the code."
+          fi
+
+      # coverage.xml exists only if this run built or restored it, so keep
+      # sonar.coverageReportPaths out of sonar-project.properties.
+      #
+      # A run that skipped the build and found no cached report has nothing to
+      # tell Sonar about coverage. Scanning anyway publishes 0% and turns the
+      # branch's quality gate red, so that run leaves the last analysis alone.
+      - name: SonarQube Scan
+        if: env.SONAR_ENABLED == 'true' && (needs.changes.outputs.code == 'true' || steps.coverage.outputs.args != '')
+        uses: SonarSource/sonarqube-scan-action@d209202bc7d53ff1cc128f7f907dac145c9d6ae9 # v8.3.0
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+        with:
+          projectBaseDir: legacy
+          args: ${{ steps.coverage.outputs.args }}

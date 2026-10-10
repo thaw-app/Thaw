@@ -3,11 +3,6 @@ description: "Triages new issues: sets type and Priority, applies classifier lab
 model: gpt-6-luna
 engine:
   id: copilot
-  # gpt-6-luna is not in the pinned Copilot CLI's built-in catalog, so the CLI
-  # falls back to the chat-completions wire format and the backend rejects the
-  # request with a 400. Force the Responses API.
-  env:
-    COPILOT_PROVIDER_WIRE_API: responses
 on:
   issues:
     types: [opened]

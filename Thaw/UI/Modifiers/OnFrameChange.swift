@@ -2,23 +2,17 @@
 //  OnFrameChange.swift
 //  Project: Thaw
 //
-//  Copyright (Ice) © 2023–2025 Jordan Baird
 //  Copyright (Thaw) © 2026 Toni Förster
 //  Licensed under the GNU GPLv3
 
-// Known warning: onGeometryChange's transform is @Sendable, but the SDK's
-// coordinate-space types aren't marked Sendable yet. They're immutable value
-// types; revisit once the SDK annotates them.
 import SwiftUI
 
 extension View {
     /// Performs the given action when the view's frame changes.
     ///
     /// - Parameters:
-    ///   - coordinateSpace: The coordinate space to use when accessing
-    ///     the view's frame.
-    ///   - action: An action to perform when the view's frame changes.
-    ///     The closure takes the new frame as a parameter.
+    ///   - coordinateSpace: The space used to measure the frame.
+    ///   - action: Receives the new frame.
     func onFrameChange(
         in coordinateSpace: some CoordinateSpaceProtocol = .local,
         perform action: @escaping (CGRect) -> Void
@@ -33,9 +27,8 @@ extension View {
     /// Updates the given binding when the view's frame changes.
     ///
     /// - Parameters:
-    ///   - coordinateSpace: The coordinate space to use when accessing
-    ///     the view's frame.
-    ///   - binding: A binding to update when the view's frame changes.
+    ///   - coordinateSpace: The space used to measure the frame.
+    ///   - binding: Receives the new frame.
     func onFrameChange(
         in coordinateSpace: some CoordinateSpaceProtocol = .local,
         update binding: Binding<CGRect>

@@ -6,7 +6,6 @@
 //  Licensed under the GNU GPLv3
 
 import Ifrit
-import Observation
 import SwiftUI
 
 // MARK: - SearchGroup
@@ -23,30 +22,25 @@ struct SearchGroup: Identifiable {
 
 // MARK: - SearchItem
 
-/// A precomputed searchable wrapper around a ``SearchEntry``.
+/// A precomputed searchable wrapper around a SearchEntry.
 ///
-/// `properties` are built once so the corpus is tokenized a single time.
+/// The properties are built once at initialization rather than re-derived
+/// on every fuzzy search, so the static corpus is tokenized a single time.
 private struct SearchItem: Searchable {
     let entry: SearchEntry
     let properties: [FuseProp]
 
-    init(entry: SearchEntry, bundle: Bundle = .main) {
+    init(entry: SearchEntry) {
         self.entry = entry
-        // Title ranks above keywords, which rank above the description.
+        // Weight the title highest, then keywords, then the description.
+        // Lower weight values contribute less to the diff score, so a
+        // match in the title ranks above a match in the description.
         let weights = SearchWeights.settings
-        // Match against what the pane actually renders, so a translated
-        // build is searchable in its own language.
-        let localizedTitle = entry.localizedTitle(bundle: bundle)
-        var props = [FuseProp(localizedTitle, weight: weights.title)]
-        if localizedTitle != entry.titleText {
-            // Keep the English source matchable too, for terms users saw in
-            // the docs.
-            props.append(FuseProp(entry.titleText, weight: weights.title))
-        }
+        var props = [FuseProp(entry.titleText, weight: weights.title)]
         if !entry.keywords.isEmpty {
             props.append(FuseProp(entry.keywords.joined(separator: " "), weight: weights.keywords))
         }
-        if let descriptionText = entry.localizedDescription(bundle: bundle) {
+        if let descriptionText = entry.descriptionText {
             props.append(FuseProp(descriptionText, weight: weights.description))
         }
         self.properties = props
@@ -57,9 +51,9 @@ private struct SearchItem: Searchable {
 
 /// The model behind the settings sidebar search.
 ///
-/// Uses ``Fuse`` to fuzzy-match the static ``SearchIndex``, then groups
-/// the ranked results by pane into ``SearchGroup``s for
-/// ``SearchResultsList``.
+/// Uses Fuse to fuzzy-match the static SearchIndex, then groups
+/// the ranked results by pane into SearchGroups for
+/// SearchResultsList.
 @MainActor
 @Observable
 final class SearchModel {
@@ -71,26 +65,14 @@ final class SearchModel {
 
     var displayedGroups = [SearchGroup]()
 
+    @ObservationIgnored
     let fuse = Fuse(threshold: 0.5)
 
     /// The static search corpus, tokenized once and reused across queries.
-    private let searchItems = SearchIndex.entries.map { SearchItem(entry: $0) }
+    @ObservationIgnored
+    private let searchItems = SearchIndex.entries.map(SearchItem.init)
 
-    /// Ranks the whole index against `query`, resolving titles against
-    /// `bundle`. Tests use it, since `Bundle.main` can't switch localization.
-    static func rankedEntries(for query: String, bundle: Bundle) -> [SearchEntry] {
-        let items = SearchIndex.entries.map { SearchItem(entry: $0, bundle: bundle) }
-        return rankedEntries(for: query, in: items, fuse: Fuse(threshold: 0.5))
-    }
-
-    /// Ranks `items` against `query`, best match first.
-    private static func rankedEntries(for query: String, in items: [SearchItem], fuse: Fuse) -> [SearchEntry] {
-        let results = fuse.searchSync(query, in: items, by: \.properties)
-        let scored = results.map { (item: items[$0.index], diffScore: $0.diffScore) }
-        return SearchIndex.sortedByRelevance(scored).map(\.entry)
-    }
-
-    /// Rebuilds `displayedGroups` from the current `searchText`.
+    /// Rebuilds displayedGroups from the current searchText.
     func updateDisplayedItems() {
         let query = searchText.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !query.isEmpty else {
@@ -100,18 +82,24 @@ final class SearchModel {
             return
         }
 
+        let fuseResults = fuse.searchSync(query, in: searchItems, by: \.properties)
+
+        let scored = fuseResults.map { result in
+            (item: searchItems[result.index], diffScore: result.diffScore)
+        }
+
         // Rank globally by relevance, then group by pane preserving the rank
         // order within each pane. Pane order follows the best-scoring entry.
-        let ranked = Self.rankedEntries(for: query, in: searchItems, fuse: fuse)
+        let ranked = SearchIndex.sortedByRelevance(scored)
 
         var grouped: [SettingsNavigationIdentifier: [SearchEntry]] = [:]
         var paneOrder: [SettingsNavigationIdentifier] = []
-        for entry in ranked {
-            let pane = entry.pane
+        for item in ranked {
+            let pane = item.entry.pane
             if grouped[pane] == nil {
                 paneOrder.append(pane)
             }
-            grouped[pane, default: []].append(entry)
+            grouped[pane, default: []].append(item.entry)
         }
 
         displayedGroups = paneOrder.map { pane in

@@ -1,0 +1,711 @@
+name: Release (Thaw 2)
+
+# Manual only; pushing a tag never releases. Drafts until attach-provenance
+# adds the attestations. The Sparkle feed lives in thaw-app/updates.
+
+on:
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: Existing release tag to publish (for example, 3.0.0-beta.1)
+        required: true
+        type: string
+      channel:
+        description: Sparkle channel (auto infers from tag suffix)
+        required: true
+        type: choice
+        default: auto
+        options:
+          - auto
+          - stable
+          - beta
+          - alpha
+      publish_release:
+        description: Publish the GitHub Release (uncheck to leave as draft)
+        required: false
+        type: boolean
+        default: false
+      discussion_category:
+        description: >-
+          Open a release discussion in this category. Only takes effect when
+          Publish release is checked, because the discussion is created on the
+          draft-to-published transition.
+        required: false
+        type: choice
+        default: none
+        options:
+          - none
+          - Announcements
+          - General
+          - Ideas
+      publish_appcast:
+        description: Push signed appcast.xml to thaw-app/updates gh-pages
+        required: false
+        type: boolean
+        default: true
+      dry_run:
+        description: "Dry run: build and report only. Publishes nothing, signs nothing."
+        required: false
+        type: boolean
+        default: false
+      release_notes:
+        description: >-
+          Optional manual override for release notes (Markdown/HTML). If left
+          blank, notes are auto-extracted from the CHANGELOG.md section for this
+          tag (Keep a Changelog style: "## [tag]"). Used for both the Thaw
+          GitHub Release body and the Sparkle appcast description. Multi-line
+          text is easiest via gh workflow run release.yml -f release_notes="$(cat notes.md)"
+          The web UI's field is single-line.
+        required: false
+        type: string
+        default: ""
+
+concurrency:
+  # Dry runs publish nothing, so they must not queue behind, or block, a real release.
+  group: sparkle-appcast${{ inputs.dry_run && '-dry-run' || '' }}
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  release:
+    if: github.repository == 'thaw-app/Thaw'
+    # GitHub-hosted Xcode 27 preview image (arm64); xcode-27-xlarge for more cores.
+    runs-on: xcode-27
+    # Needs approval on the `release` environment (admins can bypass); secrets
+    # aren't read before that.
+    environment: release
+    permissions:
+      contents: write
+      id-token: write
+    outputs:
+      tag: ${{ steps.meta.outputs.tag }}
+      dmg-name: ${{ steps.sbom-meta.outputs.dmg-name }}
+      dmg-digest: ${{ steps.sbom-meta.outputs.dmg-digest }}
+      sbom-name: ${{ steps.sbom-meta.outputs.name }}
+      sbom-digest: ${{ steps.sbom-meta.outputs.sbom-digest }}
+    env:
+      APP_NAME: "Thaw.app"
+      DMG_NAME: "Thaw.dmg"
+      UPDATES_REPOSITORY: thaw-app/updates
+      LEGACY_APPCAST_REPOSITORY: stonerl/Thaw
+    steps:
+      # A local composite action has to exist on disk before it can run, so
+      # this sparse checkout brings in .github/actions and nothing else.
+      - name: Checkout build actions
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          sparse-checkout: legacy/.github/actions
+
+      - name: Checkout source
+        id: source
+        uses: ./legacy/.github/actions/checkout-source
+        with:
+          ref: refs/tags/${{ inputs.tag }}
+          fetch-depth: 0
+
+      - name: Resolve tag and channel
+        id: meta
+        env:
+          TAG_NAME: ${{ inputs.tag }}
+          CHANNEL_INPUT: ${{ inputs.channel }}
+        run: |
+          set -euo pipefail
+
+          if [[ ! "$TAG_NAME" =~ ^[0-9]+\.[0-9]+\.[0-9]+(-[a-zA-Z0-9._]+)?$ ]]; then
+            echo "Invalid tag name format. Must be in the form 1.2.3 or 1.2.3-rc.1"
+            exit 1
+          fi
+
+          if [[ "$TAG_NAME" != 2.* ]]; then
+            echo "::error::Release (Thaw 2) publishes 2.x tags only; use Release for $TAG_NAME."
+            exit 1
+          fi
+
+          channel="$CHANNEL_INPUT"
+          if [[ "$channel" == "auto" ]]; then
+            shopt -s nocasematch
+            if [[ "$TAG_NAME" =~ -(alpha|nightly)(\.|$) ]]; then
+              channel="alpha"
+            elif [[ "$TAG_NAME" =~ -(beta|rc)(\.|$) ]]; then
+              channel="beta"
+            else
+              channel="stable"
+            fi
+            shopt -u nocasematch
+          fi
+
+          case "$channel" in
+            stable|beta|alpha) ;;
+            *)
+              echo "Unsupported channel: $channel"
+              exit 1
+              ;;
+          esac
+
+          prerelease=false
+          if [[ "$channel" != "stable" ]]; then
+            prerelease=true
+          fi
+
+          {
+            echo "tag=$TAG_NAME"
+            echo "channel=$channel"
+            echo "prerelease=$prerelease"
+          } >> "$GITHUB_OUTPUT"
+
+          echo "tag=$TAG_NAME channel=$channel prerelease=$prerelease"
+
+      - name: Resolve release notes
+        id: notes
+        uses: thaw-app/org-ci/actions/release-notes@d6dce882eeefd199062c21ef6eb646428a255568
+        with:
+          tag: ${{ steps.meta.outputs.tag }}
+          release-notes: ${{ inputs.release_notes }}
+          changelog-paths: |
+            ${{ steps.source.outputs.source-dir }}/CHANGELOG.md
+            ${{ steps.source.outputs.source-dir }}/Thaw/Resources/CHANGELOG.md
+
+      - name: Select latest installed Xcode (including betas)
+        uses: maxim-lobanov/setup-xcode@ed7a3b1fda3918c0306d1b724322adc0b8cc0a90 # v1.7.0
+        with:
+          xcode-version: latest
+
+      # A tag that pins SwiftLint runs it as a build phase, and the archive
+      # fails when that version is missing. Older tags have no installer.
+      - name: Install pinned SwiftLint
+        working-directory: ${{ steps.source.outputs.source-dir }}
+        run: |
+          if [ -f scripts/install-swiftlint.sh ]; then
+            sh scripts/install-swiftlint.sh
+            echo "$HOME/.local/bin" >> "$GITHUB_PATH"
+          else
+            echo "This tag does not pin SwiftLint; nothing to install."
+          fi
+
+      - name: Configure signing
+        uses: thaw-app/org-ci/actions/configure-signing@d90bbc87aa4dff91d3bc9e30fb6ceef0765bd986
+        with:
+          apple-application-cert: ${{ secrets.APPLE_APPLICATION_CERT }}
+          apple-application-cert-password: ${{ secrets.APPLE_APPLICATION_CERT_PASSWORD }}
+          apple-id: ${{ secrets.APPLE_ID }}
+          apple-id-password: ${{ secrets.APPLE_ID_PASSWORD }}
+          apple-team-id: ${{ secrets.APPLE_TEAM_ID }}
+
+      - name: Build
+        uses: thaw-app/org-ci/actions/build@d90bbc87aa4dff91d3bc9e30fb6ceef0765bd986
+        with:
+          apple-team-id: ${{ secrets.APPLE_TEAM_ID }}
+          project-name: ${{ steps.source.outputs.project-name }}
+          scheme-name: Thaw
+          deployment-target: ${{ steps.source.outputs.deployment-target }}
+
+      - name: Export Archive
+        uses: thaw-app/org-ci/actions/export-and-package@d90bbc87aa4dff91d3bc9e30fb6ceef0765bd986
+        with:
+          apple-team-id: ${{ secrets.APPLE_TEAM_ID }}
+          app-name: ${{ env.APP_NAME }}
+          dmg-name: ${{ env.DMG_NAME }}
+
+      - name: Notarize
+        uses: thaw-app/org-ci/actions/notarize-and-validate@d90bbc87aa4dff91d3bc9e30fb6ceef0765bd986
+        with:
+          dmg-name: ${{ env.DMG_NAME }}
+          app-name: ${{ env.APP_NAME }}
+
+      - name: Generate CycloneDX SBOM
+        id: sbom-meta
+        env:
+          TAG: ${{ steps.meta.outputs.tag }}
+          DMG_NAME: ${{ env.DMG_NAME }}
+          SOURCE_DIR: ${{ steps.source.outputs.source-dir }}
+          # Syft pinned by version and archive digest; bump both from the release's
+          # syft_<version>_checksums.txt.
+          SYFT_VERSION: 1.42.3
+          SYFT_SHA256_DARWIN_ARM64: d71ee7db2be0fe2e96f679fd9d69ef04274cc86c8604707797080a21070b3f32
+          SYFT_SHA256_DARWIN_AMD64: c00d01b7c43504708c8922d643d1cbaefa62ca8876baa4d2c2cf4c3be43707a9
+        run: |
+          set -euo pipefail
+
+          case "$(uname -m)" in
+            arm64) syft_arch=arm64; syft_sha="$SYFT_SHA256_DARWIN_ARM64" ;;
+            x86_64) syft_arch=amd64; syft_sha="$SYFT_SHA256_DARWIN_AMD64" ;;
+            *) echo "Unsupported runner architecture: $(uname -m)"; exit 1 ;;
+          esac
+
+          bin="$RUNNER_TEMP/syft-bin"
+          archive="$RUNNER_TEMP/syft.tar.gz"
+          mkdir -p "$bin"
+          curl -sSfL --retry 3 \
+            "https://github.com/anchore/syft/releases/download/v${SYFT_VERSION}/syft_${SYFT_VERSION}_darwin_${syft_arch}.tar.gz" \
+            -o "$archive"
+          echo "${syft_sha}  ${archive}" | shasum -a 256 -c -
+          tar -xzf "$archive" -C "$bin" syft
+          export PATH="$bin:$PATH"
+          syft version
+
+          # Scan the source tree: SwiftPM deps are statically linked, so only
+          # Package.resolved lists them. Build output and CI files are excluded.
+          sbom_name="Thaw_${TAG}.cdx.json"
+          sbom_path="build/${sbom_name}"
+          syft scan "dir:${SOURCE_DIR}" \
+            --exclude './build/**' \
+            --exclude './.git/**' \
+            --exclude './.github/**' \
+            --source-name Thaw \
+            --source-version "$TAG" \
+            -o "cyclonedx-json=${sbom_path}"
+          test -f "$sbom_path"
+          ls -la "$sbom_path"
+
+          # Basename-only checksums so `shasum -c` works after downloading the release assets.
+          (
+            cd build
+            shasum -a 256 "$sbom_name" | tee "${sbom_name}.sha256"
+            shasum -a 256 "$DMG_NAME" | tee "${DMG_NAME}.sha256"
+          )
+
+          sbom_hex="$(awk '{print $1}' "build/${sbom_name}.sha256")"
+          dmg_hex="$(awk '{print $1}' "build/${DMG_NAME}.sha256")"
+
+          {
+            echo "path=${sbom_path}"
+            echo "name=${sbom_name}"
+            echo "dmg-name=${DMG_NAME}"
+            echo "sbom-digest=sha256:${sbom_hex}"
+            echo "dmg-digest=sha256:${dmg_hex}"
+          } >> "$GITHUB_OUTPUT"
+
+      # generate_appcast drops the notes of prior archives it re-reads for
+      # deltas; Prepare appcasts restores them from this copy.
+      - name: Snapshot current appcast
+        id: previous-appcast
+        env:
+          GH_TOKEN: ${{ secrets.UPDATES_GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          path="$RUNNER_TEMP/appcast-before.xml"
+          # Raw, because the JSON form leaves content empty above 1 MB.
+          if gh api -H "Accept: application/vnd.github.raw" \
+            "repos/${UPDATES_REPOSITORY}/contents/appcast.xml?ref=gh-pages" \
+            > "$path" 2> "$RUNNER_TEMP/appcast-before.err" && [[ -s "$path" ]]; then
+            echo "path=$path" >> "$GITHUB_OUTPUT"
+          elif grep -q 'HTTP 404' "$RUNNER_TEMP/appcast-before.err"; then
+            echo "No appcast yet; nothing to restore"
+            echo "path=" >> "$GITHUB_OUTPUT"
+          else
+            # Publishing without it would wipe the notes of every prior release.
+            cat "$RUNNER_TEMP/appcast-before.err"
+            echo "::error::Could not snapshot the current appcast"
+            exit 1
+          fi
+
+      - name: Sparkle ZIP and appcast
+        id: sparkle
+        uses: thaw-app/org-ci/actions/sparkle-release@d90bbc87aa4dff91d3bc9e30fb6ceef0765bd986
+        with:
+          tag: ${{ steps.meta.outputs.tag }}
+          channel: ${{ steps.meta.outputs.channel }}
+          app-name: ${{ env.APP_NAME }}
+          asset-prefix: Thaw
+          appcast-title: Thaw
+          sparkle-private-key: ${{ secrets.SPARKLE_ED25519_PRIVATE_KEY }}
+          # Matches the Sparkle version in Package.resolved.
+          sparkle-version: "2.10.0"
+          sparkle-sha256: c2bf58aa8387266ac179357b1415d6f2635f044da8be41042af32425dae6da0c
+          updates-repository: ${{ env.UPDATES_REPOSITORY }}
+          updates-token: ${{ secrets.UPDATES_GITHUB_TOKEN }}
+          release-html-url: https://github.com/${{ github.repository }}/releases/tag/${{ steps.meta.outputs.tag }}
+          release-notes: ${{ steps.notes.outputs.body }}
+          publish-appcast: "false"
+
+      - name: Prepare appcasts
+        id: appcasts
+        uses: ./legacy/.github/actions/prepare-appcasts
+        with:
+          appcast-path: ${{ steps.sparkle.outputs.appcast-path }}
+          release-tag: ${{ steps.meta.outputs.tag }}
+          previous-appcast-path: ${{ steps.previous-appcast.outputs.path }}
+
+      - name: Collect update assets
+        id: update-assets
+        run: |
+          set -euo pipefail
+
+          list="$RUNNER_TEMP/update-assets.txt"
+          : > "$list"
+          printf '%s\n' "${{ steps.sparkle.outputs.zip-path }}" >> "$list"
+
+          shopt -s nullglob
+          for delta in "$RUNNER_TEMP"/sparkle-archives/*.delta; do
+            printf '%s\n' "$delta" >> "$list"
+          done
+
+          {
+            echo "files<<EOF"
+            cat "$list"
+            echo "EOF"
+          } >> "$GITHUB_OUTPUT"
+          echo "Update assets (dual-publish: thaw-app/updates + thaw-app/Thaw):"
+          cat "$list"
+
+      - name: Create updates GitHub Release (ZIP + deltas)
+        if: ${{ !inputs.dry_run }}
+        uses: softprops/action-gh-release@efb35369e0ad2afab669f228072c1b0d510eae64 # v3.0.3
+        with:
+          # v3 ignores env GITHUB_TOKEN; token input is required for cross-repo.
+          # UPDATES_GITHUB_TOKEN is a release-environment secret only.
+          token: ${{ secrets.UPDATES_GITHUB_TOKEN }}
+          repository: ${{ env.UPDATES_REPOSITORY }}
+          tag_name: ${{ steps.meta.outputs.tag }}
+          target_commitish: main
+          files: ${{ steps.update-assets.outputs.files }}
+          generate_release_notes: false
+          draft: ${{ !inputs.publish_release }}
+          prerelease: ${{ steps.meta.outputs.prerelease == 'true' }}
+          body: |
+            Sparkle update payloads for Thaw `${{ steps.meta.outputs.tag }}`.
+
+            Installer DMG: https://github.com/${{ github.repository }}/releases/tag/${{ steps.meta.outputs.tag }}
+
+      # Skipped on a dry run: keyless signing writes a permanent, public entry to
+      # the Sigstore transparency log, which cannot be retracted afterwards.
+      - name: Install cosign
+        if: ${{ !inputs.dry_run }}
+        uses: sigstore/cosign-installer@6f9f17788090df1f26f669e9d70d6ae9567deba6 # v4.1.2
+
+      - name: Sign installer DMG and SBOM (Sigstore)
+        if: ${{ !inputs.dry_run }}
+        env:
+          COSIGN_YES: "true"
+          DMG_PATH: build/${{ env.DMG_NAME }}
+          SBOM_PATH: ${{ steps.sbom-meta.outputs.path }}
+        run: |
+          set -euo pipefail
+          cosign version
+          cosign sign-blob --bundle "${DMG_PATH}.sigstore.json" "$DMG_PATH"
+          cosign sign-blob --bundle "${SBOM_PATH}.sigstore.json" "$SBOM_PATH"
+          ls -la "${DMG_PATH}.sigstore.json" "${SBOM_PATH}.sigstore.json"
+
+      - name: Create Thaw GitHub Release (DMG + SBOM + Sparkle payloads)
+        if: ${{ !inputs.dry_run }}
+        uses: softprops/action-gh-release@efb35369e0ad2afab669f228072c1b0d510eae64 # v3.0.3
+        with:
+          # softprops v3 uses the token input (env GITHUB_TOKEN is ignored).
+          token: ${{ github.token }}
+          tag_name: ${{ steps.meta.outputs.tag }}
+          # Cutover: also attach ZIP/deltas here for 2–3 releases. Canonical
+          # Sparkle downloads remain thaw-app/updates (appcast enclosure URLs).
+          files: |
+            build/${{ env.DMG_NAME }}
+            build/${{ env.DMG_NAME }}.sigstore.json
+            build/${{ env.DMG_NAME }}.sha256
+            ${{ steps.sbom-meta.outputs.path }}
+            ${{ steps.sbom-meta.outputs.path }}.sigstore.json
+            ${{ steps.sbom-meta.outputs.path }}.sha256
+            ${{ steps.update-assets.outputs.files }}
+          body: ${{ steps.notes.outputs.body }}
+          generate_release_notes: false
+          # Always a draft; attach-provenance publishes it once the attestations are
+          # attached, so an unattested release can't ship.
+          draft: true
+          prerelease: ${{ steps.meta.outputs.prerelease == 'true' }}
+
+      - name: Publish appcast to updates gh-pages
+        if: ${{ inputs.publish_appcast && inputs.publish_release && !inputs.dry_run }}
+        uses: thaw-app/org-ci/actions/publish-file-to-branch@d90bbc87aa4dff91d3bc9e30fb6ceef0765bd986
+        with:
+          repository: ${{ env.UPDATES_REPOSITORY }}
+          branch: gh-pages
+          source-path: ${{ steps.appcasts.outputs.appcast-path }}
+          destination-path: appcast.xml
+          token: ${{ secrets.UPDATES_GITHUB_TOKEN }}
+          commit-message: "chore(sparkle): publish appcast for ${{ steps.meta.outputs.tag }} (${{ steps.meta.outputs.channel }})"
+          create-branch-if-missing: "true"
+          gitignore-allowlist: |
+            *
+            !appcast.xml
+            !.gitignore
+
+      # Keep historical 1.x entries and the 2.x line, never 3.x or newer.
+      - name: Mirror 2.x appcast to legacy stonerl Pages
+        if: ${{ inputs.publish_appcast && inputs.publish_release && !inputs.dry_run && startsWith(steps.meta.outputs.tag, '2.') }}
+        uses: thaw-app/org-ci/actions/publish-file-to-branch@d90bbc87aa4dff91d3bc9e30fb6ceef0765bd986
+        with:
+          repository: ${{ env.LEGACY_APPCAST_REPOSITORY }}
+          branch: main
+          source-path: ${{ steps.appcasts.outputs.legacy-appcast-path }}
+          destination-path: appcast.xml
+          token: ${{ secrets.LEGACY_APPCAST_TOKEN }}
+          commit-message: "chore(sparkle): mirror appcast for ${{ steps.meta.outputs.tag }} (${{ steps.meta.outputs.channel }})"
+          max-attempts: "3"
+
+      - name: Dry run report
+        if: ${{ inputs.dry_run }}
+        env:
+          TAG: ${{ steps.meta.outputs.tag }}
+          CHANNEL: ${{ steps.meta.outputs.channel }}
+          PRERELEASE: ${{ steps.meta.outputs.prerelease }}
+          DMG_NAME: ${{ env.DMG_NAME }}
+          SBOM_NAME: ${{ steps.sbom-meta.outputs.name }}
+          SBOM_PATH: ${{ steps.sbom-meta.outputs.path }}
+          APPCAST_PATH: ${{ steps.appcasts.outputs.appcast-path }}
+          LEGACY_APPCAST_PATH: ${{ steps.appcasts.outputs.legacy-appcast-path }}
+          UPDATE_FILES: ${{ steps.update-assets.outputs.files }}
+          UPDATES_REPO: ${{ env.UPDATES_REPOSITORY }}
+          LEGACY_REPO: ${{ env.LEGACY_APPCAST_REPOSITORY }}
+          MIRROR_LEGACY_APPCAST: ${{ startsWith(steps.meta.outputs.tag, '2.') }}
+          WOULD_PUBLISH_APPCAST: ${{ inputs.publish_appcast && inputs.publish_release }}
+          WOULD_DRAFT: ${{ !inputs.publish_release }}
+        run: |
+          set -euo pipefail
+
+          s() { printf '%s\n' "$*" >> "$GITHUB_STEP_SUMMARY"; }
+
+          # Exact byte count, humanised, because `du` rounds a 75-byte file up to a 4K block.
+          human() {
+            stat -f%z "$1" | awk '
+              $1 >= 1048576 { printf "%.1f MB\n", $1/1048576; next }
+              $1 >= 1024    { printf "%.1f KB\n", $1/1024; next }
+                            { printf "%d B\n", $1 }'
+          }
+
+          s "# Dry run: nothing was published"
+          s ""
+          s "No GitHub Release was created, no blob was signed or attested, and no"
+          s "appcast was pushed. Re-run with **Dry run** unchecked to publish."
+          s ""
+          s "| Setting | Value |"
+          s "| --- | --- |"
+          s "| Tag | \`${TAG}\` |"
+          s "| Channel | \`${CHANNEL}\` |"
+          s "| Prerelease | \`${PRERELEASE}\` |"
+          s "| Release would be created as | $([[ "$WOULD_DRAFT" == "true" ]] && echo 'draft' || echo '**published**') |"
+          s "| Appcast would be pushed | \`${WOULD_PUBLISH_APPCAST}\` |"
+
+          # --- Assets that a real run would upload -------------------------------
+          s ""
+          s "## Would upload to \`${GITHUB_REPOSITORY}\` (release \`${TAG}\`)"
+          s ""
+          s "Installer + attestations, plus Sparkle ZIP/deltas during cutover dual-publish."
+          s ""
+          s "| Asset | Size | SHA-256 |"
+          s "| --- | ---: | --- |"
+          for f in "build/${DMG_NAME}" "build/${DMG_NAME}.sha256" "$SBOM_PATH" "${SBOM_PATH}.sha256"; do
+            [[ -f "$f" ]] || { s "| \`$(basename "$f")\` | _missing_ | n/a |"; continue; }
+            s "| \`$(basename "$f")\` | $(human "$f") | \`$(shasum -a 256 "$f" | cut -c1-16)…\` |"
+          done
+          s "| \`${DMG_NAME}.sigstore.json\` | n/a | _skipped: signing is disabled on dry runs_ |"
+          s "| \`${SBOM_NAME}.sigstore.json\` | n/a | _skipped: signing is disabled on dry runs_ |"
+          s "| \`${DMG_NAME}.intoto.jsonl\` | n/a | _skipped: provenance is disabled on dry runs_ |"
+          s "| \`${SBOM_NAME}.intoto.jsonl\` | n/a | _skipped: provenance is disabled on dry runs_ |"
+          while IFS= read -r f; do
+            [[ -n "$f" ]] || continue
+            if [[ -f "$f" ]]; then
+              s "| \`$(basename "$f")\` | $(human "$f") | \`$(shasum -a 256 "$f" | cut -c1-16)…\` |"
+            else
+              s "| \`$(basename "$f")\` | _missing_ | n/a |"
+            fi
+          done <<< "$UPDATE_FILES"
+
+          s ""
+          s "## Would upload to \`${UPDATES_REPO}\` (release \`${TAG}\`)"
+          s ""
+          s "Canonical Sparkle payloads (appcast enclosure URLs point here)."
+          s ""
+          s "| Asset | Size |"
+          s "| --- | ---: |"
+          while IFS= read -r f; do
+            [[ -n "$f" ]] || continue
+            if [[ -f "$f" ]]; then
+              s "| \`$(basename "$f")\` | $(human "$f") |"
+            else
+              s "| \`$(basename "$f")\` | _missing_ |"
+            fi
+          done <<< "$UPDATE_FILES"
+
+          # --- SBOM contents -----------------------------------------------------
+          s ""
+          s "## SBOM contents (\`${SBOM_NAME}\`)"
+          s ""
+          if [[ -f "$SBOM_PATH" ]]; then
+            s "| Component | Version |"
+            s "| --- | --- |"
+            python3 - <<'PY'
+          import json, os, sys
+          d = json.load(open(os.environ["SBOM_PATH"]))
+          comps = [c for c in d.get("components", []) if c.get("purl")]
+          out = open(os.environ["GITHUB_STEP_SUMMARY"], "a")
+          for c in sorted(comps, key=lambda c: c["name"].lower()):
+              out.write("| `%s` | `%s` |\n" % (c["name"], c.get("version", "?")))
+          if not comps:
+              out.write("| _no packaged components found_ | n/a |\n")
+          print("SBOM lists %d component(s)" % len(comps))
+          PY
+          else
+            s "_SBOM not generated._"
+          fi
+
+          # --- What the appcast push would change --------------------------------
+          appcast_diff() {
+            local label="$1" url="$2" repo="$3" generated="$4"
+            s ""
+            s "## Appcast diff vs live \`${repo}\`"
+            s ""
+            s "Source: ${url}"
+            s ""
+            if [[ ! -f "$generated" ]]; then
+              s "_No appcast was generated._"
+              return
+            fi
+            local live="$RUNNER_TEMP/live-${label}.xml"
+            if ! curl -sSfL --retry 2 "$url" -o "$live"; then
+              s "_Could not fetch the live appcast (first publish, or Pages unavailable)._"
+              s "The generated appcast would be published as-is."
+              return
+            fi
+            if diff -q "$live" "$generated" >/dev/null 2>&1; then
+              s "No change. The live appcast already matches what this run generated."
+              return
+            fi
+            s '```diff'
+            diff -u -L "live (${repo})" -L "generated (${TAG})" \
+              "$live" "$generated" | head -200 >> "$GITHUB_STEP_SUMMARY" || true
+            s '```'
+          }
+
+          appcast_diff updates "https://thaw-app.github.io/updates/appcast.xml" "$UPDATES_REPO" "$APPCAST_PATH"
+          if [[ "$MIRROR_LEGACY_APPCAST" == "true" ]]; then
+            appcast_diff legacy "https://stonerl.github.io/Thaw/appcast.xml" "$LEGACY_REPO" "$LEGACY_APPCAST_PATH"
+          else
+            s ""
+            s "Legacy appcast mirror skipped: only 2.x releases publish to stonerl/Thaw."
+          fi
+
+          s ""
+          s "Full artifacts are attached to this run as \`dry-run-${TAG}\`."
+
+      - name: Upload dry run artifacts
+        if: ${{ inputs.dry_run }}
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: dry-run-${{ steps.meta.outputs.tag }}
+          if-no-files-found: warn
+          retention-days: 7
+          path: |
+            build/${{ env.DMG_NAME }}.sha256
+            ${{ steps.sbom-meta.outputs.path }}
+            ${{ steps.sbom-meta.outputs.path }}.sha256
+            ${{ steps.appcasts.outputs.appcast-path }}
+            ${{ steps.appcasts.outputs.legacy-appcast-path }}
+
+      - name: Cleanup keychain
+        if: always()
+        run: security delete-keychain "$RUNNER_TEMP/buildagent.keychain" || true
+
+  # Provenance signing runs in a reusable workflow with its own signing identity.
+  # Skipped on dry run: attestations are permanent Sigstore / GitHub records.
+  attest-dmg:
+    needs: release
+    if: ${{ github.repository == 'thaw-app/Thaw' && !inputs.dry_run }}
+    permissions:
+      id-token: write
+      attestations: write
+      contents: read
+    uses: ./.github/workflows/attest-build-provenance.yml
+    with:
+      subject-name: ${{ needs.release.outputs.dmg-name }}
+      subject-digest: ${{ needs.release.outputs.dmg-digest }}
+
+  attest-sbom:
+    needs: release
+    if: ${{ github.repository == 'thaw-app/Thaw' && !inputs.dry_run }}
+    permissions:
+      id-token: write
+      attestations: write
+      contents: read
+    uses: ./.github/workflows/attest-build-provenance.yml
+    with:
+      subject-name: ${{ needs.release.outputs.sbom-name }}
+      subject-digest: ${{ needs.release.outputs.sbom-digest }}
+
+  attach-provenance:
+    needs: [release, attest-dmg, attest-sbom]
+    if: ${{ github.repository == 'thaw-app/Thaw' && !inputs.dry_run }}
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Download DMG provenance
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: ${{ needs.attest-dmg.outputs.artifact-name }}
+          path: provenance
+
+      - name: Download SBOM provenance
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: ${{ needs.attest-sbom.outputs.artifact-name }}
+          path: provenance
+
+      # No checkout here, so gh cannot infer the repository from a git remote.
+      - name: Upload provenance to GitHub Release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_REPO: ${{ github.repository }}
+          TAG: ${{ needs.release.outputs.tag }}
+          DMG_BUNDLE: ${{ needs.attest-dmg.outputs.bundle-name }}
+          SBOM_BUNDLE: ${{ needs.attest-sbom.outputs.bundle-name }}
+        run: |
+          set -euo pipefail
+          dmg_bundle="provenance/${DMG_BUNDLE}"
+          sbom_bundle="provenance/${SBOM_BUNDLE}"
+          test -f "$dmg_bundle"
+          test -f "$sbom_bundle"
+          ls -la provenance/
+          gh release upload "$TAG" "$dmg_bundle" "$sbom_bundle" --clobber
+          echo "Attached provenance to release ${TAG}"
+
+      # Publishes once both bundles are attached. The discussion category must be set
+      # here, on publish, and as a slug, so resolve it first while still a draft.
+      - name: Publish release
+        if: ${{ inputs.publish_release }}
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_REPO: ${{ github.repository }}
+          TAG: ${{ needs.release.outputs.tag }}
+          DISCUSSION_CATEGORY: ${{ inputs.discussion_category }}
+        run: |
+          set -euo pipefail
+          if [[ "$DISCUSSION_CATEGORY" == "none" ]]; then
+            gh release edit "$TAG" --draft=false
+            echo "Published release ${TAG} with provenance attached"
+            exit 0
+          fi
+
+          # $owner and $name are GraphQL variables, not shell expansions.
+          # shellcheck disable=SC2016
+          categories="$(gh api graphql \
+            -F owner="${GH_REPO%%/*}" -F name="${GH_REPO#*/}" \
+            -f query='query($owner: String!, $name: String!) {
+              repository(owner: $owner, name: $name) {
+                discussionCategories(first: 20) { nodes { slug name } }
+              }
+            }' \
+            --jq '.data.repository.discussionCategories.nodes[] | "\(.slug)\t\(.name)"')"
+          category_slug="$(shopt -s nocasematch; while IFS=$'\t' read -r slug name; do
+            if [[ "$slug" == "$DISCUSSION_CATEGORY" || "$name" == "$DISCUSSION_CATEGORY" ]]; then
+              echo "$slug"
+              break
+            fi
+          done <<< "$categories")"
+          if [[ -z "$category_slug" ]]; then
+            echo "::error::No discussion category matches \"${DISCUSSION_CATEGORY}\". Available categories:"
+            echo "$categories" | awk -F'\t' '{ print "::error::  " $2 " (slug: " $1 ")" }'
+            exit 1
+          fi
+
+          gh release edit "$TAG" --draft=false \
+            --discussion-category "$category_slug"
+          echo "Published release ${TAG} with provenance attached, discussion in ${category_slug}"

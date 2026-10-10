@@ -4,6 +4,9 @@ on:
   push:
     branches:
       - development
+    paths-ignore:
+      - "legacy/**"
+      - ".github/workflows/*-legacy.yml"
   schedule:
     # Weekly, offset from the hour to avoid GitHub's cron pileup.
     - cron: "31 4 * * 1"
@@ -41,6 +44,12 @@ jobs:
 
       - name: Select Xcode 26.6
         run: sudo xcode-select -s /Applications/Xcode_26.6.app/Contents/Developer
+
+      # The Thaw target's lint build phase requires the pinned SwiftLint on PATH.
+      - name: Install pinned SwiftLint
+        run: |
+          sh scripts/install-swiftlint.sh
+          echo "$HOME/.local/bin" >> "$GITHUB_PATH"
 
       # CodeQL traces this build to construct the database. Tests are not run;
       # compilation is all the extractor needs.

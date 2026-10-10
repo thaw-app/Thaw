@@ -21,3 +21,18 @@ plans/
 # Local badge mockups
 .tmp-badge-preview/
 default.profraw
+
+# Thaw 3
+.build/
+.attic/
+*.xcuserstate
+.swiftpm/
+ThawUI/.build/
+*.profraw
+.dd/
+.local-logs/
+
+# Planning documents and antislop audit reports stay local, never committed.
+plans/
+advisor-plans/
+anti-slop/
