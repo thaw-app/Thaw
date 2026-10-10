@@ -341,6 +341,46 @@ extension NotificationCenterActivationTests {
         #expect(calls == 0)
     }
 
+    @Test("Each restoration says how the panel behaved", arguments: [
+        (initiallyPresenting: false, flipsAfter: 2, outcome: NotificationCenterActivation.Outcome.panelOpened),
+        (initiallyPresenting: true, flipsAfter: 2, outcome: .panelClosed),
+        (initiallyPresenting: false, flipsAfter: Int.max, outcome: .panelNeverOpened),
+        (initiallyPresenting: true, flipsAfter: Int.max, outcome: .panelDidNotClose),
+    ])
+    func restorationOutcome(
+        initiallyPresenting: Bool,
+        flipsAfter: Int,
+        outcome: NotificationCenterActivation.Outcome
+    ) async {
+        var polls = 0
+        var reported: [NotificationCenterActivation.Outcome] = []
+        let bridge = NotificationCenterActivation(
+            activate: { _ in },
+            panelPresenting: {
+                polls += 1
+                return polls > flipsAfter ? !initiallyPresenting : initiallyPresenting
+            },
+            report: { reported.append($0) }
+        )
+        await bridge.replay(begin: { .acquired }, restore: {}, send: {}, pause: { _ in })
+        await bridge.waitUntilIdle()
+        #expect(reported == [outcome])
+    }
+
+    @Test("A cancelled release reports no panel outcome")
+    func cancelledReleaseReportsNothing() async {
+        var reported: [NotificationCenterActivation.Outcome] = []
+        let bridge = NotificationCenterActivation(
+            activate: { _ in },
+            panelPresenting: { false },
+            report: { reported.append($0) }
+        )
+        bridge.prepareLease(begin: { .acquired }, restore: {})
+        bridge.cancel()
+        await bridge.waitUntilIdle()
+        #expect(reported.isEmpty)
+    }
+
     @Test("The panel is told by its owner's process and level, in any language", arguments: [
         (pid: 1107, layer: 23, presenting: true),
         // A desktop widget: same owner, drawn at the desktop level.

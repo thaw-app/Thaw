@@ -97,9 +97,7 @@ final class HIDEventManager {
     var notificationCenterHotkeys: [SystemNotificationCenterHotkey] = []
 
     @ObservationIgnored
-    lazy var notificationCenterActivation = NotificationCenterActivation { [weak self] request in
-        await self?.performNotificationCenterActivation(request)
-    }
+    lazy var notificationCenterActivation = makeNotificationCenterActivation()
 
     /// Identity token for the current click task so a late/re-armed task
     /// cannot call expireShowOnClickGuard after it has been superseded.
@@ -570,50 +568,7 @@ final class HIDEventManager {
         option: .defaultTap
     ) { [weak self] _, event in
         guard let self else { return event }
-
-        guard !NotificationCenterEventReplay.isReplay(event) else { return event }
-
-        if event.type == .leftMouseDragged, notificationCenterInput.hasClockPress {
-            notificationCenterInput.dragClockPress(to: event.location)
-            return nil
-        }
-        if event.type == .leftMouseUp, notificationCenterInput.hasClockPress {
-            if let point = notificationCenterInput.endClockPress(at: event.location) {
-                enqueueNotificationCenterActivation(.clock(point))
-            }
-            return nil
-        }
-        guard event.type == .leftMouseDown else { return event }
-        notificationCenterInput.discardClockPress()
-        guard isEnabled, let appState else { return event }
-        let controller = appState.menuBarManager.sectionController
-        guard controller.shouldBridgeClockActivation || notificationCenterActivation.isBusy else { return event }
-        // No AX walk, display query, or capture runs in this synchronous tap.
-        guard let clock = Self.systemClockItem(
-            at: event.location,
-            in: (onScreenItems?.items ?? []) + appState.itemManager.managedItems,
-            menuBarBands: clockMenuBarBands
-        ), controller.section(for: clock) == .visible else { return event }
-        notificationCenterInput.beginClockPress(at: event.location, bounds: clock.bounds)
-        // Release at mouse-down so the completed click replays with no added settle.
-        notificationCenterActivation.prepareLease(
-            begin: {
-                let cover = appState.menuBarManager.clockBridgeCover
-                cover.show()
-                guard controller.beginClockActivationBridge(scope: .global) else {
-                    cover.hide(immediately: true)
-                    return .unavailable
-                }
-                appState.itemManager.beginNotificationCenterLayoutSuspension()
-                return .acquired
-            },
-            restore: {
-                controller.endClockActivationBridge()
-                appState.itemManager.endNotificationCenterLayoutSuspension()
-                appState.menuBarManager.clockBridgeCover.hide()
-            }
-        )
-        return nil
+        return handleClockActivation(event)
     }
 
     /// Watches the system's "Show Notification Center" keyboard shortcut.

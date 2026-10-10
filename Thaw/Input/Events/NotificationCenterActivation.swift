@@ -22,8 +22,19 @@ final class NotificationCenterActivation {
         case unavailable
     }
 
+    /// How the panel behaved while a release was held.
+    enum Outcome: Equatable {
+        case panelOpened
+        case panelClosed
+        /// The release ran to its bound with no panel, as an abandoned press also does.
+        case panelNeverOpened
+        /// A close gesture left the panel up until the bound.
+        case panelDidNotClose
+    }
+
     private let activate: (Request) async -> Void
     private let panelPresenting: () -> Bool
+    private let report: (Outcome) -> Void
     private let now: () -> Date
     private var pending: [Request] = []
     private var worker: Task<Void, Never>?
@@ -58,10 +69,12 @@ final class NotificationCenterActivation {
     init(
         activate: @escaping (Request) async -> Void,
         panelPresenting: @escaping () -> Bool = NotificationCenterActivation.systemPanelPresenting,
+        report: @escaping (Outcome) -> Void = { _ in },
         now: @escaping () -> Date = { Date() }
     ) {
         self.activate = activate
         self.panelPresenting = panelPresenting
+        self.report = report
         self.now = now
     }
 
@@ -209,15 +222,18 @@ final class NotificationCenterActivation {
             // Opening: wait for the panel, then grace the slide-out. Closing:
             // restore as soon as it clears. Both are bounded by the timeout.
             let waitingForDismissal = panelWasPresentingAtStart
-            var settled = false
+            var outcome: Outcome?
             var waited = Duration.zero
             while !Task.isCancelled {
                 let present = presenting()
                 if waitingForDismissal ? !present : present {
-                    settled = true
+                    outcome = waitingForDismissal ? .panelClosed : .panelOpened
                     break
                 }
-                guard waited < Self.presentationTimeout else { break }
+                guard waited < Self.presentationTimeout else {
+                    outcome = waitingForDismissal ? .panelDidNotClose : .panelNeverOpened
+                    break
+                }
                 do {
                     try await pause(Self.pollInterval)
                 } catch {
@@ -225,10 +241,15 @@ final class NotificationCenterActivation {
                 }
                 waited += Self.pollInterval
             }
-            if settled {
-                try? await pause(waitingForDismissal ? Self.dismissGrace : Self.escapeGrace)
+            if outcome == .panelClosed {
+                try? await pause(Self.dismissGrace)
+            } else if outcome == .panelOpened {
+                try? await pause(Self.escapeGrace)
             }
             guard let self, self.restoreSlot.isCurrent(ticket) else { return }
+            if let outcome {
+                self.report(outcome)
+            }
             self.restoreAssertion()
         }
     }

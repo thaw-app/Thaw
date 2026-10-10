@@ -24,14 +24,54 @@ extension HIDEventManager {
         case let .shortcut(hotkey): NotificationCenterEventReplay.shortcut(hotkey)
         }
         guard !events.isEmpty else { return }
+        guard let lease = notificationCenterLease() else { return }
         await notificationCenterActivation.replay(
             begin: {
                 guard controller.shouldBridgeClockActivation else { return .notRequired }
+                let acquired = lease.begin()
+                if acquired == .unavailable {
+                    Self.diagLog.warning("Notification Center activation could not release concealment")
+                }
+                return acquired
+            },
+            restore: lease.restore,
+            send: {
+                for event in events {
+                    event.post(tap: .cghidEventTap)
+                }
+                Self.diagLog.debug("Notification Center activation replayed without capture")
+            }
+        )
+    }
+
+    /// A release that ran to its bound is logged as a warning.
+    func makeNotificationCenterActivation() -> NotificationCenterActivation {
+        NotificationCenterActivation(
+            activate: { [weak self] request in
+                await self?.performNotificationCenterActivation(request)
+            },
+            report: { outcome in
+                switch outcome {
+                case .panelOpened, .panelClosed:
+                    Self.diagLog.debug("Notification Center release ended: \(String(describing: outcome))")
+                case .panelNeverOpened, .panelDidNotClose:
+                    Self.diagLog.warning("Notification Center release ran to its bound: \(String(describing: outcome))")
+                }
+            }
+        )
+    }
+
+    /// The one way concealment is released for an activation and put back:
+    /// cover the bar, lift the restriction, and hold layout still meanwhile.
+    private func notificationCenterLease() -> (begin: () -> NotificationCenterActivation.Lease, restore: () -> Void)? {
+        guard let appState else { return nil }
+        let controller = appState.menuBarManager.sectionController
+        return (
+            begin: {
                 let cover = appState.menuBarManager.clockBridgeCover
                 cover.show()
                 guard controller.beginClockActivationBridge(scope: .global) else {
                     cover.hide(immediately: true)
-                    Self.diagLog.warning("Notification Center activation could not release concealment")
                     return .unavailable
                 }
                 appState.itemManager.beginNotificationCenterLayoutSuspension()
@@ -41,14 +81,40 @@ extension HIDEventManager {
                 controller.endClockActivationBridge()
                 appState.itemManager.endNotificationCenterLayoutSuspension()
                 appState.menuBarManager.clockBridgeCover.hide()
-            },
-            send: {
-                for event in events {
-                    event.post(tap: .cghidEventTap)
-                }
-                Self.diagLog.debug("Notification Center activation replayed without capture")
             }
         )
+    }
+
+    /// Claims a physical Clock click while the restriction is held: the pair is
+    /// consumed here and the activation replayed once concealment is released.
+    func handleClockActivation(_ event: CGEvent) -> CGEvent? {
+        guard !NotificationCenterEventReplay.isReplay(event) else { return event }
+
+        if event.type == .leftMouseDragged, notificationCenterInput.hasClockPress {
+            notificationCenterInput.dragClockPress(to: event.location)
+            return nil
+        }
+        if event.type == .leftMouseUp, notificationCenterInput.hasClockPress {
+            if let point = notificationCenterInput.endClockPress(at: event.location) {
+                enqueueNotificationCenterActivation(.clock(point))
+            }
+            return nil
+        }
+        guard event.type == .leftMouseDown else { return event }
+        notificationCenterInput.discardClockPress()
+        guard isEnabled, let appState else { return event }
+        let controller = appState.menuBarManager.sectionController
+        guard controller.shouldBridgeClockActivation || notificationCenterActivation.isBusy else { return event }
+        // No AX walk, display query, or capture runs in this synchronous tap.
+        guard let clock = Self.systemClockItem(
+            at: event.location,
+            in: (onScreenItems?.items ?? []) + appState.itemManager.managedItems,
+            menuBarBands: clockMenuBarBands
+        ), controller.section(for: clock) == .visible, let lease = notificationCenterLease() else { return event }
+        notificationCenterInput.beginClockPress(at: event.location, bounds: clock.bounds)
+        // Release at mouse-down so the completed click replays with no added settle.
+        notificationCenterActivation.prepareLease(begin: lease.begin, restore: lease.restore)
+        return nil
     }
 
     /// Bridges the Notification Center shortcut while the assertion is held; other input passes through.
