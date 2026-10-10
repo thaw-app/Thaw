@@ -1031,38 +1031,25 @@ final class LayoutBarPaddingView: NSView {
             let liveItem: @MainActor (MenuBarItemTag) -> MenuBarItem? = { tag in
                 liveOrder().first { $0.tag == tag }
             }
-            // Whether the members already sit contiguously, in order, immediately
-            // beside the anchor, i.e., the block move is complete.
+            let block = GroupBlockPlacement(members: memberOrder, anchor: anchorTag, insertsLeftOfAnchor: insertToLeftOfAnchor)
             let isPlaced: @MainActor () -> Bool = {
-                let live = liveOrder()
-                guard let anchorIndex = live.firstIndex(where: { $0.tag == anchorTag }) else {
-                    return false
-                }
-                let rawStart = insertToLeftOfAnchor ? anchorIndex - memberOrder.count : anchorIndex + 1
-                // Execution-time clamp: the drop's insertion index described a
-                // section that may have changed shape mid-gesture, so the slot
-                // it implies is clamped to the live section's bounds, and the
-                // clamp logs when it fires. Clamping, rather than reporting
-                // "not placed", also lets a block that genuinely converged at
-                // a section edge confirm, instead of driving moves forever.
-                let start = rawStart.clamped(to: 0 ... max(live.count - memberOrder.count, 0))
-                if start != rawStart {
+                let live = liveOrder().map(\.tag)
+                if let slot = block.slot(in: live), slot.raw != slot.clamped {
                     Self.diagLog.warning(
-                        "Group block slot \(rawStart) outside the live section's 0...\(max(live.count - memberOrder.count, 0)); clamped to \(start)"
+                        "Group block slot \(slot.raw) outside the live section's 0...\(max(live.count - memberOrder.count, 0)); clamped to \(slot.clamped)"
                     )
                 }
-                return memberOrder.indices.allSatisfy {
-                    live.indices.contains(start + $0) && live[start + $0].tag == memberOrder[$0]
-                }
+                return block.isPlaced(in: live)
             }
 
             // Repeat the placement pass until the whole block is contiguous; a
             // single AX move can transiently fail or lag the cache, which would
             // otherwise leave one member stranded outside the group.
-            let maxPasses = 4
             var pass = 0
-            while pass < maxPasses, !isPlaced() {
+            var runAnotherPass = true
+            while runAnotherPass, !isPlaced() {
                 pass += 1
+                var membersMoved = 0
                 for tag in orderedMemberTags {
                     // Re-fetch both the member and the (stable) anchor so each
                     // move targets a current AX element.
@@ -1071,8 +1058,9 @@ final class LayoutBarPaddingView: NSView {
                     }
                     let destination: MenuBarItemManager.MoveDestination =
                         insertToLeftOfAnchor ? .leftOfItem(anchor) : .rightOfItem(anchor)
+                    var moved = false
                     do {
-                        _ = try await appState.itemManager.move(
+                        moved = try await appState.itemManager.move(
                             item: member,
                             to: destination,
                             skipInputPause: true,
@@ -1083,13 +1071,17 @@ final class LayoutBarPaddingView: NSView {
                     } catch {
                         Self.diagLog.error("Group reorder move failed for \(member.logString): \(error)")
                     }
+                    // A member macOS left in place changed nothing worth reading again.
+                    guard moved else { continue }
+                    membersMoved += 1
                     await appState.itemManager.cacheItemsRegardless(skipRecentMoveCheck: true)
                     // Let the AX order settle before the next member reads it.
                     try? await Task.sleep(for: .milliseconds(80))
                 }
+                runAnotherPass = GroupBlockPlacement.shouldRunAnotherPass(after: pass, membersMoved: membersMoved)
             }
             if !isPlaced() {
-                Self.diagLog.warning("Group reorder did not fully converge after \(maxPasses) passes")
+                Self.diagLog.warning("Group reorder did not converge after \(pass) of \(GroupBlockPlacement.maxPasses) passes")
                 // The persisted order below is still canonical; what failed is
                 // the physical AX placement. Say so rather than leaving a
                 // half-regrouped cluster with no explanation.
