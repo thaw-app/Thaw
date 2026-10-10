@@ -341,6 +341,22 @@ extension NotificationCenterActivationTests {
         #expect(calls == 0)
     }
 
+    @Test("The panel is told by its owner's process and level, in any language", arguments: [
+        (pid: 1107, layer: 23, presenting: true),
+        // A desktop widget: same owner, drawn at the desktop level.
+        (pid: 1107, layer: -2_147_483_601, presenting: false),
+        // Another process's window at the panel's level.
+        (pid: 400, layer: 23, presenting: false),
+    ])
+    func panelWindow(pid: pid_t, layer: Int, presenting: Bool) {
+        let window: [String: Any] = [
+            kCGWindowOwnerPID as String: Int(pid),
+            kCGWindowLayer as String: layer,
+            kCGWindowOwnerName as String: "Centre de notifications",
+        ]
+        #expect(NotificationCenterActivation.isPanelWindow(window, panelOwners: [1107]) == presenting)
+    }
+
     @Test("Clock replay preserves secondary-display coordinates and a balanced click")
     func mouseReplay() throws {
         let point = CGPoint(x: -50, y: -185)

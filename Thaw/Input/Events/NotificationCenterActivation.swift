@@ -5,6 +5,7 @@
 //  Copyright (Thaw) © 2026 Toni Förster
 //  Licensed under the GNU GPLv3
 
+import AppKit
 import CoreGraphics
 import Foundation
 
@@ -67,10 +68,25 @@ final class NotificationCenterActivation {
     /// Notification Center is presenting when its panel window is on-screen.
     /// The flag flips within ~100 ms of open and close, inside one poll interval.
     private static nonisolated func systemPanelPresenting() -> Bool {
+        let owners = Set(
+            NSRunningApplication.runningApplications(withBundleIdentifier: panelOwnerBundleID)
+                .map(\.processIdentifier)
+        )
+        guard !owners.isEmpty else { return false }
         let list = CGWindowListCopyWindowInfo([.optionOnScreenOnly], kCGNullWindowID) as? [[String: Any]] ?? []
-        return list.contains {
-            ($0[kCGWindowOwnerName as String] as? String) == "Notification Center"
-        }
+        return list.contains { isPanelWindow($0, panelOwners: owners) }
+    }
+
+    private nonisolated static let panelOwnerBundleID = "com.apple.notificationcenterui"
+
+    /// Whether a window is the panel: owned by the panel's process, above normal level.
+    /// The same process keeps desktop widgets on-screen at the desktop level.
+    static nonisolated func isPanelWindow(_ window: [String: Any], panelOwners: Set<pid_t>) -> Bool {
+        guard let owner = window[kCGWindowOwnerPID as String] as? Int,
+              panelOwners.contains(pid_t(owner)),
+              let layer = window[kCGWindowLayer as String] as? Int
+        else { return false }
+        return layer > Int(CGWindowLevelForKey(.normalWindow))
     }
 
     func enqueue(_ request: Request) {
