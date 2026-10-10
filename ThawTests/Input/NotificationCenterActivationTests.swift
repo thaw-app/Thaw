@@ -381,6 +381,17 @@ extension NotificationCenterActivationTests {
         #expect(reported.isEmpty)
     }
 
+    @Test("The bridge is on unless the hidden default turns it off")
+    func bridgeSwitch() throws {
+        let name = "NotificationCenterActivationTests.bridgeSwitch"
+        let defaults = try #require(UserDefaults(suiteName: name))
+        defer { defaults.removePersistentDomain(forName: name) }
+        defaults.removePersistentDomain(forName: name)
+        #expect(NotificationCenterActivation.isBridgeEnabled(in: defaults))
+        defaults.set(true, forKey: NotificationCenterActivation.bridgeDisabledKey)
+        #expect(!NotificationCenterActivation.isBridgeEnabled(in: defaults))
+    }
+
     @Test("The panel is told by its owner's process and level, in any language", arguments: [
         (pid: 1107, layer: 23, presenting: true),
         // A desktop widget: same owner, drawn at the desktop level.

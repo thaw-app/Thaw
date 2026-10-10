@@ -105,6 +105,7 @@ extension HIDEventManager {
         guard isEnabled, let appState else { return event }
         let controller = appState.menuBarManager.sectionController
         guard controller.shouldBridgeClockActivation || notificationCenterActivation.isBusy else { return event }
+        guard NotificationCenterActivation.isBridgeEnabled() || notificationCenterActivation.isBusy else { return event }
         // No AX walk, display query, or capture runs in this synchronous tap.
         guard let clock = Self.systemClockItem(
             at: event.location,
@@ -124,8 +125,9 @@ extension HIDEventManager {
         }
 
         let hotkey = notificationCenterHotkeys.first { $0.matches(event) }
-        let needsBridge = appState?.menuBarManager.sectionController.shouldBridgeClockActivation == true
-            || notificationCenterActivation.isBusy
+        let needsBridge = notificationCenterActivation.isBusy
+            || (appState?.menuBarManager.sectionController.shouldBridgeClockActivation == true
+                && NotificationCenterActivation.isBridgeEnabled())
         let disposition = notificationCenterInput.key(
             type: event.type,
             code: CGKeyCode(event.getIntegerValueField(.keyboardEventKeycode)),

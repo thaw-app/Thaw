@@ -62,6 +62,14 @@ final class NotificationCenterActivation {
     /// finishes before the bar returns.
     static let dismissGrace = Duration.milliseconds(120)
 
+    /// Hidden default that turns the bridge off. Clock clicks and the shortcut then
+    /// go to macOS untouched, which cannot open the panel while items are hidden.
+    nonisolated static let bridgeDisabledKey = Defaults.Key.disableNotificationCenterBridge.rawValue
+
+    nonisolated static func isBridgeEnabled(in defaults: UserDefaults = .standard) -> Bool {
+        !defaults.bool(forKey: bridgeDisabledKey)
+    }
+
     var isBusy: Bool {
         worker != nil || restoreLease != nil
     }
