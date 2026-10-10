@@ -135,7 +135,7 @@ final class LayoutBarPaddingView: NSView {
             // reordering arranged views mid-drag, so there is nothing to
             // preview, but the drop can still be refused, and discovering that
             // only on release means the drag just springs back with no cue.
-            return groupDropOperation(for: handle)
+            return groupDropOperation(for: handle, at: sender.draggingLocation)
         }
         // Freeze the destination's arrangedViews so that the cache refresh
         // triggered while the system move is in flight cannot overwrite the
@@ -147,6 +147,7 @@ final class LayoutBarPaddingView: NSView {
     }
 
     override func draggingExited(_ sender: NSDraggingInfo?) {
+        container.groupDropMarkerX = nil
         guard !isStabilizing else { return }
         if let sender {
             container.handleDrag(sender, phase: .exited)
@@ -156,7 +157,7 @@ final class LayoutBarPaddingView: NSView {
     override func draggingUpdated(_ sender: NSDraggingInfo) -> NSDragOperation {
         guard !isStabilizing else { return [] }
         if let handle = sender.draggingSource as? LayoutBarGroupHandleView {
-            return groupDropOperation(for: handle)
+            return groupDropOperation(for: handle, at: sender.draggingLocation)
         }
         return container.handleDrag(sender, phase: .updated)
     }
@@ -167,8 +168,12 @@ final class LayoutBarPaddingView: NSView {
     ///
     /// A same-section drop is a reorder and never changes membership, so it is
     /// always permitted.
-    private func groupDropOperation(for handle: LayoutBarGroupHandleView) -> NSDragOperation {
-        guard handle.sourceSection != container.section else { return .move }
+    private func groupDropOperation(for handle: LayoutBarGroupHandleView, at location: NSPoint) -> NSDragOperation {
+        // Only a reorder has a position; a move from another section lands in that section's order.
+        guard handle.sourceSection != container.section else {
+            container.showGroupDropMarker(at: location)
+            return .move
+        }
         guard let appState = container.appState else { return .move }
 
         let sourceItems = appState.itemManager.managedItems(for: handle.sourceSection)
@@ -188,6 +193,7 @@ final class LayoutBarPaddingView: NSView {
     }
 
     override func draggingEnded(_ sender: NSDraggingInfo) {
+        container.groupDropMarkerX = nil
         guard !isStabilizing else { return }
         container.handleDrag(sender, phase: .ended)
         restoreArrangedViewsAfterDrag(from: sender)

@@ -550,6 +550,10 @@ final class LayoutBarContainer: NSView {
             NSColor.controlAccentColor.withAlphaComponent(0.9).setFill()
             NSBezierPath(rect: band).fill()
         }
+        let gap = arrangedViews.filter(\.isDraggingPlaceholder).map(\.frame)
+        if let markerX = groupDropMarkerX ?? LayoutBarDropMarker.x(inGap: gap) {
+            LayoutBarDropMarker.draw(atX: markerX, in: bounds)
+        }
         for memberIndices in groupedMemberIndices() {
             // A bundle's members may be scattered; draw one rounded background
             // per contiguous sub-run so the chrome never encloses foreign items
@@ -779,11 +783,28 @@ final class LayoutBarContainer: NSView {
             return .move
         case .updated:
             slideDraggedBlock(from: sourceView, toward: draggingInfo.draggingLocation)
+            // The marker is drawn here, under the gap the block now holds.
+            needsDisplay = true
             return .move
         case .ended:
             setIsDropTarget(false)
             return .move
         }
+    }
+
+    /// Where a group dragged by its handle would be inserted, while it hovers here.
+    var groupDropMarkerX: CGFloat? {
+        didSet {
+            guard oldValue != groupDropMarkerX else { return }
+            needsDisplay = true
+        }
+    }
+
+    /// Points the group marker at the slot a handle drop at windowLocation would take.
+    func showGroupDropMarker(at windowLocation: NSPoint) {
+        let frames = arrangedViews.filter { !$0.isNewItemsBadge }.map(\.frame)
+        let index = LayoutBarDropMarker.insertionIndex(forX: convert(windowLocation, from: nil).x, among: frames)
+        groupDropMarkerX = LayoutBarDropMarker.x(insertingAt: index, among: frames)
     }
 
     /// Whether a drag is hovering this container; drives the drop-target highlight.
