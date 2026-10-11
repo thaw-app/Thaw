@@ -15,6 +15,7 @@ import SwiftUI
 @Observable
 final class LayoutEditorModel {
     typealias Unit = LayoutEditorOrder.Unit
+    typealias Commit = @MainActor (LayoutDropCommit.Drop, UndoManager?, @escaping @MainActor () -> Void) -> Void
 
     /// How long a dropped order is shown before the editor goes back to what the menu bar reports.
     static let authoredOrderLimit = Duration.seconds(8)
@@ -23,12 +24,16 @@ final class LayoutEditorModel {
     private(set) var itemsByID = [String: MenuBarItem]()
 
     @ObservationIgnored private let appState: AppState
+    @ObservationIgnored private let commit: Commit
     @ObservationIgnored private var authored = [MenuBarSection.Name: (order: [String], since: ContinuousClock.Instant)]()
     @ObservationIgnored private var observation: Task<Void, Never>?
     @ObservationIgnored private var layoutChanges: AnyCancellable?
 
-    init(appState: AppState) {
+    init(appState: AppState, commit: Commit? = nil) {
         self.appState = appState
+        self.commit = commit ?? { drop, undoManager, finished in
+            LayoutDropCommit.commit(drop, appState: appState, undoManager: undoManager, finished: finished)
+        }
     }
 
     var sections: [MenuBarSection.Name] {
@@ -109,8 +114,12 @@ final class LayoutEditorModel {
 
     func drop(_ difference: ReorderDifference<String, MenuBarSection.Name>, undoManager: UndoManager?) {
         guard let unitID = difference.sources.first else { return }
-        let target = difference.destination.collectionID
         let beforeID: String? = if case let .before(id) = difference.destination.position { id } else { nil }
+        move(unitID, to: difference.destination.collectionID, before: beforeID, undoManager: undoManager)
+    }
+
+    /// Moves a unit to sit before another one in the target section, or at its end when `beforeID` is nil.
+    func move(_ unitID: String, to target: MenuBarSection.Name, before beforeID: String?, undoManager: UndoManager?) {
         guard let change = LayoutEditorOrder.change(moving: unitID, in: units, to: target, before: beforeID) else {
             return
         }
@@ -132,7 +141,7 @@ final class LayoutEditorModel {
         if change.source == target || drop.items.count == 1 {
             authored[target] = (change.itemIDs(in: target), .now)
         }
-        LayoutDropCommit.commit(drop, appState: appState, undoManager: undoManager) { [weak self] in
+        commit(drop, undoManager) { [weak self] in
             self?.refresh()
         }
         Task { @MainActor [weak self] in
