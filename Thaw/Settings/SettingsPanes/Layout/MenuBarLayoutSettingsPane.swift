@@ -373,13 +373,36 @@ struct LayoutBarsSection: View {
                 // Grouped Form rows stop growing at a fixed width; size from the scroll view less the Form's 20pt insets, but never set the Form's minimum.
                 .containerRelativeFrame(.horizontal) { width, _ in width - 40 }.frame(minWidth: 0, maxWidth: .infinity)
         } footer: {
-            Text("Drag items between sections. Hold ⌘ Command to drag in the menu bar.")
-                .font(ThawType.footnote)
-                .foregroundStyle(ThawInk.supporting)
-                .fixedSize(horizontal: false, vertical: true)
+            HStack(alignment: .firstTextBaseline, spacing: ThawSpacing.base) {
+                Text("Drag items between sections. Hold ⌘ Command to drag in the menu bar.")
+                    .font(ThawType.footnote)
+                    .foregroundStyle(ThawInk.supporting)
+                    .fixedSize(horizontal: false, vertical: true)
+                Spacer(minLength: ThawSpacing.base)
+                if showsPopOutButton {
+                    popOutButton
+                }
+            }
         }
 
         layoutRefusalNotice
+    }
+
+    /// Not inside the pop-out itself, and not in Simple Mode's single screen.
+    private var showsPopOutButton: Bool {
+        !appState.navigationState.isLayoutEditorPresented && !appState.settings.general.simpleMode
+    }
+
+    private var popOutButton: some View {
+        Button("Pop Out Editor", systemImage: "rectangle.portrait.and.arrow.right") {
+            guard let screen = MenuBarLayoutEditorPanel.defaultScreen else { return }
+            let menuBarManager = appState.menuBarManager
+            menuBarManager.layoutEditorPanel.show(on: screen, usesReorderEditor: true) {
+                menuBarManager.dismissLayoutEditorPanel()
+            }
+        }
+        .buttonStyle(.settingsGlass)
+        .help("Opens the experimental reorder editor under the menu bar.")
     }
 
     /// A refused group move snaps back with no other explanation, so the
