@@ -22,8 +22,7 @@ profiles, and customizes menu bar appearance. It is a maintained fork of
 | --- | --- |
 | `Thaw/` | Main application target (UI, menu bar logic, settings, events, permissions) |
 | `Shared/` | Code shared between the app and helper processes (bridging, XPC client types, utilities) |
-| `MenuBarItemService/` | XPC helper process that resolves menu bar item source PIDs off the main app |
-| `MenuBarCaptureService/` | Recyclable XPC helper that runs SkyLight offscreen icon capture so the per-call dictionary leak stays out of the UI process |
+| `MenuBarCaptureService/` | Recyclable XPC helper that hosts the ScreenCaptureKit icon capture so SkyLight's per-call dictionary leak stays out of the UI process |
 | `ThawCtl/` | Small SwiftPM CLI / control utilities |
 | `ThawTests/` | Swift Testing suite run in CI |
 | `Fuzzing/` | SwiftPM libFuzzer targets; currently the `thaw://` settings URI parser |
@@ -47,10 +46,10 @@ External dependencies are declared via Swift Package Manager and locked in
 │  ├── Settings + URI handler (thaw://)                       │
 │  ├── Permissions (Accessibility, Screen Recording, …)       │
 │  └── Updates (Sparkle)                                      │
-│              │ XPC                    │ XPC                 │
-│              ▼                        ▼                     │
-│   MenuBarItemService.xpc      MenuBarCaptureService.xpc     │
-│   (source PID resolution)     (offscreen capture; recycled) │
+│                                       │ XPC                 │
+│                                       ▼                     │
+│                               MenuBarCaptureService.xpc     │
+│                               (offscreen capture; recycled) │
 └─────────────────────────────────────────────────────────────┘
           │                         │
           ▼                         ▼
@@ -68,36 +67,18 @@ External dependencies are declared via Swift Package Manager and locked in
 - Permissions: guides the user through TCC prompts required for AX and screen capture features.
 - Updates: Sparkle client; feed URL and EdDSA public key live in `Thaw/Resources/Info.plist`.
 
-### `MenuBarItemService` (XPC)
-
-A separate process (`com.stonerl.Thaw.MenuBarItemService`) isolates
-WindowServer and PID lookup work from the UI process. The shared protocol is a
-small Codable request/response surface: `start`, `configureLogging`, and
-`sourcePIDs`. Logging to a shared diagnostic file is configured by the main app
-after launch.
-
 ### `MenuBarCaptureService` (XPC)
 
-A second helper (`com.stonerl.Thaw.MenuBarCaptureService`) produces the images
-Thaw draws for menu bar items. Its protocol adds `captureBatch` and `recycle`
-to the same `start` and `configureLogging` pair. The app asks for one batch per
-refresh rather than one call per window, and the helper exits once it has spent
-its capture budget, which bounds the per-call leak in the underlying SkyLight
-API to the helper's lifetime rather than the app's.
-
-### `MenuBarCaptureService` (XPC)
-
-A second Application XPC (`com.stonerl.Thaw.MenuBarCaptureService`) captures
-offscreen Hidden / Always Hidden status-item windows via SkyLight. Each
-successful `SLWindowListCreateImageFromArray` call leaks a small dictionary in
-the caller; the helper exits after a capture budget (and when the last live
-consumer closes) so that growth can be reclaimed. Requests carry a request ID
-and window IDs only; the helper recomputes bounds, accepts only menu-bar item
-windows, and returns cropped premultiplied-BGRA frames. Visible-section icons
-stay on ScreenCaptureKit in the app. Always Hidden is capped at 1 fps;
-Hidden follows the icon refresh slider. This dictionary leak is in the
-capture caller (commit `0e045faf`); it is separate from the Core Animation
-fence-port leak tracked as issue #933.
+An XPC helper (`com.stonerl.Thaw.MenuBarCaptureService`) produces the images
+Thaw draws for menu bar items. It hosts the ScreenCaptureKit capture core from
+`ThawCapture`, so SkyLight's per-call dictionary leak underneath it accrues in
+the helper instead of the UI process. The app sends a typed
+`CaptureServiceRequest` (window IDs, a display's menu bar hosting window or
+strip, or an owner's bar window) and gets back a `CaptureServiceReply` with one
+frame or a failure. The helper exits after 1,800 successful captures or when
+the last client session closes, and a watchdog exits it when one capture
+outlives its budget; XPC relaunches it on the next call. The dictionary leak is
+separate from the Core Animation fence-port leak tracked as issue #933.
 
 ### External interfaces
 
