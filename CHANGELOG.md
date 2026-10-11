@@ -7,11 +7,11 @@ The `release.yml` workflow reads the section matching the release tag
 (`## [tag]`) and uses it as the release notes for both the GitHub Release
 and the Sparkle appcast, unless overridden with the `release_notes` input.
 
-## [3.0.0-alpha.8] - 2026-10-09
+## [3.0.0-alpha.8] - 2026-10-11
 
 **macOS 27 only · Build 113**
 
-This build is mostly bug fixes. Features are frozen for the next two betas, which will only fix bugs.
+This build is mostly bug fixes. Features are frozen for the next two releases, which will only fix bugs.
 
 After you update:
 
@@ -24,7 +24,9 @@ After you update:
 - **Choose how items are hidden in one place.** Layout has a Hiding method picker. Native keeps Live Activities, the camera indicator and Apple's own items on the menu bar. Standard hides any app's items. Everything also hides Clock, Control Center and Siri. It replaces a switch in General and one in Layout. Prompted by Probert on Discord, who could no longer hide Control Center after updating. By @diazdesandi.
 - **Move and hide the Game Mode indicator.** Spotted in a screenshot from mrleblanc101 on Discord. By @diazdesandi.
 - **Layout marks items macOS removes on its own.** With Standard or Everything, macOS takes items you pinned from Control Center, such as Home, off the menu bar while other icons are hidden. Their tiles now carry a badge that says so. By @diazdesandi.
+- **Layout shows where a drag will land.** A line in your accent color marks the spot while you drag an item, or a group inside its own section. By @diazdesandi.
 - **Experimental: use Thaw without Accessibility.** Choose "Continue without Accessibility" in the permissions window. You pick whole apps to hide from Thaw's menu, and a click on its icon shows or hides them. Arranging items, the Thaw Bar and search need Accessibility. By @diazdesandi.
+- **Experimental: arrange your layout in its own window.** Settings > Layout has a Pop Out Editor button under the bars. The window has one row per section, and you drag items inside a row or from one row to another. Item menus, keyboard moves and spacers are still only in Settings > Layout. By @diazdesandi.
 
 ### Changed
 
@@ -32,6 +34,7 @@ After you update:
 - **Thaw changes the menu bar's order one step at a time**, and what you ask for goes first. By @diazdesandi.
 - **The "out of reach" warning in Layout lists fewer apps and says what to do.** It leaves out apps you switched off in System Settings > Menu Bar and apps with no menu bar item right now. If an app's icon is missing too, quit and reopen that app. Otherwise relaunch Thaw; the button now says so. Reported by Andrew (andrwmai) on Discord, whose switched-off apps were listed on every launch. By @camguillory in [#1272](https://github.com/thaw-app/Thaw/pull/1272).
 - **Thaw reads the menu bar faster**, most of all when one of your apps is slow to answer. By @diazdesandi.
+- **A drop in Layout reaches the menu bar sooner on a Mac with many apps running.** Thaw used to read every app's items again around each move, which could take several seconds. By @diazdesandi.
 - **Thaw does less while the menu bar sits idle**, if you use a tint, border or shadow. By @diazdesandi.
 
 ### Changed: Settings
@@ -51,6 +54,7 @@ After you update:
 - **Thaw stops moving Home on every reveal.** It happened with the Thaw icon hidden. Fixed by @diazdesandi.
 - **A Live Activity shows in Layout and stays where macOS puts it.** Thaw used to try to move and hide it, which took the cursor for a few seconds and ended in an error. Its icon now shows too. Fixed by @diazdesandi.
 - **Hidden items go back sooner after you open Notification Center from the Clock.** With a widget on the desktop, Thaw kept them out longer than it needed to. Fixed by @diazdesandi.
+- **An item you open from search or the Thaw Bar hides again while another app keeps a pop-up window open.** It used to stay on the menu bar until you relaunched Thaw. Fixed by @camguillory in [#1284](https://github.com/thaw-app/Thaw/pull/1284).
 
 ### Fixed: order and moving
 
@@ -82,6 +86,7 @@ After you update:
 - **A reveal no longer waits behind Thaw's own repairs.** Fixed by @diazdesandi.
 - **A display change still restores your layout** when the spacing check has nothing to apply. Fixed by @camguillory in [#1268](https://github.com/thaw-app/Thaw/pull/1268).
 - **Layout's bars widen with the Settings window**, so long sections need less scrolling on a large display. Reported by @ylluminate in [#1277](https://github.com/thaw-app/Thaw/issues/1277). Fixed by @camguillory in [#1283](https://github.com/thaw-app/Thaw/pull/1283).
+- **Hidden items no longer make Thaw read the menu bar three times.** A check counted where macOS parks them and failed on most reads. Fixed by @camguillory in [#1270](https://github.com/thaw-app/Thaw/pull/1270).
 - **Icons still load when Thaw's capture helper restarts** while two captures are running. Fixed by @camguillory in [#1271](https://github.com/thaw-app/Thaw/pull/1271).
 - **Icons stay as they are when you switch displays.** With two displays, thin icons and items behind the overflow arrow used to turn into app icons. Fixed by @camguillory in [#1293](https://github.com/thaw-app/Thaw/pull/1293).
 - **Thaw no longer crashes while the Thaw Bar opens and closes.** Fixed by @camguillory in [#1294](https://github.com/thaw-app/Thaw/pull/1294).
