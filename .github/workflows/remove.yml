@@ -12,4 +12,4 @@ jobs:
     permissions:
       actions: write
     steps:
-      - uses: thaw-app/org-ci/actions/remove-skipped-runs@a5d047fe853b328067a3423f40d404b4b8245653
+      - uses: thaw-app/org-ci/actions/remove-skipped-runs@cfa52194f39013d6f54e6f5a14dc57cec3a20e9b

@@ -29,7 +29,7 @@ jobs:
     steps:
       - name: Checkout source
         id: source
-        uses: thaw-app/org-ci/actions/checkout-source@a5d047fe853b328067a3423f40d404b4b8245653
+        uses: thaw-app/org-ci/actions/checkout-source@cfa52194f39013d6f54e6f5a14dc57cec3a20e9b
         with:
           project-name: Thaw.xcodeproj
           target-name: Thaw
@@ -41,7 +41,7 @@ jobs:
           xcode-version: latest
 
       - name: Configure signing
-        uses: thaw-app/org-ci/actions/configure-signing@a5d047fe853b328067a3423f40d404b4b8245653
+        uses: thaw-app/org-ci/actions/configure-signing@cfa52194f39013d6f54e6f5a14dc57cec3a20e9b
         with:
           apple-application-cert: ${{ secrets.APPLE_APPLICATION_CERT }}
           apple-application-cert-password: ${{ secrets.APPLE_APPLICATION_CERT_PASSWORD }}
@@ -50,7 +50,7 @@ jobs:
           apple-team-id: ${{ secrets.APPLE_TEAM_ID }}
 
       - name: Build
-        uses: thaw-app/org-ci/actions/build@a5d047fe853b328067a3423f40d404b4b8245653
+        uses: thaw-app/org-ci/actions/build@cfa52194f39013d6f54e6f5a14dc57cec3a20e9b
         with:
           apple-team-id: ${{ secrets.APPLE_TEAM_ID }}
           project-name: ${{ steps.source.outputs.project-name }}
@@ -58,14 +58,14 @@ jobs:
           deployment-target: ${{ steps.source.outputs.deployment-target }}
 
       - name: Export Archive
-        uses: thaw-app/org-ci/actions/export-and-package@a5d047fe853b328067a3423f40d404b4b8245653
+        uses: thaw-app/org-ci/actions/export-and-package@cfa52194f39013d6f54e6f5a14dc57cec3a20e9b
         with:
           apple-team-id: ${{ secrets.APPLE_TEAM_ID }}
           app-name: ${{ env.APP_NAME }}
           dmg-name: ${{ env.DMG_NAME }}
 
       - name: Notarize
-        uses: thaw-app/org-ci/actions/notarize-and-validate@a5d047fe853b328067a3423f40d404b4b8245653
+        uses: thaw-app/org-ci/actions/notarize-and-validate@cfa52194f39013d6f54e6f5a14dc57cec3a20e9b
         with:
           dmg-name: ${{ env.DMG_NAME }}
           app-name: ${{ env.APP_NAME }}

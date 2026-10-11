@@ -31,7 +31,7 @@ jobs:
         with:
           persist-credentials: false
 
-      - uses: thaw-app/org-ci/actions/dependency-sca@a5d047fe853b328067a3423f40d404b4b8245653
+      - uses: thaw-app/org-ci/actions/dependency-sca@cfa52194f39013d6f54e6f5a14dc57cec3a20e9b
         with:
           lockfiles: |
             Thaw.xcodeproj/project.xcworkspace/xcshareddata/swiftpm/Package.resolved

@@ -27,7 +27,7 @@ jobs:
           persist-credentials: false
       - name: Detect code-related paths
         id: filter
-        uses: thaw-app/org-ci/actions/detect-code-changes@a5d047fe853b328067a3423f40d404b4b8245653
+        uses: thaw-app/org-ci/actions/detect-code-changes@cfa52194f39013d6f54e6f5a14dc57cec3a20e9b
         with:
           patterns: '(\.swift$|(^|/)Package\.swift$|(^|/)Package\.resolved$|^sonar-project\.properties$|^\.swiftlint|^\.swiftformat|^Thaw\.xcodeproj/|^scripts/|\.xcstrings$|^\.github/workflows/ci\.yml$)'
 
@@ -223,7 +223,7 @@ jobs:
       # skipped. With neither, it leaves the last analysis alone.
       - name: Scan with coverage
         if: env.SONAR_ENABLED == 'true'
-        uses: thaw-app/org-ci/actions/sonar-scan@a5d047fe853b328067a3423f40d404b4b8245653
+        uses: thaw-app/org-ci/actions/sonar-scan@cfa52194f39013d6f54e6f5a14dc57cec3a20e9b
         with:
           sonar-token: ${{ secrets.SONAR_TOKEN }}
           code-changed: ${{ needs.changes.outputs.code }}
