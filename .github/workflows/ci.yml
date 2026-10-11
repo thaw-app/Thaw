@@ -24,36 +24,12 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           fetch-depth: 0
+          persist-credentials: false
       - name: Detect code-related paths
         id: filter
-        shell: bash
-        run: |
-          set -euo pipefail
-          if [[ "${{ github.event_name }}" == "pull_request" ]]; then
-            git fetch --no-tags --depth=1 origin "${{ github.base_ref }}"
-            range="origin/${{ github.base_ref }}...HEAD"
-          elif [[ "${{ github.event_name }}" == "push" ]]; then
-            before="${{ github.event.before }}"
-            if [[ -z "$before" || "$before" =~ ^0+$ ]]; then
-              echo "code=true" >> "$GITHUB_OUTPUT"
-              echo "No usable before SHA; treating as code change."
-              exit 0
-            fi
-            range="${before}...${{ github.sha }}"
-          else
-            echo "code=true" >> "$GITHUB_OUTPUT"
-            echo "workflow_dispatch: treating as code change."
-            exit 0
-          fi
-
-          patterns='(\.swift$|(^|/)Package\.swift$|(^|/)Package\.resolved$|^sonar-project\.properties$|^\.swiftlint|^\.swiftformat|^Thaw\.xcodeproj/|^scripts/|\.xcstrings$|^\.github/workflows/ci\.yml$)'
-          if git diff --name-only "$range" | grep -E "$patterns" >/dev/null; then
-            echo "code=true" >> "$GITHUB_OUTPUT"
-            echo "Code-related paths changed."
-          else
-            echo "code=false" >> "$GITHUB_OUTPUT"
-            echo "No code-related paths changed; heavy jobs will no-op."
-          fi
+        uses: thaw-app/org-ci/actions/detect-code-changes@ac600643b656ddc38214a7b90edc81f40bfae478
+        with:
+          patterns: '(\.swift$|(^|/)Package\.swift$|(^|/)Package\.resolved$|^sonar-project\.properties$|^\.swiftlint|^\.swiftformat|^Thaw\.xcodeproj/|^scripts/|\.xcstrings$|^\.github/workflows/ci\.yml$)'
 
   static_analysis:
     needs: changes
@@ -177,15 +153,6 @@ jobs:
           retention-days: 1
           if-no-files-found: error
 
-      # Keeps the last report so docs-only pushes still feed Sonar instead of 0%.
-      # The key omits runner.os so the Linux sonarqube job can restore it.
-      - name: Cache Coverage XML for Sonar reuse
-        if: needs.changes.outputs.code == 'true' && (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository)
-        uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
-        with:
-          path: coverage.xml
-          key: sonar-coverage-${{ github.ref_name }}-${{ github.sha }}
-
   # Tests with Xcode 26.6 on macOS 26; `build` covers Xcode 27 on macOS 27
   # and owns coverage.
   build-macos-26:
@@ -251,50 +218,14 @@ jobs:
           fetch-depth: 0
           persist-credentials: false
 
-      - name: Download Coverage XML
-        if: env.SONAR_ENABLED == 'true' && needs.changes.outputs.code == 'true'
-        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
-        with:
-          name: coverage-data
-
-      # Docs/chore scans skip the build, so reuse the last cached report rather than
-      # let Sonar publish 0%.
-      - name: Restore cached Coverage XML
-        if: env.SONAR_ENABLED == 'true' && needs.changes.outputs.code != 'true'
-        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
-        with:
-          path: coverage.xml
-          key: sonar-coverage-${{ github.ref_name }}-${{ github.sha }}
-          restore-keys: |
-            sonar-coverage-${{ github.ref_name }}-
-            sonar-coverage-${{ github.base_ref || 'development' }}-
-            sonar-coverage-development-
-          fail-on-cache-miss: false
-
-      - name: Resolve Sonar coverage args
+      # Uses this run's coverage, or the last cached report when the build was
+      # skipped. With neither, it leaves the last analysis alone.
+      - name: Scan with coverage
         if: env.SONAR_ENABLED == 'true'
-        id: coverage
-        shell: bash
-        run: |
-          set -euo pipefail
-          if [[ -f coverage.xml ]]; then
-            echo "args=-Dsonar.coverageReportPaths=coverage.xml" >> "$GITHUB_OUTPUT"
-            echo "Using coverage.xml ($(wc -c < coverage.xml | tr -d ' ') bytes)"
-          else
-            echo "args=" >> "$GITHUB_OUTPUT"
-            echo "::warning::No coverage.xml available; the Sonar scan is skipped unless this run built the code."
-          fi
-
-      # coverage.xml exists only if this run built or restored it, so keep
-      # sonar.coverageReportPaths out of sonar-project.properties.
-      #
-      # A run that skipped the build and found no cached report has nothing to
-      # tell Sonar about coverage. Scanning anyway publishes 0% and turns the
-      # branch's quality gate red, so that run leaves the last analysis alone.
-      - name: SonarQube Scan
-        if: env.SONAR_ENABLED == 'true' && (needs.changes.outputs.code == 'true' || steps.coverage.outputs.args != '')
-        uses: SonarSource/sonarqube-scan-action@d209202bc7d53ff1cc128f7f907dac145c9d6ae9 # v8.3.0
-        env:
-          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+        uses: thaw-app/org-ci/actions/sonar-scan@ac600643b656ddc38214a7b90edc81f40bfae478
         with:
-          args: ${{ steps.coverage.outputs.args }}
+          sonar-token: ${{ secrets.SONAR_TOKEN }}
+          code-changed: ${{ needs.changes.outputs.code }}
+          cache-path: coverage.xml
+          reports: |
+            sonar.coverageReportPaths=coverage.xml
