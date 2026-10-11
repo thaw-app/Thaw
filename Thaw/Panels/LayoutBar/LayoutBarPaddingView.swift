@@ -930,7 +930,7 @@ final class LayoutBarPaddingView: NSView {
         }
 
         // Drop cursor position in the original array's index space.
-        let destination = groupHandleDestinationIndex(in: identifiers, dropX: dropX)
+        let destination = container.groupDropDestination(atX: dropX).itemIndex
 
         // Gather: remove every member, then insert the block so it begins at the
         // drop cursor. Members sitting before the cursor shift the insertion left.
@@ -1175,18 +1175,6 @@ final class LayoutBarPaddingView: NSView {
             return members.first?.displayName ?? ""
         }
         return appState.itemGroupManager.displayName(for: group, in: sourceItems)
-    }
-
-    /// The insertion index (in identifiers space) for a group dropped at
-    /// dropX, resolved from the nearest arranged item view.
-    private func groupHandleDestinationIndex(in identifiers: [String], dropX: CGFloat) -> Int {
-        guard let nearest = container.closestView(toX: dropX, excludingBadge: true),
-              case let .item(item) = nearest.kind,
-              let index = identifiers.firstIndex(of: item.uniqueIdentifier)
-        else {
-            return identifiers.count
-        }
-        return dropX > nearest.frame.midX ? index + 1 : index
     }
 
     private func orderedLayoutItemsForSectionOrder() -> [MenuBarItem] {

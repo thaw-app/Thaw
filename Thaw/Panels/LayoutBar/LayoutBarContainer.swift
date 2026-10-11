@@ -803,8 +803,8 @@ final class LayoutBarContainer: NSView {
     /// Points the group marker at the slot a handle drop at windowLocation would take.
     func showGroupDropMarker(at windowLocation: NSPoint) {
         let frames = arrangedViews.filter { !$0.isNewItemsBadge }.map(\.frame)
-        let index = LayoutBarDropMarker.insertionIndex(forX: convert(windowLocation, from: nil).x, among: frames)
-        groupDropMarkerX = LayoutBarDropMarker.x(insertingAt: index, among: frames)
+        let boundary = groupDropDestination(atX: convert(windowLocation, from: nil).x).boundary
+        groupDropMarkerX = LayoutBarDropMarker.x(insertingAt: boundary, among: frames)
     }
 
     /// Whether a drag is hovering this container; drives the drop-target highlight.

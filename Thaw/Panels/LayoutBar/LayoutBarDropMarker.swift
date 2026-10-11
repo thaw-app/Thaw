@@ -18,13 +18,31 @@ nonisolated enum LayoutBarDropMarker {
         return frames.dropFirst().reduce(first) { $0.union($1) }.midX
     }
 
-    /// The slot a group dropped at x is inserted at: before the nearest frame, or after it
-    /// when x is past its middle. The same rule the drop itself applies.
-    static func insertionIndex(forX x: CGFloat, among frames: [CGRect]) -> Int {
-        guard let nearest = frames.indices.min(by: { abs(frames[$0].midX - x) < abs(frames[$1].midX - x) }) else {
-            return 0
+    /// An arranged view as a group drop sees it.
+    struct Slot {
+        let frame: CGRect
+        /// Its place in the section's item list; nil for an opaque slot or a collapsed group.
+        let itemIndex: Int?
+        /// Whether the item list holds anything from it, which a collapsed group does.
+        let holdsItems: Bool
+    }
+
+    /// Where a group drop lands: its index in the item list, and the boundary among the slots that index sits on.
+    struct GroupDestination: Equatable {
+        let itemIndex: Int
+        let boundary: Int
+    }
+
+    /// The one rule the marker and the drop share: before the nearest slot, or after it when x is past its middle.
+    static func groupDestination(forX x: CGFloat, among slots: [Slot], itemCount: Int) -> GroupDestination {
+        let nearest = slots.indices.min { abs(slots[$0].frame.midX - x) < abs(slots[$1].frame.midX - x) }
+        guard let nearest, let itemIndex = slots[nearest].itemIndex else {
+            // Nearest to something that is not an item, the group goes to the end of the item list.
+            let end = slots.lastIndex(where: \.holdsItems).map { $0 + 1 } ?? 0
+            return GroupDestination(itemIndex: itemCount, boundary: end)
         }
-        return x > frames[nearest].midX ? nearest + 1 : nearest
+        let offset = x > slots[nearest].frame.midX ? 1 : 0
+        return GroupDestination(itemIndex: itemIndex + offset, boundary: nearest + offset)
     }
 
     /// A group dragged by its handle opens no gap, so the marker sits on the boundary it will be inserted at.
@@ -50,5 +68,21 @@ nonisolated enum LayoutBarDropMarker {
     static func draw(atX x: CGFloat, in bounds: CGRect) {
         NSColor.controlAccentColor.setFill()
         NSBezierPath(roundedRect: rect(atX: x, in: bounds), xRadius: width / 2, yRadius: width / 2).fill()
+    }
+}
+
+extension LayoutBarContainer {
+    /// Where a handle drop at x, in this view's coordinates, lands; the marker and the drop both read it.
+    func groupDropDestination(atX x: CGFloat) -> LayoutBarDropMarker.GroupDestination {
+        let identifiers = LayoutBarPaddingView.layoutItemsForPersistence(from: arrangedViews).map(\.uniqueIdentifier)
+        let slots = arrangedViews.filter { !$0.isNewItemsBadge }.map { view in
+            var itemIndex: Int?
+            if case let .item(item) = view.kind {
+                itemIndex = identifiers.firstIndex(of: item.uniqueIdentifier)
+            }
+            let holdsItems = !LayoutBarPaddingView.persistableItems(from: [view.kind]).isEmpty
+            return LayoutBarDropMarker.Slot(frame: view.frame, itemIndex: itemIndex, holdsItems: holdsItems)
+        }
+        return LayoutBarDropMarker.groupDestination(forX: x, among: slots, itemCount: identifiers.count)
     }
 }
