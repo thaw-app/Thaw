@@ -49,7 +49,7 @@ final class MenuBarLayoutEditorPanel: NSObject, NSPopoverDelegate {
     /// The invisible window that hangs the popover off the top of the screen.
     private let anchor = PopoverAnchor()
 
-    /// The reorder editor opens in a window, not under the menu bar.
+    /// The window the reorder editor opens in.
     private lazy var reorderWindow = LayoutEditorWindow { [weak self] in
         self?.appState?.navigationState.isLayoutEditorPresented = false
         MemoryReclaimer.scheduleRelief(reason: "layout editor closed")

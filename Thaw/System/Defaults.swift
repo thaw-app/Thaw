@@ -370,7 +370,7 @@ extension Defaults {
         /// its info button stays after that. Default: false.
         static let platformLimitationsAcknowledged = false
 
-        /// The Edit Layout pop-out shows the SwiftUI reorder editor in place of the Layout pane. Default: false.
+        /// Edit Layout opens the SwiftUI reorder editor, in its own window, in place of the Layout pane pop-out. Default: false.
         static let useReorderLayoutEditor = false
     }
 }
@@ -617,7 +617,7 @@ extension Defaults {
         /// Hidden; not exposed in Settings. Default: false.
         case platformLimitationsAcknowledged = "macOS27LimitationsAcknowledged"
 
-        /// Whether the Edit Layout pop-out uses the SwiftUI reorder editor (see DefaultValue.useReorderLayoutEditor).
+        /// Whether Edit Layout opens the SwiftUI reorder editor (see DefaultValue.useReorderLayoutEditor).
         /// Hidden; not exposed in Settings. Default: false.
         case useReorderLayoutEditor
 

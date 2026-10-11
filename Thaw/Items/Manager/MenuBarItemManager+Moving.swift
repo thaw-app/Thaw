@@ -2663,7 +2663,7 @@ extension MenuBarItemManager {
         deadline: ContinuousClock.Instant? = nil,
         interval: Duration = Constants.MenuBarTuning.menuBarAgentResortPollInterval,
         earlyBailProbe: Duration? = nil,
-        // Known owners first: a general read took 0.7 to 1.5 s per poll on 2026-10-10.
+        // Known owners first: a general read took 0.7 to 1.5 s per poll with 124 apps running.
         enumerate: () async -> [MenuBarItem]? = {
             await DragGeometrySource.items { await MenuBarItem.getMenuBarItems(option: .activeSpace, freshOnly: true) }
         },
