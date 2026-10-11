@@ -13,6 +13,8 @@ on:
     types: [opened]
   roles: all
   skip-bots: [dependabot, renovate, github-actions]
+# A fork that turns Actions on has no business triaging its own issues with this.
+if: github.repository == 'thaw-app/Thaw'
 permissions:
   contents: read
   issues: read
