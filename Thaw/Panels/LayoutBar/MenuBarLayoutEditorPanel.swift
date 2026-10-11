@@ -49,12 +49,18 @@ final class MenuBarLayoutEditorPanel: NSObject, NSPopoverDelegate {
     /// The invisible window that hangs the popover off the top of the screen.
     private let anchor = PopoverAnchor()
 
+    /// The reorder editor opens in a window, not under the menu bar.
+    private lazy var reorderWindow = LayoutEditorWindow { [weak self] in
+        self?.appState?.navigationState.isLayoutEditorPresented = false
+        MemoryReclaimer.scheduleRelief(reason: "layout editor closed")
+    }
+
     /// Whether the editor is currently on screen.
     ///
     /// Drives toggle(on:onDone:): a summon gesture while the panel is up puts
     /// it away, like every other toggling surface in Thaw.
     var isShown: Bool {
-        popover?.isShown ?? false
+        popover?.isShown ?? false || reorderWindow.isShown
     }
 
     /// Dismisses the panel when a click lands genuinely outside it.
@@ -99,20 +105,19 @@ final class MenuBarLayoutEditorPanel: NSObject, NSPopoverDelegate {
 
     /// usesReorderEditor nil follows the hidden default; the Layout pane's button passes true.
     func show(on screen: NSScreen, usesReorderEditor: Bool? = nil, onDone: (() -> Void)? = nil) {
-        guard
-            let appState,
-            let anchorView = anchor.view(atTopOf: screen)
-        else {
+        guard let appState else { return }
+        if usesReorderEditor ?? Defaults.bool(forKey: .useReorderLayoutEditor) {
+            closePopover()
+            appState.navigationState.isLayoutEditorPresented = true
+            appState.imageCache.prepareForPresentation()
+            reorderWindow.show(appState: appState, on: screen)
             return
         }
+        guard let anchorView = anchor.view(atTopOf: screen) else { return }
         close()
         appState.navigationState.isLayoutEditorPresented = true
         appState.imageCache.prepareForPresentation()
-        popover = makePopover(
-            appState: appState,
-            usesReorderEditor: usesReorderEditor ?? Defaults.bool(forKey: .useReorderLayoutEditor),
-            onDone: onDone
-        )
+        popover = makePopover(appState: appState, onDone: onDone)
         popover?.show(relativeTo: anchorView.bounds, of: anchorView, preferredEdge: .maxY)
         appState.navigationState.isLayoutEditorPresented = isShown
 
@@ -145,6 +150,12 @@ final class MenuBarLayoutEditorPanel: NSObject, NSPopoverDelegate {
     }
 
     func close() {
+        reorderWindow.close()
+        closePopover()
+    }
+
+    private func closePopover() {
+        guard popover != nil else { return }
         appState?.navigationState.isLayoutEditorPresented = false
         dismissMonitor.stop()
         escapeMonitor.stop()
@@ -190,7 +201,8 @@ final class MenuBarLayoutEditorPanel: NSObject, NSPopoverDelegate {
             )
         )
         .sink { [weak self] _ in
-            self?.close()
+            // The window is not pinned to a bar, so it stays.
+            self?.closePopover()
         }
         .store(in: &c)
 
@@ -223,7 +235,7 @@ final class MenuBarLayoutEditorPanel: NSObject, NSPopoverDelegate {
         return false
     }
 
-    private func makePopover(appState: AppState, usesReorderEditor: Bool, onDone: (() -> Void)?) -> NSPopover {
+    private func makePopover(appState: AppState, onDone: (() -> Void)?) -> NSPopover {
         let popover = NSPopover()
         // See the type's documentation: dismissal is ours, because a nested
         // .transient inspector popover inside an AppKit-dismissed one is a
@@ -236,15 +248,13 @@ final class MenuBarLayoutEditorPanel: NSObject, NSPopoverDelegate {
         let controller = NSHostingController(
             rootView: MenuBarLayoutEditorContentView(
                 appState: appState,
-                usesReorderEditor: usesReorderEditor,
                 onDone: onDone
             )
         )
         // The layout pane is a scrolling form, so unlike the appearance editor
         // the height doesn't need to track a configuration; a fixed size wide
         // enough for the layout bars is sufficient.
-        // The reorder editor is three rows, not a scrolling form.
-        controller.preferredContentSize = NSSize(width: 680, height: usesReorderEditor ? 380 : 640)
+        controller.preferredContentSize = NSSize(width: 680, height: 640)
         popover.contentViewController = controller
         popover.contentSize = controller.preferredContentSize
         return popover
@@ -258,22 +268,14 @@ final class MenuBarLayoutEditorPanel: NSObject, NSPopoverDelegate {
 /// bars carry no glass of their own.
 private struct MenuBarLayoutEditorContentView: View {
     let appState: AppState
-    let usesReorderEditor: Bool
     let onDone: (() -> Void)?
 
     var body: some View {
         EditorPanelChrome(
             "Layout",
-            subtitle: usesReorderEditor ? "Drag to rearrange." : "Drag to rearrange. Click an item to inspect it."
+            subtitle: "Drag to rearrange. Click an item to inspect it."
         ) {
-            if usesReorderEditor {
-                ScrollView {
-                    LayoutEditorBars(appState: appState)
-                        .padding(ThawSpacing.gutter)
-                }
-            } else {
-                MenuBarLayoutSettingsPane(itemManager: appState.itemManager)
-            }
+            MenuBarLayoutSettingsPane(itemManager: appState.itemManager)
         } bottomBar: {
             Button("Done") {
                 onDone?()

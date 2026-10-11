@@ -402,7 +402,7 @@ struct LayoutBarsSection: View {
             }
         }
         .buttonStyle(.settingsGlass)
-        .help("Opens the experimental reorder editor under the menu bar.")
+        .help("Opens the experimental reorder editor in its own window.")
     }
 
     /// A refused group move snaps back with no other explanation, so the
