@@ -81,6 +81,9 @@ final class LayoutEditorModel {
         for section in sections {
             var items = LayoutDisplayedItems.items(in: section, appState: appState, runningApplications: running)
                 .filter(LayoutBarPaddingView.acceptsLayoutDrag(of:))
+            // The same item can be read twice: the leftmost one is shown, as in the Layout bars.
+            var seen = Set<String>()
+            items.removeAll { !seen.insert($0.uniqueIdentifier).inserted }
             if let held = authored[section] {
                 let live = items.map(\.uniqueIdentifier)
                 if LayoutEditorOrder.keepsAuthoredOrder(

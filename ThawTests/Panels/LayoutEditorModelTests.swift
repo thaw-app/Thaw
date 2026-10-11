@@ -130,6 +130,24 @@ struct LayoutEditorModelTests {
     }
 
     @Test
+    func anItemReadTwiceGetsOneRowAndSurvivesADrop() {
+        let world = World()
+        let first = World.item("First")
+        let second = World.item("Second")
+        world.seat([first, second, World.item(first.tag)])
+        let commits = Commits()
+        let model = commits.model(for: world)
+        model.refresh()
+        #expect(ids(model) == [first.uniqueIdentifier, second.uniqueIdentifier])
+
+        model.move(second.uniqueIdentifier, to: .visible, before: first.uniqueIdentifier, undoManager: nil)
+        model.refresh()
+
+        #expect(ids(model) == [second.uniqueIdentifier, first.uniqueIdentifier])
+        #expect(commits.drops.first?.targetOrder == [second, first])
+    }
+
+    @Test
     func aDropOfAnUnknownUnitChangesNothing() {
         let world = World()
         let items = ["A", "B"].map(World.item)
