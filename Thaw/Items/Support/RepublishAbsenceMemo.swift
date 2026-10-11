@@ -48,6 +48,12 @@ nonisolated struct RepublishAbsenceMemo {
         }
     }
 
+    /// The wanted members a read shows as gone. An empty read saw nothing, as a cancelled one
+    /// does, so it names nobody.
+    static func absentees(wanted: Set<String>, live: Set<String>) -> Set<String> {
+        live.isEmpty ? [] : wanted.subtracting(live)
+    }
+
     /// Empties the memo so the next pass waits for every member again.
     mutating func forget() {
         missingSince.removeAll()

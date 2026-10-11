@@ -97,4 +97,14 @@ struct RepublishAbsenceMemoTests {
     func memoryWindow() {
         #expect(RepublishAbsenceMemo.memory == .seconds(10))
     }
+
+    @Test
+    func anEmptyReadNamesNoAbsentees() {
+        #expect(RepublishAbsenceMemo.absentees(wanted: ["a", "b"], live: []).isEmpty)
+    }
+
+    @Test
+    func aReadWithItemsNamesTheWantedMembersItLacks() {
+        #expect(RepublishAbsenceMemo.absentees(wanted: ["a", "b"], live: ["a", "c"]) == ["b"])
+    }
 }

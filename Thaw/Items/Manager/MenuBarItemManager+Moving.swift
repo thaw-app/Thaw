@@ -2151,7 +2151,8 @@ extension MenuBarItemManager {
                 continue
             }
 
-            var liveItems = await MenuBarItem.getMenuBarItems(option: .activeSpace)
+            // Visible takes its items from the wait below, so a full read here is thrown away.
+            var liveItems = section == .visible ? [] : await MenuBarItem.getMenuBarItems(option: .activeSpace)
 
             // A newcomer from a hidden section can take seconds to republish,
             // and one missing from the snapshot keeps its far-side weight.
@@ -2468,6 +2469,11 @@ extension MenuBarItemManager {
         let presenceWait = await waitForMenuBarAgentLayout(
             deadline: now + .seconds(3),
             interval: .milliseconds(150),
+            enumerate: {
+                await DragGeometrySource.items {
+                    await MenuBarItem.getMenuBarItems(option: .activeSpace, freshOnly: true)
+                }
+            },
             isSatisfied: { items in
                 awaitedIDs.isSubset(of: Set(items.map(\.uniqueIdentifier)))
             }
@@ -2476,7 +2482,7 @@ extension MenuBarItemManager {
         let liveIDs = Set(refreshed.map(\.uniqueIdentifier))
         missingRepublishMemo.noteArrived(wantedIDs.intersection(liveIDs))
         var updatedOrder = desiredOrder
-        let missing = wantedIDs.subtracting(liveIDs)
+        let missing = RepublishAbsenceMemo.absentees(wanted: wantedIDs, live: liveIDs)
         if !missing.isEmpty {
             missingRepublishMemo.noteMissing(missing, at: .now)
             // Named, not counted: a count cannot say which app lagged.
