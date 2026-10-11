@@ -14,7 +14,6 @@ import ThawUI
 struct LayoutEditorBars: View {
     private enum Metrics {
         static let rowHeight: CGFloat = 48
-        static let glyphHeight: CGFloat = 22
         static let tileSpacing: CGFloat = 2
     }
 
@@ -65,16 +64,10 @@ struct LayoutEditorBars: View {
 
     private func row(_ section: MenuBarSection.Name) -> some View {
         let units = model.units[section] ?? []
-        let images = OverflowFallbackIcon.resolvedImages(
-            for: units.flatMap(model.items(of:)),
-            appState: appState,
-            imageCache: appState.imageCache,
-            section: { _ in section }
-        )
         return ScrollView(.horizontal) {
             HStack(spacing: Metrics.tileSpacing) {
                 ForEach(units) { unit in
-                    tile(unit, images: images)
+                    LayoutEditorTile(unit: unit, items: model.items(of: unit), section: section, appState: appState)
                 }
                 .reorderable(collectionID: section)
             }
@@ -91,11 +84,31 @@ struct LayoutEditorBars: View {
             shape.strokeBorder(.separator.opacity(0.5), lineWidth: 0.5)
         }
     }
+}
 
-    private func tile(_ unit: LayoutEditorOrder.Unit, images: [MenuBarItemTag: MenuBarItemDisplayImage]) -> some View {
-        let items = model.items(of: unit)
+/// One icon, or one group, in a row. Reading the image cache here keeps a recapture
+/// from rebuilding the rows, which would otherwise happen during a drag.
+private struct LayoutEditorTile: View {
+    private enum Metrics {
+        static let height: CGFloat = 36
+        static let glyphHeight: CGFloat = 22
+        static let spacing: CGFloat = 2
+    }
+
+    let unit: LayoutEditorOrder.Unit
+    let items: [MenuBarItem]
+    let section: MenuBarSection.Name
+    let appState: AppState
+
+    var body: some View {
+        let images = OverflowFallbackIcon.resolvedImages(
+            for: items,
+            appState: appState,
+            imageCache: appState.imageCache,
+            section: { _ in section }
+        )
         let name = items.map { MenuBarItemDisplayName.displayName(for: $0) }.formatted(.list(type: .and))
-        return HStack(spacing: Metrics.tileSpacing) {
+        HStack(spacing: Metrics.spacing) {
             ForEach(items, id: \.uniqueIdentifier) { item in
                 Group {
                     if let image = images[item.tag] {
@@ -111,7 +124,7 @@ struct LayoutEditorBars: View {
             }
         }
         .padding(.horizontal, unit.isGroup ? 4 : 0)
-        .frame(height: Metrics.rowHeight - 12)
+        .frame(height: Metrics.height)
         .background {
             if unit.isGroup {
                 Capsule().fill(.primary.opacity(0.1))

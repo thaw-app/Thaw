@@ -98,8 +98,13 @@ final class LayoutEditorModel {
             }
             units[section] = LayoutEditorOrder.units(itemIDs: items.map(\.uniqueIdentifier), groups: groups)
         }
-        self.units = units
-        self.itemsByID = itemsByID
+        // An unchanged read must not rebuild the rows: that can land in the middle of a drag.
+        if self.units != units {
+            self.units = units
+        }
+        if self.itemsByID != itemsByID {
+            self.itemsByID = itemsByID
+        }
     }
 
     func drop(_ difference: ReorderDifference<String, MenuBarSection.Name>, undoManager: UndoManager?) {
