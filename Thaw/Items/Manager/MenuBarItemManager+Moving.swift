@@ -3069,7 +3069,7 @@ extension MenuBarItemManager {
             enumerateItems: {
                 // currentBounds matches on tag alone, so a recovery here would
                 // start the drag on empty menu bar.
-                await Self.dragGeometry(from: MenuBarItem.getMenuBarItems(option: .activeSpace))
+                await DragGeometrySource.items(moving: item, beside: destination.targetItem) { await Self.dragGeometry(from: MenuBarItem.getMenuBarItems(option: .activeSpace)) }
             }
         )
         engine.cursorWatchdogTimeout = watchdogTimeout
