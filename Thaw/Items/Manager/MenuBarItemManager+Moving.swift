@@ -2469,11 +2469,6 @@ extension MenuBarItemManager {
         let presenceWait = await waitForMenuBarAgentLayout(
             deadline: now + .seconds(3),
             interval: .milliseconds(150),
-            enumerate: {
-                await DragGeometrySource.items {
-                    await MenuBarItem.getMenuBarItems(option: .activeSpace, freshOnly: true)
-                }
-            },
             isSatisfied: { items in
                 awaitedIDs.isSubset(of: Set(items.map(\.uniqueIdentifier)))
             }
@@ -2668,7 +2663,10 @@ extension MenuBarItemManager {
         deadline: ContinuousClock.Instant? = nil,
         interval: Duration = Constants.MenuBarTuning.menuBarAgentResortPollInterval,
         earlyBailProbe: Duration? = nil,
-        enumerate: () async -> [MenuBarItem]? = { await MenuBarItem.getMenuBarItems(option: .activeSpace, freshOnly: true) },
+        // Known owners first: a general read took 0.7 to 1.5 s per poll on 2026-10-10.
+        enumerate: () async -> [MenuBarItem]? = {
+            await DragGeometrySource.items { await MenuBarItem.getMenuBarItems(option: .activeSpace, freshOnly: true) }
+        },
         isSatisfied: ([MenuBarItem]) -> Bool
     ) async -> MenuBarAgentLayoutWaitResult {
         guard var liveItems = await enumerate() else {
