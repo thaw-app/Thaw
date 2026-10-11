@@ -100,8 +100,10 @@ jobs:
 
       - name: Checkout source
         id: source
-        uses: ./.github/actions/checkout-source
+        uses: thaw-app/org-ci/actions/checkout-source@61f345397193bf3f9356c4f6179fb6ed4c84dd45
         with:
+          project-name: Thaw.xcodeproj
+          target-name: Thaw
           ref: refs/tags/${{ inputs.tag }}
           fetch-depth: 0
 
@@ -154,7 +156,7 @@ jobs:
 
       - name: Resolve release notes
         id: notes
-        uses: thaw-app/org-ci/actions/release-notes@d6dce882eeefd199062c21ef6eb646428a255568
+        uses: thaw-app/org-ci/actions/release-notes@61f345397193bf3f9356c4f6179fb6ed4c84dd45
         with:
           tag: ${{ steps.meta.outputs.tag }}
           release-notes: ${{ inputs.release_notes }}
@@ -179,7 +181,7 @@ jobs:
           fi
 
       - name: Configure signing
-        uses: thaw-app/org-ci/actions/configure-signing@d90bbc87aa4dff91d3bc9e30fb6ceef0765bd986
+        uses: thaw-app/org-ci/actions/configure-signing@61f345397193bf3f9356c4f6179fb6ed4c84dd45
         with:
           apple-application-cert: ${{ secrets.APPLE_APPLICATION_CERT }}
           apple-application-cert-password: ${{ secrets.APPLE_APPLICATION_CERT_PASSWORD }}
@@ -188,7 +190,7 @@ jobs:
           apple-team-id: ${{ secrets.APPLE_TEAM_ID }}
 
       - name: Build
-        uses: thaw-app/org-ci/actions/build@d90bbc87aa4dff91d3bc9e30fb6ceef0765bd986
+        uses: thaw-app/org-ci/actions/build@61f345397193bf3f9356c4f6179fb6ed4c84dd45
         with:
           apple-team-id: ${{ secrets.APPLE_TEAM_ID }}
           project-name: ${{ steps.source.outputs.project-name }}
@@ -196,14 +198,14 @@ jobs:
           deployment-target: ${{ steps.source.outputs.deployment-target }}
 
       - name: Export Archive
-        uses: thaw-app/org-ci/actions/export-and-package@d90bbc87aa4dff91d3bc9e30fb6ceef0765bd986
+        uses: thaw-app/org-ci/actions/export-and-package@61f345397193bf3f9356c4f6179fb6ed4c84dd45
         with:
           apple-team-id: ${{ secrets.APPLE_TEAM_ID }}
           app-name: ${{ env.APP_NAME }}
           dmg-name: ${{ env.DMG_NAME }}
 
       - name: Notarize
-        uses: thaw-app/org-ci/actions/notarize-and-validate@d90bbc87aa4dff91d3bc9e30fb6ceef0765bd986
+        uses: thaw-app/org-ci/actions/notarize-and-validate@61f345397193bf3f9356c4f6179fb6ed4c84dd45
         with:
           dmg-name: ${{ env.DMG_NAME }}
           app-name: ${{ env.APP_NAME }}
@@ -296,7 +298,7 @@ jobs:
 
       - name: Sparkle ZIP and appcast
         id: sparkle
-        uses: thaw-app/org-ci/actions/sparkle-release@d90bbc87aa4dff91d3bc9e30fb6ceef0765bd986
+        uses: thaw-app/org-ci/actions/sparkle-release@61f345397193bf3f9356c4f6179fb6ed4c84dd45
         with:
           tag: ${{ steps.meta.outputs.tag }}
           channel: ${{ steps.meta.outputs.channel }}
@@ -407,7 +409,7 @@ jobs:
 
       - name: Publish appcast to updates gh-pages
         if: ${{ inputs.publish_appcast && inputs.publish_release && !inputs.dry_run }}
-        uses: thaw-app/org-ci/actions/publish-file-to-branch@d90bbc87aa4dff91d3bc9e30fb6ceef0765bd986
+        uses: thaw-app/org-ci/actions/publish-file-to-branch@61f345397193bf3f9356c4f6179fb6ed4c84dd45
         with:
           repository: ${{ env.UPDATES_REPOSITORY }}
           branch: gh-pages
@@ -424,7 +426,7 @@ jobs:
       # Keep historical 1.x entries and the 2.x line, never 3.x or newer.
       - name: Mirror 2.x appcast to legacy stonerl Pages
         if: ${{ inputs.publish_appcast && inputs.publish_release && !inputs.dry_run && startsWith(steps.meta.outputs.tag, '2.') }}
-        uses: thaw-app/org-ci/actions/publish-file-to-branch@d90bbc87aa4dff91d3bc9e30fb6ceef0765bd986
+        uses: thaw-app/org-ci/actions/publish-file-to-branch@61f345397193bf3f9356c4f6179fb6ed4c84dd45
         with:
           repository: ${{ env.LEGACY_APPCAST_REPOSITORY }}
           branch: main

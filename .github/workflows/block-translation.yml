@@ -17,47 +17,8 @@ jobs:
       pull-requests: write
       issues: write
     steps:
-      - name: Close PR and Comment
-        uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9.0.0
+      - uses: thaw-app/org-ci/actions/block-translation-prs@61f345397193bf3f9356c4f6179fb6ed4c84dd45
         with:
-          script: |
-
-            const pr = context.payload.pull_request;
-            if (!pr) return;
-
-            if ((pr.title || '').toLowerCase().includes('crowdin')) return;
-            
-            const files = await github.paginate(github.rest.pulls.listFiles, {
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              pull_number: pr.number,
-            });
-
-            const onlyTranslations = files.every(f => f.filename.endsWith('.xcstrings'));
-            if (!onlyTranslations) return;
-
-            const message = [
-              '### 🛑 Manual Translation Detected',
-              '',
-              'Thank you very much for your contribution. We have moved translations over to Crowdin: https://crowdin.com/project/thaw',
-              '',
-              'Please contribute your translations there. We do not accept translations here anymore since it results in merge conflicts and translations for other languages being overwritten.',
-              '',
-              'Thank you for your understanding.',
-              '',
-              'This PR is being automatically closed to keep the localization sync intact.',
-            ].join('\n');
-
-            await github.rest.issues.createComment({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              issue_number: pr.number,
-              body: message
-            });
-
-            await github.rest.pulls.update({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              pull_number: pr.number,
-              state: 'closed'
-            });
+          product: Thaw
+          crowdin-url: https://crowdin.com/project/thaw
+          translation-sync-branch: l10n_development

@@ -323,7 +323,7 @@ jobs:
 
       - name: Publish appcast to updates gh-pages
         if: ${{ inputs.publish_appcast && !inputs.dry_run }}
-        uses: thaw-app/org-ci/actions/publish-file-to-branch@d90bbc87aa4dff91d3bc9e30fb6ceef0765bd986
+        uses: thaw-app/org-ci/actions/publish-file-to-branch@61f345397193bf3f9356c4f6179fb6ed4c84dd45
         with:
           repository: ${{ env.UPDATES_REPOSITORY }}
           branch: gh-pages
@@ -338,7 +338,7 @@ jobs:
 
       - name: Mirror 2.x appcast to legacy stonerl Pages
         if: ${{ inputs.publish_appcast && !inputs.dry_run && startsWith(steps.meta.outputs.stable, '2.') }}
-        uses: thaw-app/org-ci/actions/publish-file-to-branch@d90bbc87aa4dff91d3bc9e30fb6ceef0765bd986
+        uses: thaw-app/org-ci/actions/publish-file-to-branch@61f345397193bf3f9356c4f6179fb6ed4c84dd45
         with:
           repository: ${{ env.LEGACY_APPCAST_REPOSITORY }}
           branch: main
