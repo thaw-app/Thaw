@@ -24,6 +24,7 @@ path runs; a relaunch of Thaw is the simplest way to guarantee that.
 | `discardStrayMoveEvents`          | Bool | `true`  | Whether stray echoes of synthetic move events are discarded before they can be delivered against the wrong window. Set to `NO` only if this ever misfires. |
 | `failFastOnEventWindowMismatch`   | Bool | `false` | Whether a synthetic event that comes back addressed to a different window than it was posted with fails its operation immediately rather than running to timeout. Opt-in; the mismatch is always logged regardless. |
 | `disableNotificationCenterBridge` | Bool | `false` | Turns off the bridge that lets a Clock click or the system shortcut open Notification Center while items are hidden. Those clicks then go to macOS untouched and do not open it until the hidden items are shown. Set this only if Clock clicks misbehave. |
+| `useReorderLayoutEditor` | Bool | `false` | Shows the experimental reorder editor in the Edit Layout pop-out in place of the Layout pane. It has drag reordering only: no item inspector, item menu or keyboard moves. |
 
 ### Usage Examples
 

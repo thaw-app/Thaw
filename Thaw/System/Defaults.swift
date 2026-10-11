@@ -201,6 +201,7 @@ nonisolated enum Defaults {
             .useLCSSectionOrderPlanner: DefaultValue.useLCSSectionOrderPlanner,
             .inputPauseThresholdMs: DefaultValue.inputPauseThresholdMs,
             .platformLimitationsAcknowledged: DefaultValue.platformLimitationsAcknowledged,
+            .useReorderLayoutEditor: DefaultValue.useReorderLayoutEditor,
         ]
     }
 
@@ -368,6 +369,9 @@ extension Defaults {
         /// The user has seen the Layout pane's macOS 27 limitations notice; only
         /// its info button stays after that. Default: false.
         static let platformLimitationsAcknowledged = false
+
+        /// The Edit Layout pop-out shows the SwiftUI reorder editor in place of the Layout pane. Default: false.
+        static let useReorderLayoutEditor = false
     }
 }
 
@@ -612,6 +616,10 @@ extension Defaults {
         /// Whether the Layout pane's macOS 27 limitations notice was acknowledged.
         /// Hidden; not exposed in Settings. Default: false.
         case platformLimitationsAcknowledged = "macOS27LimitationsAcknowledged"
+
+        /// Whether the Edit Layout pop-out uses the SwiftUI reorder editor (see DefaultValue.useReorderLayoutEditor).
+        /// Hidden; not exposed in Settings. Default: false.
+        case useReorderLayoutEditor
 
         /// Whether Always-Hidden members are natively hidden via their
         /// owners' preference domains (see DefaultValue.useNativeAlwaysHide).

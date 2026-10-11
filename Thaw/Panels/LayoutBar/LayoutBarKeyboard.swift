@@ -364,7 +364,7 @@ enum LayoutBarKeyboard {
     // MARK: Order commit
 
     /// Share the pane's sort sequence: record, schedule apply, and immediately apply revealed hidden sections.
-    private static func applySectionOrder(
+    static func applySectionOrder(
         _ order: [MenuBarItem],
         previousOrder: [MenuBarItem],
         section: MenuBarSection.Name,

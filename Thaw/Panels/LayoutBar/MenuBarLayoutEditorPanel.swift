@@ -251,11 +251,19 @@ private struct MenuBarLayoutEditorContentView: View {
     let onDone: (() -> Void)?
 
     var body: some View {
+        let usesReorderEditor = Defaults.bool(forKey: .useReorderLayoutEditor)
         EditorPanelChrome(
             "Layout",
-            subtitle: "Drag to rearrange. Click an item to inspect it."
+            subtitle: usesReorderEditor ? "Drag to rearrange." : "Drag to rearrange. Click an item to inspect it."
         ) {
-            MenuBarLayoutSettingsPane(itemManager: appState.itemManager)
+            if usesReorderEditor {
+                ScrollView {
+                    LayoutEditorBars(appState: appState)
+                        .padding(ThawSpacing.gutter)
+                }
+            } else {
+                MenuBarLayoutSettingsPane(itemManager: appState.itemManager)
+            }
         } bottomBar: {
             Button("Done") {
                 onDone?()

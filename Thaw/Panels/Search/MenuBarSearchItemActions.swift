@@ -184,7 +184,7 @@ enum MenuBarSearchItemActions {
     /// be refused either way, the message says the item stays put instead of
     /// sending someone to a switch that would not have helped. The wording is
     /// the layout editor's, from LayoutBarFeedbackCenter.
-    private static func postAssignmentRefusal(
+    static func postAssignmentRefusal(
         for item: MenuBarItem,
         to section: MenuBarSection.Name,
         experimentalSystemItemHiding: Bool,
@@ -233,7 +233,7 @@ enum MenuBarSearchItemActions {
 
     /// A user-facing name for the group these members belong to, for use in
     /// refusal copy.
-    private static func groupDisplayName(
+    static func groupDisplayName(
         for members: [MenuBarItem],
         in sourceItems: [MenuBarItem],
         appState: AppState
