@@ -27,17 +27,12 @@ jobs:
       APP_NAME: "Thaw.app"
       DMG_NAME: "Thaw-dev.dmg"
     steps:
-      # A local composite action has to exist on disk before it can run, so
-      # this sparse checkout brings in .github/actions and nothing else.
-      - name: Checkout build actions
-        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          sparse-checkout: .github/actions
-
       - name: Checkout source
         id: source
-        uses: ./.github/actions/checkout-source
+        uses: thaw-app/org-ci/actions/checkout-source@61f345397193bf3f9356c4f6179fb6ed4c84dd45
         with:
+          project-name: Thaw.xcodeproj
+          target-name: Thaw
           ref: ${{ inputs.ref }}
 
       - name: Select latest installed Xcode (including betas)
@@ -46,7 +41,7 @@ jobs:
           xcode-version: latest
 
       - name: Configure signing
-        uses: thaw-app/org-ci/actions/configure-signing@6adcb3aa53a28cfa9d4cd2f55e2d5f5c75af980b
+        uses: thaw-app/org-ci/actions/configure-signing@61f345397193bf3f9356c4f6179fb6ed4c84dd45
         with:
           apple-application-cert: ${{ secrets.APPLE_APPLICATION_CERT }}
           apple-application-cert-password: ${{ secrets.APPLE_APPLICATION_CERT_PASSWORD }}
@@ -55,7 +50,7 @@ jobs:
           apple-team-id: ${{ secrets.APPLE_TEAM_ID }}
 
       - name: Build
-        uses: thaw-app/org-ci/actions/build@6adcb3aa53a28cfa9d4cd2f55e2d5f5c75af980b
+        uses: thaw-app/org-ci/actions/build@61f345397193bf3f9356c4f6179fb6ed4c84dd45
         with:
           apple-team-id: ${{ secrets.APPLE_TEAM_ID }}
           project-name: ${{ steps.source.outputs.project-name }}
@@ -63,14 +58,14 @@ jobs:
           deployment-target: ${{ steps.source.outputs.deployment-target }}
 
       - name: Export Archive
-        uses: thaw-app/org-ci/actions/export-and-package@6adcb3aa53a28cfa9d4cd2f55e2d5f5c75af980b
+        uses: thaw-app/org-ci/actions/export-and-package@61f345397193bf3f9356c4f6179fb6ed4c84dd45
         with:
           apple-team-id: ${{ secrets.APPLE_TEAM_ID }}
           app-name: ${{ env.APP_NAME }}
           dmg-name: ${{ env.DMG_NAME }}
 
       - name: Notarize
-        uses: thaw-app/org-ci/actions/notarize-and-validate@6adcb3aa53a28cfa9d4cd2f55e2d5f5c75af980b
+        uses: thaw-app/org-ci/actions/notarize-and-validate@61f345397193bf3f9356c4f6179fb6ed4c84dd45
         with:
           dmg-name: ${{ env.DMG_NAME }}
           app-name: ${{ env.APP_NAME }}
