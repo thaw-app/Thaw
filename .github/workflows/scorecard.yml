@@ -4,10 +4,8 @@
 
 name: Scorecard
 on:
-  # Only the default branch is supported for publishing results / badge.
-  push:
-    branches:
-      - development
+  # A scheduled run uses the default branch, the only one results and the
+  # badge can be published from.
   schedule:
     # Weekly on Saturdays.
     - cron: "30 1 * * 6"

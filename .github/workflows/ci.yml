@@ -27,7 +27,7 @@ jobs:
           persist-credentials: false
       - name: Detect code-related paths
         id: filter
-        uses: thaw-app/org-ci/actions/detect-code-changes@ac600643b656ddc38214a7b90edc81f40bfae478
+        uses: thaw-app/org-ci/actions/detect-code-changes@a5d047fe853b328067a3423f40d404b4b8245653
         with:
           patterns: '(\.swift$|(^|/)Package\.swift$|(^|/)Package\.resolved$|^sonar-project\.properties$|^\.swiftlint|^\.swiftformat|^Thaw\.xcodeproj/|^scripts/|\.xcstrings$|^\.github/workflows/ci\.yml$)'
 
@@ -154,9 +154,10 @@ jobs:
           if-no-files-found: error
 
   # Tests with Xcode 26.6 on macOS 26; `build` covers Xcode 27 on macOS 27
-  # and owns coverage.
+  # and owns coverage. Not on a push: the pull request already ran it on the
+  # same code, and only `build` is needed again, for Sonar's coverage.
   build-macos-26:
-    if: github.repository == 'thaw-app/Thaw'
+    if: github.repository == 'thaw-app/Thaw' && github.event_name != 'push'
     runs-on: macos-26
     needs: [changes, static_analysis]
     env:
@@ -222,7 +223,7 @@ jobs:
       # skipped. With neither, it leaves the last analysis alone.
       - name: Scan with coverage
         if: env.SONAR_ENABLED == 'true'
-        uses: thaw-app/org-ci/actions/sonar-scan@ac600643b656ddc38214a7b90edc81f40bfae478
+        uses: thaw-app/org-ci/actions/sonar-scan@a5d047fe853b328067a3423f40d404b4b8245653
         with:
           sonar-token: ${{ secrets.SONAR_TOKEN }}
           code-changed: ${{ needs.changes.outputs.code }}

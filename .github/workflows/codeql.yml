@@ -1,9 +1,6 @@
 name: CodeQL
 
 on:
-  push:
-    branches:
-      - development
   schedule:
     # Weekly, offset from the hour to avoid GitHub's cron pileup.
     - cron: "31 4 * * 1"
