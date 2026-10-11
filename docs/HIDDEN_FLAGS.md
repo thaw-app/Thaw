@@ -23,6 +23,7 @@ path runs; a relaunch of Thaw is the simplest way to guarantee that.
 | `inputPauseThresholdMs`           | Int  | `50`    | Milliseconds of input inactivity required before a menu-bar item reorder move proceeds. Widen this if repeated cursor "kidnapping" during reordering is an issue. |
 | `discardStrayMoveEvents`          | Bool | `true`  | Whether stray echoes of synthetic move events are discarded before they can be delivered against the wrong window. Set to `NO` only if this ever misfires. |
 | `failFastOnEventWindowMismatch`   | Bool | `false` | Whether a synthetic event that comes back addressed to a different window than it was posted with fails its operation immediately rather than running to timeout. Opt-in; the mismatch is always logged regardless. |
+| `disableNotificationCenterBridge` | Bool | `false` | Turns off the bridge that lets a Clock click or the system shortcut open Notification Center while items are hidden. Those clicks then go to macOS untouched and do not open it until the hidden items are shown. Set this only if Clock clicks misbehave. |
 
 ### Usage Examples
 
@@ -35,6 +36,9 @@ defaults write com.stonerl.Thaw discardStrayMoveEvents -bool NO
 
 # Fail fast on a window mismatch instead of waiting for a timeout.
 defaults write com.stonerl.Thaw failFastOnEventWindowMismatch -bool YES
+
+# Leave Clock clicks to macOS while items are hidden.
+defaults write com.stonerl.Thaw disableNotificationCenterBridge -bool YES
 ```
 
 To restore the default behaviour for a flag, remove the key:

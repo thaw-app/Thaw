@@ -5,6 +5,7 @@
 //  Copyright (Thaw) © 2026 Toni Förster
 //  Licensed under the GNU GPLv3
 
+import AppKit
 import CoreGraphics
 import Foundation
 
@@ -21,8 +22,19 @@ final class NotificationCenterActivation {
         case unavailable
     }
 
+    /// How the panel behaved while a release was held.
+    enum Outcome: Equatable {
+        case panelOpened
+        case panelClosed
+        /// The release ran to its bound with no panel, as an abandoned press also does.
+        case panelNeverOpened
+        /// A close gesture left the panel up until the bound.
+        case panelDidNotClose
+    }
+
     private let activate: (Request) async -> Void
     private let panelPresenting: () -> Bool
+    private let report: (Outcome) -> Void
     private let now: () -> Date
     private var pending: [Request] = []
     private var worker: Task<Void, Never>?
@@ -50,6 +62,14 @@ final class NotificationCenterActivation {
     /// finishes before the bar returns.
     static let dismissGrace = Duration.milliseconds(120)
 
+    /// Hidden default that turns the bridge off. Clock clicks and the shortcut then
+    /// go to macOS untouched, which cannot open the panel while items are hidden.
+    nonisolated static let bridgeDisabledKey = Defaults.Key.disableNotificationCenterBridge.rawValue
+
+    nonisolated static func isBridgeEnabled(in defaults: UserDefaults = .standard) -> Bool {
+        !defaults.bool(forKey: bridgeDisabledKey)
+    }
+
     var isBusy: Bool {
         worker != nil || restoreLease != nil
     }
@@ -57,20 +77,37 @@ final class NotificationCenterActivation {
     init(
         activate: @escaping (Request) async -> Void,
         panelPresenting: @escaping () -> Bool = NotificationCenterActivation.systemPanelPresenting,
+        report: @escaping (Outcome) -> Void = { _ in },
         now: @escaping () -> Date = { Date() }
     ) {
         self.activate = activate
         self.panelPresenting = panelPresenting
+        self.report = report
         self.now = now
     }
 
     /// Notification Center is presenting when its panel window is on-screen.
     /// The flag flips within ~100 ms of open and close, inside one poll interval.
     private static nonisolated func systemPanelPresenting() -> Bool {
+        let owners = Set(
+            NSRunningApplication.runningApplications(withBundleIdentifier: panelOwnerBundleID)
+                .map(\.processIdentifier)
+        )
+        guard !owners.isEmpty else { return false }
         let list = CGWindowListCopyWindowInfo([.optionOnScreenOnly], kCGNullWindowID) as? [[String: Any]] ?? []
-        return list.contains {
-            ($0[kCGWindowOwnerName as String] as? String) == "Notification Center"
-        }
+        return list.contains { isPanelWindow($0, panelOwners: owners) }
+    }
+
+    private nonisolated static let panelOwnerBundleID = "com.apple.notificationcenterui"
+
+    /// Whether a window is the panel: owned by the panel's process, above normal level.
+    /// The same process keeps desktop widgets on-screen at the desktop level.
+    static nonisolated func isPanelWindow(_ window: [String: Any], panelOwners: Set<pid_t>) -> Bool {
+        guard let owner = window[kCGWindowOwnerPID as String] as? Int,
+              panelOwners.contains(pid_t(owner)),
+              let layer = window[kCGWindowLayer as String] as? Int
+        else { return false }
+        return layer > Int(CGWindowLevelForKey(.normalWindow))
     }
 
     func enqueue(_ request: Request) {
@@ -193,15 +230,18 @@ final class NotificationCenterActivation {
             // Opening: wait for the panel, then grace the slide-out. Closing:
             // restore as soon as it clears. Both are bounded by the timeout.
             let waitingForDismissal = panelWasPresentingAtStart
-            var settled = false
+            var outcome: Outcome?
             var waited = Duration.zero
             while !Task.isCancelled {
                 let present = presenting()
                 if waitingForDismissal ? !present : present {
-                    settled = true
+                    outcome = waitingForDismissal ? .panelClosed : .panelOpened
                     break
                 }
-                guard waited < Self.presentationTimeout else { break }
+                guard waited < Self.presentationTimeout else {
+                    outcome = waitingForDismissal ? .panelDidNotClose : .panelNeverOpened
+                    break
+                }
                 do {
                     try await pause(Self.pollInterval)
                 } catch {
@@ -209,10 +249,15 @@ final class NotificationCenterActivation {
                 }
                 waited += Self.pollInterval
             }
-            if settled {
-                try? await pause(waitingForDismissal ? Self.dismissGrace : Self.escapeGrace)
+            if outcome == .panelClosed {
+                try? await pause(Self.dismissGrace)
+            } else if outcome == .panelOpened {
+                try? await pause(Self.escapeGrace)
             }
             guard let self, self.restoreSlot.isCurrent(ticket) else { return }
+            if let outcome {
+                self.report(outcome)
+            }
             self.restoreAssertion()
         }
     }

@@ -619,6 +619,10 @@ extension Defaults {
         /// Hidden; not exposed in Settings. Default: false.
         case useNativeAlwaysHide
 
+        /// Hidden diagnostic: turns off the bridge that lets the Clock and the
+        /// system shortcut open Notification Center while items are hidden.
+        case disableNotificationCenterBridge
+
         // MARK: Appearance Settings
 
         case menuBarAppearanceConfigurationV2 = "MenuBarAppearanceConfigurationV2"
