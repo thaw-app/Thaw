@@ -6,6 +6,7 @@
 //  Licensed under the GNU GPLv3
 
 import CoreGraphics
+import Foundation
 import Testing
 @testable import Thaw
 
@@ -71,5 +72,12 @@ struct ChevronMaskedProbeTests {
             now: .now
         )
         #expect(observation == .unavailable)
+    }
+
+    @Test("Thaw's own menus in the bar hold the probe; another app's or none do not")
+    func ownMenusHoldTheProbe() {
+        #expect(MenuBarItemAXProvider.isThawTheMenuBarOwner(ProcessInfo.processInfo.processIdentifier))
+        #expect(!MenuBarItemAXProvider.isThawTheMenuBarOwner(1))
+        #expect(!MenuBarItemAXProvider.isThawTheMenuBarOwner(nil))
     }
 }
