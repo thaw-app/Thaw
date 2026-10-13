@@ -34,6 +34,41 @@ struct CaptureUIStateTests {
         #expect(state.accepts(request))
     }
 
+    @Test func backdropLeaseAdmitsCaptureWithPanelsClosed() throws {
+        var state = CaptureUIState()
+        state.setActive(false)
+        #expect(state.ticket == nil)
+        state.beginOneshot()
+        let ticket = try #require(state.ticket)
+        #expect(state.accepts(ticket))
+        state.endOneshot()
+        #expect(state.ticket == nil)
+        #expect(!state.accepts(ticket))
+    }
+
+    @Test func closingPanelDoesNotInvalidateAnInFlightBackdrop() throws {
+        var state = CaptureUIState()
+        state.beginOneshot()
+        let ticket = try #require(state.ticket)
+        state.setActive(false)
+        #expect(state.accepts(ticket))
+        #expect(state.isCapturing)
+        state.endOneshot()
+        #expect(!state.accepts(ticket))
+    }
+
+    @Test func overlappingBackdropsKeepTheLeaseUntilBothFinish() throws {
+        var state = CaptureUIState()
+        state.setActive(false)
+        state.beginOneshot()
+        state.beginOneshot()
+        let ticket = try #require(state.ticket)
+        state.endOneshot()
+        #expect(state.accepts(ticket))
+        state.endOneshot()
+        #expect(!state.accepts(ticket))
+    }
+
     @Test func retiringACaptorDiscardsItsFrameStorage() {
         let captor = FrameCaptor()
         captor.stopRetainingFrames()

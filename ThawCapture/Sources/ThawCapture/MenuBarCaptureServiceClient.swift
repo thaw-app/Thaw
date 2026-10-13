@@ -138,6 +138,20 @@ public actor MenuBarCaptureServiceClient {
         return await performCapture(request, visibilityGeneration: visibilityGeneration)?.makeImage()
     }
 
+    /// One-shot backdrop capture, using the caller's lease even with all panels closed.
+    func captureBackdrop(
+        windowIDs: [CGWindowID],
+        screenBounds: CGRect,
+        options: CGWindowImageOption
+    ) async -> CGImage? {
+        let request = CaptureServiceRequest.backdrop(
+            ids: windowIDs,
+            screenBounds: screenBounds,
+            imageOptionRawValue: options.rawValue
+        )
+        return await performCapture(request, visibilityGeneration: nil)?.makeImage()
+    }
+
     // MARK: Session Management
 
     /// One capture round trip, reopening the session once when the send
@@ -166,7 +180,7 @@ public actor MenuBarCaptureServiceClient {
             }
             do {
                 let reply = try await send(request, over: session)
-                guard ScreenCapture.isCaptureUITicketCurrent(ticket) else { return nil }
+                guard !Task.isCancelled, ScreenCapture.isCaptureUITicketCurrent(ticket) else { return nil }
                 if reply.generation < lastGeneration {
                     Self.diagLog.debug(
                         "MenuBarCaptureService restarted (generation \(self.lastGeneration) -> \(reply.generation))"

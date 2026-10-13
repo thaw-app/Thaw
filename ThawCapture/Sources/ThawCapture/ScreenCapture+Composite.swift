@@ -6,7 +6,6 @@
 //  Licensed under the GNU GPLv3
 
 import CoreGraphics
-import MenuBarModel
 
 public extension ScreenCapture {
     /// Composites the given windows into one image of screenBounds.
@@ -19,7 +18,15 @@ public extension ScreenCapture {
         in screenBounds: CGRect,
         options: CGWindowImageOption
     ) async -> CGImage? {
-        guard !windowIDs.isEmpty else { return nil }
-        return Bridging.captureWindowsImage(windowIDs: windowIDs, screenBounds: screenBounds, options: options)
+        guard !windowIDs.isEmpty, !Task.isCancelled else { return nil }
+        // Backdrops remain visible with no capture panel open. Never fall back
+        // to SkyLight here: its per-call leak must stay in the helper.
+        return await withOneshotCaptureTicket {
+            await MenuBarCaptureServiceClient.shared.captureBackdrop(
+                windowIDs: windowIDs,
+                screenBounds: screenBounds,
+                options: options
+            )
+        }
     }
 }

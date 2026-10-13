@@ -80,6 +80,13 @@ the last client session closes, and a watchdog exits it when one capture
 outlives its budget; XPC relaunches it on the next call. The dictionary leak is
 separate from the Core Animation fence-port leak tracked as issue #933.
 
+Backdrop composites also run in this helper, even when the legacy
+`CaptureViaXPCService` flag is off. They borrow a one-shot capture ticket so
+closing the panels does not stop the menu-bar backdrop. The helper rechecks
+window levels and bounds: ordinary windows are admitted only within a display's
+menu-bar strip, while larger captures admit only desktop-level windows. Failed
+backdrop requests return no image, never an in-process SkyLight fallback.
+
 ### External interfaces
 
 | Interface | Direction | Notes |

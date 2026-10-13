@@ -42,6 +42,10 @@ public enum CaptureServiceRequest: Codable, Sendable {
     /// scale is advisory (0 means native); capture uses the SCK filter's scale, or 1x for nominalResolution.
     case windows(ids: [CGWindowID], screenBounds: CGRect?, imageOptionRawValue: UInt32, scale: Double)
 
+    /// SkyLight backdrop composite. The helper admits ordinary windows only
+    /// within a display's menu-bar strip; larger reads are desktop-only.
+    case backdrop(ids: [CGWindowID], screenBounds: CGRect, imageOptionRawValue: UInt32)
+
     /// MenuBarAgent's composited menu bar hosting window on a display.
     case menuBarHostingWindow(displayID: CGDirectDisplayID)
 

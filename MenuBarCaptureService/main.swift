@@ -325,6 +325,19 @@ private enum MenuBarCaptureServiceMain {
                 windowFrame: effectiveBounds,
                 scale: Double(image.width) / effectiveBounds.width
             )
+        case let .backdrop(ids, screenBounds, imageOptionRawValue):
+            guard let image = ScreenCapture.captureBackdropForService(
+                windowIDs: ids,
+                screenBounds: screenBounds,
+                options: CGWindowImageOption(rawValue: imageOptionRawValue)
+            ) else {
+                return captureFailureReply()
+            }
+            return successReply(
+                image: image,
+                windowFrame: screenBounds,
+                scale: Double(image.width) / screenBounds.width
+            )
         case let .menuBarHostingWindow(displayID):
             guard let capture = await ScreenCapture.captureMenuBarHostingWindowAsync(displayID: displayID) else {
                 return captureFailureReply()

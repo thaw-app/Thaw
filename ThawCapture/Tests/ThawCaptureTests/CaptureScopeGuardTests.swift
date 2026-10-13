@@ -30,6 +30,14 @@ struct CaptureScopeGuardTests {
 
     private static let rules: [Rule] = [
         Rule(
+            symbol: "captureBackdropForService(",
+            allowedPrefixes: [
+                "MenuBarCaptureService/main.swift",
+                "ThawCapture/Sources/ThawCapture/ScreenCapture+BackdropService.swift",
+            ],
+            rationale: "the leaking backdrop primitive must only run in the recyclable helper"
+        ),
+        Rule(
             symbol: "Bridging.captureWindowsImage",
             // Prefix matching covers SCK and future variants at call sites, but not static func definitions.
             allowedPrefixes: [captureSources],
@@ -89,6 +97,15 @@ struct CaptureScopeGuardTests {
                 """
             )
         }
+    }
+
+    @Test func backdropCompositingCannotCallSkyLightInTheApp() throws {
+        let root = try #require(Self.repositoryRoot())
+        let path = root.appending(path: "ThawCapture/Sources/ThawCapture/ScreenCapture+Composite.swift")
+        let source = try String(contentsOf: path, encoding: .utf8)
+        #expect(!Self.mentions("Bridging.captureWindowsImage", inCodeOf: source))
+        #expect(Self.mentions("MenuBarCaptureServiceClient.shared", inCodeOf: source))
+        #expect(Self.mentions("withOneshotCaptureTicket", inCodeOf: source))
     }
 
     // MARK: Scanning
