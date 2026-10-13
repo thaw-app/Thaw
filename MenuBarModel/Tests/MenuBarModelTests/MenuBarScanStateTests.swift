@@ -28,6 +28,19 @@ struct MenuBarScanStateTests {
         #expect(state.observations.count == 199)
     }
 
+    @Test("A process that launched since the last scan is asked before the rotation")
+    func newOwnerIsNotLeftBehindATruncatedScan() {
+        var state = MenuBarScanState<String>()
+        let owners = Array(Int32(1) ... 100)
+        let first = state.begin(owners: owners, priorityOwners: [100])
+        for owner in first.owners {
+            state.didAttempt(owner: owner, generation: first.generation)
+            state.record([], owner: owner, generation: first.generation)
+        }
+        let second = state.begin(owners: owners + [500], priorityOwners: [100])
+        #expect(Array(second.owners.prefix(2)) == [100, 500])
+    }
+
     @Test("An unvisited owner survives, but a successful empty answer removes its items")
     func absenceRequiresAnObservation() {
         var state = MenuBarScanState<String>()

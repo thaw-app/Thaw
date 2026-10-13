@@ -52,7 +52,9 @@ public struct MenuBarScanState<Observation: Sendable>: Sendable {
         observedAt = observedAt.filter { running.contains($0.key) }
         queue.removeAll { !running.contains($0) }
         let queued = Set(queue)
-        queue.append(contentsOf: owners.filter { !queued.contains($0) })
+        // Ahead of the rotation: a process that just launched is where a new
+        // item comes from, and at the back a truncated walk never reaches it.
+        queue.insert(contentsOf: owners.filter { !queued.contains($0) }, at: 0)
         // Empty answers are only a short-lived discovery hint. Known item
         // owners never receive this exemption from fresh geometry collection.
         let scheduled = owners.filter { priorityOwners.contains($0) }
