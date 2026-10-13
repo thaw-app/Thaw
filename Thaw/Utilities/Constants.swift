@@ -183,6 +183,7 @@ nonisolated enum Constants {
     static let changelogURL: URL = requiredInfoPlistURL(changelogURLInfoPlistKey)
 
     static let issuesURL = repositoryURL.appendingPathComponent("issues")
+    static let releasesURL = repositoryURL.appendingPathComponent("releases")
 
     /// System Settings > Menu Bar.
     static let menuBarSystemSettingsURL = URL(string: "x-apple.systempreferences:com.apple.ControlCenter-Settings.extension")
