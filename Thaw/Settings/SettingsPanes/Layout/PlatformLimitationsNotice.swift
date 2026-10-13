@@ -81,6 +81,8 @@ private struct PlatformLimitationsList: View {
 
             limitation("**Several items from one app:** some apps’ menu bar items cannot be hidden independently with the current macOS 27 mechanism. An item assigned to Hidden can remain visible when another item from the same app is assigned to Visible. To hide them, put all of that app’s items in the same section.")
 
+            limitation("**Apple’s own items:** macOS hides Focus, AirDrop, Now Playing and Fast User Switching whenever any other item is hidden, and never hides Time Machine or the Input menu. Turn on Replace Control Center items further down this page to put \(Constants.displayName) icons in their place, which you can move and hide.")
+
             limitation("**Apps that need their own update:** macOS 27 changed how menu bar items are published, and an app built against the older behavior can sit in the wrong place, refuse to hide, or show no icon. f.lux behaves this way today. The fix has to come from the app's own developer; \(Constants.displayName) cannot correct it from the outside. Check for an update to that app.")
         }
         .font(ThawType.body)
