@@ -48,8 +48,23 @@ struct AutomaticUpdatesTests {
         #expect(mode.localized == LocalizedStringKey(label))
     }
 
+    @Test("Picking a choice writes both switches and reads back", arguments: AutomaticUpdates.allCases)
+    func pickingWritesBothSwitches(mode: AutomaticUpdates) {
+        let switches = FakeSwitches()
+        switches.automaticUpdates = mode
+        #expect(switches.automaticallyChecksForUpdates == mode.checks)
+        #expect(switches.automaticallyDownloadsUpdates == mode.downloads)
+        #expect(switches.automaticUpdates == mode)
+    }
+
     @Test("The picker can tell the choices apart")
     func choicesAreDistinctRows() {
         #expect(Set(AutomaticUpdates.allCases.map(\.id)).count == AutomaticUpdates.allCases.count)
     }
+}
+
+@MainActor
+private final class FakeSwitches: AutomaticUpdateSwitches {
+    var automaticallyChecksForUpdates = false
+    var automaticallyDownloadsUpdates = true
 }

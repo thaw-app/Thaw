@@ -41,7 +41,16 @@ enum AutomaticUpdates: Hashable, CaseIterable, Identifiable {
     }
 }
 
-extension UpdatesManager {
+/// The updater's two switches, so the choice can be tested without Sparkle.
+@MainActor
+protocol AutomaticUpdateSwitches: AnyObject {
+    var automaticallyChecksForUpdates: Bool { get set }
+    var automaticallyDownloadsUpdates: Bool { get set }
+}
+
+extension UpdatesManager: AutomaticUpdateSwitches {}
+
+extension AutomaticUpdateSwitches {
     var automaticUpdates: AutomaticUpdates {
         get {
             AutomaticUpdates(checks: automaticallyChecksForUpdates, downloads: automaticallyDownloadsUpdates)
