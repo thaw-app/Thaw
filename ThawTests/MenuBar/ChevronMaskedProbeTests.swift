@@ -46,6 +46,23 @@ struct ChevronMaskedProbeTests {
         #expect(observation == .unavailable)
     }
 
+    @Test("An external display trusts an empty sweep for longer than a built-in one")
+    func externalDisplayIsSweptLessOften() {
+        let builtIn = MenuBarItemAXProvider.chevronAbsenceCooldown(isBuiltIn: true)
+        let external = MenuBarItemAXProvider.chevronAbsenceCooldown(isBuiltIn: false)
+        #expect(builtIn > .seconds(5), "must outlast the 5 s refresh backstop")
+        #expect(external > builtIn)
+
+        let now = ContinuousClock.now
+        let observation = MenuBarItemAXProvider.chevronObservationWhileMasked(
+            hint: nil,
+            lastAbsentAt: now - .seconds(30),
+            now: now,
+            cooldown: external
+        )
+        #expect(observation == .absent)
+    }
+
     @Test("No hint and no absence is unavailable")
     func noHintNoAbsenceIsUnavailable() {
         let observation = MenuBarItemAXProvider.chevronObservationWhileMasked(

@@ -839,10 +839,11 @@ nonisolated enum MenuBarItemAXProvider {
         initialState: [CGDirectDisplayID: ChevronProbeMemo]()
     )
 
-    /// How long an empty full sweep is trusted. Without it the sweep (80-230 ms
-    /// of AX hit-tests) runs on every refresh; chevrons appear only when Thaw
-    /// conceals, so the latency is cheap. Must exceed the 5 s refresh backstop.
-    private static let chevronAbsenceCooldown = Duration.seconds(12)
+    /// How long an empty sweep is trusted; longer than the 5 s refresh backstop, or the hit-tests run every refresh.
+    /// A built-in display runs out of room sooner than an external one, so it is swept more often.
+    static nonisolated func chevronAbsenceCooldown(isBuiltIn: Bool) -> Duration {
+        isBuiltIn ? .seconds(12) : .seconds(60)
+    }
 
     /// The chevron hit-test, narrowed by what the last sweep found.
     ///
@@ -856,6 +857,7 @@ nonisolated enum MenuBarItemAXProvider {
         displayBounds: CGRect
     ) -> NativeOverflowObservation {
         let memo = chevronProbeMemo.withLock { $0[display] } ?? ChevronProbeMemo()
+        let cooldown = chevronAbsenceCooldown(isBuiltIn: CGDisplayIsBuiltin(display) != 0)
 
         // A reveal mask sits above the bar, so a hit-test taken while it is up
         // reads the mask, not the bar; hold the last observation instead.
@@ -867,7 +869,9 @@ nonisolated enum MenuBarItemAXProvider {
                     "chevron: skipping the strip on display \(display) while it cannot be hit-tested; no absence recorded"
                 )
             }
-            return Self.chevronObservationWhileMasked(hint: memo.hint, lastAbsentAt: memo.lastAbsentAt, now: .now)
+            return Self.chevronObservationWhileMasked(
+                hint: memo.hint, lastAbsentAt: memo.lastAbsentAt, now: .now, cooldown: cooldown
+            )
         }
 
         if let hint = memo.hint {
@@ -884,7 +888,7 @@ nonisolated enum MenuBarItemAXProvider {
                 break
             }
         } else if let lastAbsentAt = memo.lastAbsentAt,
-                  ContinuousClock.now - lastAbsentAt < chevronAbsenceCooldown
+                  ContinuousClock.now - lastAbsentAt < cooldown
         {
             return .absent
         }
@@ -911,12 +915,13 @@ nonisolated enum MenuBarItemAXProvider {
     static nonisolated func chevronObservationWhileMasked(
         hint: CGRect?,
         lastAbsentAt: ContinuousClock.Instant?,
-        now: ContinuousClock.Instant
+        now: ContinuousClock.Instant,
+        cooldown: Duration = chevronAbsenceCooldown(isBuiltIn: true)
     ) -> NativeOverflowObservation {
         if let hint {
             return .present([hint])
         }
-        if let lastAbsentAt, now - lastAbsentAt < chevronAbsenceCooldown {
+        if let lastAbsentAt, now - lastAbsentAt < cooldown {
             return .absent
         }
         return .unavailable
