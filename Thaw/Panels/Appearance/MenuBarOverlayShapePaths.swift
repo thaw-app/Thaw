@@ -254,7 +254,7 @@ enum MenuBarShapePathBuilder {
         }
 
         if leadingPathBounds.intersects(trailingPathBounds) {
-            // Pills intersect (transient reflow): fall back to full-width.
+            // The application menu reaches the items: one shape for both.
             var fallbackRect = rect
             fallbackRect.origin.x += leftMargin
             fallbackRect.size.width -= (leftMargin + rightMargin)

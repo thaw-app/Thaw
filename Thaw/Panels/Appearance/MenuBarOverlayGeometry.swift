@@ -214,9 +214,9 @@ nonisolated enum MenuBarSplitPillGeometry {
         }
 
         if leading != .zero, trailing != .zero, leading.intersects(trailing) {
-            // Overlap during reflow: draw the leading segment only instead of
-            // resurrecting a stale trailing pill that still spans empty space.
-            return (leading, .zero, leading, .zero)
+            // A long application menu reaches the items: hand both on so the
+            // path builder merges them, instead of leaving the items bare.
+            return (leading, trailing, leading, trailing)
         }
 
         if leading == .zero, trailing == .zero,
