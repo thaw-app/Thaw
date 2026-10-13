@@ -14,6 +14,18 @@ enum MenuBarAppearanceItems {
     struct Snapshot {
         let items: [MenuBarItem]
         let readAt: ContinuousClock.Instant
+        /// The bar as MenuBarAgent drew it at this read, or nil when that could not be told.
+        var drawnBar: [MenuBarAgentWindow.Entry]?
+    }
+
+    /// Whether one of the owner's entries sits over item. macOS 27 hides per app,
+    /// so an app with one icon in Visible keeps its hidden icons on the bar.
+    nonisolated static func isDrawn(_ item: MenuBarItem, in bar: [MenuBarAgentWindow.Entry]?) -> Bool {
+        guard let bar else { return false }
+        return bar.contains { entry in
+            (entry.ownerPID == item.ownerPID || entry.ownerPID == item.sourcePID)
+                && entry.frame.minX <= item.bounds.midX && item.bounds.midX < entry.frame.maxX
+        }
     }
 
     static func geometry(
@@ -25,6 +37,8 @@ enum MenuBarAppearanceItems {
         let items = snapshot.items.filter {
             MenuBarItemGeometry.barScreen(holding: $0.bounds, among: displayBounds) != nil
         }
+        var context = context
+        context.isDrawn = { isDrawn($0, in: snapshot.drawnBar) }
         func mirroredFrame(_ frame: CGRect) -> CGRect {
             MirroredBarGeometry.frame(frame, on: screenFrame, displayBounds: displayBounds)
         }
@@ -77,25 +91,25 @@ enum MenuBarAppearanceItems {
         let recentItems = onScreenSnapshot?.items ?? []
         let recentOwners = Set(recentItems.map { $0.sourcePID ?? $0.ownerPID })
         let owners = recentOwners.union(knownItems.map { $0.sourcePID ?? $0.ownerPID })
+        // Read before the owners are asked: a bar that moves in between leaves the memo describing
+        // the older bar, so the next read sees a difference and asks again.
+        let bar = await drawnBar()
         // Recent truncated or concealed snapshots can omit owners whose icons are about to appear.
         if owners.isSubset(of: recentOwners),
            let recentAt = onScreenSnapshot?.timestamp,
            recentAt.duration(to: readAt) < .milliseconds(200),
            minimumReadTime.map({ recentAt >= $0 }) ?? true
         {
-            return Snapshot(items: recentItems, readAt: recentAt)
+            return Snapshot(items: recentItems, readAt: recentAt, drawnBar: bar)
         }
         if !owners.isEmpty {
-            // Read before the owners are asked: a bar that moves in between leaves the memo describing
-            // the older bar, so the next read sees a difference and asks again.
-            let bar = await drawnBar()
             if let bar, let last = memo?.last, last.bar == bar, last.owners == owners {
-                return Snapshot(items: last.items, readAt: readAt)
+                return Snapshot(items: last.items, readAt: readAt, drawnBar: bar)
             }
             guard let fresh = await readOwners(owners) else { return nil }
             memo?.last = bar.map { ($0, owners, fresh) }
-            return Snapshot(items: fresh, readAt: readAt)
+            return Snapshot(items: fresh, readAt: readAt, drawnBar: bar)
         }
-        return await Snapshot(items: discover(), readAt: readAt)
+        return await Snapshot(items: discover(), readAt: readAt, drawnBar: bar)
     }
 }

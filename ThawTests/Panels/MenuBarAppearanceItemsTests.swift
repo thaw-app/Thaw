@@ -161,6 +161,34 @@ struct MenuBarAppearanceItemsTests {
         #expect(pill.minX == destination.width - 343)
     }
 
+    @Test("A hidden icon the bar still draws is inside the shape")
+    func drawnHiddenIconIsWrapped() {
+        let display = CGRect(x: 0, y: 0, width: 1920, height: 1080)
+        // One app, pid 7: two icons in Hidden, one in Visible, so macOS hides none of them.
+        let main = item(7, x: 1272), alert = item(7, x: 1310), player = item(7, x: 1369)
+        let gone = item(8, x: 900)
+        let bar = [1272, 1310, 1362].map {
+            MenuBarAgentWindow.Entry(ownerPID: 7, frame: CGRect(x: CGFloat($0), y: 0, width: 40, height: 30))
+        }
+        func minX(drawnBar: [MenuBarAgentWindow.Entry]?) -> CGFloat? {
+            MenuBarAppearanceItems.geometry(
+                from: .init(items: [main, alert, player, gone], readAt: .now, drawnBar: drawnBar),
+                on: display, displayBounds: [display],
+                context: .init(revealedSection: nil, section: { $0.bounds.minX < 1360 ? .hidden : .visible })
+            ).itemBounds.map(\.minX).min()
+        }
+        #expect(minX(drawnBar: bar) == 1272, "The split app's hidden icons are drawn, so the shape reaches them")
+        #expect(minX(drawnBar: nil) == 1369, "Without a bar read the section decides, as before")
+    }
+
+    @Test("A hidden icon is drawn only where its own app has an entry")
+    func drawnNeedsTheOwnersEntry() {
+        let bar = [MenuBarAgentWindow.Entry(ownerPID: 7, frame: CGRect(x: 1272, y: 0, width: 40, height: 30))]
+        #expect(MenuBarAppearanceItems.isDrawn(item(7, x: 1274), in: bar))
+        #expect(!MenuBarAppearanceItems.isDrawn(item(8, x: 1274), in: bar), "Another app's entry over a stale frame")
+        #expect(!MenuBarAppearanceItems.isDrawn(item(7, x: 900), in: bar), "The app's entry is elsewhere")
+    }
+
     @Test("Mirroring preserves section and parked-item exclusions", arguments: [false, true])
     func mirroredGeometryKeepsExclusions(revealed: Bool) {
         let primary = CGRect(x: 0, y: 0, width: 1920, height: 1080)
