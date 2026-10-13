@@ -97,7 +97,7 @@ public extension Bridging {
     /// or detach between the two calls, so the fetch reports how many entries
     /// it wrote and the buffer is trimmed to that count, clamped to the
     /// allocation: the tail holds zeroes that are not display identifiers.
-    private static func activeDisplayIDs() -> [CGDirectDisplayID] {
+    static func activeDisplayIDs() -> [CGDirectDisplayID] {
         var capacity: UInt32 = 0
         let sizing = CGGetActiveDisplayList(0, nil, &capacity)
         guard sizing == .success else {
@@ -866,12 +866,8 @@ public extension Bridging {
     /// intersecting the capture rect with a display: it exists precisely to
     /// capture windows parked where no display is. Over-estimating fails safe.
     static func maximumActiveDisplayScale() -> CGFloat {
-        var count: UInt32 = 0
-        guard CGGetActiveDisplayList(0, nil, &count) == .success, count > 0 else { return 1 }
-        var displays = [CGDirectDisplayID](repeating: 0, count: Int(count))
-        guard CGGetActiveDisplayList(count, &displays, nil) == .success else { return 1 }
         var maximum: CGFloat = 1
-        for displayID in displays {
+        for displayID in activeDisplayIDs() {
             guard let mode = CGDisplayCopyDisplayMode(displayID), mode.width > 0 else { continue }
             maximum = max(maximum, CGFloat(mode.pixelWidth) / CGFloat(mode.width))
         }

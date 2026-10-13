@@ -21,12 +21,9 @@ public extension ScreenCapture {
               !windowIDs.isEmpty, windowIDs.count <= 64
         else { return nil }
 
-        var count: UInt32 = 0
-        guard CGGetActiveDisplayList(0, nil, &count) == .success, count > 0 else { return nil }
-        let capacity = count
-        var displays = [CGDirectDisplayID](repeating: 0, count: Int(capacity))
-        guard CGGetActiveDisplayList(capacity, &displays, &count) == .success else { return nil }
-        let displayGeometry = displays.prefix(Int(min(count, capacity))).map { displayID in
+        let displayIDs = Bridging.activeDisplayIDs()
+        guard !displayIDs.isEmpty else { return nil }
+        let displayGeometry = displayIDs.map { displayID in
             (bounds: CGDisplayBounds(displayID), menuBarHeight: liveMenuBarHeight(for: displayID))
         }
         let onScreen = Set(Bridging.getWindowList(option: .onScreen))
