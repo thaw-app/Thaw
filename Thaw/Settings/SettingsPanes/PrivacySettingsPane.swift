@@ -79,10 +79,10 @@ struct PrivacySettingsPane: View {
     private var networkAccess: some View {
         if Constants.supportsSparkleUpdates {
             // One picker, not two switches: downloading implies checking.
-            ThawPicker("Automatic updates", selection: automaticUpdatesMode) {
-                Text("Off").tag(AutomaticUpdates.off)
-                Text("Check only").tag(AutomaticUpdates.check)
-                Text("Check and download").tag(AutomaticUpdates.download)
+            ThawPicker("Automatic updates", selection: $updatesManager.automaticUpdates) {
+                ForEach(AutomaticUpdates.allCases) { mode in
+                    Text(mode.localized).tag(mode)
+                }
             }
             .annotation {
                 Text("Checking asks \(updateHost) whether a newer version exists. Downloading also fetches it in the background; without it, the download starts only after you accept an update. The release notes shown with an update come from the same server.")
@@ -113,22 +113,6 @@ struct PrivacySettingsPane: View {
         } else {
             Text("This build of \(Constants.displayName) makes no network calls.")
                 .foregroundStyle(ThawInk.supporting)
-        }
-    }
-
-    private enum AutomaticUpdates: Hashable {
-        case off, check, download
-    }
-
-    private var automaticUpdatesMode: Binding<AutomaticUpdates> {
-        Binding {
-            if !updatesManager.automaticallyChecksForUpdates {
-                return .off
-            }
-            return updatesManager.automaticallyDownloadsUpdates ? .download : .check
-        } set: { mode in
-            updatesManager.automaticallyChecksForUpdates = mode != .off
-            updatesManager.automaticallyDownloadsUpdates = mode == .download
         }
     }
 
