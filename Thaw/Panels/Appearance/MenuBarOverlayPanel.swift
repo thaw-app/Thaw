@@ -445,9 +445,18 @@ final class MenuBarOverlayPanel: NSPanel {
             return
         }
 
-        guard let menuBarHeight = owningScreen.getMenuBarHeight() else {
+        guard let windowHeight = owningScreen.getMenuBarHeight() else {
             scheduleShowRetry()
             return
+        }
+        let menuBarHeight = Self.overlayBarHeight(
+            windowHeight: windowHeight,
+            applicationMenuHeight: owningScreen.getApplicationMenuFrame()?.height,
+            isFullscreenSpace: Self.isFullscreenSpace(on: owningScreen),
+            readsOwnMenuFrame: owningScreen == NSScreen.main
+        )
+        if menuBarHeight != windowHeight {
+            diagLog.info("Overlay: bar on display \(owningScreen.displayID) drawn \(menuBarHeight) pt tall in a \(windowHeight) pt window")
         }
 
         showRetryTask?.cancel()
@@ -521,6 +530,21 @@ final class MenuBarOverlayPanel: NSPanel {
     private static func isFullscreenSpace(on screen: NSScreen) -> Bool {
         guard let spaceID = Bridging.getCurrentSpaceID(for: screen.displayID) else { return false }
         return Bridging.isSpaceFullscreen(spaceID)
+    }
+
+    /// The bar height the panel is sized to. In a fullscreen Space the panel was seen 22 pt taller
+    /// than the bar (#1229), so the app menu's own height, which is the bar as drawn, caps it there.
+    static nonisolated func overlayBarHeight(
+        windowHeight: CGFloat,
+        applicationMenuHeight: CGFloat?,
+        isFullscreenSpace: Bool,
+        readsOwnMenuFrame: Bool
+    ) -> CGFloat {
+        // Another screen borrows the main screen's menu frame, whose height may not be its own.
+        guard isFullscreenSpace, readsOwnMenuFrame, let applicationMenuHeight, applicationMenuHeight > 0 else {
+            return windowHeight
+        }
+        return min(windowHeight, applicationMenuHeight)
     }
 
     /// The level that keeps an appearance under the menu bar's items.
