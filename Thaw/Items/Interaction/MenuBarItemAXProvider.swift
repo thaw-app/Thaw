@@ -859,10 +859,12 @@ nonisolated enum MenuBarItemAXProvider {
 
         // A reveal mask sits above the bar, so a hit-test taken while it is up
         // reads the mask, not the bar; hold the last observation instead.
-        if ClockRevealMaskActivity.isAnyMaskShowing {
+        // The same while Thaw's own menus are in the bar: AppKit answers those
+        // hits on this thread and NSMenu asserts off the main one.
+        if ClockRevealMaskActivity.isAnyMaskShowing || thawOwnsTheMenuBar() {
             if memo.hint == nil, memo.lastAbsentAt == nil {
                 diagLog.debug(
-                    "chevron: skipping the strip on display \(display) while a reveal mask is up; no absence recorded"
+                    "chevron: skipping the strip on display \(display) while it cannot be hit-tested; no absence recorded"
                 )
             }
             return Self.chevronObservationWhileMasked(hint: memo.hint, lastAbsentAt: memo.lastAbsentAt, now: .now)
@@ -898,6 +900,10 @@ nonisolated enum MenuBarItemAXProvider {
             break
         }
         return full
+    }
+
+    private static func thawOwnsTheMenuBar() -> Bool {
+        NSWorkspace.shared.menuBarOwningApplication.map { AXPrimitives.isOwnProcess($0.processIdentifier) } ?? false
     }
 
     /// A known chevron or an absence inside its cooldown stands; anything else
