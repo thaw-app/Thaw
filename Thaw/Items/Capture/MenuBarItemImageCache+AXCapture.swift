@@ -62,6 +62,8 @@ extension MenuBarItemImageCache {
         )
         await captureAXStrip(candidates, context: &context, using: reader, into: &result)
         guard !screenIsLocked() else { return CapturePass() }
+        // A superseded pass keeps the crops it has and starts no further source.
+        guard !Task.isCancelled else { return result }
         let unresolved = candidates.filter { candidate in
             guard !result.captured.keys.contains(candidate.item.tag) else { return false }
             // A different pixel source cannot repair an unidentified or moved item.
@@ -114,7 +116,7 @@ extension MenuBarItemImageCache {
         into result: inout CapturePass
     ) async {
         let hosting = await readAXHostingCapture(candidates, displayID: context.displayID, using: reader, into: &result)
-        guard !screenIsLocked() else { return }
+        guard !screenIsLocked(), !Task.isCancelled else { return }
         var hostingOwners = [CGRect: MenuBarItemTag]()
         if let hosting {
             guard let sourceContext = await contextAfterSource(context, using: reader) else { return }
@@ -133,7 +135,7 @@ extension MenuBarItemImageCache {
         let unresolved = candidates.filter { !result.captured.keys.contains($0.item.tag) }
         var windowOwners = [CGRect: MenuBarItemTag]()
         for ownerPID in Set(unresolved.map(\.item.ownerPID)).sorted() {
-            guard !screenIsLocked() else { return }
+            guard !screenIsLocked(), !Task.isCancelled else { return }
             let capture = await reader.barWindowCapture(ownerPID: ownerPID, displayID: context.displayID)
             guard !screenIsLocked() else { return }
             guard let capture else { continue }
@@ -188,6 +190,8 @@ extension MenuBarItemImageCache {
             hostingFailureWarnedDisplays.withLock { _ = $0.remove(displayID) }
             return capture
         }
+        // Cancellation makes every source answer nil; that is not a failed read.
+        guard !Task.isCancelled else { return nil }
         guard result.noteMissingCapture(of: candidates.map(\.item), captureWasAllowed: captureIsAllowed()) else {
             return nil
         }
@@ -211,6 +215,11 @@ extension MenuBarItemImageCache {
         let capture = await reader.displayStripCapture(displayID: context.displayID)
         guard !screenIsLocked() else { return }
         guard let capture, Self.isPlausibleAXCapture(capture) else {
+            // Cancellation makes every source answer nil; that is not a failed read.
+            guard !Task.isCancelled else {
+                Self.diagLog.debug("axBoundsCapture: capture superseded for \(candidates.count) items; keeping their pictures")
+                return
+            }
             if result.noteMissingCapture(of: candidates.map(\.item), captureWasAllowed: captureIsAllowed()) {
                 Self.diagLog.warning("axBoundsCapture: captureMenuBarDisplayStripAsync failed for \(candidates.count) items")
             } else {

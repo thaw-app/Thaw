@@ -132,6 +132,29 @@ struct MenuBarItemCaptureFallbackTests {
         #expect(await reader.captures.last == source, "Do not start fallbacks after the lock")
     }
 
+    @Test("A capture cancelled mid-read proves nothing about the item", arguments: [CaptureFixture.Source.strip, .hosting])
+    private func cancellationDuringCaptureRecordsNoFailure(source: CaptureFixture.Source) async {
+        let item = makeItem()
+        let reader = CaptureFixture(hosting: nil, strip: nil, onCapture: {
+            if $0 == source {
+                withUnsafeCurrentTask { $0?.cancel() }
+            }
+        })
+        let cache = MenuBarItemImageCache(screenIsLocked: { false }, captureIsAllowed: { true })
+        let result = await Task {
+            await cache.axBoundsCapture(
+                [(item, item.bounds)], scale: 2, displayID: 42,
+                validateFreshBounds: false, concealedIdentifiers: [], using: reader
+            )
+        }.value
+        #expect(result.captured.isEmpty)
+        if source == .strip {
+            #expect(result.invalidatedTags.isEmpty)
+            #expect(result.unreadable.isEmpty)
+        }
+        #expect(await reader.captures.last == source, "Do not start fallbacks after the cancellation")
+    }
+
     @Test("An already locked session starts no screenshot reads")
     func lockedSessionDoesNotStartCapture() async {
         let item = makeItem()
