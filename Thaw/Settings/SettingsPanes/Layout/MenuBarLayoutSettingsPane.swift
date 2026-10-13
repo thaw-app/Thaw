@@ -143,8 +143,10 @@ struct MenuBarLayoutSettingsPane: View {
 
             HidingMethodSection(settings: appState.settings.advanced, offersAppleItems: canArrangeLayout)
 
-            // Thaw Bar Only is unplugged; its "Items macOS won’t show" section returns here with its gate.
-            // Replace Control Center items lives in Experiments.
+            // Thaw Bar Only is unplugged; its switch returns to this section with its gate.
+            if canArrangeLayout {
+                ControlCenterReplacementsSection(settings: appState.settings.advanced)
+            }
 
             LayoutMoreOptionsSection(
                 spacerManager: appState.spacerManager,

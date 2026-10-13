@@ -39,31 +39,17 @@ nonisolated extension SearchIndex {
             property: .advanced("enableRecordingWatch")
         ),
         SearchEntry(
-            id: "lab.enableModuleStandIns",
+            id: "layout.replaceControlCenterItems",
             title: "Replace Control Center items",
-            descriptionText: String(localized: "Puts Thaw icons in place of Focus, AirDrop, Now Playing and Fast User Switching while they sit in Hidden."),
-            pane: .theLab,
-            section: "Experiments",
-            keywords: ["focus", "do not disturb", "dnd", "moon", "airdrop", "now playing", "music", "user", "fast user switching", "menu extra", "system item", "replace", "stand-in"],
+            descriptionText: String(localized: "Puts Thaw icons in place of Focus, AirDrop, Now Playing, Fast User Switching, Time Machine and the Input menu, so you can move or hide them."),
+            pane: .menuBarLayout,
+            section: "Apple’s items",
+            keywords: [
+                "focus", "do not disturb", "dnd", "moon", "airdrop", "now playing", "music", "user", "fast user switching",
+                "time machine", "backup", "input menu", "text input", "keyboard", "input source", "language",
+                "menu extra", "system item", "replace", "replacement", "stand-in",
+            ],
             property: .advanced("enableModuleStandIns")
-        ),
-        SearchEntry(
-            id: "lab.enableTimeMachineTakeover",
-            title: "Replace Time Machine",
-            descriptionText: String(localized: "Removes Apple's Time Machine icon, which cannot be hidden, and puts a Thaw icon you can hide in its place."),
-            pane: .theLab,
-            section: "Experiments",
-            keywords: ["time machine", "backup", "menu extra", "system item", "replace", "stand-in", "timemachine"],
-            property: .advanced("enableTimeMachineTakeover")
-        ),
-        SearchEntry(
-            id: "lab.enableTextInputTakeover",
-            title: "Replace Input Menu",
-            descriptionText: String(localized: "Removes Apple's Input menu and puts a Thaw icon you can hide in its place, with the same input sources."),
-            pane: .theLab,
-            section: "Experiments",
-            keywords: ["input menu", "text input", "keyboard", "input source", "language", "layout", "menu extra", "system item", "replace", "stand-in"],
-            property: .advanced("enableTextInputTakeover")
         ),
         SearchEntry(
             id: "lab.recordingWatchScreen",

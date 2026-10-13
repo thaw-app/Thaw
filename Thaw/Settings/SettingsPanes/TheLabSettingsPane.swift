@@ -34,17 +34,6 @@ struct TheLabSettingsPane: View {
             }
             ThawSection("Menu bar items") {
                 enableMenuBarItemDescenders
-                enableModuleStandIns
-                systemExtraTakeoverToggle(
-                    "Replace Time Machine",
-                    isOn: $settings.enableTimeMachineTakeover,
-                    item: .timeMachine
-                )
-                systemExtraTakeoverToggle(
-                    "Replace Input Menu",
-                    isOn: $settings.enableTextInputTakeover,
-                    item: .textInput
-                )
                 enableDesktopMenuHiding
             }
             ThawSection("\(Constants.displayName)'s menu and icon") {
@@ -72,87 +61,6 @@ struct TheLabSettingsPane: View {
         .onReceive(NotificationCenter.default.publisher(for: NSApplication.didChangeScreenParametersNotification)) { _ in
             screenGeneration += 1
         }
-    }
-
-    /// One switch for all four modules: macOS hides them together, and the
-    /// runtime removes each through its own Control Center preference.
-    private var enableModuleStandIns: some View {
-        Toggle(isOn: $settings.enableModuleStandIns) {
-            HStack(spacing: ThawSpacing.compact) {
-                Text("Replace Control Center items")
-                ThawBadge.alpha
-            }
-        }
-        .annotation {
-            Text(
-                """
-                macOS hides Focus, AirDrop, Now Playing and Fast User Switching whenever any \
-                other item is hidden, even in Visible. This puts a \(Constants.displayName) icon \
-                in each one's place, with its main actions in the menu, and you can move or hide \
-                it like any other item. Turn this off to bring the originals back.
-                """
-            )
-        }
-    }
-
-    /// One switch per Apple extra, with its state beneath it. The switch is
-    /// what the user asked for; the status line is what is actually running,
-    /// so a switch that cannot run never reads as working.
-    private func systemExtraTakeoverToggle(
-        _ title: LocalizedStringKey,
-        isOn: Binding<Bool>,
-        item: SystemExtraItem
-    ) -> some View {
-        Toggle(isOn: isOn) {
-            HStack(spacing: ThawSpacing.compact) {
-                Text(title)
-                ThawBadge.alpha
-            }
-        }
-        .annotation {
-            VStack(alignment: .leading, spacing: ThawSpacing.tight) {
-                Text(
-                    """
-                    \(Constants.displayName) can't hide Apple's \(item.displayName) icon. \
-                    This swaps it for a \(Constants.displayName) icon in the same place that does the \
-                    same things and can be moved to Hidden like any other. The original comes back when you \
-                    turn this off or quit \(Constants.displayName).
-                    """
-                )
-                systemExtraTakeoverStatus(for: item)
-            }
-        }
-    }
-
-    @ViewBuilder
-    private func systemExtraTakeoverStatus(for item: SystemExtraItem) -> some View {
-        switch appState.menuBarManager.systemExtraTakeover.status(for: item).phase {
-        case .off:
-            EmptyView()
-        case .ready:
-            systemExtraStatus(
-                "Starting…",
-                systemImage: "circle.dashed",
-                color: ThawInk.supporting
-            )
-        case .active:
-            systemExtraStatus(
-                "Replaced. \(Constants.displayName)'s icon is standing in for \(item.displayName).",
-                systemImage: "checkmark.circle.fill",
-                color: .green
-            )
-        case let .unavailable(reason), let .failed(reason):
-            systemExtraStatus(reason, systemImage: "exclamationmark.triangle", color: Color.warning)
-        }
-    }
-
-    private func systemExtraStatus(_ text: String, systemImage: String, color: Color) -> some View {
-        Label {
-            Text(verbatim: text)
-        } icon: {
-            Image(systemName: systemImage)
-        }
-        .foregroundStyle(color)
     }
 
     /// The status menu as a panel. Alpha: it carries only the commands with a

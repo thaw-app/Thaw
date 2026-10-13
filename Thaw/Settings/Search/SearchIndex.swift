@@ -184,6 +184,9 @@ nonisolated enum SearchIndex {
         .advanced("enableExperimentalSystemItemHiding"),
         // Its row is commented out of Layout: the timeout has no effect on macOS 27.
         .advanced("menuBarOrderFulfillmentTimeout"),
+        // Set by Replace Control Center items, indexed under advanced.enableModuleStandIns.
+        .advanced("enableTimeMachineTakeover"),
+        .advanced("enableTextInputTakeover"),
         // Experimental toggles with no Settings UI.
         .advanced("enableExperimentalOverflowPrevention"),
         .advanced("enableTimerTakeover"),
