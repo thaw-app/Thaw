@@ -33,10 +33,10 @@ final class FullDiskAccessPermission: Permission {
             details: [
                 String(localized: "Lets \(Constants.displayName) update macOS's saved menu bar layout directly, so items move into place without your pointer moving."),
                 String(localized: "macOS keeps that layout in one protected file (~/Library/Group Containers/com.apple.MenuBar). \(Constants.displayName) reads it to place items and writes it only when you reorder."),
-                String(localized: "Choosing that file gives \(Constants.displayName) access to it alone. Without it, \(Constants.displayName) moves items with the pointer, which takes over your cursor while it works."),
+                String(localized: "Choosing that file gives \(Constants.displayName) access to it alone. Without it, \(Constants.displayName) moves items with the pointer, which takes over your cursor while it works. You may need to quit and reopen \(Constants.displayName) before it takes effect."),
             ],
             shortDetails: [
-                String(localized: "Items move into place without your pointer moving, because \(Constants.displayName) updates macOS's saved menu bar layout. It touches only that one file."),
+                String(localized: "Items move into place without your pointer moving, because \(Constants.displayName) updates macOS's saved menu bar layout. It touches only that one file. You may need to quit and reopen \(Constants.displayName) before it takes effect."),
             ],
             isRequired: true,
             settingsURL: Self.settingsPane,
@@ -68,10 +68,10 @@ final class ControlCenterAppListPermission: Permission {
             iconColor: .teal,
             details: [
                 String(localized: "Lets \(Constants.displayName) keep Live Activities and the camera indicator on the menu bar while apps are hidden."),
-                String(localized: "It also stops hidden items from flashing when Notification Center opens. Choosing the file gives \(Constants.displayName) access to it alone."),
+                String(localized: "It also stops hidden items from flashing when Notification Center opens. Choosing the file gives \(Constants.displayName) access to it alone. You may need to quit and reopen \(Constants.displayName) before it takes effect."),
             ],
             shortDetails: [
-                String(localized: "Keeps Live Activities and the camera indicator visible while apps are hidden, and helps with hidden items flashing when Notification Center opens."),
+                String(localized: "Keeps Live Activities and the camera indicator visible while apps are hidden, and helps with hidden items flashing when Notification Center opens. You may need to quit and reopen \(Constants.displayName) before it takes effect."),
             ],
             isRequired: false,
             settingsURL: nil,
