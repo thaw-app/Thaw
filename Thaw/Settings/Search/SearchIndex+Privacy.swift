@@ -42,21 +42,12 @@ nonisolated extension SearchIndex {
             property: nil
         ),
         SearchEntry(
-            id: "privacy.updateCheck",
-            title: "Update check",
-            descriptionText: String(localized: "Asks the update server whether a newer version exists. The only network call Thaw makes on its own."),
+            id: "privacy.automaticUpdates",
+            title: "Automatic updates",
+            descriptionText: String(localized: "Off, Check only, or Check and download. Checking asks the update server whether a newer version exists."),
             pane: .privacy,
             section: "Network access",
-            keywords: ["network", "update", "check", "internet", "privacy", "sparkle", "server", "offline"],
-            property: nil
-        ),
-        SearchEntry(
-            id: "privacy.updateDownload",
-            title: "Update download",
-            descriptionText: String(localized: "Fetches a new version in the background, or only after you accept an update."),
-            pane: .privacy,
-            section: "Network access",
-            keywords: ["network", "update", "download", "automatic", "privacy", "internet"],
+            keywords: ["network", "update", "check", "download", "automatic", "internet", "privacy", "sparkle", "server", "offline"],
             property: nil
         ),
         SearchEntry(

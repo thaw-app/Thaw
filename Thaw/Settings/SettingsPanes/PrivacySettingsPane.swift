@@ -85,17 +85,7 @@ struct PrivacySettingsPane: View {
                 Text("Check and download").tag(AutomaticUpdates.download)
             }
             .annotation {
-                Text("Checking asks \(updateHost) whether a newer version exists. Downloading also fetches it in the background; without it, the download starts only after you accept an update.")
-            }
-
-            HStack(alignment: .firstTextBaseline) {
-                Text("Update release notes")
-                Spacer()
-                Text("With the update")
-                    .foregroundStyle(ThawInk.supporting)
-            }
-            .annotation {
-                Text("\(Constants.displayName) loads these from \(updateHost) when it shows you an update. They are part of the update, so they follow the automatic updates setting.")
+                Text("Checking asks \(updateHost) whether a newer version exists. Downloading also fetches it in the background; without it, the download starts only after you accept an update. The release notes shown with an update come from the same server.")
             }
 
             Toggle(isOn: $advancedSettings.fetchReleaseNotes) {
