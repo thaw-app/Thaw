@@ -78,7 +78,7 @@ extension HIDEventManager {
     /// The bounds of the display under location and of every active display, for rebasing the
     /// frames macOS 27 reports against one bar's layout, and where that display's item lane starts
     /// (see MirroredBarGeometry.drawnFrame). AX shows only the active bar's chevron, so the notch stands in.
-    private static func displayContext(
+    static func displayContext(
         for location: CGPoint
     ) -> (destination: CGRect?, all: [CGRect], laneMinX: CGFloat?) {
         let all = NSScreen.allDisplayBoundsCG
@@ -217,7 +217,7 @@ extension HIDEventManager {
         // A stale cache can miss a visible icon, letting a click beside it read
         // as empty space; check the same on-screen bounds the reveal reads.
         if let pointerLocation = MouseHelpers.locationCoreGraphics,
-           isMouseInsideOnScreenItemBounds(appState: appState, at: pointerLocation)
+           isMouseInsideOnScreenItemBounds(appState: appState, at: pointerLocation) || isMouseInsideDrawnBarItem(appState: appState, at: pointerLocation)
         {
             return false
         }

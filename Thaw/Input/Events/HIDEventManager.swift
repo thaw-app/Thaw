@@ -461,6 +461,7 @@ final class HIDEventManager {
                let mouseLocation = MouseHelpers.locationCoreGraphics
             {
                 pointerAXCache.refreshForeignWidget(at: mouseLocation)
+                pointerAXCache.refreshDrawnBarIfStale()
             }
             handleShowOnHover(appState: appState, screen: screen)
             handleMenuBarTooltip(appState: appState, screen: screen)

@@ -8,6 +8,7 @@
 import CoreGraphics
 import Foundation
 import MenuBarModel
+import ThawAXCore
 
 /// Accessibility answers the input taps read without waiting for them.
 ///
@@ -50,6 +51,20 @@ final class MenuBarPointerAXCache {
     private var applicationMenu: ApplicationMenuAnswer?
     private var applicationMenuTask: Task<Void, Never>?
     private var applicationMenuTaskPID: pid_t?
+
+    /// The bar is re-read this often while the pointer is in it.
+    private static let drawnBarRefreshAge: Duration = .milliseconds(300)
+
+    /// Past this a read says nothing about the bar: a reveal or hide may have run since.
+    private static let drawnBarLifetime: Duration = .seconds(2)
+
+    private var drawnBar: (entries: [MenuBarAgentWindow.Entry], answeredAt: ContinuousClock.Instant)?
+    private var drawnBarTask: Task<Void, Never>?
+    private var drawnBarAskedAt: ContinuousClock.Instant?
+
+    /// Apps the bar draws but the walk cannot read, and the drawn-bar read last compared.
+    var unreadableOwners = UnreadableOwnerTracker()
+    var unreadableOwnersComparedAt: ContinuousClock.Instant?
 
     // MARK: Foreign widget
 
@@ -122,6 +137,36 @@ final class MenuBarPointerAXCache {
             applicationMenu = ApplicationMenuAnswer(pid: pid, frames: frames, answeredAt: .now)
             applicationMenuTask = nil
             applicationMenuTaskPID = nil
+        }
+    }
+
+    // MARK: Drawn bar
+
+    /// What MenuBarAgent draws on the bar and when that was read, or nil when
+    /// there is no recent read. Asking keeps the read fresh.
+    func drawnBarAnswer() -> (entries: [MenuBarAgentWindow.Entry], answeredAt: ContinuousClock.Instant)? {
+        refreshDrawnBarIfStale()
+        guard let drawnBar, drawnBar.answeredAt.duration(to: .now) < Self.drawnBarLifetime else {
+            return nil
+        }
+        return drawnBar
+    }
+
+    /// Starts a read unless one is running or the last was asked for moments ago.
+    /// A bar read mid-change answers nothing and leaves the previous answer to age out.
+    func refreshDrawnBarIfStale() {
+        guard drawnBarTask == nil else { return }
+        if let drawnBarAskedAt, drawnBarAskedAt.duration(to: .now) < Self.drawnBarRefreshAge {
+            return
+        }
+        drawnBarAskedAt = .now
+        drawnBarTask = Task { [weak self] in
+            let entries = await MenuBarItemAXProvider.drawnBarConcurrent()
+            guard let self else { return }
+            if let entries {
+                drawnBar = (entries, .now)
+            }
+            drawnBarTask = nil
         }
     }
 }
