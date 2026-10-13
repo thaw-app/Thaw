@@ -114,6 +114,29 @@ struct SpacingApplyModeTests {
         }
     }
 
+    @Test("Don't ask again on Apply turns confirmations off")
+    func suppressedApplyDisablesConfirmations() throws {
+        try withScratchDefaults {
+            let manager = DisplaySettingsManager()
+            manager.rememberSpacingRelaunchAnswer(approved: true)
+
+            #expect(!manager.confirmSpacingRelaunch)
+            #expect(manager.spacingApplyMode == .relaunchApps)
+        }
+    }
+
+    @Test("Don't ask again on Cancel stops relaunching, so the prompt stays away")
+    func suppressedCancelStopsRelaunching() throws {
+        try withScratchDefaults {
+            let manager = DisplaySettingsManager()
+            manager.rememberSpacingRelaunchAnswer(approved: false)
+
+            #expect(manager.spacingApplyMode == .writeOnly)
+            #expect(manager.confirmSpacingRelaunch, "a decline must never allow an unasked relaunch")
+            #expect(DisplaySettingsManager().spacingApplyMode == .writeOnly)
+        }
+    }
+
     @Test("An unknown saved value falls back to relaunching apps")
     func unknownSavedValueFallsBack() throws {
         try withScratchDefaults {

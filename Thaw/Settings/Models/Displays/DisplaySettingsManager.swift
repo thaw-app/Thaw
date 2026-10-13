@@ -507,9 +507,9 @@ final class DisplaySettingsManager {
     }
 
     /// Presents an app-modal confirmation before a display transition fires the
-    /// relaunch wave, returning whether the user approved. Ticking the
-    /// suppression box while pressing Apply turns confirmSpacingRelaunch off;
-    /// cancelling never changes it.
+    /// relaunch wave, returning whether the user approved. A ticked
+    /// suppression box makes the answer stick either way; see
+    /// rememberSpacingRelaunchAnswer(approved:).
     private func presentSpacingRelaunchConfirmation() -> Bool {
         NSApp.activate(ignoringOtherApps: true)
         let alert = NSAlert()
@@ -525,8 +525,8 @@ final class DisplaySettingsManager {
         alert.showsSuppressionButton = true
         alert.suppressionButton?.title = String(localized: "Don’t ask again")
         let apply = alert.runModal() == .alertFirstButtonReturn
-        if apply, alert.suppressionButton?.state == .on {
-            confirmSpacingRelaunch = false
+        if alert.suppressionButton?.state == .on {
+            rememberSpacingRelaunchAnswer(approved: apply)
         }
         return apply
     }
