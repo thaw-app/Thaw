@@ -9,7 +9,7 @@ import Testing
 @testable import Thaw
 
 /// The sidebar is one flat list of direct destinations, ending with About.
-/// Scripts is a placeholder reachable only through search.
+/// Scripts is an unbuilt placeholder with no route from the window.
 @MainActor
 @Suite("UX refresh navigation")
 struct UXRefreshNavigationTests {
@@ -38,10 +38,10 @@ struct UXRefreshNavigationTests {
     @Test("Placeholder and absorbed panes stay outside the sidebar")
     func panesOutsideTheSidebar() {
         let all = Set(SettingsSidebarPanes.all)
-        #expect(!all.contains(.scripts), "Scripts is a placeholder reachable via search only")
+        #expect(!all.contains(.scripts), "Scripts is an unbuilt placeholder, not a sidebar destination")
         #expect(!all.contains(.widgets), "Custom Status Icon is an Experiments toggle, not a sidebar destination")
         #expect(!all.contains(.advanced), "Advanced was dissolved into Menu Bar Behavior and Automation")
-        // All remain valid identifiers for search, thaw:// and other routes.
+        // All remain valid identifiers for saved selections, thaw:// and other routes.
         #expect(SettingsNavigationIdentifier(rawValue: "About") == .about)
         #expect(SettingsNavigationIdentifier(rawValue: "Scripts") == .scripts)
     }

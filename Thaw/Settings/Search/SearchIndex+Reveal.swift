@@ -10,9 +10,8 @@ import SwiftUI
 nonisolated extension SearchIndex {
     // MARK: Reveal Settings
 
-    /// Reveal/rehide/icon-gesture/rearranging controls now live on the Menu
-    /// Bar destination's Access surface, so their search entries route to
-    /// .menuBarLayout. The property: links are unchanged.
+    /// Reveal and rehide controls live on the Visibility pane, so their search
+    /// entries route to .visibility. The property: links are unchanged.
     static let revealEntries: [SearchEntry] = [
         SearchEntry(
             id: "general.showOnClick",

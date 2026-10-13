@@ -22,7 +22,7 @@ nonisolated extension SearchIndex {
         ),
         SearchEntry(
             id: "appearance.isDynamic",
-            title: "Use different settings for Light and Dark Mode",
+            title: "Separate looks for Light and Dark Mode",
             descriptionText: String(localized: "Edit Light and Dark separately. Switch modes below to customize each."),
             pane: .menuBarAppearance,
             keywords: ["dynamic", "light", "dark", "appearance", "mode"],

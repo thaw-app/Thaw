@@ -36,14 +36,6 @@ nonisolated extension SearchIndex {
             property: nil
         ),
         SearchEntry(
-            id: "pane.scripts",
-            title: "Scripts",
-            descriptionText: nil,
-            pane: .scripts,
-            keywords: ["scripts", "script", "custom", "module", "plugin", "command"],
-            property: nil
-        ),
-        SearchEntry(
             id: "pane.widgets",
             title: "Widgets",
             descriptionText: nil,

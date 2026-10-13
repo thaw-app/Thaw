@@ -10,8 +10,8 @@ import ThawUI
 
 /// Placeholder for the upcoming script-driven bar modules surface.
 ///
-/// The pane exists so the destination is discoverable (sidebar and search)
-/// before the feature lands; it holds no settings yet.
+/// The identifier and pane are kept for the feature; nothing in the window
+/// routes here until it lands, and it holds no settings yet.
 struct ScriptsSettingsPane: View {
     var body: some View {
         ThawEmptyState(

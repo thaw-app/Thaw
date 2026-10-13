@@ -501,7 +501,7 @@ private struct SettingsSidebar: View {
 /// The basics (General, Layout, Visibility, Appearance, Thaw Bar) sit at the
 /// top, with About last. Custom Status Icon is not a destination: it is an
 /// Experiments toggle. Scripts is an unbuilt
-/// placeholder, reachable through search only.
+/// placeholder with no route from the window.
 enum SettingsSidebarPanes {
     /// One sidebar group: its direct destinations. Groups are separated by a
     /// small gap, with no text heading, the way macOS Settings separates its

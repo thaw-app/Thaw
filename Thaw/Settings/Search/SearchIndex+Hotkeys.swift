@@ -32,6 +32,15 @@ nonisolated extension SearchIndex {
             property: nil
         ),
         SearchEntry(
+            id: "hotkeys.toggleSwap",
+            title: "Swap shown and hidden items",
+            descriptionText: nil,
+            pane: .hotkeys,
+            section: "Menu bar sections",
+            keywords: ["swap", "switch", "exchange", "shown", "hidden", "hotkey", "shortcut"],
+            property: nil
+        ),
+        SearchEntry(
             id: "hotkeys.searchMenuBarItems",
             title: "Search menu bar items",
             descriptionText: nil,
@@ -41,12 +50,30 @@ nonisolated extension SearchIndex {
             property: nil
         ),
         SearchEntry(
+            id: "hotkeys.showItemHints",
+            title: "Open an item by letter",
+            descriptionText: nil,
+            pane: .hotkeys,
+            section: "Menu bar items",
+            keywords: ["open", "letter", "hint", "hints", "keyboard", "hotkey", "shortcut"],
+            property: nil
+        ),
+        SearchEntry(
             id: "hotkeys.openMenuBarItems",
             title: "Open menu bar items",
             descriptionText: nil,
             pane: .hotkeys,
             section: "Menu bar items",
             keywords: ["open", "menu bar items", "hotkey", "per item"],
+            property: nil
+        ),
+        SearchEntry(
+            id: "hotkeys.revealSystemMenuBar",
+            title: "Reveal the menu bar",
+            descriptionText: nil,
+            pane: .hotkeys,
+            section: "Other",
+            keywords: ["reveal", "show", "menu bar", "auto-hide", "hotkey", "shortcut"],
             property: nil
         ),
         SearchEntry(
@@ -76,6 +103,24 @@ nonisolated extension SearchIndex {
             pane: .hotkeys,
             section: "Other",
             keywords: ["toggle", "auto rehide", "automatically rehide", "hotkey", "shortcut"],
+            property: nil
+        ),
+        SearchEntry(
+            id: "hotkeys.toggleZenMode",
+            title: "Toggle Zen Mode",
+            descriptionText: nil,
+            pane: .hotkeys,
+            section: "Other",
+            keywords: ["zen", "zen mode", "empty", "focus", "toggle", "hotkey", "shortcut"],
+            property: nil
+        ),
+        SearchEntry(
+            id: "hotkeys.toggleLayoutEditor",
+            title: "Show Layout",
+            descriptionText: nil,
+            pane: .hotkeys,
+            section: "Other",
+            keywords: ["layout", "show", "open", "settings", "hotkey", "shortcut"],
             property: nil
         ),
     ]

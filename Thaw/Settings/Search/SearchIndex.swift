@@ -92,14 +92,6 @@ nonisolated enum SearchIndex {
     /// macOS 27-only settings rows, appended when the sidebar search UI is available.
     private static let platformEntries: [SearchEntry] = [
         SearchEntry(
-            id: "advanced.enableExperimentalSystemItemHiding",
-            title: "Allow hiding macOS system items",
-            descriptionText: String(localized: "Allows items such as Clock, Control Center, and Siri to be moved into hidden sections."),
-            pane: .menuBarLayout,
-            keywords: ["system items", "clock", "control center", "siri", "hide", "macOS"],
-            property: .advanced("enableExperimentalSystemItemHiding")
-        ),
-        SearchEntry(
             id: "advanced.menuBarArrangementMode",
             title: "Item arrangement",
             descriptionText: String(localized: "Let Thaw keep items in your Layout order, or arrange them yourself by ⌘-dragging in the menu bar."),
@@ -116,15 +108,6 @@ nonisolated enum SearchIndex {
             section: "More layout options",
             keywords: ["app icon", "live preview", "screenshot", "capture", "overflow", "notch", "advanced layout controls"],
             property: .advanced("alwaysUseAppIconForMenuBarItems")
-        ),
-        SearchEntry(
-            id: "advanced.menuBarOrderFulfillmentTimeout",
-            title: "Reorder timeout",
-            descriptionText: String(localized: "How long Thaw waits for macOS to apply a menu bar reorder before continuing with remaining layout work."),
-            pane: .menuBarLayout,
-            section: "More layout options",
-            keywords: ["reorder", "timeout", "wait", "layout", "seconds"],
-            property: .advanced("menuBarOrderFulfillmentTimeout")
         ),
         // Spaces pane rows: agent-backed session state with no persisted
         // settings property, indexed so the pane's controls are findable.
@@ -196,6 +179,11 @@ nonisolated enum SearchIndex {
         .general("showThawBarOnlyWithInlineReveal"),
         // The radius slider shows only under Round screen corners.
         .general("screenCornerRadius"),
+        // The Everything option of the Hiding method picker, indexed under
+        // advanced.enableNativeAppHiding.
+        .advanced("enableExperimentalSystemItemHiding"),
+        // Its row is commented out of Layout: the timeout has no effect on macOS 27.
+        .advanced("menuBarOrderFulfillmentTimeout"),
         // Experimental toggles with no Settings UI.
         .advanced("enableExperimentalOverflowPrevention"),
         .advanced("enableTimerTakeover"),
