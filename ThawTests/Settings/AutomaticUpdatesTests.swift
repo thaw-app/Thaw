@@ -5,6 +5,7 @@
 //  Copyright (Thaw) © 2026 Toni Förster
 //  Licensed under the GNU GPLv3
 
+import SwiftUI
 import Testing
 @testable import Thaw
 
@@ -36,5 +37,19 @@ struct AutomaticUpdatesTests {
     func choiceSetsBothSwitches(mode: AutomaticUpdates, checks: Bool, downloads: Bool) {
         #expect(mode.checks == checks)
         #expect(mode.downloads == downloads)
+    }
+
+    @Test("Each choice has its own label in the picker", arguments: [
+        (AutomaticUpdates.off, "Off"),
+        (AutomaticUpdates.check, "Check only"),
+        (AutomaticUpdates.download, "Check and download"),
+    ])
+    func choiceHasItsOwnLabel(mode: AutomaticUpdates, label: String) {
+        #expect(mode.localized == LocalizedStringKey(label))
+    }
+
+    @Test("The picker can tell the choices apart")
+    func choicesAreDistinctRows() {
+        #expect(Set(AutomaticUpdates.allCases.map(\.id)).count == AutomaticUpdates.allCases.count)
     }
 }
