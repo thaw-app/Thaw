@@ -384,10 +384,8 @@ extension PrimitiveButtonStyle where Self == GlassButtonStyle {
 
 // MARK: - SettingsDetailHeader
 
-/// The toolbar's overflow menu: the window-level switches that have no pane
-/// of their own. Anything with a row in a pane stays out, so each setting has
-/// one home. The system draws the button; in the full window it is the one
-/// beside the search field, and Simple Mode shows the same menu alone.
+/// The toolbar's overflow menu: window-level switches that have no pane of their own.
+/// Anything with a row in a pane stays out, so each setting has one home.
 private struct SettingsOverflowMenu: View {
     let appState: AppState
     let generalSettings: GeneralSettings

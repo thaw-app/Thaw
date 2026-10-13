@@ -211,9 +211,8 @@ struct AboutSettingsPane: View {
 
     // MARK: Updates
 
-    /// The picker is made borderless explicitly, since outside a Form it
-    /// defaults to bordered. Automatic updates are set on the Privacy pane,
-    /// with the other network calls.
+    /// The picker is borderless explicitly: outside a Form it defaults to bordered.
+    /// Automatic updates are set on the Privacy pane, with the other network calls.
     private var updates: some View {
         VStack(spacing: 0) {
             updateRow("Update channel") {
