@@ -34,11 +34,11 @@ enum BentoDemo: CaseIterable {
     /// The pane a click on the card lands on.
     var pane: SettingsNavigationIdentifier {
         switch self {
-        case .find: .general
+        case .find: .visibility
         case .style: .menuBarAppearance
-        case .reveal: .general
-        case .thawBar: .displays
-        case .triggers: .automation
+        case .reveal: .visibility
+        case .thawBar: .thawBar
+        case .triggers: .triggers
         case .profiles: .profiles
         case .zen: .hotkeys
         case .integrations: .automation
