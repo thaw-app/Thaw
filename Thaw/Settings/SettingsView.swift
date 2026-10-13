@@ -385,10 +385,9 @@ extension PrimitiveButtonStyle where Self == GlassButtonStyle {
 // MARK: - SettingsDetailHeader
 
 /// The toolbar's overflow menu: the window-level switches that have no pane
-/// of their own, plus About and the update actions people look for in a
-/// title bar. Replaying onboarding lives in Troubleshooting. The
-/// system draws the button; in the full window it is the one beside the
-/// search field, and Simple Mode shows the same menu alone.
+/// of their own. Anything with a row in a pane stays out, so each setting has
+/// one home. The system draws the button; in the full window it is the one
+/// beside the search field, and Simple Mode shows the same menu alone.
 private struct SettingsOverflowMenu: View {
     let appState: AppState
     let generalSettings: GeneralSettings
@@ -412,20 +411,13 @@ private struct SettingsOverflowMenu: View {
             }
             Divider()
             Toggle("Simple Mode", isOn: $generalSettings.simpleMode)
-            Toggle("Show Descriptions", isOn: $generalSettings.showSettingDescriptions)
-            Divider()
-            Button("Customize Sidebar…") {
-                isCustomizeSidebarPresented = true
-            }
-            Divider()
-            Button("About \(Constants.displayName)") {
-                appState.navigationState.settingsNavigationIdentifier = .about
-            }
-            Button("What’s New…") {
-                appState.openWindow(.whatsNew)
-            }
-            Button("Check for Updates…") {
-                appState.updatesManager.checkForUpdates()
+            // Simple Mode has no sidebar to customize, and the sheet is only
+            // attached to the full window.
+            if !generalSettings.simpleMode {
+                Divider()
+                Button("Customize Sidebar…") {
+                    isCustomizeSidebarPresented = true
+                }
             }
         } label: {
             Label("More", systemImage: "ellipsis.circle")
