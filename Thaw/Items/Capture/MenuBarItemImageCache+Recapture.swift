@@ -860,8 +860,10 @@ extension MenuBarItemImageCache {
     ) async {
         // Before the failure reset and the reveal: a locked pass must not toggle
         // the lock screen's bar or clear strikes it did not earn back.
+        // Without Screen Recording a reveal cannot be photographed; it would only flash hidden items on the bar.
         guard !skipCaptureWhileScreenLocked("prewarmConcealedImages"),
-              appState?.menuBarManager.sectionController != nil
+              appState?.menuBarManager.sectionController != nil,
+              appState?.isPermissionGranted(.screenRecording) == true
         else {
             return
         }
