@@ -40,7 +40,7 @@ nonisolated extension SearchIndex {
         ),
         SearchEntry(
             id: "lab.enableModuleStandIns",
-            title: "Replace Control Center items while hidden",
+            title: "Replace Control Center items",
             descriptionText: String(localized: "Puts Thaw icons in place of Focus, AirDrop, Now Playing and Fast User Switching while they sit in Hidden."),
             pane: .theLab,
             section: "Experiments",
