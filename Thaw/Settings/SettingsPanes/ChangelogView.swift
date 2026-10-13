@@ -12,7 +12,7 @@ import ThawUI
 
 /// The release notes, fetched from the Thaw repository's changelog and parsed
 /// just far enough to render: `## [version]` releases, `###` sections,
-/// `####` themes, and `-` bullets with inline markdown.
+/// `####` themes, `-` bullets and numbered steps, with inline markdown.
 ///
 /// Deliberately not a general markdown engine. The changelog follows Keep a
 /// Changelog with a known shape; anything unrecognized degrades to plain
@@ -346,6 +346,10 @@ struct ChangelogDocument {
             } else if line.hasPrefix("- ") {
                 flushBullet()
                 pendingBullet = String(line.dropFirst(2))
+            } else if line.wholeMatch(of: /\d+\. .+/) != nil {
+                // A numbered step keeps its number and stays on its own line.
+                flushBullet()
+                pendingBullet = line
             } else if line.isEmpty || line == "---" || line.hasPrefix("# ") {
                 flushBullet()
             } else if pendingBullet != nil {

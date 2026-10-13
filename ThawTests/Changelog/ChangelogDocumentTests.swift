@@ -469,6 +469,30 @@ struct ChangelogDocumentTests {
         #expect(document.releases[3].version == "0.9.0")
     }
 
+    @Test("numbered steps in the intro stay separate lines and keep their numbers")
+    func numberedStepsStaySeparate() throws {
+        let document = ChangelogDocument.parse("""
+        ## [3.0.0] - 2026-10-11
+
+        After you update:
+
+        1. Open Settings > Layout and look at **Hiding method**.
+        2. If the icon is missing,
+           open Settings.
+
+        ### Fixed
+
+        - A real bullet.
+        """)
+
+        let release = try #require(document.releases.first)
+        #expect(release.intro.map(plain) == [
+            "After you update:",
+            "1. Open Settings > Layout and look at Hiding method.",
+            "2. If the icon is missing, open Settings.",
+        ])
+    }
+
     // MARK: - Intro prose and badges
 
     @Test("prose ahead of a release's first section is kept as intro; a badge line becomes a badge")
