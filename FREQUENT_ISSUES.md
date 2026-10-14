@@ -9,6 +9,7 @@ Thaw 3.0 runs on macOS 27 and Thaw 2.x runs on macOS 26. macOS 27 changed how me
   - [Little Snitch on macOS 27](#little-snitch-on-macos-27)
   - [Thaw's own icon is missing on macOS 27](#thaws-own-icon-is-missing-on-macos-27)
 - [macOS 26 (Thaw 2.x)](#macos-26-thaw-2x)
+  - [`brew upgrade` says thaw@beta does not run on this macOS](#brew-upgrade-says-thawbeta-does-not-run-on-this-macos)
   - [Items end up in the wrong section](#items-end-up-in-the-wrong-section)
   - [Thaw removed an item](#thaw-removed-an-item)
   - [Thaw's own icon is missing: how to open Settings](#thaws-own-icon-is-missing-how-to-open-settings)
@@ -61,6 +62,23 @@ macOS 27 has its own switch for each app's menu bar items, separate from Thaw's 
 2. **General → Show Thaw icon** in Thaw's settings. To open them without the icon, see [Thaw's own icon is missing: how to open Settings](#thaws-own-icon-is-missing-how-to-open-settings).
 
 ## macOS 26 (Thaw 2.x)
+
+### `brew upgrade` says thaw@beta does not run on this macOS
+
+```text
+Error: thaw@beta: This cask does not run on macOS versions older than Golden Gate.
+```
+
+The `thaw@beta` cask follows the newest beta, and that is now Thaw 3, which needs macOS 27. On macOS 26, switch to the `thaw` cask:
+
+```sh
+brew uninstall thaw@beta
+brew install thaw
+```
+
+Your settings stay, because they are not stored in the app. To keep getting 2.x betas, set the update channel to **Beta** in **Settings → About**; Thaw then updates itself. See [Versions and update channels](docs/VERSIONS.md).
+
+Related: [#1221](https://github.com/thaw-app/Thaw/issues/1221).
 
 ### Items end up in the wrong section
 
