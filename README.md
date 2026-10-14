@@ -185,6 +185,7 @@ Every core action is a `thaw://` deep link, so Thaw plugs into the launcher you 
 - [Droppy](https://getdroppy.app/): pair Thaw with Droppy's shelf and extras for a full menu bar suite.
 - [Floe](https://www.getthaw.app/docs/floe): the launcher from the same team. It opens menu bar items and applies profiles with no setup.
 - Anything else: Alfred, Shortcuts, Keyboard Maestro, BetterTouchTool, or a shell script.
+- Shortcuts, Spotlight and Siri: Thaw 3 has its own actions, and Siri phrases that need no setup. See [Shortcuts and automation](docs/SHORTCUTS.md).
 
 ```sh
 open "thaw://toggle-hidden"
@@ -196,14 +197,17 @@ Full reference, including reading and writing settings: [docs/URI_SCHEMES.md](do
 
 ## Install
 
-```sh
-brew install thaw        # stable
-brew install thaw@beta   # beta, or stable if it is newer
-```
+Run the line for your macOS in Terminal:
 
-Or grab the `.dmg` from the [latest release](https://github.com/thaw-app/Thaw/releases/latest) and drag Thaw to Applications.
+| Your Mac runs | Run this | You get |
+|---|---|---|
+| macOS 27 | `brew install thaw@beta` | Thaw 3, in beta |
+| macOS 26 | `brew install thaw` | Thaw 2, the stable release |
+| macOS 14 or 15 | Download from the [releases](https://github.com/thaw-app/Thaw/releases) | Thaw 1 |
 
-Needs macOS 26+. Thaw asks for Accessibility on first launch to move menu bar items; Screen Recording is optional. Stuck? See [Frequent issues](FREQUENT_ISSUES.md).
+No Homebrew? Download the disk image for your macOS from the [releases](https://github.com/thaw-app/Thaw/releases) and drag Thaw to Applications.
+
+Thaw asks for Accessibility on first launch to move menu bar items. On macOS 27 it also asks for Menu Bar Layout Access, which lets it read the one file where macOS keeps the menu bar's order. Screen Recording is optional. [Getting started](docs/GETTING_STARTED.md) walks through the first run, and [Frequent issues](FREQUENT_ISSUES.md) covers what goes wrong.
 
 ## Languages
 
