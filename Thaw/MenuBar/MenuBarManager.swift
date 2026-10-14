@@ -184,6 +184,7 @@ final class MenuBarManager {
 
     /// Per-extra opt-in stand-ins for Apple extras removed in hidden sections; see SystemExtraTakeoverCoordinator.
     let systemExtraTakeover = SystemExtraTakeoverCoordinator()
+    let newIconFollower = NewIconSectionFollower()
 
     /// Panels observe reveals without holding a platform type; emits nothing without an engine.
     var revealedSectionChanges: AnyPublisher<MenuBarSectionName?, Never> {
@@ -311,6 +312,7 @@ final class MenuBarManager {
             }
             itemManager.persistKnownItemIdentifiers()
         }
+        newIconFollower.start(appState: appState)
         MenuBarPresentationProvider.startDiagnosticSessionIfGated()
         leadingEdgeWatcher.performSetup(with: appState)
         backdrop.performSetup(with: appState)
