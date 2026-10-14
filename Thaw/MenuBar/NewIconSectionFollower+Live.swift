@@ -20,7 +20,7 @@ final class NewIconSectionFollower {
         task = Task { @MainActor [weak appState] in
             guard let itemManager = appState?.itemManager else { return }
             var arrivals: NewIconArrivals?
-            let changes = Observations { itemManager.managedItems.filter { !$0.isControlItem }.map(\.uniqueIdentifier) }
+            let changes = Observations { Self.itemIdentifiers(in: itemManager) }
             for await current in changes {
                 guard let appState else { return }
                 let controller = appState.menuBarManager.sectionController
@@ -39,5 +39,9 @@ final class NewIconSectionFollower {
                 }
             }
         }
+    }
+
+    private static func itemIdentifiers(in itemManager: MenuBarItemManager) -> [String] {
+        itemManager.managedItems.filter { !$0.isControlItem }.map(\.uniqueIdentifier)
     }
 }
