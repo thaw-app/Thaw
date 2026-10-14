@@ -40,15 +40,12 @@ If you decline, Thaw offers Full Disk Access as a fallback. It never asks for th
 
 You can refuse this one. Hiding, revealing and moving items in the menu bar work without it.
 
-What you lose depends on your version:
+Without it:
 
-| | Thaw 3 | Thaw 2 |
-|---|---|---|
-| Thaw Bar, search and Layout settings | Each item is drawn as its app's icon | They cannot show your items |
-| Tooltips | Off | Off |
-| Wallpaper tint | Off | Off |
+- The Thaw Bar, search and Layout draw each item as its app's icon instead of a live preview.
+- Tooltips and the wallpaper tint are off.
 
-On Thaw 2, grant it if you want the Thaw Bar or search.
+Thaw 2.0 could not show items in the Thaw Bar, search or Layout without it. Thaw 2.1 and Thaw 3 can.
 
 ### macOS keeps asking after you said yes
 

@@ -197,7 +197,7 @@ Full reference, including reading and writing settings: [docs/URI_SCHEMES.md](do
 
 ## Install
 
-Run the line for your macOS in Terminal:
+Choose the option for your macOS: a Homebrew command to run in Terminal, or a download.
 
 | Your Mac runs | Run this | You get |
 |---|---|---|

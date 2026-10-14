@@ -2,7 +2,7 @@
 
 ## 1. Install
 
-Run the line for your macOS in Terminal. To see which macOS you have, open the Apple menu and choose **About This Mac**.
+Choose the option for your macOS: a Homebrew command to run in Terminal, or a download. To see which macOS you have, open the Apple menu and choose **About This Mac**.
 
 | Your Mac runs | Run this | You get |
 |---|---|---|
@@ -22,7 +22,7 @@ Thaw asks for what it needs the first time it opens.
 |---|---|---|
 | Accessibility | Yes | Thaw moves menu bar items with it. Without it, nothing can be hidden. |
 | Menu Bar Layout Access | Only on macOS 27 | macOS 27 keeps the menu bar's order in one protected file. You pick that file in a panel, and Thaw can read that file and no other. |
-| Screen Recording | No | It adds live previews and a tint taken from your wallpaper. On Thaw 2, the Thaw Bar, search and the Layout settings also need it. |
+| Screen Recording | No | It adds live previews and a tint taken from your wallpaper. Without it, items show as their app's icon. |
 
 More on each one is under [Permissions](PERMISSIONS.md).
 
@@ -43,8 +43,6 @@ Once the item is in Hidden, it stays out of the menu bar until you click Thaw's 
 3. Drag the item from **Visible** into **Hidden**.
 
 On Thaw 3, Settings opens as one page with no sidebar if you kept Simple Mode. Switch off **Simple Mode** to see **Layout**.
-
-On Thaw 2, the Layout settings need Screen Recording to show your items.
 
 ## If something looks wrong
 

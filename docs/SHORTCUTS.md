@@ -61,7 +61,7 @@ Seven of these actions have phrases Siri understands, with no setup. Say the phr
 
 ## Focus
 
-Both versions add a Focus filter that sets a menu bar profile. In Thaw 3 it is called **Set Menu Bar Profile**. Add it under **System Settings → Focus**, pick a Focus, then **Focus Filters**. Thaw switches to that profile when the Focus starts and goes back when it ends.
+Both versions add a Focus filter that sets a menu bar profile. In Thaw 3 it is called **Set Menu Bar Profile**. Add it under **System Settings → Focus**, pick a Focus, then **Focus Filters**. Thaw switches to that profile when the Focus starts. When it ends, Thaw applies the profile set for the current display, if there is one.
 
 ## Control Center
 

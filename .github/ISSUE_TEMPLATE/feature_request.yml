@@ -11,7 +11,7 @@ body:
 
         **Issues are English only.** Machine translation (AI or any other tool) is accepted.
 
-        Thaw is free and run by a small team with limited time, so reports with clear steps and logs are looked at first. Issues that lack the requested details, or get no reply after two follow-ups from us, are closed. Issues with no activity are marked stale after 10 days and closed on day 14. Reopen with the missing details at any time.
+        Thaw is free and run by a small team with limited time, so requests with a clear use case and a proposed solution are looked at first. Issues that lack the requested details, or get no reply after two follow-ups from us, are closed. Issues with no activity are marked stale after 10 days and closed after about 14. Reopen with the missing details at any time.
 
   - type: checkboxes
     id: checks

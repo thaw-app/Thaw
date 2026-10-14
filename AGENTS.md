@@ -32,7 +32,7 @@ These are large but fine as they are, so don't split them for the sake of it: `M
 
 ## SonarCloud
 
-Changes must meet the project's SonarCloud quality requirements, including at least 80% coverage on new code. The scan also reports duplicated code and new bugs, vulnerabilities and code smells, so keep those at zero on what you add.
+New code needs at least 80% test coverage; that is the project's policy. The SonarCloud scan reports coverage along with duplicated code and new bugs, vulnerabilities and code smells, so keep those at zero on what you add.
 
 CI skips the analysis for pull requests from forks and from Dependabot. A skipped Sonar check means nothing was analyzed, not that the change passed.
 

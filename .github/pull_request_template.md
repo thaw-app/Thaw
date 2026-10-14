@@ -77,7 +77,7 @@ What does this PR change or add, and why?
 - [ ] I've updated documentation as needed.
 - [ ] This PR targets `development` (Thaw 2) or `feat/thaw-3` (Thaw 3).
 - [ ] I didn't add new responsibilities to the big types listed above.
-- [ ] The change meets the SonarCloud requirements, including at least 80% coverage on new code (see [AGENTS.md](https://github.com/thaw-app/Thaw/blob/development/AGENTS.md#sonarcloud)). Fork PRs skip the scan, so it can't confirm this for them.
+- [ ] New code has at least 80% test coverage and the SonarCloud scan reports no new issues (see [AGENTS.md](https://github.com/thaw-app/Thaw/blob/development/AGENTS.md#sonarcloud)). Fork PRs skip the scan, so it can't confirm this for them.
 - [ ] If this PR changes dependencies / lockfiles (`Package.resolved`, Actions pins, etc.), `dependency-sca` is green, or any `osv-scanner.toml` suppression includes both `reason` and `ignoreUntil` (see [Thaw/Floe Security Policy](https://github.com/thaw-app/.github/blob/main/.github/SECURITY.md#dependency-findings)).
 
 Test commands run:

@@ -2,7 +2,7 @@ name: Close stale issues
 
 on:
   schedule:
-    - cron: "0 0 * * *" # Daily, so issues close on day 14 and not up to 3 days later
+    - cron: "17 4 * * *" # Daily, off the hour when GitHub queues are busiest
   workflow_dispatch:
 
 permissions:
@@ -17,7 +17,7 @@ jobs:
     steps:
       - uses: thaw-app/org-ci/actions/close-stale-issues@cfa52194f39013d6f54e6f5a14dc57cec3a20e9b
         with:
-          # Stale after 10 days without activity, closed 4 days later: day 14.
+          # Stale after 10 days without activity, closed on the first run 4 days later.
           days-before-stale: "10"
           days-before-close: "4"
           # Issues waiting on someone else, or kept open on purpose.

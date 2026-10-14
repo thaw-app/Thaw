@@ -11,7 +11,7 @@ The two releases being finished.
 
 ### macOS 26
 
-- **Thaw 2.1.0.** At its [first release candidate](../CHANGELOG.md). It ships as 2.1.0 if no new problems turn up.
+- **Thaw 2.1.0.** Six betas are done, and the stable release is being prepared. See the [changelog](../CHANGELOG.md).
 
 ## Coming next
 
