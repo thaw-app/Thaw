@@ -93,10 +93,9 @@ public struct AXElement: @unchecked Sendable, Hashable {
     /// Elements become AXElement, geometry AXValues their Swift types, and an
     /// error placeholder from a batch read nil. Arrays are unpacked per element.
     static func unpack(_ value: AnyObject) -> Any? {
-        if let array = value as? [AnyObject] {
-            return array.compactMap(unpack)
-        }
         switch CFGetTypeID(value) {
+        case CFArrayGetTypeID():
+            return (value as? [AnyObject])?.compactMap(unpack)
         case AXUIElementGetTypeID():
             return AXElement(unsafeDowncast(value, to: AXUIElement.self))
         case AXValueGetTypeID():
