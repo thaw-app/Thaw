@@ -32,6 +32,11 @@ After you update:
 - **The Always Hidden gesture reads as a sentence.** The row looked like a setting with nothing to change. By @diazdesandi.
 - **Menu Bar Layout Access and Control Center App List say a relaunch may be needed.** [Permissions](https://www.getthaw.app/docs/thaw/permissions#menu-bar-layout-access) says what each one is for. By @diazdesandi.
 
+### Fixed: crashes
+
+- **Thaw no longer crashes at launch when macOS lists an app twice.** It could crash again on every relaunch. Reported by @nebiros in [#1330](https://github.com/thaw-app/Thaw/issues/1330). Fixed by @diazdesandi.
+- **Thaw no longer crashes when an app gives a malformed answer to an accessibility read.** It was rare and could happen whenever Thaw read the menu bar. Reported by @nebiros in [#1330](https://github.com/thaw-app/Thaw/issues/1330). Fixed by @diazdesandi, on accessibility code by @camguillory from [#1263](https://github.com/thaw-app/Thaw/pull/1263).
+
 ### Fixed: icons in Layout and the Thaw Bar
 
 - **Icons no longer turn into app icons when a capture is interrupted.** Narrow icons lost their picture until the next capture. Reported by @mrleblanc101, @ShashankKarpal and @psyrendust in [#1087](https://github.com/thaw-app/Thaw/issues/1087). Fixed by @diazdesandi.
@@ -43,6 +48,12 @@ After you update:
 - **The split shape stays on with a long app menu.** When an app's menus reached your items, the items lost their border and tint. Reported by @Bluto-Nixon in [#1324](https://github.com/thaw-app/Thaw/issues/1324) and @jon-hotaisle in [#1061](https://github.com/thaw-app/Thaw/issues/1061). Fixed by @diazdesandi.
 - **The appearance no longer covers the top of a fullscreen app.** The tint could reach well below the menu bar. Reported by @Parakeet709 in [#1229](https://github.com/thaw-app/Thaw/issues/1229). Fixed by @diazdesandi.
 - **Thaw's memory no longer grows as it reads what is behind the menu bar.** Fixed by @diazdesandi.
+- **The shape covers hidden icons macOS still draws.** When an app has icons in both Visible and Hidden, macOS keeps all of them on the bar, and the hidden ones sat outside the shape. Fixed by @diazdesandi.
+
+### Fixed: hiding and clicks
+
+- **A click on a revealed item opens it after a restart.** When Thaw started at login with your other apps, a click on some hidden items closed the Hidden section again. Fixed by @diazdesandi.
+- **A hidden app stays hidden when it adds an icon.** macOS 27 hides an app as a whole, so one new icon in Visible brought the app's other icons back. A new icon now joins them in Hidden. Fixed by @diazdesandi.
 
 ### Fixed: order and moving
 
