@@ -263,6 +263,13 @@ Open to partnerships, integrations, and sponsorships. [Get in touch](https://git
 The docs are easiest to read at [getthaw.app/docs](https://www.getthaw.app/docs/thaw), which is built from the files below. Start with [Getting started](https://www.getthaw.app/docs/thaw/getting-started), and see [Frequent issues](https://www.getthaw.app/docs/thaw/frequent-issues) if something looks wrong.
 
 - [Changelog](https://www.getthaw.app/changelog), and [what is planned](https://www.getthaw.app/roadmap)
+- [Getting started](docs/GETTING_STARTED.md)
+- [Versions and update channels](docs/VERSIONS.md)
+- [Permissions](docs/PERMISSIONS.md)
+- [What Thaw sends over the network](docs/NETWORK.md)
+- [Shortcuts and automation](docs/SHORTCUTS.md)
+- [Reset or uninstall](docs/RESET_AND_UNINSTALL.md)
+- [Frequent issues](FREQUENT_ISSUES.md)
 - [Contributing](https://github.com/thaw-app/.github/blob/main/.github/CONTRIBUTING.md)
 - [Development](docs/DEVELOPMENT.md)
 - [Credits](CREDITS.md)

@@ -2,7 +2,7 @@
 
 Check here before [filing a bug](https://github.com/thaw-app/Thaw/issues/new/choose). Your problem may already be known, and many have a workaround.
 
-Thaw 3.0 runs on macOS 27 and Thaw 2.x runs on macOS 26. macOS 27 changed how menu bar items work, so the two have separate sections. Start with the one for your macOS version.
+Thaw 3.0 runs on macOS 27 and Thaw 2.x runs on macOS 26. macOS 27 changed how menu bar items work, so the two have separate sections. Start with the one for your macOS version. [Versions and update channels](docs/VERSIONS.md) says which Thaw you have.
 
 - [macOS 27 (Thaw 3.0)](#macos-27-thaw-30)
   - [Known macOS 27 limitations](#known-macos-27-limitations)
@@ -248,6 +248,8 @@ Fix:
 1. Grant permissions under **Settings → Advanced → Permissions**.
 2. If macOS keeps re-prompting after reboot despite approval ([#683](https://github.com/thaw-app/Thaw/issues/683)), remove Thaw from **System Settings → Privacy & Security → Screen Recording**, then add it again.
 
+[Permissions](docs/PERMISSIONS.md) explains what each permission is for and how to reset one.
+
 ### Hidden items still visible when the Thaw bar is off
 
 Disabling **Use Thaw Bar** stops Thaw from actively concealing items. Icons hidden while the bar was enabled may stay visible until Thaw manages the layout again.
@@ -286,10 +288,12 @@ Fix:
 
 ## Before you file a bug
 
-1. Confirm you are on the **latest Thaw release** for your macOS: 2.x on macOS 26, 3.0 on macOS 27. On macOS 27, check [Known macOS 27 limitations](#known-macos-27-limitations) first.
+1. Confirm you are on the **latest Thaw release** for your macOS: 2.x on macOS 26, 3.0 on macOS 27 (see [Versions and update channels](docs/VERSIONS.md)). On macOS 27, check [Known macOS 27 limitations](#known-macos-27-limitations) first.
 2. Search [open and closed issues](https://github.com/thaw-app/Thaw/issues?q=is%3Aissue) for duplicates.
 3. Note your **display setup** (single vs multiple monitors).
 4. Enable **Settings → Advanced → Diagnostics → Enable diagnostic logging**, reproduce the issue, and attach the log from **Reveal Logs in Finder**.
 5. Use the [bug report template](https://github.com/thaw-app/Thaw/issues/new/choose). Reports without enough detail to reproduce may be closed until more information is provided.
+
+If a reset looks like the answer, [Reset or uninstall](docs/RESET_AND_UNINSTALL.md) lists the options from smallest to largest.
 
 **Support policy:** Thaw versions below **1.2.0** on macOS versions below **15.7.7** are no longer supported. macOS 26 and later are actively supported.
