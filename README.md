@@ -11,15 +11,21 @@
 </p>
 
 <p align="center">
-  <b>The open source menu bar manager.</b>
+  <b>The open source menu bar manager for macOS.</b><br />
+  Take back your menu bar. Hide what you don't need, and find anything in a keystroke.
 </p>
 
 <p align="center">
-  <a href="https://github.com/thaw-app/Thaw/releases">Download</a> ·
+  <a href="https://www.getthaw.app"><b>getthaw.app</b></a> ·
   <a href="#install">Install</a> ·
-  <a href="#features">Features</a> ·
-  <a href="#integrations">Integrations</a> ·
-  <a href="https://github.com/thaw-app/.github/blob/main/.github/CONTRIBUTING.md">Contributing</a>
+  <a href="https://www.getthaw.app/docs/thaw">Docs</a> ·
+  <a href="https://www.getthaw.app/changelog">Changelog</a> ·
+  <a href="https://www.getthaw.app/roadmap">Roadmap</a> ·
+  <a href="https://www.getthaw.app/community">Community</a>
+</p>
+
+<p align="center">
+  <a href="https://www.getthaw.app/#try">Try Thaw in your browser</a> before you install it.
 </p>
 
 <p align="center">
@@ -177,6 +183,7 @@ Every core action is a `thaw://` deep link, so Thaw plugs into the launcher you 
 
 - [Raycast](https://www.raycast.com/diazdesandi/thaw): official extension. Toggle sections, open search, and change settings without leaving Raycast.
 - [Droppy](https://getdroppy.app/): pair Thaw with Droppy's shelf and extras for a full menu bar suite.
+- [Floe](https://www.getthaw.app/docs/floe): the launcher from the same team. It opens menu bar items and applies profiles with no setup.
 - Anything else: Alfred, Shortcuts, Keyboard Maestro, BetterTouchTool, or a shell script.
 
 ```sh
@@ -253,6 +260,9 @@ Open to partnerships, integrations, and sponsorships. [Get in touch](https://git
 
 ## Project documentation
 
+The docs are easiest to read at [getthaw.app/docs](https://www.getthaw.app/docs/thaw), which is built from the files below. Start with [Getting started](https://www.getthaw.app/docs/thaw/getting-started), and see [Frequent issues](https://www.getthaw.app/docs/thaw/frequent-issues) if something looks wrong.
+
+- [Changelog](https://www.getthaw.app/changelog), and [what is planned](https://www.getthaw.app/roadmap)
 - [Contributing](https://github.com/thaw-app/.github/blob/main/.github/CONTRIBUTING.md)
 - [Development](docs/DEVELOPMENT.md)
 - [Credits](CREDITS.md)
