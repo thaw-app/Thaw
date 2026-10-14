@@ -171,17 +171,7 @@ final class MenuBarItemImageCacheDiskStore: @unchecked Sendable {
 
     private let diskSaveState = OSAllocatedUnfairLock(initialState: DiskSaveState())
 
-    /// False after the user requests a cache reset. Protected by a lock because
-    /// disk encoding runs on queue while the reset action runs on MainActor.
-    private let diskPersistenceState = OSAllocatedUnfairLock(initialState: true)
-
-    nonisolated var isEnabled: Bool {
-        diskPersistenceState.withLock { $0 }
-    }
-
-    /// Serial queue for disk I/O. Background QoS: nothing on screen waits for a
-    /// save, and serialization is what makes the reset barrier in
-    /// suspendForReset() reliable.
+    /// Serial queue for disk I/O. Background QoS: nothing on screen waits for a save.
     private let queue = DispatchQueue(
         label: "MenuBarItemImageCacheDiskStore",
         qos: .background
@@ -198,7 +188,7 @@ final class MenuBarItemImageCacheDiskStore: @unchecked Sendable {
         _ snapshot: [MenuBarItemTag: MenuBarItemGlyphCapture],
         concealedIdentifiers: Set<String> = []
     ) {
-        guard isEnabled, !snapshot.isEmpty else { return }
+        guard !snapshot.isEmpty else { return }
         guard let url = cacheFileURL else { return }
         // The file locations are resolved before parking, so the drain block
         // never has to reach for the search API from the queue.
@@ -233,7 +223,7 @@ final class MenuBarItemImageCacheDiskStore: @unchecked Sendable {
             }
             return (state.pending, state.pendingConcealed)
         }
-        guard let snapshot, !snapshot.isEmpty, isEnabled else { return }
+        guard let snapshot, !snapshot.isEmpty else { return }
 
         let digest = DiskCacheDigest(snapshot)
         let now = Date()
@@ -272,7 +262,6 @@ final class MenuBarItemImageCacheDiskStore: @unchecked Sendable {
         }.compactMap(\.self)
 
         guard cacheData.count == snapshot.count else { return }
-        guard isEnabled else { return }
 
         do {
             let directoryURL = url.deletingLastPathComponent()
@@ -296,11 +285,12 @@ final class MenuBarItemImageCacheDiskStore: @unchecked Sendable {
                 uniquingKeysWith: { _, latest in latest }
             )
             let writtenAt = Date()
-            let plist: [String: Any] = [
+            var plist: [String: Any] = [
                 "version": Self.cacheVersion,
                 "timestamp": writtenAt.timeIntervalSince1970,
                 "images": images,
             ]
+            plist["build"] = ImageCacheFileValidity.appBuild
             let plistData = try PropertyListSerialization.data(
                 fromPropertyList: plist,
                 format: .binary,
@@ -328,7 +318,7 @@ final class MenuBarItemImageCacheDiskStore: @unchecked Sendable {
     /// Reads the plist back and replaces one key rather than rebuilding it.
     /// The PNG bytes travel as opaque Data either way, so this costs a file
     /// round trip against the whole-cache encode it stands in for. Returns
-    /// false when the file is gone or was written by another version, which
+    /// false when the file is gone or was written by another version or build, which
     /// leaves the caller to write it out in full.
     private nonisolated func restampCacheFile(at url: URL, to date: Date) -> Bool {
         guard let fileData = try? Data(contentsOf: url),
@@ -336,7 +326,12 @@ final class MenuBarItemImageCacheDiskStore: @unchecked Sendable {
                   from: fileData,
                   format: nil
               ) as? [String: Any],
-              root["version"] as? Int == Self.cacheVersion,
+              ImageCacheFileValidity.isCurrent(
+                  fileVersion: root["version"] as? Int,
+                  fileBuild: root["build"] as? String,
+                  cacheVersion: Self.cacheVersion,
+                  appBuild: ImageCacheFileValidity.appBuild
+              ),
               root["images"] != nil
         else {
             return false
@@ -356,27 +351,6 @@ final class MenuBarItemImageCacheDiskStore: @unchecked Sendable {
             return false
         }
         return true
-    }
-
-    /// Blocks queued and future saves while a reset deletes the cache file,
-    /// and forgets the parked write so a later save cannot skip recreating it.
-    nonisolated func suspendForReset() async {
-        diskPersistenceState.withLock { $0 = false }
-        diskSaveState.withLock { state in
-            state.pending = nil
-            state.lastWritten = nil
-        }
-        await withCheckedContinuation { continuation in
-            self.queue.async {
-                continuation.resume()
-            }
-        }
-    }
-
-    /// Restores normal persistence when cache deletion fails and the app stays
-    /// running to present the maintenance error.
-    nonisolated func resumeAfterFailedReset() {
-        diskPersistenceState.withLock { $0 = true }
     }
 
     // MARK: Loading
@@ -420,9 +394,15 @@ final class MenuBarItemImageCacheDiskStore: @unchecked Sendable {
             guard let timestamp = root["timestamp"] as? TimeInterval,
                   let imagesDict = root["images"] as? [String: [String: Any]] else { return nil }
 
-            if root["version"] as? Int != Self.cacheVersion {
+            if !ImageCacheFileValidity.isCurrent(
+                fileVersion: root["version"] as? Int,
+                fileBuild: root["build"] as? String,
+                cacheVersion: Self.cacheVersion,
+                appBuild: ImageCacheFileValidity.appBuild
+            ) {
                 let version = root["version"] as? Int
-                Self.diagLog.debug("Disk cache version \(version ?? -1) is stale, deleting cache")
+                let build = root["build"] as? String
+                Self.diagLog.debug("Disk cache from version \(version ?? -1) build \(build ?? "none") is stale, deleting cache")
                 try? FileManager.default.removeItem(at: readFile)
                 return nil
             }

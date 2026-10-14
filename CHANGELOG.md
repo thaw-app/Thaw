@@ -11,6 +11,7 @@ and the Sparkle appcast, unless overridden with the `release_notes` input.
 
 ### Changed: Settings
 
+- **Troubleshooting has two fewer buttons.** "Reset Control Center" is gone: on macOS 27 it also erased your choices in System Settings > Menu Bar, and "Restore Missing Items" brings items back without deleting anything. "Quit and Clear Cache" is gone too: saved item pictures are now thrown away after every update, which is what that button was for. By @diazdesandi.
 - **Search lists every section in menu bar order.** The order buttons and the per-section switches under Menu bar search are gone. By @diazdesandi.
 - **Privacy has no Turn Everything Off button.** It switched off the two rows above it; turn those off directly. By @diazdesandi.
 - **Allow an app for thaw:// links by choosing it.** Automation > Other apps > Choose App… opens a file picker instead of asking for a bundle ID. By @diazdesandi.

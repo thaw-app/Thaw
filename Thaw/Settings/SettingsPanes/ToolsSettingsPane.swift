@@ -59,7 +59,7 @@ struct ToolsSettingsPane: View {
             // the backups this lists, and its copy points up to it.
             MenuBarLayoutBackupsSection(refreshToken: backupsRefreshToken)
 
-            // These delete preferences, clear the cache, or quit apps.
+            // These delete preferences or quit apps.
             ThawSection("Troubleshooting") {
                 toolRow(
                     title: "Missing menu bar items",
@@ -70,19 +70,6 @@ struct ToolsSettingsPane: View {
                 }
 
                 toolRow(
-                    title: "Control Center preferences",
-                    detail: "Quit Control Center and delete its preference files so the state of Apple's menu bar items can rebuild.",
-                    buttonTitle: "Reset Control Center…",
-                    role: .destructive,
-                    statusFor: .resetControlCenter
-                ) {
-                    pendingAction = .resetControlCenter
-                }
-
-                // Saved positions live in the menu bar's own domain, not
-                // Control Center's, so the row above does not clear them and
-                // this one is a separate reset rather than a duplicate.
-                toolRow(
                     title: "Saved item positions",
                     detail: "Delete macOS's saved menu bar layout and restart the menu bar so it rebuilds from scratch. Use this when items won't come back to the menu bar after you move them. A backup is saved first; restore it from Layout backups above.",
                     buttonTitle: "Reset Positions…",
@@ -90,16 +77,6 @@ struct ToolsSettingsPane: View {
                     statusFor: .resetMenuBarLayoutPositions
                 ) {
                     pendingAction = .resetMenuBarLayoutPositions
-                }
-
-                toolRow(
-                    title: "Cache",
-                    detail: "Delete \(Constants.displayName)'s cache folder, then quit the app.",
-                    buttonTitle: "Quit and Clear Cache…",
-                    role: .destructive,
-                    statusFor: .quitAndClearCache
-                ) {
-                    pendingAction = .quitAndClearCache
                 }
 
                 toolRow(
@@ -229,7 +206,7 @@ struct ToolsSettingsPane: View {
         statusAction = action
         defer { isBusy = false }
 
-        if action == .resetControlCenter || action == .resetMenuBarLayoutPositions {
+        if action == .resetMenuBarLayoutPositions {
             // Killing the host mid-move strands the move's events.
             await appState.itemManager.moveActivity.waitUntilIdle()
         }
@@ -239,9 +216,6 @@ struct ToolsSettingsPane: View {
             case .resetSettings:
                 appState.settings.resetAllSettingsToDefaults()
                 reportSuccess(String(localized: "Settings were reset to defaults."))
-            case .resetControlCenter:
-                try await MaintenanceTools.resetControlCenterPreferences()
-                reportSuccess(String(localized: "Control Center preferences were reset."))
             case .resetMenuBarLayoutPositions:
                 let backup = try await MaintenanceTools.resetMenuBarLayoutPositions()
                 appState.itemManager.forgetStrandedRepairs()
@@ -262,16 +236,6 @@ struct ToolsSettingsPane: View {
                     try? await Task.sleep(for: .milliseconds(500))
                 }
                 appState.restartSelf()
-            case .quitAndClearCache:
-                await appState.imageCache.suspendDiskPersistenceForReset()
-                do {
-                    try MaintenanceTools.clearAppCache()
-                } catch {
-                    appState.imageCache.resumeDiskPersistenceAfterFailedReset()
-                    throw error
-                }
-                reportSuccess(String(localized: "Cache cleared. Quitting…"))
-                ApplicationTermination.request()
             case .resetPermissions:
                 try await MaintenanceTools.resetAppPermissions()
                 reportSuccess(String(localized: "Permissions cleared. Quitting…"))
@@ -291,9 +255,7 @@ struct ToolsSettingsPane: View {
 
 private enum MaintenanceToolAction: Identifiable {
     case resetSettings
-    case resetControlCenter
     case resetMenuBarLayoutPositions
-    case quitAndClearCache
     case resetPermissions
 
     var id: Self {
@@ -303,9 +265,7 @@ private enum MaintenanceToolAction: Identifiable {
     var confirmationTitle: String {
         switch self {
         case .resetSettings: String(localized: "Reset all settings?")
-        case .resetControlCenter: String(localized: "Reset Control Center preferences?")
         case .resetMenuBarLayoutPositions: String(localized: "Reset saved item positions?")
-        case .quitAndClearCache: String(localized: "Quit and clear cache?")
         case .resetPermissions: String(localized: "Reset permissions?")
         }
     }
@@ -313,9 +273,7 @@ private enum MaintenanceToolAction: Identifiable {
     var errorTitle: LocalizedStringKey {
         switch self {
         case .resetSettings: "Couldn’t reset settings"
-        case .resetControlCenter: "Couldn’t reset Control Center"
         case .resetMenuBarLayoutPositions: "Couldn’t reset saved item positions"
-        case .quitAndClearCache: "Couldn’t clear the cache"
         case .resetPermissions: "Couldn’t reset permissions"
         }
     }
@@ -323,9 +281,7 @@ private enum MaintenanceToolAction: Identifiable {
     var confirmationButtonTitle: LocalizedStringKey {
         switch self {
         case .resetSettings: "Reset"
-        case .resetControlCenter: "Reset Control Center"
         case .resetMenuBarLayoutPositions: "Reset Positions"
-        case .quitAndClearCache: "Quit and Clear Cache"
         case .resetPermissions: "Reset Permissions"
         }
     }
@@ -334,12 +290,8 @@ private enum MaintenanceToolAction: Identifiable {
         switch self {
         case .resetSettings:
             "This will reset app settings to their default values. Saved profiles, allowed apps, and user data will not be deleted. This action cannot be undone."
-        case .resetControlCenter:
-            "Control Center will quit and its preference files will be deleted. macOS usually relaunches it automatically."
         case .resetMenuBarLayoutPositions:
             "Every menu bar item's saved position will be deleted and the menu bar will restart, so your whole arrangement is rebuilt from scratch. A backup is saved first, and Layout backups on this page can put it back. \(Constants.displayName) relaunches afterward."
-        case .quitAndClearCache:
-            "\(Constants.displayName) will delete its cache folder and quit. Launch the app again afterward."
         case .resetPermissions:
             "Accessibility and Screen Recording permissions will be cleared for \(Constants.displayName). The app will quit so you can grant them again on next launch."
         }

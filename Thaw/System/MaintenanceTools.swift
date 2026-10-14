@@ -18,8 +18,8 @@ import Subprocess
 /// Destructive troubleshooting helpers used by Settings → Tools.
 ///
 /// These operate on the current user's Library and TCC entries for Thaw's own
-/// bundle identifier. They are intentionally narrow: no sudo, no other apps'
-/// preferences beyond Control Center's menu-bar state plists.
+/// bundle identifier and the menu bar's saved positions. They are intentionally
+/// narrow: no sudo, and no other apps' preferences.
 nonisolated enum MaintenanceTools {
     nonisolated enum ToolError: LocalizedError {
         case commandFailed(String, Int32, String)
@@ -33,35 +33,6 @@ nonisolated enum MaintenanceTools {
                 }
                 return String(localized: "\(command) failed with exit status \(status): \(trimmed)")
             }
-        }
-    }
-
-    /// Quits Control Center and deletes its user preference plists so menu bar
-    /// item order/visibility can be rebuilt from a clean Control Center state.
-    @concurrent
-    static func resetControlCenterPreferences() async throws {
-        // Best-effort: Control Center may not be running.
-        try? await run(path: "/usr/bin/killall", arguments: ["ControlCenter"])
-
-        let fileManager = FileManager.default
-        let home = fileManager.homeDirectoryForCurrentUser
-        let preferences = home.appending(path: "Library/Preferences", directoryHint: .isDirectory)
-
-        let mainPlist = preferences.appending(path: "com.apple.controlcenter.plist")
-        try removeItemIfExists(at: mainPlist, using: fileManager)
-
-        let byHost = preferences.appending(path: "ByHost", directoryHint: .isDirectory)
-        guard fileManager.fileExists(atPath: byHost.path(percentEncoded: false)) else {
-            return
-        }
-
-        let byHostFiles = try fileManager.contentsOfDirectory(
-            at: byHost,
-            includingPropertiesForKeys: nil,
-            options: [.skipsHiddenFiles]
-        )
-        for fileURL in byHostFiles where fileURL.lastPathComponent.hasPrefix("com.apple.controlcenter") {
-            try fileManager.removeItem(at: fileURL)
         }
     }
 
@@ -157,26 +128,6 @@ nonisolated enum MaintenanceTools {
     private static func preferencesDirectory(fileManager: FileManager) -> URL {
         fileManager.homeDirectoryForCurrentUser
             .appending(path: "Library/Preferences", directoryHint: .isDirectory)
-    }
-
-    /// Deletes Thaw's user cache directory (~/Library/Caches/<bundle id>).
-    static func clearAppCache() throws {
-        let caches = FileManager.default.urls(for: .cachesDirectory, in: .userDomainMask).first
-            ?? FileManager.default.homeDirectoryForCurrentUser.appending(path: "Library/Caches", directoryHint: .isDirectory)
-        try clearAppCache(
-            cachesDirectory: caches,
-            bundleIdentifier: Constants.bundleIdentifier,
-            fileManager: .default
-        )
-    }
-
-    static func clearAppCache(
-        cachesDirectory: URL,
-        bundleIdentifier: String,
-        fileManager: FileManager
-    ) throws {
-        let cacheDirectory = cachesDirectory.appending(path: bundleIdentifier, directoryHint: .isDirectory)
-        try removeItemIfExists(at: cacheDirectory, using: fileManager)
     }
 
     /// Removes the item at url when it exists. Any removal error propagates.
