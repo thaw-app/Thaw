@@ -39,6 +39,18 @@ struct AppRunningTriggersTests {
         #expect(!trigger.matches(runningBundleIDs: [""]))
     }
 
+    @Test("A pid listed twice is one app, not a crash")
+    func duplicatePID() {
+        let apps = AppRunningTriggersManager.bundleIDsByPID([(10, "test.editor"), (10, "test.editor"), (11, "test.other")])
+        #expect(apps == [10: "test.editor", 11: "test.other"])
+    }
+
+    @Test("Apps with no pid yet all still count as running")
+    func appsWithoutPID() {
+        let apps = AppRunningTriggersManager.bundleIDsByPID([(-1, "test.editor"), (-1, "test.other"), (12, "test.third")])
+        #expect(Set(apps.values) == ["test.editor", "test.other", "test.third"])
+    }
+
     @Test("Startup, repeated snapshots, and the last process quitting balance one hold")
     func lifecycle() throws {
         try withManager { manager, _ in

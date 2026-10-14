@@ -52,7 +52,7 @@ final class AppRunningTriggersManager {
     func start(
         notificationCenter: NotificationCenter = NSWorkspace.shared.notificationCenter,
         runningApplications: @escaping @MainActor () -> [pid_t: String] = {
-            Dictionary(uniqueKeysWithValues: NSWorkspace.shared.runningApplications.compactMap { app in
+            AppRunningTriggersManager.bundleIDsByPID(NSWorkspace.shared.runningApplications.compactMap { app in
                 guard !app.isTerminated, let bundleID = app.bundleIdentifier else { return nil }
                 return (app.processIdentifier, bundleID)
             })
@@ -72,6 +72,18 @@ final class AppRunningTriggersManager {
                 .store(in: &subscriptions)
         }
         updateRunningApplications(runningApplications())
+    }
+
+    /// NSWorkspace can list one pid twice, and gives -1 to every app with no
+    /// process yet. Either made a unique-keys dictionary trap at launch.
+    static nonisolated func bundleIDsByPID(_ applications: [(pid: pid_t, bundleID: String)]) -> [pid_t: String] {
+        var result: [pid_t: String] = [:]
+        for (index, app) in applications.enumerated() {
+            // An app with no pid still counts as running, under a key of its own.
+            let key = app.pid > 0 ? app.pid : pid_t(-(index + 1))
+            result[key] = result[key] ?? app.bundleID
+        }
+        return result
     }
 
     func stop() {
