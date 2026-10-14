@@ -11,6 +11,8 @@ body:
 
         On Thaw 3.0 and macOS 27, read the [known macOS 27 limitations](https://github.com/thaw-app/Thaw/blob/development/FREQUENT_ISSUES.md#known-macos-27-limitations) too. Those don't need a report.
 
+        **Issues are English only.** Machine translation (AI or any other tool) is accepted.
+
   - type: textarea
     id: description
     attributes:

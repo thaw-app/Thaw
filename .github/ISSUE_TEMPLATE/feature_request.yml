@@ -9,6 +9,8 @@ body:
       value: |
         **Before submitting:** Search [open & closed suggestions](https://github.com/thaw-app/Thaw/issues?q=is%3Aissue+-type%3ABug) for duplicates.
 
+        **Issues are English only.** Machine translation (AI or any other tool) is accepted.
+
   - type: checkboxes
     id: checks
     attributes:

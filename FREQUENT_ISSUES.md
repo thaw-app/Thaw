@@ -293,6 +293,7 @@ Fix:
 3. Note your **display setup** (single vs multiple monitors).
 4. Enable **Settings → Advanced → Diagnostics → Enable diagnostic logging**, reproduce the issue, and attach the log from **Reveal Logs in Finder**.
 5. Use the [bug report template](https://github.com/thaw-app/Thaw/issues/new/choose). Reports without enough detail to reproduce may be closed until more information is provided.
+6. Issues are English only. Machine translation (AI or any other tool) is accepted.
 
 If a reset looks like the answer, [Reset or uninstall](docs/RESET_AND_UNINSTALL.md) lists the options from smallest to largest.
 
