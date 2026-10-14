@@ -4,7 +4,10 @@ A brief description of the changes proposed in this pull request.
 
 **Scope:** This PR changes one focused thing (bug fix or feature) plus minimal plumbing. Larger refactors need prior agreement in the issue.
 
+> **Don't add responsibilities to the big types.** We're breaking up `MenuBarItemManager`, `MenuBarItemImageCache`, `MenuBarManager`, `HIDEventManager`, `ControlItem` and `ProfileManager`. Extend a focused module or extract the behavior with its state; the big type only plugs it in. [AGENTS.md](https://github.com/thaw-app/Thaw/blob/development/AGENTS.md) has the list and why.
+>
 > **Tests:** the suite is Swift Testing throughout. Write new tests with `@Test` / `#expect`, not XCTest.
+>
 > **External contributors:** before opening a PR for a bug fix or new feature, make sure there's a corresponding issue in the [issue tracker](https://github.com/thaw-app/Thaw/issues). PRs that fix or change things that haven't been reported/agreed on may be closed without review.
 
 ## Linked issue (required)
@@ -66,13 +69,15 @@ What does this PR change or add, and why?
 ## PR Checklist
 
 - [ ] I've built and run the app locally and verified that it works as expected.
-- [ ] I've run `swiftformat .` to keep the code style consistent.
+- [ ] I've run `swiftformat .` and the strict lint for my branch (see [AGENTS.md](https://github.com/thaw-app/Thaw/blob/development/AGENTS.md#lint)).
 - [ ] I've run the smallest relevant test commands (list 1 or 2 below), e.g. `xcodebuild test …`.
 - [ ] I've added tests for new behavior (if applicable).
 - [ ] I've noted which macOS versions I tested on (26, 27, or both).
 - [ ] I've documented new public APIs / non-obvious helpers.
 - [ ] I've updated documentation as needed.
-- [ ] This PR targets the `development` branch.
+- [ ] This PR targets `development` (Thaw 2) or `feat/thaw-3` (Thaw 3).
+- [ ] I didn't add new responsibilities to the big types listed above.
+- [ ] The change meets the SonarCloud requirements, including at least 80% coverage on new code (see [AGENTS.md](https://github.com/thaw-app/Thaw/blob/development/AGENTS.md#sonarcloud)). Fork PRs skip the scan, so it can't confirm this for them.
 - [ ] If this PR changes dependencies / lockfiles (`Package.resolved`, Actions pins, etc.), `dependency-sca` is green, or any `osv-scanner.toml` suppression includes both `reason` and `ignoreUntil` (see [Thaw/Floe Security Policy](https://github.com/thaw-app/.github/blob/main/.github/SECURITY.md#dependency-findings)).
 
 Test commands run:
