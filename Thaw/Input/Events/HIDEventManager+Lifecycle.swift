@@ -83,6 +83,7 @@ extension HIDEventManager {
                         including: itemManager.onScreenItemSnapshot.items
                     )
                     rememberVisibleControlItemBounds(in: cache)
+                    pointerAXCache.drawnBarDidChange()
                 }
             }
             AnyCancellable { boundsTask.cancel() }
@@ -101,6 +102,7 @@ extension HIDEventManager {
             .debounce(for: .milliseconds(200), scheduler: DispatchQueue.main)
             .sink { [weak self] in
                 self?.rebuildWindowBoundsLookupFromCurrentLayout()
+                self?.pointerAXCache.drawnBarDidChange()
             }
             .store(in: &c)
 
