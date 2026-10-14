@@ -68,10 +68,7 @@ extension HIDEventManager {
         for pid in change.unreadable {
             let bundle = NSRunningApplication(processIdentifier: pid)?.bundleIdentifier ?? "unknown"
             Task.detached(priority: .utility) {
-                let app = AXUIElementCreateApplication(pid)
-                AXUIElementSetMessagingTimeout(app, AXPrimitives.defaultMessagingTimeout)
-                var value: CFTypeRef?
-                let result = AXUIElementCopyAttributeValue(app, kAXExtrasMenuBarAttribute as CFString, &value)
+                let result = AXPrimitives.extrasMenuBarReadResult(pid: pid)
                 Self.diagLog.warning(
                     "drawn bar: \(bundle) (pid \(pid)) has an icon on the bar but gives the walk no items; extras bar read=\(result.rawValue)"
                 )

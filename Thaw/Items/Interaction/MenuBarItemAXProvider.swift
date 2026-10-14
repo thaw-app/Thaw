@@ -578,10 +578,7 @@ nonisolated enum MenuBarItemAXProvider {
     ) {
         guard formerHosts.contains(appBundleID) else { return }
         let pid = runningApp.processIdentifier
-        let element = AXUIElementCreateApplication(pid)
-        AXUIElementSetMessagingTimeout(element, AXPrimitives.defaultMessagingTimeout)
-        var value: CFTypeRef?
-        let result = AXUIElementCopyAttributeValue(element, "AXExtrasMenuBar" as CFString, &value)
+        let result = AXPrimitives.extrasMenuBarReadResult(pid: pid)
         let isNew = loggedEmptyExtrasBarReads.withLock { logged in
             guard logged[pid] != result else { return false }
             logged[pid] = result

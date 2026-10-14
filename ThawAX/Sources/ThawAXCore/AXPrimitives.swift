@@ -143,6 +143,16 @@ public enum AXPrimitives {
         return CGRect(origin: origin, size: size)
     }
 
+    /// The element's top-left corner, or nil when it did not answer with a point.
+    public static func position(of element: AXUIElement, messagingTimeout: Float = defaultMessagingTimeout) -> CGPoint? {
+        AXUIElementSetMessagingTimeout(element, messagingTimeout)
+        guard let value = copyAttribute(element, kAXPositionAttribute), CFGetTypeID(value) == AXValueGetTypeID() else {
+            return nil
+        }
+        var point = CGPoint.zero
+        return AXValueGetValue(unsafeDowncast(value, to: AXValue.self), .cgPoint, &point) ? point : nil
+    }
+
     // MARK: - Attribute reads
 
     public static func copyAttribute(_ element: AXUIElement, _ attribute: String) -> CFTypeRef? {
@@ -236,6 +246,15 @@ public enum AXPrimitives {
         let appElement = AXUIElementCreateApplication(pid)
         AXUIElementSetMessagingTimeout(appElement, messagingTimeout)
         return elementAttribute(appElement, kAXExtrasMenuBarAttribute as String)
+    }
+
+    /// How an app answers when asked for its extras menu bar, for diagnostics:
+    /// the code tells a refusal apart from an app that has none.
+    public static func extrasMenuBarReadResult(pid: pid_t, messagingTimeout: Float = defaultMessagingTimeout) -> AXError {
+        let appElement = AXUIElementCreateApplication(pid)
+        AXUIElementSetMessagingTimeout(appElement, messagingTimeout)
+        var value: CFTypeRef?
+        return AXUIElementCopyAttributeValue(appElement, kAXExtrasMenuBarAttribute as CFString, &value)
     }
 
     // MARK: - Status-item presses

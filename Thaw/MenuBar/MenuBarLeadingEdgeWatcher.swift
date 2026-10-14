@@ -185,23 +185,11 @@ final class MenuBarLeadingEdgeWatcher {
         to x: CGFloat,
         within screen: CGRect
     ) -> LeadingEdgeAnchor? {
-        let app = AXUIElementCreateApplication(pid)
-        AXUIElementSetMessagingTimeout(app, AXPrimitives.defaultMessagingTimeout)
-        var bar: AnyObject?
-        guard AXUIElementCopyAttributeValue(app, "AXExtrasMenuBar" as CFString, &bar) == .success,
-              // The type check is what makes the downcast below safe.
-              let bar, CFGetTypeID(bar) == AXUIElementGetTypeID()
-        else {
+        guard let bar = AXPrimitives.extrasMenuBar(pid: pid) else {
             return nil
         }
-        var children: AnyObject?
-        guard AXUIElementCopyAttributeValue(unsafeDowncast(bar, to: AXUIElement.self), kAXChildrenAttribute as CFString, &children) == .success,
-              let children = children as? [AXUIElement]
-        else {
-            return nil
-        }
-        return children
-            .compactMap { child in position(of: child, within: screen, timeout: 0.25).map { (child, abs($0 - x)) } }
+        return AXPrimitives.children(of: bar)
+            .compactMap { child in position(of: child, within: screen, timeout: AXPrimitives.defaultMessagingTimeout).map { (child, abs($0 - x)) } }
             .min { $0.1 < $1.1 }
             .map { LeadingEdgeAnchor(element: $0.0, screen: screen) }
     }
@@ -209,15 +197,7 @@ final class MenuBarLeadingEdgeWatcher {
     /// The element's left edge, when it is on screen within screen.
     /// Concealed items report a position at or left of the screen's edge.
     static nonisolated func position(of element: AXUIElement, within screen: CGRect, timeout: Float) -> CGFloat? {
-        AXUIElementSetMessagingTimeout(element, timeout)
-        var value: AnyObject?
-        guard AXUIElementCopyAttributeValue(element, kAXPositionAttribute as CFString, &value) == .success,
-              let value, CFGetTypeID(value) == AXValueGetTypeID()
-        else {
-            return nil
-        }
-        var point = CGPoint.zero
-        guard AXValueGetValue(unsafeDowncast(value, to: AXValue.self), .cgPoint, &point),
+        guard let point = AXPrimitives.position(of: element, messagingTimeout: timeout),
               point.x != MenuBarItemGeometry.transientSentinelX,
               point.x > screen.minX, screen.contains(point),
               point.y - screen.minY <= MenuBarItemGeometry.maxOnBarMidY
@@ -242,8 +222,7 @@ nonisolated struct LeadingEdgeAnchor: @unchecked Sendable {
 
     /// Whether the element belongs to Thaw, whose own AX reads must stay on the main thread.
     var isOwnProcess: Bool {
-        var pid: pid_t = 0
-        return AXUIElementGetPid(element, &pid) == .success && AXPrimitives.isOwnProcess(pid)
+        AXPrimitives.pid(of: element).map(AXPrimitives.isOwnProcess) ?? false
     }
 }
 

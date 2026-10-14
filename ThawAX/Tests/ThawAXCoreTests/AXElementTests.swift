@@ -66,4 +66,14 @@ struct AXElementTests {
         AXElement.defaultMessagingTimeout = -1
         #expect(AXElement.defaultMessagingTimeout == 0)
     }
+
+    @Test
+    func `an element with no position answers nil, not a zero point`() {
+        #expect(AXPrimitives.position(of: AXUIElementCreateApplication(getpid())) == nil)
+    }
+
+    @Test
+    func `a process with no extras bar reports why, not success`() {
+        #expect(AXPrimitives.extrasMenuBarReadResult(pid: getpid()) != .success)
+    }
 }
