@@ -60,10 +60,7 @@ public struct AXElement: @unchecked Sendable, Hashable {
             attributes as CFArray,
             AXCopyMultipleAttributeOptions(rawValue: 0),
             &array
-        ) == .success,
-            let values = array as [AnyObject]?,
-            values.count == attributes.count
-        else {
+        ) == .success, let values = Self.batchValues(array, expecting: attributes.count) else {
             return [:]
         }
         var result = [String: Any]()
@@ -71,6 +68,15 @@ public struct AXElement: @unchecked Sendable, Hashable {
             result[attribute] = Self.unpack(value)
         }
         return result
+    }
+
+    /// The batch reply as one value per attribute, or nil when it is not that.
+    /// macOS has answered success with a non-array; bridging one raises an uncatchable Objective-C exception.
+    static func batchValues(_ reply: CFArray?, expecting count: Int) -> [AnyObject]? {
+        guard let reply, CFGetTypeID(reply) == CFArrayGetTypeID(), CFArrayGetCount(reply) == count else {
+            return nil
+        }
+        return reply as [AnyObject]
     }
 
     /// The names the element advertises, or nil when it did not answer.

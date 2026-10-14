@@ -45,6 +45,21 @@ struct AXElementTests {
     }
 
     @Test
+    func `a batch reply that is not an array is refused, not bridged`() {
+        // The reply behind a crash in the item walk: success, with an element where the array should be.
+        let malformed = unsafeBitCast(AXUIElementCreateApplication(getpid()), to: CFArray.self)
+        #expect(AXElement.batchValues(malformed, expecting: 1) == nil)
+        #expect(AXElement.batchValues(nil, expecting: 1) == nil)
+    }
+
+    @Test
+    func `a batch reply holds one value per attribute`() {
+        let reply = ["a", "b"] as CFArray
+        #expect(AXElement.batchValues(reply, expecting: 2)?.count == 2)
+        #expect(AXElement.batchValues(reply, expecting: 3) == nil)
+    }
+
+    @Test
     func `a negative default timeout clamps to the system default`() {
         let saved = AXElement.defaultMessagingTimeout
         defer { AXElement.defaultMessagingTimeout = saved }
