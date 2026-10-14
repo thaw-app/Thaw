@@ -22,6 +22,7 @@ After you update:
 ### Changed
 
 - **Thaw looks for macOS's overflow arrow less often on an external display.** Once a minute there, where it looked every 12 seconds. A built-in display keeps that pace. By @diazdesandi.
+- **Thaw has one dependency fewer.** It reads accessibility through its own code now, so the AXSwift6 package is gone. By @camguillory in [#1263](https://github.com/thaw-app/Thaw/pull/1263).
 
 ### Changed: Settings
 
