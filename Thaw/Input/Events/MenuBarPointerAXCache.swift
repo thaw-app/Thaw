@@ -63,6 +63,13 @@ final class MenuBarPointerAXCache {
     private var drawnBarAskedAt: ContinuousClock.Instant?
     /// A read older than this describes a bar that has changed since.
     private var drawnBarChangedAt: ContinuousClock.Instant = .now
+    private let readDrawnBar: @Sendable () async -> [MenuBarAgentWindow.Entry]?
+
+    init(readDrawnBar: @escaping @Sendable () async -> [MenuBarAgentWindow.Entry]? = {
+        await MenuBarItemAXProvider.drawnBarConcurrent()
+    }) {
+        self.readDrawnBar = readDrawnBar
+    }
 
     /// Apps the bar draws but the walk cannot read, and the drawn-bar read last compared.
     var unreadableOwners = UnreadableOwnerTracker()
@@ -168,13 +175,13 @@ final class MenuBarPointerAXCache {
             return
         }
         drawnBarAskedAt = .now
-        drawnBarTask = Task { [weak self] in
+        drawnBarTask = Task { [weak self, readDrawnBar] in
             for attempt in 0 ..< Self.drawnBarRetries {
                 if attempt > 0 {
                     try? await Task.sleep(for: Self.drawnBarRefreshAge)
                 }
                 let askedAt = ContinuousClock.now
-                guard let entries = await MenuBarItemAXProvider.drawnBarConcurrent() else { continue }
+                guard let entries = await readDrawnBar() else { continue }
                 guard let self else { return }
                 drawnBar = (entries, askedAt)
                 // The bar changed while this read was out: read it again.
