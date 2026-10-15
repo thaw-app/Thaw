@@ -217,8 +217,8 @@ private struct LayoutMoreOptionsSection: View {
                 isOn: $settings.enableMenuBarItemOverflow
             )
             .annotation(
-                "When the menu bar is full, move the Visible items that don’t fit into Hidden, so they stay reachable instead of going behind macOS’s » button.",
-                more: "Turn this off to keep the saved profile layout exactly as you arranged it."
+                "When the menu bar is full, move the Visible items that don’t fit into Hidden and open them from the \(Constants.displayName) Bar.",
+                more: "Leave this off if you prefer macOS’s » button: macOS keeps the items that don’t fit there, and your layout stays exactly as you arranged it."
             )
 
             Toggle(

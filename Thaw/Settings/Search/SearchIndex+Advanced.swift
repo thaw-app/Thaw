@@ -129,7 +129,7 @@ nonisolated extension SearchIndex {
         SearchEntry(
             id: "advanced.enableMenuBarItemOverflow",
             title: "Move items that don’t fit into Hidden",
-            descriptionText: String(localized: "When the menu bar is full, move the Visible items that don’t fit into Hidden, so they stay reachable instead of going behind macOS’s » button."),
+            descriptionText: String(localized: "When the menu bar is full, move the Visible items that don’t fit into Hidden and open them from the \(Constants.displayName) Bar."),
             pane: .menuBarLayout,
             section: "More layout options",
             keywords: ["overflow", "notch", "fit", "visible", "hidden", "advanced layout controls"],
