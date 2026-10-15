@@ -24,6 +24,7 @@ protocol MenuBarEngineConfiguration: AnyObject, Observable {
     var showOnHover: Bool { get }
     var showOnHoverDelay: TimeInterval { get }
     var showOnScroll: Bool { get }
+    var usesIconDoubleClickForAlwaysHidden: Bool { get }
     var swapOnThawIconClick: Bool { get }
 
     // Rehiding
@@ -86,6 +87,13 @@ extension AppSettings: MenuBarEngineConfiguration {
 
     var showOnScroll: Bool {
         general.showOnScroll
+    }
+
+    var usesIconDoubleClickForAlwaysHidden: Bool {
+        ControlItem.usesIconDoubleClickForAlwaysHidden(
+            isSectionEnabled: advanced.isAlwaysHiddenSectionEnabled,
+            isGestureEnabled: advanced.showAlwaysHiddenOnIconDoubleClick
+        )
     }
 
     var swapOnThawIconClick: Bool {

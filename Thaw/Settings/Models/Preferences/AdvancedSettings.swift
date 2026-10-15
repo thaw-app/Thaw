@@ -179,6 +179,13 @@ final class AdvancedSettings {
         }
     }
 
+    var showAlwaysHiddenOnIconDoubleClick = Defaults.DefaultValue.showAlwaysHiddenOnIconDoubleClick {
+        didSet {
+            guard oldValue != showAlwaysHiddenOnIconDoubleClick else { return }
+            Defaults.set(showAlwaysHiddenOnIconDoubleClick, forKey: .showAlwaysHiddenOnIconDoubleClick)
+        }
+    }
+
     /// Replaces Thaw's status menu with a panel; disabled secondary clicks use NSMenu.
     var enableControlItemPanel = Defaults.DefaultValue.enableControlItemPanel {
         didSet {
@@ -401,6 +408,7 @@ final class AdvancedSettings {
         Defaults.ifPresent(key: .legacyEnableTransportBar, assign: &enableSwapBar)
         Defaults.ifPresent(key: .enableSwapBar, assign: &enableSwapBar)
         Defaults.ifPresent(key: .swapOnThawIconClick, assign: &swapOnThawIconClick)
+        Defaults.ifPresent(key: .showAlwaysHiddenOnIconDoubleClick, assign: &showAlwaysHiddenOnIconDoubleClick)
         Defaults.ifPresent(key: .enableControlItemPanel, assign: &enableControlItemPanel)
         Defaults.ifPresent(key: .fetchReleaseNotes, assign: &fetchReleaseNotes)
         Defaults.ifPresent(key: .enableModuleStandIns, assign: &enableModuleStandIns)
@@ -516,6 +524,8 @@ final class AdvancedSettings {
                 enableSwapBar = boolValue
             case "swapOnThawIconClick":
                 swapOnThawIconClick = boolValue
+            case "showAlwaysHiddenOnIconDoubleClick":
+                showAlwaysHiddenOnIconDoubleClick = boolValue
             case "enableControlItemPanel":
                 enableControlItemPanel = boolValue
             case "fetchReleaseNotes":

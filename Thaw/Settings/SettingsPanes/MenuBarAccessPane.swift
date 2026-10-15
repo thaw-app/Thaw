@@ -101,9 +101,8 @@ struct MenuBarAccessPane: View {
     @ViewBuilder
     private var alwaysHiddenGestures: some View {
         if advancedSettings.isAlwaysHiddenSectionEnabled {
-            // A sentence, not a labelled value: nothing here can be changed.
-            Text("Double-click or Option-click an empty area of the menu bar or the \(Constants.displayName) icon to show Always Hidden menu bar items.")
-                .foregroundStyle(ThawInk.supporting)
+            Toggle("Double-click the \(Constants.displayName) icon to show Always Hidden", isOn: $advancedSettings.showAlwaysHiddenOnIconDoubleClick)
+                .annotation("Option-click and gestures in empty menu bar space are unchanged.")
         } else {
             LabeledContent("Always Hidden is off") {
                 Button("Open Layout") {

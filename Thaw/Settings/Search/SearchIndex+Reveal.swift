@@ -23,6 +23,15 @@ nonisolated extension SearchIndex {
             property: .general("showOnClick")
         ),
         SearchEntry(
+            id: "advanced.showAlwaysHiddenOnIconDoubleClick",
+            title: "Double-click Thaw icon",
+            descriptionText: String(localized: "Double-click the Thaw icon to show Always Hidden items."),
+            pane: .visibility,
+            section: "Reveal hidden items",
+            keywords: ["double-click", "double click", "icon", "always hidden", "reveal"],
+            property: .advanced("showAlwaysHiddenOnIconDoubleClick")
+        ),
+        SearchEntry(
             id: "advanced.enableSwapBar",
             title: "Show Swap Bar",
             descriptionText: String(localized: "A strip under the menu bar that trades your shown and hidden items in one click."),

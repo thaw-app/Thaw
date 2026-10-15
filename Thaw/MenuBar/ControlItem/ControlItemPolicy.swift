@@ -101,6 +101,11 @@ extension ControlItem {
         case none
     }
 
+    /// The icon's double-click shortcut requires both the section and its own preference.
+    static nonisolated func usesIconDoubleClickForAlwaysHidden(isSectionEnabled: Bool, isGestureEnabled: Bool) -> Bool {
+        isSectionEnabled && isGestureEnabled
+    }
+
     /// Resolves a click delivered through AppKit's target/action path.
     ///
     /// Modifier precedence: a double-click shortcut wins over any modifier,

@@ -45,10 +45,10 @@ struct ShowThawIconRow: View {
     @State private var placementBlock: ControlItem.PlacementBlock?
 
     /// Names only the gestures that currently do something: double-click needs
-    /// Always Hidden, and the swap option changes what a click does.
+    /// its shortcut enabled, and the swap option changes what a click does.
     private var gestureSummary: LocalizedStringKey {
         let advanced = appState.settings.advanced
-        let doubleClickOpensAlwaysHidden = advanced.isAlwaysHiddenSectionEnabled
+        let doubleClickOpensAlwaysHidden = appState.settings.usesIconDoubleClickForAlwaysHidden
         switch (advanced.swapOnThawIconClick, doubleClickOpensAlwaysHidden) {
         case (false, true):
             return "Click to show hidden items, double-click for Always Hidden, and right-click for settings."

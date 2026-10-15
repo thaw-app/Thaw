@@ -97,6 +97,7 @@ enum SettingsURIHandler {
         "enableMenuBarItemDescenders": SettingURIEntry(defaultsKey: .enableMenuBarItemDescenders, kind: .boolean, isWritable: true),
         "enableSwapBar": SettingURIEntry(defaultsKey: .enableSwapBar, kind: .boolean, isWritable: true),
         "swapOnThawIconClick": SettingURIEntry(defaultsKey: .swapOnThawIconClick, kind: .boolean, isWritable: true),
+        "showAlwaysHiddenOnIconDoubleClick": SettingURIEntry(defaultsKey: .showAlwaysHiddenOnIconDoubleClick, kind: .boolean, isWritable: true),
         "enableControlItemPanel": SettingURIEntry(defaultsKey: .enableControlItemPanel, kind: .boolean, isWritable: true),
         "fetchReleaseNotes": SettingURIEntry(defaultsKey: .fetchReleaseNotes, kind: .boolean, isWritable: true),
         "enableRecordingWatch": SettingURIEntry(defaultsKey: .enableRecordingWatch, kind: .boolean, isWritable: true),

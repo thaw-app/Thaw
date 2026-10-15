@@ -165,6 +165,7 @@ nonisolated enum Defaults {
             // is unset, and unset already reads as false.
             .enableControlItemPanel: DefaultValue.enableControlItemPanel,
             .swapOnThawIconClick: DefaultValue.swapOnThawIconClick,
+            .showAlwaysHiddenOnIconDoubleClick: DefaultValue.showAlwaysHiddenOnIconDoubleClick,
             .swapActive: DefaultValue.swapActive,
             .fetchReleaseNotes: DefaultValue.fetchReleaseNotes,
             .enableRecordingWatch: DefaultValue.enableRecordingWatch,
@@ -285,6 +286,7 @@ extension Defaults {
         static let enableMenuBarItemDescenders = false
         static let enableSwapBar = false
         static let swapOnThawIconClick = false
+        static let showAlwaysHiddenOnIconDoubleClick = true
         static let enableControlItemPanel = false
         static let swapActive = false
         static let fetchReleaseNotes = true
@@ -469,6 +471,7 @@ extension Defaults {
         /// the panel comes and goes with the switch.
         case enableSwapBar = "EnableSwapBar"
         case swapOnThawIconClick = "SwapOnThawIconClick"
+        case showAlwaysHiddenOnIconDoubleClick = "ShowAlwaysHiddenOnIconDoubleClick"
         /// The control item panel, hung under Thaw's own icon. Read live so the
         /// secondary click changes what it raises without a relaunch.
         case enableControlItemPanel = "EnableControlItemPanel"
