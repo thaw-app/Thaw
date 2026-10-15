@@ -1329,7 +1329,7 @@ extension ControlItem {
             identifier: identifier,
             modifierFlags: modifierFlags,
             clickCount: clickCount,
-            usesDoubleClick: configuration.isAlwaysHiddenSectionEnabled,
+            usesDoubleClick: configuration.usesIconDoubleClickForAlwaysHidden,
             usesOptionClick: configuration.isAlwaysHiddenSectionEnabled
         )
 
@@ -1397,14 +1397,14 @@ extension ControlItem {
             location: NSEvent.mouseLocation,
             modifiers: NSEvent.modifierFlags,
             interval: NSEvent.doubleClickInterval,
-            enabled: identifier == .visible && configuration.isAlwaysHiddenSectionEnabled
+            enabled: identifier == .visible && configuration.usesIconDoubleClickForAlwaysHidden
         )
         diagLog.debug("PrimaryActivationTrace: reportedClickCount=\(event?.clickCount ?? 0), resolvedClickCount=\(clickCount)")
         let intent = Self.menuBarAgentPrimaryActionIntent(
             identifier: identifier,
             modifierFlags: modifierFlags,
             clickCount: clickCount,
-            usesDoubleClick: configuration.isAlwaysHiddenSectionEnabled,
+            usesDoubleClick: configuration.usesIconDoubleClickForAlwaysHidden,
             usesOptionClick: configuration.isAlwaysHiddenSectionEnabled,
             diagLog: diagLog
         )
