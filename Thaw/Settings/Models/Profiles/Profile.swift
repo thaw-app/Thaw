@@ -183,10 +183,6 @@ nonisolated struct AdvancedSettingsSnapshot: Codable {
     var enableDiagnosticLogging: Bool
     var enableMenuBarItemOverflow: Bool
     var enableExperimentalSystemItemHiding: Bool
-    var searchSectionOrder: [String]
-    var searchIncludeVisible: Bool
-    var searchIncludeHidden: Bool
-    var searchIncludeAlwaysHidden: Bool
 
     /// The value every field takes when a profile predates it.
     static let defaults = AdvancedSettingsSnapshot(
@@ -203,11 +199,7 @@ nonisolated struct AdvancedSettingsSnapshot: Codable {
         autoZenWhileSharingScreen: Defaults.DefaultValue.autoZenWhileSharingScreen,
         enableDiagnosticLogging: Defaults.DefaultValue.enableDiagnosticLogging,
         enableMenuBarItemOverflow: Defaults.DefaultValue.enableMenuBarItemOverflow,
-        enableExperimentalSystemItemHiding: Defaults.DefaultValue.enableExperimentalSystemItemHiding,
-        searchSectionOrder: Defaults.DefaultValue.searchSectionOrder,
-        searchIncludeVisible: Defaults.DefaultValue.searchIncludeVisible,
-        searchIncludeHidden: Defaults.DefaultValue.searchIncludeHidden,
-        searchIncludeAlwaysHidden: Defaults.DefaultValue.searchIncludeAlwaysHidden
+        enableExperimentalSystemItemHiding: Defaults.DefaultValue.enableExperimentalSystemItemHiding
     )
 
     @MainActor
@@ -226,11 +218,7 @@ nonisolated struct AdvancedSettingsSnapshot: Codable {
             autoZenWhileSharingScreen: settings.autoZenWhileSharingScreen,
             enableDiagnosticLogging: settings.enableDiagnosticLogging,
             enableMenuBarItemOverflow: settings.enableMenuBarItemOverflow,
-            enableExperimentalSystemItemHiding: settings.enableExperimentalSystemItemHiding,
-            searchSectionOrder: settings.searchSectionOrder.map(\.rawValue),
-            searchIncludeVisible: settings.searchIncludeVisible,
-            searchIncludeHidden: settings.searchIncludeHidden,
-            searchIncludeAlwaysHidden: settings.searchIncludeAlwaysHidden
+            enableExperimentalSystemItemHiding: settings.enableExperimentalSystemItemHiding
         )
     }
 
@@ -252,10 +240,6 @@ nonisolated struct AdvancedSettingsSnapshot: Codable {
         settings.enableDiagnosticLogging = enableDiagnosticLogging
         settings.enableMenuBarItemOverflow = enableMenuBarItemOverflow
         settings.enableExperimentalSystemItemHiding = enableExperimentalSystemItemHiding
-        settings.searchSectionOrder = AdvancedSettings.sanitizedSearchSectionOrder(from: searchSectionOrder)
-        settings.searchIncludeVisible = searchIncludeVisible
-        settings.searchIncludeHidden = searchIncludeHidden
-        settings.searchIncludeAlwaysHidden = searchIncludeAlwaysHidden
     }
 }
 
@@ -302,18 +286,6 @@ nonisolated extension AdvancedSettingsSnapshot {
         enableExperimentalSystemItemHiding = try container.decode(
             .enableExperimentalSystemItemHiding,
             default: Self.defaults.enableExperimentalSystemItemHiding
-        )
-        searchSectionOrder = try container.decode(
-            .searchSectionOrder, default: Self.defaults.searchSectionOrder
-        )
-        searchIncludeVisible = try container.decode(
-            .searchIncludeVisible, default: Self.defaults.searchIncludeVisible
-        )
-        searchIncludeHidden = try container.decode(
-            .searchIncludeHidden, default: Self.defaults.searchIncludeHidden
-        )
-        searchIncludeAlwaysHidden = try container.decode(
-            .searchIncludeAlwaysHidden, default: Self.defaults.searchIncludeAlwaysHidden
         )
     }
 }

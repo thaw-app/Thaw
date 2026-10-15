@@ -182,10 +182,6 @@ nonisolated enum Defaults {
 
             // Search
             .rememberSearchQuery: DefaultValue.rememberSearchQuery,
-            .searchSectionOrder: DefaultValue.searchSectionOrder,
-            .searchIncludeVisible: DefaultValue.searchIncludeVisible,
-            .searchIncludeHidden: DefaultValue.searchIncludeHidden,
-            .searchIncludeAlwaysHidden: DefaultValue.searchIncludeAlwaysHidden,
             .menuBarSearchPresentation: DefaultValue.menuBarSearchPresentation.rawValue,
 
             // Display Settings
@@ -316,10 +312,6 @@ extension Defaults {
         // MARK: Search
 
         static let rememberSearchQuery = false
-        static let searchSectionOrder: [String] = ["visible", "hidden", "alwaysHidden"]
-        static let searchIncludeVisible = true
-        static let searchIncludeHidden = true
-        static let searchIncludeAlwaysHidden = true
         /// How the menu bar search panel opens. Stored as the case's raw
         /// value; the default is the behavior the panel shipped with.
         static let menuBarSearchPresentation = SearchPresentation.inspector
@@ -514,10 +506,6 @@ extension Defaults {
 
         case rememberSearchQuery = "RememberSearchQuery"
         case menuBarSearchRecents = "MenuBarSearchRecents"
-        case searchSectionOrder = "SearchSectionOrder"
-        case searchIncludeVisible = "SearchIncludeVisible"
-        case searchIncludeHidden = "SearchIncludeHidden"
-        case searchIncludeAlwaysHidden = "SearchIncludeAlwaysHidden"
         /// Where the search panel opens: remembered, centered, or at the
         /// pointer. Stored as the SearchPresentation case's raw value.
         case menuBarSearchPresentation = "MenuBarSearchPresentation"

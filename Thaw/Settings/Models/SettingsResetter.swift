@@ -88,12 +88,6 @@ extension AppSettings {
         advanced.zenModeWhileRecording = Defaults.DefaultValue.zenModeWhileRecording
         advanced.recordingWatchScreen = Defaults.DefaultValue.recordingWatchScreen
         advanced.enableDesktopMenuHiding = Defaults.DefaultValue.enableDesktopMenuHiding
-        advanced.searchSectionOrder = AdvancedSettings.sanitizedSearchSectionOrder(
-            from: Defaults.DefaultValue.searchSectionOrder
-        )
-        advanced.searchIncludeVisible = Defaults.DefaultValue.searchIncludeVisible
-        advanced.searchIncludeHidden = Defaults.DefaultValue.searchIncludeHidden
-        advanced.searchIncludeAlwaysHidden = Defaults.DefaultValue.searchIncludeAlwaysHidden
         advanced.menuBarSearchPresentation = Defaults.DefaultValue.menuBarSearchPresentation
     }
 

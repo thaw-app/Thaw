@@ -104,9 +104,6 @@ enum SettingsURIHandler {
         "enableDesktopMenuHiding": SettingURIEntry(defaultsKey: .enableDesktopMenuHiding, kind: .boolean, isWritable: true),
 
         // MARK: - Search
-        "searchIncludeVisible": SettingURIEntry(defaultsKey: .searchIncludeVisible, kind: .boolean, isWritable: true),
-        "searchIncludeHidden": SettingURIEntry(defaultsKey: .searchIncludeHidden, kind: .boolean, isWritable: true),
-        "searchIncludeAlwaysHidden": SettingURIEntry(defaultsKey: .searchIncludeAlwaysHidden, kind: .boolean, isWritable: true),
     ]
 
     /// Derived from keyTable so the allow-lists can never disagree with it.

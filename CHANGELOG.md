@@ -7,6 +7,12 @@ The `release.yml` workflow reads the section matching the release tag
 (`## [tag]`) and uses it as the release notes for both the GitHub Release
 and the Sparkle appcast, unless overridden with the `release_notes` input.
 
+## [3.0.0-alpha.10] - Unreleased
+
+### Changed: Settings
+
+- **Search lists every section in menu bar order.** The order buttons and the per-section switches under Menu bar search are gone. By @diazdesandi.
+
 ## [3.0.0-alpha.9] - 2026-10-14
 
 **macOS 27 only · Build 114**

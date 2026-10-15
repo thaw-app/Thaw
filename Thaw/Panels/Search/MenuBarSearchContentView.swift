@@ -66,23 +66,6 @@ private struct MenuBarSearchContentView: View {
         }
     }
 
-    /// Which sections the settings allow the search to look through, and in
-    /// what order.
-    private struct SearchScope: Equatable {
-        let sectionOrder: [MenuBarSection.Name]
-        let includesVisible: Bool
-        let includesHidden: Bool
-        let includesAlwaysHidden: Bool
-
-        func includes(_ name: MenuBarSection.Name) -> Bool {
-            switch name {
-            case .visible: includesVisible
-            case .hidden: includesHidden
-            case .alwaysHidden: includesAlwaysHidden
-            }
-        }
-    }
-
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @Environment(AppState.self) private var appState
     @Environment(MenuBarItemManager.self) private var itemManager
@@ -102,16 +85,6 @@ private struct MenuBarSearchContentView: View {
     /// builds the root view immediately after adopting the mode, so the two
     /// cannot disagree.
     let presentation: SearchPresentation
-
-    private var searchScope: SearchScope {
-        let advanced = appState.settings.advanced
-        return SearchScope(
-            sectionOrder: advanced.searchSectionOrder,
-            includesVisible: advanced.searchIncludeVisible,
-            includesHidden: advanced.searchIncludeHidden,
-            includesAlwaysHidden: advanced.searchIncludeAlwaysHidden
-        )
-    }
 
     var body: some View {
         chrome
@@ -144,10 +117,6 @@ private struct MenuBarSearchContentView: View {
                 if model.selection == nil {
                     selectFirstSelectableRow()
                 }
-            }
-            .onChange(of: searchScope) {
-                rebuildDisplayedItems()
-                ensureValidSelection()
             }
     }
 
@@ -491,11 +460,10 @@ private struct MenuBarSearchContentView: View {
         }
     }
 
-    /// Rebuilds the rows from the item cache, filtered by the configured
-    /// search scope and, when a query is present, ranked against it.
+    /// Rebuilds the rows from the item cache, section by section and, when a
+    /// query is present, ranked against it.
     private func rebuildSectionedRows() {
-        let scope = searchScope
-        let rows = scope.sectionOrder.flatMap { sectionRows(for: $0, in: scope) }
+        let rows = MenuBarSection.Name.allCases.flatMap { sectionRows(for: $0) }
 
         guard !model.searchText.isEmpty else {
             // Recents ride on top of the unfiltered list, Spotlight-style.
@@ -526,12 +494,8 @@ private struct MenuBarSearchContentView: View {
     }
 
     /// One section's slice of the search list: its header row followed by
-    /// its items in reverse cache order. Empty when the scope or the
-    /// section's own toggle excludes it.
-    private func sectionRows(for name: MenuBarSection.Name, in scope: SearchScope) -> [RankableRow] {
-        guard scope.includes(name) else {
-            return []
-        }
+    /// its items in reverse cache order. Empty when the section is turned off.
+    private func sectionRows(for name: MenuBarSection.Name) -> [RankableRow] {
         if let section = appState.menuBarManager.section(withName: name), !section.isEnabled {
             return []
         }

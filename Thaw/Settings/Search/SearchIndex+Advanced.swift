@@ -101,42 +101,6 @@ nonisolated extension SearchIndex {
             property: .advanced("menuBarSearchPresentation")
         ),
         SearchEntry(
-            id: "general.searchSectionOrder",
-            title: "Search section ordering",
-            descriptionText: String(localized: "Choose which menu bar sections appear in the search panel, and in what order."),
-            pane: .visibility,
-            section: "Menu bar search",
-            keywords: ["search", "section", "order", "panel", "reorder"],
-            property: .advanced("searchSectionOrder")
-        ),
-        SearchEntry(
-            id: "general.searchIncludeVisible",
-            title: "Include visible section in search",
-            descriptionText: nil,
-            pane: .visibility,
-            section: "Menu bar search",
-            keywords: ["search", "visible", "include", "section"],
-            property: .advanced("searchIncludeVisible")
-        ),
-        SearchEntry(
-            id: "general.searchIncludeHidden",
-            title: "Include hidden section in search",
-            descriptionText: nil,
-            pane: .visibility,
-            section: "Menu bar search",
-            keywords: ["search", "hidden", "include", "section"],
-            property: .advanced("searchIncludeHidden")
-        ),
-        SearchEntry(
-            id: "general.searchIncludeAlwaysHidden",
-            title: "Include Always Hidden in search",
-            descriptionText: nil,
-            pane: .visibility,
-            section: "Menu bar search",
-            keywords: ["search", "always hidden", "include", "section"],
-            property: .advanced("searchIncludeAlwaysHidden")
-        ),
-        SearchEntry(
             id: "general.showMenuBarTooltips",
             title: "Show tooltips in the menu bar",
             descriptionText: String(localized: "Show a tooltip when hovering over menu bar items in the actual menu bar."),

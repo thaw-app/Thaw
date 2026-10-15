@@ -327,37 +327,6 @@ final class AdvancedSettings {
         }
     }
 
-    /// The order in which menu bar sections appear in the search panel.
-    var searchSectionOrder: [MenuBarSection.Name] = Defaults.DefaultValue.searchSectionOrder
-        .compactMap(MenuBarSection.Name.init(rawValue:))
-    {
-        didSet {
-            guard oldValue != searchSectionOrder else { return }
-            Defaults.set(searchSectionOrder.map(\.rawValue), forKey: .searchSectionOrder)
-        }
-    }
-
-    var searchIncludeVisible = Defaults.DefaultValue.searchIncludeVisible {
-        didSet {
-            guard oldValue != searchIncludeVisible else { return }
-            Defaults.set(searchIncludeVisible, forKey: .searchIncludeVisible)
-        }
-    }
-
-    var searchIncludeHidden = Defaults.DefaultValue.searchIncludeHidden {
-        didSet {
-            guard oldValue != searchIncludeHidden else { return }
-            Defaults.set(searchIncludeHidden, forKey: .searchIncludeHidden)
-        }
-    }
-
-    var searchIncludeAlwaysHidden = Defaults.DefaultValue.searchIncludeAlwaysHidden {
-        didSet {
-            guard oldValue != searchIncludeAlwaysHidden else { return }
-            Defaults.set(searchIncludeAlwaysHidden, forKey: .searchIncludeAlwaysHidden)
-        }
-    }
-
     /// Search opens at its saved location, centered, or at the pointer; defaults to inspector.
     /// Read on each opening rather than watched because Settings focus closes the panel.
     var menuBarSearchPresentation = Defaults.DefaultValue.menuBarSearchPresentation {
@@ -421,9 +390,6 @@ final class AdvancedSettings {
         }
         Defaults.ifPresent(key: .enableDesktopMenuHiding, assign: &enableDesktopMenuHiding)
         Defaults.ifPresent(key: .menuBarOrderFulfillmentTimeout, assign: &menuBarOrderFulfillmentTimeout)
-        Defaults.ifPresent(key: .searchIncludeVisible, assign: &searchIncludeVisible)
-        Defaults.ifPresent(key: .searchIncludeHidden, assign: &searchIncludeHidden)
-        Defaults.ifPresent(key: .searchIncludeAlwaysHidden, assign: &searchIncludeAlwaysHidden)
 
         Defaults.ifPresent(key: .menuBarSearchPresentation) { (raw: String) in
             if let presentation = SearchPresentation(rawValue: raw) {
@@ -442,27 +408,6 @@ final class AdvancedSettings {
                 menuBarArrangementMode = mode
             }
         }
-
-        Defaults.ifPresent(key: .searchSectionOrder) { (rawValues: [String]) in
-            searchSectionOrder = Self.sanitizedSearchSectionOrder(from: rawValues)
-        }
-    }
-
-    /// Keep each section once in preferred order, appending missing cases; unusable input yields the default order.
-    static func sanitizedSearchSectionOrder(from rawValues: [String]) -> [MenuBarSection.Name] {
-        var seen = Set<MenuBarSection.Name>()
-        var ordered: [MenuBarSection.Name] = []
-        for raw in rawValues {
-            guard let name = MenuBarSection.Name(rawValue: raw), !seen.contains(name) else {
-                continue
-            }
-            ordered.append(name)
-            seen.insert(name)
-        }
-        for name in MenuBarSection.Name.allCases where !seen.contains(name) {
-            ordered.append(name)
-        }
-        return ordered
     }
 
     /// didSet handles persistence; Combine only observes external Settings-URI changes.
@@ -526,12 +471,6 @@ final class AdvancedSettings {
                 zenModeWhileRecording = boolValue
             case "enableDesktopMenuHiding":
                 enableDesktopMenuHiding = boolValue
-            case "searchIncludeVisible":
-                searchIncludeVisible = boolValue
-            case "searchIncludeHidden":
-                searchIncludeHidden = boolValue
-            case "searchIncludeAlwaysHidden":
-                searchIncludeAlwaysHidden = boolValue
             default:
                 // Key not handled by AdvancedSettings
                 break
