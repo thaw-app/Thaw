@@ -12,6 +12,7 @@ and the Sparkle appcast, unless overridden with the `release_notes` input.
 ### Changed: Settings
 
 - **Search lists every section in menu bar order.** The order buttons and the per-section switches under Menu bar search are gone. By @diazdesandi.
+- **Privacy has no Turn Everything Off button.** It switched off the two rows above it; turn those off directly. By @diazdesandi.
 
 ## [3.0.0-alpha.9] - 2026-10-14
 
