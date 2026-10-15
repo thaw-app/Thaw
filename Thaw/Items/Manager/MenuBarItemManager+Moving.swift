@@ -1368,15 +1368,15 @@ extension MenuBarItemManager {
             return
         }
 
-        var previousDragged: MenuBarItem?
+        var previousMoved: MenuBarItem?
         for item in items where item.isOnScreen && !item.bounds.isEmpty {
             guard !Task.isCancelled else { return }
             guard let destination = sectionTransitionDestination(
                 for: section,
-                after: previousDragged
+                after: previousMoved
             ) else {
                 MenuBarItemManager.diagLog.warning(
-                    "No divider to drag \(item.logString) behind before concealment"
+                    "No divider to move \(item.logString) behind before concealment"
                 )
                 break
             }
@@ -1393,18 +1393,18 @@ extension MenuBarItemManager {
                     allowSyntheticDrag: false,
                     permit: permit
                 ) {
-                    previousDragged = item
+                    previousMoved = item
                     MenuBarItemManager.diagLog.info(
-                        "Dragged \(item.logString) into the \(section.logString) band before concealment"
+                        "Moved \(item.logString) into the \(section.logString) band before concealment"
                     )
                 } else {
                     MenuBarItemManager.diagLog.warning(
-                        "Pre-concealment drag declined for \(item.logString) \(destination.logString)"
+                        "Pre-concealment move declined for \(item.logString) \(destination.logString)"
                     )
                 }
             } catch {
                 MenuBarItemManager.diagLog.error(
-                    "Pre-concealment drag failed for \(item.logString): \(error)"
+                    "Pre-concealment move failed for \(item.logString): \(error)"
                 )
             }
         }
