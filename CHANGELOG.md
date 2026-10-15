@@ -55,6 +55,7 @@ After you update:
 
 ### Fixed: hiding and clicks
 
+- **Switching displays no longer triggers an extra show or hide of hidden items** when the displays have different "Always Show Hidden Items" settings.
 - **A click on a revealed item opens it after a restart.** When Thaw started at login with your other apps, a click on some hidden items closed the Hidden section again. Fixed by @diazdesandi.
 - **A hidden app stays hidden when it adds an icon.** macOS 27 hides an app as a whole, so one new icon in Visible brought the app's other icons back. A new icon now joins them in Hidden. Fixed by @diazdesandi.
 

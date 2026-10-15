@@ -168,7 +168,7 @@ final class ControlItemMenuController: NSObject {
             let title = Self.sectionToggleTitle(for: section, name: name)
             let item = NSMenuItem(
                 title: title,
-                action: #selector(toggleMenuBarSection),
+                action: section.isToggleEnabled ? #selector(toggleMenuBarSection) : nil,
                 keyEquivalent: ""
             )
             // The count is a badge so the title stays a fixed string for translators.

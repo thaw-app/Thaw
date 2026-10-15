@@ -68,16 +68,11 @@ final class MenuBarManager {
     /// Generous reflow window; observed settling takes tens of milliseconds.
     private static let revealReflowSettleWindow: TimeInterval = 0.5
 
-    /// Observes DisplaySettingsManager.configurations through Observation, not Combine.
-    @ObservationIgnored
-    private var displayConfigurationsObservationTask: Task<Void, Never>?
-
     /// Cancel delayed focus rehide on a newer focus change or user reveal so it cannot override new state.
     @ObservationIgnored
     private var focusChangeRehideTask: Task<Void, Never>?
 
     deinit {
-        displayConfigurationsObservationTask?.cancel()
         focusChangeRehideTask?.cancel()
     }
 
@@ -226,8 +221,7 @@ final class MenuBarManager {
     /// The live left edge of the visible run, for anything drawn against it.
     let leadingEdgeWatcher = MenuBarLeadingEdgeWatcher()
 
-    /// Distinguishes persistent "Always show hidden items" reveals from temporary user toggles.
-    private var isAlwaysShowRevealActive = false
+    private var alwaysShowHiddenItemsController: AlwaysShowHiddenItemsController?
 
     var shouldDeferBarMutation: Bool {
         guard let nativeMenuBarStateChangedAt else { return false }
@@ -452,15 +446,30 @@ final class MenuBarManager {
             return
         }
 
-        // Observation delivers the current display configurations before later changes.
-        displayConfigurationsObservationTask?.cancel()
-        displayConfigurationsObservationTask = Task { @MainActor [weak self, displaySettings = appState.settings.displaySettings] in
-            let changes = Observations { displaySettings.configurations }
-            for await _ in changes {
+        alwaysShowHiddenItemsController = AlwaysShowHiddenItemsController(
+            alwaysShow: appState.settings.displaySettings.alwaysShowHiddenItems,
+            usesThawBar: { [weak self] in self?.shouldUseThawBar(for: $0) ?? true },
+            isZenModeActive: { [weak self] in self?.isZenModeActive == true },
+            revealedSection: { [weak self] in self?.sectionController.revealedSection },
+            reveal: { [weak self] target in
+                if let target {
+                    self?.sectionController.show(target)
+                } else {
+                    self?.sectionController.hideRevealedSections()
+                }
+            },
+            resetPresentation: { [weak self] in
                 guard let self else { return }
-                synchronizeAlwaysShowHiddenItems()
-                updateControlItemStates()
+                showOnHoverAllowed = true
+                for section in sections {
+                    section.desiredState = .hideSection
+                }
             }
+        )
+        alwaysShowHiddenItemsController?.observeDisplaySettings { [settings = appState.settings.displaySettings] in
+            settings.configurations
+        } refreshControls: { [weak self] in
+            self?.updateControlItemStates()
         }
 
         // Debounce cache changes so new items become assignable without churning hotkey registrations each tick.
@@ -1241,22 +1250,28 @@ final class MenuBarManager {
             }
             if !section.isHidden {
                 revealedNames.insert(name)
-                section.hide()
             }
         }
         sectionsRevealedBeforeZenMode = revealedNames
-        // hide() re-enables hover through resetClosedPresentationState; lock only after all hides.
-        showOnHoverAllowed = false
         isZenModeActive = true
+        // Snapshot both sections before the first hide conceals them together.
+        for name in revealedNames {
+            section(withName: name)?.hide()
+        }
+        showOnHoverAllowed = false
     }
 
     private func deactivateZenMode() {
         isZenModeActive = false
         showOnHoverAllowed = true
+        if alwaysShowHiddenItemsController?.shouldRestorePreZenReveals == false {
+            sectionsRevealedBeforeZenMode = []
+        }
         for name in sectionsRevealedBeforeZenMode {
             section(withName: name)?.show()
         }
         sectionsRevealedBeforeZenMode = []
+        synchronizeAlwaysShowHiddenItems()
     }
 
     // MARK: - Swap
@@ -1442,25 +1457,12 @@ final class MenuBarManager {
         }
     }
 
-    /// Apply per-display "Always show hidden items" through assignments; divider updates alone cannot reveal items.
-    private func synchronizeAlwaysShowHiddenItems() {
-        guard let screen = NSScreen.screenWithActiveMenuBar ?? NSScreen.main else {
-            return
-        }
+    var shouldAlwaysShowHiddenItems: Bool {
+        alwaysShowHiddenItemsController?.isEnabled == true
+    }
 
-        let settings = appState?.settings.displaySettings
-        let shouldAlwaysShow = settings?.alwaysShowHiddenItems(for: screen.displayID) == true
-            && !shouldUseThawBar(for: screen.displayID)
-
-        if shouldAlwaysShow {
-            if sectionController.revealedSection == nil {
-                sectionController.show(.alwaysHidden)
-            }
-            isAlwaysShowRevealActive = true
-        } else if isAlwaysShowRevealActive {
-            sectionController.hideRevealedSections()
-            isAlwaysShowRevealActive = false
-        }
+    func synchronizeAlwaysShowHiddenItems(closingSections: Bool = false) {
+        alwaysShowHiddenItemsController?.synchronize(closingSections: closingSections)
     }
 
     /// Every section name is present; the optional supports caller chaining.

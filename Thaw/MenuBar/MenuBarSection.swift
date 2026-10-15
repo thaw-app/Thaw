@@ -171,6 +171,11 @@ final class MenuBarSection {
         return appState?.menuBarManager.sectionController.isSectionHidden(name) ?? true
     }
 
+    /// The display setting owns Hidden's visibility while Always Hidden stays toggleable.
+    var isToggleEnabled: Bool {
+        isEnabled && (name != .hidden || menuBarManager?.shouldAlwaysShowHiddenItems != true)
+    }
+
     /// Visible and Hidden stay enabled even with zero-width controls because layout bars drive assignments.
     /// Always Hidden requires user opt-in.
     var isEnabled: Bool {
@@ -229,8 +234,8 @@ final class MenuBarSection {
             return
         }
 
-        // Use screenWithMouse to react immediately when switching displays.
-        guard let activeScreen = screen ?? NSScreen.screenWithMouse ?? NSScreen.screenWithActiveMenuBar ?? NSScreen.main else {
+        // Prefer the active menu bar so pointer movement does not change visibility.
+        guard let activeScreen = NSScreen.screenWithActiveMenuBar ?? screen ?? NSScreen.main else {
             controlItem.state = desiredState
             controlItem.applyAppearanceNow()
             return
@@ -238,17 +243,10 @@ final class MenuBarSection {
 
         let displaySettings = appState.settings.displaySettings
         let useThawBar = appState.menuBarManager.shouldUseThawBar(for: activeScreen.displayID)
+        let alwaysShow = !appState.menuBarManager.isZenModeActive
+            && displaySettings.alwaysShowHiddenItems(for: activeScreen.displayID)
 
-        // Apply alwaysShowHiddenItems only when the mouse and active menu bar share a screen.
-        let alwaysShow: Bool = if let menuBarScreen = NSScreen.screenWithActiveMenuBar,
-                                  menuBarScreen.displayID == NSScreen.screenWithMouse?.displayID
-        {
-            displaySettings.alwaysShowHiddenItems(for: menuBarScreen.displayID)
-        } else {
-            false
-        }
-
-        if alwaysShow, !useThawBar {
+        if name != .alwaysHidden, alwaysShow, !useThawBar {
             controlItem.state = .showSection
         } else {
             controlItem.state = desiredState
@@ -353,13 +351,17 @@ final class MenuBarSection {
         }
     }
 
-    func hide() {
-        guard let menuBarManager else {
+    func hide(using manager: MenuBarManager? = nil) {
+        guard let menuBarManager = manager ?? menuBarManager else {
             return
         }
 
         if !isHidden {
-            menuBarManager.sectionController.hideRevealedSections()
+            if menuBarManager.shouldAlwaysShowHiddenItems {
+                menuBarManager.synchronizeAlwaysShowHiddenItems(closingSections: true)
+            } else {
+                menuBarManager.sectionController.hideRevealedSections()
+            }
             menuBarManager.thawBarPanel.close()
         }
         resetClosedPresentationState(using: menuBarManager)
@@ -367,7 +369,7 @@ final class MenuBarSection {
     }
 
     private func resetClosedPresentationState(using menuBarManager: MenuBarManager) {
-        menuBarManager.showOnHoverAllowed = true
+        menuBarManager.showOnHoverAllowed = !menuBarManager.isZenModeActive
         for section in menuBarManager.sections {
             section.desiredState = .hideSection
             section.updateControlItemState(for: nil)

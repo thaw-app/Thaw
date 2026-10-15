@@ -122,7 +122,7 @@ struct ControlItemPanelView: View {
         return PanelToggleRow(symbol: symbol, title: title, help: help, isOn: isShown) {
             section?.toggle()
         }
-        .disabled(section?.isEnabled != true)
+        .disabled(section?.isToggleEnabled != true)
     }
 
     private var zenToggle: some View {

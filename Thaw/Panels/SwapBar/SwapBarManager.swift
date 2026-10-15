@@ -384,7 +384,7 @@ struct SwapBarView: View {
         return SwapBarButton(symbol: symbol, label: label, isOn: isShown) {
             section?.toggle()
         }
-        .disabled(section?.isEnabled != true)
+        .disabled(section?.isToggleEnabled != true)
     }
 
     private var zenToggle: some View {
