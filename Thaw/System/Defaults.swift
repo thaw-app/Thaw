@@ -151,7 +151,6 @@ nonisolated enum Defaults {
             .tooltipDelay: DefaultValue.tooltipDelay,
             .showMenuBarTooltips: DefaultValue.showMenuBarTooltips,
             .iconRefreshInterval: DefaultValue.iconRefreshInterval,
-            .menuBarItemAlertRevealCooldown: DefaultValue.menuBarItemAlertRevealCooldown,
             .autoZenWhileSharingScreen: DefaultValue.autoZenWhileSharingScreen,
             .enableDiagnosticLogging: DefaultValue.enableDiagnosticLogging,
             .enableMenuBarItemOverflow: DefaultValue.enableMenuBarItemOverflow,
@@ -266,7 +265,6 @@ extension Defaults {
         static let showMenuBarTooltips = false
         static let iconRefreshInterval: TimeInterval = 0.25
         /// Minimum seconds between two alert reveals of the same item.
-        static let menuBarItemAlertRevealCooldown: TimeInterval = 45
         static let autoZenWhileSharingScreen = false
         #if DEBUG
             static let enableDiagnosticLogging = true
@@ -379,7 +377,6 @@ extension Defaults {
         case lastSettingsPane = "LastSettingsPane"
         case hiddenSidebarPanes = "HiddenSidebarPanes"
         case menuBarItemAlertReveals = "MenuBarItemAlertReveals"
-        case menuBarItemAlertRevealCooldown = "MenuBarItemAlertRevealCooldown"
         case autoZenWhileSharingScreen = "AutoZenWhileSharingScreen"
         case menuBarAppearanceSpaceOverrides = "MenuBarAppearanceSpaceOverrides"
         case lockThawBarPosition = "LockThawBarPosition"

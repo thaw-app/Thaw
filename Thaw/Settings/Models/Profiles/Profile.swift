@@ -178,7 +178,6 @@ nonisolated struct AdvancedSettingsSnapshot: Codable {
     var tooltipDelay: TimeInterval
     var showMenuBarTooltips: Bool
     var iconRefreshInterval: TimeInterval
-    var menuBarItemAlertRevealCooldown: TimeInterval
     var autoZenWhileSharingScreen: Bool
     var enableDiagnosticLogging: Bool
     var enableMenuBarItemOverflow: Bool
@@ -195,7 +194,6 @@ nonisolated struct AdvancedSettingsSnapshot: Codable {
         tooltipDelay: Defaults.DefaultValue.tooltipDelay,
         showMenuBarTooltips: Defaults.DefaultValue.showMenuBarTooltips,
         iconRefreshInterval: Defaults.DefaultValue.iconRefreshInterval,
-        menuBarItemAlertRevealCooldown: Defaults.DefaultValue.menuBarItemAlertRevealCooldown,
         autoZenWhileSharingScreen: Defaults.DefaultValue.autoZenWhileSharingScreen,
         enableDiagnosticLogging: Defaults.DefaultValue.enableDiagnosticLogging,
         enableMenuBarItemOverflow: Defaults.DefaultValue.enableMenuBarItemOverflow,
@@ -214,7 +212,6 @@ nonisolated struct AdvancedSettingsSnapshot: Codable {
             tooltipDelay: settings.tooltipDelay,
             showMenuBarTooltips: settings.showMenuBarTooltips,
             iconRefreshInterval: settings.iconRefreshInterval,
-            menuBarItemAlertRevealCooldown: settings.menuBarItemAlertRevealCooldown,
             autoZenWhileSharingScreen: settings.autoZenWhileSharingScreen,
             enableDiagnosticLogging: settings.enableDiagnosticLogging,
             enableMenuBarItemOverflow: settings.enableMenuBarItemOverflow,
@@ -235,7 +232,6 @@ nonisolated struct AdvancedSettingsSnapshot: Codable {
         settings.tooltipDelay = tooltipDelay
         settings.showMenuBarTooltips = showMenuBarTooltips
         settings.iconRefreshInterval = iconRefreshInterval
-        settings.menuBarItemAlertRevealCooldown = menuBarItemAlertRevealCooldown
         settings.autoZenWhileSharingScreen = autoZenWhileSharingScreen
         settings.enableDiagnosticLogging = enableDiagnosticLogging
         settings.enableMenuBarItemOverflow = enableMenuBarItemOverflow
@@ -270,9 +266,6 @@ nonisolated extension AdvancedSettingsSnapshot {
         )
         iconRefreshInterval = try container.decode(
             .iconRefreshInterval, default: Self.defaults.iconRefreshInterval
-        )
-        menuBarItemAlertRevealCooldown = try container.decode(
-            .menuBarItemAlertRevealCooldown, default: Self.defaults.menuBarItemAlertRevealCooldown
         )
         autoZenWhileSharingScreen = try container.decode(
             .autoZenWhileSharingScreen, default: Self.defaults.autoZenWhileSharingScreen

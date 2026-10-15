@@ -83,7 +83,6 @@ struct ProfileSnapshotCodableTests {
         #expect(snapshot.showOnHoverDelay == Defaults.DefaultValue.showOnHoverDelay)
         #expect(snapshot.showMenuBarTooltips == Defaults.DefaultValue.showMenuBarTooltips)
         #expect(snapshot.iconRefreshInterval == Defaults.DefaultValue.iconRefreshInterval)
-        #expect(snapshot.menuBarItemAlertRevealCooldown == Defaults.DefaultValue.menuBarItemAlertRevealCooldown)
         #expect(snapshot.autoZenWhileSharingScreen == Defaults.DefaultValue.autoZenWhileSharingScreen)
         #expect(snapshot.enableDiagnosticLogging == Defaults.DefaultValue.enableDiagnosticLogging)
         #expect(snapshot.enableMenuBarItemOverflow == Defaults.DefaultValue.enableMenuBarItemOverflow)
@@ -141,7 +140,6 @@ struct ProfileSnapshotCodableTests {
             "enableSecondaryContextMenu",
             "hideApplicationMenus",
             "iconRefreshInterval",
-            "menuBarItemAlertRevealCooldown",
             "sectionDividerStyle",
             "showAllSectionsOnUserDrag",
             "showMenuBarTooltips",
@@ -184,7 +182,6 @@ struct ProfileSnapshotCodableTests {
             tooltipDelay: 2.5,
             showMenuBarTooltips: true,
             iconRefreshInterval: 3.5,
-            menuBarItemAlertRevealCooldown: 4.5,
             autoZenWhileSharingScreen: true,
             enableDiagnosticLogging: false,
             enableMenuBarItemOverflow: false,

@@ -36,6 +36,10 @@ struct MenuBarAccessPane: View {
                 tempShowIntervalRow
             }
 
+            ThawSection("When an icon changes") {
+                AlertRevealItemList()
+            }
+
             ThawSection("Swap shown and hidden") {
                 swapBarToggle
             }

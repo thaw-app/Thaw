@@ -66,7 +66,6 @@ extension AppSettings {
         advanced.tooltipDelay = Defaults.DefaultValue.tooltipDelay
         advanced.showMenuBarTooltips = Defaults.DefaultValue.showMenuBarTooltips
         advanced.iconRefreshInterval = Defaults.DefaultValue.iconRefreshInterval
-        advanced.menuBarItemAlertRevealCooldown = Defaults.DefaultValue.menuBarItemAlertRevealCooldown
         advanced.autoZenWhileSharingScreen = Defaults.DefaultValue.autoZenWhileSharingScreen
         advanced.menuBarOrderFulfillmentTimeout = Defaults.DefaultValue.menuBarOrderFulfillmentTimeout
         advanced.enableDiagnosticLogging = Defaults.DefaultValue.enableDiagnosticLogging

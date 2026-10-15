@@ -86,7 +86,6 @@ enum SettingsURIHandler {
         "showOnHoverDelay": SettingURIEntry(defaultsKey: .showOnHoverDelay, kind: .double(min: 0, max: 5), isWritable: true),
         "tooltipDelay": SettingURIEntry(defaultsKey: .tooltipDelay, kind: .double(min: 0, max: 5), isWritable: true),
         "iconRefreshInterval": SettingURIEntry(defaultsKey: .iconRefreshInterval, kind: .double(min: 0, max: 5), isWritable: true),
-        "menuBarItemAlertRevealCooldown": SettingURIEntry(defaultsKey: .menuBarItemAlertRevealCooldown, kind: .double(min: 5, max: 300), isWritable: true),
         "menuBarOrderFulfillmentTimeout": SettingURIEntry(defaultsKey: .menuBarOrderFulfillmentTimeout, kind: .double(min: 1, max: 15), isWritable: true),
         "autoZenWhileSharingScreen": SettingURIEntry(defaultsKey: .autoZenWhileSharingScreen, kind: .boolean, isWritable: true),
         "enableDiagnosticLogging": SettingURIEntry(defaultsKey: .enableDiagnosticLogging, kind: .boolean, isWritable: true),

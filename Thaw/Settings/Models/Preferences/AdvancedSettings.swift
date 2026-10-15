@@ -98,15 +98,6 @@ final class AdvancedSettings {
         }
     }
 
-    /// Limits repeat reveals so animated icons cannot bounce items in and out of the bar.
-    /// The watcher reads this each capture batch, so changes need no restart.
-    var menuBarItemAlertRevealCooldown = Defaults.DefaultValue.menuBarItemAlertRevealCooldown {
-        didSet {
-            guard oldValue != menuBarItemAlertRevealCooldown else { return }
-            Defaults.set(menuBarItemAlertRevealCooldown, forKey: .menuBarItemAlertRevealCooldown)
-        }
-    }
-
     /// Automatic zen mode for mirroring or sharing; see PresentationMonitor for detection limits.
     var autoZenWhileSharingScreen = Defaults.DefaultValue.autoZenWhileSharingScreen {
         didSet {
@@ -357,7 +348,6 @@ final class AdvancedSettings {
         Defaults.ifPresent(key: .tooltipDelay, assign: &tooltipDelay)
         Defaults.ifPresent(key: .showMenuBarTooltips, assign: &showMenuBarTooltips)
         Defaults.ifPresent(key: .iconRefreshInterval, assign: &iconRefreshInterval)
-        Defaults.ifPresent(key: .menuBarItemAlertRevealCooldown, assign: &menuBarItemAlertRevealCooldown)
         Defaults.ifPresent(key: .autoZenWhileSharingScreen, assign: &autoZenWhileSharingScreen)
         Defaults.ifPresent(key: .enableDiagnosticLogging, assign: &enableDiagnosticLogging)
         Defaults.ifPresent(key: .enableMenuBarItemOverflow, assign: &enableMenuBarItemOverflow)
@@ -485,8 +475,6 @@ final class AdvancedSettings {
                 tooltipDelay = doubleValue
             case "iconRefreshInterval":
                 iconRefreshInterval = doubleValue
-            case "menuBarItemAlertRevealCooldown":
-                menuBarItemAlertRevealCooldown = doubleValue
             case "menuBarOrderFulfillmentTimeout":
                 menuBarOrderFulfillmentTimeout = doubleValue
             default:

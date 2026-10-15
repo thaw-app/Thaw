@@ -41,9 +41,7 @@ enum MenuBarItemAlertReveals {
 nonisolated struct AlertRevealPolicy {
     /// The minimum time between reveals of the same item, so an icon that
     /// animates continuously can't bounce its item in and out of the bar.
-    /// Seeded from the default and kept in step with the user's setting by
-    /// the watcher; see AdvancedSettings.menuBarItemAlertRevealCooldown.
-    var cooldown: TimeInterval = Defaults.DefaultValue.menuBarItemAlertRevealCooldown
+    var cooldown: TimeInterval = 45
 
     private(set) var lastRevealDates: [String: Date] = [:]
 
@@ -104,10 +102,6 @@ final class MenuBarItemAlertRevealWatcher {
         // Non-optional: before setup this is an InertSectionController, whose
         // reveal calls are no-ops, so no extra guard is needed here.
         let sectionController = appState.menuBarManager.sectionController
-        // Re-read each batch: the setting is live, and the policy carries the
-        // reveal history that a freshly constructed one would discard.
-        policy.cooldown = appState.settings.advanced.menuBarItemAlertRevealCooldown
-
         for (tag, image) in images {
             let identifier = tag.tagIdentifier
             guard enabled.contains(identifier) else {
