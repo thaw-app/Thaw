@@ -139,8 +139,7 @@ extension MenuBarItemManager {
             // still be "Item-0" right after creation.
             if MenuBarSpacerManager.isSpacerTag(candidate.tag)
                 || appState?.spacerManager.ownsWindowID(candidate.windowID) == true
-                || ThawBarOnlyProxies.isProxyTag(candidate.tag)
-                || appState?.thawBarOnlyProxies.ownsWindowID(candidate.windowID) == true
+                || (candidate.tag.isThawOwnedNamespace && candidate.tag.title.hasPrefix(GroupFolders.autosavePrefix))
                 || appState?.groupFolders.ownsWindowID(candidate.windowID) == true
             {
                 MenuBarItemManager.diagLog.info(

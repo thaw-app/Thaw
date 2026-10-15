@@ -121,12 +121,9 @@ nonisolated enum Defaults {
             .simpleMode: DefaultValue.simpleMode,
             .showSettingDescriptions: DefaultValue.showSettingDescriptions,
             .lockThawBarPosition: DefaultValue.lockThawBarPosition,
-            .enableThawBarOnly: DefaultValue.enableThawBarOnly,
             .openHiddenItemsInMenuBar: DefaultValue.openHiddenItemsInMenuBar,
             .roundScreenCorners: DefaultValue.roundScreenCorners,
             .screenCornerRadius: DefaultValue.screenCornerRadius,
-            .showThawBarOnlyWithInlineReveal: DefaultValue.showThawBarOnlyWithInlineReveal,
-            .showThawBarOnlyLauncher: DefaultValue.showThawBarOnlyLauncher,
             .useThawBar: DefaultValue.useThawBar,
             .useThawBarOnlyOnNotchedDisplay: DefaultValue.useThawBarOnlyOnNotchedDisplay,
             .useNativeAlwaysHide: DefaultValue.useNativeAlwaysHide,
@@ -228,12 +225,9 @@ extension Defaults {
         static let simpleMode = false
         static let showSettingDescriptions = true
         static let lockThawBarPosition = true
-        static let enableThawBarOnly = true
         static let openHiddenItemsInMenuBar = false
         static let roundScreenCorners = false
         static let screenCornerRadius = 10.0
-        static let showThawBarOnlyWithInlineReveal = false
-        static let showThawBarOnlyLauncher = true
         static let useThawBar = false
         static let useThawBarOnlyOnNotchedDisplay = false
 
@@ -380,12 +374,9 @@ extension Defaults {
         case autoZenWhileSharingScreen = "AutoZenWhileSharingScreen"
         case menuBarAppearanceSpaceOverrides = "MenuBarAppearanceSpaceOverrides"
         case lockThawBarPosition = "LockThawBarPosition"
-        case enableThawBarOnly = "EnableThawBarOnly"
         case openHiddenItemsInMenuBar = "OpenHiddenItemsInMenuBar"
         case roundScreenCorners = "RoundScreenCorners"
         case screenCornerRadius = "ScreenCornerRadius"
-        case showThawBarOnlyWithInlineReveal = "ShowThawBarOnlyWithInlineReveal"
-        case showThawBarOnlyLauncher = "ShowThawBarOnlyLauncher"
         case menuBarSpacers = "MenuBarSpacers"
         case enableExperimentalRevealSystemExtras = "EnableExperimentalRevealSystemExtras"
         case useThawBar = "UseIceBar"

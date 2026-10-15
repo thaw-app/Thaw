@@ -1303,8 +1303,7 @@ extension MenuBarItemManager {
         commit: () -> Void
     ) async {
         // In Manual only an explicit Layout edit, which seats the item itself, may change a section.
-        // Thaw Bar Only items are exempt: macOS never draws them.
-        if arrangementForbidsMoves, !items.allSatisfy(isThawBarOnly) {
+        if arrangementForbidsMoves {
             MenuBarItemManager.diagLog.info(
                 "Section transition to \(section.logString) refused: manual arrangement is on"
             )

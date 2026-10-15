@@ -35,7 +35,6 @@ struct ThawBarContentView: View {
     let screen: NSScreen
     let section: MenuBarSection.Name
     /// Set for both small bars, which carry only the Thaw Bar Only items.
-    let showsOnlyThawBarOnlyItems: Bool
     /// A folder's members, when the panel shows one folder.
     let folderMembers: [String]?
 
@@ -49,7 +48,6 @@ struct ThawBarContentView: View {
         visibleControlItem: ControlItem?,
         screen: NSScreen,
         section: MenuBarSection.Name,
-        showsOnlyThawBarOnlyItems: Bool,
         folderMembers: [String]?
     ) {
         self.appState = appState
@@ -61,7 +59,6 @@ struct ThawBarContentView: View {
         self.visibleControlItem = visibleControlItem
         self.screen = screen
         self.section = section
-        self.showsOnlyThawBarOnlyItems = showsOnlyThawBarOnlyItems
         self.folderMembers = folderMembers
         self._visibleControlItemState = State(initialValue: visibleControlItem?.state ?? .hideSection)
     }
@@ -195,17 +192,14 @@ struct ThawBarContentView: View {
     }
 
     var body: some View {
-        // Thaw Bar Only items have a bar of their own, opened from their icon.
         let items = if let folderMembers {
             folderMembers.compactMap { identifier in
                 itemManager.managedItems.first {
                     MenuBarItemTag.canonicalPersistentIdentifier($0.uniqueIdentifier) == identifier
                 }
             }
-        } else if showsOnlyThawBarOnlyItems {
-            itemManager.thawBarOnlyItems
         } else {
-            itemManager.managedItems(for: section).filter { !itemManager.isThawBarOnly($0) }
+            itemManager.managedItems(for: section)
         }
         ZStack {
             ThawBarChrome(

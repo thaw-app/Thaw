@@ -31,7 +31,7 @@ final class GroupFolders {
     }
 
     /// Thaw.Proxy. excludes folder icons from new-item relocation and search.
-    static nonisolated let autosavePrefix = ThawBarOnlyProxies.autosavePrefix + "Folder."
+    static nonisolated let autosavePrefix = "Thaw.Proxy.Folder."
     /// Autosave name to the folder's name, readable off the main actor for
     /// MenuBarItem.displayName.
     static nonisolated let labelsKey = "MenuBarItemGroupManager.folderLabels"
@@ -264,5 +264,13 @@ private extension NSColor {
             blue: CGFloat(value & 0xFF) / 255,
             alpha: 1
         )
+    }
+}
+
+extension MenuBarItemManager {
+    /// Where one of Thaw's own status items is on the bar, by autosave name. On macOS 27 its
+    /// window has no real frame, so the item cache's accessibility bounds are the only measure.
+    func barBounds(ofThawItemNamed autosaveName: String) -> CGRect? {
+        managedItems.first { $0.tag.isThawOwnedNamespace && $0.tag.title == autosaveName }?.bounds
     }
 }

@@ -42,9 +42,7 @@ nonisolated struct SearchEntry: Identifiable, @unchecked Sendable {
         case "layout.spacers":
             .layoutSpacers
         // The two app-wide Thaw Bar toggles sit behind the page's disclosure.
-        case "general.lockThawBarPosition", "general.thawBarLocationOnHotkey", "general.openHiddenItemsInMenuBar",
-             "general.enableThawBarOnly", "general.showThawBarOnlyWithInlineReveal",
-             "general.showThawBarOnlyLauncher":
+        case "general.lockThawBarPosition", "general.thawBarLocationOnHotkey", "general.openHiddenItemsInMenuBar":
             .thawBarAppWideOptions
         default:
             nil
@@ -173,10 +171,6 @@ nonisolated enum SearchIndex {
         .general("thawBarLocation"),
         // An error channel, not a setting.
         .general("thawIconPersistenceError"),
-        // Thaw Bar Only is unplugged for now; its switches are commented out.
-        .general("enableThawBarOnly"),
-        .general("showThawBarOnlyLauncher"),
-        .general("showThawBarOnlyWithInlineReveal"),
         // The radius slider shows only under Round screen corners.
         .general("screenCornerRadius"),
         // The Everything option of the Hiding method picker, indexed under

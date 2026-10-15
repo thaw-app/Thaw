@@ -25,7 +25,6 @@ final class ThawBarHostingView: NSHostingView<ThawBarContentView> {
         let keyboardFocus: ThawBarKeyboardFocus
         let screen: NSScreen
         let section: MenuBarSection.Name
-        let showsOnlyThawBarOnlyItems: Bool
         let folderMembers: [String]?
     }
 
@@ -49,7 +48,6 @@ final class ThawBarHostingView: NSHostingView<ThawBarContentView> {
             visibleControlItem: inputs.appState.menuBarManager.section(withName: .visible)?.controlItem,
             screen: inputs.screen,
             section: inputs.section,
-            showsOnlyThawBarOnlyItems: inputs.showsOnlyThawBarOnlyItems,
             folderMembers: inputs.folderMembers
         )
     }

@@ -63,8 +63,6 @@ final class AppState {
 
     /// Owner of the user's menu bar spacer items.
     let spacerManager = MenuBarSpacerManager()
-    let thawBarOnlyProxies = ThawBarOnlyProxies()
-    let itemStandInSlots = ItemStandInSlots()
     let screenCorners = ScreenCorners()
     let itemHints = ItemHints()
     let groupFolders = GroupFolders()
@@ -210,11 +208,9 @@ final class AppState {
         )
         presentationMonitor.performSetup(with: self)
         spacerManager.performSetup(with: self)
-        itemStandInSlots.performSetup(with: self)
         screenCorners.performSetup(with: self)
         itemHints.performSetup(with: self)
         groupFolders.performSetup(with: self)
-        thawBarOnlyProxies.performSetup(with: self)
         diagLog.debug("bootstrap: imageCache setup complete")
         updatesManager.performSetup(with: self)
         userNotificationManager.performSetup(with: self)

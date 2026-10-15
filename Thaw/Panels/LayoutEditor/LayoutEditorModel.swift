@@ -47,7 +47,6 @@ final class LayoutEditorModel {
             let changes = Observations {
                 (
                     appState.itemManager.itemCache,
-                    appState.itemManager.thawBarOnlyIdentifiers,
                     appState.itemGroupManager.groupSet,
                     appState.settings.advanced.enableAlwaysHiddenSection,
                     appState.settings.general.showThawIcon

@@ -24,8 +24,6 @@ struct HotkeysSettingsPane: View {
             }
             ThawSection("Menu bar items") {
                 hotkeyRecorder(forAction: .searchMenuBarItems)
-                // Thaw Bar Only is unplugged for now.
-                // hotkeyRecorder(forAction: .showThawBarOnlyItems)
                 hotkeyRecorder(forAction: .showItemHints)
                 MenuBarItemHotkeyList(
                     menuBarManager: appState.menuBarManager,
@@ -77,8 +75,6 @@ struct HotkeysSettingsPane: View {
                     Text("Swap shown and hidden items")
                 case .searchMenuBarItems:
                     Text("Search menu bar items")
-                case .showThawBarOnlyItems:
-                    Text("Show Thaw Bar Only items")
                 case .showItemHints:
                     Text("Open an item by letter")
                 case .revealSystemMenuBar:

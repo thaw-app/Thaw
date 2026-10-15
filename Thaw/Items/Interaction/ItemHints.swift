@@ -92,7 +92,6 @@ final class ItemHints {
                 !item.isControlItem
                     && item.bounds.width > 0
                     && screen.frame.contains(CGPoint(x: item.bounds.midX, y: screen.frame.maxY - item.bounds.midY))
-                    && !appState.itemManager.isThawBarOnly(item)
             }
             .sorted { $0.bounds.minX < $1.bounds.minX }
     }

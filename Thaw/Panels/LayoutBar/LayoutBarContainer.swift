@@ -154,7 +154,7 @@ final class LayoutBarContainer: NSView {
             // covers the pair.
             let rebuildTask = Task { @MainActor [weak self, itemManager = appState.itemManager] in
                 let changes = Observations {
-                    (itemManager.itemCache, itemManager.newItemsPlacement, itemManager.thawBarOnlyIdentifiers,
+                    (itemManager.itemCache, itemManager.newItemsPlacement,
                      MenuBarItemIconChoices.shared.revision)
                 }
                 for await _ in changes {

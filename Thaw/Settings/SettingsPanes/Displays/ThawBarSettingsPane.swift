@@ -319,7 +319,7 @@ struct ThawBarSettingsPane: View {
     // MARK: - App-wide options
 
     /// The app-wide toggles: position lock, open-at-pointer-when-summoned-by-
-    /// hotkey, where hidden items open, and Thaw Bar Only.
+    /// hotkey, and where hidden items open.
     @ViewBuilder
     private var appWideOptions: some View {
         Toggle(
@@ -348,35 +348,5 @@ struct ThawBarSettingsPane: View {
             )
         )
         .annotation("Clicking a hidden item shows it in the menu bar and opens its menu under the icon. Turn off to open the menu without showing the icon.")
-
-        // Thaw Bar Only is unplugged for now; restore this with the gate in MenuBarItemManager+ThawBarOnly.swift.
-        // Toggle(
-        //     "Thaw Bar Only",
-        //     isOn: Binding(
-        //         get: { appState.settings.general.enableThawBarOnly },
-        //         set: { appState.settings.general.enableThawBarOnly = $0 }
-        //     )
-        // )
-        // .annotation("Items macOS won't show in the menu bar stay in the \(Constants.displayName) Bar. Turn this off to treat them as ordinary hidden items. Your list comes back when you turn it on again.")
-
-        // Toggle(
-        //     "Menu bar icon for Thaw Bar Only items",
-        //     isOn: Binding(
-        //         get: { appState.settings.general.showThawBarOnlyLauncher },
-        //         set: { appState.settings.general.showThawBarOnlyLauncher = $0 }
-        //     )
-        // )
-        // .annotation("Shows an icon in the menu bar while there are Thaw Bar Only items. Click it to open a small \(Constants.displayName) Bar with just those items.")
-        // .disabled(!appState.settings.general.enableThawBarOnly)
-
-        // Toggle(
-        //     "Show Thaw Bar Only items when showing hidden items",
-        //     isOn: Binding(
-        //         get: { appState.settings.general.showThawBarOnlyWithInlineReveal },
-        //         set: { appState.settings.general.showThawBarOnlyWithInlineReveal = $0 }
-        //     )
-        // )
-        // .annotation("When you show hidden items, the items kept in the \(Constants.displayName) Bar appear in a small \(Constants.displayName) Bar below the menu bar.")
-        // .disabled(!appState.settings.general.enableThawBarOnly)
     }
 }

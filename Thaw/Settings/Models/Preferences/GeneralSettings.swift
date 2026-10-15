@@ -113,15 +113,6 @@ final class GeneralSettings {
         }
     }
 
-    /// Whether Thaw Bar Only is in use at all. Off, its items are ordinary
-    /// Hidden items again; the list is kept for when it comes back on.
-    var enableThawBarOnly = Defaults.DefaultValue.enableThawBarOnly {
-        didSet {
-            guard oldValue != enableThawBarOnly else { return }
-            Defaults.set(enableThawBarOnly, forKey: .enableThawBarOnly)
-        }
-    }
-
     /// Whether clicking a hidden item, in the Thaw Bar, search or elsewhere,
     /// shows it in the menu bar and opens its menu there. Off, the menu opens
     /// without the icon appearing, and only apps that ignore that are shown.
@@ -129,24 +120,6 @@ final class GeneralSettings {
         didSet {
             guard oldValue != openHiddenItemsInMenuBar else { return }
             Defaults.set(openHiddenItemsInMenuBar, forKey: .openHiddenItemsInMenuBar)
-        }
-    }
-
-    /// Whether a menu bar icon opens a small Thaw Bar with the Thaw Bar Only
-    /// items, which macOS never draws in the menu bar.
-    var showThawBarOnlyLauncher = Defaults.DefaultValue.showThawBarOnlyLauncher {
-        didSet {
-            guard oldValue != showThawBarOnlyLauncher else { return }
-            Defaults.set(showThawBarOnlyLauncher, forKey: .showThawBarOnlyLauncher)
-        }
-    }
-
-    /// Whether items kept to the Thaw Bar come up in a small Thaw Bar when
-    /// hidden items open on the menu bar, where they never appear.
-    var showThawBarOnlyWithInlineReveal = Defaults.DefaultValue.showThawBarOnlyWithInlineReveal {
-        didSet {
-            guard oldValue != showThawBarOnlyWithInlineReveal else { return }
-            Defaults.set(showThawBarOnlyWithInlineReveal, forKey: .showThawBarOnlyWithInlineReveal)
         }
     }
 
@@ -286,12 +259,9 @@ final class GeneralSettings {
         Defaults.ifPresent(key: .simpleMode, assign: &simpleMode)
         Defaults.ifPresent(key: .showSettingDescriptions, assign: &showSettingDescriptions)
         Defaults.ifPresent(key: .lockThawBarPosition, assign: &lockThawBarPosition)
-        Defaults.ifPresent(key: .enableThawBarOnly, assign: &enableThawBarOnly)
         Defaults.ifPresent(key: .openHiddenItemsInMenuBar, assign: &openHiddenItemsInMenuBar)
         Defaults.ifPresent(key: .roundScreenCorners, assign: &roundScreenCorners)
         Defaults.ifPresent(key: .screenCornerRadius, assign: &screenCornerRadius)
-        Defaults.ifPresent(key: .showThawBarOnlyWithInlineReveal, assign: &showThawBarOnlyWithInlineReveal)
-        Defaults.ifPresent(key: .showThawBarOnlyLauncher, assign: &showThawBarOnlyLauncher)
         Defaults.ifPresent(key: .useThawBar, assign: &useThawBar)
         Defaults.ifPresent(key: .useThawBarOnlyOnNotchedDisplay, assign: &useThawBarOnlyOnNotchedDisplay)
         Defaults.ifPresent(key: .thawBarLocationOnHotkey, assign: &thawBarLocationOnHotkey)
@@ -363,14 +333,8 @@ final class GeneralSettings {
                 showSettingDescriptions = boolValue
             case "lockThawBarPosition" where lockThawBarPosition != boolValue:
                 lockThawBarPosition = boolValue
-            case "enableThawBarOnly" where enableThawBarOnly != boolValue:
-                enableThawBarOnly = boolValue
             case "openHiddenItemsInMenuBar" where openHiddenItemsInMenuBar != boolValue:
                 openHiddenItemsInMenuBar = boolValue
-            case "showThawBarOnlyWithInlineReveal" where showThawBarOnlyWithInlineReveal != boolValue:
-                showThawBarOnlyWithInlineReveal = boolValue
-            case "showThawBarOnlyLauncher" where showThawBarOnlyLauncher != boolValue:
-                showThawBarOnlyLauncher = boolValue
             case "useThawBarOnlyOnNotchedDisplay" where useThawBarOnlyOnNotchedDisplay != boolValue:
                 useThawBarOnlyOnNotchedDisplay = boolValue
             case "thawBarLocationOnHotkey" where thawBarLocationOnHotkey != boolValue:

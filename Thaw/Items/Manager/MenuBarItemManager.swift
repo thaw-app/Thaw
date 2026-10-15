@@ -114,15 +114,6 @@ final class MenuBarItemManager {
     /// Consecutive passes each visible item has looked unshown.
     @ObservationIgnored var notShownStreaks: [MenuBarItemTag: Int] = [:]
 
-    /// Canonical identifiers of the items in the Thaw Bar Only state. See
-    /// moveToThawBarOnly(_:appState:).
-    var thawBarOnlyIdentifiers: Set<String> = MenuBarItemManager.loadThawBarOnlyIdentifiers()
-
-    /// Thaw Bar Only items already sent back to Hidden this session, so a
-    /// move the section controller refuses is not retried on every scan. See
-    /// keepThawBarOnlyItemsHidden().
-    @ObservationIgnored var thawBarOnlyItemsReturnedToHidden = Set<String>()
-
     /// The menus a click on each item opened, by canonical identifier. Only
     /// windows that appeared with the click count, so a window the owner
     /// keeps on screen at menu level is never taken for an open menu.

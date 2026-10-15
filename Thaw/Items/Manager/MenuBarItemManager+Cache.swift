@@ -233,8 +233,6 @@ extension MenuBarItemManager {
                 recordVisibleControlObservation(items: items, displayID: displayID)
             }
             itemCache = context.cache
-            followRenamedThawBarOnlyItems()
-            keepThawBarOnlyItemsHidden()
             break
         }
 

@@ -35,12 +35,9 @@ extension AppSettings {
         general.simpleMode = Defaults.DefaultValue.simpleMode
         general.showSettingDescriptions = Defaults.DefaultValue.showSettingDescriptions
         general.lockThawBarPosition = Defaults.DefaultValue.lockThawBarPosition
-        general.enableThawBarOnly = Defaults.DefaultValue.enableThawBarOnly
         general.openHiddenItemsInMenuBar = Defaults.DefaultValue.openHiddenItemsInMenuBar
         general.roundScreenCorners = Defaults.DefaultValue.roundScreenCorners
         general.screenCornerRadius = Defaults.DefaultValue.screenCornerRadius
-        general.showThawBarOnlyWithInlineReveal = Defaults.DefaultValue.showThawBarOnlyWithInlineReveal
-        general.showThawBarOnlyLauncher = Defaults.DefaultValue.showThawBarOnlyLauncher
         general.useThawBar = Defaults.DefaultValue.useThawBar
         general.useThawBarOnlyOnNotchedDisplay = Defaults.DefaultValue.useThawBarOnlyOnNotchedDisplay
         general.thawBarLocation = Defaults.DefaultValue.thawBarLocation

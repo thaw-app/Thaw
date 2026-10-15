@@ -27,7 +27,6 @@ enum LayoutDisplayedItems {
             bundleIdentifiers: Set(runningApplications.compactMap(\.bundleIdentifier))
         ).orderingOverflowStack(savedOrder: appState.itemManager.savedSectionOrder).managedItems(for: section)
             // Thaw Bar Only items have their own row.
-            .filter { !appState.itemManager.isThawBarOnly($0) }
             // A switched-off Thaw icon stays registered at zero width so it can
             // return in place, but it is not on the bar, so it gets no slot.
             .filter { appState.settings.general.showThawIcon || !$0.tag.matchesVisibleControlItem }

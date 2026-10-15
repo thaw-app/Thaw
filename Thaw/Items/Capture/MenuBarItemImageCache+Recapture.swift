@@ -916,11 +916,6 @@ extension MenuBarItemImageCache {
                 ?? CGMainDisplayID()
             let isNativeOverflowActive = controller.isNativeOverflowActive(on: displayID)
             let itemsToCapture = sectionItems.filter { item in
-                // Thaw Bar Only items draw their app icon; revealing them
-                // to capture would flash them on the bar.
-                guard !appState.itemManager.isThawBarOnly(item) else {
-                    return false
-                }
                 // Native notch overflow remains in force when Thaw removes
                 // an item from its own concealment assertion. A prewarm in
                 // that state can only capture the system overflow chevron,

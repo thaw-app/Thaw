@@ -57,7 +57,6 @@ extension MenuBarItemManager {
         for item in items where !item.isControlItem {
             guard item.tag.canBeHidden,
                   item.isMovable(experimentalSystemItemHiding: experimentalSystemItemHiding),
-                  !isThawBarOnly(item),
                   let itemWeight = weight(item),
                   !weights.isParked(itemWeight)
             else {

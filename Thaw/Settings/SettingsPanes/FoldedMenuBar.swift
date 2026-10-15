@@ -79,16 +79,6 @@ struct FoldedMenuBar: View {
                 }
                 row(section)
             }
-            // Thaw Bar Only is unplugged for now; restore this with the gate in MenuBarItemManager+ThawBarOnly.swift.
-            // Always show this row while enabled so users can find it before adding items.
-            // if itemManager.isThawBarOnlyEnabled {
-            //     foldLine
-            //     thawBarOnlyRow
-            // }
-            // if let suggestion = itemManager.thawBarOnlySuggestions.first {
-            //     foldLine
-            //     suggestionRow(for: suggestion)
-            // }
         }
         .menuBarItemContainer(appState: appState)
         .containerShape(shape)
@@ -167,100 +157,5 @@ struct FoldedMenuBar: View {
             return
         }
         dragTargetSection = active ? name : nil
-    }
-
-    // MARK: Thaw Bar Only
-
-    /// Thaw Bar Only items have no menu bar order to drag; tiles only offer returning them.
-    private var thawBarOnlyRow: some View {
-        let items = itemManager.thawBarOnlyItems
-        let images = OverflowFallbackIcon.resolvedImages(
-            for: items,
-            appState: appState,
-            imageCache: appState.imageCache,
-            section: { _ in .hidden }
-        )
-        return HStack(spacing: 0) {
-            Text("Thaw Bar Only")
-                .font(.caption.weight(.semibold))
-                .fixedSize()
-                .frame(minWidth: gutterWidth, alignment: .leading)
-                .padding(.leading, 12)
-                .accessibilityAddTraits(.isHeader)
-            if items.isEmpty {
-                Text("Right-click an item and choose Move to › Thaw Bar Only to keep it out of the menu bar.")
-                    .font(.caption)
-                    .foregroundStyle(ThawInk.supporting)
-                    .lineLimit(2)
-                    .padding(.horizontal, ThawSpacing.base)
-                Spacer(minLength: 0)
-            } else {
-                ScrollView(.horizontal) {
-                    HStack(spacing: ThawSpacing.base) {
-                        ForEach(items, id: \.uniqueIdentifier) { item in
-                            thawBarOnlyTile(item, image: images[item.tag])
-                        }
-                    }
-                    .padding(.horizontal, ThawSpacing.base)
-                }
-                .scrollIndicators(.never)
-            }
-        }
-        .frame(height: 48)
-    }
-
-    private func thawBarOnlyTile(_ item: MenuBarItem, image: MenuBarItemDisplayImage?) -> some View {
-        Menu {
-            Button("Move to Visible") {
-                itemManager.returnFromThawBarOnly(item, to: .visible, appState: appState)
-            }
-            Button("Move to Hidden") {
-                itemManager.returnFromThawBarOnly(item, to: .hidden, appState: appState)
-            }
-            Divider()
-            Toggle("Show in Menu Bar", isOn: Binding(
-                get: { appState.thawBarOnlyProxies.isEnabled(for: item) },
-                set: { appState.thawBarOnlyProxies.setEnabled($0, for: item) }
-            ))
-            Button("Choose Icon…") {
-                ItemIconPicker.present(for: item, appState: appState)
-            }
-        } label: {
-            Group {
-                if let image {
-                    image.swiftUIImage
-                        .resizable()
-                        .scaledToFit()
-                } else {
-                    Image(systemName: "menubar.rectangle")
-                }
-            }
-            .frame(height: 22)
-        }
-        .menuStyle(.button)
-        .buttonStyle(.plain)
-        .fixedSize()
-        .help(item.displayName)
-        .accessibilityLabel(item.displayName)
-    }
-
-    /// Offers a visible item macOS is not drawing a move to Thaw Bar Only.
-    /// One at a time; the next one shows once this one is answered.
-    private func suggestionRow(for item: MenuBarItem) -> some View {
-        HStack(spacing: ThawSpacing.base) {
-            Image(systemName: "eye.slash")
-                .foregroundStyle(ThawInk.supporting)
-            Text("macOS isn’t showing “\(item.displayName)” in the menu bar.")
-                .font(.callout)
-                .lineLimit(2)
-            Spacer(minLength: 0)
-            Button("Move to Thaw Bar Only") {
-                itemManager.moveToThawBarOnly(item, appState: appState)
-            }
-            .buttonStyle(.settingsGlass)
-            .controlSize(.small)
-        }
-        .padding(.horizontal, 12)
-        .padding(.vertical, 8)
     }
 }

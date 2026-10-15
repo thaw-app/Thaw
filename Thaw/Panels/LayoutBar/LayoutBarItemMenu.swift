@@ -128,15 +128,6 @@ enum LayoutBarItemMenu {
             addSplitAppEntries(to: menu, item: item, hidingSection: hidingSection, appState: appState)
         }
         menu.addItem(moveEntry(for: item, appState: appState))
-        if appState.itemManager.isThawBarOnly(item) {
-            let proxies = appState.thawBarOnlyProxies
-            let isShown = proxies.isEnabled(for: item)
-            let entry = ClosureMenuItem(title: String(localized: "Show in Menu Bar")) {
-                proxies.setEnabled(!isShown, for: item)
-            }
-            entry.state = isShown ? .on : .off
-            menu.addItem(entry)
-        }
         menu.addItem(
             ClosureMenuItem(title: String(localized: "Choose Icon…")) {
                 ItemIconPicker.present(for: item, appState: appState)
@@ -179,33 +170,19 @@ enum LayoutBarItemMenu {
         menu.addItem(.separator())
     }
 
-    /// Thaw Bar Only is app state, but appears alongside section destinations here.
     static func moveEntry(for item: MenuBarItem, appState: AppState) -> NSMenuItem {
-        let itemManager = appState.itemManager
-        let isThawBarOnly = itemManager.isThawBarOnly(item)
         let current = appState.menuBarManager.sectionController.section(for: item)
         let submenu = NSMenu()
 
         for (index, name) in MenuBarSearchItemActions.moveDestinations(appState: appState).enumerated() {
             guard let name else { continue }
             let entry = ClosureMenuItem(title: MenuBarSearchItemActions.title(for: name)) {
-                if itemManager.isThawBarOnly(item) {
-                    itemManager.returnFromThawBarOnly(item, to: name, appState: appState)
-                } else {
-                    MenuBarSearchItemActions.move(item, to: name, appState: appState)
-                }
+                MenuBarSearchItemActions.move(item, to: name, appState: appState)
             }
-            entry.state = !isThawBarOnly && name == current ? .on : .off
+            entry.state = name == current ? .on : .off
             entry.keyEquivalent = String(index + 1)
             entry.keyEquivalentModifierMask = .command
             submenu.addItem(entry)
-        }
-        if itemManager.isThawBarOnlyEnabled {
-            let thawBarOnly = ClosureMenuItem(title: String(localized: "Thaw Bar Only")) {
-                itemManager.moveToThawBarOnly(item, appState: appState)
-            }
-            thawBarOnly.state = isThawBarOnly ? .on : .off
-            submenu.addItem(thawBarOnly)
         }
 
         let entry = NSMenuItem(title: String(localized: "Move to"), action: nil, keyEquivalent: "")
