@@ -81,6 +81,7 @@ extension AppSettings {
         advanced.enableMenuBarItemDescenders = Defaults.DefaultValue.enableMenuBarItemDescenders
         advanced.enableSwapBar = Defaults.DefaultValue.enableSwapBar
         advanced.swapOnThawIconClick = Defaults.DefaultValue.swapOnThawIconClick
+        advanced.showAlwaysHiddenOnIconDoubleClick = Defaults.DefaultValue.showAlwaysHiddenOnIconDoubleClick
         advanced.fetchReleaseNotes = Defaults.DefaultValue.fetchReleaseNotes
         advanced.showReleaseNotesAfterUpdate = Defaults.DefaultValue.showReleaseNotesAfterUpdate
         advanced.showSpaceIndicator = Defaults.DefaultValue.showSpaceIndicator
