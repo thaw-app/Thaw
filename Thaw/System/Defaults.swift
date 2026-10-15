@@ -443,8 +443,7 @@ extension Defaults {
         /// XPC helper instead of in-process ScreenCaptureKit, containing
         /// SkyLight's per-call dictionary leak in a bounded-lifetime helper.
         ///
-        /// Hidden diagnostic flag; not exposed in Settings. Default: false
-        /// until the helper's TCC attribution proves out on macOS 27.
+        /// Hidden diagnostic flag; not exposed in Settings. Default: true.
         case captureViaXPCService = "CaptureViaXPCService"
         /// Hidden diagnostic flag: route the ambient menu bar walk through the AX helper.
         case axEnumerationViaSubprocess = "AXEnumerationViaSubprocess"
@@ -572,7 +571,7 @@ extension Defaults {
         /// HID stream, avoiding the cursor warp. MenuBarAgent is resolved by
         /// name, since ownerPID is the third-party app.
         ///
-        /// Hidden diagnostic flag; not exposed in Settings. Default: false.
+        /// Hidden diagnostic flag; not exposed in Settings. Default: true.
         case addressMoveDragToMenuBarAgent
 
         /// Whether the first synthetic-drag attempt is delivered as event
