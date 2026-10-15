@@ -2881,11 +2881,11 @@ extension MenuBarItemManager {
         }
         appState?.menuBarManager.sectionController.notePreferredPositionsSelfWrite()
         let nudgeRan = requestMenuBarAgentPositionRefresh()
-        // Without the nudge the agent never re-reads the table, so polling is
-        // pointless. The write stays for the next re-sort to agree with.
-        guard nudgeRan else {
+        // A concealed item seats by this weight on its next reveal; an un-nudged
+        // write is still observed. See preferredWriteAppliesOnReveal.
+        if preferredWriteAppliesOnReveal(item, to: destination, transitionSection: transitionSection) {
             MenuBarItemManager.diagLog.info(
-                "Preferred-position write recorded but not awaited for \(item.logString): nudge suppressed; falling back"
+                "Preferred-position write stored for concealed \(item.logString); it applies on the next reveal"
             )
             return false
         }

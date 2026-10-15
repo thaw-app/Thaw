@@ -73,6 +73,22 @@ extension MenuBarItemManager {
             "Preferred-position write unverified (\(preferredPositionsIgnoredEvidence) this session); falling back per move"
         )
     }
+
+    /// Whether item is concealed, so the agent seats its written weight only at the next reveal
+    /// (macOS 27.2) and polling now would just time out. A section crossing is still awaited.
+    func preferredWriteAppliesOnReveal(
+        _ item: MenuBarItem,
+        to destination: MoveDestination,
+        transitionSection: MenuBarSection.Name?
+    ) -> Bool {
+        guard transitionSection == nil, destination.sectionAcrossBoundary(from: item) == nil,
+              let controller = appState?.menuBarManager.sectionController
+        else { return false }
+        let section = controller.section(for: item.uniqueIdentifier)
+        guard section != .visible else { return false }
+        let revealed = controller.revealedSection
+        return !(revealed == section || (section == .hidden && revealed == .alwaysHidden))
+    }
 }
 
 /// Items whose preferred-position writes MenuBarAgent keeps ignoring. Some
