@@ -623,9 +623,7 @@ private struct MenuBarSearchContentView: View {
         }
         // A visible-authored item can still be concealed by the automatic
         // overflow assertion, which the menu bar overlay also drives.
-        return !controller.effectivelyConcealedIdentifiers.contains(
-            MenuBarItemTag.canonicalPersistentIdentifier(item.uniqueIdentifier)
-        )
+        return !controller.isEffectivelyConcealed(item)
     }
 
     /// Dismisses the panel, then shows or clicks item.

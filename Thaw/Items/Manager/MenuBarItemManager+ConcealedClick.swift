@@ -37,9 +37,7 @@ extension MenuBarItemManager {
         // A visible-authored item can still be concealed by the automatic-overflow
         // set, which hides it through the same assertion the hidden sections use.
         let section = controller.section(for: item)
-        let isEffectivelyConcealed = controller.effectivelyConcealedIdentifiers.contains(
-            MenuBarItemTag.canonicalPersistentIdentifier(item.uniqueIdentifier)
-        )
+        let isEffectivelyConcealed = controller.isEffectivelyConcealed(item)
         // A visible item macOS is not drawing cannot be clicked where its
         // frame says it is; that seat belongs to something else.
         let isNotShown = itemsNotShownOnBarTags.contains(item.tag)

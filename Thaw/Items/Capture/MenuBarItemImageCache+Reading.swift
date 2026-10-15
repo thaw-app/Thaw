@@ -363,9 +363,7 @@ extension MenuBarItemImageCache {
             // A concealed item is removed from MenuBarAgent, so its stale bounds
             // crop whatever now sits there. The concealment set is the test,
             // because the AX provider reports isOnScreen: true for every item.
-            if concealedIdentifiers.contains(
-                MenuBarItemTag.canonicalPersistentIdentifier(item.uniqueIdentifier)
-            ) {
+            if ItemConcealment.isConcealed(item.uniqueIdentifier, in: concealedIdentifiers) {
                 // Applies to hiding-unsupported items too: the assertion claims them.
                 MenuBarItemImageCache.diagLog.debug(
                     "axBoundsCapture: \(item.logString) is concealed; keeping its prior image " +

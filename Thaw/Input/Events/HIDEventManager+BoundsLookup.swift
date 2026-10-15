@@ -124,9 +124,7 @@ extension HIDEventManager {
             return true
         }
         if section != .visible, !item.isNonConcealableSystemItem {
-            return !effectivelyConcealed.contains(
-                MenuBarItemTag.canonicalPersistentIdentifier(item.uniqueIdentifier)
-            )
+            return !ItemConcealment.isConcealed(item.uniqueIdentifier, in: effectivelyConcealed)
         }
         return true
     }
