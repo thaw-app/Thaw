@@ -15,6 +15,10 @@ and the Sparkle appcast, unless overridden with the `release_notes` input.
 
 - **Thaw Bar Only is gone.** It was already switched off, and its launcher icon, shortcut and stand-in icons went with it. Items you kept there are ordinary Hidden items. By @diazdesandi.
 
+### Changed
+
+- **A move macOS ignores falls back sooner.** When macOS doesn't act on a move, Thaw starts dragging the icon after 0.7 seconds instead of 1.2. By @diazdesandi.
+
 ### Changed: Settings
 
 - **Troubleshooting has two fewer buttons.** "Reset Control Center" is gone: on macOS 27 it also erased your choices in System Settings > Menu Bar, and "Restore Missing Items" brings items back without deleting anything. "Quit and Clear Cache" is gone too: saved item pictures are now thrown away after every update, which is what that button was for. By @diazdesandi.

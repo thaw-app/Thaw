@@ -132,7 +132,7 @@ nonisolated enum Constants {
         /// silently drops most writes, and an honored write starts shifting the
         /// bar within a poll or two. Only the "bar never moved" case bails
         /// early; once it moves, the wait runs to the full deadline.
-        static let menuBarAgentBarMovedProbeWindow: Duration = .milliseconds(1200)
+        static let menuBarAgentBarMovedProbeWindow: Duration = .milliseconds(700)
 
         // MARK: Show-on-hover retention
 
