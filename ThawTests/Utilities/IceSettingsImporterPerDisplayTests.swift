@@ -2,7 +2,6 @@
 //  IceSettingsImporterPerDisplayTests.swift
 //  Project: Thaw
 //
-//  Copyright (Ice) © 2023–2025 Jordan Baird
 //  Copyright (Thaw) © 2026 Toni Förster
 //  Licensed under the GNU GPLv3
 
@@ -50,7 +49,7 @@ struct IceSettingsImporterPerDisplayTests {
             let configs = try JSONDecoder()
                 .decode([String: DisplayIceBarConfiguration].self, from: data)
             // Every connected display must come out of the migration with a
-            // configuration, keyed by its UUID — no more, no less.
+            // configuration keyed by its UUID, no more and no less.
             let connectedUUIDs = Set(NSScreen.screens.compactMap {
                 Bridging.getDisplayUUIDString(for: $0.displayID)
             })

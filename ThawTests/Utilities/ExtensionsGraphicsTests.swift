@@ -2,7 +2,6 @@
 //  ExtensionsGraphicsTests.swift
 //  Project: Thaw
 //
-//  Copyright (Ice) © 2023–2025 Jordan Baird
 //  Copyright (Thaw) © 2026 Toni Förster
 //  Licensed under the GNU GPLv3
 
@@ -45,16 +44,12 @@ private var hasWindowServerSession: Bool {
 ///
 /// Every one of these extensions is declared without `nonisolated` in a module
 /// built with `SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor`, so the suites that
-/// touch them are pinned to the main actor. `CGImage` is the exception — that
+/// touch them are pinned to the main actor. `CGImage` is the exception: that
 /// extension is explicitly `nonisolated`.
 ///
-/// Deliberately out of reach here:
-///
-/// - `CGImage.averageColor`, `CGImage.isTransparent`, and
-///   `CGImage.detachedCopy` are covered by `CGImageAnalysisTests` and
-///   `CGImageDetachedCopyTests`.
-/// - `CGColor.brightness` cannot be driven down its `nil` branch: every color
-///   space that can be constructed from a unit test converts to RGB.
+/// `CGImage.averageColor`, `CGImage.isTransparent`, and
+/// `CGImage.detachedCopy` are covered by `CGImageAnalysisTests` and
+/// `CGImageDetachedCopyTests`.
 @Suite("Graphics extensions")
 struct ExtensionsGraphicsTests {
     // MARK: - CGColor
@@ -114,18 +109,62 @@ struct ExtensionsGraphicsTests {
                 #expect(brightness > CGFloat(bound))
             }
         }
+
+        /// A pattern color carries a drawing callback instead of components,
+        /// so there is nothing for Core Graphics to match into device RGB.
+        /// It is the only color that can be built in process whose conversion
+        /// genuinely fails.
+        private func patternColor() throws -> CGColor {
+            var callbacks = CGPatternCallbacks(
+                version: 0,
+                drawPattern: { _, context in
+                    context.setFillColor(gray: 0, alpha: 1)
+                    context.fill(CGRect(x: 0, y: 0, width: 1, height: 1))
+                },
+                releaseInfo: nil
+            )
+            let pattern = try #require(
+                CGPattern(
+                    info: nil,
+                    bounds: CGRect(x: 0, y: 0, width: 1, height: 1),
+                    matrix: .identity,
+                    xStep: 1,
+                    yStep: 1,
+                    tiling: .constantSpacing,
+                    isColored: true,
+                    callbacks: &callbacks
+                ),
+                "Could not create a pattern"
+            )
+            let space = try #require(
+                CGColorSpace(patternBaseSpace: nil),
+                "Could not create a pattern color space"
+            )
+            var alpha: CGFloat = 1
+            return try #require(
+                CGColor(patternSpace: space, pattern: pattern, components: &alpha),
+                "Could not create a pattern color"
+            )
+        }
+
+        @Test("A color that will not convert to RGB has no brightness")
+        func unconvertibleColorHasNoBrightness() throws {
+            let color = try patternColor()
+
+            // The conversion, not the component count, is what fails: a
+            // pattern color does report a component, its alpha.
+            #expect(color.numberOfComponents == 1)
+            #expect(color.converted(to: CGColorSpaceCreateDeviceRGB(), intent: .defaultIntent, options: nil) == nil)
+            #expect(color.brightness == nil)
+        }
     }
 
     // MARK: - CGImage transparency trimming
 
     /// `trimmingTransparency(around:alphaThreshold:)` and its private
-    /// `TransparencyContext` are what turn a captured menu bar item into a
-    /// tightly cropped icon, so an off-by-one inset or a mishandled empty image
-    /// shows up as a visibly misaligned or missing item.
-    ///
-    /// The cases below assert on the trimmed *dimensions* rather than the
-    /// origin, which keeps them independent of the row order of the underlying
-    /// bitmap.
+    /// `TransparencyContext` turn a captured menu bar item into a tightly
+    /// cropped icon. The cases assert on the trimmed dimensions, not the
+    /// origin, so they do not depend on the bitmap's row order.
     @Suite("CGImage transparency trimming")
     struct TransparencyTrimmingTests {
         @Test("Clear margins are trimmed away from all four edges")
@@ -487,6 +526,84 @@ struct ExtensionsGraphicsTests {
             await closer.value
 
             #expect(!panel.isVisible)
+        }
+    }
+
+    // MARK: - NSScreen
+
+    /// Values depend on the attached displays, so these assert invariants.
+    /// Not covered: `invalidateMenuBarHeightCache()` drops state the host app
+    /// relies on, and the secondary-screen branch of
+    /// `computeApplicationMenuFrame()` needs a second display.
+    @MainActor
+    @Suite("NSScreen on the attached displays", .serialized)
+    struct NSScreenTests {
+        @Test("The first screen is the primary display")
+        func firstScreenIsPrimaryDisplay() throws {
+            let screen = try #require(NSScreen.screens.first)
+            #expect(screen.displayID == CGMainDisplayID())
+        }
+
+        @Test("The notch frame exists exactly when the screen has a notch")
+        func notchFrameMatchesHasNotch() {
+            for screen in NSScreen.screens {
+                #expect((screen.frameOfNotch != nil) == screen.hasNotch)
+                if let notch = screen.frameOfNotch {
+                    #expect(notch.width > 0)
+                }
+            }
+        }
+
+        @Test("The screen with the mouse contains the mouse location")
+        func screenWithMouseContainsMouse() {
+            if let screen = NSScreen.screenWithMouse {
+                #expect(screen.frame.contains(NSEvent.mouseLocation))
+            }
+        }
+
+        @Test("The screen with the active menu bar is an attached screen")
+        func screenWithActiveMenuBarIsAttached() {
+            if let screen = NSScreen.screenWithActiveMenuBar {
+                #expect(NSScreen.screens.contains(screen))
+            }
+        }
+
+        @Test("The menu bar height estimate is always positive and stable")
+        func menuBarHeightEstimateIsPositiveAndStable() throws {
+            let screen = try #require(NSScreen.screens.first)
+            let first = screen.getMenuBarHeightEstimate()
+            let second = screen.getMenuBarHeightEstimate()
+            #expect(first > 0)
+            #expect(second == first)
+            // The optional variant agrees with the estimate whenever the live
+            // window-list query succeeds.
+            if let live = screen.getMenuBarHeight() {
+                #expect(live == first)
+            }
+        }
+
+        @Test("Cleaning up disconnected display caches keeps connected entries")
+        func cleanupKeepsConnectedDisplayEntries() throws {
+            let screen = try #require(NSScreen.screens.first)
+            let before = screen.getMenuBarHeightEstimate()
+            NSScreen.cleanupDisconnectedDisplayCaches()
+            NSScreen.cleanupDisconnectedDisplayCaches()
+            #expect(screen.getMenuBarHeightEstimate() == before)
+        }
+
+        @Test("The application menu frame, when readable, has a positive width")
+        func applicationMenuFrameHasPositiveWidth() throws {
+            let screen = try #require(NSScreen.screens.first)
+            // Without Accessibility trust this returns nil; with it, the reduced
+            // union of enabled menu children. Both arms are valid outcomes.
+            if let frame = screen.getApplicationMenuFrame() {
+                #expect(frame.width > 0)
+                // A second read is served from the per-display cache.
+                #expect(screen.getApplicationMenuFrame() == frame)
+            } else {
+                #expect(screen.getApplicationMenuFrame(bypassCache: true) == nil)
+            }
+            _ = screen.isSystemMenuBarVisible()
         }
     }
 }

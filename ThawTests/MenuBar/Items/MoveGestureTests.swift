@@ -1,0 +1,252 @@
+//
+//  MoveGestureTests.swift
+//  Project: Thaw
+//
+//  Copyright (Thaw) © 2026 Toni Förster
+//  Licensed under the GNU GPLv3
+
+import CoreGraphics
+import Foundation
+import Testing
+@testable import Thaw
+
+/// The faithful-drag gesture builder used by the on-item drop strategy.
+@Suite("Move gesture")
+struct MoveGestureTests {
+    private typealias Gesture = MenuBarItemManager.MoveGesture
+    private typealias Path = MenuBarItemManager.HorizontalPathDisposition
+    private typealias Transport = MenuBarItemManager.MoveTransportDecision
+
+    @Test("A faithful drag opens with a down on the item and closes with an up on the destination")
+    func gestureIsWellFormed() {
+        let start = CGPoint(x: 1452, y: 16.5)
+        let end = CGPoint(x: -3725, y: 16.5)
+
+        let steps = Gesture.faithfulDrag(start: start, end: end, intermediateSteps: 3)
+
+        #expect(steps.first == Gesture.Step(subtype: .mouseDown, point: start))
+        #expect(steps.last == Gesture.Step(subtype: .mouseUp, point: end))
+        #expect(steps.dropLast().last == Gesture.Step(subtype: .mouseDragged, point: end))
+        // down + 3 interpolated drags + settle drag + up.
+        #expect(steps.count == 6)
+        #expect(steps.count(where: { $0.subtype == .mouseDown }) == 1)
+        #expect(steps.count(where: { $0.subtype == .mouseUp }) == 1)
+        #expect(steps.count(where: { $0.subtype == .mouseDragged }) == 4)
+    }
+
+    /// At least one interpolated drag, so this path never teleports with a bare down/up pair.
+    @Test("The intermediate step count is clamped to at least one")
+    func intermediateStepsAreClamped() {
+        let start = CGPoint(x: 1000, y: 16.5)
+        let end = CGPoint(x: 200, y: 16.5)
+
+        let zero = Gesture.faithfulDrag(start: start, end: end, intermediateSteps: 0)
+        let negative = Gesture.faithfulDrag(start: start, end: end, intermediateSteps: -5)
+
+        // down + 1 interpolated drag + settle drag + up.
+        #expect(zero.count == 4)
+        #expect(negative.count == 4)
+    }
+
+    /// Every event shares the pinned vertical coordinate. Control Center reads a path
+    /// that dips below the bar as a removal, which orphaned a hosted item's scene.
+    @Test("A gesture pinned to one bar line keeps every event on that line")
+    func gestureStaysOnTheBarLine() {
+        let barY: CGFloat = 16.5
+        let start = CGPoint(x: 1452, y: barY)
+        let end = CGPoint(x: -3725, y: barY)
+
+        let steps = Gesture.faithfulDrag(start: start, end: end, intermediateSteps: 4)
+
+        #expect(steps.allSatisfy { $0.point.y == barY })
+    }
+
+    /// Interpolated points advance monotonically without overshooting either endpoint.
+    @Test("Interpolated points advance monotonically and stay between the endpoints")
+    func interpolatedPointsAreMonotonic() {
+        let start = CGPoint(x: 1452, y: 16.5)
+        let end = CGPoint(x: -3725, y: 16.5)
+
+        let steps = Gesture.faithfulDrag(start: start, end: end, intermediateSteps: 5)
+        // The mouse-up repeats the settle drag's point, so check monotonicity only through the final drag.
+        let xs = steps.dropLast().map(\.point.x)
+
+        // Strictly decreasing overall (start.x > end.x here).
+        #expect(zip(xs, xs.dropFirst()).allSatisfy { $0 > $1 })
+        let lowerBound = min(start.x, end.x)
+        let upperBound = max(start.x, end.x)
+        #expect(steps.allSatisfy { $0.point.x >= lowerBound && $0.point.x <= upperBound })
+    }
+
+    @Test("A rightward move advances left to right")
+    func rightwardMoveAdvances() {
+        let start = CGPoint(x: 200, y: 16.5)
+        let end = CGPoint(x: 1000, y: 16.5)
+
+        let steps = Gesture.faithfulDrag(start: start, end: end, intermediateSteps: 3)
+        let xs = steps.dropLast().map(\.point.x)
+
+        #expect(zip(xs, xs.dropFirst()).allSatisfy { $0 < $1 })
+    }
+
+    // MARK: Transport safety
+
+    @Test("Horizontal paths distinguish safe segments, notch crossings, and invalid endpoints")
+    func horizontalPathClassification() {
+        let display: ClosedRange<CGFloat> = 0 ... 1470
+        let notch: ClosedRange<CGFloat> = 645 ... 825
+
+        #expect(MenuBarItemManager.horizontalPathDisposition(
+            sourceX: 100,
+            destinationX: 600,
+            displayXRange: display,
+            reservedNotchXRange: notch
+        ) == .sameSafeSegment)
+        #expect(MenuBarItemManager.horizontalPathDisposition(
+            sourceX: 900,
+            destinationX: 1400,
+            displayXRange: display,
+            reservedNotchXRange: notch
+        ) == .sameSafeSegment)
+        #expect(MenuBarItemManager.horizontalPathDisposition(
+            sourceX: 600,
+            destinationX: 900,
+            displayXRange: display,
+            reservedNotchXRange: notch
+        ) == .crossesNotch)
+        #expect(MenuBarItemManager.horizontalPathDisposition(
+            sourceX: 700,
+            destinationX: 900,
+            displayXRange: display,
+            reservedNotchXRange: notch
+        ) == .invalidEndpoint)
+        #expect(MenuBarItemManager.horizontalPathDisposition(
+            sourceX: -1,
+            destinationX: 900,
+            displayXRange: display,
+            reservedNotchXRange: notch
+        ) == .invalidEndpoint)
+    }
+
+    @Test("Faithful dragging is selected only for one safe on-screen segment")
+    func faithfulTransportSelection() {
+        let selected: CGDirectDisplayID = 1
+        #expect(MenuBarItemManager.strictTransportDecision(
+            faithfulDragEnabled: true,
+            itemIsControlItem: false,
+            itemNeedsPointerTravel: false,
+            sourceDisplayID: selected,
+            destinationDisplayID: selected,
+            selectedDisplayID: selected,
+            horizontalPath: .sameSafeSegment
+        ) == .use(.faithfulDrag))
+        #expect(MenuBarItemManager.strictTransportDecision(
+            faithfulDragEnabled: false,
+            itemIsControlItem: false,
+            itemNeedsPointerTravel: false,
+            sourceDisplayID: selected,
+            destinationDisplayID: selected,
+            selectedDisplayID: selected,
+            horizontalPath: .sameSafeSegment
+        ) == .use(.teleport))
+        #expect(MenuBarItemManager.strictTransportDecision(
+            faithfulDragEnabled: true,
+            itemIsControlItem: true,
+            itemNeedsPointerTravel: false,
+            sourceDisplayID: selected,
+            destinationDisplayID: selected,
+            selectedDisplayID: selected,
+            horizontalPath: .sameSafeSegment
+        ) == .use(.teleport))
+    }
+
+    @Test("An item with no addressable owner always gets a real drag")
+    func unattributableItemForcesFaithfulDrag() {
+        let selected: CGDirectDisplayID = 1
+        // Measured on macOS 26.7 against a mirrored Live Activity: a teleport
+        // presses at the destination and posts no dragged step, so it is ignored
+        // outright; a press inside the item released without travel moves it and
+        // macOS puts it straight back. Only a real drag is kept, so the gesture
+        // is forced whatever the faithful-drag setting says.
+        #expect(MenuBarItemManager.strictTransportDecision(
+            faithfulDragEnabled: false,
+            itemIsControlItem: false,
+            itemNeedsPointerTravel: true,
+            sourceDisplayID: selected,
+            destinationDisplayID: selected,
+            selectedDisplayID: selected,
+            horizontalPath: .sameSafeSegment
+        ) == .use(.faithfulDrag))
+        // A parked endpoint keeps its own transport: its release has to stay on
+        // the planned off-screen point, which a drag cannot reach safely.
+        #expect(MenuBarItemManager.strictTransportDecision(
+            faithfulDragEnabled: false,
+            itemIsControlItem: false,
+            itemNeedsPointerTravel: true,
+            sourceDisplayID: nil,
+            destinationDisplayID: selected,
+            selectedDisplayID: selected,
+            horizontalPath: .invalidEndpoint
+        ) == .use(.parkedTeleport))
+    }
+
+    @Test("Parked and cross-notch teleports are explicit decisions")
+    func explicitTeleportSelection() {
+        let selected: CGDirectDisplayID = 1
+        #expect(MenuBarItemManager.strictTransportDecision(
+            faithfulDragEnabled: true,
+            itemIsControlItem: false,
+            itemNeedsPointerTravel: false,
+            sourceDisplayID: nil,
+            destinationDisplayID: selected,
+            selectedDisplayID: selected,
+            horizontalPath: .invalidEndpoint
+        ) == .use(.parkedTeleport))
+        #expect(MenuBarItemManager.strictTransportDecision(
+            faithfulDragEnabled: true,
+            itemIsControlItem: false,
+            itemNeedsPointerTravel: false,
+            sourceDisplayID: selected,
+            destinationDisplayID: selected,
+            selectedDisplayID: selected,
+            horizontalPath: .crossesNotch
+        ) == .use(.crossNotchTeleport))
+    }
+
+    @Test("Cross-display and invalid on-screen paths are rejected")
+    func unsafeTransportIsRejected() {
+        let selected: CGDirectDisplayID = 1
+        let other: CGDirectDisplayID = 2
+        #expect(MenuBarItemManager.strictTransportDecision(
+            faithfulDragEnabled: true,
+            itemIsControlItem: false,
+            itemNeedsPointerTravel: false,
+            sourceDisplayID: selected,
+            destinationDisplayID: other,
+            selectedDisplayID: selected,
+            horizontalPath: .sameSafeSegment
+        ) == .rejectUnsafePath)
+        #expect(MenuBarItemManager.strictTransportDecision(
+            faithfulDragEnabled: true,
+            itemIsControlItem: false,
+            itemNeedsPointerTravel: false,
+            sourceDisplayID: selected,
+            destinationDisplayID: selected,
+            selectedDisplayID: selected,
+            horizontalPath: .invalidEndpoint
+        ) == .rejectUnsafePath)
+    }
+
+    @Test("A cross-notch teleport posts no intermediate center coordinate")
+    func crossNotchTeleportUsesExactDestination() {
+        let destination = CGPoint(x: 1200, y: 0)
+        let locations = MenuBarItemManager.moveEventLocations(
+            targetPoints: (start: destination, end: destination),
+            faithfulDragStart: nil
+        )
+
+        #expect(locations.press == destination)
+        #expect(locations.release == destination)
+        #expect(locations.press.x != 735)
+    }
+}

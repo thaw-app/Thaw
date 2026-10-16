@@ -11,8 +11,6 @@ import Testing
 
 /// Pins ``AdvancedSettings.normalizedIconRefreshInterval`` to the discrete
 /// grid the "Icon refresh rate" slider can express: Off, or 1…30 fps.
-///
-/// Pure function; safe to run in parallel with the rest of the suite.
 @Suite("Icon refresh interval normalization")
 struct IconRefreshIntervalNormalizationTests {
     @Test("Zero stays Off")

@@ -2,36 +2,22 @@
 //  PartitionUnmanagedUIDsTests.swift
 //  Project: Thaw
 //
-//  Copyright (Ice) © 2023–2025 Jordan Baird
 //  Copyright (Thaw) © 2026 Toni Förster
 //  Licensed under the GNU GPLv3
 
 import Testing
 @testable import Thaw
 
-/// Characterization tests for LayoutSolver.partitionUnmanagedUIDs, the
-/// pure filter Phase 3 of applyProfileLayout uses to decide which UIDs
-/// flow into planUnmanagedPlacement.
+/// `LayoutSolver.partitionUnmanagedUIDs`, the filter applyProfileLayout uses to
+/// pick the UIDs that reach planUnmanagedPlacement.
 ///
-/// Pins down two invariants the field-reported "Thaw icon keeps moving"
-/// regression turned out to depend on:
-///
-/// 1. All three Thaw control items (hidden, alwaysHidden, visible) are
-///    excluded from the result. saveSectionOrder omits control items
-///    from savedSectionOrder by design, so they would never appear in
-///    desiredUIDs and would otherwise leak into planUnmanagedPlacement,
-///    which routes them through NewItemsPlacement and causes the LCS
-///    planner to emit spurious control-item moves every cycle.
-/// 2. Input order is preserved. Downstream consumers (LCS planner) use
-///    the filtered sequence as iteration order for placement
-///    application, so reordering here would silently change placement
-///    outcomes.
+/// 1. All three Thaw control items are excluded. saveSectionOrder never saves
+///    them, so they would leak into NewItemsPlacement and make the LCS planner
+///    emit spurious control-item moves every cycle ("Thaw icon keeps moving").
+/// 2. Input order is preserved; the LCS planner iterates it for placement.
 @Suite("Partition unmanaged UIDs")
 struct PartitionUnmanagedUIDsTests {
-    /// All three control items are present in current and excluded by
-    /// the filter, even when none of them appear in desiredUIDs. This
-    /// is the case the original bug missed (visibleCtrlUID exclusion
-    /// was absent from the inline filter).
+    /// The original bug missed the visible control item.
     @Test("All three control items are excluded")
     func allThreeControlItemsExcluded() {
         let hidden = "com.stonerl.Thaw:Thaw.ControlItem.Hidden"
@@ -52,9 +38,7 @@ struct PartitionUnmanagedUIDsTests {
         #expect(result == [app])
     }
 
-    /// `nil` control UIDs are tolerated (the alwaysHidden control item
-    /// is absent on configurations where the user disabled that
-    /// section). Other exclusions still apply.
+    /// A nil control UID (such as a disabled always-hidden section) is tolerated.
     @Test("Nil control UIDs are tolerated and other exclusions still hold")
     func nilControlUIDsToleratedAndOtherExclusionsHold() {
         let hidden = "com.stonerl.Thaw:Thaw.ControlItem.Hidden"
@@ -75,10 +59,7 @@ struct PartitionUnmanagedUIDsTests {
         #expect(result == [unsaved])
     }
 
-    /// Items present in desiredUIDs (i.e., already covered by
-    /// savedSectionOrder or the profile spec) are excluded. Only items
-    /// the desired sequence doesn't know about should reach
-    /// planUnmanagedPlacement.
+    /// Only items the desired sequence doesn't know should reach planUnmanagedPlacement.
     @Test("Items already in desiredUIDs are excluded")
     func itemsInDesiredUIDsAreExcluded() {
         let saved = "com.example.saved:Item-0"
@@ -96,11 +77,8 @@ struct PartitionUnmanagedUIDsTests {
         #expect(result == [unsaved])
     }
 
-    /// Items passed in provisionalIdentityUIDs are excluded even though they
-    /// are absent from desiredUIDs and are not control items. This is the
-    /// Little Snitch orphan case: a Control-Center-hosted widget with no
-    /// resolved source PID must not be treated as an unmanaged arrival and
-    /// relocated.
+    /// The Little Snitch orphan case: a Control Center-hosted widget with no
+    /// resolved source PID must not be relocated as an unmanaged arrival.
     @Test("Provisional-identity UIDs are excluded")
     func provisionalIdentityUIDsAreExcluded() {
         let orphan = "com.apple.controlcenter:Item-0"
@@ -118,9 +96,7 @@ struct PartitionUnmanagedUIDsTests {
         #expect(result == [app])
     }
 
-    /// Input order is preserved. The LCS planner iterates the result in
-    /// order to decide insertion positions, so reordering here would
-    /// silently change placement outcomes for the user.
+    /// The LCS planner iterates the result to decide insertion positions.
     @Test("Input order is preserved")
     func inputOrderIsPreserved() {
         let a = "com.example.a:Item-0"
@@ -140,8 +116,7 @@ struct PartitionUnmanagedUIDsTests {
         #expect(result == [c, a, b])
     }
 
-    /// Empty currentFlat returns an empty result without crashing on
-    /// any nil/non-nil control UID combination.
+    /// No crash on any nil/non-nil control UID combination.
     @Test("An empty current layout returns an empty result")
     func emptyCurrentFlatReturnsEmpty() {
         let result = LayoutSolver.partitionUnmanagedUIDs(

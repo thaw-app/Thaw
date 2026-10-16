@@ -2,7 +2,6 @@
 //  DisplaySettingsManagerURINotificationTests.swift
 //  Project: Thaw
 //
-//  Copyright (Ice) © 2023–2025 Jordan Baird
 //  Copyright (Thaw) © 2026 Toni Förster
 //  Licensed under the GNU GPLv3
 
@@ -11,9 +10,8 @@ import Testing
 @testable import Thaw
 
 /// A display UUID no real display can hold. Seeding `configurations` with it
-/// satisfies the `hasConfig` half of the handler's validation guard, which is
-/// what makes the whole `specific:UUID` branch reachable without a second
-/// monitor plugged in.
+/// passes the handler's `hasConfig` guard, so the `specific:UUID` branch is
+/// reachable without a second monitor.
 private let offscreenUUID = "TEST-DISPLAY-UUID-A"
 
 /// Builds the notification `SettingsURIHandler.postPerDisplaySettingsDidChangeNotification`
@@ -24,45 +22,36 @@ private func perDisplayChange(_ userInfo: [AnyHashable: Any]) -> Notification {
 }
 
 /// Covers the Settings-URI side of ``DisplaySettingsManager``: `parseScope`
-/// and `handleExternalPerDisplaySettingsChange`.
+/// and `handleExternalPerDisplaySettingsChange`. A hand-built `Notification`
+/// skips `performSetup(with:)`, which needs a live `AppState` and installs a
+/// one-second debounced observer.
 ///
-/// Both are internal purely so this suite exists. Driving the handler with a
-/// hand-built `Notification` skips `performSetup(with:)`, which needs a live
-/// `AppState` and installs a one-second debounced observer — neither is
-/// available or deterministic in a unit test.
-///
-/// The pivot is that a `specific:UUID` scope reaches every setter without ever
-/// consulting `NSScreen`, as long as `configurations` already holds that UUID.
-/// So every setter, clamp, and parse-failure path is asserted against
-/// ``offscreenUUID``, and the result is identical on a laptop, a docked desk,
-/// and a headless CI runner.
+/// A `specific:UUID` scope reaches every setter without consulting `NSScreen`
+/// once `configurations` holds that UUID, so setters, clamps, and parse
+/// failures are asserted against ``offscreenUUID`` and behave the same on a
+/// laptop, a docked desk, and a headless CI runner.
 ///
 /// Deliberately **not** covered:
 ///
-/// - The `active` scope's write path (`setUseIceBar(_:forActiveDisplay:)` and
-///   `toggleIceBarForActiveDisplay`). Both resolve their target through
-///   `Bridging.getActiveMenuBarDisplayUUID()`, so a test asserting a mutation
-///   would pass only on a machine with a menu bar and would assert nothing
-///   about the code under test on one without.
-/// - The relaunch/spacing consequences of a change. `configurations`' `didSet`
-///   calls `applyActiveDisplaySpacing`, which returns immediately while
-///   `appState` is `nil`; `DisplaySettingsManagerSpacingGateTests` covers that
-///   gate separately.
+/// - The `active` scope's write path. It resolves through
+///   `Bridging.getActiveMenuBarDisplayUUID()`, so a test would only mean
+///   something on a machine with a menu bar.
+/// - Relaunch and spacing consequences. `applyActiveDisplaySpacing` returns
+///   early while `appState` is `nil`; `DisplaySettingsManagerSpacingGateTests`
+///   covers that gate.
 ///
-/// The scope-wide broadcasts (`allEnabled`, `allNonIceBar`) do walk
-/// `NSScreen.screens`, so they are asserted two ways: over whatever displays
-/// happen to be attached (vacuously true when there are none) and, in every
-/// case, that the broadcast never reaches ``offscreenUUID``.
+/// Scope-wide broadcasts walk `NSScreen.screens`, so they're asserted over the
+/// attached displays (vacuously true with none) and as never reaching
+/// ``offscreenUUID``.
 ///
-/// `DisplaySettingsManager.init` reads `Defaults`, and its `didSet` observers
-/// write back, so every manager is built inside `withScratchDefaults`.
+/// `init` reads `Defaults` and its `didSet` observers write back, so every
+/// manager is built inside `withScratchDefaults`.
 @MainActor
 @Suite("Display settings URI notifications", .serialized)
 struct DisplaySettingsManagerURINotificationTests {
-    /// Builds a manager whose only configured display is `uuid`, on top of a
-    /// known-default global. Wiping `configurations` matters: it puts every
-    /// genuinely connected display back on the global template, so the
-    /// scope-wide tests below start from a state the machine cannot vary.
+    /// Builds a manager whose only configured display is `uuid`. Wiping
+    /// `configurations` puts every connected display on the global template,
+    /// so scope-wide tests start from a state the machine can't vary.
     private func makeManager(
         _ configuration: DisplayIceBarConfiguration = .defaultConfiguration,
         uuid: String = offscreenUUID
@@ -110,9 +99,8 @@ struct DisplaySettingsManagerURINotificationTests {
         #expect(uuid == nil, "an unrecognised scope must not invent a display UUID")
     }
 
-    /// Everything after the first `specific:` is the UUID, verbatim — the
-    /// prefix is stripped by length, not split on `:`. A UUID that itself
-    /// contains a colon therefore survives intact.
+    /// Everything after the first `specific:` is the UUID, verbatim: the
+    /// prefix is stripped by length, not split on `:`, so a colon survives.
     @Test("A specific scope carries everything after the prefix as the UUID", arguments: [
         ("specific:ABC-123", "ABC-123"),
         ("specific:", ""),
@@ -450,9 +438,9 @@ struct DisplaySettingsManagerURINotificationTests {
 
     // MARK: iceBarLocation
 
-    /// The handler reads `stringValue` as an `Int` raw value, which is exactly
-    /// what `SettingsURIHandler` posts — it normalises a name like
-    /// `mousePointer` to `String(location.rawValue)` before posting.
+    /// The handler reads `stringValue` as an `Int` raw value, which is what
+    /// `SettingsURIHandler` posts after normalising a name like `mousePointer`
+    /// to `String(location.rawValue)`.
     @Test("An iceBarLocation raw value is written to the named display", arguments: [
         ("0", IceBarLocation.dynamic),
         ("1", IceBarLocation.mousePointer),
@@ -675,10 +663,8 @@ struct DisplaySettingsManagerURINotificationTests {
         }
     }
 
-    /// A scope-wide change only ever walks `NSScreen.screens`, so a display
-    /// that is configured but not attached must sit it out. This is the case
-    /// a user hits after unplugging a monitor: a broadcast must not silently
-    /// rewrite the settings they saved for it.
+    /// A scope-wide change walks `NSScreen.screens`, so a configured but
+    /// unplugged display sits it out and keeps the settings saved for it.
     @Test("A scope-wide change never reaches a display that is not connected", arguments: [
         "active",
         "allEnabled",

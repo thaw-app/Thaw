@@ -2,20 +2,16 @@
 //  SavedPositionLookupTests.swift
 //  Project: Thaw
 //
-//  Copyright (Ice) © 2023–2025 Jordan Baird
 //  Copyright (Thaw) © 2026 Toni Förster
 //  Licensed under the GNU GPLv3
 
 import Testing
 @testable import Thaw
 
-/// Characterization tests for the savedPosition lookup helpers used by
-/// the position-aware restore and unmanaged-placement work.
 @Suite("Saved position lookup")
 struct SavedPositionLookupTests {
     // MARK: - savedPosition (exact match)
 
-    /// An identifier present in a saved section returns its (section, index).
     @Test("An identifier in the visible section returns its section and index")
     func exactMatchInVisibleSection() {
         let saved: [String: [String]] = [
@@ -29,7 +25,6 @@ struct SavedPositionLookupTests {
         #expect(result == LayoutSolver.SavedPosition(section: .visible, index: 1))
     }
 
-    /// An identifier present in the hidden section returns .hidden.
     @Test("An identifier in the hidden section reports the hidden section")
     func exactMatchInHiddenSection() {
         let saved: [String: [String]] = [
@@ -43,7 +38,6 @@ struct SavedPositionLookupTests {
         #expect(result == LayoutSolver.SavedPosition(section: .hidden, index: 0))
     }
 
-    /// An identifier not in any saved section returns nil.
     @Test("An identifier absent from every section returns nil")
     func identifierNotFound() {
         let saved: [String: [String]] = [
@@ -56,15 +50,12 @@ struct SavedPositionLookupTests {
         #expect(result == nil)
     }
 
-    /// Empty savedSectionOrder returns nil.
     @Test("An empty saved section order returns nil")
     func emptySavedSectionOrder() {
         let result = LayoutSolver.savedPosition(for: "anything", in: [:])
         #expect(result == nil)
     }
 
-    /// Multi-instance: identifier app:Status:1 matches its exact saved
-    /// entry even when app:Status:0 also exists.
     @Test("A multi-instance identifier matches its own saved entry")
     func multiInstanceExactMatch() {
         let saved: [String: [String]] = [
@@ -79,7 +70,6 @@ struct SavedPositionLookupTests {
 
     // MARK: - savedPositionByBaseID (baseID fallback)
 
-    /// An exact match wins over a baseID fallback.
     @Test("An exact match wins over the baseID fallback")
     func baseIDFallbackExactMatchPreferred() {
         let saved: [String: [String]] = [
@@ -93,16 +83,12 @@ struct SavedPositionLookupTests {
                 "exact :1 match should win even though :0 (no suffix) shares the baseID")
     }
 
-    /// A relaunched instance with a different :N suffix finds a saved
-    /// slot via baseID match.
     @Test("An instance with a drifted suffix falls back to the baseID match")
     func baseIDFallbackForInstanceDrift() {
         let saved: [String: [String]] = [
             "hidden": ["com.example.app:Status", "com.example.app:Status:1"],
         ]
-        // A new instance shows up as :5 (e.g. spurious instanceIndex from
-        // ordering churn). The exact match fails; baseID fallback returns
-        // the first saved instance.
+        // A new instance at :5 (instanceIndex churn) misses the exact match and gets the first saved instance.
         let result = LayoutSolver.savedPositionByBaseID(
             for: "com.example.app:Status:5",
             in: saved
@@ -111,7 +97,6 @@ struct SavedPositionLookupTests {
                 "baseID fallback should return the first matching saved instance")
     }
 
-    /// Malformed identifier with no colon never matches.
     @Test("An identifier with no colon never matches")
     func malformedIdentifierNeverMatches() {
         let saved: [String: [String]] = [
@@ -126,9 +111,7 @@ struct SavedPositionLookupTests {
 
     // MARK: - baseID(forIdentifier:) extraction contract
 
-    /// The baseID helper extracts the `namespace:title` prefix used by every
-    /// saved-position and stale-instance lookup. Pin the contract so the
-    /// dedupe refactor (and any future copy) stays correct.
+    /// `namespace:title` is the key for every saved-position and stale-instance lookup.
     @Test("baseID(forIdentifier:) extracts the namespace:title prefix")
     func baseIDExtractionContract() {
         // Typical multi-instance identifier: drops the trailing instanceIndex.
@@ -136,12 +119,10 @@ struct SavedPositionLookupTests {
             == "com.example.app:Status")
         // Long tail past maxSplits: the third component keeps its own colons.
         #expect(LayoutSolver.baseID(forIdentifier: "a:b:c:d:e") == "a:b")
-        // Bare namespace:title: unchanged.
         #expect(LayoutSolver.baseID(forIdentifier: "com.example.app:Status")
             == "com.example.app:Status")
         // No colon at all: split yields a single subsequence, prefix(2) keeps it.
         #expect(LayoutSolver.baseID(forIdentifier: "no-colon-here") == "no-colon-here")
-        // Empty input: empty output.
         #expect(LayoutSolver.baseID(forIdentifier: "") == "")
     }
 }

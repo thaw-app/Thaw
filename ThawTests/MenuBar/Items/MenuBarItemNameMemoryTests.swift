@@ -2,7 +2,6 @@
 //  MenuBarItemNameMemoryTests.swift
 //  Project: Thaw
 //
-//  Copyright (Ice) © 2023–2025 Jordan Baird
 //  Copyright (Thaw) © 2026 Toni Förster
 //  Licensed under the GNU GPLv3
 
@@ -12,16 +11,12 @@ import Testing
 
 /// Pins which items may carry a remembered name across launches.
 ///
-/// The memory exists because the first cache pass after launch runs without
-/// source-PID resolution, so every item answers to the generic "Menu Bar
-/// Item" for the seconds the accessibility scan takes (#956). Restoring the
-/// previous name closes that window — but only where the key that name is
-/// stored under still means the same item next launch. Everything in this
-/// suite is about that second half: a generic label is a small annoyance,
-/// while a confidently wrong one gets clicked.
+/// The first cache pass after launch has no source PIDs, so items read
+/// "Menu Bar Item" until the AX scan finishes (#956). A remembered name is
+/// only safe where its key means the same item next launch; a wrong name
+/// gets clicked.
 ///
-/// Serialized: the tests replace and restore the process-wide
-/// `menuBarItemResolvedNames` defaults dictionary, which must not interleave.
+/// Serialized: the tests swap the process-wide `menuBarItemResolvedNames`.
 @Suite(.serialized)
 struct MenuBarItemNameMemoryTests {
     @Test("An ordinary app item is eligible")
@@ -35,9 +30,8 @@ struct MenuBarItemNameMemoryTests {
 
     @Test("A Control-Center-hosted item with a distinctive title is eligible")
     func distinctivelyTitledHostedItemIsEligible() {
-        // These are the items the #956 log shows going unnamed: hosted by
-        // Control Center, but carrying a title that names their owner, so
-        // the key stays meaningful across launches.
+        // Hosted by Control Center, but titled after their owner, so the key
+        // stays meaningful across launches.
         for title in ["raycastIcon", "com.goodsnooze.MacWhisper", "FocusModes"] {
             let item = MenuBarItem.fixture(
                 tag: .appItem(bundleID: "com.apple.controlcenter", title: title),
@@ -63,9 +57,7 @@ struct MenuBarItemNameMemoryTests {
 
     @Test("A generic slot stays refused at every instance index")
     func genericSlotRefusedAtEveryInstanceIndex() {
-        // The field log carries Item-0:7, Item-0:9 and Item-0:10 side by
-        // side. The index is what makes them distinct *this* session and is
-        // exactly what does not survive a relaunch.
+        // The index distinguishes Item-0:7 from Item-0:9 this session only.
         for index in 1...12 {
             let item = MenuBarItem.fixture(
                 tag: .appItem(
@@ -112,9 +104,7 @@ struct MenuBarItemNameMemoryTests {
 
     @Test("A refused item never reads back a name, even if one is in defaults")
     func refusedItemNeverReadsBack() {
-        // Guards the read side independently of the write side: even a
-        // dictionary hand-populated by an older build must not paint a name
-        // onto a generic slot.
+        // Even an older build's stored entry must not name a generic slot.
         let item = MenuBarItem.fixture(
             tag: .appItem(bundleID: "com.apple.controlcenter", title: "Item-0"),
             windowID: 700,
@@ -207,10 +197,8 @@ struct MenuBarItemNameMemoryTests {
 
     @Test("Refused items are never written into the memory")
     func refusedItemsAreNotRemembered() {
-        // sourcePID is set to a live process (this test runner), so the
-        // source-application filter passes and only the eligibility rule can
-        // keep this out of the dictionary. A dead hard-coded PID would let
-        // the test pass through the sourceApplication check instead.
+        // A live sourcePID passes the source-application filter, so only the
+        // eligibility rule can keep this out of the dictionary.
         let item = MenuBarItem.fixture(
             tag: .appItem(bundleID: "com.apple.controlcenter", title: "Item-0"),
             windowID: 1100,

@@ -2,16 +2,17 @@
 //  MenuBarAppearanceConfigurationTests.swift
 //  Project: Thaw
 //
-//  Copyright (Ice) © 2023–2025 Jordan Baird
 //  Copyright (Thaw) © 2026 Toni Förster
 //  Licensed under the GNU GPLv3
 
+import CoreGraphics
 import Foundation
 import Testing
 @testable import Thaw
 
 @Suite("Menu bar appearance configuration")
 struct MenuBarAppearanceConfigurationTests {
+    @MainActor
     @Suite("MenuBarAppearanceConfigurationV2")
     struct MenuBarAppearanceConfigurationV2Tests {
         // MARK: - Default Configuration Tests
@@ -98,6 +99,40 @@ struct MenuBarAppearanceConfigurationTests {
             let config2 = MenuBarAppearanceConfigurationV2.defaultConfiguration
 
             #expect(config1.hashValue == config2.hashValue)
+        }
+
+        // MARK: - Current Configuration Tests
+
+        private func partial(borderWidth: Double) -> MenuBarAppearancePartialConfiguration {
+            var partial = MenuBarAppearancePartialConfiguration.defaultConfiguration
+            partial.borderWidth = borderWidth
+            return partial
+        }
+
+        @Test("A static configuration ignores the light and dark pair")
+        func staticConfigurationIsUsedWhenNotDynamic() {
+            var configuration = MenuBarAppearanceConfigurationV2.defaultConfiguration
+            configuration.isDynamic = false
+            configuration.lightModeConfiguration = partial(borderWidth: 1)
+            configuration.darkModeConfiguration = partial(borderWidth: 2)
+            configuration.staticConfiguration = partial(borderWidth: 3)
+
+            #expect(configuration.current == configuration.staticConfiguration)
+            #expect(configuration.current.borderWidth == 3)
+        }
+
+        /// Light and dark match so the result doesn't depend on the host's appearance;
+        /// this pins that a dynamic configuration never reads `staticConfiguration`.
+        @Test("A dynamic configuration reads the mode pair, not the static one")
+        func dynamicConfigurationIgnoresTheStaticConfiguration() {
+            var configuration = MenuBarAppearanceConfigurationV2.defaultConfiguration
+            configuration.isDynamic = true
+            configuration.lightModeConfiguration = partial(borderWidth: 7)
+            configuration.darkModeConfiguration = partial(borderWidth: 7)
+            configuration.staticConfiguration = partial(borderWidth: 42)
+
+            #expect(configuration.current.borderWidth == 7)
+            #expect(configuration.current != configuration.staticConfiguration)
         }
     }
 
@@ -197,13 +232,61 @@ struct MenuBarAppearanceConfigurationTests {
         }
     }
 
+    // MARK: - MenuBarAppearanceConfigurationV1Tests
+
+    @MainActor
+    @Suite("MenuBarAppearanceConfigurationV1.hasRoundedShape")
+    struct MenuBarAppearanceConfigurationV1Tests {
+        private func configuration(
+            shapeKind: MenuBarShapeKind,
+            fullShapeInfo: MenuBarFullShapeInfo = .defaultValue,
+            splitShapeInfo: MenuBarSplitShapeInfo = .defaultValue
+        ) -> MenuBarAppearanceConfigurationV1 {
+            var configuration = MenuBarAppearanceConfigurationV1.defaultConfiguration
+            configuration.shapeKind = shapeKind
+            configuration.fullShapeInfo = fullShapeInfo
+            configuration.splitShapeInfo = splitShapeInfo
+            return configuration
+        }
+
+        private var squareFull: MenuBarFullShapeInfo {
+            MenuBarFullShapeInfo(leadingEndCap: .square, trailingEndCap: .square)
+        }
+
+        @Test("A shapeless configuration is never rounded")
+        func noShapeIsNeverRounded() {
+            // Round end caps are supplied on purpose: `noShape` must ignore
+            // them rather than read through to the full-shape info.
+            #expect(!configuration(shapeKind: .noShape, fullShapeInfo: .defaultValue).hasRoundedShape)
+        }
+
+        @Test("A full shape reads its rounding from the full shape info")
+        func fullShapeReadsFullShapeInfo() {
+            #expect(configuration(shapeKind: .full, fullShapeInfo: .defaultValue).hasRoundedShape)
+            #expect(!configuration(shapeKind: .full, fullShapeInfo: squareFull).hasRoundedShape)
+        }
+
+        @Test("A split shape reads its rounding from the split shape info")
+        func splitShapeReadsSplitShapeInfo() {
+            let squareSplit = MenuBarSplitShapeInfo(leading: squareFull, trailing: squareFull)
+            // The full-shape info is left rounded to prove the split arm does
+            // not read the wrong field.
+            #expect(configuration(shapeKind: .split, splitShapeInfo: .defaultValue).hasRoundedShape)
+            #expect(!configuration(shapeKind: .split, splitShapeInfo: squareSplit).hasRoundedShape)
+        }
+
+        /// V1 predates the notch shape; the case exists only via the shared enum, so
+        /// legacy must report it unrounded.
+        @Test("A notch shape is not rounded in the legacy format")
+        func notchShapeIsNeverRoundedInV1() {
+            #expect(!configuration(shapeKind: .notch).hasRoundedShape)
+        }
+    }
+
     // MARK: - MenuBarAppearanceV1MigrationTests
 
-    /// Tests for converting V1 appearance data — the format Ice used before its
-    /// `0.11.10` release — which reaches Thaw only through the Ice importer.
-    ///
-    /// `MenuBarAppearanceConfigurationV1` is main-actor isolated, as is the
-    /// importer that reads it, so these tests are too.
+    /// V1 appearance data (Ice before `0.11.10`) reaches Thaw only through the
+    /// Ice importer.
     @MainActor
     @Suite("V1 migration")
     struct MenuBarAppearanceV1MigrationTests {
@@ -261,6 +344,153 @@ struct MenuBarAppearanceConfigurationTests {
             #expect(configuration.staticConfiguration.backgroundOpacity == defaultPartial.backgroundOpacity)
             #expect(configuration.notchShapeInfo == defaultConfiguration.notchShapeInfo)
             #expect(configuration.isDynamic == defaultConfiguration.isDynamic)
+        }
+    }
+
+    /// The Thaw Bar keeps borrowing the menu bar's shape, tint and border
+    /// until someone opts out.
+    @MainActor
+    @Suite("Thaw Bar appearance")
+    struct ThawBarAppearanceTests {
+        @Test("The Thaw Bar follows the menu bar by default")
+        func defaultDoesNotOverride() {
+            #expect(!ThawBarAppearance.defaultConfiguration.overridesMenuBar)
+            #expect(!MenuBarAppearanceConfigurationV2.defaultConfiguration.thawBarAppearance.overridesMenuBar)
+        }
+
+        @Test("Without an override the menu bar's values are used")
+        func inheritsFromMenuBar() {
+            let configuration = withMutableCopy(of: MenuBarAppearanceConfigurationV2.defaultConfiguration) { config in
+                config.shapeKind = .full
+                config.staticConfiguration.tintKind = .solid
+                config.staticConfiguration.tintColor = .white
+                config.staticConfiguration.borderOnThawBar = true
+                config.staticConfiguration.borderWidth = 3
+            }
+
+            let resolved = configuration.resolvedThawBarAppearance
+
+            #expect(resolved.hasRoundedShape)
+            #expect(resolved.tintKind == .solid)
+            #expect(resolved.tintColor == CGColor.white)
+            #expect(resolved.hasBorder)
+            #expect(resolved.borderWidth == 3)
+        }
+
+        /// `MenuBarItemContainer` hardcoded this opacity, so reading the menu
+        /// bar's `tintOpacity` instead would restyle every existing install.
+        @Test("The inherited tint keeps its own opacity")
+        func inheritedTintOpacityIgnoresMenuBar() {
+            let configuration = withMutableCopy(of: MenuBarAppearanceConfigurationV2.defaultConfiguration) { config in
+                config.staticConfiguration.tintKind = .solid
+                config.staticConfiguration.tintOpacity = 0.9
+            }
+
+            #expect(configuration.resolvedThawBarAppearance.tintOpacity == ThawBarAppearance.inheritedTintOpacity)
+        }
+
+        /// The border is the one property that was already forked, so the menu
+        /// bar's own `borderOnMenuBar` must not leak into the panel.
+        @Test("A menu-bar-only border does not reach the Thaw Bar")
+        func menuBarOnlyBorderIsNotInherited() {
+            let configuration = withMutableCopy(of: MenuBarAppearanceConfigurationV2.defaultConfiguration) { config in
+                config.staticConfiguration.borderOnMenuBar = true
+                config.staticConfiguration.borderOnThawBar = false
+            }
+
+            #expect(!configuration.resolvedThawBarAppearance.hasBorder)
+        }
+
+        @Test("An override replaces every menu bar value")
+        func overrideWins() {
+            let configuration = withMutableCopy(of: MenuBarAppearanceConfigurationV2.defaultConfiguration) { config in
+                config.shapeKind = .full
+                config.staticConfiguration.tintKind = .solid
+                config.staticConfiguration.tintColor = .white
+                config.staticConfiguration.borderOnThawBar = true
+                config.thawBarAppearance = ThawBarAppearance(
+                    overridesMenuBar: true,
+                    hasRoundedShape: false,
+                    tintKind: .solid,
+                    tintColor: .black,
+                    tintGradient: .defaultMenuBarTint,
+                    tintOpacity: 0.75,
+                    hasBorder: false,
+                    borderColor: .black,
+                    borderWidth: 2
+                )
+            }
+
+            let resolved = configuration.resolvedThawBarAppearance
+
+            #expect(!resolved.hasRoundedShape)
+            #expect(resolved.tintColor == CGColor.black)
+            #expect(resolved.tintOpacity == 0.75)
+            #expect(!resolved.hasBorder)
+        }
+
+        /// Switching the toggle on must change nothing until something is edited.
+        @Test("Seeding an override changes nothing on screen")
+        func seedingIsInert() {
+            let configuration = withMutableCopy(of: MenuBarAppearanceConfigurationV2.defaultConfiguration) { config in
+                config.shapeKind = .full
+                config.staticConfiguration.tintKind = .gradient
+                config.staticConfiguration.borderOnThawBar = true
+                config.staticConfiguration.borderWidth = 3
+            }
+            let before = configuration.resolvedThawBarAppearance
+
+            let seeded = withMutableCopy(of: configuration) { config in
+                config.thawBarAppearance = ThawBarAppearance(seededFrom: before)
+            }
+
+            #expect(seeded.resolvedThawBarAppearance == before)
+        }
+
+        /// The panel has never drawn the wallpaper-derived kinds, so seeding
+        /// one would hand the editor a selection it cannot render.
+        @Test("Seeding drops a tint kind the Thaw Bar cannot draw")
+        func seedingDropsUnsupportedTintKind() {
+            let configuration = withMutableCopy(of: MenuBarAppearanceConfigurationV2.defaultConfiguration) { config in
+                config.staticConfiguration.tintKind = .adaptive
+            }
+
+            let seeded = ThawBarAppearance(seededFrom: configuration.resolvedThawBarAppearance)
+
+            #expect(seeded.tintKind == .noTint)
+        }
+
+        // MARK: - Codable
+
+        @Test("An override survives a round trip")
+        func encodeDecode() throws {
+            let original = ThawBarAppearance(
+                overridesMenuBar: true,
+                hasRoundedShape: true,
+                tintKind: .solid,
+                tintColor: .white,
+                tintGradient: .defaultMenuBarTint,
+                tintOpacity: 0.45,
+                hasBorder: true,
+                borderColor: .white,
+                borderWidth: 3
+            )
+
+            let data = try JSONEncoder().encode(original)
+            let decoded = try JSONDecoder().decode(ThawBarAppearance.self, from: data)
+
+            #expect(decoded == original)
+        }
+
+        /// Configurations written before this existed have no key for it, and
+        /// must keep following the menu bar rather than picking up a fork.
+        @Test("A configuration saved before the fork keeps following the menu bar")
+        func decodeWithMissingField() throws {
+            let data = Data("{}".utf8)
+
+            let decoded = try JSONDecoder().decode(MenuBarAppearanceConfigurationV2.self, from: data)
+
+            #expect(!decoded.thawBarAppearance.overridesMenuBar)
         }
     }
 }

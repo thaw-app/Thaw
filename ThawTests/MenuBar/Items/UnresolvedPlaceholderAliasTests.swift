@@ -2,7 +2,6 @@
 //  UnresolvedPlaceholderAliasTests.swift
 //  Project: Thaw
 //
-//  Copyright (Ice) © 2023–2025 Jordan Baird
 //  Copyright (Thaw) © 2026 Toni Förster
 //  Licensed under the GNU GPLv3
 
@@ -10,16 +9,12 @@ import CoreGraphics
 import Testing
 @testable import Thaw
 
-/// Pins the #905 identity-preference fallback: when the catalog already holds
-/// an app-owned identity for a Control Center-hosted slot that the source-PID
-/// cache has not resolved this cycle, the live placeholder is re-tagged under
-/// the owning app's bundle ID namespace so the Layout editor drag and the
-/// `move(...)` inner guard can both proceed.
+/// When the catalog already knows the app that owns an unresolved Control
+/// Center-hosted slot, the placeholder is re-tagged under that app's bundle ID
+/// so the Layout editor drag and `move(...)` can proceed (#905).
 ///
-/// Only the pure halves (`appBundleID(from:excluding:thawBundleID:)` and
-/// `aliasedItem(for:appBundleID:hostPID:)`) are tested here; the AppKit-bound
-/// snapshot-and-correlate flow in `LayoutBarItemView` lives behind an
-/// `AXIdentityCatalog` snapshot that is unit-tested separately.
+/// Only the pure halves are tested here; the `LayoutBarItemView` flow sits
+/// behind an `AXIdentityCatalog` snapshot tested separately.
 @Suite("Unresolved placeholder alias")
 struct UnresolvedPlaceholderAliasTests {
     private static let hostBundleIDs: Set<String> = [
@@ -171,23 +166,20 @@ struct UnresolvedPlaceholderAliasTests {
             hostPID: 9001
         ))
 
-        // The namespace becomes the app-owned bundle ID; the generic slot title
-        // (Item-N) and the instance index are preserved so the alias's UID
-        // matches the saved-layout key (#905: at.obdev.littlesnitch.agent:Item-0).
+        // Namespace becomes the app's bundle ID; title and instance index are kept so
+        // the UID matches the saved key (at.obdev.littlesnitch.agent:Item-0).
         #expect(alias.tag.namespace == .string(Self.littleSnitchBundleID))
         #expect(alias.tag.title == Self.placeholder.tag.title)
         #expect(alias.tag.instanceIndex == Self.placeholder.tag.instanceIndex)
 
-        // The window identity is preserved (the alias is purely a tagging
-        // override — synthetic drag events still address the live slot).
+        // Tagging override only: synthetic drags still address the live slot's window.
         #expect(alias.windowID == Self.placeholder.windowID)
         #expect(alias.ownerPID == Self.placeholder.ownerPID)
         #expect(alias.bounds == Self.placeholder.bounds)
         #expect(alias.title == Self.placeholder.title)
         #expect(alias.isOnScreen == Self.placeholder.isOnScreen)
 
-        // The resolved host PID becomes the item's sourcePID, which clears the
-        // provisional-identity gate the save path uses to drop placeholders.
+        // The host PID becomes sourcePID, clearing the provisional-identity save gate.
         #expect(alias.sourcePID == 9001)
     }
 
@@ -213,9 +205,7 @@ struct UnresolvedPlaceholderAliasTests {
             hostPID: 9001
         ))
 
-        // #905: savedSectionOrder/hidden[27] keyed the app-owned form
-        // `at.obdev.littlesnitch.agent:Item-0`; the alias must produce the
-        // same identifier so the saved-layout lookup succeeds.
+        // The saved layout keys the app-owned form, so the alias must match it.
         #expect(alias.uniqueIdentifier == "\(Self.littleSnitchBundleID):Item-0")
     }
 

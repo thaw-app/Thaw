@@ -194,14 +194,10 @@ final nonisolated class EventTap: @unchecked Sendable {
             return
         }
 
-        // Register this tap
         Self.registerTap(self)
 
-        // `withLockUnchecked` (not `withLock`) because `machPort`/`source`
-        // are `CFMachPort`/`CFRunLoopSource`, non-`Sendable` types that
-        // `withLock`'s `@Sendable` closure can't capture. Safe here: this is
-        // the only reference to these locals, handed off to `state` under
-        // the lock and never touched outside it again.
+        // `withLockUnchecked`: `CFMachPort`/`CFRunLoopSource` aren't `Sendable`.
+        // Safe, since these locals are handed to `state` and never touched again.
         state.withLockUnchecked { state in
             state.machPort = machPort
             state.source = source
@@ -351,11 +347,8 @@ final nonisolated class EventTap: @unchecked Sendable {
             return
         }
         Self.unregisterTap(self)
-        // Record whether the mach port cleanup requires balancing the retain
-        // taken at creation, but perform the release only after the lock
-        // scope exits: releasing `self` inside the critical section could
-        // trigger `deinit` (and thus re-entrant locking) while the lock is
-        // still held.
+        // Release the creation retain only after the lock exits: releasing
+        // `self` inside it could run `deinit` and re-enter the lock.
         let needsRelease = state.withLock { state -> Bool in
             if let source = state.source {
                 CFRunLoopRemoveSource(runLoop, source, .commonModes)

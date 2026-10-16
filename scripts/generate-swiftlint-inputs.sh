@@ -12,7 +12,7 @@ cd "$root"
 # on the Linux CI runner; locale collation would otherwise reorder entries that
 # differ only in case and fail the verification step.
 git ls-files '*.swift' \
-    | grep -E '^(MenuBarItemService|Shared|Thaw)/' \
+    | grep -E '^(MenuBarCaptureService|MenuBarItemService|Shared|Thaw)/' \
     | LC_ALL=C sort \
     | sed 's|^|$(SRCROOT)/|' \
     > "$output"

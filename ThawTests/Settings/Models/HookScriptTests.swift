@@ -2,7 +2,6 @@
 //  HookScriptTests.swift
 //  Project: Thaw
 //
-//  Copyright (Ice) © 2023–2025 Jordan Baird
 //  Copyright (Thaw) © 2026 Toni Förster
 //  Licensed under the GNU GPLv3
 
@@ -10,23 +9,15 @@ import Foundation
 import Testing
 @testable import Thaw
 
-/// Covers ``HookScript``'s model surface and its global-hook persistence.
+/// Covers ``HookScript``'s stored shape and its global-hook persistence.
+/// Running a hook is covered by `HookRunnerTests`.
 ///
-/// `HookRunnerTests` covers what happens when a hook actually runs. What is
-/// left, and what this suite pins, is everything around that: the stored shape
-/// the settings UI reads and writes, and the two `UserDefaults` slots the
-/// global hooks live in.
+/// The pre- and post-hook must use different keys, or a post-hook silently
+/// replaces the pre-hook. A corrupt payload degrades to nil, since profile
+/// application has nowhere to surface an error.
 ///
-/// The persistence half has one property that is easy to get wrong and
-/// invisible when it is: the pre- and post-hook must occupy *different* keys.
-/// A copy-paste slip in `loadGlobal`/`saveGlobal` would make configuring a
-/// post-hook silently replace the pre-hook, and both would then run at the
-/// wrong phase. The suite also pins that a corrupt payload degrades to nil
-/// rather than throwing, since these are read during profile application where
-/// there is nowhere to surface an error.
-///
-/// `Defaults.store` is process-wide, so the suite is serialized and routes
-/// every case through a scratch domain.
+/// `Defaults.store` is process-wide, so the suite is serialized and uses a
+/// scratch domain.
 @MainActor
 @Suite("Profile-apply hooks", .serialized)
 struct HookScriptTests {
@@ -58,8 +49,8 @@ struct HookScriptTests {
         #expect(HookScript(path: path).path == path)
     }
 
-    /// The doc comment is explicit that clamping happens at run time, not on
-    /// the model, so the `Stepper` binding stays straightforward.
+    /// Clamping happens at run time, not on the model, so the `Stepper`
+    /// binding stays simple.
     @Test("An out-of-range timeout is stored unclamped")
     func outOfRangeTimeoutIsStoredUnclamped() {
         #expect(HookScript(path: "/tmp/hook.sh", timeoutSeconds: 0).timeoutSeconds == 0)
@@ -154,8 +145,7 @@ struct HookScriptTests {
         #expect(decoded.postHook?.path == "/tmp/post.sh")
     }
 
-    /// Profiles written before the field existed decode with both hooks nil,
-    /// which is the forward compatibility the type's doc comment promises.
+    /// Profiles written before the field existed decode with both hooks nil.
     @Test("An empty payload decodes to an empty container")
     func emptyPayloadDecodesToAnEmptyContainer() throws {
         let decoded = try JSONDecoder().decode(ProfileAutomation.self, from: Data("{}".utf8))
@@ -287,8 +277,8 @@ struct HookScriptTests {
         }
     }
 
-    /// A non-`Data` value in the slot — the shape a `defaults write` produces —
-    /// must not trap on the way out.
+    /// A non-`Data` value in the slot, as `defaults write` produces, must not
+    /// trap on the way out.
     @Test("A non-data value in the slot loads as nil")
     func nonDataValueLoadsAsNil() throws {
         try withScratchDefaults { _ in

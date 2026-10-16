@@ -2,16 +2,14 @@
 //  ProfilePreviewModelTests.swift
 //  Project: Thaw
 //
-//  Copyright (Ice) © 2023–2025 Jordan Baird
 //  Copyright (Thaw) © 2026 Toni Förster
 //  Licensed under the GNU GPLv3
 
 import Testing
 @testable import Thaw
 
-/// Covers the data shaping behind the profile preview popover: identifier
-/// parsing and section assembly, which are split out of the view precisely so
-/// they can be tested without standing up SwiftUI.
+/// Covers identifier parsing and section assembly for the profile preview
+/// popover, split out of the view so they test without SwiftUI.
 @Suite("Profile preview model")
 struct ProfilePreviewModelTests {
     private func layout(
@@ -83,10 +81,9 @@ struct ProfilePreviewModelTests {
         #expect(sections[0].items.map(\.title) == ["com.legacy.app"])
     }
 
-    /// A capture taken while the bar was still settling writes an empty
-    /// `itemOrder` rather than omitting it. The preview has to read that as
-    /// absent, the way the apply path does, or it shows an empty profile for
-    /// one that has a perfectly good legacy order.
+    /// A capture taken while the bar is settling writes an empty `itemOrder`.
+    /// Read it as absent, like the apply path, or the preview shows an empty
+    /// profile over a good legacy order.
     @Test("An empty itemOrder falls back to the legacy order")
     func emptyItemOrderFallsBackToLegacyOrder() {
         let snapshot = layout(

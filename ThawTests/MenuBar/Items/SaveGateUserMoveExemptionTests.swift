@@ -2,31 +2,24 @@
 //  SaveGateUserMoveExemptionTests.swift
 //  Project: Thaw
 //
-//  Copyright (Ice) © 2023–2025 Jordan Baird
 //  Copyright (Thaw) © 2026 Toni Förster
 //  Licensed under the GNU GPLv3
 
 import Testing
 @testable import Thaw
 
-/// Characterizes the save gate's user-move exemption.
+/// The save gate's user-move exemption lets a Layout-editor drag become the
+/// saved order inside the five-second move cooldown.
 ///
-/// The exemption exists so a Layout-editor drag becomes the saved order even
-/// though it lands inside the five-second move cooldown that otherwise holds
-/// saves back while a restore is in flight. The exemption must key on the
-/// user's move being the *most recent* move, not merely a recent one: a user
-/// drag at T0 followed by an automatic move at T+3 leaves both timestamps
-/// inside the window, and exempting then would let the next cache cycle
-/// persist an arrangement Thaw generated itself.
+/// It must require the user's move to be the latest one: after a user drag at
+/// T0 and an automatic move at T+3, exempting would persist Thaw's own arrangement.
 @Suite("Save gate user-move exemption")
 struct SaveGateUserMoveExemptionTests {
-    /// Instants far enough apart that ordering is unambiguous without
-    /// depending on the wall clock.
+    /// Fixed instants, so ordering does not depend on the wall clock.
     private func at(seconds: Int64) -> ContinuousClock.Instant {
         ContinuousClock().now.advanced(by: .seconds(seconds))
     }
 
-    /// The case the exemption exists for: the user's drag is the latest move.
     @Test("A user move that is the latest move is exempt")
     func latestUserMoveIsExempt() {
         #expect(MenuBarItemManager.saveCooldownExemptForUserMove(
@@ -39,9 +32,7 @@ struct SaveGateUserMoveExemptionTests {
         ))
     }
 
-    /// The regression: a user move followed by an automatic move must not
-    /// keep the exemption alive — the latest move is Thaw's, so the cooldown
-    /// has to hold against the generated intermediate arrangement.
+    /// The latest move is Thaw's, so the cooldown must hold against its intermediate arrangement.
     @Test("An automatic move after the user's move is not exempt")
     func automaticMoveAfterUserMoveIsNotExempt() {
         #expect(!MenuBarItemManager.saveCooldownExemptForUserMove(

@@ -20,21 +20,16 @@ class Permission: Identifiable {
     /// A Boolean value that indicates whether the app has this permission.
     private(set) var hasPermission = false {
         didSet {
-            // `configureCancellables` re-assigns this every 3 seconds while
-            // the permission is still missing, so fire only on an actual
-            // transition rather than on every poll.
+            // Polling re-assigns this every 3 seconds; fire only on a change.
             guard oldValue != hasPermission else { return }
             onChange?()
         }
     }
 
-    /// Callback invoked after ``hasPermission`` changes, with the new value
-    /// already stored. Set by owners (e.g. AppPermissions) that need to
-    /// react to updates.
+    /// Called after ``hasPermission`` changes, with the new value stored.
     @ObservationIgnored
     var onChange: (() -> Void)?
 
-    /// The title of the permission.
     let title: String
 
     /// The name of the system symbol image to display next to the title.
@@ -43,19 +38,16 @@ class Permission: Identifiable {
     /// The color of the icon displayed next to the title.
     let iconColor: Color
 
-    /// Descriptive details for the permission.
     let details: [String]
 
-    /// A Boolean value that indicates if the app can work without this permission.
+    /// Whether the app needs this permission to run.
     let isRequired: Bool
 
     /// The URL of the settings pane to open.
     private let settingsURL: URL?
 
-    /// The function that checks permissions.
     private let check: () -> Bool
 
-    /// The function that requests permissions.
     private let request: () -> Void
 
     /// The function that opens a System Settings URL.
@@ -64,16 +56,6 @@ class Permission: Identifiable {
     /// Observer that runs on a timer to check permissions.
     private var timerCancellable: AnyCancellable?
 
-    /// Creates a permission.
-    ///
-    /// - Parameters:
-    ///   - title: The title of the permission.
-    ///   - details: Descriptive details for the permission.
-    ///   - isRequired: A Boolean value that indicates if the app can work without this permission.
-    ///   - settingsURL: The URL of the settings pane to open.
-    ///   - check: A function that checks permissions.
-    ///   - request: A function that requests permissions.
-    ///   - openSettings: A function that opens the settings URL.
     init(
         title: String,
         iconName: String,
@@ -98,11 +80,7 @@ class Permission: Identifiable {
         configureCancellables()
     }
 
-    /// Sets up the internal observers for the permission.
-    ///
-    /// Polls ``check`` on a timer until the permission is granted, at which
-    /// point the timer cancels itself — there's no need to keep checking once
-    /// the app already has what it needs.
+    /// Polls ``check`` on a timer until the permission is granted.
     private func configureCancellables() {
         timerCancellable = Timer.publish(every: 3, tolerance: 0.5, on: .main, in: .default)
             .autoconnect()
@@ -170,8 +148,8 @@ final class AccessibilityPermission: Permission {
 // MARK: - ScreenRecordingPermission
 
 /// The Screen Recording permission, used for sampling menu bar colors,
-/// previewing menu bar items, and visual search. Optional — Thaw can run in
-/// a limited mode without it.
+/// previewing menu bar items, and visual search. Optional: Thaw runs in a
+/// limited mode without it.
 final class ScreenRecordingPermission: Permission {
     init() {
         super.init(

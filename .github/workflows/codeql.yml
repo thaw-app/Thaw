@@ -1,9 +1,6 @@
 name: CodeQL
 
 on:
-  push:
-    branches:
-      - development
   schedule:
     # Weekly, offset from the hour to avoid GitHub's cron pileup.
     - cron: "31 4 * * 1"
@@ -20,7 +17,9 @@ jobs:
   analyze:
     if: github.repository == 'thaw-app/Thaw'
     name: Analyze Swift
-    runs-on: xcode-27
+    # CodeQL traces Swift builds under Rosetta, and macOS 27 ships some
+    # build tools (sandbox-exec, swift-plugin-server) as arm64 only.
+    runs-on: macos-26
     timeout-minutes: 90
     permissions:
       security-events: write
@@ -32,10 +31,13 @@ jobs:
           persist-credentials: false
 
       - name: Initialize CodeQL
-        uses: github/codeql-action/init@cdf488f595d80d6e07e03d4674febd5ab45fa938 # v4.37.9
+        uses: github/codeql-action/init@24c54180a607b1449ed407dd24f251e4e9147c8d # v4.38.3
         with:
           languages: swift
           build-mode: manual
+
+      - name: Select Xcode 26.6
+        run: sudo xcode-select -s /Applications/Xcode_26.6.app/Contents/Developer
 
       # CodeQL traces this build to construct the database. Tests are not run;
       # compilation is all the extractor needs.
@@ -52,6 +54,6 @@ jobs:
             CODE_SIGNING_ALLOWED=NO
 
       - name: Perform CodeQL Analysis
-        uses: github/codeql-action/analyze@cdf488f595d80d6e07e03d4674febd5ab45fa938 # v4.37.9
+        uses: github/codeql-action/analyze@24c54180a607b1449ed407dd24f251e4e9147c8d # v4.38.3
         with:
           category: "/language:swift"

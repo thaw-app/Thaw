@@ -2,7 +2,6 @@
 //  CGImageDetachedCopyTests.swift
 //  Project: Thaw
 //
-//  Copyright (Ice) © 2023–2025 Jordan Baird
 //  Copyright (Thaw) © 2026 Toni Förster
 //  Licensed under the GNU GPLv3
 
@@ -117,11 +116,8 @@ struct CGImageDetachedCopyTests {
 
     @Test("A color-spaceless image falls back to device RGB")
     func detachedCopyFallsBackToDeviceRGBForAColorSpacelessImage() throws {
-        // Every other case here is device-RGB, so it is served by the
-        // preserve-the-source-color-space path and never reaches the
-        // fallback. A mask reports a nil color space, so there is nothing
-        // to preserve and the device-RGB path is the only way to produce a
-        // detached buffer at all.
+        // Every other case is device-RGB and keeps its source color space. A mask
+        // has none, so this is the only case that reaches the device-RGB fallback.
         let mask = try #require(makeMaskImage(width: 12, height: 9))
         #expect(mask.colorSpace == nil, "a mask is only a valid fixture here while it has no color space")
 

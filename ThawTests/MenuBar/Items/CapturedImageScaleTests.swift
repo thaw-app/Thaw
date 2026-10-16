@@ -2,7 +2,6 @@
 //  CapturedImageScaleTests.swift
 //  Project: Thaw
 //
-//  Copyright (Ice) © 2023–2025 Jordan Baird
 //  Copyright (Thaw) © 2026 Toni Förster
 //  Licensed under the GNU GPLv3
 
@@ -11,18 +10,11 @@ import Testing
 @testable import Thaw
 
 /// Covers `MenuBarItemImageCache.resolvedScale(imagePixelWidth:boundsWidth:expected:)`,
-/// the check `individualCapture` was missing in #851/#736 and that
-/// `compositeCapture` and `refreshImages` were still bypassing in #990.
+/// shared by every capture path (#851, #736, #990).
 ///
-/// The two composite paths used to compare an image's pixel width against
-/// `bounds.width * scale` and reject a mismatch, while `individualCapture`
-/// ran after that rejection as the fallback — and itself fed the bug in
-/// #851/#736 by caching under an unverified scale. #990 was the remaining
-/// half: on a 1x external beside a Retina display, SCK returned 2x pixels
-/// for the visible strip ("expected 522.0, got 1044") and SkyLight returned
-/// them for the offscreen strips ("expected 5365.0, got 10730"), so every
-/// composite was rejected wholesale and the layout editor showed gray
-/// placeholders. Both paths now resolve the scale the same way.
+/// On a 1x external beside a Retina display, SCK and SkyLight both return 2x
+/// pixels, so an exact width check rejects every composite and the layout
+/// editor shows gray placeholders.
 @Suite("Captured image scale resolution")
 struct CapturedImageScaleTests {
     @Test("Agreement returns the expected scale unchanged")
@@ -40,9 +32,8 @@ struct CapturedImageScaleTests {
 
     @Test("A 2x capture on a 1x display resolves to the captured scale")
     func mixedScaleCaptureUsesCapturedScale() {
-        // The exact shape from the #851 log: the resolved display reported
-        // backingScaleFactor 1.0, but ScreenCaptureKit captured at 2x
-        // (compositeCapture logged "expected 925.0 ... but got 1850.0").
+        // #851: the display reported backingScaleFactor 1.0, but
+        // ScreenCaptureKit captured at 2x.
         #expect(
             MenuBarItemImageCache.resolvedScale(imagePixelWidth: 1850, boundsWidth: 925, expected: 1)
                 == 2
@@ -51,11 +42,8 @@ struct CapturedImageScaleTests {
 
     @Test("The #990 composite strips resolve to the captured scale")
     func mixedScaleCompositeStripsResolve() {
-        // The exact shapes from the #990 log: a 1.0x external display next
-        // to a Retina one. SCK captured the 15-item visible strip at 2x and
-        // SkyLight captured the 16 offscreen hidden/always-hidden items at
-        // 2x; the exact-equality guards rejected both composites, and the
-        // layout editor drew gray placeholders for every item.
+        // #990: a 1x external next to a Retina one. SCK and SkyLight both
+        // captured their strips at 2x.
         #expect(
             MenuBarItemImageCache.resolvedScale(imagePixelWidth: 1044, boundsWidth: 522, expected: 1)
                 == 2
@@ -87,9 +75,7 @@ struct CapturedImageScaleTests {
 
     @Test("Integer pixel rounding on narrow items still resolves")
     func roundingNoiseIsTolerated() {
-        // 22.5pt at 2x rounds to 45px; the derived scale is exactly 2 here,
-        // but 23pt -> 46px derives 2.0 and 21.5pt -> 43px derives exactly 2
-        // as well. The tolerance covers the cases that do not divide evenly.
+        // The tolerance covers widths that do not divide evenly.
         let scale = MenuBarItemImageCache.resolvedScale(
             imagePixelWidth: 45,
             boundsWidth: 22.6,
@@ -100,10 +86,8 @@ struct CapturedImageScaleTests {
 
     @Test("An implausible ratio is rejected rather than cached")
     func implausibleRatioIsRejected() {
-        // Bounds and image describe different things — stale bounds, or a
-        // window resized mid-capture. There is no safe scale to cache
-        // under, so the item is dropped. A missing icon is recoverable;
-        // a wrongly-scaled cached one is not.
+        // Stale bounds or a mid-capture resize leave no safe scale, so the
+        // item is dropped. A missing icon is recoverable; a mis-scaled one is not.
         #expect(
             MenuBarItemImageCache.resolvedScale(imagePixelWidth: 100, boundsWidth: 24, expected: 1)
                 == nil
@@ -137,10 +121,8 @@ struct CapturedImageScaleTests {
 
     @Test("The resolved scale gives the item back its true point size")
     func resolvedScaleRestoresPointSize() {
-        // The property that actually matters downstream: CapturedImage
-        // divides pixels by scale to get points, and the layout bar sizes
-        // its rows from that. Under the old behavior this produced 1850pt
-        // instead of 925pt — the doubled row height in the screenshot.
+        // CapturedImage divides pixels by scale to get points, and the layout
+        // bar sizes its rows from that. A wrong scale doubles the row height.
         let boundsWidth: CGFloat = 925
         let pixelWidth = 1850
 

@@ -2,7 +2,6 @@
 //  SimpleSemaphoreTests.swift
 //  Project: Thaw
 //
-//  Copyright (Ice) © 2023–2025 Jordan Baird
 //  Copyright (Thaw) © 2026 Toni Förster
 //  Licensed under the GNU GPLv3
 
@@ -11,7 +10,7 @@ import Testing
 
 /// Verifies `SimpleSemaphore.wait(timeout:)` reconciles a lost-race acquire
 /// against a timeout: a permit won by `wait()` after the timeout has already
-/// fired must be handed back, never leaked. See Plan 008.
+/// fired must be handed back, never leaked.
 ///
 /// The suite is `.serialized` because the race hammer drives 500 real
 /// timeout-against-release races back to back and would otherwise starve the
@@ -33,13 +32,11 @@ struct SimpleSemaphoreTests {
     }
 
     /// A held semaphore causes a second waiter to time out; once the holder
-    /// signals, a third waiter succeeds — no stranded state from the
-    /// timeout.
+    /// signals, a third waiter succeeds, with nothing stranded by the timeout.
     @Test("A timeout under contention leaves no stranded state behind")
     func timeoutUnderContentionLeavesNoStrandedState() async throws {
         let semaphore = SimpleSemaphore(value: 1)
 
-        // Holder acquires the only permit.
         try await semaphore.wait(timeout: .milliseconds(50))
 
         // Second caller times out while the holder still owns the permit.
@@ -47,7 +44,6 @@ struct SimpleSemaphoreTests {
             try await semaphore.wait(timeout: .milliseconds(50))
         }
 
-        // Holder releases.
         await semaphore.signal()
 
         // Third wait must succeed promptly; no permit or waiter is stranded.
@@ -88,19 +84,13 @@ struct SimpleSemaphoreTests {
             let acquired = await waitTask
             _ = await releaseTask
 
-            // If the waiter won the race it now holds the permit that
-            // signal() restored, which is exactly the held state the next
-            // iteration expects. If it timed out, reconciliation inside
-            // wait(timeout:) already gave back any permit it might have
-            // raced into — so signal()'s restored permit is unclaimed, and
-            // it has to be consumed to get back to the held state; with the
-            // permit free this cannot block.
+            // If the waiter won, it holds the permit signal() restored, which is the
+            // held state the next iteration expects. If it timed out, wait(timeout:)
+            // already gave back any permit it raced into, so the restored permit is
+            // unclaimed and must be consumed; with it free this cannot block.
             if !acquired {
                 try await semaphore.wait(timeout: .seconds(1))
             }
-            // Either way each iteration ends with the semaphore held, so
-            // every iteration genuinely races the release against the
-            // timeout.
         }
 
         // Release the permit held across the loop, then run the final sanity

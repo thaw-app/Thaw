@@ -23,60 +23,53 @@ final class LayoutBarItemView: LayoutBarArrangedView {
         static let placeholderHorizontalInset: CGFloat = 2
         static let placeholderVerticalInset: CGFloat = 2
         static let iconInset: CGFloat = 2
-        static let fallbackSymbolPointSize: CGFloat = 11
         static let unresponsiveBadgeWidth: CGFloat = 15
+        static let triggerBadgeWidth: CGFloat = 11
+        static let triggerControlledFraction: CGFloat = 0.45
     }
 
     private weak var appState: AppState?
 
     private var cancellables = Set<AnyCancellable>()
 
-    /// Observes `appState.imageCache.images` (wave 3: `MenuBarItemImageCache`
-    /// is @Observable rather than a Combine `ObservableObject`, so its old
-    /// `$images` projection is gone). This is an AppKit view (not a SwiftUI
-    /// body), so the Observations-async-sequence pattern is used instead of
-    /// `withObservationTracking`'s recursive-registration form, matching
-    /// this class's existing Combine-`sink`-based subscription style.
+    /// AppKit normally eats mouse-up once a drag starts; this keeps the click
+    /// action safe if one gets through anyway.
+    private var didBeginDraggingForCurrentClick = false
+
+    /// Observes `appState.imageCache.images`.
     private var imageObservationTask: Task<Void, Never>?
+
+    /// Observes trigger ownership. Views rebuild only on cache changes, so a
+    /// trigger toggled while the editor is open would otherwise go stale.
+    private var triggerObservationTask: Task<Void, Never>?
 
     @MainActor
     deinit {
         imageObservationTask?.cancel()
+        triggerObservationTask?.cancel()
+        appIconPreferenceObservationTask?.cancel()
     }
 
-    /// The item that the view represents.
     let item: MenuBarItem
 
-    /// The app-owned identity an AX correlation promoted an
-    /// `unresolvedControlCenterPlaceholder` to during this view's lifetime, or
-    /// `nil` when no alias has been resolved. Non-nil only after
-    /// ``aliasForUnresolvedControlCenterPlaceholder()`` succeeded; once set,
-    /// it stays so the drag and the alert copy both report the app-owned form.
+    /// The app-owned identity AX correlation resolved for an
+    /// `unresolvedControlCenterPlaceholder`. Once set, it stays.
     private var aliasedItem: MenuBarItem?
 
-    /// The item the view should be addressed by — the alias when one was
-    /// resolved, otherwise the captured `item`. Drag dispatch reads this so a
-    /// promoted placeholder drags as its app-owned tag, not the parked
-    /// Control Center slot.
+    /// The alias when one was resolved, otherwise `item`.
     private var effectiveItem: MenuBarItem {
         aliasedItem ?? item
     }
 
     private lazy var tooltipController = CustomTooltipController(text: item.displayName, view: self)
     private var tooltipTrackingArea: NSTrackingArea?
-    /// The image drawn inside the placeholder bubble when no capture is
-    /// cached. Re-resolved lazily in ``drawPlaceholder`` so an app that was
-    /// not launchable when this view was created can still supply its icon
-    /// once it is (#981). The view is reused across cache refreshes when the
-    /// item's identity is stable, so without this the generic symbol baked
-    /// in at init stays even after the app is running and could have been
-    /// read.
+    private var appIconPreferenceObservationTask: Task<Void, Never>?
+    /// Drawn when no capture is cached. Re-resolved in ``drawPlaceholder``,
+    /// since the view outlives cache refreshes and the app may start later.
     private var placeholderImage: NSImage?
-    /// Whether ``placeholderImage`` already came from a resolved app icon, so
-    /// ``drawPlaceholder`` does not re-run the lookup on every draw.
+    /// Stops ``drawPlaceholder`` from re-running the lookup on every draw.
     private var placeholderResolvedFromApp = false
 
-    /// The image displayed inside the view.
     private var cachedImage: MenuBarItemImageCache.CapturedImage? {
         didSet {
             let previousSize = preferredSize(for: oldValue)
@@ -89,11 +82,63 @@ final class LayoutBarItemView: LayoutBarArrangedView {
         }
     }
 
+    /// Mirrors `advanced.alwaysUseAppIconForMenuBarItems`.
+    private var prefersAppIcon: Bool {
+        appState?.settings.advanced.alwaysUseAppIconForMenuBarItems ?? false
+    }
+
+    /// Whether this view draws the app icon rather than the captured glyph.
+    private var usesAppIcon: Bool {
+        MenuBarItemIconFallback.shouldUseAppIcon(
+            for: item,
+            hasCapture: cachedImage != nil,
+            prefersAppIcon: prefersAppIcon
+        )
+    }
+
+    /// While frozen, a system move can publish a transient thumbnail from
+    /// under the notch or between sections, so keep the last stable one.
+    static nonisolated func shouldUpdateCachedImage(
+        hasContainer: Bool,
+        containerAllowsUpdates: Bool
+    ) -> Bool {
+        !hasContainer || containerAllowsUpdates
+    }
+
+    /// The dragged view stays as the drop placeholder, dimmed rather than
+    /// blank.
+    static nonisolated func iconFraction(
+        isDraggingPlaceholder: Bool,
+        isEnabled: Bool
+    ) -> CGFloat {
+        if isDraggingPlaceholder {
+            return 0.45
+        }
+        return isEnabled ? 1.0 : 0.67
+    }
+
     override var kind: Kind {
         .item(effectiveItem)
     }
 
-    /// Creates a view that displays the given menu bar item.
+    /// The enabled trigger that owns this item's placement, or `nil`.
+    ///
+    /// The trigger decides where the item sits. Dragging is still allowed as
+    /// a manual fix before a trigger applies; the badge explains the
+    /// snap-back.
+    private var isTriggerControlled: Bool {
+        appState?.settings.triggers.isControlledByTrigger(
+            identifier: effectiveItem.tag.tagIdentifier
+        ) ?? false
+    }
+
+    /// For the hover tooltip only; `draw` uses ``isTriggerControlled``.
+    private var controllingTrigger: MenuBarItemTrigger? {
+        appState?.settings.triggers.controllingTrigger(
+            forIdentifier: effectiveItem.tag.tagIdentifier
+        )
+    }
+
     init(appState: AppState, item: MenuBarItem) {
         self.item = item
         self.appState = appState
@@ -107,9 +152,9 @@ final class LayoutBarItemView: LayoutBarArrangedView {
         super.init(frame: CGRect(origin: .zero, size: Self.preferredSize(for: item, image: initialImage)))
         unregisterDraggedTypes()
 
-        // Addressing the window's owner lifts the unresolved-placeholder
-        // reason, so the panel offers items it can actually move.
-        isEnabled = item.isMovableAddressingWindowOwner
+        isEnabled = item.isDraggableInLayoutEditor(
+            displayBounds: NSScreen.screens.map { CGDisplayBounds($0.displayID) }
+        )
 
         configureCancellables()
     }
@@ -124,7 +169,10 @@ final class LayoutBarItemView: LayoutBarArrangedView {
     }
 
     override func draggingImage() -> NSImage? {
-        cachedImage?.nsImage ?? placeholderBitmapImage()
+        if usesAppIcon {
+            return placeholderBitmapImage()
+        }
+        return cachedImage?.nsImage ?? placeholderBitmapImage()
     }
 
     override func updateTrackingAreas() {
@@ -144,12 +192,58 @@ final class LayoutBarItemView: LayoutBarArrangedView {
 
     override func mouseEntered(with event: NSEvent) {
         super.mouseEntered(with: event)
+        // A trigger can change while the editor is open.
+        tooltipController.text = if let trigger = controllingTrigger {
+            String(localized: "\(effectiveItem.displayName) \u{2014} placed by trigger \u{201C}\(trigger.displayName)\u{201D}")
+        } else {
+            effectiveItem.displayName
+        }
         tooltipController.scheduleShow(delay: tooltipDelay)
     }
 
     override func mouseExited(with event: NSEvent) {
         super.mouseExited(with: event)
         tooltipController.cancel()
+    }
+
+    override func mouseDown(with event: NSEvent) {
+        didBeginDraggingForCurrentClick = false
+        super.mouseDown(with: event)
+    }
+
+    override func mouseUp(with event: NSEvent) {
+        super.mouseUp(with: event)
+
+        let location = convert(event.locationInWindow, from: nil)
+        let shouldActivate = Self.shouldActivateRepresentedItem(
+            buttonNumber: event.buttonNumber,
+            didBeginDragging: didBeginDraggingForCurrentClick,
+            mouseUpInsideBounds: bounds.contains(location)
+        )
+        didBeginDraggingForCurrentClick = false
+
+        guard shouldActivate else { return }
+        activateRepresentedItem()
+    }
+
+    /// Pure click-versus-drag gate.
+    static nonisolated func shouldActivateRepresentedItem(
+        buttonNumber: Int,
+        didBeginDragging: Bool,
+        mouseUpInsideBounds: Bool
+    ) -> Bool {
+        buttonNumber == 0 && !didBeginDragging && mouseUpInsideBounds
+    }
+
+    /// Performs the item's native left click, temporarily revealing it if
+    /// hidden.
+    private func activateRepresentedItem() {
+        let representedItem = effectiveItem
+        guard let itemManager = appState?.itemManager else { return }
+        let displayID = NSScreen.screenWithActiveMenuBar?.displayID
+        Task {
+            await itemManager.activate(item: representedItem, on: displayID)
+        }
     }
 
     private func configureCancellables() {
@@ -163,8 +257,44 @@ final class LayoutBarItemView: LayoutBarArrangedView {
                 for await image in changes {
                     guard let self else { return }
                     guard !MenuBarItemImageCache.CapturedImage.isVisuallyEqual(previous, image) else { continue }
+                    // Only when applied, or a republished copy dedupes and
+                    // strands the stale thumbnail.
+                    guard self.updateCachedImageIfAllowed(image) else { continue }
                     previous = image
-                    self.cachedImage = image
+                }
+            }
+
+            // `cachedImage` doesn't change, so its didSet can't cover this.
+            appIconPreferenceObservationTask?.cancel()
+            appIconPreferenceObservationTask = Task { @MainActor [weak self, weak appState] in
+                var previous: Bool?
+                let changes = Observations {
+                    appState?.settings.advanced.alwaysUseAppIconForMenuBarItems
+                }
+                for await prefers in changes {
+                    guard let self, let prefers, prefers != previous else { continue }
+                    previous = prefers
+                    setFrameSize(preferredSize(for: cachedImage))
+                    (superview as? LayoutBarContainer)?.itemPreferredSizeDidChange(self)
+                    needsDisplay = true
+                }
+            }
+
+            // `controlledIdentifiers` is stored so every read registers a
+            // dependency. Read through `effectiveItem` to match `draw`.
+            triggerObservationTask = Task { @MainActor [weak self, weak appState] in
+                let changes = Observations { [weak self, weak appState] in
+                    guard let self, let appState else { return false }
+                    return appState.settings.triggers.isControlledByTrigger(
+                        identifier: self.effectiveItem.tag.tagIdentifier
+                    )
+                }
+                var previous: Bool?
+                for await controlled in changes {
+                    guard let self else { return }
+                    guard controlled != previous else { continue }
+                    previous = controlled
+                    self.needsDisplay = true
                 }
             }
         }
@@ -172,14 +302,8 @@ final class LayoutBarItemView: LayoutBarArrangedView {
         cancellables = c
     }
 
-    /// Provides an alert to display when the item view is disabled.
-    ///
-    /// The copy names the gate honestly. "macOS prohibits" is only true for
-    /// the static system items; an unresolved Control Center slot is Thaw's
-    /// own safety gate, and blaming macOS for it sent #905's reporter
-    /// chasing the wrong condition. When an AX correlation identified the
-    /// hosted slot's real owner, the alert names it instead of the generic
-    /// fallback the identity the decision was made on never matched.
+    /// Only blame macOS for static system items; an unresolved Control
+    /// Center slot is Thaw's own gate. Names the AX-resolved owner if known.
     func provideAlertForDisabledItem(axResolvedName: String? = nil) -> NSAlert {
         let alert = NSAlert()
         alert.messageText = String(localized: "Menu bar item is not movable.")
@@ -193,16 +317,11 @@ final class LayoutBarItemView: LayoutBarArrangedView {
         return alert
     }
 
-    /// Emits the diagnostic #905 asked for: the resolved identifier and the
-    /// exact condition the refusal was decided on. Returns the app-owned
-    /// name AX correlation found for a degraded identity, so the alert can
-    /// show it.
+    /// Logs the resolved identifier and the refusal condition. Returns the
+    /// AX-resolved app name for the alert.
     ///
-    /// Takes the identity the alias attempt already correlated rather than
-    /// running its own snapshot: the refusal path reaches here right after
-    /// ``aliasForUnresolvedControlCenterPlaceholder()`` paid for the same
-    /// bounded AX work, and paying twice is a visible main-thread hitch
-    /// mid-drag.
+    /// Reuses the alias attempt's identity; a second AX snapshot is a
+    /// visible hitch mid-drag.
     private func logMoveRefusal(
         correlatedIdentity: AXIdentityCatalog.AXItemIdentity?
     ) -> String? {
@@ -225,24 +344,14 @@ final class LayoutBarItemView: LayoutBarArrangedView {
         return identity.identifier ?? identity.title ?? identity.help
     }
 
-    /// #905 identity-preference fallback. When the captured `item` is an
-    /// `unresolvedControlCenterPlaceholder` — `com.apple.controlcenter:Item-N`,
-    /// `sourcePID == nil` — but Control Center's AX tree already names the
-    /// owning app for the slot's frame, build a synthetic `MenuBarItem`
-    /// re-tagged under that app's bundle ID namespace and carrying the owner's
-    /// PID as `sourcePID`. `isMovable` becomes true for the alias, so the
-    /// Layout editor drag (and `MenuBarItemManager.move(...)`'s inner guard)
-    /// proceed; AppKit repositions the slot by `windowID`. The post-move
-    /// `cacheItemsRegardless` writes the app-owned identifier into
-    /// `savedSectionOrder` once the source-PID cache catches up, or AppKit's
-    /// own autosave position holds the slot in place meanwhile.
+    /// When `item` is an `unresolvedControlCenterPlaceholder` (#905) but
+    /// Control Center's AX tree names the owning app for the slot's frame,
+    /// builds a movable alias tagged and PID'd as that app. AppKit still moves
+    /// the slot by `windowID`.
     ///
-    /// The bounded AX snapshot (`maxSnapshotDuration` = 500 ms) runs at most
-    /// once per drag: a successful alias flips `isEnabled` to `true` so
-    /// subsequent `mouseDragged` events skip the guard, and a failed attempt
-    /// hands its correlated identity (when it found one) to
-    /// ``logMoveRefusal(correlatedIdentity:)`` so the refusal path does not
-    /// pay for the same snapshot again.
+    /// The AX snapshot (up to 500 ms) runs at most once per drag: success
+    /// enables the view, and failure hands its identity to
+    /// ``logMoveRefusal(correlatedIdentity:)``.
     private func aliasForUnresolvedControlCenterPlaceholder(
     ) -> (alias: MenuBarItem?, correlatedIdentity: AXIdentityCatalog.AXItemIdentity?) {
         precondition(item.immovabilityReason == .unresolvedControlCenterPlaceholder)
@@ -298,16 +407,31 @@ final class LayoutBarItemView: LayoutBarArrangedView {
     }
 
     override func draw(_: NSRect) {
+        // Dimmed so the badge reads as state, not a rendering bug.
+        let fraction: CGFloat = if !isDraggingPlaceholder, isTriggerControlled {
+            Metrics.triggerControlledFraction
+        } else {
+            Self.iconFraction(
+                isDraggingPlaceholder: isDraggingPlaceholder,
+                isEnabled: isEnabled
+            )
+        }
+        // The placeholder is what resolves app icons.
+        if !usesAppIcon, let capturedImage = cachedImage?.nsImage {
+            capturedImage.draw(
+                in: bounds,
+                from: .zero,
+                operation: .sourceOver,
+                fraction: fraction
+            )
+        } else {
+            drawPlaceholder(fraction: fraction)
+        }
+
+        // Keep status badges out of the drag placeholder.
         if !isDraggingPlaceholder {
-            if let capturedImage = cachedImage?.nsImage {
-                capturedImage.draw(
-                    in: bounds,
-                    from: .zero,
-                    operation: .sourceOver,
-                    fraction: isEnabled ? 1.0 : 0.67
-                )
-            } else {
-                drawPlaceholder()
+            if isTriggerControlled {
+                drawTriggerBadge()
             }
             if Bridging.isProcessUnresponsive(item.ownerPID) {
                 let warningImage = NSImage.warning
@@ -331,16 +455,15 @@ final class LayoutBarItemView: LayoutBarArrangedView {
 
     override func mouseDragged(with event: NSEvent) {
         super.mouseDragged(with: event)
+        didBeginDraggingForCurrentClick = true
         tooltipController.cancel()
 
-        // #905 fallback: before refusing an `unresolvedControlCenterPlaceholder`
-        // drag, attempt to re-tag the slot with its app-owned identity (when
-        // Control Center's AX tree already names the owning app for the
-        // slot's frame). On a confident hit the alias becomes the view's
-        // effective item and `isEnabled` flips to `true`, so the guard below
-        // passes and `MenuBarItemManager.move(...)`'s inner `isMovable`
-        // guard (keyed off the same alias) does too. On a miss or a static
-        // prohibition the guard falls through to the alert path as before.
+        guard canBeginDraggingFromCurrentContainer else {
+            return
+        }
+
+        // Try the AX alias before refusing a placeholder drag. On a hit the
+        // view becomes enabled and the guard below passes.
         var correlatedIdentity: AXIdentityCatalog.AXItemIdentity?
         if !isEnabled,
            item.immovabilityReason == .unresolvedControlCenterPlaceholder
@@ -381,6 +504,19 @@ final class LayoutBarItemView: LayoutBarArrangedView {
         beginDraggingSession(with: [draggingItem], event: event, source: self)
     }
 
+    @discardableResult
+    private func updateCachedImageIfAllowed(_ image: MenuBarItemImageCache.CapturedImage?) -> Bool {
+        let container = superview as? LayoutBarContainer
+        guard Self.shouldUpdateCachedImage(
+            hasContainer: container != nil,
+            containerAllowsUpdates: container?.canSetArrangedViews ?? true
+        ) else {
+            return false
+        }
+        cachedImage = image
+        return true
+    }
+
     private func preferredSize(for image: MenuBarItemImageCache.CapturedImage?) -> CGSize {
         Self.preferredSize(for: item, image: image)
     }
@@ -401,21 +537,20 @@ final class LayoutBarItemView: LayoutBarArrangedView {
     /// The icon of the app that put this item on the bar, or `nil` when the
     /// owner can only name Control Center.
     ///
-    /// On macOS 26 every Control Center slot reports Control Center as its
-    /// owner, so an unresolved placeholder would take Control Center's icon
-    /// through the fallback. That is wrong on its face, and caching it as a
-    /// resolved icon also retires the retry below for the owner that shows
-    /// up once the source PID is known.
+    /// Resolved through ``MenuBarItemIconFallback`` to match the Thaw Bar.
+    ///
+    /// On macOS 26 every Control Center slot reports Control Center as owner.
+    /// Caching that icon would also stop ``drawPlaceholder`` retrying once
+    /// the real source PID is known.
+    @MainActor
     private static func resolvedAppIcon(for item: MenuBarItem) -> NSImage? {
-        if let icon = item.sourceApplication?.icon {
-            return icon
-        }
         guard item.immovabilityReason != .unresolvedControlCenterPlaceholder else {
             return nil
         }
-        return item.owningApplication?.icon
+        return MenuBarItemIconFallback.appIcon(for: item)
     }
 
+    @MainActor
     private static func makePlaceholderImage(for item: MenuBarItem) -> (NSImage?, Bool) {
         if let icon = resolvedAppIcon(for: item) {
             return (icon, true)
@@ -429,7 +564,35 @@ final class LayoutBarItemView: LayoutBarArrangedView {
         )
     }
 
-    private func drawPlaceholder() {
+    /// Leading edge, since the unresponsive badge owns the trailing one.
+    /// Cached because `draw(_:)` runs per frame during a drag and symbol
+    /// resolution allocates.
+    private static let triggerBadge: NSImage? = {
+        let configuration = NSImage.SymbolConfiguration(paletteColors: [.controlAccentColor])
+        return NSImage(
+            systemSymbolName: "bolt.fill",
+            accessibilityDescription: String(localized: "Controlled by a trigger")
+        )?.withSymbolConfiguration(configuration)
+    }()
+
+    private func drawTriggerBadge() {
+        guard let badge = Self.triggerBadge else {
+            return
+        }
+        let width = Metrics.triggerBadgeWidth
+        let scale = width / badge.size.width
+        let size = CGSize(width: width, height: badge.size.height * scale)
+        badge.draw(
+            in: CGRect(
+                x: bounds.minX,
+                y: bounds.minY,
+                width: size.width,
+                height: size.height
+            )
+        )
+    }
+
+    private func drawPlaceholder(fraction: CGFloat) {
         let placeholderRect = bounds.insetBy(
             dx: Metrics.placeholderHorizontalInset,
             dy: Metrics.placeholderVerticalInset
@@ -439,10 +602,10 @@ final class LayoutBarItemView: LayoutBarArrangedView {
             xRadius: Metrics.placeholderCornerRadius,
             yRadius: Metrics.placeholderCornerRadius
         )
-        NSColor.quaternaryLabelColor.withAlphaComponent(0.35).setFill()
+        NSColor.quaternaryLabelColor.withAlphaComponent(0.35 * fraction).setFill()
         backgroundPath.fill()
 
-        NSColor.separatorColor.withAlphaComponent(0.6).setStroke()
+        NSColor.separatorColor.withAlphaComponent(0.6 * fraction).setStroke()
         backgroundPath.lineWidth = 1
         backgroundPath.stroke()
 
@@ -450,21 +613,11 @@ final class LayoutBarItemView: LayoutBarArrangedView {
             return
         }
 
-        // #981: if the placeholder fell back to the generic symbol at init
-        // because the owning app was not launchable yet, try the app icon
-        // again now. The view is reused across cache refreshes when the
-        // item's identity is stable, so this is the one place a later
-        // resolution surfaces. One lookup per resolution; the flag stops
-        // repeat work once an icon is in hand.
         if !placeholderResolvedFromApp,
            let icon = Self.resolvedAppIcon(for: item)
         {
             self.placeholderImage = icon
             placeholderResolvedFromApp = true
-            // Draw the resolved icon in this pass. Assigning only the stored
-            // property left the local binding above holding the generic
-            // symbol, so the icon swap waited on an unrelated invalidation
-            // that never comes for items the image cache can't capture.
             placeholderImage = icon
         }
 
@@ -492,14 +645,14 @@ final class LayoutBarItemView: LayoutBarArrangedView {
                 in: iconRect,
                 from: .zero,
                 operation: .sourceOver,
-                fraction: isEnabled ? 0.8 : 0.5
+                fraction: (isEnabled ? 0.8 : 0.5) * fraction
             )
         } else {
             placeholderImage.draw(
                 in: iconRect,
                 from: .zero,
                 operation: .sourceOver,
-                fraction: isEnabled ? 0.9 : 0.5
+                fraction: (isEnabled ? 0.9 : 0.5) * fraction
             )
         }
     }

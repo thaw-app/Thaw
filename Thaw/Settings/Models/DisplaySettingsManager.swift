@@ -2,7 +2,6 @@
 //  DisplaySettingsManager.swift
 //  Project: Thaw
 //
-//  Copyright (Ice) © 2023–2025 Jordan Baird
 //  Copyright (Thaw) © 2026 Toni Förster
 //  Licensed under the GNU GPLv3
 
@@ -17,34 +16,27 @@ import Combine
 @MainActor
 @Observable
 final class DisplaySettingsManager {
-    /// The members below would be private, but the live half of this class
-    /// lives in DisplaySettingsManager+Live.swift (excluded from coverage;
-    /// see sonar-project.properties), and an extension in another file cannot
-    /// reach private members. None of them are part of the intended surface.
+    /// Not private only because DisplaySettingsManager+Live.swift extends this
+    /// class. None of these are part of the intended surface.
     @ObservationIgnored
     let diagLog = DiagLog(category: "DisplaySettingsManager")
 
     /// Per-display configurations, keyed by display UUID string.
     ///
-    /// `didSet` both persists the new value and re-derives the active
-    /// display's spacing, replacing the previous `$configurations`
-    /// Combine pipelines (one for persistence, one — `removeDuplicates()`
-    /// — for the spacing reaction). `loadInitialState()` runs from `init`,
-    /// so its assignment does not trigger this `didSet`, matching the old
-    /// `dropFirst()` skip of the initial emission during setup.
+    /// `didSet` persists the value and re-derives the active display's
+    /// spacing. It doesn't fire for the load in `init`. Stands down while a
+    /// profile apply installs its snapshot; the apply drives spacing itself.
     var configurations: [String: DisplayIceBarConfiguration] = [:] {
         didSet {
             guard oldValue != configurations else { return }
             persistConfigurations()
+            guard !isSpacingReactionSuspended else { return }
             applyActiveDisplaySpacing(reason: "configurationsChanged")
         }
     }
 
-    /// The global configuration template applied to all displays by the
-    /// Apply-to-All action in the Displays pane and used as the seed for
-    /// newly connected displays. Persisted independently from
-    /// configurations so the template survives display disconnects, and
-    /// captured by every Profile so each profile carries its own global.
+    /// Template applied by Apply to All and seeded into newly connected
+    /// displays. Persisted on its own so it survives disconnects.
     var globalConfiguration: DisplayIceBarConfiguration = .defaultConfiguration {
         didSet {
             guard oldValue != globalConfiguration else { return }
@@ -57,10 +49,8 @@ final class DisplaySettingsManager {
         }
     }
 
-    /// Cache of previously-seen displays (name + notch state), keyed by
-    /// display UUID. Lets the Displays pane show settings rows for
-    /// disconnected displays so users can edit them without having to
-    /// re-connect the display first.
+    /// Previously seen displays (name and notch state) by UUID, so the
+    /// Displays pane can show rows for disconnected displays.
     var knownDisplays: [String: KnownDisplay] = [:] {
         didSet {
             guard oldValue != knownDisplays else { return }
@@ -94,14 +84,24 @@ final class DisplaySettingsManager {
         }
     }
 
+    /// `relaunchApps` (the default) restarts the apps Thaw can bring back so
+    /// spacing applies now. `writeOnly` leaves apps running; each picks up the
+    /// new spacing when it next starts. Synced into
+    /// `MenuBarItemSpacingManager.spacingApplyMode`.
+    var spacingApplyMode = Defaults.DefaultValue.spacingApplyMode {
+        didSet {
+            guard oldValue != spacingApplyMode else { return }
+            Defaults.set(spacingApplyMode.rawValue, forKey: .spacingApplyMode)
+            appState?.spacingManager.spacingApplyMode = spacingApplyMode
+        }
+    }
+
     /// Storage for internal observers.
     @ObservationIgnored
     var cancellables = Set<AnyCancellable>()
 
-    /// Task backing the swift-async-algorithms screen-parameters debounce (see
-    /// ``configureObservers()``). Held so it is cancelled in `deinit`,
-    /// matching the lifetime of the Combine cancellables above; its notification
-    /// observer is owned inside the task and removed when it ends.
+    /// Screen-parameters debounce task, cancelled in `deinit`. It owns its
+    /// notification observer and removes it when it ends.
     @ObservationIgnored
     var screenParametersTask: Task<Void, Never>?
 
@@ -119,40 +119,38 @@ final class DisplaySettingsManager {
     weak var appState: AppState?
 
     /// UUID of the active menu bar display the last time spacing was applied.
-    /// Used to skip didChangeScreenParametersNotification fires that only
-    /// reflect a resolution or other-parameter change on the same display.
-    /// Internal access so unit tests in ThawTests can seed and assert it.
+    /// Used to skip screen-parameter changes on the same display. Internal
+    /// so tests can seed it.
     var lastAppliedActiveDisplayUUID: String?
 
+    /// True during a Displays pane spacing commit, which already asked.
+    @ObservationIgnored
+    private(set) var isCommittingUserSpacingChange = false
+
+    /// True while configuration writes must not apply spacing: a profile
+    /// snapshot install, or recording a declined relaunch.
+    @ObservationIgnored
+    private(set) var isSpacingReactionSuspended = false
+
     /// UUID of the display that currently owns the menu bar, or nil if it
-    /// cannot be determined. Exposed for views that need to decide whether
-    /// a spacing change will trigger the relaunch wave (only writes against
-    /// the active display do, because applyActiveDisplaySpacing only reads
-    /// configurationForActiveDisplay()).
+    /// cannot be determined. Views use it to tell whether a spacing change
+    /// will relaunch apps: only writes to the active display do.
     var activeMenuBarDisplayUUID: String? {
         Bridging.getActiveMenuBarDisplayUUID()
     }
 
-    /// Loads persisted state immediately at construction time, before any
-    /// `didSet` observer is armed. Swift's `didSet` does not fire for
-    /// assignments made from within the declaring class's own `init`, so
-    /// running `loadInitialState()` here — rather than from
-    /// ``performSetup(with:)`` — reproduces the old `$configurations`
-    /// `.dropFirst()` Combine pipelines' skip of the initial emission during
-    /// setup, without persisting-back or re-deriving spacing from data that
-    /// was just loaded from the same source.
+    /// Loads persisted state here because `didSet` doesn't fire for
+    /// assignments in `init`, so just-loaded data isn't written back or
+    /// re-applied as spacing.
     init() {
         loadInitialState()
     }
 
     // MARK: - Loading
 
-    /// Loads saved configurations from Defaults. On a truly first launch
-    /// (no persisted per-display configurations) with externally configured
-    /// system spacing, adopts the on-disk value as the seed offset for each
-    /// connected display so Thaw does not overwrite a user's manual
-    /// defaults write NSStatusItemSpacing and trigger a startup relaunch
-    /// wave. See issue #602.
+    /// Loads saved configurations. On first launch with externally set system
+    /// spacing, seeds each connected display from the on-disk value so Thaw
+    /// doesn't overwrite a manual `NSStatusItemSpacing` and relaunch at startup.
     private func loadInitialState() {
         let persistedData = Defaults.data(forKey: .displayIceBarConfigurations)
         if let data = persistedData {
@@ -184,9 +182,8 @@ final class DisplaySettingsManager {
         if let data = Defaults.data(forKey: .knownDisplays) {
             do {
                 let decoded = try decoder.decode([String: KnownDisplay].self, from: data)
-                // Drop entries whose name is empty/whitespace — they can be
-                // captured transiently (mirrored slave, GPU sleep) and would
-                // otherwise show up as anonymous rows in the Displays pane.
+                // Drop blank names: they're captured transiently (mirrored
+                // slave, GPU sleep) and would show as anonymous rows.
                 knownDisplays = decoded.filter {
                     !$0.value.name.trimmingCharacters(in: .whitespaces).isEmpty
                 }
@@ -206,6 +203,11 @@ final class DisplaySettingsManager {
         {
             unconfirmedSpacingProfileScope = scope
         }
+        if let raw = Defaults.string(forKey: .spacingApplyMode),
+           let mode = SpacingApplyMode(rawValue: raw)
+        {
+            spacingApplyMode = mode
+        }
     }
 
     @MainActor
@@ -218,9 +220,7 @@ final class DisplaySettingsManager {
 
     // MARK: - Persistence
 
-    /// Encodes and persists `configurations`, matching the previous
-    /// `$configurations.dropFirst()` persistence sink. Called from
-    /// `configurations`'s `didSet` and from `seedConfigurationsFromSystemSpacing()`.
+    /// Encodes and persists `configurations`.
     private func persistConfigurations() {
         do {
             let data = try encoder.encode(configurations)
@@ -230,29 +230,59 @@ final class DisplaySettingsManager {
         }
     }
 
-    /// Returns true when a didChangeScreenParametersNotification fire should
-    /// be ignored because the active menu bar display has not changed
-    /// identity since the last spacing apply. A resolution change, lid
-    /// open/close, GPU/sleep transition, or other display-parameter event
-    /// that leaves the active display UUID the same is not a reason to
-    /// re-apply spacing (and risk a relaunch wave when on-disk values drift).
+    /// Returns true when a screen-parameters change should be ignored because
+    /// the active display UUID hasn't changed since the last spacing apply.
+    /// Re-applying on a resolution, lid, or sleep change risks a relaunch
+    /// wave when on-disk values drift.
     ///
-    /// Pure on its inputs, separated from the sink so it can be unit tested
-    /// without spinning up AppState or driving real screen events.
+    /// A nil current UUID is skipped too: during sleep/wake it resolves to the
+    /// global template and would relaunch apps to a spacing nobody chose.
     static func shouldSkipSpacingApply(
         currentActiveDisplayUUID currentUUID: String?,
         lastAppliedActiveDisplayUUID lastUUID: String?
     ) -> Bool {
-        currentUUID == lastUUID
+        currentUUID == nil || currentUUID == lastUUID
+    }
+
+    /// Whether a spacing apply has to ask before it relaunches apps. Only a
+    /// Displays pane commit, which asked already, skips the prompt.
+    static func needsSpacingRelaunchConfirmation(
+        isUserInitiated: Bool,
+        confirmationsEnabled: Bool,
+        willRelaunch: Bool
+    ) -> Bool {
+        !isUserInitiated && confirmationsEnabled && willRelaunch
+    }
+
+    /// Runs a Displays pane spacing commit so the automatic confirmation
+    /// gate treats it as already confirmed.
+    func performUserSpacingChange(_ change: () -> Void) {
+        isCommittingUserSpacingChange = true
+        defer { isCommittingUserSpacingChange = false }
+        change()
+    }
+
+    /// Runs `change` without the `configurations` reaction applying spacing.
+    func withSpacingReactionSuspended(_ change: () -> Void) {
+        isSpacingReactionSuspended = true
+        defer { isSpacingReactionSuspended = false }
+        change()
+    }
+
+    /// Writes the spacing still in effect back to the active display after a
+    /// declined relaunch, so its configuration doesn't show a spacing that was
+    /// never applied.
+    func keepEffectiveSpacing(offset: Int) {
+        guard let uuid = activeMenuBarDisplayUUID else { return }
+        withSpacingReactionSuspended {
+            updateConfiguration(forDisplayUUID: uuid) { $0.withItemSpacingOffset(Double(offset)) }
+        }
     }
 
     /// Handles per-display settings changed externally via Settings URI scheme.
     ///
-    /// Internal rather than private so tests can drive it with a hand-built
-    /// `Notification` instead of going through `performSetup(with:)`, which
-    /// needs a live `AppState` and installs a one-second debounced observer.
-    /// The `specific:UUID` scope reaches every setter below without touching
-    /// `NSScreen`, provided `configurations` already holds the UUID.
+    /// Internal so tests can call it directly without a live `AppState`. The
+    /// `specific:UUID` scope avoids `NSScreen` when `configurations` holds the UUID.
     func handleExternalPerDisplaySettingsChange(_ notification: Notification) {
         guard let key = notification.userInfo?["key"] as? String,
               let scopeRaw = notification.userInfo?["scope"] as? String
@@ -278,14 +308,12 @@ final class DisplaySettingsManager {
         switch key {
         case "useIceBar":
             if notification.userInfo?["toggle"] as? Bool == true {
-                // Toggle operation
                 if let uuid = specificUUID {
                     toggleUseIceBar(forDisplayUUID: uuid)
                 } else {
                     toggleIceBarForActiveDisplay()
                 }
             } else if let value = notification.userInfo?["value"] as? Bool {
-                // Set operation
                 if let uuid = specificUUID {
                     setUseIceBar(value, forDisplayUUID: uuid)
                 } else {
@@ -365,9 +393,6 @@ final class DisplaySettingsManager {
 
     /// Parses scope string into scope enum and optional specific UUID.
     /// Format: "active", "allEnabled", "allNonIceBar", or "specific:UUID"
-    ///
-    /// Static and internal because it depends on nothing but its argument,
-    /// which makes the parse rules directly testable.
     static func parseScope(from scopeRaw: String) -> (SettingsURIHandler.PerDisplayScope, String?) {
         if scopeRaw.hasPrefix("specific:") {
             let uuid = String(scopeRaw.dropFirst("specific:".count))
@@ -680,6 +705,23 @@ final class DisplaySettingsManager {
         return targets
     }
 
+    /// Drops a display's cached name and per-display override. A connected
+    /// display is re-captured on the next screen-parameters change, so for
+    /// one this only discards the override.
+    func removeSavedDisplay(forUUID uuid: String) {
+        var updatedKnown = knownDisplays
+        let removedKnown = updatedKnown.removeValue(forKey: uuid) != nil
+        var updatedConfigs = configurations
+        let removedConfig = updatedConfigs.removeValue(forKey: uuid) != nil
+        guard removedKnown || removedConfig else { return }
+        if removedKnown {
+            knownDisplays = updatedKnown
+        }
+        if removedConfig {
+            configurations = updatedConfigs
+        }
+    }
+
     /// Toggles the Thaw Bar for the display with the active menu bar.
     func toggleIceBarForActiveDisplay() {
         guard let uuid = Bridging.getActiveMenuBarDisplayUUID() else {
@@ -727,18 +769,12 @@ final class DisplaySettingsManager {
         }
     }
 
-    /// Returns info about all known displays — currently connected ones plus
-    /// previously-seen ones whose name/notch state was cached. Connected
-    /// displays come first (alphabetical within each group), then
-    /// disconnected ones (alphabetical).
+    /// Returns connected displays, then cached disconnected ones, each group
+    /// alphabetical.
     ///
-    /// UUIDs that have a saved configuration but no cached name (e.g. a
-    /// stray entry from an older build) are deliberately not surfaced:
-    /// rendering them with a placeholder name would clutter the pane with
-    /// rows the user can't meaningfully identify. Their configuration data
-    /// is retained in storage; if such a display reconnects, its name is
-    /// captured into knownDisplays and it appears normally on subsequent
-    /// renders.
+    /// UUIDs with a saved configuration but no cached name are left out, since
+    /// the user couldn't identify them. Their data stays stored and they
+    /// reappear once the display reconnects.
     func allDisplays() -> [DisplayInfo] {
         let connected = connectedDisplays()
         let connectedIDs = Set(connected.map(\.id))
@@ -764,6 +800,13 @@ final class DisplaySettingsManager {
     /// template when no override exists.
     func configuration(forUUID uuid: String) -> DisplayIceBarConfiguration {
         configurations[uuid] ?? globalConfiguration
+    }
+
+    /// The display's own stored configuration, or nil when it has none and
+    /// resolves to the global template. The Displays pane uses this to mark
+    /// displays whose custom settings shadow the global toggles.
+    func configurationOverride(forUUID uuid: String) -> DisplayIceBarConfiguration? {
+        configurations[uuid]
     }
 }
 

@@ -2,7 +2,6 @@
 //  OpenInterfaceWindowTests.swift
 //  Project: Thaw
 //
-//  Copyright (Ice) © 2023–2025 Jordan Baird
 //  Copyright (Thaw) © 2026 Toni Förster
 //  Licensed under the GNU GPLv3
 
@@ -11,14 +10,11 @@ import Testing
 @testable import Thaw
 
 /// Covers ``MenuBarItemManager/windowIsOpenInterface(ownerPID:layer:height:interfacePIDs:)``,
-/// the last-resort reading of whether a temporarily shown item's menu is still
-/// open once the window captured at click time is gone or was never captured.
+/// the last-resort check for whether a temporarily shown item's menu is still
+/// open when no window was captured at click time.
 ///
-/// #924's search-panel path lands here: activating an item from the search
-/// panel shows it, opens its menu, and the rehide check runs against a context
-/// whose interface was never identified. A negative reading rehides — dragging
-/// the item off the bar and closing the menu the user just opened, two to three
-/// seconds in.
+/// Items shown from the search panel land here; a negative reading rehides the
+/// item and closes the menu the user just opened (#924).
 @Suite("Open interface window")
 struct OpenInterfaceWindowTests {
     private let itemOwner: pid_t = 501
@@ -47,15 +43,13 @@ struct OpenInterfaceWindowTests {
 
     // MARK: Which processes count
 
-    /// The ordinary case: one app owns both the status item and its menu.
     @Test("A menu owned by the item's own process counts")
     func menuFromItemOwnerCounts() {
         #expect(isOpenInterface(ownerPID: itemOwner, layer: popUpLevel, interfacePIDs: [itemOwner]))
     }
 
-    /// The regression. On macOS 26 the item's window is owned by Control
-    /// Center while the app draws the menu, so a check keyed on the window's
-    /// owner alone never finds the open menu and the rehide proceeds.
+    /// On macOS 26 Control Center owns the item's window while the app draws the
+    /// menu, so matching on the window owner alone never finds the open menu.
     @Test("A menu owned by the item's source process counts")
     func menuFromSourceProcessCounts() {
         #expect(
@@ -67,10 +61,8 @@ struct OpenInterfaceWindowTests {
         )
     }
 
-    /// The breadth is not unlimited — some other app's menu being open says
-    /// nothing about this item, and treating it as evidence would strand the
-    /// item in the visible section for as long as anything on the Mac had a
-    /// menu down.
+    /// Another app's open menu says nothing about this item; counting it would
+    /// strand the item visible while any menu on the Mac is down.
     @Test("A menu owned by an unrelated process does not count")
     func menuFromUnrelatedProcessDoesNotCount() {
         #expect(
@@ -82,8 +74,7 @@ struct OpenInterfaceWindowTests {
         )
     }
 
-    /// A context that resolved neither PID has nothing to match against, and
-    /// must not fall back to matching everything.
+    /// A context with neither PID resolved must not fall back to matching everything.
     @Test("An empty PID set matches nothing")
     func emptyPIDSetMatchesNothing() {
         #expect(!isOpenInterface(ownerPID: itemOwner, layer: popUpLevel, interfacePIDs: []))
@@ -91,15 +82,13 @@ struct OpenInterfaceWindowTests {
 
     // MARK: Which window levels count
 
-    /// Some menus sit a level below the pop-up level; ``WindowInfo/isMenuRelated``
-    /// allows the same slack.
+    /// Some menus sit a level below pop-up; ``WindowInfo/isMenuRelated`` allows the same slack.
     @Test("A window one level below pop-up counts")
     func oneLevelBelowPopUpCounts() {
         #expect(isOpenInterface(ownerPID: itemOwner, layer: popUpLevel - 1, interfacePIDs: [itemOwner]))
     }
 
-    /// A pop-up level window is a menu whatever its size, so the height rule
-    /// that guards the status levels must not apply here.
+    /// A pop-up level window is a menu at any size, so the status-level height rule does not apply.
     @Test("Height is not consulted at pop-up level")
     func popUpLevelIgnoresHeight() {
         #expect(isOpenInterface(ownerPID: itemOwner, layer: popUpLevel, height: 22, interfacePIDs: [itemOwner]))
@@ -115,16 +104,13 @@ struct OpenInterfaceWindowTests {
         #expect(isOpenInterface(ownerPID: itemOwner, layer: mainMenuLevel, height: 300, interfacePIDs: [itemOwner]))
     }
 
-    /// The status item itself lives at status level in the menu bar. Counting
-    /// it would mean the interface always reads as showing and the item never
-    /// goes home.
+    /// The status item lives at status level; counting it would keep the item from ever going home.
     @Test("The status item itself does not count as its own menu")
     func menuBarSizedStatusWindowDoesNotCount() {
         #expect(!isOpenInterface(ownerPID: itemOwner, layer: statusLevel, height: 22, interfacePIDs: [itemOwner]))
     }
 
-    /// The far side of the same trade: a liberal "anything above normal" match
-    /// would take an ordinary floating panel of the app as an open menu.
+    /// A liberal "anything above normal" match would take the app's floating panel for a menu.
     @Test("A floating window does not count")
     func floatingWindowDoesNotCount() {
         #expect(!isOpenInterface(ownerPID: itemOwner, layer: floatingLevel, interfacePIDs: [itemOwner]))
@@ -137,13 +123,10 @@ struct OpenInterfaceWindowTests {
 }
 
 /// Covers ``MenuBarItemManager/interfaceWindowToTrack(among:interfacePIDs:)``,
-/// which chooses the window a temporarily shown item's rehide check will watch.
+/// which picks the window a temporarily shown item's rehide check watches.
 ///
-/// The choice decides how the check behaves for as long as the item is out. A
-/// tracked window is read directly, skipping both the grace period and the
-/// `unknown` budget, so tracking a window that is not the menu turns the first
-/// check after it closes into a confident "the menu is gone" — and the item is
-/// dragged home with the menu still open under the user's pointer (#924).
+/// A tracked window skips the grace period and the `unknown` budget, so tracking
+/// a window that is not the menu drags the item home with the menu still open (#924).
 @Suite("Interface window to track")
 struct InterfaceWindowToTrackTests {
     private let itemOwner: pid_t = 501
@@ -172,15 +155,13 @@ struct InterfaceWindowToTrackTests {
         MenuBarItemManager.interfaceWindowToTrack(among: candidates, interfacePIDs: pids)?.windowID
     }
 
-    /// The ordinary case.
     @Test("A menu from the item's own process is tracked")
     func menuFromItemOwnerIsTracked() {
         let menu = window(id: 1, ownerPID: itemOwner, layer: popUpLevel, height: 300)
         #expect(tracked([menu], pids: [itemOwner]) == 1)
     }
 
-    /// The item's window and its menu belong to different processes whenever
-    /// Control Center hosts the item, so the source process counts too.
+    /// Control Center-hosted items have their window and menu in different processes.
     @Test("A menu from the item's source process is tracked")
     func menuFromSourceProcessIsTracked() {
         let menu = window(id: 1, ownerPID: menuOwner, layer: popUpLevel, height: 300)
@@ -193,26 +174,23 @@ struct InterfaceWindowToTrackTests {
         #expect(tracked([other], pids: [itemOwner, menuOwner]) == nil)
     }
 
-    /// The regression. Control Center is in the PID set for every item it
-    /// hosts, and it opens item-sized windows of its own around a click. One of
-    /// those is not the menu, and tracking it means the menu is declared closed
-    /// the moment the window goes — about a second after the user opened it.
+    /// Control Center is in the PID set for every hosted item and opens item-sized
+    /// windows of its own around a click; tracking one declares the menu closed
+    /// about a second after it opened.
     @Test("An item-sized window from a hosting process is not tracked")
     func itemSizedWindowIsNotTracked() {
         let incidental = window(id: 1, ownerPID: itemOwner, layer: statusLevel, height: 22)
         #expect(tracked([incidental], pids: [itemOwner, menuOwner]) == nil)
     }
 
-    /// Tracking nothing leaves the reading `unknown`, which is what the grace
-    /// period and the bounded re-checks are for. Better to look again than to
-    /// answer from a window that was never the menu.
+    /// Tracking nothing leaves the reading `unknown`, which the grace period and
+    /// bounded re-checks handle; better than answering from a non-menu window.
     @Test("Nothing worth tracking tracks nothing")
     func nothingQualifyingTracksNothing() {
         #expect(tracked([], pids: [itemOwner]) == nil)
     }
 
-    /// Order in the window list says nothing about which window is the menu, so
-    /// the menu has to be preferred rather than merely found first.
+    /// Window list order says nothing about which is the menu, so the menu must be preferred.
     @Test("A menu is preferred over an incidental window that opened with it")
     func menuIsPreferredOverIncidentalWindow() {
         let incidental = window(id: 1, ownerPID: itemOwner, layer: statusLevel, height: 22)
@@ -220,10 +198,8 @@ struct InterfaceWindowToTrackTests {
         #expect(tracked([incidental, menu], pids: [itemOwner, menuOwner]) == 2)
     }
 
-    /// Electron menus and agent-app popovers open at levels no menu rule
-    /// matches. `interfaceState` reads those from their size, so a window too
-    /// tall to be a status item is still worth tracking when no menu-level one
-    /// appeared.
+    /// Electron menus and agent-app popovers open at levels no menu rule matches;
+    /// a window too tall to be a status item is tracked when no menu-level one appeared.
     @Test("A tall window at an unrecognized level is tracked as a last resort")
     func tallWindowIsTrackedAsLastResort() {
         let popover = window(id: 1, ownerPID: itemOwner, layer: floatingLevel, height: 300)

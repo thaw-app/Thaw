@@ -2,7 +2,6 @@
 //  SettingsURIHandlerGetTests.swift
 //  Project: Thaw
 //
-//  Copyright (Ice) © 2023–2025 Jordan Baird
 //  Copyright (Thaw) © 2026 Toni Förster
 //  Licensed under the GNU GPLv3
 
@@ -10,55 +9,29 @@ import Foundation
 import Testing
 @testable import Thaw
 
-/// Covers ``SettingsURIHandler``'s *read* surface — the `get` action, the way
-/// it answers, and the per-display lookups both halves of the handler share.
+/// Covers ``SettingsURIHandler``'s `get` action, how it answers, and the
+/// per-display lookups shared with `set` and `toggle`.
 ///
-/// `SettingsURIHandlerTests` covers the pure key tables and
-/// `SettingsURIHandlerApplyTests` covers `set`/`toggle`; this suite drives the
-/// paths that hand data back to a *third-party app*. That makes refusal the
-/// interesting behaviour: a callback URL is an address the handler would
-/// otherwise hand to `NSWorkspace`, so every malformed or dangerous one has to
-/// be turned away before it is opened. Nothing here supplies a callback the
-/// handler would accept, precisely so the suite never opens a URL or launches
-/// another app.
+/// A callback URL would otherwise go to `NSWorkspace`, so every malformed or
+/// dangerous one must be refused before it is opened. No test supplies a
+/// callback the handler would accept, so nothing opens a URL or launches an app.
 ///
-/// Three shapes of assertion appear below:
+/// Response bodies are not observable here: the payload travels down a
+/// callback URL, and the `distnoted` broadcast does not deliver back into the
+/// test host. Tests assert the returned Boolean (a broadcast request succeeds
+/// only when it produced data, like a callback request) or the per-display
+/// notification's `userInfo`. The `iceBarLocation valid values` test calls
+/// `getSettingValue` directly instead.
 ///
-/// - the Boolean the handler returns, which is its contract with the URL
-///   dispatcher,
-/// - the in-process notification the per-display lookups post, whose `userInfo`
-///   carries the scope and value the handler resolved, and
-/// - a direct call into `getSettingValue`, used once to pin the `validValues`
-///   map a `thaw://get?key=iceBarLocation` advertises after it silently
-///   dropped two enum cases.
-///
-/// The response *body* is not asserted through its delivery channels, because
-/// it is not observable that way: the full payload only ever travels down a
-/// callback URL — which would mean opening a URL and launching another app —
-/// and the broadcast alternative goes out through `distnoted`, which does not
-/// deliver back into the test host. The one body-level assertion, the
-/// `iceBarLocation valid values` test, calls `getSettingValue` directly
-/// instead: that function is a read with no delivery side effects, so pinning
-/// its return advertises the map without ever opening a URL or posting a
-/// distributed notification. Everywhere else, what is asserted is the Boolean:
-/// a broadcast request reports success only when it produced data, the same way
-/// a callback request does, and no response, however shaped, talks its way past
-/// callback validation.
-///
-/// Every test body runs inside `withScratchDefaults`, so the handler's reads
-/// and writes go to a throwaway store rather than the real `com.stonerl.Thaw`
-/// domain, and each test starts from an empty store.
+/// Every test runs inside `withScratchDefaults`.
 @MainActor
 @Suite("Settings URI handler get", .serialized)
 struct SettingsURIHandlerGetTests {
     // MARK: Helpers
 
     /// Persists a configuration for `uuid` so the handler accepts it as a
-    /// known display.
-    ///
-    /// The handler accepts a display that is either connected *or* has a
-    /// persisted configuration, and a test cannot attach a screen — so the
-    /// persisted half is the only door into the specific-display code paths.
+    /// known display. A test cannot attach a screen, so this is the only way
+    /// into the specific-display paths.
     private func persistConfiguration(
         _ configuration: DisplayIceBarConfiguration,
         forUUID uuid: String
@@ -241,6 +214,49 @@ struct SettingsURIHandlerGetTests {
         }
     }
 
+    /// Unlike most schemeless cases, these do not parse at all, a different
+    /// branch, so each case asserts that first.
+    @Test("A callback URL the parser cannot read at all is refused", arguments: [
+        "https://exa mple.com/callback",
+        "ht^tp://callback",
+        "http://[::1",
+        "http://%%",
+        "thaw-callback://ho st/path",
+    ])
+    func unparsableCallbackIsRefused(_ callback: String) throws {
+        try withScratchDefaults { _ in
+            #expect(URLComponents(string: callback) == nil, "\(callback) must be unparsable for this test to mean anything")
+            #expect(
+                !SettingsURIHandler.handleGet(
+                    key: "version",
+                    displayUUID: nil,
+                    callback: callback,
+                    broadcast: false,
+                    requestId: "req-unparsable"
+                ),
+                "\(callback)"
+            )
+        }
+    }
+
+    /// A callback the handler will not open fails the whole request even
+    /// when the caller also asked for a broadcast, for an unparsable URL
+    /// exactly as for a dangerous scheme.
+    @Test("An unparsable callback is not quietly downgraded to a broadcast")
+    func unparsableCallbackIsNotDowngraded() throws {
+        try withScratchDefaults { _ in
+            #expect(
+                !SettingsURIHandler.handleGet(
+                    key: "all",
+                    displayUUID: nil,
+                    callback: "https://exa mple.com/callback",
+                    broadcast: true,
+                    requestId: "req-unparsable-both"
+                )
+            )
+        }
+    }
+
     // MARK: Broadcast response
 
     @Test("A broadcast get is answered")
@@ -283,9 +299,9 @@ struct SettingsURIHandlerGetTests {
     ])
     func unknownKeyIsRefusedOverBroadcast(_ key: String) throws {
         try withScratchDefaults { _ in
-            // The acknowledgement still goes out unchanged — it is a fixed shape a
-            // third-party integrator reads — but the handler reports the failure to
-            // its own caller, exactly as the callback path does.
+            // The acknowledgement goes out unchanged, since integrators read its fixed
+            // shape, but the handler reports the failure to its caller, as the callback
+            // path does.
             #expect(
                 !SettingsURIHandler.handleGet(
                     key: key,
@@ -418,6 +434,172 @@ struct SettingsURIHandlerGetTests {
         }
     }
 
+    @Test("Every key the handler publishes is readable", arguments: SettingsURIKeyTable.globalReadableKeys)
+    func everyGlobalKeyIsReadable(_ key: String) throws {
+        try withScratchDefaults { _ in
+            #expect(
+                SettingsURIHandler.handleGet(
+                    key: key,
+                    displayUUID: nil,
+                    callback: nil,
+                    broadcast: true,
+                    requestId: "req-read-\(key)"
+                ),
+                "\(key)"
+            )
+        }
+    }
+
+    /// Reading is never destructive: a `get` of every publishable key must
+    /// leave the store exactly as it found it. Three keys are seeded with
+    /// distinctive values so a read that wrote a default back is caught,
+    /// and one is left unset so a read that materialised a default is too.
+    @Test("Reading every key leaves the stored values alone")
+    func readingDoesNotWriteBack() throws {
+        try withScratchDefaults { _ in
+            Defaults.set(true, forKey: .showOnHover)
+            Defaults.set(123.0, forKey: .rehideInterval)
+            Defaults.set(RehideStrategy.focusedApp.rawValue, forKey: .rehideStrategy)
+            Defaults.removeObject(forKey: .tooltipDelay)
+
+            for key in SettingsURIKeyTable.globalReadableKeys {
+                _ = SettingsURIHandler.handleGet(
+                    key: key,
+                    displayUUID: nil,
+                    callback: nil,
+                    broadcast: true,
+                    requestId: "req-readonly-\(key)"
+                )
+            }
+
+            #expect(Defaults.bool(forKey: .showOnHover))
+            #expect(Defaults.double(forKey: .rehideInterval) == 123)
+            #expect(Defaults.integer(forKey: .rehideStrategy) == RehideStrategy.focusedApp.rawValue)
+            #expect(
+                Defaults.object(forKey: .tooltipDelay) == nil,
+                "reading an unset key must not write a default into the store"
+            )
+        }
+    }
+
+    /// The individual-key read resolves the display before it looks at the
+    /// key at all, and reports a missing setting when it cannot. Every test
+    /// here persists a *different* display first, so the refusal is the
+    /// named identifier being unknown rather than the store being empty.
+    @Test("A per-display read for a display that is not there is refused", arguments: SettingsURIKeyTable.perDisplayKeys)
+    func perDisplayReadForAnAbsentDisplayIsRefused(_ key: String) throws {
+        try withScratchDefaults { _ in
+            let known = UUID().uuidString
+            let absent = UUID().uuidString
+            let data = try JSONEncoder().encode([known: DisplayIceBarConfiguration.defaultConfiguration])
+            Defaults.set(data, forKey: .displayIceBarConfigurations)
+
+            // Control: the same key against a display the store knows is
+            // answered, so the refusal below is about the identifier.
+            #expect(
+                SettingsURIHandler.handleGet(
+                    key: key,
+                    displayUUID: known,
+                    callback: nil,
+                    broadcast: true,
+                    requestId: "req-known-\(key)"
+                ),
+                "\(key)"
+            )
+            #expect(
+                !SettingsURIHandler.handleGet(
+                    key: key,
+                    displayUUID: absent,
+                    callback: nil,
+                    broadcast: true,
+                    requestId: "req-absent-\(key)"
+                ),
+                "\(key)"
+            )
+        }
+    }
+
+    /// A malformed identifier takes the same route out, unlike `set`, which
+    /// rejects it earlier on its `UUID(uuidString:)` check.
+    @Test("A per-display read with a malformed identifier is refused", arguments: SettingsURIKeyTable.perDisplayKeys)
+    func perDisplayReadWithAMalformedIdentifierIsRefused(_ key: String) throws {
+        try withScratchDefaults { _ in
+            #expect(
+                !SettingsURIHandler.handleGet(
+                    key: key,
+                    displayUUID: "not-a-display",
+                    callback: nil,
+                    broadcast: true,
+                    requestId: "req-malformed-\(key)"
+                ),
+                "\(key)"
+            )
+        }
+    }
+
+    /// A global key is not per-display, so the same unknown identifier that
+    /// fails a per-display read has to be ignored here rather than turning
+    /// a perfectly good read into a failure.
+    @Test("An unknown display identifier on a global read is ignored, not refused")
+    func absentDisplayIdentifierOnAGlobalReadIsIgnored() throws {
+        try withScratchDefaults { _ in
+            #expect(
+                SettingsURIHandler.handleGet(
+                    key: "showOnHover",
+                    displayUUID: UUID().uuidString,
+                    callback: nil,
+                    broadcast: true,
+                    requestId: "req-global-with-display"
+                )
+            )
+        }
+    }
+
+    // MARK: Stored values the enumeration cannot name
+
+    /// A downgrade or a hand-written `defaults write` can leave a raw value
+    /// outside the enumeration. The read must answer with it rather than
+    /// report "Setting not found", or the caller could never see or fix it.
+    @Test("A rehideStrategy the enumeration cannot name is still answered", arguments: [99, -1, 3])
+    func outOfRangeRehideStrategyIsStillAnswered(_ raw: Int) throws {
+        try withScratchDefaults { _ in
+            Defaults.set(raw, forKey: .rehideStrategy)
+
+            #expect(
+                SettingsURIHandler.handleGet(
+                    key: "rehideStrategy",
+                    displayUUID: nil,
+                    callback: nil,
+                    broadcast: true,
+                    requestId: "req-strategy-\(raw)"
+                ),
+                "rehideStrategy=\(raw)"
+            )
+            #expect(Defaults.integer(forKey: .rehideStrategy) == raw, "a read must not repair the stored value")
+        }
+    }
+
+    /// The contrast: a value the enumeration *can* name is answered too, so
+    /// the test above is not simply asserting that reads always succeed.
+    @Test("A rehideStrategy the enumeration can name is answered as well")
+    func inRangeRehideStrategyIsAnswered() throws {
+        try withScratchDefaults { _ in
+            for strategy in RehideStrategy.allCases {
+                Defaults.set(strategy.rawValue, forKey: .rehideStrategy)
+                #expect(
+                    SettingsURIHandler.handleGet(
+                        key: "rehideStrategy",
+                        displayUUID: nil,
+                        callback: nil,
+                        broadcast: true,
+                        requestId: "req-strategy-\(strategy.rawValue)"
+                    ),
+                    "\(strategy)"
+                )
+            }
+        }
+    }
+
     // MARK: iceBarLocation valid values
 
     @Test("iceBarLocation advertises every IceBarLocation case, including leftAligned and rightAligned")
@@ -426,11 +608,9 @@ struct SettingsURIHandlerGetTests {
             let uuid = UUID().uuidString
             try persistConfiguration(.defaultConfiguration, forUUID: uuid)
 
-            // The validValues map drifted to three entries when IceBarLocation
-            // grew from three to five cases, so leftAligned and rightAligned
-            // could no longer be discovered through thaw://get. Drive the
-            // expectation from IceBarLocation itself so a future case can never
-            // silently drop out of the advertised set the way these two did.
+            // validValues drifted to three entries when IceBarLocation grew to five
+            // cases, hiding leftAligned and rightAligned from thaw://get. Derive the
+            // expectation from IceBarLocation so no future case can drop out.
             let value = try #require(
                 SettingsURIHandler.getSettingValue(key: "iceBarLocation", displayUUID: uuid)
             )
@@ -630,9 +810,9 @@ struct SettingsURIHandlerGetTests {
             SettingsURIHandler.addToWhitelist(bundleId: "com.apple.finder")
             #expect(SettingsURIHandler.isWhitelisted(bundleIdentifier: "com.apple.finder"))
 
-            // The identity has to be recorded even though the bundle ID is already
-            // listed. Once it is, the entry is verified against it instead of the
-            // unsigned-legacy rule — and Finder does not carry that team.
+            // The identity must be recorded even though the bundle ID is already
+            // listed. The entry is then verified against it instead of the
+            // unsigned-legacy rule, and Finder does not carry that team.
             SettingsURIHandler.addToWhitelist(bundleId: "com.apple.finder", teamIdentifier: "ABCDE12345")
 
             #expect(!SettingsURIHandler.isWhitelisted(bundleIdentifier: "com.apple.finder"))

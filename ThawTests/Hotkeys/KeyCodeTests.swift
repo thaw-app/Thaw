@@ -2,7 +2,6 @@
 //  KeyCodeTests.swift
 //  Project: Thaw
 //
-//  Copyright (Ice) © 2023–2025 Jordan Baird
 //  Copyright (Thaw) © 2026 Toni Förster
 //  Licensed under the GNU GPLv3
 
@@ -14,19 +13,12 @@ import Testing
 /// Covers ``KeyCode``'s Carbon raw values, its `Hashable`/`Codable`
 /// conformances, and the string the hotkey recorder renders for a key.
 ///
-/// The constants are compile-time `static let`s, so the raw-value cases are
-/// cheap regression locks rather than logic tests. The string values are the
-/// part with behaviour: `keyEquivalent` resolves through the *current*
-/// keyboard layout, so its output cannot be asserted verbatim without pinning
-/// the layout. What is pinned instead holds on any ASCII-capable layout — the
-/// custom mapping table that bypasses the layout entirely, and the
-/// empty-string fallback for a key the layout cannot resolve.
-/// Pinned to the main actor and serialized: `keyEquivalent` reaches
-/// `TISCopyCurrentASCIICapableKeyboardLayoutInputSource` and `UCKeyTranslate`,
-/// which are not safe to call concurrently. XCTest ran this class's tests
-/// serially and never exercised that; swift-testing parallelizes in-process
-/// regardless of the scheme's own parallelization setting, and the Carbon
-/// calls crash the host when they overlap.
+/// `keyEquivalent` resolves through the current keyboard layout, so only the
+/// layout-independent parts are pinned: the custom mapping table and the
+/// empty-string fallback.
+///
+/// Serialized on the main actor: overlapping `TISCopyCurrentASCIICapable...`
+/// and `UCKeyTranslate` calls crash the host.
 @MainActor
 @Suite("Key codes", .serialized)
 struct KeyCodeTests {

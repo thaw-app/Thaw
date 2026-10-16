@@ -61,8 +61,7 @@ def main(argv: list[str]) -> int:
     root = tree.getroot()
 
     # The macOS runner checks out to /Users/runner/work/<repo>/<repo> while the
-    # Linux runner uses /home/runner/work/<repo>/<repo>. Accept either shape so
-    # the script works no matter which runner invokes it.
+    # Linux runner uses /home/runner/work/<repo>/<repo>, so accept either.
     tail = "/".join(Path(workspace).parts[-2:])
     roots = [workspace, f"/Users/runner/work/{tail}", f"/home/runner/work/{tail}"]
 

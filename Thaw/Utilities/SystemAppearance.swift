@@ -10,9 +10,7 @@ import SwiftUI
 
 /// A value corresponding to a light or dark appearance.
 enum SystemAppearance {
-    /// A light appearance.
     case light
-    /// A dark appearance.
     case dark
 
     /// The names of the light appearances used by the system.

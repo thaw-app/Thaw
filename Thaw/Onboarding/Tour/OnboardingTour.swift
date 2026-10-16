@@ -2,32 +2,21 @@
 //  OnboardingTour.swift
 //  Project: Thaw
 //
-//  Copyright (Ice) © 2023–2025 Jordan Baird
 //  Copyright (Thaw) © 2026 Toni Förster
 //  Licensed under the GNU GPLv3
 
 import Observation
 import SwiftUI
 
-/// The first-launch onboarding tour: the welcome scene is static — it plays
-/// its own demo but never auto-advances, waiting for an explicit "Continue"
-/// tap. From there, the remaining feature slides (Management, Appearance,
-/// Hotkeys, Profiles) loop continuously — each running its own demo and
-/// advancing on its own, wrapping back to Management after Profiles — until
-/// the user taps "Get Started" to move on to permissions. The single
-/// anchored button (same position and size on every slide) reads "Continue"
-/// on the welcome slide and "Get Started" everywhere in the loop.
+/// The first-launch onboarding tour. Welcome waits for "Continue"; the
+/// feature slides then loop on their own until the user taps "Get Started".
 struct ThawOnboardingTour: View {
     var onFinish: () -> Void
 
     @State private var currentSlide = 0
-    /// Guards against a single tap being registered twice in quick succession
-    /// (trackpad chatter, or a stray double event) — without this, a double
-    /// tap silently skips a slide.
+    /// Drops a tap registered twice in quick succession, which would skip a slide.
     @State private var isNavigating = false
-    // Invalidates any pending auto-advance timer when the slide changes for
-    // any reason (auto or manual), so a stale timer from a skipped slide
-    // can't also fire later.
+    // Cancelled on every slide change so a stale timer can't fire later.
     @State private var navigationTask: Task<Void, Never>?
     @State private var autoAdvanceTask: Task<Void, Never>?
 
@@ -38,8 +27,7 @@ struct ThawOnboardingTour: View {
     @State private var profilesModel = ThawProfilesMockupModel()
 
     private let slides = ThawTourSlide.allCases
-    /// The welcome slide (index 0) plays once and is never looped back to;
-    /// the loop lives entirely within the remaining slides.
+    /// The welcome slide (index 0) is never looped back to.
     private let firstLoopingIndex = 1
 
     private var isWelcome: Bool {
@@ -116,7 +104,7 @@ struct ThawOnboardingTour: View {
         .padding(.top, 2)
     }
 
-    // MARK: Bottom area — anchored the same way on every slide
+    // MARK: Bottom area, anchored the same way on every slide
 
     private var bottomArea: some View {
         VStack(spacing: 14) {
@@ -159,9 +147,7 @@ struct ThawOnboardingTour: View {
 
     // MARK: Helpers
 
-    /// Claims a short exclusive window for one navigation action. Returns
-    /// `false` if another action already claimed it recently, so a
-    /// duplicated tap event is dropped instead of firing twice.
+    /// Returns `false` if another navigation claimed the window recently.
     private func beginNavigation() -> Bool {
         guard !isNavigating else { return false }
         isNavigating = true
@@ -191,7 +177,7 @@ struct ThawOnboardingTour: View {
 
     private func scheduleAutoAdvance() {
         autoAdvanceTask?.cancel()
-        // Welcome is static — only the looping slides auto-advance.
+        // Only the looping slides auto-advance.
         guard !isWelcome else { return }
         let delay = current.autoAdvanceDelay
         guard delay > 0 else { return }

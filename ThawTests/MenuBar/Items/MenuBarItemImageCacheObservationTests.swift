@@ -2,7 +2,6 @@
 //  MenuBarItemImageCacheObservationTests.swift
 //  Project: Thaw
 //
-//  Copyright (Ice) © 2023–2025 Jordan Baird
 //  Copyright (Thaw) © 2026 Toni Förster
 //  Licensed under the GNU GPLv3
 
@@ -56,6 +55,22 @@ struct MenuBarItemImageCacheObservationTests {
 
         #expect(cache.leastRecentlyUsedTags(count: 1) == [olderTag])
         #expect(cache.lruEntryCount == 2)
+    }
+
+    @Test
+    @MainActor
+    func imageLookupSurvivesWindowIDChange() throws {
+        let cachedTag = makeTag(title: "Stable", windowID: 1)
+        let currentTag = makeTag(title: "Stable", windowID: 2)
+        let image = try #require(makeOpaqueImage())
+        let cache = MenuBarItemImageCache(images: [
+            cachedTag: .init(cgImage: image, scale: 1),
+        ])
+
+        let result = cache.image(for: currentTag)
+
+        #expect(result?.cgImage === image)
+        #expect(result?.scale == 1)
     }
 
     @Test

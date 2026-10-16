@@ -2,7 +2,6 @@
 //  CapturableBoundsTests.swift
 //  Project: Thaw
 //
-//  Copyright (Ice) © 2023–2025 Jordan Baird
 //  Copyright (Thaw) © 2026 Toni Förster
 //  Licensed under the GNU GPLv3
 
@@ -12,16 +11,9 @@ import Testing
 
 /// Characterizes which window bounds may take part in a composite capture.
 ///
-/// `refreshImages` captures a batch of item windows as one image and slices it
-/// per item using each window's offset within the batch's bounds union. A
-/// degenerate window — zero width or zero height — breaks that: the capture
-/// APIs drop it from the composite, so it adds no pixels, while including it in
-/// the union corrupts the geometry the composite gets sliced against. Parked
-/// off-screen it widens the union across the whole gap, the composite's width
-/// no longer matches, and the batch is discarded. That is the difference
-/// between previews rendering and the Hidden rows appearing empty.
-///
-/// Which item produced the degenerate bounds does not matter to any of this.
+/// `refreshImages` slices one composite by each window's offset in the bounds
+/// union. The capture APIs drop zero-size windows, but a parked one still
+/// widens the union, so the width check fails and the Hidden rows render empty.
 @Suite("Capturable bounds")
 struct CapturableBoundsTests {
     @Test("An ordinary menu bar item window is capturable")
@@ -46,11 +38,8 @@ struct CapturableBoundsTests {
         #expect(!MenuBarItemImageCache.isCapturableBounds(.null))
     }
 
-    /// The regression itself, in the geometry the field log recorded: seven
-    /// contiguous on-screen items plus two degenerate windows at x=-3774. With
-    /// those filtered, the union matches the composite the capture returns
-    /// (260pt → 520px at 2x); without them it is 5276pt wide and every batch is
-    /// thrown away.
+    /// Seven on-screen items plus two degenerate windows at x=-3774, as in
+    /// the field log.
     @Test("Degenerate windows no longer widen the batch union")
     func degenerateWindowsDoNotWidenTheUnion() {
         let real = [

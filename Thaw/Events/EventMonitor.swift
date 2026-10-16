@@ -378,47 +378,6 @@ nonisolated extension EventMonitor {
 
 nonisolated extension EventMonitor {
     @discardableResult
-    static func startLocal(
-        for mask: NSEvent.EventTypeMask,
-        handler: @escaping (NSEvent) -> NSEvent?
-    ) -> EventMonitor {
-        let monitor = local(for: mask, handler: handler)
-        monitor.start()
-        return monitor
-    }
-
-    @discardableResult
-    static func startGlobal(
-        for mask: NSEvent.EventTypeMask,
-        handler: @escaping (NSEvent) -> Void
-    ) -> EventMonitor {
-        let monitor = global(for: mask, handler: handler)
-        monitor.start()
-        return monitor
-    }
-
-    @discardableResult
-    static func startUniversal(
-        for mask: NSEvent.EventTypeMask,
-        localHandler: @escaping (NSEvent) -> NSEvent?,
-        globalHandler: @escaping (NSEvent) -> Void
-    ) -> EventMonitor {
-        let monitor = universal(for: mask, localHandler: localHandler, globalHandler: globalHandler)
-        monitor.start()
-        return monitor
-    }
-
-    @discardableResult
-    static func startUniversal(
-        for mask: NSEvent.EventTypeMask,
-        handler: @escaping (NSEvent) -> NSEvent?
-    ) -> EventMonitor {
-        let monitor = universal(for: mask, handler: handler)
-        monitor.start()
-        return monitor
-    }
-
-    @discardableResult
     static func startPassive(
         for mask: NSEvent.EventTypeMask,
         scope: Scope,

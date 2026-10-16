@@ -2,7 +2,6 @@
 //  ShareableContentCacheTests.swift
 //  Project: Thaw
 //
-//  Copyright (Ice) © 2023–2025 Jordan Baird
 //  Copyright (Thaw) © 2026 Toni Förster
 //  Licensed under the GNU GPLv3
 
@@ -13,10 +12,8 @@ import Testing
 /// once it has elapsed, concurrent callers joining one in-flight fetch, and
 /// one caller's cancellation not poisoning another's result.
 ///
-/// Serialized because every case here measures real elapsed time against
-/// short `maxAge` budgets. Run concurrently the cases contend for the same
-/// executor and the timings stop being reliable, so the suite is kept to one
-/// case at a time as it was under XCTest.
+/// Serialized because every case measures real elapsed time against short
+/// `maxAge` budgets, and concurrent cases would contend for the executor.
 @Suite("Shareable content cache", .serialized, .timeLimit(.minutes(1)))
 struct ShareableContentCacheTests {
     // MARK: - Hit within maxAge
@@ -77,9 +74,8 @@ struct ShareableContentCacheTests {
         }
 
         async let first = cache.content(maxAge: .seconds(60), fetch: slowFetch)
-        // Wait until the first call's fetch has actually begun — so it's the
-        // one that creates the in-flight task — then join it with two more
-        // concurrent callers.
+        // Wait until the first call's fetch has begun, so it creates the
+        // in-flight task, then join it with two more concurrent callers.
         var began = fetchBegan.makeAsyncIterator()
         _ = await began.next()
         async let second = cache.content(maxAge: .seconds(60), fetch: slowFetch)

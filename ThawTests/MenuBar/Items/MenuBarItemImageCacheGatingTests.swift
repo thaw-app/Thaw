@@ -2,28 +2,18 @@
 //  MenuBarItemImageCacheGatingTests.swift
 //  Project: Thaw
 //
-//  Copyright (Ice) © 2023–2025 Jordan Baird
 //  Copyright (Thaw) © 2026 Toni Förster
 //  Licensed under the GNU GPLv3
 
 import Testing
 @testable import Thaw
 
-/// Characterizes the gating decision that bounds the perpetual background
-/// capture loop feeding the SkyLight WindowServer leak (#759).
-///
-/// `settingsPaneHasBeenOpened` used to be a sticky flag: once the user opened
-/// the layout settings pane a single time, it stayed `true` for the process
-/// lifetime, and every space/screen/appearance/item-cache change from then on
-/// triggered a full background capture of all sections — including offscreen
-/// sections through the leaking SkyLight path — even with every Thaw window
-/// closed. `shouldAllowBackgroundCapture` now gates on whether the pane is
-/// *currently* open, bounding the window in which background captures can run.
+/// Background capture of offscreen sections goes through a SkyLight path that
+/// leaks WindowServer memory (#759), so it is gated on the settings pane being
+/// open now, not ever.
 @Suite("Menu bar item image cache gating")
 struct MenuBarItemImageCacheGatingTests {
-    /// No visible consumer and the pane is closed: must not allow background
-    /// capture even if a caller explicitly requests it. This is the fix for
-    /// the sticky-flag leak amplifier.
+    /// With the pane closed and no consumer, even an explicit request is refused.
     @Test("No consumer with the pane closed does not allow background capture")
     func noConsumerPaneClosedDoesNotAllow() {
         #expect(
@@ -35,8 +25,7 @@ struct MenuBarItemImageCacheGatingTests {
         )
     }
 
-    /// The settings pane is open and background capture was explicitly
-    /// requested: must allow, preserving prewarm-on-open behavior.
+    /// Preserves prewarm-on-open.
     @Test("An open settings pane with capture requested allows background capture")
     func paneOpenAndAllowedAllows() {
         #expect(
@@ -72,5 +61,41 @@ struct MenuBarItemImageCacheGatingTests {
                 isSettingsPaneOpen: true
             )
         )
+    }
+
+    @Test("Trigger-only attention capture selects watched identifiers")
+    func triggerOnlyAttentionCaptureIsNarrow() {
+        let required = MenuBarItemImageCache.requiredCaptureIdentifiers(
+            availableIdentifiers: ["mail", "calendar", "battery"],
+            consumerNeedsWholeSection: false,
+            globalAttentionNeedsWholeSection: false,
+            attentionTriggerIdentifiers: ["calendar", "not-in-section"]
+        )
+
+        #expect(required == ["calendar"])
+    }
+
+    @Test("Visible demand unions a whole section with trigger demand")
+    func visibleConsumerKeepsWholeSection() {
+        let required = MenuBarItemImageCache.requiredCaptureIdentifiers(
+            availableIdentifiers: ["mail", "calendar", "battery"],
+            consumerNeedsWholeSection: true,
+            globalAttentionNeedsWholeSection: false,
+            attentionTriggerIdentifiers: ["calendar"]
+        )
+
+        #expect(required == ["mail", "calendar", "battery"])
+    }
+
+    @Test("Global attention keeps full concealed-section coverage")
+    func globalAttentionKeepsWholeSection() {
+        let required = MenuBarItemImageCache.requiredCaptureIdentifiers(
+            availableIdentifiers: ["mail", "calendar", "battery"],
+            consumerNeedsWholeSection: false,
+            globalAttentionNeedsWholeSection: true,
+            attentionTriggerIdentifiers: []
+        )
+
+        #expect(required == ["mail", "calendar", "battery"])
     }
 }

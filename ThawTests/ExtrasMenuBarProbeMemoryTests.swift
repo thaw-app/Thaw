@@ -2,7 +2,6 @@
 //  ExtrasMenuBarProbeMemoryTests.swift
 //  Project: Thaw
 //
-//  Copyright (Ice) © 2023–2025 Jordan Baird
 //  Copyright (Thaw) © 2026 Toni Förster
 //  Licensed under the GNU GPLv3
 
@@ -10,26 +9,22 @@ import Testing
 @testable import Thaw
 
 /// Pins what carries across launches about which applications have an extras
-/// menu bar, and — more importantly — what does not.
+/// menu bar, and what does not.
 ///
-/// The memory exists to keep the first scan of a session off the ~155 of ~170
-/// running applications that have never had an extras menu bar, which cost
-/// 3.85s in the #956 log. It is allowed to be wrong: a wrong entry costs a
-/// scan, never an answer. What it is not allowed to do is go on being wrong,
-/// which is why every rule below is biased toward re-probing.
+/// The memory keeps the first scan off apps that never had one (seconds of
+/// probing, #956). A wrong entry costs a scan, never an answer, but it must
+/// not stay wrong, so every rule is biased toward re-probing.
 @Suite("Extras menu bar probe memory")
 struct ExtrasMenuBarProbeMemoryTests {
     // MARK: Seeding
 
-    /// Nothing remembered is nothing to act on: the application is probed on
-    /// the cold-start scan exactly as it was before this memory existed.
+    /// An unknown application is probed on the cold-start scan as usual.
     @Test("An unknown application is not seeded")
     func unknownApplicationIsNotSeeded() {
         #expect(ExtrasMenuBarProbeMemory.seed(forRememberedMisses: nil) == nil)
     }
 
-    /// One miss is not evidence — an application probed while it was still
-    /// launching reports no extras menu bar for reasons of its own.
+    /// An application probed while still launching can report no extras menu bar.
     @Test("A single remembered miss is not enough to seed")
     func singleMissIsNotEnoughToSeed() {
         #expect(ExtrasMenuBarProbeMemory.seed(forRememberedMisses: 1) == nil)
@@ -44,10 +39,8 @@ struct ExtrasMenuBarProbeMemoryTests {
         #expect(seed?.misses == 3)
     }
 
-    /// The deadline is the first rung whatever the count says. Memory is good
-    /// enough to stay out of the cold-start scan and not good enough to buy
-    /// five minutes of silence from an application that gained a status item
-    /// since last launch.
+    /// Memory skips the cold-start scan but must not buy five minutes of
+    /// silence from an app that gained a status item since last launch.
     @Test("A seeded deadline is always the first rung")
     func seededDeadlineIsAlwaysTheFirstRung() {
         for misses in 2...50 {
@@ -67,8 +60,7 @@ struct ExtrasMenuBarProbeMemoryTests {
 
     // MARK: Merging
 
-    /// The ordinary case: an application that came back empty twice is worth
-    /// skipping first thing next launch.
+    /// An application that came back empty twice is skipped next launch.
     @Test("A settled miss is remembered")
     func settledMissIsRemembered() {
         let merged = ExtrasMenuBarProbeMemory.merged(
@@ -79,10 +71,7 @@ struct ExtrasMenuBarProbeMemoryTests {
         #expect(merged["com.example.quiet"] == 3)
     }
 
-    /// The case that matters most. An application that has since published an
-    /// extras menu bar loses its entry outright — a stale entry here would
-    /// cost that application's items a skipped probe on every future launch,
-    /// which is a permanent cost for a one-session observation.
+    /// A stale entry here would skip the app's probe on every future launch.
     @Test("An application that gained an extras menu bar is forgotten")
     func applicationThatGainedABarIsForgotten() {
         let merged = ExtrasMenuBarProbeMemory.merged(
@@ -129,10 +118,8 @@ struct ExtrasMenuBarProbeMemoryTests {
         #expect(merged["com.example.ancient"] == ExtrasMenuBarProbeMemory.maximumRememberedMisses)
     }
 
-    /// Growth is bounded across years of installing and removing apps. The
-    /// overflow is shed rather than the live set, since an entry for an
-    /// application that is not running is the one that may never be read
-    /// again.
+    /// Growth is bounded. Entries for apps that are not running go first,
+    /// since they may never be read again.
     @Test("Overflow sheds the applications that are not running")
     func overflowShedsAbsentApplications() {
         let stale = (0..<(ExtrasMenuBarProbeMemory.capacity * 2)).reduce(into: [String: Int]()) {

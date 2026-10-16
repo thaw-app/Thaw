@@ -2,7 +2,6 @@
 //  MouseMovedThrottleTests.swift
 //  Project: Thaw
 //
-//  Copyright (Ice) © 2023–2025 Jordan Baird
 //  Copyright (Thaw) © 2026 Toni Förster
 //  Licensed under the GNU GPLv3
 
@@ -11,14 +10,10 @@ import os
 import Testing
 @testable import Thaw
 
-/// Characterizes `HIDEventManager.shouldProcessMouseMoved`, the time-based
-/// gate that replaced a count-based "process every 5th event" throttle.
-///
-/// The count-based version scaled its effective processed-event rate with
-/// the input device's polling rate, so a 1000 Hz mouse did roughly 8x the
-/// work of a 125 Hz mouse for identical physical motion. These tests pin
-/// the replacement's actual contract: the processed-event rate is bounded
-/// by wall-clock time, not by how many events the device delivers.
+/// Characterizes `HIDEventManager.shouldProcessMouseMoved`, a time-based
+/// gate: the processed-event rate is bounded by wall-clock time, not by the
+/// device's polling rate. A count-based "every 5th event" throttle made a
+/// 1000 Hz mouse do about 8x the work of a 125 Hz one.
 @Suite("Mouse moved throttle")
 struct MouseMovedThrottleTests {
     /// Two events observed at the exact same timestamp: only the first may
@@ -65,11 +60,9 @@ struct MouseMovedThrottleTests {
         #expect(!HIDEventManager.shouldProcessMouseMoved(now: second, lastProcessTime: lastProcessTime))
     }
 
-    /// Regression guard for the original bug: with 1000 calls spread evenly
-    /// across one simulated second (modeling a 1000 Hz device), the number
-    /// processed must land near the ~30 Hz time-based cap, not near 1000 —
-    /// the old counter-based throttle would have processed ~200 of these
-    /// (every 5th of a 1000 Hz stream).
+    /// Regression guard: 1000 calls spread across one simulated second (a
+    /// 1000 Hz device) must land near the ~30 Hz cap, not near the ~200 the
+    /// old every-5th-event throttle processed.
     @Test("A high-frequency stream is bounded by time, not event count")
     func highFrequencyStreamIsBoundedByTimeNotCount() {
         let lastProcessTime = OSAllocatedUnfairLock(initialState: TimeInterval(0))

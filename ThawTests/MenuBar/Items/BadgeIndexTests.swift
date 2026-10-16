@@ -2,19 +2,15 @@
 //  BadgeIndexTests.swift
 //  Project: Thaw
 //
-//  Copyright (Ice) © 2023–2025 Jordan Baird
 //  Copyright (Thaw) © 2026 Toni Förster
 //  Licensed under the GNU GPLv3
 
 import Testing
 @testable import Thaw
 
-/// Characterization tests for the New Items badge placement search.
-///
-/// The badge's saved position is expressed relative to an anchor. When that
-/// anchor is gone, the nearest surviving sibling from the saved order stands
-/// in for it: a sibling to the anchor's left places the badge after that
-/// sibling, one to its right places the badge before.
+/// Covers the New Items badge placement search. When the saved anchor is
+/// gone, the nearest surviving sibling stands in: the badge goes after a left
+/// sibling and before a right one.
 @Suite("New items badge index")
 struct BadgeIndexTests {
     private let profileOrder = ["a", "b", "c", "d", "e"]

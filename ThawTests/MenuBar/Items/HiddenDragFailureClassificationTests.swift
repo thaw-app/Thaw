@@ -2,17 +2,15 @@
 //  HiddenDragFailureClassificationTests.swift
 //  Project: Thaw
 //
-//  Copyright (Ice) © 2023–2025 Jordan Baird
 //  Copyright (Thaw) © 2026 Toni Förster
 //  Licensed under the GNU GPLv3
 
 import Testing
 @testable import Thaw
 
-/// Characterizes `MenuBarItemManager.classifyHiddenDragFailure`, the pure
-/// decision function that decides how the Layout settings drag handler
-/// should respond to a move that threw after the drag handler's
-/// resample-and-verify pass (issue #744).
+/// Covers `MenuBarItemManager.classifyHiddenDragFailure`: how the Layout
+/// settings drag handler responds to a move that threw after
+/// resample-and-verify (#744).
 ///
 /// Precedence: reaching the intended position beats being blocked at the
 /// x=-1 sentinel; being blocked beats a missing hidden-section control item.
@@ -31,9 +29,8 @@ struct HiddenDragFailureClassificationTests {
         )
     }
 
-    /// Reaching the position wins even when the item also reads as blocked
-    /// and control items are missing -- those signals shouldn't matter once
-    /// verification already confirmed success.
+    /// Once verification confirmed success, blocked and missing-control-item
+    /// signals do not matter.
     @Test("Reaching the position beats blocked and missing control items")
     func reachedPositionBeatsBlockedAndControlItemsMissing() {
         #expect(
@@ -58,8 +55,7 @@ struct HiddenDragFailureClassificationTests {
         )
     }
 
-    /// Being blocked wins over control items being missing: precedence
-    /// matters because a blocked item is independently recoverable.
+    /// A blocked item is independently recoverable.
     @Test("Being blocked beats missing control items")
     func blockedBeatsControlItemsMissing() {
         #expect(
@@ -85,8 +81,7 @@ struct HiddenDragFailureClassificationTests {
         )
     }
 
-    /// None of the recoverable signals apply: fall back to the raw error
-    /// alert, unchanged from before this fix.
+    /// With no recoverable signal, fall back to the raw error alert.
     @Test("No recoverable signals falls back to the generic alert")
     func noSignalsAlertsGeneric() {
         #expect(

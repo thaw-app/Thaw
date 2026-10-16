@@ -2,7 +2,6 @@
 //  WindowInfoDecodingTests.swift
 //  Project: Thaw
 //
-//  Copyright (Ice) © 2023–2025 Jordan Baird
 //  Copyright (Thaw) © 2026 Toni Förster
 //  Licensed under the GNU GPLv3
 
@@ -12,53 +11,29 @@ import Foundation
 import Testing
 @testable import Thaw
 
-/// Covers the halves of ``WindowInfo`` that survive without a window server:
-/// the memberwise initializer, the *refusal* side of the synthesized `Codable`
-/// conformance, and the derived properties that the menu-bar rules read.
+/// Covers the parts of ``WindowInfo`` that work without a window server:
+/// the memberwise initializer, the refusal side of `Codable`, and the
+/// derived properties the menu-bar rules read.
 ///
-/// `WindowInfoTests` already covers the happy path — an encode/decode round
-/// trip, every field's contribution to `==`, hashing of equal values, and the
-/// three window levels `isMenuRelated` names outright. This suite deliberately
-/// starts where that one stops:
+/// - **Decoding refusals.** `WindowInfo` is persisted and replayed, so a
+///   truncated or mistyped payload must fail rather than decode into a zero
+///   rect. `bounds` decodes positionally from `[[x, y], [w, h]]`, so arity
+///   is the only guard against a silent misread.
+/// - **The memberwise initializer's defaults.**
+/// - **`isMenuRelated`'s off-by-one arm**, which also accepts the level one
+///   below the pop-up menu level.
 ///
-/// - **Decoding refusals.** A `WindowInfo` is persisted and replayed (menu-bar
-///   item caches, failure ledgers, diagnostic captures), so a truncated or
-///   wrongly typed payload has to fail loudly rather than decode into a window
-///   with a plausible-looking zero rect. `bounds` is the interesting one: it is
-///   a `CGRect`, which encodes as the nested unkeyed pair `[[x, y], [w, h]]`
-///   and whose decoder reads positionally, so arity is the only thing standing
-///   between a short payload and a silent misread.
-/// - **The memberwise initializer's defaults**, which exist purely so the rules
-///   below can be exercised without a live window, and which nothing else
-///   asserts.
-/// - **`isMenuRelated`'s off-by-one arm.** The rule accepts the pop-up menu
-///   level *and the level one below it*; nothing currently distinguishes that
-///   arm, and `isMenuRelatedForWindowServer` in the sibling suite happens to
-///   use layer 25 — the status level — so it passes whether or not the
-///   Window-Server arm exists at all.
-///
-/// Deliberately **not** covered, and not coverable here:
-///
-/// - `createWindows(from:)`, `createWindows(option:)`, `createMenuBarWindows`,
-///   `init?(windowID:)` and `currentBounds()`. All four go through `Bridging`
-///   to the live window server; their answers depend on what is on screen.
-/// - `init?(dictionary:)`, which is `private` and only ever reached from those
-///   enumeration functions.
-/// - `wallpaperWindow(from:for:)` and `menuBarWindow(from:for:)`. Both close
-///   over `CGDisplayBounds(display)`, which answers with a real display's frame
-///   on any machine that has one, so neither a match nor a non-match can be
-///   arranged deterministically — a test would assert the developer's monitor
-///   layout rather than the code.
+/// Not covered here: the enumeration functions, `init?(windowID:)` and
+/// `currentBounds()`, which go through `Bridging` to the live window server;
+/// the private `init?(dictionary:)`; and `wallpaperWindow(from:for:)` and
+/// `menuBarWindow(from:for:)`, which read `CGDisplayBounds`.
 @Suite("Window info decoding and derived rules")
 struct WindowInfoDecodingTests {
     // MARK: - Helpers
 
     /// A payload carrying every key the synthesized decoder reads, in the
-    /// shape `JSONEncoder` produces for a `WindowInfo`.
-    ///
-    /// Computed rather than stored: `[String: Any]` is not `Sendable`, so a
-    /// `static let` is rejected under strict concurrency. Recomputing also
-    /// means a test that mutates its copy cannot leak into the next one.
+    /// shape `JSONEncoder` produces for a `WindowInfo`. Computed because
+    /// `[String: Any]` is not `Sendable`, which also keeps mutations per test.
     private static var wellFormedPayload: [String: Any] {
         [
             "windowID": 12345,
@@ -296,11 +271,9 @@ struct WindowInfoDecodingTests {
         }
 
         /// Every source-PID match path anchors on the window's centre, so a
-        /// window missing either dimension has nothing to match against. The
-        /// zero-width case is the one observed in the field (#956): a status
-        /// item at `(-4323, 0, 0, 0)` that nine consecutive scans over seven
-        /// minutes never resolved, while waking a full traversal of every
-        /// running app each time.
+        /// window missing either dimension has nothing to match against. Seen in
+        /// the field (#956): a status item at `(-4323, 0, 0, 0)` that never
+        /// resolved and woke a full scan of every running app each time.
         @Test(
             "A window missing either dimension is degenerate",
             arguments: [
@@ -315,9 +288,7 @@ struct WindowInfoDecodingTests {
         }
 
         /// Position alone must not decide this. An off-screen or negatively
-        /// positioned item is perfectly matchable — the field case sits at
-        /// x = -4323 and would be wrongly skipped by a rule that keyed on
-        /// coordinates instead of size.
+        /// positioned item is matchable; the field case sits at x = -4323.
         @Test("A window far off-screen is not degenerate as long as it has area")
         func offScreenWindowWithAreaIsNotDegenerate() {
             let window = WindowInfo(

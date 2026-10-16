@@ -2,7 +2,6 @@
 //  MenuBarTestFixtures.swift
 //  Project: Thaw
 //
-//  Copyright (Ice) © 2023–2025 Jordan Baird
 //  Copyright (Thaw) © 2026 Toni Förster
 //  Licensed under the GNU GPLv3
 
@@ -61,11 +60,9 @@ nonisolated extension MenuBarItemManager.ControlItemPair {
     /// hidden divider is required; the always-hidden divider is optional to
     /// model both layouts (with and without the always-hidden section).
     ///
-    /// Default window IDs are deliberately in the 1_000_000+ range so the
-    /// underlying Bridging.getWindowBounds lookup (invoked by
-    /// CacheContext.bestBounds) reliably misses, forcing the fall-back to
-    /// item.bounds. Real macOS window IDs are far smaller, so collisions
-    /// would only happen on a system with extreme window pressure.
+    /// Default window IDs start at 1_000_000 so `Bridging.getWindowBounds`
+    /// (called by `CacheContext.bestBounds`) misses and falls back to
+    /// `item.bounds`. Real window IDs are far smaller.
     static func fixture(
         hiddenAt: CGRect,
         alwaysHiddenAt: CGRect? = nil,

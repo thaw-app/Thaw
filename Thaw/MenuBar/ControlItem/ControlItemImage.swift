@@ -12,11 +12,9 @@ import Cocoa
 nonisolated enum ControlItemImage: Codable, Hashable {
     /// An image created from drawing code built into the app.
     case builtin(_ name: ImageBuiltinName)
-    /// A system symbol image.
     case symbol(_ name: String)
     /// An image in an asset catalog.
     case catalog(_ name: String)
-    /// An image stored as data.
     case data(_ data: Data)
 
     /// A Cocoa representation of this image.
@@ -25,11 +23,8 @@ nonisolated enum ControlItemImage: Codable, Hashable {
         nsImage(customIceIconIsTemplate: appState.settings.general.customIceIconIsTemplate)
     }
 
-    /// A Cocoa representation of this image.
-    ///
-    /// Takes the one flag the conversion actually reads — whether a `.data`
-    /// icon renders as a template — instead of the full app state, so every
-    /// case can be exercised in tests without standing up an AppState.
+    /// Takes only the template flag instead of the app state, so it can be
+    /// tested without an AppState.
     @MainActor
     func nsImage(customIceIconIsTemplate: Bool) -> NSImage? {
         switch self {
@@ -62,22 +57,15 @@ nonisolated enum ControlItemImage: Codable, Hashable {
 nonisolated extension ControlItemImage {
     /// A name for an image that is created from drawing code in the app.
     enum ImageBuiltinName: Codable, Hashable {
-        /// A large chevron.
         case chevronLarge
-        /// A small chevron.
         case chevronSmall
     }
 }
 
 extension ControlItemImage {
-    /// A namespace for static builtin images.
-    ///
-    /// - Note: We use the static properties `large` and `small` to avoid repeatedly
-    ///   executing code every time ``nsImage(for:)`` is called.
+    /// Cached so ``nsImage(for:)`` doesn't redraw on every call.
     private enum StaticBuiltins {
-        /// A namespace for static builtin chevron images.
         enum Chevron {
-            /// Creates a chevron image with the given size and line width.
             private static func chevron(size: CGSize, lineWidth: CGFloat) -> NSImage {
                 let image = NSImage(size: size, flipped: false) { bounds in
                     let insetBounds = bounds.insetBy(dx: lineWidth / 2, dy: lineWidth / 2)
@@ -95,10 +83,8 @@ extension ControlItemImage {
                 return image
             }
 
-            /// A large chevron.
             static let large = chevron(size: CGSize(width: 12, height: 12), lineWidth: 2)
 
-            /// A small chevron.
             static let small = chevron(size: CGSize(width: 9, height: 9), lineWidth: 2)
         }
     }

@@ -2,7 +2,6 @@
 //  LateArrivalDetectionTests.swift
 //  Project: Thaw
 //
-//  Copyright (Ice) © 2023–2025 Jordan Baird
 //  Copyright (Thaw) © 2026 Toni Förster
 //  Licensed under the GNU GPLv3
 
@@ -13,14 +12,10 @@ import Testing
 
 /// Pins the identity-quality filter on late-arrival detection.
 ///
-/// #881's `547c9ba` log: the reporter's bar held 34 items with 16–17
-/// `sourcePID`s unresolved for most of an hour — just under
-/// `majorityOfSourcePIDsUnresolved`'s strict-majority bar, so every apply
-/// ran. Each resolution flap swapped an item's identity between its resolved
-/// and fallback forms, and whichever form the previous sort had not recorded
-/// read as a fresh arrival, scheduling another re-sort. Twenty re-sorts in
-/// 63 minutes, all of whose moves *landed* — which is why neither the
-/// boundary-move guard nor the unfinished-batch gate touches this loop.
+/// With just under half the `sourcePID`s unresolved, every apply still runs
+/// (#881). Each resolution flap swaps an item between its resolved and
+/// fallback identity, and the unrecorded form reads as a fresh arrival,
+/// scheduling another re-sort. The moves land, so no other guard stops it.
 @Suite("Late arrival detection")
 struct LateArrivalDetectionTests {
     /// The resolved and fallback identities the log showed for the same
@@ -46,10 +41,8 @@ struct LateArrivalDetectionTests {
 
     // MARK: - The loop this closes
 
-    /// An item whose PID did not resolve carries a fallback identity, so it
-    /// must not read as an arrival even when the profile happens to contain
-    /// that fallback form — which it does here, because a profile captured
-    /// during a flap bakes the bad identity in.
+    /// An unresolved item carries a fallback identity and must not read as an
+    /// arrival, even when a profile captured during a flap contains that form.
     @Test("An unresolved item is not a late arrival")
     func unresolvedItemIsNotALateArrival() {
         let items = [item("eu.exelban.Stats", "eu.exelban.Stats:1", sourcePID: nil)]
@@ -61,9 +54,8 @@ struct LateArrivalDetectionTests {
         #expect(arrivals.isEmpty)
     }
 
-    /// The flap itself: the last sort recorded the resolved form, resolution
-    /// drops, and the same item comes back under its fallback identity. Before
-    /// the filter this scheduled a re-sort; now it is ignored.
+    /// The last sort recorded the resolved form, then the same item comes back
+    /// under its fallback identity.
     @Test("A resolution flap does not manufacture an arrival")
     func resolutionFlapDoesNotManufactureAnArrival() {
         let flapped = [
@@ -81,8 +73,8 @@ struct LateArrivalDetectionTests {
         #expect(arrivals.isEmpty)
     }
 
-    /// A whole pass with nothing resolved — the state the settle-end fast
-    /// restore leaves — yields no arrivals rather than every item at once.
+    /// A pass with nothing resolved (as after the settle-end fast restore)
+    /// yields no arrivals rather than every item.
     @Test("A pass with nothing resolved yields no arrivals")
     func passWithNothingResolvedYieldsNoArrivals() {
         let items = [
@@ -100,8 +92,8 @@ struct LateArrivalDetectionTests {
 
     // MARK: - What must still be detected
 
-    /// The behaviour the detector exists for: an app launches after Thaw, its
-    /// item resolves cleanly, and it is in the profile but not yet sorted.
+    /// An app launches after Thaw, resolves cleanly, and is in the profile but
+    /// not yet sorted.
     @Test("A resolved, unsorted profile item is a late arrival")
     func resolvedUnsortedProfileItemIsALateArrival() {
         let items = [item("eu.exelban.Stats", "CPU_bar_chart", sourcePID: 4321)]
@@ -113,8 +105,7 @@ struct LateArrivalDetectionTests {
         #expect(arrivals == [Field.statsResolved])
     }
 
-    /// A mixed pass still reports the genuine arrival; the filter narrows the
-    /// set rather than suppressing detection whenever anything is unresolved.
+    /// The filter narrows the set rather than suppressing detection.
     @Test("A genuine arrival survives alongside unresolved items")
     func genuineArrivalSurvivesAlongsideUnresolvedItems() {
         let items = [

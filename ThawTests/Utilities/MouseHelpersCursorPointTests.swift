@@ -2,7 +2,6 @@
 //  MouseHelpersCursorPointTests.swift
 //  Project: Thaw
 //
-//  Copyright (Ice) © 2023–2025 Jordan Baird
 //  Copyright (Thaw) © 2026 Toni Förster
 //  Licensed under the GNU GPLv3
 
@@ -11,10 +10,10 @@ import Foundation
 import Testing
 @testable import Thaw
 
-/// Covers `MouseHelpers.cursorPoint(overItemWithBounds:displayBounds:)`, the
+/// Covers MouseHelpers.cursorPoint(overItemWithBounds:displayBounds:), the
 /// point the search panel warps to after revealing an item.
 ///
-/// The guard is the point of the helper: `CGWarpMouseCursorPosition` clamps a
+/// The guard is the point of the helper: CGWarpMouseCursorPosition clamps a
 /// point that lies on no display to the leftmost edge of one, which sits under
 /// the Apple menu. Hidden and always-hidden items on a notched display sit at
 /// negative X while they are offscreen, so a helper that answered with a point
@@ -23,7 +22,7 @@ import Testing
 @Suite("Cursor point over a revealed item")
 struct MouseHelpersCursorPointTests {
     /// The built-in display, plus one to its left, in the global top-left
-    /// origin coordinate space that `CGDisplayBounds` uses.
+    /// origin coordinate space that CGDisplayBounds uses.
     private let displays = [
         CGRect(x: 0, y: 0, width: 1800, height: 1169),
         CGRect(x: -1920, y: 0, width: 1920, height: 1080),
@@ -67,7 +66,7 @@ struct MouseHelpersCursorPointTests {
     }
 
     /// An item whose window has already gone away reads back as an empty
-    /// rect, whose center is the origin — a point that a display containing
+    /// rect, whose center is the origin, a point that a display containing
     /// the origin would otherwise accept.
     @Test("Empty bounds resolve to no point", arguments: [
         CGRect.zero,
@@ -87,5 +86,15 @@ struct MouseHelpersCursorPointTests {
         let point = MouseHelpers.cursorPoint(overItemWithBounds: bounds, displayBounds: [])
 
         #expect(point == nil)
+    }
+
+    @Test("Saved cursor position is restored only while Thaw retains ownership")
+    func cursorRestorationRespectsPhysicalInput() {
+        #expect(MouseHelpers.shouldRestoreSavedCursorPosition(
+            physicalPointerInputOccurred: false
+        ))
+        #expect(!MouseHelpers.shouldRestoreSavedCursorPosition(
+            physicalPointerInputOccurred: true
+        ))
     }
 }

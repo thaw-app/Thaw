@@ -2,7 +2,6 @@
 //  DisplayIceBarConfiguration.swift
 //  Project: Thaw
 //
-//  Copyright (Ice) © 2023–2025 Jordan Baird
 //  Copyright (Thaw) © 2026 Toni Förster
 //  Licensed under the GNU GPLv3
 
@@ -13,14 +12,11 @@ nonisolated struct DisplayIceBarConfiguration: Codable, Equatable {
     /// Whether the Thaw Bar is enabled on this display.
     let useIceBar: Bool
 
-    /// Whether the always-hidden section alone opens in the Thaw Bar on this
-    /// display, leaving the hidden section to expand inline as usual.
+    /// Whether the always-hidden section alone opens in the Thaw Bar, leaving
+    /// the hidden section inline. Only applies when ``useIceBar`` is `false`.
     ///
-    /// Only applicable when ``useIceBar`` is `false`, which already routes
-    /// every section to the Thaw Bar. Showing the always-hidden section inline
-    /// has to expand the hidden section along with it, because always-hidden
-    /// items sit to the left of the hidden control item; this is the way to
-    /// reach them without unfurling the rest of the menu bar.
+    /// Showing always-hidden inline also expands the hidden section, since its
+    /// items sit left of the hidden control item.
     let useThawBarForAlwaysHidden: Bool
 
     /// The location where the Thaw Bar appears on this display.
@@ -39,11 +35,9 @@ nonisolated struct DisplayIceBarConfiguration: Codable, Equatable {
     /// Valid range is 2 through 10.
     let gridColumns: Int
 
-    /// The menu bar item spacing offset to apply when this display is the
-    /// active menu bar display. Range is -16 to +16. The OS reads
-    /// NSStatusItemSpacing as a single system-wide value, so this is the
-    /// value that gets written + relaunched whenever this display becomes
-    /// (or remains) the active menu bar display.
+    /// Item spacing offset (-16 to +16) applied while this is the active menu
+    /// bar display. `NSStatusItemSpacing` is system-wide, so it's rewritten
+    /// whenever the active display changes.
     let itemSpacingOffset: Double
 
     /// Default configuration (disabled, dynamic location, horizontal layout).

@@ -2,7 +2,6 @@
 //  MenuBarItemServiceTests.swift
 //  Project: Thaw
 //
-//  Copyright (Ice) © 2023–2025 Jordan Baird
 //  Copyright (Thaw) © 2026 Toni Förster
 //  Licensed under the GNU GPLv3
 
@@ -70,7 +69,6 @@ struct MenuBarItemServiceTests {
 
         @Test("A sourcePIDs request keeps its window info across a round trip")
         func sourcePIDsRequestRoundTrip() throws {
-            // Create a WindowInfo manually for testing
             let windowInfo = try createTestWindowInfo()
             let original = MenuBarItemService.Request.sourcePIDs([windowInfo])
 

@@ -2,7 +2,6 @@
 //  MenuBarItemOrderingTests.swift
 //  Project: Thaw
 //
-//  Copyright (Ice) © 2023–2025 Jordan Baird
 //  Copyright (Thaw) © 2026 Toni Förster
 //  Licensed under the GNU GPLv3
 
@@ -12,12 +11,9 @@ import Testing
 
 /// Covers `MenuBarItem.sortByLeadingEdgeThenIdentifier(_:)`.
 ///
-/// `Array.sort(by:)` is not stable in Swift, so a bare `minX < minX`
-/// comparison is free to return tied items in a different relative order on
-/// every pass. Anywhere that order becomes an order of record — a persisted
-/// layout, a cache signature, a before/after comparison — the instability
-/// reads to the user as a spontaneous swap. These cases pin the tie-break
-/// that makes the result reproducible.
+/// `Array.sort(by:)` is not stable, so tied `minX` items can swap between
+/// passes. In a persisted layout or cache signature that reads as a
+/// spontaneous swap.
 @Suite("Menu bar item leading-edge ordering")
 struct MenuBarItemOrderingTests {
     private func item(
@@ -81,8 +77,7 @@ struct MenuBarItemOrderingTests {
 
     @Test("The order is identical regardless of input order")
     func resultIsIndependentOfInputOrder() {
-        // The property the tie-break exists for: any permutation of the same
-        // items resolves to one order.
+        // Any permutation of the same items resolves to one order.
         let items = [
             item("Alpha", minX: 100, windowID: 1),
             item("Bravo", minX: 100, windowID: 2),

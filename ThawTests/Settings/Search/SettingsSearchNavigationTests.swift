@@ -2,7 +2,6 @@
 //  SettingsSearchNavigationTests.swift
 //  Project: Thaw
 //
-//  Copyright (Ice) © 2023–2025 Jordan Baird
 //  Copyright (Thaw) © 2026 Toni Förster
 //  Licensed under the GNU GPLv3
 
@@ -11,7 +10,7 @@ import Testing
 
 /// Covers `SettingsSearchNavigation`, which exists to stop a disclosure
 /// request from one search result leaking into a later, unrelated
-/// navigation — a request armed by a search result must be consumed by the
+/// navigation: a request armed by a search result must be consumed by the
 /// pane that asked for it, or dropped.
 @MainActor
 @Suite("Settings search navigation")

@@ -2,7 +2,6 @@
 //  MenuOpenProbePersistenceTests.swift
 //  Project: Thaw
 //
-//  Copyright (Ice) © 2023–2025 Jordan Baird
 //  Copyright (Thaw) © 2026 Toni Förster
 //  Licensed under the GNU GPLv3
 
@@ -10,12 +9,9 @@ import CoreGraphics
 import Testing
 @testable import Thaw
 
-/// Tests for the pure persistence classification behind
-/// `isAnyMenuBarItemMenuOpen()` (#879 regression): a candidate menu window
-/// counts as an open menu while it is young, or at any age while the
-/// pointer is inside it. Persistent status-level windows (Droppy's shelf,
-/// notch HUDs) previously matched the probe for the app's whole lifetime
-/// and deferred every move indefinitely.
+/// A candidate menu window counts as open while young, or at any age while
+/// the pointer is inside it. Persistent status-level windows (Droppy's shelf,
+/// notch HUDs) used to match for their whole lifetime and defer every move (#879).
 @Suite("Menu open probe persistence classification")
 struct MenuOpenProbePersistenceTests {
     private let threshold = MenuBarItemManager.menuWindowPersistenceThreshold
@@ -158,10 +154,8 @@ struct MenuOpenProbePersistenceTests {
         .init(windowID: windowID, bounds: CGRect(x: 0, y: 0, width: 1512, height: 982))
     }
 
-    /// The #899 log: a drag-catcher overlay spanning the display contains
-    /// the pointer wherever it goes, so the under-pointer rule held the
-    /// probe open for the overlay's whole lifetime and every drag the user
-    /// made in the layout bar deferred itself.
+    /// A display-spanning drag-catcher overlay always contains the pointer, so
+    /// the under-pointer rule held the probe open and deferred every drag (#899).
     @Test("A display-sized window is never a menu, young and under the pointer or not")
     func displaySizedWindowIsNeverAMenu() {
         let outcome = MenuBarItemManager.classifyMenuWindowCandidates(
@@ -193,8 +187,7 @@ struct MenuOpenProbePersistenceTests {
         #expect(outcome.ignoredPersistentWindowIDs == [70])
     }
 
-    /// Without display geometry to compare against, the size rule cannot
-    /// fire and the age/pointer rules answer as before.
+    /// Without display geometry the size rule cannot fire; age and pointer decide.
     @Test("Without display bounds a large window follows the ordinary rules")
     func withoutDisplayBoundsSizeRuleCannotFire() {
         let outcome = MenuBarItemManager.classifyMenuWindowCandidates(
@@ -208,8 +201,7 @@ struct MenuOpenProbePersistenceTests {
         #expect(outcome.isMenuOpen)
     }
 
-    /// A zero-area window carries no geometry to judge; the size rule
-    /// stands aside and the age/pointer rules answer.
+    /// A zero-area window has no geometry to judge; age and pointer decide.
     @Test("An empty window is not display-sized")
     func emptyWindowIsNotDisplaySized() {
         #expect(
@@ -235,9 +227,8 @@ struct MenuOpenProbePersistenceTests {
         )
     }
 
-    /// The area comparison is per display: a window the size of a small
-    /// display that sits entirely on a much larger one is not an overlay
-    /// there, and a display it does not touch has no say at all.
+    /// The area comparison is per display: a small-display-sized window on a much
+    /// larger display is not an overlay there, and untouched displays have no say.
     @Test("The size rule only consults displays the window touches")
     func sizeRuleIsScopedToTouchedDisplays() {
         let smallDisplay = CGRect(x: 1512, y: 0, width: 800, height: 600)

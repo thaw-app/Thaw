@@ -2,7 +2,6 @@
 //  LayoutResetCommandTests.swift
 //  Project: Thaw
 //
-//  Copyright (Ice) © 2023–2025 Jordan Baird
 //  Copyright (Thaw) © 2026 Toni Förster
 //  Licensed under the GNU GPLv3
 
@@ -10,15 +9,13 @@ import Foundation
 import Testing
 @testable import Thaw
 
-/// Covers the terminal escape hatch for a bar that comes back wrecked on
-/// every launch (#899): a parked divider persists as an `NSStatusItem
-/// Preferred Position`, so restarting restores it and the app starts moving
-/// the pointer before the user can reach the Settings pane's reset.
+/// Covers the command-line reset for a bar that comes back broken on every
+/// launch (#899): a parked divider persists as an `NSStatusItem Preferred
+/// Position`, and the app moves the pointer before Settings is reachable.
 @MainActor
 @Suite("Layout reset command", .serialized)
 struct LayoutResetCommandTests {
-    /// Runs `body` against a throwaway defaults suite so the developer's own
-    /// menu bar layout is never the thing under test.
+    /// Runs `body` against a throwaway defaults suite.
     private func withDefaults(_ body: (UserDefaults) throws -> Void) rethrows {
         let suiteName = "LayoutResetCommandTests.\(UUID().uuidString)"
         guard let suite = UserDefaults(suiteName: suiteName) else {
@@ -79,8 +76,7 @@ struct LayoutResetCommandTests {
         }
     }
 
-    /// The parked position is the thing that makes the bar come back broken,
-    /// so re-seeding it is the point of the whole command.
+    /// The parked position is what makes the bar come back broken.
     @Test("A parked divider position is re-seeded")
     func parkedDividerPositionIsReseeded() {
         withDefaults { _ in
@@ -110,9 +106,8 @@ struct LayoutResetCommandTests {
         }
     }
 
-    /// The always-hidden divider is placed dynamically and has no seed value,
-    /// which is why `resetLayoutToFreshState()` leaves it alone. Matching that
-    /// keeps the two resets from diverging.
+    /// The always-hidden divider has no seed value, and
+    /// `resetLayoutToFreshState()` leaves it alone too.
     @Test("The always-hidden divider is left alone")
     func alwaysHiddenDividerIsLeftAlone() {
         withDefaults { _ in
@@ -129,8 +124,7 @@ struct LayoutResetCommandTests {
         }
     }
 
-    /// Unrelated settings must survive: this is a layout reset, not a
-    /// factory reset.
+    /// This is a layout reset, not a factory reset.
     @Test("Unrelated defaults survive the reset")
     func unrelatedDefaultsSurviveTheReset() {
         withDefaults { suite in
@@ -158,8 +152,7 @@ struct LayoutResetCommandTests {
         }
     }
 
-    /// A normal launch must leave the layout completely untouched, or every
-    /// start would wipe the user's arrangement.
+    /// Otherwise every start would wipe the user's arrangement.
     @Test("A normal launch leaves the layout untouched")
     func normalLaunchLeavesLayoutUntouched() {
         withDefaults { suite in

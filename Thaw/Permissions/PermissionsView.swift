@@ -8,16 +8,10 @@
 
 import SwiftUI
 
-/// The standalone permissions screen: shows a card per required permission,
-/// an optional Ice settings import prompt, and Quit/Continue actions that
-/// gate first-launch setup.
+/// The standalone permissions screen.
 ///
-/// `manager` is a plain stored property rather than an `@Environment`-sourced
-/// one: `PermissionsManaging` is generic over `Manager`, and `@Environment`
-/// injection needs a concrete type at both the injection and read site,
-/// which a generic parameter doesn't provide. Observation still tracks reads
-/// of `manager`'s properties normally regardless of how the reference itself
-/// arrived at the view.
+/// `manager` is a stored property because `@Environment` needs a concrete
+/// type, which the generic `Manager` doesn't provide.
 struct PermissionsView<Manager: PermissionsManaging>: View {
     @Environment(AppState.self) var appState: AppState
     let manager: Manager
@@ -29,8 +23,7 @@ struct PermissionsView<Manager: PermissionsManaging>: View {
 
     private let iceImporter = IceSettingsImporter()
 
-    /// The continue button's label — calls out limited mode when only the
-    /// required (not all) permissions have been granted.
+    /// Calls out limited mode when only the required permissions are granted.
     private var continueButtonText: LocalizedStringKey {
         if case .hasRequired = manager.permissionsState {
             "Continue in Limited Mode"
@@ -39,8 +32,6 @@ struct PermissionsView<Manager: PermissionsManaging>: View {
         }
     }
 
-    /// The continue button's foreground style, reflecting how complete the
-    /// granted permissions are.
     private var continueButtonForegroundStyle: some ShapeStyle {
         switch manager.permissionsState {
         case .missing:
@@ -75,7 +66,6 @@ struct PermissionsView<Manager: PermissionsManaging>: View {
         }
     }
 
-    /// The title and reassurance copy shown above the permission cards.
     private var headerView: some View {
         VStack(spacing: 12) {
             Text("Enable Permissions")
@@ -92,7 +82,6 @@ struct PermissionsView<Manager: PermissionsManaging>: View {
         }
     }
 
-    /// A horizontal row of cards, one per permission the manager exposes.
     private var permissionsStack: some View {
         HStack(spacing: 16) {
             ForEach(manager.allPermissions) { permission in
@@ -102,8 +91,6 @@ struct PermissionsView<Manager: PermissionsManaging>: View {
         .fixedSize(horizontal: false, vertical: true)
     }
 
-    /// Reassures the user that Screen Recording is optional and the app can
-    /// still run, just with reduced functionality, without it.
     private var limitedModeFootnote: some View {
         Label {
             Text("\(Constants.displayName) can work in a limited mode without Screen Recording.")
@@ -115,7 +102,6 @@ struct PermissionsView<Manager: PermissionsManaging>: View {
         .font(.subheadline)
     }
 
-    /// The Quit / Continue action row beneath the permission cards.
     private var footerView: some View {
         HStack(spacing: 12) {
             quitButton
@@ -124,8 +110,6 @@ struct PermissionsView<Manager: PermissionsManaging>: View {
         .controlSize(.large)
     }
 
-    /// Terminates the app outright — the only sound option when the user
-    /// won't proceed through the mandatory first-launch permissions step.
     private var quitButton: some View {
         Button {
             NSApp.terminate(nil)
@@ -136,8 +120,7 @@ struct PermissionsView<Manager: PermissionsManaging>: View {
         .buttonStyle(.bordered)
     }
 
-    /// Completes first-launch setup with whatever permissions are currently
-    /// granted. Disabled until at least the required permissions are in place.
+    /// Disabled until at least the required permissions are granted.
     private var continueButton: some View {
         Button {
             appState.completeFirstLaunchSetup()
@@ -150,8 +133,7 @@ struct PermissionsView<Manager: PermissionsManaging>: View {
         .disabled(manager.permissionsState == .missing)
     }
 
-    /// A prompt offering to import settings from a detected Ice install,
-    /// shown only on first launch when such settings are present.
+    /// Offers to import settings from a detected Ice install on first launch.
     private var iceImportBox: some View {
         IceSection {
             HStack(alignment: .center) {
@@ -199,8 +181,6 @@ struct PermissionsView<Manager: PermissionsManaging>: View {
         }
     }
 
-    /// Refreshes whether an importable Ice install was detected, hiding the
-    /// import prompt if it's no longer applicable.
     private func checkForIceSettings() {
         hasIceSettings = iceImporter.hasIceSettings()
 
@@ -209,8 +189,7 @@ struct PermissionsView<Manager: PermissionsManaging>: View {
         }
     }
 
-    /// Imports settings from the detected Ice install, surfacing the result
-    /// and nudging the always-hidden section setting to force it to refresh.
+    /// Also nudges the always-hidden section setting to force a refresh.
     private func importIceSettings() {
         isImportingIceSettings = true
 
@@ -233,15 +212,13 @@ struct PermissionsView<Manager: PermissionsManaging>: View {
 
 // MARK: - PermissionCard
 
-/// A card describing a single permission — its icon, title, details, and a
-/// button to request it (or a confirmation once it's been granted).
+/// A card describing one permission, with a button to request it.
 struct PermissionCard: View {
     @Environment(AppState.self) var appState: AppState
     let permission: Permission
 
-    /// Whether granting the permission should bring the permissions window
-    /// back to the front. Disabled when hosted in a context — like the
-    /// onboarding tour's replay preview — that shouldn't steal focus.
+    /// Whether granting brings the permissions window back to the front.
+    /// Off where stealing focus is wrong, like the tour's replay preview.
     var refocusesWindowAfterGrant = true
 
     var body: some View {
@@ -271,10 +248,8 @@ struct PermissionCard: View {
                 Spacer(minLength: 0)
 
                 Button {
-                    // The request is intentionally fire-and-forget. The
-                    // permission object keeps polling until the user grants
-                    // access, so closing System Settings leaves this button
-                    // available for another attempt.
+                    // Fire-and-forget: the permission keeps polling, so the
+                    // button stays usable if System Settings is closed.
                     permission.performRequest()
                 } label: {
                     if permission.hasPermission {
@@ -304,8 +279,7 @@ struct PermissionCard: View {
     }
 }
 
-/// A lightweight stand-in for ``AppPermissions`` used by the preview, so it
-/// doesn't need to spin up the real manager and its app machinery.
+/// A lightweight stand-in for ``AppPermissions`` used by the preview.
 @MainActor
 @Observable
 private final class MockPermissionsManager: PermissionsManaging {

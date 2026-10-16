@@ -2,7 +2,6 @@
 //  HookScript.swift
 //  Project: Thaw
 //
-//  Copyright (Ice) © 2023–2025 Jordan Baird
 //  Copyright (Thaw) © 2026 Toni Förster
 //  Licensed under the GNU GPLv3
 
@@ -18,12 +17,10 @@ struct HookScript: Codable, Hashable {
     var path: String
 
     /// Maximum wall-clock seconds the hook may run before Thaw terminates it.
-    /// Clamped to [1, 300] at run time; storing the raw value keeps the
-    /// Stepper binding straightforward.
+    /// Clamped to [1, 300] at run time, so the Stepper can bind the raw value.
     var timeoutSeconds: Double
 
-    /// When false, the hook is skipped without removing the path. Lets
-    /// users park a configured script without losing the path.
+    /// When false, the hook is skipped but its path is kept.
     var isEnabled: Bool
 
     init(path: String, timeoutSeconds: Double = 5, isEnabled: Bool = true) {

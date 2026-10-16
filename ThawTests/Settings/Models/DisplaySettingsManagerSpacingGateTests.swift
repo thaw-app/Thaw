@@ -2,7 +2,6 @@
 //  DisplaySettingsManagerSpacingGateTests.swift
 //  Project: Thaw
 //
-//  Copyright (Ice) © 2023–2025 Jordan Baird
 //  Copyright (Thaw) © 2026 Toni Förster
 //  Licensed under the GNU GPLv3
 
@@ -38,9 +37,9 @@ struct DisplaySettingsManagerSpacingGateTests {
         ))
     }
 
-    @Test("An apply is not skipped once the current UUID becomes nil")
-    func predicateDoesNotSkipWhenCurrentBecomesNil() {
-        #expect(!DisplaySettingsManager.shouldSkipSpacingApply(
+    @Test("A nil current UUID skips the spacing apply (#1180)")
+    func predicateSkipsWhenCurrentBecomesNil() {
+        #expect(DisplaySettingsManager.shouldSkipSpacingApply(
             currentActiveDisplayUUID: nil,
             lastAppliedActiveDisplayUUID: "UUID-A"
         ))
@@ -85,5 +84,88 @@ struct DisplaySettingsManagerSpacingGateTests {
             currentActiveDisplayUUID: "UUID-B",
             lastAppliedActiveDisplayUUID: manager.lastAppliedActiveDisplayUUID
         ))
+    }
+
+    // MARK: - Relaunch confirmation
+
+    @Test("An automatic apply that relaunches asks first")
+    func automaticRelaunchNeedsConfirmation() {
+        #expect(DisplaySettingsManager.needsSpacingRelaunchConfirmation(
+            isUserInitiated: false,
+            confirmationsEnabled: true,
+            willRelaunch: true
+        ))
+    }
+
+    @Test("A Displays pane commit is not asked about twice")
+    func userCommitSkipsConfirmation() {
+        #expect(!DisplaySettingsManager.needsSpacingRelaunchConfirmation(
+            isUserInitiated: true,
+            confirmationsEnabled: true,
+            willRelaunch: true
+        ))
+    }
+
+    @Test("Turning confirmations off applies without asking")
+    func disabledConfirmationsSkipPrompt() {
+        #expect(!DisplaySettingsManager.needsSpacingRelaunchConfirmation(
+            isUserInitiated: false,
+            confirmationsEnabled: false,
+            willRelaunch: true
+        ))
+    }
+
+    @Test("An apply that relaunches nothing never asks")
+    func noRelaunchSkipsPrompt() {
+        #expect(!DisplaySettingsManager.needsSpacingRelaunchConfirmation(
+            isUserInitiated: false,
+            confirmationsEnabled: true,
+            willRelaunch: false
+        ))
+    }
+
+    @Test("Don't ask again on Apply turns confirmations off")
+    func suppressedApplyDisablesConfirmations() throws {
+        try withScratchDefaults { _ in
+            let manager = DisplaySettingsManager()
+            manager.rememberSpacingRelaunchAnswer(approved: true)
+
+            #expect(!manager.confirmSpacingRelaunch)
+            #expect(manager.spacingApplyMode == .relaunchApps)
+        }
+    }
+
+    @Test("Don't ask again on Cancel stops relaunching, so the prompt stays away")
+    func suppressedCancelStopsRelaunching() throws {
+        try withScratchDefaults { _ in
+            let manager = DisplaySettingsManager()
+            manager.rememberSpacingRelaunchAnswer(approved: false)
+
+            #expect(manager.spacingApplyMode == .writeOnly)
+            #expect(manager.confirmSpacingRelaunch, "a decline must never allow an unasked relaunch")
+            #expect(DisplaySettingsManager().spacingApplyMode == .writeOnly, "the choice must survive a relaunch")
+        }
+    }
+
+    @Test("A user spacing change is flagged only while it runs")
+    func userSpacingChangeFlagIsScoped() {
+        let manager = DisplaySettingsManager()
+        var flaggedInside = false
+        manager.performUserSpacingChange {
+            flaggedInside = manager.isCommittingUserSpacingChange
+        }
+        #expect(flaggedInside)
+        #expect(!manager.isCommittingUserSpacingChange)
+    }
+
+    @Test("A suspended spacing reaction is flagged only while it runs")
+    func spacingReactionSuspensionIsScoped() {
+        let manager = DisplaySettingsManager()
+        var flaggedInside = false
+        manager.withSpacingReactionSuspended {
+            flaggedInside = manager.isSpacingReactionSuspended
+        }
+        #expect(flaggedInside)
+        #expect(!manager.isSpacingReactionSuspended)
     }
 }

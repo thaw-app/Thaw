@@ -1,5 +1,5 @@
 name: Bug Report
-description: File a bug report
+description: Report something broken or behaving wrong.
 title: "[Bug] "
 type: bug
 projects: ["thaw-app/1"]
@@ -8,6 +8,12 @@ body:
     attributes:
       value: |
         Check [Frequent Issues](https://github.com/thaw-app/Thaw/blob/development/FREQUENT_ISSUES.md) and search [open and closed issues](https://github.com/thaw-app/Thaw/issues?q=is%3Aissue) first.
+
+        On Thaw 3.0 and macOS 27, read the [known macOS 27 limitations](https://github.com/thaw-app/Thaw/blob/development/FREQUENT_ISSUES.md#known-macos-27-limitations) too. Those don't need a report.
+
+        **Issues are English only.** Machine translation (AI or any other tool) is accepted.
+
+        Thaw is free and run by a small team with limited time, so reports with clear steps and logs are looked at first. Issues that lack the requested details, or get no reply after two follow-ups from us, are closed. Issues with no activity are marked stale after 10 days and closed after about 14. Reopen with the missing details at any time.
 
   - type: textarea
     id: description
@@ -43,7 +49,8 @@ body:
     id: app_version
     attributes:
       label: Thaw version
-      placeholder: e.g. 2.1.0
+      description: 2.x runs on macOS 26, 3.0 on macOS 27.
+      placeholder: e.g. 2.1.0-beta.5 or 3.0.0-alpha.6
     validations:
       required: true
 
@@ -51,7 +58,7 @@ body:
     id: macos_version
     attributes:
       label: macOS version
-      placeholder: e.g. 26.1 (Tahoe)
+      placeholder: e.g. 26.6.2 (Tahoe) or 27.0 (Golden Gate)
     validations:
       required: true
 

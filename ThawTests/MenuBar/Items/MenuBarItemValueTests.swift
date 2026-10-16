@@ -2,7 +2,6 @@
 //  MenuBarItemValueTests.swift
 //  Project: Thaw
 //
-//  Copyright (Ice) © 2023–2025 Jordan Baird
 //  Copyright (Thaw) © 2026 Toni Förster
 //  Licensed under the GNU GPLv3
 
@@ -17,10 +16,8 @@ import Testing
 /// The name ``MenuBarItem/autoDetectedName`` derives from a source process,
 /// computed for the process running the tests.
 ///
-/// Every test that needs a *resolvable* source application passes the test
-/// runner's own pid. `NSRunningApplication(processIdentifier:)` answers for it
-/// on any machine, which no other pid can promise: a hard-coded pid may be
-/// unused on one machine and a running app on the next.
+/// Tests that need a resolvable source app pass the test runner's own pid;
+/// a hard-coded pid may be unused on one machine and a running app on the next.
 private var testRunnerSourceName: String? {
     let app = NSRunningApplication(processIdentifier: ProcessInfo.processInfo.processIdentifier)
     return app?.localizedName ?? app?.bundleIdentifier
@@ -73,16 +70,12 @@ private func baseItem(
 
 // MARK: - MenuBarItem Value Tests
 
-/// Covers the value surface of ``MenuBarItem``: the capability flags it layers
-/// on top of its tag, its identity (equality, hashing, `uniqueIdentifier`), its
-/// textual forms, the name-detection pipeline, and the `Defaults`-backed custom
-/// name.
+/// Covers the value surface of ``MenuBarItem``: capability flags, identity,
+/// textual forms, name detection, and the `Defaults`-backed custom name.
 ///
-/// Everything here is built from the memberwise initializer, so no window
-/// server, display, or foreign process is involved. The window-derived half of
-/// the file — `getMenuBarItemWindows`, `getMenuBarItems`, and the
-/// `init(uncheckedItemWindow:)` chain — is deliberately out of reach: it needs
-/// `Bridging`/CGS window lists and the XPC source-pid service.
+/// Everything uses the memberwise initializer. The window-derived half
+/// (`getMenuBarItems`, `init(uncheckedItemWindow:)`) is out of reach: it needs
+/// CGS window lists and the XPC source-pid service.
 @Suite("Menu bar item values")
 struct MenuBarItemValueTests {
     // MARK: - Capability Flags
@@ -215,7 +208,7 @@ struct MenuBarItemValueTests {
 
     // MARK: - Identity
 
-    /// `uniqueIdentifier`, equality, hashing and `logString` — the parts other
+    /// `uniqueIdentifier`, equality, hashing and `logString`, which other
     /// subsystems key persisted state on.
     @Suite("Identity")
     struct Identity {
@@ -433,7 +426,11 @@ struct MenuBarItemValueTests {
 
         @Test("A SystemUIServer Time Machine item is reduced to \"Time Machine\"")
         func systemUIServerTimeMachineIsExtracted() {
-            let item = MenuBarItem.fixture(tag: .timeMachine, windowID: 38, sourcePID: testRunnerPID)
+            let item = MenuBarItem.fixture(
+                tag: namespacedTag(.systemUIServer, "com.apple.menuextra.TimeMachine"),
+                windowID: 38,
+                sourcePID: testRunnerPID
+            )
 
             #expect(item.autoDetectedName == "Time Machine")
         }
@@ -537,9 +534,7 @@ struct MenuBarItemValueTests {
     /// layered on it.
     ///
     /// `withScratchDefaults` swaps the process-wide `Defaults.store`, so this
-    /// suite is `.serialized` as `ScratchDefaults.swift` requires. Without the
-    /// scratch store these tests would both read and rewrite the running
-    /// user's real custom names.
+    /// suite is `.serialized` as `ScratchDefaults.swift` requires.
     @Suite("Custom names", .serialized)
     struct CustomNames {
         @Test("An item with nothing stored has no custom name")
@@ -604,9 +599,8 @@ struct MenuBarItemValueTests {
         @Test("A custom name survives the item getting a new window identifier")
         func customNameIsSharedAcrossWindowIdentifiers() throws {
             try withScratchDefaults { _ in
-                // This is the point of leaving the window id out of the
-                // identifier: after a restart the same status item comes back
-                // with a different window and must keep its name.
+                // After a restart the same status item comes back with a
+                // different window and must keep its name.
                 var beforeRestart = baseItem(tag: appTag("Status", windowID: 77), windowID: 77, sourcePID: nil)
                 let afterRestart = baseItem(tag: appTag("Status", windowID: 910), windowID: 910, sourcePID: nil)
                 beforeRestart.customName = "Renamed"

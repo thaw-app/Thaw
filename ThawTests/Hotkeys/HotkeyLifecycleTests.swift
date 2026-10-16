@@ -2,7 +2,6 @@
 //  HotkeyLifecycleTests.swift
 //  Project: Thaw
 //
-//  Copyright (Ice) © 2023–2025 Jordan Baird
 //  Copyright (Thaw) © 2026 Toni Förster
 //  Licensed under the GNU GPLv3
 
@@ -10,39 +9,24 @@ import Foundation
 import Testing
 @testable import Thaw
 
-/// Covers ``Hotkey`` itself — construction, the enable/disable pair, the
-/// change announcement, and value equality — without an `AppState`.
+/// Covers ``Hotkey`` construction, enable/disable, the change announcement,
+/// and value equality, without an `AppState`.
 ///
-/// `Hotkey`'s private `Listener` has a failable initializer that returns `nil`
-/// unless the hotkey has *both* an app state and a key combination, and only an
-/// app state can supply the `HotkeyRegistry` it would register with. So without
-/// `performSetup(with:)` the hotkey can never become enabled — which is exactly
-/// what makes the rest of the type testable: `enable()` runs end to end and
-/// touches nothing global, so every path around it can be driven safely.
+/// Without `performSetup(with:)` the private `Listener` init returns `nil`,
+/// so the hotkey never becomes enabled and `enable()` touches nothing global.
 ///
-/// The load-bearing behaviour here is the `keyCombination` `didSet`. It calls
-/// `enable()` and then `keyCombinationDidChange?()`, and three owners —
-/// `HotkeysSettings`, `MenuBarManager`, and `ProfileManager` — persist the
-/// binding from inside that callback. Two properties of it are relied on and
-/// otherwise unverified:
+/// `HotkeysSettings`, `MenuBarManager`, and `ProfileManager` persist the
+/// binding from the `keyCombination` `didSet` callback, which relies on:
 ///
-/// - The value passed to `init` is **not** announced. All three owners set the
-///   loaded binding first and install the callback second, precisely so the
-///   value just read back off disk is not written straight out again. That
-///   ordering is a comment in three files and an assertion in none.
-/// - Every later assignment announces **exactly once**, with the new value
-///   already stored, including an assignment of `nil`. `HotkeysSettings` reads
-///   `hotkey.keyCombination` from inside the callback to decide between writing
-///   the binding and deleting the dictionary entry, so a callback that fired
-///   before the store, or twice, would either persist the stale binding or
-///   leave a dead entry behind.
+/// - The value passed to `init` is **not** announced, so a binding just read
+///   off disk is not written straight back.
+/// - Every later assignment, including `nil`, announces **exactly once** with
+///   the new value already stored. Otherwise `HotkeysSettings` would persist a
+///   stale binding or leave a dead entry behind.
 ///
-/// Deliberately **not** covered: `performSetup(with:)`, the registration inside
-/// `Listener.init`, the action-dispatch closure it installs, and
-/// `Listener.invalidate()`. All four need a live `AppState` — and the dispatch
-/// closure additionally reaches into `ProfileManager` and `MenuBarManager` — so
-/// none can be reached from a unit test. `isEnabled` is therefore asserted only
-/// in its `false` state, which is the honest one for a hotkey with no app.
+/// `performSetup(with:)`, listener registration and dispatch, and
+/// `Listener.invalidate()` need a live `AppState` and are not covered, so
+/// `isEnabled` is only asserted `false`.
 @MainActor
 @Suite("Hotkey lifecycle")
 struct HotkeyLifecycleTests {
@@ -52,11 +36,7 @@ struct HotkeyLifecycleTests {
     private static let controlOptionF20 = KeyCombination(key: .f20, modifiers: [.control, .option])
     private static let shiftSpace = KeyCombination(key: .space, modifiers: [.shift])
 
-    /// Records what each announcement saw, so a test can assert the count and
-    /// the value the callback would have persisted in one go.
-    ///
-    /// `KeyCombination` is main-actor isolated like the rest of the app target,
-    /// so the recorder is too; the callback only ever runs on the main actor.
+    /// Records the key combination each announcement saw.
     @MainActor
     private final class ChangeRecorder {
         private(set) var observed: [KeyCombination?] = []
@@ -103,9 +83,8 @@ struct HotkeyLifecycleTests {
             #expect(!hotkey.isEnabled)
         }
 
-        /// Every action has to be bindable; `HotkeysSettings` builds one hotkey
-        /// per `settingsActions` entry and `ProfileManager` builds `.profileApply`
-        /// hotkeys, so no case may be special-cased out at construction.
+        /// `HotkeysSettings` and `ProfileManager` build hotkeys for these
+        /// actions, so no case may be special-cased out at construction.
         @Test("Every action can back a hotkey", arguments: HotkeyAction.allCases)
         func everyActionCanBackAHotkey(_ action: HotkeyAction) {
             let hotkey = Hotkey(action: action, keyCombination: KeyCombination(key: .a, modifiers: [.command]))
@@ -150,8 +129,7 @@ struct HotkeyLifecycleTests {
         }
 
         /// `disable()` runs on teardown paths that cannot know whether a
-        /// listener was ever installed, so it has to tolerate being called on a
-        /// hotkey that never had one.
+        /// listener was ever installed.
         @Test("Disabling a hotkey that was never enabled is idempotent")
         func disableIsIdempotent() {
             let hotkey = Hotkey(action: .toggleApplicationMenus)
@@ -213,9 +191,7 @@ struct HotkeyLifecycleTests {
         #expect(recorder.observed == [Self.commandF19, Self.controlOptionF20, Self.shiftSpace])
     }
 
-    /// Unbinding is the case that deletes the stored entry rather than
-    /// rewriting it, so the clear has to be announced like any other change and
-    /// the callback has to see `nil`.
+    /// Unbinding deletes the stored entry, so the callback has to see `nil`.
     @Test("Clearing a key combination announces the cleared value")
     func clearingIsAnnounced() {
         let hotkey = Hotkey(action: .enableIceBar, keyCombination: Self.commandF19)
@@ -227,9 +203,7 @@ struct HotkeyLifecycleTests {
         #expect(hotkey.keyCombination == nil)
     }
 
-    /// The announcement is an assignment signal, not a change signal: writing
-    /// the same binding back announces again. Owners that want change-only
-    /// semantics have to compare for themselves.
+    /// The announcement is an assignment signal, not a change signal.
     @Test("Reassigning the same key combination announces again")
     func reassigningTheSameValueAnnouncesAgain() {
         let hotkey = Hotkey(action: .toggleHiddenSection)
@@ -278,8 +252,7 @@ struct HotkeyLifecycleTests {
             return hasher.finalize()
         }
 
-        /// `Hotkey` is a class that compares by value. Two separately built
-        /// hotkeys standing for the same binding are the same hotkey.
+        /// `Hotkey` is a class that compares by value.
         @Test("Two hotkeys with the same action and binding are equal")
         func sameActionAndBindingAreEqual() {
             let combination = KeyCombination(key: .f19, modifiers: [.command])
@@ -334,8 +307,7 @@ struct HotkeyLifecycleTests {
         }
 
         /// Equality reads the *current* binding, not the one the hotkey was
-        /// built with — a hotkey rebound by the recorder stops matching its
-        /// former twin and starts matching whatever now carries that binding.
+        /// built with.
         @Test("Equality follows a rebinding rather than the original value")
         func equalityFollowsRebinding() {
             let combination = KeyCombination(key: .f20, modifiers: [.control, .option])

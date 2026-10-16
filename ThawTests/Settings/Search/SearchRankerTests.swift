@@ -2,7 +2,6 @@
 //  SearchRankerTests.swift
 //  Project: Thaw
 //
-//  Copyright (Ice) © 2023–2025 Jordan Baird
 //  Copyright (Thaw) © 2026 Toni Förster
 //  Licensed under the GNU GPLv3
 //
@@ -15,16 +14,12 @@ struct SearchRankerTests {
     // MARK: - Settings Weights
 
     /// Ifrit scales a field's diff score by `(1 - weight)` (a weight of `1`
-    /// is a no-op), and a lower diff score ranks the result higher. A field
-    /// therefore ranks higher the *larger* its weight is.
+    /// is a no-op), and a lower score ranks higher, so a larger weight ranks
+    /// a field higher.
     ///
-    /// The regression these tests pin: `SearchWeights.settings` used to hand
-    /// the smaller weight to `title` and the larger one to `keywords`, which
-    /// — under Ifrit's "higher weight ranks higher" contract — made a keyword
-    /// match outrank a title match: the opposite of the documented intent
-    /// ("a title match ranks above a keywords match, which ranks above a
-    /// description match"). The factor is derived here rather than read from
-    /// Fuse so this stays a pure, Ifrit-free unit test.
+    /// Pins a regression where `SearchWeights.settings` gave `keywords` a
+    /// larger weight than `title`, so keyword matches outranked title matches.
+    /// Derived here rather than read from Fuse to keep the test Ifrit-free.
     private static func rankingFactor(forWeight weight: Double) -> Double {
         weight == 1 ? 1 : 1 - weight
     }

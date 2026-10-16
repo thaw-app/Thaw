@@ -2,7 +2,6 @@
 //  ControlItemImageTests.swift
 //  Project: Thaw
 //
-//  Copyright (Ice) © 2023–2025 Jordan Baird
 //  Copyright (Thaw) © 2026 Toni Förster
 //  Licensed under the GNU GPLv3
 
@@ -12,18 +11,10 @@ import Testing
 
 /// Covers ``ControlItemImage``'s stored form and value semantics.
 ///
-/// The enum is what a control item icon looks like on disk: it is embedded in
-/// every `ControlItemImageSet`, which in turn is written to the `iceIcon`
-/// default and into every exported profile. The four cases therefore have a
-/// wire format that outlives the build that wrote it, and the synthesized
-/// `Codable` conformance keys off the case names — renaming `.catalog` would
-/// leave existing users with an undecodable icon and a blank menu bar item, so
-/// the encoded shape is pinned here rather than assumed.
+/// Stored in the `iceIcon` default and exported profiles, keyed by case name,
+/// so renaming `.catalog` would leave users with an undecodable icon.
 ///
-/// The conversion to `NSImage` is covered by
-/// `ControlItemImageConversionTests` through the
-/// `nsImage(customIceIconIsTemplate:)` seam; only the `AppState` overload,
-/// which forwards the one flag it reads, stays out of reach.
+/// `NSImage` conversion is covered by `ControlItemImageConversionTests`.
 @Suite("Control item image")
 struct ControlItemImageTests {
     private var encoder: JSONEncoder {
@@ -53,8 +44,7 @@ struct ControlItemImageTests {
         #expect(decoded == image)
     }
 
-    /// The case names are the stored discriminator. Renaming one silently
-    /// orphans every icon a previous build wrote.
+    /// Renaming a case orphans every icon a previous build wrote.
     @Test("The case names are the stored discriminators")
     func caseNamesAreTheStoredDiscriminators() throws {
         let payloads = try Self.allCases.map { image in

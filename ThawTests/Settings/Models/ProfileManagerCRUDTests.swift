@@ -2,7 +2,6 @@
 //  ProfileManagerCRUDTests.swift
 //  Project: Thaw
 //
-//  Copyright (Ice) © 2023–2025 Jordan Baird
 //  Copyright (Thaw) © 2026 Toni Förster
 //  Licensed under the GNU GPLv3
 
@@ -10,19 +9,14 @@ import Foundation
 import Testing
 @testable import Thaw
 
-/// Covers the ``ProfileManager`` surface that owns files and the manifest:
-/// rename, duplicate, import/export, display association, hooks, and the
-/// two broadcast writers.
+/// Covers the file and manifest side of ``ProfileManager``: rename, duplicate,
+/// import/export, display association, hooks, and the two broadcast writers.
 ///
-/// `applyProfile` and `performSetup` need a live `AppState` and are out of
-/// reach here; everything below runs against a real `ProfileManager` pointed
-/// at a per-test temporary directory, so the on-disk JSON and the in-memory
-/// manifest are both exercised for real.
+/// `applyProfile` and `performSetup` need a live `AppState`, so they aren't
+/// covered. Each case runs against a real manager in a temporary directory.
 ///
-/// Each case that mutates asserts against a *reloaded* manager where the
-/// persisted state is what matters — an in-memory-only assertion would pass
-/// for a change that never reached disk, which is the bug class
-/// `ProfileManagerDeleteTests` was written for.
+/// Mutating cases assert against a reloaded manager, since an in-memory
+/// assertion passes for a change that never reached disk.
 @MainActor
 @Suite("Profile manager CRUD", .serialized)
 struct ProfileManagerCRUDTests {
@@ -92,11 +86,9 @@ struct ProfileManagerCRUDTests {
             let copyID = try #require(manager.profiles.first { $0.name == "Copy" }?.id)
             let copy = try manager.loadProfile(id: copyID)
 
-            // The seeded per-display entry is the load-bearing assertion:
-            // `duplicateProfile` rebuilds the copy from `original.content`,
-            // and `Profile.content` is computed, so a field dropped from
-            // either side of that round trip vanishes silently. Asserting a
-            // `makeProfile` default instead would pass even then.
+            // `duplicateProfile` rebuilds from the computed `original.content`,
+            // so a field dropped in that round trip vanishes silently. Check a
+            // seeded value, since a `makeProfile` default would still pass.
             #expect(copy.displayConfigurations["UUID-A"]?.itemSpacingOffset == 7)
             #expect(copy.content.generalSettings.rehideInterval == 15)
         }
@@ -221,6 +213,76 @@ struct ProfileManagerCRUDTests {
             manager.setAssociatedDisplay(uuid: nil, forProfileID: id)
 
             #expect(manager.profiles.first?.associatedDisplayUUID == nil)
+        }
+    }
+
+    // MARK: Space association
+
+    @Test("A Space association persists to the manifest")
+    func spaceAssociationPersists() throws {
+        try withManager(seeding: [makeProfile(named: "Writing")]) { manager, tmp in
+            let id = try #require(manager.profiles.first?.id)
+
+            manager.setAssociatedSpace(key: "SPACE-UUID-A", spaceName: "Desktop 2", forProfileID: id)
+
+            #expect(manager.profiles.first?.associatedSpaceKey == "SPACE-UUID-A")
+            let reloaded = ProfileManager(profilesDirectory: tmp)
+            #expect(reloaded.profiles.first?.associatedSpaceKey == "SPACE-UUID-A")
+            #expect(reloaded.profiles.first?.associatedSpaceName == "Desktop 2")
+        }
+    }
+
+    @Test("Associating a Space moves it off whichever profile held it")
+    func spaceAssociationIsExclusive() throws {
+        try withManager(seeding: [makeProfile(named: "One"), makeProfile(named: "Two")]) { manager, _ in
+            let first = try #require(manager.profiles.first { $0.name == "One" }?.id)
+            let second = try #require(manager.profiles.first { $0.name == "Two" }?.id)
+
+            manager.setAssociatedSpace(key: "SPACE-UUID-A", forProfileID: first)
+            manager.setAssociatedSpace(key: "SPACE-UUID-A", forProfileID: second)
+
+            #expect(manager.profiles.first { $0.id == first }?.associatedSpaceKey == nil)
+            #expect(manager.profiles.first { $0.id == second }?.associatedSpaceKey == "SPACE-UUID-A")
+        }
+    }
+
+    @Test("Passing nil clears the Space association and its cached label")
+    func spaceAssociationCanBeCleared() throws {
+        try withManager(seeding: [makeProfile(named: "Writing")]) { manager, _ in
+            let id = try #require(manager.profiles.first?.id)
+            manager.setAssociatedSpace(key: "SPACE-UUID-A", spaceName: "Desktop 2", forProfileID: id)
+
+            manager.setAssociatedSpace(key: nil, forProfileID: id)
+
+            #expect(manager.profiles.first?.associatedSpaceKey == nil)
+            #expect(manager.profiles.first?.associatedSpaceName == nil)
+        }
+    }
+
+    @Test("A Space key resolves back to the profile that holds it")
+    func spaceLookupFindsItsProfile() throws {
+        try withManager(seeding: [makeProfile(named: "One"), makeProfile(named: "Two")]) { manager, _ in
+            let second = try #require(manager.profiles.first { $0.name == "Two" }?.id)
+            manager.setAssociatedSpace(key: "SPACE-UUID-A", forProfileID: second)
+
+            #expect(manager.profile(forSpaceKey: "SPACE-UUID-A")?.id == second)
+            #expect(manager.profile(forSpaceKey: "SPACE-UUID-B") == nil)
+        }
+    }
+
+    @Test("Space and display associations are independent")
+    func spaceAndDisplayAssociationsCoexist() throws {
+        try withManager(seeding: [makeProfile(named: "Desk")]) { manager, _ in
+            let id = try #require(manager.profiles.first?.id)
+
+            manager.setAssociatedDisplay(uuid: "UUID-A", forProfileID: id)
+            manager.setAssociatedSpace(key: "SPACE-UUID-A", forProfileID: id)
+
+            #expect(manager.profiles.first?.associatedDisplayUUID == "UUID-A")
+            #expect(manager.profiles.first?.associatedSpaceKey == "SPACE-UUID-A")
+
+            manager.setAssociatedSpace(key: nil, forProfileID: id)
+            #expect(manager.profiles.first?.associatedDisplayUUID == "UUID-A")
         }
     }
 

@@ -13,26 +13,19 @@ import Foundation
 nonisolated enum Constants {
     // swiftlint:disable force_unwrapping
 
-    /// The version string in the app's bundle.
     static let versionString = Bundle.main.versionString!
 
-    /// The build string in the app's bundle.
     static let buildString = Bundle.main.buildString!
 
-    /// The user-readable copyright string in the app's bundle.
     static let copyrightString = Bundle.main.copyrightString!
 
-    /// The app's bundle identifier.
     static let bundleIdentifier = Bundle.main.bundleIdentifier!
 
-    /// The app's display name.
     static let displayName = Bundle.main.displayName
 
     // swiftlint:enable force_unwrapping
 
-    /// The brightness threshold above which the menu bar is considered "bright".
-    /// When the menu bar brightness exceeds this value, items should use dark colors.
-    /// Used for non-notched displays.
+    /// Menu bar brightness above which items use dark colors, on non-notched displays.
     static let menuBarBrightnessThreshold: CGFloat = 0.67
 
     /// The brightness threshold for notched displays.
@@ -52,10 +45,12 @@ nonisolated enum Constants {
     /// `MenuBarItemSpacingManager` shell commands.
     static let menuBarItemSpacingExecutableURIInfoPlistKey = "ThawMenuBarItemSpacingExecutableURI"
 
-    /// The project's GitHub repository URL.
+    /// Info.plist key used to configure the executable URI for `launchctl`,
+    /// which restarts LaunchAgent-owned menu bar items.
+    static let launchctlExecutableURIInfoPlistKey = "ThawLaunchctlExecutableURI"
+
     static let repositoryURL: URL = requiredInfoPlistURL(repositoryURLInfoPlistKey)
 
-    /// The URL for filing issues.
     static let issuesURL = repositoryURL.appendingPathComponent("issues")
 
     /// The URL for downloading preview builds.
@@ -64,8 +59,14 @@ nonisolated enum Constants {
     /// The URL for sponsoring/donating.
     static let donateURL: URL = requiredInfoPlistURL(donateURLInfoPlistKey)
 
+    /// The Crowdin project URL for community translations.
+    static let translateURL = URL(string: "https://crowdin.com/project/thaw")!
+
     /// The executable URL used by `MenuBarItemSpacingManager`.
     static let menuBarItemSpacingExecutableURL: URL = requiredInfoPlistURL(menuBarItemSpacingExecutableURIInfoPlistKey)
+
+    /// The `launchctl` executable used by `MenuBarItemSpacingManager`.
+    static let launchctlExecutableURL: URL = requiredInfoPlistURL(launchctlExecutableURIInfoPlistKey)
 
     // MARK: - Helpers
 

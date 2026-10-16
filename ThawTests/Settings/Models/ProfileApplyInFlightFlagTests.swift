@@ -2,7 +2,6 @@
 //  ProfileApplyInFlightFlagTests.swift
 //  Project: Thaw
 //
-//  Copyright (Ice) © 2023–2025 Jordan Baird
 //  Copyright (Thaw) © 2026 Toni Förster
 //  Licensed under the GNU GPLv3
 
@@ -10,22 +9,16 @@ import Foundation
 import Testing
 @testable import Thaw
 
-/// Characterizes the in-flight profile flag teardown on the no-moves exit of a
-/// profile apply.
+/// Pins the in-flight flag teardown on the no-moves exit of a profile apply.
 ///
 /// A profile apply arms isApplyingProfileLayout so a concurrent saved-layout
-/// apply cannot fight it. The normal exit clears the flag. The no-moves exit
-/// (taken when the bar is already in the target arrangement, which is the
-/// common case on a display reconnect that re-applies the active-display
-/// profile) is a separate code path: if it does not run the same teardown the
-/// flag leaks true and every later applySavedLayout is skipped with "profile
-/// apply in flight", so the saved layout can never be restored for the rest of
-/// the session. The field log showed this stick at a display reconnect and
-/// disable re-hide while the menu bar churned across three displays.
+/// apply can't fight it. The no-moves exit (common on a display reconnect that
+/// re-applies the active-display profile) is a separate path. If it skips the
+/// teardown, the flag leaks true and every later applySavedLayout is skipped
+/// as "profile apply in flight" for the rest of the session.
 ///
-/// Serialized because each case drives a `MenuBarItemManager` through a real
-/// profile apply, which reaches process-wide menu bar state that the other
-/// item-manager suites also touch.
+/// Serialized because each case drives a real profile apply, which touches
+/// process-wide menu bar state.
 @MainActor
 @Suite("Profile apply in-flight flag", .serialized)
 struct ProfileApplyInFlightFlagTests {
@@ -34,7 +27,6 @@ struct ProfileApplyInFlightFlagTests {
     }
 
     /// A profile apply that needs no moves must leave the in-flight flag clear.
-    /// Red against the pre-fix no-moves exit, which never cleared it.
     @Test("A no-moves profile apply clears the in-flight flag")
     func noMovesProfileApplyClearsInFlightFlag() {
         let manager = MenuBarItemManager()

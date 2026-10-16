@@ -2,7 +2,6 @@
 //  WindowIDsChangedGateTests.swift
 //  Project: Thaw
 //
-//  Copyright (Ice) © 2023–2025 Jordan Baird
 //  Copyright (Thaw) © 2026 Toni Förster
 //  Licensed under the GNU GPLv3
 
@@ -10,24 +9,19 @@ import CoreGraphics
 import Testing
 @testable import Thaw
 
-/// Characterizes the windowID-change gate that decides whether a cache cycle
-/// should dispatch a saved-layout re-apply.
+/// The windowID-change gate that decides whether a cycle re-applies the saved layout.
 ///
-/// The gate fires when a previously-seen window has disappeared (an item quit
-/// or relaunched). The bug: with "Displays have separate Spaces" enabled, when
-/// the menu bar follows the user's focus to another display the previous
-/// display's item windows leave the active-space window list, so they read as
-/// "missing" and the gate fires a full bulk re-sort on every cross-screen
-/// focus change. That re-sort is what thrashed the control items and drifted
-/// items into always-hidden on the notched display. A pure display switch must
-/// not advance the gate.
+/// It fires when a known window disappears. With "Displays have separate
+/// Spaces", the bar following focus to another display drops the previous
+/// display's windows from the active-space list, which fired a full re-sort on
+/// every focus change and drifted items into always-hidden. A display switch
+/// must not advance the gate.
 @Suite("Window ID change gate")
 struct WindowIDsChangedGateTests {
     private let d1: CGDirectDisplayID = 1
     private let d2: CGDirectDisplayID = 2
 
-    /// Same display, a previously-seen window is gone: a real change (item quit
-    /// / relaunch). Must fire.
+    /// A known window gone on the same display is a real quit or relaunch.
     @Test("A missing window on the same display fires the gate")
     func sameDisplayMissingWindowFires() {
         #expect(
@@ -40,8 +34,7 @@ struct WindowIDsChangedGateTests {
         )
     }
 
-    /// Same display, every previous window still present (pure additions are
-    /// owned by another path): must not fire.
+    /// Pure additions are owned by another path.
     @Test("Pure additions on the same display do not fire the gate")
     func sameDisplayNoMissingWindowDoesNotFire() {
         #expect(
@@ -54,9 +47,7 @@ struct WindowIDsChangedGateTests {
         )
     }
 
-    /// The active menu bar display switched to another screen: the previous
-    /// display's windows are gone from the active-space set, but this is not an
-    /// item quit. Must NOT fire. This is the fix; it is red against the stub.
+    /// The previous display's windows leave the active-space set, but nothing quit.
     @Test("Switching the active menu bar display does not fire the gate")
     func activeDisplaySwitchDoesNotFire() {
         #expect(
@@ -69,7 +60,7 @@ struct WindowIDsChangedGateTests {
         )
     }
 
-    /// First cycle (no previous frame to diff against): must not fire.
+    /// First cycle, nothing to diff against.
     @Test("An empty previous frame does not fire the gate")
     func emptyPreviousDoesNotFire() {
         #expect(
@@ -82,13 +73,9 @@ struct WindowIDsChangedGateTests {
         )
     }
 
-    /// Control-Center-generic (`Item-N`) windows churn windowIDs while the
-    /// bar is otherwise stable (Live Activities, transient CC widgets). The
-    /// applySavedLayout call site subtracts the previous frame's CC-generic
-    /// windowIDs before diffing so their disappearance can't dispatch a
-    /// cursor-hijacking bulk apply (#736). This characterizes that call-site
-    /// composition: with the churned window excluded the gate stays quiet,
-    /// and a real item disappearing alongside the churn still fires.
+    /// Control Center generic (`Item-N`) windows churn IDs while the bar is stable
+    /// (Live Activities, transient widgets). applySavedLayout subtracts them before
+    /// diffing so churn cannot trigger a bulk apply (#736); a real disappearance still fires.
     @Test("Control Center generic churn excluded from the diff keeps the gate quiet")
     func ccGenericChurnExcludedFromGate() {
         let previous: Set<CGWindowID> = [10, 11, 42]
@@ -111,8 +98,7 @@ struct WindowIDsChangedGateTests {
         )
     }
 
-    /// Unknown display on either side (nil): fall back to the plain
-    /// windowID-disappearance signal rather than suppressing a real change.
+    /// With a nil display on either side, fall back to plain disappearance rather than suppress a real change.
     @Test("An unknown display falls back to the plain window ID signal")
     func nilDisplayFallsBackToWindowIDSignal() {
         #expect(

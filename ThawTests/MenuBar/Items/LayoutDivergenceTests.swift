@@ -2,7 +2,6 @@
 //  LayoutDivergenceTests.swift
 //  Project: Thaw
 //
-//  Copyright (Ice) © 2023–2025 Jordan Baird
 //  Copyright (Thaw) © 2026 Toni Förster
 //  Licensed under the GNU GPLv3
 
@@ -11,14 +10,10 @@ import Testing
 @testable import Thaw
 
 /// Covers ``MenuBarItemManager/layoutDivergesFromSaved(candidates:sectionLookup:hiddenBounds:alwaysHiddenBounds:overflowExemptUIDs:activelyShownTags:)``,
-/// the second of `applySavedLayout`'s two triggers and the one that fires on
-/// ambient drift rather than on items coming and going.
+/// the `applySavedLayout` trigger that fires on ambient drift.
 ///
-/// The rule decides whether a bulk apply is dispatched at all, and the only
-/// gate between that dispatch and the user's bar is the open-menu probe. When
-/// the probe returns a false negative — which #924's logs show it doing on
-/// nearly every call, bailing at "no candidate menu windows on screen" — a
-/// divergence reported here becomes items moving under an open menu.
+/// The open-menu probe often returns a false negative (#924), so a divergence
+/// reported here can move items under an open menu.
 @Suite("Layout divergence")
 struct LayoutDivergenceTests {
     /// Always-hidden divider at 100–120, hidden divider at 200–220. An item is
@@ -98,10 +93,8 @@ struct LayoutDivergenceTests {
 
     // MARK: Temporarily shown items (#924)
 
-    /// The regression. Thaw moved this item into the visible section itself in
-    /// order to show it, so its position is not drift — it is the feature
-    /// working. Reporting it dispatches a bulk apply that drags the item home
-    /// under the menu the user just opened.
+    /// Thaw moved this item to show it, so its position is not drift.
+    /// Reporting it drags the item home under the menu the user just opened.
     @Test("An item Thaw is temporarily showing does not diverge")
     func temporarilyShownItemDoesNotDiverge() {
         #expect(
@@ -113,8 +106,7 @@ struct LayoutDivergenceTests {
         )
     }
 
-    /// The exemption is per item, not a blanket suppression: a genuine drift
-    /// elsewhere on the bar still has to be seen while something is shown.
+    /// The exemption is per item, not a blanket suppression.
     @Test("A temporarily shown item does not mask another item's drift")
     func temporarilyShownItemDoesNotMaskOtherDrift() {
         #expect(
@@ -152,8 +144,7 @@ struct LayoutDivergenceTests {
 
     // MARK: Notch overflow exemptions
 
-    /// Unchanged behaviour, pinned because the exemption moved from a derived
-    /// flag inside the loop to a set passed in by the caller.
+    /// The exemption is now a set passed in by the caller.
     @Test("An ejected item resting in hidden is exempt")
     func ejectedItemInHiddenIsExempt() {
         #expect(
@@ -165,9 +156,8 @@ struct LayoutDivergenceTests {
         )
     }
 
-    /// An ejected item that drifted somewhere other than hidden is genuine
-    /// drift, and the caller passes an empty set when the feature is off or the
-    /// active display has no notch.
+    /// An ejected item that drifted anywhere but hidden is genuine drift. The
+    /// caller passes an empty set when the feature is off or there is no notch.
     @Test("The overflow exemption only covers hidden")
     func overflowExemptionOnlyCoversHidden() {
         #expect(

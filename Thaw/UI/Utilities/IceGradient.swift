@@ -12,12 +12,8 @@ import SwiftUI
 
 /// A custom gradient.
 nonisolated struct IceGradient: Codable, Hashable {
-    /// The color stops in the gradient.
     var stops: [ColorStop]
 
-    /// Creates a gradient with the given array of color stops.
-    ///
-    /// - Parameter stops: An array of color stops.
     init(stops: [ColorStop] = []) {
         self.stops = stops
     }
@@ -99,11 +95,8 @@ nonisolated struct IceGradient: Codable, Hashable {
     /// This method does not simply return the color of the nearest color
     /// stop. Instead, it computes the actual rendered color at `location`.
     ///
-    /// This method uses the extended Display P3 color space to process the
-    /// colors in the gradient. The same color space is also used to create
-    /// the returned color. Converting the color to a different color space
-    /// may produce unexpected results. Prefer ``color(at:using:)`` if you
-    /// need the color returned in a different color space.
+    /// Uses extended Display P3 to process the colors and to create the result.
+    /// Prefer ``color(at:using:)`` if you need another color space.
     ///
     /// - Parameter location: A value between 0 and 1 representing the
     ///   location of the color to return.
@@ -157,12 +150,9 @@ nonisolated struct IceGradient: Codable, Hashable {
             count += 1
         }
 
-        // No sample contributed components — for example, a gradient whose
-        // stops cannot be interpolated into an NSGradient — so there is
-        // nothing to average. Dividing by the zero count below would hand
-        // back a CGColor whose components are all NaN, which reads as a
-        // valid color to every caller and poisons whatever it is blended
-        // into. Mirrors the same guard in ``CGImage.averageColor``.
+        // No sample contributed, so there's nothing to average. Dividing by zero
+        // would return an all-NaN CGColor that callers treat as valid. Mirrors
+        // ``CGImage.averageColor``.
         guard count > 0 else {
             return nil
         }
@@ -193,12 +183,10 @@ nonisolated extension IceGradient {
 nonisolated extension IceGradient {
     /// A color stop in a gradient.
     nonisolated struct ColorStop: Hashable {
-        /// The stop's color.
         var color: CGColor
         /// The stop's relative location in a gradient.
         var location: CGFloat
 
-        /// Returns a stop with the given color and location.
         static func stop(_ color: CGColor, location: CGFloat) -> ColorStop {
             ColorStop(color: color, location: location)
         }

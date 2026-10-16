@@ -2,26 +2,20 @@
 //  PrunedSectionOrderTests.swift
 //  Project: Thaw
 //
-//  Copyright (Ice) © 2023–2025 Jordan Baird
 //  Copyright (Thaw) © 2026 Toni Förster
 //  Licensed under the GNU GPLv3
 
 import Testing
 @testable import Thaw
 
-/// Characterizes the repair pass over a persisted section order.
-///
-/// Two shipped fixes stop their own failure from recurring but leave what was
-/// already written to disk in place: the provisional-identity guard (#788) and
-/// volatile-title canonicalization (#815). Users who were affected before
-/// either landed keep their damaged layout forever. This is the heal.
+/// Repairs a persisted section order. The provisional-identity guard (#788) and
+/// title canonicalization (#815) stop new damage but leave old damage on disk.
 @Suite("Pruned section order")
 struct PrunedSectionOrderTests {
     // MARK: Provisional-identity duplicates (#788)
 
-    /// The reporter's exact pair: BetterTouchTool's item saved once under its
-    /// real owner and once under the Control Center namespace it was given
-    /// while its source PID would not resolve.
+    /// BetterTouchTool saved under its real owner and again under the Control
+    /// Center namespace it got while its source PID was unresolved.
     @Test("A Control Center duplicate of a real owner's item is dropped")
     func dropsProvisionalDuplicate() {
         let real = "com.hegenberg.BetterTouchTool:com.hegenberg.BetterTouchTool (449CF8DD-A814-4D62-99D1-85D3F400F8B3)"
@@ -31,8 +25,7 @@ struct PrunedSectionOrderTests {
         #expect(pruned["hidden"] == [real, "us.zoom.xos:Item-0"])
     }
 
-    /// The duplicate and its real owner need not share a section — the
-    /// poisoned copy is filed wherever it was when resolution failed.
+    /// The poisoned copy sits wherever it was when resolution failed.
     @Test("The duplicate is dropped across section boundaries")
     func dropsProvisionalDuplicateAcrossSections() {
         let real = "com.hegenberg.BetterTouchTool:BetterTouchTool"
@@ -46,8 +39,7 @@ struct PrunedSectionOrderTests {
         #expect(pruned["hidden"] == [])
     }
 
-    /// The safety property. Genuine Control Center items have no real-owner
-    /// twin, so nothing about them looks like a duplicate and they survive.
+    /// Genuine Control Center items have no real-owner twin, so they survive.
     @Test("Genuine Control Center items are never pruned")
     func keepsGenuineControlCenterItems() {
         let system = [
@@ -62,8 +54,7 @@ struct PrunedSectionOrderTests {
         #expect(pruned["visible"] == system)
     }
 
-    /// Instance indexes are part of identity, so `:1` is not a duplicate of
-    /// `:0` and must not be collapsed into it.
+    /// Instance indexes are identity, so `:1` is not a duplicate of `:0`.
     @Test("Differing instance indexes are not duplicates")
     func instanceIndexesAreDistinct() {
         let entries = [
@@ -76,11 +67,8 @@ struct PrunedSectionOrderTests {
 
     // MARK: Localized display-name ghosts (#949)
 
-    /// The #949 reporter's exact pair: an en-GB machine minted
-    /// `Control Centre:WiFi` while the bundle ID read nil, and counting it
-    /// as a real owner deleted the genuine `com.apple.controlcenter:WiFi`
-    /// as a provisional duplicate on every load. The ghost must be the one
-    /// that goes.
+    /// An en-GB machine minted `Control Centre:WiFi` while the bundle ID read nil,
+    /// and treating it as a real owner deleted the genuine `com.apple.controlcenter:WiFi` (#949).
     @Test("A localized ghost never deletes its genuine Control Center twin")
     func localizedGhostDoesNotDeleteGenuineTwin() {
         let ghost = "Control Centre:WiFi"
@@ -90,8 +78,7 @@ struct PrunedSectionOrderTests {
         #expect(pruned["visible"] == [genuine])
     }
 
-    /// `Control Centre:Thaw.ControlItem.Visible` is a mis-tagged chevron;
-    /// nothing live carries a control item title outside Thaw's namespace.
+    /// A mis-tagged chevron: control item titles only exist in Thaw's namespace.
     @Test("A localized ghost of a Thaw control item is dropped")
     func localizedGhostOfControlItemIsDropped() {
         let ghost = "Control Centre:Thaw.ControlItem.Visible"
@@ -101,9 +88,7 @@ struct PrunedSectionOrderTests {
         #expect(pruned["visible"] == [genuine])
     }
 
-    /// A display-name namespace with no canonical twin may be the only
-    /// identity a bundle-ID-less app ever got; deleting it would lose the
-    /// user's placement.
+    /// It may be the only identity a bundle-ID-less app ever got.
     @Test("A display-name entry without a twin survives")
     func displayNameEntryWithoutTwinSurvives() {
         let entries = ["Docker Desktop:Item-0", "com.if.Amphetamine:Amphetamine"]
@@ -112,10 +97,8 @@ struct PrunedSectionOrderTests {
         #expect(pruned["hidden"] == entries)
     }
 
-    /// Some languages localize Control Center without any whitespace
-    /// (German: Kontrollzentrum), which the whitespace heuristic cannot
-    /// see. The caller passes the live localized name as an alias so the
-    /// classification stays locale-independent for the current locale.
+    /// Some locales have no whitespace (German: Kontrollzentrum), so the caller passes
+    /// the live localized name as an alias.
     @Test("A whitespace-free localized alias is recognized via the alias set")
     func whitespaceFreeAliasIsRecognized() {
         let ghost = "Kontrollzentrum:WiFi"
@@ -128,10 +111,8 @@ struct PrunedSectionOrderTests {
         #expect(withAlias["visible"] == [genuine])
     }
 
-    /// The #949 follow-up logs carried `Control Centre:Alcove` next to
-    /// `com.henrikruscon.Alcove:Alcove` — a third-party twin, reachable
-    /// only through the claimed-title rule since the genuine Control
-    /// Center entries had already been deleted by the pre-fix pruner.
+    /// `Control Centre:Alcove` next to `com.henrikruscon.Alcove:Alcove`: a third-party
+    /// twin found only via the claimed-title rule (#949).
     @Test("A localized ghost of a real owner's item is dropped")
     func localizedGhostOfRealOwnerIsDropped() {
         let ghost = "Control Centre:Alcove"
@@ -141,8 +122,7 @@ struct PrunedSectionOrderTests {
         #expect(pruned["hidden"] == [genuine])
     }
 
-    /// Every owner has an Item-0, so a generic title claimed by a real
-    /// owner is no evidence of a twin. The display-name entry stays.
+    /// Every owner has an Item-0, so a generic title is no evidence of a twin.
     @Test("A generic title never counts as a claimed-title twin")
     func genericTitleIsNotAClaimedTitleTwin() {
         let entries = ["Docker Desktop:Item-0", "org.openvpn.client.app:Item-0"]
@@ -151,8 +131,7 @@ struct PrunedSectionOrderTests {
         #expect(pruned["hidden"] == entries)
     }
 
-    /// The ghost and its twin need not share a section — the ghost was
-    /// filed wherever the item sat when the bundle ID failed to read.
+    /// The ghost sits wherever the item was when the bundle ID failed to read.
     @Test("The localized ghost is dropped across section boundaries")
     func localizedGhostDroppedAcrossSections() {
         let pruned = LayoutSolver.prunedSectionOrder([
@@ -165,8 +144,7 @@ struct PrunedSectionOrderTests {
 
     // MARK: Volatile-title accumulation (#815)
 
-    /// A LyricsX layout accumulated one entry per lyric ever displayed. All
-    /// of them canonicalize to a single key, so only the first survives.
+    /// LyricsX saved one entry per lyric shown; all canonicalize to one key.
     @Test("Per-lyric history collapses to one entry")
     func collapsesLyricHistory() {
         let owner = MenuBarItemTag.lyricsXBundleID
@@ -177,7 +155,7 @@ struct PrunedSectionOrderTests {
         #expect(pruned["hidden"]?.first == polluted[0])
     }
 
-    /// Same shape for the metric owner the canonicalizer was built for.
+    /// The same for the metric owner.
     @Test("Per-sample metric history collapses per distinct metric")
     func collapsesMetricHistory() {
         let owner = MenuBarItemTag.iStatMenusStatusBundleID
@@ -191,8 +169,7 @@ struct PrunedSectionOrderTests {
 
     // MARK: Invariants
 
-    /// Pruning must only ever remove. If it reordered a section it would
-    /// itself produce the fault #885 exists to detect.
+    /// Reordering would itself produce the fault #885 detects.
     @Test("Surviving entries keep their relative order")
     func preservesOrder() {
         let owner = MenuBarItemTag.lyricsXBundleID
@@ -207,8 +184,7 @@ struct PrunedSectionOrderTests {
         #expect(pruned["visible"] == ["a.app:Item-0", "\(owner):first lyric", "b.app:Item-0", "c.app:Item-0"])
     }
 
-    /// A layout with nothing wrong with it must come back byte-identical, so
-    /// running this on every launch is free and cannot churn the plist.
+    /// Runs every launch, so a clean layout must come back identical and never churn the plist.
     @Test("A clean layout is returned unchanged")
     func cleanLayoutIsUnchanged() {
         let clean = [
@@ -219,8 +195,7 @@ struct PrunedSectionOrderTests {
         #expect(LayoutSolver.prunedSectionOrder(clean) == clean)
     }
 
-    /// Section keys are preserved even when a section empties out, so the
-    /// caller's `pruned != stored` comparison stays meaningful.
+    /// Keeps the caller's `pruned != stored` comparison meaningful.
     @Test("Sections and keys survive an empty result")
     func keysSurviveEmptying() {
         let pruned = LayoutSolver.prunedSectionOrder([
@@ -231,12 +206,9 @@ struct PrunedSectionOrderTests {
         #expect(pruned["hidden"]?.isEmpty == true)
     }
 
-    /// A volatile-title owner saved in one section under one sample and in
-    /// another section under a later one leaves two entries that canonicalize
-    /// to the same key. Deduplicating per section keeps both, and the section
-    /// lookups built from this order then resolve that key by whichever
-    /// section the dictionary iterated last — a nondeterministic answer to
-    /// "where does this item belong".
+    /// A volatile-title owner saved in two sections under different samples
+    /// canonicalizes to one key in both, and lookups would pick whichever section
+    /// iterated last.
     @Test("The same canonical identity is kept in only one section")
     func canonicalDuplicateAcrossSectionsIsResolved() {
         let owner = MenuBarItemTag.lyricsXBundleID
@@ -251,7 +223,7 @@ struct PrunedSectionOrderTests {
         #expect(pruned["hidden"]?.isEmpty == true)
     }
 
-    /// Same shape for the metric owner, and across all three sections.
+    /// The metric owner, across all three sections.
     @Test("Section precedence is visible, then hidden, then always-hidden")
     func sectionPrecedenceIsDeterministic() {
         let owner = MenuBarItemTag.iStatMenusStatusBundleID
@@ -266,8 +238,7 @@ struct PrunedSectionOrderTests {
         #expect(pruned["alwaysHidden"]?.isEmpty == true)
     }
 
-    /// Distinct identities from the same owner must not be collapsed into one
-    /// another just because they share a namespace.
+    /// Sharing a namespace does not make identities the same.
     @Test("Distinct metrics from one owner survive in their own sections")
     func distinctMetricsAreNotCollapsed() {
         let owner = MenuBarItemTag.iStatMenusStatusBundleID
@@ -280,9 +251,7 @@ struct PrunedSectionOrderTests {
         #expect(pruned["hidden"] == ["\(owner):Network 3.4 MB/s"])
     }
 
-    /// A section key outside the known three is not part of the precedence
-    /// order and must keep its entries untouched rather than being silently
-    /// emptied by the dedupe pass.
+    /// Unknown section keys are outside the precedence order and keep their entries.
     @Test("An unknown section key keeps its own entries")
     func unknownSectionKeyIsPreserved() {
         let pruned = LayoutSolver.prunedSectionOrder([
@@ -296,8 +265,7 @@ struct PrunedSectionOrderTests {
 
     // MARK: Misattributed own-namespace entries (#927)
 
-    /// Source-PID resolution handed Control Center's WiFi item Thaw's own PID,
-    /// and the layout kept the result. Nothing live will carry that name.
+    /// Source-PID resolution gave Control Center's WiFi Thaw's own PID; nothing live will carry that name.
     @Test("A foreign item saved under Thaw's namespace is dropped")
     func dropsForeignEntryUnderOwnNamespace() {
         let own = Constants.bundleIdentifier
@@ -307,11 +275,8 @@ struct PrunedSectionOrderTests {
         #expect(pruned["visible"] == ["us.zoom.xos:Item-0"])
     }
 
-    /// The reason this rule has to run before the provisional-duplicate check
-    /// rather than after it. Left in place, the misattributed entry counts as a
-    /// "real owner" of the title `WiFi`, which makes the genuine Control Center
-    /// item look like the poisoned copy and deletes the wrong one — the exact
-    /// state #927's reporter was in.
+    /// This rule runs before the duplicate check: otherwise the misattributed entry
+    /// owns `WiFi` and the genuine Control Center item is deleted instead (#927).
     @Test("The genuine Control Center twin survives its misattributed copy")
     func keepsGenuineTwinOfMisattributedEntry() {
         let own = Constants.bundleIdentifier
@@ -321,7 +286,6 @@ struct PrunedSectionOrderTests {
         #expect(pruned["visible"] == ["com.apple.controlcenter:WiFi"])
     }
 
-    /// Thaw's own items are the point of the namespace and must survive.
     @Test("Thaw's own control items and spacers survive")
     func keepsOwnControlItemsAndSpacers() {
         let own = Constants.bundleIdentifier
@@ -347,8 +311,7 @@ struct PrunedSectionOrderTests {
 
     // MARK: System clones (#927)
 
-    /// The reporter carried six clones under one owner, all planned against on
-    /// every apply.
+    /// Six clones under one owner were planned against on every apply.
     @Test("System clone entries are dropped under any namespace")
     func dropsSystemClones() {
         let owner = "info.marcel-dierkes.KeepingYouAwake"
@@ -363,7 +326,6 @@ struct PrunedSectionOrderTests {
         #expect(pruned["visible"] == ["\(owner):Item-0"])
     }
 
-    /// An item that merely mentions the clone name is not one.
     @Test("A title that only resembles a clone name survives")
     func keepsLookalikeCloneTitle() {
         let entry = "com.example.app:System Status Item Clone Manager"
@@ -373,8 +335,7 @@ struct PrunedSectionOrderTests {
 
     // MARK: Self-titled entries (#881, #927)
 
-    /// Four of #881's twenty-one, verbatim. The degradation hits siblings
-    /// together, so they arrive carrying instance indexes.
+    /// Four entries from #881, verbatim; the degradation hits siblings, hence the indexes.
     @Test("Entries titled after their own namespace are dropped")
     func dropsSelfTitledEntries() {
         let pruned = LayoutSolver.prunedSectionOrder([
@@ -390,8 +351,7 @@ struct PrunedSectionOrderTests {
     }
 
     /// Pruning runs after ``LayoutSolver/canonicalizedSectionOrder(_:)``, which
-    /// rewrites a nested helper's namespace and leaves the title alone. The two
-    /// halves no longer match literally, and the entry is just as dead.
+    /// rewrites the helper namespace but not the title, so they no longer match literally.
     @Test("A canonicalized helper namespace still reads as self-titled")
     func dropsSelfTitledEntryAfterNamespaceCanonicalization() {
         let degraded = ["hidden": ["at.obdev.littlesnitch.agent:at.obdev.littlesnitch.agent"]]
@@ -399,9 +359,8 @@ struct PrunedSectionOrderTests {
         #expect(pruned["hidden"] == [])
     }
 
-    /// The ordering trap the misattribution rule already had. A self-titled
-    /// entry is not a real owner, so it must not license the #788 rule to
-    /// delete the genuine Control Center item of the same title.
+    /// A self-titled entry is not a real owner and must not license the #788 rule
+    /// to delete the genuine Control Center item.
     @Test("A self-titled entry does not condemn a Control Center twin")
     func selfTitledEntryDoesNotCondemnControlCenterTwin() {
         let pruned = LayoutSolver.prunedSectionOrder([
@@ -413,9 +372,7 @@ struct PrunedSectionOrderTests {
         #expect(pruned["visible"] == ["com.apple.controlcenter:com.microsoft.OneDrive"])
     }
 
-    /// A title that starts with the bundle identifier still carries identity
-    /// past it — BetterTouchTool's UUID-suffixed item is the shape in the
-    /// tracker — so only exact equality counts.
+    /// BetterTouchTool's UUID-suffixed title starts with its bundle ID, so only exact equality counts.
     @Test("A title that merely begins with its namespace survives")
     func keepsTitleThatOnlyBeginsWithNamespace() {
         let entries = [

@@ -2,7 +2,6 @@
 //  UpdatesManagerTests.swift
 //  Project: Thaw
 //
-//  Copyright (Ice) © 2023–2025 Jordan Baird
 //  Copyright (Thaw) © 2026 Toni Förster
 //  Licensed under the GNU GPLv3
 
@@ -12,15 +11,10 @@ import Testing
 
 /// Pins the promise the macOS compatibility alert makes.
 ///
-/// The alert tells the user that a build for their macOS arrives through the
-/// alpha channel, then starts a check for it. Sparkle says nothing when a
-/// background check finds nothing, so the promise is tracked across the check
-/// and answered with the releases page when the feed comes back empty. These
-/// tests stand in for the check: they drive the outcomes Sparkle would report.
+/// The alert starts an alpha check. Sparkle stays silent when a background
+/// check finds nothing, so an empty feed opens the releases page instead.
 ///
-/// Serialized and run against a scratch defaults suite, since subscribing to a
-/// channel writes real preference keys through the process-wide
-/// `Defaults.store`.
+/// Serialized: subscribing writes through the process-wide `Defaults.store`.
 @MainActor
 @Suite("Compatibility update check", .serialized)
 struct UpdatesManagerTests {
@@ -31,26 +25,23 @@ struct UpdatesManagerTests {
         return manager
     }
 
-    /// Read back through ``UpdatesManager/storedUpdateChannel(on:)`` rather
-    /// than `updateChannel`, whose getter withholds alpha from a system that
-    /// still has a shipping build to run. The alert only appears past that
-    /// line, but the machine running the tests need not be.
-    @Test("Accepting the alert subscribes to alpha")
-    func acceptingTheAlertSubscribesToAlpha() throws {
+    /// Read via ``UpdatesManager/storedUpdateChannel(on:)`` because the
+    /// `updateChannel` getter withholds alpha on a supported macOS.
+    @Test("Accepting the alert subscribes to beta")
+    func acceptingTheAlertSubscribesToBeta() throws {
         try withScratchDefaults { _ in
             let manager = manager { _ in }
-            manager.checkForAlphaUpdateAfterCompatibilityWarning()
+            manager.checkForBetaUpdateAfterCompatibilityWarning()
             let unsupported = OperatingSystemVersion(
                 majorVersion: MacOSCompatibilityWarning.firstUnsupportedMajorVersion,
                 minorVersion: 0,
                 patchVersion: 0
             )
-            #expect(UpdatesManager.storedUpdateChannel(on: unsupported) == .alpha)
+            #expect(UpdatesManager.storedUpdateChannel(on: unsupported) == .beta)
         }
     }
 
-    /// A feed with no alpha item is the state of the world until the rewrite
-    /// publishes one, so the fallback is the path most users take.
+    /// Until the rewrite publishes an alpha item, most users take this path.
     @Test("A check that finds nothing opens the releases page")
     func emptyFeedOpensReleasesPage() throws {
         try withScratchDefaults { _ in
@@ -77,8 +68,7 @@ struct UpdatesManagerTests {
         }
     }
 
-    /// Scheduled checks the user never asked for keep ending, and none of them
-    /// owes anyone a browser window.
+    /// Scheduled checks never open a browser window.
     @Test("A check nobody started opens nothing")
     func unrequestedCheckOpensNothing() throws {
         try withScratchDefaults { _ in
@@ -89,9 +79,7 @@ struct UpdatesManagerTests {
         }
     }
 
-    /// The alert's check is shown as soon as it lands. Deferring it to a
-    /// notification would answer the user's click with silence whenever they
-    /// have not granted notifications.
+    /// Deferring to a notification would be silent without notification permission.
     @Test("The alert's check is never deferred")
     func compatibilityCheckIsShownImmediately() throws {
         try withScratchDefaults { _ in
@@ -117,8 +105,8 @@ struct UpdatesManagerTests {
         }
     }
 
-    /// The update window is the answer, so the notification is dropped and the
-    /// promise is closed with it: a later empty check belongs to someone else.
+    /// The update window is the answer, so the notification is dropped and
+    /// the promise closed.
     @Test("A found update answers the promise without notifying")
     func foundUpdateAnswersWithoutNotifying() throws {
         try withScratchDefaults { _ in
@@ -132,10 +120,8 @@ struct UpdatesManagerTests {
         }
     }
 
-    /// Drives the delegate callbacks Sparkle itself calls, rather than the
-    /// helpers behind them, so the wiring between the two is covered too. The
-    /// updater is built with `startingUpdater: false`, so it schedules
-    /// nothing and reaches no network.
+    /// Drives Sparkle's own delegate callbacks to cover the wiring.
+    /// `startingUpdater: false` keeps it off the network.
     @Test("Sparkle reporting an empty check opens the releases page")
     func sparkleEmptyCheckOpensReleasesPage() throws {
         try withScratchDefaults { _ in
@@ -173,14 +159,16 @@ struct UpdatesManagerTests {
         }
     }
 
-    /// What Sparkle is told to accept comes from the stored channel, so the
-    /// picker in Settings reaches the updater.
+    /// The Settings picker must reach the updater. Beta's tags depend on the
+    /// running macOS, so the expectation does too.
     @Test("The allowed channels follow the stored channel")
     func allowedChannelsFollowStoredChannel() throws {
         try withScratchDefaults { store in
             let manager = manager { _ in }
             store.set(UpdateChannel.beta.rawValue, forKey: "UpdateChannel")
-            #expect(manager.allowedChannels(for: manager.updater) == ["beta"])
+            let running = ProcessInfo.processInfo.operatingSystemVersion
+            #expect(manager.allowedChannels(for: manager.updater) == UpdateChannel.beta.allowedSparkleChannels(on: running))
+            #expect(manager.allowedChannels(for: manager.updater).contains("beta"))
         }
     }
 

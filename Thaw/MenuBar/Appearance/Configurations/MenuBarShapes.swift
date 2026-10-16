@@ -150,9 +150,7 @@ nonisolated extension MenuBarBackgroundKind {
 nonisolated extension MenuBarBackgroundKind {
     /// App-level default for background rendering in appearance configs.
     ///
-    /// Named `defaultKind` rather than `default`: the latter is a Swift
-    /// keyword, and a backtick-escaped declaration reads as a language
-    /// construct at the point of use.
+    /// Not `default`, which is a keyword and would need backticks.
     static let defaultKind = MenuBarBackgroundKind.none
 }
 

@@ -2,7 +2,6 @@
 //  AutomationSettingsTests.swift
 //  Project: Thaw
 //
-//  Copyright (Ice) © 2023–2025 Jordan Baird
 //  Copyright (Thaw) © 2026 Toni Förster
 //  Licensed under the GNU GPLv3
 
@@ -10,13 +9,10 @@ import Foundation
 import Testing
 @testable import Thaw
 
-/// Covers ``AutomationSettings``' whitelist bookkeeping — the part of the
-/// Settings URI automation surface that is real logic rather than view code.
+/// Covers the whitelist bookkeeping in ``AutomationSettings``.
 ///
-/// The whitelist lives in `UserDefaults` through `SettingsURIHandler`, so
-/// every case that touches it runs inside `withScratchDefaults`: the model
-/// reads and writes a throwaway store instead of the developer's own
-/// automation settings, and each case starts from an empty domain.
+/// The whitelist lives in `UserDefaults` via `SettingsURIHandler`, so each
+/// case runs in `withScratchDefaults` against a throwaway, empty store.
 @MainActor
 @Suite("Automation settings", .serialized)
 struct AutomationSettingsTests {
@@ -85,34 +81,6 @@ struct AutomationSettingsTests {
         }
     }
 
-    @Test("Removing by index drops exactly the selected rows")
-    func removingByIndexDropsTheSelectedRows() throws {
-        try withScratchDefaults { _ in
-            let settings = AutomationSettings()
-            for id in ["com.example.Alpha", "com.example.Beta", "com.example.Gamma"] {
-                settings.addToWhitelist(bundleId: id)
-            }
-            // Sorted by display name, so the order here is alpha, beta, gamma.
-            #expect(settings.whitelistedApps.count == 3)
-
-            settings.removeWhitelistedApp(at: IndexSet([0, 2]))
-
-            #expect(settings.whitelistedApps.map(\.bundleId) == ["com.example.Beta"])
-        }
-    }
-
-    @Test("An out-of-range index is skipped rather than trapping")
-    func outOfRangeIndexIsSkipped() throws {
-        try withScratchDefaults { _ in
-            let settings = AutomationSettings()
-            settings.addToWhitelist(bundleId: "com.example.Alpha")
-
-            settings.removeWhitelistedApp(at: IndexSet([5]))
-
-            #expect(settings.whitelistedApps.map(\.bundleId) == ["com.example.Alpha"])
-        }
-    }
-
     @Test("Entries are ordered by display name, not insertion order")
     func whitelistIsSortedByDisplayName() throws {
         try withScratchDefaults { _ in
@@ -160,6 +128,35 @@ struct AutomationSettingsTests {
 
             settings.isSettingsURIEnabled = false
             #expect(!Defaults.bool(forKey: .settingsURIEnabled))
+        }
+    }
+
+    @Test("Adding the current app whitelists this bundle")
+    func addCurrentAppWhitelistsThisBundle() throws {
+        try withScratchDefaults { _ in
+            let bundleID = try #require(
+                Bundle.main.bundleIdentifier,
+                "the test host is an app bundle, so it always has an identifier"
+            )
+            let settings = AutomationSettings()
+            #expect(settings.whitelistedApps.isEmpty)
+
+            settings.addCurrentApp()
+
+            #expect(settings.whitelistedApps.contains { $0.bundleId == bundleID })
+            #expect(SettingsURIHandler.getWhitelist().contains(bundleID))
+        }
+    }
+
+    @Test("Adding the current app twice does not duplicate the entry")
+    func addCurrentAppIsIdempotent() throws {
+        try withScratchDefaults { _ in
+            let settings = AutomationSettings()
+
+            settings.addCurrentApp()
+            settings.addCurrentApp()
+
+            #expect(settings.whitelistedApps.count == 1)
         }
     }
 }

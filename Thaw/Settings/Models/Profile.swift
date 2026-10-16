@@ -2,7 +2,6 @@
 //  Profile.swift
 //  Project: Thaw
 //
-//  Copyright (Ice) © 2023–2025 Jordan Baird
 //  Copyright (Thaw) © 2026 Toni Förster
 //  Licensed under the GNU GPLv3
 
@@ -20,6 +19,12 @@ nonisolated struct ProfileMetadata: Codable, Identifiable, Hashable {
     var associatedDisplayUUID: String?
     /// The cached display name, used when the display is disconnected.
     var associatedDisplayName: String?
+    /// The reboot-stable key of the Space this profile auto-activates for,
+    /// or `nil` for manual-only. See `Bridging.getSpacePersistentKeys()`.
+    var associatedSpaceKey: String?
+    /// A user-facing label for the associated Space. Spaces have no system
+    /// name, so this is whatever the user typed when making the association.
+    var associatedSpaceName: String?
 }
 
 // MARK: - GeneralSettingsSnapshot
@@ -41,6 +46,9 @@ nonisolated struct GeneralSettingsSnapshot: Codable {
     var autoRehide: Bool
     var rehideStrategyRawValue: Int
     var rehideInterval: TimeInterval
+    /// Optional so profiles saved before the setting existed still decode;
+    /// a missing value leaves the current setting alone.
+    var tempShowInterval: TimeInterval?
 
     @MainActor
     static func capture(from settings: GeneralSettings) -> GeneralSettingsSnapshot {
@@ -59,7 +67,8 @@ nonisolated struct GeneralSettingsSnapshot: Codable {
             showOnScroll: settings.showOnScroll,
             autoRehide: settings.autoRehide,
             rehideStrategyRawValue: settings.rehideStrategy.rawValue,
-            rehideInterval: settings.rehideInterval
+            rehideInterval: settings.rehideInterval,
+            tempShowInterval: settings.tempShowInterval
         )
     }
 
@@ -87,6 +96,9 @@ nonisolated struct GeneralSettingsSnapshot: Codable {
             settings.rehideStrategy = strategy
         }
         settings.rehideInterval = rehideInterval
+        if let tempShowInterval {
+            settings.tempShowInterval = tempShowInterval
+        }
     }
 }
 
@@ -104,21 +116,10 @@ nonisolated struct AdvancedSettingsSnapshot: Codable {
     var tooltipDelay: TimeInterval
     var showMenuBarTooltips: Bool
     var iconRefreshInterval: TimeInterval
-    // enableDiagnosticLogging is deliberately NOT part of a profile.
-    //
-    // It is a diagnostic control, not a preference: a user turns it on to
-    // capture a log, and the thing they most often need to capture is a
-    // profile switch. Carrying it in the snapshot meant applying a profile
-    // restored whatever the switch was when that profile was saved — off,
-    // for every profile that already exists — so the logging stopped at
-    // the exact moment it was wanted, and the switch appeared to flip
-    // itself back (reported on #899). Leaving it out means it stays where
-    // the user put it, for the whole session, across every profile.
-    //
-    // Removing the field is safe in both directions: every property here
-    // decodes with `decodeIfPresent` and a default, so a new build ignores
-    // the key still present in old profiles, and an older build reading a
-    // newly-written profile falls back to the default rather than failing.
+    // enableDiagnosticLogging is deliberately not part of a profile: users
+    // turn it on to capture a profile switch, and restoring it on apply
+    // turned logging off at that moment. Old and new builds both decode
+    // fine since every field uses `decodeIfPresent` with a default.
     var useDoubleClickToShowAlwaysHiddenSection: Bool
     var useOptionClickToShowAlwaysHiddenSection: Bool
     var enableMenuBarItemOverflow: Bool
@@ -168,7 +169,7 @@ nonisolated struct AdvancedSettingsSnapshot: Codable {
         settings.tooltipDelay = tooltipDelay
         settings.showMenuBarTooltips = showMenuBarTooltips
         settings.iconRefreshInterval = iconRefreshInterval
-        // enableDiagnosticLogging intentionally untouched — see the property list.
+        // enableDiagnosticLogging intentionally untouched; see the property list.
         settings.useDoubleClickToShowAlwaysHiddenSection = useDoubleClickToShowAlwaysHiddenSection
         settings.useOptionClickToShowAlwaysHiddenSection = useOptionClickToShowAlwaysHiddenSection
         settings.enableMenuBarItemOverflow = enableMenuBarItemOverflow
@@ -341,25 +342,14 @@ nonisolated struct MenuBarLayoutSnapshot: Codable {
     /// Profiles written before `itemOrder` was added contain the equivalent
     /// `savedSectionOrder` representation, so preserve their layout intent.
     ///
-    /// An *empty* `itemOrder` falls back too, not just a missing one.
-    /// `captureCurrentLayout` derives `itemOrder` from the item manager's
-    /// cache, which is empty while the menu bar is still settling, so a
-    /// capture taken at the wrong moment writes `[:]` rather than `nil`. Under
-    /// a plain `??` that empty dictionary shadows a perfectly good
-    /// `savedSectionOrder`, and the next apply sees no layout at all. Treating
-    /// it as absent also repairs profiles already written that way.
-    /// Pruned on the way out, the way ``MenuBarItemManager`` prunes the saved
-    /// section order it loads from disk. A profile is captured from the live
-    /// bar, so a capture taken while source-PID resolution was degraded bakes
-    /// in identifiers that can never match a live item again — and unlike the
-    /// saved order, nothing rewrites a profile in the background to repair it.
-    /// #881's reporter carried a profile holding both the provisional and the
-    /// resolved form of several items, and the apply planned against both.
+    /// An empty `itemOrder` falls back too: a capture taken while the cache
+    /// was still settling writes `[:]`, which would shadow a good
+    /// `savedSectionOrder` and leave the apply with no layout.
     ///
-    /// Every consumer reads the layout through here or through
-    /// ``resolvedItemSectionMap`` below, including the identifier set that
-    /// arrival detection matches against, so pruning once at the read covers
-    /// them all.
+    /// Pruned on the way out, like the saved section order: a capture taken
+    /// while source-PID resolution was degraded holds identifiers that can
+    /// never match a live item. Every consumer reads the layout through here
+    /// or ``resolvedItemSectionMap``, so pruning once covers them all.
     var resolvedItemOrder: [String: [String]] {
         guard let itemOrder, !itemOrder.isEmpty else {
             return LayoutSolver.prunedSectionOrder(savedSectionOrder)
@@ -389,10 +379,8 @@ nonisolated struct MenuBarLayoutSnapshot: Codable {
 
 /// Groups all settings data for a profile, used to reduce init parameter count.
 ///
-/// The initializer is left to synthesis rather than written out. The defaults
-/// below carry the same values the explicit initializer supplied, and the
-/// synthesized memberwise initializer takes its parameter order from the
-/// property order here, so every call site is unaffected.
+/// The memberwise initializer takes its parameter order from the property
+/// order here.
 nonisolated struct ProfileContent {
     var generalSettings: GeneralSettingsSnapshot
     var advancedSettings: AdvancedSettingsSnapshot
@@ -602,6 +590,10 @@ nonisolated struct ProfileExportEntry: Codable {
     var profile: Profile
     var associatedDisplayUUID: String?
     var associatedDisplayName: String?
+    /// Space associations are exported too, but a key from another Mac will
+    /// never match locally, so importing one is harmless rather than useful.
+    var associatedSpaceKey: String?
+    var associatedSpaceName: String?
 }
 
 /// Wrapper for exporting multiple profiles as a single file.

@@ -2,7 +2,6 @@
 //  LayoutResetErrorTests.swift
 //  Project: Thaw
 //
-//  Copyright (Ice) © 2023–2025 Jordan Baird
 //  Copyright (Thaw) © 2026 Toni Förster
 //  Licensed under the GNU GPLv3
 
@@ -68,7 +67,6 @@ struct LayoutResetErrorTests {
         let error = MenuBarItemManager.LayoutResetError.missingAppState
         let localizedError = error as LocalizedError
 
-        // localizedDescription should use errorDescription for LocalizedError
         #expect(error.localizedDescription == localizedError.errorDescription)
     }
 
@@ -79,7 +77,6 @@ struct LayoutResetErrorTests {
         let error1 = MenuBarItemManager.LayoutResetError.missingAppState
         let error2 = MenuBarItemManager.LayoutResetError.missingAppState
 
-        // Enums without associated values should be equatable
         #expect(errorsAreEqual(error1, error2))
     }
 

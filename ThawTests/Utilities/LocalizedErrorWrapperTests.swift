@@ -2,7 +2,6 @@
 //  LocalizedErrorWrapperTests.swift
 //  Project: Thaw
 //
-//  Copyright (Ice) © 2023–2025 Jordan Baird
 //  Copyright (Thaw) © 2026 Toni Förster
 //  Licensed under the GNU GPLv3
 
@@ -13,14 +12,11 @@ import Testing
 /// Covers ``LocalizedErrorWrapper``, which flattens an arbitrary error into a
 /// value SwiftUI's alert presentation can read.
 ///
-/// The type has exactly one decision in it, and it is the interesting one: an
-/// error that already conforms to `LocalizedError` has its four fields copied
-/// verbatim, while anything else — an `NSError` bridged from a framework, a
-/// bare `enum` thrown by app code — contributes only `localizedDescription`
-/// and leaves the other three nil. Getting that branch backwards would either
-/// drop a hand-written recovery suggestion or surface Swift's generated
-/// "The operation couldn't be completed" text where a real message existed, and
-/// neither failure is visible without an alert on screen.
+/// An error that already conforms to `LocalizedError` has its four fields
+/// copied verbatim; anything else (a bridged `NSError`, a bare `enum`)
+/// contributes only `localizedDescription`. Getting that backwards would drop
+/// a hand-written recovery suggestion or show Swift's generic "The operation
+/// couldn't be completed" text, and neither is visible without an alert.
 @Suite("Localized error wrapper")
 struct LocalizedErrorWrapperTests {
     /// An error that fills in every `LocalizedError` field.
@@ -65,7 +61,7 @@ struct LocalizedErrorWrapperTests {
 
     /// The default `LocalizedError` conformance returns nil for everything, and
     /// the wrapper must not substitute `localizedDescription` for the missing
-    /// values — that is the other branch's job.
+    /// values; that is the other branch's job.
     @Test("A localized error with no values wraps to all nil")
     func emptyLocalizedErrorWrapsToAllNil() {
         let wrapper = LocalizedErrorWrapper(EmptyLocalizedError())

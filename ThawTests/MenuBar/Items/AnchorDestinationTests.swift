@@ -2,22 +2,16 @@
 //  AnchorDestinationTests.swift
 //  Project: Thaw
 //
-//  Copyright (Ice) © 2023–2025 Jordan Baird
 //  Copyright (Thaw) © 2026 Toni Förster
 //  Licensed under the GNU GPLv3
 
 import Testing
 @testable import Thaw
 
-/// Characterization tests for LayoutSolver.anchorDestination, the
-/// shared helper used by cross-section restore, within-section reorder,
-/// and profile-route unmanaged placement.
-///
-/// Pins down: forward-first preference, backward fallback, section-
-/// boundary fallback, and edge cases around index bounds.
+/// Covers LayoutSolver.anchorDestination, shared by cross-section restore,
+/// within-section reorder, and profile-route unmanaged placement.
 @Suite("Anchor destination")
 struct AnchorDestinationTests {
-    /// A successor in the same section is preferred over a predecessor.
     /// saved=[A,B,C], moving B at idx 1, current section has A and C.
     /// Forward scan finds C → .leftOfUID(C).
     @Test("A successor in the same section is preferred over a predecessor")
@@ -31,8 +25,6 @@ struct AnchorDestinationTests {
         #expect(result == .leftOfUID("C"))
     }
 
-    /// When no successor is in the section, backward scan picks the
-    /// nearest predecessor.
     /// saved=[A,B,C], moving B at idx 1, current section has A only.
     /// Forward scan misses C; backward scan finds A → .rightOfUID(A).
     @Test("Without a successor the nearest predecessor anchors the move")
@@ -46,7 +38,6 @@ struct AnchorDestinationTests {
         #expect(result == .rightOfUID("A"))
     }
 
-    /// When neither scan finds an anchor, fall back to section boundary.
     /// saved=[A,B,C], moving B at idx 1, current section is empty of
     /// these uids → .sectionBoundary.
     @Test("With no anchor either way the section boundary is used")
@@ -73,8 +64,6 @@ struct AnchorDestinationTests {
         #expect(result == .leftOfUID("B"))
     }
 
-    /// Saved index at end of sequence: no forward scan possible; use
-    /// the nearest predecessor present in section.
     /// saved=[A,B,C], moving at idx 2 (last), current has A.
     @Test("A saved index at the end of the sequence uses the backward scan")
     func savedIndexAtEndUsesBackwardScan() {
@@ -87,8 +76,7 @@ struct AnchorDestinationTests {
         #expect(result == .rightOfUID("A"))
     }
 
-    /// Empty saved sequence falls back to section boundary regardless
-    /// of currentUIDsInSection.
+    /// Regardless of currentUIDsInSection.
     @Test("An empty saved sequence falls back to the section boundary")
     func emptySavedSequenceFallsBack() {
         let result = LayoutSolver.anchorDestination(

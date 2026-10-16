@@ -14,41 +14,31 @@ import Synchronization
 nonisolated enum MouseHelpers {
     private static let diagLog = DiagLog(category: "MouseHelpers")
 
-    /// Cursor hide/show bookkeeping. The `CGDisplayHideCursor` /
-    /// `CGDisplayShowCursor` calls that `hideCount` mirrors are made *inside*
-    /// the same critical section, so the count and the window server's hide
-    /// state can never diverge through interleaving (a hide landing between
-    /// another thread's decrement and its show call used to strand the
-    /// cursor hidden until the watchdog fired).
+    /// Cursor hide/show bookkeeping. CGDisplayHideCursor/ShowCursor run inside the
+    /// same critical section, so the count and the window server's hide state can't
+    /// diverge (a hide between another thread's decrement and show stranded the cursor).
     private struct CursorState {
         var hideCount = 0
-        /// The armed watchdog, if any. Sleeps until `watchdogDeadline`, then
+        /// The armed watchdog, if any. Sleeps until watchdogDeadline, then
         /// force-shows the cursor as the safety net against unbalanced hides.
         var watchdogTask: Task<Void, Never>?
-        /// Deadline of the armed watchdog, used to extend — never shorten —
-        /// coverage when nested holders request a longer timeout than the
-        /// first hide armed.
+        /// Deadline of the armed watchdog, so nested holders with a longer timeout
+        /// extend coverage but never shorten it.
         var watchdogDeadline: ContinuousClock.Instant = .now
-        /// Bumped whenever the watchdog is armed or cancelled. A fired
-        /// watchdog that lost the race with its own cancellation (already
-        /// executing, blocked on the lock) compares its captured generation
-        /// and becomes a no-op instead of force-showing a cursor a newer
-        /// holder legitimately hid.
+        /// Bumped on every arm or cancel. A fired watchdog that lost the race with its
+        /// cancellation compares generations and no-ops instead of undoing a newer hide.
         var generation = 0
     }
 
     private static let cursorState = Mutex(CursorState())
     private static let defaultWatchdogTimeout: Duration = .seconds(1)
 
-    /// Arms the watchdog, or extends it when the requested timeout reaches
-    /// past the currently scheduled deadline. Never shortens an armed
-    /// watchdog: a nested short-timeout hide must not cut the safety window
-    /// out from under an outer long-running holder (and vice versa, a
-    /// nested long-timeout hide extends the 1s default a shorter first
-    /// holder armed, so the watchdog can't force-show mid-operation).
+    /// Arms the watchdog, or extends it to a later deadline. Never shortens it: a
+    /// nested short hide can't cut an outer holder's window, and a nested long hide
+    /// extends a shorter first one.
     ///
-    /// Must be called while holding the `cursorState` lock. Returns whether
-    /// a new watchdog was scheduled so the caller can log outside the lock.
+    /// Call with the cursorState lock held. Returns whether a new watchdog was
+    /// scheduled so the caller can log outside the lock.
     private static func scheduleWatchdog(_ state: inout CursorState, after timeout: Duration) -> Bool {
         let deadline = ContinuousClock.now + timeout
         if state.watchdogTask != nil, state.watchdogDeadline >= deadline {
@@ -66,7 +56,7 @@ nonisolated enum MouseHelpers {
         return true
     }
 
-    /// Must be called while holding the `cursorState` lock.
+    /// Must be called while holding the cursorState lock.
     private static func cancelWatchdog(_ state: inout CursorState) {
         state.watchdogTask?.cancel()
         state.watchdogTask = nil
@@ -104,14 +94,14 @@ nonisolated enum MouseHelpers {
     }
 
     /// Returns the location of the mouse cursor in the coordinate
-    /// space used by `AppKit`, with the origin at the bottom left
+    /// space used by AppKit, with the origin at the bottom left
     /// of the screen.
     static var locationAppKit: CGPoint? {
         CGEvent(source: nil)?.unflippedLocation
     }
 
     /// Returns the location of the mouse cursor in the coordinate
-    /// space used by `CoreGraphics`, with the origin at the top left
+    /// space used by CoreGraphics, with the origin at the top left
     /// of the screen.
     static var locationCoreGraphics: CGPoint? {
         CGEvent(source: nil)?.location
@@ -145,7 +135,7 @@ nonisolated enum MouseHelpers {
     }
 
     /// Decrements the hide cursor count and shows the mouse cursor
-    /// if the count is `0`.
+    /// if the count is 0.
     static func showCursor() {
         var wasAlreadyZero = false
         var showFailure: CGError?
@@ -162,9 +152,8 @@ nonisolated enum MouseHelpers {
                 cancelWatchdog(&state)
             } else {
                 showFailure = result
-                // The count is already zero, so no later showCursor call
-                // will retry — keep the watchdog armed as the recovery path
-                // instead of leaving the cursor stranded hidden.
+                // The count is already zero, so no later showCursor will retry. Keep the
+                // watchdog armed so the cursor isn't stranded hidden.
                 _ = scheduleWatchdog(&state, after: defaultWatchdogTimeout)
             }
         }
@@ -185,9 +174,8 @@ nonisolated enum MouseHelpers {
         let result = CGWarpMouseCursorPosition(point)
         if result != .success {
             diagLog.warning("CGWarpMouseCursorPosition failed (error: \(result.rawValue)), falling back to CGEvent mouseMoved")
-            // Posting a mouseMoved event is more reliable than warp when a
-            // menu is tracking the cursor — the event updates the cursor
-            // position in the Window Server even if warp is blocked.
+            // Posting mouseMoved is more reliable than warp while a menu tracks the cursor;
+            // it updates the Window Server position even when warp is blocked.
             guard
                 let source = CGEventSource(stateID: .hidSystemState),
                 let event = CGEvent(
@@ -205,9 +193,9 @@ nonisolated enum MouseHelpers {
     }
 
     /// Returns the point to warp the cursor to in order to place it over a
-    /// menu bar item, or `nil` if the item isn't on any of the given displays.
+    /// menu bar item, or nil if the item isn't on any of the given displays.
     ///
-    /// `CGWarpMouseCursorPosition` clamps an offscreen point to the leftmost
+    /// CGWarpMouseCursorPosition clamps an offscreen point to the leftmost
     /// edge of a display, which sits under the Apple menu, so an item that is
     /// offscreen has to be left alone rather than warped to.
     ///
@@ -228,13 +216,9 @@ nonisolated enum MouseHelpers {
 
     /// Returns the cursor to `point` after an operation that moved it.
     ///
-    /// An unconditional warp, matching what these call sites did before the
-    /// cursor work landed and what `development` does today. A richer version
-    /// once preferred the user's own position when they moved the mouse
-    /// mid-operation, backed by a hide-suspension mechanism in this type; it
-    /// arrived with the macOS 27 backport (#811) and left with the revert of
-    /// that backport (#857), so it should return with #811 rather than on its
-    /// own.
+    /// An unconditional warp. The version that preferred the user's own position came
+    /// with the macOS 27 backport (#811) and left with its revert (#857); it should
+    /// return with #811.
     ///
     /// - Parameter point: The point to move the cursor to in global
     ///   display coordinates.
@@ -242,21 +226,10 @@ nonisolated enum MouseHelpers {
         warpCursor(to: point)
     }
 
-    /// Connects or disconnects the positions of the mouse and cursor.
-    ///
-    /// - Parameter connected: A Boolean value that determines whether
-    ///   to connect or disconnect the positions.
-    static func associateMouseAndCursor(_ connected: Bool) {
-        let result = CGAssociateMouseAndMouseCursorPosition(connected ? 1 : 0)
-        if result != .success {
-            diagLog.error("CGAssociateMouseAndMouseCursorPosition failed with error code \(result.rawValue)")
-        }
-    }
-
     /// Returns a Boolean value that indicates whether a mouse button
     /// is pressed.
     ///
-    /// - Parameter button: The mouse button to check. Pass `nil` to
+    /// - Parameter button: The mouse button to check. Pass nil to
     ///   check all available mouse buttons (Quartz supports up to 32).
     static func isButtonPressed(_ button: CGMouseButton? = nil) -> Bool {
         let stateID = CGEventSourceStateID.combinedSessionState
@@ -279,20 +252,61 @@ nonisolated enum MouseHelpers {
     /// movement event occurred within the given duration.
     ///
     /// - Parameter duration: The duration within which the last mouse
-    ///   movement event must have occurred in order to return `true`.
-    static func lastMovementOccurred(within duration: Duration) -> Bool {
-        let stateID = CGEventSourceStateID.combinedSessionState
+    ///   movement event must have occurred in order to return true.
+    static func lastMovementOccurred(
+        within duration: Duration,
+        stateID: CGEventSourceStateID = .combinedSessionState
+    ) -> Bool {
         let seconds = CGEventSource.secondsSinceLastEventType(stateID, eventType: .mouseMoved)
         return .seconds(seconds) <= duration
+    }
+
+    /// Whether a physical press, release, or drag of any button happened within the
+    /// interval. `isButtonPressed()` misses a click released before the check, so these
+    /// timestamps are what make a bulk batch defer to a mid-sequence click.
+    static func lastPointerButtonEventOccurred(
+        within duration: Duration,
+        stateID: CGEventSourceStateID = .combinedSessionState
+    ) -> Bool {
+        let eventTypes: [CGEventType] = [
+            .leftMouseDown, .leftMouseUp,
+            .rightMouseDown, .rightMouseUp,
+            .otherMouseDown, .otherMouseUp,
+            .leftMouseDragged, .rightMouseDragged, .otherMouseDragged,
+        ]
+        return eventTypes.contains { type in
+            .seconds(CGEventSource.secondsSinceLastEventType(stateID, eventType: type)) <= duration
+        }
+    }
+
+    /// Whether physical pointer input occurred after an operation took cursor
+    /// ownership. HID-system timestamps exclude Thaw's synthetic warps/events.
+    static func physicalPointerInputOccurred(
+        since start: ContinuousClock.Instant,
+        now: ContinuousClock.Instant = .now
+    ) -> Bool {
+        let elapsed = max(start.duration(to: now), .zero)
+        return lastMovementOccurred(within: elapsed, stateID: .hidSystemState)
+            || lastScrollWheelOccurred(within: elapsed, stateID: .hidSystemState)
+            || lastPointerButtonEventOccurred(within: elapsed, stateID: .hidSystemState)
+    }
+
+    /// Pure cursor-ownership decision used by move and batch restoration.
+    static func shouldRestoreSavedCursorPosition(
+        physicalPointerInputOccurred: Bool
+    ) -> Bool {
+        !physicalPointerInputOccurred
     }
 
     /// Returns a Boolean value that indicates whether the last scroll
     /// wheel event occurred within the given duration.
     ///
     /// - Parameter duration: The duration within which the last scroll
-    ///   wheel event must have occurred in order to return `true`.
-    static func lastScrollWheelOccurred(within duration: Duration) -> Bool {
-        let stateID = CGEventSourceStateID.combinedSessionState
+    ///   wheel event must have occurred in order to return true.
+    static func lastScrollWheelOccurred(
+        within duration: Duration,
+        stateID: CGEventSourceStateID = .combinedSessionState
+    ) -> Bool {
         let seconds = CGEventSource.secondsSinceLastEventType(stateID, eventType: .scrollWheel)
         return .seconds(seconds) <= duration
     }

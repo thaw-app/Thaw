@@ -2,7 +2,6 @@
 //  ProfileManagerUpdateRearmIntegrationTests.swift
 //  Project: Thaw
 //
-//  Copyright (Ice) © 2023–2025 Jordan Baird
 //  Copyright (Thaw) © 2026 Toni Förster
 //  Licensed under the GNU GPLv3
 
@@ -12,28 +11,20 @@ import Testing
 
 /// End-to-end regression lock for the update-re-arms-cache wiring.
 ///
-/// Drives the real ProfileManager.updateProfileLayout path against an injected
-/// temporary profiles directory and a standalone MenuBarItemManager: it loads
-/// the profile from disk, captures the live layout, writes the update back, and
-/// re-arms the in-memory cache. This is the integration the gate test and the
-/// MenuBarItemManager cache test could not reach on their own. It fails if the
-/// rearm wiring is removed from updateProfileLayout.
+/// Drives the real `updateProfileLayout` path against a temporary profiles
+/// directory and a standalone MenuBarItemManager. Fails if the re-arm wiring
+/// is removed from `updateProfileLayout`.
 ///
-/// Serialized because the tests swap the process-wide `Defaults` store via
-/// `withScratchDefaults`, which requires the suite to be `.serialized`. The
-/// `MenuBarItemManager.savedSectionOrder` seed lands in the scratch store, so
-/// the developer's real saved menu bar arrangement is never touched.
+/// Serialized because `withScratchDefaults` swaps the process-wide `Defaults`
+/// store.
 @MainActor
 @Suite("Profile manager update re-arm integration", .serialized)
 final class ProfileManagerRearmIntegrationTests {
     private let savedSectionOrderKey = "MenuBarItemManager.savedSectionOrder"
 
-    /// A profile is active with an item in Always-Hidden, the user moves it to
-    /// Hidden (updating the live savedSectionOrder), then updates the active
-    /// profile's layout. The item manager's cached spec must follow to Hidden,
-    /// so a later late-arrival re-sort no longer drags the item back into
-    /// Always-Hidden. Without the re-arm wiring the cache stays on the
-    /// Always-Hidden spec and this fails.
+    /// The user moves an item from Always-Hidden to Hidden, then updates the
+    /// active profile's layout. The cached spec must follow to Hidden, or a
+    /// late-arrival re-sort drags the item back into Always-Hidden.
     @Test("Updating the active profile's layout re-arms the cache end to end")
     func updatingActiveProfileLayoutRearmsCacheEndToEnd() throws {
         let tmp = FileManager.default.temporaryDirectory

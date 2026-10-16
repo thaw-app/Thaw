@@ -2,7 +2,6 @@
 //  MenuBarSectionGeometryTests.swift
 //  Project: Thaw
 //
-//  Copyright (Ice) © 2023–2025 Jordan Baird
 //  Copyright (Thaw) © 2026 Toni Förster
 //  Licensed under the GNU GPLv3
 
@@ -86,7 +85,6 @@ private enum NotchedScreen {
     }
 }
 
-/// Orders the presentation modes from roomiest to most constrained.
 private func constraintRank(of mode: MenuBarSection.PresentationMode) -> Int {
     switch mode {
     case .inline: 0
@@ -353,19 +351,14 @@ private let presentationCases: [PresentationCase] = [
 
 // MARK: - MenuBarSection Geometry Tests
 
-/// Covers the two pure geometry statics on ``MenuBarSection``:
+/// The two pure geometry statics on ``MenuBarSection``:
 /// `usableInlineWidth(from:screenFrameMinX:screenVisibleMaxX:notchFrame:)` and
-/// `presentationMode(totalItemsWidth:appMenuRightEdge:screenFrameMinX:screenVisibleMaxX:notchFrame:allowHidingApplicationMenus:)`.
+/// `presentationMode(totalItemsWidth:appMenuRightEdge:screenFrameMinX:screenVisibleMaxX:notchFrame:allowHidingApplicationMenus:)`,
+/// against fixed screen descriptions. The instance half needs a live
+/// `ControlItem` and `NSScreen`.
 ///
-/// Both take plain numbers, so every case here is a fixed screen description
-/// rather than whatever displays this machine happens to have. The instance
-/// half of `MenuBarSection` -- `show`, `hide`, `toggle`,
-/// `updateControlItemState`, and the rehide task and monitor -- is out of reach
-/// without a live `ControlItem`/`NSStatusItem` and an `NSScreen`.
-///
-/// `Name`, `notchGap`, and the coarse presentation-mode cases live in
-/// `MenuBarSectionNameTests`; `forcesIceBarForNotchOverflow` lives in
-/// `NotchOverflowRevealTests`.
+/// `Name`, `notchGap`, and coarse presentation modes are in `MenuBarSectionNameTests`;
+/// `forcesIceBarForNotchOverflow` is in `NotchOverflowRevealTests`.
 @Suite("Menu bar section geometry")
 struct MenuBarSectionGeometryTests {
     // MARK: - Usable Inline Width
@@ -379,10 +372,8 @@ struct MenuBarSectionGeometryTests {
 
         @Test("The usable inline width is never negative", arguments: usableWidthCases)
         fileprivate func usableWidthIsNeverNegative(testCase: UsableWidthCase) {
-            // Both subtractions can go negative on a real display -- the menus
-            // can overhang the visible frame, and the notch's left gap can
-            // start left of the screen -- and a negative side would read as
-            // extra room once it was summed with the other side.
+            // Both sides can go negative on a real display (menus overhanging the visible
+            // frame, the notch gap starting left of the screen), which would read as extra room.
             #expect(testCase.measured >= 0)
         }
 
@@ -403,10 +394,8 @@ struct MenuBarSectionGeometryTests {
 
         @Test("Hiding the application menus can only ever add space")
         func droppingTheApplicationMenusNeverCosts() {
-            // `presentationMode` re-measures with the menus collapsed onto the
-            // screen's left edge and assumes the second number is the larger
-            // one. If it were not, an item set that already fit could be
-            // pushed into the Thaw Bar.
+            // `presentationMode` assumes the collapsed-menus width is the larger one;
+            // otherwise an item set that fit could be pushed into the Thaw Bar.
             for testCase in usableWidthCases {
                 let withoutMenus = MenuBarSection.usableInlineWidth(
                     from: testCase.screenFrameMinX,
@@ -439,9 +428,7 @@ struct MenuBarSectionGeometryTests {
 
         @Test("An absent application menu frame is measured like one at the screen's left edge")
         func absentMenuFrameMatchesTheScreenEdge() {
-            // `presentationMode` relies on this equivalence when it re-measures
-            // with the menus hidden: it passes `screenFrameMinX` where the
-            // first measurement passed `nil`.
+            // `presentationMode` passes `screenFrameMinX` where the first measurement passed `nil`.
             let absent = MenuBarSection.usableInlineWidth(
                 from: nil,
                 screenFrameMinX: NotchedScreen.minX,
@@ -470,10 +457,8 @@ struct MenuBarSectionGeometryTests {
 
         @Test("A width equal to the usable width still counts as fitting")
         func equalityFitsInline() {
-            // The comparison is `<=`. An item set measured at exactly the
-            // usable width is already laid out on the bar, so treating it as
-            // an overflow would flap between inline and the Thaw Bar on every
-            // measurement.
+            // The comparison is `<=`. Treating an exact fit as overflow would flap between
+            // inline and the Thaw Bar on every measurement.
             let usable = MenuBarSection.usableInlineWidth(
                 from: NotchedScreen.appMenuRightEdge,
                 screenFrameMinX: NotchedScreen.minX,
@@ -504,8 +489,7 @@ struct MenuBarSectionGeometryTests {
 
         @Test("Hiding the application menus is never proposed when the setting is off")
         func hidingIsNeverProposedWhenDisabled() {
-            // The guard sits between the two measurements, so a "no" has to
-            // reach `.iceBar` without the wider bar ever being considered.
+            // A "no" must reach `.iceBar` without considering the wider bar.
             for width in stride(from: CGFloat(0), through: 2000, by: 125) {
                 let mode = MenuBarSection.presentationMode(
                     totalItemsWidth: width,
@@ -522,9 +506,8 @@ struct MenuBarSectionGeometryTests {
 
         @Test("Widening the item set never recovers a roomier mode")
         func modeDegradesMonotonically() {
-            // Everything downstream assumes the decision is monotonic in the
-            // item width. A non-monotonic rule would let one more item pull the
-            // section back out of the Thaw Bar.
+            // Downstream assumes monotonic decisions; otherwise one more item could pull
+            // the section back out of the Thaw Bar.
             var previousRank = 0
             for width in stride(from: CGFloat(0), through: 1600, by: 25) {
                 let mode = MenuBarSection.presentationMode(

@@ -57,10 +57,27 @@ nonisolated struct MenuBarItemTag: Hashable, CustomStringConvertible {
         namespace == .controlCenter && MarkerPairResolver.isGenericControlCenterTitle(title)
     }
 
+    /// Whether this tag names a Control Center module under another namespace,
+    /// which only a wrong source-PID resolution produces.
+    ///
+    /// Spatial AX matching can skew on multi-display setups and give a module
+    /// a neighboring app's PID (`com.techsmith.snagit.capturehelper:Battery`,
+    /// #1027). Only the title reveals it. A false positive (an app titling its
+    /// item "Battery") only loses its saved position.
+    var isMisattributedControlCenterModule: Bool {
+        namespace != .controlCenter && Self.isControlCenterModuleTitle(title)
+    }
+
     /// A Boolean value that indicates whether the item identified
     /// by this tag is a control item owned by Ice.
+    ///
+    /// User-created spacers are not control items and stay draggable; only
+    /// section-divider spacers count.
     var isControlItem: Bool {
-        MenuBarItemTag.controlItems.contains(where: { $0.namespace == namespace && $0.title == title }) ||
+        if namespace == .thaw && title.hasPrefix(MenuBarSpacerManager.autosavePrefix) {
+            return false
+        }
+        return MenuBarItemTag.controlItems.contains(where: { $0.namespace == namespace && $0.title == title }) ||
             title.contains(".Spacer.")
     }
 
@@ -74,18 +91,13 @@ nonisolated struct MenuBarItemTag: Hashable, CustomStringConvertible {
     /// by this tag is a system-created clone of an actual item,
     /// and therefore invalid for management.
     ///
-    /// The title is a stable name the WindowServer assigns to clone
-    /// windows, but the namespace varies: it can be a UUID, the owning
-    /// process name (Window Server) when the source PID never resolves,
-    /// or even a real bundle ID when the clone spatially mis-matches a
-    /// nearby app. Matching on the title alone catches every variant;
-    /// gating on a UUID namespace missed the process-name and bundle-ID
-    /// clones seen in the field.
+    /// Matches on the title alone: WindowServer names clones consistently,
+    /// but their namespace can be a UUID, "Window Server", or even a nearby
+    /// app's bundle ID.
     var isSystemClone: Bool {
         title == "System Status Item Clone"
     }
 
-    /// A textual representation of the tag.
     var description: String {
         var result = String(describing: namespace)
         if !title.isEmpty {
@@ -125,10 +137,8 @@ nonisolated struct MenuBarItemTag: Hashable, CustomStringConvertible {
         namespace == other.namespace && title == other.title && instanceIndex == other.instanceIndex
     }
 
-    /// A stable string identifier that uniquely identifies this tag
-    /// across window ID changes (e.g. app restarts). Includes the
-    /// instance index when it is nonzero so that multiple items from
-    /// the same app with the same title are distinguishable.
+    /// Stable across window ID changes. Includes a nonzero instance index to
+    /// tell same-titled items from one app apart.
     var tagIdentifier: String {
         if instanceIndex > 0 {
             return "\(namespace):\(title):\(instanceIndex)"
@@ -138,10 +148,8 @@ nonisolated struct MenuBarItemTag: Hashable, CustomStringConvertible {
 
     /// A lossless string encoding of this tag, suitable for persistence.
     ///
-    /// Unlike ``tagIdentifier``, this round-trips the namespace *kind* and the
-    /// instance index, so two items that differ only in those fields do not
-    /// collide. The window identifier is deliberately excluded: window IDs do
-    /// not survive a relaunch.
+    /// Unlike ``tagIdentifier``, round-trips the namespace kind and instance
+    /// index. Excludes the window ID, which doesn't survive a relaunch.
     ///
     /// Format: `<kind>:<namespaceValue>:<instanceIndex>:<title>`, where `kind`
     /// is `n` (null), `s` (string) or `u` (uuid). The title is the remainder of
@@ -201,16 +209,9 @@ nonisolated struct MenuBarItemTag: Hashable, CustomStringConvertible {
     /// Collapses a live metric title to the shape it will still have a second
     /// from now.
     ///
-    /// iStat Menus names its status items after the value on screen — "CPU
-    /// 12%" becomes "CPU 43%", "3.4 MB/s" becomes "918 KB/s" — so every
-    /// identifier derived from the title is a *different* identifier on the
-    /// next sample. Anything keyed by that identifier (a persisted section
-    /// assignment, a saved order, a dedup set) therefore stops matching the
-    /// item it was written for, and the item reads as brand new.
-    ///
-    /// Numbers become `#` and byte units are normalized so magnitude changes
-    /// (`KB` → `MB`) don't split the key either. Everything else is left
-    /// alone, so "CPU" and "Network" stay distinguishable.
+    /// iStat Menus titles items with the live value ("CPU 12%"), so anything
+    /// keyed by the title stops matching on the next sample. Numbers become
+    /// `#` and byte units are normalized; "CPU" and "Network" stay distinct.
     static func canonicalMetricTitle(_ raw: String) -> String {
         raw
             .replacing(/[-+]?\d+(?:[.,]\d+)?/, with: "#")
@@ -222,16 +223,76 @@ nonisolated struct MenuBarItemTag: Hashable, CustomStringConvertible {
     /// the lyric line currently on screen.
     static let lyricsXBundleID = "ddddxxx.LyricsX"
 
+    /// The titles Control Center gives its own menu bar modules.
+    ///
+    /// Under any other namespace, one of these means a misresolved PID.
+    /// `BentoBox` carries an instance suffix, so it's a prefix test. A closed
+    /// list in macOS's exact casing, not a heuristic.
+    static let controlCenterModuleTitles: Set<String> = [
+        "Accessibility",
+        "AudioVideoModule",
+        "Battery",
+        "Bluetooth",
+        "BentoBox",
+        "Clock",
+        "Display",
+        "FaceTime",
+        "FocusModes",
+        "Hearing",
+        "KeyboardBrightness",
+        "MusicRecognition",
+        "NowPlaying",
+        "ScreenMirroring",
+        "Sound",
+        "WiFi",
+    ]
+
+    /// Whether `title` names one of Control Center's own modules, allowing
+    /// for the `BentoBox-<n>` instance suffix.
+    static func isControlCenterModuleTitle(_ title: String) -> Bool {
+        controlCenterModuleTitles.contains(title) || title.hasPrefix("BentoBox")
+    }
+
+    /// The foreign-namespace spelling of a Control Center module identifier,
+    /// if it is one.
+    ///
+    /// Returns the Control Center spelling (title and instance index kept),
+    /// or the input unchanged. Comparing with the input is the
+    /// misattribution test ``LayoutSolver`` prunes on.
+    ///
+    /// `Item-N` titles are left alone: a third-party generic slot looks the
+    /// same, and guessing would orphan real items.
+    static func canonicalControlCenterModuleIdentifier(_ identifier: String) -> String {
+        guard let separator = identifier.firstIndex(of: ":") else {
+            return identifier
+        }
+        let namespace = String(identifier[..<separator])
+        guard namespace != Namespace.controlCenter.description else {
+            return identifier
+        }
+        let remainder = identifier[identifier.index(after: separator)...]
+        var title = Substring(remainder)
+        var instanceIndex: Substring?
+        if let lastSeparator = title.lastIndex(of: ":"),
+            Int(title[title.index(after: lastSeparator)...]) != nil
+        {
+            instanceIndex = title[title.index(after: lastSeparator)...]
+            title = title[..<lastSeparator]
+        }
+        guard isControlCenterModuleTitle(String(title)) else {
+            return identifier
+        }
+        if let instanceIndex {
+            return "\(Namespace.controlCenter.description):\(title):\(instanceIndex)"
+        }
+        return "\(Namespace.controlCenter.description):\(title)"
+    }
+
     /// The canonical title for an owner whose title carries no identity.
     ///
-    /// A metric title has a stable skeleton worth keeping — "CPU #" and
-    /// "Network #" still tell two iStat items apart. A lyric has none: every
-    /// character of it is the volatile part, and two consecutive lines share
-    /// nothing. Collapsing to a constant is therefore the whole title
-    /// canonicalization for such an owner, which means its items are
-    /// distinguished only by instance index. That is fine while the owner
-    /// contributes a single item, and is the reason this is an allowlist
-    /// rather than a heuristic.
+    /// A lyric has no stable skeleton, so it collapses to a constant and
+    /// items are told apart only by instance index. Fine for single-item
+    /// owners, hence an allowlist.
     static let opaqueTitle = "#"
 
     /// The volatile-title owner an identifier belongs to, if any, paired with
@@ -252,17 +313,14 @@ nonisolated struct MenuBarItemTag: Hashable, CustomStringConvertible {
 
     /// The canonical form of a `namespace:title[:index]` identifier.
     ///
-    /// A no-op for every owner except the volatile-title ones above, so it is
-    /// safe to apply to identifiers of unknown provenance — including ones
-    /// read back from a profile written before this existed.
+    /// A no-op except for volatile-title owners, so safe on any identifier.
     static func canonicalPersistentIdentifier(_ identifier: String) -> String {
         guard let (prefix, canonicalize) = volatileTitleOwner(of: identifier) else {
             return identifier
         }
 
         let suffix = String(identifier.dropFirst(prefix.count))
-        // A trailing `:<digits>` is the instance index, not part of the
-        // title — split it off so it survives canonicalization intact.
+        // Split off a trailing `:<digits>` instance index first.
         if let separator = suffix.lastIndex(of: ":") {
             let title = String(suffix[..<separator])
             let instance = String(suffix[suffix.index(after: separator)...])
@@ -339,15 +397,9 @@ nonisolated extension MenuBarItemTag {
     /// The tag for the system "FaceTime" item.
     static let faceTime = MenuBarItemTag(namespace: .controlCenter, title: "FaceTime")
 
-    /// The tag for the system "Music Recognition" item.
-    static let musicRecognition = MenuBarItemTag(namespace: .controlCenter, title: "MusicRecognition")
-
     /// The tag for the system item that appears in the menu bar
     /// during recordings started by the macOS "Screenshot" tool.
     static let screenCaptureUI = MenuBarItemTag(namespace: .screenCaptureUI, title: "Item-0")
-
-    /// The tag for the system "Siri" item.
-    static let siri = MenuBarItemTag(namespace: .systemUIServer, title: "Siri")
 
     /// The tag for the system "SSMenuAgent" item (Screen Sharing menu extra).
     ///
@@ -355,9 +407,6 @@ nonisolated extension MenuBarItemTag {
     /// The item visually follows the cursor during the drag, but springs
     /// back to its original position on mouse-up.
     static let ssMenuAgent = MenuBarItemTag(namespace: .ssMenuAgent, title: "Item-0")
-
-    /// The tag for the system "Time Machine" item.
-    static let timeMachine = MenuBarItemTag(namespace: .systemUIServer, title: "com.apple.menuextra.TimeMachine")
 
     /// The tag for the system "Game Mode" item.
     static let gameMode = MenuBarItemTag(namespace: .gamePolicyAgent, title: "Item-0")
@@ -375,7 +424,6 @@ nonisolated extension MenuBarItemTag {
         /// A namespace represented by a UUID.
         case uuid(UUID)
 
-        /// A textual representation of the namespace.
         var description: String {
             switch self {
             case .null: "null"
@@ -456,44 +504,22 @@ nonisolated extension MenuBarItemTag.Namespace {
     /// Bundle identifiers of helper processes that own a menu bar item on
     /// behalf of a user-facing app, mapped to that app's identifier.
     ///
-    /// Some apps put their status item in a nested helper rather than in
-    /// the app the user installed. The window's owner is then the helper,
-    /// so the namespace — and with it `uniqueIdentifier`, the saved
-    /// position, and the name shown in the layout editor — is named after
-    /// a process the user has never heard of. Worse, a helper that is
-    /// relaunched under a different build (or a user who switches between
-    /// the App Store and direct-download builds of the same app) reads as
-    /// a different item entirely.
+    /// Otherwise the item is named after a helper the user never installed.
+    /// An explicit list, not a heuristic: stripping dot-components would fold
+    /// distinct items together. Adding an entry costs that item's saved
+    /// position once.
     ///
-    /// Deliberately a short, explicit list rather than a heuristic. A rule
-    /// like "strip the last dot-component" would fold genuinely distinct
-    /// items together — `com.apple.controlcenter` hosts many — and the
-    /// cost of being wrong here is a mis-restored layout.
-    ///
-    /// Changing an item's namespace changes its `uniqueIdentifier`, so an
-    /// entry already persisted under the helper's identifier no longer
-    /// matches. It is pruned as unmatchable and the item re-persists under
-    /// its canonical identifier: a one-time loss of that item's saved
-    /// position, not a permanent one.
-    /// Every entry must be verified against a live bar. OneDrive is the
-    /// cautionary case: it looks like it belongs here, and does not. The
-    /// installed app's *own* bundle identifier is
-    /// `com.microsoft.OneDrive-mac`, so "normalising" that to
-    /// `com.microsoft.OneDrive` renames a real app to an identifier no
-    /// process reports. Its status item is owned by the main app; there is
-    /// no helper to alias away.
+    /// Verify every entry against a live bar. OneDrive doesn't belong: its
+    /// own ID is `com.microsoft.OneDrive-mac` and the main app owns the item.
     static let helperBundleIDAliases: [String: String] = [
-        // Verified: /Applications/Little Snitch.app/Contents/Components/
-        // Little Snitch Agent.app owns the status item and reports this
-        // identifier, while the app the user installed is at.obdev.littlesnitch.
+        // Verified: Little Snitch Agent.app, inside the app bundle, owns the item.
         "at.obdev.littlesnitch.agent": "at.obdev.littlesnitch",
     ]
 
     /// Returns the user-facing app's bundle identifier for a bundle
     /// identifier that may belong to one of its helpers.
     ///
-    /// The identity function for everything not in
-    /// ``helperBundleIDAliases``, which is the overwhelming majority.
+    /// The identity function for everything not in ``helperBundleIDAliases``.
     static func canonicalBundleID(_ bundleID: String) -> String {
         helperBundleIDAliases[bundleID] ?? bundleID
     }

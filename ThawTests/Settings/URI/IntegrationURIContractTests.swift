@@ -2,7 +2,6 @@
 //  IntegrationURIContractTests.swift
 //  Project: Thaw
 //
-//  Copyright (Ice) © 2023–2025 Jordan Baird
 //  Copyright (Thaw) © 2026 Toni Förster
 //  Licensed under the GNU GPLv3
 
@@ -14,8 +13,8 @@ import Testing
 
 //
 // Source: github.com/thaw-app/raycast-extension
-//   - src/data/index.ts — DIRECT_ACTIONS (6) and SETTINGS_ACTIONS (4)
-//   - src/utils/openUrl.ts — buildThawUrl() composes `thaw://<action>?<query>`
+//   - src/data/index.ts: DIRECT_ACTIONS (6) and SETTINGS_ACTIONS (4)
+//   - src/utils/openUrl.ts: buildThawUrl() composes `thaw://<action>?<query>`
 //
 // buildThawUrl drops falsy query values, so a parameter is either present with
 // a non-empty value or absent entirely. Keys are compile-time constants in the
@@ -38,16 +37,15 @@ private let raycastURIs: [String] = [
 // MARK: - Droppy
 
 //
-// Source: /Applications/Droppy.app — literals recovered from the shipped
-// binary, since Droppy is closed source:
+// Source: /Applications/Droppy.app. Droppy is closed source, so these
+// literals come from the shipped binary:
 //   "thaw://get?key=all&callback="   (callback value interpolated)
 //   "thaw://toggle?key="             (key value interpolated)
 //   "droppy://thaw-response"         (its callback scheme)
 //
-// Droppy emits no `thaw://set` at all. Its onboarding is a text instruction
-// telling the user to enable the Settings URI scheme and approve Droppy when
-// Thaw prompts — it does not probe with a parameterless URL to trigger the
-// dialog.
+// Droppy emits no `thaw://set`. Its onboarding tells the user to enable the
+// Settings URI scheme and approve Droppy when prompted; it never probes with
+// a parameterless URL.
 
 /// Every URL shape Droppy is able to emit.
 private let droppyURIs: [String] = [
@@ -67,11 +65,8 @@ private func parse(_ string: String) throws -> SettingsURIRequest {
 
 @Suite("Integration URI contract")
 struct IntegrationURIContractTests {
-    /// The Option B regression guard.
-    ///
-    /// Malformed routes are rejected before the authorization gate, so if a
-    /// real integration URL ever parsed as malformed it would silently stop
-    /// working — no prompt, no settings change.
+    /// Malformed routes are rejected before the authorization gate, so a real
+    /// integration URL that parsed as malformed would silently stop working.
     @Test("No shipped integration URL is malformed", arguments: raycastURIs + droppyURIs)
     func integrationURIsAreNeverMalformed(uri: String) throws {
         let route = try parse(uri).route
@@ -162,7 +157,7 @@ struct IntegrationURIContractTests {
 
         /// Droppy interpolates the key into `thaw://toggle?key=`. An empty
         /// field yields a present-but-empty key, which must stay a toggle
-        /// route and be rejected later by key validation — not malformed.
+        /// route and be rejected later by key validation, not as malformed.
         @Test("An empty interpolated key stays a toggle route")
         func emptyInterpolatedKey() throws {
             #expect(try parse("thaw://toggle?key=").route == .toggle(key: "", displayUUID: nil))

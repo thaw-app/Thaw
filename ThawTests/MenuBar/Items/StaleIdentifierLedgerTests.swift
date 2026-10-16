@@ -2,7 +2,6 @@
 //  StaleIdentifierLedgerTests.swift
 //  Project: Thaw
 //
-//  Copyright (Ice) © 2023–2025 Jordan Baird
 //  Copyright (Thaw) © 2026 Toni Förster
 //  Licensed under the GNU GPLv3
 
@@ -10,19 +9,15 @@ import Foundation
 import Testing
 @testable import Thaw
 
-/// Covers ``StaleIdentifierLedger``: when an identifier that no longer
-/// matches anything stops being counted as a position, and — more
-/// importantly — when it must not.
+/// Covers ``StaleIdentifierLedger``: when an identifier that matches nothing
+/// stops counting as a position, and when it must not.
 ///
-/// The ledger persists on every write, so the suite runs against a scratch
-/// defaults store and is `.serialized` as ``withScratchDefaults(_:)``
-/// requires.
+/// The ledger persists on every write, so the suite uses scratch defaults and
+/// is `.serialized` as ``withScratchDefaults(_:)`` requires.
 @MainActor
 @Suite("Stale identifier ledger", .serialized)
 struct StaleIdentifierLedgerTests {
-    /// A dead entry plus enough live ones to keep the unmatched share under
-    /// the ledger's ceiling. One in four is exactly at the limit, which the
-    /// ledger accepts.
+    /// One dead entry in four, exactly at the ledger's unmatched-share ceiling.
     private static let dead = "de.simon.RAMTamer:Item-0"
     private static let live = [
         "de.simon.ramtamer:Item-0",
@@ -34,8 +29,7 @@ struct StaleIdentifierLedgerTests {
         Set(Self.live + [Self.dead])
     }
 
-    /// Runs `count` applies in which every live identifier matched and the
-    /// dead one did not.
+    /// Runs `count` applies in which only the dead identifier misses.
     private func missDead(_ ledger: StaleIdentifierLedger, times count: Int) {
         for _ in 0 ..< count {
             ledger.recordApply(planned: planned, matched: Set(Self.live))
@@ -44,8 +38,7 @@ struct StaleIdentifierLedgerTests {
 
     // MARK: - Retirement
 
-    /// The whole point of the threshold is that an app the user quit for an
-    /// afternoon comes back before it is written off.
+    /// An app quit for an afternoon comes back before it is written off.
     @Test("An identifier below the threshold is not retired")
     func belowThresholdIsNotRetired() throws {
         try withScratchDefaults { _ in
@@ -66,8 +59,7 @@ struct StaleIdentifierLedgerTests {
         }
     }
 
-    /// Retirement is announced once, so a caller can log it without the log
-    /// repeating on every subsequent apply.
+    /// Announced once, so callers can log it without repeating.
     @Test("Retirement is reported by the apply that causes it, and only that one")
     func retirementIsReportedOnce() throws {
         try withScratchDefaults { _ in
@@ -83,8 +75,7 @@ struct StaleIdentifierLedgerTests {
         }
     }
 
-    /// The verdict is never final. A Control-Center-hosted item whose owner
-    /// only becomes attributable later has to come straight back.
+    /// A Control Center-hosted item whose owner becomes attributable later must come straight back.
     @Test("One live match clears the count and un-retires the identifier")
     func matchClearsTheVerdict() throws {
         try withScratchDefaults { _ in
@@ -99,8 +90,7 @@ struct StaleIdentifierLedgerTests {
         }
     }
 
-    /// The counter is consecutive, not cumulative: an app quit and relaunched
-    /// nine times over must never accumulate its way to retirement.
+    /// Consecutive, not cumulative: repeated quit and relaunch never adds up to retirement.
     @Test("Misses interrupted by a match do not accumulate")
     func missesDoNotAccumulateAcrossAMatch() throws {
         try withScratchDefaults { _ in
@@ -115,10 +105,8 @@ struct StaleIdentifierLedgerTests {
 
     // MARK: - Sample quality
 
-    /// Source-PID resolution degrades in bulk, not one item at a time. An
-    /// apply that could not attribute a third of the bar says nothing about
-    /// any individual identifier, and counting it would retire real items by
-    /// the dozen — deleting the evidence of its own mistake.
+    /// Source-PID resolution degrades in bulk. An apply that could not attribute a
+    /// third of the bar would retire real items by the dozen.
     @Test("An apply with too many unmatched identifiers is discarded")
     func degradedSampleIsDiscarded() throws {
         try withScratchDefaults { _ in
@@ -131,8 +119,7 @@ struct StaleIdentifierLedgerTests {
         }
     }
 
-    /// A discarded sample is discarded whole: it must not clear counts either,
-    /// or a single degraded pass would reset progress toward a real verdict.
+    /// A discarded sample must not clear counts either, or one degraded pass resets progress.
     @Test("A discarded sample leaves existing counts alone")
     func degradedSampleDoesNotResetCounts() throws {
         try withScratchDefaults { _ in
@@ -153,8 +140,7 @@ struct StaleIdentifierLedgerTests {
         }
     }
 
-    /// A UUID namespace is reassigned every session, so such an entry is
-    /// unmatched for a reason that has nothing to do with the item being gone.
+    /// A UUID namespace changes every session, so its entry is unmatched for unrelated reasons.
     @Test("A UUID-namespaced identifier is never retired")
     func uuidNamespaceIsNeverRetired() throws {
         try withScratchDefaults { _ in
@@ -170,8 +156,7 @@ struct StaleIdentifierLedgerTests {
 
     // MARK: - Pruning
 
-    /// The reason the ledger exists: a ghost ahead of a live entry inflates
-    /// the index `savedPositionByBaseID` reports.
+    /// A ghost ahead of a live entry inflates the index `savedPositionByBaseID` reports.
     @Test("Pruning drops retired identifiers and keeps the rest in order")
     func pruningDropsRetiredEntriesInPlace() throws {
         try withScratchDefaults { _ in

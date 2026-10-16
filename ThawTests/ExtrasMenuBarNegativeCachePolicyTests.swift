@@ -2,7 +2,6 @@
 //  ExtrasMenuBarNegativeCachePolicyTests.swift
 //  Project: Thaw
 //
-//  Copyright (Ice) © 2023–2025 Jordan Baird
 //  Copyright (Thaw) © 2026 Toni Förster
 //  Licensed under the GNU GPLv3
 
@@ -11,14 +10,10 @@ import Testing
 
 /// Pins the extras-menu-bar negative-cache TTL ladder.
 ///
-/// The regression this ladder fixes: the per-app "checked, no extras menu
-/// bar" flag was cleared on every cache cleanup, and cleanup is driven by
-/// `NSWorkspace.runningApplications` — which changes whenever any process on
-/// the system starts or exits. A field log (#956) showed cleanup running 46
-/// times in seven minutes, so nearly every full scan re-probed all ~170
-/// running applications over the Accessibility API even though only ~16 of
-/// them have an extras menu bar at all. Deadlines make the skip survive
-/// cleanup; the ladder is what keeps late-registered status items findable.
+/// Cache cleanup follows `NSWorkspace.runningApplications`, which changes
+/// whenever any process starts or exits, so clearing the "no extras menu bar"
+/// flag there re-probed every app over AX (#956). Deadlines survive cleanup;
+/// the ladder keeps late-registered status items findable.
 struct ExtrasMenuBarNegativeCachePolicyTests {
     @Test func firstMissRetriesQuickly() {
         // An app that has just launched may publish its status item a
@@ -54,21 +49,16 @@ struct ExtrasMenuBarNegativeCachePolicyTests {
     }
 
     @Test func steadyStateIsBoundedSoLateStatusItemsAreStillFound() {
-        // An app that registers a status item long after launch has to be
-        // rediscovered without user action. The steady-state rung is the
-        // worst-case delay for that, so it must stay bounded — this is the
-        // property the deleted blanket reset used to provide.
+        // The steady-state rung is the worst-case delay for finding a status
+        // item registered long after launch, so it must stay bounded.
         let steadyState = ExtrasMenuBarNegativeCachePolicy.ttl(afterConsecutiveMisses: 99)
         #expect(steadyState <= .seconds(300))
     }
 
     @Test func earlyRungsCoverTheStartupSettlingWindow() {
-        // Logging in launches every status-item agent at once, and an app
-        // that is reachable over accessibility before it publishes its
-        // status item comes back empty on the first probe. The first two
-        // rungs must therefore both elapse inside the app's ~90s startup
-        // settling window, giving such an app three chances to be seen
-        // before the ladder backs off to minutes.
+        // At login an app can be reachable over AX before it publishes its
+        // status item. The first two rungs must elapse inside the ~90s
+        // startup settling window.
         let firstTwo = ExtrasMenuBarNegativeCachePolicy.ttl(afterConsecutiveMisses: 1)
             + ExtrasMenuBarNegativeCachePolicy.ttl(afterConsecutiveMisses: 2)
         #expect(firstTwo < .seconds(90))

@@ -2,7 +2,6 @@
 //  MenuBarItemFailureLedgerTests.swift
 //  Project: Thaw
 //
-//  Copyright (Ice) © 2023–2025 Jordan Baird
 //  Copyright (Thaw) © 2026 Toni Förster
 //  Licensed under the GNU GPLv3
 
@@ -11,18 +10,12 @@ import Foundation
 import Testing
 @testable import Thaw
 
-/// Covers the ledger's contract along both of its dimensions: the
-/// session-scoped backoff that keeps bulk apply off a failing item, and
-/// the persisted mark that remembers an owner which never answers.
+/// Covers the session-scoped backoff that keeps bulk apply off a failing
+/// item, and the persisted mark for an owner that never answers. One success
+/// clears both; a failure that is not an unresponsive owner only extends the
+/// backoff.
 ///
-/// The two share a key and a clearing rule, so the tests that matter most
-/// are the ones asserting they move together — one success clears both,
-/// and a failure that is not an unresponsive owner extends the backoff
-/// without ever earning a mark.
-///
-/// The ledger writes through to `UserDefaults.standard`, so every test
-/// saves and restores the key it touches rather than leaving the running
-/// user's domain modified.
+/// The ledger writes to `UserDefaults.standard`, so each test restores its key.
 @MainActor
 @Suite("Menu bar item failure ledger", .serialized)
 final class MenuBarItemFailureLedgerTests {
@@ -78,13 +71,8 @@ final class MenuBarItemFailureLedgerTests {
         )
     }
 
-    /// Records exactly as many unresponsive-owner failures as it takes to
-    /// earn a mark, for tests where being marked is setup rather than the
-    /// thing under test.
-    ///
-    /// The threshold itself is pinned by ``aSecondFailureStillDoesNotMark``
-    /// and ``aThirdFailureMarksTheItem``, so it lives as a literal in
-    /// exactly one place here.
+    /// Records just enough unresponsive-owner failures to earn a mark. The
+    /// threshold is pinned by ``aThirdFailureMarksTheItem``.
     private func failUntilMarked(
         _ ledger: MenuBarItemFailureLedger,
         _ item: MenuBarItem,
@@ -242,7 +230,7 @@ final class MenuBarItemFailureLedgerTests {
         ledger.recordFailure(for: item, kind: .other, now: now)
         ledger.recordFailure(for: item, kind: .other, now: now)
 
-        // Two failures, so 60 seconds — past where one would have lapsed.
+        // Two failures buy 60 seconds, past where one would have lapsed.
         #expect(ledger.isUnderBackoff(key: item.uniqueIdentifier, now: now.advanced(by: .seconds(45))))
     }
 

@@ -2,27 +2,22 @@
 //  ParkedDividerTests.swift
 //  Project: Thaw
 //
-//  Copyright (Ice) © 2023–2025 Jordan Baird
 //  Copyright (Thaw) © 2026 Toni Förster
 //  Licensed under the GNU GPLv3
 
 import Testing
 @testable import Thaw
 
-/// Log-replay lock for the #899 boundary-move storm.
+/// Replays the #899 boundary-move storm against ``ParkedDividerLog``.
 ///
-/// #881 stopped `planHiddenDividerAnchor` from anchoring the `H_ctrl` drag to
-/// a parked item. #899 is the same drag failing from the other side: the
-/// anchor is back on the bar, so the anchor filter passes it, but the divider
-/// itself is still parked and AppKit snaps it home on mouse-up. These tests
-/// pin both halves against the shapes in ``ParkedDividerLog``, so the pair
-/// cannot regress independently.
+/// #881 stopped anchoring the `H_ctrl` drag to a parked item. #899 fails from
+/// the other side: the anchor is back on the bar, but the divider is still
+/// parked and AppKit snaps it home on mouse-up. Both halves are pinned here.
 @Suite("Parked divider boundary move (#899)")
 struct ParkedDividerTests {
     // MARK: - The half #881 already closed
 
-    /// On the odd passes the anchor is parked, so no anchor is planned and no
-    /// drag is attempted.
+    /// On odd passes the anchor is parked, so no drag is attempted.
     @Test("A parked anchor plans no boundary move")
     func parkedAnchorPlansNothing() {
         let anchorBounds = ParkedDividerLog.bounds(
@@ -33,8 +28,7 @@ struct ParkedDividerTests {
             screenFrames: ParkedDividerLog.screenFrames
         ))
 
-        // The anchor is excluded from the candidate set, and it is the only
-        // desired-hidden item live on the bar, so the planner returns nil.
+        // The anchor is the only desired-hidden item live and it is excluded, so nil.
         let anchor = LayoutSolver.planHiddenDividerAnchor(
             desiredHidden: [ParkedDividerLog.anchorUID],
             desiredVisible: [],
@@ -45,9 +39,7 @@ struct ParkedDividerTests {
 
     // MARK: - The half #899 adds
 
-    /// On the even passes the anchor is back on screen, so it survives the
-    /// candidate filter and an anchor *is* planned. The anchor filter cannot
-    /// prevent this drag.
+    /// On even passes the anchor is on screen, so the anchor filter cannot prevent the drag.
     @Test("An on-screen anchor still plans a boundary move")
     func onScreenAnchorStillPlansAMove() {
         let anchorBounds = ParkedDividerLog.bounds(
@@ -66,8 +58,7 @@ struct ParkedDividerTests {
         #expect(anchor == .rightOf(ParkedDividerLog.anchorUID))
     }
 
-    /// The divider the planned move would drag is parked, which is the
-    /// condition the boundary move now checks before posting any events.
+    /// The boundary move now checks for a parked divider before posting events.
     @Test("The divider is parked on the pass whose anchor is on screen")
     func dividerIsParkedWhenAnchorIsOnScreen() {
         let dividerBounds = ParkedDividerLog.bounds(
@@ -79,8 +70,7 @@ struct ParkedDividerTests {
         ))
     }
 
-    /// The divider is parked on *both* states, so the guard covers the odd
-    /// passes too — belt and braces with the anchor filter.
+    /// Parked in both states, so the guard also backs up the anchor filter on odd passes.
     @Test("The divider is parked on both alternating states")
     func dividerIsParkedOnBothStates() {
         for minX in [
@@ -96,17 +86,14 @@ struct ParkedDividerTests {
 
     // MARK: - The loop the log recorded
 
-    /// The mismatch never reaches zero: the two states hand the same work
-    /// back and forth, which is why nothing in the pass sequence itself ever
-    /// stopped the storm.
+    /// The two states hand the same work back and forth, so the passes alone never stop the storm.
     @Test("The logged pass sequence never converges")
     func loggedPassSequenceNeverConverges() {
         #expect(!ParkedDividerLog.mismatchPerPass.contains(0))
         #expect(Set(ParkedDividerLog.mismatchPerPass) == [5, 9])
     }
 
-    /// The hidden section's membership is what alternates: the per-item pass
-    /// evacuates it, the next pass puts it back.
+    /// The per-item pass empties hidden and the next pass refills it.
     @Test("The hidden section alternates between populated and empty")
     func hiddenSectionAlternates() {
         #expect(ParkedDividerLog.hiddenWhenAnchorParked.count == 4)
@@ -114,12 +101,10 @@ struct ParkedDividerTests {
     }
 }
 
-/// The backoff that bounds the storm regardless of which state the bar is in.
+/// The backoff that bounds the storm in either state.
 ///
-/// The per-item LCS pass already consulted the failure ledger; the `H_ctrl`
-/// boundary move did not, so a divider that could not land was re-dragged in
-/// full by every re-sort. In #899 that ran for as long as the reporter left
-/// the app running.
+/// The `H_ctrl` boundary move did not consult the failure ledger, so a divider
+/// that could not land was re-dragged by every re-sort for as long as the app ran (#899).
 @MainActor
 @Suite("Boundary move backoff (#899)", .serialized)
 struct BoundaryMoveBackoffTests {
@@ -136,15 +121,13 @@ struct BoundaryMoveBackoffTests {
         )
     }
 
-    /// A fresh divider is not under backoff, so the first attempt still runs.
     @Test("An unrecorded divider is not under backoff")
     func unrecordedDividerIsNotUnderBackoff() {
         let ledger = MenuBarItemFailureLedger()
         #expect(!ledger.isUnderBackoff(for: Self.divider()))
     }
 
-    /// One recorded failure opens the window, so the next re-sort skips the
-    /// drag instead of repeating it.
+    /// One failure opens the window, so the next re-sort skips the drag.
     @Test("A recorded failure puts the divider under backoff")
     func recordedFailurePutsDividerUnderBackoff() {
         let ledger = MenuBarItemFailureLedger()
@@ -153,9 +136,7 @@ struct BoundaryMoveBackoffTests {
         #expect(ledger.isUnderBackoff(for: divider))
     }
 
-    /// The item-taking overload has to agree with the key `recordFailure`
-    /// writes under. Checking a different key than the ledger records is how
-    /// a backoff silently never fires.
+    /// Checking a different key than `recordFailure` writes is how a backoff silently never fires.
     @Test("The item overload reads the key recordFailure writes")
     func itemOverloadMatchesRecordedKey() {
         let ledger = MenuBarItemFailureLedger()
@@ -165,8 +146,7 @@ struct BoundaryMoveBackoffTests {
         #expect(ledger.isUnderBackoff(for: divider))
     }
 
-    /// A landed move clears the window so a divider that recovers is not left
-    /// waiting out a backoff it no longer deserves.
+    /// A divider that recovers must not wait out a backoff it no longer deserves.
     @Test("Success clears the backoff window")
     func successClearsBackoff() {
         let ledger = MenuBarItemFailureLedger()

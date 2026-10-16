@@ -2,7 +2,6 @@
 //  MenuBarItemTagTests.swift
 //  Project: Thaw
 //
-//  Copyright (Ice) © 2023–2025 Jordan Baird
 //  Copyright (Thaw) © 2026 Toni Förster
 //  Licensed under the GNU GPLv3
 
@@ -474,11 +473,8 @@ struct MenuBarItemTagTests {
 
         @Test("The clone title marks a string-namespaced item as a system clone")
         func isSystemCloneWithStringNamespace() {
-            // Field logs show clones carry a non-UUID namespace: the owning
-            // process name (Window Server) when the source PID never resolves,
-            // or a real bundle ID when the clone spatially mis-matches a nearby
-            // app. The title is the reliable discriminator, so a string
-            // namespace with the clone title must still count as a clone.
+            // Clones can carry the owning process name or a mis-matched
+            // bundle ID as namespace, so the title alone decides.
             let processNamespaceClone = MenuBarItemTag(
                 namespace: .string("Window Server"),
                 title: "System Status Item Clone"

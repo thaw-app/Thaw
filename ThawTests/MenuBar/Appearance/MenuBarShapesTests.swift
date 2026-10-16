@@ -2,11 +2,12 @@
 //  MenuBarShapesTests.swift
 //  Project: Thaw
 //
-//  Copyright (Ice) © 2023–2025 Jordan Baird
 //  Copyright (Thaw) © 2026 Toni Förster
 //  Licensed under the GNU GPLv3
 
+import AppKit
 import Foundation
+import SwiftUI
 import Testing
 @testable import Thaw
 
@@ -89,6 +90,36 @@ struct MenuBarShapesTests {
                 let data = try encoder.encode(kind)
                 let decoded = try decoder.decode(MenuBarShapeKind.self, from: data)
                 #expect(decoded == kind)
+            }
+        }
+
+        @Test("Every shape kind has its own label")
+        func localizedLabels() {
+            #expect(MenuBarShapeKind.noShape.localized == LocalizedStringKey("None"))
+            #expect(MenuBarShapeKind.full.localized == LocalizedStringKey("Full"))
+            #expect(MenuBarShapeKind.split.localized == LocalizedStringKey("Split"))
+            #expect(MenuBarShapeKind.notch.localized == LocalizedStringKey("Notch"))
+        }
+
+        @Test("No two shape kinds share a label")
+        func localizedLabelsAreDistinct() {
+            // `LocalizedStringKey` is Equatable but not Hashable, so this
+            // cannot go through a Set.
+            let labels = MenuBarShapeKind.allCases.map(\.localized)
+            for (offset, label) in labels.enumerated() {
+                for other in labels[(offset + 1)...] {
+                    #expect(label != other)
+                }
+            }
+        }
+
+        /// The decoder reads persisted `UserDefaults` data, so an unknown raw value must
+        /// fail loudly rather than fall back to a shape the user never chose.
+        @Test("An out-of-range raw value is rejected rather than defaulted", arguments: [4, 99, -1])
+        func decodingAnUnknownRawValueThrows(_ rawValue: Int) throws {
+            let data = try JSONEncoder().encode(rawValue)
+            #expect(throws: DecodingError.self) {
+                try JSONDecoder().decode(MenuBarShapeKind.self, from: data)
             }
         }
     }
@@ -277,6 +308,70 @@ struct MenuBarShapesTests {
             let data = try encoder.encode(MenuBarShapeKind.notch)
             let decoded = try decoder.decode(MenuBarShapeKind.self, from: data)
             #expect(decoded == .notch)
+        }
+    }
+
+    // MARK: - MenuBarBackgroundKind Tests
+
+    @MainActor
+    @Suite("MenuBarBackgroundKind")
+    struct MenuBarBackgroundKindTests {
+        @Test("Every background kind has its own label")
+        func localizedLabels() {
+            #expect(MenuBarBackgroundKind.none.localized == LocalizedStringKey("None"))
+            #expect(MenuBarBackgroundKind.solid.localized == LocalizedStringKey("Solid"))
+            #expect(MenuBarBackgroundKind.gradient.localized == LocalizedStringKey("Gradient"))
+            #expect(MenuBarBackgroundKind.glass.localized == LocalizedStringKey("Glass"))
+            #expect(MenuBarBackgroundKind.adaptive.localized == LocalizedStringKey("Adaptive"))
+        }
+
+        @Test("No two background kinds share a label")
+        func localizedLabelsAreDistinct() {
+            let labels = MenuBarBackgroundKind.allCases.map(\.localized)
+            for (offset, label) in labels.enumerated() {
+                for other in labels[(offset + 1)...] {
+                    #expect(label != other)
+                }
+            }
+        }
+
+        /// The fallback when no background was chosen; changing it restyles every
+        /// existing install.
+        @Test("The app-level default background is none")
+        func defaultKindIsNone() {
+            #expect(MenuBarBackgroundKind.defaultKind == MenuBarBackgroundKind.none)
+        }
+    }
+
+    // MARK: - MenuBarGlassStyle Tests
+
+    @MainActor
+    @Suite("MenuBarGlassStyle")
+    struct MenuBarGlassStyleTests {
+        @Test("Each style maps to the matching AppKit glass style")
+        func nsGlassStyleMapping() {
+            #expect(MenuBarGlassStyle.regular.nsGlassStyle == NSGlassEffectView.Style.regular)
+            #expect(MenuBarGlassStyle.clear.nsGlassStyle == NSGlassEffectView.Style.clear)
+        }
+
+        @Test("The two styles do not collapse onto one AppKit style")
+        func nsGlassStyleMappingIsInjective() {
+            #expect(MenuBarGlassStyle.regular.nsGlassStyle != MenuBarGlassStyle.clear.nsGlassStyle)
+        }
+
+        @Test("Each style has its own label")
+        func localizedLabels() {
+            #expect(MenuBarGlassStyle.regular.localized == LocalizedStringKey("Regular"))
+            #expect(MenuBarGlassStyle.clear.localized == LocalizedStringKey("Clear"))
+            #expect(MenuBarGlassStyle.regular.localized != MenuBarGlassStyle.clear.localized)
+        }
+
+        /// The style is persisted inside the appearance configuration as its
+        /// raw value, so these two integers are a storage format.
+        @Test("The raw values are the stored format")
+        func rawValuesArePinned() {
+            #expect(MenuBarGlassStyle.regular.rawValue == 0)
+            #expect(MenuBarGlassStyle.clear.rawValue == 1)
         }
     }
 }

@@ -2,7 +2,6 @@
 //  ControlItemOcclusion.swift
 //  Project: Thaw
 //
-//  Copyright (Ice) © 2023–2025 Jordan Baird
 //  Copyright (Thaw) © 2026 Toni Förster
 //  Licensed under the GNU GPLv3
 
@@ -12,27 +11,19 @@ import Foundation
 
 /// Decides when a control item's window counts as occluded.
 ///
-/// `NSWindow.occlusionState` is the only permission-free way to learn that the
-/// menu bar accepted a status item but is not rendering it — the state a
-/// control item lands in when macOS parks it in the notch dead zone. Nothing
-/// here touches Screen Recording, so it keeps reporting when that grant is
-/// refused and the image cache has nothing to say.
+/// `NSWindow.occlusionState` is the only permission-free way to learn the menu
+/// bar accepted a status item but isn't rendering it, as when macOS parks it
+/// in the notch dead zone.
 ///
-/// The raw signal cannot be trusted sample for sample. The window server
-/// publishes occlusion asynchronously, so a reading taken just after the menu
-/// bar reorders still describes the previous layout, and a lid open/close or
-/// display reconfiguration briefly reports everything occluded. ``Evaluator``
-/// therefore requires consecutive agreeing samples and discards whatever
-/// arrives while a display change is still settling.
+/// The window server publishes occlusion asynchronously, so a reading right
+/// after a reorder describes the old layout, and a lid or display change
+/// briefly reports everything occluded. ``Evaluator`` requires consecutive
+/// agreeing samples and discards readings while a display change settles.
 ///
-/// Note that `occlusionState` is only unreliable in one direction. AppKit
-/// counts a window as visible whenever its bounding box lands in a visible
-/// region — even fully transparent ones — so a false *visible* is expected by
-/// design. A false *occluded* is the anomaly, which is the reading this type
-/// exists to confirm.
+/// A false visible is expected (transparent regions count as visible); a
+/// false occluded is the anomaly this type confirms.
 nonisolated enum ControlItemOcclusion {
-    /// The number of consecutive agreeing samples required before a change of
-    /// verdict is reported.
+    /// Consecutive agreeing samples required to change the verdict.
     static let requiredConfirmations = 2
 
     /// How long after a display change samples are discarded.
@@ -44,8 +35,7 @@ nonisolated enum ControlItemOcclusion {
         /// as visible.
         let isOccluded: Bool
 
-        /// Whether the status item is in the menu bar at all. A control item
-        /// the user switched off is absent, which is not the same as occluded.
+        /// A control item the user switched off is absent, not occluded.
         let isInMenuBar: Bool
 
         /// Seconds elapsed since the last display reconfiguration.
@@ -54,7 +44,6 @@ nonisolated enum ControlItemOcclusion {
 
     /// Folds a stream of ``Sample``s into a debounced verdict.
     struct Evaluator {
-        /// The verdict currently being reported.
         private(set) var isOccluded = false
 
         /// The verdict awaiting confirmation.
@@ -63,14 +52,11 @@ nonisolated enum ControlItemOcclusion {
         /// How many consecutive samples have agreed with ``candidate``.
         private var agreementCount = 0
 
-        /// Feeds one sample in.
-        ///
         /// - Returns: The new verdict when it changes, or `nil` while the
         ///   current verdict stands or the sample was discarded.
         mutating func evaluate(_ sample: Sample) -> Bool? {
             guard sample.isInMenuBar else {
-                // Absent items hold no verdict. Clearing the candidate makes
-                // a returning item earn its confirmations from scratch.
+                // A returning item earns its confirmations from scratch.
                 reset()
                 guard isOccluded else {
                     return nil
@@ -80,8 +66,7 @@ nonisolated enum ControlItemOcclusion {
             }
 
             guard sample.secondsSinceDisplayChange >= ControlItemOcclusion.displayChangeGrace else {
-                // Readings taken mid-reconfiguration are noise, so they must
-                // not count toward a verdict either.
+                // Readings mid-reconfiguration are noise.
                 reset()
                 return nil
             }

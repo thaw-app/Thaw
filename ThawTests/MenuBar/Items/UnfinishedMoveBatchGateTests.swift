@@ -2,27 +2,21 @@
 //  UnfinishedMoveBatchGateTests.swift
 //  Project: Thaw
 //
-//  Copyright (Ice) © 2023–2025 Jordan Baird
 //  Copyright (Thaw) © 2026 Toni Förster
 //  Licensed under the GNU GPLv3
 
 import Testing
 @testable import Thaw
 
-/// Characterizes the arm that withholds the live arrangement from the saved
-/// order after a bulk apply gave up partway.
+/// Withholds the live arrangement from the saved order after a bulk apply gave up.
 ///
-/// A batch that fails leaves the bar wherever it stopped. Recording that as
-/// the user's layout replaces the order the batch was restoring, so the next
-/// pass plans against the partial result and shifts things a little further
-/// again (#900). The arm is cleared only by a clean apply or an explicit user
-/// move; elapsed time cannot make a partial result authoritative.
+/// Saving where a failed batch stopped makes the next pass plan against the
+/// partial result and drift further (#900). Only a clean apply or an explicit
+/// user move clears it; elapsed time never does.
 @Suite("Unfinished move batch gate")
 struct UnfinishedMoveBatchGateTests {
     private let clock = ContinuousClock()
 
-    /// The ordinary case: every apply so far enacted what it planned, so
-    /// nothing is withheld.
     @Test("No arm does not block the save")
     func noArmDoesNotBlock() {
         #expect(
@@ -32,8 +26,7 @@ struct UnfinishedMoveBatchGateTests {
         )
     }
 
-    /// The cache cycle immediately after a failed batch is the one that
-    /// would persist the wreckage, so it has to be covered.
+    /// The cycle right after a failed batch is the one that would persist it.
     @Test("A batch that just failed blocks the save")
     func freshArmBlocks() {
         let now = clock.now
@@ -55,8 +48,7 @@ struct UnfinishedMoveBatchGateTests {
         )
     }
 
-    /// A failed batch is not an order of record merely because time passed.
-    /// The latch is cleared only by a clean apply or an explicit user move.
+    /// Only a clean apply or an explicit user move clears the latch, not time.
     @Test("An old unfinished batch still blocks the save")
     func oldUnfinishedBatchStillBlocks() {
         let armedAt = clock.now
@@ -67,8 +59,7 @@ struct UnfinishedMoveBatchGateTests {
         )
     }
 
-    /// A direct Cmd-drag or a successful Layout editor drag is an explicit
-    /// choice to make the current arrangement authoritative.
+    /// A Cmd-drag or successful Layout editor drag makes the current arrangement authoritative.
     @Test("An explicit user move clears the unfinished-batch latch")
     @MainActor
     func explicitUserMoveClearsLatch() {

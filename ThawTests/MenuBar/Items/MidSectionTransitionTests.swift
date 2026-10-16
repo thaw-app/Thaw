@@ -2,7 +2,6 @@
 //  MidSectionTransitionTests.swift
 //  Project: Thaw
 //
-//  Copyright (Ice) © 2023–2025 Jordan Baird
 //  Copyright (Thaw) © 2026 Toni Förster
 //  Licensed under the GNU GPLv3
 
@@ -10,23 +9,19 @@ import CoreGraphics
 import Testing
 @testable import Thaw
 
-/// Tests for the rule that spots a cache pass taken part-way through a
-/// section expand or collapse.
+/// Spots a cache pass taken part-way through a section expand or collapse.
 ///
-/// A collapsed section stretches its control item across the displays; an
-/// expanded one leaves it at `NSStatusItem.variableLength`. The drag and the
-/// resize are separate steps, so a pass can observe revealed items behind a
-/// still-stretched divider — and classifying against that mixture moves an
-/// entire section into `visible`.
+/// A collapsed section stretches its divider across the displays; an expanded
+/// one leaves it at `NSStatusItem.variableLength`. Drag and resize are separate
+/// steps, so a pass can see revealed items behind a still-stretched divider,
+/// and classifying that mixture moves a whole section into `visible`.
 @Suite("Mid-section transition")
 struct MidSectionTransitionTests {
-    /// Width the window server reports for a collapsed section's divider. The
-    /// requested 10000 pt is clamped to roughly the span of the displays; this
-    /// is a real value from the #851 log.
+    /// A collapsed divider's width as reported (#851 log): the requested 10000 pt
+    /// is clamped to roughly the span of the displays.
     private let stretchedWidth: CGFloat = 5000
 
-    /// A marker-width divider. `NSStatusItem.variableLength` measures in
-    /// single digits once laid out, and the #851 log also shows exactly 0.
+    /// `variableLength` measures in single digits once laid out; the #851 log also shows 0.
     private let markerWidth: CGFloat = 0
 
     @Test("A collapsed section with a stretched divider is consistent")
@@ -49,9 +44,7 @@ struct MidSectionTransitionTests {
         )
     }
 
-    /// The #851 pass: the section had been expanded and its items were already
-    /// at revealed coordinates, but the divider still carried the stretched
-    /// width of the collapsed layout.
+    /// The #851 pass: items already at revealed coordinates, divider still stretched.
     @Test("An expanded section with a stretched divider is mid-transition")
     func expandedSectionWithStretchedDividerIsMidTransition() {
         #expect(
@@ -62,8 +55,7 @@ struct MidSectionTransitionTests {
         )
     }
 
-    /// The reverse straddle, seen while a section collapses: the divider has
-    /// already shrunk but the items have not been parked yet.
+    /// The reverse, while collapsing: the divider has shrunk but items are not parked yet.
     @Test("A collapsed section with a marker divider is mid-transition")
     func collapsedSectionWithMarkerDividerIsMidTransition() {
         #expect(
@@ -92,8 +84,7 @@ struct MidSectionTransitionTests {
         )
     }
 
-    /// Widths from the #851 log, which range from 4656 to 5002 depending on the
-    /// display arrangement, all have to read as stretched.
+    /// Observed widths range from 4656 to 5002 by display arrangement; all read as stretched.
     @Test("Every observed stretched width reads as a stretched divider")
     func observedStretchedWidthsAllReadAsCollapsed() {
         for width in [4656, 5000, 5002, 3068] as [CGFloat] {

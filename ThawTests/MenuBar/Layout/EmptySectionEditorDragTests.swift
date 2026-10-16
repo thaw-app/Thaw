@@ -2,26 +2,20 @@
 //  EmptySectionEditorDragTests.swift
 //  Project: Thaw
 //
-//  Copyright (Ice) © 2023–2025 Jordan Baird
 //  Copyright (Thaw) © 2026 Toni Förster
 //  Licensed under the GNU GPLv3
 
 import Testing
 @testable import Thaw
 
-/// Covers `LayoutBarPaddingView.shouldRevealSectionForEditorDrag`, the
-/// decision behind the #988 fix.
+/// Covers `LayoutBarPaddingView.shouldRevealSectionForEditorDrag`.
 ///
-/// #988: with an empty Hidden section, both dividers park offscreen at the
-/// same coordinate (the reporter's log shows `hidden.minX=-3861.0` and
-/// `alwaysHidden.maxX=-3861.0`), so a drag into Hidden resolves to
-/// `.leftOfItem(H_ctrl)` — a parked divider the #923 guard must refuse. The
-/// refusal's "open the section and try dragging the item again" advice
-/// deadlocks there: an empty section has nothing to open, so every retry
-/// hits the same refusal. The fix reveals the empty section instead of
-/// refusing, which this predicate gates. It must stay narrow: populated
-/// sections anchor drops on their items, a showing section has its divider
-/// onscreen, and non-divider tags never route through the decision.
+/// With Hidden empty, both dividers park at the same offscreen coordinate, so a
+/// drag into Hidden resolves to `.leftOfItem(H_ctrl)`, which the #923 guard
+/// refuses. Its "open the section and retry" advice deadlocks on an empty
+/// section, so the empty section is revealed instead. The rule stays narrow:
+/// populated sections anchor on items, a showing section's divider is onscreen,
+/// and non-divider tags never get here.
 @Suite("Empty-section editor drag reveal (#988)")
 struct EmptySectionEditorDragTests {
     @Test("An empty concealed section reveals — the #988 deadlock")
@@ -46,8 +40,7 @@ struct EmptySectionEditorDragTests {
 
     @Test("A populated section does not reveal")
     func populatedSectionDoesNotReveal() {
-        // With items in the section the drop anchors on those items and the
-        // clamp-and-retry move path owns the case.
+        // Items in the section anchor the drop; the clamp-and-retry path owns this case.
         #expect(
             !LayoutBarPaddingView.shouldRevealSectionForEditorDrag(
                 dividerTag: .hiddenControlItem,
@@ -68,8 +61,7 @@ struct EmptySectionEditorDragTests {
 
     @Test("A disabled section never reveals")
     func disabledSectionDoesNotReveal() {
-        // isEnabled is part of the reveal predicate: a section whose divider
-        // is not added to the menu bar has nothing to bring onscreen.
+        // A divider not in the menu bar has nothing to bring onscreen.
         #expect(
             !LayoutBarPaddingView.shouldRevealSectionForEditorDrag(
                 dividerTag: .hiddenControlItem,
@@ -82,8 +74,7 @@ struct EmptySectionEditorDragTests {
 
     @Test("A showing section does not reveal")
     func showingSectionDoesNotReveal() {
-        // Concealed == false means the divider is onscreen; the reachability
-        // gate never fires.
+        // Not concealed means the divider is onscreen, so the reachability gate never fires.
         #expect(
             !LayoutBarPaddingView.shouldRevealSectionForEditorDrag(
                 dividerTag: .hiddenControlItem,
@@ -96,8 +87,7 @@ struct EmptySectionEditorDragTests {
 
     @Test("A non-divider tag never reveals")
     func nonDividerTagDoesNotReveal() {
-        // The visible chevron is a control item but never a parked section
-        // boundary, and regular items have their own move paths.
+        // The chevron is never a parked section boundary, and regular items have their own move paths.
         #expect(
             !LayoutBarPaddingView.shouldRevealSectionForEditorDrag(
                 dividerTag: .visibleControlItem,
@@ -126,19 +116,14 @@ struct EmptySectionEditorDragTests {
 
     @Test("An always-hidden destination reveals the hidden section with it (#1010)")
     func alwaysHiddenDestinationRevealsLeadingSections() {
-        // #1010: the always-hidden divider parks to the LEFT of the hidden
-        // section's content. Revealing the always-hidden section alone
-        // shrinks its parked spacer, but AppKit re-places the divider just
-        // left of the hidden section's still-parked content, so it never
-        // comes onscreen and the reveal times out into the #923 refusal —
-        // the reporter's "still same error even after a few system
-        // restarts". The hidden section must expand with it.
+        // The always-hidden divider parks left of the hidden section's content, so
+        // revealing always-hidden alone leaves it offscreen and the reveal times out
+        // into the #923 refusal (#1010). Hidden must expand with it.
         #expect(
             LayoutBarPaddingView.sectionsToRevealForEditorDrag(forDividerTag: .alwaysHiddenControlItem)
                 == [.hidden, .alwaysHidden]
         )
-        // A hidden destination has nothing parked ahead of it that a reveal
-        // would not cover; non-divider tags reveal nothing at all.
+        // Nothing is parked ahead of a hidden destination; non-divider tags reveal nothing.
         #expect(
             LayoutBarPaddingView.sectionsToRevealForEditorDrag(forDividerTag: .hiddenControlItem)
                 == [.hidden]

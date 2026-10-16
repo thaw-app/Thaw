@@ -2,7 +2,6 @@
 //  FocusFilterIntent.swift
 //  Project: Thaw
 //
-//  Copyright (Ice) © 2023–2025 Jordan Baird
 //  Copyright (Thaw) © 2026 Toni Förster
 //  Licensed under the GNU GPLv3
 
@@ -37,16 +36,14 @@ struct ProfileEntityQuery: EntityQuery {
     }
 
     private func allProfiles() -> [ProfileEntity] {
-        guard let appSupport = FileManager.default.urls(
-            for: .applicationSupportDirectory,
-            in: .userDomainMask
-        ).first else {
+        // The path lives on ThawFocusModeStore so the two readers of this
+        // manifest cannot drift apart.
+        guard
+            let manifestURL = ThawFocusModeStore.manifestURL,
+            let data = try? Data(contentsOf: manifestURL)
+        else {
             return []
         }
-        let manifestURL = appSupport
-            .appendingPathComponent("Thaw/Profiles/profiles.json")
-
-        guard let data = try? Data(contentsOf: manifestURL) else { return [] }
 
         let decoder = JSONDecoder()
         decoder.dateDecodingStrategy = .iso8601
@@ -84,7 +81,7 @@ struct ThawFocusFilter: SetFocusFilterIntent {
         guard let profile,
               UUID(uuidString: profile.id) != nil
         else {
-            // Focus deactivated — clear the stored profile and notify.
+            // Focus deactivated: clear the stored profile and notify.
             Defaults.removeObject(forKey: .focusFilterRequestedProfileID)
             DistributedNotificationCenter.default().postNotificationName(
                 Notification.Name("com.stonerl.Thaw.focusFilterDeactivated"),

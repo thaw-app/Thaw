@@ -2,7 +2,6 @@
 //  ProfileManagerCaptureTests.swift
 //  Project: Thaw
 //
-//  Copyright (Ice) © 2023–2025 Jordan Baird
 //  Copyright (Thaw) © 2026 Toni Förster
 //  Licensed under the GNU GPLv3
 
@@ -10,20 +9,15 @@ import Foundation
 import Testing
 @testable import Thaw
 
-/// Covers the capture half of ``ProfileManager``: saving the current
-/// configuration as a profile, overwriting an existing profile from current
-/// state, and the scoped-update dispatcher.
+/// Covers the capture half of ``ProfileManager``: saving current state as a
+/// profile, overwriting a profile from current state, and scoped updates.
 ///
-/// These run against real stores — `AppSettings`, `MenuBarAppearanceManager`,
-/// `MenuBarItemManager` — through the narrow seam
-/// `saveProfile(name:settings:appearanceManager:itemManager:)`, so no live
-/// `AppState` is needed. Every store is constructed and mutated inside a
-/// scratch `Defaults` suite: the settings models persist through `didSet`,
-/// and layout capture reads `Defaults.store` directly, so leaking either
-/// would corrupt the runner's real domain.
+/// Uses real stores through `saveProfile(name:settings:appearanceManager:itemManager:)`,
+/// so no live `AppState` is needed. Every store lives in a scratch `Defaults`
+/// suite, since settings persist through `didSet` and layout capture reads
+/// `Defaults.store` directly.
 ///
-/// Like the CRUD suite, mutating cases assert against a *reloaded* manager
-/// wherever the persisted state is what matters.
+/// Mutating cases assert against a reloaded manager where persisted state matters.
 @MainActor
 @Suite("Profile manager capture", .serialized)
 struct ProfileManagerCaptureTests {

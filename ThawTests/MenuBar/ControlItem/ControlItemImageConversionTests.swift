@@ -2,7 +2,6 @@
 //  ControlItemImageConversionTests.swift
 //  Project: Thaw
 //
-//  Copyright (Ice) © 2023–2025 Jordan Baird
 //  Copyright (Thaw) © 2026 Toni Förster
 //  Licensed under the GNU GPLv3
 
@@ -11,15 +10,10 @@ import Testing
 @testable import Thaw
 
 /// Covers ``ControlItemImage``'s conversion to `NSImage` through the
-/// `nsImage(customIceIconIsTemplate:)` seam — every case except the
-/// `AppState` overload, which only forwards the template flag.
+/// `nsImage(customIceIconIsTemplate:)` seam.
 ///
-/// The stored form and value semantics live in `ControlItemImageTests`;
-/// this suite is only about what the cases render to.
-///
-/// The builtin chevrons are handler-backed images, so requesting a TIFF
-/// representation is what actually runs the drawing closure; without it the
-/// path-stroking code never executes.
+/// The builtin chevrons are handler-backed, so only requesting a TIFF
+/// representation runs the drawing closure.
 @MainActor
 @Suite("Control item image conversion")
 struct ControlItemImageConversionTests {

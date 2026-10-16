@@ -2,7 +2,6 @@
 //  PredicatesTests.swift
 //  Project: Thaw
 //
-//  Copyright (Ice) © 2023–2025 Jordan Baird
 //  Copyright (Thaw) © 2026 Toni Förster
 //  Licensed under the GNU GPLv3
 
@@ -13,19 +12,14 @@ import Testing
 /// Covers ``Predicates``, the namespace the app uses to name closures that
 /// would otherwise be anonymous at the call site.
 ///
-/// Three of the four factories are pass-throughs, but they exist as an
-/// overload set, and an overload set is a thing that can be resolved wrongly.
-/// The zero-argument factories in particular wrap the body in a closure that
-/// discards its input, so a mix-up between them and the one-argument factories
-/// would compile and then quietly ignore the value being tested. Each test
-/// therefore pins the result type explicitly, which forces a specific overload
-/// rather than whatever the type checker happens to prefer.
+/// Three of the four factories are pass-throughs, but as an overload set
+/// they can be resolved wrongly: the zero-argument ones discard their input,
+/// so a mix-up would compile and ignore the value. Each test pins the result
+/// type to force a specific overload.
 ///
-/// ``Predicates/controlItemConstraint(button:)`` is the one factory with real
-/// logic: it captures the button's superview *at creation time* and matches
-/// against `secondItem`. Capturing eagerly is deliberate — the caller removes
-/// constraints while walking the view tree — so the test pins that the target
-/// is the superview and not the button itself.
+/// ``Predicates/controlItemConstraint(button:)`` captures the button's
+/// superview at creation time, since the caller removes constraints while
+/// walking the view tree, and matches it against `secondItem`.
 @MainActor
 @Suite("Predicates")
 struct PredicatesTests {

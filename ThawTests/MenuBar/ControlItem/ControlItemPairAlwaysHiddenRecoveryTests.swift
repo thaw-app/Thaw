@@ -2,7 +2,6 @@
 //  ControlItemPairAlwaysHiddenRecoveryTests.swift
 //  Project: Thaw
 //
-//  Copyright (Ice) © 2023–2025 Jordan Baird
 //  Copyright (Thaw) © 2026 Toni Förster
 //  Licensed under the GNU GPLv3
 
@@ -14,38 +13,23 @@ import Testing
 /// Regression locks for the always-hidden divider recovery in
 /// `ControlItemPair` (#991).
 ///
-/// Field log (issue #991): after a Mac restart the always-hidden divider
-/// sits parked offscreen — its collapsed-section resting state — and on
-/// macOS 26 that parked window intermittently drops out of the enumerated
-/// item list (the ControlItem "occluded" flapping). Every path in
-/// `ControlItemPair.init` then returned `alwaysHidden = nil` while still
-/// reporting `.identity` resolution via the hidden divider, so profile
-/// applies either skipped outright ("always-hidden divider unresolved while
-/// its section is enabled") or abandoned mid-apply after the H_ctrl moves
-/// had already been enacted ("control items degraded before moving
-/// AH_ctrl"). The menu bar never converged to the profile: the reported
-/// "icons resetting to random positions on mac restart".
+/// On macOS 26 the parked always-hidden divider intermittently drops out of
+/// the enumerated list after a restart. `alwaysHidden` then resolved nil, and
+/// profile applies skipped or abandoned mid-apply, so icons never converged.
 ///
-/// The fix routes every `alwaysHidden` resolution through
-/// `resolveAlwaysHidden(in:authoritativeWindowID:recovery:)`, which recovers
-/// the divider from its own authoritative window when it is absent from the
-/// list — the same `ownControlItem` channel the hidden divider already had.
+/// `resolveAlwaysHidden(in:authoritativeWindowID:recovery:)` recovers the
+/// divider from its own authoritative window when it is absent from the list.
 ///
-/// The unit target owns no real windows, so the recovery leaf is injected.
-/// The full-init end state for the exact #991 cycle in this environment is
-/// pinned as a characterization: `alwaysHidden` stays nil (the real window
-/// server cannot confirm the fixture ID) with `.identity` resolution intact.
-/// In production the same cycle logs "recovered always-hidden control item
-/// … from its own window" and the apply proceeds.
+/// The unit target owns no real windows, so the recovery leaf is injected and
+/// the full-init case can only confirm `alwaysHidden` stays nil here.
 @MainActor
 @Suite("ControlItemPair always-hidden recovery")
 struct ControlItemPairAlwaysHiddenRecoveryTests {
     private let hiddenTitle = "Thaw.ControlItem.Hidden"
     private let alwaysHiddenTitle = "Thaw.ControlItem.AlwaysHidden"
 
-    /// Fixture window IDs live in the 1_000_000+ range (see
-    /// MenuBarTestFixtures), so the real window-server lookup reliably
-    /// misses them — same assumption as CacheContext.bestBounds.
+    /// Fixture window IDs live in the 1_000_000+ range, so the real
+    /// window-server lookup misses them.
     private let authoritativeAHWindowID: CGWindowID = 1_000_002
 
     private func hiddenItem(windowID: CGWindowID = 1_000_001) -> MenuBarItem {
@@ -103,10 +87,8 @@ struct ControlItemPairAlwaysHiddenRecoveryTests {
 
     @Test("A known-but-absent authoritative window never adopts a lookalike from the list")
     func knownButAbsentAuthoritativeWindowDoesNotAdoptLookalike() {
-        // Duplicate-Thaw hazard: a lookalike divider (other instance, stale
-        // cache) shares the tag but not the authoritative window ID. Before
-        // the fix the tag path adopted it blind; the fix must return nil and
-        // leave the lookalike untouched.
+        // A lookalike divider (another Thaw instance, stale cache) shares the
+        // tag but not the authoritative window ID and must not be adopted.
         let lookalikeWindowID: CGWindowID = 21543
         var items = [
             hiddenItem(),
@@ -150,10 +132,8 @@ struct ControlItemPairAlwaysHiddenRecoveryTests {
 
     @Test("A null window ID counts as no ID and tag-matches the divider")
     func zeroAuthoritativeIDFallsBackToTagMatching() {
-        // A status item whose window has not been created yet converts to
-        // CGWindowID 0 (kCGNullWindowID) through CGWindowID(exactly:).
-        // Treating it as authoritative would skip tag matching and attempt
-        // recovery against an ID the window server always refuses.
+        // A status item without a window yet converts to kCGNullWindowID,
+        // which must not skip tag matching.
         var items = [
             hiddenItem(),
             alwaysHiddenItem(windowID: 366),
@@ -176,11 +156,8 @@ struct ControlItemPairAlwaysHiddenRecoveryTests {
 
     @Test("Without an authoritative ID, our PID plus the canonical title answers a noncanonical tag")
     func sourcePIDAndTitleFallbackAnswersNoncanonicalTag() {
-        // On macOS 26 the enumerated title can drift from the autosave name
-        // the .thaw namespace tag is built from, so plain tag matching
-        // fails while the item itself is unambiguous: our own process plus
-        // the canonical title. This mirrors the pair's sourcePID fallback
-        // for the hidden divider.
+        // On macOS 26 the enumerated title can drift from the autosave name,
+        // so tag matching fails; own process plus canonical title still identifies it.
         let lookalike = MenuBarItem.fixture(
             tag: MenuBarItemTag(
                 namespace: .string("com.example.lookalike"),
@@ -203,9 +180,8 @@ struct ControlItemPairAlwaysHiddenRecoveryTests {
 
     @Test("The full pair resolves a tag-matchable divider past a null window ID")
     func pairResolvesDividerPastNullWindowID() {
-        // Primary path claims the hidden divider by its valid window ID;
-        // the always-hidden ID is still null because its window has not
-        // been created. The divider must resolve from the list by tag.
+        // The always-hidden window does not exist yet, so the divider must
+        // resolve from the list by tag.
         var items = [
             hiddenItem(windowID: 1_000_001),
             alwaysHiddenItem(windowID: 366),
@@ -226,12 +202,8 @@ struct ControlItemPairAlwaysHiddenRecoveryTests {
 
     @Test("Tag-path apply with an absent AH window stays identity-resolved and honestly nil")
     func tagPathWithAbsentAHWindowRemainsIdentityResolved() {
-        // The exact 15:43:58 cycle from the #991 field log: hidden divider
-        // resolves, always-hidden divider absent from the list, authoritative
-        // AH window ID supplied. In this environment the real window-server
-        // lookup cannot confirm the fixture ID, so the honest end state is
-        // nil-at-.identity; production recovers the divider instead (see the
-        // suite doc comment).
+        // The #991 cycle: always-hidden divider absent, authoritative ID given.
+        // The fixture ID cannot be confirmed here, so it stays nil at .identity.
         var items = [hiddenItem()]
 
         let pair = MenuBarItemManager.ControlItemPair(

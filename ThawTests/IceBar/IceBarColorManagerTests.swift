@@ -2,7 +2,6 @@
 //  IceBarColorManagerTests.swift
 //  Project: Thaw
 //
-//  Copyright (Ice) © 2023–2025 Jordan Baird
 //  Copyright (Thaw) © 2026 Toni Förster
 //  Licensed under the GNU GPLv3
 
@@ -12,16 +11,9 @@ import Testing
 
 /// Covers `IceBarColorManager.colorSamplePercentage(frame:screenFrame:)`.
 ///
-/// The percentage maps the bar's horizontal center onto the screen so the
-/// wallpaper/menu-bar color is sampled at the matching offset. The math
-/// divides by the width of the screen frame inset by half the bar width on
-/// each side. When a horizontal IceBar overflows to the full screen width —
-/// a state the bar itself detects at `frame.width == screen.frame.width`
-/// (see `IceBar.swift`) — that inset frame collapses to zero width and the
-/// division is by zero. The resulting `NaN` flows into `cropRect.x`, so the
-/// color is sampled at a garbage offset (or stops updating) instead of the
-/// bar's actual center. The guard falls back to `0.5` (the panel's middle)
-/// in that degenerate case, which is what these tests lock in.
+/// The math divides by the screen width inset by half the bar width on each
+/// side. A full-width IceBar collapses that to zero, and the `NaN` lands in
+/// `cropRect.x`, so the guard falls back to `0.5`.
 @Suite("IceBar color sample percentage")
 @MainActor
 struct IceBarColorManagerTests {
@@ -32,9 +24,7 @@ struct IceBarColorManagerTests {
         let screenWidth: CGFloat = 1920
         let screenFrame = CGRect(x: 0, y: 0, width: screenWidth, height: 1080)
 
-        // The bar has overflowed to span the entire screen: this is the exact
-        // state that collapses the inset frame to zero width and previously
-        // divided by zero.
+        // The bar spans the entire screen, collapsing the inset frame to zero width.
         let fullWidthFrame = CGRect(x: 0, y: 0, width: screenWidth, height: 28)
 
         let percentage = IceBarColorManager.colorSamplePercentage(

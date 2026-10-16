@@ -2,7 +2,6 @@
 //  IceGradientAverageColorTests.swift
 //  Project: Thaw
 //
-//  Copyright (Ice) © 2023–2025 Jordan Baird
 //  Copyright (Thaw) © 2026 Toni Förster
 //  Licensed under the GNU GPLv3
 
@@ -11,20 +10,11 @@ import Testing
 
 /// Covers `IceGradient.averageColor(using:option:)`.
 ///
-/// The averaging loop divides the summed RGBA components by the number of
-/// samples that contributed components. The empty-count guard added next to
-/// that division mirrors the one already present in
-/// ``CGImage.averageColor``: dividing by a zero count yields a `CGColor`
-/// whose components are all `NaN`, which reads as a valid color to every
-/// caller and poisons whatever it is blended into.
-///
-/// That guard is defensive depth. On macOS the samples are produced by
-/// interpolating an `NSGradient`, and once the gradient is non-empty the
-/// interpolation always returns a color with usable components, so the count
-/// is never zero in practice. The cases below therefore lock the two
-/// reachable contracts — an empty gradient averages to `nil`, and a
-/// non-empty gradient averages to a color with no `NaN`/infinite components
-/// — which is the user-visible behavior the guard exists to preserve.
+/// Dividing by a zero sample count yields an all-`NaN` `CGColor` that reads
+/// as valid and poisons whatever it is blended into; the guard mirrors
+/// ``CGImage.averageColor``. A non-empty `NSGradient` never yields a zero
+/// count, so the cases lock the reachable contracts: an empty gradient
+/// averages to `nil`, and a non-empty one has no `NaN` or infinite components.
 @Suite("IceGradient average color")
 @MainActor
 struct IceGradientAverageColorTests {

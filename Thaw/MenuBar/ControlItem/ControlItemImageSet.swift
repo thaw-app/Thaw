@@ -8,9 +8,7 @@
 
 import SwiftUI
 
-/// A named set of images that are used by control items.
-///
-/// An image set contains images for a control item in both the hidden and visible states.
+/// A named set of control item images for the hidden and visible states.
 nonisolated struct ControlItemImageSet: Codable, Hashable, Identifiable {
     enum Name: String, Codable, Hashable {
         case arrow = "Arrow"
@@ -23,7 +21,6 @@ nonisolated struct ControlItemImageSet: Codable, Hashable, Identifiable {
         case sunglasses = "Sunglasses"
         case custom = "Custom"
 
-        /// Localized string key representation.
         var localized: LocalizedStringKey {
             switch self {
             case .arrow: "Arrow"

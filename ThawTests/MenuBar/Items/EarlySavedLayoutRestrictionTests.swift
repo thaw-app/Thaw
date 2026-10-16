@@ -2,7 +2,6 @@
 //  EarlySavedLayoutRestrictionTests.swift
 //  Project: Thaw
 //
-//  Copyright (Ice) © 2023–2025 Jordan Baird
 //  Copyright (Thaw) © 2026 Toni Förster
 //  Licensed under the GNU GPLv3
 
@@ -12,17 +11,13 @@ import Testing
 /// Characterizes the narrowing applied to the saved order by the early,
 /// resolved-identities-only apply that runs during startup settling.
 ///
-/// Without that early pass the bar sits in macOS's arrangement until every
-/// sourcePID resolves, which is ~8 s on a dense bar (#881). Running early is
-/// only safe because the desired order is narrowed to identifiers we can
-/// currently identify: `planLCSMoveSequence` intersects current with desired,
-/// so an identifier dropped here is left untouched rather than mispositioned.
+/// Without it the bar keeps macOS's arrangement until every sourcePID
+/// resolves (~8 s on a dense bar). It is safe because `planLCSMoveSequence`
+/// leaves identifiers dropped here untouched rather than mispositioned.
 @Suite("Early saved-layout restriction")
 struct EarlySavedLayoutRestrictionTests {
-    // NOTE: `applySavedLayout` is an instance method requiring a live
-    // `appState`, real `ControlItemPair`s and Window Server items, so this
-    // suite characterizes the pure narrowing helper only — matching the
-    // approach in SourcePIDResolutionGateTests.
+    // `applySavedLayout` needs a live `appState` and real window server
+    // items, so only the pure narrowing helper is covered.
 
     @Test("Unresolved identifiers are dropped from the desired order")
     func unresolvedIdentifiersAreDropped() {
@@ -54,9 +49,8 @@ struct EarlySavedLayoutRestrictionTests {
         #expect(restricted["visible"] == ["com.a:One", "com.c:Three", "com.d:Four"])
     }
 
-    /// An unresolved sibling sharing a base identifier is exactly the case
-    /// the exact-match rule exists to exclude — matching on the base would
-    /// make `Item-0:2` a move target on the strength of `Item-0:1` resolving.
+    /// Matching on the base identifier would make `Item-0:2` a move target
+    /// because `Item-0:1` resolved.
     @Test("A resolved sibling does not admit an unresolved instance")
     func resolvedSiblingDoesNotAdmitUnresolvedInstance() {
         let saved = [
@@ -73,9 +67,8 @@ struct EarlySavedLayoutRestrictionTests {
         #expect(restricted["hidden"] == [])
     }
 
-    /// Section keys survive emptying so the caller can distinguish "this
-    /// section has nothing resolved yet" from "this section is absent", and
-    /// so the hidden-section room check reads a real count.
+    /// The caller distinguishes "nothing resolved yet" from "section absent",
+    /// and the hidden-section room check needs a real count.
     @Test("Section keys survive even when fully emptied")
     func sectionKeysSurviveEmptying() {
         let saved = [
@@ -94,8 +87,7 @@ struct EarlySavedLayoutRestrictionTests {
         #expect(restricted["alwaysHidden"] == [])
     }
 
-    /// The all-unresolved case is what the caller's own guard keys off to
-    /// abandon the early pass entirely and wait for settling-end.
+    /// The caller abandons the early pass on this and waits for settling-end.
     @Test("Nothing resolved leaves every section empty")
     func nothingResolvedLeavesEverySectionEmpty() {
         let saved = [

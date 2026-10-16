@@ -2,7 +2,6 @@
 //  ExtrasMenuBarProbeStore.swift
 //  Project: Thaw
 //
-//  Copyright (Ice) © 2023–2025 Jordan Baird
 //  Copyright (Thaw) © 2026 Toni Förster
 //  Licensed under the GNU GPLv3
 
@@ -10,13 +9,9 @@ import Foundation
 
 /// Reads and writes ``ExtrasMenuBarProbeMemory``'s contents.
 ///
-/// The service has no access to the app's `Defaults`, and does not need it:
-/// this memory is written by the process that does the probing and read by
-/// nobody else, so it lives in the service's own defaults domain
-/// (`com.stonerl.Thaw.MenuBarItemService`). Keeping it out of the app's
-/// domain also keeps it out of everything that treats that domain as user
-/// settings — this is a measurement, not a preference, and losing it costs
-/// one slow scan.
+/// Stored in the service's own defaults domain
+/// (`com.stonerl.Thaw.MenuBarItemService`), not the app's: it is a
+/// measurement, not a user setting, and losing it costs one slow scan.
 nonisolated enum ExtrasMenuBarProbeStore {
     private static let key = "ExtrasMenuBarProbeMisses"
 
@@ -29,10 +24,8 @@ nonisolated enum ExtrasMenuBarProbeStore {
 
     /// Writes `misses`, unless it matches what is already stored.
     ///
-    /// The write guard is what makes it safe to call this from the cache
-    /// cleanup, which runs whenever any process on the system starts or exits
-    /// — roughly every nine seconds in the field. The memory converges within
-    /// the first minute of a session and then stops changing.
+    /// The write guard makes this safe to call from cache cleanup, which runs
+    /// on every process launch or exit (about every nine seconds).
     static func save(_ misses: [String: Int]) {
         guard misses != stored() else {
             return

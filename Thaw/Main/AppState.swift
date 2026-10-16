@@ -52,6 +52,12 @@ final class AppState {
     /// Global cache for menu bar item images.
     let imageCache = MenuBarItemImageCache()
 
+    /// Owner of the user's menu bar spacer items.
+    let spacerManager = MenuBarSpacerManager()
+
+    /// Owner of user-authored menu bar item groups.
+    let itemGroupManager = MenuBarItemGroupManager()
+
     /// Manager for input events received by the app.
     let hidEventManager = HIDEventManager()
 
@@ -64,27 +70,34 @@ final class AppState {
     /// Manager for user notifications.
     let userNotificationManager = UserNotificationManager()
 
+    /// Engages zen mode while the screen is mirrored or being shared.
+    let presentationMonitor = PresentationMonitor()
+
     /// Storage for internal observers.
     private var cancellables = Set<AnyCancellable>()
 
-    /// Observes `navigationState`'s @Observable properties (wave 3), replacing
-    /// the old `Publishers.CombineLatest($isAppFrontmost, $isSettingsPresented)`
-    /// subscription.
+    /// Observes `navigationState.isAppFrontmost` and `isSettingsPresented`.
     private var navigationStateObservationTask: Task<Void, Never>?
 
-    /// Observes `hidEventManager.isDraggingMenuBarItem` (wave 3), replacing
-    /// the old `$isDraggingMenuBarItem.removeDuplicates().sink` subscription.
+    /// Observes `hidEventManager.isDraggingMenuBarItem`.
     private var hidEventManagerObservationTask: Task<Void, Never>?
 
-    /// Observes `NSApplication.didChangeScreenParametersNotification` via
-    /// `NotificationCenter.notifications(named:)`, replacing a
-    /// `NotificationCenter.publisher(for:).debounce(for:scheduler:).sink`
-    /// Combine chain with an async sequence debounced through
-    /// swift-async-algorithms' `.debounce(for:)`.
+    /// Observes `NSApplication.didChangeScreenParametersNotification`, debounced.
     private var screenParametersObservationTask: Task<Void, Never>?
 
     /// Track open windows to prevent duplicates
     private var openWindows = Set<IceWindowIdentifier>()
+
+    /// Whether settings, permissions, search, or the Thaw Bar is up.
+    /// Those surfaces activate as a regular app, so a menu-bar hide retry
+    /// must not switch back to accessory and hide their Dock icon.
+    var explicitUIWantsRegularActivation: Bool {
+        navigationState.isSettingsPresented
+            || navigationState.isSearchPresented
+            || navigationState.isIceBarPresented
+            || openWindows.contains(.settings)
+            || openWindows.contains(.permissions)
+    }
 
     /// Track last known screen count to detect disconnects.
     private var lastKnownScreenCount = NSScreen.screens.count
@@ -95,11 +108,20 @@ final class AppState {
     /// Diagnostic logger for the app state.
     let diagLog = DiagLog(category: "AppState")
 
-    /// `@ObservationIgnored`: the Observation macro cannot generate its
-    /// tracked-access init accessor for a `lazy` property. Not read by any
-    /// view body, so the exemption has no UI-observability effect.
+    /// `@ObservationIgnored`: the macro can't handle a `lazy` property, and no
+    /// view reads it.
     @ObservationIgnored
     private lazy var setupTask = Task { @MainActor in
+        // Repoint the XPC service on rotation. Installed before logging starts
+        // so the first rotation is covered too.
+        DiagnosticLogger.shared.onRotate = {
+            Task { await MenuBarItemService.Connection.shared.syncLogging() }
+        }
+
+        // Opening a log file prunes, so set retention first; the settings model
+        // isn't built yet.
+        DiagnosticLogger.shared.setRotationPolicy(AdvancedSettings.persistedRotationPolicy())
+
         #if DEBUG
             // Debug builds always have diagnostic logging on so logs are
             // captured during development without depending on the toggle.
@@ -121,6 +143,11 @@ final class AppState {
         diagLog.debug("setupTask: starting MenuBarItemService XPC connection")
         await MenuBarItemService.Connection.shared.start()
         diagLog.debug("setupTask: MenuBarItemService XPC connection started")
+        // Capture is optional: don't block item/manager setup if the helper is slow.
+        Task {
+            await MenuBarCaptureService.Connection.shared.start()
+        }
+        diagLog.debug("setupTask: MenuBarCaptureService XPC start kicked off")
 
         appearanceManager.performSetup(with: self)
         hidEventManager.performSetup(with: self)
@@ -131,6 +158,8 @@ final class AppState {
         diagLog.debug("setupTask: starting imageCache setup")
         imageCache.performSetup(with: self)
         diagLog.debug("setupTask: imageCache setup complete")
+        spacerManager.performSetup(with: self)
+        presentationMonitor.performSetup(with: self)
         updatesManager.performSetup(with: self)
         userNotificationManager.performSetup(with: self)
         profileManager.performSetup(with: self)
@@ -287,16 +316,7 @@ final class AppState {
             }
         }
 
-        // `navigationState` (AppNavigationState) is now @Observable (wave 3),
-        // so its old `$isAppFrontmost`/`$isSettingsPresented` Combine
-        // projections are gone. Replaced with the wave-2 Observations-Task
-        // pattern. The original pipeline also merged in a one-time `true`
-        // fired after a 1s delay to force an initial update once at launch;
-        // reproduced below as a separate detached delay. The 0.1s throttle
-        // is dropped: isAppFrontmost/isSettingsPresented only flip on user
-        // navigation (not high-frequency), so per-change firing is
-        // equivalent in practice and avoids reimplementing throttle(latest:)
-        // by hand.
+        // No throttle: these flags only flip on user navigation.
         navigationStateObservationTask = Task { [weak self] in
             guard let self else { return }
             let changes = Observations { [navigationState] in
@@ -320,25 +340,10 @@ final class AppState {
             }
         }
 
-        // `menuBarManager`, `permissions`, `settings`, and `updatesManager`
-        // are all `@Observable` (waves 2–3), and `AppState` itself is now
-        // `@Observable` too (wave 4): the old `objectWillChange` forwarding
-        // lattice that used to re-publish each child's changes through
-        // `AppState`'s own `objectWillChange` is gone entirely. Views
-        // reading `appState.settings.*`, `appState.menuBarManager.*`, etc.
-        // directly in their body rely on SwiftUI's Observation access
-        // tracking, which composes transparently across nested `@Observable`
-        // object graphs without any manual forwarding.
+        // Child models are `@Observable`, so views need no change forwarding.
 
-        // Mirrors DisplaySettingsManager.configureObservers' screenParametersTask:
-        // a plain NotificationCenter.publisher().debounce(scheduler:) chain here would
-        // be the only remaining Combine cancellable doing what an async
-        // sequence already does better elsewhere in the codebase, so it's
-        // reproduced with an AsyncStream fed by a NotificationCenter observer,
-        // coalesced with swift-async-algorithms' `.debounce(for:)`, instead of
-        // a Combine hop to DispatchQueue.main. Notification isn't Sendable, so
-        // the stream carries Void and the count is re-read from NSScreen
-        // (MainActor-isolated, like the rest of this task's body) per event.
+        // Notification isn't Sendable, so the stream carries Void and the
+        // screen count is re-read per event.
         let (screenParameterEvents, screenParameterContinuation) = AsyncStream<Void>.makeStream()
         screenParametersObservationTask = Task { @MainActor [weak self] in
             let observer = NotificationCenter.default.addObserver(
@@ -353,20 +358,14 @@ final class AppState {
                 defer { self.lastKnownScreenCount = count }
                 if count < self.lastKnownScreenCount {
                     self.diagLog.info("Display disconnected: refresh item cache + cleanup image cache")
-                    // A display change relocates items to the remaining
-                    // display and leaves the menu bar geometry (Control
-                    // Center position, item bounds) unsettled for a short
-                    // window. Open a settling period so saved-layout restores
-                    // defer until the bar restabilizes and then run once on
-                    // settled geometry. Without this, a restore could fire
-                    // against transient off-screen geometry: Control Center's
-                    // stale left edge produces a negative notch-overflow
-                    // budget that collapses the hidden section into visible
-                    // and is then persisted into the saved order.
+                    // Menu bar geometry is unsettled right after a display change.
+                    // Defer layout restores: Control Center's stale left edge gives
+                    // a negative notch-overflow budget that collapses hidden into
+                    // visible and gets persisted.
                     self.itemManager.startSettlingPeriod(reason: "displayDisconnect")
                     // Force item cache rebuild so displayID reflects current
                     // display geometry (items moved to remaining display).
-                    await self.itemManager.cacheItemsRegardless(skipRecentMoveCheck: true)
+                    await self.itemManager.cacheItemsRegardless(options: .init(skipRecentMoveCheck: true))
                     // Force image cache: remove entries for items no longer
                     // present, trigger re-capture for current display.
                     self.imageCache.performCacheCleanup()
@@ -380,7 +379,7 @@ final class AppState {
                     self.itemManager.startSettlingPeriod(reason: "displayConnect")
                     // Items keep their windowIDs when moving to new display.
                     // Item cache rebuild picks up new items on the added display.
-                    await self.itemManager.cacheItemsRegardless(skipRecentMoveCheck: true)
+                    await self.itemManager.cacheItemsRegardless(options: .init(skipRecentMoveCheck: true))
                     self.diagLog.info("Item cache refreshed after display connect")
                 }
             }
@@ -454,6 +453,9 @@ final class AppState {
     }
 
     func activate(withPolicy policy: NSApplication.ActivationPolicy? = nil) {
+        if policy == .regular {
+            menuBarManager.invalidatePendingAccessoryActivation()
+        }
         if let policy {
             NSApp.setActivationPolicy(policy)
         }

@@ -2,21 +2,16 @@
 //  MoveFailureBackoffTests.swift
 //  Project: Thaw
 //
-//  Copyright (Ice) © 2023–2025 Jordan Baird
 //  Copyright (Thaw) © 2026 Toni Förster
 //  Licensed under the GNU GPLv3
 
 import Testing
 @testable import Thaw
 
-/// Characterizes the per-item move-failure backoff the bulk-apply loops use
-/// to stop one persistently unmovable item (a vanished transient Control
-/// Center window, an item whose owning app hangs) from re-triggering a full
-/// cursor-hijacking apply on every cache cycle (#736).
+/// Per-item backoff so one unmovable item (a vanished Control Center window, a
+/// hung owner) does not re-trigger a cursor-hijacking apply every cache cycle (#736).
 @Suite("Move failure backoff")
 struct MoveFailureBackoffTests {
-    /// The interval grows linearly with consecutive failures so a genuinely
-    /// stuck item is retried less and less often.
     @Test("The interval grows with the failure count")
     func intervalGrowsWithFailureCount() {
         #expect(MenuBarItemManager.moveFailureBackoffInterval(failureCount: 1) == .seconds(30))
@@ -24,17 +19,14 @@ struct MoveFailureBackoffTests {
         #expect(MenuBarItemManager.moveFailureBackoffInterval(failureCount: 4) == .seconds(120))
     }
 
-    /// Capped at 5 minutes: an item that recovers (app unhangs, window
-    /// reappears with valid bounds) must not wait unboundedly long for its
-    /// next attempt.
+    /// Capped so an item that recovers does not wait unboundedly for its next attempt.
     @Test("The interval is capped at five minutes")
     func intervalIsCappedAtFiveMinutes() {
         #expect(MenuBarItemManager.moveFailureBackoffInterval(failureCount: 10) == .seconds(300))
         #expect(MenuBarItemManager.moveFailureBackoffInterval(failureCount: 1000) == .seconds(300))
     }
 
-    /// Degenerate input: a zero or negative count is treated as one failure
-    /// rather than producing a zero/negative interval.
+    /// A zero or negative count is treated as one failure.
     @Test("A non-positive count clamps to a single failure")
     func nonPositiveCountClampsToSingleFailure() {
         #expect(MenuBarItemManager.moveFailureBackoffInterval(failureCount: 0) == .seconds(30))
@@ -42,15 +34,12 @@ struct MoveFailureBackoffTests {
     }
 }
 
-/// Characterizes which failures `move` has already filed with the ledger by
-/// the time it throws, so a catch clause that files again does not charge one
-/// failed move twice.
+/// Which failures `move` has already filed with the ledger when it throws, so a
+/// catch clause does not charge one failed move twice.
 ///
-/// Double-filing was invisible while it only widened a backoff window, but it
-/// made the "wait for another failure before marking" rule meaningless: both
-/// halves were consumed in the same instant. In the #687 log, 1Password was
-/// marked unresponsive one millisecond after the line saying it was still
-/// waiting for a second failure.
+/// Double-filing consumed both halves of "wait for another failure before
+/// marking" at once: 1Password was marked unresponsive a millisecond after
+/// the log said it was waiting for a second failure (#687).
 @Suite("Move failure double filing")
 struct MoveFailureDoubleFilingTests {
     private func makeItem() -> MenuBarItem {
@@ -60,8 +49,7 @@ struct MoveFailureDoubleFilingTests {
         )
     }
 
-    /// The three the ledger treats as an unresponsive owner are exactly the
-    /// three `move` files for itself.
+    /// The three unresponsive-owner failures are exactly the three `move` files itself.
     @Test("Unresponsive-owner failures are already filed")
     func unresponsiveOwnerFailuresAreAlreadyFiled() {
         let item = makeItem()
@@ -74,8 +62,8 @@ struct MoveFailureDoubleFilingTests {
         }
     }
 
-    /// Everything else is still the caller's to file, so the backoff window
-    /// keeps counting vanished items and stale destinations.
+    /// Everything else is the caller's to file, so backoff still counts vanished
+    /// items and stale destinations.
     @Test("Other failures are left for the caller to file")
     func otherFailuresAreLeftToTheCaller() {
         let item = makeItem()
@@ -91,8 +79,7 @@ struct MoveFailureDoubleFilingTests {
         }
     }
 
-    /// An error from outside the move path — a cancellation, say — is nobody's
-    /// filed failure.
+    /// An error from outside the move path, such as cancellation, is nobody's filed failure.
     @Test("A foreign error is not treated as already filed")
     func foreignErrorIsNotAlreadyFiled() {
         #expect(!MenuBarItemManager.moveAlreadyFiledFailure(for: CancellationError()))

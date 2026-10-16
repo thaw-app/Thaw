@@ -2,21 +2,18 @@
 //  SavedLayoutSectionLookupTests.swift
 //  Project: Thaw
 //
-//  Copyright (Ice) © 2023–2025 Jordan Baird
 //  Copyright (Thaw) © 2026 Toni Förster
 //  Licensed under the GNU GPLv3
 
 import Testing
 @testable import Thaw
 
-/// Characterizes the saved-layout lookup used by the saved-order restore gate.
+/// The saved-layout lookup behind the saved-order restore gate.
 ///
-/// The live savedSectionOrder can contain several instances of the same base
-/// identifier (namespace:title) split across sections, especially Control
-/// Center generic items (`Item-0:1`, `Item-0:2`, ...). The divergence gate must
-/// not collapse those to one base section, otherwise unrelated app-launch
-/// cache churn can falsely dispatch a bulk layout apply and visually expand the
-/// hidden section before restoring it.
+/// savedSectionOrder can split instances of one base identifier across
+/// sections (Control Center's `Item-0:1`, `Item-0:2`, ...). Collapsing them to
+/// one section lets app-launch churn trigger a bulk apply that visibly expands
+/// the hidden section.
 @Suite("Saved layout section lookup")
 struct SavedLayoutSectionLookupTests {
     @Test("Exact instance sections remain available when the base is ambiguous")

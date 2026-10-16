@@ -72,20 +72,15 @@ final class HotkeysSettings {
 
     /// Configures the internal observers for the model.
     ///
-    /// Each hotkey's callback is assigned after ``loadInitialState()`` has
-    /// already set its initial key combination, so — like the previous
-    /// `dropFirst()` Combine pipeline — the initial value is never persisted
-    /// redundantly, only subsequent changes.
+    /// Callbacks are assigned after ``loadInitialState()``, so only later
+    /// changes are persisted.
     private func configureObservers() {
         for hotkey in hotkeys {
             hotkey.keyCombinationDidChange = { [weak self, weak hotkey] in
                 guard let self, let hotkey else { return }
                 do {
-                    // Encoding the optional directly turns a cleared binding
-                    // into the JSON literal `null` and stores it, leaving a
-                    // dead entry behind for a hotkey the user just unbound.
-                    // Remove the key instead, so the dictionary only ever
-                    // holds bindings that actually exist.
+                    // Remove cleared bindings; encoding the optional would
+                    // store a dead `null` entry.
                     let data = try hotkey.keyCombination.map { try encoder.encode($0) }
                     withMutableCopy(of: Defaults.dictionary(forKey: .hotkeys) ?? [:]) { dictionary in
                         if let data {

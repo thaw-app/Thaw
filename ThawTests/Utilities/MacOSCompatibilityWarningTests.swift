@@ -2,7 +2,6 @@
 //  MacOSCompatibilityWarningTests.swift
 //  Project: Thaw
 //
-//  Copyright (Ice) © 2023–2025 Jordan Baird
 //  Copyright (Thaw) © 2026 Toni Förster
 //  Licensed under the GNU GPLv3
 
@@ -36,22 +35,21 @@ struct MacOSCompatibilityWarningTests {
         #expect(prompt.confirmButtonTitle == String(localized: "View Preview Builds"))
     }
 
-    @Test("With a manager the prompt offers the alpha channel")
-    func managerOffersAlphaChannel() throws {
+    @Test("With a manager the prompt offers the beta channel")
+    func managerOffersBetaChannel() throws {
         let prompt = try #require(MacOSCompatibilityWarning.prompt(for: version(27), canSubscribe: true))
-        #expect(prompt.action == .subscribeToAlpha)
-        #expect(prompt.confirmButtonTitle == String(localized: "Switch to Alpha Updates"))
+        #expect(prompt.action == .subscribeToBeta)
+        #expect(prompt.confirmButtonTitle == String(localized: "Switch to Beta Updates"))
     }
 
-    /// The alert cannot offer a channel the running system is not allowed to
-    /// select, whatever the manager is willing to do.
-    @Test("An unavailable alpha channel is not offered")
-    func unavailableAlphaIsNotOffered() throws {
+    /// The channel the alert switches to must reach the rewrite's builds on
+    /// the macOS it warns about, whichever channel those were published on.
+    @Test("The offered channel reaches the rewrite on an unsupported macOS")
+    func offeredChannelReachesTheRewrite() throws {
         let unsupported = version(MacOSCompatibilityWarning.firstUnsupportedMajorVersion)
-        #expect(UpdateChannel.alpha.isAvailable(on: unsupported))
-
         let prompt = try #require(MacOSCompatibilityWarning.prompt(for: unsupported, canSubscribe: true))
-        #expect(prompt.action == .subscribeToAlpha)
+        #expect(prompt.action == .subscribeToBeta)
+        #expect(UpdateChannel.beta.allowedSparkleChannels(on: unsupported) == ["beta", "alpha"])
     }
 
     /// The warning fires on every release from the unsupported one onward, so

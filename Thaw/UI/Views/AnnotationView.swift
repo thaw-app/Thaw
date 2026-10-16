@@ -10,6 +10,8 @@ import SwiftUI
 
 /// A view that displays content as an annotation below a parent view.
 struct AnnotationView<Parent: View, Content: View, ForegroundStyle: ShapeStyle>: View {
+    @Environment(\.settingsDescriptionsVisible) private var descriptionsVisible
+
     private let alignment: HorizontalAlignment
     private let spacing: CGFloat
     private let font: Font?
@@ -127,13 +129,24 @@ struct AnnotationView<Parent: View, Content: View, ForegroundStyle: ShapeStyle>:
     var body: some View {
         VStack(alignment: alignment, spacing: spacing) {
             parent
-            content
-                .font(font)
-                .foregroundStyle(foregroundStyle)
+            if descriptionsVisible {
+                content
+                    .font(font)
+                    .foregroundStyle(foregroundStyle)
+            }
         }
         .frame(maxWidth: .infinity, alignment: Alignment(horizontal: alignment, vertical: .center))
         .fixedSize(horizontal: false, vertical: true)
     }
+}
+
+extension EnvironmentValues {
+    /// Whether explanatory captions below settings rows are shown.
+    ///
+    /// Defaults to `true` so surfaces outside the settings window (such as
+    /// the standalone appearance editor) keep their captions regardless of
+    /// the "Show setting descriptions" preference.
+    @Entry var settingsDescriptionsVisible: Bool = true
 }
 
 extension View {

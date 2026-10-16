@@ -2,7 +2,6 @@
 //  SearchModel.swift
 //  Project: Thaw
 //
-//  Copyright (Ice) © 2023–2025 Jordan Baird
 //  Copyright (Thaw) © 2026 Toni Förster
 //  Licensed under the GNU GPLv3
 
@@ -26,25 +25,22 @@ struct SearchGroup: Identifiable {
 
 /// A precomputed searchable wrapper around a ``SearchEntry``.
 ///
-/// The `properties` are built once at initialization rather than re-derived
-/// on every fuzzy search, so the static corpus is tokenized a single time.
+/// `properties` are built once so the corpus is tokenized a single time.
 private struct SearchItem: Searchable {
     let entry: SearchEntry
     let properties: [FuseProp]
 
     init(entry: SearchEntry, bundle: Bundle = .main) {
         self.entry = entry
-        // Weight the title highest, then keywords, then the description.
-        // Lower weight values contribute less to the diff score, so a
-        // match in the title ranks above a match in the description.
+        // Title ranks above keywords, which rank above the description.
         let weights = SearchWeights.settings
         // Match against what the pane actually renders, so a translated
         // build is searchable in its own language.
         let localizedTitle = entry.localizedTitle(bundle: bundle)
         var props = [FuseProp(localizedTitle, weight: weights.title)]
         if localizedTitle != entry.titleText {
-            // Keep the English source matchable too — users search the term
-            // they saw in the docs as often as the one on screen.
+            // Keep the English source matchable too, for terms users saw in
+            // the docs.
             props.append(FuseProp(entry.titleText, weight: weights.title))
         }
         if !entry.keywords.isEmpty {
@@ -81,14 +77,15 @@ final class SearchModel {
     private let searchItems = SearchIndex.entries.map { SearchItem(entry: $0) }
 
     /// Ranks the whole index against `query`, resolving titles against
-    /// `bundle`.
-    ///
-    /// The instance path resolves against `Bundle.main`, whose localization a
-    /// test process cannot switch; this exposes the same ranking with the
-    /// bundle injected so translated matching is verifiable.
+    /// `bundle`. Tests use it, since `Bundle.main` can't switch localization.
     static func rankedEntries(for query: String, bundle: Bundle) -> [SearchEntry] {
         let items = SearchIndex.entries.map { SearchItem(entry: $0, bundle: bundle) }
-        let results = Fuse(threshold: 0.5).searchSync(query, in: items, by: \.properties)
+        return rankedEntries(for: query, in: items, fuse: Fuse(threshold: 0.5))
+    }
+
+    /// Ranks `items` against `query`, best match first.
+    private static func rankedEntries(for query: String, in items: [SearchItem], fuse: Fuse) -> [SearchEntry] {
+        let results = fuse.searchSync(query, in: items, by: \.properties)
         let scored = results.map { (item: items[$0.index], diffScore: $0.diffScore) }
         return SearchIndex.sortedByRelevance(scored).map(\.entry)
     }
@@ -103,24 +100,18 @@ final class SearchModel {
             return
         }
 
-        let fuseResults = fuse.searchSync(query, in: searchItems, by: \.properties)
-
-        let scored = fuseResults.map { result in
-            (item: searchItems[result.index], diffScore: result.diffScore)
-        }
-
         // Rank globally by relevance, then group by pane preserving the rank
         // order within each pane. Pane order follows the best-scoring entry.
-        let ranked = SearchIndex.sortedByRelevance(scored)
+        let ranked = Self.rankedEntries(for: query, in: searchItems, fuse: fuse)
 
         var grouped: [SettingsNavigationIdentifier: [SearchEntry]] = [:]
         var paneOrder: [SettingsNavigationIdentifier] = []
-        for item in ranked {
-            let pane = item.entry.pane
+        for entry in ranked {
+            let pane = entry.pane
             if grouped[pane] == nil {
                 paneOrder.append(pane)
             }
-            grouped[pane, default: []].append(item.entry)
+            grouped[pane, default: []].append(entry)
         }
 
         displayedGroups = paneOrder.map { pane in

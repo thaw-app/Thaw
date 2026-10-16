@@ -2,33 +2,24 @@
 //  ShouldPersistSavedOrderTests.swift
 //  Project: Thaw
 //
-//  Copyright (Ice) © 2023–2025 Jordan Baird
 //  Copyright (Thaw) © 2026 Toni Förster
 //  Licensed under the GNU GPLv3
 
 import Testing
 @testable import Thaw
 
-/// Characterization tests for LayoutSolver.shouldPersistSavedOrder, the
-/// pure truth-table gate consumed by uncheckedCacheItems to decide
-/// whether to write savedSectionOrder for the current cache snapshot.
-///
-/// Pins down which in-flight orchestrator signals block a save. A
-/// regression where any of these flags is dropped from the gate is
-/// caught by the corresponding test below.
+/// `LayoutSolver.shouldPersistSavedOrder`, the gate uncheckedCacheItems uses
+/// before writing savedSectionOrder. Each in-flight signal that blocks a save
+/// has its own test.
 @Suite("Should persist saved order")
 struct ShouldPersistSavedOrderTests {
-    /// All clear: every gate flag is false and no temporary contexts.
-    /// The expected state for ordinary cache cycles between user
-    /// actions.
+    /// The ordinary state between user actions.
     @Test("All flags clear and no temporary contexts persists")
     func allFalseAndContextsEmptyPersists() {
         #expect(LayoutSolver.shouldPersistSavedOrder(.init()))
     }
 
-    /// Restore in flight: the cross-section / within-section restore
-    /// loop is currently moving items; intermediate cache states must
-    /// not be persisted.
+    /// The restore loop is moving items; intermediate states must not persist.
     @Test("A restore in flight blocks the save")
     func restoringItemOrderBlocks() {
         #expect(!LayoutSolver.shouldPersistSavedOrder(
@@ -38,8 +29,7 @@ struct ShouldPersistSavedOrderTests {
         ))
     }
 
-    /// Layout reset in flight (the user-triggered "Reset Layout" pass);
-    /// transient mid-reset state is not the user's intent.
+    /// Mid-reset state is not the user's intent.
     @Test("A layout reset in flight blocks the save")
     func resettingLayoutBlocks() {
         #expect(!LayoutSolver.shouldPersistSavedOrder(
@@ -49,9 +39,8 @@ struct ShouldPersistSavedOrderTests {
         ))
     }
 
-    /// Cold-boot settling window: many apps register their NSStatusItems
-    /// in quick succession; capturing a snapshot mid-settling can
-    /// persist sourcePID-unresolved placeholder identifiers.
+    /// Apps register status items in quick succession at boot, and a snapshot
+    /// then can persist sourcePID-unresolved placeholder identifiers.
     @Test("The cold-boot settling window blocks the save")
     func inStartupSettlingBlocks() {
         #expect(!LayoutSolver.shouldPersistSavedOrder(
@@ -61,10 +50,8 @@ struct ShouldPersistSavedOrderTests {
         ))
     }
 
-    /// Profile apply in flight: applyProfileLayout owns the live layout
-    /// and is moving items to match the profile spec. A nested cache
-    /// cycle that clobbers isRestoringItemOrder (e.g. a failed restore
-    /// returning false) must not let the partial layout reach disk.
+    /// applyProfileLayout owns the layout; a nested cycle that clears
+    /// isRestoringItemOrder (a failed restore) must not let the partial layout reach disk.
     @Test("A profile apply in flight blocks the save")
     func applyingProfileLayoutBlocks() {
         #expect(!LayoutSolver.shouldPersistSavedOrder(
@@ -74,12 +61,8 @@ struct ShouldPersistSavedOrderTests {
         ))
     }
 
-    /// Any temporarily-shown item is in flight: uncheckedCacheItems
-    /// will route the item's cache entry to its return destination
-    /// instead of its live visible position, so the save must wait
-    /// until the rehide completes (or fails into pendingRelocations
-    /// where the separate pendingRehideTagIdentifiers filter takes
-    /// over).
+    /// uncheckedCacheItems routes a temporarily shown item to its return destination,
+    /// so the save waits for the rehide (or for pendingRehideTagIdentifiers to take over).
     @Test("A temporarily-shown item in flight blocks the save")
     func temporarilyShownContextsNonEmptyBlocks() {
         #expect(!LayoutSolver.shouldPersistSavedOrder(
@@ -89,12 +72,8 @@ struct ShouldPersistSavedOrderTests {
         ))
     }
 
-    /// A pending layout divergence blocks the save: applySavedLayout
-    /// observed a divergence on this cycle but is waiting for a second
-    /// consecutive confirmation before correcting it. The current cache
-    /// reflects a transient macOS rebuild (e.g. a space switch
-    /// re-exposing hidden items as visible); persisting it now would
-    /// bake that transient state into the saved layout (#736).
+    /// applySavedLayout is waiting for a second confirmation of a divergence; the
+    /// cache may reflect a transient macOS rebuild such as a space switch (#736).
     @Test("A pending layout divergence blocks the save")
     func pendingDivergenceBlocks() {
         #expect(!LayoutSolver.shouldPersistSavedOrder(
@@ -104,10 +83,7 @@ struct ShouldPersistSavedOrderTests {
         ))
     }
 
-    /// The always-hidden divider went unresolved for this cache cycle:
-    /// without that boundary every always-hidden item degrades to
-    /// `.hidden`, and persisting the misread would make it the user's
-    /// layout (#849).
+    /// Without that divider every always-hidden item degrades to `.hidden` (#849).
     @Test("An unresolved always-hidden section blocks the save")
     func alwaysHiddenSectionUnresolvedBlocks() {
         #expect(!LayoutSolver.shouldPersistSavedOrder(
@@ -117,10 +93,8 @@ struct ShouldPersistSavedOrderTests {
         ))
     }
 
-    /// The hidden section's span between the dividers has closed to
-    /// zero while the saved layout still expects hidden items: the cache
-    /// resolves those items as visible, and persisting would move them
-    /// out of the hidden section for good (#795).
+    /// A closed span resolves expected hidden items as visible, and saving would
+    /// move them out of hidden for good (#795).
     @Test("A hidden section without room blocks the save")
     func hiddenSectionWithoutRoomBlocks() {
         #expect(!LayoutSolver.shouldPersistSavedOrder(
@@ -130,9 +104,7 @@ struct ShouldPersistSavedOrderTests {
         ))
     }
 
-    /// Two flags simultaneously: any blocking flag is sufficient to
-    /// block the save. Sanity-check that the gate is the AND of all
-    /// per-flag predicates rather than counting.
+    /// Any one blocking flag is enough; the gate does not count them.
     @Test("Any one of several blocking flags is enough to block")
     func multipleBlockingFlagsAllBlock() {
         #expect(!LayoutSolver.shouldPersistSavedOrder(
@@ -149,11 +121,8 @@ struct ShouldPersistSavedOrderTests {
         ))
     }
 
-    /// An unfinished move batch blocks the save: the bulk apply planned
-    /// moves it never enacted, so what the bar shows is where the batch
-    /// stopped rather than a layout anyone chose. Persisting it replaces
-    /// the order the batch was restoring, and the next pass then measures
-    /// against the partial result — the drift #900 describes.
+    /// A partial batch leaves the bar where it stopped; saving that replaces the
+    /// order being restored and the next pass drifts further (#900).
     @Test("An unfinished move batch blocks the save")
     func unfinishedMoveBatchBlocks() {
         #expect(!LayoutSolver.shouldPersistSavedOrder(
@@ -163,11 +132,8 @@ struct ShouldPersistSavedOrderTests {
         ))
     }
 
-    /// The move cooldown blocks the save, because `applySavedLayout` honours
-    /// the same window: for five seconds after a move it declines to restore.
-    /// A save allowed inside that window writes the bar as it stands while
-    /// the only thing that would have corrected it is standing down, so the
-    /// interrupted arrangement becomes the saved one (#958).
+    /// `applySavedLayout` declines to restore for five seconds after a move, so a
+    /// save in that window would make the interrupted arrangement stick (#958).
     @Test("The move cooldown blocks the save")
     func moveCooldownBlocks() {
         #expect(!LayoutSolver.shouldPersistSavedOrder(
@@ -177,11 +143,9 @@ struct ShouldPersistSavedOrderTests {
         ))
     }
 
-    /// The menu bar changing display blocks the save. The multi-display gate
-    /// can only see items still classified as visible, so a relocation that
-    /// strands items in the wrong section removes its own evidence: in the
-    /// #958 log it fired correctly with sixteen visible items and then passed
-    /// two and a half minutes later when only four were left.
+    /// The multi-display gate only sees items still classified visible, so a
+    /// relocation removes its own evidence: it fired with sixteen visible items,
+    /// then passed minutes later with four (#958).
     @Test("The menu bar changing display blocks the save")
     func displayChangeBlocks() {
         #expect(!LayoutSolver.shouldPersistSavedOrder(

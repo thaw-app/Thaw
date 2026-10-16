@@ -29,7 +29,6 @@ nonisolated enum IceBarLocation: Int, CaseIterable, Codable, Identifiable {
         rawValue
     }
 
-    /// Localized string key representation.
     var localized: LocalizedStringKey {
         switch self {
         case .dynamic: "Dynamic"
@@ -40,9 +39,7 @@ nonisolated enum IceBarLocation: Int, CaseIterable, Codable, Identifiable {
         }
     }
 
-    /// Parses an IceBarLocation from a string value.
-    /// Supports exact case names: "dynamic", "mousePointer", "iceIcon"
-    /// Or raw integer values: "0", "1", "2"
+    /// Accepts case names or raw integer values.
     static func fromString(_ value: String) -> IceBarLocation? {
         switch value {
         case "dynamic", "0":

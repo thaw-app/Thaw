@@ -2,7 +2,6 @@
 //  FocusFilterIntentTests.swift
 //  Project: Thaw
 //
-//  Copyright (Ice) © 2023–2025 Jordan Baird
 //  Copyright (Thaw) © 2026 Toni Förster
 //  Licensed under the GNU GPLv3
 
@@ -14,40 +13,22 @@ import Testing
 /// Covers ``ThawFocusFilter`` and ``ProfileEntityQuery``, the App Intents
 /// surface that lets a macOS Focus mode switch Thaw's menu bar profile.
 ///
-/// `ProfileEntityTests` already covers ``ProfileEntity``'s identity and type
-/// display representation. What was untested is everything the system actually
-/// invokes: the filter's `perform()` and the query that populates the profile
-/// picker in System Settings.
+/// `perform()` writes the `FocusFilterRequestedProfileID` default and posts a
+/// `DistributedNotificationCenter` notification. Only the default is asserted:
+/// the post is delivered on a run loop the test can't join, so asserting it
+/// would be flaky. `ProfileManagerPersistenceTests` covers the receiving half.
 ///
-/// `perform()` has exactly one durable side effect — the
-/// `FocusFilterRequestedProfileID` default — and one volatile one, a
-/// `DistributedNotificationCenter` post. Only the first is asserted here.
-/// Distributed notifications cross process boundaries and are delivered on a
-/// run loop the test cannot join, so treating delivery as a postcondition would
-/// make these cases flaky; `ProfileManagerPersistenceTests` covers the
-/// receiving half by writing the same key directly. The post still happens, and
-/// is harmless: nothing in the test process subscribes to it.
+/// Filter cases run in `withScratchDefaults`. The suite stays `.serialized`
+/// because some cases read `nonisolated(unsafe) static var`s.
 ///
-/// The key is written through `Defaults.store`, so every case that performs the
-/// filter runs inside `withScratchDefaults`, whose async overload serializes
-/// the store swap process-wide. The suite stays `.serialized` because the
-/// metadata and default-query cases read `nonisolated(unsafe) static var`s.
-///
-/// Deliberate gap: `ProfileEntityQuery.allProfiles()` hardcodes
-/// `FileManager.default.urls(for: .applicationSupportDirectory, …)` plus
-/// `"Thaw/Profiles/profiles.json"` and offers no injection point, unlike
-/// `ProfileManager(profilesDirectory:)`. Its result therefore depends on
-/// whether the machine running the tests has real Thaw profiles, and seeding
-/// them would mean writing into the developer's own Application Support. The
-/// cases below only assert invariants that hold for both an empty and a
-/// populated manifest; a seam is needed to do better.
+/// Gap: `ProfileEntityQuery.allProfiles()` hardcodes the Application Support
+/// path with no injection point, so these cases only assert invariants that
+/// hold for both an empty and a populated manifest.
 @MainActor
 @Suite("Thaw Focus Filter intent", .serialized)
 struct FocusFilterIntentTests {
     /// The `UserDefaults` key the filter hands to `ProfileManager`. Pinned as a
-    /// literal because it is a cross-process contract: the intent runs in the
-    /// Focus extension's context and the app reads it back later, so renaming
-    /// it on one side silently stops profiles from switching.
+    /// literal because renaming it on one side silently stops profile switching.
     private static let requestedProfileKey = "FocusFilterRequestedProfileID"
 
     // MARK: Performing the filter
@@ -142,8 +123,7 @@ struct FocusFilterIntentTests {
     // MARK: Display representation
 
     /// Both sides resolve through the same string catalog, so the comparison
-    /// holds in every localization — the same approach ``ProfileEntityTests``
-    /// takes for the entity's type display representation.
+    /// holds in every localization.
     @Test("The filter's display representation names the selected profile")
     func displayRepresentationNamesTheSelectedProfile() throws {
         // Held in a variable rather than written inline, so the expectation's
@@ -172,10 +152,8 @@ struct FocusFilterIntentTests {
 
     @Test("The filter is presented to the system under the Profiles category")
     func intentMetadata() throws {
-        // `title` and `description` are what System Settings shows in the
-        // Focus Filters list, and both are `nonisolated(unsafe) static var`,
-        // so they are only read here, never assigned. The category name is
-        // what groups the filter in the picker, so it is worth pinning.
+        // `title` and `description` are `nonisolated(unsafe) static var`s, so
+        // only read them. The category name groups the filter in the picker.
         #expect(String(localized: ThawFocusFilter.title) == String(localized: "Set Menu Bar Profile"))
 
         let description: IntentDescription = try #require(ThawFocusFilter.description)
@@ -209,10 +187,8 @@ struct FocusFilterIntentTests {
 
     @Test("Every suggested entity is identified by a profile UUID")
     func suggestedEntitiesAreIdentifiedByUUIDs() async throws {
-        // The manifest's contents are not something a test may assume, but the
-        // mapping from manifest entry to entity must hold for whatever is
-        // there: the id has to round-trip back to a `UUID`, because that is
-        // what `ThawFocusFilter.perform()` validates before storing it.
+        // Whatever the manifest holds, each id must round-trip to a `UUID`,
+        // since `ThawFocusFilter.perform()` validates that before storing it.
         let entities = try await ProfileEntityQuery().suggestedEntities()
 
         for entity in entities {

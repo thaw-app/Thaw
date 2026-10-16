@@ -2,7 +2,6 @@
 //  MenuBarItemService.swift
 //  Project: Thaw
 //
-//  Copyright (Ice) © 2023–2025 Jordan Baird
 //  Copyright (Thaw) © 2026 Toni Förster
 //  Licensed under the GNU GPLv3
 
@@ -15,7 +14,10 @@ nonisolated enum MenuBarItemService {
 nonisolated extension MenuBarItemService {
     enum Request: Codable {
         case start
-        case configureLogging(filePath: String)
+        /// Points the service's diagnostic logger at `filePath`, or turns file
+        /// logging off when `nil`. Sent at startup, on rotation, and when the
+        /// user toggles logging. `rotationPolicy` makes the service prune by the app's rules.
+        case configureLogging(filePath: String?, rotationPolicy: DiagnosticLogger.RotationPolicy?)
         case sourcePIDs([WindowInfo])
     }
 

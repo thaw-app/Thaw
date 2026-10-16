@@ -2,7 +2,6 @@
 //  ProfilePruningTests.swift
 //  Project: Thaw
 //
-//  Copyright (Ice) © 2023–2025 Jordan Baird
 //  Copyright (Thaw) © 2026 Toni Förster
 //  Licensed under the GNU GPLv3
 
@@ -11,12 +10,9 @@ import Testing
 
 /// Covers the pruning a profile's layout gets on the way out.
 ///
-/// A profile is captured from the live bar, so a capture taken while
-/// source-PID resolution was degraded bakes in identifiers that can never
-/// match a live item again. `MenuBarItemManager` already prunes the saved
-/// section order when it loads it (#788, #815), but nothing rewrote a
-/// profile — #881's reporter carried one holding four Control-Center-hosted
-/// entries with no title at all, and every apply planned against them.
+/// A capture taken while source-PID resolution was degraded bakes in
+/// identifiers that never match a live item again, and every apply planned
+/// against them (#881).
 @Suite("Profile layout pruning")
 struct ProfilePruningTests {
     /// The unidentifiable entries from #881's `547c9ba` log, as they appear
@@ -75,8 +71,8 @@ struct ProfilePruningTests {
 
     // MARK: - What must survive
 
-    /// A titled Control Center item is a real item — Wi-Fi, Clock, BentoBox —
-    /// and is only ever dropped when a real owner claims the same title.
+    /// A titled Control Center item (Wi-Fi, Clock, BentoBox) is real, and is
+    /// only dropped when a real owner claims the same title.
     @Test("A titled Control Center entry survives")
     func titledControlCenterEntrySurvives() {
         let snapshot = layout(itemOrder: [
@@ -154,5 +150,81 @@ struct UntitledEntryPruningTests {
             "visible": ["com.apple.controlcenter:Item-0", "com.shortcutlabs.FlicMac:Item-0"],
         ])
         #expect(pruned["visible"] == ["com.shortcutlabs.FlicMac:Item-0"])
+    }
+}
+
+/// On non-English systems, Control Center's localized owner name ("Control
+/// Centre", "Kontrollzentrum") can land in the namespace when bundle-ID
+/// resolution fails transiently, minting ghosts like `Control Centre:Item-0:13`.
+/// The shared `Item-N` title slips past the claimed-title rule, so they
+/// persist. When `com.apple.controlcenter` is present in the saved order, the
+/// aliases are pruned (#1080).
+@Suite("Localized Control Center ghost pruning")
+struct LocalizedControlCenterGhostPruningTests {
+    @Test("A Control Centre alias ghost is pruned when the canonical namespace is present")
+    func localizedAliasGhostIsPruned() {
+        let pruned = LayoutSolver.prunedSectionOrder(
+            [
+                "hidden": [
+                    "com.apple.controlcenter:WiFi",
+                    "com.lwouis.alt-tab-macos:Item-0",
+                    "Control Centre:Item-0:8",
+                    "Control Centre:Item-0:10",
+                ],
+            ],
+            displayNameAliases: ["Control Centre"]
+        )
+
+        let kept = pruned["hidden"] ?? []
+        #expect(kept.contains("com.apple.controlcenter:WiFi"))
+        #expect(kept.contains("com.lwouis.alt-tab-macos:Item-0"))
+        #expect(!kept.contains("Control Centre:Item-0:8"))
+        #expect(!kept.contains("Control Centre:Item-0:10"))
+    }
+
+    @Test("A localized alias ghost is kept when no canonical entry exists")
+    func localizedAliasGhostSurvivesWithoutCanonicalTwin() {
+        // No com.apple.controlcenter entry and no known module title, so this
+        // may be the slot's only identity; deleting it loses placement (#949).
+        let pruned = LayoutSolver.prunedSectionOrder(
+            ["hidden": ["Control Centre:SomeUniqueApp"]],
+            displayNameAliases: ["Control Centre"]
+        )
+
+        #expect(pruned["hidden"] == ["Control Centre:SomeUniqueApp"])
+    }
+
+    @Test("A whitespace-namespaced non-alias ghost is not pruned by the alias rule")
+    func whitespaceNonAliasGhostIsNotPrunedByAliasRule() {
+        // A third-party app whose display name has a space but is not a
+        // Control Center alias stays protected by #949: we do not know it
+        // has a canonical twin.
+        let pruned = LayoutSolver.prunedSectionOrder(
+            ["hidden": ["Some App:Item-0", "com.example.other:Item-0"]],
+            displayNameAliases: ["Control Centre"]
+        )
+
+        #expect(pruned["hidden"]?.contains("Some App:Item-0") == true)
+    }
+
+    @Test("An instance-indexed Item-N alias ghost is pruned when the canonical namespace is present")
+    func instanceIndexedItemNGhostIsPruned() {
+        // The shape from #1080: the :N instance suffix the windowID-sort
+        // enumeration assigns doesn't protect it from the alias rule.
+        let pruned = LayoutSolver.prunedSectionOrder(
+            [
+                "hidden": [
+                    "com.apple.controlcenter:WiFi",
+                    "Control Centre:Item-0:13",
+                    "com.lwouis.alt-tab-macos:Item-0",
+                ],
+            ],
+            displayNameAliases: ["Control Centre"]
+        )
+
+        let kept = pruned["hidden"] ?? []
+        #expect(kept.contains("com.apple.controlcenter:WiFi"))
+        #expect(kept.contains("com.lwouis.alt-tab-macos:Item-0"))
+        #expect(!kept.contains("Control Centre:Item-0:13"))
     }
 }

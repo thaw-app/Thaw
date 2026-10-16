@@ -12,9 +12,8 @@ import SwiftUI
 /// A non-interactive view that visualises the notch dead zone at the
 /// leading edge of the visible Layout Bar.
 ///
-/// Lives inside the scrollable document view and is sized in real screen
-/// points so it scrolls with the layout content and stays in 1:1 scale
-/// with the menu bar items beside it.
+/// Sized in real screen points so it scrolls with, and matches the scale of,
+/// the items beside it.
 final class NotchIndicatorView: NSView {
     /// Colour palette used to keep the indicator legible against the
     /// current menu bar background.
@@ -49,9 +48,8 @@ final class NotchIndicatorView: NSView {
     }
 }
 
-/// SwiftUI body for the notch indicator. Hosted in `NSHostingView` so the
-/// parent `NSView` supplies the frame in real screen points instead of
-/// relying on `GeometryReader` math.
+/// Hosted so the parent view supplies the frame in screen points instead
+/// of `GeometryReader` math.
 private struct NotchIndicatorContent: View {
     let averageColorInfo: MenuBarAverageColorInfo?
 
@@ -112,8 +110,7 @@ private struct DiagonalStripes: View {
             let gap: CGFloat = 5
             let step = stripeWidth + gap
 
-            // Draw diagonal lines from bottom-left to top-right across the canvas.
-            // Extend the range to cover corners.
+            // Extend the range to cover the corners.
             let extent = size.width + size.height
             var offset: CGFloat = -extent
 

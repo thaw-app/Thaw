@@ -2,7 +2,6 @@
 //  ParkedDividerLog.swift
 //  Project: Thaw
 //
-//  Copyright (Ice) © 2023–2025 Jordan Baird
 //  Copyright (Thaw) © 2026 Toni Förster
 //  Licensed under the GNU GPLv3
 
@@ -11,20 +10,16 @@ import CoreGraphics
 /// The two menu bar shapes the #899 field log alternated between while the
 /// boundary move storm ran.
 ///
-/// Reporter: single notched MacBook Pro (`screen.maxX=2056`, notch
-/// `918…1138`, right boundary 1985), macOS 26.6.1 build 25G76, Thaw
-/// 2.0.0-rc.2.1 (49) commit `54345d40`, log `thaw_2026-08-09_18-14-12.log`.
+/// Single notched MacBook Pro (`screen.maxX=2056`, notch `918…1138`, right
+/// boundary 1985), macOS 26.6.1.
 ///
-/// The log covers 22 seconds and never converges. `Profile re-sort` fires
-/// seven times, and the hidden section's membership alternates 4 → 0 → 4
-/// with `hiddenBoundaryMismatch` alternating 5 → 9 → 5. Every pass tries to
-/// drag `H_ctrl` next to coconutBattery, every pass burns all eight attempts
-/// on `EventError.cannotComplete`, and the per-item pass that follows flips
-/// the membership back so the next re-sort has the same work to do. It ends
-/// only because the reporter killed the app.
+/// The log never converges: hidden membership alternates 4 → 0 → 4 and
+/// `hiddenBoundaryMismatch` 5 → 9 → 5. Every pass burns all eight attempts
+/// dragging `H_ctrl` next to coconutBattery, and the per-item pass flips the
+/// membership back.
 ///
-/// The two states fail for different reasons, which is why #881's anchor
-/// filter alone does not close the loop:
+/// The two states fail for different reasons, so #881's anchor filter alone
+/// does not close the loop:
 ///
 /// - ``anchorParked``: both the anchor and the divider sit in the parked
 ///   zone. `planHiddenDividerAnchor` rejects the anchor, so no drag is
@@ -35,9 +30,8 @@ import CoreGraphics
 ///   events, yet AppKit snaps the divider back on mouse-up and the attempt
 ///   reports "events succeeded but item not at destination".
 enum ParkedDividerLog {
-    /// The reporter's display. Only `maxX` is quoted in the log; the height
-    /// is whatever contains a menu bar item's center, which every item in
-    /// the log has at `y=19.5` (bounds `y=0`, `height=39`).
+    /// Only `maxX` is logged; the height just has to contain the item
+    /// centers at `y=19.5`.
     static let display = CGRect(x: 0, y: 0, width: 2056, height: 1329)
 
     static let screenFrames = [display]
@@ -45,8 +39,7 @@ enum ParkedDividerLog {
     /// Menu bar item height as logged by `captureWindowsImageSCK`.
     private static let itemHeight: CGFloat = 39
 
-    /// Builds a menu bar item rect at the given `minX`, matching the log's
-    /// vertical geometry.
+    /// Builds an item rect at `minX` with the log's vertical geometry.
     static func bounds(minX: CGFloat, width: CGFloat = 24) -> CGRect {
         CGRect(x: minX, y: 0, width: width, height: itemHeight)
     }
@@ -82,9 +75,7 @@ enum ParkedDividerLog {
     ]
 
     /// Hidden section on the even passes: the per-item pass evacuated it into
-    /// visible, so only the always-hidden divider is left between the
-    /// dividers. The log records `hidden section has 0 items` alongside
-    /// `Skipping saveSectionOrder; hidden section has zero width`.
+    /// visible, and the save was skipped for zero width.
     static let hiddenWhenAnchorOnScreen: [String] = []
 
     /// The anchor `planHiddenDividerAnchor` picked on every pass, and the

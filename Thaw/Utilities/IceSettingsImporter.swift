@@ -2,7 +2,6 @@
 //  IceSettingsImporter.swift
 //  Project: Thaw
 //
-//  Copyright (Ice) © 2023–2025 Jordan Baird
 //  Copyright (Thaw) © 2026 Toni Förster
 //  Licensed under the GNU GPLv3
 
@@ -14,7 +13,6 @@ import Foundation
 struct IceSettingsImporter {
     private let diagLog = DiagLog(category: "IceSettingsImporter")
 
-    /// The bundle identifier for Ice.
     private static let iceBundleIdentifier = "com.jordanbaird.Ice"
 
     /// Source preferences and the appearance destination are injectable so V1
@@ -60,23 +58,18 @@ struct IceSettingsImporter {
 
         diagLog.info("Starting import of Ice settings. Found \(iceSettings.count) potential settings")
 
-        // Import General Settings
         settingsImported += importGeneralSettings(from: iceSettings)
 
-        // Import Advanced Settings
         settingsImported += importAdvancedSettings(from: iceSettings)
 
-        // Import Hotkeys Settings
         settingsImported += importHotkeysSettings(from: iceSettings)
 
-        // Import Appearance Settings
         settingsImported += importAppearanceSettings(from: iceSettings)
 
         diagLog.info("Successfully imported \(settingsImported) settings from Ice")
         return (true, settingsImported)
     }
 
-    /// Imports general settings from Ice.
     private func importGeneralSettings(from iceSettings: [String: Any]) -> Int {
         var imported = 0
 
@@ -139,7 +132,6 @@ struct IceSettingsImporter {
         }
     }
 
-    /// Imports advanced settings from Ice.
     private func importAdvancedSettings(from iceSettings: [String: Any]) -> Int {
         var imported = 0
 
@@ -163,7 +155,6 @@ struct IceSettingsImporter {
         return imported
     }
 
-    /// Imports hotkeys settings from Ice.
     private func importHotkeysSettings(from iceSettings: [String: Any]) -> Int {
         // Ice stores hotkeys as a dictionary of action identifiers to encoded `KeyCombination` data.
         if let hotkeysDict = iceSettings["Hotkeys"] as? [String: Any] {
@@ -186,7 +177,6 @@ struct IceSettingsImporter {
         return 0
     }
 
-    /// Imports appearance settings from Ice.
     private func importAppearanceSettings(from iceSettings: [String: Any]) -> Int {
         var imported = 0
 

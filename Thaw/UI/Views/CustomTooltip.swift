@@ -2,7 +2,6 @@
 //  CustomTooltip.swift
 //  Project: Thaw
 //
-//  Copyright (Ice) © 2023–2025 Jordan Baird
 //  Copyright (Thaw) © 2026 Toni Förster
 //  Licensed under the GNU GPLv3
 
@@ -19,13 +18,8 @@ final class CustomTooltipPanel: NSPanel {
     /// Only the owner that showed the tooltip can dismiss it.
     private(set) var currentOwner: AnyHashable?
 
-    /// Safety-net timer that force-dismisses the tooltip if no owner ever
-    /// calls `dismiss(owner:)`.
-    ///
-    /// A missed hover-exit (a stalled event tap, a deallocated owner, …)
-    /// must never leave this singleton on screen forever (#734). The
-    /// timer is refreshed on every `show(...)`, so a genuine long hover
-    /// keeps the tooltip alive; it only fires after 10s of silence.
+    /// Force-dismisses the tooltip after 10s without a `show(...)`, so a missed
+    /// hover-exit (stalled event tap, deallocated owner) can't strand it (#734).
     private var hideWatchdog: Task<Void, Never>?
 
     private let label: NSTextField = {
@@ -113,11 +107,8 @@ final class CustomTooltipPanel: NSPanel {
             screens: screens,
             preferred: screen?.frame
         ) else {
-            // The point doesn't fall inside any known screen, which is the
-            // source of the #734 "random position" reports (stale/parked
-            // bounds). Don't show a tooltip we can't place sanely — and
-            // dismiss any tooltip that's already visible so stale content
-            // and ownership don't linger on screen.
+            // The point is off every known screen (stale or parked bounds, #734). Don't
+            // show a tooltip we can't place, and dismiss any visible one so it doesn't linger.
             dismiss()
             return
         }
@@ -137,15 +128,9 @@ final class CustomTooltipPanel: NSPanel {
         }
     }
 
-    /// Computes the origin at which a panel of `panelSize` should be placed
-    /// near `point`, clamped to whichever screen's `frame` contains `point`.
-    ///
-    /// Returns `nil` if `point` falls outside every screen's `frame` — that
-    /// indicates stale or parked coordinates that shouldn't be trusted to
-    /// place a visible panel (#734).
-    ///
-    /// `preferred` is used only to break ties between overlapping screen
-    /// frames that both contain `point`; it has no effect otherwise.
+    /// Origin for a panel of `panelSize` near `point`, clamped to the screen whose
+    /// `frame` contains `point`. Returns `nil` when none does (stale or parked
+    /// coordinates). `preferred` only breaks ties between overlapping screens.
     static nonisolated func placementOrigin(
         for panelSize: NSSize,
         near point: NSPoint,
@@ -171,7 +156,6 @@ final class CustomTooltipPanel: NSPanel {
             y: point.y - panelSize.height - 18
         )
 
-        // Clamp to screen bounds.
         origin.x = max(screenFrame.minX + 2, min(origin.x, screenFrame.maxX - panelSize.width - 2))
         origin.y = max(screenFrame.minY + 2, min(origin.y, screenFrame.maxY - panelSize.height - 2))
 
@@ -217,7 +201,6 @@ final class CustomTooltipController {
     /// A unique identifier for this controller, used as the tooltip owner token.
     private let id = UUID()
 
-    /// The text to display in the tooltip.
     var text: String
 
     init(text: String, view: NSView? = nil) {

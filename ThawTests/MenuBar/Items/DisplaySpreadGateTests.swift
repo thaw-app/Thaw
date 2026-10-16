@@ -2,7 +2,6 @@
 //  DisplaySpreadGateTests.swift
 //  Project: Thaw
 //
-//  Copyright (Ice) © 2023–2025 Jordan Baird
 //  Copyright (Thaw) © 2026 Toni Förster
 //  Licensed under the GNU GPLv3
 
@@ -13,26 +12,19 @@ import Testing
 /// Characterizes the display-spread predicate that both the saved-layout apply
 /// and the section-order persist consult before acting.
 ///
-/// When the active menu bar relocates to another display macOS migrates the
-/// status item windows between screens asynchronously. For a window of time
-/// the managed items straddle two displays: some still on the old screen,
-/// some already on the new one. A bulk apply dispatched in that window
-/// resolves each item's move against whichever display its window currently
-/// occupies, so the moves cannot converge and leave items stranded on the
-/// wrong screen, where they read as un-hidden. Persisting the section order in
-/// that window bakes the transition artifact into the saved layout. Both
-/// callers defer until the items collapse back onto a single display.
+/// When the menu bar moves to another display, macOS migrates status item
+/// windows asynchronously, so items briefly straddle two screens. Applying or
+/// persisting then strands items or bakes the transition into the saved
+/// layout, so both callers defer until items settle on one display.
 ///
-/// Frames are expressed in the global CoreGraphics coordinate space
-/// (top-left origin), the same space the menu bar item bounds use, so a
-/// secondary display positioned above the main one has a negative y origin.
+/// Frames use global CoreGraphics coordinates (top-left origin), so a display
+/// above the main one has a negative y origin.
 @Suite("Display spread gate")
 struct DisplaySpreadGateTests {
     private let main = CGRect(x: 0, y: 0, width: 1728, height: 1117)
     private let above = CGRect(x: 0, y: -1440, width: 2560, height: 1440)
 
-    /// A single connected display can never spread; the predicate must short
-    /// circuit so single-display users never defer.
+    /// Single-display users must never defer.
     @Test("A single connected screen never reads as a spread")
     func singleScreenNeverSpreads() {
         #expect(
@@ -43,8 +35,7 @@ struct DisplaySpreadGateTests {
         )
     }
 
-    /// Two displays connected, but every item resolves to the same screen: a
-    /// settled layout. Must not defer.
+    /// Every item on the same one of two screens is settled and must not defer.
     @Test("Every item on one of two screens is a settled layout")
     func allItemsOnOneOfTwoScreensDoesNotSpread() {
         #expect(
@@ -55,9 +46,7 @@ struct DisplaySpreadGateTests {
         )
     }
 
-    /// Items straddle both displays: the relocation-in-progress state from the
-    /// field log. This is the condition both gates must catch. Red against the
-    /// missing predicate.
+    /// Items straddling both displays is the relocation state both gates must catch.
     @Test("Items split across two screens read as a spread")
     func itemsSplitAcrossTwoScreensSpreads() {
         #expect(
@@ -68,12 +57,8 @@ struct DisplaySpreadGateTests {
         )
     }
 
-    /// Items on one screen plus parked hidden items that happen to land on no
-    /// display at all, because no screen occupies that coordinate range. The
-    /// unmatched points must be ignored so a normal hidden layout does not read
-    /// as spread. Note this is the lucky arrangement: see
-    /// parkedItemInsideLeftDisplayReadsAsSpread for the case where a screen
-    /// does own the parked coordinates.
+    /// Parked hidden items that land on no display must be ignored. See
+    /// parkedItemInsideLeftDisplayReadsAsSpread for when a screen owns them.
     @Test("Parked off-screen items are ignored")
     func offScreenParkedItemsAreIgnored() {
         #expect(
@@ -100,8 +85,7 @@ struct DisplaySpreadGateTests {
         )
     }
 
-    /// Two real on-screen items, one per display, mixed with parked items:
-    /// still a spread (the parked items neither add nor mask the split).
+    /// Parked items neither add to nor mask a real split.
     @Test("A split mixed with parked items is still a spread")
     func splitWithParkedItemsStillSpreads() {
         #expect(
@@ -126,11 +110,8 @@ struct DisplaySpreadGateTests {
 
     // MARK: - Displays to the left of the main one
 
-    // The arrangement from the field log: an ultrawide main display with a
-    // second screen to its right and a third to its left. The left screen owns
-    // the negative x range that parked hidden items are shoved into, so the
-    // "parked items land on no display" assumption the rest of this suite was
-    // written against does not hold here.
+    // Ultrawide main display with screens to its right and left. The left
+    // screen owns the negative x range parked hidden items are shoved into.
 
     private let fieldMain = CGRect(x: 0, y: 0, width: 3440, height: 1440)
     private let fieldRight = CGRect(x: 3440, y: 0, width: 2560, height: 1440)
@@ -140,13 +121,9 @@ struct DisplaySpreadGateTests {
         [fieldMain, fieldRight, fieldLeft]
     }
 
-    /// A parked hidden item shoved to x ≈ -2450 lands inside the left display,
-    /// so the predicate honestly reports a spread. This is not a bug in the
-    /// predicate; it is why callers must exclude parked items before calling
-    /// it. Feeding every section in made both gates fire forever: the persist
-    /// gate then blocked every write to savedSectionOrder, the saved layout
-    /// stopped tracking the user's arrangement, and each window-ID change
-    /// re-imposed the stale order.
+    /// A parked item at x ≈ -2450 lands inside the left display and reads as
+    /// a spread, so callers must exclude parked items. Otherwise both gates
+    /// fire forever and savedSectionOrder is never written.
     @Test("A parked item inside a left-positioned display reads as a spread")
     func parkedItemInsideLeftDisplayReadsAsSpread() {
         #expect(
@@ -160,8 +137,7 @@ struct DisplaySpreadGateTests {
         )
     }
 
-    /// The same settled arrangement with the parked items excluded, which is
-    /// what the callers now pass. Must not defer.
+    /// With parked items excluded, as callers pass them, this must not defer.
     @Test("Unparked centers alone do not spread on a left-positioned arrangement")
     func unparkedCentersDoNotSpreadOnFieldArrangement() {
         #expect(

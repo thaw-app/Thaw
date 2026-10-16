@@ -36,11 +36,7 @@ nonisolated enum AXHelpers {
     }
 
     /// The raw AXEnabled attribute, or nil when the element does not expose it.
-    /// isEnabled collapses a missing attribute to false, so it cannot tell an
-    /// explicitly disabled element from one that simply does not publish the
-    /// attribute. Callers that must keep that distinction use this: source-PID
-    /// matching treats absent as enabled, and the unresolved-item diagnostics
-    /// report it verbatim.
+    /// Unlike isEnabled, this tells a missing attribute from an explicit false.
     static func enabledAttribute(_ element: UIElement) -> Bool? {
         try? element.attribute(.enabled)
     }

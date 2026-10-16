@@ -2,7 +2,6 @@
 //  SearchIndex.swift
 //  Project: Thaw
 //
-//  Copyright (Ice) © 2023–2025 Jordan Baird
 //  Copyright (Thaw) © 2026 Toni Förster
 //  Licensed under the GNU GPLv3
 
@@ -22,23 +21,13 @@ nonisolated enum SettingsProperty: Hashable {
 
 /// One searchable row in the settings search index.
 ///
-/// `titleKey`/`sectionKey` reuse the exact `LocalizedStringKey` literals from
-/// the settings panes so no new translation keys are introduced for titles or
-/// section headers — they resolve to the same catalog entries the panes use.
-/// `titleText`/`sectionText`/`descriptionText` are the English source strings,
-/// which are also the catalog keys, so ``localizedTitle(bundle:)`` and its
-/// siblings resolve them to the running localization for fuzzy matching. `keywords`
-/// stays English: it is a search-only alias list with no catalog entries, and
-/// the English title is indexed alongside the translated one so terms users
-/// saw in docs or release notes keep matching in a localized build.
+/// `titleKey`/`sectionKey` reuse the panes' exact `LocalizedStringKey`
+/// literals, so no new translation keys are needed. The `*Text` fields are
+/// the English sources, which double as catalog keys for localized matching.
+/// `keywords` stays English: it has no catalog entries.
 ///
-/// Conforms to `@unchecked Sendable` (not `Hashable`) so the static index
-/// arrays are concurrency-safe under Swift 6 strict concurrency.
-/// `LocalizedStringKey` is not `Sendable`-annotated in this SDK and not
-/// `Hashable`; the entry is immutable (all `let`), so unchecked Sendable
-/// conformance is safe — matching the precedent set by `SectionedListItem`.
-/// `Identifiable.id` is `String`, which is `Hashable`, so `Identifiable` is
-/// satisfied without the whole struct being `Hashable`.
+/// `@unchecked Sendable` because `LocalizedStringKey` isn't `Sendable`; the
+/// entry is all `let`, so that's safe.
 nonisolated struct SearchEntry: Identifiable, @unchecked Sendable {
     let id: String
     let titleKey: LocalizedStringKey
@@ -55,18 +44,11 @@ nonisolated struct SearchEntry: Identifiable, @unchecked Sendable {
     /// The English source doubles as the catalog key, so this resolves the
     /// same entry the pane's `titleKey` does.
     ///
-    /// - Parameter bundle: The bundle to resolve against. Defaults to
-    ///   `.main`, which picks the running localization; tests pass a
-    ///   specific `.lproj` bundle, since the `locale:` argument of
-    ///   `String(localized:)` only selects formatting, not which
-    ///   localization is looked up.
+    /// - Parameter bundle: The bundle to resolve against. Tests pass a
+    ///   specific `.lproj` bundle, since `String(localized:)`'s `locale:`
+    ///   only affects formatting, not which localization is looked up.
     func localizedTitle(bundle: Bundle = .main) -> String {
         String(localized: String.LocalizationValue(titleText), bundle: bundle)
-    }
-
-    /// The section header as rendered, when the entry has one.
-    func localizedSection(bundle: Bundle = .main) -> String? {
-        sectionText.map { String(localized: String.LocalizationValue($0), bundle: bundle) }
     }
 
     /// The annotation text as rendered, when the entry has one.
@@ -96,15 +78,12 @@ nonisolated enum SearchIndex {
         + displayEntries + hotkeyEntries + layoutEntries + appearanceEntries
 
     /// macOS 27-only settings rows, appended when the sidebar search UI is
-    /// available. Currently empty: rows are only added here once a matching
-    /// control is actually exposed in a settings pane.
+    /// available. Empty until a matching control ships in a pane.
     private static let macOS27Entries: [SearchEntry] = []
 
     /// All searchable settings entries, in pane order.
     ///
-    /// The set is static for a given OS, so it is resolved once and cached
-    /// rather than re-concatenated on every access (the search path reads it
-    /// per keystroke).
+    /// Cached because the search path reads it per keystroke.
     static let entries: [SearchEntry] = {
         if #available(macOS 27, *) {
             return sharedEntries + macOS27Entries
@@ -127,7 +106,6 @@ nonisolated enum SearchIndex {
 
     /// Advanced settings that only participate in search on macOS 27.
     private static let macOS27AdvancedNonSearchableProperties: Set<SettingsProperty> = [
-        .advanced("alwaysUseAppIconForMenuBarItems"),
         .advanced("enableExperimentalWindowHiding"),
         .advanced("enableExperimentalSystemItemHiding"),
         .advanced("menuBarOrderFulfillmentTimeout"),
@@ -140,9 +118,7 @@ nonisolated enum SearchIndex {
         return baseNonSearchableProperties.union(macOS27AdvancedNonSearchableProperties)
     }
 
-    /// ``entries`` bucketed by pane, resolved once for the same reason
-    /// ``entries`` itself is: the search path reads it per keystroke, and a
-    /// filter per lookup rescans the whole index for each pane.
+    /// ``entries`` bucketed by pane, cached for the same per-keystroke reason.
     private static let entriesByPane: [SettingsNavigationIdentifier: [SearchEntry]] =
         Dictionary(grouping: entries, by: \.pane)
 
@@ -151,10 +127,8 @@ nonisolated enum SearchIndex {
         entriesByPane[pane] ?? []
     }
 
-    /// Pure relevance sort: Fuse's `diffScore` is `0` for a perfect match and
-    /// increases with worse matches, so the best result has the lowest score.
-    /// Delegates to ``SearchRanker/sortedByRelevance(_:)``, the pipe shared
-    /// with menu bar item search, so the two surfaces can't drift apart.
+    /// Sorts by Fuse `diffScore`, lowest (best) first. Delegates to
+    /// ``SearchRanker/sortedByRelevance(_:)``, shared with menu bar item search.
     static func sortedByRelevance<T>(_ items: [(item: T, diffScore: Double)]) -> [T] {
         SearchRanker.sortedByRelevance(items)
     }
@@ -251,6 +225,39 @@ nonisolated enum SearchIndex {
             property: nil
         ),
         SearchEntry(
+            id: "pane.triggers",
+            titleKey: "Triggers",
+            titleText: "Triggers",
+            descriptionText: "Automatically move menu bar items when system conditions change.",
+            pane: .triggers,
+            sectionKey: nil,
+            sectionText: nil,
+            keywords: ["triggers", "conditions", "automation", "battery", "focus", "network", "reveal", "hide"],
+            property: nil
+        ),
+        SearchEntry(
+            id: "pane.tools",
+            titleKey: "Tools",
+            titleText: "Tools",
+            descriptionText: "Diagnostics, language override, resets, and troubleshooting tools.",
+            pane: .tools,
+            sectionKey: nil,
+            sectionText: nil,
+            keywords: ["tools", "maintenance", "reset", "cache", "permissions", "language", "logging", "diagnostics", "troubleshooting"],
+            property: nil
+        ),
+        SearchEntry(
+            id: "pane.developer",
+            titleKey: "Trigger Sources",
+            titleText: "Trigger Sources",
+            descriptionText: "Turn trigger sources on or off and see the live system state.",
+            pane: .developer,
+            sectionKey: nil,
+            sectionText: nil,
+            keywords: ["developer", "dev mode", "flags", "experimental", "trigger sources", "diagnostics"],
+            property: nil
+        ),
+        SearchEntry(
             id: "pane.about",
             titleKey: "About",
             titleText: "About",
@@ -276,6 +283,39 @@ nonisolated enum SearchIndex {
             sectionText: nil,
             keywords: ["launch", "login", "startup", "auto", "start"],
             property: nil
+        ),
+        SearchEntry(
+            id: "general.showSettingDescriptions",
+            titleKey: "Show setting descriptions",
+            titleText: "Show setting descriptions",
+            descriptionText: "Explains what a setting does directly beneath it.",
+            pane: .general,
+            sectionKey: nil,
+            sectionText: nil,
+            keywords: ["descriptions", "explanations", "captions", "help text", "show"],
+            property: .general("showSettingDescriptions")
+        ),
+        SearchEntry(
+            id: "general.hideDockIconWhenToggling",
+            titleKey: "Hide Dock icon when toggling the menu bar",
+            titleText: "Hide Dock icon when toggling the menu bar",
+            descriptionText: "Keep the app's icon out of the Dock when showing or hiding hidden menu bar items. If they need extra space, they open in the Thaw Bar instead of hiding the app menus. Settings windows still appear normally.",
+            pane: .general,
+            sectionKey: nil,
+            sectionText: nil,
+            keywords: ["dock", "icon", "hide", "toggle", "menu bar", "accessory", "thaw bar", "overflow"],
+            property: .general("hideDockIconWhenToggling")
+        ),
+        SearchEntry(
+            id: "general.simpleMode",
+            titleKey: "Simple Mode",
+            titleText: "Simple Mode",
+            descriptionText: "Show a single curated settings page instead of the full sidebar.",
+            pane: .general,
+            sectionKey: nil,
+            sectionText: nil,
+            keywords: ["simple mode", "simple", "basic", "minimal", "settings layout"],
+            property: .general("simpleMode")
         ),
         SearchEntry(
             id: "general.showIceIcon",
@@ -402,6 +442,17 @@ nonisolated enum SearchIndex {
             sectionText: "After revealing",
             keywords: ["rehide", "interval", "timed", "seconds", "delay"],
             property: .general("rehideInterval")
+        ),
+        SearchEntry(
+            id: "general.tempShowInterval",
+            titleKey: "Hide opened items again after",
+            titleText: "Hide opened items again after",
+            descriptionText: "How long a hidden menu bar item you open from search or the Thaw Bar stays in the menu bar after its menu closes.",
+            pane: .general,
+            sectionKey: "After revealing",
+            sectionText: "After revealing",
+            keywords: ["temp", "temporary", "temporarily shown", "hide again", "seconds", "delay"],
+            property: .general("tempShowInterval")
         ),
         SearchEntry(
             id: "advanced.useOptionClickToShowAlwaysHiddenSection",
@@ -533,6 +584,17 @@ nonisolated enum SearchIndex {
             property: .advanced("tooltipDelay")
         ),
         SearchEntry(
+            id: "advanced.autoZenWhileSharingScreen",
+            titleKey: "Enter zen mode while presenting",
+            titleText: "Enter zen mode while presenting",
+            descriptionText: "Hide every concealable section while a display is mirrored or the screen is being shared.",
+            pane: .advanced,
+            sectionKey: "Menu bar behavior",
+            sectionText: "Menu bar behavior",
+            keywords: ["zen", "presenting", "mirror", "screen share", "hide", "presentation"],
+            property: .advanced("autoZenWhileSharingScreen")
+        ),
+        SearchEntry(
             id: "advanced.automaticArrangementEnabled",
             // Reuses catalog strings that are already fully translated, so
             // the entry ships localized without a new Crowdin round.
@@ -615,10 +677,8 @@ nonisolated enum SearchIndex {
 
     // MARK: Display Settings
 
-    /// Display settings are configuration-based (per-display and global
-    /// templates on `DisplaySettingsManager`), not direct `@Published` toggles,
-    /// so they are not covered by the drift guard. They are indexed for search
-    /// discoverability.
+    /// Display settings live in `DisplaySettingsManager` configurations, not
+    /// `@Published` toggles, so the drift guard doesn't cover them.
     private static let displayEntries: [SearchEntry] = [
         SearchEntry(
             id: "displays.useIceBar",
@@ -697,6 +757,17 @@ nonisolated enum SearchIndex {
             keywords: ["confirm", "relaunch", "apps", "spacing", "restart"],
             property: nil
         ),
+        SearchEntry(
+            id: "displays.spacingApplyMode",
+            titleKey: "When applying spacing",
+            titleText: "When applying spacing",
+            descriptionText: "Choose whether spacing changes restart menu bar apps immediately or wait until the next restart. macOS only reads menu bar spacing when a status item's owner starts, so restarting apps applies the change now; waiting leaves every app running and the new spacing appears the next time each app starts.",
+            pane: .displays,
+            sectionKey: nil,
+            sectionText: nil,
+            keywords: ["spacing", "relaunch", "restart", "apps", "disable", "without", "immediate", "next restart"],
+            property: nil
+        ),
     ]
 
     // MARK: Hotkey Settings
@@ -770,11 +841,44 @@ nonisolated enum SearchIndex {
             keywords: ["toggle", "application menus", "app menus", "hotkey", "shortcut"],
             property: nil
         ),
+        SearchEntry(
+            id: "hotkeys.toggleAutoRehide",
+            titleKey: "Toggle automatic rehiding",
+            titleText: "Toggle automatic rehiding",
+            descriptionText: nil,
+            pane: .hotkeys,
+            sectionKey: "Other",
+            sectionText: "Other",
+            keywords: ["toggle", "auto rehide", "automatically rehide", "hotkey", "shortcut"],
+            property: nil
+        ),
+        SearchEntry(
+            id: "hotkeys.toggleZenMode",
+            titleKey: "Toggle zen mode",
+            titleText: "Toggle zen mode",
+            descriptionText: nil,
+            pane: .hotkeys,
+            sectionKey: "Other",
+            sectionText: "Other",
+            keywords: ["toggle", "zen mode", "focus", "hide everything", "hotkey", "shortcut"],
+            property: nil
+        ),
     ]
 
     // MARK: Layout Settings
 
     private static let layoutEntries: [SearchEntry] = [
+        SearchEntry(
+            id: "layout.sortSectionAlphabetically",
+            titleKey: "Sort a section A→Z",
+            titleText: "Sort a section A→Z",
+            descriptionText: "Reorder the items in any menu bar section alphabetically by name, without dragging each one. The sort applies to the active profile and takes effect immediately.",
+            pane: .menuBarLayout,
+            sectionKey: nil,
+            sectionText: nil,
+            keywords: ["sort", "alphabetical", "order", "arrange", "a to z", "hidden", "section"],
+            property: nil
+        ),
         SearchEntry(
             id: "advanced.enableAlwaysHiddenSection",
             titleKey: "Enable the always-hidden section",
@@ -796,6 +900,28 @@ nonisolated enum SearchIndex {
             sectionText: "Sections",
             keywords: ["divider", "style", "chevron", "separator", "section"],
             property: .advanced("sectionDividerStyle")
+        ),
+        SearchEntry(
+            id: "layout.spacers",
+            titleKey: "Spacers",
+            titleText: "Spacers",
+            descriptionText: "Insert empty gap items into the menu bar and adjust their width.",
+            pane: .menuBarLayout,
+            sectionKey: "Spacers",
+            sectionText: "Spacers",
+            keywords: ["spacer", "gap", "space", "separator", "width"],
+            property: nil
+        ),
+        SearchEntry(
+            id: "layout.groups",
+            titleKey: "Item groups",
+            titleText: "Item groups",
+            descriptionText: "Group menu bar items so they always move together.",
+            pane: .menuBarLayout,
+            sectionKey: "Item groups",
+            sectionText: "Item groups",
+            keywords: ["group", "cluster", "together", "move", "bundle"],
+            property: nil
         ),
         SearchEntry(
             id: "layout.resetMenuBarLayout",
@@ -832,7 +958,7 @@ nonisolated enum SearchIndex {
             pane: .menuBarAppearance,
             sectionKey: "Background",
             sectionText: "Background",
-            keywords: ["background", "style", "solid", "gradient", "glass", "adaptive", "opacity", "shadow", "border"],
+            keywords: ["background", "style", "solid", "gradient", "glass", "adaptive", "palette", "wallpaper", "opacity", "shadow", "border"],
             property: nil
         ),
         SearchEntry(
@@ -865,7 +991,7 @@ nonisolated enum SearchIndex {
             pane: .menuBarAppearance,
             sectionKey: "Shape fill",
             sectionText: "Shape fill",
-            keywords: ["tint", "fill", "style", "solid", "gradient", "glass", "adaptive", "opacity", "shadow", "border"],
+            keywords: ["tint", "fill", "style", "solid", "gradient", "glass", "adaptive", "palette", "wallpaper", "opacity", "shadow", "border"],
             property: nil
         ),
         SearchEntry(

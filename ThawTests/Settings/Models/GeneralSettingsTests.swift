@@ -2,7 +2,6 @@
 //  GeneralSettingsTests.swift
 //  Project: Thaw
 //
-//  Copyright (Ice) © 2023–2025 Jordan Baird
 //  Copyright (Thaw) © 2026 Toni Förster
 //  Licensed under the GNU GPLv3
 
@@ -13,26 +12,16 @@ import Testing
 /// Covers ``GeneralSettings``' setup surface: the `Defaults` load performed by
 /// `performSetup(with:)` and the Settings-URI notification it subscribes to.
 ///
-/// Both halves are trust boundaries of a sort. The load reads whatever is in
-/// `UserDefaults` — possibly written by an older build, a hand-edited plist, or
-/// a partially failed import — so an unrecognized enum raw value or undecodable
-/// icon payload has to leave the shipped default standing rather than crash or
-/// blank the icon. The notification arrives on behalf of a *third-party app*
-/// that sent a `thaw://` URL, so a key this model does not own, or a payload of
-/// the wrong type, must be dropped.
+/// The load may read values from an older build, a hand-edited plist, or a
+/// failed import, so an unknown enum raw value or undecodable icon keeps the
+/// shipped default. The notification comes from a third-party `thaw://` URL,
+/// so unowned keys and wrong-typed payloads are dropped.
+/// `SettingsURIHandlerApplyTests` covers the sending side; both must agree on
+/// the `userInfo` shape.
 ///
-/// `SettingsURIHandlerApplyTests` covers the sending side of the same
-/// notification; the two suites have to agree on the `userInfo` shape.
-///
-/// The model persists through `didSet` and `Defaults` is hardcoded to
-/// `.standard`, so the suite snapshots the keys it touches and restores them
-/// afterwards.
-///
-/// Snapshotting the *keys* rather than the whole persistent domain is
-/// deliberate: suites run concurrently, so a whole-domain snapshot taken while
-/// another suite holds scratch values captures them, and restoring it writes
-/// them back over the developer's own settings. Restoring one model's keys
-/// cannot reach anything this suite did not write.
+/// `Defaults` is hardcoded to `.standard`, so the suite restores only the keys
+/// it touches. A whole-domain snapshot can capture a concurrent suite's
+/// scratch values and write them back over the developer's settings.
 @MainActor
 @Suite("General settings", .serialized)
 final class GeneralSettingsTests {
@@ -52,6 +41,7 @@ final class GeneralSettingsTests {
         .autoRehide,
         .rehideStrategy,
         .rehideInterval,
+        .hideDockIconWhenToggling,
     ]
 
     private let savedDefaults: [Defaults.Key: Any?]
@@ -94,20 +84,13 @@ final class GeneralSettingsTests {
 
     /// Posts external settings changes and waits for the model to handle them.
     ///
-    /// `observeSettingsChangesViaURI` delivers on `DispatchQueue.main`, so the
-    /// handlers have only been enqueued by the time the posts return. They are
-    /// enqueued in order, so a block queued after the last post lands behind
-    /// every one of them — a deterministic wait rather than a sleep.
+    /// `observeSettingsChangesViaURI` enqueues handlers in order on
+    /// `DispatchQueue.main`, so a block queued after the last post is a
+    /// deterministic wait. Posting as a batch suspends once, which narrows the
+    /// window for another suite to run over this one's scratch values.
     ///
-    /// Changes are posted as a batch so that a test suspends once rather than
-    /// once per change: every suspension is a window in which another suite can
-    /// run while this one's scratch values sit in `Defaults`.
-    ///
-    /// The model listens on `NotificationCenter.default`, so a suite that posts
-    /// its own changes — `SettingsURIHandlerApplyTests` does — reaches this
-    /// model too. Assertions after a post therefore stick to keys no other
-    /// suite writes, except where the setting under test is the only one of its
-    /// kind.
+    /// `SettingsURIHandlerApplyTests` posts on the same center, so assertions
+    /// stick to keys no other suite writes.
     private func postExternalChanges(_ changes: [[String: Any]]) async {
         for change in changes {
             NotificationCenter.default.post(
@@ -143,6 +126,7 @@ final class GeneralSettingsTests {
         Defaults.set(true, forKey: .showOnHover)
         Defaults.set(false, forKey: .showOnScroll)
         Defaults.set(false, forKey: .autoRehide)
+        Defaults.set(true, forKey: .hideDockIconWhenToggling)
         Defaults.set(42.5, forKey: .rehideInterval)
 
         let settings = makeSettings()
@@ -157,6 +141,7 @@ final class GeneralSettingsTests {
         #expect(settings.showOnHover)
         #expect(!settings.showOnScroll)
         #expect(!settings.autoRehide)
+        #expect(settings.hideDockIconWhenToggling)
         #expect(settings.rehideInterval == 42.5)
     }
 
@@ -173,6 +158,7 @@ final class GeneralSettingsTests {
         #expect(settings.iceBarLocation == Defaults.DefaultValue.iceBarLocation)
         #expect(settings.showOnHover == Defaults.DefaultValue.showOnHover)
         #expect(settings.autoRehide == Defaults.DefaultValue.autoRehide)
+        #expect(settings.hideDockIconWhenToggling == Defaults.DefaultValue.hideDockIconWhenToggling)
         #expect(settings.rehideStrategy == Defaults.DefaultValue.rehideStrategy)
         #expect(settings.rehideInterval == Defaults.DefaultValue.rehideInterval)
         #expect(settings.lastCustomIceIcon == nil)
@@ -286,6 +272,7 @@ final class GeneralSettingsTests {
             ["key": "useIceBar", "value": true],
             ["key": "useIceBarOnlyOnNotchedDisplay", "value": true],
             ["key": "iceBarLocationOnHotkey", "value": true],
+            ["key": "hideDockIconWhenToggling", "value": true],
         ])
 
         #expect(!settings.showIceIcon)
@@ -296,6 +283,7 @@ final class GeneralSettingsTests {
         #expect(settings.useIceBar)
         #expect(settings.useIceBarOnlyOnNotchedDisplay)
         #expect(settings.iceBarLocationOnHotkey)
+        #expect(settings.hideDockIconWhenToggling)
     }
 
     @Test("An external double change updates the rehide interval")
@@ -305,10 +293,8 @@ final class GeneralSettingsTests {
 
         await postExternalChange(["key": "rehideInterval", "doubleValue": 123.5])
 
-        // Only the model is asserted, not `Defaults`: a suite that restores a
-        // whole persistent domain can land during the suspension above and
-        // wipe the write this model just made. Persistence itself is covered
-        // synchronously by `propertyChangesArePersisted`.
+        // Assert the model, not `Defaults`: another suite's whole-domain
+        // restore can land during the suspension and wipe the write.
         #expect(settings.rehideInterval == 123.5)
     }
 

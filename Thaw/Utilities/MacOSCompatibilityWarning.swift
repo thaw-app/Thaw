@@ -2,20 +2,15 @@
 //  MacOSCompatibilityWarning.swift
 //  Project: Thaw
 //
-//  Copyright (Ice) © 2023–2025 Jordan Baird
 //  Copyright (Thaw) © 2026 Toni Förster
 //  Licensed under the GNU GPLv3
 
 import AppKit
 
 enum MacOSCompatibilityWarning {
-    /// The first macOS this build does not support, and the one the rewrite
-    /// on ``UpdateChannel/alpha`` is built against.
-    ///
-    /// The two readings are the same number for the same reason: the alert
-    /// below tells the user that support for this release arrives through the
-    /// alpha channel, so the version that triggers the warning has to be the
-    /// version that makes that channel selectable.
+    /// The first macOS this build doesn't support, and the one the rewrite
+    /// targets. On it, ``UpdateChannel/beta`` also takes the rewrite's alpha
+    /// builds, so the channel the alert switches to always reaches one.
     static nonisolated let firstUnsupportedMajorVersion = 27
 
     static nonisolated func shouldShow(for version: OperatingSystemVersion) -> Bool {
@@ -24,8 +19,8 @@ enum MacOSCompatibilityWarning {
 
     /// What the alert's default button does.
     nonisolated enum Action: Equatable {
-        /// Subscribe to the alpha channel and check for the build it carries.
-        case subscribeToAlpha
+        /// Subscribe to the beta channel and check for the build it carries.
+        case subscribeToBeta
         /// Open the releases page so the user can pick a build by hand.
         case openReleasesPage
     }
@@ -39,20 +34,11 @@ enum MacOSCompatibilityWarning {
         let action: Action
     }
 
-    /// The prompt for a system, or `nil` when the system is supported and no
-    /// alert is due.
+    /// The prompt for a system, or `nil` when it's supported.
     ///
-    /// The alpha offer needs somewhere to send the subscription, so
-    /// `canSubscribe` reports whether an updates manager reached the call.
-    /// Alpha availability is checked against the running system rather than
-    /// assumed: the alert must not offer a channel it cannot select. Both
-    /// readings come from ``firstUnsupportedMajorVersion``, so the offer
-    /// stands whenever the alert appears; the check is what keeps the alert
-    /// honest if the two ever part.
-    ///
-    /// The warning fires on every release from the unsupported one onward, so
-    /// the copy names the macOS actually running rather than the first one
-    /// this build turned away.
+    /// `canSubscribe` says whether an updates manager reached the call. The copy
+    /// names the running macOS, since the warning fires on every release from the
+    /// unsupported one onward.
     static nonisolated func prompt(
         for version: OperatingSystemVersion,
         canSubscribe: Bool
@@ -64,12 +50,12 @@ enum MacOSCompatibilityWarning {
         let release = version.majorVersion
         let title = String(localized: "macOS \(release) Is Not Yet Supported")
 
-        guard canSubscribe, UpdateChannel.alpha.isAvailable(on: version) else {
+        guard canSubscribe else {
             return Prompt(
                 title: title,
                 message: String(
                     localized: """
-                    This version of Thaw is not yet compatible with macOS \(release). Preview builds are available on GitHub Releases, and support will be delivered through the alpha update channel.
+                    This version of Thaw is not yet compatible with macOS \(release). Support is coming through the alpha and beta update channels, and preview builds are available on GitHub Releases.
                     """
                 ),
                 confirmButtonTitle: String(localized: "View Preview Builds"),
@@ -81,11 +67,11 @@ enum MacOSCompatibilityWarning {
             title: title,
             message: String(
                 localized: """
-                This version of Thaw is not yet compatible with macOS \(release). Support arrives through the alpha channel, which carries the rewritten app. Thaw can subscribe you and check for a build now. If none has been published yet, it opens the preview builds on GitHub.
+                This version of Thaw is not yet compatible with macOS \(release). Support is coming through the alpha and beta update channels, which carry the rewritten app. Thaw can switch you to beta updates and check for a build now. If none has been published yet, it opens the preview builds on GitHub.
                 """
             ),
-            confirmButtonTitle: String(localized: "Switch to Alpha Updates"),
-            action: .subscribeToAlpha
+            confirmButtonTitle: String(localized: "Switch to Beta Updates"),
+            action: .subscribeToBeta
         )
     }
 
@@ -109,8 +95,8 @@ enum MacOSCompatibilityWarning {
         }
 
         switch prompt.action {
-        case .subscribeToAlpha:
-            updatesManager?.checkForAlphaUpdateAfterCompatibilityWarning()
+        case .subscribeToBeta:
+            updatesManager?.checkForBetaUpdateAfterCompatibilityWarning()
         case .openReleasesPage:
             NSWorkspace.shared.open(Constants.releasesURL)
         }

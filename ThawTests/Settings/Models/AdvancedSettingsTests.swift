@@ -2,7 +2,6 @@
 //  AdvancedSettingsTests.swift
 //  Project: Thaw
 //
-//  Copyright (Ice) © 2023–2025 Jordan Baird
 //  Copyright (Thaw) © 2026 Toni Förster
 //  Licensed under the GNU GPLv3
 
@@ -13,24 +12,16 @@ import Testing
 /// Covers ``AdvancedSettings``' setup surface: the `Defaults` load performed by
 /// `performSetup(with:)` and the Settings-URI notification it subscribes to.
 ///
-/// The load reads whatever is in `UserDefaults` — possibly written by an older
-/// build, a hand-edited plist, or a partially failed import — so an
-/// unrecognized divider style or a search-section order that is short,
-/// duplicated, or full of unknown names has to resolve to something usable
-/// rather than leave the search panel with a missing or repeated section.
-/// The notification arrives on behalf of a *third-party app* that sent a
-/// `thaw://` URL, so a key this model does not own, or a payload of the wrong
-/// type, must be dropped.
+/// The load may read values from an older build, a hand-edited plist, or a
+/// failed import, so an unknown divider style or a short, duplicated, or
+/// unknown search-section order must still give a usable search panel. The
+/// notification comes from a third-party `thaw://` URL, so unowned keys and
+/// wrong-typed payloads are dropped. `SettingsURIHandlerApplyTests` covers the
+/// sending side; both must agree on the `userInfo` shape.
 ///
-/// `SettingsURIHandlerApplyTests` covers the sending side of the same
-/// notification; the two suites have to agree on the `userInfo` shape.
-///
-/// The model persists through `didSet`, so every test body runs inside
-/// `withScratchDefaults`: writes land in a throwaway store rather than the
-/// developer's own settings, and each test starts from the empty store of a
-/// first launch. That also keeps `enableDiagnosticLogging` at its compiled-in
-/// default, so the model never runs the `didSet` that reaches into the shared
-/// ``DiagnosticLogger``.
+/// Each test runs in `withScratchDefaults` from an empty store. That keeps
+/// `enableDiagnosticLogging` at its default, so the `didSet` that reaches into
+/// the shared ``DiagnosticLogger`` never runs.
 @MainActor
 @Suite("Advanced settings", .serialized)
 struct AdvancedSettingsTests {
@@ -45,20 +36,13 @@ struct AdvancedSettingsTests {
 
     /// Posts external settings changes and waits for the model to handle them.
     ///
-    /// `observeSettingsChangesViaURI` delivers on `DispatchQueue.main`, so the
-    /// handlers have only been enqueued by the time the posts return. They are
-    /// enqueued in order, so a block queued after the last post lands behind
-    /// every one of them — a deterministic wait rather than a sleep.
+    /// `observeSettingsChangesViaURI` enqueues handlers in order on
+    /// `DispatchQueue.main`, so a block queued after the last post is a
+    /// deterministic wait. Posting as a batch suspends once, which narrows the
+    /// window for another suite to run over this one's scratch values.
     ///
-    /// Changes are posted as a batch so that a test suspends once rather than
-    /// once per change: every suspension is a window in which another suite can
-    /// run while this one's scratch store is installed.
-    ///
-    /// The model listens on `NotificationCenter.default`, so a suite that posts
-    /// its own changes — `SettingsURIHandlerApplyTests` does — reaches this
-    /// model too. Assertions after a post therefore stick to keys no other
-    /// suite writes, except where the setting under test is the only one of its
-    /// kind.
+    /// `SettingsURIHandlerApplyTests` posts on the same center, so assertions
+    /// stick to keys no other suite writes.
     private func postExternalChanges(_ changes: [[String: Any]]) async {
         for change in changes {
             NotificationCenter.default.post(
@@ -347,10 +331,8 @@ struct AdvancedSettingsTests {
                 ["key": "iconRefreshInterval", "doubleValue": 3.75],
             ])
 
-            // Only the model is asserted, not `Defaults`: a suite that restores a
-            // whole persistent domain can land during the suspension above and
-            // wipe the writes this model just made. Persistence itself is covered
-            // synchronously by `propertyChangesArePersisted`.
+            // Assert the model, not `Defaults`: another suite's whole-domain
+            // restore can land during the suspension and wipe the writes.
             #expect(settings.showOnHoverDelay == 1.75)
             #expect(settings.tooltipDelay == 2.75)
             #expect(settings.iconRefreshInterval == 1.0)

@@ -2,7 +2,6 @@
 //  TourSlide.swift
 //  Project: Thaw
 //
-//  Copyright (Ice) © 2023–2025 Jordan Baird
 //  Copyright (Thaw) © 2026 Toni Förster
 //  Licensed under the GNU GPLv3
 
@@ -45,11 +44,8 @@ nonisolated enum ThawTourSlide: Int, CaseIterable, Identifiable {
         }
     }
 
-    /// The delay, in seconds, this slide's demo plays before auto-advancing
-    /// to the next one. The welcome slide's value is unused — the tour never
-    /// auto-advances off it — and the last looping slide wraps back around
-    /// to the first looping slide, so the remaining slides loop forever until
-    /// the user taps "Get Started".
+    /// Seconds this slide's demo plays before auto-advancing. Unused for the
+    /// welcome slide; the other slides loop until the user taps "Get Started".
     var autoAdvanceDelay: Double {
         switch self {
         case .welcome: 0

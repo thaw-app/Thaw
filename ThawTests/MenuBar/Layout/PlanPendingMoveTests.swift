@@ -2,7 +2,6 @@
 //  PlanPendingMoveTests.swift
 //  Project: Thaw
 //
-//  Copyright (Ice) © 2023–2025 Jordan Baird
 //  Copyright (Thaw) © 2026 Toni Förster
 //  Licensed under the GNU GPLv3
 
@@ -11,15 +10,9 @@ import Foundation
 import Testing
 @testable import Thaw
 
-/// Characterization tests for PendingLedger.planPendingMove.
+/// PendingLedger.planPendingMove, the per-entry decision behind relocatePendingItems.
 ///
-/// Pins down the per-entry decision logic used by relocatePendingItems:
-/// actively-shown short-circuit, waitForRelaunch sentinel handling,
-/// item-already-hidden cleanup, destination resolution (stored neighbor →
-/// fallback neighbor → section boundary), and itemNotPresent skipping.
-///
-/// Coordinate convention: hidden divider at x=400, width=10. Items in
-/// "visible" sit at x >= 410. Items in "hidden" sit at x < 400.
+/// Hidden divider at x=400, width 10: visible items at x >= 410, hidden at x < 400.
 @Suite("Plan pending move")
 struct PlanPendingMoveTests {
     // MARK: - Helpers
@@ -63,10 +56,31 @@ struct PlanPendingMoveTests {
         )
     }
 
+    /// Plans with no stored destinations and no bounds overrides.
+    private func planWithDefaults(
+        entry: PendingLedger.PendingEntry,
+        items: [MenuBarItem],
+        controlItems: MenuBarItemManager.ControlItemPair,
+        returnInfo: PendingLedger.PendingReturnInfo = PendingLedger.PendingReturnInfo(
+            destinations: [:],
+            fallbackNeighbors: [:]
+        )
+    ) -> PendingLedger.PendingMove {
+        PendingLedger.planPendingMove(
+            entry: entry,
+            bar: PendingLedger.BarState(
+                items: items,
+                controlItems: controlItems,
+                hiddenBounds: hiddenBounds,
+                boundsForWindowID: [:],
+                activelyShownTags: []
+            ),
+            returnInfo: returnInfo
+        )
+    }
+
     // MARK: - Scenarios
 
-    /// A standard pending entry for a visible item produces a move to the
-    /// section boundary (no stored neighbor, no fallback).
     @Test("A standard entry for a visible item falls back to the section boundary")
     func standardEntryVisibleItemFallsBackToSectionBoundary() {
         let item = visibleItem(bundleID: "com.example.app", title: "Status", windowID: 800)
@@ -77,11 +91,13 @@ struct PlanPendingMoveTests {
 
         let decision = PendingLedger.planPendingMove(
             entry: entry,
-            items: [item],
-            controlItems: pair(),
-            hiddenBounds: hiddenBounds,
-            boundsForWindowID: [:],
-            activelyShownTags: [],
+            bar: PendingLedger.BarState(
+                items: [item],
+                controlItems: pair(),
+                hiddenBounds: hiddenBounds,
+                boundsForWindowID: [:],
+                activelyShownTags: []
+            ),
             returnInfo: PendingLedger.PendingReturnInfo(
                 destinations: [:],
                 fallbackNeighbors: [:]
@@ -101,8 +117,6 @@ struct PlanPendingMoveTests {
         }
     }
 
-    /// A pending entry whose item is already in the hidden section
-    /// produces .clearEntry — no move needed.
     @Test("A standard entry whose item is already hidden clears the entry")
     func standardEntryAlreadyHiddenClearsEntry() {
         let item = hiddenItem(bundleID: "com.example.app", title: "Status", windowID: 801)
@@ -113,11 +127,13 @@ struct PlanPendingMoveTests {
 
         let decision = PendingLedger.planPendingMove(
             entry: entry,
-            items: [item],
-            controlItems: pair(),
-            hiddenBounds: hiddenBounds,
-            boundsForWindowID: [:],
-            activelyShownTags: [],
+            bar: PendingLedger.BarState(
+                items: [item],
+                controlItems: pair(),
+                hiddenBounds: hiddenBounds,
+                boundsForWindowID: [:],
+                activelyShownTags: []
+            ),
             returnInfo: PendingLedger.PendingReturnInfo(
                 destinations: [:],
                 fallbackNeighbors: [:]
@@ -131,9 +147,7 @@ struct PlanPendingMoveTests {
         }
     }
 
-    /// When the item referenced by the pending entry is not in the current
-    /// items list, the planner emits .skip(.itemNotPresent) — the entry
-    /// stays in the dict for the next launch.
+    /// The entry stays for the next launch.
     @Test("An entry whose item is not present skips")
     func itemNotPresentSkips() {
         let entry = PendingLedger.PendingEntry(
@@ -143,11 +157,13 @@ struct PlanPendingMoveTests {
 
         let decision = PendingLedger.planPendingMove(
             entry: entry,
-            items: [],
-            controlItems: pair(),
-            hiddenBounds: hiddenBounds,
-            boundsForWindowID: [:],
-            activelyShownTags: [],
+            bar: PendingLedger.BarState(
+                items: [],
+                controlItems: pair(),
+                hiddenBounds: hiddenBounds,
+                boundsForWindowID: [:],
+                activelyShownTags: []
+            ),
             returnInfo: PendingLedger.PendingReturnInfo(
                 destinations: [:],
                 fallbackNeighbors: [:]
@@ -157,23 +173,23 @@ struct PlanPendingMoveTests {
         #expect(decision == .skip(reason: .itemNotPresent))
     }
 
-    /// waitForRelaunch sentinel with the same windowID skips with
-    /// .waitForRelaunchActive.
     @Test("A waitForRelaunch sentinel with the same windowID skips")
     func waitForRelaunchSameWindowIDSkips() {
         let item = visibleItem(bundleID: "com.example.app", title: "Status", windowID: 802)
         let entry = PendingLedger.PendingEntry(
             tagIdentifier: item.tag.tagIdentifier,
-            kind: .waitForRelaunch(windowID: 802, section: .hidden)
+            kind: .waitForRelaunch(windowID: 802, section: .hidden, setAt: nil)
         )
 
         let decision = PendingLedger.planPendingMove(
             entry: entry,
-            items: [item],
-            controlItems: pair(),
-            hiddenBounds: hiddenBounds,
-            boundsForWindowID: [:],
-            activelyShownTags: [],
+            bar: PendingLedger.BarState(
+                items: [item],
+                controlItems: pair(),
+                hiddenBounds: hiddenBounds,
+                boundsForWindowID: [:],
+                activelyShownTags: []
+            ),
             returnInfo: PendingLedger.PendingReturnInfo(
                 destinations: [:],
                 fallbackNeighbors: [:]
@@ -183,24 +199,24 @@ struct PlanPendingMoveTests {
         #expect(decision == .skip(reason: .waitForRelaunchActive))
     }
 
-    /// waitForRelaunch sentinel with a new windowID (app relaunched)
-    /// promotes the entry. The orchestrator persists the change and
-    /// re-runs the planner.
+    /// The app relaunched; the orchestrator persists the change and re-runs the planner.
     @Test("A waitForRelaunch sentinel with a new windowID promotes the entry")
     func waitForRelaunchNewWindowIDPromotes() {
         let item = visibleItem(bundleID: "com.example.app", title: "Status", windowID: 803)
         let entry = PendingLedger.PendingEntry(
             tagIdentifier: item.tag.tagIdentifier,
-            kind: .waitForRelaunch(windowID: 999, section: .hidden)
+            kind: .waitForRelaunch(windowID: 999, section: .hidden, setAt: nil)
         )
 
         let decision = PendingLedger.planPendingMove(
             entry: entry,
-            items: [item],
-            controlItems: pair(),
-            hiddenBounds: hiddenBounds,
-            boundsForWindowID: [:],
-            activelyShownTags: [],
+            bar: PendingLedger.BarState(
+                items: [item],
+                controlItems: pair(),
+                hiddenBounds: hiddenBounds,
+                boundsForWindowID: [:],
+                activelyShownTags: []
+            ),
             returnInfo: PendingLedger.PendingReturnInfo(
                 destinations: [:],
                 fallbackNeighbors: [:]
@@ -214,8 +230,77 @@ struct PlanPendingMoveTests {
         }
     }
 
-    /// An entry whose tag is currently in activelyShownTags skips with
-    /// .activelyShown — the rehide flow owns this item.
+    /// The app never relaunched, so the windowID never changes; without the age
+    /// cap the item would stay off savedSectionOrder forever (#1079).
+    @Test("A stale waitForRelaunch sentinel promotes past the age cap")
+    func waitForRelaunchStaleSentinelPromotes() {
+        let item = visibleItem(bundleID: "com.example.app", title: "Status", windowID: 805)
+        let setAt = Date(timeIntervalSince1970: 1_700_000_000)
+        let now = setAt.addingTimeInterval(2 * 24 * 3600) // 2 days later
+        let entry = PendingLedger.PendingEntry(
+            tagIdentifier: item.tag.tagIdentifier,
+            kind: .waitForRelaunch(windowID: 805, section: .hidden, setAt: setAt)
+        )
+
+        let decision = PendingLedger.planPendingMove(
+            entry: entry,
+            bar: PendingLedger.BarState(
+                items: [item],
+                controlItems: pair(),
+                hiddenBounds: hiddenBounds,
+                boundsForWindowID: [:],
+                activelyShownTags: []
+            ),
+            returnInfo: PendingLedger.PendingReturnInfo(
+                destinations: [:],
+                fallbackNeighbors: [:]
+            ),
+            now: now,
+            sentinelAgeCap: .seconds(86400)
+        )
+
+        if case let .promoteWaitForRelaunch(section) = decision {
+            #expect(section == .hidden)
+        } else {
+            Issue.record("expected .promoteWaitForRelaunch for a stale sentinel, got \(decision)")
+        }
+    }
+
+    /// Pre-timestamp sentinels are stale on first encounter, so they clear after
+    /// upgrade instead of waiting for a relaunch that never comes (#1079).
+    @Test("A waitForRelaunch sentinel with no timestamp promotes as stale")
+    func waitForRelaunchNoTimestampPromotesAsStale() {
+        let item = visibleItem(bundleID: "com.example.app", title: "Status", windowID: 806)
+        let entry = PendingLedger.PendingEntry(
+            tagIdentifier: item.tag.tagIdentifier,
+            kind: .waitForRelaunch(windowID: 806, section: .hidden, setAt: nil)
+        )
+
+        let decision = PendingLedger.planPendingMove(
+            entry: entry,
+            bar: PendingLedger.BarState(
+                items: [item],
+                controlItems: pair(),
+                hiddenBounds: hiddenBounds,
+                boundsForWindowID: [:],
+                activelyShownTags: []
+            ),
+            returnInfo: PendingLedger.PendingReturnInfo(
+                destinations: [:],
+                fallbackNeighbors: [:]
+            ),
+            now: Date(),
+            sentinelAgeCap: .seconds(86400)
+        )
+
+        if case let .promoteWaitForRelaunch(section) = decision {
+            #expect(section == .hidden)
+        } else {
+            Issue.record("expected .promoteWaitForRelaunch for a timestamp-less sentinel, got \(decision)")
+        }
+    }
+
+    /// The rehide flow owns actively shown items.
     @Test("An actively shown entry is excluded")
     func activelyShownExclusion() {
         let item = visibleItem(bundleID: "com.example.app", title: "Status", windowID: 804)
@@ -226,11 +311,13 @@ struct PlanPendingMoveTests {
 
         let decision = PendingLedger.planPendingMove(
             entry: entry,
-            items: [item],
-            controlItems: pair(),
-            hiddenBounds: hiddenBounds,
-            boundsForWindowID: [:],
-            activelyShownTags: [item.tag.tagIdentifier],
+            bar: PendingLedger.BarState(
+                items: [item],
+                controlItems: pair(),
+                hiddenBounds: hiddenBounds,
+                boundsForWindowID: [:],
+                activelyShownTags: [item.tag.tagIdentifier]
+            ),
             returnInfo: PendingLedger.PendingReturnInfo(
                 destinations: [:],
                 fallbackNeighbors: [:]
@@ -240,8 +327,7 @@ struct PlanPendingMoveTests {
         #expect(decision == .skip(reason: .activelyShown))
     }
 
-    /// An entry whose recorded section is .visible produces .clearEntry —
-    /// there's no hidden destination to restore to.
+    /// There's no hidden destination to restore to.
     @Test("An entry recorded for the visible section short-circuits to clear")
     func visibleSectionShortCircuitsToClear() {
         let item = visibleItem(bundleID: "com.example.app", title: "Status", windowID: 805)
@@ -252,11 +338,13 @@ struct PlanPendingMoveTests {
 
         let decision = PendingLedger.planPendingMove(
             entry: entry,
-            items: [item],
-            controlItems: pair(),
-            hiddenBounds: hiddenBounds,
-            boundsForWindowID: [:],
-            activelyShownTags: [],
+            bar: PendingLedger.BarState(
+                items: [item],
+                controlItems: pair(),
+                hiddenBounds: hiddenBounds,
+                boundsForWindowID: [:],
+                activelyShownTags: []
+            ),
             returnInfo: PendingLedger.PendingReturnInfo(
                 destinations: [:],
                 fallbackNeighbors: [:]
@@ -270,8 +358,6 @@ struct PlanPendingMoveTests {
         }
     }
 
-    /// A stored neighbor destination takes precedence over the fallback
-    /// neighbor and the section boundary.
     @Test("A stored neighbor takes precedence over the fallbacks")
     func storedNeighborTakesPrecedence() {
         let item = visibleItem(bundleID: "com.example.app", title: "Status", windowID: 806, x: 500)
@@ -283,11 +369,13 @@ struct PlanPendingMoveTests {
 
         let decision = PendingLedger.planPendingMove(
             entry: entry,
-            items: [item, neighbor],
-            controlItems: pair(),
-            hiddenBounds: hiddenBounds,
-            boundsForWindowID: [:],
-            activelyShownTags: [],
+            bar: PendingLedger.BarState(
+                items: [item, neighbor],
+                controlItems: pair(),
+                hiddenBounds: hiddenBounds,
+                boundsForWindowID: [:],
+                activelyShownTags: []
+            ),
             returnInfo: PendingLedger.PendingReturnInfo(
                 destinations: [
                     item.tag.tagIdentifier: [
@@ -307,5 +395,139 @@ struct PlanPendingMoveTests {
         } else {
             Issue.record("expected .move(.leftOfItem(neighbor)), got \(decision)")
         }
+    }
+
+    /// The owning app quit, so there's no item to compare yet; the entry must
+    /// survive to the next pass.
+    @Test("A waitForRelaunch sentinel whose item is still gone skips")
+    func waitForRelaunchWithAbsentItemSkips() {
+        let entry = PendingLedger.PendingEntry(
+            tagIdentifier: "com.example.app:Status",
+            kind: .waitForRelaunch(windowID: 900, section: .hidden, setAt: nil)
+        )
+
+        let decision = planWithDefaults(
+            entry: entry,
+            items: [],
+            controlItems: .fixture(hiddenAt: hiddenBounds)
+        )
+
+        #expect(decision == .skip(reason: .itemNotPresent))
+    }
+
+    /// With no stored destination, the live nearest-neighbour cache is
+    /// consulted before the section boundary, always to the right of that neighbour.
+    @Test("A fallback neighbour is used when no destination was stored")
+    func fallbackNeighbourIsUsedWhenNoDestinationWasStored() {
+        let item = visibleItem(bundleID: "com.example.app", title: "Status", windowID: 910)
+        let neighbor = visibleItem(bundleID: "com.example.app", title: "Neighbour", windowID: 911, x: 600)
+        let entry = PendingLedger.PendingEntry(
+            tagIdentifier: item.tag.tagIdentifier,
+            kind: .section(.hidden)
+        )
+
+        let decision = planWithDefaults(
+            entry: entry,
+            items: [item, neighbor],
+            controlItems: .fixture(hiddenAt: hiddenBounds),
+            returnInfo: PendingLedger.PendingReturnInfo(
+                destinations: [:],
+                fallbackNeighbors: [item.tag.tagIdentifier: neighbor.tag]
+            )
+        )
+
+        guard case let .move(movedItem, destination) = decision else {
+            Issue.record("expected .move, got \(decision)")
+            return
+        }
+        #expect(movedItem.windowID == 910)
+        guard case let .rightOfItem(target) = destination else {
+            Issue.record("expected .rightOfItem, got \(destination)")
+            return
+        }
+        #expect(target.windowID == 911)
+    }
+
+    /// A fallback neighbour that is no longer in the live item list is
+    /// stale; the planner must fall through to the section boundary
+    /// instead of aiming at an item that is not there.
+    @Test("A fallback neighbour that is no longer present falls through to the boundary")
+    func staleFallbackNeighbourFallsThroughToTheBoundary() {
+        let item = visibleItem(bundleID: "com.example.app", title: "Status", windowID: 912)
+        let departed = visibleItem(bundleID: "com.example.app", title: "Departed", windowID: 913, x: 600)
+        let entry = PendingLedger.PendingEntry(
+            tagIdentifier: item.tag.tagIdentifier,
+            kind: .section(.hidden)
+        )
+
+        let decision = planWithDefaults(
+            entry: entry,
+            items: [item],
+            controlItems: .fixture(hiddenAt: hiddenBounds),
+            returnInfo: PendingLedger.PendingReturnInfo(
+                destinations: [:],
+                fallbackNeighbors: [item.tag.tagIdentifier: departed.tag]
+            )
+        )
+
+        guard case let .move(_, destination) = decision,
+              case let .leftOfItem(target) = destination
+        else {
+            Issue.record("expected .move(.leftOfItem), got \(decision)")
+            return
+        }
+        #expect(target.tag == .hiddenControlItem)
+    }
+
+    @Test("An always-hidden entry lands left of the always-hidden divider")
+    func alwaysHiddenEntryLandsLeftOfTheAlwaysHiddenDivider() {
+        let item = visibleItem(bundleID: "com.example.app", title: "Status", windowID: 914)
+        let entry = PendingLedger.PendingEntry(
+            tagIdentifier: item.tag.tagIdentifier,
+            kind: .section(.alwaysHidden)
+        )
+
+        let decision = planWithDefaults(
+            entry: entry,
+            items: [item],
+            controlItems: .fixture(
+                hiddenAt: hiddenBounds,
+                alwaysHiddenAt: CGRect(x: 100, y: 0, width: 10, height: 22)
+            )
+        )
+
+        guard case let .move(_, destination) = decision,
+              case let .leftOfItem(target) = destination
+        else {
+            Issue.record("expected .move(.leftOfItem), got \(decision)")
+            return
+        }
+        #expect(target.tag == .alwaysHiddenControlItem)
+    }
+
+    /// The always-hidden section can be switched off, which removes its
+    /// divider. An entry recorded before that must degrade to the hidden
+    /// divider rather than be dropped.
+    @Test("An always-hidden entry degrades to the hidden divider when the section is off")
+    func alwaysHiddenEntryDegradesWhenTheSectionIsOff() {
+        let item = visibleItem(bundleID: "com.example.app", title: "Status", windowID: 915)
+        let entry = PendingLedger.PendingEntry(
+            tagIdentifier: item.tag.tagIdentifier,
+            kind: .section(.alwaysHidden)
+        )
+
+        let decision = planWithDefaults(
+            entry: entry,
+            items: [item],
+            controlItems: .fixture(hiddenAt: hiddenBounds)
+        )
+
+        guard case let .move(_, destination) = decision,
+              case let .leftOfItem(target) = destination
+        else {
+            Issue.record("expected .move(.leftOfItem), got \(decision)")
+            return
+        }
+        #expect(target.tag == .hiddenControlItem)
     }
 }

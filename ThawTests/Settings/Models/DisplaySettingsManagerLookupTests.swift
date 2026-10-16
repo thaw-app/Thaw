@@ -2,7 +2,6 @@
 //  DisplaySettingsManagerLookupTests.swift
 //  Project: Thaw
 //
-//  Copyright (Ice) © 2023–2025 Jordan Baird
 //  Copyright (Thaw) © 2026 Toni Förster
 //  Licensed under the GNU GPLv3
 
@@ -11,18 +10,15 @@ import Foundation
 import Testing
 @testable import Thaw
 
-/// A display UUID no real display can hold. Seeding `configurations` with it
-/// gives every test below one entry whose fate is the same on a laptop, a
-/// docked desk, and a headless runner — which is what lets the scope-driven
-/// tests assert something even when they also walk `NSScreen`.
+/// A display UUID no real display can hold, so its entry behaves the same on a
+/// laptop, a docked desk, and a headless runner.
 private let storedOnlyUUID = "TEST-DISPLAY-UUID-LOOKUP"
 
 /// A display identifier the window server cannot resolve, so
 /// `configuration(for:)` has to fall through to the global template.
 ///
-/// The lookup is safe either way: an identifier that unexpectedly *did*
-/// resolve would simply have no stored entry and read the template through the
-/// other arm, so the assertion holds without depending on what is attached.
+/// If it did resolve, it would have no stored entry and still read the
+/// template.
 private let unresolvableDisplayID = CGDirectDisplayID.max
 
 /// Builds the notification
@@ -33,60 +29,34 @@ private func perDisplayChange(_ userInfo: [AnyHashable: Any]) -> Notification {
     Notification(name: .perDisplaySettingsDidChangeViaURI, object: nil, userInfo: userInfo)
 }
 
-/// Covers the half of ``DisplaySettingsManager`` that its four sibling suites
-/// leave alone: what the manager reads out of `Defaults` at construction time,
-/// the derived lookups layered on top of `configurations`, and the
-/// Settings-URI scope arms the URI suite deliberately skipped.
+/// Covers what ``DisplaySettingsManager`` reads from `Defaults` at
+/// construction, the derived lookups over `configurations`, and the
+/// Settings-URI scope arms the URI suite skipped. The four sibling suites
+/// cover the rest.
 ///
-/// Between them the siblings already reach a lot.
-/// `DisplaySettingsManagerGlobalFallbackTests` covers `configuration(forUUID:)`
-/// and `configurationForActiveDisplay()`; `DisplaySettingsManagerMutationTests`
-/// covers `updateConfiguration`, the typed lookups against a *stored* entry,
-/// `applyGlobalToAllKnownDisplays`, `allDisplays` ordering and the
-/// configuration/global persistence round trips;
-/// `DisplaySettingsManagerSpacingGateTests` covers `shouldSkipSpacingApply`;
-/// and `DisplaySettingsManagerURINotificationTests` covers `parseScope` plus
-/// every `specific:UUID` setter. None of that is repeated here.
-///
-/// What is left, and what this suite is for:
-///
-/// - **`loadInitialState`'s failure and side-table branches.** Three separate
-///   `do`/`catch` blocks, the empty-name filter over the cached display names,
-///   and the two scalar settings (`confirmSpacingRelaunch`,
-///   `unconfirmedSpacingProfileScope`) restored at the end. All of it runs from
-///   `init`, so every test seeds the scratch store *before* constructing the
-///   manager. A decode failure has to leave the property at its default and let
-///   the loader carry on to the next key, so each test seeds a second, valid
-///   key that the assertion is not about and checks it arrived.
+/// - **`loadInitialState`'s failure and side-table branches.** They run from
+///   `init`, so each test seeds the scratch store before constructing the
+///   manager. A decode failure must leave the property at its default and let
+///   the loader continue, so each test also seeds a second, valid key and
+///   checks it arrived.
 /// - **The derived read surface.** `isIceBarEnabledOnAnyDisplay` and
-///   `isAlwaysShowEnabledOnAnyDisplay` read stored entries rather than the
-///   template, and the typed per-display lookups fall back to the template for
-///   an identifier that resolves to nothing.
-/// - **`applyGlobalToAllKnownDisplays`' no-write case.** It only assigns when
-///   the new dictionary actually differs, which matters because the assignment
-///   is what drives persistence and the spacing re-derivation. Observed by
-///   clearing the persisted key and checking it stays cleared.
-/// - **The Settings-URI scope arms with no display named.** The URI suite's own
-///   doc comment records that it skipped the `active` scope, because a test
-///   asserting the resulting mutation would only mean something on a machine
-///   with a menu bar. These tests drive those arms and assert what is true
-///   either way: the stored-only display is never touched, and any write landed
-///   on the active display and nowhere else. The same shape covers the
-///   `allEnabled` location broadcast and the `allNonIceBar` toggle, neither of
-///   which the URI suite reaches, and every "scope not implemented" arm — each
-///   of those paired with a `specific:UUID` control in the same test so
-///   "nothing changed" is the scope being refused rather than a dead setter.
+///   `isAlwaysShowEnabledOnAnyDisplay` read stored entries, not the template,
+///   and typed lookups fall back to the template for an unresolvable display.
+/// - **`applyGlobalToAllKnownDisplays`' no-write case.** Assigning drives
+///   persistence and the spacing re-derivation, so it only assigns on a change.
+/// - **Settings-URI scope arms with no display named.** Tests assert what holds
+///   on any machine: the stored-only display is never touched, and any write
+///   lands on the active display only. "Scope not implemented" arms pair with a
+///   `specific:UUID` control, so "nothing changed" means the scope was refused.
 ///
-/// Deliberately **not** covered, because none of it can be driven from a unit
-/// test without either a live `AppState` or the machine's own hardware:
+/// Not covered, since they need a live `AppState` or real hardware:
 /// `performSetup(with:)`, `captureCurrentlyConnectedDisplays`,
-/// `seedConfigurationsFromSystemSpacing` (reads `NSStatusItemSpacing` out of
-/// the byHost global domain, which no scratch store can redirect),
-/// `configureObservers` (a one-second debounce), `applyActiveDisplaySpacing`,
-/// and `presentSpacingRelaunchConfirmation` (`NSAlert.runModal`).
+/// `seedConfigurationsFromSystemSpacing` (reads the byHost domain, which no
+/// scratch store can redirect), `configureObservers`,
+/// `applyActiveDisplaySpacing`, and `presentSpacingRelaunchConfirmation`.
 ///
-/// `DisplaySettingsManager.init` reads `Defaults` and its `didSet` observers
-/// write back, so every manager here is built inside `withScratchDefaults`.
+/// `init` reads `Defaults` and `didSet` writes back, so every manager here is
+/// built inside `withScratchDefaults`.
 @MainActor
 @Suite("Display settings lookup and loading", .serialized)
 struct DisplaySettingsManagerLookupTests {
@@ -168,7 +138,7 @@ struct DisplaySettingsManagerLookupTests {
 
         /// A mirrored slave or a display caught mid-sleep can be cached with a
         /// blank name. Those entries would render as anonymous rows in the
-        /// Displays pane, so the loader drops them — and only them.
+        /// Displays pane, so the loader drops them, and only them.
         @Test("Cached entries with a blank name are dropped as the cache is loaded")
         func blankNamedCacheEntriesAreDroppedOnLoad() throws {
             try withScratchDefaults { _ in
@@ -419,10 +389,9 @@ struct DisplaySettingsManagerLookupTests {
             }
         }
 
-        /// The property exists so views can decide whether a spacing edit will
-        /// fire the relaunch wave. It has to read the window server rather than
-        /// the last-applied bookkeeping field, which is seeded here with a
-        /// value that could never be a real display UUID.
+        /// Views use this to decide whether a spacing edit fires the relaunch
+        /// wave, so it reads the window server, not the last-applied field
+        /// (seeded here with an impossible UUID).
         @Test("The active display identifier comes from the window server, not the last-applied field")
         func activeDisplayUUIDComesFromTheWindowServer() throws {
             try withScratchDefaults { _ in
@@ -493,16 +462,12 @@ struct DisplaySettingsManagerLookupTests {
 
     // MARK: - Settings-URI changes that name no display
 
-    /// The arms `DisplaySettingsManagerURINotificationTests` records as
-    /// deliberately skipped, driven here in a way that does not depend on what
-    /// is plugged in.
+    /// The arms `DisplaySettingsManagerURINotificationTests` skips, driven
+    /// independently of what is plugged in.
     ///
-    /// Two invariants make that possible. First, ``storedOnlyUUID`` is in
-    /// `configurations` but can never be attached, so "the request did not
-    /// reach it" is the same claim on every machine. Second, the manager's own
-    /// `activeMenuBarDisplayUUID` says whether there is an active display at
-    /// all, which lets each test state the right expectation for the machine it
-    /// is running on rather than assuming one.
+    /// ``storedOnlyUUID`` is in `configurations` but never attached, so "not
+    /// reached" means the same on every machine, and `activeMenuBarDisplayUUID`
+    /// tells each test whether there is an active display at all.
     @MainActor
     @Suite("Settings-URI changes that name no display")
     struct ChangesThatNameNoDisplay {
@@ -539,10 +504,9 @@ struct DisplaySettingsManagerLookupTests {
             }
         }
 
-        /// The toggle arm resolves its target the same way, and flips whatever
-        /// the display currently reads — which, with no stored entry, is the
-        /// template. Seeding the template with the bar off makes the expected
-        /// result unambiguous.
+        /// The toggle arm flips whatever the display reads, which with no
+        /// stored entry is the template. Seeding the template with the bar off
+        /// makes the expected result unambiguous.
         @Test("A useIceBar toggle that names no display reaches the active display and nothing else")
         func activeScopeUseIceBarToggle() throws {
             try withScratchDefaults { _ in
@@ -567,9 +531,8 @@ struct DisplaySettingsManagerLookupTests {
         }
 
         /// The location broadcast walks the attached screens, not the stored
-        /// table. The stored-only display is given the bar *on* here, so it
-        /// would qualify if the walk went through `configurations` — which is
-        /// exactly the mistake the assertion catches.
+        /// table. The stored-only display has the bar on, so it would qualify
+        /// if the walk went through `configurations`.
         @Test("A location broadcast reaches the attached displays but never a stored-only one")
         func allEnabledScopeLocationBroadcast() throws {
             try withScratchDefaults { _ in
@@ -734,9 +697,9 @@ struct DisplaySettingsManagerLookupTests {
     @MainActor
     @Suite("Codable round trips")
     struct CodableRoundTrips {
-        /// The cache is what keeps a disconnected display editable in the
-        /// Displays pane, so both fields have to survive the round trip — the
-        /// notch flag especially, since it decides how the pane renders.
+        /// The cache keeps a disconnected display editable in the Displays pane,
+        /// so both fields must survive, especially the notch flag, which
+        /// decides how the pane renders.
         @Test("A cached display survives a round trip through JSON")
         func knownDisplayRoundTrips() throws {
             let encoder = JSONEncoder()

@@ -2,34 +2,24 @@
 //  HiddenDividerBoundaryTests.swift
 //  Project: Thaw
 //
-//  Copyright (Ice) © 2023–2025 Jordan Baird
 //  Copyright (Thaw) © 2026 Toni Förster
 //  Licensed under the GNU GPLv3
 
 import Testing
 @testable import Thaw
 
-/// Covers the hidden-divider boundary check that applyProfileLayout's
-/// Phase 1 runs before the always-hidden divider placement.
+/// The hidden-divider boundary check applyProfileLayout's Phase 1 runs before
+/// placing the always-hidden divider.
 ///
-/// The boundary check exists because neither of the two mechanisms that
-/// preceded it can see a divider that has drifted past every managed item:
-///
-/// - Phase 1's `crossSectionMoves` / `totalSectionMismatch` tallies both
-///   intersect against the currently-occupied hidden and always-hidden
-///   sets, so a bar where both are empty scores zero on both.
-/// - The LCS pass receives sequences with the dividers stripped, so a
-///   divergence that is purely a divider position leaves current equal to
-///   desired and plans no moves.
-///
-/// Together those produced #879: every hidden item classified visible, and
-/// the apply reported "all items already in correct positions".
+/// Neither earlier mechanism sees a divider that drifted past every managed item:
+/// the Phase 1 tallies intersect occupied hidden sets (empty here, so zero), and
+/// the LCS pass strips dividers (so current equals desired). Together they
+/// classified every hidden item visible and reported success (#879).
 @Suite("Hidden divider boundary")
 struct HiddenDividerBoundaryTests {
     // MARK: - Mismatch counting
 
-    /// A bar that already matches the profile scores zero, so the divider
-    /// move never runs on a healthy layout.
+    /// A matching bar scores zero, so the divider move never runs on a healthy layout.
     @Test("A layout that matches the profile reports no boundary mismatch")
     func matchingLayoutReportsNoMismatch() {
         let mismatch = LayoutSolver.hiddenBoundaryMismatch(
@@ -44,8 +34,6 @@ struct HiddenDividerBoundaryTests {
         #expect(mismatch == 0)
     }
 
-    /// An item the profile assigns to hidden but that currently classifies
-    /// visible is on the wrong side of the divider and must be counted.
     @Test("An item that should be hidden but reads visible counts")
     func itemThatShouldBeHiddenCounts() {
         let mismatch = LayoutSolver.hiddenBoundaryMismatch(
@@ -60,8 +48,7 @@ struct HiddenDividerBoundaryTests {
         #expect(mismatch == 1)
     }
 
-    /// The reverse direction counts too: the divider can drift the other
-    /// way and swallow items the profile wants visible.
+    /// The divider can drift the other way and swallow items meant to be visible.
     @Test("An item that should be visible but reads hidden counts")
     func itemThatShouldBeVisibleCounts() {
         let mismatch = LayoutSolver.hiddenBoundaryMismatch(
@@ -76,14 +63,11 @@ struct HiddenDividerBoundaryTests {
         #expect(mismatch == 1)
     }
 
-    /// Always-hidden counts as concealed for this check. Which of the two
-    /// concealed sections an item lands in is the always-hidden divider's
-    /// problem, handled by the AH_ctrl planning that follows; the hidden
-    /// divider only decides concealed versus visible.
+    /// Which concealed section an item lands in is AH_ctrl's job; the hidden divider
+    /// only decides concealed versus visible.
     @Test("Hidden and always-hidden are one side for this check")
     func hiddenAndAlwaysHiddenCountAsOneSide() {
-        // Every item is concealed, and every item is meant to be
-        // concealed — they are merely in the wrong concealed section.
+        // Everything is concealed as intended, just in the wrong concealed section.
         let mismatch = LayoutSolver.hiddenBoundaryMismatch(
             currentVisible: [],
             currentHidden: ["a"],
@@ -97,8 +81,7 @@ struct HiddenDividerBoundaryTests {
                 "a hidden↔always-hidden swap is the AH_ctrl planner's job, not the hidden divider's")
     }
 
-    /// Items the profile does not mention are unmanaged arrivals routed by
-    /// planUnmanagedPlacement, so they must not drag the divider.
+    /// Items the profile does not mention are routed by planUnmanagedPlacement and must not move the divider.
     @Test("An item absent from the profile does not count")
     func unmanagedItemDoesNotCount() {
         let mismatch = LayoutSolver.hiddenBoundaryMismatch(
@@ -115,9 +98,7 @@ struct HiddenDividerBoundaryTests {
 
     // MARK: - Anchor planning
 
-    /// Section order runs right-to-left, so index 0 of the hidden section
-    /// is its rightmost item and the divider belongs immediately right of
-    /// it — the gap between the hidden and visible groups.
+    /// Order runs right-to-left, so hidden index 0 is rightmost and the divider goes just right of it.
     @Test("The anchor is the rightmost live hidden item")
     func anchorsToRightmostHiddenItem() {
         let anchor = LayoutSolver.planHiddenDividerAnchor(
@@ -129,9 +110,7 @@ struct HiddenDividerBoundaryTests {
         #expect(anchor == .rightOf("h1"))
     }
 
-    /// A profile lists items that are not running right now. The anchor
-    /// has to be an item actually on the bar, so the planner walks inward
-    /// from the rightmost until it finds one.
+    /// Profiles list items that are not running, so the planner walks inward to one on the bar.
     @Test("A hidden item that is not running is skipped as an anchor")
     func skipsHiddenItemsThatAreNotLive() {
         let anchor = LayoutSolver.planHiddenDividerAnchor(
@@ -143,9 +122,7 @@ struct HiddenDividerBoundaryTests {
         #expect(anchor == .rightOf("h2"))
     }
 
-    /// With nothing live on the hidden side the divider still has to end
-    /// up left of every visible item, so it anchors to the leftmost one —
-    /// the last entry in the visible order.
+    /// With no live hidden item, the divider anchors left of the leftmost visible item (the last entry).
     @Test("An empty hidden side anchors left of the leftmost visible item")
     func fallsBackToLeftmostVisibleItem() {
         let anchor = LayoutSolver.planHiddenDividerAnchor(
@@ -157,8 +134,7 @@ struct HiddenDividerBoundaryTests {
         #expect(anchor == .leftOf("v3"))
     }
 
-    /// Nothing live on either side leaves no anchor to drag against; the
-    /// caller logs and falls through to the LCS pass rather than guessing.
+    /// The caller logs and falls through to the LCS pass rather than guessing.
     @Test("No live item on either side yields no anchor")
     func noLiveItemYieldsNoAnchor() {
         let anchor = LayoutSolver.planHiddenDividerAnchor(
@@ -172,18 +148,12 @@ struct HiddenDividerBoundaryTests {
 
     // MARK: - Field replay (#879)
 
-    /// Replays the Phase 1 sets captured in the #879 field log, where the
-    /// reporter's hidden section emptied into visible after upgrading from
-    /// 2.0.0-rc.1 to rc.2 and could not be restored.
-    ///
-    /// The log's own numbers were `crossSectionMoves=0`,
-    /// `totalSectionMismatch=0`, verdict "all items already in correct
-    /// positions" — with 29 items in `desiredHidden` and none in
-    /// `currentHidden`.
+    /// Replays the Phase 1 sets from the #879 log, where the hidden section emptied
+    /// into visible after 2.0.0-rc.1 to rc.2 and could not be restored: both tallies
+    /// were 0 with 29 items desired hidden and none currently hidden.
     @Suite("Issue 879 field log")
     struct Issue879FieldLog {
-        /// The 28 items the log reported in the visible section, in the
-        /// order it reported them (index 0 rightmost).
+        /// The 28 visible items in log order (index 0 rightmost).
         static let currentVisible = [
             "com.stonerl.Thaw:Thaw.ControlItem.Visible",
             "com.robinlu.mac.Tooth-Fairy:Item-0",
@@ -215,9 +185,7 @@ struct HiddenDividerBoundaryTests {
             "com.raycast.macos:extension_auto-quit-app_auto-quit-app-menubar__e77dadf4-2dd6-4fd8-9041-d67068b934ae",
         ]
 
-        /// The profile's hidden section as the log printed it. The Phase 1
-        /// lines log sorted sets, so this is membership only — tests that
-        /// depend on section *order* use synthetic fixtures instead.
+        /// Phase 1 logs sorted sets, so this is membership only; order-dependent tests use synthetic fixtures.
         static let desiredHidden: Set<String> = [
             "86Z3GCJ4MF.com.noodlesoft.HazelHelper:Item-0",
             "app.loshadki.OpenIn.v4:Item-0",
@@ -250,7 +218,6 @@ struct HiddenDividerBoundaryTests {
             "pro.betterdisplay.BetterDisplay:Item-0",
         ]
 
-        /// The profile's visible section as the log printed it.
         static let desiredVisible: Set<String> = [
             "85C27NK92C.com.flexibits.fantastical2.mac.helper:Fantastical",
             "app.updatest.Updatest:Item-0",
@@ -267,12 +234,8 @@ struct HiddenDividerBoundaryTests {
             "com.techsmith.snagit.capturehelper:Item-0",
         ]
 
-        /// Every item on the bar belongs to exactly one of the profile's two
-        /// sections, and the bar's order already groups them: the 10 items
-        /// bound for visible occupy the rightmost 10 slots and the 18 bound
-        /// for hidden occupy the rest. Nothing is interleaved and nothing is
-        /// unmanaged. The layout is not scrambled — only the divider is in
-        /// the wrong place.
+        /// Every item belongs to one of the two sections and the bar already groups
+        /// them (10 visible rightmost, 18 hidden). Only the divider is misplaced.
         @Test("The bar is cleanly partitioned; only the divider is misplaced")
         func barIsCleanlyPartitioned() {
             let boundVisible = Self.currentVisible.filter(Self.desiredVisible.contains)
@@ -284,14 +247,9 @@ struct HiddenDividerBoundaryTests {
                     "the bar is already grouped visible-then-hidden, so only H_ctrl sits in the wrong gap")
         }
 
-        /// The LCS pass is handed sequences with the dividers stripped. The
-        /// bar's grouping means those two sequences are identical, so the
-        /// planner returns no moves — reproducing the log's "all items
-        /// already in correct positions" verdict.
-        ///
-        /// This is a characterization test, not a regression: the fix does
-        /// not change what the LCS sees. It pins the blindness the boundary
-        /// check exists to compensate for.
+        /// With dividers stripped the two sequences are identical, so the LCS plans
+        /// nothing, matching the log. Characterization, not regression: it pins the
+        /// blindness the boundary check compensates for.
         @Test("The LCS pass plans no moves, as the field log reported")
         func lcsPlansNoMoves() {
             let desiredNoControls = Self.currentVisible.filter(Self.desiredVisible.contains)
@@ -315,9 +273,7 @@ struct HiddenDividerBoundaryTests {
                     "with the dividers stripped the two sequences coincide, so the LCS sees nothing to do")
         }
 
-        /// The boundary check does see it: 18 items the profile assigns to
-        /// hidden are classifying visible. That non-zero count is what makes
-        /// Phase 1 drag H_ctrl instead of concluding the bar is correct.
+        /// The boundary check counts the 18 stranded items, which makes Phase 1 drag H_ctrl.
         @Test("The boundary check counts all 18 items stranded in visible")
         func boundaryCheckCountsStrandedItems() {
             let mismatch = LayoutSolver.hiddenBoundaryMismatch(
@@ -332,16 +288,13 @@ struct HiddenDividerBoundaryTests {
             #expect(mismatch == 18)
         }
 
-        /// The reporter had no always-hidden section, so `ahCtrlUID` was nil
-        /// and Phase 1's existing repair branch — which is bound on that
-        /// optional — could not have run even had its tallies been non-zero.
-        /// The boundary move must not carry the same gate.
+        /// With no always-hidden section `ahCtrlUID` was nil, so the existing repair
+        /// branch could not run; the boundary move must not share that gate.
         @Test("The boundary is repairable without an always-hidden divider")
         func repairDoesNotDependOnAlwaysHiddenDivider() {
             let live = Set(Self.currentVisible)
             let anchor = LayoutSolver.planHiddenDividerAnchor(
-                // Profile order for the hidden section, reconstructed from the
-                // bar: the 18 stranded items in the order they sit on it.
+                // The 18 stranded items in bar order.
                 desiredHidden: Self.currentVisible.filter(Self.desiredHidden.contains),
                 desiredVisible: Self.currentVisible.filter(Self.desiredVisible.contains),
                 liveMovableUIDs: live
@@ -353,19 +306,11 @@ struct HiddenDividerBoundaryTests {
     }
 }
 
-/// Pins the refusal that keeps the H_ctrl boundary move off Thaw's own
-/// chevron (#958).
+/// Keeps the H_ctrl boundary move off Thaw's own chevron (#958).
 ///
-/// The candidate set the caller hands the planner is already filtered to
-/// items that are movable and on screen. Thaw's control items pass both on
-/// every pass, so on a bar where the profile's items have been dragged to
-/// the wrong side of the divider and parked there, the chevron is the only
-/// candidate left standing — and it is the one anchor that must not be
-/// used. Dragging H_ctrl up to it sweeps the section it was restoring
-/// across with it.
-///
-/// #958's reporter imported a known-good plist with Thaw quit, confirmed it
-/// live, and watched the first apply after relaunch undo it:
+/// Candidates are pre-filtered to movable, on-screen items, which control items
+/// always are. With the profile's items parked on the wrong side, the chevron is
+/// the last candidate, and dragging H_ctrl to it sweeps the section across.
 ///
 /// ```
 /// Profile layout Phase 1: hiddenBoundaryMismatch=11
@@ -374,10 +319,8 @@ struct HiddenDividerBoundaryTests {
 /// post-H_ctrl classification crossSectionMoves=0, totalSectionMismatch=0
 /// ```
 ///
-/// The roster below is the visible order from the `broken_profile.json`
-/// attached to the same issue, in profile order — index 0 rightmost. The
-/// chevron sits at index 11 with four items to its left, none of which are
-/// movable, which is what leaves it as the last candidate the search finds.
+/// The roster is the visible order from the issue's `broken_profile.json`
+/// (index 0 rightmost): the chevron at index 11 with four unmovable items left of it.
 @Suite("Boundary anchor refuses Thaw's own items")
 struct BoundaryAnchorControlItemRefusalTests {
     private static let chevron = "com.stonerl.Thaw:Thaw.ControlItem.Visible"
@@ -410,9 +353,7 @@ struct BoundaryAnchorControlItemRefusalTests {
 
     // MARK: - The refusal
 
-    /// The reporter's state: every hidden-side item parked off screen and
-    /// every real visible item dragged across with them, leaving the
-    /// chevron alone in the candidate set.
+    /// Every hidden-side and real visible item parked, leaving only the chevron.
     @Test("The chevron alone yields no anchor")
     func chevronAloneYieldsNoAnchor() {
         let anchor = LayoutSolver.planHiddenDividerAnchor(
@@ -425,8 +366,7 @@ struct BoundaryAnchorControlItemRefusalTests {
         #expect(anchor == nil)
     }
 
-    /// The behaviour the refusal replaces, so the regression is pinned by
-    /// the shape it used to take rather than only by its absence.
+    /// Pins the old behaviour so the regression is caught by its shape, not only its absence.
     @Test("Without the bar, the same inputs anchor on the chevron")
     func sameInputsUsedToAnchorOnTheChevron() {
         let anchor = LayoutSolver.planHiddenDividerAnchor(
@@ -438,10 +378,8 @@ struct BoundaryAnchorControlItemRefusalTests {
         #expect(anchor == .leftOf(Self.chevron))
     }
 
-    /// Refusing means stopping, not searching on. The next candidate to the
-    /// chevron's right is an item the profile wants right of the divider,
-    /// so anchoring there would drag H_ctrl past it and conceal it — the
-    /// same collapse one item smaller.
+    /// The next candidate right of the chevron is wanted visible, so anchoring there
+    /// would conceal it: the same collapse, one item smaller.
     @Test("The search does not continue past a refused anchor")
     func searchDoesNotContinuePastARefusedAnchor() {
         let anchor = LayoutSolver.planHiddenDividerAnchor(
@@ -454,8 +392,7 @@ struct BoundaryAnchorControlItemRefusalTests {
         #expect(anchor == nil)
     }
 
-    /// A divider that reached the desired-hidden order is refused the same
-    /// way, from the other side.
+    /// A divider in the desired-hidden order is refused the same way.
     @Test("A control item on the hidden side is refused too")
     func controlItemOnTheHiddenSideIsRefused() {
         let anchor = LayoutSolver.planHiddenDividerAnchor(
@@ -470,8 +407,7 @@ struct BoundaryAnchorControlItemRefusalTests {
 
     // MARK: - What the refusal must not cost
 
-    /// A real item at the boundary is still an anchor. The refusal is not a
-    /// blanket stand-down on bars that happen to have the chevron live.
+    /// Not a blanket stand-down on bars with the chevron live.
     @Test("A live real item to the chevron's left still anchors the move")
     func liveRealItemStillAnchorsTheMove() {
         let anchor = LayoutSolver.planHiddenDividerAnchor(
@@ -484,9 +420,7 @@ struct BoundaryAnchorControlItemRefusalTests {
         #expect(anchor == .leftOf("org.p0deje.Maccy:Item-0"))
     }
 
-    /// The hidden side is tried first and is unaffected, so the common
-    /// repair — a profile whose hidden items are back on the bar — plans
-    /// the same move it always did.
+    /// The hidden side is tried first, so the common repair plans the same move as before.
     @Test("A live hidden item still wins over the visible fallback")
     func liveHiddenItemStillWins() {
         let anchor = LayoutSolver.planHiddenDividerAnchor(
@@ -501,8 +435,7 @@ struct BoundaryAnchorControlItemRefusalTests {
 
     // MARK: - Telling the two nil cases apart in the log
 
-    /// A refusal names the item it refused, so a field log distinguishes
-    /// "the items are on the wrong side" from "the items are not running".
+    /// Lets a log tell "wrong side" from "not running".
     @Test("The candidate helper names the refused chevron")
     func candidateHelperNamesTheRefusedChevron() {
         let candidate = LayoutSolver.hiddenDividerAnchorCandidate(
@@ -514,8 +447,7 @@ struct BoundaryAnchorControlItemRefusalTests {
         #expect(candidate == Self.chevron)
     }
 
-    /// A bar with nothing live reports no candidate at all, which is the
-    /// pre-existing nil and keeps its own log line.
+    /// The pre-existing nil, with its own log line.
     @Test("Nothing live yields no candidate")
     func nothingLiveYieldsNoCandidate() {
         let candidate = LayoutSolver.hiddenDividerAnchorCandidate(
@@ -528,19 +460,16 @@ struct BoundaryAnchorControlItemRefusalTests {
     }
 }
 
-/// Pins which of the two boundary repairs Phase 1 takes.
+/// Which of the two boundary repairs Phase 1 takes.
 ///
-/// Dragging H_ctrl re-sections every item it crosses, so it is the cheap
-/// repair only when the divider itself is what drifted. #958 is the case
-/// where it was not: one item on the wrong side, nine still correctly
-/// concealed, and the drag planned to reach that one item would have carried
-/// the divider from minX -3871 to 1648, across the entire visible section.
+/// Dragging H_ctrl re-sections every item it crosses, so it only fits when the
+/// divider itself drifted. With one item wrong and nine correctly concealed, the
+/// drag would have carried the divider from -3871 to 1648 (#958).
 @Suite("Divider drag versus per-item boundary moves")
 struct HiddenBoundaryRepairChoiceTests {
     @Test("Nothing concealed means the divider drifted past everything (#879)")
     func emptyConcealedSideDragsTheDivider() {
-        // The bar the boundary check was written for: eighteen managed items,
-        // all of them reading visible, none behind the divider.
+        // Eighteen managed items all reading visible, none behind the divider.
         #expect(LayoutSolver.shouldMoveHiddenDivider(liveConcealedCount: 0, liveVisibleCount: 18))
     }
 
@@ -551,14 +480,13 @@ struct HiddenBoundaryRepairChoiceTests {
 
     @Test("One stray item with a populated hidden section moves the item (#958)")
     func oneStrayItemMovesTheItem() {
-        // oa's 21 August reading: nine items correctly concealed, one on the
-        // wrong side. The divider is where it belongs.
+        // Nine correctly concealed, one on the wrong side: the divider is fine.
         #expect(!LayoutSolver.shouldMoveHiddenDivider(liveConcealedCount: 9, liveVisibleCount: 17))
     }
 
     @Test("A bar with most items concealed still moves items, not the divider")
     func mostlyConcealedBarMovesItems() {
-        // oa's 05:00 reading: thirty-two concealed, eleven of them wrongly so.
+        // Thirty-two concealed, eleven of them wrongly.
         #expect(!LayoutSolver.shouldMoveHiddenDivider(liveConcealedCount: 32, liveVisibleCount: 4))
     }
 
@@ -589,8 +517,7 @@ struct HiddenBoundaryOffenderTests {
             desiredAlwaysHidden: desiredAlwaysHidden,
             overflowExemptUIDs: overflowExemptUIDs
         )
-        // The tally is defined in terms of the split, and every case here
-        // checks that the two cannot drift apart.
+        // The tally is defined by the split; these cases keep the two from drifting apart.
         #expect(split.count == LayoutSolver.hiddenBoundaryMismatch(
             currentVisible: currentVisible,
             currentHidden: currentHidden,
@@ -651,8 +578,7 @@ struct HiddenBoundaryOffenderTests {
             desiredAlwaysHidden: []
         )
         #expect(split.wronglyConcealed == ["b"])
-        // An item moving between hidden and always-hidden is AH_ctrl's
-        // problem and must not show up here.
+        // Moves between hidden and always-hidden are AH_ctrl's problem.
         let acrossAH = offenders(
             currentVisible: ["a"],
             currentHidden: ["b"],
@@ -689,12 +615,9 @@ struct HiddenBoundaryOffenderTests {
 
     // MARK: - Notch-overflow exemption (#958)
 
-    /// An item ejected into hidden by the notch-overflow rebalance sits on
-    /// the concealed side while the profile still lists it visible. That
-    /// divergence is by design; counting it makes Phase 1 recall the item
-    /// to visible, and the next cycle's overflow plan ejects it again — a
-    /// two-drag oscillation for as long as the bar stays over budget.
-    /// The exemption must absorb exactly that case.
+    /// A notch-overflow-ejected item sits concealed while the profile lists it
+    /// visible, by design. Counting it makes Phase 1 recall it and the next overflow
+    /// plan eject it again, oscillating while the bar is over budget.
     @Test("A notch-overflow-ejected item sitting in hidden is exempt from the boundary check")
     func overflowEjectedItemInHiddenIsExempt() {
         let split = offenders(
@@ -707,8 +630,7 @@ struct HiddenBoundaryOffenderTests {
         )
         #expect(split.isEmpty)
 
-        // Without the exemption the same bar counts the ejected item —
-        // this documents the oscillation mechanism, not desired behavior.
+        // Documents the oscillation mechanism, not desired behavior.
         let unexempt = offenders(
             currentVisible: ["a", "b"],
             currentHidden: ["c", "ejected"],
@@ -718,9 +640,7 @@ struct HiddenBoundaryOffenderTests {
         #expect(unexempt.wronglyConcealed == ["ejected"])
     }
 
-    /// An ejected item that drifted into always-hidden has left the section
-    /// the eject placed it in. That is genuine drift and must keep counting,
-    /// matching the rule `currentLayoutDivergesFromSaved` applies.
+    /// Drifting into always-hidden is real drift and keeps counting, as in `currentLayoutDivergesFromSaved`.
     @Test("A notch-overflow-ejected item that drifted to always-hidden still counts")
     func overflowEjectedItemInAlwaysHiddenStillCounts() {
         let split = offenders(
@@ -735,9 +655,7 @@ struct HiddenBoundaryOffenderTests {
         #expect(split.wronglyConcealed == ["ejected"])
     }
 
-    /// An ejected item that made its own way back to the visible side needs
-    /// no exemption (it is where the profile wants it), but the exempt set
-    /// must not swallow other genuine offenders on the concealed side.
+    /// The exempt set must not swallow unrelated wrongly-concealed items.
     @Test("The exemption does not hide unrelated wrongly-concealed items")
     func exemptionDoesNotHideOtherOffenders() {
         let split = offenders(
@@ -751,10 +669,7 @@ struct HiddenBoundaryOffenderTests {
         #expect(split.wronglyConcealed == ["drifted"])
     }
 
-    /// The exemption exists to stop Phase 1 recalling ejected items from
-    /// hidden. An exempt UID currently sitting VISIBLE and wanted concealed
-    /// is the opposite situation — a genuine offender in the other direction
-    /// — and must keep counting whatever the exempt set says.
+    /// An exempt UID sitting visible but wanted concealed is a real offender in the other direction.
     @Test("The exemption never suppresses wrongly-visible offenders")
     func exemptionNeverSuppressesWronglyVisible() {
         let split = offenders(
@@ -770,9 +685,7 @@ struct HiddenBoundaryOffenderTests {
         #expect(split.count == 1)
     }
 
-    /// The exemption parameter defaults to empty; every pre-existing caller
-    /// relies on that meaning "no exemption". Pin the identity so a default-
-    /// value regression cannot silently change long-standing tallies.
+    /// Every existing caller relies on the empty default meaning "no exemption".
     @Test("An empty exempt set reproduces the legacy tally exactly")
     func emptyExemptSetMatchesLegacyTally() {
         let inputs = (
@@ -800,16 +713,13 @@ struct HiddenBoundaryOffenderTests {
             desiredAlwaysHidden: inputs.desiredAlwaysHidden,
             overflowExemptUIDs: []
         )
-        // Both directions of travel are populated here, so this pins the
-        // identity for wronglyVisible and wronglyConcealed at once.
+        // Both directions are populated, so this pins wronglyVisible and wronglyConcealed at once.
         #expect(explicitEmpty == legacy)
         #expect(legacy.wronglyVisible == ["b"])
         #expect(legacy.wronglyConcealed == ["d"])
     }
 
-    /// UIDs in the exempt set that name no item on the bar must change
-    /// nothing: the eject set can outlive the items it once named (an app
-    /// quits between cycles), and stale entries must be inert.
+    /// The eject set can outlive its items (an app quits), so stale entries must be inert.
     @Test("Exempt UIDs that match nothing on the bar are inert")
     func unknownExemptUIDsAreInert() {
         let baseline = offenders(
@@ -829,8 +739,7 @@ struct HiddenBoundaryOffenderTests {
         #expect(exempted == baseline)
     }
 
-    /// A tight bar can hold several ejected items at once. Exempting a
-    /// subset absorbs exactly that subset; the rest keep counting.
+    /// Exempting a subset absorbs exactly that subset.
     @Test("A partial exempt set absorbs only its own items")
     func partialExemptionAbsorbsOnlyItsOwnItems() {
         let split = offenders(
@@ -844,10 +753,7 @@ struct HiddenBoundaryOffenderTests {
         #expect(split.wronglyConcealed == ["ej2"])
     }
 
-    /// `hiddenBoundaryMismatch` is the value the parked-divider recovery
-    /// streak counts on, so it must see the exempted tally too — an
-    /// eject-only divergence must neither advance nor reset the streak's
-    /// input dishonestly.
+    /// The parked-divider recovery streak counts on this value, so it must honour the exemption.
     @Test("hiddenBoundaryMismatch honours the exemption")
     func mismatchHonoursExemption() {
         let mismatchCurrentVisible = Set(["a", "b"])
@@ -876,11 +782,9 @@ struct HiddenBoundaryOffenderTests {
         #expect(exempt == 0)
     }
 
-    /// applyProfileLayout derives the soak diagnostic without re-running the
-    /// solver, as |exempt ∩ currentHidden ∩ desiredVisible|. That shortcut is
-    /// only valid while the solver drops wronglyConcealed entries exclusively
-    /// through that same intersection. Walk every placement of the exempt UID
-    /// across the three sections and confirm the two computations agree.
+    /// applyProfileLayout computes the soak diagnostic as |exempt ∩ currentHidden ∩ desiredVisible|
+    /// without re-running the solver; valid only while the solver drops wronglyConcealed
+    /// entries through that same intersection. Every placement is checked.
     @Test("Absorbed-offender count equals the exempt intersection in every placement")
     func absorbedCountMatchesExemptIntersectionEverywhere() {
         let placements: [(section: String, currentHidden: Set<String>, currentAH: Set<String>)] = [
@@ -923,9 +827,7 @@ struct HiddenBoundaryOffenderTests {
         }
     }
 
-    /// Covers ``LayoutSolver.HiddenBoundaryOffenders/isEmpty`` directly: it
-    /// gates nothing today but is the readable spelling future callers will
-    /// reach for, so its agreement with count must not drift.
+    /// Unused today, but it must keep agreeing with count.
     @Test("isEmpty agrees with count")
     func isEmptyAgreesWithCount() {
         let empty = offenders(

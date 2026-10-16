@@ -2,7 +2,6 @@
 //  ParkedAnchorTests.swift
 //  Project: Thaw
 //
-//  Copyright (Ice) © 2023–2025 Jordan Baird
 //  Copyright (Thaw) © 2026 Toni Förster
 //  Licensed under the GNU GPLv3
 
@@ -10,20 +9,12 @@ import CoreGraphics
 import Testing
 @testable import Thaw
 
-/// Pins the on-screen check that prevents a parked off-screen item from being
-/// used as the H_ctrl drag anchor.
+/// Keeps a parked off-screen item from being used as the H_ctrl drag anchor.
 ///
-/// #881's remaining storm on the `fec231c` build: at launch the hidden
-/// section's items are parked thousands of points left of the display by the
-/// control item's collapse. `planHiddenDividerAnchor` picked the first
-/// desired-hidden item (e.g. `ai.elementlabs.lmstudio:Item-0` at
-/// `minX=-4222`) as the anchor, the H_ctrl drag failed all 8 retries — each
-/// attempt briefly brought the divider on-screen (icons disappeared/reappeared)
-/// then snapped back to the parked zone — and the user saw a cursor seizure.
-///
-/// The fix excludes parked items from the anchor candidate set, so the
-/// per-item LCS pass (which successfully repositions items one-by-one) runs
-/// instead of the futile boundary move.
+/// At launch hidden items are parked thousands of points left of the display.
+/// Picking one (such as `ai.elementlabs.lmstudio:Item-0` at minX -4222) failed all
+/// 8 retries, each briefly pulling the divider on-screen, and seized the cursor
+/// (#881). Parked items are excluded so the per-item LCS pass runs instead.
 @Suite("Parked anchor exclusion")
 struct ParkedAnchorTests {
     private static let display = CGRect(x: 0, y: 0, width: 1728, height: 1120)
@@ -76,9 +67,7 @@ struct ParkedAnchorTests {
 
     // MARK: - planHiddenDividerAnchor with parked exclusions
 
-    /// The #881 scenario: all desired-hidden items are parked. The planner
-    /// returns nil when the only movable candidates are off-screen, so the
-    /// H_ctrl boundary move is skipped and the per-item LCS pass handles it.
+    /// With every candidate parked the anchor is nil and the per-item LCS pass takes over.
     @Test("Anchor is nil when all desired-hidden movables are parked")
     func anchorIsNilWhenAllHiddenMovablesAreParked() {
         let desiredHidden = [
@@ -89,8 +78,7 @@ struct ParkedAnchorTests {
             "com.apple.controlcenter:Clock",
             "com.apple.controlcenter:WiFi",
         ]
-        // Only the hidden items are movable; system items in visible are not.
-        // All are parked, so none appear in the on-screen movable set.
+        // Only hidden items are movable, and all are parked, so the on-screen set is empty.
         let liveMovableUIDs: Set<String> = []
         let anchor = LayoutSolver.planHiddenDividerAnchor(
             desiredHidden: desiredHidden,
@@ -100,8 +88,7 @@ struct ParkedAnchorTests {
         #expect(anchor == nil)
     }
 
-    /// When one desired-hidden item is on-screen, it is picked over parked
-    /// items earlier in the list — the planner skips the parked ones.
+    /// An on-screen item wins over parked items earlier in the list.
     @Test("Anchor prefers an on-screen item over an earlier parked item")
     func anchorPrefersOnScreenOverParked() {
         let desiredHidden = [
@@ -109,8 +96,7 @@ struct ParkedAnchorTests {
             "com.adobe.acc.AdobeCreativeCloud:Item-0", // on-screen
         ]
         let desiredVisible: [String] = []
-        // Only the on-screen item is in the movable set (parked one excluded
-        // at the call site).
+        // The call site already excludes the parked item.
         let liveMovableUIDs: Set = ["com.adobe.acc.AdobeCreativeCloud:Item-0"]
         let anchor = LayoutSolver.planHiddenDividerAnchor(
             desiredHidden: desiredHidden,
@@ -126,19 +112,15 @@ struct ParkedAnchorTests {
     }
 }
 
-/// Pins the measurement point of ``LayoutSolver/isOnScreen(bounds:screenFrames:)``.
+/// Pins where ``LayoutSolver/isOnScreen(bounds:screenFrames:)`` measures.
 ///
-/// #958: a collapsed hidden divider is 5000 points wide, because that width is
-/// what pushes the concealed items off the display. Measuring it at its center
-/// therefore samples a point 2500 points right of the divider itself, and on
-/// oa's three-display arrangement that point landed on a screen while the
-/// divider was parked at minX -3871. The guard meant to refuse a drag from a
-/// parked divider read a screen hit and let the drag through; H_ctrl travelled
-/// to 1648 and swept the whole visible section into hidden.
+/// A collapsed hidden divider is 5000 points wide, so its center sits 2500 points
+/// right of the divider. On a three-display setup that point hit a screen while
+/// the divider was parked at -3871, so the parked-drag guard let H_ctrl through
+/// and it swept visible into hidden (#958).
 @Suite("Off-screen is measured at the leading edge")
 struct LeadingEdgeOnScreenTests {
-    /// oa's arrangement: the built-in display at the origin, with externals
-    /// placed left of it and below it.
+    /// Built-in display at the origin, externals to its left and below.
     private static let screenFrames = [
         CGRect(x: 0, y: 0, width: 1728, height: 1117),
         CGRect(x: -2560, y: -300, width: 2560, height: 1440),
@@ -148,15 +130,13 @@ struct LeadingEdgeOnScreenTests {
     @Test("A parked 5000-wide divider is off-screen even though its center is not")
     func parkedWideDividerIsOffScreen() {
         let divider = CGRect(x: -3871, y: 0, width: 5000, height: 33)
-        // The reading that let #958 through.
         #expect(Self.screenFrames.contains { $0.contains(CGPoint(x: divider.midX, y: divider.midY)) })
         #expect(!LayoutSolver.isOnScreen(bounds: divider, screenFrames: Self.screenFrames))
     }
 
     @Test("A 5000-wide divider sitting on the bar is on-screen")
     func seatedWideDividerIsOnScreen() {
-        // Same width, but parked nowhere: the divider is where the profile
-        // wants it and the drag can land.
+        // Same width, not parked: the drag can land.
         let divider = CGRect(x: 743, y: 0, width: 5000, height: 33)
         #expect(LayoutSolver.isOnScreen(bounds: divider, screenFrames: Self.screenFrames))
     }

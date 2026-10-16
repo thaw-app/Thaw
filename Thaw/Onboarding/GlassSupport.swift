@@ -2,17 +2,14 @@
 //  GlassSupport.swift
 //  Project: Thaw
 //
-//  Copyright (Ice) © 2023–2025 Jordan Baird
 //  Copyright (Thaw) © 2026 Toni Förster
 //  Licensed under the GNU GPLv3
 
 import AppKit
 import SwiftUI
 
-/// A true see-through glass pane: an `NSVisualEffectView` blending with
-/// whatever is *behind the window* (desktop, other apps), and making the
-/// window itself non-opaque so that blend has something real to show —
-/// rather than a synthetic colored backdrop standing in for it.
+/// An `NSVisualEffectView` that blends with whatever is behind the window,
+/// with the window made non-opaque so the blend shows through.
 struct VisualEffectBackground: NSViewRepresentable {
     func makeNSView(context _: Context) -> NSVisualEffectView {
         let view = NSVisualEffectView()
@@ -37,12 +34,8 @@ struct VisualEffectBackground: NSViewRepresentable {
     }
 }
 
-/// A small SF Symbol glyph, optionally drawn on a frosted circular badge —
-/// the welcome orbit's "planet" look wants a badge (so it reads as a
-/// floating object), but a real macOS menu bar icon is just a plain
-/// monochrome glyph with no background shape at all. Set
-/// `showBackground: false` for the demo menu bar mockups so they look like
-/// an authentic bar instead of a row of buttons.
+/// A small SF Symbol glyph, optionally on a frosted circular badge. Use
+/// `showBackground: false` in menu bar mockups, where real icons have no badge.
 struct GlassIconBubble: View {
     let symbol: String
     var size: CGFloat = 30

@@ -2,15 +2,14 @@
 //  GraphicsTestFixtures.swift
 //  Project: Thaw
 //
-//  Copyright (Ice) © 2023–2025 Jordan Baird
 //  Copyright (Thaw) © 2026 Toni Förster
 //  Licensed under the GNU GPLv3
 
 import CoreGraphics
 import Testing
 
-/// Builds a premultiplied-first, 32-bit little-endian RGBA image — the shape
-/// the capture paths produce — and runs `draw` against its context.
+/// Builds a premultiplied-first, 32-bit little-endian RGBA image (the shape
+/// the capture paths produce) and runs `draw` against its context.
 func makeCanvas(
     width: Int,
     height: Int,

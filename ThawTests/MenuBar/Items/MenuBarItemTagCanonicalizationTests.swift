@@ -2,7 +2,6 @@
 //  MenuBarItemTagCanonicalizationTests.swift
 //  Project: Thaw
 //
-//  Copyright (Ice) © 2023–2025 Jordan Baird
 //  Copyright (Thaw) © 2026 Toni Förster
 //  Licensed under the GNU GPLv3
 
@@ -26,8 +25,7 @@ struct MenuBarItemTagCanonicalizationTests {
         #expect(MenuBarItemTag.canonicalMetricTitle("Temp -4°") == "Temp #°")
     }
 
-    /// The point of the unit normalization: a rate that crosses a magnitude
-    /// boundary must not re-key the item.
+    /// A rate crossing a magnitude boundary must not re-key the item.
     @Test("Byte units normalize across magnitudes")
     func normalizesByteUnitsAcrossMagnitudes() {
         let fast = MenuBarItemTag.canonicalMetricTitle("3.4 MB/s")
@@ -133,11 +131,8 @@ struct MenuBarItemTagCanonicalizationTests {
 
     // MARK: - Opaque titles (LyricsX, #815)
 
-    /// LyricsX titles its menu bar item with the lyric line on screen, so
-    /// consecutive titles share nothing at all. Every song change minted a
-    /// fresh identifier, the item read as a brand-new arrival, and Thaw
-    /// filed it under the new-items section — moving the lyrics back into
-    /// hidden however many times the user dragged them out (#815).
+    /// LyricsX titles its item with the current lyric, so every song change
+    /// minted a new identifier and the item was re-filed as a new arrival.
     @Test("Lyric titles collapse to a single identifier")
     func lyricTitlesCollapse() {
         let owner = MenuBarItemTag.lyricsXBundleID
@@ -148,9 +143,7 @@ struct MenuBarItemTagCanonicalizationTests {
         #expect(first == "\(owner):\(MenuBarItemTag.opaqueTitle)")
     }
 
-    /// The metric canonicalizer would not have helped here: it collapses
-    /// digits, and a lyric has none. This is why the owner needed its own
-    /// title shape rather than an entry in the existing allowlist.
+    /// The metric canonicalizer collapses digits, and a lyric has none.
     @Test("The metric canonicalizer alone would not collapse lyrics")
     func metricCanonicalizerIsInsufficientForLyrics() {
         let a = MenuBarItemTag.canonicalMetricTitle("I walked through the door")
@@ -158,9 +151,8 @@ struct MenuBarItemTagCanonicalizationTests {
         #expect(a != b)
     }
 
-    /// An instance index is identity, not title, so it survives the collapse.
-    /// With the title gone it is the only thing separating two items from the
-    /// same opaque owner.
+    /// With the title gone, the instance index is all that separates two
+    /// items from the same owner.
     @Test("The instance index survives an opaque collapse")
     func opaqueCollapsePreservesInstanceIndex() {
         let owner = MenuBarItemTag.lyricsXBundleID
@@ -179,9 +171,7 @@ struct MenuBarItemTagCanonicalizationTests {
         #expect(identifier == "\(owner):\(MenuBarItemTag.opaqueTitle)")
     }
 
-    /// Adding an owner must not have widened the net. Everything outside the
-    /// allowlist still passes through untouched, including apps whose titles
-    /// happen to look volatile.
+    /// Everything outside the allowlist passes through, even volatile-looking titles.
     @Test("Unlisted owners are still untouched")
     func unlistedOwnersAreUntouched() {
         for identifier in [

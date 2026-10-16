@@ -2,7 +2,6 @@
 //  MigrationTests.swift
 //  Project: Thaw
 //
-//  Copyright (Ice) © 2023–2025 Jordan Baird
 //  Copyright (Thaw) © 2026 Toni Förster
 //  Licensed under the GNU GPLv3
 
@@ -14,18 +13,14 @@ import Testing
 /// written by an earlier build up to the current format.
 ///
 /// The only surviving migration converts the global Thaw Bar switches into
-/// per-display configurations. It is destructive in the sense that matters: it
-/// writes `displayIceBarConfigurations` and then sets a latch so it never runs
-/// again. Two things therefore have to hold. The latch must be set on *every*
-/// path — including the "nothing to migrate" path, otherwise the migration
-/// re-runs at each launch and stomps whatever the user has since configured
-/// per display. And the latch must not be set when encoding fails, so a
-/// transient failure does not permanently skip the conversion.
+/// per-display configurations, then sets a latch so it never runs again. The
+/// latch must be set on every path, including "nothing to migrate", or the
+/// migration re-runs at each launch and stomps later per-display edits. It
+/// must not be set when encoding fails, so a transient failure does not skip
+/// the conversion for good.
 ///
-/// Every case runs against a scratch defaults suite, since `migrateAll()`
-/// writes through the `Defaults` facade and would otherwise mutate the
-/// developer's real domain. `Defaults.store` is process-wide, so the suite is
-/// serialized.
+/// Every case runs against scratch defaults in a serialized suite, since
+/// `migrateAll()` writes through the process-wide `Defaults` facade.
 @MainActor
 @Suite("Settings migration", .serialized)
 struct MigrationTests {
@@ -51,8 +46,8 @@ struct MigrationTests {
     }
 
     /// With the Thaw Bar switched off there is nothing to convert, but the
-    /// latch still has to be set — otherwise the migration reconsiders the
-    /// legacy keys at every launch.
+    /// latch still has to be set, or the migration reconsiders the legacy keys
+    /// at every launch.
     @Test("A disabled Thaw Bar writes no configurations but still latches")
     func disabledIceBarWritesNothingButLatches() throws {
         try withScratchDefaults { _ in
@@ -65,8 +60,8 @@ struct MigrationTests {
         }
     }
 
-    /// Once the latch is set, the legacy keys are ignored entirely — this is
-    /// what protects a user who has since edited their per-display settings.
+    /// Once the latch is set, the legacy keys are ignored entirely, which
+    /// protects a user who has since edited their per-display settings.
     @Test("An already-latched domain is left untouched")
     func latchedDomainIsLeftUntouched() throws {
         try withScratchDefaults { _ in
@@ -121,8 +116,8 @@ struct MigrationTests {
         }
     }
 
-    /// A raw value the current build does not recognize — from a downgrade, or
-    /// a hand-edited plist — has to resolve to `.dynamic` rather than abort the
+    /// A raw value the current build does not recognize (from a downgrade or a
+    /// hand-edited plist) must resolve to `.dynamic` rather than abort the
     /// migration.
     @Test("An unrecognized location falls back to dynamic")
     func unrecognizedLocationFallsBackToDynamic() throws {

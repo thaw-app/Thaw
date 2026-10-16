@@ -1,101 +1,165 @@
 # Frequent Issues <!-- omit in toc -->
 
-Check here before [filing a bug](https://github.com/thaw-app/Thaw/issues/new/choose). Your problem may already be known with a workaround available.
+Check here before [filing a bug](https://github.com/thaw-app/Thaw/issues/new/choose). Your problem may already be known, and many have a workaround.
 
-> [!IMPORTANT]
-> **macOS 27 (Golden Gate):** use the tracking issue **[#687](https://github.com/thaw-app/Thaw/issues/687)** for general support, status, and preview builds. Do not open a new issue for that.
+Thaw 3.0 runs on macOS 27 and Thaw 2.x runs on macOS 26. macOS 27 changed how menu bar items work, so the two have separate sections. Start with the one for your macOS version. [Versions and update channels](docs/VERSIONS.md) says which Thaw you have.
 
-- [macOS 27 (Golden Gate)](#macos-27-golden-gate)
-- [Items end up in the wrong section](#items-end-up-in-the-wrong-section)
-- [Thaw removed an item](#thaw-removed-an-item)
-- [Layout changes on its own](#layout-changes-on-its-own)
-- [How do I solve the `Thaw cannot arrange menu bar items in automatically hidden menu bars` error?](#how-do-i-solve-the-thaw-cannot-arrange-menu-bar-items-in-automatically-hidden-menu-bars-error)
-- [An item is visible in the menu bar but missing from Layout settings](#an-item-is-visible-in-the-menu-bar-but-missing-from-layout-settings)
-- [Little Snitch](#little-snitch)
-- [CodexBar](#codexbar)
-- [Multi-monitor / plugging in a display](#multi-monitor--plugging-in-a-display)
-- [Menu bar spacing (beta) hides or clips items](#menu-bar-spacing-beta-hides-or-clips-items)
-- [Screen Recording and permission prompts](#screen-recording-and-permission-prompts)
-- [Hidden items still visible when the Thaw bar is off](#hidden-items-still-visible-when-the-thaw-bar-is-off)
-- [Flickering, refreshing, or "dancing" icons](#flickering-refreshing-or-dancing-icons)
-- [Live Activities and iPhone mirroring](#live-activities-and-iphone-mirroring)
-- [High CPU or memory usage](#high-cpu-or-memory-usage)
+- [macOS 27 (Thaw 3.0)](#macos-27-thaw-30)
+  - [Known macOS 27 limitations](#known-macos-27-limitations)
+  - [Little Snitch on macOS 27](#little-snitch-on-macos-27)
+  - [Thaw's own icon is missing on macOS 27](#thaws-own-icon-is-missing-on-macos-27)
+- [macOS 26 (Thaw 2.x)](#macos-26-thaw-2x)
+  - [`brew upgrade` says thaw@beta does not run on this macOS](#brew-upgrade-says-thawbeta-does-not-run-on-this-macos)
+  - [Items end up in the wrong section](#items-end-up-in-the-wrong-section)
+  - [Thaw removed an item](#thaw-removed-an-item)
+  - [Thaw's own icon is missing: how to open Settings](#thaws-own-icon-is-missing-how-to-open-settings)
+  - [Layout changes on its own](#layout-changes-on-its-own)
+  - [How do I solve the `Thaw cannot arrange menu bar items in automatically hidden menu bars` error?](#how-do-i-solve-the-thaw-cannot-arrange-menu-bar-items-in-automatically-hidden-menu-bars-error)
+  - [An item is visible in the menu bar but missing from Layout settings](#an-item-is-visible-in-the-menu-bar-but-missing-from-layout-settings)
+  - [Little Snitch](#little-snitch)
+  - [CodexBar](#codexbar)
+  - [Multi-monitor / plugging in a display](#multi-monitor--plugging-in-a-display)
+  - [Menu bar spacing (beta) hides or clips items](#menu-bar-spacing-beta-hides-or-clips-items)
+  - [What Thaw will and won't quit](#what-thaw-will-and-wont-quit)
+  - [Screen Recording and permission prompts](#screen-recording-and-permission-prompts)
+  - [Hidden items still visible when the Thaw bar is off](#hidden-items-still-visible-when-the-thaw-bar-is-off)
+  - [Flickering, refreshing, or "dancing" icons](#flickering-refreshing-or-dancing-icons)
+  - [Live Activities and iPhone mirroring](#live-activities-and-iphone-mirroring)
+  - [High CPU or memory usage](#high-cpu-or-memory-usage)
 - [Before you file a bug](#before-you-file-a-bug)
 
-## macOS 27 (Golden Gate)
+## macOS 27 (Thaw 3.0)
 
-General macOS 27 support, incomplete behavior on Golden Gate, and preview builds are tracked in **[#687](https://github.com/thaw-app/Thaw/issues/687)**. Comment there instead of opening a new issue.
+macOS 27 changed how menu bar items are hidden and arranged, and Thaw 3.0 is built on the new system. Some things are not possible on it yet. Thaw lists the same limitations in **Settings → Menu Bar Layout** under **Known macOS 27 limitations**.
 
-Only file a separate bug if you have a **narrow, specific, reproducible** problem that is clearly distinct from “Thaw isn’t fully supported on 27 yet.”
+### Known macOS 27 limitations
 
-## Items end up in the wrong section
+These are known. You don't need to report them.
 
-macOS inserts new status items at the **far left** of the menu bar. Thaw treats that region as the **Hidden** section (or **Always Hidden** when that section is enabled). Some apps do not persist their menu bar position across relaunch, so Thaw may treat them as newly detected items even after you have moved them before.
+- **Several items from one app:** some apps' menu bar items cannot be hidden independently with the current macOS 27 mechanism. An item in Hidden can stay visible when another item from the same app is in Visible. To hide them, put all of that app's items in the same section. [#1125](https://github.com/thaw-app/Thaw/issues/1125)
+- **Apple's own items:** macOS hides Focus, AirDrop, Now Playing and Fast User Switching whenever any other item is hidden, and never hides Time Machine or the Input menu. Turn on **Replace Control Center items** in **Settings → Menu Bar Layout** to put Thaw icons in their place, which you can move and hide.
+- **Clock, Control Center and Siri:** macOS pins these. Thaw cannot move them.
+- **Shortcuts and Focus:** macOS 27 can hide the Shortcuts item at launch, and the Focus icon may not be visible to Thaw at all. Thaw cannot manage either one yet. [#1105](https://github.com/thaw-app/Thaw/issues/1105), [#1124](https://github.com/thaw-app/Thaw/issues/1124), [#1154](https://github.com/thaw-app/Thaw/issues/1154)
+- **Live Activities:** macOS 27 hides some Live Activity items and gives Thaw no way to bring them back on demand. [#1095](https://github.com/thaw-app/Thaw/issues/1095)
+- **Apps that need their own update:** an app built for the older menu bar can sit in the wrong place, refuse to hide, or show no icon. f.lux behaves this way today. The fix has to come from the app's developer, so check for an update to that app.
+- **Items that show changing text** (a temperature, a clock, a transfer rate): these can land next to where you put them rather than exactly there. macOS places them from memory, not from Thaw's layout.
+- **Uneven spacing:** each app adds its own padding around its items, so the same spacing setting can still leave uneven gaps. Applying spacing can also restart menu bar apps so they pick up the new value. [#1126](https://github.com/thaw-app/Thaw/issues/1126)
+- **App icons instead of previews:** when Thaw has no usable capture of an item, including when Screen Recording is off, it shows the app's icon instead. That is on purpose. If an item disappears completely, report it. [#1119](https://github.com/thaw-app/Thaw/issues/1119)
 
-Thaw 2.0 remembers layout through **profiles** and the **New Items** badge in **Settings → Menu Bar Layout**. Move that badge to choose where newly detected items should appear.
+Thaw and iStat Menus work well together since iStat Menus 7.5.1. If iStat items misbehave, update iStat Menus first.
 
-**Workarounds:**
+### Little Snitch on macOS 27
+
+Thaw can't see Little Snitch's menu bar icon until Little Snitch allows GUI scripting. In Little Snitch's settings, under **Security**, turn on **Allow GUI Scripting access to Little Snitch**.
+
+While Little Snitch is running and its icon is missing, **Settings → Menu Bar Layout** shows a reminder with a button that opens Little Snitch.
+
+### Thaw's own icon is missing on macOS 27
+
+macOS 27 has its own switch for each app's menu bar items, separate from Thaw's icon setting. Check both:
+
+1. **System Settings → Menu Bar → Allow in Menu Bar → Thaw**.
+2. **General → Show Thaw icon** in Thaw's settings. To open them without the icon, see [Thaw's own icon is missing: how to open Settings](#thaws-own-icon-is-missing-how-to-open-settings).
+
+## macOS 26 (Thaw 2.x)
+
+### `brew upgrade` says thaw@beta does not run on this macOS
+
+```text
+Error: thaw@beta: This cask does not run on macOS versions older than Golden Gate.
+```
+
+The `thaw@beta` cask follows the newest beta, and that is now Thaw 3, which needs macOS 27. On macOS 26, switch to the `thaw` cask:
+
+```sh
+brew uninstall thaw@beta
+brew install thaw
+```
+
+Your settings stay, because they are not stored in the app. To keep getting 2.x betas, set the update channel to **Beta** in **Settings → About**; Thaw then updates itself. See [Versions and update channels](docs/VERSIONS.md).
+
+Related: [#1221](https://github.com/thaw-app/Thaw/issues/1221).
+
+### Items end up in the wrong section
+
+macOS inserts new status items at the far left, which Thaw treats as the Hidden section (or Always Hidden when enabled). Some apps don't persist their position across relaunch, so Thaw may treat them as new even after you moved them.
+
+Fix:
 
 1. Open **Settings → Menu Bar Layout** and drag the item into the correct section.
 2. **⌘ Command + drag** the item in the menu bar.
-3. Move the **New Items** badge to your preferred default section.
-4. Use **Reset layout** only when you intend to start over. It can move every item back to Visible.
+3. Move the **New Items** badge to your preferred default section (Thaw 2.0 remembers layout through profiles and that badge).
+4. Use **Reset layout** only to start over; it can move every item back to Visible.
 
-If an item keeps returning to Hidden or Always Hidden after reboot, the host app is likely not saving its position. For [Little Snitch](#little-snitch) and [CodexBar](#codexbar), see the dedicated sections. Both have known upstream causes.
+If an item keeps returning to Hidden or Always Hidden after reboot, the host app likely isn't saving its position. For [Little Snitch](#little-snitch) and [CodexBar](#codexbar), see their sections; both have known upstream causes.
 
-Related reports: [#607](https://github.com/thaw-app/Thaw/issues/607), [#707](https://github.com/thaw-app/Thaw/issues/707), [#675](https://github.com/thaw-app/Thaw/issues/675), [#605](https://github.com/thaw-app/Thaw/issues/605).
+Related: [#607](https://github.com/thaw-app/Thaw/issues/607), [#707](https://github.com/thaw-app/Thaw/issues/707), [#675](https://github.com/thaw-app/Thaw/issues/675), [#605](https://github.com/thaw-app/Thaw/issues/605).
 
-## Thaw removed an item
+### Thaw removed an item
 
-Thaw cannot delete menu bar items. An item that seems to have vanished was usually moved into the **Hidden** or **Always Hidden** section by macOS or by your layout.
+Thaw cannot delete menu bar items. A vanished item was usually moved into the Hidden or Always Hidden section by macOS or by your layout.
 
-**Workaround:**
+Fix:
 
 1. **Option + click** the Thaw icon to reveal the always-hidden section (or double-click an empty area of the menu bar if you enabled that in **Settings → Advanced**).
 2. **⌘ Command + drag** the item into a different section.
 
-## Layout changes on its own
+### Thaw's own icon is missing: how to open Settings
 
-Thaw **does** persist item order per profile. Layout drift usually comes from one of these causes:
+If Thaw's own menu bar icon is missing, open its Settings directly from Terminal:
 
-- macOS or a host app **relaunches its status item** with a new identity.
-- A **display topology change** (plugging in a monitor, waking from sleep, Sidecar, KVM switch).
-- A **spacing change** that requires Thaw to relaunch apps with menu bar items.
+```sh
+open "thaw://open-settings"
+```
 
-When display spacing must be applied across a transition, Thaw may relaunch affected apps. That can look like icons jumping or duplicating briefly. Enable **Confirm before relaunching apps** in **Settings → Displays** if you want a prompt first.
+This is an existing [action URL](docs/URI_SCHEMES.md#supported-actions); it does not require enabling Settings URI automation or authorizing a caller to change settings.
+
+Once Settings opens:
+
+1. Check **General → Show Thaw icon**.
+2. On macOS 27, also see [Thaw's own icon is missing on macOS 27](#thaws-own-icon-is-missing-on-macos-27).
+3. If **Show Thaw icon** is on and the icon is still missing, follow [Before you file a bug](#before-you-file-a-bug). Include your Thaw and macOS versions, installation path, and which displays are affected. Note separately whether Settings opens, Layout shows items, and hidden items can be revealed.
+
+Opening Settings restores access to the controls; it does not establish that the menu bar problem is fixed. Related report: [#1135](https://github.com/thaw-app/Thaw/issues/1135).
+
+### Layout changes on its own
+
+Thaw persists item order per profile. Drift usually comes from one of:
+
+- macOS or a host app relaunching its status item with a new identity.
+- A display topology change (plugging in a monitor, waking from sleep, Sidecar, KVM switch).
+- A spacing change that requires Thaw to relaunch apps with menu bar items.
+
+When spacing must be applied across a transition, Thaw may relaunch affected apps, which can look like icons jumping or duplicating briefly. Enable **Confirm before relaunching apps** in **Settings → Displays** to get a prompt first.
 
 If order keeps changing without any display or app changes, it may be a bug. See [Before you file a bug](#before-you-file-a-bug).
 
-Related reports: [#702](https://github.com/thaw-app/Thaw/issues/702), [#717](https://github.com/thaw-app/Thaw/issues/717), [#718](https://github.com/thaw-app/Thaw/issues/718).
+Related: [#702](https://github.com/thaw-app/Thaw/issues/702), [#717](https://github.com/thaw-app/Thaw/issues/717), [#718](https://github.com/thaw-app/Thaw/issues/718).
 
-## How do I solve the `Thaw cannot arrange menu bar items in automatically hidden menu bars` error?
+### How do I solve the `Thaw cannot arrange menu bar items in automatically hidden menu bars` error?
 
-macOS does not expose enough of the menu bar for Thaw to rearrange items while **Automatically hide and show the menu bar** is active.
+macOS doesn't expose enough of the menu bar for Thaw to rearrange items while **Automatically hide and show the menu bar** is active.
 
-1. Open **System Settings** on your Mac.
-2. Go to **Control Center**.
-3. Set **Automatically hide and show the menu bar** to **Never**, as shown below.
-4. Update your layout in **Settings → Menu Bar Layout**.
-5. Return **Automatically hide and show the menu bar** to your preferred setting.
+Fix:
+
+1. Open **System Settings → Control Center**.
+2. Set **Automatically hide and show the menu bar** to **Never** (below).
+3. Update your layout in **Settings → Menu Bar Layout**.
+4. Return **Automatically hide and show the menu bar** to your preferred setting.
 
 ![Disable Menu Bar Hiding](https://github.com/user-attachments/assets/74c1fde6-d310-4fe3-9f2b-703d8ccb636a)
 
-## An item is visible in the menu bar but missing from Layout settings
+### An item is visible in the menu bar but missing from Layout settings
 
-Some apps draw menu bar icons outside the normal status-item APIs Thaw enumerates, or host their icon under the `com.apple.controlcenter` namespace without a stable identifier. Thaw may show the icon in the menu bar but not list it by name in **Settings → Menu Bar Layout**.
+Some apps draw icons outside the status-item APIs Thaw enumerates, or host their icon under `com.apple.controlcenter` without a stable identifier. Thaw may show the icon in the bar but not list it by name in **Settings → Menu Bar Layout**.
 
-macOS also prevents certain **system items** from being repositioned with **⌘ Command + drag**. They follow the cursor during the drag but snap back on release.
+macOS also prevents certain system items from being repositioned with **⌘ Command + drag**: they follow the cursor during the drag but snap back on release.
 
-For known problematic apps, see the dedicated sections below:
+For known problematic apps, see [Little Snitch](#little-snitch) and [CodexBar](#codexbar).
 
-- [Little Snitch](#little-snitch)
-- [CodexBar](#codexbar)
+### Little Snitch
 
-## Little Snitch
-
-Little Snitch is the most frequently reported third-party menu bar app in Thaw issues. Its agent (`at.obdev.littlesnitch.agent`) often appears at the Accessibility layer as `com.apple.controlcenter:Item-0` **without a stable source PID**, so Thaw must identify it indirectly (marker-pair resolution) rather than by bundle ID alone.
-
-This causes several confusing symptoms that look like Thaw bugs but stem from how Little Snitch hosts its status item on macOS 26:
+Little Snitch's agent (`at.obdev.littlesnitch.agent`) often appears at the Accessibility layer as `com.apple.controlcenter:Item-0` without a stable source PID, so Thaw must identify it indirectly (marker-pair resolution) rather than by bundle ID. Symptoms that look like Thaw bugs but stem from how Little Snitch hosts its status item on macOS 26:
 
 | Symptom | Example issues |
 |---------|----------------|
@@ -106,49 +170,40 @@ This causes several confusing symptoms that look like Thaw bugs but stem from ho
 | Clicking the icon while hidden makes the Thaw icon follow the cursor | [#332](https://github.com/thaw-app/Thaw/issues/332) |
 | Duplicate Little Snitch Agent after wake from sleep | [#641](https://github.com/thaw-app/Thaw/issues/641) |
 
-**What works today**
+Fix:
 
-- **2.0.0-beta.14+** includes improved matching for Control Center–hosted items ([#643](https://github.com/thaw-app/Thaw/issues/643)). The beta 13 regression ("will not stick") should not recur on current builds.
-- Thaw maintainers are in contact with the Little Snitch developers about the underlying identification problem.
-
-**Workarounds to try**
-
-1. **Update Thaw** to the latest 2.0 beta (or stable, whichever is newer).
-2. If the icon vanishes when Thaw launches, **quit Thaw**, **⌘ Command + drag** the Little Snitch icon to the far right of the menu bar, then relaunch Thaw ([#709](https://github.com/thaw-app/Thaw/issues/709)).
-3. Clear Thaw's cache and reset Accessibility permission, then re-grant when prompted ([#643](https://github.com/thaw-app/Thaw/issues/643)):
+1. In Little Snitch's settings, under **Security**, turn on **Allow GUI Scripting access to Little Snitch**. Without it, Little Snitch ignores the events Thaw sends to move its icon.
+2. **Update Thaw** to the latest 2.x release. 2.0.0-beta.14+ has improved matching for Control Center-hosted items ([#643](https://github.com/thaw-app/Thaw/issues/643)); the beta 13 "will not stick" regression should not recur.
+3. If the icon vanishes when Thaw launches, quit Thaw, **⌘ Command + drag** the Little Snitch icon to the far right of the menu bar, then relaunch Thaw ([#709](https://github.com/thaw-app/Thaw/issues/709)).
+4. Clear Thaw's cache and reset Accessibility, then re-grant when prompted ([#643](https://github.com/thaw-app/Thaw/issues/643)):
 
    ```sh
    rm -rf ~/Library/Caches/com.stonerl.Thaw
    tccutil reset Accessibility com.stonerl.Thaw
    ```
 
-4. If Little Snitch **Network Monitor meters** keep returning to Always Hidden, try placing them from Little Snitch's own preferences rather than only through Thaw ([#575](https://github.com/thaw-app/Thaw/issues/575)).
-5. If layout problems started after installing **CodexBar 0.29.x**, see [CodexBar](#codexbar). Corrupted Control Center state can affect Little Snitch and other Control Center–hosted items.
+5. If Little Snitch **Network Monitor meters** keep returning to Always Hidden, place them from Little Snitch's own preferences rather than only through Thaw ([#575](https://github.com/thaw-app/Thaw/issues/575)).
+6. If layout problems started after installing **CodexBar 0.29.x**, see [CodexBar](#codexbar). Corrupted Control Center state can affect Little Snitch and other Control Center-hosted items.
 
-**What may still not work**
+Still broken: the icon may never appear under the name "Little Snitch" in Layout settings even when visible in the bar ([#709](https://github.com/thaw-app/Thaw/issues/709)), and moving it only inside Thaw's Layout panel may not stick. Menu-bar **⌘ Command + drag** (with Thaw quit, if needed) is more reliable.
 
-- The icon may never appear under the name "Little Snitch" in Layout settings even when visible in the bar ([#709](https://github.com/thaw-app/Thaw/issues/709)).
-- Moving Little Snitch **only** inside Thaw's Layout panel may not stick; menu-bar **⌘ Command + drag** (with Thaw quit, if needed) is more reliable for some users.
+If none of this helps, file a bug with diagnostic logs. Search the log for `obdev`, `littlesnitch`, and `marker-pair`. Absence of `at.obdev.littlesnitch.agent` usually means Thaw hasn't identified the item yet.
 
-If none of the above helps, file a bug with diagnostic logs. Search the log for `obdev`, `littlesnitch`, and `marker-pair`. Absence of `at.obdev.littlesnitch.agent` usually means Thaw has not identified the item yet.
+### CodexBar
 
-## CodexBar
+CodexBar issues are upstream: certain versions wrote state into macOS Control Center preferences that caused Thaw (and other menu bar managers) to misplace the icon into Hidden or Always Hidden ([#605](https://github.com/thaw-app/Thaw/issues/605)).
 
-CodexBar issues are **upstream**: certain CodexBar versions wrote state into macOS Control Center preferences that caused Thaw (and other menu bar managers) to misplace the icon into Hidden or Always Hidden ([#605](https://github.com/thaw-app/Thaw/issues/605)).
-
-**Affected CodexBar versions (from issue reports)**
+Affected versions:
 
 | Version | Status |
 |---------|--------|
-| **0.27.0** | Reported broken ([#605](https://github.com/thaw-app/Thaw/issues/605) comment) |
-| **0.28.0** | Worked in maintainer testing |
-| **0.29.0** | Known bad: corrupts Control Center files ([#605](https://github.com/thaw-app/Thaw/issues/605)) |
-| **0.29.1** | Fixed for some users |
-| **0.30.1+** | Upstream fix shipped ([#605](https://github.com/thaw-app/Thaw/issues/605), [CodexBar v0.30.1](https://github.com/steipete/CodexBar/releases/tag/v0.30.1), [steipete/CodexBar#1122](https://github.com/steipete/CodexBar/pull/1122)) |
+| 0.27.0 | Reported broken ([#605](https://github.com/thaw-app/Thaw/issues/605) comment) |
+| 0.28.0 | Worked in maintainer testing |
+| 0.29.0 | Known bad: corrupts Control Center files ([#605](https://github.com/thaw-app/Thaw/issues/605)) |
+| 0.29.1 | Fixed for some users |
+| 0.30.1+ | Upstream fix shipped ([#605](https://github.com/thaw-app/Thaw/issues/605), [CodexBar v0.30.1](https://github.com/steipete/CodexBar/releases/tag/v0.30.1), [steipete/CodexBar#1122](https://github.com/steipete/CodexBar/pull/1122)) |
 
-Thaw versions seen in reports: **1.2.0** (original report), **2.0.0-beta.13+** (follow-up testing). The fix is on the CodexBar side; use a current Thaw build together with CodexBar **0.30.1 or later**.
-
-**Workarounds**
+Fix:
 
 1. Update CodexBar to **[v0.30.1](https://github.com/steipete/CodexBar/releases/tag/v0.30.1) or newer**.
 2. If the menu bar still behaves oddly after upgrading, reset Control Center preferences ([#605](https://github.com/thaw-app/Thaw/issues/605)):
@@ -162,84 +217,103 @@ Thaw versions seen in reports: **1.2.0** (original report), **2.0.0-beta.13+** (
 
 3. Re-pin CodexBar to the Visible section in **Settings → Menu Bar Layout**.
 
-Corrupted Control Center state from CodexBar 0.29.x can also cause **Little Snitch**, **Timemator**, and other Control Center–hosted items to drift ([#643](https://github.com/thaw-app/Thaw/issues/643) comments). If multiple apps misbehave at once, fix CodexBar first.
+Corrupted Control Center state from 0.29.x can also cause **Little Snitch**, **Timemator**, and other Control Center-hosted items to drift ([#643](https://github.com/thaw-app/Thaw/issues/643) comments). If multiple apps misbehave at once, fix CodexBar first.
 
-## Multi-monitor / plugging in a display
+### Multi-monitor / plugging in a display
 
-Connecting, disconnecting, or switching displays can cause brief visual glitches: resolution flicker or extra spacing. These are often transient.
+Connecting, disconnecting, or switching displays can cause brief visual glitches (resolution flicker, extra spacing), often transient.
 
-Thaw may **relaunch apps with menu bar items** when a display transition requires applying different menu bar spacing. That can produce duplicate icons if the host app also relaunches its agent. The duplicate usually belongs to the app, not Thaw.
+Thaw may relaunch apps with menu bar items when a display transition requires applying different menu bar spacing. That can produce duplicate icons if the host app also relaunches its agent. The duplicate usually belongs to the app, not Thaw. Thaw does not quit macOS system services during this; see [What Thaw will and won't quit](#what-thaw-will-and-wont-quit).
 
-**Workarounds:**
+Fix:
 
 1. Enable **Confirm before relaunching apps** in **Settings → Displays**.
 2. Wait a few seconds after a display change before editing layout.
 3. After wake from sleep, quit and reopen Thaw if layout looks stale.
 
-Related reports: [#591](https://github.com/thaw-app/Thaw/issues/591), [#685](https://github.com/thaw-app/Thaw/issues/685), [#641](https://github.com/thaw-app/Thaw/issues/641), [#708](https://github.com/thaw-app/Thaw/issues/708).
+Related: [#591](https://github.com/thaw-app/Thaw/issues/591), [#685](https://github.com/thaw-app/Thaw/issues/685), [#641](https://github.com/thaw-app/Thaw/issues/641), [#708](https://github.com/thaw-app/Thaw/issues/708).
 
-## Menu bar spacing (beta) hides or clips items
+### Menu bar spacing (beta) hides or clips items
 
-Menu bar spacing is a **beta** feature. Values far from the default (especially negative spacing) change how many items fit. Items can end up under the notch or off-screen even though they still appear in Layout settings.
+Spacing is a beta feature. Values far from the default (especially negative spacing) change how many items fit; items can end up under the notch or off-screen while still appearing in Layout settings.
 
-**Workarounds:**
+Fix:
 
 1. Return spacing to the default and confirm all items are reachable.
 2. Re-apply spacing in small steps.
-3. If a system app crashes when spacing changes (for example Spotlight), treat it as an upstream macOS issue ([#720](https://github.com/thaw-app/Thaw/issues/720)).
+3. If a system app is missing after a spacing change (for example Spotlight), restart it with `launchctl kickstart -k gui/$(id -u)/com.apple.Spotlight`, or log out and back in.
 
-Related reports: [#664](https://github.com/thaw-app/Thaw/issues/664).
+Related: [#664](https://github.com/thaw-app/Thaw/issues/664).
 
-## Screen Recording and permission prompts
+### What Thaw will and won't quit
 
-Thaw uses **Screen Recording** for live previews of menu bar items and for the wallpaper-derived tints. Hiding, revealing, and rearranging items do not need it.
+Menu bar spacing lives in a single system-wide preference, and a status item only picks up a new value when its owning process starts. To apply spacing right away, Thaw restarts the apps that own menu bar items. It sorts them into three groups first:
 
-Without the permission, Thaw draws each item as its owning app's icon in the Thaw Bar, the layout bars, and the search panel. Older builds showed an error on those surfaces instead, which is what [#628](https://github.com/thaw-app/Thaw/issues/628) reported.
+- **Apps macOS launches for you** (Spotlight, the input menu, Dock, Time Machine) are restarted through `launchctl kickstart`, so launchd stays their launching parent. Quitting one and relaunching it directly is rejected by macOS at exec, and the item would stay gone until you rebooted ([#720](https://github.com/thaw-app/Thaw/issues/720)).
+- **System binaries no LaunchAgent claims** are left alone entirely. Thaw has no way to bring them back, so it never takes them down ([#1070](https://github.com/thaw-app/Thaw/issues/1070)).
+- **Your own apps** are asked to quit and launched again. Thaw asks; it never force-quits. An app that declines (a save sheet, a long operation) keeps running and keeps the previous spacing.
 
-Grant permissions under **Settings → Advanced → Permissions**. If macOS keeps re-prompting after reboot despite approval ([#683](https://github.com/thaw-app/Thaw/issues/683)), remove Thaw from **System Settings → Privacy & Security → Screen Recording**, then add it again.
+The trade-off is that anything Thaw skips keeps its old spacing until it next starts on its own. Spacing changes are rare; a permanently dead Spotlight is not worth an evenly spaced menu bar.
 
-## Hidden items still visible when the Thaw bar is off
+If you would rather Thaw never restart apps, set **When applying spacing** to **Wait until next restart** in **Settings → Displays**. Thaw still writes the new spacing to the system preference, but leaves every app running; the new spacing appears the next time each app starts on its own (after a restart, or when you reopen it). This avoids the restart disruption when plugging in or unplugging monitors, at the cost of spacing not taking effect immediately.
 
-Disabling **Use Thaw Bar** stops Thaw from actively concealing items. Icons that were hidden while the bar was enabled may remain visible until Thaw manages the layout again.
+### Screen Recording and permission prompts
 
-**Workaround:** Turn **Use Thaw Bar** back on, or open **Settings → Menu Bar Layout** and re-apply your sections.
+Thaw uses **Screen Recording** for live previews and wallpaper-derived tints. Hiding, revealing, and rearranging items don't need it. Without the permission, Thaw draws each item as its owning app's icon in the Thaw Bar, the layout bars, and the search panel (older builds showed an error on those surfaces instead; see [#628](https://github.com/thaw-app/Thaw/issues/628)).
 
-Related report: [#610](https://github.com/thaw-app/Thaw/issues/610).
+Fix:
 
-## Flickering, refreshing, or "dancing" icons
+1. Grant permissions under **Settings → Advanced → Permissions**.
+2. If macOS keeps re-prompting after reboot despite approval ([#683](https://github.com/thaw-app/Thaw/issues/683)), remove Thaw from **System Settings → Privacy & Security → Screen Recording**, then add it again.
 
-Frequent redraws are often caused by the **host app** updating its status item (for example Shazam or Amphetamine) rather than by Thaw. Mission Control and space switches can also trigger full layout storms ([#718](https://github.com/thaw-app/Thaw/issues/718)).
+[Permissions](docs/PERMISSIONS.md) explains what each permission is for and how to reset one.
 
-**Workarounds:**
+### Hidden items still visible when the Thaw bar is off
+
+Disabling **Use Thaw Bar** stops Thaw from actively concealing items. Icons hidden while the bar was enabled may stay visible until Thaw manages the layout again.
+
+Fix: turn **Use Thaw Bar** back on, or open **Settings → Menu Bar Layout** and re-apply your sections.
+
+Related: [#610](https://github.com/thaw-app/Thaw/issues/610).
+
+### Flickering, refreshing, or "dancing" icons
+
+Frequent redraws are often caused by the host app updating its status item (for example Shazam or Amphetamine), not by Thaw. Mission Control and space switches can also trigger full layout storms ([#718](https://github.com/thaw-app/Thaw/issues/718)).
+
+Fix:
 
 1. Update Thaw to the latest release.
 2. Check whether the affected app has a menu-bar redraw setting.
-3. If flicker started after a Thaw update, file a bug with logs. It may be a regression.
+3. If flicker started after a Thaw update, file a bug with logs; it may be a regression.
 
-Related reports: [#678](https://github.com/thaw-app/Thaw/issues/678), [#649](https://github.com/thaw-app/Thaw/issues/649).
+Related: [#678](https://github.com/thaw-app/Thaw/issues/678), [#649](https://github.com/thaw-app/Thaw/issues/649).
 
-## Live Activities and iPhone mirroring
+### Live Activities and iPhone mirroring
 
 Live Activities mirrored from an iPhone (Screen Continuity) can interfere with layout operations ([#722](https://github.com/thaw-app/Thaw/issues/722), [#556](https://github.com/thaw-app/Thaw/issues/556)). Gaps or empty spaces in the menu bar during mirroring are a known limitation.
 
-**Workaround:** Pause iPhone mirroring or wait until the Live Activity ends before editing layout.
+Fix: pause iPhone mirroring, or wait until the Live Activity ends before editing layout.
 
-## High CPU or memory usage
+### High CPU or memory usage
 
 Sustained high CPU or RAM after long uptime is not expected ([#680](https://github.com/thaw-app/Thaw/issues/680), [#599](https://github.com/thaw-app/Thaw/issues/599)).
 
-**Workarounds:**
+Fix:
 
 1. Quit and reopen Thaw.
-2. Disable **Enable diagnostic logging** when you are not actively debugging.
+2. Disable **Enable diagnostic logging** when you're not actively debugging.
 3. If usage stays high, file a bug with logs (see below).
 
 ## Before you file a bug
 
-1. Confirm you are on the **latest Thaw release** and **macOS 26+** (the active target for current development).
+1. Confirm you are on the **latest Thaw release** for your macOS: 2.x on macOS 26, 3.0 on macOS 27 (see [Versions and update channels](docs/VERSIONS.md)). On macOS 27, check [Known macOS 27 limitations](#known-macos-27-limitations) first.
 2. Search [open and closed issues](https://github.com/thaw-app/Thaw/issues?q=is%3Aissue) for duplicates.
 3. Note your **display setup** (single vs multiple monitors).
 4. Enable **Settings → Advanced → Diagnostics → Enable diagnostic logging**, reproduce the issue, and attach the log from **Reveal Logs in Finder**.
 5. Use the [bug report template](https://github.com/thaw-app/Thaw/issues/new/choose). Reports without enough detail to reproduce may be closed until more information is provided.
+6. Issues are English only. Machine translation (AI or any other tool) is accepted.
+7. Thaw is free and run by a small team with limited time, so reports with clear steps and logs are looked at first. Issues that lack the requested details, or get no reply after two follow-ups from us, are closed. Issues with no activity are marked stale after 10 days and closed after about 14, unless they are labelled `blocked`, `parked`, `help wanted` or `keep open`. A closed issue can be reopened with the missing details.
+
+If a reset looks like the answer, [Reset or uninstall](docs/RESET_AND_UNINSTALL.md) lists the options from smallest to largest.
 
 **Support policy:** Thaw versions below **1.2.0** on macOS versions below **15.7.7** are no longer supported. macOS 26 and later are actively supported.

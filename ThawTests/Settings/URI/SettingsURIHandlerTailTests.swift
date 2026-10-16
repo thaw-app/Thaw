@@ -2,7 +2,6 @@
 //  SettingsURIHandlerTailTests.swift
 //  Project: Thaw
 //
-//  Copyright (Ice) © 2023–2025 Jordan Baird
 //  Copyright (Thaw) © 2026 Toni Förster
 //  Licensed under the GNU GPLv3
 
@@ -12,9 +11,7 @@ import Testing
 @testable import Thaw
 
 /// Collects the notifications posted on `name` while `body` runs.
-///
-/// The three sibling suites each carry a private copy of this; it lives at file
-/// scope here so the nested suites below can share one.
+/// File-scoped so the nested suites below share one copy.
 @MainActor
 private func notifications(
     named name: Notification.Name,
@@ -41,52 +38,29 @@ private final class NotificationBox: @unchecked Sendable {
     }
 }
 
-/// The tail of ``SettingsURIHandler`` that the three existing suites leave
-/// alone.
+/// Covers the parts of ``SettingsURIHandler`` the three sibling suites leave
+/// unreached:
 ///
-/// Between them, `SettingsURIHandlerTests` (key tables, `parseBool`,
-/// `parseDouble`, `PerDisplayScope`), `SettingsURIHandlerApplyTests` (`set` and
-/// `toggle`, clamping, whitelist add/remove) and `SettingsURIHandlerGetTests`
-/// (`get`, callback-scheme refusals, code-signature verification) already reach
-/// most of the type. What is left is genuinely a tail, and it is grouped here
-/// by what makes each part unreached rather than by API surface:
+/// - **The empty-string display identifier.** A `thaw://` URL with a bare
+///   `display=` must scope the change as if the parameter were omitted, not
+///   address a display named "". Sibling suites only pass `nil` or a real UUID.
+/// - **The `userInfo` a per-display change carries.** `DisplaySettingsManager`
+///   reads `value`, `stringValue` and `toggle` to decide what kind of change
+///   it got, so exactly one must be present. Siblings only assert the present key.
+/// - **The per-display keys that cannot be toggled.** `iceBarLayout` and
+///   `gridColumns` reach the same refusal as `iceBarLocation`.
+/// - **`TeamIdentifierLookup.teamIdentifier` and `getAppIcon(for:)`**, only
+///   called from the modal `promptForAuthorization`.
+/// - **Removal purging the stored signing identity.** A stale identity would
+///   be verified against on the next authorization.
 ///
-/// - **The empty-string display identifier.** Both `handlePerDisplaySet` and
-///   `handlePerDisplayToggle` open with `if let uuid = displayUUID,
-///   !uuid.isEmpty`. The sibling suites pass either `nil` or a real UUID, so
-///   the `!uuid.isEmpty` half has never been the thing that decided the branch.
-///   It matters because a `thaw://` URL carrying `display=` with nothing after
-///   it produces exactly that, and it must scope the change the same way as
-///   omitting the parameter entirely rather than addressing a display named "".
-/// - **The `userInfo` a per-display change carries.** The posting helper builds
-///   its payload from three independent `if let`/`if` arms, and
-///   `DisplaySettingsManager` reads `value`, `stringValue` and `toggle` to
-///   decide what kind of change it was handed. Sibling tests assert the key
-///   that *is* present; nothing asserts that the other two are absent, so a
-///   payload that carried all three would pass every existing test and leave
-///   the reader picking whichever arm it checks first.
-/// - **The per-display keys that cannot be toggled.** Only `iceBarLocation` is
-///   currently asserted; `iceBarLayout` and `gridColumns` reach the same
-///   refusal and are equally not Booleans.
-/// - **`TeamIdentifierLookup.teamIdentifier` and `getAppIcon(for:)`**, which are
-///   only ever called from `promptForAuthorization` — an `NSAlert.runModal`, so
-///   unreachable from a test through its caller.
-/// - **Removal purging the stored signing identity.** `removeFromWhitelist`
-///   deletes both the whitelist entry and the identity; the sibling round-trip
-///   test only observes the entry, so a removal that left the identity behind
-///   would still pass it, and the stale identity would then be verified against
-///   on the next authorization.
+/// Not covered: `promptForAuthorization` (modal `NSAlert`), the success path
+/// of `sendCallbackResponse` (launches another app), and the
+/// display-enumerating halves of `getAllSettings`/`getAllDisplays`, which
+/// depend on the attached monitors.
 ///
-/// Deliberately **not** covered: `promptForAuthorization` (runs a modal
-/// `NSAlert`), the success path of `sendCallbackResponse` (opens a URL through
-/// `NSWorkspace`, which launches another app), and the display-enumerating
-/// halves of `getAllSettings`/`getAllDisplays`, whose answers depend on the
-/// monitors attached to the machine running the suite.
-///
-/// Every test that reads or writes a setting runs inside `withScratchDefaults`,
-/// so the suite never touches the developer's real `com.stonerl.Thaw` domain —
-/// which also means it starts from a known-empty whitelist rather than from
-/// whatever the developer has authorized.
+/// Every read or write runs inside `withScratchDefaults`, starting from an
+/// empty whitelist.
 @MainActor
 @Suite("Settings URI handler tail", .serialized)
 struct SettingsURIHandlerTailTests {
@@ -127,9 +101,7 @@ struct SettingsURIHandlerTailTests {
             #expect(SettingsURIHandler.getAppIcon(for: "com.example.NotInstalledAnywhere") == nil)
         }
 
-        /// Finder ships with the system, so it resolves on any machine that can
-        /// run this suite at all. The sibling suite already leans on that for
-        /// `getAppName`.
+        /// Finder ships with the system, so it resolves on any machine.
         @Test("An installed app resolves to an icon")
         func installedAppResolvesToAnIcon() {
             #expect(SettingsURIHandler.getAppIcon(for: "com.apple.finder") != nil)
@@ -296,8 +268,7 @@ struct SettingsURIHandlerTailTests {
             }
         }
 
-        /// A toggle carries no value at all — the reader is being told to flip
-        /// whatever it currently holds, not to store something.
+        /// A toggle carries no value: the reader flips whatever it holds.
         @Test("A toggle carries the toggle flag and no value")
         func toggleCarriesOnlyItsFlag() throws {
             try withScratchDefaults { _ in
@@ -338,11 +309,9 @@ struct SettingsURIHandlerTailTests {
     @MainActor
     @Suite("Whitelist bookkeeping")
     struct WhitelistBookkeeping {
-        /// Removal has to forget the recorded team as well as the entry. If it
-        /// did not, re-authorizing the app afterwards would still be verified
-        /// against the team it used to be authorized with — so an app that has
-        /// since changed, or lost, its signature would be refused even though
-        /// the user just approved it again.
+        /// Removal must forget the recorded team as well as the entry, or
+        /// re-authorizing an app whose signature changed would still be verified
+        /// against the stale team and refused.
         @Test("Removing an app forgets the signing identity it was authorized with")
         func removalForgetsTheSigningIdentity() throws {
             try withScratchDefaults { _ in

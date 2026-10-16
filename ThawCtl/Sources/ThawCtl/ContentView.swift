@@ -2,7 +2,6 @@
 //  ContentView.swift
 //  Project: Thaw
 //
-//  Copyright (Ice) © 2023–2025 Jordan Baird
 //  Copyright (Thaw) © 2026 Toni Förster
 //  Licensed under the GNU GPLv3
 
@@ -165,7 +164,6 @@ struct ContentView: View {
 
     private var responsePanel: some View {
         VStack(spacing: 0) {
-            // Display UUID field
             HStack {
                 Text("Display UUID:")
                     .font(.caption)
@@ -179,7 +177,6 @@ struct ContentView: View {
 
             Divider()
 
-            // Timeline
             List {
                 ForEach(engine.log) { entry in
                     VStack(alignment: .leading, spacing: 2) {

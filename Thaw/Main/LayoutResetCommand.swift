@@ -2,7 +2,6 @@
 //  LayoutResetCommand.swift
 //  Project: Thaw
 //
-//  Copyright (Ice) © 2023–2025 Jordan Baird
 //  Copyright (Thaw) © 2026 Toni Förster
 //  Licensed under the GNU GPLv3
 
@@ -11,34 +10,23 @@ import Foundation
 /// The persisted half of a layout reset, runnable before the app builds a
 /// menu bar.
 ///
-/// ``MenuBarItemManager/resetLayoutToFreshState()`` — the Settings pane's
-/// reset — does this plus the live half: re-seating items, re-caching, and
-/// ending the settling window. That needs a running `AppState`, and it
-/// throws `LayoutResetError.missingAppState` without one.
-///
-/// The failure this exists for is the one where that is no help. A parked
-/// divider persists as an `NSStatusItem Preferred Position` and is restored
-/// on the next launch, so a bar wrecked badly enough comes back wrecked and
-/// starts moving items — and the pointer — before the user can reach
-/// Settings. #899's reporter had to kill Thaw from a terminal; this lets
-/// them repair the bar from the same terminal, before starting it again:
+/// ``MenuBarItemManager/resetLayoutToFreshState()`` also does the live half,
+/// which needs a running `AppState`. A parked divider is restored from
+/// `NSStatusItem Preferred Position` at launch, so a wrecked bar can start
+/// moving items before Settings is reachable (#899). This repairs it first:
 ///
 ///     /Applications/Thaw.app/Contents/MacOS/Thaw --reset-layout
 ///
-/// Only `UserDefaults` is touched, so it is safe to run with the app not
-/// running, and pointless to run while it is (the live manager holds the
-/// same state in memory and will persist it back).
+/// Only `UserDefaults` is touched; run it while the app is not running, or
+/// the live manager writes its state back.
 enum LayoutResetCommand {
     /// The argument that selects this command.
     static let flag = "--reset-layout"
 
     /// The defaults keys holding the persisted arrangement.
     ///
-    /// Mirrors what `resetLayoutToFreshState()` clears in memory before
-    /// persisting: the saved order, the "seen this item before" set, the
-    /// pinning sets, the in-flight relocation bookkeeping, the new-items
-    /// placement, and the stale-identifier retirement verdicts. Removed
-    /// rather than zeroed so the loaders fall back to their own defaults.
+    /// Mirrors what `resetLayoutToFreshState()` clears. Removed rather than
+    /// zeroed so the loaders fall back to their own defaults.
     static let layoutDefaultsKeys = MenuBarItemManager.LayoutStateKey.all + [
         Defaults.Key.newItemsSection.rawValue,
         Defaults.Key.newItemsPlacementData.rawValue,
@@ -53,9 +41,8 @@ enum LayoutResetCommand {
 
     /// Clears the persisted arrangement and re-seeds the divider positions.
     ///
-    /// The divider half matches `resetLayoutToFreshState()` exactly: visible
-    /// to 0, hidden to 1, always-hidden left alone because it is placed
-    /// dynamically and has no seed value to restore.
+    /// Matches `resetLayoutToFreshState()`: visible to 0, hidden to 1, and
+    /// always-hidden untouched since it is placed dynamically.
     static func resetPersistedLayout() {
         for key in layoutDefaultsKeys {
             Defaults.store.removeObject(forKey: key)
@@ -67,10 +54,7 @@ enum LayoutResetCommand {
     /// Runs the command if the arguments select it, reporting whether it
     /// ran so the caller can skip starting the app.
     ///
-    /// Writes are flushed explicitly: the process returns from `main`
-    /// immediately after this, and a reset that does not reach disk is
-    /// worse than no reset at all — the user would relaunch into the same
-    /// wrecked bar believing they had fixed it.
+    /// Writes are flushed explicitly because the process exits right after.
     static func runIfRequested(arguments: [String] = CommandLine.arguments) -> Bool {
         guard isRequested(arguments: arguments) else {
             return false

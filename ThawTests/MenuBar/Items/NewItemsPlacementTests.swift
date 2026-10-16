@@ -2,7 +2,6 @@
 //  NewItemsPlacementTests.swift
 //  Project: Thaw
 //
-//  Copyright (Ice) © 2023–2025 Jordan Baird
 //  Copyright (Thaw) © 2026 Toni Förster
 //  Licensed under the GNU GPLv3
 
@@ -12,16 +11,12 @@ import Testing
 
 // MARK: - NewItemsPlacement.Relation Tests
 
-/// Pins the wire format of `MenuBarItemManager.NewItemsPlacement.Relation`.
+/// Pins the raw values of `MenuBarItemManager.NewItemsPlacement.Relation`.
 ///
-/// The relation is persisted inside `newItemsPlacementData`, so its raw
-/// values are a stored format: renaming a case is safe, but changing the
-/// raw value silently discards an existing user's placement preference and
-/// falls back to the section default. These cases fail loudly if that ever
-/// happens.
+/// They are persisted in `newItemsPlacementData`; changing one silently
+/// discards a user's placement and falls back to the section default.
 ///
-/// Reads only; nothing here touches the defaults domain, so the suite is
-/// safe to run in parallel with the rest.
+/// Read-only, so safe to run in parallel.
 @Suite("New items placement relation")
 struct NewItemsPlacementRelationTests {
     // MARK: - Raw Values
@@ -120,16 +115,13 @@ struct NewItemsPlacementRelationTests {
 
 // MARK: - NewItemsPlacement Tests
 
-/// Covers `MenuBarItemManager.NewItemsPlacement` construction, equality, and
-/// its `Codable` conformance.
+/// `MenuBarItemManager.NewItemsPlacement` construction, equality, and `Codable`.
 ///
-/// The placement is persisted as JSON under `newItemsPlacementData` and
-/// compared against the stored value to decide whether a newly detected menu
-/// bar item needs to be moved. That makes both the encoded shape and the
-/// synthesized `Equatable` conformance load-bearing.
+/// The placement is stored as JSON in `newItemsPlacementData` and compared
+/// against the stored value to decide whether a new item must move, so both
+/// the encoded shape and `Equatable` are load-bearing.
 ///
-/// Reads only; nothing here touches the defaults domain, so the suite is
-/// safe to run in parallel with the rest.
+/// Read-only, so safe to run in parallel.
 @Suite("New items placement")
 struct NewItemsPlacementTests {
     // MARK: - Initialization
@@ -187,7 +179,6 @@ struct NewItemsPlacementTests {
     func defaultValueSectionKey() {
         let defaultValue = MenuBarItemManager.NewItemsPlacement.defaultValue
 
-        // Default section should be "hidden" per Defaults.DefaultValue.newItemsSection
         #expect(defaultValue.sectionKey == Defaults.DefaultValue.newItemsSection)
     }
 
@@ -374,7 +365,7 @@ struct NewItemsPlacementTests {
         let data = try #require(json.data(using: .utf8))
         let decoder = JSONDecoder()
 
-        // anchorIdentifier is Optional<String>, so missing key decodes as nil
+        // anchorIdentifier is optional, so a missing key decodes as nil.
         let placement = try decoder.decode(MenuBarItemManager.NewItemsPlacement.self, from: data)
 
         #expect(placement.sectionKey == "hidden")
@@ -435,7 +426,6 @@ struct NewItemsPlacementTests {
 
     @Test("Every relation can be carried by a placement")
     func allRelationsCovered() {
-        // Ensure all three relations can be used in placements
         let leftPlacement = MenuBarItemManager.NewItemsPlacement(
             sectionKey: "test",
             anchorIdentifier: "anchor",

@@ -2,29 +2,21 @@
 //  MenuBarItemManagerRearmTests.swift
 //  Project: Thaw
 //
-//  Copyright (Ice) © 2023–2025 Jordan Baird
 //  Copyright (Thaw) © 2026 Toni Förster
 //  Licensed under the GNU GPLv3
 
 import Testing
 @testable import Thaw
 
-/// Verifies the cache-refresh contract of rearmActiveProfileLayout, the half
-/// of the fix that lives in MenuBarItemManager.
+/// When the user updates the active profile, rearmActiveProfileLayout must
+/// refresh activeProfileLayout and activeProfileItemIdentifiers, or the next
+/// late-arrival re-sort drags items back to the last applied layout.
 ///
-/// The late-arrival re-sort reads activeProfileLayout (its sectionOrder /
-/// itemSectionMap) and activeProfileItemIdentifiers. When the user updates the
-/// active profile, re-arming must refresh both so the next re-sort targets the
-/// updated layout instead of the spec frozen at the last apply. This is exactly
-/// the reversion that dragged items back into Always-Hidden in the field logs.
-///
-/// Serialized because each case mints a real `MenuBarItemManager`, which reads
-/// the shared `UserDefaults` layout keys that the settings suites also touch.
+/// Serialized: a real `MenuBarItemManager` reads shared `UserDefaults` keys.
 @MainActor
 @Suite("Menu bar item manager re-arm", .serialized)
 struct MenuBarItemManagerRearmTests {
-    /// Re-arming on a fresh manager refreshes both the cached layout and the
-    /// flattened identifier set the late-arrival detector consults.
+    /// The late-arrival detector consults the flattened identifier set.
     @Test("Re-arming refreshes the cached layout and the identifier set")
     func rearmRefreshesCachedLayoutAndIdentifiers() {
         let manager = MenuBarItemManager()
@@ -55,17 +47,14 @@ struct MenuBarItemManagerRearmTests {
         )
     }
 
-    /// Reproduces the field reversion at the cache level: a profile is applied
-    /// with an item in Always-Hidden, the user moves it to Hidden and updates
-    /// the profile, and re-arming must move the cached section to Hidden. With
-    /// the pre-fix no-op, the cache would stay on the Always-Hidden spec and the
-    /// next late-arrival re-sort would drag the item back into Always-Hidden.
+    /// The user moves an item from Always-Hidden to Hidden and updates the
+    /// profile; re-arming must move the cached section too.
     @Test("Re-arming moves a cached item from Always-Hidden to Hidden")
     func rearmMovesCachedItemFromAlwaysHiddenToHidden() {
         let manager = MenuBarItemManager()
         let uid = "com.if.Amphetamine:Amphetamine"
 
-        // State A: as applied — item lives in Always-Hidden.
+        // State A: as applied, the item lives in Always-Hidden.
         manager.rearmActiveProfileLayout(
             pinnedHidden: [],
             pinnedAlwaysHidden: [],

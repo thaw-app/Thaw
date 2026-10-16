@@ -2,16 +2,11 @@
 //  LittleSnitchOrphanLog.swift
 //  Project: Thaw
 //
-//  Copyright (Ice) © 2023–2025 Jordan Baird
 //  Copyright (Thaw) © 2026 Toni Förster
 //  Licensed under the GNU GPLv3
 
-/// A trimmed, verbatim excerpt from a field-captured Thaw log used as the
-/// first fixture for the profile-layout log-replay harness.
-///
-/// Source: thaw_2026-05-29_17-13-13.log (a ~23k-line capture reported by a
-/// user whose Little Snitch agent kept moving on launch). Only the lines the
-/// harness parses are retained, copied without modification:
+/// Verbatim excerpt from a field log where the Little Snitch agent kept
+/// moving on launch, kept to the lines the replay harness parses:
 ///
 ///   - the Missing sourcePID warning that proves the Little Snitch agent icon
 ///     (windowID 64, namespaced com.apple.controlcenter:Item-0) had no
@@ -23,8 +18,7 @@
 ///     resolution renamed the same physical item to
 ///     at.obdev.littlesnitch.agent:Item-0, where nothing is unmanaged.
 ///
-/// Thaw does not log the desired visible set (only desiredHidden / desiredAH),
-/// which is why the harness reconstructs it; see the harness for how.
+/// Thaw does not log the desired visible set, so the harness reconstructs it.
 enum LittleSnitchOrphanLog {
     static let text = """
     2026-05-29 17:13:15.062 [WARNING] [MenuBarItemManager] Missing sourcePID for <com.apple.controlcenter:Item-0 (windowID: 64)>

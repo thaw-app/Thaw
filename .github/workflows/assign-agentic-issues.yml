@@ -1,8 +1,7 @@
 name: Assign agentic workflow issues
 
-# gh-aw opens failure / incomplete / noop tracker issues with the
-# `agentic-workflows` label but does not assign a maintainer. Assign them to
-# the Thaw maintainer so they surface in "Assigned to me".
+# gh-aw opens its `agentic-workflows` tracker issues unassigned; this assigns
+# them to the maintainer so they show up in "Assigned to me".
 
 on:
   issues:

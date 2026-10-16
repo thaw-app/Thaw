@@ -2,7 +2,6 @@
 //  MenuBarSectionNameTests.swift
 //  Project: Thaw
 //
-//  Copyright (Ice) © 2023–2025 Jordan Baird
 //  Copyright (Thaw) © 2026 Toni Förster
 //  Licensed under the GNU GPLv3
 
@@ -87,10 +86,8 @@ struct MenuBarSectionNameTests {
 
     // MARK: - localized
 
-    // LocalizedStringKey is not Equatable and doesn't expose its key
-    // directly; comparing `String(describing:)` against a key built from
-    // the expected string is the closest meaningful check of which key
-    // `localized` actually returns.
+    // LocalizedStringKey is not Equatable, so compare `String(describing:)` against
+    // a key built from the expected string.
 
     @Test("visible exposes the \"Visible\" localized key")
     func localizedVisible() {
@@ -164,6 +161,52 @@ struct MenuBarSectionNameTests {
         )
 
         #expect(mode == .inlineHidingApplicationMenus)
+    }
+
+    @Test("Hiding application menus is allowed only when both settings agree")
+    func allowsHidingApplicationMenusRequiresBothSettings() {
+        #expect(
+            MenuBarSection.allowsHidingApplicationMenus(
+                hideApplicationMenus: true,
+                hideDockIconWhenToggling: false
+            )
+        )
+        #expect(
+            !MenuBarSection.allowsHidingApplicationMenus(
+                hideApplicationMenus: true,
+                hideDockIconWhenToggling: true
+            )
+        )
+        #expect(
+            !MenuBarSection.allowsHidingApplicationMenus(
+                hideApplicationMenus: false,
+                hideDockIconWhenToggling: false
+            )
+        )
+        #expect(
+            !MenuBarSection.allowsHidingApplicationMenus(
+                hideApplicationMenus: false,
+                hideDockIconWhenToggling: true
+            )
+        )
+    }
+
+    @Test("Hiding the Dock icon falls back to the Thaw Bar instead of hiding app menus")
+    func presentationModeFallsBackToIceBarWhenHideDockIconIsEnabled() {
+        let allowHiding = MenuBarSection.allowsHidingApplicationMenus(
+            hideApplicationMenus: true,
+            hideDockIconWhenToggling: true
+        )
+        let mode = MenuBarSection.presentationMode(
+            totalItemsWidth: 1000,
+            appMenuRightEdge: 350,
+            screenFrameMinX: 0,
+            screenVisibleMaxX: 1200,
+            notchFrame: nil,
+            allowHidingApplicationMenus: allowHiding
+        )
+
+        #expect(mode == .iceBar)
     }
 
     @Test("Items that cannot fit even without the application menus use the Thaw Bar")

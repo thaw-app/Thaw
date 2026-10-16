@@ -2,7 +2,6 @@
 //  ReturnAnchorsTests.swift
 //  Project: Thaw
 //
-//  Copyright (Ice) © 2023–2025 Jordan Baird
 //  Copyright (Thaw) © 2026 Toni Förster
 //  Licensed under the GNU GPLv3
 
@@ -13,14 +12,10 @@ import Testing
 /// temporarily shown item is anchored against when it is returned to its
 /// section.
 ///
-/// The eligibility set is the whole point. The item list arrives in Window
-/// Server order rather than left-to-right order, so a freshly created window
-/// can sit next to an item from anywhere in the bar — including one that can
-/// never be hidden. Anchoring to such a neighbor returns the item into that
-/// neighbor's section and strands it there, which is the #859 failure. The
-/// scan therefore has to walk past ineligible neighbors rather than trust
-/// adjacency, while still preferring the nearest eligible one so ordering
-/// within the section survives.
+/// Items arrive in WindowServer order, not left-to-right, so a new window can
+/// sit next to any item, including one that can never be hidden. Anchoring to
+/// it strands the item in that neighbor's section (#859), so the scan skips
+/// ineligible neighbors while preferring the nearest eligible one.
 @Suite("Return anchor selection")
 struct ReturnAnchorsTests {
     // MARK: - Neighbor preference

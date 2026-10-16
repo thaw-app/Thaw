@@ -2,7 +2,6 @@
 //  SettingsURIHandlerApplyTests.swift
 //  Project: Thaw
 //
-//  Copyright (Ice) © 2023–2025 Jordan Baird
 //  Copyright (Thaw) © 2026 Toni Förster
 //  Licensed under the GNU GPLv3
 
@@ -10,19 +9,13 @@ import Foundation
 import Testing
 @testable import Thaw
 
-/// Covers ``SettingsURIHandler``'s *apply* surface — the `set` and `toggle`
-/// actions and the notifications they post.
+/// Covers ``SettingsURIHandler``'s `set` and `toggle` actions and the
+/// notifications they post.
 ///
-/// `SettingsURIHandlerTests` covers the pure side (key tables, `parseBool`,
-/// `parseDouble`, `PerDisplayScope`). This suite drives the paths that
-/// actually mutate state, which is where the trust boundary lives: these
-/// functions run on behalf of a *third-party app* that sent a `thaw://` URL,
-/// so a malformed key, an out-of-range double, or a non-finite value has to
-/// be refused rather than written through to `Defaults`.
-///
-/// Every test body runs inside `withScratchDefaults`, so the handler's writes
-/// land in a throwaway store rather than the real `com.stonerl.Thaw` domain,
-/// and each test starts from an empty store.
+/// These run on behalf of a third-party app that sent a `thaw://` URL, so a
+/// malformed key, an out-of-range double, or a non-finite value must be
+/// refused rather than written to `Defaults`. Each test runs inside
+/// `withScratchDefaults`, starting from an empty throwaway store.
 @MainActor
 @Suite("Settings URI handler apply", .serialized)
 struct SettingsURIHandlerApplyTests {
@@ -118,6 +111,48 @@ struct SettingsURIHandlerApplyTests {
         }
     }
 
+    /// A key in `supportedBooleanKeys` with no `keyMapping` entry is
+    /// refused at run time and announces nothing. Asserting the
+    /// notification rather than the return value catches that even for the
+    /// per-display keys, which answer on the other channel.
+    @Test("Every Boolean key the handler publishes can be set and says so", arguments: SettingsURIKeyTable.booleanKeys)
+    func everyBooleanKeyIsSettable(_ key: String) throws {
+        try withScratchDefaults { _ in
+            let channel: Notification.Name = SettingsURIKeyTable.perDisplayKeys.contains(key)
+                ? .perDisplaySettingsDidChangeViaURI
+                : .settingsDidChangeViaURI
+
+            let posted = notifications(named: channel) {
+                _ = SettingsURIHandler.handleSet(key: key, value: "true", sender: "test")
+            }
+
+            #expect(posted.count == 1, "\(key)")
+            #expect(posted.first?.userInfo?["key"] as? String == key, "\(key)")
+            #expect(posted.first?.userInfo?["value"] as? Bool == true, "\(key)")
+        }
+    }
+
+    /// A `thaw://` URL is assembled by whoever sends it, and a stray space
+    /// around the value is the easiest mistake to make. It has to be
+    /// refused rather than trimmed, so the sender learns about it.
+    @Test("A Boolean with surrounding whitespace is refused", arguments: [
+        " true",
+        "true ",
+        "\ttrue",
+        "yes\n",
+        " 1",
+        "0 ",
+    ])
+    func paddedBooleansAreRefused(_ value: String) throws {
+        #expect(SettingsURIHandler.parseBool(value) == nil, "\(value.debugDescription)")
+
+        try withScratchDefaults { _ in
+            Defaults.set(true, forKey: .showOnHover)
+            #expect(!SettingsURIHandler.handleSet(key: "showOnHover", value: value, sender: "test"))
+            #expect(Defaults.bool(forKey: .showOnHover), "a refused set must not disturb the stored value")
+        }
+    }
+
     // MARK: Toggle
 
     @Test("Toggling flips the stored value")
@@ -151,6 +186,25 @@ struct SettingsURIHandlerApplyTests {
 
             #expect(posted.first?.userInfo?["key"] as? String == "autoRehide")
             #expect(posted.first?.userInfo?["value"] as? Bool == true)
+        }
+    }
+
+    /// Toggling twice has to announce two opposite values: that is only
+    /// true if the handler is reading back what it just wrote, through a
+    /// mapping that actually exists.
+    @Test("Every global Boolean key toggles against its own stored value", arguments: SettingsURIKeyTable.globalBooleanKeys)
+    func everyGlobalBooleanKeyToggles(_ key: String) throws {
+        try withScratchDefaults { _ in
+            let posted = notifications(named: .settingsDidChangeViaURI) {
+                _ = SettingsURIHandler.handleToggle(key: key, sender: "test")
+                _ = SettingsURIHandler.handleToggle(key: key, sender: "test")
+            }
+
+            #expect(posted.count == 2, "\(key)")
+            let first = posted.first?.userInfo?["value"] as? Bool
+            let second = posted.last?.userInfo?["value"] as? Bool
+            #expect(first != nil, "\(key)")
+            #expect(first != second, "\(key) must toggle away from what it just stored")
         }
     }
 
@@ -245,6 +299,86 @@ struct SettingsURIHandlerApplyTests {
         }
     }
 
+    @Test("A double with whitespace or digit separators is refused", arguments: [
+        " 1.5",
+        "1.5 ",
+        "1_000",
+        "1,5",
+        "1 000",
+    ])
+    func paddedOrSeparatedDoublesAreRefused(_ value: String) throws {
+        #expect(SettingsURIHandler.parseDouble(value) == nil, "\(value.debugDescription)")
+
+        try withScratchDefaults { _ in
+            Defaults.set(42.0, forKey: .rehideInterval)
+            #expect(!SettingsURIHandler.handleSet(key: "rehideInterval", value: value, sender: "test"))
+            #expect(Defaults.double(forKey: .rehideInterval) == 42)
+        }
+    }
+
+    /// And they reach `Defaults` unaltered when they land inside the key's
+    /// range, so an unusual spelling is not quietly treated as malformed.
+    @Test("An unusual spelling inside the range is stored verbatim", arguments: [
+        ("0x1p3", 8.0),
+        ("+2.5", 2.5),
+        ("5.", 5.0),
+        ("2e1", 20.0),
+    ])
+    func unusualSpellingsInsideTheRangeAreStored(_ pair: (String, Double)) throws {
+        let (value, expected) = pair
+
+        try withScratchDefaults { _ in
+            // rehideInterval is bounded to 1...300, and every value here
+            // sits inside it, so nothing is clamped on the way in.
+            Defaults.set(42.0, forKey: .rehideInterval)
+            #expect(SettingsURIHandler.handleSet(key: "rehideInterval", value: value, sender: "test"), "\(value)")
+            #expect(Defaults.double(forKey: .rehideInterval) == expected, "\(value)")
+        }
+    }
+
+    /// An unusual spelling gets no special treatment at the range check
+    /// either: `.5` is below `rehideInterval`'s floor and is clamped to it,
+    /// exactly as `0.5` would be.
+    @Test("An unusual spelling below the range is clamped like any other", arguments: [".5", "+0.25", "0x1p-2"])
+    func unusualSpellingsBelowTheRangeAreClamped(_ value: String) throws {
+        try withScratchDefaults { _ in
+            #expect(SettingsURIHandler.handleSet(key: "rehideInterval", value: value, sender: "test"), "\(value)")
+            #expect(Defaults.double(forKey: .rehideInterval) == 1, "\(value)")
+        }
+    }
+
+    /// The infinities `Double.init` produces, spelled out or from exponent
+    /// overflow, must be caught by the finiteness check rather than clamped to
+    /// the top of the range.
+    @Test("Every infinity the parser produces is refused rather than clamped", arguments: [
+        "infinity",
+        "INFINITY",
+        "Inf",
+        "1e400",
+        "-1e400",
+        "-infinity",
+    ])
+    func infinitiesAreRefused(_ value: String) throws {
+        let parsed = try #require(SettingsURIHandler.parseDouble(value), "\(value) must parse for this test to mean anything")
+        #expect(!parsed.isFinite, "\(value)")
+
+        try withScratchDefaults { _ in
+            Defaults.set(42.0, forKey: .rehideInterval)
+            #expect(!SettingsURIHandler.handleSet(key: "rehideInterval", value: value, sender: "test"), "\(value)")
+            #expect(Defaults.double(forKey: .rehideInterval) == 42, "\(value) must not be clamped to the range bound")
+        }
+    }
+
+    /// The same finiteness rule has to hold on every double key, not just
+    /// the one with the widest range.
+    @Test("Infinity is refused on every double key", arguments: SettingsURIKeyTable.doubleKeys)
+    func infinityIsRefusedOnEveryDoubleKey(_ key: String) throws {
+        try withScratchDefaults { _ in
+            #expect(!SettingsURIHandler.handleSet(key: key, value: "infinity", sender: "test"), "\(key)")
+            #expect(!SettingsURIHandler.handleSet(key: key, value: "nan", sender: "test"), "\(key)")
+        }
+    }
+
     // MARK: Enum set
 
     @Test(
@@ -259,7 +393,7 @@ struct SettingsURIHandlerApplyTests {
         }
     }
 
-    @Test("An unknown rehideStrategy is refused", arguments: ["", "eventually", "9", "-1", "focused_app"])
+    @Test("An unknown rehideStrategy is refused", arguments: ["", "eventually", "3", "9", "99", "-1", "focused_app"])
     func unknownRehideStrategyIsRefused(_ value: String) throws {
         try withScratchDefaults { _ in
             Defaults.set(1, forKey: .rehideStrategy)
@@ -467,6 +601,97 @@ struct SettingsURIHandlerApplyTests {
             #expect(posted.first?.userInfo?["key"] as? String == "useIceBar")
             #expect(posted.first?.userInfo?["toggle"] as? Bool == true)
             #expect(posted.first?.userInfo?["scope"] as? String == "active")
+        }
+    }
+
+    /// The Boolean per-display keys reach separate arms of
+    /// `handlePerDisplayToggle`. All must behave identically: a toggle carries
+    /// the flag and no value, since the reader flips whatever it holds.
+    @Test(
+        "Any Boolean per-display key can be toggled on a named display",
+        arguments: ["useIceBar", "alwaysShowHiddenItems", "useThawBarForAlwaysHidden"]
+    )
+    func namedDisplayToggleWorksForBothBooleanKeys(_ key: String) throws {
+        try withScratchDefaults { _ in
+            // The toggle path requires the display to be known, so persist one.
+            let uuid = UUID().uuidString
+            let seeded = try JSONEncoder().encode([uuid: DisplayIceBarConfiguration.defaultConfiguration])
+            Defaults.set(seeded, forKey: .displayIceBarConfigurations)
+            var accepted = false
+
+            let posted = notifications(named: .perDisplaySettingsDidChangeViaURI) {
+                accepted = SettingsURIHandler.handleToggle(key: key, sender: "test", displayUUID: uuid)
+            }
+
+            #expect(accepted, "\(key)")
+            #expect(posted.count == 1, "\(key)")
+            let userInfo = try #require(posted.first?.userInfo, "\(key)")
+            #expect(userInfo["key"] as? String == key, "\(key)")
+            #expect(userInfo["scope"] as? String == "specific:\(uuid)", "\(key)")
+            #expect(userInfo["toggle"] as? Bool == true, "\(key)")
+            #expect(userInfo["value"] == nil, "\(key)")
+            #expect(userInfo["stringValue"] == nil, "\(key)")
+        }
+    }
+
+    /// Toggle and set validate a named display identically: it must parse as
+    /// a UUID and be connected or persisted. Toggle used to check only for a
+    /// hyphen and reported success for displays that did not exist.
+    @Test(
+        "A named-display toggle refuses an unknown display, like the set path",
+        arguments: ["useIceBar", "alwaysShowHiddenItems", "useThawBarForAlwaysHidden"]
+    )
+    func namedDisplayToggleRefusesAnUnknownDisplay(_ key: String) throws {
+        try withScratchDefaults { _ in
+            // Never persisted or attached, so refused.
+            #expect(!SettingsURIHandler.handleToggle(key: key, sender: "test", displayUUID: UUID().uuidString), "\(key)")
+            #expect(!SettingsURIHandler.handleToggle(key: key, sender: "test", displayUUID: "nodashes"), "\(key)")
+
+            // The set path is the stricter one, for the same identifier.
+            #expect(
+                !SettingsURIHandler.handleSet(
+                    key: key,
+                    value: "true",
+                    sender: "test",
+                    displayUUID: UUID().uuidString
+                ),
+                "\(key)"
+            )
+        }
+    }
+
+    /// The Boolean per-display keys reach separate arms of
+    /// `handlePerDisplaySetForSpecificDisplay`, so each has to be driven
+    /// with a display identifier: a set carries the parsed value and no
+    /// toggle flag, and a value the arm cannot parse is refused before
+    /// anything is posted.
+    @Test(
+        "Any Boolean per-display key can be set on a named display",
+        arguments: ["useIceBar", "alwaysShowHiddenItems", "useThawBarForAlwaysHidden"]
+    )
+    func namedDisplaySetWorksForBooleanKeys(_ key: String) throws {
+        try withScratchDefaults { _ in
+            // The set path requires the display to be known, so persist a
+            // configuration for it.
+            let uuid = UUID().uuidString
+            let seeded = try JSONEncoder().encode([uuid: DisplayIceBarConfiguration.defaultConfiguration])
+            Defaults.set(seeded, forKey: .displayIceBarConfigurations)
+            var accepted = false
+
+            let posted = notifications(named: .perDisplaySettingsDidChangeViaURI) {
+                accepted = SettingsURIHandler.handleSet(key: key, value: "true", sender: "test", displayUUID: uuid)
+            }
+
+            #expect(accepted, "\(key)")
+            #expect(posted.count == 1, "\(key)")
+            let userInfo = try #require(posted.first?.userInfo, "\(key)")
+            #expect(userInfo["key"] as? String == key, "\(key)")
+            #expect(userInfo["scope"] as? String == "specific:\(uuid)", "\(key)")
+            #expect(userInfo["value"] as? Bool == true, "\(key)")
+            #expect(userInfo["toggle"] == nil, "\(key)")
+
+            // The same arm refuses a value it cannot parse as a Boolean.
+            #expect(!SettingsURIHandler.handleSet(key: key, value: "maybe", sender: "test", displayUUID: uuid), "\(key)")
         }
     }
 

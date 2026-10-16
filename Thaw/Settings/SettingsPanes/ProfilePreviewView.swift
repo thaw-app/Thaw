@@ -2,7 +2,6 @@
 //  ProfilePreviewView.swift
 //  Project: Thaw
 //
-//  Copyright (Ice) © 2023–2025 Jordan Baird
 //  Copyright (Thaw) © 2026 Toni Förster
 //  Licensed under the GNU GPLv3
 
@@ -16,7 +15,7 @@ nonisolated enum ProfilePreviewModel {
     struct Item: Identifiable, Equatable {
         /// The item's uniqueIdentifier (`namespace:title`) from the snapshot.
         let id: String
-        /// The namespace half of the identifier — effectively a bundle ID.
+        /// The namespace half of the identifier, effectively a bundle ID.
         let bundleID: String
         /// The custom name when one was saved, otherwise the identifier title.
         let title: String
@@ -45,12 +44,9 @@ nonisolated enum ProfilePreviewModel {
 
     /// Assembles the preview sections from a layout snapshot.
     ///
-    /// Reads through ``MenuBarLayoutSnapshot/resolvedItemOrder`` rather than
-    /// picking between `itemOrder` and `savedSectionOrder` here, so the
-    /// preview shows what an apply would actually do. That property already
-    /// handles the legacy fallback, and it also treats an *empty* `itemOrder`
-    /// as absent — a capture taken while the bar was settling writes `[:]`,
-    /// which a plain `??` would show as a profile with no items at all.
+    /// Reads through ``MenuBarLayoutSnapshot/resolvedItemOrder`` so the
+    /// preview shows what an apply would do, including its legacy and
+    /// empty-`itemOrder` fallbacks.
     static func sections(for layout: MenuBarLayoutSnapshot) -> [Section] {
         let order = layout.resolvedItemOrder
         return sectionKeys.map { key in
@@ -75,11 +71,9 @@ nonisolated enum ProfilePreviewModel {
         let offset: Double
     }
 
-    /// Assembles the spacing summary #887 asked the preview to include: the
-    /// profile-wide offset first, then each stored display override, sorted
-    /// by resolved name so the order is stable no matter how the dictionary
-    /// iterates. Zero is the default and changes nothing, so zero offsets
-    /// add no row.
+    /// Assembles the spacing summary: the profile-wide offset first, then each
+    /// display override sorted by name for a stable order. Zero offsets add
+    /// no row.
     static func spacingRows(
         for profile: Profile,
         displayNames: [String: String]

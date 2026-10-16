@@ -17,21 +17,19 @@ struct DisplaySettingsPane: View {
     @Environment(AppState.self) var appState: AppState
     @Bindable var displaySettings: DisplaySettingsManager
 
-    /// Per-display draft of the spacing slider, keyed by display UUID.
-    /// Until the user clicks Apply, dragging the slider only updates this
-    /// dictionary, it does not touch the saved configuration or trigger
-    /// any relaunches.
+    /// Per-display draft of the spacing slider, keyed by display UUID. Nothing
+    /// is saved or relaunched until the user clicks Apply.
     @State private var draftSpacing: [String: CGFloat] = [:]
-    /// Pending spacing apply held while the confirmation alert is shown.
-    /// Set by requestSpacingApply when a prompt is required; the alert binds
-    /// to its non-nil state. Nil when no alert is showing.
+    /// Pending spacing apply; the confirmation alert shows while non-nil.
     @State private var pendingSpacingApply: PendingSpacingApply?
-    /// Pending global broadcast held while the global confirmation alert
-    /// is shown. Set by requestGlobalApply; the alert binds to its
-    /// non-nil state. Nil when no alert is showing.
+    /// Pending global broadcast; the global confirmation alert shows while
+    /// non-nil.
     @State private var pendingGlobalApply: PendingGlobalApply?
+    /// Pending display removal; the confirmation alert shows while non-nil.
+    @State private var pendingDisplayRemoval: DisplaySettingsManager.DisplayInfo?
     @State private var errorMessage: String?
     @State private var showingError = false
+    @State private var selectedDisplayID: String?
 
     /// A spacing apply request awaiting user confirmation.
     private struct PendingSpacingApply: Equatable {
@@ -57,9 +55,20 @@ struct DisplaySettingsPane: View {
             }
             IceSection {
                 confirmSpacingRelaunchControls
+            } footer: {
+                if displaySettings.spacingApplyMode == .relaunchApps {
+                    SettingsWarningPill(
+                        title: "Apps may relaunch",
+                        message: "Changing menu bar spacing for a display can relaunch apps with menu bar items. Unsaved input, progress, or transient app state may be lost."
+                    )
+                }
             }
-            ForEach(displaySettings.allDisplays()) { display in
-                displaySection(for: display)
+            if !displaySettings.allDisplays().isEmpty {
+                IceSection {
+                    Text("Per display")
+                } content: {
+                    perDisplayControls
+                }
             }
         }
         .alert(
@@ -90,6 +99,32 @@ struct DisplaySettingsPane: View {
             actions: { pending in globalConfirmationButtons(for: pending) },
             message: { pending in Text(globalConfirmationMessage(for: pending)) }
         )
+        .alert(
+            String(localized: "Remove saved display?"),
+            isPresented: Binding(
+                get: { pendingDisplayRemoval != nil },
+                set: {
+                    if !$0 {
+                        pendingDisplayRemoval = nil
+                    }
+                }
+            ),
+            presenting: pendingDisplayRemoval,
+            actions: { pending in
+                Button(String(localized: "Remove"), role: .destructive) {
+                    displaySettings.removeSavedDisplay(forUUID: pending.id)
+                    // Snap the picker back to the first remaining display so
+                    // the pane is not left pointing at a removed row.
+                    if selectedDisplayID == pending.id {
+                        selectedDisplayID = displaySettings.allDisplays().first?.id
+                    }
+                }
+                Button(String(localized: "Cancel"), role: .cancel) { /* The alert dismisses itself. */ }
+            },
+            message: { pending in
+                Text(String(localized: "This removes \"\(pending.name)\" and its saved settings from the list. The display reappears here if you connect it again."))
+            }
+        )
         .alert("Error", isPresented: $showingError) {
             Button("OK") { errorMessage = nil }
         } message: {
@@ -101,39 +136,84 @@ struct DisplaySettingsPane: View {
 
     @ViewBuilder
     private var confirmSpacingRelaunchControls: some View {
-        VStack(alignment: .leading, spacing: 8) {
+        IcePicker(
+            "When applying spacing",
+            selection: $displaySettings.spacingApplyMode
+        ) {
+            Text("Apply spacing immediately (restarts menu bar apps)")
+                .tag(SpacingApplyMode.relaunchApps)
+            Text("Wait until next restart (no apps restarted)")
+                .tag(SpacingApplyMode.writeOnly)
+        }
+        .annotation("macOS only reads menu bar spacing when a status item's owner starts. Restarting apps applies the change now; waiting leaves every app running and the new spacing appears the next time each app starts (after a restart, or when you reopen it).")
+
+        // Confirmations only matter when a relaunch wave can actually fire.
+        // Under writeOnly nothing is restarted, so there is nothing to ask
+        // about and nothing to save-scope.
+        if displaySettings.spacingApplyMode == .relaunchApps {
             Toggle("Confirm before relaunching apps", isOn: $displaySettings.confirmSpacingRelaunch)
                 .annotation("Before a display change or spacing edit relaunches your menu bar apps, Thaw asks you to confirm. Turn this off to apply spacing changes and relaunch apps without confirmation.")
 
-            SettingsWarningPill(
-                title: "Apps may relaunch",
-                message: "Changing menu bar spacing for a display can relaunch apps with menu bar items. Unsaved input, progress, or transient app state may be lost."
-            )
-        }
-
-        if !displaySettings.confirmSpacingRelaunch {
-            IcePicker(
-                "Without confirmation, save spacing to",
-                selection: $displaySettings.unconfirmedSpacingProfileScope
-            ) {
-                Text("Active profile").tag(SpacingProfileSaveScope.activeProfile)
-                Text("All profiles").tag(SpacingProfileSaveScope.allProfiles)
+            if !displaySettings.confirmSpacingRelaunch {
+                IcePicker(
+                    "Without confirmation, save spacing to",
+                    selection: $displaySettings.unconfirmedSpacingProfileScope
+                ) {
+                    Text("Active profile").tag(SpacingProfileSaveScope.activeProfile)
+                    Text("All profiles").tag(SpacingProfileSaveScope.allProfiles)
+                }
+                .annotation("When a profile is active, choose whether spacing changes save to just the active profile or to every profile.")
             }
-            .annotation("When a profile is active, choose whether spacing changes save to just the active profile or to every profile.")
         }
     }
 
-    private func displaySection(for display: DisplaySettingsManager.DisplayInfo) -> some View {
-        IceSection {
-            displayHeader(for: display)
-        } content: {
-            displayRow(for: display)
+    /// One controls block driven by a display picker, instead of repeating
+    /// the block once per display.
+    @ViewBuilder
+    private var perDisplayControls: some View {
+        let displays = displaySettings.allDisplays()
+        let selected = displays.first { $0.id == selectedDisplayID } ?? displays[0]
+
+        IcePicker(
+            "Display",
+            selection: Binding(
+                get: { selected.id },
+                set: { selectedDisplayID = $0 }
+            )
+        ) {
+            ForEach(displays) { display in
+                Text(display.name).tag(display.id)
+            }
         }
+
+        if selected.hasNotch || !selected.isConnected || hasCustomConfiguration(selected) {
+            displayHeader(for: selected)
+                .frame(maxWidth: .infinity, alignment: .leading)
+        }
+
+        displayRow(for: selected)
+    }
+
+    /// Whether the display has its own stored configuration, which overrides
+    /// the global template. Without this marker the global toggles look broken.
+    private func hasCustomConfiguration(_ display: DisplaySettingsManager.DisplayInfo) -> Bool {
+        displaySettings.configurationOverride(forUUID: display.id) != nil
     }
 
     private func displayHeader(for display: DisplaySettingsManager.DisplayInfo) -> some View {
         HStack(spacing: 6) {
             Text(display.name)
+            if hasCustomConfiguration(display) {
+                Text("Custom")
+                    .padding(.horizontal, 6)
+                    .padding(.vertical, 2)
+                    .background(.tint.opacity(0.15))
+                    .clipShape(Capsule())
+                    .foregroundStyle(.tint)
+                    .help(Text(
+                        "This display has its own settings, which take precedence over the global template above."
+                    ))
+            }
             if display.hasNotch {
                 Text("Notch")
                     .padding(.horizontal, 6)
@@ -148,6 +228,11 @@ struct DisplaySettingsPane: View {
                     .background(.quaternary)
                     .clipShape(Capsule())
                     .foregroundStyle(.secondary)
+                Button("Remove", role: .destructive) {
+                    pendingDisplayRemoval = display
+                }
+                .buttonStyle(.borderless)
+                .help(Text("Remove this display and its saved settings from the list. It reappears if you connect it again."))
             }
         }
     }
@@ -226,6 +311,10 @@ struct DisplaySettingsPane: View {
         let savedOffset = displaySettings.configuration(forUUID: display.id).itemSpacingOffset
         let draft = draftSpacing[display.id] ?? CGFloat(savedOffset)
         let canApply = draft != CGFloat(savedOffset)
+        // macOS keeps one spacing for the whole system, and it follows the
+        // display that hosts the menu bar: writing another display's value
+        // would either do nothing or silently restyle every display.
+        let editsActiveDisplay = displaySettings.activeMenuBarDisplayUUID == display.id
 
         let sliderBinding = Binding<CGFloat>(
             get: { draftSpacing[display.id] ?? CGFloat(savedOffset) },
@@ -246,13 +335,14 @@ struct DisplaySettingsPane: View {
                 in: -16 ... 16,
                 step: 2
             )
+            .disabled(!editsActiveDisplay)
         } label: {
             LabeledContent {
                 Button("Apply") {
                     requestSpacingApply(for: display, offset: Double(draft))
                 }
                 .help(Text("Apply the spacing for this display"))
-                .disabled(!canApply)
+                .disabled(!canApply || !editsActiveDisplay)
 
                 Button {
                     requestSpacingApply(for: display, offset: 0)
@@ -262,13 +352,28 @@ struct DisplaySettingsPane: View {
                 .buttonStyle(.borderless)
                 .help(Text("Reset to the default spacing"))
                 .disabled(savedOffset == 0 && draft == 0)
+                .disabled(!editsActiveDisplay)
             } label: {
                 Text("Menu bar item spacing")
             }
         }
-        .annotation(
-            "Apply briefly relaunches apps with menu bar items so they pick up the new spacing. Setting takes effect when this display is the active menu bar display."
-        )
+        .annotation {
+            if editsActiveDisplay {
+                if displaySettings.spacingApplyMode == .writeOnly {
+                    Text(
+                        "Apply writes the new spacing without restarting apps. macOS keeps one spacing for the whole system; it follows the display that hosts the menu bar. The new spacing appears the next time each menu bar app starts."
+                    )
+                } else {
+                    Text(
+                        "Apply briefly relaunches apps with menu bar items so they pick up the new spacing. macOS keeps one spacing for the whole system; it follows the display that hosts the menu bar."
+                    )
+                }
+            } else {
+                Text(
+                    "macOS keeps one item spacing for the whole system, taken from the display that currently hosts the menu bar. This display's saved value applies while it hosts the menu bar; make it the active menu bar display to change it here."
+                )
+            }
+        }
         .onChange(of: savedOffset) { _, newValue in
             // Sync draft when the saved value changes externally
             // (profile load, URI scheme, etc.).
@@ -278,12 +383,9 @@ struct DisplaySettingsPane: View {
 
     // MARK: - Spacing Apply Confirmation
 
-    /// Routes both the Apply button and the inline reset button through a
-    /// single decision point. When no profile is active and the change is
-    /// for a non-active display, applies immediately (matches prior
-    /// behaviour). Otherwise stages a PendingSpacingApply so the .alert
-    /// can ask the user to choose between updating the active profile,
-    /// updating every profile, or cancelling.
+    /// Shared by the Apply and inline reset buttons. With no active profile
+    /// and a non-active display, applies immediately; otherwise stages a
+    /// PendingSpacingApply so the alert can ask which profiles to update.
     private func requestSpacingApply(
         for display: DisplaySettingsManager.DisplayInfo,
         offset: Double
@@ -296,9 +398,11 @@ struct DisplaySettingsPane: View {
             return
         }
 
-        // Confirmations disabled: apply directly, saving to the profile
-        // target the user picked instead of staging the alert.
-        if !displaySettings.confirmSpacingRelaunch {
+        // Confirmations disabled, or writeOnly (no apps restart, so there
+        // is nothing to confirm about relaunching): apply directly, saving
+        // to the profile target the user picked instead of staging the
+        // alert.
+        if !displaySettings.confirmSpacingRelaunch || displaySettings.spacingApplyMode == .writeOnly {
             commitSpacingWithoutConfirmation(
                 displayID: display.id,
                 offset: offset,
@@ -320,15 +424,14 @@ struct DisplaySettingsPane: View {
         )
     }
 
-    /// Writes the new spacing to displaySettings.configurations. The
-    /// Combine sink in DisplaySettingsManager picks this up and drives the
-    /// relaunch wave on the next main-queue dispatch, so the caller is
-    /// expected to have already written the profile file when persisting
-    /// to a profile is desired.
+    /// Writes the new spacing to displaySettings.configurations, whose
+    /// `didSet` drives the relaunch wave. Write any profile file first.
     private func commitSpacing(displayID: String, offset: Double) {
         draftSpacing[displayID] = CGFloat(offset)
-        displaySettings.updateConfiguration(forDisplayUUID: displayID) { config in
-            config.withItemSpacingOffset(offset)
+        displaySettings.performUserSpacingChange {
+            displaySettings.updateConfiguration(forDisplayUUID: displayID) { config in
+                config.withItemSpacingOffset(offset)
+            }
         }
     }
 
@@ -365,17 +468,32 @@ struct DisplaySettingsPane: View {
         }
     }
 
+    /// Revalidates a staged spacing request. The menu bar can move to another
+    /// display while the alert is open; the request is then cancelled and the
+    /// slider snaps back to the saved value.
+    private func revalidatePendingSpacing(_ pending: PendingSpacingApply) -> Bool {
+        guard displaySettings.activeMenuBarDisplayUUID == pending.displayID else {
+            draftSpacing[pending.displayID] = CGFloat(
+                displaySettings.configuration(forUUID: pending.displayID).itemSpacingOffset
+            )
+            errorMessage = String(
+                localized: "The menu bar moved to another display while the confirmation was open. The spacing change was cancelled."
+            )
+            showingError = true
+            return false
+        }
+        return true
+    }
+
     @ViewBuilder
     private func spacingConfirmationButtons(for pending: PendingSpacingApply) -> some View {
         if pending.activeProfileID != nil {
             Button(String(localized: "Update Active Profile"), role: .destructive) {
+                guard revalidatePendingSpacing(pending) else { return }
                 if let id = pending.activeProfileID {
-                    // updateProfile(scope:.configurationOnly) captures live
-                    // state, so the in-memory configuration must hold the new
-                    // value before the save. Snapshot the previous offset so
-                    // a save failure can roll the live state back instead of
-                    // leaving the new spacing applied without a matching
-                    // profile entry, which the next reapply would revert.
+                    // updateProfile captures live state, so commit before the
+                    // save, keeping the previous offset to roll back if the
+                    // save fails.
                     let previousOffset = displaySettings
                         .configuration(forUUID: pending.displayID)
                         .itemSpacingOffset
@@ -396,6 +514,7 @@ struct DisplaySettingsPane: View {
                 }
             }
             Button(String(localized: "Update All Profiles"), role: .destructive) {
+                guard revalidatePendingSpacing(pending) else { return }
                 let previousOffset = displaySettings
                     .configuration(forUUID: pending.displayID)
                     .itemSpacingOffset
@@ -418,6 +537,7 @@ struct DisplaySettingsPane: View {
             }
         } else {
             Button(String(localized: "Apply"), role: .destructive) {
+                guard revalidatePendingSpacing(pending) else { return }
                 commitSpacing(displayID: pending.displayID, offset: pending.offset)
             }
             Button(String(localized: "Cancel"), role: .cancel) {
@@ -430,19 +550,17 @@ struct DisplaySettingsPane: View {
 
     private func spacingConfirmationMessage(for pending: PendingSpacingApply) -> String {
         let profileName = pending.activeProfileName ?? ""
+        let relaunches = displaySettings.spacingApplyMode == .relaunchApps
+        let relaunchClause = relaunches
+            ? String(localized: "Applying this spacing change will relaunch each app with a menu bar item. Relaunching apps may cause unsaved input, progress, or transient app state to be lost. ")
+            : String(localized: "Apps are not restarted; the new spacing appears the next time each menu bar app starts. ")
         switch (pending.isActiveDisplay, pending.activeProfileID != nil) {
         case (true, true):
-            return String(
-                format: String(localized: "Applying this spacing change will relaunch each app with a menu bar item. Relaunching apps may cause unsaved input, progress, or transient app state to be lost. Save the new spacing to the active profile \"%@\", or save it to every profile."),
-                profileName
-            )
+            return String(format: String(localized: "%@Save the new spacing to the active profile \"%@\", or save it to every profile."), relaunchClause, profileName)
         case (false, true):
-            return String(
-                format: String(localized: "Save the new spacing to the active profile \"%@\", or save it to every profile."),
-                profileName
-            )
+            return String(format: String(localized: "Save the new spacing to the active profile \"%@\", or save it to every profile."), profileName)
         case (true, false):
-            return String(localized: "Applying this spacing change will relaunch each app with a menu bar item. Relaunching apps may cause unsaved input, progress, or transient app state to be lost.")
+            return relaunchClause
         case (false, false):
             return ""
         }
@@ -527,11 +645,8 @@ struct DisplaySettingsPane: View {
             get: { draftSpacing[Self.globalDraftKey] ?? CGFloat(savedOffset) },
             set: { newValue in
                 draftSpacing[Self.globalDraftKey] = newValue
-                // Stage the draft into the global template immediately so
-                // the Apply-to-All button broadcasts the spacing along with
-                // the other controls. The relaunch wave only fires when
-                // Apply-to-All writes to the per-display configurations,
-                // so this assignment is cheap.
+                // Stage into the global template now so Apply to All carries
+                // it. No relaunch fires until Apply to All writes displays.
                 displaySettings.globalConfiguration = displaySettings.globalConfiguration
                     .withItemSpacingOffset(Double(newValue))
             }
@@ -555,7 +670,9 @@ struct DisplaySettingsPane: View {
             Text("Menu bar item spacing")
         }
         .annotation(
-            "Applying briefly relaunches apps with menu bar items so they pick up the new spacing."
+            displaySettings.spacingApplyMode == .writeOnly
+                ? "Applying writes the new spacing without restarting apps; the new spacing appears the next time each menu bar app starts."
+                : "Applying briefly relaunches apps with menu bar items so they pick up the new spacing."
         )
         .onChange(of: savedOffset) { _, newValue in
             // Sync draft when the saved value changes externally
@@ -564,10 +681,8 @@ struct DisplaySettingsPane: View {
         }
     }
 
-    /// Returns true when the Apply-to-All button should be enabled. The
-    /// button activates when at least one known display has a configuration
-    /// that differs from the current global template; otherwise the
-    /// broadcast would be a no-op.
+    /// True when at least one known display differs from the global template,
+    /// so Apply to All would change something.
     private var canApplyGlobal: Bool {
         let target = displaySettings.globalConfiguration
         let displays = displaySettings.allDisplays()
@@ -604,12 +719,12 @@ struct DisplaySettingsPane: View {
         )
     }
 
-    /// Pushes the global template to every known display via the manager's
-    /// broadcast helper. The Combine sink in DisplaySettingsManager picks
-    /// the resulting configurations change up and drives the relaunch wave
-    /// for the active display on the next main-queue dispatch.
+    /// Pushes the global template to every known display. The configurations
+    /// `didSet` then drives the relaunch wave for the active display.
     private func commitGlobalApply() {
-        displaySettings.applyGlobalToAllKnownDisplays()
+        displaySettings.performUserSpacingChange {
+            displaySettings.applyGlobalToAllKnownDisplays()
+        }
     }
 
     /// Broadcasts the global template and, when a profile is active,
@@ -630,9 +745,8 @@ struct DisplaySettingsPane: View {
     }
 
     /// Broadcasts the global template, then persists it to `id`'s profile.
-    /// Snapshots the previous configurations first so a save failure can
-    /// roll the live state back rather than leaving the broadcast applied
-    /// without a matching profile entry, which the next reapply would revert.
+    /// Snapshots the previous configurations so a save failure can roll the
+    /// live state back.
     private func updateActiveProfile(id: UUID) {
         let previousConfigurations = displaySettings.configurations
         commitGlobalApply()
@@ -643,7 +757,9 @@ struct DisplaySettingsPane: View {
                 appState: appState
             )
         } catch {
-            displaySettings.configurations = previousConfigurations
+            displaySettings.performUserSpacingChange {
+                displaySettings.configurations = previousConfigurations
+            }
             errorMessage = error.localizedDescription
             showingError = true
         }
@@ -660,7 +776,9 @@ struct DisplaySettingsPane: View {
                 propagateToDisplays: true
             )
         } catch {
-            displaySettings.configurations = previousConfigurations
+            displaySettings.performUserSpacingChange {
+                displaySettings.configurations = previousConfigurations
+            }
             errorMessage = error.localizedDescription
             showingError = true
         }
@@ -690,7 +808,13 @@ struct DisplaySettingsPane: View {
 
     private func globalConfirmationMessage(for pending: PendingGlobalApply) -> String {
         let profileName = pending.activeProfileName ?? ""
-        let displayMessage = String(localized: "This will overwrite the settings of ^[\(pending.displayCount) displays](inflect: true) with the global template. If the active display's spacing changes, Thaw will relaunch each app with a menu bar item. Relaunching apps may cause unsaved input, progress, or transient app state to be lost.")
+        let relaunches = displaySettings.spacingApplyMode == .relaunchApps
+        let spacingClause = if relaunches {
+            String(localized: "If the active display's spacing changes, Thaw will relaunch each app with a menu bar item. Relaunching apps may cause unsaved input, progress, or transient app state to be lost.")
+        } else {
+            String(localized: "If the active display's spacing changes, the new spacing appears the next time each menu bar app starts, and apps are not restarted.")
+        }
+        let displayMessage = String(localized: "This will overwrite the settings of \(pending.displayCount) displays with the global template. ") + spacingClause
         if pending.activeProfileID != nil {
             let profileInstruction = String(localized: "Save the global template to the active profile \"\(profileName)\", or save it to every profile.")
             return "\(displayMessage) \(profileInstruction)"
@@ -765,7 +889,14 @@ private struct IceBarConfigurationControls<ExtraControls: View>: View {
             }
 
         Toggle("Use \(Constants.displayName) Bar", isOn: $useIceBar)
-            .annotation("Show hidden menu bar items in a separate bar below the menu bar.")
+            .annotation {
+                switch context {
+                case .display:
+                    Text("Show hidden menu bar items in a separate bar below the menu bar.")
+                case .globalTemplate:
+                    Text("Show hidden menu bar items in a separate bar below the menu bar. This edits the global template, which displays with no custom settings follow; apply it with \"Apply to All Displays\" below, since displays with custom settings keep theirs until then.")
+                }
+            }
 
         Toggle("Always-hidden items only", isOn: $useThawBarForAlwaysHidden)
             .disabled(useIceBar)

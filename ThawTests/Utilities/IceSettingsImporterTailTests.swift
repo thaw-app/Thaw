@@ -2,7 +2,6 @@
 //  IceSettingsImporterTailTests.swift
 //  Project: Thaw
 //
-//  Copyright (Ice) © 2023–2025 Jordan Baird
 //  Copyright (Thaw) © 2026 Toni Förster
 //  Licensed under the GNU GPLv3
 
@@ -11,28 +10,21 @@ import Testing
 @testable import Thaw
 
 /// Covers the parts of ``IceSettingsImporter`` that ``IceSettingsImporterTests``
-/// leaves alone: it only exercises the V1 appearance conversion, so the general,
-/// advanced and hotkey mappings, the per-display gate and the V2 appearance path
-/// were never run.
+/// leaves alone: the general, advanced and hotkey mappings, the per-display
+/// gate, and the V2 appearance path.
 ///
-/// This code reads a *foreign* app's `UserDefaults` domain. Every value in it
-/// was written by a different binary, possibly a much older one, and nothing
-/// validates it before it is copied into Thaw's own domain — so absent keys,
-/// wrong types and empty containers are the cases that matter, not the happy
-/// path.
+/// Ice's domain was written by another, possibly much older binary and is
+/// copied unvalidated, so absent keys, wrong types and empty containers are
+/// the cases that matter.
 ///
-/// The importer writes through the `Defaults` facade, so every case runs inside
-/// `withScratchDefaults` and the suite is `.serialized`: `Defaults.store` is
-/// process-wide. The Ice side is a throwaway `UserDefaults` suite per test,
-/// removed afterwards, so nothing here reads or writes a real Ice installation.
+/// Every case runs inside `withScratchDefaults` in a `.serialized` suite,
+/// against a throwaway Ice `UserDefaults` suite per test.
 ///
-/// Deliberate gaps:
-/// - The `UseIceBar == true` branch of `importPerDisplayIceBarSettings` calls
-///   `DisplayIceBarConfiguration.buildConfigurations`, which walks
-///   `NSScreen.screens`. Its result — and therefore whether the `configs.isEmpty`
-///   guard fires — depends on what displays are attached to the machine running
-///   the tests, so only the deterministic "no Thaw Bar to convert" side is
-///   covered here.
+/// Gaps:
+/// - The `UseIceBar == true` branch of `importPerDisplayIceBarSettings` walks
+///   `NSScreen.screens` through `DisplayIceBarConfiguration.buildConfigurations`,
+///   so its result depends on the attached displays. Only the "no Thaw Bar to
+///   convert" side is covered.
 /// - `importPerDisplayIceBarSettings`' `diagLog.error` arm is unreachable:
 ///   `JSONEncoder` cannot fail on `[String: DisplayIceBarConfiguration]`.
 @MainActor
@@ -61,11 +53,9 @@ struct IceSettingsImporterTailTests {
     /// Opens a throwaway defaults suite seeded with `values`, standing in for
     /// Ice's own domain.
     ///
-    /// The suite sees its own keys plus the global domain, and nothing this
-    /// build writes — the same assumption ``IceSettingsImporterTests`` makes.
-    /// It matters here because Thaw's own `Defaults.Key` raw values are the
-    /// very strings the importer looks up in Ice's domain, so a leak from the
-    /// host app's own settings would show up as phantom imports.
+    /// The suite sees its own keys plus the global domain, nothing this build
+    /// writes. Thaw's `Defaults.Key` raw values are the strings the importer
+    /// looks up in Ice's domain, so a leak would show up as phantom imports.
     private func makeSource(_ values: [String: Any]) throws -> (defaults: UserDefaults, domainName: String) {
         let domainName = "com.stonerl.ThawTests.IceSettingsImporterTail.\(UUID().uuidString)"
         let defaults = try #require(UserDefaults(suiteName: domainName))
@@ -125,7 +115,7 @@ struct IceSettingsImporterTailTests {
 
     /// One pass over every mapping the importer knows, so the per-key loops and
     /// the sum in `importIceSettings` are all driven together. `UseIceBar` is
-    /// deliberately `false`: see the suite's deliberate gaps.
+    /// deliberately `false`: see the suite's gaps.
     @Test("A fully populated Ice domain imports every mapped key exactly once")
     func fullyPopulatedDomainImportsEveryMapping() throws {
         try withScratchDefaults { suite in
@@ -228,7 +218,7 @@ struct IceSettingsImporterTailTests {
     /// The mapping loop copies whatever object it finds without checking its
     /// type, so a key Ice stored as a string lands in Thaw's domain as a string
     /// under a key the app reads as a `Bool`. Pinned as observed behaviour, not
-    /// endorsed: see the report accompanying this suite.
+    /// endorsed.
     @Test("A mistyped Ice value is copied verbatim and still counted as imported")
     func mistypedValuesAreCopiedVerbatim() throws {
         try withScratchDefaults { suite in
@@ -280,14 +270,9 @@ struct IceSettingsImporterTailTests {
         }
     }
 
-    // A test for `UseIceBar` stored as the integer 1 was removed rather than
-    // fixed. `UserDefaults.bool(forKey:)` coerces a stored number, so 1 reads
-    // back as `true` and the per-display conversion runs — and that conversion
-    // goes through `DisplayIceBarConfiguration.buildConfigurations`, which
-    // walks `NSScreen.screens`. Both the configuration count and the
-    // `configs.isEmpty` guard therefore depend on how many displays the
-    // machine running the suite has attached, so no assertion here can hold
-    // everywhere.
+    // No test covers `UseIceBar` stored as the integer 1: `bool(forKey:)` reads
+    // it as `true`, and the per-display conversion then depends on how many
+    // displays are attached.
 
     // MARK: Hotkeys
 
@@ -416,11 +401,9 @@ struct IceSettingsImporterTailTests {
         }
     }
 
-    /// Ice can hold both keys at once — the V1 key survives its own migration.
-    /// `importAppearanceSettings` is an `if`/`else if`, so V2 wins outright and
-    /// the V1 fallback is never reached. Worth pinning: the two keys describe
-    /// the same setting, and silently preferring the older one would quietly
-    /// undo an appearance change the user made in a later Ice build.
+    /// Ice can hold both keys at once, since the V1 key survives its own
+    /// migration. V2 wins outright: preferring the older key would undo an
+    /// appearance change the user made in a later Ice build.
     @Test("With both appearance formats present, only V2 is imported")
     func v2AppearanceWinsWhenBothArePresent() throws {
         try withScratchDefaults { _ in

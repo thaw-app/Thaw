@@ -16,16 +16,13 @@ import XPC
 /// target's default actor isolation is MainActor.
 final nonisolated class Listener: @unchecked Sendable {
     private let diagLog = DiagLog(category: "Listener")
-    /// The shared listener.
     static let shared = Listener()
 
-    /// The service name.
     private let name = MenuBarItemService.name
 
     /// The underlying XPC listener object.
     private var xpcListener: XPCListener?
 
-    /// Creates the shared listener.
     private init() {
         // Intentionally empty: this type is a singleton and is configured via `activate()`.
     }
@@ -34,7 +31,6 @@ final nonisolated class Listener: @unchecked Sendable {
         cancel()
     }
 
-    /// Handles a received message.
     private func handleMessage(_ message: XPCReceivedMessage) -> MenuBarItemService.Response? {
         do {
             let request = try message.decode(as: MenuBarItemService.Request.self)
@@ -42,12 +38,21 @@ final nonisolated class Listener: @unchecked Sendable {
             case .start:
                 diagLog.debug("Listener received start request")
                 return .start
-            case let .configureLogging(filePath):
-                // Only attach to files inside the app's approved log
-                // directory. The path arrives from the XPC peer, and in
-                // teamless (ad-hoc) builds the listener has no peer
-                // requirement, so an arbitrary path could otherwise make
-                // this service open and append to any user-writable file.
+            case let .configureLogging(filePath, rotationPolicy):
+                if let rotationPolicy {
+                    // Prune by the app's retention settings, not this target's
+                    // defaults: both processes share one log directory.
+                    DiagnosticLogger.shared.setRotationPolicy(rotationPolicy)
+                }
+                guard let filePath else {
+                    // The app turned file logging off; stop writing to the
+                    // shared file rather than holding it open.
+                    DiagnosticLogger.shared.isEnabled = false
+                    diagLog.debug("Listener disabled diagnostic logging")
+                    return .configureLogging
+                }
+                // Only attach inside the approved log directory. Ad-hoc builds have no
+                // peer requirement, so a peer could otherwise point us at any writable file.
                 let requested = URL(fileURLWithPath: filePath)
                     .standardizedFileURL.resolvingSymlinksInPath()
                 let approvedDir = DiagnosticLogger.shared.logDirectory
@@ -58,7 +63,12 @@ final nonisolated class Listener: @unchecked Sendable {
                     )
                     return nil
                 }
-                DiagnosticLogger.shared.attachToFile(at: requested)
+                guard DiagnosticLogger.shared.attachToFile(at: requested) else {
+                    // Replying success would leave this process writing to the old
+                    // segment, which retention later deletes. Failing makes the app retry.
+                    diagLog.error("Listener failed to attach diagnostic logging to \(requested.path)")
+                    return nil
+                }
                 diagLog.debug("Listener attached diagnostic logging to \(requested.path)")
                 return .configureLogging
             case let .sourcePIDs(windows):
@@ -85,11 +95,8 @@ final nonisolated class Listener: @unchecked Sendable {
 
     /// Activates the listener.
     ///
-    /// Session peers must be signed with the same team identifier as the
-    /// service process. Builds signed without a team identifier
-    /// (ad-hoc/personal builds) activate without a peer requirement, since
-    /// `.isFromSameTeam()` can never be satisfied there and every session
-    /// would be cancelled before the first message.
+    /// Peers must share the service's team identifier. Ad-hoc builds skip the
+    /// peer requirement, since `.isFromSameTeam()` can never pass there.
     func activate() {
         guard xpcListener == nil else {
             diagLog.notice("Listener is already active")
@@ -113,7 +120,6 @@ final nonisolated class Listener: @unchecked Sendable {
         }
     }
 
-    /// Cancels the listener.
     func cancel() {
         diagLog.debug("Canceling listener")
         xpcListener.take()?.cancel()

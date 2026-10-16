@@ -2,7 +2,6 @@
 //  ControlCenterHostedMatchLogReplayTests.swift
 //  Project: Thaw
 //
-//  Copyright (Ice) © 2023–2025 Jordan Baird
 //  Copyright (Thaw) © 2026 Toni Förster
 //  Licensed under the GNU GPLv3
 
@@ -11,26 +10,18 @@ import Foundation
 import Testing
 @testable import Thaw
 
-/// Log-replay harness for the SourcePIDCache strict 1pt spatial pass, focused
-/// on the macOS 26 Control-Center-hosted resolution case that this area keeps
-/// regressing on.
+/// Log-replay harness for the SourcePIDCache strict 1pt spatial pass.
 ///
 /// macOS 26 hosts third-party status items under Control Center at the CG
-/// layer. Two shapes look identical from the outside but must resolve in
-/// opposite directions:
+/// layer. Two identical-looking shapes must resolve in opposite directions:
 ///
-///   - Little Snitch publishes NO extras-bar child of its own, so the only AX
-///     child on its icon is Control Center's. Binding it to Control Center
-///     misattributes it and starves marker-pair resolution. It must stay
-///     unresolved.
-///   - The Clock publishes its OWN extras-bar child on the same icon, so it
+///   - Little Snitch publishes no extras-bar child, so the only AX child on
+///     its icon is Control Center's. It must stay unresolved for marker-pair.
+///   - The Clock publishes its own extras-bar child on the same icon, so it
 ///     must resolve to com.fabriceleyne.theclock.
 ///
-/// A fix for either case has repeatedly broken the other. These tests parse the
-/// real "diag unresolved" lines for both and drive the real
-/// ControlCenterHostedMatch gate, so a future change that re-breaks one is
-/// caught here. The named-module and Live-Activity gate guards keep the rest of
-/// the Control Center family from collateral damage.
+/// A fix for either case has repeatedly broken the other. These tests replay
+/// the real "diag unresolved" lines for both through the real gate.
 @Suite("Control Center hosted match log replay")
 struct ControlCenterHostedMatchLogReplayTests {
     private let cc = "com.apple.controlcenter"
@@ -79,9 +70,8 @@ struct ControlCenterHostedMatchLogReplayTests {
 
     // MARK: - Regression locks: the mutually-protective pair
 
-    /// RED before the gate, GREEN after. Little Snitch's icon must NOT bind to
-    /// Control Center; it has to stay unresolved so it remains an orphan that
-    /// reaches marker-pair resolution.
+    /// Little Snitch's icon must stay unresolved so it reaches marker-pair
+    /// resolution.
     @Test("The Little Snitch icon does not bind to Control Center")
     func littleSnitchIconDoesNotBindToControlCenter() throws {
         let scenario = try #require(
@@ -93,10 +83,8 @@ struct ControlCenterHostedMatchLogReplayTests {
         )
     }
 
-    /// GREEN before and after the gate. The Clock must keep resolving to its
-    /// own app: the gate refuses only Control Center's self-match, never a
-    /// widget's own extras-bar child. This is the regression lock that protects
-    /// The Clock from a future Little Snitch fix.
+    /// The gate refuses only Control Center's self-match, never a widget's own
+    /// extras-bar child.
     @Test("The Clock resolves to its own app")
     func theClockResolvesToItsOwnApp() throws {
         let scenario = try #require(
@@ -109,11 +97,8 @@ struct ControlCenterHostedMatchLogReplayTests {
 
     // MARK: - Gate guards: the rest of the Control Center family
 
-    /// Named Control Center modules carry descriptive titles, so the strict
-    /// match identifies a real owner and is NOT a bare CC-hosted slot: they keep
-    /// resolving to Control Center. System titles (TimeMachine) and nil/empty
-    /// likewise never count as generic slots. Confirmed present as managed
-    /// com.apple.controlcenter:<title> items in field logs.
+    /// Named modules, system titles (TimeMachine), and nil/empty titles are
+    /// not generic slots, so they keep resolving to Control Center.
     @Test("Named Control Center titles are not generic slots")
     func namedControlCenterTitlesAreNotGenericSlots() {
         for title in [
@@ -142,10 +127,8 @@ struct ControlCenterHostedMatchLogReplayTests {
         }
     }
 
-    /// The check only governs Control Center as the matcher: a generic Item-N
-    /// title attributed to any other app (a widget's own extras child like The
-    /// Clock, or Thaw's own items) — or to no known app at all — is never a bare
-    /// CC slot.
+    /// The check only governs Control Center as the matcher. A generic Item-N
+    /// title attributed to any other app, or to none, is never a bare CC slot.
     @Test("A non-Control-Center matcher is never a slot")
     func nonControlCenterMatcherIsNeverASlot() {
         for matcher in ["com.fabriceleyne.theclock", "com.stonerl.Thaw"] {
@@ -164,8 +147,7 @@ struct ControlCenterHostedMatchLogReplayTests {
         )
     }
 
-    /// The shared generic-title predicate, the single source of truth reused by
-    /// both isCCHostedGenericSlot and MenuBarItemTag.isControlCenterGenericItem.
+    /// Shared by isCCHostedGenericSlot and MenuBarItemTag.isControlCenterGenericItem.
     @Test("The generic Control Center title predicate matches only Item-N titles")
     func genericControlCenterTitlePredicate() {
         #expect(MarkerPairResolver.isGenericControlCenterTitle("Item-0"))
@@ -181,10 +163,8 @@ struct ControlCenterHostedMatchLogReplayTests {
     }
 }
 
-/// Parses one SourcePIDCache "diag unresolved" line into a replayable window
-/// scenario and drives the real strict-pass match decision. Test-only; models
-/// just enough of the strict 1pt pass to characterize which app an icon would
-/// bind to.
+/// Parses a SourcePIDCache "diag unresolved" line and replays the strict 1pt
+/// pass to show which app an icon would bind to.
 enum ControlCenterHostedResolutionReplay {
     /// One nearest-candidate AX child from the diag line's `nearest=[...]` list.
     struct CandidateChild: Equatable {
@@ -235,11 +215,9 @@ enum ControlCenterHostedResolutionReplay {
     /// MarkerPairResolver.isCCHostedGenericSlot check, returning the bundle ID
     /// the icon would resolve to, or nil if it stays unresolved.
     ///
-    /// Faithful reduction: within the 1pt tolerance the field logs show a
-    /// single candidate (the next is always >= 40pt away), so "nearest
-    /// qualifying candidate" equals the production pass's "first app whose child
-    /// is within 1pt". The enabled != false guard mirrors the post-#667 matcher,
-    /// where an absent AXEnabled attribute counts as enabled.
+    /// Field logs show one candidate within 1pt (the next is >= 40pt away), so
+    /// nearest equals the production pass's first match. An absent AXEnabled
+    /// counts as enabled, as in the post-#667 matcher.
     static func resolve(_ scenario: WindowScenario, ccBundleID: String = "com.apple.controlcenter") -> String? {
         for candidate in scenario.candidates.sorted(by: { $0.distance < $1.distance }) {
             guard candidate.distance <= 1 else { break }

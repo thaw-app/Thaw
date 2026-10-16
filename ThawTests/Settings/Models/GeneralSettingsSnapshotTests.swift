@@ -2,7 +2,6 @@
 //  GeneralSettingsSnapshotTests.swift
 //  Project: Thaw
 //
-//  Copyright (Ice) © 2023–2025 Jordan Baird
 //  Copyright (Thaw) © 2026 Toni Förster
 //  Licensed under the GNU GPLv3
 
@@ -10,15 +9,9 @@ import Foundation
 import Testing
 @testable import Thaw
 
-/// Covers ``GeneralSettingsSnapshot``'s value semantics and its `Codable`
-/// conformance.
-///
-/// The snapshot is the on-disk shape of a profile's General pane, so the icon
-/// payloads, the enum-backed Ice Bar location, and the raw rehide strategy all
-/// have to survive a round trip unchanged.
-///
-/// Reads only; nothing here touches the defaults domain, so the suite is safe
-/// to run in parallel with the rest.
+/// Covers ``GeneralSettingsSnapshot``'s value semantics and `Codable`
+/// conformance. It's the on-disk shape of a profile's General pane, so icons,
+/// the Ice Bar location, and the rehide strategy must round-trip unchanged.
 @Suite("General settings snapshot")
 struct GeneralSettingsSnapshotTests {
     private let encoder = JSONEncoder()
@@ -47,9 +40,8 @@ struct GeneralSettingsSnapshotTests {
     }
 
     private func makeCustomSnapshot() throws -> GeneralSettingsSnapshot {
-        // Use one of the user selectable icons; a missing fixture is a broken
-        // icon catalog and must fail the test immediately rather than fall
-        // back to the default icon.
+        // A missing fixture means a broken icon catalog, so fail rather than
+        // fall back to the default icon.
         let ellipsisIcon = try #require(
             ControlItemImageSet.userSelectableIceIcons.first { $0.name == .ellipsis }
         )

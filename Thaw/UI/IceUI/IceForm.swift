@@ -18,11 +18,8 @@ struct IceForm<Content: View>: View {
     }
 
     var body: some View {
-        // The pane title lives in the window's toolbar (navigationTitle);
-        // rendering it here too produced a double header. Form scrolls
-        // full-width so the scrollbar tracks the detail pane / window edge;
-        // reading width is enforced with symmetric gutters instead of
-        // shrinking the scroll view itself.
+        // The title lives in the toolbar; repeating it here doubled the header.
+        // Form scrolls full-width so the scrollbar sits at the window edge.
         Form {
             content
         }

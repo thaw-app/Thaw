@@ -2,7 +2,6 @@
 //  ProfileLayoutLogReplayTests.swift
 //  Project: Thaw
 //
-//  Copyright (Ice) © 2023–2025 Jordan Baird
 //  Copyright (Thaw) © 2026 Toni Förster
 //  Licensed under the GNU GPLv3
 
@@ -13,27 +12,17 @@ import Testing
 
 /// Log-replay harness for the profile-layout decision path.
 ///
-/// Parses real Thaw log lines into per-cycle records and drives the actual
-/// pure planner (LayoutSolver.partitionUnmanagedUIDs) with inputs
-/// reconstructed from those records. This characterizes "given the menu bar
-/// shape Thaw observed on this cycle, did the planner deem the right items
-/// unmanaged" without standing up the async orchestrator, AX, or the Window
-/// Server. New field logs become regression fixtures by adding another
-/// excerpt and another expectation.
+/// Parses real Thaw log lines into per-cycle records and drives the pure
+/// planner (LayoutSolver.partitionUnmanagedUIDs) with inputs rebuilt from
+/// them, without the async orchestrator, AX, or WindowServer. New field logs
+/// become fixtures by adding an excerpt and an expectation.
 ///
-/// Fixture one is LittleSnitchOrphanLog: a user whose Little Snitch agent
-/// kept moving on launch. Its agent icon is hosted by Control Center with no
-/// resolvable source PID, so it is namespaced com.apple.controlcenter:Item-0
-/// and, not matching the profile's at.obdev.littlesnitch.agent:Item-0 entry,
-/// is treated as an unmanaged new arrival and relocated every cycle until
-/// marker-pair resolution finally identifies it ~46 minutes in.
-///
-/// The Layer-1 fix excludes provisional-identity orphans from the unmanaged
-/// set inside the live partitioner. Two tests pin it down:
-/// testWithoutExclusionTheOrphanWouldBeUnmanaged documents the bug mechanism
-/// (with no exclusion the orphan is classified unmanaged, matching the field
-/// log), and testBuggyCycleDoesNotPlanMoveForUnresolvedOrphan is the regression
-/// lock that fails before the fix and passes after it.
+/// LittleSnitchOrphanLog: the Little Snitch agent icon is hosted by Control
+/// Center with no resolvable source PID, so it's namespaced
+/// com.apple.controlcenter:Item-0, misses the profile's
+/// at.obdev.littlesnitch.agent:Item-0 entry, and is relocated as unmanaged
+/// every cycle until marker-pair resolution identifies it ~46 minutes in. The
+/// Layer-1 fix excludes provisional-identity orphans from the unmanaged set.
 @Suite("Profile layout log replay")
 struct ProfileLayoutLogReplayTests {
     private let orphanUID = "com.apple.controlcenter:Item-0"
@@ -62,17 +51,11 @@ struct ProfileLayoutLogReplayTests {
         #expect(clean.currentVisible.contains("at.obdev.littlesnitch.agent:Item-0"))
     }
 
-    /// Fails with a clear message naming the specific log line if the parser
-    /// ever stops recognising a format it currently understands, rather than
-    /// surfacing a bare nil three layers away from the cause.
+    /// Fails naming the specific log line if the parser stops recognising a
+    /// format, rather than surfacing a bare nil three layers from the cause.
     ///
-    /// LittleSnitchOrphanLog exercises 7 of the 9 format-contract patterns
-    /// (see parse(_:)'s doc comment): Missing sourcePID, the three
-    /// applyProfileLayout current-section lines, ahCtrlUID, desiredHidden, and
-    /// desiredAH, plus a planUnmanagedPlacement line. It does NOT cover
-    /// desiredVisible (older captures do not log it; see
-    /// testLoggedDesiredVisibleIsUsedInsteadOfInference) or the two
-    /// notch-overflow lines (see testDisplayReconnectNegativeBudgetYieldsNoOverflow).
+    /// The fixture covers 7 of the 9 format-contract patterns in parse(_:).
+    /// desiredVisible and the two notch-overflow lines have their own tests.
     @Test("The parser recognises every format-contract pattern in the fixture")
     func parserRecognisesEveryFormatContractPatternInTheFixture() throws {
         let parsed = ProfileLayoutLogReplay.parse(LittleSnitchOrphanLog.text)
@@ -116,13 +99,10 @@ struct ProfileLayoutLogReplayTests {
 
     // MARK: Bug mechanism (documents what the exclusion is responsible for)
 
-    /// With no orphan exclusion (provisionalIdentityUIDs empty), replaying the
-    /// buggy cycle through the real partitioner reproduces the field verdict
-    /// exactly: the unresolved Little Snitch orphan is the sole item routed to
-    /// planUnmanagedPlacement, which is what dragged it on every cycle. The
-    /// unmanaged set is reconstructed independently of the planUnmanagedPlace-
-    /// ment log lines (the orphan is identified via the Missing sourcePID
-    /// signal), so matching them is a genuine characterization, not a tautology.
+    /// With no orphan exclusion, the buggy cycle reproduces the field verdict:
+    /// the Little Snitch orphan is the only item routed to
+    /// planUnmanagedPlacement. The unmanaged set is rebuilt from the Missing
+    /// sourcePID signal, not those log lines, so the match isn't a tautology.
     @Test("Without the exclusion the orphan is classified unmanaged")
     func withoutExclusionTheOrphanWouldBeUnmanaged() throws {
         let parsed = ProfileLayoutLogReplay.parse(LittleSnitchOrphanLog.text)
@@ -146,11 +126,8 @@ struct ProfileLayoutLogReplayTests {
 
     // MARK: Regression lock for Layer 1 (red before the fix, green after)
 
-    /// Replaying the buggy cycle through the live partitioner, passing the
-    /// orphan set the orchestrator now computes, the unresolved Little Snitch
-    /// orphan is no longer classified unmanaged, so no unmanaged placement (and
-    /// therefore no move) is planned for it. This fails before Layer 1 applies
-    /// provisionalIdentityUIDs and passes once it does.
+    /// With the orphan set the orchestrator now computes, the unresolved
+    /// Little Snitch orphan is no longer unmanaged, so no move is planned.
     @Test("The buggy cycle plans no move for the unresolved orphan")
     func buggyCycleDoesNotPlanMoveForUnresolvedOrphan() throws {
         let parsed = ProfileLayoutLogReplay.parse(LittleSnitchOrphanLog.text)
@@ -227,13 +204,10 @@ struct ProfileLayoutLogReplayTests {
 
     // MARK: Hardening: prefer the logged desiredVisible over inference
 
-    /// With the Phase 1 desiredVisible line present, the harness uses it
-    /// verbatim instead of inferring desired-visible from the current bar.
-    /// Constructed so the two paths disagree: `com.example.extra:Item-0` is a
-    /// non-orphan visible item the profile does not cover, so inference (which
-    /// keeps every non-orphan visible item) would wrongly treat it as desired
-    /// and never flag it, whereas the logged desiredVisible omits it and the
-    /// partitioner correctly classifies it unmanaged, matching the log.
+    /// The logged desiredVisible is used verbatim instead of inferred.
+    /// `com.example.extra:Item-0` is a visible non-orphan the profile doesn't
+    /// cover: inference would treat it as desired, while the logged set omits
+    /// it and the partitioner flags it unmanaged, matching the log.
     @Test("The logged desiredVisible is used instead of inference")
     func loggedDesiredVisibleIsUsedInsteadOfInference() throws {
         let log = """
@@ -269,14 +243,11 @@ struct ProfileLayoutLogReplayTests {
 
     // MARK: Regression lock for the display-reconnect overflow corruption (#666)
 
-    /// Replays a real field cycle (thaw_2026-06-07_09-48-52.log, 11:44:42)
-    /// where a display disconnect/reconnect left the menu bar geometry
-    /// unsettled: Control Center reported a stale off-screen edge, so the
-    /// overflow budget came out negative (availableWidth=-1202) and the buggy
-    /// build ejected all 13 visible items into hidden, collapsing the hidden
-    /// section into visible. Driving the live planNotchOverflow with that exact
-    /// budget must yield no overflow once the invalid-budget guard is in place.
-    /// Red before the guard (every visible item ejected), green after.
+    /// Replays a field cycle (thaw_2026-06-07_09-48-52.log, 11:44:42) where a
+    /// display reconnect left Control Center at a stale off-screen edge, so the
+    /// budget came out negative (availableWidth=-1202) and the buggy build
+    /// ejected all 13 visible items into hidden. planNotchOverflow must yield
+    /// no overflow for that budget.
     @Test("A negative field budget from a display reconnect yields no overflow")
     func displayReconnectNegativeBudgetYieldsNoOverflow() throws {
         let log = """
@@ -332,14 +303,11 @@ struct ProfileLayoutLogReplayTests {
 
     // MARK: Regression lock for the unsettled-geometry layout pass
 
-    /// Replays a real field cycle (thaw_2026-06-11_09-11-10.log, 11:31:05) on
-    /// the patched build where the notch-overflow guard is already present:
-    /// Control Center was reported at rightBoundary=672, left of the notch's
-    /// right edge (956), giving a negative budget. The overflow guard correctly
-    /// skipped the eject, but the pass still ran its control-item placement on
-    /// that stale geometry and moved the Thaw visible icon to the far left. The
-    /// geometry-readiness gate must report this cycle as not ready so the whole
-    /// pass is deferred. Red before the gate (the stub reports ready).
+    /// Replays a field cycle (thaw_2026-06-11_09-11-10.log, 11:31:05) with the
+    /// overflow guard in place: Control Center at rightBoundary=672, left of
+    /// the notch's right edge (956). The eject was skipped, but control-item
+    /// placement still ran on the stale geometry and moved the Thaw icon to
+    /// the far left, so the readiness gate must defer the whole pass.
     @Test("An unsettled-geometry field cycle is not ready")
     func unsettledGeometryFieldCycleIsNotReady() throws {
         let log = """
@@ -399,22 +367,15 @@ struct ProfileLayoutLogReplayTests {
 
     // MARK: Regression lock for the overflow-eject vs boundary-repair oscillation (#958)
 
-    /// Replays a real field cycle (thaw_2026-08-20_11-21-26.log, 16:32:47.8,
-    /// nk-tedo-001's machine, build 52f4ed3): the bar is persistently over the
-    /// notch budget, so every apply re-plans an eject ("notch overflow;
-    /// 1 item(s)" fires at .826 and again 2.6 s later), while Phase 1 reads
-    /// `leits.MeetingBar` — hidden in this cycle's snapshot, visible per the
-    /// saved order — as wronglyConcealed. The log does not name which UID the
-    /// eject plan chose, but it names the count (1), and MeetingBar is the
-    /// one item the mismatch counted.
+    /// Replays a field cycle (thaw_2026-08-20_11-21-26.log, 16:32:47.8) where
+    /// the bar is persistently over the notch budget, so every apply ejects one
+    /// item, while Phase 1 reads `leits.MeetingBar` (hidden in this snapshot,
+    /// visible per the saved order) as wronglyConcealed.
     ///
-    /// On builds through e384ce36 that mismatch drove a divider drag; since
-    /// aa5b2850 it drives per-item moves that recall MeetingBar to visible,
-    /// and the next cycle's eject plan sends it back: two synthetic drags per
-    /// apply, forever (the "icons jumping randomly" reports). With this
-    /// cycle's overflow eject exempted, the boundary check scores zero and no
-    /// repair chases the item.
-    /// Red before the exemption (mismatch=1), green after (mismatch=0).
+    /// The repair recalled MeetingBar to visible and the next eject sent it
+    /// back: two synthetic drags per apply, forever (the "icons jumping
+    /// randomly" reports). Exempting this cycle's overflow eject makes the
+    /// boundary check score zero.
     @Test("An overflow-ejected field cycle must not count the ejected item as a boundary offender")
     func overflowEjectedFieldCycleIsNotABoundaryOffender() throws {
         let log = """
@@ -430,9 +391,8 @@ struct ProfileLayoutLogReplayTests {
         let parsed = ProfileLayoutLogReplay.parse(log)
         let cycle = try #require(parsed.cycles.first)
 
-        // Field characterization: the buggy cycle counted exactly one
-        // offender — the item this very cycle's overflow plan had stashed in
-        // hidden.
+        // The buggy cycle counted one offender: the item this cycle's
+        // overflow plan had stashed in hidden.
         #expect(cycle.loggedOverflowCount == 1)
         let ejectedUID = "leits.MeetingBar:Item-0"
         #expect(cycle.currentHidden.contains(ejectedUID))
@@ -445,8 +405,8 @@ struct ProfileLayoutLogReplayTests {
         let desiredHidden = Set(cycle.desiredHidden)
         let desiredAlwaysHidden = Set(cycle.desiredAlwaysHidden)
 
-        // Without the exemption the ejected item is the offender — this
-        // documents the mechanism that sent the repair after it each cycle.
+        // Without the exemption the ejected item is the offender, which sent
+        // the repair after it each cycle.
         let unexempt = LayoutSolver.hiddenBoundaryOffenders(
             currentVisible: currentVisible,
             currentHidden: currentHidden,
@@ -471,10 +431,9 @@ struct ProfileLayoutLogReplayTests {
         )
         #expect(exempt.isEmpty, "Exempting this cycle's overflow eject must clear the field mismatch")
 
-        // The gate itself stays false for these counts (nine correctly
-        // concealed, eleven visible after control items are dropped), so on
-        // aa5b2850+ builds the repair route was per-item drags — exactly the
-        // oscillation this exemption removes.
+        // The gate stays false for these counts (nine concealed, eleven
+        // visible without control items), so the repair used per-item drags,
+        // the oscillation this exemption removes.
         let liveControlUIDs: Set = ["com.stonerl.Thaw:Thaw.ControlItem.Visible",
                                     "com.stonerl.Thaw:Thaw.ControlItem.AlwaysHidden"]
         let liveConcealed = currentHidden.union(currentAlwaysHidden).subtracting(liveControlUIDs).count
@@ -688,13 +647,10 @@ enum ProfileLayoutLogReplay {
 extension ProfileLayoutLogReplay.Cycle {
     /// Reconstructs partitionUnmanagedUIDs inputs for this cycle.
     ///
-    /// When the log carries the Phase 1 desiredVisible line (builds that emit
-    /// it), that captured set is used verbatim, so nothing about the desired
-    /// layout is inferred. For older captures that predate the line, the
-    /// visible desired set is reconstructed as the current visible items that
-    /// are neither control items nor provisional-identity orphans, which is
-    /// sound for those fixtures because the field log confirmed the orphan was
-    /// the only visible item the profile did not cover.
+    /// A logged Phase 1 desiredVisible line is used verbatim. Older captures
+    /// rebuild the desired visible set as current visible items that are
+    /// neither control items nor provisional-identity orphans, which holds for
+    /// those fixtures because the orphan was the only uncovered visible item.
     func partitionInputs(unresolvedSourcePIDBaseUIDs: Set<String>) -> ProfileLayoutLogReplay.PartitionInputs {
         // Control identifiers come from the live control-item tags, not
         // hardcoded strings, so a change to control-item identity is caught.
@@ -731,10 +687,9 @@ extension ProfileLayoutLogReplay.Cycle {
             ahCtrlUID: ahCtrl
         )
 
-        // The exact condition the Layer-1 fix excludes: an item left with a
-        // provisional identifier because its source PID never resolved.
-        // Computed with the live predicate so the harness tracks the
-        // production predicate.
+        // The exact condition the Layer-1 fix excludes: a provisional
+        // identifier because the source PID never resolved. Uses the live
+        // predicate.
         let orphans = Set(
             (visibleItems + hiddenItems + ahItems)
                 .filter(\.hasProvisionalIdentity)
@@ -760,14 +715,11 @@ extension ProfileLayoutLogReplay.Cycle {
     }
 }
 
-/// Red→green guard for the relaunch-settling gate
-/// (MenuBarItemManager.tracksMenuBarItem). When a tracked app relaunches
-/// (e.g. an in-app update) Thaw must arm a settling period so the move pass
-/// waits out the churn; without it the bulk apply runs on the transient
-/// layout and sweeps hidden items into the visible section (the Free Download
-/// Manager update unhide). Equally it must NOT arm for ordinary launches, so
-/// users don't pay a deferral on every app start, and one bundle ID must not
-/// loosely prefix-match another app.
+/// Guards the relaunch-settling gate (MenuBarItemManager.tracksMenuBarItem).
+/// A tracked app relaunching (e.g. an in-app update) must arm a settling
+/// period, or the bulk apply runs on the transient layout and sweeps hidden
+/// items into visible (the Free Download Manager update unhide). Ordinary
+/// launches must not arm it, and one bundle ID must not prefix-match another.
 @Suite("Relaunch settling gate")
 struct RelaunchSettlingGateTests {
     private let tracked: Set<String> = [

@@ -2,7 +2,6 @@
 //  PlanLeftmostMoveTests.swift
 //  Project: Thaw
 //
-//  Copyright (Ice) © 2023–2025 Jordan Baird
 //  Copyright (Thaw) © 2026 Toni Förster
 //  Licensed under the GNU GPLv3
 
@@ -11,16 +10,10 @@ import Foundation
 import Testing
 @testable import Thaw
 
-/// Characterization tests for LayoutSolver.planLeftmostMove.
+/// LayoutSolver.planLeftmostMove, the cascade behind relocateNewLeftmostItems:
+/// Thaw icon, non-hideable system item, new hideable item, then noop.
 ///
-/// Pins down the four-branch cascade used by relocateNewLeftmostItems:
-/// (1) Thaw icon, (2) non-hideable system item, (3) new hideable item,
-/// (4) noop. Each scenario layouts the inputs at the planner boundary so
-/// no Bridging or instance state is involved.
-///
-/// Coordinate convention: hidden divider at x=400, width=10. Items with
-/// maxX <= 400 are "leftmost" (left of divider). Items further right are
-/// either at the divider or beyond.
+/// Hidden divider at x=400, width 10; items with maxX <= 400 are leftmost.
 @Suite("Plan leftmost move")
 struct PlanLeftmostMoveTests {
     // MARK: - Helpers
@@ -47,8 +40,6 @@ struct PlanLeftmostMoveTests {
 
     // MARK: - Scenarios
 
-    /// The Thaw visible-control icon left of the divider triggers the
-    /// Thaw-icon recovery branch.
     @Test("The Thaw icon left of the divider takes the Thaw-icon branch")
     func thawIconLeftOfDividerTriggersThawIconBranch() {
         let thaw = leftmostItem(
@@ -78,8 +69,7 @@ struct PlanLeftmostMoveTests {
         }
     }
 
-    /// A non-hideable system indicator (camera / mic / screen recording)
-    /// left of the divider triggers the system-item recovery branch.
+    /// Camera, mic, and screen-recording indicators are non-hideable.
     @Test("A non-hideable system item takes the system-item branch")
     func nonHideableSystemItemTriggersSystemItemBranch() {
         let screenCap = leftmostItem(
@@ -109,9 +99,7 @@ struct PlanLeftmostMoveTests {
         }
     }
 
-    /// A hideable app item that already has an entry in savedSectionOrder
-    /// belongs to the restoreItemsToSavedSections path, not the new-item
-    /// relocation path. The planner emits .noop(.noNewCandidate).
+    /// An item with a saved section belongs to restoreItemsToSavedSections, not this path.
     @Test("A hideable item with a saved section is deferred")
     func hideableItemWithSavedSectionIsDeferred() {
         let app = leftmostItem(
@@ -137,9 +125,6 @@ struct PlanLeftmostMoveTests {
         #expect(decision == .noop(reason: .noNewCandidate))
     }
 
-    /// A hideable item with unresolved sourcePID short-circuits the
-    /// candidate-selection cascade. The planner returns .noop with the
-    /// unresolvedSourcePID reason.
     @Test("A hideable item with an unresolved source PID is deferred")
     func hideableItemWithUnresolvedSourcePIDIsDeferred() {
         let app = leftmostItem(
@@ -166,9 +151,7 @@ struct PlanLeftmostMoveTests {
         #expect(decision == .noop(reason: .unresolvedSourcePID))
     }
 
-    /// A genuinely new hideable item — identifier not in knownItem-
-    /// Identifiers, not in any saved section, not already placed in a
-    /// hidden tag set — triggers the new-hideable-item relocation.
+    /// Not a known identifier, not in any saved section, and not already in a hidden tag set.
     @Test("A genuinely new hideable item is relocated")
     func genuinelyNewHideableItemTriggersRelocation() {
         let app = leftmostItem(
@@ -199,10 +182,8 @@ struct PlanLeftmostMoveTests {
         }
     }
 
-    /// When an item's identifier appears new (not in knownItemIdentifiers)
-    /// but its windowID was previously seen, the planner treats this as an
-    /// identifier migration (e.g. sourcePID resolution succeeded mid-cycle)
-    /// rather than a brand new item. Result: .noop(.noNewCandidate).
+    /// A new identifier on a known windowID is a migration (such as sourcePID
+    /// resolving mid-cycle), not a new item.
     @Test("An identifier migration is not treated as a new item")
     func identifierMigrationIsNotTreatedAsNew() {
         let app = leftmostItem(
@@ -229,8 +210,6 @@ struct PlanLeftmostMoveTests {
                 "isNewIdentity && !isNewID should be treated as identifier migration, not new item")
     }
 
-    /// A candidate that is already in the target section produces a
-    /// .noop(.alreadyInTarget) decision, avoiding the wasteful move.
     @Test("A candidate already in the target section is a no-op")
     func candidateAlreadyInTargetSectionIsNoop() {
         let app = leftmostItem(
@@ -243,9 +222,7 @@ struct PlanLeftmostMoveTests {
             items: [app],
             observation: LayoutSolver.LeftmostObservation(
                 hiddenBounds: hiddenBounds,
-                // sectionByWindowID claims the item is already in .hidden,
-                // which is also the effectiveNewItemsSection, so moving
-                // would be a no-op.
+                // Already in .hidden, which is the new-items section.
                 sectionByWindowID: [app.windowID: .hidden],
                 previousWindowIDs: []
             ),
@@ -259,22 +236,14 @@ struct PlanLeftmostMoveTests {
         #expect(decision == .noop(reason: .alreadyInTarget))
     }
 
-    /// A brand-new mid-session app arrival (windowID not in
-    /// previousWindowIDs) whose sourcePID could not be resolved by
-    /// the spatial AX pass nor by the marker-pair fallback still
-    /// short-circuits with .unresolvedSourcePID. The current
-    /// behavior leaves the icon at macOS's default leftmost
-    /// placement rather than relocating an item whose identifier is
-    /// unstable. Any future loosening (e.g. tracking by windowID
-    /// instead of identifier) must replace this assertion
-    /// deliberately so the regression risk is explicit.
+    /// A new arrival whose sourcePID neither the AX pass nor the marker-pair
+    /// fallback resolved stays at macOS's default spot rather than moving an
+    /// unstable identifier. Loosening this (such as tracking by windowID) must
+    /// change this assertion deliberately.
     @Test("A new windowID with an unresolved source PID still short-circuits")
     func newWindowIDWithUnresolvedSourcePIDStillShortCircuits() {
         let newApp = leftmostItem(
-            // Identifier collapses to com.apple.controlcenter:Item-0:N
-            // when sourcePID resolution fails on macOS 26; the test
-            // models the placeholder namespace the orchestrator
-            // actually sees in that case.
+            // On macOS 26 a failed sourcePID resolution yields com.apple.controlcenter:Item-0:N.
             tag: appTag("com.apple.controlcenter", "Item-0", 1),
             x: 100,
             windowID: 999, // fresh windowID
@@ -289,8 +258,7 @@ struct PlanLeftmostMoveTests {
                 previousWindowIDs: [101, 102, 103] // windowID 999 is new
             ),
             savedSectionOrder: [
-                // The widget's real bundle ID is saved, but the live
-                // item's placeholder identifier won't match.
+                // The real bundle ID is saved, but the placeholder won't match it.
                 "hidden": ["com.wireguard.macos:Item-0"],
             ],
             knownItemIdentifiers: [],
@@ -303,11 +271,8 @@ struct PlanLeftmostMoveTests {
                 "nil-sourcePID hideable items must short-circuit even when their windowID is unambiguously new")
     }
 
-    /// With no items left of the divider, the planner emits
-    /// .noop(.noLeftmostItems).
     @Test("No items left of the divider yields no leftmost items")
     func emptyLeftmostListReturnsNoLeftmostItems() {
-        // All items sit to the right of the hidden divider (minX >= 500).
         let visibleApp = MenuBarItem.fixture(
             tag: appTag("com.example.app", "Status"),
             windowID: 707,
@@ -333,12 +298,9 @@ struct PlanLeftmostMoveTests {
 
     // MARK: - Unstable owner titles (#849)
 
-    /// The bundle ID and identifiers here are the ones from the #849 log: the
-    /// item the user put in Always Hidden was saved as
-    /// `com.shortcutlabs.FlicMac:Item-0`, but the live item arrived tagged
-    /// `com.shortcutlabs.FlicMac:com.shortcutlabs.FlicMac` and so matched no
-    /// saved entry. Flic owns exactly one status item, so the namespace
-    /// identifies it unambiguously and its saved section must still apply.
+    /// The #849 log: saved as `com.shortcutlabs.FlicMac:Item-0`, live as
+    /// `com.shortcutlabs.FlicMac:com.shortcutlabs.FlicMac`. Flic owns one status
+    /// item, so the namespace identifies it and its saved section still applies.
     @Test("A title change under a sole owner keeps the saved section")
     func titleChangeUnderASoleOwnerKeepsTheSavedSection() {
         let flic = leftmostItem(
@@ -364,10 +326,7 @@ struct PlanLeftmostMoveTests {
         #expect(decision == .noop(reason: .noNewCandidate))
     }
 
-    /// The fallback is deliberately limited to owners with a single live item.
-    /// With two items under one namespace the saved entry no longer says which
-    /// one it meant, so the planner falls back to treating the unmatched item
-    /// as new.
+    /// With two live items under one namespace the saved entry is ambiguous, so the item is new.
     @Test("A title change is not forgiven when the owner has two live items")
     func titleChangeIsNotForgivenWhenTheOwnerHasTwoLiveItems() {
         let renamed = leftmostItem(
@@ -402,8 +361,7 @@ struct PlanLeftmostMoveTests {
         }
     }
 
-    /// Same limit from the other side: an owner with two saved entries has no
-    /// single entry the live item can be matched to.
+    /// With two saved entries under one owner, there is no single match.
     @Test("A title change is not forgiven when the owner has two saved entries")
     func titleChangeIsNotForgivenWhenTheOwnerHasTwoSavedEntries() {
         let renamed = leftmostItem(
@@ -438,11 +396,8 @@ struct PlanLeftmostMoveTests {
 
     // MARK: - Continuity across a degraded cycle (#849)
 
-    /// The #849 sequence: one enumeration comes back degraded, so the item's
-    /// windowID is missing from the immediately preceding cycle, and its
-    /// identifier changed as well. Judged on the previous cycle alone the item
-    /// looks brand new; the several-cycle history remembers the windowID and
-    /// keeps it out of the relocation path.
+    /// A degraded enumeration drops the windowID from the previous cycle while the
+    /// identifier also changes. The several-cycle history still remembers it (#849).
     @Test("A windowID seen several cycles ago is not new")
     func windowIDSeenSeveralCyclesAgoIsNotNew() {
         let app = leftmostItem(
@@ -472,8 +427,7 @@ struct PlanLeftmostMoveTests {
         )
     }
 
-    /// The history must not swallow genuinely new items: a windowID absent from
-    /// both the previous cycle and the recent history still relocates.
+    /// The history must not swallow genuinely new items.
     @Test("A windowID absent from the recent history is still new")
     func windowIDAbsentFromRecentHistoryIsStillNew() {
         let app = leftmostItem(
@@ -504,10 +458,8 @@ struct PlanLeftmostMoveTests {
         }
     }
 
-    /// The Control Center namespace is the shared fallback for every widget
-    /// macOS hosts but Thaw cannot yet attribute, so a saved entry under it
-    /// says nothing about which item is which. It is excluded from the
-    /// namespace fallback even when the counts happen to line up.
+    /// Control Center is the shared fallback namespace for unattributed widgets,
+    /// so a saved entry under it identifies nothing, whatever the counts.
     @Test("The Control Center namespace is excluded from the namespace fallback")
     func controlCenterNamespaceIsExcludedFromTheNamespaceFallback() {
         let hosted = leftmostItem(
@@ -539,9 +491,8 @@ struct PlanLeftmostMoveTests {
 
     // MARK: - Thaw icon, standalone
 
-    /// planThawIconMove is what the startup-settling path calls, before the
-    /// other items' namespace tags are trustworthy. It must agree with the
-    /// Thaw-icon branch of the full planner.
+    /// The startup-settling path calls this before other tags are trustworthy; it
+    /// must agree with the full planner's Thaw-icon branch.
     @Test("planThawIconMove finds the Thaw icon left of the divider")
     func planThawIconMoveFindsIconLeftOfDivider() {
         let thaw = leftmostItem(tag: .visibleControlItem, x: 100, windowID: 700)
@@ -551,8 +502,7 @@ struct PlanLeftmostMoveTests {
         #expect(icon?.windowID == 700)
     }
 
-    /// Once the icon sits right of the divider it is on screen, so repeated
-    /// settling polls must not keep moving it.
+    /// Once placed right of the divider, settling polls must not keep moving it.
     @Test("planThawIconMove returns nil when the Thaw icon is already placed")
     func planThawIconMoveIgnoresIconRightOfDivider() {
         let thaw = leftmostItem(tag: .visibleControlItem, x: 500, windowID: 700)
@@ -562,9 +512,7 @@ struct PlanLeftmostMoveTests {
         #expect(icon == nil)
     }
 
-    /// The settling path must act on the Thaw icon only. Third-party items
-    /// left of the divider are the ones whose tags aren't settled yet, and
-    /// deferring them is the whole point of the settling guard.
+    /// Third-party items left of the divider have unsettled tags; deferring them is the point.
     @Test("planThawIconMove ignores non-Thaw items left of the divider")
     func planThawIconMoveIgnoresOtherLeftmostItems() {
         let other = leftmostItem(tag: appTag("com.example.app", "Item"), x: 100, windowID: 710)

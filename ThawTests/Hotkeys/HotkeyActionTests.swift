@@ -2,7 +2,6 @@
 //  HotkeyActionTests.swift
 //  Project: Thaw
 //
-//  Copyright (Ice) © 2023–2025 Jordan Baird
 //  Copyright (Thaw) © 2026 Toni Förster
 //  Licensed under the GNU GPLv3
 
@@ -21,6 +20,8 @@ struct HotkeyActionTests {
         #expect(HotkeyAction.searchMenuBarItems.rawValue == "SearchMenuBarItems")
         #expect(HotkeyAction.enableIceBar.rawValue == "EnableIceBar")
         #expect(HotkeyAction.toggleApplicationMenus.rawValue == "ToggleApplicationMenus")
+        #expect(HotkeyAction.toggleAutoRehide.rawValue == "ToggleAutoRehide")
+        #expect(HotkeyAction.toggleZenMode.rawValue == "ToggleZenMode")
         #expect(HotkeyAction.profileApply.rawValue == "ProfileApply")
         #expect(HotkeyAction.openMenuBarItem.rawValue == "OpenMenuBarItem")
     }
@@ -43,9 +44,9 @@ struct HotkeyActionTests {
 
     // MARK: - CaseIterable Tests
 
-    @Test("There are seven actions")
+    @Test("There are nine actions")
     func allCasesCount() {
-        #expect(HotkeyAction.allCases.count == 7)
+        #expect(HotkeyAction.allCases.count == 9)
     }
 
     @Test("All cases contains every expected action")
@@ -82,6 +83,7 @@ struct HotkeyActionTests {
         #expect(settingsActions.contains(.searchMenuBarItems))
         #expect(settingsActions.contains(.enableIceBar))
         #expect(settingsActions.contains(.toggleApplicationMenus))
+        #expect(settingsActions.contains(.toggleAutoRehide))
     }
 
     @Test("Settings actions is all cases minus two")

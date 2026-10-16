@@ -2,7 +2,6 @@
 //  IceBarLayout.swift
 //  Project: Thaw
 //
-//  Copyright (Ice) © 2023–2025 Jordan Baird
 //  Copyright (Thaw) © 2026 Toni Förster
 //  Licensed under the GNU GPLv3
 
@@ -23,7 +22,6 @@ nonisolated enum IceBarLayout: Int, CaseIterable, Codable, Identifiable {
         rawValue
     }
 
-    /// Localized string key representation.
     var localized: LocalizedStringKey {
         switch self {
         case .horizontal: "Horizontal"
@@ -32,9 +30,7 @@ nonisolated enum IceBarLayout: Int, CaseIterable, Codable, Identifiable {
         }
     }
 
-    /// Parses an IceBarLayout from a string value.
-    /// Supports exact case names: "horizontal", "vertical", "grid"
-    /// Or raw integer values: "0", "1", "2"
+    /// Accepts case names or raw integer values.
     static func fromString(_ value: String) -> IceBarLayout? {
         switch value {
         case "horizontal", "0":

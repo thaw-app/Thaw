@@ -2,7 +2,6 @@
 //  ProfileManagerObservationTasksTests.swift
 //  Project: Thaw
 //
-//  Copyright (Ice) © 2023–2025 Jordan Baird
 //  Copyright (Thaw) © 2026 Toni Förster
 //  Licensed under the GNU GPLv3
 
@@ -10,14 +9,12 @@ import Foundation
 import Testing
 @testable import Thaw
 
-/// Covers `ProfileManager.startObservationTasks()`: the notification
-/// observation wiring that `performSetup(with:)` runs, extracted so it is
-/// exercisable without a live `AppState`.
+/// Covers `ProfileManager.startObservationTasks()`, the observation wiring
+/// `performSetup(with:)` runs, without a live `AppState`.
 ///
-/// The debounced stream mechanics themselves are covered by
-/// `DebouncedNotificationTaskTests`; these cases pin the manager-side
-/// contract — every observer task is started, and a repeated setup
-/// replaces the previous tasks instead of leaking them.
+/// Every observer task starts, and a repeated setup replaces the previous
+/// tasks instead of leaking them. Stream mechanics are covered by
+/// `DebouncedNotificationTaskTests`.
 @Suite("Profile manager observation tasks")
 @MainActor
 struct ProfileManagerObservationTasksTests {

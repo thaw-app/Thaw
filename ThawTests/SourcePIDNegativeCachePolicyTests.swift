@@ -2,7 +2,6 @@
 //  SourcePIDNegativeCachePolicyTests.swift
 //  Project: Thaw
 //
-//  Copyright (Ice) © 2023–2025 Jordan Baird
 //  Copyright (Thaw) © 2026 Toni Förster
 //  Licensed under the GNU GPLv3
 //
@@ -12,13 +11,10 @@ import Testing
 
 /// Pins the negative-cache TTL ladder.
 ///
-/// The regression this ladder fixes: the app front-loads its sourcePID
-/// resolution requests into its startup settling window (~90s), and the
-/// first cold AX scan routinely under-resolves. With a flat 60s TTL, one
-/// failed cold scan barred a window past the last request the app would
-/// ever make for it, wedging resolution for the whole session. The early
-/// rungs must therefore stay comfortably inside the settling window, and
-/// the ladder must never bar a window permanently.
+/// With a flat 60s TTL, one failed cold AX scan during the ~90s startup
+/// settling window barred a window past the app's last request for it,
+/// wedging resolution for the session. Early rungs must stay inside the
+/// settling window, and the ladder must never bar a window permanently.
 struct SourcePIDNegativeCachePolicyTests {
     @Test func firstFailureRetriesQuickly() {
         #expect(SourcePIDNegativeCachePolicy.ttl(afterConsecutiveFailures: 1) == .seconds(5))

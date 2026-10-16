@@ -2,7 +2,6 @@
 //  MenuBarTestFixturesTests.swift
 //  Project: Thaw
 //
-//  Copyright (Ice) © 2023–2025 Jordan Baird
 //  Copyright (Thaw) © 2026 Toni Förster
 //  Licensed under the GNU GPLv3
 
@@ -10,10 +9,7 @@ import CoreGraphics
 import Testing
 @testable import Thaw
 
-/// Sanity tests for the synthetic fixture builders in
-/// MenuBarTestFixtures.swift. These pin down that the fixtures produce values
-/// with the documented defaults so the planner tests built on top of them stay
-/// stable.
+/// Pins the fixture defaults so the planner tests built on them stay stable.
 @Suite("Menu bar test fixtures")
 struct MenuBarTestFixturesTests {
     @Test("An app item tag carries its bundle identifier and title")

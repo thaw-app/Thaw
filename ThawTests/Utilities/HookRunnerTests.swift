@@ -2,7 +2,6 @@
 //  HookRunnerTests.swift
 //  Project: Thaw
 //
-//  Copyright (Ice) © 2023–2025 Jordan Baird
 //  Copyright (Thaw) © 2026 Toni Förster
 //  Licensed under the GNU GPLv3
 
@@ -12,13 +11,11 @@ import Testing
 
 /// Covers `HookRunner`, which launches user-supplied profile-apply scripts.
 ///
-/// Every case here runs a real subprocess against a script written into a
-/// per-test temporary directory. That is deliberate: the interesting
-/// behavior — the executable-bit check, the osascript routing, the context
-/// environment, the timeout race — only exists at the process boundary, and
-/// a fake would assert nothing about it. `osascriptPath` is injected so the
-/// AppleScript route can be exercised without depending on a real
-/// interpreter or on `.scpt` compilation.
+/// Every case runs a real subprocess against a script in a per-test
+/// temporary directory, since the executable-bit check, osascript routing,
+/// context environment and timeout race only exist at the process boundary.
+/// `osascriptPath` is injected so the AppleScript route needs no real
+/// interpreter or `.scpt` compilation.
 @MainActor
 @Suite("Profile-apply hook execution")
 final class HookRunnerTests {
@@ -209,8 +206,8 @@ final class HookRunnerTests {
 
     @Test("AppleScript files are routed through osascript")
     func appleScriptIsRoutedThroughOSAScript() async throws {
-        // A .scpt file is read by osascript, so it needs read but not
-        // execute permission — the executable-bit check must not apply.
+        // A .scpt file is read by osascript, so it needs read but not execute
+        // permission; the executable-bit check must not apply.
         let scriptPath = try writeScript(
             "-- not really compiled AppleScript\n",
             named: "hook.scpt",
@@ -290,13 +287,10 @@ final class HookRunnerTests {
 
     @Test("The timeout bounds the caller's wall-clock time", .timeLimit(.minutes(1)))
     func timeoutBoundsTheCallersWallClockTime() async throws {
-        // The regression this guards: `sh` does not forward the teardown
-        // signal to its own child and then waits for that child, so
-        // signalling the wrapper alone cannot end the hook. `run` used to
-        // stay blocked for the child's full lifetime — 30s against a 1s
-        // budget. Teardown now targets the hook's whole process group, so
-        // the wrapper's child goes down with it and the wait ends at the
-        // budget.
+        // `sh` does not forward the teardown signal to its child and then waits
+        // for it, so signalling the wrapper alone cannot end the hook (`run` used
+        // to block 30s against a 1s budget). Teardown targets the hook's whole
+        // process group, so the wait ends at the budget.
         let path = try writeScript("#!/bin/sh\nsleep 30\n")
         let hook = HookScript(path: path, timeoutSeconds: 0.1)
 
@@ -316,12 +310,10 @@ final class HookRunnerTests {
 
     @Test("A timed-out hook takes its descendants down with it", .timeLimit(.minutes(1)))
     func timedOutHookLeavesNoDescendants() async throws {
-        // The other half of the same problem: a wrapper's child used to be
-        // abandoned at the budget and run to completion as an orphan. The
-        // teardown sequence targets the process group, and the implicit kill
-        // that ends it inherits that, so the descendant is terminated rather
-        // than left behind. `createSession` is what keeps those signals off
-        // Thaw's own process group.
+        // A wrapper's child used to be orphaned at the budget and run to
+        // completion. Teardown and its final kill target the process group, so the
+        // descendant dies too. `createSession` keeps those signals off Thaw's own
+        // process group.
         let pidFile = tempDirectory.appendingPathComponent("descendant.pid").path
         let path = try writeScript("#!/bin/sh\nsleep 30 &\necho $! > \(pidFile)\nwait\n")
         let hook = HookScript(path: path, timeoutSeconds: 0.1)
@@ -349,9 +341,8 @@ final class HookRunnerTests {
 
     @Test("A slow hook does not stall the apply pipeline", .timeLimit(.minutes(1)))
     func runIfEnabledReturnsAtTheBudget() async throws {
-        // Why the above matters: runIfEnabled is awaited inside the
-        // profile-apply path, so a hook that shells out to anything slow
-        // used to hold the whole apply for the child's lifetime.
+        // runIfEnabled is awaited inside the profile-apply path, so a hook with a
+        // slow child would hold the whole apply.
         let hook = try HookScript(path: writeScript("#!/bin/sh\nsleep 30\n"), timeoutSeconds: 0.1)
 
         let start = ContinuousClock.now

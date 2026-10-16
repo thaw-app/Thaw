@@ -2,7 +2,6 @@
 //  MenuBarOverlayPanelSpaceTests.swift
 //  Project: Thaw
 //
-//  Copyright (Ice) © 2023–2025 Jordan Baird
 //  Copyright (Thaw) © 2026 Toni Förster
 //  Licensed under the GNU GPLv3
 
@@ -12,9 +11,7 @@ import Testing
 
 /// Covers `MenuBarOverlayPanel.isStranded(panelSpaces:currentSpace:globalActiveSpace:ownsActiveMenuBar:)`,
 /// the pure decision behind the space migration in `show()` (#794). The rest
-/// of the migration talks to the window server (per-display current space,
-/// the panel's own space list) and isn't practically unit-testable; this is
-/// the one piece of its logic that is.
+/// talks to the window server.
 @Suite("Menu bar overlay panel spaces")
 struct MenuBarOverlayPanelSpaceTests {
     @Test("A panel on the owning display's current space is not stranded")
@@ -54,9 +51,8 @@ struct MenuBarOverlayPanelSpaceTests {
 
     @Test("A known current space beats the fallback")
     func knownCurrentSpaceBeatsFallback() {
-        // The display's own space is authoritative: even with the panel
-        // owning the active menu bar and the global active space pointing
-        // elsewhere, a known per-display space decides the verdict alone.
+        // A known per-display space decides alone, even when the global
+        // active space points elsewhere.
         let stranded = MenuBarOverlayPanel.isStranded(
             panelSpaces: [10],
             currentSpace: 10,
@@ -68,11 +64,8 @@ struct MenuBarOverlayPanelSpaceTests {
 
     @Test("An unknown current space falls back to the global active space on the active display")
     func unknownCurrentSpaceFallsBackOnActiveDisplay() {
-        // #794: on macOS 26 setups where the per-display query stops
-        // answering, the display that owns the active menu bar can still
-        // judge the panel against the global active space — the two
-        // coincide there by definition. A panel the switch left behind is
-        // stranded; one that followed is not.
+        // On macOS 26 the per-display query can stop answering. The display
+        // owning the active menu bar can use the global active space instead.
         let stranded = MenuBarOverlayPanel.isStranded(
             panelSpaces: [10],
             currentSpace: nil,
@@ -92,9 +85,8 @@ struct MenuBarOverlayPanelSpaceTests {
 
     @Test("An unknown current space does not strand a panel on a sibling display")
     func unknownCurrentSpaceIsNotStrandedOnSiblingDisplay() {
-        // The fallback must not reach sibling displays: the global active
-        // space says nothing about their current space, and a wrong
-        // order-out would flicker the bar on every housekeeping pass.
+        // The global active space says nothing about sibling displays, and a
+        // wrong order-out flickers the bar on every housekeeping pass.
         let stranded = MenuBarOverlayPanel.isStranded(
             panelSpaces: [10],
             currentSpace: nil,
@@ -106,9 +98,7 @@ struct MenuBarOverlayPanelSpaceTests {
 
     @Test("A sibling display's space change does not strand the panel")
     func siblingDisplaySwitchDoesNotStrand() {
-        // With distinct spaces per display, switching display B's space must
-        // not order out display A's panel: A's panel still sits on A's
-        // current space.
+        // Switching display B's space must not order out display A's panel.
         let stranded = MenuBarOverlayPanel.isStranded(
             panelSpaces: [30],
             currentSpace: 30,

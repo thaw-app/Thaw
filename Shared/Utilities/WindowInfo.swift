@@ -49,16 +49,9 @@ nonisolated struct WindowInfo {
     /// A Boolean value that indicates whether the window has no area to
     /// match an accessibility element against.
     ///
-    /// Every source-PID match path anchors on this window's centre — the
-    /// strict pass, the owner-corroborated pass, and the marker-pair
-    /// fallback all compare it against an accessibility element's frame. A
-    /// window with zero width or height has no centre worth comparing, so a
-    /// full scan started on its behalf cannot succeed.
-    ///
-    /// These are real and they persist. The log attached to #956 carries a
-    /// status item at `(-4323, 0, 0, 0)` whose nearest accessibility frame
-    /// is Control Center's own zero-width placeholder; nine consecutive
-    /// scans over seven minutes left it unresolved.
+    /// Every source-PID match compares this window's centre with an AX frame,
+    /// so a scan started for a zero-width or zero-height window can't succeed.
+    /// These exist and persist (#956: `(-4323, 0, 0, 0)`, unresolved for minutes).
     var isDegenerate: Bool {
         bounds.isEmpty
     }
@@ -119,9 +112,7 @@ nonisolated struct WindowInfo {
 nonisolated extension WindowInfo {
     /// Creates a window from its individual properties.
     ///
-    /// The stored properties are otherwise only ever filled in from a live
-    /// window server description, which leaves the rules that read them
-    /// impossible to exercise in isolation. This exists so they can be.
+    /// Lets tests exercise the derived rules without a live window server.
     init(
         windowID: CGWindowID,
         ownerPID: pid_t,

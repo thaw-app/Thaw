@@ -2,11 +2,11 @@
 //  SharedExtensionsTests.swift
 //  Project: Thaw
 //
-//  Copyright (Ice) © 2023–2025 Jordan Baird
 //  Copyright (Thaw) © 2026 Toni Förster
 //  Licensed under the GNU GPLv3
 
 import CoreGraphics
+import Dispatch
 import Foundation
 import Testing
 @testable import Thaw
@@ -204,6 +204,35 @@ struct SharedExtensionsTests {
             let rect = CGRect(x: 5, y: 10, width: 30, height: 40)
             #expect(rect.center.x == rect.midX)
             #expect(rect.center.y == rect.midY)
+        }
+    }
+
+    // MARK: - DispatchQueue Extension Tests
+
+    @Suite("DispatchQueue")
+    struct DispatchQueueExtensionTests {
+        @Test("The queue keeps the label it was given and runs work")
+        func targetingGlobalKeepsItsLabel() {
+            let queue = DispatchQueue.targetingGlobal(label: "com.stonerl.ThawTests.targetingGlobal")
+
+            #expect(queue.label == "com.stonerl.ThawTests.targetingGlobal")
+            #expect(queue.sync { 6 * 7 } == 42)
+        }
+
+        @Test("The explicit quality-of-service and attribute overloads are usable")
+        func targetingGlobalAcceptsQoSAndAttributes() {
+            let queue = DispatchQueue.targetingGlobal(
+                label: "com.stonerl.ThawTests.targetingGlobal.concurrent",
+                qos: .utility,
+                attributes: .concurrent
+            )
+            var total = 0
+
+            queue.sync(flags: .barrier) { total += 1 }
+            queue.sync(flags: .barrier) { total += 1 }
+
+            #expect(queue.label == "com.stonerl.ThawTests.targetingGlobal.concurrent")
+            #expect(total == 2)
         }
     }
 }

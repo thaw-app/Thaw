@@ -2,32 +2,25 @@
 //  PlanSectionOrderTests.swift
 //  Project: Thaw
 //
-//  Copyright (Ice) © 2023–2025 Jordan Baird
 //  Copyright (Thaw) © 2026 Toni Förster
 //  Licensed under the GNU GPLv3
 
 import Testing
 @testable import Thaw
 
-/// Characterization tests for LayoutSolver.planSectionOrder, the
-/// position-preserving rebuild used by saveSectionOrder.
-///
-/// Pins down the fix for the pre-existing bug where closed-app entries
-/// were appended to the end of the saved list, destroying user-intended
-/// position. Closed entries are now spliced in at positions anchored
-/// against their old-neighbor entries that are still present.
+/// LayoutSolver.planSectionOrder, saveSectionOrder's position-preserving rebuild.
+/// Closed-app entries are spliced in next to surviving neighbours instead of
+/// being appended to the end.
 @Suite("Plan section order")
 struct PlanSectionOrderTests {
-    /// Closed app at mid-index: saved=[A,B,C,D,E], B not present →
-    /// new=[A,B,C,D,E] (B's position preserved, anchored against A or C).
+    /// saved=[A,B,C,D,E] with B closed keeps B between A and C.
     @Test("A closed app keeps its mid-list position")
     func closedAppPreservedAtMidIndex() {
         let result = LayoutSolver.planSectionOrder(
             currentInSection: ["A", "C", "D", "E"],
             oldSavedForSection: ["A", "B", "C", "D", "E"],
             allCurrentIdentifiers: ["A", "C", "D", "E"],
-            // B is closed: it should NOT appear in allCurrentBaseIdentifiers
-            // because that set tracks currently-cached items only.
+            // B is closed, so it is absent from the current-cache set.
             allCurrentBaseIdentifiers: ["A", "C", "D", "E"]
         )
 
@@ -35,9 +28,7 @@ struct PlanSectionOrderTests {
                 "B should be preserved at its old position between A and C")
     }
 
-    /// Closed app at index 0: saved=[A,B,C], A closed → new=[A,B,C].
-    /// A is preserved at the start because forward scan finds B as
-    /// successor, inserts before B.
+    /// The forward scan finds B as successor and inserts A before it.
     @Test("A closed app at the head stays at the head")
     func closedAppPreservedAtIndexZero() {
         let result = LayoutSolver.planSectionOrder(
@@ -50,9 +41,7 @@ struct PlanSectionOrderTests {
         #expect(result == ["A", "B", "C"])
     }
 
-    /// Closed app at last index: saved=[A,B,C], C closed → new=[A,B,C].
-    /// Forward scan from C finds nothing; backward finds B → insert
-    /// after B.
+    /// No successor, so it goes after the predecessor B.
     @Test("A closed app at the tail stays at the tail")
     func closedAppPreservedAtLastIndex() {
         let result = LayoutSolver.planSectionOrder(
@@ -65,9 +54,6 @@ struct PlanSectionOrderTests {
         #expect(result == ["A", "B", "C"])
     }
 
-    /// Multiple closed apps: saved=[A,B,C,D,E], B and D closed →
-    /// new=[A,B,C,D,E]. Both closed entries get their positions
-    /// preserved.
     @Test("Several closed apps all keep their positions")
     func multipleClosedApps() {
         let result = LayoutSolver.planSectionOrder(
@@ -80,10 +66,7 @@ struct PlanSectionOrderTests {
         #expect(result == ["A", "B", "C", "D", "E"])
     }
 
-    /// New item enters: saved=[A,B,C], current cache has X between A
-    /// and B → new=[A,X,B,C]. The new item X gets the leading position
-    /// from current cache; the saved order's items keep their relative
-    /// order through closed-app preservation.
+    /// saved=[A,B,C], cache has X between A and B, giving [A,X,B,C].
     @Test("A newly appeared item lands where the cache puts it")
     func newItemEnters() {
         let result = LayoutSolver.planSectionOrder(
@@ -96,10 +79,7 @@ struct PlanSectionOrderTests {
         #expect(result == ["A", "X", "B", "C"])
     }
 
-    /// Section move: saved-in-this-section=[A,B,C], B currently in
-    /// ANOTHER section. allCurrentIdentifiers contains B (because it
-    /// IS in the cache, just elsewhere). The planner drops B from
-    /// this section's saved order.
+    /// B is in the cache, just in another section, so it leaves this section's order.
     @Test("An item that moved to another section is dropped")
     func itemMovedToAnotherSectionIsDropped() {
         let result = LayoutSolver.planSectionOrder(
@@ -112,10 +92,7 @@ struct PlanSectionOrderTests {
         #expect(result == ["A", "C"], "B moved sections → drop from this section's saved order")
     }
 
-    /// Stale instance index: saved=[com.x:Title:0], current has
-    /// com.x:Title:5 (instance index shifted). allCurrentBaseIdentifiers
-    /// contains "com.x:Title". The planner drops the stale :0 entry
-    /// because the baseID exists with a different instance.
+    /// saved has com.x:Title:0, cache has com.x:Title:5, so the stale :0 is dropped.
     @Test("A stale instance index is dropped in favour of the live one")
     func staleInstanceIndexIsDropped() {
         let result = LayoutSolver.planSectionOrder(
@@ -128,7 +105,6 @@ struct PlanSectionOrderTests {
         #expect(result == ["com.x:Title:5"], "stale :0 entry should be dropped, :5 kept")
     }
 
-    /// Empty old saved: just returns current.
     @Test("An empty saved order returns the current order")
     func emptyOldSavedReturnsCurrent() {
         let result = LayoutSolver.planSectionOrder(
@@ -141,9 +117,7 @@ struct PlanSectionOrderTests {
         #expect(result == ["A", "B"])
     }
 
-    /// The user's actual Cursor scenario: Cursor was at index 2 in
-    /// saved (between Discord and Alter), then quit. After A.7's fix,
-    /// the next save preserves Cursor at index 2.
+    /// Cursor was saved between Discord and Alter, then quit; the next save keeps it there.
     @Test("A quit app stays between the neighbours it was saved between")
     func cursorScenarioPreservesBetweenDiscordAndAlter() {
         // Approximation: Droppy, Discord, Cursor, Alter, ..., Battery, BentoBox, Clock.
@@ -156,7 +130,7 @@ struct PlanSectionOrderTests {
             "com.apple.controlcenter:BentoBox-0",
             "com.apple.controlcenter:Clock",
         ]
-        // Cursor is closed → not in current.
+        // Cursor is closed, so it is not in current.
         let current = [
             "iordv.Droppy:Item-0",
             "com.hnc.Discord:Item",

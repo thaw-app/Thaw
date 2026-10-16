@@ -2,7 +2,6 @@
 //  FlattenCurrentSectionsTests.swift
 //  Project: Thaw
 //
-//  Copyright (Ice) © 2023–2025 Jordan Baird
 //  Copyright (Thaw) © 2026 Toni Förster
 //  Licensed under the GNU GPLv3
 
@@ -40,11 +39,9 @@ struct FlattenCurrentSectionsTests {
     /// With no always-hidden control item, its boundary marker is omitted but
     /// any always-hidden items still follow the hidden section.
     ///
-    /// Nothing in the output then distinguishes `c:Item-0` from a hidden item,
-    /// which is why `applyProfileLayout` refuses to plan at all when the
-    /// always-hidden section is enabled and its divider did not resolve: every
-    /// always-hidden item reads as a cross-section mismatch, and the moves that
-    /// answer it change nothing, so the next pass plans them again (#881).
+    /// Nothing then distinguishes `c:Item-0` from a hidden item, so
+    /// `applyProfileLayout` refuses to plan when the always-hidden divider is
+    /// enabled but unresolved; otherwise it re-plans no-op moves forever (#881).
     @Test("A nil always-hidden control omits the marker but keeps its items")
     func alwaysHiddenControlOmittedWhenNil() {
         let result = LayoutSolver.flattenCurrentSections(

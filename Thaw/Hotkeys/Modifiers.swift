@@ -20,10 +20,6 @@ nonisolated struct Modifiers: OptionSet, Codable, Hashable {
 }
 
 nonisolated extension Modifiers {
-    /// All modifiers in the order displayed by the system,
-    /// according to Apple's style guide.
-    static let canonicalOrder = [control, option, shift, command]
-
     /// A symbolic string representation of the modifiers.
     var symbolicValue: String {
         var result = ""

@@ -2,7 +2,6 @@
 //  ProfileTests.swift
 //  Project: Thaw
 //
-//  Copyright (Ice) © 2023–2025 Jordan Baird
 //  Copyright (Thaw) © 2026 Toni Förster
 //  Licensed under the GNU GPLv3
 
@@ -282,8 +281,8 @@ struct MenuBarLayoutSnapshotTests {
 
 @Suite("Profile")
 struct ProfileFullTests {
-    /// Swift Testing builds a fresh suite instance per test, so these stand in
-    /// for the XCTest `setUp` that rebuilt them before every case.
+    /// Swift Testing builds a fresh suite instance per test, so these are
+    /// rebuilt for every case.
     private let encoder: JSONEncoder
     private let decoder: JSONDecoder
 
@@ -296,10 +295,8 @@ struct ProfileFullTests {
 
     // MARK: - Initialization Tests
 
-    /// `id`, `createdAt` and `modifiedAt` are non-optional, so the XCTest
-    /// original's `XCTAssertNotNil` on them could never fail. The substantive
-    /// form is that the initializer *defaults* the timestamps to now; fresh
-    /// identifier generation is covered by ``profileInitGeneratesUniqueId()``.
+    /// The initializer defaults the timestamps to now. Fresh identifiers are
+    /// covered by ``profileInitGeneratesUniqueId()``.
     @Test("A profile built from content takes its name and defaults its timestamps")
     func profileInitWithContent() {
         let content = makeTestProfileContent()
@@ -399,10 +396,8 @@ struct ProfileFullTests {
         )
     }
 
-    /// The settings blocks are non-optional, so the XCTest original's
-    /// `XCTAssertNotNil` on them could never fail. What the forward-compatible
-    /// decoder actually promises is that an absent block is filled from
-    /// `Defaults.DefaultValue`, which is what this asserts instead.
+    /// The forward-compatible decoder fills an absent settings block from
+    /// `Defaults.DefaultValue`.
     @Test("A profile JSON missing everything but a name decodes with default settings")
     func decodeProfileWithMissingFields() throws {
         // Minimal JSON with only required fields
@@ -428,7 +423,6 @@ struct ProfileFullTests {
 
         let decoded = try decoder.decode(Profile.self, from: json)
 
-        // Should use defaults
         #expect(decoded.name == String(localized: "Untitled"))
     }
 
@@ -450,10 +444,8 @@ struct ProfileFullTests {
 
     // MARK: - Identifiable Tests
 
-    /// `Profile` conforms to `Identifiable` with `ID == UUID`: binding `id` to
-    /// a typed local is the compile-time half of that claim, and matching the
-    /// metadata identifier is the runtime half. (The XCTest original asserted
-    /// non-nil on a non-optional `UUID`, which could never fail.)
+    /// Binding `id` to a typed local checks `ID == UUID` at compile time;
+    /// matching the metadata identifier checks it at runtime.
     @Test("A profile is identifiable by a UUID")
     func profileIsIdentifiable() {
         let content = makeTestProfileContent()

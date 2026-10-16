@@ -110,10 +110,8 @@ final class AdvancedSettings {
 
     /// The interval between icon image refreshes in panels (Thaw Bar, search, layout).
     ///
-    /// Always held on the discrete grid the "Icon refresh rate" slider can
-    /// express: `0` (Off) or `1/n` for `n` in `1...maxIconRefreshRate`. Writes
-    /// from the slider, URI, profiles, and Defaults load are all snapped here
-    /// so the UI and the live-refresh loop never disagree.
+    /// Every write is snapped to the slider's grid, `0` (Off) or `1/n`, so the
+    /// UI and the live-refresh loop never disagree.
     var iconRefreshInterval = Defaults.DefaultValue.iconRefreshInterval {
         didSet {
             let normalized = Self.normalizedIconRefreshInterval(iconRefreshInterval)
@@ -139,19 +137,121 @@ final class AdvancedSettings {
         return 1.0 / fps
     }
 
+    /// A Boolean value that indicates whether zen mode engages by itself while
+    /// the screen is mirrored or being shared. See ``PresentationMonitor`` for
+    /// what that does and does not detect.
+    var autoZenWhileSharingScreen = Defaults.DefaultValue.autoZenWhileSharingScreen {
+        didSet {
+            guard oldValue != autoZenWhileSharingScreen else { return }
+            Defaults.set(autoZenWhileSharingScreen, forKey: .autoZenWhileSharingScreen)
+        }
+    }
+
     /// A Boolean value that indicates whether diagnostic logging to file is enabled.
     var enableDiagnosticLogging = Defaults.DefaultValue.enableDiagnosticLogging {
         didSet {
             guard oldValue != enableDiagnosticLogging else { return }
             Defaults.set(enableDiagnosticLogging, forKey: .enableDiagnosticLogging)
             #if DEBUG
-                // Debug builds keep logging on regardless of profile swaps
-                // or user toggles so we never miss capture during dev.
+                // Debug builds always log.
                 DiagnosticLogger.shared.isEnabled = true
             #else
                 DiagnosticLogger.shared.isEnabled = enableDiagnosticLogging
             #endif
+            // The XPC service holds its own handle on the log file.
+            Task { await MenuBarItemService.Connection.shared.syncLogging() }
         }
+    }
+
+    /// The size, in megabytes, a diagnostic log file may reach before it is
+    /// rotated to a new file.
+    var diagnosticLogMaxSizeMB = Defaults.DefaultValue.diagnosticLogMaxSizeMB {
+        didSet {
+            guard oldValue != diagnosticLogMaxSizeMB else { return }
+            Defaults.set(diagnosticLogMaxSizeMB, forKey: .diagnosticLogMaxSizeMB)
+            applyLogRotationPolicy(pushingToService: true)
+        }
+    }
+
+    /// How many days diagnostic log files are kept before they are deleted.
+    var diagnosticLogRetentionDays = Defaults.DefaultValue.diagnosticLogRetentionDays {
+        didSet {
+            guard oldValue != diagnosticLogRetentionDays else { return }
+            Defaults.set(diagnosticLogRetentionDays, forKey: .diagnosticLogRetentionDays)
+            applyLogRotationPolicy(pushingToService: true)
+        }
+    }
+
+    /// How often diagnostic logs are rotated on a schedule, on top of the size
+    /// limit.
+    var diagnosticLogRotationInterval = Defaults.DefaultValue.diagnosticLogRotationInterval {
+        didSet {
+            guard oldValue != diagnosticLogRotationInterval else { return }
+            Defaults.set(diagnosticLogRotationInterval.rawValue, forKey: .diagnosticLogRotationInterval)
+            applyLogRotationPolicy(pushingToService: true)
+        }
+    }
+
+    /// True while ``loadInitialState()`` runs.
+    ///
+    /// Stops each `didSet` from sending the service a half-loaded policy.
+    @ObservationIgnored
+    private var isLoadingInitialState = false
+
+    /// Only guards the conversion to bytes against overflow from stored values.
+    private static let maxDiagnosticLogSizeMB = 1_000_000
+
+    /// Hands the current rotation settings to the diagnostic logger, and
+    /// optionally to the XPC service that shares the log directory.
+    ///
+    /// - Parameter pushingToService: Whether to forward the policy over XPC.
+    ///   Off during initialization; `Connection.start()` sends it anyway.
+    func applyLogRotationPolicy(pushingToService: Bool = false) {
+        DiagnosticLogger.shared.setRotationPolicy(
+            Self.rotationPolicy(
+                maxSizeMB: diagnosticLogMaxSizeMB,
+                retentionDays: diagnosticLogRetentionDays,
+                interval: diagnosticLogRotationInterval
+            )
+        )
+
+        guard pushingToService, !isLoadingInitialState else { return }
+        Task { await MenuBarItemService.Connection.shared.syncLogging() }
+    }
+
+    /// Builds a rotation policy from the given settings.
+    static func rotationPolicy(
+        maxSizeMB: Int,
+        retentionDays: Int,
+        interval: LogRotationInterval
+    ) -> DiagnosticLogger.RotationPolicy {
+        var policy = DiagnosticLogger.RotationPolicy()
+        // Clamp first: `UInt64(huge) * 1024 * 1024` traps on overflow.
+        let megabytes = min(max(0, maxSizeMB), maxDiagnosticLogSizeMB)
+        policy.maxFileSizeBytes = UInt64(megabytes) * 1024 * 1024
+        policy.retentionDays = max(1, retentionDays)
+        policy.rotationInterval = interval.seconds
+        return policy
+    }
+
+    /// Reads a rotation policy straight out of the stored settings.
+    ///
+    /// Logging starts before this model exists, and opening a log prunes the
+    /// directory; the default retention would delete files meant to be kept.
+    static func persistedRotationPolicy() -> DiagnosticLogger.RotationPolicy {
+        var maxSizeMB = Defaults.DefaultValue.diagnosticLogMaxSizeMB
+        var retentionDays = Defaults.DefaultValue.diagnosticLogRetentionDays
+        var interval = Defaults.DefaultValue.diagnosticLogRotationInterval
+
+        Defaults.ifPresent(key: .diagnosticLogMaxSizeMB, assign: &maxSizeMB)
+        Defaults.ifPresent(key: .diagnosticLogRetentionDays, assign: &retentionDays)
+        Defaults.ifPresent(key: .diagnosticLogRotationInterval) { (rawValue: String) in
+            if let stored = LogRotationInterval(rawValue: rawValue) {
+                interval = stored
+            }
+        }
+
+        return rotationPolicy(maxSizeMB: maxSizeMB, retentionDays: retentionDays, interval: interval)
     }
 
     /// A Boolean value that controls whether profile-apply overflows menu bar
@@ -167,13 +267,9 @@ final class AdvancedSettings {
     /// A Boolean value that controls whether Thaw rearranges the menu bar on
     /// its own initiative.
     ///
-    /// The escape hatch for bars where the automatic paths misbehave. When
-    /// off, the late-arrival re-sort and the saved-layout restore both stand
-    /// down; applying a profile still works, and items can still be arranged
-    /// by ⌘ Command + dragging them in the menu bar. Read at the single
-    /// choke point in `MenuBarItemManager.applyProfileLayout`, which is also
-    /// where the graduated responses (the idle gate, concealed-order
-    /// relaxation, unfinished-batch rationing) live.
+    /// When off, the late-arrival re-sort and saved-layout restore stand down;
+    /// profile applies still work. Read in
+    /// `MenuBarItemManager.applyProfileLayout`.
     var automaticArrangementEnabled = Defaults.DefaultValue.automaticArrangementEnabled {
         didSet {
             guard oldValue != automaticArrangementEnabled else { return }
@@ -184,11 +280,8 @@ final class AdvancedSettings {
     /// A Boolean value that controls whether the Thaw Bar is used to reveal
     /// hidden items while notch overflow has items ejected.
     ///
-    /// Expanding the hidden section inline cannot show items that overflow
-    /// ejected: they were ejected precisely because the visible row had no room
-    /// left beside the notch. When this is on, a display with ejected items
-    /// reveals through the Thaw Bar regardless of its per-display Thaw Bar
-    /// setting. Only affects displays that currently have ejected items.
+    /// Inline expansion can't show ejected items, since the row had no room.
+    /// Overrides the per-display Thaw Bar setting while items are ejected.
     var useThawBarOnNotchOverflow = Defaults.DefaultValue.useThawBarOnNotchOverflow {
         didSet {
             guard oldValue != useThawBarOnNotchOverflow else { return }
@@ -199,9 +292,7 @@ final class AdvancedSettings {
     /// A Boolean value that controls whether left-clicks on menu bar items
     /// from the IceBar are delivered via an accessibility action (AXShowMenu,
     /// falling back to AXPress) instead of a synthetic mouse click.
-    /// Default on and no longer surfaced in Settings; automatically falls
-    /// back to the synthetic click on any failure. Moves and right-clicks
-    /// are unaffected.
+    /// Not shown in Settings. Falls back to the synthetic click on failure.
     var useAXClickDelivery = Defaults.DefaultValue.useAXClickDelivery {
         didSet {
             guard oldValue != useAXClickDelivery else { return }
@@ -249,9 +340,8 @@ final class AdvancedSettings {
     /// A Boolean value that indicates whether the mouse pointer is moved to a
     /// menu bar item that was opened from the search panel.
     ///
-    /// Only the search panel warps the pointer. Opening an item from the Thaw
-    /// Bar means the pointer is already there, so moving it would only take it
-    /// somewhere the user did not put it.
+    /// Only the search panel warps; from the Thaw Bar the pointer is already
+    /// there.
     var moveCursorToRevealedItem = Defaults.DefaultValue.moveCursorToRevealedItem {
         didSet {
             guard oldValue != moveCursorToRevealedItem else { return }
@@ -259,35 +349,49 @@ final class AdvancedSettings {
         }
     }
 
+    /// Whether menu bar items are drawn as their owning application's icon
+    /// instead of a live capture.
+    ///
+    /// Unlike the automatic fallback, uses icons even when a capture exists.
+    var alwaysUseAppIconForMenuBarItems = Defaults.DefaultValue.alwaysUseAppIconForMenuBarItems {
+        didSet {
+            guard oldValue != alwaysUseAppIconForMenuBarItems else { return }
+            Defaults.set(alwaysUseAppIconForMenuBarItems, forKey: .alwaysUseAppIconForMenuBarItems)
+        }
+    }
+
+    /// Whether an item that starts blinking while hidden briefly shows its
+    /// section, so an alert raised behind the chevron is still seen.
+    ///
+    /// Off by default: the verdict is a pixel heuristic, and a wrong one moves
+    /// the user's bar.
+    var surfaceItemsSeekingAttention = Defaults.DefaultValue.surfaceItemsSeekingAttention {
+        didSet {
+            guard oldValue != surfaceItemsSeekingAttention else { return }
+            Defaults.set(surfaceItemsSeekingAttention, forKey: .surfaceItemsSeekingAttention)
+        }
+    }
+
     /// Storage for internal observers.
     @ObservationIgnored
     private var cancellables = Set<AnyCancellable>()
 
-    /// The shared app state.
     @ObservationIgnored
     private(set) weak var appState: AppState?
 
-    /// Performs the initial setup of the model.
-    ///
-    /// The app state is only stored, never read, by this model: the setup it
-    /// performs is reading `Defaults` and subscribing to the Settings-URI
-    /// notification. The parameter is optional so that setup can be driven
-    /// without standing up an ``AppState``; the app always passes one.
+    /// `appState` is only stored, so it's optional for setup without one.
     func performSetup(with appState: AppState? = nil) {
         self.appState = appState
         loadInitialState()
         configureObservers()
     }
 
-    /// Loads the model's initial state.
     private func loadInitialState() {
-        // 1.x click-gesture migration (#1012): option-click and double-click
-        // on the menu bar toggled the always-hidden section unconditionally
-        // in 1.x. 2.0 replaced them with opt-in gates whose keys did not
-        // exist for upgraders, so the gestures silently stopped working —
-        // reported as "2.0 did not honor the settings from 1.2". Seed both
-        // gates on when they have never been explicitly set; an explicit
-        // choice (either value, including off) is never overwritten.
+        isLoadingInitialState = true
+        defer { isLoadingInitialState = false }
+        // 1.x migration: option-click and double-click always toggled
+        // always-hidden. Seed 2.0's opt-in gates on when never set; an
+        // explicit choice is never overwritten.
         if Defaults.object(forKey: .useOptionClickToShowAlwaysHiddenSection) == nil {
             Defaults.set(true, forKey: .useOptionClickToShowAlwaysHiddenSection)
         }
@@ -304,9 +408,17 @@ final class AdvancedSettings {
         Defaults.ifPresent(key: .enableSecondaryContextMenuQuit, assign: &enableSecondaryContextMenuQuit)
         Defaults.ifPresent(key: .showOnHoverDelay, assign: &showOnHoverDelay)
         Defaults.ifPresent(key: .tooltipDelay, assign: &tooltipDelay)
+        Defaults.ifPresent(key: .autoZenWhileSharingScreen, assign: &autoZenWhileSharingScreen)
         Defaults.ifPresent(key: .showMenuBarTooltips, assign: &showMenuBarTooltips)
         Defaults.ifPresent(key: .iconRefreshInterval, assign: &iconRefreshInterval)
         Defaults.ifPresent(key: .enableDiagnosticLogging, assign: &enableDiagnosticLogging)
+        Defaults.ifPresent(key: .diagnosticLogMaxSizeMB, assign: &diagnosticLogMaxSizeMB)
+        Defaults.ifPresent(key: .diagnosticLogRetentionDays, assign: &diagnosticLogRetentionDays)
+        Defaults.ifPresent(key: .diagnosticLogRotationInterval) { (rawValue: String) in
+            if let interval = LogRotationInterval(rawValue: rawValue) {
+                diagnosticLogRotationInterval = interval
+            }
+        }
         Defaults.ifPresent(key: .enableMenuBarItemOverflow, assign: &enableMenuBarItemOverflow)
         Defaults.ifPresent(key: .automaticArrangementEnabled, assign: &automaticArrangementEnabled)
         Defaults.ifPresent(key: .useThawBarOnNotchOverflow, assign: &useThawBarOnNotchOverflow)
@@ -315,6 +427,8 @@ final class AdvancedSettings {
         Defaults.ifPresent(key: .searchIncludeHidden, assign: &searchIncludeHidden)
         Defaults.ifPresent(key: .searchIncludeAlwaysHidden, assign: &searchIncludeAlwaysHidden)
         Defaults.ifPresent(key: .moveCursorToRevealedItem, assign: &moveCursorToRevealedItem)
+        Defaults.ifPresent(key: .surfaceItemsSeekingAttention, assign: &surfaceItemsSeekingAttention)
+        Defaults.ifPresent(key: .alwaysUseAppIconForMenuBarItems, assign: &alwaysUseAppIconForMenuBarItems)
 
         Defaults.ifPresent(key: .sectionDividerStyle) { rawValue in
             if let style = SectionDividerStyle(rawValue: rawValue) {
@@ -325,6 +439,9 @@ final class AdvancedSettings {
         Defaults.ifPresent(key: .searchSectionOrder) { (rawValues: [String]) in
             searchSectionOrder = Self.sanitizedSearchSectionOrder(from: rawValues)
         }
+
+        // One apply once every setting is loaded.
+        applyLogRotationPolicy()
     }
 
     /// Returns a search-section order that contains each `MenuBarSection.Name`
@@ -338,12 +455,7 @@ final class AdvancedSettings {
         return preferred + MenuBarSection.Name.allCases.filter { !preferred.contains($0) }
     }
 
-    /// Configures the internal observers for the model.
-    ///
-    /// Persistence for most properties is now driven by `didSet` on each
-    /// property (see above), replacing the previous `$property.persistToDefaults`
-    /// Combine pipelines. Only the Settings-URI notification subscription
-    /// remains Combine-based here.
+    /// Only the Settings-URI subscription; persistence is in each `didSet`.
     private func configureObservers() {
         cancellables = [
             NotificationCenter.observeSettingsChangesViaURI { [weak self] change in
@@ -354,7 +466,6 @@ final class AdvancedSettings {
 
     /// Handles settings changed externally via Settings URI scheme.
     private func handleExternalSettingsChange(_ change: ExternalSettingsChange) {
-        // Handle boolean values
         if let boolValue = change.boolValue {
             switch change.key {
             case "enableAlwaysHiddenSection":
@@ -391,13 +502,16 @@ final class AdvancedSettings {
                 searchIncludeAlwaysHidden = boolValue
             case "moveCursorToRevealedItem":
                 moveCursorToRevealedItem = boolValue
+            case "surfaceItemsSeekingAttention":
+                surfaceItemsSeekingAttention = boolValue
+            case "alwaysUseAppIconForMenuBarItems":
+                alwaysUseAppIconForMenuBarItems = boolValue
             default:
                 // Key not handled by AdvancedSettings
                 break
             }
         }
 
-        // Handle double values
         if let doubleValue = change.doubleValue {
             switch change.key {
             case "showOnHoverDelay":

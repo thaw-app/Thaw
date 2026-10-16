@@ -2,7 +2,6 @@
 //  MarkerPairResolver.swift
 //  Project: Thaw
 //
-//  Copyright (Ice) © 2023–2025 Jordan Baird
 //  Copyright (Thaw) © 2026 Toni Förster
 //  Licensed under the GNU GPLv3
 
@@ -13,23 +12,11 @@ import Foundation
 /// marker windows so their NSStatusItem sourcePIDs can be recovered
 /// after the spatial AX pass fails.
 ///
-/// On macOS 26 some widgets (Little Snitch's agent observed in the
-/// wild) have their NSStatusItem hosted by Control Center at the AX
-/// layer and do not publish an AXExtrasMenuBar of their own. The
-/// CG-to-AX spatial resolver in SourcePIDCache cannot find a per-app
-/// extras child for them, sourcePID stays nil, and the namespace
-/// falls back to com.apple.controlcenter, colliding with Apple's real
-/// Control Center items and with any other widget hit by the same
-/// failure.
-///
-/// Structurally, every NSStatusItem-style widget also publishes a
-/// SECOND CG window in the items-only list whose title is the
-/// widget's bundle identifier and whose width matches the on-screen
-/// icon (heights diverge: the icon takes the active display's menu
-/// bar height while the marker carries a placeholder height). This
-/// resolver pairs icons with markers by width and synthesizes the
-/// sourcePID via injected lookups so the algorithm stays pure and
-/// testable.
+/// On macOS 26 some widgets (Little Snitch's agent) are hosted by Control
+/// Center at the AX layer with no AXExtrasMenuBar, so sourcePID stays nil and
+/// the namespace collides with com.apple.controlcenter. Each such widget also
+/// publishes a second CG window titled with its bundle ID and the icon's width
+/// (heights differ). Lookups are injected so the algorithm stays pure.
 nonisolated enum MarkerPairResolver {
     /// A marker window candidate distilled from the items-only list.
     /// Markers carry bundle-ID-shaped titles (titles containing a ".")
@@ -68,16 +55,10 @@ nonisolated enum MarkerPairResolver {
     /// the resolution paths so a marker hosted by either does not
     /// collapse the resolution back to those PIDs.
     ///
-    /// Both halves of that rule are load-bearing. Checking only the
-    /// marker side lets a single marker be claimed by every unresolved
-    /// icon that happens to share its width: a field log (2.0.0-rc.2,
-    /// a bar with 24 items) shows one marker resolving five distinct
-    /// icons to the same PID, which stamped Control Center's own Sound
-    /// and Wi-Fi modules with a third-party bundle identifier. A wrong
-    /// PID is worse than none — it renames the item, so its saved
-    /// position stops matching, and it slips past the unresolved-
-    /// sourcePID gates that keep a degraded snapshot from being acted
-    /// on or persisted.
+    /// Both halves matter: checking only markers let one marker resolve five
+    /// icons, stamping CC's Sound and Wi-Fi with a third-party bundle ID. A
+    /// wrong PID is worse than none: it renames the item and slips past the
+    /// unresolved-sourcePID gates.
     ///
     /// - Parameters:
     ///   - unresolvedIcons: candidate on-screen icons. Icons whose own
@@ -105,19 +86,13 @@ nonisolated enum MarkerPairResolver {
         pidToBundleID: (pid_t) -> String?,
         bundleIDToPID: (String) -> pid_t?
     ) -> [Resolution] {
-        // Icons whose own title is bundle-ID-shaped are markers, not
-        // candidates; dropping them up front keeps them out of the
-        // per-width candidate census below as well as out of the
-        // pairing loop.
+        // Icons with bundle-ID-shaped titles are markers, not candidates.
         let candidates = unresolvedIcons.filter { icon in
             guard let title = icon.title else { return true }
             return !title.contains(".")
         }
 
-        // How many candidate icons share each width. A marker may be
-        // claimed by exactly one of them; when several compete for the
-        // same width there is no evidence saying which one owns it, so
-        // none resolve.
+        // When several candidates share a width, none resolve.
         var candidatesPerWidth = [CGFloat: Int]()
         for icon in candidates {
             candidatesPerWidth[icon.size.width, default: 0] += 1
@@ -127,18 +102,9 @@ nonisolated enum MarkerPairResolver {
         for icon in candidates {
             guard candidatesPerWidth[icon.size.width] == 1 else { continue }
 
-            // Match by width only, not exact size. The on-screen icon
-            // and its off-screen marker share width (the widget's
-            // intrinsic icon width), but heights differ: the icon
-            // takes the active display's menu bar height (typically
-            // 22-30pt depending on the display and notch state) while
-            // the marker carries a default placeholder height
-            // (33pt observed in field logs). Exact size matching
-            // rejected legitimate pairs whose widths agreed but whose
-            // heights drifted by 3pt. The two uniqueness checks — one
-            // candidate icon per width above, one marker per width
-            // here — still prevent misattribution when several windows
-            // happen to share a width.
+            // Match by width only: the icon takes the menu bar height (22-30pt)
+            // while the marker has a placeholder height (33pt). The two
+            // uniqueness checks still prevent misattribution.
             let matching = markers.filter {
                 $0.windowID != icon.windowID && $0.size.width == icon.size.width
             }
@@ -201,31 +167,20 @@ nonisolated enum MarkerPairResolver {
 
     /// True when a CG window title has the generic Item-N shape macOS assigns to
     /// Control-Center-hosted items that publish no name of their own (Item-0,
-    /// Item-38, ...). The single source of truth for that shape, shared by
-    /// MenuBarItemTag.isControlCenterGenericItem and isCCHostedGenericSlot so the
-    /// two can never drift apart.
+    /// Item-38, ...). Shared by MenuBarItemTag.isControlCenterGenericItem and
+    /// isCCHostedGenericSlot so the two can't drift.
     static func isGenericControlCenterTitle(_ title: String?) -> Bool {
         guard let title else { return false }
         return title.wholeMatch(of: /Item-\d+/) != nil
     }
 
-    /// Returns true when a strict 1pt spatial match only confirms Control
-    /// Center hosting and does not identify the owning app. Control Center is
-    /// the CG owner of every CC-hosted NSStatusItem on macOS 26; when the
-    /// matched app IS Control Center and the window carries a generic Item-N
-    /// title, writing Control Center's PID would tag the item as a transient
-    /// CC widget (isTransientControlCenterItem true, canBeHidden false), hiding
-    /// it from profile management. The window is left unresolved so marker-pair
-    /// can supply the real owner PID.
+    /// Returns true when a strict 1pt match only confirms Control Center
+    /// hosting of a generic Item-N slot. CC's PID would mark it a transient CC
+    /// widget that can't be hidden, so it is left for marker-pair.
     ///
-    /// On a single display macOS 26 does not publish the bundle-ID marker
-    /// windows marker-pair needs, so these items can stay unresolved for the
-    /// session. That is accepted: attributing them to Control Center would
-    /// mislabel them permanently, which is worse than leaving them unowned.
-    /// Named CC items (BentoBox-0, Clock, WiFi, NowPlaying, ...)
-    /// carry non-generic titles and are unaffected; a widget that publishes its
-    /// own extras-bar child (The Clock, com.fabriceleyne.theclock) matches via
-    /// that app, not Control Center, so it is never flagged here.
+    /// On one display the markers may never publish, leaving the item
+    /// unresolved for the session; that beats a permanent mislabel. Named CC
+    /// items (Clock, WiFi) and widgets with their own extras child are unaffected.
     static func isCCHostedGenericSlot(
         appBundleID: String?,
         windowTitle: String?,
@@ -235,56 +190,16 @@ nonisolated enum MarkerPairResolver {
     }
 }
 
-/// Decides whether a Control-Center-hosted menu bar window's title
-/// indicates which application owns it, used by SourcePIDCache's
-/// corroborated spatial fallback to attribute an icon whose own app
-/// publishes an extras-bar AX child offset too far for the strict 1pt
-/// pass (AirBuddy's icon sits ~2pt off, SpamSieve up to ~8pt).
-///
-/// Some widgets carry a reverse-DNS title on the icon window itself
-/// (codes.rambo.AirBuddy.Menu, com.c-command.spamsieve) even though the
-/// CG window is owned by Control Center. Pairing that title against a
-/// candidate app's bundle identifier corroborates a loose spatial match,
-/// so a nearby unrelated neighbor can never be mis-attributed the way a
-/// bare distance threshold would allow.
+/// Decides whether a Control Center-hosted window's title names its owning
+/// app. Corroborates SourcePIDCache's loose spatial fallback (AirBuddy ~2pt
+/// off, SpamSieve ~8pt) so a nearby unrelated neighbor is never attributed.
 nonisolated enum HostedItemOwnership {
-    /// Returns true when title and bundleID, treated as reverse-DNS
-    /// strings, are in an owner relationship: they agree on at least two
-    /// leading components, and either one is a full component-prefix of
-    /// the other or their first differing component is a prefix of its
-    /// counterpart.
-    ///
-    /// This matches codes.rambo.AirBuddy.Menu to codes.rambo.AirBuddyHelper
-    /// and com.c-command.spamsieve to com.c-command.SpamSieve, while
-    /// rejecting same-vendor different-app pairs such as
-    /// pl.maketheweb.pixelsnap2 vs pl.maketheweb.cleanshotx and unrelated
-    /// neighbors such as com.wireguard.macos vs app.updatest.Updatest.
-    /// Comparison is case-insensitive.
-    ///
-    /// A title with no reverse-DNS shape at all qualifies only when it is
-    /// exactly the bundle's final component — BetterTouchTool's slot titles
-    /// itself "BetterTouchTool" and belongs to com.hegenberg.BetterTouchTool.
-    /// Vendor components and generic titles (Item-0, empty) never qualify.
     /// Returns the single running bundle identifier a window title names
-    /// outright, or `nil`.
+    /// outright, or `nil`. Case-insensitive.
     ///
-    /// ``titleIndicatesOwner(_:bundleID:)`` is a *relation* — it accepts
-    /// prefixes and near-misses, so a caller must corroborate it, which the
-    /// hosted-extras pass does spatially against the app's AX children.
-    /// Items hosted by Control Center have no `AXExtrasMenuBar` of their
-    /// own, which is precisely why they are unresolved, so that
-    /// corroboration can never arrive and they fall through every pass —
-    /// observed as `com.apple.controlcenter:com.microsoft.OneDrive`,
-    /// `:com.apple.TextInputMenuAgent`, `:us.zoom.xos` and seven more in a
-    /// single log, each with a nil source PID (#854).
-    ///
-    /// Exact equality needs no corroboration. A window titled with the
-    /// complete bundle identifier of a running application is naming its
-    /// owner, not resembling it. Requiring a unique match keeps the
-    /// degenerate case — two processes claiming one identifier — out.
-    ///
-    /// Case-insensitive, matching ``titleIndicatesOwner(_:bundleID:)``.
-    /// Pure over its inputs.
+    /// Unlike ``titleIndicatesOwner(_:bundleID:)``, exact equality needs no
+    /// spatial corroboration, which CC-hosted items can never supply (#854).
+    /// Requiring a unique match rules out two processes sharing an identifier.
     static func exactlyNamedOwner(_ title: String?, runningBundleIDs: [String]) -> String? {
         guard let title, !title.isEmpty else { return nil }
         let needle = title.lowercased()
@@ -298,33 +213,32 @@ nonisolated enum HostedItemOwnership {
         return matches[0]
     }
 
+    /// Returns true when title and bundleID, as reverse-DNS strings, agree on
+    /// at least two leading components and either one is a component-prefix of
+    /// the other or their first differing component is a prefix of its
+    /// counterpart. Case-insensitive.
+    ///
+    /// Matches codes.rambo.AirBuddy.Menu to codes.rambo.AirBuddyHelper; rejects
+    /// pl.maketheweb.pixelsnap2 vs pl.maketheweb.cleanshotx. A title with no
+    /// dots qualifies only as the bundle's final component (BetterTouchTool).
     static func titleIndicatesOwner(_ title: String?, bundleID: String) -> Bool {
         guard let title, !title.isEmpty else { return false }
         let titleParts = title.lowercased().split(separator: ".", omittingEmptySubsequences: false)
         let bundleParts = bundleID.lowercased().split(separator: ".", omittingEmptySubsequences: false)
-        // A bundle id has at least two components. Empty components are
-        // rejected outright: split(omittingEmptySubsequences: false) keeps a
-        // trailing empty component, and "" is a prefix of every string, so a
-        // malformed vendor-only title (pl.maketheweb.) would otherwise clear
-        // the prefix test against any app from that vendor.
+        // Reject empty components: "" prefixes everything, so "pl.maketheweb."
+        // would otherwise match any app from that vendor.
         guard bundleParts.count >= 2,
               titleParts.allSatisfy({ !$0.isEmpty }),
               bundleParts.allSatisfy({ !$0.isEmpty })
         else { return false }
 
-        // A title with no reverse-DNS shape at all still identifies the app when
-        // it *is* the app's name: BetterTouchTool's slot titles itself
-        // "BetterTouchTool" and belongs to com.hegenberg.BetterTouchTool. Only the
-        // final component qualifies — a vendor component (apple, maketheweb) names
-        // a publisher, not an app, and matching on it would hand every widget that
-        // vendor ships to whichever of its apps happened to be checked first.
+        // A dotless title matches only the final component; a vendor component
+        // would hand every widget from that vendor to whichever app came first.
         if titleParts.count == 1, let appComponent = bundleParts.last {
             return titleParts[0] == appComponent
         }
 
-        // Two-component titles are neither shape: too short to carry a
-        // distinctive component pair, too long to be a bare app name.
-        // A reverse-DNS-shaped title has at least three components.
+        // Two-component titles are neither a bare name nor reverse-DNS.
         guard titleParts.count >= 3 else { return false }
 
         let shared = zip(titleParts, bundleParts).prefix { $0 == $1 }.count
@@ -336,8 +250,7 @@ nonisolated enum HostedItemOwnership {
             return true
         }
         // Otherwise the first differing component must be a prefix of its
-        // counterpart (airbuddy vs airbuddyhelper), which is what separates
-        // AirBuddy from same-vendor different-app pairs.
+        // counterpart (airbuddy vs airbuddyhelper).
         return titleParts[shared].hasPrefix(bundleParts[shared])
             || bundleParts[shared].hasPrefix(titleParts[shared])
     }

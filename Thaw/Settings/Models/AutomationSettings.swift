@@ -2,7 +2,6 @@
 //  AutomationSettings.swift
 //  Project: Thaw
 //
-//  Copyright (Ice) © 2023–2025 Jordan Baird
 //  Copyright (Thaw) © 2026 Toni Förster
 //  Licensed under the GNU GPLv3
 
@@ -28,7 +27,6 @@ final class AutomationSettings {
 
     // MARK: - Types
 
-    /// Represents a whitelisted application.
     struct WhitelistedApp: Identifiable, Equatable {
         let bundleId: String
         let appName: String?
@@ -88,7 +86,6 @@ final class AutomationSettings {
         }
     }
 
-    /// Adds a bundle ID to the whitelist.
     func addToWhitelist(bundleId: String) {
         let trimmed = bundleId.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty else { return }
@@ -97,23 +94,8 @@ final class AutomationSettings {
         refreshWhitelist()
     }
 
-    /// Removes a bundle ID from the whitelist.
     func removeFromWhitelist(bundleId: String) {
         SettingsURIHandler.removeFromWhitelist(bundleId: bundleId)
-        refreshWhitelist()
-    }
-
-    /// Removes a whitelisted app at the specified index.
-    func removeWhitelistedApp(at indexSet: IndexSet) {
-        let appsToRemove = indexSet.compactMap { index -> String? in
-            guard index < whitelistedApps.count else { return nil }
-            return whitelistedApps[index].bundleId
-        }
-
-        for bundleId in appsToRemove {
-            SettingsURIHandler.removeFromWhitelist(bundleId: bundleId)
-        }
-
         refreshWhitelist()
     }
 

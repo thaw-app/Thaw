@@ -2,21 +2,16 @@
 //  SearchIndexTests.swift
 //  Project: Thaw
 //
-//  Copyright (Ice) © 2023–2025 Jordan Baird
 //  Copyright (Thaw) © 2026 Toni Förster
 //  Licensed under the GNU GPLv3
 
 import Testing
 @testable import Thaw
 
-/// Covers the rules applied around the settings search index: the pane
-/// filter, the relevance sort, the disclosure mapping that decides which
-/// rows need a collapsed group expanded before they can be revealed, and the
-/// non-searchable allow-list.
-///
-/// The index contents themselves are data, so these assertions target the
-/// rules rather than pinning every row — a pinned row list would break on
-/// every copy change without catching a real defect.
+/// Covers the settings search index rules: pane filter, relevance sort,
+/// disclosure mapping for rows in collapsed groups, and the non-searchable
+/// allow-list. Assertions target the rules, not every row, so copy changes
+/// don't break them.
 @Suite("Settings search index")
 struct SearchIndexTests {
     // MARK: - entries
@@ -33,6 +28,19 @@ struct SearchIndexTests {
     @Test("The index is populated")
     func indexIsNotEmpty() {
         #expect(!SearchIndex.entries.isEmpty)
+    }
+
+    @Test("The hide-Dock-icon-when-toggling row is indexed")
+    func hideDockIconWhenTogglingIsSearchable() {
+        let entry = SearchIndex.entries.first { $0.id == "general.hideDockIconWhenToggling" }
+
+        #expect(entry?.property == .general("hideDockIconWhenToggling"))
+        #expect(entry?.titleText == "Hide Dock icon when toggling the menu bar")
+        #expect(
+            entry?.descriptionText
+                == "Keep the app's icon out of the Dock when showing or hiding hidden menu bar items. If they need extra space, they open in the Thaw Bar instead of hiding the app menus. Settings windows still appear normally."
+        )
+        #expect(entry?.pane == .general)
     }
 
     // MARK: - entries(for:)
@@ -61,6 +69,12 @@ struct SearchIndexTests {
             .flatMap { SearchIndex.entries(for: $0) }
 
         #expect(partitioned.count == SearchIndex.entries.count)
+    }
+
+    @Test("New trigger panes have searchable pane rows")
+    func triggerPanesAreSearchable() {
+        #expect(SearchIndex.entries(for: .triggers).contains { $0.id == "pane.triggers" })
+        #expect(SearchIndex.entries(for: .developer).contains { $0.id == "pane.developer" })
     }
 
     // MARK: - sortedByRelevance
@@ -97,10 +111,9 @@ struct SearchIndexTests {
         ]
     )
     func gatedRowsRequestDisclosure(id: String) {
-        // These rows live inside a collapsed group in the Advanced pane.
-        // Without the disclosure, selecting the search result scrolls to a
-        // row the user cannot see. A row absent on this OS version is not a
-        // failure; the mapping is only asserted for the ones indexed here.
+        // These rows sit in a collapsed group in the Advanced pane, so without
+        // the disclosure the result scrolls to a hidden row. Rows absent on
+        // this OS version are skipped.
         guard let entry = SearchIndex.entries.first(where: { $0.id == id }) else {
             return
         }

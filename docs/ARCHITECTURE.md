@@ -14,9 +14,7 @@ profiles, and customizes menu bar appearance. It is a maintained fork of
   loss of status items.
 - Prefer local-only operation: no accounts, no telemetry/tracking backend.
 - Fail closed for privileged automation surfaces (`thaw://` settings APIs).
-- Stay compatible with current macOS releases. The deployment target is macOS
-  26; macOS 27 support is tracked in
-  [#687](https://github.com/thaw-app/Thaw/issues/687).
+- Stay compatible with current macOS releases. The deployment target is macOS 26; macOS 27 is supported.
 
 ## Repository layout
 
@@ -25,7 +23,7 @@ profiles, and customizes menu bar appearance. It is a maintained fork of
 | `Thaw/` | Main application target (UI, menu bar logic, settings, events, permissions) |
 | `Shared/` | Code shared between the app and helper processes (bridging, XPC client types, utilities) |
 | `MenuBarItemService/` | XPC helper process that resolves menu bar item source PIDs off the main app |
-| `MenuBarCaptureService/` | XPC helper process that captures menu bar item images in batches |
+| `MenuBarCaptureService/` | Recyclable XPC helper that runs SkyLight offscreen icon capture so the per-call dictionary leak stays out of the UI process |
 | `ThawCtl/` | Small SwiftPM CLI / control utilities |
 | `ThawTests/` | Swift Testing suite run in CI |
 | `Fuzzing/` | SwiftPM libFuzzer targets; currently the `thaw://` settings URI parser |
@@ -52,7 +50,7 @@ External dependencies are declared via Swift Package Manager and locked in
 │              │ XPC                    │ XPC                 │
 │              ▼                        ▼                     │
 │   MenuBarItemService.xpc      MenuBarCaptureService.xpc     │
-│   (source PID resolution)     (batched item capture)        │
+│   (source PID resolution)     (offscreen capture; recycled) │
 └─────────────────────────────────────────────────────────────┘
           │                         │
           ▼                         ▼
@@ -63,20 +61,12 @@ External dependencies are declared via Swift Package Manager and locked in
 
 ### Main app (`Thaw/`)
 
-- **MenuBar:** Enumerates and moves status items, maintains hidden /
-  always-hidden sections, layout reconciliation, spacing, appearance overlay,
-  and the Thaw Bar (IceBar) UI.
-- **Events / Hotkeys:** User input paths that show or hide sections without
-  going through the settings UI.
-- **Triggers:** Condition monitors (power, network, Focus, schedule, and
-  others) that reveal or hide an individual item. Everything except the
-  battery and power conditions is off until enabled per condition from
-  Developer settings.
-- **Settings:** UserDefaults-backed configuration, profiles, onboarding.
-- **Permissions:** Guides the user through TCC prompts required for AX and
-  screen capture features.
-- **Updates:** Sparkle client; feed URL and EdDSA public key live in
-  `Thaw/Resources/Info.plist`.
+- MenuBar: enumerates and moves status items, maintains hidden / always-hidden sections, layout reconciliation, spacing, appearance overlay, and the Thaw Bar (IceBar) UI.
+- Events / Hotkeys: user input paths that show or hide sections without going through the settings UI.
+- Triggers: condition monitors (power, network, Focus, schedule, and others) that reveal or hide an individual item. Everything except the battery and power conditions is off until enabled per condition from Developer settings.
+- Settings: UserDefaults-backed configuration, profiles, onboarding.
+- Permissions: guides the user through TCC prompts required for AX and screen capture features.
+- Updates: Sparkle client; feed URL and EdDSA public key live in `Thaw/Resources/Info.plist`.
 
 ### `MenuBarItemService` (XPC)
 
@@ -94,6 +84,20 @@ to the same `start` and `configureLogging` pair. The app asks for one batch per
 refresh rather than one call per window, and the helper exits once it has spent
 its capture budget, which bounds the per-call leak in the underlying SkyLight
 API to the helper's lifetime rather than the app's.
+
+### `MenuBarCaptureService` (XPC)
+
+A second Application XPC (`com.stonerl.Thaw.MenuBarCaptureService`) captures
+offscreen Hidden / Always Hidden status-item windows via SkyLight. Each
+successful `SLWindowListCreateImageFromArray` call leaks a small dictionary in
+the caller; the helper exits after a capture budget (and when the last live
+consumer closes) so that growth can be reclaimed. Requests carry a request ID
+and window IDs only; the helper recomputes bounds, accepts only menu-bar item
+windows, and returns cropped premultiplied-BGRA frames. Visible-section icons
+stay on ScreenCaptureKit in the app. Always Hidden is capped at 1 fps;
+Hidden follows the icon refresh slider. This dictionary leak is in the
+capture caller (commit `0e045faf`); it is separate from the Core Animation
+fence-port leak tracked as issue #933.
 
 ### External interfaces
 
@@ -113,14 +117,10 @@ API to the helper's lifetime rather than the app's.
 
 ## Build and release
 
-- **Dev loop:** Open `Thaw.xcodeproj` in Xcode 26+, build/run.
-- **CI:** `.github/workflows/ci.yml` runs SwiftLint, `xcodebuild test`, and
-  SonarCloud.
-  Shared release/CI pieces live in [`thaw-app/org-ci`](https://github.com/thaw-app/org-ci).
-- **Release:** Signed with Developer ID, notarized, packaged (ZIP/DMG), Sparkle
-  appcast updated. See [VERIFYING_RELEASES.md](VERIFYING_RELEASES.md) and
-  [RELEASES.md](RELEASES.md).
-- **Hosting:** Canonical source is [thaw-app/Thaw](https://github.com/thaw-app/Thaw).
+- Dev loop: open `Thaw.xcodeproj` in Xcode 26+, build/run.
+- CI: `.github/workflows/ci.yml` runs SwiftLint, `xcodebuild test`, and SonarCloud. Shared release/CI pieces live in [`thaw-app/org-ci`](https://github.com/thaw-app/org-ci).
+- Release: signed with Developer ID, notarized, packaged (ZIP/DMG), Sparkle appcast updated. See [VERIFYING_RELEASES.md](VERIFYING_RELEASES.md) and [RELEASES.md](RELEASES.md).
+- Hosting: canonical source is [thaw-app/Thaw](https://github.com/thaw-app/Thaw).
 
 ## Related organization repositories
 
@@ -139,5 +139,5 @@ and supply-chain review:
 
 - [ASSURANCE_CASE.md](ASSURANCE_CASE.md): threat model and security argument
 - [URI_SCHEMES.md](URI_SCHEMES.md): external URL/API surface
-- [SECURITY.md](../.github/SECURITY.md): security requirements and reporting
+- [Thaw/Floe Security Policy](https://github.com/thaw-app/.github/blob/main/.github/SECURITY.md): reporting, support, and dependency requirements
 - [GOVERNANCE.md](../.github/GOVERNANCE.md): project roles and org repo inventory

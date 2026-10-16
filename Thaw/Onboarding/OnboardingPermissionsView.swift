@@ -2,29 +2,21 @@
 //  OnboardingPermissionsView.swift
 //  Project: Thaw
 //
-//  Copyright (Ice) © 2023–2025 Jordan Baird
 //  Copyright (Thaw) © 2026 Toni Förster
 //  Licensed under the GNU GPLv3
 
 import SwiftUI
 
-/// The permissions step shown at the end of the glass onboarding tour, and
-/// again on its own whenever permissions are missing on a later launch.
-///
-/// One view serves both so the second encounter looks like the first.
+/// The permissions step at the end of onboarding, and on its own whenever
+/// permissions are missing on a later launch.
 struct ThawPermissionsView: View {
     @Environment(AppPermissions.self) private var permissions
 
     var onContinue: () -> Void
 
-    /// Shows a Quit button beside Continue when non-nil.
-    ///
-    /// Absent during onboarding, where the tour precedes this step and the
-    /// app menu is available. Supplied when the view is presented standalone:
-    /// that window hides its close, minimize and zoom buttons, and Continue
-    /// stays disabled until the required permissions are granted, so without
-    /// this there is no way out of the window for a user who does not want
-    /// to grant them.
+    /// Shows a Quit button beside Continue when non-nil. Supplied only when
+    /// standalone, where the window has no close button and Continue waits
+    /// on the required permissions.
     var onQuit: (() -> Void)?
 
     @State private var appeared = false
@@ -115,7 +107,7 @@ private struct OnboardingPermissionCard: View {
                     .foregroundStyle(permission.iconColor)
 
                 Text(permission.title)
-                    .font(.system(size: 13, weight: .semibold))
+                    .font(ThawType.heading)
 
                 Spacer()
             }
@@ -123,13 +115,14 @@ private struct OnboardingPermissionCard: View {
             VStack(alignment: .leading, spacing: 5) {
                 ForEach(permission.details, id: \.self) { detail in
                     HStack(alignment: .top, spacing: 6) {
+                        // A 3pt bullet, not type: no text style is this small.
                         Image(systemName: "circle.fill")
                             .font(.system(size: 3))
                             .foregroundStyle(.tertiary)
                             .padding(.top, 5)
 
                         Text(detail)
-                            .font(.system(size: 11))
+                            .font(ThawType.caption)
                             .foregroundStyle(.secondary)
                             .fixedSize(horizontal: false, vertical: true)
                     }
@@ -141,7 +134,7 @@ private struct OnboardingPermissionCard: View {
 
             if permission.hasPermission {
                 Label("Permission Granted", systemImage: "checkmark")
-                    .font(.system(size: 12, weight: .medium))
+                    .font(ThawType.detail.weight(.medium))
                     .foregroundStyle(.green)
                     .frame(maxWidth: .infinity)
                     .frame(height: 30)
@@ -150,7 +143,7 @@ private struct OnboardingPermissionCard: View {
                     permission.performRequest()
                 } label: {
                     Text("Grant Permission")
-                        .font(.system(size: 12, weight: .semibold))
+                        .font(ThawType.detail.weight(.semibold))
                         .frame(maxWidth: .infinity)
                         .frame(height: 30)
                 }
@@ -159,7 +152,7 @@ private struct OnboardingPermissionCard: View {
         }
         .padding(14)
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
-        .glassEffect(.regular, in: RoundedRectangle(cornerRadius: 16))
+        .glassEffect(.regular, in: RoundedRectangle(cornerRadius: ThawRadius.card))
         .animation(.easeOut(duration: 0.3), value: permission.hasPermission)
     }
 }

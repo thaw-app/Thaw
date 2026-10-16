@@ -18,23 +18,19 @@ struct LayoutBar: View {
         }
 
         func updateNSView(_: LayoutBarScrollView, context _: Context) {
-            // Intentionally empty: `LayoutBarScrollView` wires itself to shared
-            // state during initialization, so subsequent updates arrive through
-            // its internal observers rather than SwiftUI's representable hook.
+            // `LayoutBarScrollView` observes shared state itself.
         }
     }
 
     @Environment(AppState.self) var appState: AppState
-    let imageCache: MenuBarItemImageCache
-
     let section: MenuBarSection.Name
 
     private var backgroundShape: some InsettableShape {
-        RoundedRectangle(cornerRadius: 12, style: .continuous)
+        RoundedRectangle(cornerRadius: ThawRadius.card, style: .continuous)
     }
 
     var body: some View {
-        mainContent
+        Representable(appState: appState, section: section)
             .frame(height: 48)
             .frame(maxWidth: .infinity)
             .menuBarItemContainer(appState: appState)
@@ -45,16 +41,5 @@ struct LayoutBar: View {
                 backgroundShape
                     .strokeBorder(.quaternary)
             }
-    }
-
-    @ViewBuilder
-    private var mainContent: some View {
-        if imageCache.cacheFailed(for: section) {
-            // Avoid flicker during rapid cache refreshes; hold a blank placeholder instead of the error text.
-            Color.clear
-                .frame(height: 20)
-        } else {
-            Representable(appState: appState, section: section)
-        }
     }
 }

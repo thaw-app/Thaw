@@ -2,7 +2,6 @@
 //  HelperBundleIDAliasTests.swift
 //  Project: Thaw
 //
-//  Copyright (Ice) © 2023–2025 Jordan Baird
 //  Copyright (Thaw) © 2026 Toni Förster
 //  Licensed under the GNU GPLv3
 
@@ -12,20 +11,15 @@ import Testing
 /// Pins the helper-to-app bundle identifier aliases used when deriving a
 /// menu bar item's namespace.
 ///
-/// Some apps host their status item in a nested helper, so the window's
-/// owner — and therefore the namespace, `uniqueIdentifier`, saved position
-/// and displayed name — is a process the user never installed. Little
-/// Snitch is the verified case: the item is owned by
-/// `at.obdev.littlesnitch.agent`, a helper inside
-/// `/Applications/Little Snitch.app/Contents/Components/`.
+/// Some apps host their status item in a nested helper, so the namespace,
+/// saved position and name would name a process the user never installed
+/// (e.g. `at.obdev.littlesnitch.agent`).
 ///
-/// These raw values are effectively a stored format: an item's persisted
-/// position is keyed by the identifier this mapping produces, so changing
-/// one silently orphans the entries users already have.
+/// These values are a stored format: changing one orphans saved positions.
 @Suite("Helper bundle ID aliases")
 struct HelperBundleIDAliasTests {
-    /// The verified case. `at.obdev.littlesnitch.agent` owns the item;
-    /// `at.obdev.littlesnitch` is the app the user installed.
+    /// `at.obdev.littlesnitch.agent` owns the item; `at.obdev.littlesnitch`
+    /// is the installed app.
     @Test("The Little Snitch agent resolves to the Little Snitch app")
     func littleSnitchAgentResolvesToApp() {
         #expect(
@@ -44,13 +38,9 @@ struct HelperBundleIDAliasTests {
         )
     }
 
-    /// OneDrive must NOT be aliased, and this is a regression test rather
-    /// than a formality: `com.microsoft.OneDrive-mac` looks like a
-    /// platform-suffixed variant of `com.microsoft.OneDrive`, but it is
-    /// the installed app's own identifier — verified against a running
-    /// OneDrive. Rewriting it renames a real app to an identifier no
-    /// process reports, orphaning its saved position for good. Its status
-    /// item is owned by the main app; there is no helper to fold in.
+    /// `com.microsoft.OneDrive-mac` looks like a suffixed variant, but it is
+    /// the installed app's own identifier. Rewriting it orphans its saved
+    /// position for good.
     @Test(
         "OneDrive identifiers are left alone",
         arguments: [
@@ -63,8 +53,7 @@ struct HelperBundleIDAliasTests {
         #expect(MenuBarItemTag.Namespace.canonicalBundleID(bundleID) == bundleID)
     }
 
-    /// The overwhelming majority of items are untouched: the mapping is
-    /// the identity function for anything not explicitly listed.
+    /// Anything not explicitly listed is unchanged.
     @Test(
         "Unlisted identifiers pass through unchanged",
         arguments: [
@@ -79,9 +68,8 @@ struct HelperBundleIDAliasTests {
         #expect(MenuBarItemTag.Namespace.canonicalBundleID(bundleID) == bundleID)
     }
 
-    /// A "strip the last component" heuristic would fold distinct Control
-    /// Center items together; the table is explicit precisely so that
-    /// cannot happen. This guards against someone replacing it with one.
+    /// A "strip the last component" heuristic would fold distinct items
+    /// together, which is why the table is explicit.
     @Test("Sibling identifiers of an aliased app are not folded in")
     func siblingIdentifiersNotFolded() {
         // The daemon is a different process with a different lifetime; it

@@ -2,22 +2,17 @@
 //  MoveOperationTimeoutTests.swift
 //  Project: Thaw
 //
-//  Copyright (Ice) © 2023–2025 Jordan Baird
 //  Copyright (Thaw) © 2026 Toni Förster
 //  Licensed under the GNU GPLv3
 
 import Testing
 @testable import Thaw
 
-/// Characterizes how a move attempt's outcome sizes the next attempt's
-/// budget.
+/// How a move attempt's outcome sizes the next attempt's budget.
 ///
-/// `postMoveEvents` waits for the item's origin to change, not for it to
-/// arrive: an attempt that misses its destination still displaces the item
-/// by a pixel or two as the owning app registers the click. Treating that
-/// as a fast response and shortening the budget let a run of misses starve
-/// an item until it could no longer answer in time — the
-/// `itemResponseTimeout` cascade behind #881.
+/// `postMoveEvents` waits for the origin to change, not for arrival, so a miss
+/// still nudges the item a pixel or two. Treating that as a fast response let a
+/// run of misses starve the budget into an `itemResponseTimeout` cascade (#881).
 @Suite("Move operation timeout")
 struct MoveOperationTimeoutTests {
     /// Landing the item is the only outcome that earns a shorter budget.
@@ -30,7 +25,7 @@ struct MoveOperationTimeoutTests {
         )
     }
 
-    /// An unresponsive owner earns a longer budget, unchanged from before.
+    /// An unresponsive owner earns a longer budget.
     @Test("An unresponsive owner grows the budget by half")
     func unresponsiveOwnerGrowsTheBudget() {
         #expect(
@@ -40,8 +35,7 @@ struct MoveOperationTimeoutTests {
         )
     }
 
-    /// The fix: a miss is neutral. It is neither evidence the owner is
-    /// keeping up nor evidence it has stopped answering.
+    /// A miss is neutral: no evidence the owner is keeping up or has stopped answering.
     @Test("Displacing the item without landing it leaves the budget alone")
     func missIsNeutral() {
         #expect(
@@ -51,11 +45,8 @@ struct MoveOperationTimeoutTests {
         )
     }
 
-    /// Regression lock for #881. UserSwitcher drifted 1144 → 1142 → 1140 →
-    /// 1138 → 1137 across three attempts that each displaced it without
-    /// landing it, then timed out. Under the old unconditional decay each of
-    /// those misses shortened the next attempt; the budget must now survive
-    /// an arbitrarily long run of them intact.
+    /// UserSwitcher drifted 1144 to 1137 over three misses, then timed out (#881).
+    /// The budget must survive any run of misses intact.
     @Test("A run of misses never starves the budget")
     func missesDoNotStarveTheBudget() {
         let start = Duration.milliseconds(100)
@@ -68,8 +59,8 @@ struct MoveOperationTimeoutTests {
         #expect(timeout == start)
     }
 
-    /// The decay still compounds across genuinely successful moves, so a
-    /// cooperative item is not permanently charged its first slow attempt.
+    /// Decay still compounds across real successes, so a cooperative item is not
+    /// charged its first slow attempt forever.
     @Test("The budget still decays across repeated successful moves")
     func successCompounds() {
         var timeout = Duration.milliseconds(256)
@@ -83,9 +74,8 @@ struct MoveOperationTimeoutTests {
 
     // MARK: Merging with the cached budget
 
-    /// The #687 fix. Smoothing an escalation against the standing value
-    /// halved it, so a budget that `nextMoveOperationTimeout` had just raised
-    /// by half only rose by a quarter.
+    /// Smoothing an escalation against the standing value halved it, so a
+    /// budget raised by half only rose by a quarter (#687).
     @Test("An escalation is adopted at full size")
     func escalationIsAdoptedWhole() {
         #expect(
@@ -95,8 +85,7 @@ struct MoveOperationTimeoutTests {
         )
     }
 
-    /// Decay stays smoothed: one fast answer should not commit an owner to a
-    /// budget it cannot meet again.
+    /// Decay stays smoothed: one fast answer should not commit an owner to a budget it cannot meet again.
     @Test("A decay is smoothed against the standing budget")
     func decayIsSmoothed() {
         #expect(
@@ -106,9 +95,8 @@ struct MoveOperationTimeoutTests {
         )
     }
 
-    /// Regression lock for the #687 ladder. Escalating by half from the old
-    /// 100ms default, the log reached only 476ms in eight attempts before
-    /// giving up on 1Password. Unsmoothed, four attempts exhaust the budget.
+    /// Escalating by half from 100ms reached only 476ms in eight attempts before
+    /// giving up on 1Password (#687). Unsmoothed, four attempts exhaust the budget.
     @Test("Escalation reaches the ceiling in four attempts, not eight")
     func escalationReachesTheCeilingQuickly() {
         var timeout = Duration.milliseconds(250)
@@ -126,8 +114,7 @@ struct MoveOperationTimeoutTests {
         #expect(timeout == .seconds(1))
     }
 
-    /// An owner that is answering slowly is given up to a second. Past that
-    /// it is better classified as unresponsive than as slow.
+    /// Past a second, a slow owner is better classified as unresponsive.
     @Test("The budget is capped at a second")
     func budgetIsCappedAtASecond() {
         #expect(
@@ -137,8 +124,7 @@ struct MoveOperationTimeoutTests {
         )
     }
 
-    /// A budget under 75ms leaves less than eight polls of margin, which is
-    /// how the `itemResponseTimeout` cascades started.
+    /// Under 75ms leaves less than eight polls of margin, which started the `itemResponseTimeout` cascades.
     @Test("The budget never falls below the polling floor")
     func budgetNeverFallsBelowTheFloor() {
         #expect(
@@ -148,8 +134,7 @@ struct MoveOperationTimeoutTests {
         )
     }
 
-    /// A cooperative item's budget still walks down over repeated landings
-    /// rather than sticking at whatever its first slow attempt cost.
+    /// A cooperative item's budget walks down over repeated landings instead of sticking at its first slow cost.
     @Test("Repeated landings still walk the cached budget down")
     func landingsWalkTheBudgetDown() {
         var timeout = Duration.milliseconds(350)
@@ -166,13 +151,10 @@ struct MoveOperationTimeoutTests {
     }
 }
 
-/// The cursor-hide watchdog must outlast the worst case a single `move`
-/// call can burn: every attempt spends its whole budget four times over
-/// (two event posts, two response waits), budgets escalate to the merged
-/// ceiling, and a failed attempt posts one more fallback at a fixed 100 ms.
-/// An item that outlasts the watchdog gets the cursor force-shown at the
-/// synthetic event's last position mid-sequence — the flash this sizing
-/// exists to prevent.
+/// The cursor-hide watchdog must outlast the worst single `move`: each attempt
+/// spends its budget four times (two posts, two waits), budgets escalate to the
+/// ceiling, and a failure posts one 100 ms fallback. Outlasting the watchdog
+/// force-shows the cursor mid-sequence, the flash this sizing prevents.
 @Suite("Cursor hide watchdog sizing")
 struct CursorHideWatchdogSizingTests {
     @Test("The default ceiling sizes the watchdog past eight escalated attempts")

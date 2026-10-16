@@ -2,7 +2,6 @@
 //  ProfileDecodingDefaultsTests.swift
 //  Project: Thaw
 //
-//  Copyright (Ice) © 2023–2025 Jordan Baird
 //  Copyright (Thaw) © 2026 Toni Förster
 //  Licensed under the GNU GPLv3
 
@@ -12,30 +11,21 @@ import Testing
 
 // MARK: - Snapshot capture and apply
 
-/// Covers the two halves of a profile save/restore that talk to the *live*
-/// settings models: `GeneralSettingsSnapshot`/`AdvancedSettingsSnapshot`'s
-/// `capture(from:)` and `apply(to:)`.
+/// Covers `capture(from:)` and `apply(to:)` on `GeneralSettingsSnapshot` and
+/// `AdvancedSettingsSnapshot`, the halves that talk to the live settings models.
 ///
-/// `ProfileTests`, `GeneralSettingsSnapshotTests` and
-/// `AdvancedSettingsSnapshotTests` all build snapshots by hand and only ever
-/// round-trip them through JSON, so the copy in and the copy out were never
-/// exercised. They are the part that actually loses a user's settings when a
-/// field is forgotten: a property missing from `capture` silently reverts on
-/// the next profile switch, and a property missing from `apply` silently keeps
-/// the previous profile's value.
+/// Other snapshot suites only round-trip hand-built snapshots through JSON. A
+/// property missing from `capture` silently reverts on the next profile switch;
+/// one missing from `apply` silently keeps the previous profile's value.
 ///
-/// The models persist every assignment through `Defaults`, so each case runs
-/// inside `withScratchDefaults` and the suite is `.serialized` — `Defaults.store`
-/// is process-wide.
+/// `Defaults.store` is process-wide, so each case runs inside
+/// `withScratchDefaults` and the suite is `.serialized`.
 ///
 /// Deliberate gaps:
-/// - `enableDiagnosticLogging` is no longer part of the snapshot at all, so
-///   there is nothing here to hold equal. It was removed because a profile
-///   apply restored it, switching diagnostic logging off in the middle of the
-///   capture a user had turned it on to take (#899). The key may still appear
-///   in profiles written by earlier builds and is ignored on decode.
-/// - The models are built bare rather than through `performSetup()`, which
-///   would load `Defaults` and subscribe to the Settings-URI notification.
+/// - `enableDiagnosticLogging` is no longer in the snapshot, since a profile
+///   apply switched logging off mid-capture (#899). Old profiles' key is
+///   ignored on decode.
+/// - The models are built bare rather than through `performSetup()`.
 ///   `GeneralSettingsTests` and `AdvancedSettingsTests` own that path.
 @MainActor
 @Suite("Profile snapshots against live settings models", .serialized)
@@ -164,9 +154,8 @@ struct ProfileSnapshotLiveSettingsTests {
 
             snapshot.apply(to: settings)
 
-            // Applying is what a profile switch does, and the switch has to
-            // outlive the launch: the models persist through `didSet`, so the
-            // scratch domain is the observable side effect.
+            // A profile switch has to outlive the launch. The models persist
+            // through `didSet`, so the scratch domain shows it.
             #expect(suite.object(forKey: Defaults.Key.showOnHover.rawValue) as? Bool == true)
             #expect(suite.object(forKey: Defaults.Key.rehideInterval.rawValue) as? Double == 77)
             #expect(
@@ -176,10 +165,9 @@ struct ProfileSnapshotLiveSettingsTests {
         }
     }
 
-    /// The raw value is stored rather than the enum precisely so a profile
-    /// written by a newer build survives being read by an older one. The older
-    /// build cannot honour a strategy it does not know, so it has to keep the
-    /// one already in effect rather than fall over or reset.
+    /// The raw value is stored so a profile from a newer build survives an
+    /// older one, which keeps the strategy already in effect instead of
+    /// resetting.
     @Test("An unrecognized rehide strategy leaves the live strategy standing")
     func applyGeneralSettingsWithUnknownRehideStrategy() throws {
         try withScratchDefaults { _ in
@@ -200,11 +188,8 @@ struct ProfileSnapshotLiveSettingsTests {
     }
 
     /// `iceIcon`'s `didSet` mirrors a `.custom` icon into `lastCustomIceIcon`,
-    /// so the assignment order in `apply(to:)` decides whether the snapshot's
-    /// own `lastCustomIceIcon` survives. It used to assign that field first and
-    /// have the mirror immediately overwrite it; this test previously pinned
-    /// that as expected. `apply(to:)` now assigns it last, so the two fields
-    /// stay distinct and a profile keeps the custom icon it remembered.
+    /// so `apply(to:)` assigns `lastCustomIceIcon` last to keep the custom icon
+    /// the profile remembered.
     @Test("Applying a custom Ice icon keeps the snapshot's last-custom icon")
     func applyGeneralSettingsCustomIconKeepsLastCustom() throws {
         try withScratchDefaults { _ in
@@ -508,16 +493,10 @@ struct ProfileSnapshotLiveSettingsTests {
 
 // MARK: - Layout resolution
 
-/// Covers `MenuBarLayoutSnapshot`'s two resolution accessors, which decide what
-/// a profile restore actually does with a layout.
-///
-/// Both exist to keep profiles written before `itemOrder` and `itemSectionMap`
-/// were introduced applying the same layout they always did. `ProfileTests`
-/// covers the plain legacy fallback; what is left is the precedence between the
-/// two representations and what happens when they disagree.
-///
-/// Pure value work: nothing here reaches `Defaults` or any process-global, so
-/// the suite runs in parallel with the rest.
+/// Covers `MenuBarLayoutSnapshot`'s two resolution accessors, which keep
+/// profiles written before `itemOrder` and `itemSectionMap` applying the same
+/// layout. `ProfileTests` covers the plain legacy fallback; this covers the
+/// precedence between the two and what happens when they disagree.
 @Suite("Menu bar layout snapshot resolution")
 struct MenuBarLayoutSnapshotResolutionTests {
     private func makeSnapshot(
@@ -584,12 +563,9 @@ struct MenuBarLayoutSnapshotResolutionTests {
         #expect(snapshot.resolvedItemSectionMap.isEmpty)
     }
 
-    /// A malformed layout that lists one identifier under two sections cannot
-    /// produce a stable answer: the inversion walks `resolvedItemOrder`, a
-    /// `Dictionary`, whose iteration order is unspecified and varies with the
-    /// hash seed between runs. The assertion is therefore that the identifier
-    /// lands in *one* of the two, which is the strongest claim the
-    /// implementation supports. See the report accompanying this suite.
+    /// One identifier under two sections has no stable answer: the inversion
+    /// walks a `Dictionary` whose order varies with the hash seed, so the
+    /// strongest claim is that it lands in one of the two.
     @Test("An identifier listed twice resolves to one of its sections, unpredictably")
     func duplicateIdentifierResolvesToOneSection() {
         let snapshot = makeSnapshot(
@@ -607,14 +583,10 @@ struct MenuBarLayoutSnapshotResolutionTests {
 
 // MARK: - Decoding asymmetry
 
-/// Pins the difference in how the two settings snapshots decode a *partial*
-/// object.
-///
-/// `AdvancedSettingsSnapshot` has a hand-written `init(from:)` that fills every
-/// missing key from `Defaults.DefaultValue`; `GeneralSettingsSnapshot` uses the
-/// synthesized one and so requires every key. `AdvancedSettingsSnapshotTests`
-/// covers the tolerant side. This is the strict side, and the asymmetry decides
-/// whether a hand-edited or truncated profile file loads at all.
+/// Pins the strict side of partial decoding: `GeneralSettingsSnapshot` uses the
+/// synthesized `init(from:)` and requires every key, while
+/// `AdvancedSettingsSnapshot` fills missing keys from `Defaults.DefaultValue`.
+/// The asymmetry decides whether a hand-edited or truncated profile loads.
 @Suite("Profile decoding of partial settings objects")
 struct ProfilePartialSettingsDecodingTests {
     private var decoder: JSONDecoder {
@@ -674,11 +646,9 @@ struct ProfilePartialSettingsDecodingTests {
 @MainActor
 @Suite("Profile snapshot regressions", .serialized)
 struct ProfileSnapshotRegressionTests {
-    /// `captureCurrentLayout` derives `itemOrder` from the item manager's
-    /// cache, which is empty while the menu bar is still settling. That writes
-    /// `[:]`, not `nil` — and an empty dictionary is still non-nil, so a plain
-    /// `itemOrder ?? savedSectionOrder` handed the apply path an empty layout
-    /// while a perfectly good `savedSectionOrder` sat right beside it.
+    /// `captureCurrentLayout` writes `[:]`, not `nil`, while the menu bar is
+    /// still settling, so a plain `itemOrder ?? savedSectionOrder` handed the
+    /// apply path an empty layout next to a good `savedSectionOrder`.
     @Test("An empty item order falls back to the saved section order")
     func emptyItemOrderFallsBackToSavedSectionOrder() {
         let saved = ["visible": ["com.example.A"], "hidden": ["com.example.B"]]
@@ -726,11 +696,9 @@ struct ProfileSnapshotRegressionTests {
         #expect(layout.resolvedItemSectionMap.isEmpty)
     }
 
-    /// `iceIcon`'s `didSet` mirrors a `.custom` icon into `lastCustomIceIcon`.
-    /// `apply(to:)` used to assign `lastCustomIceIcon` first, so that mirror
-    /// immediately overwrote it and a profile carrying a custom icon always
-    /// came back with the two fields equal — losing whichever custom icon the
-    /// profile had remembered separately.
+    /// `iceIcon`'s `didSet` mirrors a `.custom` icon into `lastCustomIceIcon`,
+    /// so assigning `lastCustomIceIcon` first let the mirror overwrite the
+    /// custom icon the profile remembered.
     @Test("Applying a snapshot keeps its own lastCustomIceIcon")
     func applyPreservesLastCustomIceIcon() throws {
         try withScratchDefaults { _ in

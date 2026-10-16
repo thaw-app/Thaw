@@ -2,23 +2,17 @@
 //  SectionOrderDigestTests.swift
 //  Project: Thaw
 //
-//  Copyright (Ice) © 2023–2025 Jordan Baird
 //  Copyright (Thaw) © 2026 Toni Förster
 //  Licensed under the GNU GPLv3
 
 import Testing
 @testable import Thaw
 
-/// Characterizes the saved-section-order digest added for #885.
-///
-/// That report could not be attributed because the only thing logged about
-/// the saved order was its per-section counts, and the fault leaves counts
-/// correct: the hidden section held the right 47 items, and every one of the
-/// 46 carried over sat at a new index. The digest and the REORDERED-ONLY
-/// marker exist so the next occurrence is readable straight off a field log.
+/// The saved-section-order digest (#885). Per-section counts could not
+/// attribute that report because the fault keeps counts correct and only
+/// reorders; the digest and REORDERED-ONLY marker make it readable from a log.
 @Suite("Section order digest")
 struct SectionOrderDigestTests {
-    /// The whole point: same items, different sequence, different digest.
     @Test("The digest is order-sensitive")
     func digestIsOrderSensitive() {
         let items = ["a:Item-0", "b:Item-0", "c:Item-0"]
@@ -28,8 +22,7 @@ struct SectionOrderDigestTests {
         )
     }
 
-    /// Comparing digests across relaunches is the entire use case, so the
-    /// value must not depend on a per-process hash seed.
+    /// Digests are compared across relaunches, so no per-process hash seed.
     @Test("The digest is stable for equal input")
     func digestIsStable() {
         let items = ["com.example.app:Item-0", "com.other.app:Item-1"]
@@ -37,8 +30,7 @@ struct SectionOrderDigestTests {
         #expect(MenuBarItemManager.orderDigest([]) == MenuBarItemManager.orderDigest([]))
     }
 
-    /// Identifiers are separated before hashing, so a boundary shift between
-    /// adjacent entries cannot alias to the same digest.
+    /// Separated before hashing, so a boundary shift between entries cannot alias.
     @Test("The digest distinguishes identifier boundaries")
     func digestSeparatesIdentifiers() {
         #expect(
@@ -47,8 +39,7 @@ struct SectionOrderDigestTests {
         )
     }
 
-    /// #885's signature: membership intact, sequence permuted. This is the
-    /// case the counts hid, so it gets its own marker.
+    /// Membership intact, sequence permuted: the case counts hid (#885).
     @Test("A pure reorder is called out as REORDERED-ONLY")
     func pureReorderIsMarked() {
         let before = ["hidden": ["a", "b", "c", "d"]]
@@ -60,8 +51,7 @@ struct SectionOrderDigestTests {
         #expect(summary.contains("hidden=4"))
     }
 
-    /// A membership change is an ordinary event — an app launched, an item
-    /// appeared — and must not be dressed up as the fault above.
+    /// An app launching or an item appearing must not look like the reorder fault.
     @Test("A membership change is not marked as a reorder")
     func membershipChangeIsNotMarked() {
         let before = ["hidden": ["a", "b", "c"]]
@@ -72,8 +62,7 @@ struct SectionOrderDigestTests {
         #expect(summary.contains("hidden=3→4"))
     }
 
-    /// Untouched sections stay quiet so the changed one is easy to find; the
-    /// #885 apply left visible and alwaysHidden alone.
+    /// Untouched sections stay quiet so the changed one is easy to find.
     @Test("Unchanged sections are reported as unchanged")
     func unchangedSectionsAreQuiet() {
         let order = [
@@ -90,10 +79,8 @@ struct SectionOrderDigestTests {
         #expect(summary.contains("hidden=2 REORDERED-ONLY"))
     }
 
-    /// The reporter's shape: 46 carried over, one added, and not one of the
-    /// 46 in its old position. Membership grew, so this reads as a size
-    /// change — but the digests still pin the sequence on both sides, which
-    /// is what makes the next occurrence attributable.
+    /// 46 carried over, one added, none at its old index. It reads as a size
+    /// change, but the digests still pin both sequences.
     @Test("The reporter's shape is distinguishable in one line")
     func reporterShapeIsReadable() {
         let before = (0 ..< 46).map { "app\($0):Item-0" }

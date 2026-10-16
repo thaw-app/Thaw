@@ -88,13 +88,9 @@ actor SimpleSemaphore {
             }
             group.cancelAll()
             if first == .timedOut {
-                // The acquire child may STILL have won the race against
-                // cancellation (it may have decremented `value` before
-                // cancelAll() landed). Drain it: an .acquired result means
-                // we hold a permit nobody will use, so give it back to
-                // preserve invariant 1. A CancellationError from the drain
-                // is the normal case (the acquire child was cancelled
-                // cleanly before winning) and is swallowed.
+                // The acquire child may still have won before cancelAll() landed. Drain it: an
+                // .acquired result is an unused permit, so give it back (invariant 1). A
+                // CancellationError is the normal, clean case.
                 do {
                     while let drained = try await group.next() {
                         if drained == .acquired {
@@ -102,7 +98,7 @@ actor SimpleSemaphore {
                         }
                     }
                 } catch is CancellationError {
-                    // Acquire child cancelled cleanly — nothing held.
+                    // Acquire child cancelled cleanly; nothing held.
                 }
             } else {
                 // Acquired. Drain the cancelled timeout-sleep child and
@@ -121,14 +117,9 @@ actor SimpleSemaphore {
 
     /// Signals the semaphore, resuming the next waiter if present.
     ///
-    /// Standard counting-semaphore semantics: always increment value,
-    /// then wake a queued waiter only when the post-increment value is
-    /// still non-positive (meaning waiters remain). The previous
-    /// implementation skipped the increment when waking a waiter, which
-    /// caused value to drift negative when concurrent callers queued
-    /// up during a long-running holder; every subsequent caller would
-    /// then see value < 0 in wait and suspend forever even after all
-    /// prior holders had released.
+    /// Always increments, then wakes a waiter only if the value is still
+    /// non-positive. Skipping the increment on wake drifted the value negative and
+    /// left later callers suspended forever.
     func signal() {
         value += 1
         if value <= 0, let waiter = waiters.popFirst() {

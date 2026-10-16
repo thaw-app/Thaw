@@ -2,7 +2,6 @@
 //  MarkerPairResolverTests.swift
 //  Project: Thaw
 //
-//  Copyright (Ice) © 2023–2025 Jordan Baird
 //  Copyright (Thaw) © 2026 Toni Förster
 //  Licensed under the GNU GPLv3
 
@@ -99,9 +98,8 @@ struct MarkerPairResolverTests {
     }
 
     /// Marker's CG owner is the widget's real app (not CC, not Thaw):
-    /// the owning-PID path resolves directly without falling through
-    /// to the title lookup. The bundleIDToPID closure must NOT be
-    /// invoked in this case.
+    /// the owning-PID path resolves directly, and the bundleIDToPID
+    /// closure must not be invoked.
     @Test("The owning-PID path is preferred over the title lookup")
     func owningPIDPathPreferredOverTitleLookup() {
         var bundleLookupCalled = false
@@ -183,10 +181,8 @@ struct MarkerPairResolverTests {
         #expect(result.first?.resolvedPID == 777)
     }
 
-    /// Both paths resolve to Thaw: no resolution emitted. Defensive
-    /// guarantee that Thaw's own PID is never attributed to a
-    /// third-party widget regardless of where the lookup happens to
-    /// land.
+    /// Both paths resolve to Thaw: no resolution emitted, so Thaw's own
+    /// PID is never attributed to a third-party widget.
     @Test("Both paths resolving to Thaw produces no result")
     func bothPathsResolveToThawProducesNoResult() {
         let icons = [icon(windowID: 1, title: "Item-0")]
@@ -204,9 +200,9 @@ struct MarkerPairResolverTests {
 
     /// A marker titled with Control Center's own bundle identifier must not
     /// resolve an icon to Control Center. The owning-PID path already rejects
-    /// it; the title-lookup path must too, or the icon gets a *resolved* CC
-    /// PID, reads as a transient CC widget (canBeHidden false), and drops out
-    /// of profile management — past every unresolved-sourcePID gate.
+    /// it; the title-lookup path must too, or the icon gets a resolved CC PID,
+    /// reads as a transient CC widget (canBeHidden false), and drops out of
+    /// profile management past every unresolved-sourcePID gate.
     @Test("A Control-Center-titled marker resolves nothing")
     func controlCenterTitledMarkerResolvesNothing() {
         let icons = [icon(windowID: 1, title: "Item-0")]
@@ -222,10 +218,8 @@ struct MarkerPairResolverTests {
         #expect(result == [])
     }
 
-    /// Two unresolved icons share the same size and there are two
-    /// markers of that size: the ambiguity is unresolvable, so no
-    /// pairings emit. Prevents the cross-attribution where an icon
-    /// gets paired with the wrong marker.
+    /// Two unresolved icons and two markers share one size: the ambiguity
+    /// is unresolvable, so nothing pairs rather than risk cross-attribution.
     @Test("An ambiguous multi-match is skipped")
     func multiMatchSkipped() {
         let icons = [
@@ -282,10 +276,8 @@ struct MarkerPairResolverTests {
         #expect(result == [])
     }
 
-    /// Icon whose own title is bundle-ID-shaped is not a candidate:
-    /// it's a marker, not an icon. This prevents two markers from
-    /// pairing with each other. The generic-titled icon resolves
-    /// normally; the bundle-ID-titled "icon" is silently skipped.
+    /// An icon whose own title is bundle-ID-shaped is a marker, not a
+    /// candidate, so two markers never pair with each other.
     @Test("A bundle-ID-shaped icon title is skipped")
     func bundleIDShapedIconTitleIsSkipped() {
         // Two unrelated widgets at different sizes so neither
@@ -356,8 +348,8 @@ struct MarkerPairResolverTests {
     /// though the size matches.
     @Test("A self-pairing is rejected")
     func selfPairingRejected() {
-        // Same windowID for icon and marker — pathological input that
-        // shouldn't occur, but the filter must hold.
+        // Same windowID for icon and marker: pathological, but the filter
+        // must hold.
         let icons = [icon(windowID: 1, title: "Item-0")]
         let markers = [marker(windowID: 1, title: "com.example.widget", owningPID: 100)]
         let result = MarkerPairResolver.resolve(
@@ -371,9 +363,7 @@ struct MarkerPairResolverTests {
         #expect(result == [])
     }
 
-    /// Size mismatch: no pairing. The marker's width differs from the
-    /// icon's by 1 point, so they should not be considered the same
-    /// widget.
+    /// Size mismatch of 1 point: not the same widget, so no pairing.
     @Test("A size mismatch produces no result")
     func sizeMismatchProducesNoResult() {
         let icons = [icon(windowID: 1, title: "Item-0", size: CGSize(width: 116, height: 33))]
@@ -394,8 +384,7 @@ struct MarkerPairResolverTests {
         #expect(result == [])
     }
 
-    /// Neither owning-PID nor title-lookup resolves: no result. The
-    /// algorithm bails cleanly when no resolution path succeeds.
+    /// Neither owning-PID nor title-lookup resolves: no result.
     @Test("Neither path resolving produces no result")
     func neitherPathResolvesProducesNoResult() {
         let icons = [icon(windowID: 1, title: "Item-0")]
@@ -411,7 +400,7 @@ struct MarkerPairResolverTests {
         #expect(result == [])
     }
 
-    /// Empty inputs: empty output. Trivial guard.
+    /// Empty inputs: empty output.
     @Test("Empty inputs produce empty output")
     func emptyInputsProduceEmptyOutput() {
         let result = MarkerPairResolver.resolve(
@@ -594,7 +583,7 @@ struct HostedItemOwnershipTests {
     @Test("A bare app-name title matches its bundle's last component")
     func bareAppNameMatchesLastComponent() {
         // windowID 3511 in the rc2 log: title "BetterTouchTool", AX child 15pt
-        // // away in com.hegenberg.BetterTouchTool, refused for lack of shape.
+        // away in com.hegenberg.BetterTouchTool, refused for lack of shape.
         #expect(HostedItemOwnership.titleIndicatesOwner("BetterTouchTool", bundleID: "com.hegenberg.BetterTouchTool"))
     }
 
@@ -605,19 +594,17 @@ struct HostedItemOwnershipTests {
 
     @Test("A bare title must equal the app component exactly")
     func bareTitleMustEqualAppComponentExactly() {
-        // Substring agreement is not enough — "Clock" is a Control Center module.
+        // Substring agreement is not enough: "Clock" is a Control Center module.
         #expect(!HostedItemOwnership.titleIndicatesOwner("Clock", bundleID: "com.fabriceleyne.theclock"))
         #expect(!HostedItemOwnership.titleIndicatesOwner("Sound", bundleID: "com.rogueamoeba.soundsource"))
     }
 
     // MARK: - HostedItemOwnership.exactlyNamedOwner
 
-    /// The #854 cluster: ten items whose title *is* their owner's bundle
-    /// identifier, every one with a nil source PID. The hosted-extras pass
-    /// finds the right app by title and then demands spatial confirmation
-    /// against its AX children — which an item hosted by Control Center
-    /// cannot supply, that being why it is unresolved. Exact equality needs
-    /// no confirmation.
+    /// The #854 cluster: items whose title is their owner's bundle
+    /// identifier, all with a nil source PID. The hosted-extras pass demands
+    /// spatial confirmation against the app's AX children, which an item
+    /// hosted by Control Center cannot supply. Exact equality needs none.
     @Test(
         "A title that is exactly a running bundle identifier names its owner",
         arguments: [

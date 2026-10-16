@@ -2,7 +2,6 @@
 //  ProfileEntityTests.swift
 //  Project: Thaw
 //
-//  Copyright (Ice) © 2023–2025 Jordan Baird
 //  Copyright (Thaw) © 2026 Toni Förster
 //  Licensed under the GNU GPLv3
 
@@ -25,11 +24,9 @@ struct ProfileEntityTests {
 
     // MARK: - Type Display Representation
 
-    /// `typeDisplayRepresentation` is non-optional, so the XCTest original's
-    /// `XCTAssertNotNil` could never fail. Asserting the resolved name is the
-    /// substantive form of the same check: it pins the string the system shows
-    /// when the user picks a Thaw profile in a Focus Filter. Both sides resolve
-    /// through the same catalog, so the case holds in every localization.
+    /// Pins the name the system shows when the user picks a Thaw profile in a
+    /// Focus Filter. Both sides resolve through the same catalog, so the case
+    /// holds in every localization.
     @Test("The entity type is presented to the system as a menu bar profile")
     func typeDisplayRepresentation() {
         let representation = ProfileEntity.typeDisplayRepresentation

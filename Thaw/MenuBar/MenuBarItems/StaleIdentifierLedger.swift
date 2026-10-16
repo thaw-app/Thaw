@@ -2,7 +2,6 @@
 //  StaleIdentifierLedger.swift
 //  Project: Thaw
 //
-//  Copyright (Ice) © 2023–2025 Jordan Baird
 //  Copyright (Thaw) © 2026 Toni Förster
 //  Licensed under the GNU GPLv3
 
@@ -10,84 +9,34 @@ import Foundation
 
 // MARK: - StaleIdentifierLedger
 
-/// The record of which saved identifiers have stopped corresponding to
-/// anything on the bar, so that a layout can eventually stop planning
-/// against them.
+/// Tracks saved identifiers that no longer match anything on the bar.
 ///
-/// A saved order accumulates identifiers and never sheds them. That is
-/// deliberate for the common case: `planSectionOrder` merges entries for
-/// apps that are merely closed, because forgetting them would send an app
-/// back to `NewItemsPlacement` the next time it launched instead of the
-/// slot the user put it in. So "no live item matches this identifier"
-/// cannot, on its own, mean the identifier is dead.
+/// Saved orders keep closed apps on purpose, so they return to their slot.
+/// But an app that changes its bundle identifier leaves an entry nothing can
+/// match, and every such ghost ahead of a live entry inflates the index
+/// ``LayoutSolver/savedPositionByBaseID(for:in:)`` returns, pushing
+/// returning apps further right.
 ///
-/// It stops being deliberate when the identity itself is gone. An app that
-/// changes its bundle identifier — #899's reporter carried
-/// `de.simon.RAMTamer` alongside `de.simon.ramtamer`, and the same pair for
-/// JuicyFlow — leaves an entry behind that no future item can ever match,
-/// because nothing anywhere records that one bundle identifier superseded
-/// another. Canonicalization does not merge them either: it only rewrites
-/// the volatile-title owners, so the two spellings stay distinct forever.
-///
-/// Such an entry costs nothing at move-planning time — the apply filters the
-/// desired sequence down to identifiers that are actually on the bar, so a
-/// dead one is simply skipped and never becomes an unenacted move. What it
-/// costs is *position*. ``LayoutSolver/savedPositionByBaseID(for:in:)``
-/// answers with an index into the saved array, and every dead entry ahead of
-/// a live one inflates that index. An app that returns to the bar is then
-/// placed further right than the user left it, by exactly the number of
-/// ghosts in front of it — and because nothing ever removes them, the drift
-/// only grows.
-///
-/// The only signal that separates the two cases is repetition. A closed app
-/// comes back; a retired identity does not. This ledger counts consecutive
-/// applies in which an identifier was planned and went unmatched, and names
-/// the ones that have run out of excuses.
-///
-/// It never deletes anything. Retirement means "stop counting it when
-/// resolving saved positions", which leaves the entry in the user's saved
-/// order and in their profile file, and lets one live match undo the verdict
-/// at any time. That matters because the verdict can be wrong: an item whose
-/// owner Thaw cannot yet attribute — Little Snitch's agent before its marker
-/// window appears — is indistinguishable from a rename here. Retiring it
-/// costs nothing, because it is unplaceable either way, and the moment the
-/// marker resolves the identifier matches again and the count is cleared.
+/// A closed app comes back; a retired identity doesn't. This counts
+/// consecutive unmatched applies. Retirement deletes nothing and one live
+/// match undoes it, since an item Thaw can't attribute yet (Little Snitch
+/// before its marker window) looks the same as a rename.
 @MainActor
 final class StaleIdentifierLedger {
-    /// How many consecutive unmatched applies retire an identifier.
-    ///
-    /// Sized against the case it must not break: an app the user quits for
-    /// an afternoon. Applies are driven by cache cycles and profile
-    /// switches, not by a timer, so this is a count of opportunities rather
-    /// than a duration — but it has to be large enough that ordinary
-    /// quit-and-relaunch never reaches it, and small enough that a genuine
-    /// rename is retired within a session or two of normal use.
+    /// How many consecutive unmatched applies retire an identifier. Applies
+    /// aren't timed, so this is large enough that quitting an app for an
+    /// afternoon never reaches it.
     static let retirementThreshold = 10
 
     /// The largest share of a planned order that may go unmatched before the
-    /// sample is discarded.
-    ///
-    /// ``MenuBarItemManager`` already abandons an apply when the majority of
-    /// source PIDs are unresolved, but partial degradation clears that bar
-    /// while still mislabelling a third of the bar as absent. Counting those
-    /// applies would retire real items in batches — the exact failure this
-    /// ledger would be blamed for, and the one that is hardest to diagnose
-    /// afterwards, because the evidence is the thing that got deleted.
-    ///
-    /// A quarter is above anything a working bar produces (closed apps are a
-    /// handful of entries, not a quarter of them) and well below what a
-    /// degraded resolution pass produces.
+    /// sample is discarded. Partly degraded PID resolution can mislabel a
+    /// third of the bar as absent, which would retire real items in batches.
     static let maxUnmatchedFraction = 0.25
 
     private static nonisolated let diagLog = DiagLog(category: "StaleIdentifierLedger")
 
-    /// The build string persisted counts are valid for; a change drops them.
-    ///
-    /// Identity resolution is the thing most likely to improve between
-    /// builds — a Control-Center-hosted item that never resolved under one
-    /// release starts resolving under the next. Counts earned against the
-    /// old behaviour would retire identifiers the new build can match, so an
-    /// update clears the slate.
+    /// The build string persisted counts are valid for; a change drops them,
+    /// since a new build may resolve identities the old one couldn't.
     private static nonisolated var currentBuildVersion: String {
         Bundle.main.object(forInfoDictionaryKey: "CFBundleVersion") as? String ?? "unknown"
     }
@@ -121,8 +70,7 @@ final class StaleIdentifierLedger {
 
     /// Whether the given identifier should be left out of a plan.
     ///
-    /// Takes the raw identifier and canonicalizes it here, so a caller
-    /// holding an entry from a saved order cannot check a different key than
+    /// Canonicalizes here so callers can't check a different key than
     /// ``recordApply(planned:matched:)`` recorded under.
     func isRetired(_ identifier: String) -> Bool {
         guard let count = missCounts[MenuBarItemTag.canonicalPersistentIdentifier(identifier)] else {
@@ -133,11 +81,7 @@ final class StaleIdentifierLedger {
 
     /// The given saved order with retired identifiers left out.
     ///
-    /// Apply this where the order is read as *positions* rather than as a
-    /// list of things to move: a ghost ahead of a live entry inflates the
-    /// index ``LayoutSolver/savedPositionByBaseID(for:in:)`` reports, which is
-    /// the drift this ledger exists to stop. An order with nothing retired in
-    /// it comes back untouched.
+    /// Use where the order is read as positions rather than moves.
     func pruning(_ sectionOrder: [String: [String]]) -> [String: [String]] {
         let retired = retiredIdentifiers
         guard !retired.isEmpty else {
@@ -154,11 +98,8 @@ final class StaleIdentifierLedger {
 
     /// Records the outcome of one completed apply.
     ///
-    /// Call this only from an apply that actually planned against the bar.
-    /// An apply that returned early — no item order, no control items, a
-    /// menu open, a majority of source PIDs unresolved — observed nothing
-    /// about any identifier, and feeding it here would count a skipped pass
-    /// as evidence of absence.
+    /// Call only from an apply that actually planned against the bar; an
+    /// early return would count a skipped pass as evidence of absence.
     ///
     /// - Parameters:
     ///   - planned: Every identifier the layout asked for, control items
@@ -197,7 +138,7 @@ final class StaleIdentifierLedger {
             let key = MenuBarItemTag.canonicalPersistentIdentifier(identifier)
             let previous = missCounts[key] ?? 0
             guard previous < Self.retirementThreshold else {
-                continue // Already retired; leave the count where it is.
+                continue
             }
             let count = previous + 1
             missCounts[key] = count
@@ -216,7 +157,6 @@ final class StaleIdentifierLedger {
         return newlyRetired
     }
 
-    /// Forgets everything, so that a reset starts from no verdicts.
     func removeAll() {
         guard !missCounts.isEmpty else {
             return
@@ -229,10 +169,7 @@ final class StaleIdentifierLedger {
 
     /// Whether an identifier can meaningfully be counted at all.
     ///
-    /// A UUID namespace is reassigned every session, so such an entry is
-    /// unmatched on every apply for a reason that has nothing to do with the
-    /// item having gone away. Counting it would retire it on its tenth apply
-    /// and teach the ledger nothing.
+    /// UUID namespaces are reassigned every session, so they never match.
     private static func isRetirable(_ identifier: String) -> Bool {
         guard let namespace = identifier.split(separator: ":", maxSplits: 1).first else {
             return false
@@ -241,8 +178,7 @@ final class StaleIdentifierLedger {
     }
 
     private func persist() {
-        // Stamped on every write, including the empty one, so the stamp and
-        // the counts it describes can never disagree.
+        // Stamped on every write, including empty, so it matches the counts.
         Defaults.set(Self.currentBuildVersion, forKey: .staleIdentifierMissCountsBuild)
         if missCounts.isEmpty {
             Defaults.removeObject(forKey: .staleIdentifierMissCounts)

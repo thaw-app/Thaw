@@ -2,7 +2,6 @@
 //  ProfileLayoutRepairTests.swift
 //  Project: Thaw
 //
-//  Copyright (Ice) © 2023–2025 Jordan Baird
 //  Copyright (Thaw) © 2026 Toni Förster
 //  Licensed under the GNU GPLv3
 
@@ -13,14 +12,11 @@ import Testing
 /// Covers ``ProfileManager/repairPersistedLayouts()``, the pass that applies
 /// the saved-order pruning rules to the profile JSON on disk.
 ///
-/// ``MenuBarItemManager`` has always repaired the saved section order it loads
-/// and written the result back, so a widened pruning rule reaches that store on
-/// the next launch. Profiles were only ever pruned on the way out, through
-/// `resolvedItemOrder`, which left the damage in the file and let it seed the
-/// in-memory saved order again at every startup.
+/// Pruning profiles only on read, via `resolvedItemOrder`, left the damage in
+/// the file to reseed the saved order at every startup.
 ///
-/// Every assertion reads through a *second* `ProfileManager` over the same
-/// directory, so a repair that only happened in memory fails the test.
+/// Every assertion reads through a second `ProfileManager` over the same
+/// directory, so a repair that only happened in memory fails.
 @MainActor
 @Suite("Profile layout repair", .serialized)
 struct ProfileLayoutRepairTests {

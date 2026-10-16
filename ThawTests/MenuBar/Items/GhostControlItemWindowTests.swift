@@ -2,11 +2,11 @@
 //  GhostControlItemWindowTests.swift
 //  Project: Thaw
 //
-//  Copyright (Ice) © 2023–2025 Jordan Baird
 //  Copyright (Thaw) © 2026 Toni Förster
 //  Licensed under the GNU GPLv3
 
 import CoreGraphics
+import Foundation
 import Testing
 @testable import Thaw
 
@@ -15,6 +15,7 @@ import Testing
 struct GhostControlItemWindowTests {
     private let hiddenTitle = "Thaw.ControlItem.Hidden"
     private let alwaysHiddenTitle = "Thaw.ControlItem.AlwaysHidden"
+    private let visibleTitle = "Thaw.ControlItem.Visible"
 
     private func item(tag: MenuBarItemTag, windowID: CGWindowID, title: String) -> MenuBarItem {
         MenuBarItem.fixture(tag: tag, windowID: windowID, title: title)
@@ -113,5 +114,178 @@ struct GhostControlItemWindowTests {
         )
 
         #expect(ghosts.isEmpty)
+    }
+
+    @Test("Authoritative current-process IDs win even when older numerically")
+    func authoritativeDividerGenerationSurvivesReversedIDs() {
+        let items = [
+            item(tag: .hiddenControlItem, windowID: 42, title: hiddenTitle),
+            item(tag: .alwaysHiddenControlItem, windowID: 43, title: alwaysHiddenTitle),
+            item(tag: .visibleControlItem, windowID: 39, title: visibleTitle),
+            item(tag: .hiddenControlItem, windowID: 900, title: hiddenTitle),
+            item(tag: .alwaysHiddenControlItem, windowID: 901, title: alwaysHiddenTitle),
+            item(tag: .visibleControlItem, windowID: 902, title: visibleTitle),
+        ]
+
+        let ghosts = MenuBarItemManager.ghostControlItemWindowIDs(
+            in: items,
+            ownWindowIDsByTitle: [
+                hiddenTitle: 42,
+                alwaysHiddenTitle: 43,
+                visibleTitle: 39,
+            ]
+        )
+        #expect(ghosts == [900, 901, 902])
+    }
+
+    @Test("Synthetic and null AppKit window numbers are not WindowServer IDs")
+    func syntheticWindowNumbersAreRejected() {
+        let syntheticWindowNumbers = [
+            0,
+            -1,
+            Int(CGWindowID.max) + 1,
+            Int(0x4_0000_0000),
+            Int(0x5_0000_0000),
+        ]
+        for windowNumber in syntheticWindowNumbers {
+            #expect(MenuBarItemManager.windowServerID(windowNumber: windowNumber) == nil)
+            #expect(MenuBarItemManager.authoritativeControlItemWindowID(
+                windowNumber: windowNumber
+            ) == nil)
+        }
+        #expect(MenuBarItemManager.windowServerID(windowNumber: 42) == 42)
+        #expect(MenuBarItemManager.authoritativeControlItemWindowID(windowNumber: 42) == 42)
+
+        let items = [
+            item(tag: .hiddenControlItem, windowID: 364, title: hiddenTitle),
+            item(
+                tag: .appItem(
+                    bundleID: "com.stonerl.Thaw",
+                    title: hiddenTitle,
+                    instanceIndex: 1
+                ),
+                windowID: 21542,
+                title: hiddenTitle
+            ),
+        ]
+        #expect(MenuBarItemManager.ControlItemPair.ambiguousControlItemTitles(
+            in: items
+        ) == [hiddenTitle])
+    }
+
+    @Test("Control items start nonzero so AppKit creates a real window")
+    func controlItemMaterializationLengthIsNonzero() {
+        #expect(ControlItem.statusItemMaterializationLength > 0)
+    }
+
+    // MARK: - Orphans under our own namespace (#1032)
+
+    /// The window Control Center kept serving after the Thaw process behind
+    /// it exited: our namespace, our bundle identifier as its title, and a
+    /// window number that is none of ours.
+    private var orphan: MenuBarItem {
+        item(
+            tag: .appItem(bundleID: "com.stonerl.Thaw", title: "com.stonerl.Thaw"),
+            windowID: 639,
+            title: "com.stonerl.Thaw"
+        )
+    }
+
+    @Test("An orphaned window under our namespace is dropped")
+    func orphanDetectionDropsControlCenterHeldWindow() {
+        let items = [
+            item(tag: .hiddenControlItem, windowID: 16233, title: hiddenTitle),
+            item(tag: .alwaysHiddenControlItem, windowID: 16236, title: alwaysHiddenTitle),
+            orphan,
+            item(tag: .appItem(bundleID: "com.apple.controlcenter", title: "Battery"), windowID: 16, title: "Battery"),
+        ]
+
+        let orphans = MenuBarItemManager.orphanedOwnNamespaceWindowIDs(
+            in: items,
+            ownWindowIDs: [16233, 16236]
+        )
+
+        #expect(orphans == [639])
+    }
+
+    /// Without one of our own windows in the reading there is no baseline,
+    /// so the filter declines to call anything an orphan.
+    @Test("Orphan detection requires one of our own windows")
+    func orphanDetectionRequiresOneOfOurWindows() {
+        let orphans = MenuBarItemManager.orphanedOwnNamespaceWindowIDs(
+            in: [orphan],
+            ownWindowIDs: [16233]
+        )
+
+        #expect(orphans.isEmpty)
+    }
+
+    /// The orphan's title matches one of our control items during a bar-wide
+    /// kCGWindowName degradation, so ownership is decided by window number.
+    @Test("A control item of ours with a degraded title is kept")
+    func orphanDetectionKeepsADegradedControlItem() {
+        let degraded = item(
+            tag: .appItem(bundleID: "com.stonerl.Thaw", title: "com.stonerl.Thaw"),
+            windowID: 16233,
+            title: "com.stonerl.Thaw"
+        )
+        let items = [
+            degraded,
+            item(tag: .alwaysHiddenControlItem, windowID: 16236, title: alwaysHiddenTitle),
+        ]
+
+        let orphans = MenuBarItemManager.orphanedOwnNamespaceWindowIDs(
+            in: items,
+            ownWindowIDs: [16233, 16236]
+        )
+
+        #expect(orphans.isEmpty)
+    }
+
+    /// A spacer identified by title is ours even when its window number has
+    /// not been enumerated as one of ours.
+    @Test("A user spacer is not an orphan")
+    func orphanDetectionKeepsUserSpacers() {
+        let spacerTitle = MenuBarSpacerManager.autosavePrefix + UUID().uuidString
+        let items = [
+            item(tag: .hiddenControlItem, windowID: 16233, title: hiddenTitle),
+            item(
+                tag: .appItem(bundleID: "com.stonerl.Thaw", title: spacerTitle),
+                windowID: 17001,
+                title: spacerTitle
+            ),
+        ]
+
+        let orphans = MenuBarItemManager.orphanedOwnNamespaceWindowIDs(
+            in: items,
+            ownWindowIDs: [16233]
+        )
+
+        #expect(orphans.isEmpty)
+    }
+
+    /// Left in, the self-titled orphan makes liveIdentitiesAreDegraded
+    /// discard every reading, freezing the cache for as long as it lasts.
+    @Test("Dropping the orphan clears the false degradation signal")
+    func droppingTheOrphanClearsTheDegradationSignal() {
+        let items = [
+            item(tag: .hiddenControlItem, windowID: 16233, title: hiddenTitle),
+            item(tag: .alwaysHiddenControlItem, windowID: 16236, title: alwaysHiddenTitle),
+            orphan,
+            item(tag: .appItem(bundleID: "com.apple.controlcenter", title: "Battery"), windowID: 16, title: "Battery"),
+        ]
+        let identities = { (items: [MenuBarItem]) in
+            items.map { ($0.tag.namespace.description, $0.tag.title) }
+        }
+
+        #expect(LayoutSolver.liveIdentitiesAreDegraded(identities(items)))
+
+        let orphans = MenuBarItemManager.orphanedOwnNamespaceWindowIDs(
+            in: items,
+            ownWindowIDs: [16233, 16236]
+        )
+        let kept = items.filter { !orphans.contains($0.windowID) }
+
+        #expect(!LayoutSolver.liveIdentitiesAreDegraded(identities(kept)))
     }
 }

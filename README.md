@@ -3,69 +3,59 @@
 
 <!-- Badges: shieldcn: individuals + small related groups (light/dark) -->
 <p align="center">
-  <a href="https://github.com/thaw-app/Thaw/actions/workflows/ci.yml"><picture><source media="(prefers-color-scheme: dark)" srcset="https://www.shieldcn.dev/github/ci/thaw-app/Thaw.svg?variant=outline&amp;size=sm&amp;mode=dark&amp;font=geist&amp;statusDot=true" /><img alt="CI" src="https://www.shieldcn.dev/github/ci/thaw-app/Thaw.svg?variant=outline&amp;size=sm&amp;mode=light&amp;font=geist&amp;statusDot=true" /></picture></a>
-  <a href="https://discord.gg/KDfWjWDnR4"><picture><source media="(prefers-color-scheme: dark)" srcset="https://www.shieldcn.dev/badge/Discord-join.svg?variant=outline&amp;size=sm&amp;mode=dark&amp;font=geist&amp;logo=discord&amp;" /><img alt="Discord" src="https://www.shieldcn.dev/badge/Discord-join.svg?variant=outline&amp;size=sm&amp;mode=light&amp;font=geist&amp;logo=discord&amp;" /></picture></a>
-  <a href="https://github.com/sponsors/stonerl"><picture><source media="(prefers-color-scheme: dark)" srcset="https://www.shieldcn.dev/badge/Sponsor-GitHub.svg?logo=githubsponsors&amp;variant=outline&amp;size=sm&amp;mode=dark&amp;font=geist" /><img alt="Sponsor" src="https://www.shieldcn.dev/badge/Sponsor-GitHub.svg?logo=githubsponsors&amp;variant=outline&amp;size=sm&amp;mode=light&amp;font=geist" /></picture></a>
-    <a href="https://sonarcloud.io/component_measures?id=thaw-app_Thaw&amp;metric=coverage"><picture><source media="(prefers-color-scheme: dark)" srcset="https://www.shieldcn.dev/sonar/coverage/thaw-app_Thaw.svg?variant=outline&amp;size=sm&amp;mode=dark&amp;font=geist&amp;logo=sonarqubecloud" /><img alt="Sonar coverage" src="https://www.shieldcn.dev/sonar/coverage/thaw-app_Thaw.svg?variant=outline&amp;size=sm&amp;mode=light&amp;font=geist&amp;logo=sonarqubecloud" /></picture></a>
+  <a href="https://discord.gg/KDfWjWDnR4"><picture><source media="(prefers-color-scheme: dark)" srcset="https://www.shieldcn.dev/badge/Discord-join.svg?variant=outline&amp;size=xs&amp;mode=dark&amp;font=geist&amp;logo=discord&amp;" /><img alt="Discord" src="https://www.shieldcn.dev/badge/Discord-join.svg?variant=outline&amp;size=xs&amp;mode=light&amp;font=geist&amp;logo=discord&amp;" /></picture></a>
+  <a href="https://sonarcloud.io/component_measures?id=thaw-app_Thaw&amp;metric=coverage"><picture><source media="(prefers-color-scheme: dark)" srcset="https://www.shieldcn.dev/sonar/coverage/thaw-app_Thaw.svg?variant=outline&amp;size=xs&amp;mode=dark&amp;font=geist&amp;logo=sonarqubecloud" /><img alt="Sonar coverage" src="https://www.shieldcn.dev/sonar/coverage/thaw-app_Thaw.svg?variant=outline&amp;size=xs&amp;mode=light&amp;font=geist&amp;logo=sonarqubecloud" /></picture></a>
+  <a href="https://scorecard.dev/viewer/?uri=github.com/thaw-app/Thaw"><picture><source media="(prefers-color-scheme: dark)" srcset="https://www.shieldcn.dev/github/scorecard/thaw-app/Thaw.svg?variant=outline&amp;size=xs&amp;mode=dark&amp;font=geist" /><img alt="OpenSSF Scorecard" src="https://www.shieldcn.dev/github/scorecard/thaw-app/Thaw.svg?variant=outline&amp;size=xs&amp;mode=light&amp;font=geist" /></picture></a>
+  <a href="https://www.bestpractices.dev/projects/13303"><picture><source media="(prefers-color-scheme: dark)" srcset="https://www.shieldcn.dev/github/openssf/thaw-app/Thaw.svg?variant=outline&amp;size=xs&amp;mode=dark&amp;font=geist&amp;color=D4AF37" /><img alt="OpenSSF Best Practices" src="https://www.shieldcn.dev/github/openssf/thaw-app/Thaw.svg?variant=outline&amp;size=xs&amp;mode=light&amp;font=geist&amp;color=D4AF37" /></picture></a>
+  <a href="docs/VERIFYING_RELEASES.md"><picture><source media="(prefers-color-scheme: dark)" srcset="https://www.shieldcn.dev/badge/SLSA-Build_L3.svg?variant=outline&amp;size=xs&amp;mode=dark&amp;font=geist&amp;logo=ri:GoPackage" /><img alt="SLSA 3" src="https://www.shieldcn.dev/badge/SLSA-3.svg?variant=outline&amp;size=xs&amp;mode=light&amp;font=geist&amp;logo=ri:GoPackage" /></picture></a>
 </p>
 
 <p align="center">
-  <a href="https://scorecard.dev/viewer/?uri=github.com/thaw-app/Thaw"><picture><source media="(prefers-color-scheme: dark)" srcset="https://www.shieldcn.dev/github/scorecard/thaw-app/Thaw.svg?variant=outline&amp;size=sm&amp;mode=dark&amp;font=geist" /><img alt="OpenSSF Scorecard" src="https://www.shieldcn.dev/github/scorecard/thaw-app/Thaw.svg?variant=outline&amp;size=sm&amp;mode=light&amp;font=geist" /></picture></a>
-  <a href="https://www.bestpractices.dev/projects/13303"><picture><source media="(prefers-color-scheme: dark)" srcset="https://www.shieldcn.dev/github/openssf/thaw-app/Thaw.svg?variant=outline&amp;size=sm&amp;mode=dark&amp;font=geist&amp;color=D4AF37" /><img alt="OpenSSF Best Practices" src="https://www.shieldcn.dev/github/openssf/thaw-app/Thaw.svg?variant=outline&amp;size=sm&amp;mode=light&amp;font=geist&amp;color=D4AF37" /></picture></a>
-  <picture><source media="(prefers-color-scheme: dark)" srcset="https://www.shieldcn.dev/badge/Baseline-3.svg?variant=outline&amp;size=sm&amp;mode=dark&amp;font=geist" /><img alt="OpenSSF Baseline Level 3" src="https://www.shieldcn.dev/badge/Baseline-3.svg?variant=outline&amp;size=sm&amp;mode=light&amp;font=geist" /></picture>
-  <a href="docs/VERIFYING_RELEASES.md"><picture><source media="(prefers-color-scheme: dark)" srcset="https://www.shieldcn.dev/badge/SLSA-Build_L3.svg?variant=outline&amp;size=sm&amp;mode=dark&amp;font=geist&amp;logo=ri:GoPackage" /><img alt="SLSA 3" src="https://www.shieldcn.dev/badge/SLSA-3.svg?variant=outline&amp;size=sm&amp;mode=light&amp;font=geist&amp;logo=ri:GoPackage" /></picture></a>
-</p>
-
-
-<p align="center">
-  <b>Take back your menu bar. Hide what you don't need, find anything in a keystroke,<br />  and make the bar look the way you want.</b><br />
-  <b>Free and open source. Private by design: no tracking, no account, nothing ever leaves your Mac.</b>
+  <b>The open source menu bar manager for macOS.</b><br />
+  Take back your menu bar. Hide what you don't need, and find anything in a keystroke.
 </p>
 
 <p align="center">
-  <a href="https://github.com/thaw-app/Thaw/releases">Download</a> ·
+  <a href="https://www.getthaw.app"><b>getthaw.app</b></a> ·
   <a href="#install">Install</a> ·
-  <a href="#features">Features</a> ·
-  <a href="#integrations">Integrations</a> ·
-  <a href=".github/CONTRIBUTING.md">Contributing</a>
+  <a href="https://www.getthaw.app/docs/thaw">Docs</a> ·
+  <a href="https://www.getthaw.app/changelog">Changelog</a> ·
+  <a href="https://www.getthaw.app/roadmap">Roadmap</a> ·
+  <a href="https://www.getthaw.app/community">Community</a>
 </p>
 
 <p align="center">
-  <b>We are open to partnerships, integrations, and sponsorships. Contact us.</b>
+  <a href="https://www.getthaw.app/#try">Try Thaw in your browser</a> before you install it.
 </p>
 
 <p align="center">
-  <a href="https://www.raycast.com/diazdesandi/thaw"><img alt="Works with Raycast" src="https://raw.githubusercontent.com/thaw-app/brand-assets/main/badges/works-with-raycast.svg" height="36" /></a>
-  <a href="https://getdroppy.app/"><img alt="Works with Droppy" src="https://raw.githubusercontent.com/thaw-app/brand-assets/main/badges/works-with-droppy.svg" height="36" /></a>
+  <a href="https://vercel.com/open-source-program">
+    <img alt="Vercel OSS Program" src="https://vercel.com/oss/program-badge-2026.svg" />
+  </a>
 </p>
 
 <div align="center">
-  <a href="https://trendshift.io/repositories/21173" target="_blank"><img src="https://trendshift.io/api/badge/repositories/21173" alt="thaw-app/Thaw | Trendshift" style="width: 250px; height: 55px;" width="250" height="55" /></a>
+  <a href="https://trendshift.io/repositories/21173" target="_blank"><img src="https://trendshift.io/api/badge/repositories/21173" alt="thaw-app/Thaw | Trendshift" style="width: 150px; height: 33px;" width="150" height="33" /></a>
+  <a href="https://www.producthunt.com/products/thaw-2?embed=true&amp;utm_source=badge-featured&amp;utm_medium=badge&amp;utm_campaign=badge-thaw-3" target="_blank" rel="noopener noreferrer"><img alt="Thaw | Product Hunt" width="150" height="32" src="https://api.producthunt.com/widgets/embed-image/v1/featured.svg?post_id=1239794&amp;theme=light&amp;t=1788423441056"></a>
+  <a href="https://www.star-history.com/thaw-app/thaw" target="_blank"><picture><source media="(prefers-color-scheme: dark)" srcset="https://api.star-history.com/badge?repo=thaw-app/Thaw&amp;type=rank&amp;theme=dark" /><source media="(prefers-color-scheme: light)" srcset="https://api.star-history.com/badge?repo=thaw-app/Thaw&amp;type=rank" /><img alt="Star History Rank" src="https://api.star-history.com/badge?repo=thaw-app/Thaw&amp;type=rank" width="116" height="33" /></picture></a>
 </div>
 
 <p align="center">
   <a href="https://github.com/user-attachments/assets/9584065d-f840-4545-9a42-cfc5534b5ac3"><img alt="Thaw overview" src="https://github.com/user-attachments/assets/9584065d-f840-4545-9a42-cfc5534b5ac3" width="800" /></a>
 </p>
 
-## Why Thaw
-
-- **Free, and free to keep.** No purchase, no subscription, and no upgrade fee when macOS ships a new version.
-- **Open source, GPL-3.0.** Read the code, build it yourself, fork it.
-- **No tracking, no account.** No analytics, no telemetry, no sign-up.
-- **Screen Recording is optional.** Hiding, revealing, and rearranging items all work without it, and any item Thaw cannot capture is drawn as its app's icon instead. Grant it if you want live item previews and wallpaper-derived tinting.
-- **Light on your Mac.** A small, steady memory footprint.
-- **Signed and notarized by Apple**, with [verifiable releases](docs/VERIFYING_RELEASES.md), the [OpenSSF Best Practices](https://www.bestpractices.dev/projects/13303) Gold badge, and an [OpenSSF Scorecard](https://scorecard.dev/viewer/?uri=github.com/thaw-app/Thaw) for supply-chain posture.
-
 ## Features
 
-- **Declutter your menu bar**: hide the icons you do not need and keep an always-hidden section for the rest
-- **Reveal items fast**: hover, click, scroll or swipe, or press a hotkey
-- **Search and jump**: find any menu bar item from the keyboard
-- **Triggers**: reveal an item when a condition is met, from the battery level to the active Focus, the Wi-Fi network, or a script's exit code
-- **Switch layouts by context**: bind a profile to a display, to a Space, or to a Focus filter
-- **Zen mode**: one action conceals every section and locks the reveal gestures, then puts it all back. It can engage on its own while you present or share your screen
-- **Style the bar**: tint, gradient, shadow, border, and custom shapes, per light/dark mode and per Space
-- **Built for modern macOS**: supports macOS 26 and 27, including notch-friendly layouts via the Thaw Bar
+- Declutter your menu bar by hiding the icons you don't need, with an always-hidden section for the rest
+- Reveal items by hovering, clicking, scrolling, swiping, or pressing a hotkey
+- Search and jump to any menu bar item from the keyboard
+- Triggers that reveal an item when a condition is met, from battery level to the active Focus, the Wi-Fi network, or a script's exit code
+- Switch layouts by context: bind a profile to a display, a Space, or a Focus filter
+- Zen mode: one action conceals every section and locks the reveal gestures, then puts it all back. It can engage on its own while you present or share your screen
+- Style the bar with tint, gradient, shadow, border, and custom shapes, per light/dark mode and per Space
+- Built for modern macOS: supports macOS 26 and 27, including notch-friendly layouts via the Thaw Bar
+- Light on your Mac, with a small and steady memory footprint
+- Multilingual: available in 20 languages
 
 <details>
 <summary><b>Full feature list</b>: 40+ more, including groups, spacers, profiles, triggers, and hotkeys</summary>
@@ -176,13 +166,26 @@ Reveal an item when a condition is met, or hide it instead. Battery and power co
 
 </details>
 
+## Transparency
+
+- Free, and free to keep. No purchase, no subscription, and no upgrade fee when macOS ships a new version.
+- Open source, GPL-3.0. Read the code, build it yourself, fork it.
+- No tracking, no account. No analytics, no telemetry, no sign-up.
+- Screen Recording is optional. Hiding, revealing, and rearranging items all work without it, and any item Thaw cannot capture is drawn as its app's icon instead. Grant it if you want live item previews and wallpaper-derived tinting.
+- Signed and notarized by Apple, with verifiable releases, the OpenSSF Best Practices Gold badge, and an OpenSSF Scorecard for supply-chain posture.
+
 ## Integrations
+
+<a href="https://www.raycast.com/diazdesandi/thaw"><img alt="Works with Raycast" src="https://raw.githubusercontent.com/thaw-app/brand-assets/main/badges/works-with-raycast.svg" height="28" /></a>
+<a href="https://getdroppy.app/"><img alt="Works with Droppy" src="https://raw.githubusercontent.com/thaw-app/brand-assets/main/badges/works-with-droppy.svg" height="28" /></a>
 
 Every core action is a `thaw://` deep link, so Thaw plugs into the launcher you already use.
 
-- **[Raycast](https://www.raycast.com/diazdesandi/thaw)**: official extension. Toggle sections, open search, and change settings without leaving Raycast.
-- **[Droppy](https://getdroppy.app/)**: pair Thaw with Droppy's shelf and extras for a full menu bar suite.
-- **Anything else**: Alfred, Shortcuts, Keyboard Maestro, BetterTouchTool, or a shell script.
+- [Raycast](https://www.raycast.com/diazdesandi/thaw): official extension. Toggle sections, open search, and change settings without leaving Raycast.
+- [Droppy](https://getdroppy.app/): pair Thaw with Droppy's shelf and extras for a full menu bar suite.
+- [Floe](https://www.getthaw.app/docs/floe): the launcher from the same team. It opens menu bar items and applies profiles with no setup.
+- Anything else: Alfred, Shortcuts, Keyboard Maestro, BetterTouchTool, or a shell script.
+- Shortcuts, Spotlight and Siri: Thaw 3 has its own actions, and Siri phrases that need no setup. See [Shortcuts and automation](docs/SHORTCUTS.md).
 
 ```sh
 open "thaw://toggle-hidden"
@@ -194,18 +197,21 @@ Full reference, including reading and writing settings: [docs/URI_SCHEMES.md](do
 
 ## Install
 
-```sh
-brew install thaw        # stable
-brew install thaw@beta   # beta, or stable if it is newer
-```
+Choose the option for your macOS: a Homebrew command to run in Terminal, or a download.
 
-Or grab the `.dmg` from the [latest release](https://github.com/thaw-app/Thaw/releases/latest) and drag Thaw to Applications.
+| Your Mac runs | Run this | You get |
+|---|---|---|
+| macOS 27 | `brew install thaw@beta` | Thaw 3, in beta |
+| macOS 26 | `brew install thaw` | Thaw 2, the stable release |
+| macOS 14 or 15 | Download from the [releases](https://github.com/thaw-app/Thaw/releases) | Thaw 1 |
 
-Needs macOS 26+. Thaw asks for Accessibility on first launch to move menu bar items; Screen Recording is optional. Stuck? See [Frequent issues](FREQUENT_ISSUES.md).
+No Homebrew? Download the disk image for your macOS from the [releases](https://github.com/thaw-app/Thaw/releases) and drag Thaw to Applications.
+
+Thaw asks for Accessibility on first launch to move menu bar items. On macOS 27 it also asks for Menu Bar Layout Access, which lets it read the one file where macOS keeps the menu bar's order. Screen Recording is optional. [Getting started](docs/GETTING_STARTED.md) walks through the first run, and [Frequent issues](FREQUENT_ISSUES.md) covers what goes wrong.
 
 ## Languages
 
-Thaw speaks 20 languages, thanks to translators around the world.
+Thaw is available in 20 languages, thanks to translators around the world.
 
 <table frame="void" rules="none">
   <tr>
@@ -246,9 +252,11 @@ Missing yours, or spotted something off? [Translate Thaw on Crowdin](https://cro
 
 ## Contributors
 
-This project exists thanks to the awesome people who contribute code and documentation. Translations happen on Crowdin rather than in git, so translators are credited separately in [Credits](CREDITS.md).
+This project exists thanks to the people who contribute code and documentation. Translations happen on Crowdin rather than in git, so translators are credited separately in [Credits](CREDITS.md).
 
-Want to contribute? Start with [Ways to contribute](https://github.com/thaw-app/Thaw/issues/316). Pull requests are welcome against the `development` branch (see [Contributing](.github/CONTRIBUTING.md)).
+Want to contribute? Start with [Ways to contribute](https://github.com/thaw-app/Thaw/issues/316). Pull requests are welcome against the `development` branch (see the shared [Thaw/Floe contribution policy](https://github.com/thaw-app/.github/blob/main/.github/CONTRIBUTING.md)).
+
+Open to partnerships, integrations, and sponsorships. [Get in touch](https://github.com/sponsors/stonerl).
 
 <p align="center">
   <a href="https://github.com/thaw-app/Thaw/graphs/contributors"><img alt="contributors" src="https://shieldcn.dev/contributors/thaw-app/Thaw.svg?title=false&amp;size=40&amp;names=true&amp;titleAlign=center&amp;limit=100&amp;mode=light&amp;font=space-grotesk&amp;watermark=true&amp;border=false" /></a>
@@ -256,10 +264,21 @@ Want to contribute? Start with [Ways to contribute](https://github.com/thaw-app/
 
 ## Project documentation
 
-- [Contributing](.github/CONTRIBUTING.md)
+The docs are easiest to read at [getthaw.app/docs](https://www.getthaw.app/docs/thaw), which is built from the files below. Start with [Getting started](https://www.getthaw.app/docs/thaw/getting-started), and see [Frequent issues](https://www.getthaw.app/docs/thaw/frequent-issues) if something looks wrong.
+
+- [Changelog](https://www.getthaw.app/changelog), and [what is planned](https://www.getthaw.app/roadmap)
+- [Getting started](docs/GETTING_STARTED.md)
+- [Versions and update channels](docs/VERSIONS.md)
+- [Permissions](docs/PERMISSIONS.md)
+- [What Thaw sends over the network](docs/NETWORK.md)
+- [Shortcuts and automation](docs/SHORTCUTS.md)
+- [Reset or uninstall](docs/RESET_AND_UNINSTALL.md)
+- [Frequent issues](FREQUENT_ISSUES.md)
+- [Contributing](https://github.com/thaw-app/.github/blob/main/.github/CONTRIBUTING.md)
+- [Development](docs/DEVELOPMENT.md)
 - [Credits](CREDITS.md)
 - [Governance](.github/GOVERNANCE.md)
-- [Security policy](.github/SECURITY.md)
+- [Security policy](https://github.com/thaw-app/.github/blob/main/.github/SECURITY.md)
 - [Roadmap](docs/ROADMAP.md)
 - [Architecture](docs/ARCHITECTURE.md)
 - [Assurance case](docs/ASSURANCE_CASE.md)

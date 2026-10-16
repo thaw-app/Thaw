@@ -2,7 +2,6 @@
 //  ExternalSettingsChangeTests.swift
 //  Project: Thaw
 //
-//  Copyright (Ice) © 2023–2025 Jordan Baird
 //  Copyright (Thaw) © 2026 Toni Förster
 //  Licensed under the GNU GPLv3
 
@@ -55,9 +54,8 @@ struct ExternalSettingsChangeTests {
                 subscription = NotificationCenter.observeSettingsChangesViaURI { change in
                     #expect(change.key == "showOnHover")
                     #expect(change.boolValue == true)
-                    // Cancel before resuming so a duplicate delivery can
-                    // neither over-count the confirmation nor resume the
-                    // continuation twice.
+                    // Cancel first so a duplicate delivery can't over-count
+                    // the confirmation or resume the continuation twice.
                     subscription?.cancel()
                     subscription = nil
                     confirm()

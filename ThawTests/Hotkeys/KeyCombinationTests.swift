@@ -2,7 +2,6 @@
 //  KeyCombinationTests.swift
 //  Project: Thaw
 //
-//  Copyright (Ice) © 2023–2025 Jordan Baird
 //  Copyright (Thaw) © 2026 Toni Förster
 //  Licensed under the GNU GPLv3
 
@@ -12,26 +11,13 @@ import Testing
 
 /// Covers ``KeyCombination``, the key-plus-modifiers pair behind every hotkey.
 ///
-/// Three surfaces matter here and `KeyCodeTests` / `ModifiersTests` cover
-/// neither of them, since both stop at the individual halves.
-///
-/// The first is the encoded form. A key combination is stored as a two-element
-/// unkeyed array — key code first, modifier mask second — inside every hotkey
-/// default and every exported profile. Nothing about that shape is enforced by
-/// the type system, and swapping the two elements would produce a payload that
-/// still decodes and binds a completely different hotkey. The decoder's arity
-/// check is the only guard against a truncated or extended payload, so both
-/// sides of it are exercised.
-///
-/// The second is `init(event:)`, which is how a recorded keystroke becomes a
-/// stored combination. It narrows `NSEvent.modifierFlags` — a mask that also
-/// carries Caps Lock, Fn, and the numeric-keypad bit — down to the four
-/// modifiers the app supports. A stray bit surviving that narrowing would make
-/// a recorded hotkey compare unequal to the same keystroke replayed later.
-///
-/// The third is `isSystemReserved`, which reads the live symbolic hotkey table.
-/// Its contents depend on the machine, so the tests assert the shape of the
-/// answer rather than specific entries.
+/// - The stored form is an unkeyed `[keyCode, modifierMask]` array. Swapping
+///   the elements still decodes but binds a different hotkey, and the arity
+///   check is the only guard against a truncated payload.
+/// - `init(event:)` narrows `NSEvent.modifierFlags` (which also carries Caps
+///   Lock, Fn, and the keypad bit) to the four supported modifiers.
+/// - `isSystemReserved` reads the live symbolic hotkey table, which varies
+///   by machine.
 @MainActor
 @Suite("Key combination")
 struct KeyCombinationTests {
@@ -175,8 +161,7 @@ struct KeyCombinationTests {
         #expect(decoded == combination)
     }
 
-    /// The stored shape is `[keyCode, modifierMask]`. Both the order and the
-    /// arity are load-bearing.
+    /// Both the order and the arity of `[keyCode, modifierMask]` matter.
     @Test("A combination encodes as a key code followed by a modifier mask")
     func combinationEncodesAsAnOrderedPair() throws {
         let combination = KeyCombination(key: .f19, modifiers: [.command, .shift])
@@ -248,9 +233,7 @@ struct KeyCombinationTests {
 
     // MARK: - System Reservation
 
-    /// The reserved table is whatever the running machine has configured, so
-    /// the assertion is that the lookup answers at all rather than that a
-    /// particular combination is in it.
+    /// The reserved table varies by machine, so this only checks the lookup answers.
     @Test("Reservation lookup answers without trapping")
     func reservationLookupAnswers() {
         let combination = KeyCombination(key: .f19, modifiers: [.control, .option, .shift, .command])
@@ -267,8 +250,7 @@ struct KeyCombinationTests {
         #expect(!combination.isSystemReserved)
     }
 
-    /// Reservation is a property of the pair, so it has to agree for two
-    /// combinations that compare equal.
+    /// Reservation is a property of the pair.
     @Test("Equal combinations agree on their reservation")
     func equalCombinationsAgreeOnReservation() {
         let first = KeyCombination(key: .space, modifiers: [.command])

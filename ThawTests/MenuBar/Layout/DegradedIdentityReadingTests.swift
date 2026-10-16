@@ -2,34 +2,28 @@
 //  DegradedIdentityReadingTests.swift
 //  Project: Thaw
 //
-//  Copyright (Ice) © 2023–2025 Jordan Baird
 //  Copyright (Thaw) © 2026 Toni Förster
 //  Licensed under the GNU GPLv3
 
 import Testing
 @testable import Thaw
 
-/// Covers ``LayoutSolver/liveIdentitiesAreDegraded(_:)``, the gate that stops a
-/// bar-wide `kCGWindowName` degradation from reaching the cache.
+/// Covers ``LayoutSolver/liveIdentitiesAreDegraded(_:)``, which keeps a bar-wide
+/// `kCGWindowName` degradation out of the cache.
 ///
-/// #881's 12:38 log read the live hidden section as
-/// `com.rogueamoeba.soundsource:com.rogueamoeba.soundsource` and ten more of
-/// the same shape, Thaw's own control item among them, two minutes after the
-/// same items had read normally. Caching that reading persists the whole bar
-/// under a second set of identifiers, and every later flip between the two
-/// spellings presents a bar's worth of late arrivals — a re-sort, a bulk apply,
-/// posted moves, a captured cursor. The reporter's unenacted-move streak
-/// reached nine.
+/// A log read the hidden section as `com.rogueamoeba.soundsource:com.rogueamoeba.soundsource`
+/// and ten more like it, Thaw's control item included, minutes after a normal
+/// reading (#881). Caching it saves the bar under a second set of identifiers,
+/// and each flip back triggers a re-sort, bulk apply, and captured cursor.
 ///
-/// The cost of a false positive is one skipped cache cycle, so these tests
-/// mostly pin the cases that must *not* trip it.
+/// A false positive costs one skipped cycle, so most tests pin what must not trip.
 @Suite("Degraded identity reading")
 struct DegradedIdentityReadingTests {
     private func identities(_ pairs: [(String, String)]) -> [(namespace: String, title: String)] {
         pairs.map { (namespace: $0.0, title: $0.1) }
     }
 
-    /// Eleven of #881's, verbatim, as the log listed them.
+    /// Eleven entries from the #881 log, verbatim.
     @Test("A bar-wide degraded reading is caught")
     func catchesBarWideDegradation() {
         let degraded = identities([
@@ -44,10 +38,8 @@ struct DegradedIdentityReadingTests {
         #expect(LayoutSolver.liveIdentitiesAreDegraded(degraded))
     }
 
-    /// The certain signal. Thaw titles its own items `Thaw.ControlItem.*`, so
-    /// one in our namespace wearing our bundle identifier cannot be a correct
-    /// reading — and it arrives with the dividers unrecognizable, which is why
-    /// the same logs report the hidden control item missing.
+    /// Thaw titles its items `Thaw.ControlItem.*`, so one titled with our bundle ID
+    /// is always wrong, and it comes with unrecognizable dividers.
     @Test("Our own item titled with our bundle ID is enough on its own")
     func ownDegradedControlItemIsSufficient() {
         let own = Constants.bundleIdentifier
@@ -61,7 +53,6 @@ struct DegradedIdentityReadingTests {
 
     // MARK: - What must not trip it
 
-    /// The ordinary bar.
     @Test("A healthy reading is not degraded")
     func healthyReadingPasses() {
         let own = Constants.bundleIdentifier
@@ -77,9 +68,8 @@ struct DegradedIdentityReadingTests {
         #expect(!LayoutSolver.liveIdentitiesAreDegraded(reading))
     }
 
-    /// One app really may name its window after its own bundle identifier.
-    /// Alone on a populated bar it proves nothing, and freezing the cache over
-    /// it would strand the layout.
+    /// An app may title its window with its bundle ID; alone on a populated bar
+    /// that proves nothing, and freezing the cache would strand the layout.
     @Test("A single self-titled item on a healthy bar is tolerated")
     func singleSelfTitledItemIsTolerated() {
         let reading = identities([
@@ -92,8 +82,7 @@ struct DegradedIdentityReadingTests {
         #expect(!LayoutSolver.liveIdentitiesAreDegraded(reading))
     }
 
-    /// That same app on a bar too small to judge. Half of three is not
-    /// evidence of anything.
+    /// Half of three is not evidence of anything.
     @Test("A short reading is never judged on proportion alone")
     func shortReadingIsNotJudged() {
         let reading = identities([
@@ -109,8 +98,7 @@ struct DegradedIdentityReadingTests {
         #expect(!LayoutSolver.liveIdentitiesAreDegraded([]))
     }
 
-    /// A title that continues past the bundle identifier still identifies the
-    /// item, so exact equality is the whole test.
+    /// A title that continues past the bundle ID still identifies the item, so only exact equality counts.
     @Test("Titles that merely begin with the namespace are not self-titled")
     func prefixTitlesAreNotSelfTitled() {
         let reading = identities([
@@ -122,8 +110,7 @@ struct DegradedIdentityReadingTests {
         #expect(!LayoutSolver.liveIdentitiesAreDegraded(reading))
     }
 
-    /// An item whose title could not be read at all is empty, not self-titled;
-    /// counting it would let a bar of untitled items read as degraded.
+    /// Unreadable titles are empty, and counting them would let an untitled bar read as degraded.
     @Test("Empty titles do not count as self-titled")
     func emptyTitlesDoNotCount() {
         let reading = identities([
@@ -135,9 +122,8 @@ struct DegradedIdentityReadingTests {
         #expect(!LayoutSolver.liveIdentitiesAreDegraded(reading))
     }
 
-    /// The namespace of a nested helper is canonicalized on the way in while
-    /// the title is not, so the two halves of a degraded Little Snitch item
-    /// never match literally.
+    /// Nested helper namespaces are canonicalized but titles are not, so a degraded
+    /// Little Snitch item never matches literally.
     @Test("A canonicalized helper namespace is still self-titled")
     func canonicalizedHelperNamespaceIsSelfTitled() {
         let reading = identities([

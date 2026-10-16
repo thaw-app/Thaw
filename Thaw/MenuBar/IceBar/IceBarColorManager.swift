@@ -10,6 +10,9 @@ import Combine
 import Observation
 import SwiftUI
 
+/// Samples the menu bar / wallpaper strip under the Thaw Bar for icon contrast.
+///
+/// Samples whichever screen the panel is on, not just the main display.
 @MainActor
 @Observable
 final class IceBarColorManager {
@@ -21,17 +24,15 @@ final class IceBarColorManager {
     @ObservationIgnored
     private var windowImage: CGImage?
 
-    /// Monotonically incremented by updateWindowImage and clearWindowImage.
-    /// A capture in flight stamps the value it observed; on completion it only
-    /// writes windowImage if the value still matches, so a late completion
-    /// can't undo a freshly cleared image or overwrite a newer capture.
+    /// A capture only writes windowImage if this hasn't moved since it
+    /// started, so a late completion can't undo a clear or a newer capture.
     @ObservationIgnored
     private var windowImageGeneration: Int = 0
 
     @ObservationIgnored
     private var cancellables = Set<AnyCancellable>()
 
-    /// Cancellable for the periodic refresh timer, active only while the Thaw Bar is visible.
+    /// Active only while the Thaw Bar is visible.
     @ObservationIgnored
     private var periodicRefreshCancellable: AnyCancellable?
 
@@ -47,17 +48,17 @@ final class IceBarColorManager {
         if let iceBarPanel {
             iceBarPanel.publisher(for: \.screen)
                 .receive(on: DispatchQueue.main)
-                .sink { [weak self] screen in
-                    guard
-                        let self,
-                        let screen,
-                        screen == .main
-                    else {
+                .sink { [weak self, weak iceBarPanel] screen in
+                    guard let self, let screen, let iceBarPanel, iceBarPanel.isVisible else {
                         return
                     }
+                    // Drop the previous display's sample before the new capture
+                    // lands so icon contrast cannot briefly reuse the old screen.
+                    self.invalidateColorInfo()
+                    let frame = iceBarPanel.frame
                     Task { [weak self] in
                         guard let self else { return }
-                        await self.updateWindowImage(for: screen)
+                        await self.refresh(with: frame, screen: screen)
                     }
                 }
                 .store(in: &c)
@@ -69,8 +70,7 @@ final class IceBarColorManager {
                         let self,
                         let iceBarPanel,
                         let screen = iceBarPanel.screen,
-                        iceBarPanel.isVisible,
-                        screen == .main
+                        iceBarPanel.isVisible
                     else {
                         return
                     }
@@ -80,7 +80,6 @@ final class IceBarColorManager {
                 }
                 .store(in: &c)
 
-            // Notification-driven updates (space change, screen params, theme change).
             Publishers.Merge3(
                 NSWorkspace.shared.notificationCenter
                     .publisher(for: NSWorkspace.activeSpaceDidChangeNotification)
@@ -97,21 +96,19 @@ final class IceBarColorManager {
                 guard let self else {
                     return
                 }
-                // Clear window image on display changes to prevent memory growth
-                // and invalidate any in-flight capture from before the change.
+                // Also invalidates any in-flight capture.
                 self.clearWindowImage()
                 guard
                     let iceBarPanel,
                     iceBarPanel.isVisible,
-                    let screen = iceBarPanel.screen,
-                    screen == .main
+                    let screen = iceBarPanel.screen
                 else {
                     return
                 }
                 let frame = iceBarPanel.frame
                 Task { [weak self] in
                     guard let self else { return }
-                    await self.updateWindowImage(for: screen)
+                    guard await self.updateWindowImage(for: screen) else { return }
                     withAnimation {
                         self.updateColorInfo(with: frame, screen: screen)
                     }
@@ -119,23 +116,17 @@ final class IceBarColorManager {
             }
             .store(in: &c)
 
-            // Manage visibility: update colors immediately + start/stop periodic timer.
-            // Single subscription replaces the previous two \.isVisible observers.
             iceBarPanel.publisher(for: \.isVisible)
                 .removeDuplicates()
                 .receive(on: DispatchQueue.main)
                 .sink { [weak self, weak iceBarPanel] isVisible in
                     guard let self else { return }
                     if isVisible {
-                        // Refresh windowImage immediately so the first color
-                        // update isn't stale. Awaiting inside a Task so
-                        // updateColorInfo reads the fresh capture, not the
-                        // previous cycle's leftover.
-                        if let iceBarPanel, let screen = iceBarPanel.screen, screen == .main {
+                        if let iceBarPanel, let screen = iceBarPanel.screen {
                             let frame = iceBarPanel.frame
                             Task { [weak self] in
                                 guard let self else { return }
-                                await self.updateWindowImage(for: screen)
+                                guard await self.updateWindowImage(for: screen) else { return }
                                 self.updateColorInfo(with: frame, screen: screen)
                             }
                         }
@@ -150,7 +141,6 @@ final class IceBarColorManager {
         cancellables = c
     }
 
-    /// Starts the 5-second periodic refresh timer for color updates.
     private func startPeriodicRefresh(for iceBarPanel: IceBarPanel?) {
         stopPeriodicRefresh()
         periodicRefreshCancellable = Timer.publish(every: 5, tolerance: 1, on: .main, in: .default)
@@ -160,15 +150,14 @@ final class IceBarColorManager {
                     let self,
                     let iceBarPanel,
                     iceBarPanel.isVisible,
-                    let screen = iceBarPanel.screen,
-                    screen == .main
+                    let screen = iceBarPanel.screen
                 else {
                     return
                 }
                 let frame = iceBarPanel.frame
                 Task { [weak self] in
                     guard let self else { return }
-                    await self.updateWindowImage(for: screen)
+                    guard await self.updateWindowImage(for: screen) else { return }
                     withAnimation {
                         self.updateColorInfo(with: frame, screen: screen)
                     }
@@ -176,23 +165,24 @@ final class IceBarColorManager {
             }
     }
 
-    /// Stops the periodic refresh timer.
     private func stopPeriodicRefresh() {
         periodicRefreshCancellable?.cancel()
         periodicRefreshCancellable = nil
-        // Clear the window image to free memory when IceBar is hidden.
         clearWindowImage()
     }
 
-    /// Clears windowImage and invalidates any in-flight capture. Use whenever
-    /// callers want a synchronous nil state that an outstanding async capture
-    /// must not be allowed to overwrite.
+    /// Clears windowImage and invalidates any in-flight capture.
     private func clearWindowImage() {
         windowImageGeneration += 1
         windowImage = nil
     }
 
-    private func updateWindowImage(for screen: NSScreen) async {
+    /// Captures the menu bar / wallpaper strip for `screen`.
+    ///
+    /// - Returns: `true` when this call stored the current generation's image.
+    ///   Don't update ``colorInfo`` after `false`.
+    @discardableResult
+    private func updateWindowImage(for screen: NSScreen) async -> Bool {
         let windows = WindowInfo.createWindows(option: .onScreen)
         let displayID = screen.displayID
 
@@ -200,16 +190,15 @@ final class IceBarColorManager {
             let menuBarWindow = WindowInfo.menuBarWindow(from: windows, for: displayID),
             let wallpaperWindow = WindowInfo.wallpaperWindow(from: windows, for: displayID)
         else {
-            return
+            return false
         }
 
         let windowIDs = [menuBarWindow.windowID, wallpaperWindow.windowID]
-        let bounds = withMutableCopy(of: wallpaperWindow.bounds) { $0.size.height = 1 }
+        // Quartz window bounds use a top-left origin. Capture the menu bar
+        // window's own frame so the average matches the visible bar body.
+        let bounds = menuBarWindow.bounds
 
-        // Stamp our generation before suspending. If the counter advances while
-        // we await (a clearWindowImage, a stopPeriodicRefresh, or a newer
-        // updateWindowImage call), our completion is stale and must skip the
-        // write so we don't undo intentional clears or clobber a fresher image.
+        // Stamp before suspending; skip the write if it moved meanwhile.
         windowImageGeneration += 1
         let generation = windowImageGeneration
 
@@ -218,21 +207,15 @@ final class IceBarColorManager {
             screenBounds: bounds,
             option: .nominalResolution
         )
-        guard generation == windowImageGeneration, let image else { return }
+        guard generation == windowImageGeneration, let image else { return false }
         windowImage = image
+        return true
     }
 
-    /// The horizontal position (`0...1`) of the bar's center within the screen,
-    /// used to sample the wallpaper/menu-bar color at the matching offset.
+    /// The horizontal position (`0...1`) of the bar's center within the screen.
     ///
-    /// `insetScreenFrame` is the screen inset by half the bar width on each
-    /// side, so its width collapses to zero when a horizontal bar overflows to
-    /// the full screen width — a state the bar itself detects at
-    /// `frame.width == screen.frame.width` (see `IceBar.swift`). Dividing by
-    /// that zero width yields `NaN`, which then drives `cropRect.x` and makes
-    /// the color sample at a garbage offset (or stop updating) instead of the
-    /// bar's actual center. The guard falls back to the panel's middle so the
-    /// degenerate case still samples a sensible color.
+    /// A full-width bar collapses the inset frame to zero width, so the guard
+    /// falls back to the middle instead of dividing into `NaN`.
     static func colorSamplePercentage(frame: CGRect, screenFrame: CGRect) -> CGFloat {
         let insetScreenFrame = screenFrame.insetBy(dx: frame.width / 2, dy: 0)
         guard insetScreenFrame.width > 0 else {
@@ -250,31 +233,45 @@ final class IceBarColorManager {
 
         let percentage = Self.colorSamplePercentage(frame: frame, screenFrame: screen.frame)
 
-        let cropRect = CGRect(x: imageBounds.width * percentage, y: 0, width: 0, height: 1)
-            .insetBy(dx: -150, dy: 0)
-            .intersection(imageBounds)
+        // Full height, not only the top pixel row.
+        let cropRect = CGRect(
+            x: imageBounds.width * percentage,
+            y: 0,
+            width: 0,
+            height: imageBounds.height
+        )
+        .insetBy(dx: -150, dy: 0)
+        .intersection(imageBounds)
 
         guard
             let croppedImage = image.cropping(to: cropRect),
-            let averageColor = croppedImage.averageColor()
+            let averageColor = croppedImage.averageColor(option: .ignoreAlpha)
         else {
             return
         }
 
-        // Just use `menuBarWindow` as the source for now, regardless
-        // of whether its image contributed to the average.
-        colorInfo = MenuBarAverageColorInfo(color: averageColor, source: .menuBarWindow)
+        let next = MenuBarAverageColorInfo(color: averageColor, source: .menuBarWindow)
+        guard colorInfo != next else { return }
+        colorInfo = next
     }
 
     func updateAllProperties(with frame: CGRect, screen: NSScreen) {
-        // Keep the public signature synchronous so IceBar.show doesn't ripple
-        // async upstream. Wraps the async refresh+color combo in a Task so
-        // updateColorInfo reads the fresh capture instead of the previous
-        // cycle's leftover.
+        // Synchronous so IceBar.show doesn't go async.
         Task { [weak self] in
             guard let self else { return }
-            await self.updateWindowImage(for: screen)
-            self.updateColorInfo(with: frame, screen: screen)
+            await self.refresh(with: frame, screen: screen)
         }
+    }
+
+    /// So a cross-display open can't reuse the previous screen's brightness.
+    func invalidateColorInfo() {
+        colorInfo = nil
+        clearWindowImage()
+    }
+
+    /// Captures the menu bar strip for `screen` and rewrites ``colorInfo``.
+    func refresh(with frame: CGRect, screen: NSScreen) async {
+        guard await updateWindowImage(for: screen) else { return }
+        updateColorInfo(with: frame, screen: screen)
     }
 }

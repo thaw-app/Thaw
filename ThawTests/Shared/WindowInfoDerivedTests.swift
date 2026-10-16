@@ -2,7 +2,6 @@
 //  WindowInfoDerivedTests.swift
 //  Project: Thaw
 //
-//  Copyright (Ice) © 2023–2025 Jordan Baird
 //  Copyright (Thaw) © 2026 Toni Förster
 //  Licensed under the GNU GPLv3
 
@@ -14,23 +13,14 @@ import Testing
 
 // MARK: - Fixtures
 
-/// A display identifier no Mac hands out.
-///
-/// Core Graphics answers with an empty rect for it rather than refusing, and
-/// an empty rect is the one display geometry that is the same on every
-/// machine. It is what lets the selection rules below be exercised without
-/// asking this machine how many displays it has or where they sit.
+/// A display identifier no Mac hands out. Core Graphics answers with an
+/// empty rect for it, the one display geometry that is the same everywhere.
 private let unknownDisplay = CGDirectDisplayID(0xDEAD_BEEF)
 
 /// Pins the two Core Graphics facts every fixture in this file rests on:
 /// an unknown display reports an empty rect, and an empty rect contains the
-/// empty rect.
-///
-/// The second is what makes the containment clause in both selection rules
-/// satisfiable by a zero-bounds window, so that the *other* clauses can be
-/// asserted on their own. If either ever stops holding, the cases that use
-/// zero-bounds windows would quietly start passing for the wrong reason, so
-/// they say so out loud instead.
+/// empty rect. If either stops holding, the zero-bounds cases would pass for
+/// the wrong reason.
 private func requireContainableEmptyDisplay() throws {
     let bounds = CGDisplayBounds(unknownDisplay)
     try #require(
@@ -56,46 +46,21 @@ private enum MenuBarWindowRule: String, CaseIterable, Sendable {
 
 /// Covers the parts of `Shared/Utilities/WindowInfo.swift` that answer
 /// without a window server: the two selection rules, and the enumeration
-/// paths that refuse before they ever reach one.
+/// paths that refuse before reaching one.
 ///
-/// `WindowInfoTests` covers the `Codable` round trip, each field's
-/// contribution to `==` and to hashing, and three of the window levels
-/// `isMenuRelated` names. `WindowInfoDecodingTests` covers the memberwise
-/// initializer, the decoder's refusals, and the derived menu-bar rules
-/// including the off-by-one arm. Neither touches the lookups below, which
-/// both sibling suites record as uncoverable because they close over
-/// `CGDisplayBounds`.
+/// `CGDisplayBounds` reports an empty rect for an unknown display, and an
+/// empty rect contains itself, so a zero-bounds window satisfies the
+/// containment clause of both rules on any machine. That frees the other
+/// clauses to be asserted one at a time; a window with real bounds pins
+/// the containment clause itself.
 ///
-/// They are coverable, with one device. `CGDisplayBounds` reports an *empty*
-/// rect for a display identifier that does not exist, and `CGRect` counts an
-/// empty rect as containing the empty rect. So a window with zero bounds
-/// satisfies the containment clause of both rules on any machine, which
-/// frees the remaining clauses — the ones that actually encode what a menu
-/// bar or wallpaper window looks like — to be asserted one at a time. A
-/// window with real bounds satisfies none of them, which pins the
-/// containment clause itself. Nothing here reads the real display list.
+/// `menuBarWindow(from:for:)` is how `NSScreen.getMenuBarHeight()` finds the
+/// window it measures, and that height places every managed item. A dropped
+/// clause would match another window and return a plausible but wrong height.
 ///
-/// This matters because `menuBarWindow(from:for:)` is how
-/// `NSScreen.getMenuBarHeight()` finds the window it measures, and that
-/// height decides where every managed status item is placed. A rule that
-/// dropped a clause would start matching some other Window Server window and
-/// hand back a plausible but wrong height.
-///
-/// Deliberately **not** covered:
-///
-/// - `createWindows(option:)`, `createMenuBarWindows(option:)`, and the
-///   description-decoding half of `createWindows(from:)`. All three ask the
-///   window server what exists, so their answers are whatever happens to be
-///   on screen.
-/// - `init?(dictionary:)`, which is `private` and only ever reached from
-///   those enumeration paths.
-/// - `currentBounds()`, which is a single `Bridging` call.
-/// - The success arm of `init?(windowID:)`, which needs a window that really
-///   exists.
-/// - The Dock-owned arm of `wallpaperWindow(from:for:)`. Satisfying it needs
-///   a window owned by a running Dock, which is exactly the sort of thing a
-///   unit test must not depend on. The clause is pinned from the other side
-///   instead, by a window owned by a real application that is not the Dock.
+/// The window server paths are covered by `WindowInfoLiveTests` below. The
+/// Dock-owned arm of `wallpaperWindow(from:for:)` is pinned here from the
+/// other side by a non-Dock owner.
 @Suite("Window info lookups without a window server")
 struct WindowInfoDerivedTests {
     // MARK: - Enumeration refusals
@@ -130,9 +95,7 @@ struct WindowInfoDerivedTests {
     // MARK: - Menu bar window
 
     /// The rule names four attributes and a containment. Each case below
-    /// leaves exactly one of them unsatisfied, so a clause that was dropped
-    /// or loosened fails on its own case rather than hiding behind the
-    /// others.
+    /// leaves exactly one unsatisfied, so a dropped clause fails on its own.
     @Suite("Picking the menu bar window out of a list")
     struct MenuBarWindowTests {
         /// A window carrying every attribute the rule asks for. Its bounds
@@ -277,6 +240,43 @@ struct WindowInfoDerivedTests {
             #expect(owner.bundleIdentifier != "com.apple.dock")
 
             #expect(WindowInfo.wallpaperWindow(from: [window], for: unknownDisplay) == nil)
+        }
+    }
+}
+
+// MARK: - Live window server
+
+/// Runs the CGS query chain against the hosted session. A bare CI session may
+/// have no menu bar or wallpaper window, so each lookup is checked only when
+/// it returns one.
+@MainActor
+@Suite("Window info lookups against the window server", .serialized)
+struct WindowInfoLiveTests {
+    @Test("The menu bar window, when present, sits on its display")
+    func menuBarWindowSitsOnItsDisplay() {
+        let display = CGMainDisplayID()
+        // A hosted test session has a menu bar; a bare CI session may not.
+        // Either way the CGS query chain runs for real.
+        if let window = WindowInfo.menuBarWindow(for: display) {
+            #expect(window.title == "Menubar")
+            #expect(window.bounds.height > 0)
+            #expect(CGDisplayBounds(display).contains(window.bounds))
+            // Round-trip through the failable single-window initializer.
+            let sameWindow = WindowInfo(windowID: window.windowID)
+            #expect(sameWindow?.windowID == window.windowID)
+            // currentBounds re-queries live state for the same window.
+            if let bounds = window.currentBounds() {
+                #expect(bounds.height > 0)
+            }
+        }
+    }
+
+    @Test("The wallpaper window, when present, sits on its display")
+    func wallpaperWindowSitsOnItsDisplay() {
+        let display = CGMainDisplayID()
+        if let window = WindowInfo.wallpaperWindow(for: display) {
+            #expect(window.owningApplication?.bundleIdentifier == "com.apple.dock")
+            #expect(CGDisplayBounds(display).contains(window.bounds))
         }
     }
 }

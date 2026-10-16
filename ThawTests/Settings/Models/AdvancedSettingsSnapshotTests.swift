@@ -2,7 +2,6 @@
 //  AdvancedSettingsSnapshotTests.swift
 //  Project: Thaw
 //
-//  Copyright (Ice) © 2023–2025 Jordan Baird
 //  Copyright (Thaw) © 2026 Toni Förster
 //  Licensed under the GNU GPLv3
 
@@ -10,17 +9,9 @@ import Foundation
 import Testing
 @testable import Thaw
 
-/// Covers ``AdvancedSettingsSnapshot``'s value semantics and its `Codable`
-/// conformance.
-///
-/// The snapshot is the on-disk shape of a profile's Advanced pane, so a
-/// profile written by an older build can be missing any key the current build
-/// knows about. Decoding therefore has to fall back to
-/// `Defaults.DefaultValue` rather than throwing, which is what the
-/// forward-compatibility cases below pin.
-///
-/// Reads only; nothing here writes to the defaults domain, so the suite is
-/// safe to run in parallel with the rest.
+/// Covers ``AdvancedSettingsSnapshot``'s value semantics and `Codable`
+/// conformance. A profile from an older build can miss any key, so decoding
+/// falls back to `Defaults.DefaultValue` instead of throwing.
 @Suite("Advanced settings snapshot")
 struct AdvancedSettingsSnapshotTests {
     private let encoder = JSONEncoder()
@@ -150,9 +141,8 @@ struct AdvancedSettingsSnapshotTests {
 
     @Test("A profile written before the newer keys existed decodes with their defaults")
     func decodeOlderProfileMissingNewerKeys() throws {
-        // Simulates a profile saved before useDoubleClickToShowAlwaysHiddenSection
-        // and enableSecondaryContextMenuQuit were added. Decoding must succeed,
-        // filling in defaults from Defaults.DefaultValue.
+        // A profile saved before useDoubleClickToShowAlwaysHiddenSection and
+        // enableSecondaryContextMenuQuit existed; they decode to defaults.
         let json = """
         {
             "enableAlwaysHiddenSection": true,
@@ -435,12 +425,9 @@ struct AdvancedSettingsSnapshotTests {
 
     /// `enableDiagnosticLogging` is deliberately not part of a profile.
     ///
-    /// It is a diagnostic control, not a preference. While it was in the
-    /// snapshot, applying a profile restored whatever the switch had been
-    /// when that profile was saved — off, for every profile that already
-    /// existed — so logging stopped at the exact moment a user had turned it
-    /// on to capture a profile switch, and the switch looked like it flipped
-    /// itself back (#899).
+    /// Applying a profile restored the saved switch state, usually off, so
+    /// logging stopped right when a user turned it on to capture a profile
+    /// switch (#899).
     @Test("A profile written before the removal still decodes, ignoring the key")
     func legacyDiagnosticLoggingKeyIsIgnored() throws {
         let json = """
@@ -467,10 +454,8 @@ struct AdvancedSettingsSnapshotTests {
         #expect(decoded.iconRefreshInterval == 3.0)
     }
 
-    /// The key must not come back on the way out either: a profile saved by
-    /// this build carries no diagnostic-logging state, so applying it on any
-    /// build — including an older one, which decodes with `decodeIfPresent`
-    /// and a default — cannot disturb the switch.
+    /// A profile saved by this build carries no diagnostic-logging state, so
+    /// applying it on any build, older ones included, can't disturb the switch.
     @Test("An encoded snapshot no longer writes the key")
     func encodedSnapshotOmitsDiagnosticLogging() throws {
         let data = try encoder.encode(makeCustomSnapshot())

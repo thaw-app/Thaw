@@ -2,7 +2,6 @@
 //  SourceResolutionProbeTests.swift
 //  Project: Thaw
 //
-//  Copyright (Ice) © 2023–2025 Jordan Baird
 //  Copyright (Thaw) © 2026 Toni Förster
 //  Licensed under the GNU GPLv3
 
@@ -11,14 +10,12 @@ import Testing
 @testable import Thaw
 
 /// Covers ``MenuBarItemManager/windowIDsNeedingSourceResolution(cachedItems:currentWindowIDs:)``,
-/// which decides whether a cache cycle that saw no window change still has a
-/// reason to ask the service for source processes.
+/// which decides whether a cycle with no window change should still ask for source processes.
 ///
-/// An item cached without one has a provisional identity: its namespace falls
-/// back to the owner of its window — Control Center, for everything it hosts —
-/// and its name to "Menu Bar Item". The first AX scan after login routinely
-/// misses, and the item's window then never changes again, so before this the
-/// bad reading survived until the next launch.
+/// Without a source, an item's namespace falls back to its window owner (Control
+/// Center for hosted items) and its name to "Menu Bar Item". The first AX scan
+/// after login often misses and the window never changes again, so the bad
+/// reading used to last until relaunch.
 @Suite("Source resolution probe")
 struct SourceResolutionProbeTests {
     private func probe(
@@ -39,8 +36,7 @@ struct SourceResolutionProbeTests {
         )
     }
 
-    /// The steady state, and the one that has to cost nothing: every item knows
-    /// its owner, so there is no question to ask and no reason to recache.
+    /// The steady state must cost nothing: every item knows its owner.
     @Test("A fully resolved cache asks nothing")
     func resolvedCacheAsksNothing() {
         let items = [item(windowID: 1, sourcePID: 100), item(windowID: 2, sourcePID: 200)]
@@ -58,11 +54,8 @@ struct SourceResolutionProbeTests {
         #expect(probe([], current: [1, 2]).isEmpty)
     }
 
-    /// Control items are the one thing that must never be sent: their AX
-    /// children are disabled dividers, so the request is a guaranteed miss that
-    /// can start a full scan of every running app's extras menu bar — the
-    /// expense this whole probe is shaped around avoiding. Their PID is known
-    /// locally and filled in by the recache regardless.
+    /// A control item's AX children are disabled dividers, so asking is a sure miss
+    /// that can trigger a full extras-menu-bar scan of every app. Its PID is known locally.
     @Test("A control item is never asked about")
     func controlItemIsNeverAsked() {
         let control = MenuBarItem.fixture(
@@ -80,9 +73,8 @@ struct SourceResolutionProbeTests {
         #expect(probe([control, unresolved], current: [3, 4]) == [4])
     }
 
-    /// The cache can outlive a window — an item is held through a failed
-    /// reading rather than dropped. Asking about a window that is gone spends
-    /// an AX scan on something that can never resolve, every tick, forever.
+    /// The cache holds items through a failed reading; asking about a gone window
+    /// spends an AX scan every tick on something that can never resolve.
     @Test("An item whose window is gone is not asked about")
     func departedWindowIsNotAsked() {
         let items = [item(windowID: 1, sourcePID: nil), item(windowID: 2, sourcePID: nil)]
