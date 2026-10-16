@@ -26,6 +26,7 @@ and the Sparkle appcast, unless overridden with the `release_notes` input.
 - **Privacy has no Turn Everything Off button.** It switched off the two rows above it; turn those off directly. By @diazdesandi.
 - **Allow an app for thaw:// links by choosing it.** Automation > Other apps > Choose App… opens a file picker instead of asking for a bundle ID. By @diazdesandi.
 - **Automation is one short page.** Each row says what's set right now. Display and Space switching open in a sheet, and a script's timeout and on/off switch are in its ⋯ menu. By @diazdesandi.
+- **Simple Mode has an All Settings button** in the toolbar, so you don't have to find Simple Mode in the ⋯ menu to leave it. By @diazdesandi.
 - **"Show an item when its icon changes" moved to Visibility and lost its cooldown slider.** The same item can show itself again after 45 seconds, the old default. By @diazdesandi.
 
 ### Fixed

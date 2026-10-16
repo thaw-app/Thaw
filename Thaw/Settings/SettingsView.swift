@@ -98,6 +98,13 @@ struct SettingsView: View {
         // The same overflow menu as the full window, so the mode switch sits
         // in the same place whichever way the window is showing.
         .toolbar {
+            // A labelled way out, so leaving Simple Mode doesn't depend on finding the overflow menu.
+            ToolbarItem(placement: .primaryAction) {
+                Button("All Settings") {
+                    generalSettings.simpleMode = false
+                }
+                .help("Leave Simple Mode and show every settings page")
+            }
             ToolbarItem(placement: .primaryAction) {
                 SettingsOverflowMenu(appState: appState, generalSettings: generalSettings, isCustomizeSidebarPresented: $isCustomizeSidebarPresented)
             }
