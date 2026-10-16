@@ -43,6 +43,8 @@ struct AutomationSettingsPane: View {
                 .help("macOS offers no way to see that another app is recording the screen, so recordings are not covered.")
             }
 
+            TriggerSections(manager: appState.appRunningTriggers)
+
             otherAppsSection
             scriptsSection
         }

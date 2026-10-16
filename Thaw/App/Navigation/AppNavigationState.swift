@@ -104,6 +104,12 @@ final class AppNavigationState {
 
     var settingsNavigationIdentifier: SettingsNavigationIdentifier = .general {
         didSet {
+            // Observation routes this assignment back through didSet, which then saves it.
+            let destination = settingsNavigationIdentifier.destination
+            guard destination == settingsNavigationIdentifier else {
+                settingsNavigationIdentifier = destination
+                return
+            }
             Defaults.set(settingsNavigationIdentifier.rawValue, forKey: .lastSettingsPane)
             // Which pane is showing decides whether capture is on, so moving
             // from General to Layout has to re-evaluate without a window toggle.
@@ -125,7 +131,7 @@ final class AppNavigationState {
         // Restore the full window's last pane for returning from Simple Mode; init assignment does not persist via didSet.
         // Ignore panes no longer in the sidebar so selection and detail stay connected.
         if let rawValue = Defaults.string(forKey: .lastSettingsPane),
-           let pane = SettingsNavigationIdentifier(rawValue: rawValue)
+           let pane = SettingsNavigationIdentifier(rawValue: rawValue)?.destination
         {
             if SettingsSidebarPanes.all.contains(pane) {
                 settingsNavigationIdentifier = pane

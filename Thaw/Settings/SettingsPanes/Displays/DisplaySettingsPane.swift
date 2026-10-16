@@ -55,6 +55,9 @@ struct DisplaySettingsPane: View {
                     perDisplayControls
                 }
             }
+
+            // Spaces belong to displays in macOS, so their controls follow the display's.
+            SpacesControlsContent(activeSpaceID: UInt64(bitPattern: Int64(appState.activeSpace.spaceID)))
         }
         .alert(
             String(localized: "Apply spacing change?"),

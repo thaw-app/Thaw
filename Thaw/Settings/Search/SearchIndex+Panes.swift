@@ -74,7 +74,7 @@ nonisolated extension SearchIndex {
             id: "pane.spaces",
             title: "Spaces",
             descriptionText: nil,
-            pane: .spaces,
+            pane: .displays,
             keywords: ["spaces", "space", "per-space", "desktop", "fullscreen", "mission control", "hide", "reveal", "strip"],
             property: nil
         ),
@@ -114,7 +114,7 @@ nonisolated extension SearchIndex {
             id: "pane.triggers",
             title: "Triggers",
             descriptionText: "Show menu bar items while an app is running.",
-            pane: .triggers,
+            pane: .automation,
             keywords: ["trigger", "app running", "launch", "quit", "conditional", "show", "reveal"],
             property: nil
         ),

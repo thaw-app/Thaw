@@ -11,7 +11,8 @@ import SwiftUI
 import ThawUI
 import UniformTypeIdentifiers
 
-struct TriggersSettingsPane: View {
+/// The app-running triggers, shown as sections of the Automation page.
+struct TriggerSections: View {
     @Environment(AppState.self) private var appState
     @Bindable var manager: AppRunningTriggersManager
     @State private var draft = AppRunningTrigger()
@@ -20,56 +21,22 @@ struct TriggersSettingsPane: View {
     @State private var isResetting = false
 
     var body: some View {
-        ThawForm {
-            ThawSection("App is running") {
-                Text("Show selected menu bar items while an app runs, even in the background. When it quits, the items follow their saved layout again.")
-                Text("macOS may also show other menu bar items from the same app.")
-                    .font(ThawType.detail)
-                    .foregroundStyle(.secondary)
+        // The sheet and dialogs hang on the first section, which is always shown, so each appears once.
+        ThawSection("When an app runs") {
+            LabeledContent {
                 Button("Add Trigger") {
                     draft = AppRunningTrigger()
                     isEditing = true
                 }
+                .buttonStyle(.settingsGlass)
                 .disabled(!manager.canEdit)
+            } label: {
+                ThawRowLabel(
+                    "Show chosen items",
+                    detail: "They show while the app runs, even in the background, and go back to their place when it quits."
+                )
             }
-
-            if !manager.canEdit {
-                ThawSection("Saved triggers unavailable") {
-                    Text("Saved triggers could not be read and have not been changed. Resetting removes only these trigger rules.")
-                    Button("Reset Triggers", role: .destructive) { isResetting = true }
-                }
-            } else if manager.rules.isEmpty {
-                ThawSection {
-                    Text("No triggers yet")
-                        .font(ThawType.heading)
-                    Text("Add a trigger to choose an app and the items it should reveal.")
-                        .foregroundStyle(.secondary)
-                }
-            } else {
-                ForEach(manager.rules) { rule in
-                    ThawSection {
-                        Toggle(isOn: Binding(
-                            get: { rule.isEnabled },
-                            set: { manager.setEnabled($0, id: rule.id) }
-                        )) {
-                            Text("While \(rule.appName) is running")
-                        }
-                        Text(rule.targets.map(\.name).formatted(.list(type: .and)))
-                            .foregroundStyle(.secondary)
-                        Text(status(for: rule))
-                            .font(ThawType.detail)
-                        HStack {
-                            Button("Edit") {
-                                draft = rule
-                                isEditing = true
-                            }
-                            .accessibilityLabel("Edit trigger for \(rule.appName)")
-                            Button("Remove", role: .destructive) { pendingRemoval = rule }
-                                .accessibilityLabel("Remove trigger for \(rule.appName)")
-                        }
-                    }
-                }
-            }
+            .help("macOS may also show other menu bar items from the same app.")
         }
         .sheet(isPresented: $isEditing) {
             AppRunningTriggerEditor(draft: $draft, availableTargets: availableTargets) {
@@ -101,6 +68,40 @@ struct TriggersSettingsPane: View {
             Button("Reset Triggers", role: .destructive) { manager.reset() }
         }
         .errorAlert("Triggers", message: $manager.errorMessage)
+
+        if !manager.canEdit {
+            ThawSection("Saved triggers unavailable") {
+                Text("Saved triggers could not be read and have not been changed. Resetting removes only these trigger rules.")
+                Button("Reset Triggers", role: .destructive) { isResetting = true }
+                    .buttonStyle(.settingsGlass)
+            }
+        } else {
+            ForEach(manager.rules) { rule in
+                ThawSection {
+                    Toggle(isOn: Binding(
+                        get: { rule.isEnabled },
+                        set: { manager.setEnabled($0, id: rule.id) }
+                    )) {
+                        Text("While \(rule.appName) is running")
+                    }
+                    Text(rule.targets.map(\.name).formatted(.list(type: .and)))
+                        .foregroundStyle(.secondary)
+                    Text(status(for: rule))
+                        .font(ThawType.detail)
+                    HStack {
+                        Button("Edit") {
+                            draft = rule
+                            isEditing = true
+                        }
+                        .buttonStyle(.settingsGlass)
+                        .accessibilityLabel("Edit trigger for \(rule.appName)")
+                        Button("Remove", role: .destructive) { pendingRemoval = rule }
+                            .buttonStyle(.settingsGlass)
+                            .accessibilityLabel("Remove trigger for \(rule.appName)")
+                    }
+                }
+            }
+        }
     }
 
     private var availableTargets: [AppRunningTrigger.Target] {
@@ -145,6 +146,7 @@ private struct AppRunningTriggerEditor: View {
                             .foregroundStyle(.secondary)
                     }
                     Button("Choose App") { isChoosingApp = true }
+                        .buttonStyle(.settingsGlass)
                 }
                 ThawSection("Show these menu bar items") {
                     if targets.isEmpty {
@@ -173,12 +175,14 @@ private struct AppRunningTriggerEditor: View {
             HStack {
                 Spacer()
                 Button("Cancel") { dismiss() }
+                    .buttonStyle(.settingsGlass)
                     .keyboardShortcut(.cancelAction)
                 Button("Save Trigger") {
                     if save() {
                         dismiss()
                     }
                 }
+                .buttonStyle(.settingsGlass)
                 .keyboardShortcut(.defaultAction)
                 .disabled(!draft.isValid)
             }
