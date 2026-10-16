@@ -36,6 +36,11 @@ final class MenuBarManager {
     /// Pause hover after an explicit toggle so it cannot undo the user; resume when the pointer leaves.
     var showOnHoverAllowed = true {
         didSet {
+            // Hiding a section and the hover rearm both allow hover again, which undid Zen Mode's lock.
+            if showOnHoverAllowed, isZenModeActive {
+                showOnHoverAllowed = false
+                return
+            }
             guard oldValue != showOnHoverAllowed else { return }
             diagLog.debug("hover: \(showOnHoverAllowed ? "allowed again" : "paused")")
         }
