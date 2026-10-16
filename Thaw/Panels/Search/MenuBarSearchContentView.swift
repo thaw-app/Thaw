@@ -195,6 +195,7 @@ private struct MenuBarSearchContentView: View {
             .autocorrectionDisabled(true)
             .writingToolsBehavior(.disabled)
             .focused($queryFieldIsFocused)
+            .sectionedListKeys(selection: $model.selection, items: model.displayedItems, isEnabled: model.renameSession == nil)
 
             if metrics.hasTrailingSpacer {
                 Spacer()

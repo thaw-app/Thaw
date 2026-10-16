@@ -32,10 +32,6 @@ struct SectionedList<ItemID: Hashable, ItemContent: View>: View {
         self.isEditing = isEditing
     }
 
-    private var handlesKeys: Bool {
-        selection != nil && !isEditing
-    }
-
     var body: some View {
         ScrollViewReader { proxy in
             ScrollView {
@@ -53,18 +49,7 @@ struct SectionedList<ItemID: Hashable, ItemContent: View>: View {
         .scrollIndicatorsFlash(onAppear: true)
         .contentMargins(.all, contentPadding, for: .scrollContent)
         .contentMargins(.all, -0.5, for: .scrollIndicators)
-        .onKeyDown(key: .downArrow, isEnabled: handlesKeys) {
-            moveSelection(by: 1)
-            return .handled
-        }
-        .onKeyDown(key: .upArrow, isEnabled: handlesKeys) {
-            moveSelection(by: -1)
-            return .handled
-        }
-        .onKeyDown(key: .returnKey, isEnabled: handlesKeys) {
-            items.first { $0.id == selection }?.action?()
-            return .handled
-        }
+        .sectionedListKeys(selection: $selection, items: items, isEnabled: !isEditing)
     }
 
     /// Sets the padding of the sectioned list's content.
@@ -73,20 +58,51 @@ struct SectionedList<ItemID: Hashable, ItemContent: View>: View {
         copy.contentPadding = length
         return copy
     }
+}
 
-    /// Walks from the current selection in steps of step and selects the
-    /// first selectable item found, staying put if there is none.
-    private func moveSelection(by step: Int) {
-        guard let selectedIndex = items.firstIndex(where: { $0.id == selection }) else {
-            return
+// MARK: - Keyboard
+
+/// Steps through a sectioned list's selectable rows, skipping the headers.
+nonisolated enum SectionedListNavigation {
+    /// The first selectable row step rows from the selection, or the selection
+    /// itself when there is none that way.
+    static func step<ID: Hashable>(from selection: ID?, by step: Int, in rows: [(id: ID, isSelectable: Bool)]) -> ID? {
+        guard let selectedIndex = rows.firstIndex(where: { $0.id == selection }) else {
+            return selection
         }
         var index = selectedIndex + step
-        while items.indices.contains(index) {
-            if items[index].isSelectable {
-                selection = items[index].id
-                return
+        while rows.indices.contains(index) {
+            if rows[index].isSelectable {
+                return rows[index].id
             }
             index += step
+        }
+        return selection
+    }
+}
+
+extension View {
+    /// Arrow keys move the selection and Return opens the selected row. A search field above
+    /// the list uses it too, since the field keeps the focus while the user types.
+    func sectionedListKeys<ItemID: Hashable>(
+        selection: Binding<ItemID?>,
+        items: [SectionedListItem<ItemID, some View>],
+        isEnabled: Bool = true
+    ) -> some View {
+        onKeyPress(keys: [.upArrow, .downArrow, .return]) { press in
+            guard isEnabled, selection.wrappedValue != nil else { return .ignored }
+            switch press.key {
+            case .return:
+                items.first { $0.id == selection.wrappedValue }?.action?()
+            default:
+                let rows = items.map { (id: $0.id, isSelectable: $0.isSelectable) }
+                selection.wrappedValue = SectionedListNavigation.step(
+                    from: selection.wrappedValue,
+                    by: press.key == .downArrow ? 1 : -1,
+                    in: rows
+                )
+            }
+            return .handled
         }
     }
 }
