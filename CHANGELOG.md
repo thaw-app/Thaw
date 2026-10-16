@@ -44,6 +44,9 @@ and the Sparkle appcast, unless overridden with the `release_notes` input.
 - **Switching profiles no longer turns off Always Hidden or "Move items that don't fit into Hidden".** A profile saved before you turned them on switched them back off whenever a display or Space changed. A profile can still turn Always Hidden on. By @diazdesandi.
 - **Zen Mode keeps hover from revealing hidden items until you turn it off.** The lock came undone the next time a section hid, so Zen Mode seemed to do nothing. By @diazdesandi.
 - **"Always show hidden items" stays on.** On a display where it's turned on, hidden items no longer hide again after a few seconds, and moving the pointer to another display no longer shows or hides them. By @malash.
+- **Moving an item lands where you put it more often.** Before it moves an icon, Thaw checks that the icons around the new spot haven't moved, and it reads every saved position back from macOS. A move that didn't stick switches to dragging right away instead of waiting. By @diazdesandi.
+- **Showing hidden items no longer reshuffles the visible ones.** When a hidden item had ended up among your visible items, showing the hidden section also rewrote the position of every visible item, which could move icons like Wi-Fi. By @diazdesandi.
+- **A failed save can no longer wipe macOS's saved menu bar positions.** When that file couldn't be read, Thaw wrote a new one in its place and lost every other item's position. Now it leaves the file alone. By @diazdesandi.
 
 ## [3.0.0-alpha.9] - 2026-10-14
 
