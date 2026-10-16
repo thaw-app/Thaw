@@ -43,6 +43,7 @@ and the Sparkle appcast, unless overridden with the `release_notes` input.
 
 - **Switching profiles no longer turns off Always Hidden or "Move items that don't fit into Hidden".** A profile saved before you turned them on switched them back off whenever a display or Space changed. A profile can still turn Always Hidden on. By @diazdesandi.
 - **Zen Mode keeps hover from revealing hidden items until you turn it off.** The lock came undone the next time a section hid, so Zen Mode seemed to do nothing. By @diazdesandi.
+- **"Always show hidden items" stays on.** On a display where it's turned on, hidden items no longer hide again after a few seconds, and moving the pointer to another display no longer shows or hides them. By @malash.
 
 ## [3.0.0-alpha.9] - 2026-10-14
 
