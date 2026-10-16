@@ -11,6 +11,10 @@ and the Sparkle appcast, unless overridden with the `release_notes` input.
 
 **macOS 27 only · Build 115**
 
+### New
+
+- **Moving an item from its menu says how it went.** After a move from the Thaw Bar or search, a short message says where the item went, or that it didn't move. By @diazdesandi.
+
 ### Removed
 
 - **Thaw Bar Only is gone.** It was already switched off, and its launcher icon, shortcut and stand-in icons went with it. Items you kept there are ordinary Hidden items. By @diazdesandi.
