@@ -13,6 +13,7 @@ and the Sparkle appcast, unless overridden with the `release_notes` input.
 
 ### New
 
+- **What's New offers experiments you haven't tried.** The notes for the version you're running start with the Experiments switches that are still off, and you can turn them on right there. By @diazdesandi.
 - **Moving an item from its menu says how it went.** After a move from the Thaw Bar or search, a short message says where the item went, or that it didn't move. By @diazdesandi.
 
 ### Removed
