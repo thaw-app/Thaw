@@ -171,8 +171,25 @@ final class UpdatesManager: NSObject {
         updaterController.startUpdater()
     }
 
+    /// Set in the settings process, which hands checks to the app.
+    @ObservationIgnored
+    var forwardCheck: (() -> Void)?
+
+    /// The settings process may have changed Sparkle's stored preferences. Sparkle reads
+    /// them from the defaults, and a reset schedules the next check by them.
+    func storedPreferencesChanged() {
+        guard hasStartedUpdater else { return }
+        withMutation(keyPath: \.automaticallyChecksForUpdates) {}
+        withMutation(keyPath: \.automaticallyDownloadsUpdates) {}
+        updater.resetUpdateCycleAfterShortDelay()
+    }
+
     @objc func checkForUpdates() {
         guard Constants.supportsSparkleUpdates else {
+            return
+        }
+        if let forwardCheck {
+            forwardCheck()
             return
         }
         #if DEBUG

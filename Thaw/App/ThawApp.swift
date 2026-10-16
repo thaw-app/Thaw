@@ -14,6 +14,8 @@ enum ThawEntryPoint {
     static func main() {
         if NativeVisibilityRecoveryLaunch.isRequested {
             NativeVisibilityRecoveryApp.main()
+        } else if SettingsProcessApp.isRequested {
+            SettingsProcessApp.main()
         } else {
             ThawApp.main()
         }

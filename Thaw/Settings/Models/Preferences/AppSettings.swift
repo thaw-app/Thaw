@@ -35,4 +35,10 @@ final class AppSettings {
         hotkeys.performSetup(with: appState)
         displaySettings.performSetup(with: appState)
     }
+
+    /// Reads the stored values again, in the settings process and after it wrote them.
+    func loadStoredValues() {
+        general.loadInitialState()
+        advanced.loadInitialState()
+    }
 }

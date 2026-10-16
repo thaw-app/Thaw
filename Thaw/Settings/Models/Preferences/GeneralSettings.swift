@@ -253,7 +253,7 @@ final class GeneralSettings {
     }
 
     /// Loads the model's initial state.
-    private func loadInitialState() {
+    func loadInitialState() {
         Defaults.ifPresent(key: .showThawIcon, assign: &showThawIcon)
         Defaults.ifPresent(key: .customThawIconIsTemplate, assign: &customThawIconIsTemplate)
         Defaults.ifPresent(key: .simpleMode, assign: &simpleMode)

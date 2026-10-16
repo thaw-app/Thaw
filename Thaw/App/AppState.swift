@@ -106,6 +106,10 @@ final class AppState {
 
     let applicationMenuCover = ApplicationMenuCover()
 
+    /// Settings in a process of its own, when SettingsInOwnProcess is set.
+    @ObservationIgnored
+    private(set) lazy var settingsProcessHost = SettingsProcessHost(app: settingsProcessAppSide())
+
     /// Diagnostic logger for the app state.
     let diagLog = DiagLog(category: "AppState")
 
@@ -544,7 +548,8 @@ final class AppState {
         }
     }
 
-    func openWindow(_ id: ThawWindowIdentifier) {
+    func openWindow(_ id: ThawWindowIdentifier, allowSettingsProcess: Bool = true) {
+        if allowSettingsProcess, showsInSettingsProcess(id, isOpenHere: openWindows.contains(id)) { return }
         if id == .settings {
             prepareSettingsPresentation()
         }

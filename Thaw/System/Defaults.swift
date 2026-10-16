@@ -370,6 +370,7 @@ extension Defaults {
         case showSettingDescriptions = "ShowSettingDescriptions"
         case lastSettingsPane = "LastSettingsPane"
         case hiddenSidebarPanes = "HiddenSidebarPanes"
+        case settingsInOwnProcess = "SettingsInOwnProcess"
         case menuBarItemAlertReveals = "MenuBarItemAlertReveals"
         case autoZenWhileSharingScreen = "AutoZenWhileSharingScreen"
         case menuBarAppearanceSpaceOverrides = "MenuBarAppearanceSpaceOverrides"
