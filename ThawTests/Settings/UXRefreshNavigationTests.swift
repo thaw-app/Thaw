@@ -126,7 +126,6 @@ struct UXRefreshNavigationTests {
     func spacingEntriesStayOnDisplays() {
         let stayIDs: Set = [
             "displays.itemSpacing",
-            "displays.confirmSpacingRelaunch",
             "displays.spacingApplyMode",
         ]
         for entry in SearchIndex.entries where stayIDs.contains(entry.id) {

@@ -14,6 +14,7 @@ public struct ThawSlider<Value: BinaryFloatingPoint, ValueLabel: View>: View {
     private let bounds: ClosedRange<Value>
     private let step: Value?
     private let reversed: Bool
+    private let fillsFromCenter: Bool
     private let showsValue: Bool
     private let unit: String?
     private let valueLabel: ValueLabel
@@ -23,6 +24,7 @@ public struct ThawSlider<Value: BinaryFloatingPoint, ValueLabel: View>: View {
         in bounds: ClosedRange<Value>,
         step: Value? = nil,
         reversed: Bool = false,
+        fillsFromCenter: Bool = false,
         showsValue: Bool = false,
         unit: String? = nil,
         @ViewBuilder valueLabel: () -> ValueLabel
@@ -31,6 +33,7 @@ public struct ThawSlider<Value: BinaryFloatingPoint, ValueLabel: View>: View {
         self.bounds = bounds
         self.step = step
         self.reversed = reversed
+        self.fillsFromCenter = fillsFromCenter
         self.showsValue = showsValue
         self.unit = unit
         self.valueLabel = valueLabel()
@@ -42,6 +45,7 @@ public struct ThawSlider<Value: BinaryFloatingPoint, ValueLabel: View>: View {
         in bounds: ClosedRange<Value>,
         step: Value? = nil,
         reversed: Bool = false,
+        fillsFromCenter: Bool = false,
         showsValue: Bool = false,
         unit: String? = nil
     ) where ValueLabel == Text {
@@ -49,6 +53,7 @@ public struct ThawSlider<Value: BinaryFloatingPoint, ValueLabel: View>: View {
         self.bounds = bounds
         self.step = step
         self.reversed = reversed
+        self.fillsFromCenter = fillsFromCenter
         self.showsValue = showsValue
         self.unit = unit
         self.valueLabel = Text(valueLabelKey)
@@ -67,6 +72,8 @@ public struct ThawSlider<Value: BinaryFloatingPoint, ValueLabel: View>: View {
 
     public var body: some View {
         CompactSlider(value: $value, in: bounds, step: step ?? 0)
+            // A slider whose default sits in the middle fills out from there, so the fill shows which way it moved.
+            .compactSliderStyle(default: .horizontal(fillsFromCenter ? .center : .leading))
             .frame(height: height)
             .onContinuousHover { phase in
                 if case .active = phase {
