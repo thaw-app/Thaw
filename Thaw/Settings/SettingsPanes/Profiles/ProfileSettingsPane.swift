@@ -284,10 +284,10 @@ struct ProfileSettingsPane: View {
         diff.settingChanges = ProfileLayoutDiff.settingChanges(
             current: GeneralSettingsSnapshot.capture(from: appState.settings.general),
             profile: profile.generalSettings
-        ) + ProfileLayoutDiff.settingChanges(
-            current: AdvancedSettingsSnapshot.capture(from: appState.settings.advanced),
-            profile: profile.advancedSettings
-        )
+        ) + {
+            let current = AdvancedSettingsSnapshot.capture(from: appState.settings.advanced)
+            return ProfileLayoutDiff.settingChanges(current: current, profile: profile.advancedSettings.merged(onto: current))
+        }()
 
         // Warn only if applying the profile's display spacing would relaunch apps.
         let offset = Int(profile.globalDisplayConfiguration.itemSpacingOffset.rounded())
