@@ -40,7 +40,7 @@ nonisolated enum LayoutBatchMoveError: Error, Equatable, Sendable {
     /// A readable explanation for logs and the response's details field.
     var details: String {
         switch self {
-        case .missingItem: "Provide at least one item=<id>"
+        case .missingItem: "Provide at least one item-id=<id>"
         case .missingSection: "Provide section=visible, hidden or alwaysHidden"
         case let .unknownSection(value): "Unknown section \(value); use visible, hidden or alwaysHidden"
         case let .duplicateItem(id): "Item \(id) is listed more than once"
@@ -98,10 +98,10 @@ nonisolated struct LayoutBatchMovePlan: Equatable, Sendable {
 
 /// A parsed thaw://move-item URL.
 ///
-///     thaw://move-item?item=<id>[&item=<id>...]&section=<visible|hidden|alwaysHidden>[&after=<id>]
+///     thaw://move-item?item-id=<id>[&item-id=<id>...]&section=<visible|hidden|alwaysHidden>[&after-id=<id>]
 ///
-/// The items land in the order given, right after the after item as the Layout pane shows the
-/// section from left to right, or at the section's right end when after is absent.
+/// The items land in the order given, right after the after-id item as the Layout pane shows the
+/// section from left to right, or at the section's right end when after-id is absent.
 nonisolated struct LayoutBatchMove: Equatable, Sendable {
     let itemIDs: [String]
     let section: MenuBarSectionName
@@ -109,9 +109,9 @@ nonisolated struct LayoutBatchMove: Equatable, Sendable {
 
     static func parse(_ url: URL) -> Result<Self, LayoutBatchMoveError> {
         let queryItems = URLComponents(url: url, resolvingAgainstBaseURL: false)?.queryItems ?? []
-        let itemIDs = queryItems.filter { $0.name == "item" }.compactMap(\.value).filter { !$0.isEmpty }
+        let itemIDs = queryItems.filter { $0.name == "item-id" }.compactMap(\.value).filter { !$0.isEmpty }
         let sectionValue = queryItems.first { $0.name == "section" }?.value ?? ""
-        let afterID = queryItems.first { $0.name == "after" }?.value.flatMap { $0.isEmpty ? nil : $0 }
+        let afterID = queryItems.first { $0.name == "after-id" }?.value.flatMap { $0.isEmpty ? nil : $0 }
 
         guard !itemIDs.isEmpty else { return .failure(.missingItem) }
         guard !sectionValue.isEmpty else { return .failure(.missingSection) }
@@ -195,7 +195,7 @@ extension LauncherURIPayload {
         var version = LauncherURIPayload.version
         let itemIds: [String]
         let section: String?
-        let after: String?
+        let afterId: String?
         let outcome: String
     }
 }
@@ -214,7 +214,7 @@ extension LauncherURIResponse {
         let payload = LauncherURIPayload.ItemMove(
             itemIds: command?.itemIDs ?? [],
             section: command?.section.rawValue,
-            after: command?.afterID,
+            afterId: command?.afterID,
             outcome: code
         )
         guard case let .refused(error) = outcome else {

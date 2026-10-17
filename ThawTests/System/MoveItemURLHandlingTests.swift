@@ -29,7 +29,7 @@ extension SettingsURIResponseSuites {
                 ))
             }
             let capture = try await fake.send(
-                "thaw://move-item?item=com.example.a%3AItem-0&item=com.example.b%3AItem-0&section=visible&after=w&\(callback)&requestId=m1"
+                "thaw://move-item?item-id=com.example.a%3AItem-0&item-id=com.example.b%3AItem-0&section=visible&after-id=w&\(callback)&requestId=m1"
             )
 
             #expect(fake.moves.map(\.itemIDs) == [["com.example.a:Item-0", "com.example.b:Item-0"]])
@@ -41,7 +41,7 @@ extension SettingsURIResponseSuites {
             #expect(data["version"] as? Int == 1)
             #expect(data["itemIds"] as? [String] == ["com.example.a:Item-0", "com.example.b:Item-0"])
             #expect(data["section"] as? String == "visible")
-            #expect(data["after"] as? String == "w")
+            #expect(data["afterId"] as? String == "w")
             #expect(data["outcome"] as? String == "moved")
         }
 
@@ -57,7 +57,7 @@ extension SettingsURIResponseSuites {
                     targetOrder: ["a"]
                 ))
             }
-            let response = try await fake.send("thaw://move-item?item=a&section=visible&\(callback)").callbackResponse()
+            let response = try await fake.send("thaw://move-item?item-id=a&section=visible&\(callback)").callbackResponse()
 
             #expect(response["status"] as? String == "success")
             #expect((response["data"] as? [String: Any])?["outcome"] as? String == "unchanged")
@@ -67,20 +67,20 @@ extension SettingsURIResponseSuites {
         func refusedMoveReportsWhy() async throws {
             let fake = FakeLauncherEnvironment()
             fake.moveOutcome = { _ in .refused(.controlItem("thaw")) }
-            let response = try await fake.send("thaw://move-item?item=thaw&section=hidden&\(callback)").callbackResponse()
+            let response = try await fake.send("thaw://move-item?item-id=thaw&section=hidden&\(callback)").callbackResponse()
 
             #expect(response["status"] as? String == "error")
             #expect(response["error"] as? String == "itemNotMovable")
             #expect((response["details"] as? String)?.contains("thaw") == true)
             let data = try #require(response["data"] as? [String: Any])
             #expect(data["outcome"] as? String == "itemNotMovable")
-            #expect(data["after"] == nil)
+            #expect(data["afterId"] == nil)
         }
 
         @Test("A malformed move is refused before it reaches the move path")
         func malformedMoveNeverMoves() async throws {
             let fake = FakeLauncherEnvironment()
-            let response = try await fake.send("thaw://move-item?item=a&section=top&\(callback)").callbackResponse()
+            let response = try await fake.send("thaw://move-item?item-id=a&section=top&\(callback)").callbackResponse()
 
             #expect(fake.moves.isEmpty)
             #expect(response["error"] as? String == "invalidRequest")
@@ -92,8 +92,8 @@ extension SettingsURIResponseSuites {
         @Test("A move runs without a response mechanism, and a broadcast only acknowledges it")
         func moveRunsWithoutResponse() async throws {
             let fake = FakeLauncherEnvironment()
-            let silent = try await fake.send("thaw://move-item?item=a&section=hidden")
-            let broadcast = try await fake.send("thaw://move-item?item=a&section=hidden&broadcast=true")
+            let silent = try await fake.send("thaw://move-item?item-id=a&section=hidden")
+            let broadcast = try await fake.send("thaw://move-item?item-id=a&section=hidden&broadcast=true")
 
             #expect(fake.moves.count == 2)
             #expect(silent.openedURLs.isEmpty && silent.broadcasts.isEmpty)
@@ -112,7 +112,7 @@ extension SettingsURIResponseSuites {
             #expect(items.first?["id"] as? String == "com.example.app:Item-0")
             #expect(items.first?["name"] as? String == "Example")
             #expect(items.first?["section"] as? String == "hidden")
-            #expect(try LauncherURIRequest(url: #require(URL(string: "thaw://move-item?item=x&section=hidden")))?.operation == .moveItem)
+            #expect(try LauncherURIRequest(url: #require(URL(string: "thaw://move-item?item-id=x&section=hidden")))?.operation == .moveItem)
         }
 
         private func withScratchDefaults<T>(_ body: () throws -> T) throws -> T {

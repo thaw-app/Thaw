@@ -339,7 +339,7 @@ Floe (`com.thaw.floe`) is trusted without the authorization prompt and works whi
 | `thaw://activate-item` | `item-id` | Opens an item's menu, revealing it first if hidden |
 | `thaw://list-profiles` | `callback` or `broadcast` | Saved profiles and which one is active |
 | `thaw://apply-profile` | `profile-id` | Applies a saved profile and waits for its layout |
-| `thaw://move-item` | `item` (repeatable), `section`, optional `after` | Moves items into a section as a drop in Layout does |
+| `thaw://move-item` | `item-id` (repeatable), `section`, optional `after-id` | Moves items into a section as a drop in Layout does |
 
 ```bash
 open "thaw://list-items?callback=myapp://thaw-response&requestId=1"
@@ -436,15 +436,15 @@ An error response puts a stable code in `error` and a readable explanation in `d
 `move-item`:
 
 ```text
-thaw://move-item?item=<id>[&item=<id>...]&section=<visible|hidden|alwaysHidden>[&after=<id>]
+thaw://move-item?item-id=<id>[&item-id=<id>...]&section=<visible|hidden|alwaysHidden>[&after-id=<id>]
 ```
 
 ```bash
-open "thaw://move-item?item=com.example.app%3AItem-0&section=hidden&callback=myapp://thaw-response&requestId=5"
-open "thaw://move-item?item=com.example.a%3AItem-0&item=com.example.b%3AItem-0&section=visible&after=com.example.c%3AItem-0"
+open "thaw://move-item?item-id=com.example.app%3AItem-0&section=hidden&callback=myapp://thaw-response&requestId=5"
+open "thaw://move-item?item-id=com.example.a%3AItem-0&item-id=com.example.b%3AItem-0&section=visible&after-id=com.example.c%3AItem-0"
 ```
 
-`item` is an `id` from `list-items`, percent-encoded. Repeat it to move several items in one call; they keep the order given. `section` is matched without regard to case. Without `after`, the items go to the right end of the section. With `after`, they go right after that item, to its right as the Layout pane shows the section from left to right; `after` must already be in the target section and must not be one of the moved items.
+`item-id` is an `id` from `list-items`, percent-encoded. Repeat it to move several items in one call; they keep the order given. `section` is matched without regard to case. Without `after-id`, the items go to the right end of the section. With `after-id`, they go directly to the right of that item as the Layout pane shows the section. `after-id` must already be in the target section and must not be one of the moved items.
 
 Thaw checks every item before it moves any. One that is unknown, one of Thaw's own control items, part of a group (groups move as a whole in Layout), or unable to go to that section refuses the whole call, and `details` names it. `alwaysHidden` is refused while that section is turned off. The checked items then move in one pass through the same path a drop in Layout takes, so the bar is laid out once for the batch, and Thaw treats the move as a user edit: automatic layout passes waiting at the time give way to it.
 
@@ -457,15 +457,15 @@ Thaw checks every item before it moves any. One that is unknown, one of Thaw's o
 }
 ```
 
-`after` is included when it was given. `outcome` is `moved` (Thaw recorded the new order and started applying it; as with a drop in Layout, the bar can take a moment to catch up), `unchanged` (the items were already there), or one of these error codes:
+`afterId` is included when `after-id` was given. `outcome` is `moved` (Thaw recorded the new order and started applying it; as with a drop in Layout, the bar can take a moment to catch up), `unchanged` (the items were already there), or one of these error codes:
 
 | Code | Meaning |
 | ---- | ------- |
-| `invalidRequest` | No `item`, no or an unknown `section`, an item listed twice, or `after` naming a moved item |
+| `invalidRequest` | No `item-id`, no or an unknown `section`, an item listed twice, or `after-id` naming a moved item |
 | `itemUnavailable` | No item in Layout has that identifier |
 | `itemNotMovable` | A control item, a group member, or an item that cannot go to that section |
 | `sectionDisabled` | The target section is turned off |
-| `anchorUnavailable` | `after` is not in the target section |
+| `anchorUnavailable` | `after-id` is not in the target section |
 | `moveRefused` | The move path declined the move, for example because an item quit in the meantime or macOS would not assign it |
 
 `move-item` is not available in reduced mode.

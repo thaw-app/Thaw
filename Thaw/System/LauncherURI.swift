@@ -23,7 +23,7 @@ nonisolated enum LauncherURIOperation: String, CaseIterable, Sendable {
         case .listItems, .listProfiles, .getAppearance: nil
         case .activateItem: "item-id"
         case .applyProfile: "profile-id"
-        case .moveItem: "item"
+        case .moveItem: "item-id"
         }
     }
 }

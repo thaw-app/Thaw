@@ -41,7 +41,7 @@ struct LayoutBatchMoveExecutorTests {
     @Test("A batch is one user edit followed by a single call to the drop path")
     func batchIsOneUserEditAndOneCommit() async throws {
         let path = MovePath()
-        let outcome = try await path.executor.run(command("thaw://move-item?item=x&item=h2&item=a&section=hidden&after=h1"))
+        let outcome = try await path.executor.run(command("thaw://move-item?item-id=x&item-id=h2&item-id=a&section=hidden&after-id=h1"))
 
         #expect(path.events == ["input:userEdit", "commit"])
         let plan = try #require(path.plans.first)
@@ -53,7 +53,7 @@ struct LayoutBatchMoveExecutorTests {
     @Test("A refused batch never reaches the repair lane or the drop path")
     func refusedBatchDoesNothing() async throws {
         let path = MovePath()
-        let outcome = try await path.executor.run(command("thaw://move-item?item=h1&item=ghost&section=visible"))
+        let outcome = try await path.executor.run(command("thaw://move-item?item-id=h1&item-id=ghost&section=visible"))
 
         #expect(outcome == .refused(.unknownItem("ghost")))
         #expect(path.events.isEmpty)
@@ -62,7 +62,7 @@ struct LayoutBatchMoveExecutorTests {
     @Test("A move that changes nothing is reported without writing")
     func unchangedMoveDoesNotCommit() async throws {
         let path = MovePath()
-        let outcome = try await path.executor.run(command("thaw://move-item?item=c&section=visible"))
+        let outcome = try await path.executor.run(command("thaw://move-item?item-id=c&section=visible"))
 
         guard case .unchanged = outcome else {
             Issue.record("Expected unchanged, got \(outcome)")
@@ -75,7 +75,7 @@ struct LayoutBatchMoveExecutorTests {
     func declinedMoveIsRefused() async throws {
         let path = MovePath()
         path.accepts = false
-        let outcome = try await path.executor.run(command("thaw://move-item?item=h1&section=visible"))
+        let outcome = try await path.executor.run(command("thaw://move-item?item-id=h1&section=visible"))
 
         #expect(outcome == .refused(.moveRefused))
         #expect(path.events == ["input:userEdit", "commit"])
@@ -137,7 +137,7 @@ struct LayoutBatchMoveExecutorTests {
 
     @Test("Reduced mode does not answer move-item or list-items")
     func reducedModeRefusesTheLayoutActions() throws {
-        for request in ["move-item?item=a&section=hidden", "list-items?callback=x://y"] {
+        for request in ["move-item?item-id=a&section=hidden", "list-items?callback=x://y"] {
             #expect(try ReducedModeURLCommand(#require(URL(string: "thaw://\(request)"))) == nil)
         }
     }

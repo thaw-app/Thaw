@@ -53,7 +53,7 @@ struct LayoutBatchMoveTests {
 
     @Test("A single item, a section and an anchor parse")
     func parsesAllParameters() throws {
-        let parsed = try command("thaw://move-item?item=com.example.app:Item-0&section=hidden&after=com.example.other:Item-0")
+        let parsed = try command("thaw://move-item?item-id=com.example.app:Item-0&section=hidden&after-id=com.example.other:Item-0")
         #expect(parsed.itemIDs == ["com.example.app:Item-0"])
         #expect(parsed.section == .hidden)
         #expect(parsed.afterID == "com.example.other:Item-0")
@@ -61,14 +61,14 @@ struct LayoutBatchMoveTests {
 
     @Test("Repeated items keep the order given")
     func repeatedItemsKeepTheirOrder() throws {
-        let parsed = try command("thaw://move-item?item=z&item=x&item=y&section=visible")
+        let parsed = try command("thaw://move-item?item-id=z&item-id=x&item-id=y&section=visible")
         #expect(parsed.itemIDs == ["z", "x", "y"])
         #expect(parsed.afterID == nil)
     }
 
     @Test("Percent-encoded identifiers with colons and spaces are decoded")
     func decodesEncodedIdentifiers() throws {
-        let parsed = try command("thaw://move-item?item=com.example.app%3AMy%20Item&section=alwaysHidden&after=com.apple.x%3AWi-Fi%20Menu")
+        let parsed = try command("thaw://move-item?item-id=com.example.app%3AMy%20Item&section=alwaysHidden&after-id=com.apple.x%3AWi-Fi%20Menu")
         #expect(parsed.itemIDs == ["com.example.app:My Item"])
         #expect(parsed.section == .alwaysHidden)
         #expect(parsed.afterID == "com.apple.x:Wi-Fi Menu")
@@ -76,27 +76,27 @@ struct LayoutBatchMoveTests {
 
     @Test("The section name is matched case-insensitively")
     func sectionCaseIsIgnored() throws {
-        #expect(try command("thaw://move-item?item=a&section=AlwaysHidden").section == .alwaysHidden)
+        #expect(try command("thaw://move-item?item-id=a&section=AlwaysHidden").section == .alwaysHidden)
     }
 
     @Test("An empty anchor counts as absent")
     func emptyAnchorIsAbsent() throws {
-        #expect(try command("thaw://move-item?item=a&section=visible&after=").afterID == nil)
+        #expect(try command("thaw://move-item?item-id=a&section=visible&after-id=").afterID == nil)
     }
 
     @Test("Missing or malformed parameters are refused with the reason")
     func malformedRequestsAreRefused() throws {
         #expect(try error("thaw://move-item?section=visible") == .missingItem)
-        #expect(try error("thaw://move-item?item=&section=visible") == .missingItem)
-        #expect(try error("thaw://move-item?item=a") == .missingSection)
-        #expect(try error("thaw://move-item?item=a&section=") == .missingSection)
-        #expect(try error("thaw://move-item?item=a&section=top") == .unknownSection("top"))
-        #expect(try error("thaw://move-item?item=a&item=b&item=a&section=visible") == .duplicateItem("a"))
-        #expect(try error("thaw://move-item?item=a&item=b&section=visible&after=b") == .anchorIsMovedItem("b"))
+        #expect(try error("thaw://move-item?item-id=&section=visible") == .missingItem)
+        #expect(try error("thaw://move-item?item-id=a") == .missingSection)
+        #expect(try error("thaw://move-item?item-id=a&section=") == .missingSection)
+        #expect(try error("thaw://move-item?item-id=a&section=top") == .unknownSection("top"))
+        #expect(try error("thaw://move-item?item-id=a&item-id=b&item-id=a&section=visible") == .duplicateItem("a"))
+        #expect(try error("thaw://move-item?item-id=a&item-id=b&section=visible&after-id=b") == .anchorIsMovedItem("b"))
     }
 
     @Test("Every refusal has a stable code and names what is at fault", arguments: [
-        (LayoutBatchMoveError.missingItem, "invalidRequest", "item="),
+        (LayoutBatchMoveError.missingItem, "invalidRequest", "item-id="),
         (.missingSection, "invalidRequest", "section="),
         (.unknownSection("top"), "invalidRequest", "top"),
         (.duplicateItem("a"), "invalidRequest", "a"),
@@ -116,7 +116,7 @@ struct LayoutBatchMoveTests {
 
     @Test("A move without an anchor lands at the target's right end")
     func movesToTheEnd() throws {
-        let plan = try command("thaw://move-item?item=h1&section=visible").plan(in: Self.snapshot).get()
+        let plan = try command("thaw://move-item?item-id=h1&section=visible").plan(in: Self.snapshot).get()
         #expect(plan.source == .hidden)
         #expect(plan.target == .visible)
         #expect(plan.previousTargetOrder == ["a", "b", "c"])
@@ -126,13 +126,13 @@ struct LayoutBatchMoveTests {
 
     @Test("A move with an anchor lands right after it, to its right in Layout")
     func movesAfterTheAnchor() throws {
-        let plan = try command("thaw://move-item?item=h2&section=visible&after=a").plan(in: Self.snapshot).get()
+        let plan = try command("thaw://move-item?item-id=h2&section=visible&after-id=a").plan(in: Self.snapshot).get()
         #expect(plan.targetOrder == ["a", "h2", "b", "c"])
     }
 
     @Test("Several items from different sections land together in the order given")
     func batchKeepsTheGivenOrder() throws {
-        let plan = try command("thaw://move-item?item=x&item=c&item=h1&section=hidden&after=h2")
+        let plan = try command("thaw://move-item?item-id=x&item-id=c&item-id=h1&section=hidden&after-id=h2")
             .plan(in: Self.snapshot).get()
         #expect(plan.itemIDs == ["x", "c", "h1"])
         #expect(plan.source == .alwaysHidden)
@@ -142,24 +142,24 @@ struct LayoutBatchMoveTests {
 
     @Test("A reorder inside one section keeps that section as the source")
     func reorderInsideASection() throws {
-        let plan = try command("thaw://move-item?item=c&item=a&section=visible").plan(in: Self.snapshot).get()
+        let plan = try command("thaw://move-item?item-id=c&item-id=a&section=visible").plan(in: Self.snapshot).get()
         #expect(plan.source == .visible)
         #expect(plan.targetOrder == ["b", "c", "a"])
     }
 
     @Test("A move that leaves everything in place changes nothing")
     func noOpIsRecognised() throws {
-        let plan = try command("thaw://move-item?item=c&section=visible&after=b").plan(in: Self.snapshot).get()
+        let plan = try command("thaw://move-item?item-id=c&section=visible&after-id=b").plan(in: Self.snapshot).get()
         #expect(plan.changesNothing)
     }
 
     @Test("Unknown items and anchors are refused")
     func unknownIdentifiersAreRefused() throws {
         #expect(throws: LayoutBatchMoveError.unknownItem("nope")) {
-            try command("thaw://move-item?item=nope&section=visible").plan(in: Self.snapshot).get()
+            try command("thaw://move-item?item-id=nope&section=visible").plan(in: Self.snapshot).get()
         }
         #expect(throws: LayoutBatchMoveError.unknownAnchor("h1")) {
-            try command("thaw://move-item?item=a&section=visible&after=h1").plan(in: Self.snapshot).get()
+            try command("thaw://move-item?item-id=a&section=visible&after-id=h1").plan(in: Self.snapshot).get()
         }
     }
 
@@ -167,7 +167,7 @@ struct LayoutBatchMoveTests {
     func disabledSectionIsRefused() throws {
         let snapshot = LayoutBatchMoveSnapshot(sections: [.visible: [Self.entry("a")], .hidden: [Self.entry("h")]])
         #expect(throws: LayoutBatchMoveError.sectionDisabled(.alwaysHidden)) {
-            try command("thaw://move-item?item=a&section=alwaysHidden").plan(in: snapshot).get()
+            try command("thaw://move-item?item-id=a&section=alwaysHidden").plan(in: snapshot).get()
         }
     }
 
@@ -183,16 +183,16 @@ struct LayoutBatchMoveTests {
             .hidden: [Self.entry("h")],
         ])
         #expect(throws: LayoutBatchMoveError.controlItem("thaw")) {
-            try command("thaw://move-item?item=thaw&section=visible&after=app").plan(in: snapshot).get()
+            try command("thaw://move-item?item-id=thaw&section=visible&after-id=app").plan(in: snapshot).get()
         }
         #expect(throws: LayoutBatchMoveError.groupedItem("member")) {
-            try command("thaw://move-item?item=member&section=hidden").plan(in: snapshot).get()
+            try command("thaw://move-item?item-id=member&section=hidden").plan(in: snapshot).get()
         }
         #expect(throws: LayoutBatchMoveError.notMovable("clock", .hidden)) {
-            try command("thaw://move-item?item=clock&section=hidden").plan(in: snapshot).get()
+            try command("thaw://move-item?item-id=clock&section=hidden").plan(in: snapshot).get()
         }
         #expect(throws: LayoutBatchMoveError.notMovable("clock", .visible)) {
-            try command("thaw://move-item?item=clock&section=visible&after=app").plan(in: snapshot).get()
+            try command("thaw://move-item?item-id=clock&section=visible&after-id=app").plan(in: snapshot).get()
         }
     }
 
@@ -202,14 +202,14 @@ struct LayoutBatchMoveTests {
             .visible: [],
             .hidden: [Self.entry("h1", reordersInVisible: false), Self.entry("h2")],
         ])
-        let plan = try command("thaw://move-item?item=h1&section=hidden").plan(in: snapshot).get()
+        let plan = try command("thaw://move-item?item-id=h1&section=hidden").plan(in: snapshot).get()
         #expect(plan.targetOrder == ["h2", "h1"])
     }
 
     @Test("One invalid item refuses the whole batch and is named")
     func oneInvalidItemRefusesTheBatch() throws {
         #expect(throws: LayoutBatchMoveError.unknownItem("ghost")) {
-            try command("thaw://move-item?item=h1&item=ghost&item=x&section=visible").plan(in: Self.snapshot).get()
+            try command("thaw://move-item?item-id=h1&item-id=ghost&item-id=x&section=visible").plan(in: Self.snapshot).get()
         }
     }
 }
