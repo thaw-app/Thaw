@@ -45,6 +45,7 @@ and the Sparkle appcast, unless overridden with the `release_notes` input.
 
 ### Fixed
 
+- **The tint and shape step aside in every full-screen app.** With the menu bar set to stay shown, they slid down onto the app's toolbar, or covered the menu bar items. Reported by @Parakeet709 in [#1229](https://github.com/thaw-app/Thaw/issues/1229). By @diazdesandi.
 - **Switching profiles no longer turns off Always Hidden or "Move items that don't fit into Hidden".** A profile saved before you turned them on switched them back off whenever a display or Space changed. A profile can still turn Always Hidden on. By @diazdesandi.
 - **Zen Mode keeps hover from revealing hidden items until you turn it off.** The lock came undone the next time a section hid, so Zen Mode seemed to do nothing. By @diazdesandi.
 - **"Always show hidden items" stays on.** On a display where it's turned on, hidden items no longer hide again after a few seconds, and moving the pointer to another display no longer shows or hides them. By @malash.

@@ -134,8 +134,8 @@ final class MenuBarOverlayPanel: NSPanel {
     /// Debounce repeated show requests and clear them after positioning the panel.
     @Published var needsShow = false
 
-    /// Track per-display fullscreen bar absence separately; another app's fullscreen transition does not change Thaw's presentation options.
-    private var isSystemMenuBarAbsent = false
+    /// Track per-display fullscreen Spaces separately; another app's fullscreen transition does not change Thaw's presentation options.
+    private var showsFullscreenSpace = false
 
     /// The Mission Control probe, which owns the probe window and the state
     /// that decides when the overlay should fade.
@@ -211,6 +211,7 @@ final class MenuBarOverlayPanel: NSPanel {
         if let appState {
             subscriptions.append(observeMenuBarVisibility(appState: appState))
             subscriptions.append(observeConfigurationForWindowLevel(appState: appState))
+            subscriptions.append(observeActiveSpaceSamples(appState: appState))
         }
         cancellables = Set(subscriptions)
 
@@ -387,6 +388,18 @@ final class MenuBarOverlayPanel: NSPanel {
         return AnyCancellable { task.cancel() }
     }
 
+    /// AppState also samples the Space on app switches and clicks, which catches a fullscreen entry the notification missed or reported early.
+    private func observeActiveSpaceSamples(appState: AppState) -> AnyCancellable {
+        let task = Task { @MainActor [weak self, weak appState] in
+            let changes = Observations { appState?.activeSpace }
+            for await _ in changes {
+                guard let self else { return }
+                refreshSystemMenuBarPresence()
+            }
+        }
+        return AnyCancellable { task.cancel() }
+    }
+
     /// Skip frame reads during teardown (pipelines can still fire) or system hiding, when geometry is not on screen.
     private func refreshApplicationMenuFrame() {
         guard
@@ -403,7 +416,7 @@ final class MenuBarOverlayPanel: NSPanel {
         guard let menuBarManager = appState?.menuBarManager else { return true }
         return !menuBarManager.isMenuBarHiddenBySystem
             && !missionControlProbe.isActive
-            && !isSystemMenuBarAbsent
+            && !showsFullscreenSpace
     }
 
     private func applyVisibility() {
@@ -412,26 +425,13 @@ final class MenuBarOverlayPanel: NSPanel {
     }
 
     private func refreshSystemMenuBarPresence() {
-        // Entering or leaving a fullscreen Space changes which level keeps the panel under the items.
+        // A fullscreen Space shifts its content, this panel included, below a bar that stays shown, so the overlay steps aside there.
         updateWindowLevel()
-        let absent = Self.isSystemMenuBarHidden(on: owningScreen)
-        guard absent != isSystemMenuBarAbsent else { return }
-        isSystemMenuBarAbsent = absent
-        diagLog.debug("Overlay: system menu bar on display \(owningScreen.displayID) is \(absent ? "hidden" : "shown")")
+        let fullscreen = OverlaySpaceLookup.isFullscreenSpace(on: owningScreen)
+        guard fullscreen != showsFullscreenSpace else { return }
+        showsFullscreenSpace = fullscreen
+        diagLog.debug("Overlay: display \(owningScreen.displayID) shows a \(fullscreen ? "fullscreen" : "desktop") Space")
         applyVisibility()
-    }
-
-    /// Use fullscreen Space reveal state, defaulting to shown when unavailable.
-    /// macOS 27's main bar has no enumerable window even while visible.
-    private static func isSystemMenuBarHidden(on screen: NSScreen) -> Bool {
-        guard
-            let spaceID = Bridging.getCurrentSpaceID(for: screen.displayID),
-            Bridging.isSpaceFullscreen(spaceID)
-        else {
-            return false
-        }
-        let state = Bridging.menuBarRevealState(forSpace: spaceID)
-        return state.isAvailable && !state.isVisible && state.revealFraction <= 0
     }
 
     /// Read height at show time because it changes with the screen; retry unavailable geometry during display reconfiguration.
@@ -452,7 +452,7 @@ final class MenuBarOverlayPanel: NSPanel {
         let menuBarHeight = Self.overlayBarHeight(
             windowHeight: windowHeight,
             applicationMenuHeight: owningScreen.getApplicationMenuFrame()?.height,
-            isFullscreenSpace: Self.isFullscreenSpace(on: owningScreen),
+            isFullscreenSpace: OverlaySpaceLookup.isFullscreenSpace(on: owningScreen),
             readsOwnMenuFrame: owningScreen == NSScreen.main
         )
         if menuBarHeight != windowHeight {
@@ -520,16 +520,11 @@ final class MenuBarOverlayPanel: NSPanel {
             || config.current.backgroundKind != .none
         let newLevel = Self.overlayLevel(
             hasAppearance: hasAppearance,
-            isFullscreenSpace: Self.isFullscreenSpace(on: owningScreen)
+            isFullscreenSpace: OverlaySpaceLookup.isFullscreenSpace(on: owningScreen)
         )
         if level != newLevel {
             level = newLevel
         }
-    }
-
-    private static func isFullscreenSpace(on screen: NSScreen) -> Bool {
-        guard let spaceID = Bridging.getCurrentSpaceID(for: screen.displayID) else { return false }
-        return Bridging.isSpaceFullscreen(spaceID)
     }
 
     /// The bar height the panel is sized to. In a fullscreen Space the panel was seen 22 pt taller

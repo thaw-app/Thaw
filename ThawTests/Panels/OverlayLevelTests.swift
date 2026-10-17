@@ -33,3 +33,29 @@ struct OverlayLevelTests {
         #expect(MenuBarOverlayPanel.overlayLevel(hasAppearance: false, isFullscreenSpace: true) == .statusBar)
     }
 }
+
+@Suite("Appearance overlay Space lookup")
+struct OverlaySpaceLookupTests {
+    @Test("The display's own Space wins when the query answers")
+    func displaySpaceWins() {
+        #expect(OverlaySpaceLookup.resolvedSpaceID(displaySpace: 7, activeSpace: 3, ownsActiveMenuBar: true) == 7)
+        #expect(OverlaySpaceLookup.resolvedSpaceID(displaySpace: 7, activeSpace: 3, ownsActiveMenuBar: false) == 7)
+    }
+
+    @Test("A silent query on the active menu bar's screen falls back to the active Space")
+    func silentQueryFallsBack() {
+        #expect(OverlaySpaceLookup.resolvedSpaceID(displaySpace: nil, activeSpace: 3, ownsActiveMenuBar: true) == 3)
+        #expect(OverlaySpaceLookup.resolvedSpaceID(displaySpace: 0, activeSpace: 3, ownsActiveMenuBar: true) == 3)
+    }
+
+    @Test("Another screen has no fallback, since the active Space may not be its own")
+    func otherScreenHasNoFallback() {
+        #expect(OverlaySpaceLookup.resolvedSpaceID(displaySpace: nil, activeSpace: 3, ownsActiveMenuBar: false) == nil)
+        #expect(OverlaySpaceLookup.resolvedSpaceID(displaySpace: 0, activeSpace: 3, ownsActiveMenuBar: false) == nil)
+    }
+
+    @Test("No Space known at all reads as none")
+    func nothingKnown() {
+        #expect(OverlaySpaceLookup.resolvedSpaceID(displaySpace: nil, activeSpace: 0, ownsActiveMenuBar: true) == nil)
+    }
+}
