@@ -446,7 +446,7 @@ open "thaw://move-item?item-id=com.example.a%3AItem-0&item-id=com.example.b%3AIt
 
 `item-id` is an `id` from `list-items`, percent-encoded. Repeat it to move several items in one call; they keep the order given. `section` is matched without regard to case. Without `after-id`, the items go to the right end of the section. With `after-id`, they go directly to the right of that item as the Layout pane shows the section. `after-id` must already be in the target section and must not be one of the moved items.
 
-Thaw checks every item before it moves any. One that is unknown, one of Thaw's own control items, part of a group (groups move as a whole in Layout), or unable to go to that section refuses the whole call, and `details` names it. `alwaysHidden` is refused while that section is turned off. The checked items then move in one pass through the same path a drop in Layout takes, so the bar is laid out once for the batch, and Thaw treats the move as a user edit: automatic layout passes waiting at the time give way to it.
+Thaw checks every item before it moves any. If one is unknown, is one of Thaw's own control items, belongs to a group whose other members aren't listed too, or can't go to that section, the whole call is refused and `details` names that item. Groups move as a whole, as in Layout, so list every member to move one. `alwaysHidden` is refused while that section is turned off. The items then move in one pass, the same way a drop in Layout does, so the bar is laid out once. Thaw counts the move as a user edit, so automatic layout passes waiting at the time give way to it.
 
 ```json
 {
@@ -463,7 +463,7 @@ Thaw checks every item before it moves any. One that is unknown, one of Thaw's o
 | ---- | ------- |
 | `invalidRequest` | No `item-id`, no or an unknown `section`, an item listed twice, or `after-id` naming a moved item |
 | `itemUnavailable` | No item in Layout has that identifier |
-| `itemNotMovable` | A control item, a group member, or an item that cannot go to that section |
+| `itemNotMovable` | A control item, a group member listed without the rest of its group, or an item that cannot go to that section |
 | `sectionDisabled` | The target section is turned off |
 | `anchorUnavailable` | `after-id` is not in the target section |
 | `moveRefused` | The move path declined the move, for example because an item quit in the meantime or macOS would not assign it |

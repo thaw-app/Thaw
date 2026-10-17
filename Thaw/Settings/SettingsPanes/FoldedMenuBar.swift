@@ -26,6 +26,9 @@ struct FoldedMenuBar: View {
     /// Drag target published by LayoutBarContainer through layoutBarDragTargetChanged.
     @State private var dragTargetSection: MenuBarSection.Name?
 
+    /// The items selected across this surface's bars.
+    @State private var selection = LayoutSelectionModel()
+
     /// Fits "Always Hidden" at caption size in the shipped languages.
     private let gutterWidth: CGFloat = 92
 
@@ -59,7 +62,7 @@ struct FoldedMenuBar: View {
                         sortMenu(section)
                     }
                     .padding(.horizontal, ThawSpacing.tight)
-                    LayoutBar(imageCache: appState.imageCache, section: section, chrome: .card)
+                    LayoutBar(imageCache: appState.imageCache, section: section, chrome: .card, selection: selection)
                 }
                 .onReceive(
                     NotificationCenter.default.publisher(for: .layoutBarDragTargetChanged)
@@ -103,7 +106,7 @@ struct FoldedMenuBar: View {
             sectionName(section)
                 .frame(minWidth: gutterWidth, alignment: .leading)
                 .padding(.leading, 12)
-            LayoutBar(imageCache: appState.imageCache, section: section, chrome: .bare)
+            LayoutBar(imageCache: appState.imageCache, section: section, chrome: .bare, selection: selection)
             sortMenu(section)
                 .padding(.horizontal, 10)
         }

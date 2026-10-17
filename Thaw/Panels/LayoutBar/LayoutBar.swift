@@ -12,9 +12,10 @@ struct LayoutBar: View {
     private struct Representable: NSViewRepresentable {
         let appState: AppState
         let section: MenuBarSection.Name
+        let selection: LayoutSelectionModel?
 
         func makeNSView(context _: Context) -> LayoutBarScrollView {
-            LayoutBarScrollView(appState: appState, section: section)
+            LayoutBarScrollView(appState: appState, section: section, selection: selection)
         }
 
         func updateNSView(_: LayoutBarScrollView, context _: Context) {
@@ -35,6 +36,8 @@ struct LayoutBar: View {
 
     let section: MenuBarSection.Name
     var chrome: Chrome = .card
+    /// The pane's selection, shared by every section's bar.
+    var selection: LayoutSelectionModel?
 
     private var backgroundShape: some InsettableShape {
         RoundedRectangle(cornerRadius: ThawRadius.card, style: .continuous)
@@ -69,6 +72,6 @@ struct LayoutBar: View {
 
     private var mainContent: some View {
         // Concealed items may lack captures; keep placeholders draggable rather than hiding the interactive bar.
-        Representable(appState: appState, section: section)
+        Representable(appState: appState, section: section, selection: selection)
     }
 }

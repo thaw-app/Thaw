@@ -93,7 +93,7 @@ struct LayoutBatchMoveExecutorTests {
         #expect(snapshot.sections[.visible]?.map(\.id) == [first.uniqueIdentifier, second.uniqueIdentifier])
         let entry = snapshot.entry(first.uniqueIdentifier)
         #expect(entry?.isControlItem == false)
-        #expect(entry?.isGrouped == false)
+        #expect(entry?.groupID == nil)
     }
 
     @Test("A live plan becomes a Layout pane drop, marked as a batch when it moves several items")

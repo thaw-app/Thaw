@@ -31,14 +31,14 @@ struct LayoutBatchMoveTests {
     static func entry(
         _ id: String,
         control: Bool = false,
-        grouped: Bool = false,
+        group: String? = nil,
         assignable: Set<MenuBarSectionName> = Set(MenuBarSectionName.allCases),
         reordersInVisible: Bool = true
     ) -> Entry {
         Entry(
             id: id,
             isControlItem: control,
-            isGrouped: grouped,
+            groupID: group,
             assignableSections: assignable,
             reordersInVisible: reordersInVisible
         )
@@ -177,7 +177,8 @@ struct LayoutBatchMoveTests {
             .visible: [
                 Self.entry("thaw", control: true),
                 Self.entry("clock", assignable: [.visible], reordersInVisible: false),
-                Self.entry("member", grouped: true),
+                Self.entry("member", group: "g"),
+                Self.entry("partner", group: "g"),
                 Self.entry("app"),
             ],
             .hidden: [Self.entry("h")],
@@ -210,6 +211,30 @@ struct LayoutBatchMoveTests {
     func oneInvalidItemRefusesTheBatch() throws {
         #expect(throws: LayoutBatchMoveError.unknownItem("ghost")) {
             try command("thaw://move-item?item-id=h1&item-id=ghost&item-id=x&section=visible").plan(in: Self.snapshot).get()
+        }
+    }
+
+    @Test("A move can land at the start of the section; only an after placement names an anchor")
+    func placementAtStart() throws {
+        let startMove = LayoutBatchMove(itemIDs: ["h1", "x"], section: .visible, placement: .start)
+        let plan = try startMove.plan(in: Self.snapshot).get()
+        #expect(plan.targetOrder == ["h1", "x", "a", "b", "c"])
+        #expect(startMove.afterID == nil)
+        #expect(LayoutBatchMove(itemIDs: ["a"], section: .hidden, placement: .after("h1")).afterID == "h1")
+        #expect(try command("thaw://move-item?item-id=a&section=hidden").placement == .end)
+    }
+
+    @Test("A group moves when every member is listed, and refuses when one is left out")
+    func groupsMoveWhole() throws {
+        let snapshot = LayoutBatchMoveSnapshot(sections: [
+            .visible: [Self.entry("g1", group: "g"), Self.entry("a"), Self.entry("g2", group: "g")],
+            .hidden: [Self.entry("h")],
+        ])
+        let plan = try command("thaw://move-item?item-id=g1&item-id=g2&section=hidden&after-id=h").plan(in: snapshot).get()
+        #expect(plan.targetOrder == ["h", "g1", "g2"])
+        #expect(snapshot.members(ofGroup: "g") == ["g1", "g2"])
+        #expect(throws: LayoutBatchMoveError.groupedItem("g2")) {
+            try command("thaw://move-item?item-id=a&item-id=g2&section=hidden").plan(in: snapshot).get()
         }
     }
 }

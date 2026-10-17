@@ -8,7 +8,7 @@
 import AppKit
 import MenuBarModel
 
-/// Carries out a parsed move of one or more items as one drop in the Layout pane would.
+/// Carries out a move of one or more items as one Layout drop; thaw://move-item and the pane's selection share it.
 ///
 /// Every item is checked before anything is written, and the whole batch goes to the
 /// move path in a single call, so the bar is re-laid once rather than once per item.
@@ -61,22 +61,26 @@ extension LayoutBatchMoveExecutor {
     static func snapshot(appState: AppState) -> LayoutBatchMoveSnapshot {
         let systemItemHiding = appState.settings.advanced.enableExperimentalSystemItemHiding
         let reorderable = systemItemHiding && LayoutBarPaddingView.allowsAnchoredSystemItemReordering(appState: appState)
-        return LayoutBatchMoveSnapshot(sections: editorItems(appState: appState).mapValues { items in
-            let grouped = Set(appState.itemGroupManager.resolvedGroups(for: items)
-                .filter { $0.memberIndices.count > 1 }
-                .flatMap(\.memberIndices))
-            return items.enumerated().map { index, item in
+        let sections = editorItems(appState: appState)
+        return LayoutBatchMoveSnapshot(sections: Dictionary(uniqueKeysWithValues: sections.map { section, items in
+            var groupAtIndex = [Int: String]()
+            for group in appState.itemGroupManager.resolvedGroups(for: items) where group.memberIndices.count > 1 {
+                for index in group.memberIndices {
+                    groupAtIndex[index] = "\(section.rawValue):\(group.origin)"
+                }
+            }
+            return (section, items.enumerated().map { index, item in
                 LayoutBatchMoveSnapshot.Entry(
                     id: item.uniqueIdentifier,
                     isControlItem: item.isControlItem,
-                    isGrouped: grouped.contains(index),
+                    groupID: groupAtIndex[index],
                     assignableSections: Set(MenuBarSectionName.allCases.filter {
                         MenuBarBackendProvider.current.canAssign(item, to: $0, experimentalSystemItemHiding: systemItemHiding)
                     }),
                     reordersInVisible: item.isPhysicallyOrderable(experimentalSystemItemHiding: reorderable)
                 )
-            }
-        })
+            })
+        }))
     }
 
     /// The plan as a Layout pane drop, read again so it acts on the items as they are now.

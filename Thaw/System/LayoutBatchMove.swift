@@ -48,7 +48,7 @@ nonisolated enum LayoutBatchMoveError: Error, Equatable, Sendable {
         case let .sectionDisabled(section): "The \(section.rawValue) section is turned off"
         case let .unknownItem(id): "No item in Layout has the identifier \(id)"
         case let .controlItem(id): "Item \(id) is one of Thaw's own control items"
-        case let .groupedItem(id): "Item \(id) belongs to a group, which moves as a whole in Layout"
+        case let .groupedItem(id): "Item \(id) belongs to a group; list every member to move the group as a whole"
         case let .notMovable(id, section): "Item \(id) cannot move to \(section.rawValue)"
         case let .unknownAnchor(id): "No item in the target section has the identifier \(id)"
         case .moveRefused: "The move path declined the move; an item may have quit or could not be assigned"
@@ -61,7 +61,8 @@ nonisolated struct LayoutBatchMoveSnapshot: Equatable, Sendable {
     struct Entry: Equatable, Sendable {
         let id: String
         let isControlItem: Bool
-        let isGrouped: Bool
+        /// The group the item belongs to in Layout, nil when it is in none.
+        let groupID: String?
         /// The sections the item may be assigned to.
         let assignableSections: Set<MenuBarSectionName>
         /// Whether the item can change place inside Visible.
@@ -77,6 +78,11 @@ nonisolated struct LayoutBatchMoveSnapshot: Equatable, Sendable {
 
     func entry(_ id: String) -> Entry? {
         sections.values.lazy.flatMap(\.self).first { $0.id == id }
+    }
+
+    /// Every member of the group, in all sections.
+    func members(ofGroup groupID: String) -> [String] {
+        sections.values.flatMap(\.self).filter { $0.groupID == groupID }.map(\.id)
     }
 }
 
@@ -96,16 +102,28 @@ nonisolated struct LayoutBatchMovePlan: Equatable, Sendable {
     }
 }
 
-/// A parsed thaw://move-item URL.
+/// A move of one or more items, parsed from a thaw://move-item URL or made by the Layout pane.
 ///
 ///     thaw://move-item?item-id=<id>[&item-id=<id>...]&section=<visible|hidden|alwaysHidden>[&after-id=<id>]
 ///
 /// The items land in the order given, right after the after-id item as the Layout pane shows the
 /// section from left to right, or at the section's right end when after-id is absent.
 nonisolated struct LayoutBatchMove: Equatable, Sendable {
+    /// Where the items land in the target section, read left to right.
+    enum Placement: Equatable, Sendable {
+        case start
+        case end
+        case after(String)
+    }
+
     let itemIDs: [String]
     let section: MenuBarSectionName
-    let afterID: String?
+    let placement: Placement
+
+    /// The anchor item, when the items land right after one.
+    var afterID: String? {
+        if case let .after(id) = placement { id } else { nil }
+    }
 
     static func parse(_ url: URL) -> Result<Self, LayoutBatchMoveError> {
         let queryItems = URLComponents(url: url, resolvingAgainstBaseURL: false)?.queryItems ?? []
@@ -127,7 +145,7 @@ nonisolated struct LayoutBatchMove: Equatable, Sendable {
         if let afterID, itemIDs.contains(afterID) {
             return .failure(.anchorIsMovedItem(afterID))
         }
-        return .success(Self(itemIDs: itemIDs, section: section, afterID: afterID))
+        return .success(Self(itemIDs: itemIDs, section: section, placement: afterID.map(Placement.after) ?? .end))
     }
 
     /// Checks every item against the snapshot first, then works out the target order.
@@ -141,7 +159,7 @@ nonisolated struct LayoutBatchMove: Equatable, Sendable {
             guard let entry = snapshot.entry(id), let current = snapshot.section(of: id) else {
                 return .failure(.unknownItem(id))
             }
-            if let refusal = refusal(for: entry, from: current) {
+            if let refusal = refusal(for: entry, from: current, in: snapshot) {
                 return .failure(refusal)
             }
             if current != section, source == nil {
@@ -151,8 +169,13 @@ nonisolated struct LayoutBatchMove: Equatable, Sendable {
 
         let moved = Set(itemIDs)
         var order = previous.map(\.id).filter { !moved.contains($0) }
-        var index = order.endIndex
-        if let afterID {
+        let index: Int
+        switch placement {
+        case .start:
+            index = order.startIndex
+        case .end:
+            index = order.endIndex
+        case let .after(afterID):
             guard let anchor = order.firstIndex(of: afterID) else {
                 return .failure(.unknownAnchor(afterID))
             }
@@ -168,12 +191,16 @@ nonisolated struct LayoutBatchMove: Equatable, Sendable {
         ))
     }
 
-    /// The same rules a drop in the Layout pane follows, except that control items never move.
-    private func refusal(for entry: LayoutBatchMoveSnapshot.Entry, from current: MenuBarSectionName) -> LayoutBatchMoveError? {
+    /// A Layout drop's rules, except that control items never move and a group moves only whole.
+    private func refusal(
+        for entry: LayoutBatchMoveSnapshot.Entry,
+        from current: MenuBarSectionName,
+        in snapshot: LayoutBatchMoveSnapshot
+    ) -> LayoutBatchMoveError? {
         if entry.isControlItem {
             return .controlItem(entry.id)
         }
-        if entry.isGrouped {
+        if let groupID = entry.groupID, !Set(itemIDs).isSuperset(of: snapshot.members(ofGroup: groupID)) {
             return .groupedItem(entry.id)
         }
         let movable = current == section

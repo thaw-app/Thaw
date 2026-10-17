@@ -1186,6 +1186,9 @@
     "%@, removed while hidden" : {
 
     },
+    "%@, selected" : {
+      "comment" : "VoiceOver value of a selected Layout item: its section name, then that it is selected"
+    },
     "%@. Move them to Hidden and they open from the %@ Bar instead." : {
       "localizations" : {
         "en" : {
@@ -1587,6 +1590,29 @@
     "%lld" : {
 
     },
+    "%lld Items Selected" : {
+      "comment" : "Header of the menu for several selected Layout items",
+      "localizations" : {
+        "en" : {
+          "variations" : {
+            "plural" : {
+              "one" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld Item Selected"
+                }
+              },
+              "other" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld Items Selected"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "%lld drags" : {
 
     },
@@ -1729,6 +1755,29 @@
     },
     "%lld items in this group aren’t in the menu bar right now. Open the missing apps, then try again." : {
       "comment" : "Reason a group move was refused: several members missing"
+    },
+    "%lld items selected" : {
+      "comment" : "VoiceOver announcement of how many items are selected in the Layout pane",
+      "localizations" : {
+        "en" : {
+          "variations" : {
+            "plural" : {
+              "one" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld item selected"
+                }
+              },
+              "other" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld items selected"
+                }
+              }
+            }
+          }
+        }
+      }
     },
     "%lld layout updates" : {
 
@@ -3273,6 +3322,9 @@
     },
     "Add to Group" : {
 
+    },
+    "Add to Selection" : {
+      "comment" : "VoiceOver action that adds a Layout item to the selection"
     },
     "Adds Quit %@ to the bottom of the %@ menu you get by right-clicking the menu bar." : {
       "localizations" : {
@@ -12400,6 +12452,9 @@
           }
         }
       }
+    },
+    "Deselect" : {
+      "comment" : "VoiceOver action that removes a Layout item from the selection"
     },
     "Desktop %lld" : {
       "comment" : "Label for a desktop Space, numbered as Mission Control numbers it."
@@ -23067,6 +23122,29 @@
     "Move %@" : {
 
     },
+    "Move %lld Items to %@" : {
+      "comment" : "Menu entry that moves every selected Layout item to a section",
+      "localizations" : {
+        "en" : {
+          "variations" : {
+            "plural" : {
+              "one" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "Move %1$lld Item to %2$@"
+                }
+              },
+              "other" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "Move %1$lld Items to %2$@"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "Move All %@ Items to %@" : {
       "localizations" : {
         "en" : {
@@ -25234,6 +25312,9 @@
     },
     "Nothing was changed. The positions in use now could not be backed up first, so the restore would not have been undoable. %@" : {
 
+    },
+    "Nothing was moved. An item may have quit or changed since you selected it. Select the items again and retry." : {
+      "comment" : "Explanation shown when a move of several selected Layout items was refused"
     },
     "Nothing was moved: %@ is not managing the menu bar yet. Try again once your menu bar items appear." : {
 
@@ -31176,6 +31257,9 @@
     "Select “group.com.apple.controlcenter.plist” to let %@ hide apps the way System Settings does. %@ is granted access to this one file only." : {
 
     },
+    "Selection cleared" : {
+      "comment" : "VoiceOver announcement when the Layout pane's selection is cleared"
+    },
     "Separate looks for Light and Dark Mode" : {
 
     },
@@ -36058,6 +36142,9 @@
     },
     "The section dividers are not on the menu bar yet" : {
 
+    },
+    "The selected items couldn’t move to %@" : {
+      "comment" : "Title shown when a move of several selected Layout items was refused"
     },
     "The system's layout table" : {
 
