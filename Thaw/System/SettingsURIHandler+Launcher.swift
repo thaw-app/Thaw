@@ -21,9 +21,11 @@ extension SettingsURIHandler {
         var activateItem: (String) async -> MenuBarItemActivationOutcome
         /// Applies a saved profile and reports whether its layout half ran.
         var applyProfile: (UUID) async throws -> Bool
+        /// Moves items as a drop in the Layout pane would; see LayoutBatchMoveExecutor.
+        var moveItems: (LayoutBatchMove) async -> LayoutBatchMoveOutcome
     }
 
-    /// Handles the four launcher operations; the caller has already passed the whitelist gate.
+    /// Handles the launcher operations; the caller has already passed the whitelist gate.
     /// Lists need a response mechanism. The two actions run without one, as other thaw:// actions do.
     static func handleLauncherRequest(
         _ request: LauncherURIRequest,
@@ -65,6 +67,8 @@ extension SettingsURIHandler {
                     requestId: requestId
                 )
             }
+        case .moveItem:
+            response = await moveItemResponse(request.move, environment: environment, requestId: requestId)
         }
 
         deliverLauncherResponse(response, for: request, requestId: requestId)
@@ -81,7 +85,7 @@ extension SettingsURIHandler {
             listItemsResponse(environment: environment, requestId: requestId)
         case .getAppearance:
             LauncherURIResponse.success(environment.appearance(), operation: .getAppearance, requestId: requestId)
-        case .listProfiles, .activateItem, .applyProfile:
+        case .listProfiles, .activateItem, .applyProfile, .moveItem:
             listProfilesResponse(environment: environment, requestId: requestId)
         }
     }
@@ -162,6 +166,25 @@ extension SettingsURIHandler {
         return LauncherURIResponse.profileApplication(profileId: identifier, outcome: outcome, requestId: requestId)
     }
 
+    private static func moveItemResponse(
+        _ move: Result<LayoutBatchMove, LayoutBatchMoveError>?,
+        environment: LauncherEnvironment,
+        requestId: String
+    ) async -> [String: Any] {
+        let command = try? move?.get()
+        let outcome: LayoutBatchMoveOutcome = switch move {
+        case let .success(command)?: await environment.moveItems(command)
+        case let .failure(error)?: .refused(error)
+        case nil: .refused(.missingItem)
+        }
+        if case let .refused(error) = outcome {
+            diagLog.warning("Launcher URI move-item: refused, \(error.details)")
+        } else {
+            diagLog.info("Launcher URI move-item: \(command?.itemIDs ?? []) -> \(command?.section.rawValue ?? "?"): \(outcome)")
+        }
+        return LauncherURIResponse.itemMove(outcome, command: command, requestId: requestId)
+    }
+
     /// Same split as thaw://get: the full response goes only to the callback;
     /// a broadcast, which any process can hear, gets an acknowledgement.
     private static func deliverLauncherResponse(
@@ -210,7 +233,8 @@ extension SettingsURIHandler.LauncherEnvironment {
                 let manager = appState.profileManager
                 try await manager.applyProfileAwaitingLayout(id: profileID, to: appState)
                 return !manager.layoutDidNotRun
-            }
+            },
+            moveItems: { await LayoutBatchMoveExecutor(appState: appState).run($0) }
         )
     }
 }
