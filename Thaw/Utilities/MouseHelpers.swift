@@ -214,6 +214,21 @@ nonisolated enum MouseHelpers {
         return point
     }
 
+    /// Returns a Boolean value that indicates whether a point lies on none of
+    /// the given displays.
+    ///
+    /// A move event posted at such a point still moves the cursor, and the
+    /// window server clamps it to a display edge. For a parked item that is
+    /// the leftmost edge, under the Apple menu.
+    ///
+    /// - Parameters:
+    ///   - point: The point in global display coordinates.
+    ///   - displayBounds: The bounds of the available displays in global
+    ///     display coordinates.
+    static func isOffEveryDisplay(_ point: CGPoint, displayBounds: [CGRect]) -> Bool {
+        !displayBounds.contains { $0.contains(point) }
+    }
+
     /// Returns the cursor to `point` after an operation that moved it.
     ///
     /// An unconditional warp. The version that preferred the user's own position came
@@ -292,10 +307,27 @@ nonisolated enum MouseHelpers {
     }
 
     /// Pure cursor-ownership decision used by move and batch restoration.
+    ///
+    /// - Parameters:
+    ///   - physicalPointerInputOccurred: Whether the user moved, clicked or
+    ///     scrolled after the operation saved the cursor position.
+    ///   - postedEventsOffEveryDisplay: Whether the operation posted an event
+    ///     at a point that lies on no display. The window server put the
+    ///     cursor on a display edge for it, so where the cursor is now is
+    ///     Thaw's doing and any movement since is relative to that edge
+    ///     (#318). The saved position wins even over physical input.
+    ///   - tookCursorOwnership: Whether the operation hid the cursor and
+    ///     promised to put it back. One that didn't still has to undo an
+    ///     event posted off every display.
     static func shouldRestoreSavedCursorPosition(
-        physicalPointerInputOccurred: Bool
+        physicalPointerInputOccurred: Bool,
+        postedEventsOffEveryDisplay: Bool = false,
+        tookCursorOwnership: Bool = true
     ) -> Bool {
-        !physicalPointerInputOccurred
+        if postedEventsOffEveryDisplay {
+            return true
+        }
+        return tookCursorOwnership && !physicalPointerInputOccurred
     }
 
     /// Returns a Boolean value that indicates whether the last scroll

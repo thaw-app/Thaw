@@ -289,4 +289,26 @@ struct MoveEventCoordinatesTests {
             #expect(!strategy.keepsPlannedReleasePoint(targetDisposition: .selectedDisplay))
         }
     }
+
+    /// #318: the parked teleport's press and release at x -3751 put the real
+    /// cursor on the left display edge, so the transaction has to know it
+    /// posted there even if a later attempt only touched on-screen points.
+    @MainActor
+    @Test("The cursor trace keeps an off-display note across attempts")
+    func cursorTraceKeepsOffDisplayNote() {
+        let displays = [CGRect(x: 0, y: 0, width: 1920, height: 1080)]
+        let trace = MenuBarItemManager.MoveCursorTrace()
+
+        trace.notePostedEvents(at: [CGPoint(x: 1505, y: 15)], displayBounds: displays)
+        #expect(!trace.postedEventsOffEveryDisplay)
+
+        trace.notePostedEvents(
+            at: [CGPoint(x: -3751, y: 15), CGPoint(x: -3751, y: 15)],
+            displayBounds: displays
+        )
+        #expect(trace.postedEventsOffEveryDisplay)
+
+        trace.notePostedEvents(at: [CGPoint(x: 1505, y: 15)], displayBounds: displays)
+        #expect(trace.postedEventsOffEveryDisplay)
+    }
 }
