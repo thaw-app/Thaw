@@ -31,16 +31,12 @@ enum SettledSectionOrder {
         section: MenuBarSectionName,
         desiredOrder: [String],
         liveItems: [MenuBarItem],
-        dividers: ControlItemPair?
+        dividers: ControlItemPair?,
+        table: StoredWeights.Table = .read()
     ) -> Bool {
         guard section != .visible,
-              let (pair, items) = ControlOrderRules.withDividers(liveItems, dividers)
+              let (ordered, weights, items) = ObservedMembership.storedReading(liveItems: liveItems, dividers: dividers, table: table)
         else { return false }
-        let weights = StoredWeights(among: items)
-        guard weights.isAvailable else { return false }
-        let reading = ObservedMembership.DividerWeights(among: items, dividers: pair, weight: weights.weight(of:))
-            .reading(alwaysHiddenEnabled: pair.alwaysHidden != nil)
-        guard case let .ordered(ordered) = reading else { return false }
         let members = desiredOrder.map { identifier in
             items.first { $0.uniqueIdentifier == identifier }.flatMap(weights.weight(of:))
         }

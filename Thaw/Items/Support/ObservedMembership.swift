@@ -113,3 +113,22 @@ nonisolated enum ObservedMembership {
             .map { ($0.key, $0.value.map(\.item)) }
     }
 }
+
+extension ObservedMembership {
+    /// The live items' stored weights and the dividers they read as, taking the dividers from the pair when the cache dropped them.
+    /// Nil when the table can't be read, or the dividers are missing or out of order.
+    @MainActor
+    static func storedReading(
+        liveItems: [MenuBarItem],
+        dividers: ControlItemPair?,
+        table: StoredWeights.Table = .read()
+    ) -> (dividers: Dividers, weights: StoredWeights, items: [MenuBarItem])? {
+        guard let (pair, items) = ControlOrderRules.withDividers(liveItems, dividers) else { return nil }
+        let weights = StoredWeights(among: items, table: table)
+        guard weights.isAvailable else { return nil }
+        let reading = DividerWeights(among: items, dividers: pair, weight: weights.weight(of:))
+            .reading(alwaysHiddenEnabled: pair.alwaysHidden != nil)
+        guard case let .ordered(ordered) = reading else { return nil }
+        return (ordered, weights, items)
+    }
+}

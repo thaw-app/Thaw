@@ -148,12 +148,22 @@ enum MenuBarSearchItemActions {
         committed: Bool,
         appState: AppState
     ) {
-        let current = appState.itemManager.managedItem(withTag: item.tag) ?? item
+        let manager = appState.itemManager
+        let current = manager.managedItem(withTag: item.tag) ?? item
+        let observed = MoveLanding.observedSection(
+            of: current,
+            liveItems: manager.itemCache.managedItems,
+            dividers: manager.lastKnownControlItems
+        )
         let message = MoveResultMessage.make(
             itemName: item.displayName,
             sectionTitle: title(for: section),
             committed: committed,
-            landed: appState.menuBarManager.sectionController.section(for: current) == section
+            landed: MoveLanding.landed(
+                in: section,
+                assigned: appState.menuBarManager.sectionController.section(for: current),
+                observed: observed
+            )
         )
         ThawHUD.show(symbol: message.symbol, text: "\(message.text)")
     }
