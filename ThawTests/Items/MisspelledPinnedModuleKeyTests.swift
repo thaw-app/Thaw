@@ -33,7 +33,7 @@ struct MisspelledPinnedModuleKeyTests {
     func prunedWithoutASecondLaunch() throws {
         let suite = "MisspelledPinnedModuleKeyTests.\(UUID().uuidString)"
         let defaults = try #require(UserDefaults(suiteName: suite))
-        defer { defaults.removePersistentDomain(forName: suite) }
+        defer { ScratchDefaults.remove(suite) }
         var removed = Set<String>()
 
         let pruned = PositionStoreHygiene.prune(

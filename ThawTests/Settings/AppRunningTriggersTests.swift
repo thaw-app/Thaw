@@ -22,7 +22,7 @@ struct AppRunningTriggersTests {
         let manager = AppRunningTriggersManager(store: store)
         defer {
             manager.stop()
-            store.removePersistentDomain(forName: suite)
+            ScratchDefaults.remove(suite)
         }
         try body(manager, store)
     }
@@ -227,7 +227,7 @@ struct AppRunningTriggersTests {
         let manager = AppRunningTriggersManager(store: store)
         defer {
             manager.stop()
-            store.removePersistentDomain(forName: suite)
+            ScratchDefaults.remove(suite)
         }
         let center = NotificationCenter()
         var applications: [pid_t: String] = [:]

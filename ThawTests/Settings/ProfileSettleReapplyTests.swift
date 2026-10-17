@@ -15,12 +15,10 @@ import Testing
 struct ProfileSettleReapplyTests {
     private let work = UUID()
     private let home = UUID()
+    private let suites = ScratchSuites(prefix: "ProfileSettleReapplyTests")
 
     private func freshDefaults() -> UserDefaults {
-        let name = "ProfileSettleReapplyTests.\(UUID().uuidString)"
-        let defaults = UserDefaults(suiteName: name)!
-        defaults.removePersistentDomain(forName: name)
-        return defaults
+        suites.make()!
     }
 
     @Test("No active profile, nothing to apply")

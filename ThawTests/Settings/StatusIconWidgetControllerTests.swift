@@ -12,10 +12,10 @@ import Testing
 @MainActor
 @Suite("Status icon widget controller", .serialized)
 struct StatusIconWidgetControllerTests {
+    private let suites = ScratchSuites(prefix: "StatusIconWidgetControllerTests")
+
     private func makeController() throws -> StatusIconWidgetController {
-        let suiteName = "StatusIconWidgetControllerTests.\(UUID().uuidString)"
-        let defaults = try #require(UserDefaults(suiteName: suiteName))
-        return StatusIconWidgetController(defaults: defaults)
+        try StatusIconWidgetController(defaults: #require(suites.make()))
     }
 
     @Test("Sampler readings flow into live samples and the published state")

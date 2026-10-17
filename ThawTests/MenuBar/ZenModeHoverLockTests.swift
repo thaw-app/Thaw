@@ -20,7 +20,7 @@ struct ZenModeHoverLockTests {
         Defaults.store = store
         defer {
             Defaults.store = previousStore
-            store.removePersistentDomain(forName: suite)
+            ScratchDefaults.remove(suite)
         }
         try body(AppState().menuBarManager)
     }

@@ -133,7 +133,7 @@ struct ThawBarPointerPlacementTests {
         Defaults.store = store
         defer {
             Defaults.store = previousStore
-            store.removePersistentDomain(forName: suite)
+            ScratchDefaults.remove(suite)
             NSApp.setActivationPolicy(previousPolicy)
         }
         let fixture = try PlacementFixture(location: location, showsIcon: showsIcon)

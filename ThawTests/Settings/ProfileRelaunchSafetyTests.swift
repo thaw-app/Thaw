@@ -73,7 +73,7 @@ struct ProfileRelaunchSafetyTests {
         Defaults.store = scratch
         defer {
             Defaults.store = previous
-            scratch.removePersistentDomain(forName: suiteName)
+            ScratchDefaults.remove(suiteName)
         }
 
         let displaySettings = DisplaySettingsManager()
