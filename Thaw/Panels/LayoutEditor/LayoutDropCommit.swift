@@ -18,6 +18,9 @@ enum LayoutDropCommit {
         let target: MenuBarSection.Name
         let previousTargetOrder: [MenuBarItem]
         let targetOrder: [MenuBarItem]
+        /// Several separate items that land in targetOrder. Without it, several items are a group,
+        /// which lands in the target's stored order.
+        var isBatch = false
     }
 
     /// Posts the reason and returns true when the drop cannot be carried out.
