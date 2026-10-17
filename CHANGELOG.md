@@ -38,6 +38,7 @@ and the Sparkle appcast, unless overridden with the `release_notes` input.
 - **One choice for how a spacing change applies.** "When spacing changes" asks first, restarts menu bar apps right away, or waits until they restart. It replaces a picker and a switch and keeps what you had set. "Save spacing to every profile" is a switch now too. By @diazdesandi.
 - **The spacing sliders fill out from Default,** so you can see whether you made spacing tighter or wider. By @diazdesandi.
 - **The buttons in triggers and the Recovery window match the rest of Settings.** By @diazdesandi.
+- **The Nightly update channel is called Alpha,** matching the version numbers it delivers. You stay on it. By @diazdesandi.
 
 ### Fixed
 

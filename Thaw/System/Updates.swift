@@ -15,7 +15,7 @@ nonisolated enum UpdateChannel: String, CaseIterable, Identifiable {
     case stable
     /// Development / RC builds (sparkle:channel = beta).
     case beta
-    /// Nightly / macOS 27 preview builds (sparkle:channel = alpha).
+    /// Alpha builds for macOS 27 (sparkle:channel = alpha).
     case alpha
 
     /// Stable carries incompatible builds, so offering it would stop updates.
@@ -32,7 +32,7 @@ nonisolated enum UpdateChannel: String, CaseIterable, Identifiable {
         switch self {
         case .stable: "Stable"
         case .beta: "Beta"
-        case .alpha: "Nightly"
+        case .alpha: "Alpha"
         }
     }
 

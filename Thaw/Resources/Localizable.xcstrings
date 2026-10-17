@@ -3832,6 +3832,9 @@
     "Allows items such as Clock, Control Center, and Siri to be moved into hidden sections." : {
 
     },
+    "Alpha" : {
+      "comment" : "A label for the \"Alpha\" segment in the update channel picker."
+    },
     "Always Hidden" : {
 
     },
@@ -9023,7 +9026,7 @@
     "Choose Another" : {
 
     },
-    "Choose Beta or Nightly updates. Automatic updates can be Off, Check only, or Check and download." : {
+    "Choose Beta or Alpha updates. Automatic updates can be Off, Check only, or Check and download." : {
 
     },
     "Choose Icon…" : {
@@ -23769,9 +23772,6 @@
     },
     "Next Track" : {
 
-    },
-    "Nightly" : {
-      "comment" : "A label for the \"Nightly\" segment in the update channel picker."
     },
     "Nightly channel · Last checked %@" : {
 
