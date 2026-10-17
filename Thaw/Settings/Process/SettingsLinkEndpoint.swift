@@ -19,15 +19,24 @@ final class SettingsLinkEndpoint {
     private var isReloading = false
     private var isClosed = false
 
+    private let onMessage: @MainActor (SettingsLinkMessage) -> Void
+    private let onClose: @MainActor () -> Void
+
     /// Calls onMessage for each message read, and onClose once the other end has closed the pipe.
     init(
         input: FileHandle,
         output: FileHandle,
         onMessage: @escaping @MainActor (SettingsLinkMessage) -> Void,
-        onClose: @escaping @MainActor () -> Void = {}
+        onClose: @escaping @MainActor () -> Void = {
+            // Most ends have nothing to do when the other end goes.
+        }
     ) {
         self.input = input
         self.output = output
+        self.onMessage = onMessage
+        self.onClose = onClose
+        // A write after the other end has gone then fails with EPIPE instead of killing this process.
+        _ = fcntl(output.fileDescriptor, F_SETNOSIGPIPE, 1)
         // Not input.bytes.lines: Foundation reads every AsyncBytes in a process on one serial
         // queue with a blocking read, so this pipe, open as long as Settings is, would stall the rest.
         input.readabilityHandler = { [weak self] handle in
@@ -36,18 +45,7 @@ final class SettingsLinkEndpoint {
             if data.isEmpty {
                 handle.readabilityHandler = nil
             }
-            // The main queue keeps the chunks in the order they were read.
-            DispatchQueue.main.async {
-                MainActor.assumeIsolated {
-                    guard let self, !self.isClosed else { return }
-                    if data.isEmpty {
-                        self.close()
-                        onClose()
-                    } else {
-                        self.read(data).forEach(onMessage)
-                    }
-                }
-            }
+            Self.deliver(data, to: self)
         }
         defaultsObserver = NotificationCenter.default
             .publisher(for: UserDefaults.didChangeNotification)
@@ -56,8 +54,31 @@ final class SettingsLinkEndpoint {
             .sink { [weak self] _ in self?.send(.settingsChanged) }
     }
 
+    /// The main queue keeps the chunks in the order they were read.
+    private nonisolated static func deliver(_ data: Data, to endpoint: SettingsLinkEndpoint?) {
+        DispatchQueue.main.async { [weak endpoint] in
+            MainActor.assumeIsolated { endpoint?.received(data) }
+        }
+    }
+
+    private func received(_ data: Data) {
+        guard !isClosed else { return }
+        if data.isEmpty {
+            close()
+            onClose()
+        } else {
+            read(data).forEach(onMessage)
+        }
+    }
+
+    /// A failed write means the other end has gone, so nothing more is sent.
     func send(_ message: SettingsLinkMessage) {
-        try? output.write(contentsOf: message.line)
+        guard !isClosed else { return }
+        do {
+            try output.write(contentsOf: message.line)
+        } catch {
+            close()
+        }
     }
 
     /// Runs body without telling the other end about the settings it writes.

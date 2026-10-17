@@ -23,68 +23,113 @@ final class SettingsProcessHost {
         var updatesState: () -> SettingsLinkMessage
     }
 
+    /// A started settings process, as the host sees it.
+    nonisolated struct Child {
+        var processIdentifier: pid_t
+        var isRunning: () -> Bool
+        var fromChild: FileHandle
+        var toChild: FileHandle
+    }
+
+    /// Starts the process with these arguments and calls the handler with its status once it ends.
+    typealias Launch = @MainActor (_ arguments: [String], _ onEnd: @escaping @Sendable (Int32) -> Void) throws -> Child
+
     private let app: AppSide
-    private var process: Process?
+    private let isEnabledNow: @MainActor () -> Bool
+    private let launchChild: Launch
+    private var child: Child?
+    /// Counts the launches, so a process that ends after another has started is not taken for it.
+    private var generation = 0
     private var link: SettingsLinkEndpoint?
     private var updatesWatch: Task<Void, Never>?
     private let diagLog = DiagLog(category: "SettingsProcessHost")
 
-    init(app: AppSide) {
+    init(
+        app: AppSide,
+        isEnabled: @escaping @MainActor () -> Bool = SettingsProcessHost.isEnabledInDefaults,
+        launch: @escaping Launch = SettingsProcessHost.launchExecutable
+    ) {
         self.app = app
+        isEnabledNow = isEnabled
+        launchChild = launch
     }
 
     /// Never in the settings process itself, which shows its own windows.
-    var isEnabled: Bool {
+    static func isEnabledInDefaults() -> Bool {
         Defaults.bool(forKey: .settingsInOwnProcess) && !SettingsProcessApp.isRequested
     }
 
     /// Shows Settings in its own process. Returns false when the app should show it instead.
     func show(pane: String, simpleMode: Bool) -> Bool {
-        guard SettingsProcessRoute.runsInOwnProcess(pane: pane, simpleMode: simpleMode, isEnabled: isEnabled) else {
+        guard SettingsProcessRoute.runsInOwnProcess(pane: pane, simpleMode: simpleMode, isEnabled: isEnabledNow()) else {
             return false
         }
-        if let process, process.isRunning {
+        if let child, child.isRunning() {
             link?.send(.show(pane: pane))
-            yieldActivation(to: process)
+            yieldActivation(to: child.processIdentifier)
             return true
         }
         return launch(pane: pane)
     }
 
-    private func launch(pane: String) -> Bool {
-        guard let executable = Bundle.main.executableURL else { return false }
+    /// Starts this app's own executable with the settings argument, its standard input and output piped.
+    nonisolated static func launchExecutable(
+        arguments: [String],
+        onEnd: @escaping @Sendable (Int32) -> Void
+    ) throws -> Child {
+        guard let executable = Bundle.main.executableURL else { throw CocoaError(.fileNoSuchFile) }
         let process = Process()
         process.executableURL = executable
-        process.arguments = [SettingsProcessRoute.launchArgument, pane]
+        process.arguments = arguments
         let toChild = Pipe()
         let fromChild = Pipe()
         process.standardInput = toChild
         process.standardOutput = fromChild
-        process.terminationHandler = { [weak self] ended in
-            Task { @MainActor in self?.ended(ended) }
-        }
+        process.terminationHandler = { ended in onEnd(ended.terminationStatus) }
+        try process.run()
+        return Child(
+            processIdentifier: process.processIdentifier,
+            isRunning: { process.isRunning },
+            fromChild: fromChild.fileHandleForReading,
+            toChild: toChild.fileHandleForWriting
+        )
+    }
+
+    private func launch(pane: String) -> Bool {
+        let launched = generation + 1
+        let child: Child
         do {
-            try process.run()
+            child = try launchChild([SettingsProcessRoute.launchArgument, pane]) { [weak self] status in
+                Task { @MainActor in self?.ended(generation: launched, status: status) }
+            }
         } catch {
             diagLog.error("Couldn't start the settings process: \(error)")
             return false
         }
-        self.process = process
+        generation = launched
+        self.child = child
         link = SettingsLinkEndpoint(
-            input: fromChild.fileHandleForReading,
-            output: toChild.fileHandleForWriting,
-            onMessage: { [weak self] message in self?.receive(message) }
+            input: child.fromChild,
+            output: child.toChild,
+            onMessage: { [weak self] message in self?.receive(message) },
+            onClose: { [weak self] in self?.linkClosed(generation: launched) }
         )
         watchUpdates()
-        yieldActivation(to: process)
-        diagLog.info("Started the settings process (pid \(process.processIdentifier)) on \(pane)")
+        yieldActivation(to: child.processIdentifier)
+        diagLog.info("Started the settings process (pid \(child.processIdentifier)) on \(pane)")
         return true
     }
 
-    private func ended(_ ended: Process) {
-        guard ended === process else { return }
-        diagLog.info("The settings process ended with status \(ended.terminationStatus)")
-        process = nil
+    /// The process closed its end, so nothing more is sent to it.
+    private func linkClosed(generation closed: Int) {
+        guard closed == generation else { return }
+        link = nil
+    }
+
+    private func ended(generation ended: Int, status: Int32) {
+        guard ended == generation, child != nil else { return }
+        diagLog.info("The settings process ended with status \(status)")
+        child = nil
         link?.close()
         link = nil
         updatesWatch?.cancel()
@@ -119,8 +164,8 @@ final class SettingsProcessHost {
     }
 
     /// The system may hold back activation for a process the user didn't start.
-    private func yieldActivation(to process: Process) {
-        if let app = NSRunningApplication(processIdentifier: process.processIdentifier) {
+    private func yieldActivation(to processIdentifier: pid_t) {
+        if let app = NSRunningApplication(processIdentifier: processIdentifier) {
             NSApp.yieldActivation(to: app)
         }
     }
