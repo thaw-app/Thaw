@@ -227,8 +227,10 @@ extension MenuBarItemManager {
     }
 
     /// Re-checks for status items that register after the cold-boot settling
-    /// window (already-running apps with late NSStatusItem attachment).
+    /// window (already-running apps with late NSStatusItem attachment), then
+    /// for login items that add theirs a minute or more after launch.
     private func scheduleStartupLateItemRecheck() {
+        LateLoginArrivals.schedule(for: self)
         Task { @MainActor [weak self] in
             // Many apps attach their status item 2–5 s after start, with no
             // launch notification since they were already running.
