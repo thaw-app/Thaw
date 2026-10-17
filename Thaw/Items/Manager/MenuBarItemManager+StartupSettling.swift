@@ -186,10 +186,10 @@ extension MenuBarItemManager {
                 }
             }
 
-            // The active display's profile, not savedSectionOrder, is the truth
-            // at launch. Await it so applySavedLayout below cannot race it.
+            // Only a profile other than the one already in place is applied, so drags made since survive.
+            // Await it so applySavedLayout below cannot race it.
             if let appState = self.appState,
-               appState.profileManager.activeProfileID != nil
+               ProfileSettleReapply.Record().settle(activeProfileID: appState.profileManager.activeProfileID)
             {
                 MenuBarItemManager.diagLog.info(
                     "\(reason): applying active display profile after settling"
