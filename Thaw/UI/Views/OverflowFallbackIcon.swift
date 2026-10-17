@@ -127,10 +127,6 @@ enum OverflowFallbackIcon {
         guard supportsMissingCaptureFallback(for: section) else { return false }
         // Apple hosts contain distinct modules, including Siri; their process icon cannot replace each glyph.
         guard !usesCapturedSystemPreview(item) else { return false }
-        // Nothing on the bar to capture, and a reveal would flash it there.
-        if appState.itemManager.isThawBarOnly(item) {
-            return appIcon(for: item) != nil || image(for: item) != nil
-        }
         // Native overflow needs no case: captures that meet its chevron are refused, and concealed
         // items are not revealed for one on an overflowed bar.
         // The app-icon override lets users avoid native-overflow capture bleed even with populated captures.
@@ -227,15 +223,7 @@ enum OverflowFallbackIcon {
             appState: appState,
             visibleControlItemState: visibleControlItemState
         ) ?? MenuBarItemIconChoices.shared.image(for: item)
-            ?? thawBarOnlyIcon(for: item, appState: appState)
             ?? image(for: item)
-    }
-
-    /// Uncaptured Thaw Bar Only items prefer bundled status glyphs over app icons.
-    @MainActor
-    private static func thawBarOnlyIcon(for item: MenuBarItem, appState: AppState) -> NSImage? {
-        guard appState.itemManager.isThawBarOnly(item), let pid = item.sourcePID else { return nil }
-        return BundledStatusIcon.image(forBundleAt: NSRunningApplication(processIdentifier: pid)?.bundleURL)
     }
 
     /// Thaw's selected status-item icon for the current visible-section state.

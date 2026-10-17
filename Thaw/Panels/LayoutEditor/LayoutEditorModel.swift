@@ -47,7 +47,6 @@ final class LayoutEditorModel {
             let changes = Observations {
                 (
                     appState.itemManager.itemCache,
-                    appState.itemManager.thawBarOnlyIdentifiers,
                     appState.itemGroupManager.groupSet,
                     appState.settings.advanced.enableAlwaysHiddenSection,
                     appState.settings.general.showThawIcon
@@ -79,11 +78,7 @@ final class LayoutEditorModel {
         var units = [MenuBarSection.Name: [Unit]]()
         var itemsByID = [String: MenuBarItem]()
         for section in sections {
-            var items = LayoutDisplayedItems.items(in: section, appState: appState, runningApplications: running)
-                .filter(LayoutBarPaddingView.acceptsLayoutDrag(of:))
-            // The same item can be read twice: the leftmost one is shown, as in the Layout bars.
-            var seen = Set<String>()
-            items.removeAll { !seen.insert($0.uniqueIdentifier).inserted }
+            var items = LayoutDisplayedItems.editorItems(in: section, appState: appState, runningApplications: running)
             if let held = authored[section] {
                 let live = items.map(\.uniqueIdentifier)
                 if LayoutEditorOrder.keepsAuthoredOrder(

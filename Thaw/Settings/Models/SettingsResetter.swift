@@ -35,12 +35,9 @@ extension AppSettings {
         general.simpleMode = Defaults.DefaultValue.simpleMode
         general.showSettingDescriptions = Defaults.DefaultValue.showSettingDescriptions
         general.lockThawBarPosition = Defaults.DefaultValue.lockThawBarPosition
-        general.enableThawBarOnly = Defaults.DefaultValue.enableThawBarOnly
         general.openHiddenItemsInMenuBar = Defaults.DefaultValue.openHiddenItemsInMenuBar
         general.roundScreenCorners = Defaults.DefaultValue.roundScreenCorners
         general.screenCornerRadius = Defaults.DefaultValue.screenCornerRadius
-        general.showThawBarOnlyWithInlineReveal = Defaults.DefaultValue.showThawBarOnlyWithInlineReveal
-        general.showThawBarOnlyLauncher = Defaults.DefaultValue.showThawBarOnlyLauncher
         general.useThawBar = Defaults.DefaultValue.useThawBar
         general.useThawBarOnlyOnNotchedDisplay = Defaults.DefaultValue.useThawBarOnlyOnNotchedDisplay
         general.thawBarLocation = Defaults.DefaultValue.thawBarLocation
@@ -66,7 +63,6 @@ extension AppSettings {
         advanced.tooltipDelay = Defaults.DefaultValue.tooltipDelay
         advanced.showMenuBarTooltips = Defaults.DefaultValue.showMenuBarTooltips
         advanced.iconRefreshInterval = Defaults.DefaultValue.iconRefreshInterval
-        advanced.menuBarItemAlertRevealCooldown = Defaults.DefaultValue.menuBarItemAlertRevealCooldown
         advanced.autoZenWhileSharingScreen = Defaults.DefaultValue.autoZenWhileSharingScreen
         advanced.menuBarOrderFulfillmentTimeout = Defaults.DefaultValue.menuBarOrderFulfillmentTimeout
         advanced.enableDiagnosticLogging = Defaults.DefaultValue.enableDiagnosticLogging
@@ -88,12 +84,6 @@ extension AppSettings {
         advanced.zenModeWhileRecording = Defaults.DefaultValue.zenModeWhileRecording
         advanced.recordingWatchScreen = Defaults.DefaultValue.recordingWatchScreen
         advanced.enableDesktopMenuHiding = Defaults.DefaultValue.enableDesktopMenuHiding
-        advanced.searchSectionOrder = AdvancedSettings.sanitizedSearchSectionOrder(
-            from: Defaults.DefaultValue.searchSectionOrder
-        )
-        advanced.searchIncludeVisible = Defaults.DefaultValue.searchIncludeVisible
-        advanced.searchIncludeHidden = Defaults.DefaultValue.searchIncludeHidden
-        advanced.searchIncludeAlwaysHidden = Defaults.DefaultValue.searchIncludeAlwaysHidden
         advanced.menuBarSearchPresentation = Defaults.DefaultValue.menuBarSearchPresentation
     }
 

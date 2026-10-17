@@ -9,57 +9,10 @@ import MenuBarModel
 import SwiftUI
 import ThawUI
 
-// MARK: - SpacesSettingsPane
-
-/// Live controls for how macOS presents the system menu bar, per Space.
-///
-/// Everything here is a command, not a preference: the backend
-/// (MenuBarPresentationControlling) has setters and no getters, the menu bar
-/// agent owns the state for Thaw's process session and reverts it on quit, and
-/// nothing is persisted.
-///
-/// The @State below is a UI echo of what the user asked for this session, not
-/// a source of truth; a failed call reverts its mirror. The "This Space"
-/// mirrors reset on Space change, because another Space's overrides cannot be
-/// read back. The pane is gated on isSupported; a page of switches that
-/// silently do nothing would be worse than one sentence explaining why.
-struct SpacesSettingsPane: View {
-    @Environment(AppState.self) private var appState
-
-    /// The presentation seam. Resolved once per body evaluation rather than
-    /// stored: the provider owns a single process-wide controller, and this is
-    /// just a name for it.
-    private var presentation: any MenuBarPresentationControlling {
-        MenuBarPresentationProvider.current
-    }
-
-    var body: some View {
-        ThawForm {
-            SpacesControlsContent(activeSpaceID: activeSpaceID)
-        }
-    }
-
-    /// The CGS Space identifier for the Space the user is looking at.
-    ///
-    /// Sourced from AppState.activeSpace, which the app already keeps
-    /// current off NSWorkspace.activeSpaceDidChangeNotification (plus its own
-    /// polling fallback), so this pane needs no space-tracking of its own and
-    /// cannot disagree with the rest of the app about which Space is active.
-    ///
-    /// CGSSpaceID is an Int app-side while the presentation seam takes a
-    /// UInt64; the bit-pattern conversion is deliberate, so a hypothetical
-    /// negative identifier is passed through unchanged instead of trapping in
-    /// a settings pane.
-    private var activeSpaceID: UInt64 {
-        UInt64(bitPattern: Int64(appState.activeSpace.spaceID))
-    }
-}
-
 // MARK: - SpacesControlsContent
 
-/// The Spaces session controls, without their own ThawForm so they can be
-/// embedded as a section inside another pane (the Menu Bar Access surface).
-/// SpacesSettingsPane wraps this in a ThawForm for its standalone use.
+/// The Spaces controls shown in Displays & Spaces. They are commands, not preferences:
+/// the menu bar agent keeps the state for this session and puts it back when Thaw quits.
 struct SpacesControlsContent: View {
     let activeSpaceID: UInt64
 

@@ -313,10 +313,9 @@ extension MenuBarItemManager {
             && !appState.menuBarManager.isRevealHideTransitionActive
         let parkedWidths = !isBarSettled ? [] : visibleLive
             .filter { item in
-                let key = MenuBarItemTag.canonicalPersistentIdentifier(item.uniqueIdentifier)
-                return item.bounds.minX == MenuBarItemGeometry.transientSentinelX
-                    && !overflowIdentifiers.contains(item.uniqueIdentifier)
-                    && !concealedIdentifiers.contains(key)
+                item.bounds.minX == MenuBarItemGeometry.transientSentinelX
+                    && !ItemConcealment.isConcealed(item.uniqueIdentifier, in: overflowIdentifiers)
+                    && !ItemConcealment.isConcealed(item.uniqueIdentifier, in: concealedIdentifiers)
             }
             .map(\.bounds.width)
         let parkedDeficit = overflowDeficits.updateParkedLane(

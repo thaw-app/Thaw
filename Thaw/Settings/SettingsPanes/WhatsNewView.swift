@@ -38,6 +38,7 @@ struct WhatsNewView: View {
                 VStack(alignment: .leading, spacing: 28) {
                     updateNotice(for: release)
                     sourceNotice
+                    switchesToTry(for: release)
                     releaseBody(release)
                 }
             } else if source == .disabled {
@@ -91,6 +92,14 @@ struct WhatsNewView: View {
             Text("This update is ready to install. Use the update window to install it now or later.")
                 .font(ThawType.body)
                 .foregroundStyle(.secondary)
+        }
+    }
+
+    /// Off-by-default switches, offered only on the running release's notes.
+    @ViewBuilder
+    private func switchesToTry(for release: ChangelogDocument.Release) -> some View {
+        if release.version == Constants.versionString {
+            WhatsNewSwitchesView(settings: appState.settings.advanced)
         }
     }
 

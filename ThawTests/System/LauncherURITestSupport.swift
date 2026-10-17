@@ -69,12 +69,14 @@ final class FakeLauncherEnvironment {
     var activationOutcome = MenuBarItemActivationOutcome.completed(reactionObserved: true)
     /// Whether the layout half ran; nil makes the apply throw.
     var applyLayoutRan: Bool? = true
+    var moveOutcome: (LayoutBatchMove) -> LayoutBatchMoveOutcome = { _ in .refused(.moveRefused) }
 
     private(set) var itemReads = 0
     private(set) var profileReads = 0
     private(set) var appearanceReads = 0
     private(set) var activatedIdentifiers = [String]()
     private(set) var appliedProfileIDs = [UUID]()
+    private(set) var moves = [LayoutBatchMove]()
 
     let appearance = SharedAppearance(
         configuration: .defaultConfiguration,
@@ -107,6 +109,10 @@ final class FakeLauncherEnvironment {
                 self.appliedProfileIDs.append(profileID)
                 guard let ran = self.applyLayoutRan else { throw ApplyFailure() }
                 return ran
+            },
+            moveItems: { command in
+                self.moves.append(command)
+                return self.moveOutcome(command)
             }
         )
     }

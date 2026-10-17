@@ -101,42 +101,6 @@ nonisolated extension SearchIndex {
             property: .advanced("menuBarSearchPresentation")
         ),
         SearchEntry(
-            id: "general.searchSectionOrder",
-            title: "Search section ordering",
-            descriptionText: String(localized: "Choose which menu bar sections appear in the search panel, and in what order."),
-            pane: .visibility,
-            section: "Menu bar search",
-            keywords: ["search", "section", "order", "panel", "reorder"],
-            property: .advanced("searchSectionOrder")
-        ),
-        SearchEntry(
-            id: "general.searchIncludeVisible",
-            title: "Include visible section in search",
-            descriptionText: nil,
-            pane: .visibility,
-            section: "Menu bar search",
-            keywords: ["search", "visible", "include", "section"],
-            property: .advanced("searchIncludeVisible")
-        ),
-        SearchEntry(
-            id: "general.searchIncludeHidden",
-            title: "Include hidden section in search",
-            descriptionText: nil,
-            pane: .visibility,
-            section: "Menu bar search",
-            keywords: ["search", "hidden", "include", "section"],
-            property: .advanced("searchIncludeHidden")
-        ),
-        SearchEntry(
-            id: "general.searchIncludeAlwaysHidden",
-            title: "Include Always Hidden in search",
-            descriptionText: nil,
-            pane: .visibility,
-            section: "Menu bar search",
-            keywords: ["search", "always hidden", "include", "section"],
-            property: .advanced("searchIncludeAlwaysHidden")
-        ),
-        SearchEntry(
             id: "general.showMenuBarTooltips",
             title: "Show tooltips in the menu bar",
             descriptionText: String(localized: "Show a tooltip when hovering over menu bar items in the actual menu bar."),
@@ -147,35 +111,25 @@ nonisolated extension SearchIndex {
         ),
         SearchEntry(
             id: "advanced.autoZenWhileSharingScreen",
-            title: "Enter Zen Mode while presenting",
-            descriptionText: String(localized: "Hides your Hidden and Always Hidden items while a display is mirrored or your screen is shared, then brings them back."),
+            title: "Hide items while presenting",
+            descriptionText: String(localized: "Hidden items stay hidden while you share your screen or mirror a display."),
             pane: .automation,
-            section: "Presentation",
             keywords: ["zen", "presenting", "present", "share", "sharing", "mirror", "screen", "projector", "meeting"],
             property: .advanced("autoZenWhileSharingScreen")
         ),
         SearchEntry(
             id: "automation.menuBarItemAlertReveals",
-            title: "Reveal on icon change",
+            title: "Show an item when its icon changes",
             descriptionText: String(localized: "Briefly shows a hidden item in the menu bar when its icon changes, so you see its alert."),
-            pane: .automation,
-            section: "Reveal on icon change",
+            pane: .visibility,
+            section: "When an icon changes",
             keywords: ["reveal", "alert", "icon", "change", "badge", "notification", "hidden", "temporarily"],
             property: nil
         ),
         SearchEntry(
-            id: "automation.menuBarItemAlertRevealCooldown",
-            title: "Reveal cooldown",
-            descriptionText: String(localized: "Minimum wait before the same item can reveal itself again. Stops an icon that animates nonstop from bouncing in and out of the menu bar."),
-            pane: .automation,
-            section: "Reveal on icon change",
-            keywords: ["reveal", "cooldown", "alert", "icon", "throttle", "seconds"],
-            property: .advanced("menuBarItemAlertRevealCooldown")
-        ),
-        SearchEntry(
             id: "advanced.enableMenuBarItemOverflow",
             title: "Move items that don’t fit into Hidden",
-            descriptionText: String(localized: "When the menu bar is full, move the Visible items that don’t fit into Hidden, so they stay reachable instead of going behind macOS’s » button."),
+            descriptionText: String(localized: "When the menu bar is full, move the Visible items that don’t fit into Hidden and open them from the \(Constants.displayName) Bar."),
             pane: .menuBarLayout,
             section: "More layout options",
             keywords: ["overflow", "notch", "fit", "visible", "hidden", "advanced layout controls"],

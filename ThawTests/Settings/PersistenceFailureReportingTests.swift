@@ -22,7 +22,7 @@ struct PersistenceFailureReportingTests {
         Defaults.store = scratch
         defer {
             Defaults.store = previous
-            scratch.removePersistentDomain(forName: suiteName)
+            ScratchDefaults.remove(suiteName)
         }
         return try body(scratch)
     }

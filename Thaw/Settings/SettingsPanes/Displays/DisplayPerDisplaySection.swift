@@ -120,13 +120,7 @@ extension DisplaySettingsPane {
         )
 
         LabeledContent {
-            ThawSlider(
-                value: sliderBinding,
-                in: -16 ... 16,
-                step: 2
-            ) {
-                spacingValueLabel(draft)
-            }
+            SpacingSlider(value: sliderBinding) { spacingValueLabel(draft) }
         } label: {
             LabeledContent {
                 // Reset acts on the saved value, so it stays available without a pending draft.

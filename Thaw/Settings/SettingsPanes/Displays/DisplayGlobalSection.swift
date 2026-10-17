@@ -87,12 +87,7 @@ extension DisplaySettingsPane {
         }
 
         LabeledContent {
-            ThawSlider(
-                labelKey,
-                value: sliderBinding,
-                in: -16 ... 16,
-                step: 2
-            )
+            SpacingSlider(value: sliderBinding) { Text(labelKey) }
         } label: {
             Text("Menu bar item spacing")
         }

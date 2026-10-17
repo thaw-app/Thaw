@@ -154,7 +154,7 @@ final class LayoutBarContainer: NSView {
             // covers the pair.
             let rebuildTask = Task { @MainActor [weak self, itemManager = appState.itemManager] in
                 let changes = Observations {
-                    (itemManager.itemCache, itemManager.newItemsPlacement, itemManager.thawBarOnlyIdentifiers,
+                    (itemManager.itemCache, itemManager.newItemsPlacement,
                      MenuBarItemIconChoices.shared.revision)
                 }
                 for await _ in changes {
@@ -615,6 +615,7 @@ final class LayoutBarContainer: NSView {
         )
 
         refreshArrangedViews(for: displayedItems, runningApplications: runningApplications)
+        DiagnosticLines.logLayoutTiles(section: section, items: displayedItems, imageCache: appState.imageCache)
     }
 
     /// Rebuilds the section's arranged views from the fresh identifier list, keyed
@@ -983,5 +984,16 @@ final class LayoutBarContainer: NSView {
             .map { (view: $0, offset: abs($0.frame.midX - xPosition)) }
             .min { $0.offset < $1.offset }?
             .view
+    }
+
+    /// Rebuilds add and remove item views, so the Layout selection rereads the bar.
+    override func didAddSubview(_ subview: NSView) {
+        super.didAddSubview(subview)
+        scheduleSelectionSync()
+    }
+
+    override func willRemoveSubview(_ subview: NSView) {
+        super.willRemoveSubview(subview)
+        scheduleSelectionSync()
     }
 }

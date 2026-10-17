@@ -63,10 +63,7 @@ enum SettingsURIHandler {
         "simpleMode": SettingURIEntry(defaultsKey: .simpleMode, kind: .boolean, isWritable: true),
         "showSettingDescriptions": SettingURIEntry(defaultsKey: .showSettingDescriptions, kind: .boolean, isWritable: true),
         "lockThawBarPosition": SettingURIEntry(defaultsKey: .lockThawBarPosition, kind: .boolean, isWritable: true),
-        "enableThawBarOnly": SettingURIEntry(defaultsKey: .enableThawBarOnly, kind: .boolean, isWritable: true),
         "openHiddenItemsInMenuBar": SettingURIEntry(defaultsKey: .openHiddenItemsInMenuBar, kind: .boolean, isWritable: true),
-        "showThawBarOnlyWithInlineReveal": SettingURIEntry(defaultsKey: .showThawBarOnlyWithInlineReveal, kind: .boolean, isWritable: true),
-        "showThawBarOnlyLauncher": SettingURIEntry(defaultsKey: .showThawBarOnlyLauncher, kind: .boolean, isWritable: true),
         "useThawBarOnlyOnNotchedDisplay": SettingURIEntry(defaultsKey: .useThawBarOnlyOnNotchedDisplay, kind: .boolean, isWritable: true),
         "thawBarLocationOnHotkey": SettingURIEntry(defaultsKey: .thawBarLocationOnHotkey, kind: .boolean, isWritable: true),
         "showOnClick": SettingURIEntry(defaultsKey: .showOnClick, kind: .boolean, isWritable: true),
@@ -86,7 +83,6 @@ enum SettingsURIHandler {
         "showOnHoverDelay": SettingURIEntry(defaultsKey: .showOnHoverDelay, kind: .double(min: 0, max: 5), isWritable: true),
         "tooltipDelay": SettingURIEntry(defaultsKey: .tooltipDelay, kind: .double(min: 0, max: 5), isWritable: true),
         "iconRefreshInterval": SettingURIEntry(defaultsKey: .iconRefreshInterval, kind: .double(min: 0, max: 5), isWritable: true),
-        "menuBarItemAlertRevealCooldown": SettingURIEntry(defaultsKey: .menuBarItemAlertRevealCooldown, kind: .double(min: 5, max: 300), isWritable: true),
         "menuBarOrderFulfillmentTimeout": SettingURIEntry(defaultsKey: .menuBarOrderFulfillmentTimeout, kind: .double(min: 1, max: 15), isWritable: true),
         "autoZenWhileSharingScreen": SettingURIEntry(defaultsKey: .autoZenWhileSharingScreen, kind: .boolean, isWritable: true),
         "enableDiagnosticLogging": SettingURIEntry(defaultsKey: .enableDiagnosticLogging, kind: .boolean, isWritable: true),
@@ -104,9 +100,6 @@ enum SettingsURIHandler {
         "enableDesktopMenuHiding": SettingURIEntry(defaultsKey: .enableDesktopMenuHiding, kind: .boolean, isWritable: true),
 
         // MARK: - Search
-        "searchIncludeVisible": SettingURIEntry(defaultsKey: .searchIncludeVisible, kind: .boolean, isWritable: true),
-        "searchIncludeHidden": SettingURIEntry(defaultsKey: .searchIncludeHidden, kind: .boolean, isWritable: true),
-        "searchIncludeAlwaysHidden": SettingURIEntry(defaultsKey: .searchIncludeAlwaysHidden, kind: .boolean, isWritable: true),
     ]
 
     /// Derived from keyTable so the allow-lists can never disagree with it.

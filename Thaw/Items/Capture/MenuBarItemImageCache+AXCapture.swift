@@ -46,7 +46,12 @@ extension MenuBarItemImageCache {
             itemsWithBounds, band: band, overflowBounds: overflowBounds, into: &result
         )
         guard !candidates.isEmpty else {
-            Self.diagLog.debug("axBoundsCapture: no trustworthy status-item bounds; skipping screenshot")
+            // Says which test failed: no app-menu edge refuses every icon, a stale edge refuses those left of it.
+            Self.diagLog.debug(
+                "axBoundsCapture: no trustworthy status-item bounds; skipping screenshot " +
+                    "(menuMaxX=\(band.menuMaxX.map { "\($0)" } ?? "nil"), band=\(band.frame), items=" +
+                    itemsWithBounds.map { "\($0.item.logString)@\($0.bounds)" }.joined(separator: ", ") + ")"
+            )
             return result
         }
         var context = AXCropContext(

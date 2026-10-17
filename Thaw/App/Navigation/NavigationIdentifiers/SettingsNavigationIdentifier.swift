@@ -28,13 +28,23 @@ enum SettingsNavigationIdentifier: String, @MainActor NavigationIdentifier {
     case privacy = "Privacy"
     case about = "About"
 
+    /// Where a pane opens. Spaces moved into Displays and Triggers into Automation, so links
+    /// and saved panes that name them land there.
+    var destination: SettingsNavigationIdentifier {
+        switch self {
+        case .spaces: .displays
+        case .triggers: .automation
+        default: self
+        }
+    }
+
     var localized: LocalizedStringKey {
         switch self {
         case .general: "General"
         case .menuBarLayout: "Layout"
         case .visibility: "Visibility"
         case .thawBar: "\(Constants.displayName) Bar"
-        case .displays: "Displays"
+        case .displays: "Displays & Spaces"
         case .spaces: "Spaces"
         case .menuBarAppearance: "Appearance"
         case .hotkeys: "Shortcuts"
@@ -60,13 +70,13 @@ enum SettingsNavigationIdentifier: String, @MainActor NavigationIdentifier {
         case .menuBarLayout: "Shown, hidden and always hidden"
         case .visibility: "How hidden items appear"
         case .thawBar: "Hidden items below the menu bar"
-        case .displays: "Settings for each display"
+        case .displays: "Settings for each display and Space"
         case .spaces: "Layouts for each space"
         case .menuBarAppearance: "Colour, shape and borders"
         case .hotkeys: "Keyboard shortcuts"
         case .profiles: "Saved layouts to switch between"
         case .advanced: "Advanced options"
-        case .automation: "Shortcuts, URLs and other apps"
+        case .automation: "Triggers, other apps and scripts"
         case .triggers: "Show items while an app runs"
         case .scripts: "Scripts"
         case .widgets: "A custom icon in the menu bar"

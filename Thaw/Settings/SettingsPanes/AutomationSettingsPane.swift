@@ -16,7 +16,7 @@ struct AutomationSettingsPane: View {
     @Bindable var settings: AutomationSettings
     @Bindable var hookSettings: AutomationHookSettings
     @Bindable var advancedSettings: AdvancedSettings
-    @State private var newBundleId: String = ""
+    @State private var isChoosingApp = false
     @State private var isShowingAddError = false
     @State private var addErrorMessage = ""
     @State private var selectedHookProfileID: UUID?
@@ -24,39 +24,42 @@ struct AutomationSettingsPane: View {
     /// Bumped whenever a per-profile hook write completes, so SwiftUI
     /// re-reads the latest values from ProfileManager.
     @State private var profileHookRevision: Int = 0
-    /// Shared width for the hook-row label column, sized to the widest
-    /// localized label so longer translations never wrap mid-word.
-    @State private var hookLabelWidth: CGFloat = 90
+    @State private var isEditingProfileSwitching = false
+    @State private var isShowingScriptEnvironment = false
 
     var body: some View {
         ThawForm {
-            // Everyday options first: what happens on its own as you work.
-            profileAutoSwitchSection
+            ThawSection {
+                if !appState.profileManager.profiles.isEmpty {
+                    profileSwitchingRow
+                }
 
-            ThawSection("Presentation") {
-                Toggle("Enter Zen Mode while presenting", isOn: $advancedSettings.autoZenWhileSharingScreen)
-                    .annotation(
-                        "Hides your Hidden and Always Hidden items while a display is mirrored or your screen is shared, then brings them back.",
-                        more: "macOS offers no way to see that another app is recording the screen, so recordings are not covered."
+                Toggle(isOn: $advancedSettings.autoZenWhileSharingScreen) {
+                    ThawRowLabel(
+                        "Hide items while presenting",
+                        detail: "Hidden items stay hidden while you share your screen or mirror a display."
                     )
+                }
+                .help("macOS offers no way to see that another app is recording the screen, so recordings are not covered.")
             }
 
-            alertRevealSection
+            TriggerSections(manager: appState.appRunningTriggers)
 
-            // Then the parts that talk to other apps and run your own code.
-            enableSection
-
-            if settings.isSettingsURIEnabled {
-                whitelistSection
-                addAppSection
-                aboutSection
-            }
-
-            globalHooksSection
-            profileHooksSection
-            envVarsSection
+            otherAppsSection
+            scriptsSection
         }
         .errorAlert("Couldn’t save script", message: $hookErrorMessage)
+        .fileImporter(isPresented: $isChoosingApp, allowedContentTypes: [.application]) { result in
+            addChosenApp(result)
+        }
+        .sheet(isPresented: $isEditingProfileSwitching) {
+            AutomationSheet(title: "Profile switching") {
+                ProfileAutoSwitchControls(
+                    profileManager: appState.profileManager,
+                    errorMessage: $hookErrorMessage
+                )
+            }
+        }
         .onAppear {
             if selectedHookProfileID == nil {
                 selectedHookProfileID = appState.profileManager.activeProfileID
@@ -72,202 +75,124 @@ struct AutomationSettingsPane: View {
                     ?? updated.first?.id
             }
         }
-        .onPreferenceChange(HookLabelWidthKey.self) { width in
-            hookLabelWidth = max(width, 90)
-        }
     }
 
-    // MARK: - Profile Auto-Switch
+    // MARK: - As you work
 
-    @ViewBuilder
-    private var profileAutoSwitchSection: some View {
-        // Only shown when profiles exist; an empty picker is noise.
-        if !appState.profileManager.profiles.isEmpty {
-            ProfileAutoSwitchControls(
-                profileManager: appState.profileManager,
-                errorMessage: $hookErrorMessage
+    private var profileSwitchingRow: some View {
+        LabeledContent {
+            Button("Choose…") { isEditingProfileSwitching = true }
+                .buttonStyle(.settingsGlass)
+        } label: {
+            ThawRowLabel(
+                "Switch profiles by display or Space",
+                verbatimDetail: AutomationSummary.profileSwitching(profileAssignments)
             )
         }
     }
 
-    // MARK: - Enable Section
-
-    /// Opens the Advanced group. Off is the normal state, so it carries no
-    /// warning when off; the sections that depend on it simply stay hidden.
-    private var enableSection: some View {
-        ThawSection {
-            Text("Advanced")
-                .font(ThawType.heading)
-        } content: {
-            Toggle("Allow other apps to change settings", isOn: $settings.isSettingsURIEnabled)
-                .annotation("Apps you approve can read and change \(Constants.displayName) settings by opening thaw:// links.")
+    private var profileAssignments: [AutomationSummary.Assignment] {
+        appState.profileManager.profiles.flatMap { profile -> [AutomationSummary.Assignment] in
+            var assignments = [AutomationSummary.Assignment]()
+            if profile.associatedDisplayUUID != nil {
+                let place = profile.associatedDisplayName ?? String(localized: "a display")
+                assignments.append(.init(profile: profile.name, place: place))
+            }
+            if profile.associatedSpaceKey != nil {
+                let place = profile.associatedSpaceName ?? String(localized: "a Space")
+                assignments.append(.init(profile: profile.name, place: place))
+            }
+            return assignments
         }
     }
 
-    // MARK: - Whitelist Section
+    // MARK: - Other apps
 
-    private var whitelistSection: some View {
-        ThawSection {
-            let count = String(localized: "apps \(settings.whitelistedApps.count)", comment: "Shows the number of allowed apps")
-            HStack(spacing: ThawSpacing.compact) {
-                Text("Allowed apps")
-                Text(verbatim: "(\(count))")
-                    .foregroundStyle(ThawInk.supporting)
+    private var otherAppsSection: some View {
+        ThawSection("Other apps") {
+            Toggle(isOn: $settings.isSettingsURIEnabled) {
+                ThawRowLabel(
+                    "Let apps change settings",
+                    detail: "Apps you approve can change \(Constants.displayName) with thaw:// links. Each new app asks you once."
+                )
             }
-        } content: {
-            if settings.whitelistedApps.isEmpty {
-                emptyWhitelistView
-            } else {
+
+            if settings.isSettingsURIEnabled {
                 ForEach(settings.whitelistedApps) { app in
-                    whitelistedAppRow(app)
-                        .contextMenu {
-                            Button("Remove from Allowed Apps", role: .destructive) {
-                                settings.removeFromWhitelist(bundleId: app.bundleId)
-                            }
+                    allowedAppRow(app)
+                }
+
+                HStack(spacing: ThawSpacing.base) {
+                    Button("Choose App…") { isChoosingApp = true }
+                        .buttonStyle(.settingsGlass)
+
+                    #if DEBUG
+                        Button("Add \(Constants.displayName) (Test)") {
+                            settings.addCurrentApp()
                         }
+                        .buttonStyle(.settingsGlass)
+                    #endif
+                }
+
+                if isShowingAddError {
+                    Text(addErrorMessage)
+                        .font(ThawType.caption)
+                        .foregroundStyle(Color.warning)
                 }
             }
         }
     }
 
-    private var emptyWhitelistView: some View {
-        ThawEmptyState(
-            systemImage: "checkmark.shield",
-            title: "No allowed apps",
-            caption: "An app appears here after it asks to change settings and you approve it."
-        )
-    }
-
-    private func whitelistedAppRow(_ app: AutomationSettings.WhitelistedApp) -> some View {
-        HStack(spacing: ThawSpacing.inset) {
-            if let icon = app.icon {
-                Image(nsImage: icon)
-                    .resizable()
-                    .scaledToFit()
-                    .frame(width: 28, height: 28)
-            } else {
-                Image(systemName: "app.fill")
-                    .font(.title3)
-                    .frame(width: 28, height: 28)
-                    .foregroundStyle(.secondary)
+    private func allowedAppRow(_ app: AutomationSettings.WhitelistedApp) -> some View {
+        HStack(spacing: ThawSpacing.row) {
+            Group {
+                if let icon = app.icon {
+                    Image(nsImage: icon)
+                        .resizable()
+                        .scaledToFit()
+                } else {
+                    Image(systemName: "app")
+                        .foregroundStyle(ThawInk.supporting)
+                }
             }
+            .frame(width: 20, height: 20)
+            .accessibilityHidden(true)
 
-            VStack(alignment: .leading, spacing: ThawSpacing.hairline) {
-                Text(app.displayName)
-                    .font(ThawType.label)
-                Text(app.bundleId)
-                    .font(ThawType.caption)
-                    .foregroundStyle(ThawInk.supporting)
-                    .lineLimit(1)
-            }
+            Text(app.displayName)
+                .help(app.bundleId)
 
             Spacer()
 
-            Label {
-                Text("Can modify settings")
-            } icon: {
-                Image(systemName: "checkmark.shield.fill")
-                    .foregroundStyle(.green)
-            }
-            .labelStyle(.titleAndIcon)
-            .font(ThawType.caption)
-            .foregroundStyle(ThawInk.supporting)
-
-            Button {
+            Button("Remove") {
                 settings.removeFromWhitelist(bundleId: app.bundleId)
-            } label: {
-                Image(systemName: "minus.circle.fill")
-                    .foregroundStyle(.red)
             }
             .buttonStyle(.plain)
-            .help("Remove from allowed apps")
-            .accessibilityLabel("Remove \(app.displayName) from allowed apps")
-        }
-    }
-
-    private var addAppSection: some View {
-        ThawSection("Add an app") {
-            HStack(spacing: ThawSpacing.base) {
-                TextField("App bundle ID, e.g. com.example.App", text: $newBundleId)
-                    .textFieldStyle(.roundedBorder)
-
-                Button("Add") {
-                    addBundleId()
-                }
-                .buttonStyle(.settingsGlass)
-                .disabled({
-                    let trimmed = newBundleId.trimmingCharacters(in: .whitespacesAndNewlines)
-                    return trimmed.isEmpty || !AutomationSettings.isValidBundleId(trimmed)
-                }())
-
-                #if DEBUG
-                    Button("Add \(Constants.displayName) (Test)") {
-                        settings.addCurrentApp()
-                    }
-                    .buttonStyle(.settingsGlass)
-                    .help("Add \(Constants.displayName) itself for testing")
-                #endif
-            }
-
-            if isShowingAddError {
-                Text(addErrorMessage)
-                    .font(ThawType.caption)
-                    .foregroundStyle(Color.warning)
-            }
-        }
-    }
-
-    // MARK: - About Section
-
-    private var aboutSection: some View {
-        ThawSection("Approving an app") {
-            VStack(alignment: .leading, spacing: ThawSpacing.base) {
-                numberedStep(1, "When an app opens a thaw:// link to change settings, \(Constants.displayName) checks whether you have allowed that app.")
-                numberedStep(2, "If you have not, you’ll see a confirmation dialog showing the app name and what it wants to do.")
-                numberedStep(3, "If you approve, the app is allowed permanently and can modify settings anytime without asking again.")
-                numberedStep(4, "You can remove apps from this list at any time to revoke their access.")
-            }
-            .font(ThawType.caption)
             .foregroundStyle(ThawInk.supporting)
-
-            Text("Allowed apps can read and change most settings, such as how sections show and hide, the \(Constants.displayName) Bar, and per-display options.")
-                .font(ThawType.caption)
-                .foregroundStyle(ThawInk.supporting)
-                .fixedSize(horizontal: false, vertical: true)
+            .accessibilityLabel("Remove \(app.displayName)")
         }
     }
 
-    private func numberedStep(_ number: Int, _ text: LocalizedStringKey) -> some View {
-        HStack(alignment: .top, spacing: ThawSpacing.base) {
-            Text(verbatim: "\(number).")
-            Text(text)
-        }
-    }
-
-    // MARK: - Actions
-
-    private func addBundleId() {
-        let trimmed = newBundleId.trimmingCharacters(in: .whitespacesAndNewlines)
-
-        guard !trimmed.isEmpty else {
-            showError("Enter a bundle ID, like com.example.App.")
+    private func addChosenApp(_ result: Result<URL, Error>) {
+        guard let url = try? result.get() else {
+            showError("The app could not be selected. Try again.")
             return
         }
-
-        guard AutomationSettings.isValidBundleId(trimmed) else {
-            showError("That isn’t a bundle ID. Enter one like com.example.App.")
-            return
+        let scoped = url.startAccessingSecurityScopedResource()
+        defer {
+            if scoped {
+                url.stopAccessingSecurityScopedResource()
+            }
         }
-
-        let existing = settings.whitelistedApps.contains { $0.bundleId == trimmed }
-        guard !existing else {
-            showError("“\(trimmed)” is already allowed.")
-            return
+        let bundleID = Bundle(url: url)?.bundleIdentifier
+        switch AutomationSettings.choice(forBundleID: bundleID, allowed: settings.whitelistedApps.map(\.bundleId)) {
+        case let .add(bundleID):
+            settings.addToWhitelist(bundleId: bundleID)
+            isShowingAddError = false
+        case .alreadyAllowed:
+            showError("“\(FileManager.default.displayName(atPath: url.path))” is already allowed.")
+        case .noBundleID:
+            showError("Choose an application with a bundle identifier.")
         }
-
-        settings.addToWhitelist(bundleId: trimmed)
-        newBundleId = ""
-        isShowingAddError = false
     }
 
     private func showError(_ message: String) {
@@ -275,82 +200,62 @@ struct AutomationSettingsPane: View {
         isShowingAddError = true
     }
 
-    // MARK: - Hooks
+    // MARK: - Scripts
 
-    private var globalHooksSection: some View {
-        ThawSection("Scripts for every profile") {
-            Text("Run a shell script or AppleScript before or after any profile switch: by hand, with a keyboard shortcut, when displays change, or from a Focus filter.")
-                .font(ThawType.caption)
-                .foregroundStyle(ThawInk.supporting)
-                .fixedSize(horizontal: false, vertical: true)
+    private var scriptsSection: some View {
+        ThawSection {
+            Text("Scripts when a profile switches")
+        } content: {
+            HookRow(label: "Before switching", hook: $hookSettings.globalPreHook)
+            HookRow(label: "After switching", hook: $hookSettings.globalPostHook)
 
-            HookRow(
-                label: "Before switching",
-                hook: $hookSettings.globalPreHook,
-                labelWidth: hookLabelWidth
-            )
-
-            HookRow(
-                label: "After switching",
-                hook: $hookSettings.globalPostHook,
-                labelWidth: hookLabelWidth
-            )
-        }
-    }
-
-    private var profileHooksSection: some View {
-        ThawSection("Scripts for one profile") {
-            if appState.profileManager.profiles.isEmpty {
-                Text("No profiles yet. Create one on the Profiles page to give it its own scripts.")
-                    .font(ThawType.caption)
-                    .foregroundStyle(ThawInk.supporting)
-            } else {
-                ThawPicker("Profile", selection: $selectedHookProfileID) {
-                    ForEach(appState.profileManager.profiles) { meta in
-                        Text(meta.name).tag(Optional(meta.id))
+            if !appState.profileManager.profiles.isEmpty {
+                LabeledContent {
+                    ThawPicker("Profile", selection: $selectedHookProfileID) {
+                        ForEach(appState.profileManager.profiles) { meta in
+                            Text(meta.name).tag(Optional(meta.id))
+                        }
                     }
+                    .labelsHidden()
+                    .fixedSize()
+                } label: {
+                    ThawRowLabel(
+                        "Scripts for one profile",
+                        detail: "They run between the two above, only when switching to this profile."
+                    )
                 }
 
                 if let profileID = selectedHookProfileID {
-                    HookRow(
-                        label: "Before switching",
-                        hook: bindingForProfileHook(profileID: profileID, phase: .pre),
-                        labelWidth: hookLabelWidth
-                    )
-
-                    HookRow(
-                        label: "After switching",
-                        hook: bindingForProfileHook(profileID: profileID, phase: .post),
-                        labelWidth: hookLabelWidth
-                    )
-
-                    Text("These run only when switching to this profile, between the scripts for every profile: after their Before switching script and before their After switching one.")
-                        .font(ThawType.caption)
-                        .foregroundStyle(ThawInk.supporting)
+                    Group {
+                        HookRow(label: "Before switching", hook: bindingForProfileHook(profileID: profileID, phase: .pre))
+                        HookRow(label: "After switching", hook: bindingForProfileHook(profileID: profileID, phase: .post))
+                    }
+                    .id(profileHookRevision)
                 }
             }
+        } footer: {
+            Button("What scripts receive") { isShowingScriptEnvironment = true }
+                .buttonStyle(.link)
+                .popover(isPresented: $isShowingScriptEnvironment) {
+                    scriptEnvironment
+                }
         }
-        .id(profileHookRevision)
     }
 
-    private var envVarsSection: some View {
-        ThawSection("Script environment") {
-            Text("Environment variables passed to scripts")
-                .font(ThawType.caption)
-                .foregroundStyle(ThawInk.supporting)
-
-            Text(verbatim: "THAW_HOOK_PHASE, THAW_HOOK_SCOPE, THAW_PROFILE_ID, THAW_PROFILE_NAME, THAW_PREVIOUS_PROFILE_ID, THAW_PREVIOUS_PROFILE_NAME")
+    private var scriptEnvironment: some View {
+        VStack(alignment: .leading, spacing: ThawSpacing.base) {
+            Text("Scripts get these environment variables:")
+            Text(verbatim: "THAW_HOOK_PHASE\nTHAW_HOOK_SCOPE\nTHAW_PROFILE_ID\nTHAW_PROFILE_NAME\nTHAW_PREVIOUS_PROFILE_ID\nTHAW_PREVIOUS_PROFILE_NAME")
                 .font(ThawType.caption.monospaced())
-                .foregroundStyle(ThawInk.supporting)
                 .textSelection(.enabled)
-                .fixedSize(horizontal: false, vertical: true)
-
-            Text("Example: a Before switching script could run `defaults write com.bjango.istatmenus5 ActiveProfile -string \"$THAW_PROFILE_NAME\"` to keep iStat Menus in sync with \(Constants.displayName).")
+            Text("For example, `defaults write com.bjango.istatmenus5 ActiveProfile -string \"$THAW_PROFILE_NAME\"` keeps iStat Menus on the same profile.")
                 .font(ThawType.caption)
                 .foregroundStyle(ThawInk.supporting)
                 .textSelection(.enabled)
-                .fixedSize(horizontal: false, vertical: true)
         }
+        .fixedSize(horizontal: false, vertical: true)
+        .frame(width: 320, alignment: .leading)
+        .padding(ThawSpacing.gutter)
     }
 
     private func bindingForProfileHook(profileID: UUID, phase: HookPhase) -> Binding<HookScript?> {
@@ -374,144 +279,98 @@ struct AutomationSettingsPane: View {
             }
         )
     }
+}
 
-    // MARK: - Reveal on Icon Change
+// MARK: - AutomationSheet
 
-    private var alertRevealSection: some View {
-        ThawSection("Reveal on icon change") {
-            AlertRevealItemList()
-            // The list shows only a "hide an item first" note when nothing
-            // can reveal, and a cooldown for nothing would do nothing.
-            if hasAlertRevealCandidates {
-                alertRevealCooldown
+/// A sheet holding the controls that a summary row on the page opens.
+private struct AutomationSheet<Content: View>: View {
+    @Environment(\.dismiss) private var dismiss
+    let title: LocalizedStringKey
+    @ViewBuilder let content: Content
+
+    var body: some View {
+        VStack(spacing: 0) {
+            Text(title)
+                .font(ThawType.heading)
+                .padding(.top, ThawSpacing.gutter)
+            ThawForm {
+                content
             }
+            HStack {
+                Spacer()
+                Button("Done") { dismiss() }
+                    .buttonStyle(.settingsGlass)
+                    .keyboardShortcut(.defaultAction)
+            }
+            .padding(ThawSpacing.gutter)
         }
-    }
-
-    /// Mirrors the rows AlertRevealItemList draws: any item in Hidden or
-    /// Always Hidden, or an opt-in whose item has since left the menu bar.
-    private var hasAlertRevealCandidates: Bool {
-        let cache = appState.itemManager.itemCache
-        return !(cache[.hidden] + cache[.alwaysHidden]).isEmpty
-            || !MenuBarItemAlertReveals.identifiers().isEmpty
-    }
-
-    private var alertRevealCooldown: some View {
-        SecondsSliderRow(
-            "Reveal cooldown",
-            value: $advancedSettings.menuBarItemAlertRevealCooldown,
-            in: 5 ... 300,
-            step: 5
-        )
-        .annotation(
-            """
-            The least time that passes before the same item can reveal itself again, \
-            so an icon that animates continuously can’t bounce in and out of the menu bar.
-            """
-        )
+        .frame(width: 520, height: 460)
     }
 }
 
 // MARK: - HookRow
 
-/// Collects the widest natural label width across all hook rows so the
-/// label column can be sized to fit the longest localized string.
-private struct HookLabelWidthKey: PreferenceKey {
-    static let defaultValue: CGFloat = 0
-    static func reduce(value: inout CGFloat, nextValue: () -> CGFloat) {
-        value = max(value, nextValue())
-    }
-}
-
 private struct HookRow: View {
     let label: LocalizedStringKey
     @Binding var hook: HookScript?
-    let labelWidth: CGFloat
+
+    /// Timeouts offered in the menu; a stored value outside them is added.
+    private static let timeouts: [Double] = [5, 10, 30, 60, 120, 300]
 
     var body: some View {
-        VStack(alignment: .leading, spacing: ThawSpacing.compact) {
+        LabeledContent {
             HStack(spacing: ThawSpacing.base) {
-                Text(label)
-                    .lineLimit(1)
-                    .fixedSize(horizontal: true, vertical: false)
-                    .background(
-                        GeometryReader { proxy in
-                            Color.clear.preference(
-                                key: HookLabelWidthKey.self,
-                                value: proxy.size.width
-                            )
-                        }
-                    )
-                    .frame(minWidth: labelWidth, alignment: .leading)
-
-                Text(displayPath)
-                    .font(ThawType.caption.monospaced())
-                    .foregroundStyle(hook == nil ? ThawInk.supporting : Color.primary)
-                    .lineLimit(1)
-                    .truncationMode(.middle)
-                    .frame(maxWidth: .infinity, alignment: .leading)
-
-                Button("Choose Script…") { chooseScript() }
+                Button(hook == nil ? "Choose…" : "Change…") { chooseScript() }
                     .buttonStyle(.settingsGlass)
 
-                Button(role: .destructive) {
-                    hook = nil
-                } label: {
-                    Image(systemName: "minus.circle.fill")
-                        .foregroundStyle(.red)
+                if hook != nil {
+                    Menu {
+                        Toggle("Run this script", isOn: enabledBinding)
+                            .toggleStyle(.automatic)
+                        Picker("Timeout", selection: timeoutBinding) {
+                            ForEach(timeoutChoices, id: \.self) { seconds in
+                                Text("\(Int(seconds)) s").tag(seconds)
+                            }
+                        }
+                        Divider()
+                        Button("Remove Script", role: .destructive) { hook = nil }
+                    } label: {
+                        Image(systemName: "ellipsis.circle")
+                    }
+                    .menuStyle(.borderlessButton)
+                    .menuIndicator(.hidden)
+                    .fixedSize()
+                    .accessibilityLabel("Script options")
                 }
-                .buttonStyle(.plain)
-                .help("Remove script")
-                .accessibilityLabel("Remove script")
-                .opacity(hook == nil ? 0 : 1)
-                .allowsHitTesting(hook != nil)
-                .accessibilityHidden(hook == nil)
             }
-
-            if hook != nil {
-                HStack(spacing: ThawSpacing.gutter) {
-                    Spacer().frame(width: labelWidth)
-
-                    Toggle("Enabled", isOn: enabledBinding)
-                        .toggleStyle(.checkbox)
-
-                    HStack(spacing: ThawSpacing.tight) {
-                        Text("Timeout")
-                        TextField(value: timeoutBinding, formatter: Self.timeoutFormatter) {
-                            EmptyView()
-                        }
-                        .textFieldStyle(.roundedBorder)
-                        .frame(width: 56)
-                        .multilineTextAlignment(.trailing)
-                        Stepper(value: timeoutBinding, in: 1 ... 300) {
-                            EmptyView()
-                        }
-                        .labelsHidden()
-                    }
-                    .font(ThawType.caption)
-
-                    Spacer()
-                }
-
+        } label: {
+            VStack(alignment: .leading, spacing: ThawSpacing.hairline) {
+                Text(label)
                 if let warning = validationWarning {
-                    HStack(spacing: ThawSpacing.compact) {
-                        Spacer().frame(width: labelWidth)
-                        Image(systemName: "exclamationmark.triangle.fill")
-                            .foregroundStyle(Color.warning)
-                        Text(warning)
-                            .font(ThawType.caption)
-                            .foregroundStyle(Color.warning)
-                    }
+                    Text(warning)
+                        .font(ThawType.detail)
+                        .foregroundStyle(Color.warning)
+                } else {
+                    Text(detail)
+                        .font(ThawType.detail.monospaced())
+                        .foregroundStyle(ThawInk.supporting)
+                        .lineLimit(1)
+                        .truncationMode(.middle)
                 }
             }
         }
     }
 
-    private var displayPath: String {
-        if let path = hook?.path, !path.isEmpty {
-            return path
-        }
-        return String(localized: "(no script selected)")
+    private var detail: String {
+        let path = AutomationSummary.script(path: hook?.path)
+        guard let hook, !hook.isEnabled else { return path }
+        return String(localized: "\(path), off")
+    }
+
+    private var timeoutChoices: [Double] {
+        let current = hook?.timeoutSeconds ?? 5
+        return Self.timeouts.contains(current) ? Self.timeouts : (Self.timeouts + [current]).sorted()
     }
 
     private var enabledBinding: Binding<Bool> {
@@ -549,17 +408,6 @@ private struct HookRow: View {
         }
         return nil
     }
-
-    private static let timeoutFormatter: NumberFormatter = {
-        let f = NumberFormatter()
-        f.numberStyle = .decimal
-        let suffix = " " + String(localized: "s", comment: "Seconds unit suffix for timeout field")
-        f.positiveSuffix = suffix
-        f.negativeSuffix = suffix
-        f.minimumFractionDigits = 0
-        f.maximumFractionDigits = 0
-        return f
-    }()
 
     private func chooseScript() {
         let panel = NSOpenPanel()

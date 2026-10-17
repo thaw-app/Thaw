@@ -22,7 +22,7 @@ struct SystemItemHidingCompatibilityTests {
         defer {
             SettingsURIHandler.settingsChangeNotificationCenter = previousCenter
             Defaults.store = previous
-            scratch.removePersistentDomain(forName: suiteName)
+            ScratchDefaults.remove(suiteName)
         }
         try body()
     }

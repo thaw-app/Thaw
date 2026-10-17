@@ -105,9 +105,16 @@ final class AutomationSettings {
         addToWhitelist(bundleId: bundleId)
     }
 
-    static func isValidBundleId(_ bundleId: String) -> Bool {
-        // This is only a basic dot-and-space check, not full bundle-ID validation.
-        let trimmed = bundleId.trimmingCharacters(in: .whitespacesAndNewlines)
-        return trimmed.contains(".") && !trimmed.contains(" ") && !trimmed.isEmpty
+    /// What picking an app in the allowed-apps chooser does.
+    nonisolated enum AllowedAppChoice: Equatable {
+        case add(String)
+        case alreadyAllowed(String)
+        case noBundleID
+    }
+
+    nonisolated static func choice(forBundleID bundleID: String?, allowed: [String]) -> AllowedAppChoice {
+        let trimmed = bundleID?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+        guard !trimmed.isEmpty else { return .noBundleID }
+        return allowed.contains(trimmed) ? .alreadyAllowed(trimmed) : .add(trimmed)
     }
 }

@@ -20,7 +20,7 @@ struct UXRefreshNavigationTests {
         #expect(SettingsSidebarPanes.groups.count == 1, "Got: \(SettingsSidebarPanes.groups.count)")
         #expect(SettingsSidebarPanes.all == [
             .general, .menuBarLayout, .visibility, .menuBarAppearance, .thawBar,
-            .profiles, .hotkeys, .automation, .triggers, .displays, .spaces,
+            .profiles, .hotkeys, .automation, .displays,
             .privacy, .theLab, .tools, .about,
         ], "Got: \(SettingsSidebarPanes.all)")
     }
@@ -41,6 +41,11 @@ struct UXRefreshNavigationTests {
         #expect(!all.contains(.scripts), "Scripts is an unbuilt placeholder, not a sidebar destination")
         #expect(!all.contains(.widgets), "Custom Status Icon is an Experiments toggle, not a sidebar destination")
         #expect(!all.contains(.advanced), "Advanced was dissolved into Menu Bar Behavior and Automation")
+        #expect(!all.contains(.spaces), "Spaces is a section of Displays & Spaces")
+        #expect(SettingsNavigationIdentifier.spaces.destination == .displays)
+        #expect(!all.contains(.triggers), "Triggers is a section of Automation")
+        #expect(SettingsNavigationIdentifier.triggers.destination == .automation)
+        #expect(SettingsNavigationIdentifier.general.destination == .general)
         // All remain valid identifiers for saved selections, thaw:// and other routes.
         #expect(SettingsNavigationIdentifier(rawValue: "About") == .about)
         #expect(SettingsNavigationIdentifier(rawValue: "Scripts") == .scripts)
@@ -126,7 +131,6 @@ struct UXRefreshNavigationTests {
     func spacingEntriesStayOnDisplays() {
         let stayIDs: Set = [
             "displays.itemSpacing",
-            "displays.confirmSpacingRelaunch",
             "displays.spacingApplyMode",
         ]
         for entry in SearchIndex.entries where stayIDs.contains(entry.id) {

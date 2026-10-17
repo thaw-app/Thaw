@@ -14,8 +14,16 @@ enum ThawEntryPoint {
     static func main() {
         if NativeVisibilityRecoveryLaunch.isRequested {
             NativeVisibilityRecoveryApp.main()
+        } else if MemoryBench.isRequested {
+            MemoryBench.run()
         } else {
-            ThawApp.main()
+            // Both the app and the Settings process configure TipKit here, before any scene or default changes.
+            FeatureTips.configureAtLaunch()
+            if SettingsProcessApp.isRequested {
+                SettingsProcessApp.main()
+            } else {
+                ThawApp.main()
+            }
         }
     }
 }

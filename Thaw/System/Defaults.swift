@@ -121,12 +121,9 @@ nonisolated enum Defaults {
             .simpleMode: DefaultValue.simpleMode,
             .showSettingDescriptions: DefaultValue.showSettingDescriptions,
             .lockThawBarPosition: DefaultValue.lockThawBarPosition,
-            .enableThawBarOnly: DefaultValue.enableThawBarOnly,
             .openHiddenItemsInMenuBar: DefaultValue.openHiddenItemsInMenuBar,
             .roundScreenCorners: DefaultValue.roundScreenCorners,
             .screenCornerRadius: DefaultValue.screenCornerRadius,
-            .showThawBarOnlyWithInlineReveal: DefaultValue.showThawBarOnlyWithInlineReveal,
-            .showThawBarOnlyLauncher: DefaultValue.showThawBarOnlyLauncher,
             .useThawBar: DefaultValue.useThawBar,
             .useThawBarOnlyOnNotchedDisplay: DefaultValue.useThawBarOnlyOnNotchedDisplay,
             .useNativeAlwaysHide: DefaultValue.useNativeAlwaysHide,
@@ -151,7 +148,6 @@ nonisolated enum Defaults {
             .tooltipDelay: DefaultValue.tooltipDelay,
             .showMenuBarTooltips: DefaultValue.showMenuBarTooltips,
             .iconRefreshInterval: DefaultValue.iconRefreshInterval,
-            .menuBarItemAlertRevealCooldown: DefaultValue.menuBarItemAlertRevealCooldown,
             .autoZenWhileSharingScreen: DefaultValue.autoZenWhileSharingScreen,
             .enableDiagnosticLogging: DefaultValue.enableDiagnosticLogging,
             .enableMenuBarItemOverflow: DefaultValue.enableMenuBarItemOverflow,
@@ -182,10 +178,6 @@ nonisolated enum Defaults {
 
             // Search
             .rememberSearchQuery: DefaultValue.rememberSearchQuery,
-            .searchSectionOrder: DefaultValue.searchSectionOrder,
-            .searchIncludeVisible: DefaultValue.searchIncludeVisible,
-            .searchIncludeHidden: DefaultValue.searchIncludeHidden,
-            .searchIncludeAlwaysHidden: DefaultValue.searchIncludeAlwaysHidden,
             .menuBarSearchPresentation: DefaultValue.menuBarSearchPresentation.rawValue,
 
             // Display Settings
@@ -233,12 +225,9 @@ extension Defaults {
         static let simpleMode = false
         static let showSettingDescriptions = true
         static let lockThawBarPosition = true
-        static let enableThawBarOnly = true
         static let openHiddenItemsInMenuBar = false
         static let roundScreenCorners = false
         static let screenCornerRadius = 10.0
-        static let showThawBarOnlyWithInlineReveal = false
-        static let showThawBarOnlyLauncher = true
         static let useThawBar = false
         static let useThawBarOnlyOnNotchedDisplay = false
 
@@ -270,7 +259,6 @@ extension Defaults {
         static let showMenuBarTooltips = false
         static let iconRefreshInterval: TimeInterval = 0.25
         /// Minimum seconds between two alert reveals of the same item.
-        static let menuBarItemAlertRevealCooldown: TimeInterval = 45
         static let autoZenWhileSharingScreen = false
         #if DEBUG
             static let enableDiagnosticLogging = true
@@ -316,10 +304,6 @@ extension Defaults {
         // MARK: Search
 
         static let rememberSearchQuery = false
-        static let searchSectionOrder: [String] = ["visible", "hidden", "alwaysHidden"]
-        static let searchIncludeVisible = true
-        static let searchIncludeHidden = true
-        static let searchIncludeAlwaysHidden = true
         /// How the menu bar search panel opens. Stored as the case's raw
         /// value; the default is the behavior the panel shipped with.
         static let menuBarSearchPresentation = SearchPresentation.inspector
@@ -386,17 +370,14 @@ extension Defaults {
         case showSettingDescriptions = "ShowSettingDescriptions"
         case lastSettingsPane = "LastSettingsPane"
         case hiddenSidebarPanes = "HiddenSidebarPanes"
+        case settingsInOwnProcess = "SettingsInOwnProcess"
         case menuBarItemAlertReveals = "MenuBarItemAlertReveals"
-        case menuBarItemAlertRevealCooldown = "MenuBarItemAlertRevealCooldown"
         case autoZenWhileSharingScreen = "AutoZenWhileSharingScreen"
         case menuBarAppearanceSpaceOverrides = "MenuBarAppearanceSpaceOverrides"
         case lockThawBarPosition = "LockThawBarPosition"
-        case enableThawBarOnly = "EnableThawBarOnly"
         case openHiddenItemsInMenuBar = "OpenHiddenItemsInMenuBar"
         case roundScreenCorners = "RoundScreenCorners"
         case screenCornerRadius = "ScreenCornerRadius"
-        case showThawBarOnlyWithInlineReveal = "ShowThawBarOnlyWithInlineReveal"
-        case showThawBarOnlyLauncher = "ShowThawBarOnlyLauncher"
         case menuBarSpacers = "MenuBarSpacers"
         case enableExperimentalRevealSystemExtras = "EnableExperimentalRevealSystemExtras"
         case useThawBar = "UseIceBar"
@@ -451,8 +432,7 @@ extension Defaults {
         /// XPC helper instead of in-process ScreenCaptureKit, containing
         /// SkyLight's per-call dictionary leak in a bounded-lifetime helper.
         ///
-        /// Hidden diagnostic flag; not exposed in Settings. Default: false
-        /// until the helper's TCC attribution proves out on macOS 27.
+        /// Hidden diagnostic flag; not exposed in Settings. Default: true.
         case captureViaXPCService = "CaptureViaXPCService"
         /// Hidden diagnostic flag: route the ambient menu bar walk through the AX helper.
         case axEnumerationViaSubprocess = "AXEnumerationViaSubprocess"
@@ -514,10 +494,6 @@ extension Defaults {
 
         case rememberSearchQuery = "RememberSearchQuery"
         case menuBarSearchRecents = "MenuBarSearchRecents"
-        case searchSectionOrder = "SearchSectionOrder"
-        case searchIncludeVisible = "SearchIncludeVisible"
-        case searchIncludeHidden = "SearchIncludeHidden"
-        case searchIncludeAlwaysHidden = "SearchIncludeAlwaysHidden"
         /// Where the search panel opens: remembered, centered, or at the
         /// pointer. Stored as the SearchPresentation case's raw value.
         case menuBarSearchPresentation = "MenuBarSearchPresentation"
@@ -584,7 +560,7 @@ extension Defaults {
         /// HID stream, avoiding the cursor warp. MenuBarAgent is resolved by
         /// name, since ownerPID is the third-party app.
         ///
-        /// Hidden diagnostic flag; not exposed in Settings. Default: false.
+        /// Hidden diagnostic flag; not exposed in Settings. Default: true.
         case addressMoveDragToMenuBarAgent
 
         /// Whether the first synthetic-drag attempt is delivered as event
@@ -677,5 +653,6 @@ extension Defaults {
 
         case globalPreProfileHook = "GlobalPreProfileHook"
         case globalPostProfileHook = "GlobalPostProfileHook"
+        case lastSettledProfileID = "LastSettledProfileID"
     }
 }

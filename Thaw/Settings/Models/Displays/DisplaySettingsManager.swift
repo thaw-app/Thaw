@@ -370,7 +370,7 @@ final class DisplaySettingsManager {
         // A skipped event returns from this one run; the next event runs again.
         screenParametersTask = NotificationCenter.default.eventsTask(named: NSApplication.didChangeScreenParametersNotification, debounce: .seconds(1)) { [weak self] in
             guard let self else { return }
-            diagLog.info("Screen parameters changed, \(NSScreen.managedScreens.count) screen(s) connected")
+            diagLog.info(DiagnosticLines.screensChanged(NSScreen.managedScreens))
             captureCurrentlyConnectedDisplays()
             let currentUUID = Bridging.getActiveMenuBarDisplayUUID()
             if Self.shouldSkipSpacingApply(

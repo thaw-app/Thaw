@@ -302,20 +302,8 @@ final class MenuBarSection {
                 section.updateControlItemState(for: nil)
             }
         }
-        showThawBarOnlyCompanionIfNeeded()
         refreshRevealedItemImages()
         startRehideChecks()
-    }
-
-    /// Inline reveal cannot reach Thaw Bar Only items; show a companion bar that closes with the reveal.
-    private func showThawBarOnlyCompanionIfNeeded() {
-        guard let appState, let menuBarManager,
-              name != .visible,
-              appState.settings.general.showThawBarOnlyWithInlineReveal,
-              !appState.itemManager.thawBarOnlyItems.isEmpty,
-              let screen = screenForThawBar
-        else { return }
-        menuBarManager.thawBarPanel.show(section: .hidden, on: screen, presentation: .alongsideReveal)
     }
 
     /// Capture glyphs while the section is revealed to replace app-icon fallbacks in layout and search.

@@ -178,15 +178,10 @@ nonisolated struct AdvancedSettingsSnapshot: Codable {
     var tooltipDelay: TimeInterval
     var showMenuBarTooltips: Bool
     var iconRefreshInterval: TimeInterval
-    var menuBarItemAlertRevealCooldown: TimeInterval
     var autoZenWhileSharingScreen: Bool
     var enableDiagnosticLogging: Bool
     var enableMenuBarItemOverflow: Bool
     var enableExperimentalSystemItemHiding: Bool
-    var searchSectionOrder: [String]
-    var searchIncludeVisible: Bool
-    var searchIncludeHidden: Bool
-    var searchIncludeAlwaysHidden: Bool
 
     /// The value every field takes when a profile predates it.
     static let defaults = AdvancedSettingsSnapshot(
@@ -199,15 +194,10 @@ nonisolated struct AdvancedSettingsSnapshot: Codable {
         tooltipDelay: Defaults.DefaultValue.tooltipDelay,
         showMenuBarTooltips: Defaults.DefaultValue.showMenuBarTooltips,
         iconRefreshInterval: Defaults.DefaultValue.iconRefreshInterval,
-        menuBarItemAlertRevealCooldown: Defaults.DefaultValue.menuBarItemAlertRevealCooldown,
         autoZenWhileSharingScreen: Defaults.DefaultValue.autoZenWhileSharingScreen,
         enableDiagnosticLogging: Defaults.DefaultValue.enableDiagnosticLogging,
         enableMenuBarItemOverflow: Defaults.DefaultValue.enableMenuBarItemOverflow,
-        enableExperimentalSystemItemHiding: Defaults.DefaultValue.enableExperimentalSystemItemHiding,
-        searchSectionOrder: Defaults.DefaultValue.searchSectionOrder,
-        searchIncludeVisible: Defaults.DefaultValue.searchIncludeVisible,
-        searchIncludeHidden: Defaults.DefaultValue.searchIncludeHidden,
-        searchIncludeAlwaysHidden: Defaults.DefaultValue.searchIncludeAlwaysHidden
+        enableExperimentalSystemItemHiding: Defaults.DefaultValue.enableExperimentalSystemItemHiding
     )
 
     @MainActor
@@ -222,15 +212,10 @@ nonisolated struct AdvancedSettingsSnapshot: Codable {
             tooltipDelay: settings.tooltipDelay,
             showMenuBarTooltips: settings.showMenuBarTooltips,
             iconRefreshInterval: settings.iconRefreshInterval,
-            menuBarItemAlertRevealCooldown: settings.menuBarItemAlertRevealCooldown,
             autoZenWhileSharingScreen: settings.autoZenWhileSharingScreen,
             enableDiagnosticLogging: settings.enableDiagnosticLogging,
             enableMenuBarItemOverflow: settings.enableMenuBarItemOverflow,
-            enableExperimentalSystemItemHiding: settings.enableExperimentalSystemItemHiding,
-            searchSectionOrder: settings.searchSectionOrder.map(\.rawValue),
-            searchIncludeVisible: settings.searchIncludeVisible,
-            searchIncludeHidden: settings.searchIncludeHidden,
-            searchIncludeAlwaysHidden: settings.searchIncludeAlwaysHidden
+            enableExperimentalSystemItemHiding: settings.enableExperimentalSystemItemHiding
         )
     }
 
@@ -247,15 +232,10 @@ nonisolated struct AdvancedSettingsSnapshot: Codable {
         settings.tooltipDelay = tooltipDelay
         settings.showMenuBarTooltips = showMenuBarTooltips
         settings.iconRefreshInterval = iconRefreshInterval
-        settings.menuBarItemAlertRevealCooldown = menuBarItemAlertRevealCooldown
         settings.autoZenWhileSharingScreen = autoZenWhileSharingScreen
         settings.enableDiagnosticLogging = enableDiagnosticLogging
         settings.enableMenuBarItemOverflow = enableMenuBarItemOverflow
         settings.enableExperimentalSystemItemHiding = enableExperimentalSystemItemHiding
-        settings.searchSectionOrder = AdvancedSettings.sanitizedSearchSectionOrder(from: searchSectionOrder)
-        settings.searchIncludeVisible = searchIncludeVisible
-        settings.searchIncludeHidden = searchIncludeHidden
-        settings.searchIncludeAlwaysHidden = searchIncludeAlwaysHidden
     }
 }
 
@@ -287,9 +267,6 @@ nonisolated extension AdvancedSettingsSnapshot {
         iconRefreshInterval = try container.decode(
             .iconRefreshInterval, default: Self.defaults.iconRefreshInterval
         )
-        menuBarItemAlertRevealCooldown = try container.decode(
-            .menuBarItemAlertRevealCooldown, default: Self.defaults.menuBarItemAlertRevealCooldown
-        )
         autoZenWhileSharingScreen = try container.decode(
             .autoZenWhileSharingScreen, default: Self.defaults.autoZenWhileSharingScreen
         )
@@ -302,18 +279,6 @@ nonisolated extension AdvancedSettingsSnapshot {
         enableExperimentalSystemItemHiding = try container.decode(
             .enableExperimentalSystemItemHiding,
             default: Self.defaults.enableExperimentalSystemItemHiding
-        )
-        searchSectionOrder = try container.decode(
-            .searchSectionOrder, default: Self.defaults.searchSectionOrder
-        )
-        searchIncludeVisible = try container.decode(
-            .searchIncludeVisible, default: Self.defaults.searchIncludeVisible
-        )
-        searchIncludeHidden = try container.decode(
-            .searchIncludeHidden, default: Self.defaults.searchIncludeHidden
-        )
-        searchIncludeAlwaysHidden = try container.decode(
-            .searchIncludeAlwaysHidden, default: Self.defaults.searchIncludeAlwaysHidden
         )
     }
 }

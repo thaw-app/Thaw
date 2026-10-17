@@ -1186,6 +1186,9 @@
     "%@, removed while hidden" : {
 
     },
+    "%@, selected" : {
+      "comment" : "VoiceOver value of a selected Layout item: its section name, then that it is selected"
+    },
     "%@. Move them to Hidden and they open from the %@ Bar instead." : {
       "localizations" : {
         "en" : {
@@ -1587,6 +1590,29 @@
     "%lld" : {
 
     },
+    "%lld Items Selected" : {
+      "comment" : "Header of the menu for several selected Layout items",
+      "localizations" : {
+        "en" : {
+          "variations" : {
+            "plural" : {
+              "one" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld Item Selected"
+                }
+              },
+              "other" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld Items Selected"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "%lld drags" : {
 
     },
@@ -1729,6 +1755,29 @@
     },
     "%lld items in this group aren’t in the menu bar right now. Open the missing apps, then try again." : {
       "comment" : "Reason a group move was refused: several members missing"
+    },
+    "%lld items selected" : {
+      "comment" : "VoiceOver announcement of how many items are selected in the Layout pane",
+      "localizations" : {
+        "en" : {
+          "variations" : {
+            "plural" : {
+              "one" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld item selected"
+                }
+              },
+              "other" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld items selected"
+                }
+              }
+            }
+          }
+        }
+      }
     },
     "%lld layout updates" : {
 
@@ -2279,12 +2328,6 @@
       }
     },
     "**App icons instead of menu bar previews:** Thaw uses an app-icon fallback when a usable capture is unavailable, including when Screen Recording permission is off. The fallback is intentional; an item disappearing entirely still needs investigation." : {
-
-    },
-    "**Apps that need their own update:** macOS 27 changed how menu bar items are published, and an app built against the older behavior can sit in the wrong place, refuse to hide, or show no icon. f.lux behaves this way today. The fix has to come from the app's own developer; %@ cannot correct it from the outside. Check for an update to that app." : {
-
-    },
-    "**Apps that need their own update:** macOS 27 changed how menu bar items are published, and an app built against the older behavior can sit in the wrong place, refuse to hide, or show no icon. f.lux behaves this way today. The fix has to come from the app's own developer; Thaw cannot correct it from the outside." : {
 
     },
     "**Control Center items assigned to Hidden are switched off, not hidden:** Wi‑Fi, Bluetooth and other Control Center modules in Hidden or Always Hidden are turned off in macOS, and they do not come back when the section is revealed. Move them to Visible to show them again." : {
@@ -3274,6 +3317,9 @@
     "Add to Group" : {
 
     },
+    "Add to Selection" : {
+      "comment" : "VoiceOver action that adds a Layout item to the selection"
+    },
     "Adds Quit %@ to the bottom of the %@ menu you get by right-clicking the menu bar." : {
       "localizations" : {
         "en" : {
@@ -3831,6 +3877,9 @@
     },
     "Allows items such as Clock, Control Center, and Siri to be moved into hidden sections." : {
 
+    },
+    "Alpha" : {
+      "comment" : "A label for the \"Alpha\" segment in the update channel picker."
     },
     "Always Hidden" : {
 
@@ -9023,7 +9072,7 @@
     "Choose Another" : {
 
     },
-    "Choose Beta or Nightly updates. Automatic updates can be Off, Check only, or Check and download." : {
+    "Choose Beta or Alpha updates. Automatic updates can be Off, Check only, or Check and download." : {
 
     },
     "Choose Icon…" : {
@@ -12267,7 +12316,7 @@
         }
       }
     },
-    "Delete macOS's saved menu bar layout and restart the menu bar so it rebuilds from scratch. Use this when items won't come back to the menu bar after you move them. A backup is saved first; restore it from Layout backups above." : {
+    "Delete macOS's saved menu bar layout and restart the menu bar so it rebuilds from scratch. Use this when items won't come back to the menu bar after you move them. A backup is saved first; restore it from Layout backups below." : {
 
     },
     "Delete this backup?" : {
@@ -12397,6 +12446,9 @@
           }
         }
       }
+    },
+    "Deselect" : {
+      "comment" : "VoiceOver action that removes a Layout item from the selection"
     },
     "Desktop %lld" : {
       "comment" : "Label for a desktop Space, numbered as Mission Control numbers it."
@@ -23064,6 +23116,29 @@
     "Move %@" : {
 
     },
+    "Move %lld Items to %@" : {
+      "comment" : "Menu entry that moves every selected Layout item to a section",
+      "localizations" : {
+        "en" : {
+          "variations" : {
+            "plural" : {
+              "one" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "Move %1$lld Item to %2$@"
+                }
+              },
+              "other" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "Move %1$lld Items to %2$@"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "Move All %@ Items to %@" : {
       "localizations" : {
         "en" : {
@@ -23764,14 +23839,14 @@
         }
       }
     },
+    "New: select several items" : {
+      "comment" : "Title of the Layout tip that announces selecting several menu bar items at once"
+    },
     "Newly connected displays are also seeded from this template." : {
 
     },
     "Next Track" : {
 
-    },
-    "Nightly" : {
-      "comment" : "A label for the \"Nightly\" segment in the update channel picker."
     },
     "Nightly channel · Last checked %@" : {
 
@@ -25234,6 +25309,9 @@
     },
     "Nothing was changed. The positions in use now could not be backed up first, so the restore would not have been undoable. %@" : {
 
+    },
+    "Nothing was moved. An item may have quit or changed since you selected it. Select the items again and retry." : {
+      "comment" : "Explanation shown when a move of several selected Layout items was refused"
     },
     "Nothing was moved: %@ is not managing the menu bar yet. Try again once your menu bar items appear." : {
 
@@ -31176,6 +31254,9 @@
     "Select “group.com.apple.controlcenter.plist” to let %@ hide apps the way System Settings does. %@ is granted access to this one file only." : {
 
     },
+    "Selection cleared" : {
+      "comment" : "VoiceOver announcement when the Layout pane's selection is cleared"
+    },
     "Separate looks for Light and Dark Mode" : {
 
     },
@@ -36058,6 +36139,9 @@
     },
     "The section dividers are not on the menu bar yet" : {
 
+    },
+    "The selected items couldn’t move to %@" : {
+      "comment" : "Title shown when a move of several selected Layout items was refused"
     },
     "The system's layout table" : {
 
@@ -41849,6 +41933,9 @@
     },
     "•" : {
 
+    },
+    "⌘-click or ⇧-click icons, then drag one or right-click to move them all." : {
+      "comment" : "Message of the Layout tip that announces selecting several menu bar items at once"
     }
   },
   "version" : "1.1"

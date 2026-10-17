@@ -16,7 +16,7 @@ struct MenuBarHistoryRemovalTests {
     func clearsOnlyRetiredHistory() throws {
         let suiteName = "MenuBarHistoryRemovalTests.\(UUID().uuidString)"
         let defaults = try #require(UserDefaults(suiteName: suiteName))
-        defer { defaults.removePersistentDomain(forName: suiteName) }
+        defer { ScratchDefaults.remove(suiteName) }
         defaults.set(true, forKey: "EnableBarHygieneAudit")
         defaults.set(Data("history".utf8), forKey: "MenuBarHygieneLedger")
         defaults.set(Date.now, forKey: "LayoutSuggestions.dismissed.unusedItems")

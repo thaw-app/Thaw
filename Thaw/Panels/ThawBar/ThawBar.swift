@@ -22,16 +22,8 @@ final class ThawBarPanel: NSPanel {
     enum Presentation {
         /// A section's items: the panel owns the reveal.
         case section
-        /// Inline reveal owns the section and closes this companion Thaw Bar Only panel.
-        case alongsideReveal
-        /// Thaw Bar Only items opened from their icon or shortcut, with no section ownership.
-        case thawBarOnly
         /// Folder items opened from their icon, with no section ownership.
         case folder
-
-        var showsOnlyThawBarOnlyItems: Bool {
-            self == .alongsideReveal || self == .thawBarOnly
-        }
     }
 
     private(set) var presentation = Presentation.section
@@ -387,7 +379,6 @@ final class ThawBarPanel: NSPanel {
             keyboardFocus: keyboardFocus,
             screen: screen,
             section: section,
-            showsOnlyThawBarOnlyItems: presentation.showsOnlyThawBarOnlyItems,
             folderMembers: folderMemberIdentifiers
         )
         if let hostingView = contentView as? ThawBarHostingView {
@@ -412,10 +403,8 @@ final class ThawBarPanel: NSPanel {
             keyboardFocus.begin()
         }
 
-        // Nonactivating panels get no resign-key dismissal; monitor outside clicks unless inline reveal owns rehide.
-        if presentation != .alongsideReveal {
-            installOutsideClickMonitor()
-        }
+        // Nonactivating panels get no resign-key dismissal, so watch for outside clicks.
+        installOutsideClickMonitor()
 
         // Non-section items are never on the bar; capturing would unnecessarily reveal and reconceal the user's section.
         guard presentation == .section else {
@@ -507,20 +496,10 @@ final class ThawBarPanel: NSPanel {
         {
             return
         }
-        // The Thaw Bar Only icon's own click toggles the panel.
-        if presentation == .thawBarOnly, appState?.thawBarOnlyProxies.launcherContainsPointer() == true {
-            return
-        }
         if presentation == .folder, appState?.groupFolders.iconContainsPointer() == true {
             return
         }
         hide()
-    }
-
-    func closeIfShowingThawBarOnly() {
-        if isVisible, presentation == .thawBarOnly {
-            close()
-        }
     }
 
     func hide() {

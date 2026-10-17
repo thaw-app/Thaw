@@ -437,7 +437,7 @@ final class ProfileManager {
 
     private func applySnapshot(_ profile: Profile, to appState: AppState) {
         profile.generalSettings.apply(to: appState.settings.general)
-        profile.advancedSettings.apply(to: appState.settings.advanced)
+        profile.advancedSettings.merged(onto: .capture(from: appState.settings.advanced)).apply(to: appState.settings.advanced)
 
         Defaults.set(profile.hotkeys, forKey: .hotkeys)
         for hotkey in appState.settings.hotkeys.hotkeys {

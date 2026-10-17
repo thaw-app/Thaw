@@ -68,12 +68,15 @@ struct NativeVisibilityRecoveryView: View {
                 Link("Open Menu Bar Settings", destination: URL(string: "x-apple.systempreferences:com.apple.ControlCenter-Settings.extension")!)
                 Spacer()
                 Button("Quit Recovery") { NSApp.terminate(nil) }
+                    .buttonStyle(.settingsGlass)
                     .disabled(model.isBusy)
                     .keyboardShortcut(.cancelAction)
                 if model.successMessage == nil {
                     Button("Check Again") { Task { await model.load() } }
+                        .buttonStyle(.settingsGlass)
                         .disabled(model.isBusy)
                     Button("Restore Visibility…") { confirmsRestore = true }
+                        .buttonStyle(.settingsGlass)
                         .disabled(!model.canRestore)
                         .keyboardShortcut(.defaultAction)
                 }

@@ -329,7 +329,7 @@ The `bundleId` parameter is stripped/ignored in release builds. Remove it in pro
 
 ### Launcher Operations
 
-Four operations let a launcher list and drive menu bar items and profiles. The launcher queries, ranks, and picks an identifier; Thaw resolves it, acts, and reports the outcome. They pass the same feature toggle and whitelist as the settings URLs, and take the same `callback`, `broadcast`, and `requestId` parameters as `thaw://get`.
+Five operations let a launcher list, drive and arrange menu bar items and profiles. The launcher queries, ranks, and picks an identifier; Thaw resolves it, acts, and reports the outcome. They pass the same feature toggle and whitelist as the settings URLs, and take the same `callback`, `broadcast`, and `requestId` parameters as `thaw://get`.
 
 Floe (`com.thaw.floe`) is trusted without the authorization prompt and works while the Settings URI feature is off, provided it is signed by the same team as Thaw. Any other sender needs the feature enabled and an approved entry in Automation.
 
@@ -339,6 +339,7 @@ Floe (`com.thaw.floe`) is trusted without the authorization prompt and works whi
 | `thaw://activate-item` | `item-id` | Opens an item's menu, revealing it first if hidden |
 | `thaw://list-profiles` | `callback` or `broadcast` | Saved profiles and which one is active |
 | `thaw://apply-profile` | `profile-id` | Applies a saved profile and waits for its layout |
+| `thaw://move-item` | `item-id` (repeatable), `section`, optional `after-id` | Moves items into a section as a drop in Layout does |
 
 ```bash
 open "thaw://list-items?callback=myapp://thaw-response&requestId=1"
@@ -347,7 +348,7 @@ open "thaw://list-profiles?callback=myapp://thaw-response&requestId=3"
 open "thaw://apply-profile?profile-id=1B4E28BA-2FA1-11D2-883F-0016D3CCA427&callback=myapp://thaw-response&requestId=4"
 ```
 
-`item-id` is an `id` from `list-items`, percent-encoded; `profile-id` is an `id` from `list-profiles`. The two actions run with or without a response mechanism. The two lists need one.
+`item-id` is an `id` from `list-items`, percent-encoded; `profile-id` is an `id` from `list-profiles`. The actions run with or without a response mechanism. The lists need one.
 
 Responses use the `thaw://get` envelope plus an `operation` field. `data` always carries a `version` (currently `1`); fields may be added without changing it. As with `thaw://get`, the full response goes only to the callback, and `broadcast=true` returns an acknowledgement.
 
@@ -431,6 +432,43 @@ An error response puts a stable code in `error` and a readable explanation in `d
   "data": {"version": 1, "itemId": "com.example.app:Item-0", "outcome": "itemUnavailable"}
 }
 ```
+
+`move-item`:
+
+```text
+thaw://move-item?item-id=<id>[&item-id=<id>...]&section=<visible|hidden|alwaysHidden>[&after-id=<id>]
+```
+
+```bash
+open "thaw://move-item?item-id=com.example.app%3AItem-0&section=hidden&callback=myapp://thaw-response&requestId=5"
+open "thaw://move-item?item-id=com.example.a%3AItem-0&item-id=com.example.b%3AItem-0&section=visible&after-id=com.example.c%3AItem-0"
+```
+
+`item-id` is an `id` from `list-items`, percent-encoded. Repeat it to move several items in one call; they keep the order given. `section` is matched without regard to case. Without `after-id`, the items go to the right end of the section. With `after-id`, they go directly to the right of that item as the Layout pane shows the section. `after-id` must already be in the target section and must not be one of the moved items.
+
+Thaw checks every item before it moves any. If one is unknown, is one of Thaw's own control items, belongs to a group whose other members aren't listed too, or can't go to that section, the whole call is refused and `details` names that item. Groups move as a whole, as in Layout, so list every member to move one. `alwaysHidden` is refused while that section is turned off. The items then move in one pass, the same way a drop in Layout does, so the bar is laid out once. Thaw counts the move as a user edit, so automatic layout passes waiting at the time give way to it.
+
+```json
+{
+  "requestId": "5",
+  "operation": "move-item",
+  "status": "success",
+  "data": {"version": 1, "itemIds": ["com.example.app:Item-0"], "section": "hidden", "outcome": "moved"}
+}
+```
+
+`afterId` is included when `after-id` was given. `outcome` is `moved` (Thaw recorded the new order and started applying it; as with a drop in Layout, the bar can take a moment to catch up), `unchanged` (the items were already there), or one of these error codes:
+
+| Code | Meaning |
+| ---- | ------- |
+| `invalidRequest` | No `item-id`, no or an unknown `section`, an item listed twice, or `after-id` naming a moved item |
+| `itemUnavailable` | No item in Layout has that identifier |
+| `itemNotMovable` | A control item, a group member listed without the rest of its group, or an item that cannot go to that section |
+| `sectionDisabled` | The target section is turned off |
+| `anchorUnavailable` | `after-id` is not in the target section |
+| `moveRefused` | The move path declined the move, for example because an item quit in the meantime or macOS would not assign it |
+
+`move-item` is not available in reduced mode.
 
 A callback is a response, not a command. Any app can open your callback URL, so accept one only when its `requestId` and `operation` match a request you sent and are still waiting on, and never act on a callback beyond completing that request.
 

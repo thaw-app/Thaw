@@ -27,9 +27,6 @@ extension MenuBarItem {
         if let folder = GroupFolders.label(for: tag) {
             return folder
         }
-        if ThawBarOnlyProxies.isProxyTag(tag) {
-            return String(localized: "Thaw Bar Only items")
-        }
         if let label = ItemStandInSlot.label(for: tag) {
             return label
         }
@@ -49,9 +46,9 @@ extension MenuBarItem {
             // draggable, but there is nothing to launch in one.
             && !(tag.isThawOwnedNamespace
                 && tag.title.hasPrefix(MenuBarSpacerManager.autosavePrefix))
-            // The launcher opens a bar, and a stand-in's item is listed in
+            // A folder icon opens a bar, and a stand-in's item is listed in
             // its own right.
-            && !ThawBarOnlyProxies.isProxyTag(tag)
+            && !(tag.isThawOwnedNamespace && tag.title.hasPrefix(GroupFolders.autosavePrefix))
             && ItemStandInSlot(tag: tag) == nil
     }
 

@@ -52,6 +52,7 @@ extension HIDEventManager {
         }
 
         isDraggingMenuBarItem = true
+        appState.itemManager.repairs.interruptAutomaticWork(by: .userDragStarted)
 
         // Optionally bring every section out for the duration of the drag, so
         // the user can drop an item into one that is currently put away.

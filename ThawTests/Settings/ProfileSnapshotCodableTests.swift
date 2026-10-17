@@ -69,29 +69,37 @@ struct ProfileSnapshotCodableTests {
 
     @Test("An advanced snapshot missing keys falls back to the documented defaults")
     func advancedSnapshotFillsMissingKeys() throws {
-        let json = Data(#"{"sectionDividerStyle": 1, "searchIncludeVisible": false}"#.utf8)
+        let json = Data(#"{"sectionDividerStyle": 1, "tooltipDelay": 9}"#.utf8)
 
         let snapshot = try decoder.decode(AdvancedSettingsSnapshot.self, from: json)
 
         #expect(snapshot.sectionDividerStyle == 1)
-        #expect(snapshot.searchIncludeVisible == false)
+        #expect(snapshot.tooltipDelay == 9)
 
         #expect(snapshot.enableAlwaysHiddenSection == Defaults.DefaultValue.enableAlwaysHiddenSection)
         #expect(snapshot.showAllSectionsOnUserDrag == Defaults.DefaultValue.showAllSectionsOnUserDrag)
         #expect(snapshot.hideApplicationMenus == Defaults.DefaultValue.hideApplicationMenus)
         #expect(snapshot.enableSecondaryContextMenu == Defaults.DefaultValue.enableSecondaryContextMenu)
         #expect(snapshot.showOnHoverDelay == Defaults.DefaultValue.showOnHoverDelay)
-        #expect(snapshot.tooltipDelay == Defaults.DefaultValue.tooltipDelay)
         #expect(snapshot.showMenuBarTooltips == Defaults.DefaultValue.showMenuBarTooltips)
         #expect(snapshot.iconRefreshInterval == Defaults.DefaultValue.iconRefreshInterval)
-        #expect(snapshot.menuBarItemAlertRevealCooldown == Defaults.DefaultValue.menuBarItemAlertRevealCooldown)
         #expect(snapshot.autoZenWhileSharingScreen == Defaults.DefaultValue.autoZenWhileSharingScreen)
         #expect(snapshot.enableDiagnosticLogging == Defaults.DefaultValue.enableDiagnosticLogging)
         #expect(snapshot.enableMenuBarItemOverflow == Defaults.DefaultValue.enableMenuBarItemOverflow)
         #expect(snapshot.enableExperimentalSystemItemHiding == Defaults.DefaultValue.enableExperimentalSystemItemHiding)
-        #expect(snapshot.searchSectionOrder == Defaults.DefaultValue.searchSectionOrder)
-        #expect(snapshot.searchIncludeHidden == Defaults.DefaultValue.searchIncludeHidden)
-        #expect(snapshot.searchIncludeAlwaysHidden == Defaults.DefaultValue.searchIncludeAlwaysHidden)
+    }
+
+    @Test("A profile saved with the removed search settings still loads")
+    func advancedSnapshotIgnoresRemovedSearchKeys() throws {
+        let json = Data(#"""
+        {"sectionDividerStyle": 1, "searchSectionOrder": ["hidden", "visible"],
+         "searchIncludeVisible": false, "searchIncludeHidden": false, "searchIncludeAlwaysHidden": false}
+        """#.utf8)
+
+        let snapshot = try decoder.decode(AdvancedSettingsSnapshot.self, from: json)
+
+        #expect(snapshot.sectionDividerStyle == 1)
+        #expect(try encodedKeys(of: snapshot).allSatisfy { !$0.hasPrefix("search") })
     }
 
     // MARK: Encoded key set
@@ -132,11 +140,6 @@ struct ProfileSnapshotCodableTests {
             "enableSecondaryContextMenu",
             "hideApplicationMenus",
             "iconRefreshInterval",
-            "menuBarItemAlertRevealCooldown",
-            "searchIncludeAlwaysHidden",
-            "searchIncludeHidden",
-            "searchIncludeVisible",
-            "searchSectionOrder",
             "sectionDividerStyle",
             "showAllSectionsOnUserDrag",
             "showMenuBarTooltips",
@@ -179,15 +182,10 @@ struct ProfileSnapshotCodableTests {
             tooltipDelay: 2.5,
             showMenuBarTooltips: true,
             iconRefreshInterval: 3.5,
-            menuBarItemAlertRevealCooldown: 4.5,
             autoZenWhileSharingScreen: true,
             enableDiagnosticLogging: false,
             enableMenuBarItemOverflow: false,
-            enableExperimentalSystemItemHiding: true,
-            searchSectionOrder: ["hidden", "visible"],
-            searchIncludeVisible: false,
-            searchIncludeHidden: false,
-            searchIncludeAlwaysHidden: false
+            enableExperimentalSystemItemHiding: true
         )
     }
 

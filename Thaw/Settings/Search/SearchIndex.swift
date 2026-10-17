@@ -42,9 +42,7 @@ nonisolated struct SearchEntry: Identifiable, @unchecked Sendable {
         case "layout.spacers":
             .layoutSpacers
         // The two app-wide Thaw Bar toggles sit behind the page's disclosure.
-        case "general.lockThawBarPosition", "general.thawBarLocationOnHotkey", "general.openHiddenItemsInMenuBar",
-             "general.enableThawBarOnly", "general.showThawBarOnlyWithInlineReveal",
-             "general.showThawBarOnlyLauncher":
+        case "general.lockThawBarPosition", "general.thawBarLocationOnHotkey", "general.openHiddenItemsInMenuBar":
             .thawBarAppWideOptions
         default:
             nil
@@ -115,7 +113,7 @@ nonisolated enum SearchIndex {
             id: "spaces.hideInThisSpace",
             title: "Hide the menu bar in this Space",
             descriptionText: String(localized: "Hides the system menu bar only while this Space is showing. Other Spaces keep their current behavior."),
-            pane: .spaces,
+            pane: .displays,
             section: "This Space",
             keywords: ["hide", "space", "menu bar", "per-space", "desktop"],
             property: nil
@@ -124,7 +122,7 @@ nonisolated enum SearchIndex {
             id: "spaces.disableHoverReveal",
             title: "Disable hover reveal in this Space",
             descriptionText: String(localized: "Stops a hidden menu bar from sliding down when the pointer reaches the top edge of the screen in this Space."),
-            pane: .spaces,
+            pane: .displays,
             section: "This Space",
             keywords: ["hover", "reveal", "auto show", "space", "top edge"],
             property: nil
@@ -133,7 +131,7 @@ nonisolated enum SearchIndex {
             id: "spaces.revealStripHeight",
             title: "Reveal strip height",
             descriptionText: String(localized: "How tall the invisible strip at the top of the screen is before a hidden menu bar reveals itself."),
-            pane: .spaces,
+            pane: .displays,
             section: "This Space",
             keywords: ["reveal", "strip", "height", "edge", "hidden", "autohide"],
             property: nil
@@ -142,7 +140,7 @@ nonisolated enum SearchIndex {
             id: "spaces.fullScreenAppearanceEverywhere",
             title: "Use the full-screen menu bar appearance everywhere",
             descriptionText: String(localized: "Gives ordinary desktop Spaces the menu bar appearance macOS normally reserves for full-screen apps."),
-            pane: .spaces,
+            pane: .displays,
             section: "All Spaces",
             keywords: ["fullscreen", "appearance", "everywhere", "spaces"],
             property: nil
@@ -151,7 +149,7 @@ nonisolated enum SearchIndex {
             id: "spaces.hideEverywhere",
             title: "Hide the menu bar in every Space",
             descriptionText: String(localized: "Hides the system menu bar in every context, full screen included."),
-            pane: .spaces,
+            pane: .displays,
             section: "All Spaces",
             keywords: ["hide", "global", "every space", "menu bar"],
             property: nil
@@ -173,10 +171,6 @@ nonisolated enum SearchIndex {
         .general("thawBarLocation"),
         // An error channel, not a setting.
         .general("thawIconPersistenceError"),
-        // Thaw Bar Only is unplugged for now; its switches are commented out.
-        .general("enableThawBarOnly"),
-        .general("showThawBarOnlyLauncher"),
-        .general("showThawBarOnlyWithInlineReveal"),
         // The radius slider shows only under Round screen corners.
         .general("screenCornerRadius"),
         // The Everything option of the Hiding method picker, indexed under

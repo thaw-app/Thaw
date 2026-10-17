@@ -24,7 +24,7 @@ struct PickedFileAccessTests {
         let suiteName = "PickedFileAccessTests.\(UUID().uuidString)"
         let defaults = try #require(UserDefaults(suiteName: suiteName))
         defer {
-            defaults.removePersistentDomain(forName: suiteName)
+            ScratchDefaults.remove(suiteName)
             try? FileManager.default.removeItem(at: folder)
         }
         let file = folder.appendingPathComponent("list.plist")

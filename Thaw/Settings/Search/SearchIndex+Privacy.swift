@@ -59,14 +59,5 @@ nonisolated extension SearchIndex {
             keywords: ["network", "release notes", "whats new", "what's new", "fetch", "changelog", "privacy", "offline"],
             property: .advanced("fetchReleaseNotes")
         ),
-        SearchEntry(
-            id: "privacy.turnEverythingOff",
-            title: "Turn Everything Off",
-            descriptionText: String(localized: "Switches off every network call Thaw makes."),
-            pane: .privacy,
-            section: "Network access",
-            keywords: ["network", "off", "offline", "privacy", "disable", "everything"],
-            property: nil
-        ),
     ]
 }

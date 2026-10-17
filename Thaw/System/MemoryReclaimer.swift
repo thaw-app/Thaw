@@ -62,7 +62,7 @@ enum MemoryReclaimer {
     }
 
     /// Physical footprint matching footprint(1) and Activity Monitor.
-    private static nonisolated func physicalFootprint() -> UInt64? {
+    static nonisolated func physicalFootprint() -> UInt64? {
         var info = rusage_info_v4()
         // proc_pid_rusage's pointer-to-pointer type expects the struct address itself.
         // Rebind it; passing a pointer to a local pointer would overrun that local.

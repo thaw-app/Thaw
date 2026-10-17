@@ -100,6 +100,8 @@ enum MenuBarSearchItemActions {
 
         // The user chose this from a menu, so it moves in Manual too.
         ExplicitLayoutEdit.task {
+            // Nil once a refusal has explained itself.
+            var committed: Bool? = false
             // Seat the weights in the destination band before the assertion
             // flips, or MenuBarAgent republishes the item on its old side of
             // the divider and the boundary repair drags it back seconds later.
@@ -121,18 +123,49 @@ enum MenuBarSearchItemActions {
                                 refusal: refusal
                             )
                         )
+                        committed = nil
                         return
                     }
+                    committed = true
                 } else {
                     // No setSectionOrder to go with it: a drop carries a position
                     // and this does not, so the item takes whatever place the
                     // destination's stored order gives it.
                     controller.setSection(section, item: item)
+                    committed = true
                 }
             }
 
             await appState.itemManager.cacheItemsRegardless(skipRecentMoveCheck: true)
+            if let committed { showMoveResult(for: item, to: section, committed: committed, appState: appState) }
         }
+    }
+
+    /// Says where a menu move left the item, since the menu has closed by then.
+    private static func showMoveResult(
+        for item: MenuBarItem,
+        to section: MenuBarSection.Name,
+        committed: Bool,
+        appState: AppState
+    ) {
+        let manager = appState.itemManager
+        let current = manager.managedItem(withTag: item.tag) ?? item
+        let observed = MoveLanding.observedSection(
+            of: current,
+            liveItems: manager.itemCache.managedItems,
+            dividers: manager.lastKnownControlItems
+        )
+        let message = MoveResultMessage.make(
+            itemName: item.displayName,
+            sectionTitle: title(for: section),
+            committed: committed,
+            landed: MoveLanding.landed(
+                in: section,
+                assigned: appState.menuBarManager.sectionController.section(for: current),
+                observed: observed
+            )
+        )
+        ThawHUD.show(symbol: message.symbol, text: "\(message.text)")
     }
 
     /// Assigns several ungrouped items to section in one pass, for the

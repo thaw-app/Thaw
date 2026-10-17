@@ -98,6 +98,13 @@ struct SettingsView: View {
         // The same overflow menu as the full window, so the mode switch sits
         // in the same place whichever way the window is showing.
         .toolbar {
+            // A labelled way out, so leaving Simple Mode doesn't depend on finding the overflow menu.
+            ToolbarItem(placement: .primaryAction) {
+                Button("All Settings") {
+                    generalSettings.simpleMode = false
+                }
+                .help("Leave Simple Mode and show every settings page")
+            }
             ToolbarItem(placement: .primaryAction) {
                 SettingsOverflowMenu(appState: appState, generalSettings: generalSettings, isCustomizeSidebarPresented: $isCustomizeSidebarPresented)
             }
@@ -277,11 +284,6 @@ struct SettingsView: View {
                 settings: appState.settings.general,
                 advancedSettings: appState.settings.advanced
             )
-        case .spaces:
-            // Session-only Space controls: a peer destination, not a tab inside
-            // Menu Bar. See SpacesSettingsPane for why these are commands, not
-            // preferences.
-            SpacesSettingsPane()
         case .thawBar:
             ThawBarSettingsPane(displaySettings: appState.settings.displaySettings)
         case .menuBarAppearance:
@@ -292,15 +294,13 @@ struct SettingsView: View {
             ProfileSettingsPane(profileManager: appState.profileManager)
         case .hotkeys:
             HotkeysSettingsPane(settings: appState.settings.hotkeys)
-        case .automation:
+        case .automation, .triggers:
             AutomationSettingsPane(
                 settings: appState.settings.automation,
                 hookSettings: appState.settings.automationHook,
                 advancedSettings: appState.settings.advanced
             )
-        case .triggers:
-            TriggersSettingsPane(manager: appState.appRunningTriggers)
-        case .displays:
+        case .displays, .spaces:
             DisplaySettingsPane(displaySettings: appState.settings.displaySettings)
         case .general:
             GeneralSettingsPane(
@@ -518,7 +518,7 @@ enum SettingsSidebarPanes {
         // Appearance, Thaw Bar) need no heading.
         Group(panes: [
             .general, .menuBarLayout, .visibility, .menuBarAppearance, .thawBar,
-            .profiles, .hotkeys, .automation, .triggers, .displays, .spaces,
+            .profiles, .hotkeys, .automation, .displays,
             .privacy, .theLab, .tools, .about,
         ]),
     ]

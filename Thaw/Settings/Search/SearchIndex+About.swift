@@ -14,10 +14,10 @@ nonisolated extension SearchIndex {
         SearchEntry(
             id: "about.updateChannel",
             title: "Update channel",
-            descriptionText: String(localized: "Choose Beta or Nightly updates. Automatic updates can be Off, Check only, or Check and download."),
+            descriptionText: String(localized: "Choose Beta or Alpha updates. Automatic updates can be Off, Check only, or Check and download."),
             pane: .about,
             section: "Updates",
-            keywords: ["update", "channel", "beta", "nightly", "automatic", "check", "download"],
+            keywords: ["update", "channel", "beta", "alpha", "nightly", "automatic", "check", "download"],
             property: nil
         ),
     ]

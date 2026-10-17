@@ -76,12 +76,32 @@ final class RepairOrchestrator {
         case settingChanged
         /// A section was revealed, or is about to be.
         case sectionRevealed
+        /// A section is about to be revealed, before the restriction is released.
+        case revealStarting
+        /// The user started ⌘-dragging an icon on the bar.
+        case userDragStarted
+        /// The user opened an item from the Thaw Bar, search or a hint.
+        case userClickedItem
+
+        /// Causes that mean someone is at the bar, so the passes they start are not a loop.
+        var isUserAction: Bool {
+            interruptsAutomaticWork || [.userDragEnded, .userEdit, .sectionRevealed].contains(self)
+        }
+
+        /// Causes that call off the automatic passes asked for before them, which were planned on a bar the user is now changing.
+        var interruptsAutomaticWork: Bool {
+            [.revealStarting, .userDragStarted, .userClickedItem].contains(self)
+        }
     }
 
     private static let diagLog = DiagLog(category: "RepairOrchestrator")
 
     private(set) var ledger = RepairLedger()
     private let lane = RepairLane()
+    private var budget = AutomaticWriteBudget()
+    private var interruption = AutomaticPassInterruption()
+    /// Writes counted when each automatic pass took the lane, so leaving can say how many it made.
+    private var writesAtEntry = [Work: Int]()
 
     /// How many writers have finished. A plan made at one count is stale at another: something
     /// wrote the bar's order after the plan read it. Every door counts, the unsequenced one too.
@@ -91,12 +111,36 @@ final class RepairOrchestrator {
 
     /// Stamps a request with what asked for it.
     func request(_ work: Work, cause: Cause) {
+        if cause.interruptsAutomaticWork {
+            interruptAutomaticWork(by: cause)
+        } else if cause.isUserAction {
+            budget.noteUserAction()
+        }
+        interruption.noteRequest(work, byUser: cause.isUserAction)
         ledger.request(work, cause: cause)
     }
 
     /// Drops the requests of work whose scheduler declined to arm it.
     func withdraw(_ work: Work) {
         ledger.withdraw(work)
+        interruption.forget(work)
+    }
+
+    /// Calls off the automatic passes asked for before this user input.
+    /// One still waiting for the lane is turned away; one writing stops at its next check of ``userWorkIsWaiting``.
+    func interruptAutomaticWork(by cause: Cause) {
+        budget.noteUserAction()
+        let calledOff = interruption.noteUserInput()
+        let withdrawn = Set(calledOff + lane.dropAutomaticWaiters(where: interruption.isCalledOff))
+        for work in withdrawn {
+            ledger.withdraw(work)
+        }
+        let stopping = lane.current.flatMap { interruption.isInterrupted($0) ? $0 : nil }
+        guard !withdrawn.isEmpty || stopping != nil else { return }
+        let names = withdrawn.map(\.rawValue).sorted().joined(separator: ", ")
+        Self.diagLog.info(
+            "\(cause.rawValue): user input called off [\(names)]" + (stopping.map { "; \($0.rawValue) stops at its next check" } ?? "")
+        )
     }
 
     // MARK: Taking a turn
@@ -107,6 +151,16 @@ final class RepairOrchestrator {
     /// Nil means the task was cancelled while it queued; the caller must return
     /// without writing.
     func enter(_ work: Work, priority: RepairLane.Priority = .automatic) async -> RepairLane.Hold? {
+        guard priority == .user || budget.allowsAutomaticWrites() else {
+            withdraw(work)
+            Self.diagLog.debug("\(work.rawValue): automatic writes are paused; not running")
+            return nil
+        }
+        guard priority == .user || !interruption.isCalledOff(work) else {
+            withdraw(work)
+            Self.diagLog.debug("\(work.rawValue): called off by user input; not running")
+            return nil
+        }
         let queuedAt = ContinuousClock.now
         let ahead = lane.current
         let takeoversBefore = lane.takeovers
@@ -121,6 +175,10 @@ final class RepairOrchestrator {
             )
         }
         let run = ledger.begin(work)
+        if priority == .automatic {
+            writesAtEntry[work] = StoreWriteAudit.totalWrites
+            interruption.noteStarted(work)
+        }
         let queued = ahead.map { ", queued \(queuedAt.duration(to: .now)) behind \($0.rawValue)" } ?? ""
         Self.diagLog.debug("\(work.rawValue): running for \(describe(run))\(queued)")
         return hold
@@ -136,15 +194,26 @@ final class RepairOrchestrator {
     /// Hands the lane to whoever is next.
     /// Whether user work is queued behind the pass in the lane. See
     /// ``RepairLane/userWorkIsWaiting``.
+    /// User input that arrived after the automatic pass in the lane started counts too.
     var userWorkIsWaiting: Bool {
-        lane.userWorkIsWaiting
+        lane.userWorkIsWaiting || lane.current.map(interruption.isInterrupted) == true
     }
 
     func leave(_ hold: RepairLane.Hold) {
         let ran = ledger.end(hold.work)
         writeGeneration &+= 1
+        interruption.noteFinished(hold.work)
         lane.leave(hold)
         Self.diagLog.debug("\(hold.work.rawValue): finished after \(ran)")
+        guard let entry = writesAtEntry.removeValue(forKey: hold.work) else { return }
+        let writes = StoreWriteAudit.totalWrites - entry
+        Self.diagLog.info("\(hold.work.rawValue): pass made \(writes) write(s) in \(ran)")
+        if writes > 0, budget.noteWritingPass() {
+            Self.diagLog.warning(
+                "automatic writes paused for \(AutomaticWriteBudget.pause): over \(AutomaticWriteBudget.limit) writing passes " +
+                    "in \(AutomaticWriteBudget.window) with no user action"
+            )
+        }
     }
 
     /// Runs a write that is one synchronous step.

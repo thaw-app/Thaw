@@ -39,7 +39,7 @@ struct SettingsURIWhitelistTests {
         Defaults.store = scratch
         defer {
             Defaults.store = previous
-            scratch.removePersistentDomain(forName: suiteName)
+            ScratchDefaults.remove(suiteName)
         }
         return try body(scratch)
     }
@@ -252,7 +252,7 @@ struct SettingsURIWhitelistTests {
         _ = SettingsURIHandler.handleSet(key: "tooltipDelay", value: String(originalValue), sender: sender)
         try await Task.sleep(for: .milliseconds(100))
         Defaults.store = previousStore
-        scratch.removePersistentDomain(forName: suiteName)
+        ScratchDefaults.remove(suiteName)
     }
 
     @Test("Ice-era key names still resolve to their current spelling")

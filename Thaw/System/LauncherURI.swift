@@ -15,6 +15,7 @@ nonisolated enum LauncherURIOperation: String, CaseIterable, Sendable {
     case listProfiles = "list-profiles"
     case applyProfile = "apply-profile"
     case getAppearance = "get-appearance"
+    case moveItem = "move-item"
 
     /// The query parameter carrying the identifier the operation acts on.
     var identifierParameter: String? {
@@ -22,6 +23,7 @@ nonisolated enum LauncherURIOperation: String, CaseIterable, Sendable {
         case .listItems, .listProfiles, .getAppearance: nil
         case .activateItem: "item-id"
         case .applyProfile: "profile-id"
+        case .moveItem: "item-id"
         }
     }
 }
@@ -35,6 +37,8 @@ nonisolated struct LauncherURIRequest: Equatable, Sendable {
     let callback: String?
     let broadcast: Bool
     let requestId: String?
+    /// The parsed move, present only for move-item.
+    let move: Result<LayoutBatchMove, LayoutBatchMoveError>?
 
     /// Whether the caller gave Thaw anywhere to send a response.
     var hasResponseMechanism: Bool {
@@ -59,6 +63,7 @@ nonisolated struct LauncherURIRequest: Equatable, Sendable {
         self.callback = value("callback")
         self.broadcast = value("broadcast") == "true"
         self.requestId = value("requestId")
+        self.move = operation == .moveItem ? LayoutBatchMove.parse(url) : nil
     }
 }
 

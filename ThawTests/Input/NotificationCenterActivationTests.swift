@@ -385,8 +385,8 @@ extension NotificationCenterActivationTests {
     func bridgeSwitch() throws {
         let name = "NotificationCenterActivationTests.bridgeSwitch"
         let defaults = try #require(UserDefaults(suiteName: name))
-        defer { defaults.removePersistentDomain(forName: name) }
-        defaults.removePersistentDomain(forName: name)
+        defer { ScratchDefaults.remove(name) }
+        ScratchDefaults.remove(name)
         #expect(NotificationCenterActivation.isBridgeEnabled(in: defaults))
         defaults.set(true, forKey: NotificationCenterActivation.bridgeDisabledKey)
         #expect(!NotificationCenterActivation.isBridgeEnabled(in: defaults))

@@ -156,6 +156,10 @@ jobs:
             CODE_SIGNING_REQUIRED=NO \
             CODE_SIGNING_ALLOWED=NO
 
+      - name: Check memory budget
+        if: needs.changes.outputs.code == 'true'
+        run: ./scripts/check-memory-budget.sh Build/Build/Products/Debug/Thaw.app/Contents/MacOS/Thaw
+
       - name: Convert coverage to XML
         if: needs.changes.outputs.code == 'true' && (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository)
         env:

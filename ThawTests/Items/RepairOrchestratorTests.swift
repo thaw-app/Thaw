@@ -135,4 +135,140 @@ struct RepairOrchestratorTests {
             == .unsequenced("manualLayoutEdit while postRestrictionRepair was writing"))
         repairs.leave(pass)
     }
+
+    /// One automatic pass that writes once through its permit.
+    private func writingPass(_ repairs: RepairOrchestrator, _ work: RepairOrchestrator.Work = .postRestrictionRepair) async -> Bool {
+        guard let hold = await repairs.enter(work) else { return false }
+        StoreWriteAudit.note(StoreWritePermit(hold), write: "test")
+        repairs.leave(hold)
+        return true
+    }
+
+    @Test("Automatic passes that keep writing with nobody at the bar are paused")
+    func writingLoopIsPaused() async {
+        let repairs = RepairOrchestrator()
+        for _ in 0 ... AutomaticWriteBudget.limit {
+            #expect(await writingPass(repairs))
+        }
+        #expect(await repairs.enter(.structuralNormalization) == nil)
+    }
+
+    @Test("A pass that writes nothing never counts toward the pause")
+    func silentPassesNeverPause() async throws {
+        let repairs = RepairOrchestrator()
+        for _ in 0 ..< 10 {
+            let hold = try #require(await repairs.enter(.postRestrictionRepair))
+            repairs.leave(hold)
+        }
+        #expect(await writingPass(repairs))
+    }
+
+    @Test("A user edit gets through a pause and lifts it")
+    func userEditLiftsThePause() async throws {
+        let repairs = RepairOrchestrator()
+        for _ in 0 ... AutomaticWriteBudget.limit {
+            _ = await writingPass(repairs)
+        }
+        let edit = try #require(await repairs.enterForUserEdit())
+        repairs.leave(edit)
+        #expect(await writingPass(repairs))
+    }
+
+    @Test("Showing a section counts as the user at the bar")
+    func revealLiftsThePause() async {
+        let repairs = RepairOrchestrator()
+        for _ in 0 ... AutomaticWriteBudget.limit {
+            _ = await writingPass(repairs)
+        }
+        repairs.request(.revealReconcile, cause: .sectionRevealed)
+        #expect(await writingPass(repairs, .revealReconcile))
+    }
+
+    @Test("A reveal starting turns away an automatic pass waiting for the lane")
+    func revealCallsOffAQueuedPass() async throws {
+        let repairs = RepairOrchestrator()
+        let holder = try #require(await repairs.enter(.arrivalOrderRestore))
+        repairs.request(.overflowRebalance, cause: .cachePublished)
+        let waiting = Task { @MainActor in await repairs.enter(.overflowRebalance) }
+        for _ in 0 ..< 20 {
+            await Task.yield()
+        }
+
+        _ = repairs.writeNow(.preRevealOrder, cause: .revealStarting) { $0.door }
+
+        #expect(await waiting.value == nil)
+        #expect(repairs.ledger.causesWaiting(for: .overflowRebalance).isEmpty)
+        repairs.leave(holder)
+    }
+
+    @Test("A pass asked for before a click does not start after it; one asked for after does")
+    func clickCallsOffAPendingPass() async throws {
+        let repairs = RepairOrchestrator()
+        repairs.request(.postRestrictionRepair, cause: .restrictionChanged)
+
+        repairs.interruptAutomaticWork(by: .userClickedItem)
+
+        #expect(await repairs.enter(.postRestrictionRepair) == nil)
+        repairs.request(.postRestrictionRepair, cause: .restrictionChanged)
+        let hold = try #require(await repairs.enter(.postRestrictionRepair))
+        repairs.leave(hold)
+    }
+
+    @Test("The normalization a ⌘-drag asked for keeps its turn when the user clicks")
+    func dragNormalizationSurvivesAClick() async throws {
+        let repairs = RepairOrchestrator()
+        repairs.request(.structuralNormalization, cause: .userDragEnded)
+
+        repairs.interruptAutomaticWork(by: .userClickedItem)
+
+        let hold = try #require(await repairs.enter(.structuralNormalization))
+        repairs.leave(hold)
+    }
+
+    @Test("A writing automatic pass is told to stop when a drag starts")
+    func dragStopsAWritingPass() async throws {
+        let repairs = RepairOrchestrator()
+        repairs.request(.postRestrictionRepair, cause: .restrictionChanged)
+        let hold = try #require(await repairs.enter(.postRestrictionRepair))
+        #expect(!repairs.userWorkIsWaiting)
+
+        repairs.interruptAutomaticWork(by: .userDragStarted)
+
+        #expect(repairs.userWorkIsWaiting)
+        repairs.leave(hold)
+        #expect(!repairs.userWorkIsWaiting)
+    }
+
+    @Test("Work the user asked for is never turned away by user input")
+    func userPriorityWorkIsNotCalledOff() async throws {
+        let repairs = RepairOrchestrator()
+        repairs.request(.revealReconcile, cause: .sectionRevealed)
+        repairs.interruptAutomaticWork(by: .userClickedItem)
+        repairs.request(.profileLayoutApply, cause: .profileApplied)
+        repairs.interruptAutomaticWork(by: .userClickedItem)
+
+        let hold = try #require(await repairs.enter(.profileLayoutApply, priority: .user))
+        #expect(!repairs.userWorkIsWaiting)
+        repairs.leave(hold)
+    }
+
+    @Test("User input lifts a pause")
+    func inputLiftsThePause() async {
+        let repairs = RepairOrchestrator()
+        for _ in 0 ... AutomaticWriteBudget.limit {
+            _ = await writingPass(repairs)
+        }
+        repairs.interruptAutomaticWork(by: .userDragStarted)
+        #expect(await writingPass(repairs))
+    }
+
+    @Test("Only the causes that start something the user does call off automatic work")
+    func interruptingCauses() {
+        let interrupting = Set([RepairOrchestrator.Cause.revealStarting, .userDragStarted, .userClickedItem])
+        for cause in [RepairOrchestrator.Cause.revealStarting, .userDragStarted, .userClickedItem, .userDragEnded, .sectionRevealed, .restrictionChanged, .settled] {
+            #expect(cause.interruptsAutomaticWork == interrupting.contains(cause))
+        }
+        let allAreUserActions = interrupting.allSatisfy(\.isUserAction)
+        #expect(allAreUserActions)
+    }
 }

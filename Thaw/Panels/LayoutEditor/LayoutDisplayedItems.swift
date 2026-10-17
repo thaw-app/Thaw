@@ -27,9 +27,21 @@ enum LayoutDisplayedItems {
             bundleIdentifiers: Set(runningApplications.compactMap(\.bundleIdentifier))
         ).orderingOverflowStack(savedOrder: appState.itemManager.savedSectionOrder).managedItems(for: section)
             // Thaw Bar Only items have their own row.
-            .filter { !appState.itemManager.isThawBarOnly($0) }
             // A switched-off Thaw icon stays registered at zero width so it can
             // return in place, but it is not on the bar, so it gets no slot.
             .filter { appState.settings.general.showThawIcon || !$0.tag.matchesVisibleControlItem }
+    }
+
+    /// The items the reorder editor lists for a section: those a drag may pick up, each once.
+    /// The same item can be read twice; the leftmost one is kept, as in the Layout bars.
+    static func editorItems(
+        in section: MenuBarSection.Name,
+        appState: AppState,
+        runningApplications: [NSRunningApplication]
+    ) -> [MenuBarItem] {
+        var seen = Set<String>()
+        return items(in: section, appState: appState, runningApplications: runningApplications)
+            .filter(LayoutBarPaddingView.acceptsLayoutDrag(of:))
+            .filter { seen.insert($0.uniqueIdentifier).inserted }
     }
 }

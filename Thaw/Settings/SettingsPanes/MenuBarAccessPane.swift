@@ -36,13 +36,16 @@ struct MenuBarAccessPane: View {
                 tempShowIntervalRow
             }
 
+            ThawSection("When an icon changes") {
+                AlertRevealItemList()
+            }
+
             ThawSection("Swap shown and hidden") {
                 swapBarToggle
             }
 
             ThawSection("Menu bar search") {
                 searchPresentationPicker
-                searchSectionOrdering
             }
 
             ThawSection("Tooltips") {
@@ -127,12 +130,6 @@ struct MenuBarAccessPane: View {
 
     // MARK: - Search
 
-    private var displayedSearchSectionNames: [MenuBarSection.Name] {
-        advancedSettings.searchSectionOrder.filter { name in
-            name != .alwaysHidden || advancedSettings.isAlwaysHiddenSectionEnabled
-        }
-    }
-
     private var searchPresentationPicker: some View {
         ThawPicker("Where the panel opens", selection: $advancedSettings.menuBarSearchPresentation) {
             ForEach(SearchPresentation.allCases) { presentation in
@@ -163,87 +160,5 @@ struct MenuBarAccessPane: View {
             instead of aiming at the menu bar.
             """
         }
-    }
-
-    private var searchSectionOrdering: some View {
-        VStack(alignment: .leading, spacing: ThawSpacing.base) {
-            ForEach(Array(displayedSearchSectionNames.enumerated()), id: \.element) { index, name in
-                searchSectionRow(for: name)
-                if index < displayedSearchSectionNames.count - 1 {
-                    Divider()
-                }
-            }
-        }
-        .thawAnimation(ThawMotion.quick, value: advancedSettings.searchSectionOrder)
-        .thawAnimation(ThawMotion.quick, value: advancedSettings.enableAlwaysHiddenSection)
-        .annotation(
-            "Choose which menu bar sections appear in the search panel, and in what order.",
-            more: "Use the up and down buttons to reorder, and turn off a section to exclude its items from search results.",
-            spacing: ThawSpacing.row
-        )
-    }
-
-    @ViewBuilder
-    private func searchSectionRow(for name: MenuBarSection.Name) -> some View {
-        let displayed = displayedSearchSectionNames
-        let position = displayed.firstIndex(of: name) ?? 0
-        let isFirst = position == 0
-        let isLast = position == displayed.count - 1
-        HStack(spacing: ThawSpacing.base) {
-            Text(name.localized)
-                .frame(maxWidth: .infinity, alignment: .leading)
-            Button {
-                moveSearchSection(name, by: -1)
-            } label: {
-                Image(systemName: "chevron.up")
-            }
-            .buttonStyle(.plain)
-            .disabled(isFirst)
-            .accessibilityLabel(String(localized: "Move up"))
-            .help("Move up")
-            Button {
-                moveSearchSection(name, by: 1)
-            } label: {
-                Image(systemName: "chevron.down")
-            }
-            .buttonStyle(.plain)
-            .disabled(isLast)
-            .accessibilityLabel(String(localized: "Move down"))
-            .help("Move down")
-            Toggle(name.localized, isOn: searchInclusionBinding(for: name))
-                .labelsHidden()
-        }
-    }
-
-    private func searchInclusionBinding(for name: MenuBarSection.Name) -> Binding<Bool> {
-        switch name {
-        case .visible:
-            return $advancedSettings.searchIncludeVisible
-        case .hidden:
-            return $advancedSettings.searchIncludeHidden
-        case .alwaysHidden:
-            return $advancedSettings.searchIncludeAlwaysHidden
-        }
-    }
-
-    private func moveSearchSection(_ name: MenuBarSection.Name, by offset: Int) {
-        let displayed = displayedSearchSectionNames
-        guard let displayIndex = displayed.firstIndex(of: name) else {
-            return
-        }
-        let displayTarget = displayIndex + offset
-        guard displayed.indices.contains(displayTarget) else {
-            return
-        }
-        let other = displayed[displayTarget]
-        guard
-            let index = advancedSettings.searchSectionOrder.firstIndex(of: name),
-            let otherIndex = advancedSettings.searchSectionOrder.firstIndex(of: other)
-        else {
-            return
-        }
-        var order = advancedSettings.searchSectionOrder
-        order.swapAt(index, otherIndex)
-        advancedSettings.searchSectionOrder = order
     }
 }

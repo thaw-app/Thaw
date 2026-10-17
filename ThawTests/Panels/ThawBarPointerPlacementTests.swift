@@ -133,7 +133,7 @@ struct ThawBarPointerPlacementTests {
         Defaults.store = store
         defer {
             Defaults.store = previousStore
-            store.removePersistentDomain(forName: suite)
+            ScratchDefaults.remove(suite)
             NSApp.setActivationPolicy(previousPolicy)
         }
         let fixture = try PlacementFixture(location: location, showsIcon: showsIcon)
@@ -179,10 +179,13 @@ private struct PlacementFixture {
     }
 
     func show(triggeredByHotkey: Bool = false, openedFrom iconFrame: CGRect? = nil) {
-        // Companion presentation avoids section capture and global dismissal monitors.
+        // Folder presentation avoids section capture.
         panel.show(
-            section: .hidden, on: screen, triggeredByHotkey: triggeredByHotkey,
-            presentation: .alongsideReveal, openedFrom: iconFrame
+            section: .hidden,
+            on: screen,
+            triggeredByHotkey: triggeredByHotkey,
+            presentation: .folder,
+            openedFrom: iconFrame
         )
     }
 

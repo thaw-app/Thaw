@@ -38,40 +38,6 @@ nonisolated extension SearchIndex {
             keywords: ["lock", "drag", "move", "pin", "bar", "position"],
             property: .general("lockThawBarPosition")
         ),
-        // Thaw Bar Only is unplugged for now; restore this with the gate in MenuBarItemManager+ThawBarOnly.swift.
-        // SearchEntry(
-        //     id: "general.enableThawBarOnly",
-        //     titleKey: "Thaw Bar Only",
-        //     titleText: "Thaw Bar Only",
-        //     descriptionText: String(localized: "Items macOS won't show in the menu bar stay in the \(Constants.displayName) Bar. Turn this off to treat them as ordinary hidden items. Your list comes back when you turn it on again."),
-        //     pane: .thawBar,
-        //     sectionKey: "Options for all displays",
-        //     sectionText: "Options for all displays",
-        //     keywords: ["thaw bar only", "turn off", "disable", "not shown", "hidden"],
-        //     property: .general("enableThawBarOnly")
-        // ),
-        // SearchEntry(
-        //     id: "general.showThawBarOnlyWithInlineReveal",
-        //     titleKey: "Show Thaw Bar Only items when showing hidden items",
-        //     titleText: "Show Thaw Bar Only items when showing hidden items",
-        //     descriptionText: String(localized: "When you show hidden items, the items kept in the \(Constants.displayName) Bar appear in a small \(Constants.displayName) Bar below the menu bar."),
-        //     pane: .thawBar,
-        //     sectionKey: "Options for all displays",
-        //     sectionText: "Options for all displays",
-        //     keywords: ["thaw bar only", "reveal", "inline", "hidden", "small bar", "companion", "not shown"],
-        //     property: .general("showThawBarOnlyWithInlineReveal")
-        // ),
-        // SearchEntry(
-        //     id: "general.showThawBarOnlyLauncher",
-        //     titleKey: "Menu bar icon for Thaw Bar Only items",
-        //     titleText: "Menu bar icon for Thaw Bar Only items",
-        //     descriptionText: String(localized: "A menu bar icon that opens a small \(Constants.displayName) Bar with just the items macOS won't show in the menu bar."),
-        //     pane: .thawBar,
-        //     sectionKey: "Options for all displays",
-        //     sectionText: "Options for all displays",
-        //     keywords: ["thaw bar only", "launcher", "icon", "small bar", "not shown", "menu bar"],
-        //     property: .general("showThawBarOnlyLauncher")
-        // ),
         SearchEntry(
             id: "general.showSettingDescriptions",
             title: "Show setting descriptions",

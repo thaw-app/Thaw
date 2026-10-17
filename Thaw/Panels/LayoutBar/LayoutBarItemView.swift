@@ -1055,6 +1055,24 @@ final class LayoutBarItemView: LayoutBarArrangedView {
         image.addRepresentation(rep)
         return image
     }
+
+    /// The Layout selection highlight sits on the layer behind the glyph and follows each redraw.
+    override func viewWillDraw() {
+        super.viewWillDraw()
+        LayoutSelectionHighlight.apply(to: self, isSelected: isLayoutSelected)
+    }
+
+    override func accessibilityValue() -> Any? {
+        selectionAccessibilityValue() ?? super.accessibilityValue()
+    }
+
+    override func isAccessibilitySelected() -> Bool {
+        isLayoutSelected
+    }
+
+    override func accessibilityCustomActions() -> [NSAccessibilityCustomAction]? {
+        selectionAccessibilityActions(appendedTo: super.accessibilityCustomActions() ?? [])
+    }
 }
 
 // MARK: LayoutBarItemView: NSPopoverDelegate

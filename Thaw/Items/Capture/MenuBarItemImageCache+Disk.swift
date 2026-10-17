@@ -14,7 +14,6 @@ extension MenuBarItemImageCache {
     /// Persists what is currently trusted for a faster restart. The file,
     /// its format, and the save queue live on MenuBarItemImageCacheDiskStore.
     func saveToDisk() {
-        guard diskStore.isEnabled else { return }
         guard !capturesByTag.isEmpty else { return }
 
         let concealedIdentifiers = appState.map { appState in
@@ -232,16 +231,5 @@ extension MenuBarItemImageCache {
         diskLoadTask?.cancel()
         diskLoadTask = nil
         diskLoadGeneration &+= 1
-    }
-
-    /// Blocks saves while a reset deletes the file, and makes the store forget
-    /// what it believes is on disk.
-    func suspendDiskPersistenceForReset() async {
-        await diskStore.suspendForReset()
-    }
-
-    /// Restores persistence after a reset failed and the cache file survived.
-    func resumeDiskPersistenceAfterFailedReset() {
-        diskStore.resumeAfterFailedReset()
     }
 }

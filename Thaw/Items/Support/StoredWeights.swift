@@ -58,6 +58,20 @@ struct StoredWeights {
         store.isParkedWeight(weight)
     }
 
+    /// Whether the Always Hidden divider sits beyond the Hidden divider, seen from the Visible control.
+    /// A divider on the wrong side would read every item past it as Always Hidden.
+    nonisolated static func dividersAreOrdered(
+        hiddenDivider: Int,
+        alwaysHiddenDivider: Int?,
+        visibleControl: Int
+    ) -> Bool {
+        guard hiddenDivider != visibleControl else { return false }
+        guard let alwaysHiddenDivider else { return true }
+        return hiddenDivider > visibleControl
+            ? alwaysHiddenDivider > hiddenDivider
+            : alwaysHiddenDivider < hiddenDivider
+    }
+
     /// Weights sort the whole bar; Hidden is beyond its divider away from Visible, Always Hidden beyond its own divider.
     /// Everything else, including items beyond the Visible control, is Visible.
     nonisolated static func observedSection(

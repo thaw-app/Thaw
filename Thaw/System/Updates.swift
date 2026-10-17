@@ -15,7 +15,7 @@ nonisolated enum UpdateChannel: String, CaseIterable, Identifiable {
     case stable
     /// Development / RC builds (sparkle:channel = beta).
     case beta
-    /// Nightly / macOS 27 preview builds (sparkle:channel = alpha).
+    /// Alpha builds for macOS 27 (sparkle:channel = alpha).
     case alpha
 
     /// Stable carries incompatible builds, so offering it would stop updates.
@@ -32,7 +32,7 @@ nonisolated enum UpdateChannel: String, CaseIterable, Identifiable {
         switch self {
         case .stable: "Stable"
         case .beta: "Beta"
-        case .alpha: "Nightly"
+        case .alpha: "Alpha"
         }
     }
 
@@ -171,8 +171,29 @@ final class UpdatesManager: NSObject {
         updaterController.startUpdater()
     }
 
+    /// Set in the settings process, which hands checks to the app.
+    @ObservationIgnored
+    var forwardCheck: (() -> Void)?
+
+    /// The settings process may have changed Sparkle's stored preferences. Sparkle reads
+    /// them from the defaults, and a reset schedules the next check by them.
+    func storedPreferencesChanged() {
+        guard hasStartedUpdater else { return }
+        withMutation(keyPath: \.automaticallyChecksForUpdates) {
+            // Sparkle already holds the new value; observers only need to hear that it changed.
+        }
+        withMutation(keyPath: \.automaticallyDownloadsUpdates) {
+            // Sparkle already holds the new value; observers only need to hear that it changed.
+        }
+        updater.resetUpdateCycleAfterShortDelay()
+    }
+
     @objc func checkForUpdates() {
         guard Constants.supportsSparkleUpdates else {
+            return
+        }
+        if let forwardCheck {
+            forwardCheck()
             return
         }
         #if DEBUG
