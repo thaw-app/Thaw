@@ -20,7 +20,7 @@ nonisolated enum ProfileSettleReapply {
 
     /// The profile the last settle left in place, kept across launches.
     struct Record {
-        static let key = "ProfileSettleReapply.lastSettledProfileID"
+        static let key = Defaults.Key.lastSettledProfileID.rawValue
 
         private let defaults: UserDefaults
 
