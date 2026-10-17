@@ -79,6 +79,22 @@ nonisolated enum SectionedListNavigation {
         }
         return selection
     }
+
+    /// What a key the list listens for does: open the selected row, or step through the rows.
+    struct Command: Equatable {
+        /// Rows to step, or nil to open the selected row.
+        let step: Int?
+    }
+
+    /// Nil for an arrow with Shift, Command, Option or Control, which the focused search field uses to select text.
+    /// The keypad and function flags macOS sets on every arrow press don't count.
+    static func command(for key: KeyEquivalent, modifiers: EventModifiers) -> Command? {
+        if key == .return {
+            return Command(step: nil)
+        }
+        guard modifiers.isDisjoint(with: [.shift, .command, .option, .control]) else { return nil }
+        return Command(step: key == .downArrow ? 1 : -1)
+    }
 }
 
 extension View {
@@ -90,17 +106,14 @@ extension View {
         isEnabled: Bool = true
     ) -> some View {
         onKeyPress(keys: [.upArrow, .downArrow, .return]) { press in
-            guard isEnabled, selection.wrappedValue != nil else { return .ignored }
-            switch press.key {
-            case .return:
-                items.first { $0.id == selection.wrappedValue }?.action?()
-            default:
+            guard isEnabled, selection.wrappedValue != nil,
+                  let command = SectionedListNavigation.command(for: press.key, modifiers: press.modifiers)
+            else { return .ignored }
+            if let step = command.step {
                 let rows = items.map { (id: $0.id, isSelectable: $0.isSelectable) }
-                selection.wrappedValue = SectionedListNavigation.step(
-                    from: selection.wrappedValue,
-                    by: press.key == .downArrow ? 1 : -1,
-                    in: rows
-                )
+                selection.wrappedValue = SectionedListNavigation.step(from: selection.wrappedValue, by: step, in: rows)
+            } else {
+                items.first { $0.id == selection.wrappedValue }?.action?()
             }
             return .handled
         }
