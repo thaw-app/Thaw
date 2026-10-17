@@ -66,6 +66,15 @@ struct ToolsSettingsPane: View {
                 }
 
                 toolRow(
+                    title: "Menu bar",
+                    detail: "Restart the menu bar when it gets stuck, for example when it stays on top of full-screen apps. Your layout is kept, and \(Constants.displayName) relaunches afterward.",
+                    buttonTitle: "Restart Menu Bar…",
+                    statusFor: .restartMenuBar
+                ) {
+                    pendingAction = .restartMenuBar
+                }
+
+                toolRow(
                     title: "Saved item positions",
                     detail: "Delete macOS's saved menu bar layout and restart the menu bar so it rebuilds from scratch. Use this when items won't come back to the menu bar after you move them. A backup is saved first; restore it from Layout backups below.",
                     buttonTitle: "Reset Positions…",
@@ -206,7 +215,7 @@ struct ToolsSettingsPane: View {
         statusAction = action
         defer { isBusy = false }
 
-        if action == .resetMenuBarLayoutPositions {
+        if action == .resetMenuBarLayoutPositions || action == .restartMenuBar {
             // Killing the host mid-move strands the move's events.
             await appState.itemManager.moveActivity.waitUntilIdle()
         }
@@ -236,6 +245,11 @@ struct ToolsSettingsPane: View {
                     try? await Task.sleep(for: .milliseconds(500))
                 }
                 appState.restartSelf()
+            case .restartMenuBar:
+                try await MaintenanceTools.restartMenuBar()
+                reportSuccess(String(localized: "The menu bar was restarted. Relaunching…"))
+                // Thaw's hiding and positions sessions ended with the old host.
+                appState.restartSelf()
             case .resetPermissions:
                 try await MaintenanceTools.resetAppPermissions()
                 reportSuccess(String(localized: "Permissions cleared. Quitting…"))
@@ -256,6 +270,7 @@ struct ToolsSettingsPane: View {
 private enum MaintenanceToolAction: Identifiable {
     case resetSettings
     case resetMenuBarLayoutPositions
+    case restartMenuBar
     case resetPermissions
 
     var id: Self {
@@ -266,6 +281,7 @@ private enum MaintenanceToolAction: Identifiable {
         switch self {
         case .resetSettings: String(localized: "Reset all settings?")
         case .resetMenuBarLayoutPositions: String(localized: "Reset saved item positions?")
+        case .restartMenuBar: String(localized: "Restart the menu bar?")
         case .resetPermissions: String(localized: "Reset permissions?")
         }
     }
@@ -274,6 +290,7 @@ private enum MaintenanceToolAction: Identifiable {
         switch self {
         case .resetSettings: "Couldn’t reset settings"
         case .resetMenuBarLayoutPositions: "Couldn’t reset saved item positions"
+        case .restartMenuBar: "Couldn’t restart the menu bar"
         case .resetPermissions: "Couldn’t reset permissions"
         }
     }
@@ -282,6 +299,7 @@ private enum MaintenanceToolAction: Identifiable {
         switch self {
         case .resetSettings: "Reset"
         case .resetMenuBarLayoutPositions: "Reset Positions"
+        case .restartMenuBar: "Restart Menu Bar"
         case .resetPermissions: "Reset Permissions"
         }
     }
@@ -292,6 +310,8 @@ private enum MaintenanceToolAction: Identifiable {
             "This will reset app settings to their default values. Saved profiles, allowed apps, and user data will not be deleted. This action cannot be undone."
         case .resetMenuBarLayoutPositions:
             "Every menu bar item's saved position will be deleted and the menu bar will restart, so your whole arrangement is rebuilt from scratch. A backup is saved first, and Layout backups on this page can put it back. \(Constants.displayName) relaunches afterward."
+        case .restartMenuBar:
+            "The menu bar will disappear for a moment and come back. Your layout is kept. \(Constants.displayName) relaunches afterward."
         case .resetPermissions:
             "Accessibility and Screen Recording permissions will be cleared for \(Constants.displayName). The app will quit so you can grant them again on next launch."
         }

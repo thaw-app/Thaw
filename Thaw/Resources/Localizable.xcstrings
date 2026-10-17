@@ -7807,6 +7807,9 @@
         }
       }
     },
+    "Couldn’t restart the menu bar" : {
+
+    },
     "CPU" : {
 
     },
@@ -29324,6 +29327,24 @@
         }
       }
     },
+    "Restart the menu bar when it gets stuck, for example when it stays on top of full-screen apps. Your layout is kept, and %@ relaunches afterward." : {
+
+    },
+    "Restart Menu Bar…" : {
+
+    },
+    "Restart the menu bar?" : {
+
+    },
+    "Restart Menu Bar" : {
+
+    },
+    "Restarts the system's menu bar service when it gets stuck, for example on top of full-screen apps. Your layout is kept." : {
+
+    },
+    "Restart the menu bar" : {
+
+    },
     "Restore" : {
 
     },
@@ -36073,6 +36094,12 @@
     },
     "The menu bar is set to hide itself" : {
       "comment" : "Title of the Simple Mode pill shown while macOS auto-hides the menu bar."
+    },
+    "The menu bar will disappear for a moment and come back. Your layout is kept. %@ relaunches afterward." : {
+
+    },
+    "The menu bar was restarted. Relaunching…" : {
+
     },
     "The open source menu bar manager for macOS" : {
 

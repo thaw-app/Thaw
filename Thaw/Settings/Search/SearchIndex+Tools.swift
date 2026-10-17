@@ -52,6 +52,15 @@ nonisolated extension SearchIndex {
             property: nil
         ),
         SearchEntry(
+            id: "tools.restartMenuBar",
+            title: "Restart the menu bar",
+            descriptionText: String(localized: "Restarts the system's menu bar service when it gets stuck, for example on top of full-screen apps. Your layout is kept."),
+            pane: .tools,
+            section: "Troubleshooting",
+            keywords: ["restart", "menu bar", "stuck", "full screen", "fullscreen", "killall", "MenuBarAgent", "tools"],
+            property: nil
+        ),
+        SearchEntry(
             id: "tools.resetMenuBarLayoutPositions",
             title: "Reset menu bar layout positions",
             descriptionText: String(localized: "Deletes every saved item position and restarts the system's menu bar service, so the layout rebuilds from scratch. Thaw saves a backup first. Use this when items won't return to the menu bar after you rearrange."),

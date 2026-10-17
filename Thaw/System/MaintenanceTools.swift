@@ -82,6 +82,13 @@ nonisolated enum MaintenanceTools {
         return backup
     }
 
+    /// Quits the menu bar host so launchd starts a fresh one, which clears a
+    /// bar stuck in the wrong state. Saved positions are left alone.
+    @concurrent
+    static func restartMenuBar() async throws {
+        try await run(path: "/usr/bin/killall", arguments: [menuBarHostingProcessName])
+    }
+
     /// Puts a layout backup back, after snapshotting what it overwrites.
     ///
     /// The undo snapshot is taken before anything is killed, and a failure to
