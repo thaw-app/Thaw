@@ -19,29 +19,22 @@ import UniformTypeIdentifiers
 final class MenuBarItemImageCacheDiskStore: @unchecked Sendable {
     private static nonisolated let diagLog = DiagLog(category: "MenuBarItemImageCacheDiskStore")
 
-    init() {}
+    /// The directory the cache file lives under; the user's Caches unless a test gives another.
+    private let cachesDirectory: URL?
+
+    init(cachesDirectory: URL? = FileManager.default.urls(for: .cachesDirectory, in: .userDomainMask).first) {
+        self.cachesDirectory = cachesDirectory
+    }
 
     // MARK: File Location
 
     /// Path to the cache file in Caches directory.
     nonisolated var cacheFileURL: URL? {
-        guard let cacheDirectory = FileManager.default.urls(for: .cachesDirectory, in: .userDomainMask).first else {
-            return nil
-        }
-        return Self.cacheFileURL(
-            cachesDirectory: cacheDirectory,
-            bundleIdentifier: Constants.bundleIdentifier
-        )
+        cachesDirectory.map { Self.cacheFileURL(cachesDirectory: $0, bundleIdentifier: Constants.bundleIdentifier) }
     }
 
     nonisolated var legacyCacheFileURL: URL? {
-        guard let cacheDirectory = FileManager.default.urls(for: .cachesDirectory, in: .userDomainMask).first else {
-            return nil
-        }
-        return Self.legacyCacheFileURL(
-            cachesDirectory: cacheDirectory,
-            bundleIdentifier: Constants.bundleIdentifier
-        )
+        cachesDirectory.map { Self.legacyCacheFileURL(cachesDirectory: $0, bundleIdentifier: Constants.bundleIdentifier) }
     }
 
     static nonisolated func cacheFileURL(

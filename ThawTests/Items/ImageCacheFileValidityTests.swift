@@ -5,6 +5,7 @@
 //  Copyright (Thaw) © 2026 Toni Förster
 //  Licensed under the GNU GPLv3
 
+import Foundation
 import Testing
 @testable import Thaw
 
@@ -35,5 +36,10 @@ struct ImageCacheFileValidityTests {
     @Test("Without a known app build, only the format decides")
     func unknownAppBuildUsesFormatOnly() {
         #expect(ImageCacheFileValidity.isCurrent(fileVersion: 12, fileBuild: nil, cacheVersion: 12, appBuild: nil))
+    }
+
+    @Test("The build comes from the app bundle")
+    func appBuildMatchesBundle() {
+        #expect(ImageCacheFileValidity.appBuild == Bundle.main.object(forInfoDictionaryKey: "CFBundleVersion") as? String)
     }
 }
