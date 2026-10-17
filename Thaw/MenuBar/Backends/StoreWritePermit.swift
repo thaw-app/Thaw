@@ -80,6 +80,11 @@ enum StoreWriteAudit {
         }
     }
 
+    /// Every write so far, whatever door it came through.
+    static var totalWrites: Int {
+        counts.values.reduce(0, +)
+    }
+
     /// Writes that came through neither door, by path.
     static var unsequenced: [String: Int] {
         counts.filter { $0.key.hasPrefix("unsequenced(") }

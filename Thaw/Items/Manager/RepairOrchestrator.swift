@@ -76,12 +76,20 @@ final class RepairOrchestrator {
         case settingChanged
         /// A section was revealed, or is about to be.
         case sectionRevealed
+
+        /// Causes that mean someone is at the bar, so the passes they start are not a loop.
+        var isUserAction: Bool {
+            [.userDragEnded, .userEdit, .sectionRevealed].contains(self)
+        }
     }
 
     private static let diagLog = DiagLog(category: "RepairOrchestrator")
 
     private(set) var ledger = RepairLedger()
     private let lane = RepairLane()
+    private var budget = AutomaticWriteBudget()
+    /// Writes counted when each automatic pass took the lane, so leaving can say how many it made.
+    private var writesAtEntry = [Work: Int]()
 
     /// How many writers have finished. A plan made at one count is stale at another: something
     /// wrote the bar's order after the plan read it. Every door counts, the unsequenced one too.
@@ -91,6 +99,9 @@ final class RepairOrchestrator {
 
     /// Stamps a request with what asked for it.
     func request(_ work: Work, cause: Cause) {
+        if cause.isUserAction {
+            budget.noteUserAction()
+        }
         ledger.request(work, cause: cause)
     }
 
@@ -107,6 +118,11 @@ final class RepairOrchestrator {
     /// Nil means the task was cancelled while it queued; the caller must return
     /// without writing.
     func enter(_ work: Work, priority: RepairLane.Priority = .automatic) async -> RepairLane.Hold? {
+        guard priority == .user || budget.allowsAutomaticWrites() else {
+            withdraw(work)
+            Self.diagLog.debug("\(work.rawValue): automatic writes are paused; not running")
+            return nil
+        }
         let queuedAt = ContinuousClock.now
         let ahead = lane.current
         let takeoversBefore = lane.takeovers
@@ -121,6 +137,9 @@ final class RepairOrchestrator {
             )
         }
         let run = ledger.begin(work)
+        if priority == .automatic {
+            writesAtEntry[work] = StoreWriteAudit.totalWrites
+        }
         let queued = ahead.map { ", queued \(queuedAt.duration(to: .now)) behind \($0.rawValue)" } ?? ""
         Self.diagLog.debug("\(work.rawValue): running for \(describe(run))\(queued)")
         return hold
@@ -145,6 +164,15 @@ final class RepairOrchestrator {
         writeGeneration &+= 1
         lane.leave(hold)
         Self.diagLog.debug("\(hold.work.rawValue): finished after \(ran)")
+        guard let entry = writesAtEntry.removeValue(forKey: hold.work) else { return }
+        let writes = StoreWriteAudit.totalWrites - entry
+        Self.diagLog.info("\(hold.work.rawValue): pass made \(writes) write(s) in \(ran)")
+        if writes > 0, budget.noteWritingPass() {
+            Self.diagLog.warning(
+                "automatic writes paused for \(AutomaticWriteBudget.pause): over \(AutomaticWriteBudget.limit) writing passes " +
+                    "in \(AutomaticWriteBudget.window) with no user action"
+            )
+        }
     }
 
     /// Runs a write that is one synchronous step.
