@@ -156,6 +156,25 @@ struct ObservedMembershipTests {
         #expect(moves.first?.section == .hidden)
     }
 
+    /// The agent seats an icon it has never saved leftmost, past every weight on the bar.
+    @Test("A new icon lands in Always Hidden when that section is saved, and in Hidden when it is off", arguments: [
+        (true, MenuBarSectionName.alwaysHidden),
+        (false, MenuBarSectionName.hidden),
+    ])
+    func newIconLandsLeftmost(alwaysHiddenEnabled: Bool, expected: MenuBarSectionName) throws {
+        let bar = [
+            Self.candidate("hiddenItem", weight: 900, authored: .hidden),
+            Self.candidate("farItem", weight: 1500, authored: .alwaysHidden),
+        ]
+        let newIcon = try Self.candidate("new", weight: #require(bar.map(\.weight).max()) + 26, authored: nil)
+        let reading = ObservedMembership.readDividers(
+            visibleControl: 161, hidden: 328, alwaysHidden: 1368, alwaysHiddenEnabled: alwaysHiddenEnabled
+        )
+        let moves = reading.moves(for: bar + [newIcon])
+        #expect(moves.map(\.section) == [expected])
+        #expect(moves.first?.items.map(\.title) == (alwaysHiddenEnabled ? ["new"] : ["farItem", "new"]))
+    }
+
     @Test("Items moving to one section keep their reading order")
     func groupedItemsKeepOrder() throws {
         let dividers = try #require(ObservedMembership.Dividers(hidden: 328, alwaysHidden: 1368, visibleControl: 161))
