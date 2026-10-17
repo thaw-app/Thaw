@@ -39,40 +39,27 @@ extension MenuBarItemManager {
         let weights = StoredWeights(among: items)
         guard weights.isAvailable else { return }
         let weight = weights.weight(of:)
-        // The cache keeps the Visible control but drops both dividers, so those come from the last walk.
-        let dividers = lastKnownControlItems
-        guard let visibleControl = items.first(where: { $0.tag.matchesVisibleControlItem }).flatMap(weight),
-              let hiddenDivider = (dividers?.hidden).flatMap(weight),
-              hiddenDivider != visibleControl
-        else {
+        let found = ObservedMembership.DividerWeights(among: items, dividers: lastKnownControlItems, weight: weight)
+        let reading = found.reading(alwaysHiddenEnabled: configuration.isAlwaysHiddenSectionEnabled)
+        switch reading {
+        case .ordered:
+            break
+        case .unavailable:
             MenuBarItemManager.diagLog.debug("observed membership (\(reason)): divider weights unavailable; skipping")
-            return
-        }
-        let alwaysHiddenDivider = configuration.isAlwaysHiddenSectionEnabled
-            ? (dividers?.alwaysHidden).flatMap(weight)
-            : nil
-        let experimentalSystemItemHiding = configuration.enableExperimentalSystemItemHiding
-
-        var moves = [MenuBarSectionName: [MenuBarItem]]()
-        for item in items where !item.isControlItem {
-            guard item.tag.canBeHidden,
-                  item.isMovable(experimentalSystemItemHiding: experimentalSystemItemHiding),
-                  let itemWeight = weight(item),
-                  !weights.isParked(itemWeight)
-            else {
-                continue
-            }
-            let observed = StoredWeights.observedSection(
-                weight: itemWeight,
-                hiddenDivider: hiddenDivider,
-                alwaysHiddenDivider: alwaysHiddenDivider,
-                visibleControl: visibleControl
+        case .outOfOrder:
+            MenuBarItemManager.diagLog.warning(
+                "observed membership (\(reason)): dividers out of order (\(found.logString)); skipping"
             )
-            guard controller.authoredSection(for: item.uniqueIdentifier) != observed else { continue }
-            moves[observed, default: []].append(item)
         }
-        guard !moves.isEmpty else { return }
-        for (section, sectionItems) in moves.sorted(by: { $0.key.rawValue < $1.key.rawValue }) {
+        let experimentalSystemItemHiding = configuration.enableExperimentalSystemItemHiding
+        let candidates = items.compactMap { item -> ObservedMembership.Candidate? in
+            guard !item.isControlItem, item.tag.canBeHidden,
+                  item.isMovable(experimentalSystemItemHiding: experimentalSystemItemHiding),
+                  let itemWeight = weight(item), !weights.isParked(itemWeight)
+            else { return nil }
+            return .init(item: item, weight: itemWeight, authored: controller.authoredSection(for: item.uniqueIdentifier))
+        }
+        for (section, sectionItems) in reading.moves(for: candidates) {
             MenuBarItemManager.diagLog.info(
                 "observed membership (\(reason)): \(sectionItems.count) item(s) sit in \(section.logString) on the bar: " +
                     sectionItems.map(\.logString).joined(separator: ", ")

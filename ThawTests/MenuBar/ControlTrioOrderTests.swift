@@ -70,6 +70,24 @@ struct ControlTrioOrderTests {
         ))
     }
 
+    @Test("the frames logged right after turning Always Hidden on read as out of order")
+    func alwaysHiddenJustEnabled() {
+        #expect(!ControlOrderRules.controlTrioInCanonicalOrder(
+            alwaysHidden: control(midX: 1616.5),
+            hidden: control(midX: 1577.5),
+            visible: control(midX: 1745.5)
+        ))
+    }
+
+    @Test("an Always-Hidden divider past the Visible control is out of order")
+    func alwaysHiddenPastVisible() {
+        #expect(!ControlOrderRules.controlTrioInCanonicalOrder(
+            alwaysHidden: control(midX: 1800),
+            hidden: control(midX: 1577.5),
+            visible: control(midX: 1745.5)
+        ))
+    }
+
     private func control(midX: CGFloat) -> MenuBarItem {
         MenuBarItem(
             tag: .hiddenControlItem,

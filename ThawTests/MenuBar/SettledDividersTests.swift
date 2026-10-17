@@ -47,6 +47,44 @@ struct SettledDividersTests {
         #expect(result.items.map(\.windowID) == [1, 2, 10])
     }
 
+    @Test("Without Always Hidden only the Hidden divider is added")
+    func onlyHiddenDivider() throws {
+        let result = try #require(ControlOrderRules.withDividers(cached, ControlItemPair(hidden: hidden, alwaysHidden: nil)))
+        #expect(result.items.map(\.windowID) == [1, 2, 10])
+        #expect(result.controlItems.alwaysHidden == nil)
+    }
+
+    @Test("A cached divider with the same window keeps the cache's copy")
+    func cachedCopyWins() throws {
+        let moved = Self.item("Hidden", x: 1400, windowID: 10)
+        let result = try #require(ControlOrderRules.withDividers(
+            cached + [moved], ControlItemPair(hidden: hidden, alwaysHidden: alwaysHidden)
+        ))
+        #expect(result.items.map(\.windowID) == [1, 2, 10, 11])
+        #expect(result.items.first { $0.windowID == 10 }?.bounds.minX == 1400)
+    }
+
+    @Test("An empty cache still gets the dividers")
+    func emptyCache() throws {
+        let result = try #require(ControlOrderRules.withDividers([], ControlItemPair(hidden: hidden, alwaysHidden: alwaysHidden)))
+        #expect(result.items.map(\.windowID) == [10, 11])
+    }
+
+    @Test("The out-of-order trio is detectable once the dividers are back")
+    func trioDetectableWithDividers() throws {
+        let visible = MenuBarItem(
+            tag: .visibleControlItem, windowID: 20, ownerPID: 1, sourcePID: 1,
+            bounds: CGRect(x: 1733, y: 3, width: 24, height: 24), title: "Visible", isOnScreen: true
+        )
+        let result = try #require(ControlOrderRules.withDividers(
+            cached + [visible], ControlItemPair(hidden: hidden, alwaysHidden: alwaysHidden)
+        ))
+        let found = try #require(result.items.first { $0.tag.matchesVisibleControlItem })
+        #expect(!ControlOrderRules.controlTrioInCanonicalOrder(
+            alwaysHidden: result.controlItems.alwaysHidden, hidden: result.controlItems.hidden, visible: found
+        ))
+    }
+
     @Test("Without a known Hidden divider nothing can be ordered")
     func noDividersIsNil() {
         #expect(ControlOrderRules.withDividers(cached, nil) == nil)

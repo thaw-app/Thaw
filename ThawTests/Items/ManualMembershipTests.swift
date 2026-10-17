@@ -39,6 +39,26 @@ struct ManualMembershipTests {
         ) == .visible)
     }
 
+    @Test("Dividers in order on either axis")
+    func dividersInOrder() {
+        #expect(StoredWeights.dividersAreOrdered(hiddenDivider: 328, alwaysHiddenDivider: 1368, visibleControl: 161))
+        #expect(StoredWeights.dividersAreOrdered(hiddenDivider: -328, alwaysHiddenDivider: -1368, visibleControl: -161))
+        #expect(StoredWeights.dividersAreOrdered(hiddenDivider: 328, alwaysHiddenDivider: nil, visibleControl: 161))
+    }
+
+    @Test("An Always Hidden divider between Visible and Hidden is out of order")
+    func alwaysHiddenDividerOnTheWrongSide() {
+        #expect(!StoredWeights.dividersAreOrdered(hiddenDivider: 328, alwaysHiddenDivider: 200, visibleControl: 161))
+        #expect(!StoredWeights.dividersAreOrdered(hiddenDivider: 328, alwaysHiddenDivider: 100, visibleControl: 161))
+        #expect(!StoredWeights.dividersAreOrdered(hiddenDivider: 328, alwaysHiddenDivider: 328, visibleControl: 161))
+        #expect(!StoredWeights.dividersAreOrdered(hiddenDivider: -328, alwaysHiddenDivider: -200, visibleControl: -161))
+    }
+
+    @Test("A Hidden divider on the Visible control is out of order")
+    func hiddenDividerOnVisibleControl() {
+        #expect(!StoredWeights.dividersAreOrdered(hiddenDivider: 161, alwaysHiddenDivider: nil, visibleControl: 161))
+    }
+
     @Test("Without Always Hidden everything past the Hidden divider is Hidden")
     func noAlwaysHidden() {
         #expect(StoredWeights.observedSection(
