@@ -42,6 +42,16 @@ struct ProfileSettleReapplyTests {
         #expect(ProfileSettleReapply.shouldReapply(activeProfileID: home, lastSettledProfileID: work))
     }
 
+    @Test("Without a store given, the record keeps to the app's defaults store")
+    func recordUsesAppStore() {
+        let defaults = freshDefaults()
+        let previous = Defaults.store
+        Defaults.store = defaults
+        defer { Defaults.store = previous }
+        ProfileSettleReapply.Record().lastSettledProfileID = work
+        #expect(ProfileSettleReapply.Record(defaults: defaults).lastSettledProfileID == work)
+    }
+
     @Test("The record starts empty")
     func recordStartsEmpty() {
         let record = ProfileSettleReapply.Record(defaults: freshDefaults())
