@@ -366,7 +366,7 @@ extension MenuBarItemManager {
                 isInStartupSettling: isInStartupSettling,
                 isApplyingProfileLayout: isApplyingProfileLayout
             )
-        guard savedOrderMirrorGate.allowsMirror(identifiers: Set(cache.managedItems.map(\.uniqueIdentifier)), restrictionChange: lastRestrictionChangeTimestamp, sectionRevealed: isAnySectionRevealed), shouldPersistLayoutSnapshot else {
+        guard savedOrderMirrorGate.allowsMirror(identifiers: Set(cache.managedItems.map(\.uniqueIdentifier)), restrictionChange: lastRestrictionChangeTimestamp, sectionRevealed: isAnySectionRevealed, transientFrame: SavedOrderMirrorGate.transientFrame(among: cache[.visible], displays: displays)), shouldPersistLayoutSnapshot else {
             return
         }
         // Concealed buckets retain old frames, which cannot describe the current bar.

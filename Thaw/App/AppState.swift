@@ -159,8 +159,8 @@ final class AppState {
     /// Watches navigationState's observable focus and Settings visibility.
     private var navigationStateObservationTask: Task<Void, Never>?
 
-    /// Track last known screen count to detect disconnects.
-    private var lastKnownScreenCount = NSScreen.managedScreens.count
+    /// The last display arrangement seen, to tell connects, disconnects and rearrangements apart.
+    private var displayArrangement = DisplayArrangementWatch(.current)
 
     /// Prevent repeated restart attempts.
     private var isRestarting = false
@@ -491,9 +491,9 @@ final class AppState {
 
     /// The debounced body of observeDisplayTopology().
     private func handleDisplayTopologyChange() {
-        let count = NSScreen.managedScreens.count
-        defer { lastKnownScreenCount = count }
-        if count < lastKnownScreenCount {
+        let change = displayArrangement.update(to: .current)
+        diagLog.debug("Display topology: \(change.logDescription)")
+        if change == .disconnected {
             diagLog.info("Display disconnected: refresh item cache + cleanup image cache")
             Task { @MainActor [weak self] in
                 guard let self else { return }
@@ -508,16 +508,16 @@ final class AppState {
                 await imageCache.recaptureNow(sections: MenuBarSection.Name.allCases)
                 diagLog.info("Cache refresh complete after display disconnect")
             }
-        } else if count > lastKnownScreenCount {
-            diagLog.info("Display connected: refresh item cache")
+        } else if change != .unchanged {
+            diagLog.info("\(change.logDescription): refresh item cache")
             Task { @MainActor [weak self] in
                 guard let self else { return }
                 // Defer saved-layout restore until attached-display geometry settles, as on disconnect.
-                itemManager.startSettlingPeriod(reason: "displayConnect")
+                itemManager.startSettlingPeriod(reason: change.settlingReason)
                 // Items keep their windowIDs when moving to new display.
                 // Item cache rebuild picks up new items on the added display.
                 await itemManager.cacheItemsRegardless(skipRecentMoveCheck: true)
-                diagLog.info("Item cache refreshed after display connect")
+                diagLog.info("Item cache refreshed after \(change.logDescription.lowercased())")
             }
         }
     }

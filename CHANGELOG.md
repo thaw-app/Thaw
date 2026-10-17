@@ -58,6 +58,7 @@ and the Sparkle appcast, unless overridden with the `release_notes` input.
 - **Thaw stops rearranging the menu bar on its own if its repairs keep going.** When automatic passes write more than four times in 30 seconds while you're not using the menu bar, they pause for a minute. Using the menu bar ends the pause. By @diazdesandi.
 - **Thaw no longer puts its dividers back in order while hiding is changing.** macOS holds the menu bar's order still while it hides or shows items and for a few seconds after, so a fix written then was wasted or set off another one. Thaw now waits until the menu bar has settled. By @diazdesandi.
 - **Using the menu bar stops Thaw's background tidying.** Starting a ⌘-drag, opening an item from the Thaw Bar, search or a hint, or showing a hidden section now calls off any automatic repair Thaw had planned, instead of letting it run on a menu bar you just changed. A layout you're looking at while a section is shown is also never saved as your order. By @diazdesandi.
+- **Rearranging your displays is handled like plugging one in.** Thaw used to wait for the menu bar to settle only when the number of displays changed. Swapping a display, moving one in System Settings or picking another main display now gets the same wait, and Thaw doesn't save the order while an icon is still at the screen's left edge or above the menu bar. By @diazdesandi.
 
 ## [3.0.0-alpha.9] - 2026-10-14
 
