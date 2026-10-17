@@ -55,10 +55,6 @@ struct ToolsSettingsPane: View {
                 MoveInspectorSection()
             }
 
-            // Above Troubleshooting because the positions reset there writes
-            // the backups this lists, and its copy points up to it.
-            MenuBarLayoutBackupsSection(refreshToken: backupsRefreshToken)
-
             // These delete preferences or quit apps.
             ThawSection("Troubleshooting") {
                 toolRow(
@@ -71,7 +67,7 @@ struct ToolsSettingsPane: View {
 
                 toolRow(
                     title: "Saved item positions",
-                    detail: "Delete macOS's saved menu bar layout and restart the menu bar so it rebuilds from scratch. Use this when items won't come back to the menu bar after you move them. A backup is saved first; restore it from Layout backups above.",
+                    detail: "Delete macOS's saved menu bar layout and restart the menu bar so it rebuilds from scratch. Use this when items won't come back to the menu bar after you move them. A backup is saved first; restore it from Layout backups below.",
                     buttonTitle: "Reset Positions…",
                     role: .destructive,
                     statusFor: .resetMenuBarLayoutPositions
@@ -101,6 +97,10 @@ struct ToolsSettingsPane: View {
                     pendingAction = .resetSettings
                 }
             }
+
+            // Below the resets so they stay in reach. The positions reset writes
+            // the backups listed here, and its text points down to them.
+            MenuBarLayoutBackupsSection(refreshToken: backupsRefreshToken)
         }
         .disabled(isBusy)
         .task(id: settings.enableDiagnosticLogging) {

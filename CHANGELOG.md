@@ -26,6 +26,7 @@ and the Sparkle appcast, unless overridden with the `release_notes` input.
 
 ### Changed: Settings
 
+- **Tools lists the resets before your layout backups.** Layout backups moved to the bottom of the page, so Troubleshooting and Reset come first. By @diazdesandi.
 - **Troubleshooting has two fewer buttons.** "Reset Control Center" is gone: on macOS 27 it also erased your choices in System Settings > Menu Bar, and "Restore Missing Items" brings items back without deleting anything. "Quit and Clear Cache" is gone too: saved item pictures are now thrown away after every update, which is what that button was for. By @diazdesandi.
 - **Search lists every section in menu bar order.** The order buttons and the per-section switches under Menu bar search are gone. By @diazdesandi.
 - **Privacy has no Turn Everything Off button.** It switched off the two rows above it; turn those off directly. By @diazdesandi.

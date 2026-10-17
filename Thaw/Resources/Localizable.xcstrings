@@ -12270,7 +12270,7 @@
         }
       }
     },
-    "Delete macOS's saved menu bar layout and restart the menu bar so it rebuilds from scratch. Use this when items won't come back to the menu bar after you move them. A backup is saved first; restore it from Layout backups above." : {
+    "Delete macOS's saved menu bar layout and restart the menu bar so it rebuilds from scratch. Use this when items won't come back to the menu bar after you move them. A backup is saved first; restore it from Layout backups below." : {
 
     },
     "Delete this backup?" : {
