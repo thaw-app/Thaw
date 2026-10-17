@@ -179,8 +179,12 @@ final class UpdatesManager: NSObject {
     /// them from the defaults, and a reset schedules the next check by them.
     func storedPreferencesChanged() {
         guard hasStartedUpdater else { return }
-        withMutation(keyPath: \.automaticallyChecksForUpdates) {}
-        withMutation(keyPath: \.automaticallyDownloadsUpdates) {}
+        withMutation(keyPath: \.automaticallyChecksForUpdates) {
+            // Sparkle already holds the new value; observers only need to hear that it changed.
+        }
+        withMutation(keyPath: \.automaticallyDownloadsUpdates) {
+            // Sparkle already holds the new value; observers only need to hear that it changed.
+        }
         updater.resetUpdateCycleAfterShortDelay()
     }
 

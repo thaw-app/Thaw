@@ -120,13 +120,18 @@ extension LayoutBarContainer {
             let outcome = await selection.move(to: target, placement: placement, using: selection.makeMover(appState))
             guard let outcome,
                   let refusal = LayoutSelectionModel.refusal(for: outcome, section: target, itemName: { id in
-                      appState.itemManager.managedItems.first { $0.uniqueIdentifier == id }?.displayName
+                      Self.displayName(of: id, appState: appState)
                   })
             else {
                 return
             }
             appState.layoutFeedback.post(refusal)
         }
+    }
+
+    /// The name a refusal gives the item with this identifier.
+    private static func displayName(of identifier: String, appState: AppState) -> String? {
+        appState.itemManager.managedItems.first { $0.uniqueIdentifier == identifier }?.displayName
     }
 }
 

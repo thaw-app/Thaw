@@ -74,13 +74,17 @@ extension LayoutBatchMoveExecutor {
                     id: item.uniqueIdentifier,
                     isControlItem: item.isControlItem,
                     groupID: groupAtIndex[index],
-                    assignableSections: Set(MenuBarSectionName.allCases.filter {
-                        MenuBarBackendProvider.current.canAssign(item, to: $0, experimentalSystemItemHiding: systemItemHiding)
-                    }),
+                    assignableSections: assignableSections(for: item, experimentalSystemItemHiding: systemItemHiding),
                     reordersInVisible: item.isPhysicallyOrderable(experimentalSystemItemHiding: reorderable)
                 )
             })
         }))
+    }
+
+    private static func assignableSections(for item: MenuBarItem, experimentalSystemItemHiding: Bool) -> Set<MenuBarSectionName> {
+        Set(MenuBarSectionName.allCases.filter {
+            MenuBarBackendProvider.current.canAssign(item, to: $0, experimentalSystemItemHiding: experimentalSystemItemHiding)
+        })
     }
 
     /// The plan as a Layout pane drop, read again so it acts on the items as they are now.
