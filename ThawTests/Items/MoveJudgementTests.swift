@@ -14,11 +14,11 @@ import Testing
 /// A move whose result the bar can't show is set aside, not scored as a failure.
 @Suite("Move judgement")
 struct MoveJudgementTests {
-    private static func item(_ bundle: String, _ title: String, windowID: CGWindowID) -> MenuBarItem {
+    private static func item(_ bundle: String, _ title: String, windowID: CGWindowID, width: CGFloat = 24) -> MenuBarItem {
         MenuBarItem(
             tag: MenuBarItemTag(namespace: .string(bundle), title: title, instanceIndex: 0),
             windowID: windowID, ownerPID: pid_t(windowID), sourcePID: pid_t(windowID),
-            bounds: CGRect(x: CGFloat(windowID) * 30, y: 3, width: 24, height: 24), title: title, isOnScreen: true
+            bounds: CGRect(x: CGFloat(windowID) * 30, y: 3, width: width, height: 24), title: title, isOnScreen: true
         )
     }
 
@@ -44,6 +44,27 @@ struct MoveJudgementTests {
             == .unjudgeable(.itemCountChanged))
         #expect(MoveJudgement.judge(repaired: false, itemCountBefore: 20, itemCountAfter: 18, ownerIconCount: 2)
             == .unjudgeable(.itemCountChanged))
+    }
+
+    @Test("An icon the bar draws with no size can't be judged, since overflow dropped it")
+    func zeroSizeFrameUnjudgeable() {
+        #expect(MoveJudgement.judge(repaired: false, itemCountBefore: 20, itemCountAfter: 20, ownerIconCount: 1, frameIsEmpty: true)
+            == .unjudgeable(.zeroSizeFrame))
+        #expect(MoveJudgement.judge(repaired: true, itemCountBefore: 20, itemCountAfter: 20, ownerIconCount: 1, frameIsEmpty: true)
+            == .applied)
+    }
+
+    @Test("Judging from the reads before and after the move")
+    func judgeFromReads() {
+        let moved = Self.item("com.example.Moved", "Item-0", windowID: 1)
+        let other = Self.item("com.example.Other", "Item-0", windowID: 2)
+        let dropped = Self.item("com.example.Moved", "Item-0", windowID: 1, width: 0)
+        #expect(MoveJudgement.judge(repaired: false, item: moved, before: [moved, other], after: [moved, other]) == .unapplied)
+        #expect(MoveJudgement.judge(repaired: false, item: moved, before: [moved, other], after: [dropped, other])
+            == .unjudgeable(.zeroSizeFrame))
+        #expect(MoveJudgement.judge(repaired: false, item: moved, before: [moved, other], after: [other])
+            == .unjudgeable(.itemCountChanged))
+        #expect(MoveJudgement.judge(repaired: true, item: moved, before: [moved, other], after: [moved, other]) == .applied)
     }
 
     @Test("Owner icons count the app's items, not other apps' or Thaw's controls")

@@ -20,16 +20,39 @@ nonisolated enum MoveJudgement: Equatable {
         case itemCountChanged = "the item count changed"
         /// The app owns another icon, and the agent may sort them by rows the write didn't touch.
         case sharedOwner = "its app has another icon on the bar"
+        /// The bar drew the item with no size, which is how overflow drops it, so its place says nothing.
+        case zeroSizeFrame = "the bar drew it with no size"
     }
 
-    static func judge(repaired: Bool, itemCountBefore: Int, itemCountAfter: Int, ownerIconCount: Int) -> Self {
+    static func judge(
+        repaired: Bool,
+        itemCountBefore: Int,
+        itemCountAfter: Int,
+        ownerIconCount: Int,
+        frameIsEmpty: Bool = false
+    ) -> Self {
         if repaired {
             return .applied
         }
         if itemCountBefore != itemCountAfter {
             return .unjudgeable(.itemCountChanged)
         }
+        if frameIsEmpty {
+            return .unjudgeable(.zeroSizeFrame)
+        }
         return ownerIconCount > 1 ? .unjudgeable(.sharedOwner) : .unapplied
+    }
+
+    /// Judges a move of the item from the bar reads taken before and after it.
+    static func judge(repaired: Bool, item: MenuBarItem, before: [MenuBarItem], after: [MenuBarItem]) -> Self {
+        let frame = after.first { $0.uniqueIdentifier == item.uniqueIdentifier }?.bounds ?? .zero
+        return judge(
+            repaired: repaired,
+            itemCountBefore: before.count,
+            itemCountAfter: after.count,
+            ownerIconCount: ownerIconCount(of: item, among: before),
+            frameIsEmpty: frame.isEmpty
+        )
     }
 
     static func ownerIconCount(of item: MenuBarItem, among items: [MenuBarItem]) -> Int {

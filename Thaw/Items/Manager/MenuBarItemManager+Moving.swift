@@ -1168,7 +1168,7 @@ extension MenuBarItemManager {
 
             // The ordinary move: a verified store write, then a drag, since the
             // agent ignores the row for a re-allowed item.
-            let (countBefore, ownerIcons) = (liveItems.count, MoveJudgement.ownerIconCount(of: liveItem, among: liveItems))
+            let itemsBefore = liveItems
             var repaired = false
             do {
                 let moved = try await move(
@@ -1225,7 +1225,7 @@ extension MenuBarItemManager {
                     "macOS 27 section boundary repair failed for \(liveItem.logString): \(error)"
                 )
             }
-            recordSectionBoundaryRepairOutcome(for: liveItem, judgement: .judge(repaired: repaired, itemCountBefore: countBefore, itemCountAfter: liveItems.count, ownerIconCount: ownerIcons))
+            recordSectionBoundaryRepairOutcome(for: liveItem, judgement: .judge(repaired: repaired, item: liveItem, before: itemsBefore, after: liveItems))
         }
 
         // Visible is expressed by absence from sectionAssignment, so the loop
