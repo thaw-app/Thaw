@@ -2330,12 +2330,6 @@
     "**App icons instead of menu bar previews:** Thaw uses an app-icon fallback when a usable capture is unavailable, including when Screen Recording permission is off. The fallback is intentional; an item disappearing entirely still needs investigation." : {
 
     },
-    "**Apps that need their own update:** macOS 27 changed how menu bar items are published, and an app built against the older behavior can sit in the wrong place, refuse to hide, or show no icon. f.lux behaves this way today. The fix has to come from the app's own developer; %@ cannot correct it from the outside. Check for an update to that app." : {
-
-    },
-    "**Apps that need their own update:** macOS 27 changed how menu bar items are published, and an app built against the older behavior can sit in the wrong place, refuse to hide, or show no icon. f.lux behaves this way today. The fix has to come from the app's own developer; Thaw cannot correct it from the outside." : {
-
-    },
     "**Control Center items assigned to Hidden are switched off, not hidden:** Wi‑Fi, Bluetooth and other Control Center modules in Hidden or Always Hidden are turned off in macOS, and they do not come back when the section is revealed. Move them to Visible to show them again." : {
 
     },
