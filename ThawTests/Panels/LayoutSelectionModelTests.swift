@@ -136,6 +136,29 @@ struct LayoutSelectionModelTests {
         #expect(!general.message.isEmpty)
     }
 
+    @Test("A Command or Shift click that reaches two items reports a multi-selection once")
+    func multiSelectionIsReported() {
+        let spoken = Spoken()
+        let model = LayoutSelectionModel(announce: { spoken.messages.append($0) }, onMultiSelect: { spoken.messages.append("multi") })
+        model.update(LayoutSelectionTests.visible, in: .visible)
+        model.update(LayoutSelectionTests.hidden, in: .hidden)
+
+        model.click("g1", in: .visible, kind: .replace)
+        model.click("a", in: .visible, kind: .replace)
+        model.click("b", in: .visible, kind: .toggle)
+        model.click("c", in: .visible, kind: .toggle)
+        model.clear()
+        model.click("a", in: .visible, kind: .replace)
+        model.click("b", in: .visible, kind: .extend)
+
+        #expect(spoken.messages.filter { $0 == "multi" }.count == 2)
+        #expect(!LayoutSelectionModel.isMultiSelection(.replace, from: 0, to: 2))
+        #expect(LayoutSelectionModel.isMultiSelection(.toggle, from: 1, to: 2))
+        #expect(LayoutSelectionModel.isMultiSelection(.extend, from: 1, to: 3))
+        #expect(!LayoutSelectionModel.isMultiSelection(.toggle, from: 2, to: 3))
+        #expect(!LayoutSelectionModel.isMultiSelection(.toggle, from: 2, to: 1))
+    }
+
     @Test("Without a speaker of its own the model announces through VoiceOver")
     func defaultAnnouncementPosts() {
         let model = LayoutSelectionModel()

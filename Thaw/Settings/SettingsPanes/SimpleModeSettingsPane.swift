@@ -82,6 +82,8 @@ struct SimpleModeSettingsPane: View {
                         action: { appState.permissions.screenRecording.performRequest() }
                     )
                 }
+                // Simple Mode has no limitations card, so nothing holds the tip back here.
+                LayoutMultiSelectTipView(isLimitationsCardShowing: false)
                 if showsHideByDragHint {
                     ThawFirstRunHint(
                         systemImage: "hand.draw",
