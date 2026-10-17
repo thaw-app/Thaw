@@ -57,6 +57,19 @@ enum ControlOrderRules {
         }
     }
 
+    /// The cached items with the dividers from the last walk put back, since the cache drops them.
+    /// Nil without a known Hidden divider, as nothing can be put in order then.
+    static nonisolated func withDividers(
+        _ cached: [MenuBarItem],
+        _ dividers: ControlItemPair?
+    ) -> (controlItems: ControlItemPair, items: [MenuBarItem])? {
+        guard let dividers else { return nil }
+        let missing = [dividers.hidden, dividers.alwaysHidden].compactMap(\.self).filter { divider in
+            !cached.contains { $0.windowID == divider.windowID }
+        }
+        return (dividers, cached + missing)
+    }
+
     /// Whether macOS has parked the Hidden divider off the bar, as it does while
     /// a display reconnects. Which side of a parked divider an item reads on is
     /// meaningless, so no order judged against it may be written.

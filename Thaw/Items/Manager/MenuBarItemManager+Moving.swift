@@ -692,15 +692,12 @@ extension MenuBarItemManager {
                 }
                 return
             }
-            guard let controlItems = controlItemPair(in: settledItems) else { return }
-
-            if restoreStructuralControlOrder(
-                controlItems: controlItems,
-                items: settledItems,
-                permit: StoreWritePermit(hold)
-            ) {
+            if let (controlItems, withDividers) = ControlOrderRules.withDividers(settledItems, lastKnownControlItems),
+               restoreStructuralControlOrder(controlItems: controlItems, items: withDividers, permit: StoreWritePermit(hold)) {
                 moveActivity.noteMoveOperation()
             }
+            // The passes below have never run on macOS 27, since the cache holds no dividers; they stay off until checked live.
+            guard controlItemPair(in: settledItems) != nil else { return }
 
             // Respace concealed bands while invisible, so the host's remembered
             // slots make the next reveal expand in authored order.
