@@ -17,7 +17,8 @@ nonisolated struct AutomaticPassInterruption {
 
     private var epoch: UInt64 = 0
     private var stamps = [Work: Stamp]()
-    private var running = [Work: UInt64]()
+    /// Passes in the lane, with the stamp their request carried when they started.
+    private var running = [Work: Stamp]()
 
     /// Stamps a request with the current epoch.
     mutating func noteRequest(_ work: Work, byUser: Bool) {
@@ -34,12 +35,12 @@ nonisolated struct AutomaticPassInterruption {
         for (work, stamp) in stamps {
             if stamp.byUser {
                 stamps[work]?.epoch = epoch
-                if running[work] != nil {
-                    running[work] = epoch
-                }
             } else if stamp.epoch == previous {
                 calledOff.append(work)
             }
+        }
+        for (work, stamp) in running where stamp.byUser {
+            running[work]?.epoch = epoch
         }
         return calledOff.sorted { $0.rawValue < $1.rawValue }
     }
@@ -50,13 +51,14 @@ nonisolated struct AutomaticPassInterruption {
     }
 
     /// Records an automatic pass taking the lane, in the epoch it was asked for.
+    /// The pass uses up its request, so a later request starts from a stamp of its own.
     mutating func noteStarted(_ work: Work) {
-        running[work] = stamps[work]?.epoch ?? epoch
+        running[work] = stamps.removeValue(forKey: work) ?? Stamp(epoch: epoch, byUser: false)
     }
 
     /// Whether user input arrived after this automatic pass started.
     func isInterrupted(_ work: Work) -> Bool {
-        running[work].map { $0 < epoch } ?? false
+        running[work].map { $0.epoch < epoch } ?? false
     }
 
     mutating func noteFinished(_ work: Work) {

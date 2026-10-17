@@ -81,4 +81,27 @@ struct AutomaticPassInterruptionTests {
         #expect(interruption.noteUserInput().isEmpty)
         #expect(!interruption.isCalledOff(.arrivalOrderRestore))
     }
+
+    @Test("A finished pass the user asked for doesn't lend its stamp to a later automatic request")
+    func finishedUserPassLeavesNoStamp() {
+        var interruption = AutomaticPassInterruption()
+        interruption.noteRequest(.structuralNormalization, byUser: true)
+        interruption.noteStarted(.structuralNormalization)
+        interruption.noteFinished(.structuralNormalization)
+        #expect(interruption.noteUserInput().isEmpty)
+
+        interruption.noteRequest(.structuralNormalization, byUser: false)
+        #expect(interruption.noteUserInput() == [.structuralNormalization])
+        #expect(interruption.isCalledOff(.structuralNormalization))
+    }
+
+    @Test("A pass that ran is not called off by input after it, without a new request")
+    func startedPassUsesUpItsRequest() {
+        var interruption = AutomaticPassInterruption()
+        interruption.noteRequest(.postRestrictionRepair, byUser: false)
+        interruption.noteStarted(.postRestrictionRepair)
+        interruption.noteFinished(.postRestrictionRepair)
+        #expect(interruption.noteUserInput().isEmpty)
+        #expect(!interruption.isCalledOff(.postRestrictionRepair))
+    }
 }
