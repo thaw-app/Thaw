@@ -351,6 +351,7 @@ nonisolated enum SettingsURIKeyTable {
         "useIceBarOnlyOnNotchedDisplay",
         "hideApplicationMenus",
         "hideDockIconWhenToggling",
+        "showDockIconWithSettings",
         "enableAlwaysHiddenSection",
         "useOptionClickToShowAlwaysHiddenSection",
         "useDoubleClickToShowAlwaysHiddenSection",

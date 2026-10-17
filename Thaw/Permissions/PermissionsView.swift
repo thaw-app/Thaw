@@ -271,7 +271,7 @@ struct PermissionCard: View {
             guard hasPermission else {
                 return
             }
-            appState.activate(withPolicy: .regular)
+            appState.activateForUserWindow()
             if refocusesWindowAfterGrant {
                 appState.openWindow(.permissions)
             }

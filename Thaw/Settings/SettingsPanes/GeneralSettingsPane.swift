@@ -56,6 +56,8 @@ struct GeneralSettingsPane: View {
             .annotation("Explains what a setting does directly beneath it, like this text.")
         Toggle("Hide Dock icon when toggling the menu bar", isOn: $settings.hideDockIconWhenToggling)
             .annotation("Keep the app's icon out of the Dock when showing or hiding hidden menu bar items. If they need extra space, they open in the Thaw Bar instead of hiding the app menus. Settings windows still appear normally.")
+        Toggle("Show Dock icon while Settings is open", isOn: $settings.showDockIconWithSettings)
+            .annotation("Turn this off to keep Thaw out of the Dock and its recent apps when you open Settings and other windows. They still open in front and take keyboard focus. Hiding the app menus can still show the Dock icon.")
     }
 
     // MARK: Ice Icon Options

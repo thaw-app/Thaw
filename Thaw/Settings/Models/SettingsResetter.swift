@@ -48,6 +48,7 @@ extension AppSettings {
         general.simpleMode = Defaults.DefaultValue.simpleMode
         general.showSettingDescriptions = Defaults.DefaultValue.showSettingDescriptions
         general.hideDockIconWhenToggling = Defaults.DefaultValue.hideDockIconWhenToggling
+        general.showDockIconWithSettings = Defaults.DefaultValue.showDockIconWithSettings
         appState?.itemGroupManager.apply(nil)
     }
 

@@ -37,6 +37,7 @@ struct SettingsResetterTests {
             settings.general.showOnHover = !Defaults.DefaultValue.showOnHover
             settings.general.autoRehide = !Defaults.DefaultValue.autoRehide
             settings.general.hideDockIconWhenToggling = !Defaults.DefaultValue.hideDockIconWhenToggling
+            settings.general.showDockIconWithSettings = !Defaults.DefaultValue.showDockIconWithSettings
             settings.general.rehideInterval = Defaults.DefaultValue.rehideInterval + 42
 
             settings.resetGeneral()
@@ -45,6 +46,7 @@ struct SettingsResetterTests {
             #expect(settings.general.showOnHover == Defaults.DefaultValue.showOnHover)
             #expect(settings.general.autoRehide == Defaults.DefaultValue.autoRehide)
             #expect(settings.general.hideDockIconWhenToggling == Defaults.DefaultValue.hideDockIconWhenToggling)
+            #expect(settings.general.showDockIconWithSettings == Defaults.DefaultValue.showDockIconWithSettings)
             #expect(settings.general.rehideInterval == Defaults.DefaultValue.rehideInterval)
             #expect(settings.general.lastCustomIceIcon == nil)
         }
