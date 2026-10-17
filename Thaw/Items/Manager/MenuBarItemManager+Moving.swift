@@ -1146,6 +1146,7 @@ extension MenuBarItemManager {
                 continue
             }
 
+            MenuBarItemManager.diagLog.debug(DiagnosticLines.boundaryRepair(liveItem, section: section, controlItems: controlItems, revealed: revealedSection))
             // Runs on every reveal, so it shares the strand pass's breaker and
             // re-arms. The cooldown is checked here because those re-arms only
             // run on a restriction change.

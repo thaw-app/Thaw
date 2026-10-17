@@ -6,10 +6,13 @@
 //  Licensed under the GNU GPLv3
 
 import Foundation
+import MenuBarModel
 
 /// Whether the end of a settle re-applies the active profile. Re-applying the one already in place
 /// would undo every drag made since.
 nonisolated enum ProfileSettleReapply {
+    fileprivate static let diagLog = DiagLog(category: "ProfileSettleReapply")
+
     static func shouldReapply(activeProfileID: UUID?, lastSettledProfileID: UUID?) -> Bool {
         guard let activeProfileID else { return false }
         return activeProfileID != lastSettledProfileID
@@ -38,11 +41,15 @@ nonisolated enum ProfileSettleReapply {
 
         /// Records the active profile and says whether this settle should apply it.
         func settle(activeProfileID: UUID?) -> Bool {
-            let reapply = ProfileSettleReapply.shouldReapply(
-                activeProfileID: activeProfileID,
-                lastSettledProfileID: lastSettledProfileID
-            )
+            let last = lastSettledProfileID
+            let reapply = ProfileSettleReapply.shouldReapply(activeProfileID: activeProfileID, lastSettledProfileID: last)
             lastSettledProfileID = activeProfileID
+            if let activeProfileID {
+                ProfileSettleReapply.diagLog.info(
+                    "settle: \(reapply ? "applying" : "keeping") profile \(activeProfileID.uuidString) " +
+                        "(last settled \(last?.uuidString ?? "none"))"
+                )
+            }
             return reapply
         }
     }

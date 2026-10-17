@@ -615,6 +615,7 @@ final class LayoutBarContainer: NSView {
         )
 
         refreshArrangedViews(for: displayedItems, runningApplications: runningApplications)
+        DiagnosticLines.logLayoutTiles(section: section, items: displayedItems, imageCache: appState.imageCache)
     }
 
     /// Rebuilds the section's arranged views from the fresh identifier list, keyed
