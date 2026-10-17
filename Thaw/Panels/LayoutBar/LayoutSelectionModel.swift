@@ -26,9 +26,15 @@ final class LayoutSelectionModel {
 
     /// Speaks a selection change to VoiceOver.
     @ObservationIgnored private let announce: @MainActor (String) -> Void
+    /// Runs each time a Command or Shift click grows the selection from fewer than two items to two or more.
+    @ObservationIgnored private let onMultiSelect: @MainActor () -> Void
 
-    init(announce: @escaping @MainActor (String) -> Void = LayoutSelectionModel.postAnnouncement) {
+    init(
+        announce: @escaping @MainActor (String) -> Void = LayoutSelectionModel.postAnnouncement,
+        onMultiSelect: @escaping @MainActor () -> Void = {}
+    ) {
         self.announce = announce
+        self.onMultiSelect = onMultiSelect
     }
 
     var count: Int {
@@ -51,7 +57,17 @@ final class LayoutSelectionModel {
     }
 
     func click(_ itemID: String, in section: MenuBarSectionName, kind: LayoutSelection.Click) {
+        let previousCount = count
         change { $0.click(itemID, in: section, units: units[section] ?? [], kind: kind) }
+        if Self.isMultiSelection(kind, from: previousCount, to: count) {
+            onMultiSelect()
+        }
+    }
+
+    /// Whether a click of kind that took the selection from oldCount to newCount items made a multi-selection.
+    /// A plain click on a group selects several items too, but it is not the user selecting several.
+    nonisolated static func isMultiSelection(_ kind: LayoutSelection.Click, from oldCount: Int, to newCount: Int) -> Bool {
+        kind != .replace && oldCount < 2 && newCount >= 2
     }
 
     func clear() {

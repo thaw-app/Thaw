@@ -20,7 +20,6 @@ struct MenuBarLayoutSettingsPane: View {
     @State private var relaunchErrorMessage: String?
     /// Set while macOS has Thaw itself switched off in its menu bar settings.
     @State private var isDeniedBySystem = false
-
     /// Refresh hidden occupancy from tags, not geometry, to avoid jitter; see MenuBarLayoutGroupsSection.
     @State private var isNothingHidden = false
 
@@ -119,6 +118,7 @@ struct MenuBarLayoutSettingsPane: View {
                     EmptyView()
                 }
                 if LayoutBanner.allowsTips(beside: banner) {
+                    LayoutMultiSelectTipView(isLimitationsCardShowing: !isLimitationsAcknowledged)
                     LayoutSuggestionCards(itemManager: itemManager)
                     if showsHideByDragHint {
                         ThawFirstRunHint(

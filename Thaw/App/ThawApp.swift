@@ -16,10 +16,14 @@ enum ThawEntryPoint {
             NativeVisibilityRecoveryApp.main()
         } else if MemoryBench.isRequested {
             MemoryBench.run()
-        } else if SettingsProcessApp.isRequested {
-            SettingsProcessApp.main()
         } else {
-            ThawApp.main()
+            // Both the app and the Settings process configure TipKit here, before any scene or default changes.
+            FeatureTips.configureAtLaunch()
+            if SettingsProcessApp.isRequested {
+                SettingsProcessApp.main()
+            } else {
+                ThawApp.main()
+            }
         }
     }
 }

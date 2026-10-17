@@ -12,8 +12,9 @@ import SwiftUI
 /// One line, dismissed forever, on an accent-washed card so it reads as a
 /// note, not a warning. No queue or sequencing; teaching more is onboarding's job.
 public struct ThawFirstRunHint: View {
-    private let systemImage: String
-    private let text: LocalizedStringKey
+    private let image: Image
+    private let title: Text?
+    private let text: Text
     private let actionTitle: LocalizedStringKey?
     private let action: (() -> Void)?
     private let onDismiss: () -> Void
@@ -35,25 +36,40 @@ public struct ThawFirstRunHint: View {
         action: (() -> Void)? = nil,
         onDismiss: @escaping () -> Void
     ) {
-        self.systemImage = systemImage
-        self.text = text
+        image = Image(systemName: systemImage)
+        title = nil
+        self.text = Text(text)
         self.actionTitle = actionTitle
         self.action = action
+        self.onDismiss = onDismiss
+    }
+
+    /// A hint with a bold lead line above its sentence, for callers that already hold Text, such as a TipKit tip.
+    public init(image: Image, title: Text?, text: Text, onDismiss: @escaping () -> Void) {
+        self.image = image
+        self.title = title
+        self.text = text
+        actionTitle = nil
+        action = nil
         self.onDismiss = onDismiss
     }
 
     public var body: some View {
         HStack(alignment: .firstTextBaseline, spacing: ThawSpacing.row) {
             HStack(alignment: .firstTextBaseline, spacing: ThawSpacing.row) {
-                Image(systemName: systemImage)
+                image
                     .font(ThawType.symbol)
                     .foregroundStyle(.secondary)
                     .accessibilityHidden(true)
 
-                Text(text)
-                    .font(ThawType.caption)
-                    .foregroundStyle(.primary)
-                    .fixedSize(horizontal: false, vertical: true)
+                VStack(alignment: .leading, spacing: ThawSpacing.tight) {
+                    title?
+                        .font(ThawType.caption.weight(.semibold))
+                    text
+                        .font(ThawType.caption)
+                }
+                .foregroundStyle(.primary)
+                .fixedSize(horizontal: false, vertical: true)
             }
             .accessibilityElement(children: .combine)
 

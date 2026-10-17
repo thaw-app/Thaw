@@ -27,7 +27,7 @@ struct FoldedMenuBar: View {
     @State private var dragTargetSection: MenuBarSection.Name?
 
     /// The items selected across this surface's bars.
-    @State private var selection = LayoutSelectionModel()
+    @State private var selection = LayoutSelectionModel(onMultiSelect: { FeatureTips.shared.noteMultiSelect() })
 
     /// Fits "Always Hidden" at caption size in the shipped languages.
     private let gutterWidth: CGFloat = 92

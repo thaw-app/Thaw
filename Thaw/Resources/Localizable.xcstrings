@@ -23839,6 +23839,9 @@
         }
       }
     },
+    "New: select several items" : {
+      "comment" : "Title of the Layout tip that announces selecting several menu bar items at once"
+    },
     "Newly connected displays are also seeded from this template." : {
 
     },
@@ -41930,6 +41933,9 @@
     },
     "•" : {
 
+    },
+    "⌘-click or ⇧-click icons, then drag one or right-click to move them all." : {
+      "comment" : "Message of the Layout tip that announces selecting several menu bar items at once"
     }
   },
   "version" : "1.1"
