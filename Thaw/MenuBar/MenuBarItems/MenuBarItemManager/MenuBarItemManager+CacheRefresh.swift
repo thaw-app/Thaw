@@ -56,6 +56,140 @@ extension MenuBarItemManager {
         return false
     }
 
+    /// How many passes a scheduled refresh runs before giving up, about three
+    /// seconds at uiSettleDelay apart.
+    static let scheduledRefreshMaxAttempts = 10
+
+    /// Whether a scheduled refresh runs another pass after this one.
+    static nonisolated func shouldRetryScheduledCacheRefresh(
+        attemptCompleted: Bool,
+        attempt: Int,
+        maxAttempts: Int
+    ) -> Bool {
+        !attemptCompleted && attempt < maxAttempts
+    }
+
+    /// Runs cache passes, uiSettleDelay apart, until one completes a cycle or
+    /// the attempts run out.
+    ///
+    /// A pass returns without completing when another pass holds cacheGate,
+    /// the user is dragging an item, a move lands mid-pass, or its result is
+    /// discarded as mid expand/collapse. The callers' window IDs are already
+    /// committed, so without retrying nothing else would run another pass
+    /// until they change again.
+    @discardableResult
+    func refreshCacheUntilCycleCompletes(options: CacheOptions) async -> Bool {
+        await refreshCacheUntilCycleCompletes { options }
+    }
+
+    /// Like ``refreshCacheUntilCycleCompletes(options:)``, reading the options
+    /// again before every attempt so requests merged in meanwhile take effect.
+    @discardableResult
+    func refreshCacheUntilCycleCompletes(options currentOptions: () -> CacheOptions) async -> Bool {
+        var attempt = 0
+        while true {
+            attempt += 1
+            try? await Task.sleep(for: MenuBarItemManager.uiSettleDelay)
+            guard !Task.isCancelled else {
+                return false
+            }
+            let cacheAttempt = CacheAttempt()
+            await cacheItemsRegardless(options: currentOptions(), cacheAttempt: cacheAttempt)
+            guard Self.shouldRetryScheduledCacheRefresh(
+                attemptCompleted: cacheAttempt.didCompleteCycle,
+                attempt: attempt,
+                maxAttempts: Self.scheduledRefreshMaxAttempts
+            ) else {
+                if !cacheAttempt.didCompleteCycle {
+                    MenuBarItemManager.diagLog.warning(
+                        "Scheduled cache refresh gave up after \(attempt) attempt(s) without a completed cycle"
+                    )
+                }
+                return cacheAttempt.didCompleteCycle
+            }
+        }
+    }
+
+    /// Refreshes the cache after a pass was discarded as mid expand/collapse.
+    ///
+    /// The discarded pass has already committed the window IDs, so the change
+    /// detector won't run another until they change again, which can take
+    /// minutes. Until then the Thaw Bar keeps showing a moved item in its old
+    /// section. A separate Task, because the discarding pass still holds
+    /// cacheGate. Only one runs at a time: a later request while it runs is
+    /// merged into its flags (see ``MidTransitionRetryFlags``) instead of
+    /// starting a second loop, every attempt takes the merged flags, and a
+    /// request that lands after the last attempt starts a new retry.
+    func scheduleCacheRetryAfterMidTransitionSkip(
+        suppressAutomaticMoves: Bool,
+        suppressSavedOrderPersistence: Bool
+    ) {
+        let request = MidTransitionRetryFlags(
+            suppressAutomaticMoves: suppressAutomaticMoves,
+            suppressSavedOrderPersistence: suppressSavedOrderPersistence
+        )
+        midTransitionRetryFlags = midTransitionRetryFlags?.merged(with: request) ?? request
+        guard midTransitionRetryTask == nil else {
+            return
+        }
+        midTransitionRetryTask = Task { [weak self] in
+            // Each attempt takes the requests merged so far, so a requirement
+            // is never dropped between attempts.
+            var flags = request
+            await self?.refreshCacheUntilCycleCompletes {
+                if let pending = self?.midTransitionRetryFlags {
+                    flags = flags.merged(with: pending)
+                    self?.midTransitionRetryFlags = nil
+                }
+                return CacheOptions(
+                    skipRecentMoveCheck: true,
+                    skipSavedLayoutApply: true,
+                    suppressAutomaticMoves: flags.suppressAutomaticMoves,
+                    suppressSavedOrderPersistence: flags.suppressSavedOrderPersistence
+                )
+            }
+            self?.midTransitionRetryTask = nil
+            // A request that arrived after the last attempt took its flags
+            // still needs a pass of its own.
+            if let late = self?.midTransitionRetryFlags {
+                self?.midTransitionRetryFlags = nil
+                self?.scheduleCacheRetryAfterMidTransitionSkip(
+                    suppressAutomaticMoves: late.suppressAutomaticMoves,
+                    suppressSavedOrderPersistence: late.suppressSavedOrderPersistence
+                )
+            }
+        }
+    }
+
+    /// The suppress flags of the pending mid-transition retries.
+    nonisolated struct MidTransitionRetryFlags: Equatable {
+        var suppressAutomaticMoves: Bool
+        var suppressSavedOrderPersistence: Bool
+
+        /// Each flag stays set only if every merged request set it: one pass
+        /// that needs automatic moves or saved-order persistence gets them.
+        func merged(with other: MidTransitionRetryFlags) -> MidTransitionRetryFlags {
+            MidTransitionRetryFlags(
+                suppressAutomaticMoves: suppressAutomaticMoves && other.suppressAutomaticMoves,
+                suppressSavedOrderPersistence: suppressSavedOrderPersistence && other.suppressSavedOrderPersistence
+            )
+        }
+    }
+
+    /// Whether a cache pass that handed its publish to a saved-layout apply
+    /// still has to schedule a refresh itself.
+    ///
+    /// The apply schedules one when it finishes or abandons its moves. When it
+    /// returns earlier, deferred because user input stayed active or skipped
+    /// for an open menu, nothing does, and the committed window IDs keep the
+    /// change detector quiet.
+    static nonisolated func savedLayoutHandoffNeedsCacheRefresh(
+        deferredRefreshesBeforeApply: Int,
+        deferredRefreshesAfterApply: Int
+    ) -> Bool {
+        deferredRefreshesAfterApply == deferredRefreshesBeforeApply
+    }
+
     /// Caches the current items if they changed, fixing the control item order first.
     func cacheItemsIfNeeded() async {
         let rawWindowIDs = Bridging.getMenuBarWindowList(option: [.itemsOnly, .activeSpace])
