@@ -15,6 +15,7 @@ and the Sparkle appcast, unless overridden with the `release_notes` input.
 
 - **What's New offers experiments you haven't tried.** The notes for the version you're running start with the Experiments switches that are still off, and you can turn them on right there. By @diazdesandi.
 - **Moving an item from its menu says how it went.** After a move from the Thaw Bar or search, a short message says where the item went, or that it didn't move. By @diazdesandi.
+- **Move items with a thaw:// link.** `thaw://move-item` puts one or more items into Visible, Hidden or Always Hidden, optionally right after another item, the same way a drop in Layout does. Apps need your approval in Automation first. See docs/URI_SCHEMES.md. By @diazdesandi.
 
 ### Removed
 
