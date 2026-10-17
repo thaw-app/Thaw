@@ -91,6 +91,8 @@ final class MenuBarItemManager {
     var lastKnownControlItems: ControlItemPair?
 
     @ObservationIgnored var lastVisibleControlDiagnosticState: String?
+    /// Holds the saved-order mirror while the bar settles after a wake, display, hiding or item change.
+    @ObservationIgnored let savedOrderMirrorGate = SavedOrderMirrorGate()
 
     /// Whether Thaw manages no items at all.
     ///
