@@ -831,7 +831,7 @@ extension MenuBarItemManager {
         }
 
         if !arrangementIsManual,
-           repairs.writeNow(.preRevealOrder, cause: .sectionRevealed, { permit in
+           repairs.writeNow(.preRevealOrder, cause: .revealStarting, { permit in
                restoreStructuralControlOrder(
                    controlItems: controlItems,
                    items: cachedItems,

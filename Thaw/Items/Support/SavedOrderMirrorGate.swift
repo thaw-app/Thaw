@@ -34,13 +34,15 @@ final class SavedOrderMirrorGate {
         lastDisturbance = instant
     }
 
-    /// Whether the cache holding these items may become the saved order now. A changed item set counts as a disturbance.
+    /// Whether the cache holding these items may become the saved order now.
+    /// A changed item set counts as a disturbance, and so does a revealed section, whose order is temporary.
     func allowsMirror(
         identifiers: Set<String>,
         restrictionChange: ContinuousClock.Instant?,
+        sectionRevealed: Bool = false,
         now: ContinuousClock.Instant = .now
     ) -> Bool {
-        if let lastIdentifiers, lastIdentifiers != identifiers {
+        if sectionRevealed || lastIdentifiers.map({ $0 != identifiers }) == true {
             lastDisturbance = now
         }
         lastIdentifiers = identifiers

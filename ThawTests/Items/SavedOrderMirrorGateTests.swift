@@ -72,4 +72,14 @@ struct SavedOrderMirrorGateTests {
         #expect(!SavedOrderMirrorGate.isQuiet(now: at(10), events: [at(2), at(8)], quietPeriod: .seconds(5)))
         #expect(SavedOrderMirrorGate.isQuiet(now: at(10), events: [], quietPeriod: .seconds(5)))
     }
+
+    @Test("A revealed section holds the mirror, and the hold outlasts the reveal")
+    func revealedSectionHoldsTheMirror() {
+        let gate = SavedOrderMirrorGate(observesSystem: false)
+        #expect(gate.allowsMirror(identifiers: items, restrictionChange: nil, now: at(0)))
+        #expect(!gate.allowsMirror(identifiers: items, restrictionChange: nil, sectionRevealed: true, now: at(1)))
+        #expect(!gate.allowsMirror(identifiers: items, restrictionChange: nil, sectionRevealed: true, now: at(20)))
+        #expect(!gate.allowsMirror(identifiers: items, restrictionChange: nil, now: at(25)))
+        #expect(gate.allowsMirror(identifiers: items, restrictionChange: nil, now: at(32.5)))
+    }
 }

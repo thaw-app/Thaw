@@ -24,9 +24,8 @@ extension MenuBarItemManager {
         with mouseButton: CGMouseButton,
         on displayID: CGDirectDisplayID
     ) async -> MenuBarItemActivationOutcome {
-        guard let controller = appState?.menuBarManager.sectionController else {
-            return .activationFailed
-        }
+        repairs.interruptAutomaticWork(by: .userClickedItem)
+        guard let controller = appState?.menuBarManager.sectionController else { return .activationFailed }
 
         // Opening an item on another display activates it; the repair pass must
         // not read that as a topology change.

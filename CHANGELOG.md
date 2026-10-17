@@ -57,6 +57,7 @@ and the Sparkle appcast, unless overridden with the `release_notes` input.
 - **An app with several icons no longer sets off a chain of repairs.** When macOS didn't move one of them, Thaw counted it as a failure, tried again on every reveal and re-spaced the items around it. When it can't tell whether a move worked, because the app has another icon or an item came or went meanwhile, Thaw now leaves that icon alone for a while. By @diazdesandi.
 - **Thaw stops rearranging the menu bar on its own if its repairs keep going.** When automatic passes write more than four times in 30 seconds while you're not using the menu bar, they pause for a minute. Using the menu bar ends the pause. By @diazdesandi.
 - **Thaw no longer puts its dividers back in order while hiding is changing.** macOS holds the menu bar's order still while it hides or shows items and for a few seconds after, so a fix written then was wasted or set off another one. Thaw now waits until the menu bar has settled. By @diazdesandi.
+- **Using the menu bar stops Thaw's background tidying.** Starting a ⌘-drag, opening an item from the Thaw Bar, search or a hint, or showing a hidden section now calls off any automatic repair Thaw had planned, instead of letting it run on a menu bar you just changed. A layout you're looking at while a section is shown is also never saved as your order. By @diazdesandi.
 
 ## [3.0.0-alpha.9] - 2026-10-14
 

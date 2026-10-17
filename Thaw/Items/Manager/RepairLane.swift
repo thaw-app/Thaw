@@ -135,6 +135,19 @@ final class RepairLane {
         next.continuation.resume(returning: true)
     }
 
+    /// Turns away the automatic passes in line that match, as if each had been cancelled.
+    /// Returns the work turned away, first in line first.
+    @discardableResult
+    func dropAutomaticWaiters(where matches: (RepairOrchestrator.Work) -> Bool) -> [RepairOrchestrator.Work] {
+        let isDropped: (Waiter) -> Bool = { $0.priority == .automatic && matches($0.hold.work) }
+        let dropped = waiters.filter(isDropped)
+        waiters.removeAll(where: isDropped)
+        for waiter in dropped {
+            waiter.continuation.resume(returning: false)
+        }
+        return dropped.map(\.hold.work)
+    }
+
     /// User work goes behind the user work already waiting and ahead of every
     /// automatic pass.
     private func enqueue(_ waiter: Waiter) {

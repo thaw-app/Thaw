@@ -169,4 +169,23 @@ struct RepairLaneTests {
         let hold = try #require(await second.value)
         lane.leave(hold)
     }
+
+    @Test("Dropping automatic waiters turns them away and leaves user work in line")
+    func dropAutomaticWaiters() async throws {
+        let lane = RepairLane()
+        let holder = try #require(await lane.enter(.postRestrictionRepair))
+        let automatic = Task { @MainActor in await lane.enter(.overflowRebalance) }
+        await waitForQueue(1, in: lane)
+        let user = Task { @MainActor in await lane.enter(.revealReconcile, priority: .user) }
+        await waitForQueue(2, in: lane)
+
+        let dropped = lane.dropAutomaticWaiters { _ in true }
+
+        #expect(dropped == [.overflowRebalance])
+        #expect(await automatic.value == nil)
+        #expect(lane.queued == [.revealReconcile])
+        lane.leave(holder)
+        let userHold = try #require(await user.value)
+        lane.leave(userHold)
+    }
 }
