@@ -51,6 +51,7 @@ and the Sparkle appcast, unless overridden with the `release_notes` input.
 - **A failed save can no longer wipe macOS's saved menu bar positions.** When that file couldn't be read, Thaw wrote a new one in its place and lost every other item's position. Now it leaves the file alone. By @diazdesandi.
 - **Turning on Always Hidden no longer sweeps your items into it.** Its divider could appear on the wrong side of the Hidden divider and stay there, and the next ⌘-drag then moved every item past it into Always Hidden. Thaw now puts the dividers back in order and ignores them while they are out of order. By @diazdesandi.
 - **Items you move stay put when Thaw restarts or a display changes.** With a profile active, Thaw re-applied that profile's layout after every launch, display change and app restart, undoing anything you had moved since. It now applies a profile only when it switches to it. Reported in [#1314](https://github.com/thaw-app/Thaw/issues/1314). By @diazdesandi.
+- **Showing Hidden no longer shuffles items that are already in place.** With Always Hidden on, Thaw judged Hidden items against Always Hidden's divider while that section was closed, where macOS leaves the divider beside the Hidden one. It then moved every Hidden item, one by one, to where it already was. By @diazdesandi.
 
 ## [3.0.0-alpha.9] - 2026-10-14
 

@@ -1135,7 +1135,7 @@ extension MenuBarItemManager {
                     items: liveItems,
                     item: liveItem,
                     section: section,
-                    controlItems: controlItems,
+                    controlItems: ControlOrderRules.boundaryControls(controlItems, revealedSection: revealedSection),
                     experimentalSystemItemHiding: experimentalSystemItemHiding
                 ),
                 let destination = MenuBarLayoutPlannerProvider.current.sectionBoundaryDestination(

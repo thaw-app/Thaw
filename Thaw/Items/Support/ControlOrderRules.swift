@@ -70,6 +70,16 @@ enum ControlOrderRules {
         return (dividers, cached + missing)
     }
 
+    /// The dividers a reveal's boundary check judges items against. Unless Always Hidden is the
+    /// section shown, its divider is collapsed and macOS doesn't seat it where its weight says.
+    static nonisolated func boundaryControls(
+        _ controlItems: ControlItemPair,
+        revealedSection: MenuBarSection.Name
+    ) -> ControlItemPair {
+        guard revealedSection != .alwaysHidden else { return controlItems }
+        return ControlItemPair(hidden: controlItems.hidden, alwaysHidden: nil)
+    }
+
     /// Whether macOS has parked the Hidden divider off the bar, as it does while
     /// a display reconnects. Which side of a parked divider an item reads on is
     /// meaningless, so no order judged against it may be written.
