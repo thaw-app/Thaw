@@ -985,4 +985,15 @@ final class LayoutBarContainer: NSView {
             .min { $0.offset < $1.offset }?
             .view
     }
+
+    /// Rebuilds add and remove item views, so the Layout selection rereads the bar.
+    override func didAddSubview(_ subview: NSView) {
+        super.didAddSubview(subview)
+        scheduleSelectionSync()
+    }
+
+    override func willRemoveSubview(_ subview: NSView) {
+        super.willRemoveSubview(subview)
+        scheduleSelectionSync()
+    }
 }

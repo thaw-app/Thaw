@@ -38,17 +38,7 @@ extension LayoutBarContainer {
     }
 
     /// A rebuild adds and removes item views, so the selection rereads the bar once it settles.
-    override func didAddSubview(_ subview: NSView) {
-        super.didAddSubview(subview)
-        scheduleSelectionSync()
-    }
-
-    override func willRemoveSubview(_ subview: NSView) {
-        super.willRemoveSubview(subview)
-        scheduleSelectionSync()
-    }
-
-    private func scheduleSelectionSync() {
+    func scheduleSelectionSync() {
         guard selection != nil else { return }
         Task { @MainActor [weak self] in
             self?.syncSelection()
@@ -147,27 +137,14 @@ extension LayoutBarItemView {
         (superview as? LayoutBarContainer)?.selection?.contains(item.uniqueIdentifier) ?? false
     }
 
-    /// The highlight sits on the view's layer, behind the glyph, and follows each redraw.
-    override func viewWillDraw() {
-        super.viewWillDraw()
-        LayoutSelectionHighlight.apply(to: self, isSelected: isLayoutSelected)
-    }
-
     /// The section, and whether the item is selected, read live so VoiceOver never hears a stale state.
-    override func accessibilityValue() -> Any? {
-        guard let section = (superview as? LayoutBarContainer)?.section else {
-            return super.accessibilityValue()
-        }
+    func selectionAccessibilityValue() -> Any? {
+        guard let section = (superview as? LayoutBarContainer)?.section else { return nil }
         return LayoutSelectionHighlight.accessibilityValue(section: section, isSelected: isLayoutSelected)
     }
 
-    override func isAccessibilitySelected() -> Bool {
-        isLayoutSelected
-    }
-
     /// The item's own actions, then selecting it and, once several are selected, moving them all.
-    override func accessibilityCustomActions() -> [NSAccessibilityCustomAction]? {
-        let own = super.accessibilityCustomActions() ?? []
+    func selectionAccessibilityActions(appendedTo own: [NSAccessibilityCustomAction]) -> [NSAccessibilityCustomAction] {
         guard let container = superview as? LayoutBarContainer, container.selection != nil,
               container.selectionUnits().contains(where: { $0.isSelectable && $0.memberIDs.contains(item.uniqueIdentifier) })
         else {
