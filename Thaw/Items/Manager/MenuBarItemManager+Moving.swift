@@ -2524,7 +2524,7 @@ extension MenuBarItemManager {
                 controller: controller,
                 nudgeRan: nudgeRan
             )
-        } else {
+        } else if !SettledSectionOrder.isStored(section: section, desiredOrder: desiredOrder, liveItems: liveItems, dividers: lastKnownControlItems) {
             let trace = tracePositionWrite(
                 context: "section apply \(section.logString) reason=\(reason)",
                 items: liveItems,
