@@ -1037,15 +1037,18 @@ extension MenuBarItemManager {
 
     /// Scores one reveal-time section boundary repair against the breaker the
     /// visible-strand pass uses.
-    private func recordSectionBoundaryRepairOutcome(for item: MenuBarItem, repaired: Bool) {
+    private func recordSectionBoundaryRepairOutcome(for item: MenuBarItem, judgement: MoveJudgement) {
         let id = PostRestrictionRepairItemID(item)
-        let outcome = boundaryRepairBreaker.record(repaired: repaired, for: id, tripLimit: Self.boundaryRepairTripLimit)
-        guard outcome.suppressed else { return }
-        MenuBarItemManager.diagLog.warning(
-            "macOS 27 section boundary repair: suppressing \(item.logString) after " +
-                "\(Self.boundaryRepairTripLimit) failed reveals for " +
-                "\(Int(Self.boundaryRepairSuppressionCooldown)) s"
-        )
+        let outcome = boundaryRepairBreaker.record(judgement, for: id, tripLimit: Self.boundaryRepairTripLimit)
+        if case let .unjudgeable(reason) = judgement {
+            MenuBarItemManager.diagLog.info("macOS 27 section boundary repair: can't judge \(item.logString) (\(reason.rawValue)); leaving it for \(Int(Self.boundaryRepairSuppressionCooldown)) s")
+        } else if outcome.suppressed {
+            MenuBarItemManager.diagLog.warning(
+                "macOS 27 section boundary repair: suppressing \(item.logString) after " +
+                    "\(Self.boundaryRepairTripLimit) failed reveals for " +
+                    "\(Int(Self.boundaryRepairSuppressionCooldown)) s"
+            )
+        }
     }
 
     /// Repairs assignments written by earlier macOS 27 builds that concealed
@@ -1165,6 +1168,7 @@ extension MenuBarItemManager {
 
             // The ordinary move: a verified store write, then a drag, since the
             // agent ignores the row for a re-allowed item.
+            let (countBefore, ownerIcons) = (liveItems.count, MoveJudgement.ownerIconCount(of: liveItem, among: liveItems))
             var repaired = false
             do {
                 let moved = try await move(
@@ -1221,7 +1225,7 @@ extension MenuBarItemManager {
                     "macOS 27 section boundary repair failed for \(liveItem.logString): \(error)"
                 )
             }
-            recordSectionBoundaryRepairOutcome(for: liveItem, repaired: repaired)
+            recordSectionBoundaryRepairOutcome(for: liveItem, judgement: .judge(repaired: repaired, itemCountBefore: countBefore, itemCountAfter: liveItems.count, ownerIconCount: ownerIcons))
         }
 
         // Visible is expressed by absence from sectionAssignment, so the loop

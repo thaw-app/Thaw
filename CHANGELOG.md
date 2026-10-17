@@ -54,6 +54,7 @@ and the Sparkle appcast, unless overridden with the `release_notes` input.
 - **Showing Hidden no longer shuffles items that are already in place.** With Always Hidden on, Thaw judged Hidden items against Always Hidden's divider while that section was closed, where macOS leaves the divider beside the Hidden one. It then moved every Hidden item, one by one, to where it already was. By @diazdesandi.
 - **Showing a hidden section no longer rewrites positions that are already right.** Thaw rewrote the spacing of every item in the section each time it was shown, which made macOS lay the bar out again. It now leaves them alone when they're already in order. By @diazdesandi.
 - **A passing jumble no longer becomes your layout.** Thaw saved the live order every few seconds, including the moment after a wake, a display change or an app adding an icon, and then kept putting that order back. It now waits until the menu bar has been settled for five seconds. By @diazdesandi.
+- **An app with several icons no longer sets off a chain of repairs.** When macOS didn't move one of them, Thaw counted it as a failure, tried again on every reveal and re-spaced the items around it. When it can't tell whether a move worked, because the app has another icon or an item came or went meanwhile, Thaw now leaves that icon alone for a while. By @diazdesandi.
 
 ## [3.0.0-alpha.9] - 2026-10-14
 
