@@ -42,8 +42,9 @@ extension DiagnosticLines {
     private static let layoutLog = DiagLog(category: "LayoutBarContainer")
     private static var lastLayoutTiles = [String: String]()
 
-    static func screensChanged(_ screens: [NSScreen]) -> String {
-        screensChanged(screens.map { (id: $0.displayID, frame: $0.frame, isMain: $0 == NSScreen.main) })
+    /// The main display is the one holding the menu bar, not NSScreen.main, which follows the key window.
+    static func screensChanged(_ screens: [NSScreen], mainDisplayID: CGDirectDisplayID = CGMainDisplayID()) -> String {
+        screensChanged(screens.map { (id: $0.displayID, frame: $0.frame, isMain: $0.displayID == mainDisplayID) })
     }
 
     static func boundaryRepair(
