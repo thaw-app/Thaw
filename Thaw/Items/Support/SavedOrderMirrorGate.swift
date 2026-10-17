@@ -11,7 +11,8 @@ import AppKit
 /// After a wake, a display, hiding or item change the bar passes through orders nobody chose.
 @MainActor
 final class SavedOrderMirrorGate {
-    static let quietPeriod = Duration.seconds(5)
+    /// MenuBarAgent rewrites its whole table 10 s after a new item appears, so the hold outlasts that.
+    static let quietPeriod = Duration.seconds(12)
 
     private var lastDisturbance: ContinuousClock.Instant?
     private var lastIdentifiers: Set<String>?
@@ -46,7 +47,7 @@ final class SavedOrderMirrorGate {
         return Self.isQuiet(now: now, events: [lastDisturbance, restrictionChange], quietPeriod: Self.quietPeriod)
     }
 
-    nonisolated static func isQuiet(
+    static nonisolated func isQuiet(
         now: ContinuousClock.Instant,
         events: [ContinuousClock.Instant?],
         quietPeriod: Duration

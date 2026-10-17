@@ -27,13 +27,13 @@ struct SavedOrderMirrorGateTests {
         #expect(gate.allowsMirror(identifiers: items, restrictionChange: nil, now: at(3)))
     }
 
-    @Test("An item arriving holds the mirror for the quiet period")
+    @Test("An item arriving holds the mirror past the agent's rewrite 10 s later")
     func arrivalHoldsTheMirror() {
         let gate = SavedOrderMirrorGate(observesSystem: false)
         _ = gate.allowsMirror(identifiers: items, restrictionChange: nil, now: at(0))
         #expect(!gate.allowsMirror(identifiers: items.union(["d"]), restrictionChange: nil, now: at(1)))
-        #expect(!gate.allowsMirror(identifiers: items.union(["d"]), restrictionChange: nil, now: at(5.5)))
-        #expect(gate.allowsMirror(identifiers: items.union(["d"]), restrictionChange: nil, now: at(6.5)))
+        #expect(!gate.allowsMirror(identifiers: items.union(["d"]), restrictionChange: nil, now: at(11.5)))
+        #expect(gate.allowsMirror(identifiers: items.union(["d"]), restrictionChange: nil, now: at(13.5)))
     }
 
     @Test("An item leaving holds the mirror too")
@@ -54,7 +54,7 @@ struct SavedOrderMirrorGateTests {
     func restrictionChangeHoldsTheMirror() {
         let gate = SavedOrderMirrorGate(observesSystem: false)
         #expect(!gate.allowsMirror(identifiers: items, restrictionChange: at(1), now: at(2)))
-        #expect(gate.allowsMirror(identifiers: items, restrictionChange: at(1), now: at(7)))
+        #expect(gate.allowsMirror(identifiers: items, restrictionChange: at(1), now: at(14)))
     }
 
     @Test("A wake or display change holds the mirror")
@@ -63,7 +63,7 @@ struct SavedOrderMirrorGateTests {
         _ = gate.allowsMirror(identifiers: items, restrictionChange: nil, now: at(0))
         gate.noteDisturbance(at: at(10))
         #expect(!gate.allowsMirror(identifiers: items, restrictionChange: nil, now: at(12)))
-        #expect(gate.allowsMirror(identifiers: items, restrictionChange: nil, now: at(16)))
+        #expect(gate.allowsMirror(identifiers: items, restrictionChange: nil, now: at(23)))
     }
 
     @Test("The quiet rule on its own")
