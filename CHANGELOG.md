@@ -56,6 +56,7 @@ and the Sparkle appcast, unless overridden with the `release_notes` input.
 - **A passing jumble no longer becomes your layout.** Thaw saved the live order every few seconds, including the moment after a wake, a display change or an app adding an icon, and then kept putting that order back. It now waits until the menu bar has been settled for twelve seconds, which outlasts the rewrite macOS makes ten seconds after an icon appears. By @diazdesandi.
 - **An app with several icons no longer sets off a chain of repairs.** When macOS didn't move one of them, Thaw counted it as a failure, tried again on every reveal and re-spaced the items around it. When it can't tell whether a move worked, because the app has another icon or an item came or went meanwhile, Thaw now leaves that icon alone for a while. By @diazdesandi.
 - **Thaw stops rearranging the menu bar on its own if its repairs keep going.** When automatic passes write more than four times in 30 seconds while you're not using the menu bar, they pause for a minute. Using the menu bar ends the pause. By @diazdesandi.
+- **Thaw no longer puts its dividers back in order while hiding is changing.** macOS holds the menu bar's order still while it hides or shows items and for a few seconds after, so a fix written then was wasted or set off another one. Thaw now waits until the menu bar has settled. By @diazdesandi.
 
 ## [3.0.0-alpha.9] - 2026-10-14
 

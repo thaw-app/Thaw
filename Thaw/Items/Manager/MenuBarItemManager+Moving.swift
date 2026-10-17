@@ -599,7 +599,7 @@ extension MenuBarItemManager {
         }
         repairs.request(.structuralNormalization, cause: cause)
         structuralNormalizationTask = Task { @MainActor [weak self] in
-            try? await Task.sleep(for: after)
+            try? await Task.sleep(for: ControlResortHold.debounce(after, for: "structural normalization", self.map(ControlResortHold.Signal.init(of:))))
             guard !Task.isCancelled, let self else { return }
             structuralNormalizationTask = nil
             guard let appState,
@@ -620,17 +620,15 @@ extension MenuBarItemManager {
             }
             // During a reveal the writes would flicker the bar, so re-arm a
             // bounded number of times instead of dropping the work.
+            @MainActor func rearm() {
+                guard deferralsRemaining > 0 else { return }
+                scheduleStructuralNormalization(cause: .rearmed, after: after, deferralsRemaining: deferralsRemaining - 1)
+            }
             guard layoutPublication.canPublish(generation: layoutPublication.generation),
                   appState.menuBarManager.sectionController.revealedSection == nil,
                   !appState.menuBarManager.isRevealHideTransitionActive
             else {
-                if deferralsRemaining > 0 {
-                    scheduleStructuralNormalization(
-                        cause: .rearmed,
-                        after: after,
-                        deferralsRemaining: deferralsRemaining - 1
-                    )
-                }
+                rearm()
                 return
             }
 
@@ -653,14 +651,10 @@ extension MenuBarItemManager {
                     repairs.leave(hold)
                 }
             }
-            guard layoutPublication.canPublish(generation: layoutPublication.generation) else {
-                if deferralsRemaining > 0 {
-                    scheduleStructuralNormalization(
-                        cause: .rearmed,
-                        after: after,
-                        deferralsRemaining: deferralsRemaining - 1
-                    )
-                }
+            guard layoutPublication.canPublish(generation: layoutPublication.generation),
+                  ControlResortHold.allowsResort(for: "structural normalization", .init(of: self))
+            else {
+                rearm()
                 return
             }
 
