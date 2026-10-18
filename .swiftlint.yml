@@ -2,17 +2,33 @@ included:
   - MenuBarModel
   - Shared
   - Thaw
+  - ThawAutomation
   - ThawCapture
   - ThawCtl
+  - ThawModuleKit
+  - ThawTriggers
   - ThawUI
+  - ThawWidgets
 
 excluded:
   - MenuBarModel/.build
+  - ThawAutomation/.build
+  - ThawModuleKit/.build
+  - ThawTriggers/.build
+  - ThawWidgets/.build
   - ThawCapture/.build
   - ThawCtl/.build
   - ThawUI/.build
   - ThawTests
+  - ThawAutomation/Tests
+  - ThawModuleKit/Tests
+  - ThawTriggers/Tests
+  - ThawWidgets/Tests
   - MenuBarModel/Package.swift
+  - ThawAutomation/Package.swift
+  - ThawModuleKit/Package.swift
+  - ThawTriggers/Package.swift
+  - ThawWidgets/Package.swift
   - ThawCapture/Package.swift
   - ThawCtl/Package.swift
   - ThawUI/Package.swift

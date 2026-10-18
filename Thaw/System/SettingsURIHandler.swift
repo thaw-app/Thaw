@@ -9,6 +9,7 @@ import AppKit
 import Foundation
 import MenuBarModel
 import Security
+import ThawModuleKit
 
 /// Handles settings manipulation via thaw:// URLs with whitelist-based security.
 @MainActor
@@ -59,6 +60,7 @@ enum SettingsURIHandler {
     /// Unset keys read registered Defaults values; SettingsURIKeyTableTests ensures every global table key is registered.
     static let keyTable: [String: SettingURIEntry] = [
         // MARK: - General
+
         "showThawIcon": SettingURIEntry(defaultsKey: .showThawIcon, kind: .boolean, isWritable: true),
         "customThawIconIsTemplate": SettingURIEntry(defaultsKey: .customThawIconIsTemplate, kind: .boolean, isWritable: true),
         "simpleMode": SettingURIEntry(defaultsKey: .simpleMode, kind: .boolean, isWritable: true),
@@ -77,6 +79,7 @@ enum SettingsURIHandler {
         "rehideStrategy": SettingURIEntry(defaultsKey: .rehideStrategy, kind: .enumeration, isWritable: true),
 
         // MARK: - Advanced
+
         "enableAlwaysHiddenSection": SettingURIEntry(defaultsKey: .enableAlwaysHiddenSection, kind: .boolean, isWritable: true),
         "showAllSectionsOnUserDrag": SettingURIEntry(defaultsKey: .showAllSectionsOnUserDrag, kind: .boolean, isWritable: true),
         "hideApplicationMenus": SettingURIEntry(defaultsKey: .hideApplicationMenus, kind: .boolean, isWritable: true),
@@ -144,11 +147,28 @@ enum SettingsURIHandler {
 
     /// Whether a sender is trusted without asking: a built-in bundle ID signed by this app's team.
     /// An unsigned build of either side has no team and is never trusted this way.
-    static func isBuiltInTrusted(bundleId: String, senderTeamID: String?, ownTeamID: String?) -> Bool {
-        guard builtInTrustedBundleIDs.contains(bundleId),
+    static func isBuiltInTrusted(
+        bundleId: String,
+        senderTeamID: String?,
+        ownTeamID: String?,
+        ownBundleID: String? = Bundle.main.bundleIdentifier
+    ) -> Bool {
+        guard isBuiltInBundleID(bundleId, ownBundleID: ownBundleID),
               let senderTeamID, let ownTeamID
         else { return false }
         return senderTeamID == ownTeamID
+    }
+
+    /// A partner app from the list, or one of this Thaw's own modules, which
+    /// are named after its bundle ID: com.stonerl.Thaw.module.triggers.
+    static func isBuiltInBundleID(_ bundleId: String, ownBundleID: String?) -> Bool {
+        if builtInTrustedBundleIDs.contains(bundleId) {
+            return true
+        }
+        guard let ownBundleID else { return false }
+        let prefix = ownBundleID + ModuleLaunchEnvironment.moduleBundleSeparator
+        let name = bundleId.dropFirst(prefix.count)
+        return bundleId.hasPrefix(prefix) && !name.isEmpty && !name.contains(".")
     }
 
     /// Whether the sender is a built-in trusted sender, judged by its own signature.
@@ -158,7 +178,9 @@ enum SettingsURIHandler {
         _ sender: SettingsURISender?,
         ownTeamID: () -> String? = { teamIdentifier(ofAppAt: Bundle.main.bundleURL, logName: "this app") }
     ) -> Bool {
-        guard let sender, builtInTrustedBundleIDs.contains(sender.bundleIdentifier) else { return false }
+        guard let sender, isBuiltInBundleID(sender.bundleIdentifier, ownBundleID: Bundle.main.bundleIdentifier) else {
+            return false
+        }
         return isBuiltInTrusted(
             bundleId: sender.bundleIdentifier,
             senderTeamID: sender.teamIdentifier,
@@ -511,6 +533,12 @@ enum SettingsURIHandler {
         itemID: String?,
         sectionAssignment: [String: MenuBarSection.Name]
     ) -> String? {
+        resolveRevealItemIdentifier(bundle: bundle, itemID: itemID, candidates: Array(sectionAssignment.keys))
+    }
+
+    /// Resolves bundle or item-id against the given item identifiers, such as
+    /// the assigned items for a reveal or the held ones for a release.
+    static func resolveRevealItemIdentifier(bundle: String?, itemID: String?, candidates: [String]) -> String? {
         let hasBundle = !(bundle?.isEmpty ?? true)
         let hasItemID = !(itemID?.isEmpty ?? true)
 
@@ -528,7 +556,7 @@ enum SettingsURIHandler {
         guard let bundle else { return nil }
 
         let prefix = "\(bundle):"
-        let matches = sectionAssignment.keys.filter { $0.hasPrefix(prefix) }
+        let matches = candidates.filter { $0.hasPrefix(prefix) }
         guard let match = matches.first, matches.count == 1 else {
             diagLog.warning(
                 "Settings URI reveal-item: bundle '\(bundle)' matched \(matches.count) assigned item(s), expected exactly 1"
@@ -1068,7 +1096,7 @@ enum SettingsURIHandler {
         // Check if we have config for disconnected display
         if let configs = Defaults.data(forKey: .displayThawBarConfigurations)
             .flatMap({ try? JSONDecoder().decode([String: DisplayThawBarConfiguration].self, from: $0) }),
-            let config = configs[uuid]
+           let config = configs[uuid]
         {
             return [
                 "requestId": requestId,

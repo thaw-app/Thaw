@@ -9,7 +9,7 @@ import Foundation
 import Testing
 @testable import Thaw
 
-/// Keeps the Automation pane's thaw:// promises honest.
+/// Keeps the thaw:// promises on the Privacy pane honest.
 ///
 /// The pane tells the user four things: an app Thaw does not recognise cannot
 /// change a setting, approval is asked for once and then remembered, an

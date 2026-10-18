@@ -72,7 +72,6 @@ final class AppState {
     /// Reveals concealed items temporarily when their icon changes.
     let alertRevealWatcher = MenuBarItemAlertRevealWatcher()
     let presentationMonitor = PresentationMonitor()
-    let appRunningTriggers = AppRunningTriggersManager()
 
     /// Owner of the user's menu bar spacer items.
     let spacerManager = MenuBarSpacerManager()
@@ -117,12 +116,15 @@ final class AppState {
     /// profiles, and reach the section and zen toggles without the menu.
     let swapBarManager = SwapBarManager()
 
-    /// The panel Thaw's own icon raises in place of its status menu, a Lab
-    /// experiment. Nothing is constructed until the first press with it on.
+    /// The panel Thaw's own icon raises in place of its status menu. Nothing
+    /// is constructed until the first press with it on.
     let controlItemPanel = ControlItemPanelController()
 
-    /// Lab recording watcher reads only public CoreAudio and CoreMediaIO state, independent of other subsystems.
+    /// Reads the camera and microphone for Zen Mode, using only public CoreAudio and CoreMediaIO state.
     let recordingWatchManager = RecordingWatchManager()
+
+    /// Launches the modules shipped with Thaw or installed beside it.
+    let moduleHost = ModuleHost(environment: .live())
 
     let applicationMenuCover = ApplicationMenuCover()
 
@@ -229,10 +231,6 @@ final class AppState {
         diagLog.debug("bootstrap: starting imageCache setup")
         imageCache.activate(with: self)
         alertRevealWatcher.performSetup(with: self)
-        appRunningTriggers.start(
-            reveal: { [weak self] in self?.menuBarManager.sectionController.revealItemTemporarily($0) },
-            release: { [weak self] in self?.menuBarManager.sectionController.concealTemporarilyRevealedItem($0) }
-        )
         presentationMonitor.performSetup(with: self)
         spacerManager.performSetup(with: self)
         screenCorners.performSetup(with: self, displaySettlements: displayEnvironment.settlements)
@@ -257,9 +255,8 @@ final class AppState {
         controlItemPanel.performSetup(with: self)
         recordingWatchManager.performSetup(with: self)
         applicationMenuCover.performSetup(with: self)
-        // The widget preview item exists only inside a running process, so
-        // every launch re-publishes it when the user last left it enabled.
-        StatusIconWidgetController.shared.restore()
+        moduleHost.startObservingTerminations()
+        Task { await moduleHost.startAll() }
 
         installObservers()
         MemoryReclaimer.start()
@@ -541,7 +538,9 @@ final class AppState {
     }
 
     func openWindow(_ id: ThawWindowIdentifier, allowSettingsProcess: Bool = true) {
-        if allowSettingsProcess, showsInSettingsProcess(id, isOpenHere: openWindows.contains(id)) { return }
+        if allowSettingsProcess, showsInSettingsProcess(id, isOpenHere: openWindows.contains(id)) {
+            return
+        }
         if id == .settings {
             prepareSettingsPresentation()
         }

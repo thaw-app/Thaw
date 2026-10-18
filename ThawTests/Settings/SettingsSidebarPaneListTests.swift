@@ -32,10 +32,10 @@ struct SettingsSidebarPaneListTests {
     func rowIdentities() {
         let ids = SettingsSidebarPanes.rows.map(\.id)
         #expect(Set(ids).count == ids.count)
-        #expect(ids.contains("heading:Modules"))
+        #expect(ids.contains("heading:On"))
         #expect(ids.contains("gap"))
         #expect(ids.contains(SettingsNavigationIdentifier.privacy.rawValue))
-        #expect(SettingsSidebarPanes.groups.map(\.id) == [.general, .profiles, .privacy, .about])
+        #expect(SettingsSidebarPanes.groups.map(\.id) == [.general, .profiles, .modules, .about])
         #expect(SettingsSidebarRow.heading("Manage").page == nil)
         #expect(SettingsSidebarRow.gap.page == nil)
         #expect(SettingsSidebarRow.page(.tools).page == .tools)

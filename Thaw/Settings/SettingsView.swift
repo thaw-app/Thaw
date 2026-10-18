@@ -282,20 +282,16 @@ struct SettingsView: View {
         case .menuBarAppearance:
             MenuBarAppearanceSettingsPane(appearanceManager: appState.appearanceManager)
         case .widgets:
-            WidgetsSettingsPane()
+            WidgetsSettingsPane(settings: appState.settings.advanced)
         case .profiles:
             ProfileSettingsPane(profileManager: appState.profileManager)
         case .hotkeys:
             HotkeysSettingsPane(settings: appState.settings.hotkeys)
         case .automation, .triggers:
-            AutomationSettingsPane(
-                settings: appState.settings.automation,
-                hookSettings: appState.settings.automationHook,
-                advancedSettings: appState.settings.advanced
-            )
+            TriggersSettingsPane()
         case .displays, .spaces:
             DisplaySettingsPane(displaySettings: appState.settings.displaySettings)
-        case .general:
+        case .general, .theLab:
             GeneralSettingsPane(
                 settings: appState.settings.general,
                 advancedSettings: appState.settings.advanced
@@ -305,17 +301,16 @@ struct SettingsView: View {
                 updatesManager: appState.updatesManager,
                 advancedSettings: appState.settings.advanced
             )
-        case .theLab:
-            TheLabSettingsPane(settings: appState.settings.advanced)
         case .tools:
             ToolsSettingsPane(settings: appState.settings.advanced)
+        case .modules:
+            ModulesSettingsPane(moduleHost: appState.moduleHost)
         case .about:
             AboutSettingsPane(updatesManager: appState.updatesManager)
         case .scripts:
             ScriptsSettingsPane()
         case .advanced:
-            // Advanced was dissolved; its controls live on General, Layout, and
-            // Automation. A stale identifier (saved last pane) lands on Layout.
+            // Advanced was dissolved, so a saved pane that names it opens Layout.
             MenuBarLayoutSettingsPane(itemManager: appState.itemManager)
         }
     }
@@ -463,7 +458,10 @@ private struct SettingsSidebar: View {
     let generalSettings: GeneralSettings
 
     var body: some View {
-        SettingsSidebarPaneList(navigationState: navigationState)
+        SettingsSidebarPaneList(
+            navigationState: navigationState,
+            turnedOff: SettingsSidebarPanes.panesTurnedOff(isEnabled: appState.moduleHost.isEnabled)
+        )
             .navigationSplitViewColumnWidth(min: SettingsSidebarPaneList.listWidth, ideal: SettingsSidebarPaneList.listWidth, max: 250)
             .onChange(of: generalSettings.simpleMode) { _, _ in
                 searchModel.updateDisplayedItems()

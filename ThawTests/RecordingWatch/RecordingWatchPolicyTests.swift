@@ -134,4 +134,21 @@ struct RecordingWatchPolicyTests {
         #expect(!RecordingActivity(isCameraInUse: true).isIdle)
         #expect(!RecordingActivity(microphoneUsers: [user(42, "Zoom")]).isIdle)
     }
+
+    // MARK: - Hidden alerts
+
+    @Test("The alerts stay off while they are hidden, whatever was saved")
+    func hiddenAlertsStayOff() {
+        #expect(!RecordingWatchPolicy.alertsAvailable)
+        #expect(!RecordingWatchPolicy.alertsOn(saved: true))
+        #expect(RecordingWatchPolicy.alertsOn(saved: true, available: true))
+        #expect(!RecordingWatchPolicy.alertsOn(saved: false, available: true))
+    }
+
+    @Test("The devices are read for the alerts or for Zen Mode, and not for neither")
+    func samplesForEitherUse() {
+        #expect(RecordingWatchPolicy.shouldSample(alerts: false, zenMode: true))
+        #expect(RecordingWatchPolicy.shouldSample(alerts: true, zenMode: false))
+        #expect(!RecordingWatchPolicy.shouldSample(alerts: false, zenMode: false))
+    }
 }

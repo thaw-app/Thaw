@@ -10,6 +10,7 @@ import Cocoa
 import Combine
 import Foundation
 import MenuBarModel
+import ThawModuleKit
 
 @MainActor
 @Observable
@@ -259,7 +260,7 @@ final class ProfileManager {
     }
 
     /// Apply spacing after settings; applyOffset avoids relaunches for matching on-disk offsets.
-    /// Capture previousProfileID before changing activeProfileID so hooks receive THAW_PREVIOUS_PROFILE_ID.
+    /// Capture previousProfileID before changing activeProfileID so modules hear which profile came before.
     /// While relaunches need confirmation, spacing is only written unless spacingRelaunchApproved says the user agreed.
     func applyProfile(_ profile: Profile, to appState: AppState, previousProfileID: UUID? = nil, relaunchesApps: Bool = true, spacingRelaunchApproved: Bool = false) {
         diagLog.debug(
@@ -281,46 +282,19 @@ final class ProfileManager {
         let itemSectionMap = profile.menuBarLayout.itemSectionMap ?? [:]
         let itemOrder = profile.menuBarLayout.itemOrder ?? [:]
 
-        // Snapshot hook configuration on MainActor with the other apply preparation.
-        let globalPre = HookScript.loadGlobal(.pre)
-        let globalPost = HookScript.loadGlobal(.post)
-        let profilePre = profile.automation?.preHook
-        let profilePost = profile.automation?.postHook
-
         let previousName = previousProfileID.flatMap { id in
             profiles.first(where: { $0.id == id })?.name
         }
-        let baseContext = (
+        let event = ProfileSwitch(
             profileID: profile.id,
             profileName: profile.name,
-            previousID: previousProfileID,
-            previousName: previousName
+            previousProfileID: previousProfileID,
+            previousProfileName: previousName
         )
 
         layoutTask = Task { [weak self] in
-            // Global pre-hooks provide common setup; profile pre-hooks can override or extend it.
-            await HookRunner.runIfEnabled(globalPre, context: HookRunner.Context(
-                phase: .pre,
-                scope: .global,
-                profileID: baseContext.profileID,
-                profileName: baseContext.profileName,
-                previousProfileID: baseContext.previousID,
-                previousProfileName: baseContext.previousName
-            ))
-            if Task.isCancelled {
-                return
-            }
-            await HookRunner.runIfEnabled(profilePre, context: HookRunner.Context(
-                phase: .pre,
-                scope: .profile,
-                profileID: baseContext.profileID,
-                profileName: baseContext.profileName,
-                previousProfileID: baseContext.previousID,
-                previousProfileName: baseContext.previousName
-            ))
-            if Task.isCancelled {
-                return
-            }
+            // Modules hear of the switch first; Thaw doesn't wait for their scripts.
+            ProfileSwitchAnnouncer.post(.willApply, event)
 
             let mayRelaunch = self?.applySnapshot(profile, to: appState, relaunchesApps: relaunchesApps, spacingRelaunchApproved: spacingRelaunchApproved) ?? false
 
@@ -373,32 +347,12 @@ final class ProfileManager {
                 self?.recordLayoutDidNotRun(generation: generation)
             }
 
-            // Reverse pre-hook order for teardown; skip post-hooks when a newer apply cancels this task.
+            // A newer apply cancels this task; only the switch that finished is announced as applied.
             if Task.isCancelled {
                 self?.endLayoutTask(generation: generation)
                 return
             }
-            await HookRunner.runIfEnabled(profilePost, context: HookRunner.Context(
-                phase: .post,
-                scope: .profile,
-                profileID: baseContext.profileID,
-                profileName: baseContext.profileName,
-                previousProfileID: baseContext.previousID,
-                previousProfileName: baseContext.previousName
-            ))
-            // Recheck cancellation after a long profile script to avoid firing global teardown for a superseded apply.
-            if Task.isCancelled {
-                self?.endLayoutTask(generation: generation)
-                return
-            }
-            await HookRunner.runIfEnabled(globalPost, context: HookRunner.Context(
-                phase: .post,
-                scope: .global,
-                profileID: baseContext.profileID,
-                profileName: baseContext.profileName,
-                previousProfileID: baseContext.previousID,
-                previousProfileName: baseContext.previousName
-            ))
+            ProfileSwitchAnnouncer.post(.didApply, event)
 
             self?.endLayoutTask(generation: generation)
         }
@@ -849,29 +803,6 @@ final class ProfileManager {
             }
         }
         try saveManifest()
-    }
-
-    // MARK: - Profile Hooks
-
-    /// Return empty automation when a profile has no hooks or cannot be loaded.
-    func hooks(forProfileID id: UUID) -> ProfileAutomation {
-        guard let profile = try? loadProfile(id: id) else {
-            return ProfileAutomation()
-        }
-        return profile.automation ?? ProfileAutomation()
-    }
-
-    /// nil clears the hook; rewrite profile JSON and bump manifest modifiedAt for UI updates.
-    func setHook(_ hook: HookScript?, phase: HookPhase, forProfileID id: UUID) throws {
-        var profile = try loadProfile(id: id)
-        var automation = profile.automation ?? ProfileAutomation()
-        switch phase {
-        case .pre: automation.preHook = hook
-        case .post: automation.postHook = hook
-        }
-        profile.automation = automation.isEmpty ? nil : automation
-        profile.modifiedAt = Date()
-        try replaceProfile(profile)
     }
 
     /// Exports all profiles as a single JSON file including metadata.

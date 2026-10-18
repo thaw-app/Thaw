@@ -118,19 +118,39 @@ struct ShowHiddenItemsOnRow: View {
     @Bindable var settings: GeneralSettings
 
     var body: some View {
-        LabeledContent("Show hidden items on") {
+        ToggleButtonRow("Show hidden items on") {
+            Toggle("Click", isOn: $settings.showOnClick)
+                .help("Click an empty area of the menu bar to show hidden menu bar items.")
+            Toggle("Hover", isOn: $settings.showOnHover)
+                .help("Hover over an empty area of the menu bar to show hidden menu bar items.")
+            Toggle("Scroll", isOn: $settings.showOnScroll)
+                .help("Scroll or swipe in the menu bar to show hidden menu bar items.")
+        }
+        .annotation("Show hidden menu bar items by clicking, hovering, or scrolling in an empty area of the menu bar.")
+    }
+}
+
+// MARK: - ToggleButtonRow
+
+/// One setting that can apply at several times, as a row of buttons that
+/// switch on separately, such as Show hidden items on Click, Hover and Scroll.
+struct ToggleButtonRow<Toggles: View>: View {
+    private let label: LocalizedStringKey
+    private let toggles: Toggles
+
+    init(_ label: LocalizedStringKey, @ViewBuilder toggles: () -> Toggles) {
+        self.label = label
+        self.toggles = toggles()
+    }
+
+    var body: some View {
+        LabeledContent(label) {
             ControlGroup {
-                Toggle("Click", isOn: $settings.showOnClick)
-                    .help("Click an empty area of the menu bar to show hidden menu bar items.")
-                Toggle("Hover", isOn: $settings.showOnHover)
-                    .help("Hover over an empty area of the menu bar to show hidden menu bar items.")
-                Toggle("Scroll", isOn: $settings.showOnScroll)
-                    .help("Scroll or swipe in the menu bar to show hidden menu bar items.")
+                toggles
             }
             .toggleStyle(.button)
             .fixedSize()
         }
-        .annotation("Show hidden menu bar items by clicking, hovering, or scrolling in an empty area of the menu bar.")
     }
 }
 

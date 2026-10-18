@@ -517,6 +517,11 @@ After you update:
 - **Thaw Bar Only is gone.** Items you kept there are now ordinary Hidden items. By @diazdesandi.
 - **Troubleshooting no longer has Reset Control Center or Quit and Clear Cache.** On macOS 27, Reset Control Center also erased your choices in System Settings > Menu Bar. Restore Missing Items brings items back without deleting anything. Thaw now clears its saved item pictures after every update, which is what Quit and Clear Cache did. By @diazdesandi.
 
+### New
+
+- **Modules in Settings.** A new Modules page switches optional parts of Thaw on and off. A module that's off doesn't run at all. Thaw Automation is the first one; it starts switched on if you already had scripts. By @diazdesandi.
+- **Widgets is out of Experiments.** The icon that combines battery, Wi-Fi and other readings has its own Widgets page in Settings. Turn it on there with "Show in menu bar". By @diazdesandi.
+
 ### Changed
 
 - **The last welcome screen shows its cards two to a row,** so each demo and caption has room. By @diazdesandi.
@@ -591,6 +596,11 @@ After you update:
 - **Home and other items pinned from Control Center leave the menu bar while Hidden is closed**, if you use Standard or Everything. Layout marks them. Thaw can't keep them on the bar.
 - **Siri doesn't run Thaw's actions when you ask by voice.** The same actions work from Shortcuts and Spotlight.
 - **On some Macs, clicks in Settings land below the control.** Reported in [#1265](https://github.com/thaw-app/Thaw/issues/1265) and [#1244](https://github.com/thaw-app/Thaw/issues/1244). If it happens to you, [send us a log](https://www.getthaw.app/docs/thaw/frequent-issues#before-you-file-a-bug).
+
+### Changed: Settings
+
+- **Displays & Spaces is now called Displays.** It still holds menu bar item spacing for each display and the This Space and All Spaces controls. By @diazdesandi.
+- **Automation is down to triggers and scripts.** The rest moved to where it belongs: "Hide items while presenting" is on Visibility, the apps allowed to change settings with thaw:// links are on Privacy, and switching profiles by display or Space is on Profiles. Search and links find them in their new places. By @diazdesandi.
 
 ## [3.0.0-alpha.10] - 2026-10-18
 

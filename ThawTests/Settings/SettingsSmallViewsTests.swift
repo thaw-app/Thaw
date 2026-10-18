@@ -50,7 +50,9 @@ final class SettingsSmallViewsTests {
             _ = pane.localized
             _ = pane.subtitle
         }
-        #expect(SettingsNavigationIdentifier.displays.localized == "Displays & Spaces")
-        #expect(SettingsNavigationIdentifier.automation.subtitle == "Triggers, other apps and scripts")
+        #expect(SettingsNavigationIdentifier.displays.localized == "Displays")
+        #expect(SettingsNavigationIdentifier.automation.subtitle == "Triggers and scripts")
+        #expect(SettingsNavigationIdentifier.scripts.localized == "Scripts")
+        #expect(SettingsNavigationIdentifier.scripts.subtitle == "Run scripts before and after a profile switches")
     }
 }
