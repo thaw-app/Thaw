@@ -6,16 +6,9 @@
 //  Licensed under the GNU GPLv3
 
 import SwiftUI
-import ThawCapture
 import ThawUI
 
-/// The "Behavior" surface of the Menu Bar destination: the shared
-/// reveal/rehide behavior, search presentation and menu bar tooltips.
-///
-/// Thaw Bar configuration (placement, layout, grid) lives on the Thaw Bar
-/// page, which this links to. Menu bar item spacing and the whole-template
-/// broadcast stay on the Displays pane, which owns the relaunch-guarded
-/// apply flow.
+/// The Visibility pane: revealing and rehiding, icon-change reveals, Zen Mode, the Swap Bar, search and hover.
 struct MenuBarAccessPane: View {
     @Environment(AppState.self) private var appState
     @Bindable var settings: GeneralSettings
@@ -39,6 +32,10 @@ struct MenuBarAccessPane: View {
                 AlertRevealItemList()
             }
 
+            ThawSection("Zen Mode") {
+                ZenModeWhileRow(settings: advancedSettings)
+            }
+
             ThawSection("Swap shown and hidden") {
                 swapBarToggle
             }
@@ -47,18 +44,8 @@ struct MenuBarAccessPane: View {
                 searchPresentationPicker
             }
 
-            ThawSection("Tooltips") {
-                if ScreenCapture.hasCachedScreenRecordingPermission {
-                    showMenuBarTooltips
-                } else {
-                    SettingsWarningPill(
-                        title: "Tooltips need Screen Recording",
-                        message: "Turn it on to see an item's name when you hover over it.",
-                        systemImage: "eye.slash",
-                        actionTitle: "Grant Access",
-                        action: { appState.permissions.screenRecording.performRequest() }
-                    )
-                }
+            ThawSection("On hover") {
+                HoverReadoutsRow(settings: advancedSettings)
             }
         }
         .sliderLabelAlignment()
@@ -118,13 +105,6 @@ struct MenuBarAccessPane: View {
             }
             .annotation("Turn on Always Hidden in Layout to use it.")
         }
-    }
-
-    // MARK: - Tooltips
-
-    private var showMenuBarTooltips: some View {
-        Toggle("Show tooltips in the menu bar", isOn: $advancedSettings.showMenuBarTooltips)
-            .annotation("Show a tooltip when hovering over menu bar items in the actual menu bar.")
     }
 
     // MARK: - Search

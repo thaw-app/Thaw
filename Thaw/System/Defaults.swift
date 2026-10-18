@@ -393,6 +393,8 @@ extension Defaults {
 
         case hotkeys = "Hotkeys"
         case profileHotkeys = "ProfileHotkeys"
+        /// Triggers saved before they moved to the Thaw Triggers module. Thaw only
+        /// checks whether any exist, to start that module switched on.
         case appRunningTriggers = "AppRunningTriggersV1"
         case menuBarItemHotkeys = "MenuBarItemHotkeys"
 
@@ -626,11 +628,19 @@ extension Defaults {
         case settingsURISigningIdentities = "SettingsURISigningIdentities"
         case settingsURICodeHashes = "SettingsURICodeHashes"
 
-        // MARK: Profile Hooks
+        // MARK: Profiles
 
+        case lastSettledProfileID = "LastSettledProfileID"
+
+        // MARK: Modules
+
+        case enabledModules = "EnabledModules"
+        /// Settings left from before their features became modules. Thaw only
+        /// checks whether they exist, to start each module switched on.
         case globalPreProfileHook = "GlobalPreProfileHook"
         case globalPostProfileHook = "GlobalPostProfileHook"
         case lastSettledProfileID = "LastSettledProfileID"
         case lastActiveProfileID = "LastActiveProfileID"
+        case widgetIconPublished = "StatusIconPrototype.published"
     }
 }

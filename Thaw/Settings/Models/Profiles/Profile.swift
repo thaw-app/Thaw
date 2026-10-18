@@ -7,6 +7,7 @@
 
 import Foundation
 import MenuBarModel
+import ThawModuleKit
 
 // MARK: - ProfileMetadata
 

@@ -77,13 +77,13 @@ macOS Settings URLs Thaw opens:
 | `x-apple.systempreferences:com.apple.preference.security?Privacy_Accessibility` | Accessibility settings    |
 | `x-apple.systempreferences:com.apple.preference.security?Privacy_ScreenCapture` | Screen Recording settings |
 
-## Settings URI (Automation)
+## Settings URI
 
 Read and write Thaw settings via `thaw://` URLs, gated by a security whitelist. Automation tools like Droppy use this to control Thaw settings.
 
 ### Security Model
 
-1. Feature toggle: Settings URI is disabled by default (enable in Settings → Automation)
+1. Feature toggle: Settings URI is disabled by default (enable in Settings → Privacy)
 2. Whitelist: only approved apps can modify settings
 3. First-time authorization: new apps trigger a confirmation dialog with app name and permissions. Apps can proactively request authorization via `thaw://authorize` without reading or writing settings
 4. Silent failures: unauthorized requests fail without user interruption
@@ -334,7 +334,7 @@ The `bundleId` parameter is stripped/ignored in release builds. Remove it in pro
 
 Five operations let a launcher list, drive and arrange menu bar items and profiles. The launcher queries, ranks, and picks an identifier; Thaw resolves it, acts, and reports the outcome. They pass the same feature toggle and whitelist as the settings URLs, and take the same `callback`, `broadcast`, and `requestId` parameters as `thaw://get`.
 
-Floe (`com.thaw.floe`) is trusted without the authorization prompt and works while the Settings URI feature is off, provided it is signed by the same team as Thaw. Any other sender needs the feature enabled and an approved entry in Automation.
+Floe (`com.thaw.floe`) and Thaw's own modules (bundle IDs that start with Thaw's bundle ID followed by `.module.`) are trusted without the authorization prompt and work while the Settings URI feature is off, provided they are signed by the same team as Thaw. Any other sender needs the feature enabled and an approved app in Privacy.
 
 | URL | Parameters | Description |
 | --- | ---------- | ----------- |
@@ -476,6 +476,19 @@ Thaw checks every item before it moves any. If one is unknown, is one of Thaw's 
 
 A callback is a response, not a command. Any app can open your callback URL, so accept one only when its `requestId` and `operation` match a request you sent and are still waiting on, and never act on a callback beyond completing that request.
 
+### Showing One Item
+
+`thaw://reveal-item` shows one hidden item without opening its section. Pass exactly one of `item-id` (an `id` from `list-items`) or `bundle` (an app with a single item). The item hides again on its own after a short delay, the same way an item opened from the Thaw Bar does.
+
+With `hold=true` (only the literal `true` counts), the item stays shown until the same app sends `thaw://release-item` with the same `item-id` or `bundle`. A bundle in `release-item` is matched against the items that app holds. Several apps can hold one item; it hides once the last of them releases it. A click on the item or another reveal can still hide it in between, and the next `hold` shows it again. Holds end when Thaw quits, and a module's holds end when the module stops running. Thaw Triggers uses this to show items while an app runs.
+
+Both URLs pass the same feature toggle and whitelist as the settings URLs, need macOS 27, and send no callback.
+
+```bash
+open "thaw://reveal-item?item-id=com.example.app%3AItem-0&hold=true"
+open "thaw://release-item?item-id=com.example.app%3AItem-0"
+```
+
 ### Raycast Settings Integration
 
 ```bash
@@ -491,7 +504,7 @@ open "thaw://toggle?key=${1}"
 
 ### Whitelist Management
 
-Manage authorized apps in **Settings → Automation**:
+Manage authorized apps in **Settings → Privacy**:
 
 - View all whitelisted applications with icons and names
 - Remove apps to revoke their access

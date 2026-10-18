@@ -10,21 +10,16 @@ import Combine
 import MenuBarModel
 import Observation
 
-/// Says out loud what the system says with a 6pt dot.
+/// Reads the camera and microphone while Zen Mode or the alerts need them.
 ///
-/// Shows a capsule naming the app when the camera or mic starts, plus a line
-/// in the control item menu while it lasts.
-///
-/// Kept off MenuBarManager so the experiment is removable by deleting one
-/// directory and one line in AppState.
-///
+/// Turns Zen Mode on while either is in use, and, when the alerts are on, names the app that started.
 /// Only the microphone can be attributed; see RecordingDeviceProbe.
 @MainActor
 @Observable
 final class RecordingWatchManager {
     private nonisolated let diagLog = DiagLog(category: "RecordingWatchManager")
 
-    /// How often the devices are sampled while the experiment is on.
+    /// How often the devices are sampled while they are read.
     ///
     /// Polled: CoreAudio listeners would need one re-registered subscription
     /// per process to save under a second.
@@ -37,25 +32,37 @@ final class RecordingWatchManager {
     private var advancedSettings: AdvancedSettings?
     private var cancellables = Set<AnyCancellable>()
 
-    /// The most recent reading, or an empty one while the experiment is off.
+    /// The most recent reading, or an empty one while the alerts are off.
     ///
     /// Empty when off, so the menu never consults the flag separately.
     var activity = RecordingActivity()
 
     private var pollTask: Task<Void, Never>?
 
-    /// Whether the Lab flag is on. Read straight off the settings model so the
-    /// pane's binding, a thaw:// flip and a profile apply all agree.
-    var isEnabled: Bool {
-        advancedSettings?.enableRecordingWatch ?? false
+    /// Whether the alerts run. Read straight off the settings model so a
+    /// thaw:// flip and a profile apply agree with it.
+    var areAlertsOn: Bool {
+        RecordingWatchPolicy.alertsOn(saved: advancedSettings?.enableRecordingWatch ?? false)
+    }
+
+    private var isZenModeOn: Bool {
+        advancedSettings?.zenModeWhileRecording ?? false
     }
 
     func performSetup(with appState: AppState) {
         self.appState = appState
         advancedSettings = appState.settings.advanced
         cancellables = [observeSettingFlips()]
-        if isEnabled {
+        refresh()
+    }
+
+    /// Reads the devices while the alerts or Zen Mode need them, and stops
+    /// once neither does.
+    private func refresh() {
+        if RecordingWatchPolicy.shouldSample(alerts: areAlertsOn, zenMode: isZenModeOn) {
             start()
+        } else {
+            stop()
         }
     }
 
@@ -81,7 +88,10 @@ final class RecordingWatchManager {
                     return
                 }
 
-                if let previous {
+                // Without the alerts the reading only drives Zen Mode, so the
+                // menu lists nothing and no banner shows.
+                let alerts = self.areAlertsOn
+                if alerts, let previous {
                     for announcement in RecordingWatchPolicy.announcements(from: previous, to: sample) {
                         self.announce(announcement)
                     }
@@ -89,14 +99,15 @@ final class RecordingWatchManager {
                 previous = sample
                 // The sample is usually identical to the last one; skipping
                 // the write keeps the observation registrar quiet at 1 Hz.
-                if self.activity != sample {
-                    self.activity = sample
+                let shown = alerts ? sample : RecordingActivity()
+                if self.activity != shown {
+                    self.activity = shown
                 }
 
-                // Presenter mode: collapse the bar while the camera or mic is
+                // Zen Mode while recording: collapse the bar while the camera or mic is
                 // in use, restore it when they idle. The reason set means this
                 // and screen-sharing zen coexist without cancelling each other.
-                if self.advancedSettings?.zenModeWhileRecording == true {
+                if self.isZenModeOn {
                     self.appState?.menuBarManager.setAutomaticZenMode(!sample.isIdle, reason: .recording)
                 }
 
@@ -106,6 +117,7 @@ final class RecordingWatchManager {
     }
 
     private func stop() {
+        guard pollTask != nil else { return }
         pollTask?.cancel()
         pollTask = nil
         activity = RecordingActivity()
@@ -192,24 +204,22 @@ final class RecordingWatchManager {
         return displayID.flatMap(NSScreen.screen(for:))
     }
 
-    // MARK: Flag
+    // MARK: Flags
 
-    /// Starts and stops the poller with the Lab flag. Observes the property,
-    /// not defaults, so pane, thaw:// and profile changes all land.
+    /// Starts and stops the poller with the two flags. Observes the
+    /// properties, not defaults, so pane, thaw:// and profile changes all land.
     private func observeSettingFlips() -> AnyCancellable {
         guard let advanced = advancedSettings else { return AnyCancellable { /* Nothing was observed, so there is nothing to cancel. */ } }
-        let flagTask = advanced.observe(\.enableRecordingWatch) { [weak self] enabled in
-            if enabled {
-                self?.start()
-            } else {
-                self?.stop()
-            }
+        let flagTask = advanced.observe(\.enableRecordingWatch) { [weak self] _ in
+            self?.refresh()
         }
         // The poll loop never sees the flag's falling edge, so release any
         // held collapse here.
         let zenTask = advanced.observe(\.zenModeWhileRecording) { [weak self] enabled in
-            guard !enabled else { return }
-            self?.appState?.menuBarManager.setAutomaticZenMode(false, reason: .recording)
+            if !enabled {
+                self?.appState?.menuBarManager.setAutomaticZenMode(false, reason: .recording)
+            }
+            self?.refresh()
         }
         return AnyCancellable {
             flagTask.cancel()

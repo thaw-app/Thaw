@@ -32,6 +32,11 @@ struct NetworkAccessInventoryTests {
         "packages/MenuBarModel/Sources",
         "packages/ThawCapture/Sources",
         "ThawUI/Sources",
+        // The modules ship inside Thaw too.
+        "ThawModuleKit/Sources",
+        "ThawAutomation/Sources",
+        "ThawTriggers/Sources",
+        "ThawWidgets/Sources",
     ]
 
     /// Repository-relative allowances; the updater wrapper uses Sparkle, but is listed in case it needs a network client.
@@ -44,7 +49,7 @@ struct NetworkAccessInventoryTests {
     /// Passive route observation, documented separately from outbound requests.
     /// Allow only this token; adding a network client to the sampler still fails.
     private static let localPathMonitors: Set<String> = [
-        "Thaw/Settings/Models/Widgets/StatusIconLiveSampler.swift",
+        "ThawWidgets/Sources/WidgetsCore/StatusIconLiveSampler.swift",
     ]
 
     private static var repositoryRoot: URL {

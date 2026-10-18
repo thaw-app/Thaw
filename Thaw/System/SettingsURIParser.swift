@@ -93,7 +93,9 @@ nonisolated enum SettingsURIRoute: Equatable, Sendable {
     case get(SettingsURIGetQuery)
     case authorize
     /// The handler requires exactly one of the two, so both stay optional here.
-    case revealItem(bundle: String?, itemID: String?)
+    case revealItem(bundle: String?, itemID: String?, hold: Bool)
+    /// Lets go of a hold from reveal-item; takes the same two parameters.
+    case releaseItem(bundle: String?, itemID: String?)
     case launcher(LauncherURIOperation, SettingsURILauncherQuery)
     case proxyPress(bundle: String)
     case toggleThawBar
@@ -115,7 +117,7 @@ nonisolated struct SettingsURIRequest: Equatable, Sendable {
     var requiresAuthorization: Bool {
         switch route {
         case .action, .unrecognized: false
-        case .set, .toggle, .get, .authorize, .revealItem, .launcher, .proxyPress, .toggleThawBar, .dumpItems, .malformed: true
+        case .set, .toggle, .get, .authorize, .revealItem, .releaseItem, .launcher, .proxyPress, .toggleThawBar, .dumpItems, .malformed: true
         }
     }
 
@@ -182,7 +184,16 @@ nonisolated enum SettingsURIParser {
             guard let parameters else {
                 return .malformed(host: host)
             }
-            return .revealItem(bundle: parameters.first("bundle"), itemID: parameters.first("item-id"))
+            return .revealItem(
+                bundle: parameters.first("bundle"),
+                itemID: parameters.first("item-id"),
+                hold: parameters.first("hold") == "true"
+            )
+        case "release-item":
+            guard let parameters else {
+                return .malformed(host: host)
+            }
+            return .releaseItem(bundle: parameters.first("bundle"), itemID: parameters.first("item-id"))
         case "proxy-press":
             guard let bundle = parameters?.nonEmpty("bundle") else {
                 return .malformed(host: host)

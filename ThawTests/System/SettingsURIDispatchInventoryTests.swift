@@ -200,7 +200,7 @@ struct SettingsURIDispatchInventoryTests {
         let router = try Self.body(of: "handleURL", in: lines)
         let dispatch = try Self.body(of: "dispatchAuthorizedRoute", in: lines)
 
-        let gatedCases = [".set(", ".toggle(", ".get(", ".revealItem(", ".launcher(", ".proxyPress(", ".toggleThawBar:", ".dumpItems("]
+        let gatedCases = [".set(", ".toggle(", ".get(", ".revealItem(", ".releaseItem(", ".launcher(", ".proxyPress(", ".toggleThawBar:", ".dumpItems("]
         for gatedCase in gatedCases {
             #expect(
                 dispatch.contains { $0.contains("case") && $0.contains(gatedCase) },

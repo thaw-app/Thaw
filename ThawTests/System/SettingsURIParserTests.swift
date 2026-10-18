@@ -82,9 +82,22 @@ struct SettingsURIParserTests {
 
     @Test("reveal-item passes bundle and item-id through for the handler to check")
     func revealItemParses() throws {
-        #expect(try route("thaw://reveal-item?bundle=com.a") == .revealItem(bundle: "com.a", itemID: nil))
-        #expect(try route("thaw://reveal-item?item-id=com.a:x") == .revealItem(bundle: nil, itemID: "com.a:x"))
-        #expect(try route("thaw://reveal-item") == .revealItem(bundle: nil, itemID: nil))
+        #expect(try route("thaw://reveal-item?bundle=com.a") == .revealItem(bundle: "com.a", itemID: nil, hold: false))
+        #expect(try route("thaw://reveal-item?item-id=com.a:x") == .revealItem(bundle: nil, itemID: "com.a:x", hold: false))
+        #expect(try route("thaw://reveal-item") == .revealItem(bundle: nil, itemID: nil, hold: false))
+    }
+
+    @Test("reveal-item holds only when hold is exactly true")
+    func revealItemHold() throws {
+        #expect(try route("thaw://reveal-item?bundle=com.a&hold=true") == .revealItem(bundle: "com.a", itemID: nil, hold: true))
+        #expect(try route("thaw://reveal-item?bundle=com.a&hold=1") == .revealItem(bundle: "com.a", itemID: nil, hold: false))
+    }
+
+    @Test("release-item passes bundle and item-id through and needs authorization")
+    func releaseItemParses() throws {
+        #expect(try route("thaw://release-item?bundle=com.a") == .releaseItem(bundle: "com.a", itemID: nil))
+        #expect(try route("thaw://release-item?item-id=com.a:x") == .releaseItem(bundle: nil, itemID: "com.a:x"))
+        #expect(SettingsURIParser.parse(try #require(URL(string: "thaw://release-item?bundle=com.a"))).requiresAuthorization)
     }
 
     @Test("proxy-press needs a non-empty bundle")

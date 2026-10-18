@@ -24,11 +24,7 @@ struct GeneralSettingsPane: View {
                 thawIconOptions
             }
             ThawSection("Menu bar behavior") {
-                Toggle("Hide app menus when showing menu bar items", isOn: $advancedSettings.hideApplicationMenus)
-                    .annotation(
-                        "Make more room in the menu bar by hiding the current app menus if needed.",
-                        more: "macOS requires \(Constants.displayName) to make itself visible in the Dock while this setting is in effect."
-                    )
+                AppMenuHidingRow(settings: advancedSettings)
                 Toggle("Right-click the menu bar for the \(Constants.displayName) menu", isOn: $advancedSettings.enableSecondaryContextMenu)
                     .annotation(
                         "Right-click an empty area of the menu bar to open a minimal version of \(Constants.displayName)'s menu.",

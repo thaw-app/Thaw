@@ -3,17 +3,33 @@ included:
   - Thaw
   - packages/ThawCapture
   - packages/ThawCtl
+  - ThawAutomation
+  - ThawModuleKit
+  - ThawTriggers
   - ThawUI
+  - ThawWidgets
 
 excluded:
   - packages/MenuBarModel/.build
   - packages/ThawCapture/.build
   - packages/ThawCtl/.build
+  - ThawAutomation/.build
+  - ThawModuleKit/.build
+  - ThawTriggers/.build
+  - ThawWidgets/.build
   - ThawUI/.build
   - ThawTests
+  - ThawAutomation/Tests
+  - ThawModuleKit/Tests
+  - ThawTriggers/Tests
+  - ThawWidgets/Tests
   - packages/MenuBarModel/Package.swift
   - packages/ThawCapture/Package.swift
   - packages/ThawCtl/Package.swift
+  - ThawAutomation/Package.swift
+  - ThawModuleKit/Package.swift
+  - ThawTriggers/Package.swift
+  - ThawWidgets/Package.swift
   - ThawUI/Package.swift
 
 disabled_rules:

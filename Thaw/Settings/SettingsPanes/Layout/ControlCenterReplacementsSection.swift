@@ -19,10 +19,10 @@ struct ControlCenterReplacements: Equatable {
     var skipped: Set<SystemExtraStandIn> = []
 
     /// The four Control Center modules one switch used to cover.
-    static let modules: [SystemExtraStandIn] = [.focus, .airDrop, .nowPlaying, .userSwitcher]
+    static let moduleItems: [SystemExtraStandIn] = [.focus, .airDrop, .nowPlaying, .userSwitcher]
 
     /// Every item the list offers, in the order it shows them.
-    static let listed: [SystemExtraStandIn] = modules + [.timeMachine, .textInput]
+    static let listed: [SystemExtraStandIn] = moduleItems + [.timeMachine, .textInput]
 
     var isOn: Bool {
         get { Self.listed.contains { isReplaced($0) } }
@@ -58,13 +58,13 @@ struct ControlCenterReplacements: Equatable {
             if replaced {
                 if !modules {
                     modules = true
-                    skipped = Set(Self.modules)
+                    skipped = Set(Self.moduleItems)
                 }
                 skipped.remove(item)
             } else {
                 skipped.insert(item)
             }
-            if skipped.isSuperset(of: Self.modules) {
+            if skipped.isSuperset(of: Self.moduleItems) {
                 modules = false
                 skipped = []
             }

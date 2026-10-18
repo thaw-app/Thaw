@@ -6,11 +6,12 @@
 //  Licensed under the GNU GPLv3
 
 import SwiftUI
+import ThawModuleKit
 import ThawUI
 
 // MARK: - SettingsSidebarPanes
 
-/// The sidebar's pages in groups, as in Floe: everyday pages, the extras under Modules, Manage, then About.
+/// The sidebar's pages in groups, as in Floe: everyday pages, the modules that are on, Manage, then About.
 enum SettingsSidebarPanes {
     /// One group of pages, under its heading when it has one.
     struct Group: Identifiable {
@@ -25,12 +26,12 @@ enum SettingsSidebarPanes {
     static let groups: [Group] = [
         Group(heading: nil, panes: [.general, .menuBarLayout, .visibility, .menuBarAppearance, .thawBar, .displays, .hotkeys]),
         Group(
-            heading: String(localized: "Modules", comment: "A heading in the settings sidebar, over the Profiles, Automation and Experiments pages, the parts of Thaw beyond the everyday pages."),
-            panes: [.profiles, .automation, .theLab]
+            heading: String(localized: "On", comment: "A heading in the settings sidebar, over the pages of the parts switched on in Modules."),
+            panes: [.profiles, .scripts, .triggers, .widgets]
         ),
         Group(
-            heading: String(localized: "Manage", comment: "A heading in the settings sidebar, over the Privacy and Troubleshooting pages, which look after Thaw itself."),
-            panes: [.privacy, .tools]
+            heading: String(localized: "Manage", comment: "A heading in the settings sidebar, over the Modules, Privacy and Troubleshooting pages, which look after Thaw itself."),
+            panes: [.modules, .privacy, .tools]
         ),
         Group(heading: nil, panes: [.about]),
     ]
@@ -38,15 +39,35 @@ enum SettingsSidebarPanes {
     /// Every page, in sidebar order.
     static let all: [SettingsNavigationIdentifier] = groups.flatMap(\.panes)
 
-    /// The sidebar's rows, headings included. A group with no heading after
-    /// another group opens with a gap.
-    static let rows: [SettingsSidebarRow] = groups.reduce(into: []) { rows, group in
-        if let heading = group.heading {
-            rows.append(.heading(heading))
-        } else if !rows.isEmpty {
-            rows.append(.gap)
+    /// Pages that only open a module, by the module. Each one leaves the
+    /// sidebar while its module is off; Modules turns it back on. Widgets is
+    /// not one of them: it also holds the panel, which Thaw runs itself.
+    static let modulePanes: [SettingsNavigationIdentifier: ModuleIdentifier] = [.scripts: .scripts, .triggers: .triggers]
+
+    /// The pages whose module is off.
+    static func panesTurnedOff(isEnabled: (ModuleIdentifier) -> Bool) -> Set<SettingsNavigationIdentifier> {
+        Set(modulePanes.filter { !isEnabled($0.value) }.map(\.key))
+    }
+
+    /// The sidebar's rows with every page on.
+    static let rows = rows(turnedOff: [])
+
+    /// The sidebar's rows, headings included, without the pages that are
+    /// turned off. A group left with no pages loses its heading too, and a
+    /// group with no heading after another group opens with a gap.
+    static func rows(turnedOff: Set<SettingsNavigationIdentifier>) -> [SettingsSidebarRow] {
+        var rows = [SettingsSidebarRow]()
+        for group in groups {
+            let pages = group.panes.filter { !turnedOff.contains($0) }.map(SettingsSidebarRow.page)
+            guard !pages.isEmpty else { continue }
+            if let heading = group.heading {
+                rows.append(.heading(heading))
+            } else if !rows.isEmpty {
+                rows.append(.gap)
+            }
+            rows += pages
         }
-        rows += group.panes.map(SettingsSidebarRow.page)
+        return rows
     }
 
     /// The selected row. None while search results show, so a click on any row ends the search,
@@ -56,10 +77,14 @@ enum SettingsSidebarPanes {
         return current
     }
 
-    /// The page above or below the current one, past the headings, or nil
-    /// at either end or for left and right.
-    static func page(moving direction: MoveCommandDirection, from current: SettingsNavigationIdentifier) -> SettingsNavigationIdentifier? {
-        all.neighbor(of: current, moving: direction)
+    /// The page above or below the current one among the rows shown, past
+    /// the headings, or nil at either end or for left and right.
+    static func page(
+        moving direction: MoveCommandDirection,
+        from current: SettingsNavigationIdentifier,
+        in rows: [SettingsSidebarRow] = rows
+    ) -> SettingsNavigationIdentifier? {
+        rows.compactMap(\.page).neighbor(of: current, moving: direction)
     }
 
     /// Opens a page from the sidebar. The search is cleared first: the page
@@ -71,8 +96,13 @@ enum SettingsSidebarPanes {
     }
 
     /// Opens the page above or below the current one, when there is one.
-    static func move(_ direction: MoveCommandDirection, searchModel: SearchModel, navigationState: AppNavigationState) {
-        guard let pane = page(moving: direction, from: navigationState.settingsNavigationIdentifier) else { return }
+    static func move(
+        _ direction: MoveCommandDirection,
+        in rows: [SettingsSidebarRow] = rows,
+        searchModel: SearchModel,
+        navigationState: AppNavigationState
+    ) {
+        guard let pane = page(moving: direction, from: navigationState.settingsNavigationIdentifier, in: rows) else { return }
         open(pane, searchModel: searchModel, navigationState: navigationState)
     }
 }
@@ -108,12 +138,18 @@ enum SettingsSidebarRow: Identifiable, Equatable {
 struct SettingsSidebarPaneList: View {
     @Environment(SearchModel.self) private var searchModel
     let navigationState: AppNavigationState
+    /// Pages whose module is off, left out of the list.
+    var turnedOff: Set<SettingsNavigationIdentifier> = []
     @FocusState private var isFocused: Bool
 
     static let listWidth: CGFloat = 220
 
     private var isSearching: Bool {
         !searchModel.searchText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+    }
+
+    private var rows: [SettingsSidebarRow] {
+        SettingsSidebarPanes.rows(turnedOff: turnedOff)
     }
 
     private var selectedRow: SettingsNavigationIdentifier? {
@@ -124,7 +160,7 @@ struct SettingsSidebarPaneList: View {
         ScrollViewReader { proxy in
             ScrollView {
                 VStack(alignment: .leading, spacing: ThawSpacing.hairline) {
-                    ForEach(SettingsSidebarPanes.rows) { row in
+                    ForEach(rows) { row in
                         switch row {
                         case let .heading(title):
                             SettingsSidebarHeading(title: title)
@@ -150,7 +186,7 @@ struct SettingsSidebarPaneList: View {
         }
         .scrollEdgeEffectStyle(.soft, for: .top)
         .thawKeyboardList(isFocused: $isFocused) { direction in
-            SettingsSidebarPanes.move(direction, searchModel: searchModel, navigationState: navigationState)
+            SettingsSidebarPanes.move(direction, in: rows, searchModel: searchModel, navigationState: navigationState)
         }
     }
 }

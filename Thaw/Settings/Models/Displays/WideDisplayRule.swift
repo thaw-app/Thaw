@@ -10,7 +10,6 @@ import Observation
 
 /// Shows every hidden item while the menu bar is active on a display at
 /// least a chosen width, as if "Always show hidden items" were on for it.
-/// Other menu bar managers offer the same: on a wide screen there is room.
 @MainActor
 @Observable
 final class WideDisplayRule {
@@ -44,7 +43,7 @@ final class WideDisplayRule {
         Self.applies(isEnabled: isEnabled, screenWidth: screenWidth(displayID), minimumWidth: minimumWidth)
     }
 
-    nonisolated static func applies(isEnabled: Bool, screenWidth: CGFloat?, minimumWidth: Double) -> Bool {
+    static nonisolated func applies(isEnabled: Bool, screenWidth: CGFloat?, minimumWidth: Double) -> Bool {
         guard isEnabled, let screenWidth else { return false }
         return Double(screenWidth) >= minimumWidth
     }
