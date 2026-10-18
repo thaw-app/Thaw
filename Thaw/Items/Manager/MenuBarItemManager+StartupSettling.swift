@@ -52,6 +52,7 @@ extension MenuBarItemManager {
         let maxDeadline = max(settlingDeadline ?? newMaxDeadline, newMaxDeadline)
         settlingDeadline = maxDeadline
         settlingExpectedBundleIDs = mergedExpected
+        let adoptsObservedMembership = Self.settleAdoptsObservedMembership(incoming: incomingKind, replacing: settlingKind)
         settlingKind = incomingKind
         // The cancelled task exits without touching shared state.
         startupSettlingTask?.cancel()
@@ -172,7 +173,9 @@ extension MenuBarItemManager {
             )
             // A bar arranged by hand while Thaw was not running, or under an
             // older build, has to be read once before its sections can be.
-            adoptObservedMembership(reason: "settled launch")
+            if adoptsObservedMembership {
+                adoptObservedMembership(reason: "settled launch")
+            }
 
             // Once per launch, after login items register: hygiene asks
             // NSWorkspace which apps exist. Latched because profile applies
@@ -216,6 +219,13 @@ extension MenuBarItemManager {
                 scheduleStartupLateItemRecheck()
             }
         }
+    }
+
+    /// Whether a settling reads sections from the stored weights when it ends: only Thaw's own launch.
+    /// A concealed item's weight can still sit in the Visible band in Manual, so a later read would undo Layout edits.
+    /// An app relaunch that takes over the launch settling still owes that read.
+    static func settleAdoptsObservedMembership(incoming: SettlingKind, replacing existing: SettlingKind?) -> Bool {
+        incoming == .cold || existing == .cold
     }
 
     static func settlingYields(incoming: SettlingKind, to existing: SettlingKind) -> Bool {

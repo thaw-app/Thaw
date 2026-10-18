@@ -44,4 +44,20 @@ struct SettlingKindTests {
         #expect(!MenuBarItemManager.settlingYields(incoming: .event, to: .preflight))
         #expect(!MenuBarItemManager.settlingYields(incoming: .cold, to: .event))
     }
+
+    @Test("Only the launch settling reads sections from the bar")
+    func onlyLaunchSettlingAdoptsMembership() {
+        #expect(MenuBarItemManager.settleAdoptsObservedMembership(incoming: .cold, replacing: nil))
+        #expect(MenuBarItemManager.settleAdoptsObservedMembership(incoming: .expectedSet, replacing: .cold))
+        #expect(MenuBarItemManager.settleAdoptsObservedMembership(incoming: .cold, replacing: .event))
+    }
+
+    @Test("An app launch, display change or spacing wave keeps the sections set in Layout", arguments: [
+        MenuBarItemManager.SettlingKind.event, .expectedSet, .preflight,
+    ])
+    func laterSettlingsKeepAuthoredSections(kind: MenuBarItemManager.SettlingKind) {
+        #expect(!MenuBarItemManager.settleAdoptsObservedMembership(incoming: kind, replacing: nil))
+        #expect(!MenuBarItemManager.settleAdoptsObservedMembership(incoming: kind, replacing: .event))
+        #expect(!MenuBarItemManager.settleAdoptsObservedMembership(incoming: kind, replacing: .expectedSet))
+    }
 }
