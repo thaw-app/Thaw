@@ -9,88 +9,165 @@ import SwiftUI
 import ThawModuleKit
 import ThawUI
 
-/// The optional parts of Thaw, each with its on/off switch. Profiles is built
-/// into Thaw; the others run as their own apps, and one that's off doesn't
-/// run at all. A part that's off leaves the sidebar.
+/// The optional parts of Thaw as searchable cards, like Floe's extension store.
+/// Profiles is built in; the others are their own apps, and one that's off doesn't run.
 struct ModulesSettingsPane: View {
     @Bindable var moduleHost: ModuleHost
     @Bindable var profiles: ProfilesFeature
+    @State private var query = ""
+
+    /// Cards about as wide as Floe's store cards, as many to a row as fit.
+    private let columns = [GridItem(.adaptive(minimum: 160, maximum: 220), spacing: ThawSpacing.gutter, alignment: .top)]
 
     var body: some View {
-        ThawForm {
-            ThawSection {
-                Toggle(isOn: $profiles.isOn) {
-                    VStack(alignment: .leading, spacing: ThawSpacing.hairline) {
-                        Text("Profiles")
-                        Text("Switches between saved layouts by hand, with a shortcut, or when the display, Space or Focus changes. Saved profiles are kept while this is off.")
-                            .font(ThawType.detail)
-                            .foregroundStyle(ThawInk.supporting)
+        let shown = Self.matching(cards, query: query)
+        VStack(spacing: 0) {
+            TextField("Search modules", text: $query)
+                .textFieldStyle(.roundedBorder)
+                .padding(ThawSpacing.inset)
+            ScrollView {
+                LazyVGrid(columns: columns, spacing: ThawSpacing.gutter) {
+                    ForEach(shown) { card in
+                        ModuleCardView(card: card, moduleHost: moduleHost, profiles: profiles)
                     }
                 }
-                .toggleStyle(.switch)
+                .padding(.horizontal, ThawSpacing.inset)
+                .padding(.bottom, ThawSpacing.inset)
             }
-            if rows.isEmpty {
-                ThawSection {
-                    ThawEmptyState(
-                        systemImage: "puzzlepiece.extension",
-                        title: "No modules",
-                        caption: "This copy of \(Constants.displayName) came without any modules."
-                    )
-                }
-            } else {
-                ThawSection {
-                    ForEach(rows, id: \.url) { row in
-                        moduleRow(row)
-                    }
+            .overlay {
+                if shown.isEmpty, !query.isEmpty {
+                    ContentUnavailableView.search(text: query)
                 }
             }
         }
         .onAppear { moduleHost.refresh() }
     }
 
-    private struct Row {
-        let url: URL
-        let manifest: ModuleManifest
-        let state: ModuleHost.State
+    // MARK: Cards
+
+    /// Profiles first, then the installed modules by name.
+    private var cards: [ModuleCard] {
+        let modules = moduleHost.modules
+            .compactMap { _, module -> ModuleCard? in
+                guard let manifest = module.manifest else { return nil }
+                return ModuleCard(
+                    kind: .module(manifest.identifier),
+                    name: manifest.name,
+                    summary: Self.summary(for: manifest.identifier, state: module.state),
+                    pane: Self.pane(for: manifest.identifier)
+                )
+            }
+            .sorted { $0.name.localizedStandardCompare($1.name) == .orderedAscending }
+        let profilesCard = ModuleCard(
+            kind: .profiles,
+            name: String(localized: "Profiles"),
+            summary: String(localized: "Switches saved layouts by display, Space, Focus or shortcut."),
+            pane: .profiles
+        )
+        return [profilesCard] + modules
     }
 
-    private var rows: [Row] {
-        moduleHost.modules
-            .compactMap { url, module in module.manifest.map { Row(url: url, manifest: $0, state: module.state) } }
-            .sorted { $0.manifest.name.localizedStandardCompare($1.manifest.name) == .orderedAscending }
-    }
-
-    private func moduleRow(_ row: Row) -> some View {
-        LabeledContent {
-            ModuleControls(moduleHost: moduleHost, identifier: row.manifest.identifier, name: row.manifest.name)
-        } label: {
-            VStack(alignment: .leading, spacing: ThawSpacing.hairline) {
-                Text(verbatim: row.manifest.name)
-                Text(Self.summary(for: row.manifest.identifier, state: row.state))
-                    .font(ThawType.detail)
-                    .foregroundStyle(ThawInk.supporting)
+    /// The cards whose name or description contains every word of the query.
+    static func matching(_ cards: [ModuleCard], query: String) -> [ModuleCard] {
+        let words = query.split(whereSeparator: \.isWhitespace)
+        guard !words.isEmpty else { return cards }
+        return cards.filter { card in
+            words.allSatisfy { word in
+                card.name.localizedStandardContains(word) || card.summary.localizedStandardContains(word)
             }
         }
     }
 
+    static func pane(for identifier: String) -> SettingsNavigationIdentifier {
+        switch ModuleIdentifier(rawValue: identifier) {
+        case .scripts: .scripts
+        case .triggers: .triggers
+        case .widgets, nil: .widgets
+        }
+    }
+
     /// What a module does, or why it isn't running when it should be.
-    static func summary(for identifier: String, state: ModuleHost.State) -> LocalizedStringKey {
+    static func summary(for identifier: String, state: ModuleHost.State) -> String {
         switch state {
         case .refused(.untrusted):
-            return "Not signed by \(Constants.displayName)'s developers, so it won't run."
+            return String(localized: "Not signed by \(Constants.displayName)'s developers, so it won't run.")
         case .refused(.needsNewerThaw):
-            return "Needs a newer version of \(Constants.displayName)."
+            return String(localized: "Needs a newer version of \(Constants.displayName).")
         case .gaveUp:
-            return "Stopped after it kept quitting. Switch it off and on to try again."
+            return String(localized: "Stopped after it kept quitting. Switch it off and on to try again.")
         case .launchFailed:
-            return "Couldn't start. Switch it off and on to try again."
+            return String(localized: "Couldn't start. Switch it off and on to try again.")
         case .idle, .running, .restarting, .stopped, .refused(.launch), .refused(.notAModule):
             switch ModuleIdentifier(rawValue: identifier) {
-            case .scripts: return "Runs your scripts when a profile switches."
-            case .triggers: return "Shows chosen menu bar items while an app runs or when their icon changes."
-            case .widgets: return "Shows battery, Wi-Fi and other readings in one menu bar icon."
+            case .scripts: return String(localized: "Runs your scripts when a profile switches.")
+            case .triggers: return String(localized: "Shows chosen menu bar items while an app runs or when their icon changes.")
+            case .widgets: return String(localized: "Shows battery, Wi-Fi and other readings in one menu bar icon.")
             case nil: return ""
             }
+        }
+    }
+}
+
+/// One part of Thaw that can be switched on or off.
+struct ModuleCard: Identifiable, Equatable {
+    enum Kind: Equatable {
+        case profiles
+        /// A module app, by its identifier.
+        case module(String)
+    }
+
+    let kind: Kind
+    let name: String
+    let summary: String
+    /// The page whose icon the card shows.
+    let pane: SettingsNavigationIdentifier
+
+    var id: String {
+        switch kind {
+        case .profiles: "profiles"
+        case let .module(identifier): identifier
+        }
+    }
+}
+
+/// One card: the part's icon, name and description, then its switch.
+private struct ModuleCardView: View {
+    let card: ModuleCard
+    @Bindable var moduleHost: ModuleHost
+    @Bindable var profiles: ProfilesFeature
+
+    var body: some View {
+        VStack(spacing: ThawSpacing.base) {
+            SettingsPaneIconTile(identifier: card.pane, side: 40)
+            VStack(spacing: ThawSpacing.hairline) {
+                Text(verbatim: card.name)
+                    .lineLimit(1)
+                Text(verbatim: card.summary)
+                    .font(ThawType.detail)
+                    .foregroundStyle(ThawInk.supporting)
+                    .lineLimit(3, reservesSpace: true)
+            }
+            .multilineTextAlignment(.center)
+            control
+        }
+        .padding(ThawSpacing.inset)
+        .frame(maxWidth: .infinity)
+        .background(.quinary, in: RoundedRectangle(cornerRadius: ThawRadius.card, style: .continuous))
+        .accessibilityElement(children: .contain)
+        .accessibilityLabel(Text(verbatim: card.name))
+    }
+
+    @ViewBuilder
+    private var control: some View {
+        switch card.kind {
+        case .profiles:
+            Toggle(isOn: $profiles.isOn) {
+                Text(verbatim: card.name)
+            }
+            .labelsHidden()
+            .toggleStyle(.switch)
+        case let .module(identifier):
+            ModuleControls(moduleHost: moduleHost, identifier: identifier, name: card.name)
         }
     }
 }
