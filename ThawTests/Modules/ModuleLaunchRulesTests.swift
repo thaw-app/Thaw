@@ -16,7 +16,7 @@ struct ModuleManifestTests {
     private let validInfo: [String: Any] = [
         "CFBundleIdentifier": "com.thaw.module.automation",
         "CFBundleShortVersionString": "1.2.0",
-        "CFBundleName": "Thaw Scripts",
+        "CFBundleName": "Scripts",
         ModuleManifest.identifierKey: "automation",
         ModuleManifest.minimumAPIVersionKey: 1,
     ]
@@ -27,7 +27,7 @@ struct ModuleManifestTests {
         #expect(manifest.identifier == "automation")
         #expect(manifest.bundleIdentifier == "com.thaw.module.automation")
         #expect(manifest.version == "1.2.0")
-        #expect(manifest.name == "Thaw Scripts")
+        #expect(manifest.name == "Scripts")
         #expect(manifest.minimumAPIVersion == 1)
     }
 

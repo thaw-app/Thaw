@@ -88,8 +88,8 @@ nonisolated enum ModuleDefaults {
     }
 
     /// Each module's check for work Thaw had before it became a module: scripts
-    /// for Thaw Scripts, saved triggers for Thaw Triggers, the widget icon in
-    /// the menu bar for Thaw Widgets. Profile files are read only when asked.
+    /// for Scripts, saved triggers for Triggers, the widget icon in
+    /// the menu bar for Widgets. Profile files are read only when asked.
     static func priorWorkInThawSettings(profileFiles: @escaping () -> [Data]) -> [String: () -> Bool] {
         [
             ModuleIdentifier.scripts.rawValue: {
@@ -103,7 +103,7 @@ nonisolated enum ModuleDefaults {
         ]
     }
 
-    /// Thaw Scripts starts on when Thaw already had scripts to run:
+    /// Scripts starts on when Thaw already had scripts to run:
     /// a global script in Thaw's settings or a script saved in any profile.
     static func automationHadScripts(globalHookData: [Data?], profileFiles: [Data]) -> Bool {
         if globalHookData.contains(where: { $0 != nil }) {

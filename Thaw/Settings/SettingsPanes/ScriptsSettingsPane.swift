@@ -10,7 +10,7 @@ import ThawModuleKit
 import ThawUI
 
 /// Scripts that run before and after a profile switch. They live in the
-/// Thaw Scripts module; this pane switches it on or off and opens it.
+/// Scripts module; this pane switches it on or off and opens it.
 struct ScriptsSettingsPane: View {
     var body: some View {
         ThawForm {
@@ -23,7 +23,7 @@ struct ScriptsSettingsPane: View {
             ModuleOpenRow(
                 module: .scripts,
                 title: "Before and after a profile switches",
-                detail: "Scripts run in Thaw Scripts, a module that comes with \(Constants.displayName)."
+                detail: "Scripts run in the Scripts module, which comes with \(Constants.displayName)."
             )
         }
     }

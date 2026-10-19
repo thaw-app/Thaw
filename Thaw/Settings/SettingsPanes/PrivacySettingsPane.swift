@@ -51,7 +51,7 @@ struct PrivacySettingsPane: View {
             // connection, so there is nothing to account for.
             if appState.moduleHost.isEnabled(.widgets) {
                 ThawSection("Local connection status") {
-                    Text("The widget icon reads the connection type from macOS on this Mac. It does not contact a server or send network details, and it stops reading when you turn Thaw Widgets off in Modules.")
+                    Text("The widget icon reads the connection type from macOS on this Mac. It does not contact a server or send network details, and it stops reading when you turn Widgets off in Modules.")
                         .foregroundStyle(ThawInk.supporting)
                 }
             }

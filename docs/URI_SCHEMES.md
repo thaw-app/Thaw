@@ -480,7 +480,7 @@ A callback is a response, not a command. Any app can open your callback URL, so 
 
 `thaw://reveal-item` shows one hidden item without opening its section. Pass exactly one of `item-id` (an `id` from `list-items`) or `bundle` (an app with a single item). The item hides again on its own after a short delay, the same way an item opened from the Thaw Bar does.
 
-With `hold=true` (only the literal `true` counts), the item stays shown until the same app sends `thaw://release-item` with the same `item-id` or `bundle`. A bundle in `release-item` is matched against the items that app holds. Several apps can hold one item; it hides once the last of them releases it. Clicking the item, or Thaw showing it for another reason, leaves it shown while it is held. Holds end when Thaw quits, and a module's holds end when the module stops running. Thaw Triggers uses this to show items while an app runs.
+With `hold=true` (only the literal `true` counts), the item stays shown until the same app sends `thaw://release-item` with the same `item-id` or `bundle`. A bundle in `release-item` is matched against the items that app holds. Several apps can hold one item; it hides once the last of them releases it. Clicking the item, or Thaw showing it for another reason, leaves it shown while it is held. Holds end when Thaw quits, and a module's holds end when the module stops running. The Triggers module uses this to show items while an app runs.
 
 Both URLs pass the same feature toggle and whitelist as the settings URLs, need macOS 27, and send no callback.
 
