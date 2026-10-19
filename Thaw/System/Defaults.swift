@@ -394,7 +394,7 @@ extension Defaults {
 
         case hotkeys = "Hotkeys"
         case profileHotkeys = "ProfileHotkeys"
-        /// Triggers saved before they moved to the Thaw Triggers module. Thaw only
+        /// Triggers saved before they moved to the Triggers module. Thaw only
         /// checks whether any exist, to start that module switched on.
         case appRunningTriggers = "AppRunningTriggersV1"
         case menuBarItemHotkeys = "MenuBarItemHotkeys"

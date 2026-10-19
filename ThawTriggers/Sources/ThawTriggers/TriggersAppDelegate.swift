@@ -87,7 +87,7 @@ final class TriggersAppDelegate: NSObject, NSApplicationDelegate {
             let window = NSWindow(contentViewController: NSHostingController(
                 rootView: TriggersView(manager: manager, itemSource: itemSource)
             ))
-            window.title = String(localized: "Thaw Triggers")
+            window.title = String(localized: "Triggers")
             window.styleMask = [.titled, .closable, .miniaturizable, .resizable]
             window.isReleasedWhenClosed = false
             window.center()

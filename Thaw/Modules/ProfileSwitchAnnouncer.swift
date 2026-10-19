@@ -8,7 +8,7 @@
 import Foundation
 import ThawModuleKit
 
-/// Tells modules that Thaw is switching profiles, so Thaw Scripts can run
+/// Tells modules that Thaw is switching profiles, so the Scripts module can run
 /// the user's scripts. Thaw doesn't wait for any module to answer.
 enum ProfileSwitchAnnouncer {
     /// The notification for one phase of a switch, or nil without a bundle ID to scope it to.

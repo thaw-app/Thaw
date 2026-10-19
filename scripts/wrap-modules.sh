@@ -9,7 +9,7 @@ identity="${EXPANDED_CODE_SIGN_IDENTITY:--}"
 # earlier build, such as one under a name a module no longer has, goes first.
 rm -rf "$moduleDir"/*.app(N)
 # executable, module identifier, app name
-for spec in "ThawAutomation automation Thaw Scripts" "ThawTriggers triggers Thaw Triggers" "ThawWidgets widgets Thaw Widgets"; do
+for spec in "ThawAutomation automation Scripts" "ThawTriggers triggers Triggers" "ThawWidgets widgets Widgets"; do
     parts=(${=spec})
     exe="$moduleDir/${parts[1]}"
     [[ -f $exe ]] || { echo "warning: wrap-modules: $exe not found"; continue; }

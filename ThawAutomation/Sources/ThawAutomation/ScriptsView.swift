@@ -9,7 +9,7 @@ import AutomationCore
 import SwiftUI
 import ThawModuleKit
 
-/// The Thaw Scripts window: one pair of scripts for every switch, and a pair
+/// The Scripts module's window: one pair of scripts for every switch, and a pair
 /// for one profile.
 struct ScriptsView: View {
     let store: HookStore

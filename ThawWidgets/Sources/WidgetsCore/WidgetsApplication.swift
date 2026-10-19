@@ -64,7 +64,7 @@ final class WidgetsAppDelegate: NSObject, NSApplicationDelegate {
     private func showWindow() {
         if window == nil {
             let window = NSWindow(contentViewController: NSHostingController(rootView: WidgetsView()))
-            window.title = String(localized: "Thaw Widgets")
+            window.title = String(localized: "Widgets")
             window.styleMask = [.titled, .closable, .miniaturizable]
             window.isReleasedWhenClosed = false
             window.center()

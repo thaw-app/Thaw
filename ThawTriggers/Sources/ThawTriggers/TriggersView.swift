@@ -9,7 +9,7 @@ import SwiftUI
 import TriggersCore
 import UniformTypeIdentifiers
 
-/// The Thaw Triggers window.
+/// The Triggers module's window.
 struct TriggersView: View {
     @Bindable var manager: AppRunningTriggersManager
     let itemSource: ThawItemSource

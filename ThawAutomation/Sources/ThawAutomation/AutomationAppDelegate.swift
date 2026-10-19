@@ -69,7 +69,7 @@ final class AutomationAppDelegate: NSObject, NSApplicationDelegate {
             let window = NSWindow(contentViewController: NSHostingController(
                 rootView: ScriptsView(store: store, catalog: catalog)
             ))
-            window.title = String(localized: "Thaw Scripts")
+            window.title = String(localized: "Scripts")
             window.styleMask = [.titled, .closable, .miniaturizable]
             window.isReleasedWhenClosed = false
             window.center()

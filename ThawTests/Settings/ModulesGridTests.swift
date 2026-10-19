@@ -13,8 +13,8 @@ import Testing
 struct ModulesGridTests {
     private let cards: [ModuleCard] = [
         .init(kind: .profiles, name: "Profiles", summary: "Switches between saved layouts.", pane: .profiles),
-        .init(kind: .module("triggers"), name: "Thaw Triggers", summary: "Shows chosen menu bar items while an app runs.", pane: .triggers),
-        .init(kind: .module("widgets"), name: "Thaw Widgets", summary: "Shows battery, Wi-Fi and other readings.", pane: .widgets),
+        .init(kind: .module("triggers"), name: "Triggers", summary: "Shows chosen menu bar items while an app runs.", pane: .triggers),
+        .init(kind: .module("widgets"), name: "Widgets", summary: "Shows battery, Wi-Fi and other readings.", pane: .widgets),
     ]
 
     @Test("An empty or blank search shows every card")
