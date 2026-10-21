@@ -773,6 +773,9 @@ extension MenuBarItemManager {
 
         let items = await MenuBarItem.getMenuBarItems(option: .activeSpace)
         var failedContexts = [TemporarilyShownItemContext]()
+        // A context deferred for a hidden menu bar needs the timer even after
+        // a forced rehide, whose callers don't always re-arm it.
+        var deferredBehindHiddenMenuBar = false
 
         appState.hidEventManager.stopAll()
         defer {
@@ -833,6 +836,24 @@ extension MenuBarItemManager {
                         """
                     )
                 }
+                continue
+            }
+
+            // A hidden menu bar reports every item off screen, and move() then
+            // rejects the endpoints as stale. That isn't a failed attempt:
+            // wait for the bar to come back instead of spending attempts and
+            // ending in waitForRelaunch.
+            if Self.menuBarAppearsConcealed(
+                itemBounds: item.bounds,
+                itemIsOnScreen: item.isOnScreen,
+                hiddenDividerMaxX: items.first { $0.tag == .hiddenControlItem }?.bounds.maxX,
+                displayBounds: NSScreen.screens.map { CGDisplayBounds($0.displayID) }
+            ) {
+                MenuBarItemManager.diagLog.debug(
+                    "Menu bar is hidden; deferring rehide of \(item.logString) without counting an attempt"
+                )
+                failedContexts.append(context)
+                deferredBehindHiddenMenuBar = true
                 continue
             }
 
@@ -908,9 +929,52 @@ extension MenuBarItemManager {
                 """
             )
             temporarilyShownItemContexts.append(contentsOf: failedContexts.reversed())
-            if !force {
+            if Self.rearmsRehideTimer(force: force, deferredBehindHiddenMenuBar: deferredBehindHiddenMenuBar) {
                 runRehideTimer(for: 3)
             }
+        }
+    }
+
+    /// Whether a rehide pass that left items queued re-arms the retry timer.
+    ///
+    /// A forced rehide normally leaves that to its caller, but temporarilyShow
+    /// cancels the timer and can return before arming it, so an item deferred
+    /// for a hidden menu bar always gets the timer.
+    static nonisolated func rearmsRehideTimer(force: Bool, deferredBehindHiddenMenuBar: Bool) -> Bool {
+        !force || deferredBehindHiddenMenuBar
+    }
+
+    /// How far above a display's top edge an auto-hidden menu bar can sit,
+    /// which is where it slides to in a full-screen space.
+    static nonisolated let concealedMenuBarSlideMargin: CGFloat = 80
+
+    /// Whether the menu bar holding a temporarily shown item is hidden, as
+    /// opposed to the item having gone stale.
+    ///
+    /// With the menu bar auto-hidden, every item window reports
+    /// `kCGWindowIsOnscreen = false` but keeps its position, or slides up
+    /// above the display in a full-screen space. An item right of the hidden
+    /// divider can't be parked, so reading as off screen while sitting at
+    /// the top of a display means the bar is hidden.
+    static nonisolated func menuBarAppearsConcealed(
+        itemBounds: CGRect,
+        itemIsOnScreen: Bool,
+        hiddenDividerMaxX: CGFloat?,
+        displayBounds: [CGRect]
+    ) -> Bool {
+        guard
+            !itemIsOnScreen,
+            !itemBounds.isEmpty,
+            let hiddenDividerMaxX,
+            itemBounds.minX >= hiddenDividerMaxX
+        else {
+            return false
+        }
+        let center = CGPoint(x: itemBounds.midX, y: itemBounds.midY)
+        return displayBounds.contains { display in
+            (display.minX ... display.maxX).contains(center.x)
+                && ((display.minY - concealedMenuBarSlideMargin) ... (display.minY + concealedMenuBarSlideMargin))
+                .contains(center.y)
         }
     }
 

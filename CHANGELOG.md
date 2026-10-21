@@ -24,6 +24,10 @@ the items under New and Fixed.
 
 ## [Unreleased]
 
+### Fixed
+
+- With the menu bar set to hide automatically, an item opened from the Thaw Bar could stay in the visible section until its app was relaunched. It now goes back once the menu bar shows again.
+
 ## [2.1.0] - 2026-10-14
 **macOS 26 only**
 
