@@ -16,7 +16,7 @@ body:
         4. Make the problem happen again, then wait 10 seconds.
         5. Click **Show Log Files in Finder** and attach the newest `thaw_….log` below.
 
-        If Thaw crashed before you could turn on logging, attach the crash report instead: open Console, choose Crash Reports, and pick the newest Thaw entry.
+        If Thaw crashed before you could turn on logging, attach the crash report instead: in Console, choose Crash Reports, right-click the newest Thaw entry, choose Reveal in Finder, rename the file from `.ips` to `.txt`, and attach it.
 
         Thaw is made by a small team, so we close reports that have no log, that another app caused, or that get no reply after two follow-ups. You can reopen with the details any time. Write in English; machine translation is fine.
 
@@ -61,7 +61,7 @@ body:
     id: log
     attributes:
       label: Diagnostic log
-      description: The newest `thaw_….log` from step 5, or the crash report.
+      description: The newest `thaw_….log` from step 5, or the crash report renamed to `.txt`. GitHub doesn't accept `.ips` files.
     validations:
       required: true
 
@@ -135,7 +135,7 @@ body:
     attributes:
       label: Before you submit
       options:
-        - label: I turned on logging before making the problem happen, and the log shows it.
+        - label: I attached a log from the moment the problem happened, or a crash report if Thaw crashed first.
           required: true
         - label: The problem still happens with utility, automation and other menu bar apps quit.
           required: true
