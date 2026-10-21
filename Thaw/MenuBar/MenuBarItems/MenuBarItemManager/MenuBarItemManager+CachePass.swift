@@ -739,6 +739,7 @@ extension MenuBarItemManager {
            !suppressAutomaticMoves,
            lastMoveOperationTimestamp == moveTimestampAtGateEntry
         {
+            let deferredRefreshesBeforeApply = deferredCacheRefreshCount
             let didApplySavedLayout = await applySavedLayout(
                 items: items,
                 previousCycle: PreviousCacheCycle(
@@ -754,6 +755,17 @@ extension MenuBarItemManager {
                 }
             )
             if didApplySavedLayout {
+                // This pass leaves its publish to the apply. An apply that
+                // returned before moving anything schedules no refresh.
+                if Self.savedLayoutHandoffNeedsCacheRefresh(
+                    deferredRefreshesBeforeApply: deferredRefreshesBeforeApply,
+                    deferredRefreshesAfterApply: deferredCacheRefreshCount
+                ) {
+                    MenuBarItemManager.diagLog.debug(
+                        "cacheItemsRegardless: saved-layout apply returned without a cache refresh; scheduling one"
+                    )
+                    scheduleDeferredCacheRefresh()
+                }
                 return
             }
         } else if !skipSavedLayoutApply,

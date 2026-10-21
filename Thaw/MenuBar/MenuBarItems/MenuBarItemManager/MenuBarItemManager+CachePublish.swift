@@ -112,7 +112,11 @@ extension MenuBarItemManager {
             let section = await midTransitionSection(in: context)
         {
             MenuBarItemManager.diagLog.debug(
-                "Not updating menu bar item cache: \(section.logString) is mid expand/collapse, keeping last-known-good cache"
+                "Not updating menu bar item cache: \(section.logString) is mid expand/collapse, keeping last-known-good cache and retrying"
+            )
+            scheduleCacheRetryAfterMidTransitionSkip(
+                suppressAutomaticMoves: suppressAutomaticMoves,
+                suppressSavedOrderPersistence: suppressSavedOrderPersistence
             )
             return
         }
@@ -335,9 +339,13 @@ extension MenuBarItemManager {
                 else {
                     return false
                 }
+                // The divider's own state, not section.isHidden: while the Thaw
+                // Bar shows a section, or the display always shows hidden items,
+                // isHidden disagrees with the divider for as long as that lasts,
+                // and every pass in between was discarded.
                 return MenuBarItemManager.isMidSectionTransition(
                     dividerWidth: width,
-                    isSectionCollapsed: section.isHidden
+                    isSectionCollapsed: section.controlItem.state == .hideSection
                 )
             }?.0
         }

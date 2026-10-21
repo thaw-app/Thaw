@@ -24,6 +24,10 @@ the items under New and Fixed.
 
 ## [Unreleased]
 
+### Fixed
+
+- After Thaw moved an item, the Thaw Bar could keep showing it in its old section for several minutes.
+
 ## [2.1.0] - 2026-10-14
 **macOS 26 only**
 
