@@ -1,0 +1,143 @@
+name: Bug in Thaw 3 (macOS 27)
+description: Report something broken or behaving wrong in Thaw 3.
+title: "[Bug] "
+type: bug
+labels: ["macos-27"]
+projects: ["thaw-app/1"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        **Before you file a bug:**
+
+        1. Search [Frequent Issues](https://github.com/thaw-app/Thaw/blob/development/FREQUENT_ISSUES.md) and [existing issues](https://github.com/thaw-app/Thaw/issues?q=is%3Aissue).
+        2. Quit all-in-one utility apps, automation tools and other menu bar managers, then check the problem still happens. Apps with Accessibility access can click and move menu bar items, and press Thaw's icon.
+        3. Turn on logging: Settings > Troubleshooting > Diagnostics > **Detailed logging**.
+        4. Make the problem happen again, then wait 10 seconds.
+        5. Click **Show Log Files in Finder** and attach the newest `thaw_….log` below.
+
+        If Thaw crashed before you could turn on logging, attach the crash report instead: open Console, choose Crash Reports, and pick the newest Thaw entry.
+
+        Thaw is made by a small team, so we close reports that have no log, that another app caused, or that get no reply after two follow-ups. You can reopen with the details any time. Write in English; machine translation is fine.
+
+  - type: dropdown
+    id: area
+    attributes:
+      label: Area
+      options:
+        - Menu bar and hiding
+        - Layout and moving items
+        - Thaw Bar
+        - Appearance
+        - Settings
+        - Profiles
+        - Shortcuts
+        - Updates
+        - Onboarding and permissions
+        - Other
+    validations:
+      required: true
+
+  - type: textarea
+    id: description
+    attributes:
+      label: What happened?
+      description: What went wrong, and what you expected instead.
+    validations:
+      required: true
+
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      placeholder: |
+        1.
+        2.
+        3.
+    validations:
+      required: true
+
+  - type: upload
+    id: log
+    attributes:
+      label: Diagnostic log
+      description: The newest `thaw_….log` from step 5, or the crash report.
+    validations:
+      required: true
+
+  - type: upload
+    id: evidence
+    attributes:
+      label: Screenshots or a screen recording
+      description: Optional. Helps with anything you can see, like icons in the wrong place.
+    validations:
+      required: false
+
+  - type: textarea
+    id: version_info
+    attributes:
+      label: Version info
+      description: In Settings > About, click the copy button next to the version, then paste it here.
+      placeholder: |
+        Thaw 3.0.0-beta.3 (116)
+        Commit: 33605ef8f
+        macOS: Version 27.2 (Build 26B5112a)
+      render: text
+    validations:
+      required: true
+
+  - type: dropdown
+    id: hiding_method
+    attributes:
+      label: Hiding method
+      description: Settings > Layout > Options.
+      options:
+        - Native
+        - Standard
+        - Everything
+    validations:
+      required: true
+
+  - type: dropdown
+    id: arrangement
+    attributes:
+      label: Item arrangement
+      description: Settings > Layout > Options.
+      options:
+        - Automatic
+        - Manual
+    validations:
+      required: true
+
+  - type: dropdown
+    id: monitor_setup
+    attributes:
+      label: Display setup
+      description: Optional. Some layout and notch bugs only happen on one kind of setup.
+      options:
+        - One display, no notch
+        - One display with a notch
+        - Several displays, none with a notch
+        - Several displays, one with a notch
+    validations:
+      required: false
+
+  - type: textarea
+    id: additional
+    attributes:
+      label: When did it start? Anything else?
+      description: The first version with the problem, other menu bar apps, your setup.
+    validations:
+      required: false
+
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: Before you submit
+      options:
+        - label: I turned on logging before making the problem happen, and the log shows it.
+          required: true
+        - label: The problem still happens with utility, automation and other menu bar apps quit.
+          required: true
+        - label: I'm on the latest release for my channel and searched existing issues.
+          required: true

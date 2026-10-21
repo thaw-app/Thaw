@@ -9,3 +9,6 @@ contact_links:
   - name: Discord
     url: https://discord.gg/KDfWjWDnR4
     about: Questions and help from the community.
+  - name: Questions and ideas
+    url: https://github.com/orgs/thaw-app/discussions
+    about: Ask a question or share an idea in Discussions, not as an issue.

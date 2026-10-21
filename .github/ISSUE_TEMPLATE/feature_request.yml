@@ -7,25 +7,26 @@ body:
   - type: markdown
     attributes:
       value: |
-        **Before submitting:** Search [open & closed suggestions](https://github.com/thaw-app/Thaw/issues?q=is%3Aissue+-type%3ABug) for duplicates.
+        **Before you suggest something:**
 
-        **Issues are English only.** Machine translation (AI or any other tool) is accepted.
+        1. Search [existing suggestions](https://github.com/thaw-app/Thaw/issues?q=is%3Aissue+-type%3ABug) for duplicates.
+        2. Describe the problem you want solved, then how you'd like it to work.
 
-        Thaw is free and run by a small team with limited time, so requests with a clear use case and a proposed solution are looked at first. Issues that lack the requested details, or get no reply after two follow-ups from us, are closed. Issues with no activity are marked stale after 10 days and closed after about 14. Reopen with the missing details at any time.
+        We look at requests with a clear use case and a proposed solution first. We close requests that lack these details or get no reply after two follow-ups. Inactive requests are marked stale after 10 days and closed after about 14. You can reopen any time. Write in English; machine translation is fine.
 
   - type: checkboxes
     id: checks
     attributes:
-      label: Pre-submission checklist
+      label: Before you submit
       options:
-        - label: I searched existing issues (open & closed) and found no duplicates
+        - label: I searched existing issues and found no duplicate
           required: true
 
   - type: textarea
     id: problem
     attributes:
-      label: Problem / Use Case
-      description: What are you trying to do that isn't possible or convenient right now?
+      label: The problem
+      description: What you want to do that Thaw makes hard or impossible today.
       placeholder: "I'd like to be able to…"
     validations:
       required: true
@@ -33,24 +34,23 @@ body:
   - type: textarea
     id: solution
     attributes:
-      label: Proposed Solution
-      description: How do you envision this working?
-      placeholder: A clear and concise description of what you'd like to happen.
+      label: How it could work
+      placeholder: What you'd like Thaw to do.
     validations:
       required: true
 
   - type: textarea
     id: alternatives
     attributes:
-      label: Alternatives Considered
-      description: Any workarounds you've tried or other ways this could work.
+      label: Other options you tried
+      description: Workarounds, or other ways it could work.
     validations:
       required: false
 
   - type: textarea
     id: additional
     attributes:
-      label: Additional Context
-      description: Screenshots, mockups, screen recordings, or anything else helpful.
+      label: Anything else?
+      description: Screenshots, mockups or recordings.
     validations:
       required: false
