@@ -46,6 +46,19 @@ final class GeneralSettings {
         }
     }
 
+    /// A Boolean value that indicates whether Settings, Permissions and other
+    /// windows the user opens switch Thaw to a regular app with a Dock icon.
+    /// When `false`, those windows leave Thaw an accessory app, so opening them
+    /// doesn't add it to the Dock or the Dock's recent apps. Hiding the app
+    /// menus still uses regular activation and can show the Dock icon.
+    var showDockIconWithSettings = Defaults.DefaultValue.showDockIconWithSettings {
+        didSet {
+            guard oldValue != showDockIconWithSettings else { return }
+            Defaults.set(showDockIconWithSettings, forKey: .showDockIconWithSettings)
+            appState?.applyUserWindowActivationPolicy()
+        }
+    }
+
     /// A Boolean value that indicates whether the Ice icon
     /// should be shown.
     var showIceIcon = Defaults.DefaultValue.showIceIcon {
@@ -241,6 +254,7 @@ final class GeneralSettings {
         Defaults.ifPresent(key: .simpleMode, assign: &simpleMode)
         Defaults.ifPresent(key: .showSettingDescriptions, assign: &showSettingDescriptions)
         Defaults.ifPresent(key: .hideDockIconWhenToggling, assign: &hideDockIconWhenToggling)
+        Defaults.ifPresent(key: .showDockIconWithSettings, assign: &showDockIconWithSettings)
         Defaults.ifPresent(key: .rehideInterval, assign: &rehideInterval)
         Defaults.ifPresent(key: .tempShowInterval, assign: &tempShowInterval)
 
@@ -307,6 +321,8 @@ final class GeneralSettings {
                 showOnScroll = boolValue
             case "hideDockIconWhenToggling" where hideDockIconWhenToggling != boolValue:
                 hideDockIconWhenToggling = boolValue
+            case "showDockIconWithSettings" where showDockIconWithSettings != boolValue:
+                showDockIconWithSettings = boolValue
             case "autoRehide" where autoRehide != boolValue:
                 autoRehide = boolValue
             default:

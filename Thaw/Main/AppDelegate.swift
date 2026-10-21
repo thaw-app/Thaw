@@ -441,7 +441,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
         Task { @MainActor in
             try? await Task.sleep(for: .milliseconds(100))
-            appState.activate(withPolicy: .regular)
+            appState.activateForUserWindow()
             appState.openWindow(.settings)
         }
     }

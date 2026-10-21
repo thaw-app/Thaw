@@ -92,6 +92,13 @@ final class AppState {
     /// Those surfaces activate as a regular app, so a menu-bar hide retry
     /// must not switch back to accessory and hide their Dock icon.
     var explicitUIWantsRegularActivation: Bool {
+        // With the Dock icon turned off for these surfaces they stay accessory,
+        // so they have no claim on regular activation.
+        showsDockIconWithUserWindows && isUserWindowPresented
+    }
+
+    /// Whether settings, permissions, search, or the Thaw Bar is up.
+    private var isUserWindowPresented: Bool {
         navigationState.isSettingsPresented
             || navigationState.isSearchPresented
             || navigationState.isIceBarPresented
@@ -194,7 +201,7 @@ final class AppState {
         guard hasPermissions else { return }
 
         Task {
-            activate(withPolicy: .regular)
+            activateForUserWindow()
             openWindow(.settings)
         }
     }
@@ -218,10 +225,16 @@ final class AppState {
                 diagLog.debug("Setting up app state")
                 await setupTask.value
 
-                // Warm up the activation policy system.
-                NSApp.setActivationPolicy(.regular)
-                try? await Task.sleep(for: .milliseconds(50))
-                NSApp.setActivationPolicy(.accessory)
+                // Warm up the activation policy system. Skipped when Thaw
+                // stays accessory: even 50 ms as a regular app puts it in the
+                // Dock's recent apps.
+                if Self.warmsUpActivationPolicy(
+                    showDockIconWithSettings: showsDockIconWithUserWindows
+                ) {
+                    NSApp.setActivationPolicy(.regular)
+                    try? await Task.sleep(for: .milliseconds(50))
+                    NSApp.setActivationPolicy(.accessory)
+                }
 
                 diagLog.debug("Finished setting up app state")
             }
@@ -229,7 +242,7 @@ final class AppState {
             Task {
                 // Delay to prevent conflicts with the app delegate.
                 try? await Task.sleep(for: .milliseconds(100))
-                activate(withPolicy: .regular)
+                activateForUserWindow()
                 dismissWindow(.settings) // Shouldn't be open anyway.
                 openWindow(.permissions)
             }
@@ -439,7 +452,7 @@ final class AppState {
 
             if self.openWindows.contains(id) {
                 self.diagLog.debug("Window \(id) already open, activating existing window")
-                self.activate(withPolicy: .regular)
+                self.activateForUserWindow(bringingToFront: id)
                 return
             }
 
@@ -448,8 +461,88 @@ final class AppState {
             EnvironmentValues().openWindow(id: id)
 
             try? await Task.sleep(for: .milliseconds(100))
-            self.activate(withPolicy: .regular)
+            self.activateForUserWindow(bringingToFront: id)
         }
+    }
+
+    /// The activation policy for a window the user opened: Settings,
+    /// Permissions, onboarding, search or the Thaw Bar.
+    ///
+    /// `nil` keeps the current policy. Any switch to `.regular`, however
+    /// brief, makes macOS add Thaw to the Dock's recent apps, so with the
+    /// Dock icon turned off the app stays `.accessory` and is only activated.
+    static nonisolated func activationPolicyForUserWindow(
+        showDockIconWithSettings: Bool
+    ) -> NSApplication.ActivationPolicy? {
+        showDockIconWithSettings ? .regular : nil
+    }
+
+    /// The policy to switch to when "Show Dock icon while Settings is open"
+    /// changes while one of those windows is already up.
+    static nonisolated func activationPolicyForOpenUserWindows(
+        showDockIconWithSettings: Bool
+    ) -> NSApplication.ActivationPolicy {
+        showDockIconWithSettings ? .regular : .accessory
+    }
+
+    /// Applies a change to "Show Dock icon while Settings is open" to the
+    /// windows that are already up, rather than only to the next one opened.
+    /// Does nothing when none of them is up.
+    func applyUserWindowActivationPolicy() {
+        guard isUserWindowPresented else {
+            return
+        }
+        let policy = Self.activationPolicyForOpenUserWindows(
+            showDockIconWithSettings: showsDockIconWithUserWindows
+        )
+        // A settings URI can change the option while Settings sits behind
+        // another app; activating then would take focus from that app.
+        guard NSApp.isActive else {
+            if policy == .regular {
+                menuBarManager.invalidatePendingAccessoryActivation()
+            }
+            NSApp.setActivationPolicy(policy)
+            return
+        }
+        activate(withPolicy: policy)
+    }
+
+    /// The "Show Dock icon while Settings is open" preference as stored.
+    ///
+    /// Read from Defaults rather than the General settings model, which loads
+    /// stored values only in setupTask. The missing-permissions path opens its
+    /// window without running that task, so the model still holds its default.
+    /// Every change through the model or a settings URI writes Defaults.
+    private var showsDockIconWithUserWindows: Bool {
+        Self.showDockIconWithSettings(storedValue: Defaults.object(forKey: .showDockIconWithSettings))
+    }
+
+    /// The stored preference, or its shipped default when it was never written.
+    static nonisolated func showDockIconWithSettings(storedValue: Any?) -> Bool {
+        (storedValue as? Bool) ?? Defaults.DefaultValue.showDockIconWithSettings
+    }
+
+    /// Whether setup briefly switches to `.regular` to warm up activation.
+    static nonisolated func warmsUpActivationPolicy(showDockIconWithSettings: Bool) -> Bool {
+        showDockIconWithSettings
+    }
+
+    /// Activates the app for a window the user opened, honouring the
+    /// "Show Dock icon while Settings is open" setting.
+    ///
+    /// - Parameter id: A window to make key and bring to the front when the
+    ///   app stays accessory. A regular activation already does that.
+    func activateForUserWindow(bringingToFront id: IceWindowIdentifier? = nil) {
+        let policy = Self.activationPolicyForUserWindow(
+            showDockIconWithSettings: showsDockIconWithUserWindows
+        )
+        activate(withPolicy: policy)
+        guard policy == nil, let id else {
+            return
+        }
+        NSApp.windows
+            .first { $0.identifier?.rawValue == id.rawValue }?
+            .makeKeyAndOrderFront(nil)
     }
 
     func activate(withPolicy policy: NSApplication.ActivationPolicy? = nil) {

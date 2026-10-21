@@ -30,6 +30,7 @@ enum SettingsURIHandler {
         "useIceBarOnlyOnNotchedDisplay",
         "hideApplicationMenus",
         "hideDockIconWhenToggling",
+        "showDockIconWithSettings",
         "enableAlwaysHiddenSection",
         "useOptionClickToShowAlwaysHiddenSection",
         "useDoubleClickToShowAlwaysHiddenSection",
@@ -82,6 +83,7 @@ enum SettingsURIHandler {
         "useIceBarOnlyOnNotchedDisplay": .useIceBarOnlyOnNotchedDisplay,
         "hideApplicationMenus": .hideApplicationMenus,
         "hideDockIconWhenToggling": .hideDockIconWhenToggling,
+        "showDockIconWithSettings": .showDockIconWithSettings,
         "enableAlwaysHiddenSection": .enableAlwaysHiddenSection,
         "useOptionClickToShowAlwaysHiddenSection": .useOptionClickToShowAlwaysHiddenSection,
         "useDoubleClickToShowAlwaysHiddenSection": .useDoubleClickToShowAlwaysHiddenSection,
@@ -650,6 +652,20 @@ enum SettingsURIHandler {
         }
     }
 
+    /// Shipped values for boolean keys whose absence must not read as `false`.
+    private static let booleanDefaultsWhenAbsent: [Defaults.Key: Bool] = [
+        .showDockIconWithSettings: Defaults.DefaultValue.showDockIconWithSettings,
+    ]
+
+    /// The stored value of a boolean key, or its shipped default when the key
+    /// has never been written. `Defaults.bool` reads an absent key as `false`.
+    static func booleanValue(forKey key: Defaults.Key) -> Bool {
+        if Defaults.object(forKey: key) == nil, let fallback = booleanDefaultsWhenAbsent[key] {
+            return fallback
+        }
+        return Defaults.bool(forKey: key)
+    }
+
     /// Handles thaw://toggle?key=X URL.
     /// Returns true if setting was toggled successfully.
     static func handleToggle(key: String, sender: String?, displayUUID: String? = nil) -> Bool {
@@ -674,7 +690,7 @@ enum SettingsURIHandler {
             return false
         }
 
-        let currentValue = Defaults.bool(forKey: defaultsKey)
+        let currentValue = booleanValue(forKey: defaultsKey)
         let newValue = !currentValue
 
         Defaults.set(newValue, forKey: defaultsKey)
@@ -980,7 +996,7 @@ enum SettingsURIHandler {
 
         if supportedBooleanKeys.contains(key) {
             guard let defaultsKey = keyMapping[key] else { return nil }
-            let value = Defaults.bool(forKey: defaultsKey)
+            let value = booleanValue(forKey: defaultsKey)
             return [
                 "value": value,
                 "type": "boolean",

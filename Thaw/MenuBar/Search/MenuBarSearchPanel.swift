@@ -55,7 +55,7 @@ final class MenuBarSearchPanel: NSPanel {
 
         if keyCode == .comma, modifiers.contains(.command), !modifiers.contains(.control), !modifiers.contains(.option), !modifiers.contains(.shift) {
             self?.close()
-            appState?.activate(withPolicy: .regular)
+            appState?.activateForUserWindow()
             appState?.openWindow(.settings)
             return nil
         }
@@ -529,7 +529,7 @@ private struct MenuBarSearchContentView: View {
     private func openPermissionsSettings() {
         closePanel()
         appState.navigationState.settingsNavigationIdentifier = .advanced
-        appState.activate(withPolicy: .regular)
+        appState.activateForUserWindow()
         appState.openWindow(.settings)
     }
 
@@ -560,7 +560,7 @@ private struct MenuBarSearchContentView: View {
         HStack {
             SettingsButton {
                 closePanel()
-                appState.activate(withPolicy: .regular)
+                appState.activateForUserWindow()
                 appState.openWindow(.settings)
             }
 

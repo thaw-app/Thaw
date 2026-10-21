@@ -101,6 +101,7 @@ nonisolated extension Defaults {
         static let autoZenWhileSharingScreen = false
         static let showSettingDescriptions = true
         static let hideDockIconWhenToggling = false
+        static let showDockIconWithSettings = true
         static let rehideStrategy: RehideStrategy = .smart
         static let rehideInterval: TimeInterval = 15
         static let tempShowInterval: TimeInterval = 0
@@ -201,6 +202,7 @@ nonisolated extension Defaults {
         case showSettingDescriptions = "ShowSettingDescriptions"
         case autoZenWhileSharingScreen = "AutoZenWhileSharingScreen"
         case hideDockIconWhenToggling = "HideDockIconWhenToggling"
+        case showDockIconWithSettings = "ShowDockIconWithSettings"
         case rehideStrategy = "RehideStrategy"
         case rehideInterval = "RehideInterval"
         case tempShowInterval = "TempShowInterval"

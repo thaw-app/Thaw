@@ -42,6 +42,7 @@ final class GeneralSettingsTests {
         .rehideStrategy,
         .rehideInterval,
         .hideDockIconWhenToggling,
+        .showDockIconWithSettings,
     ]
 
     private let savedDefaults: [Defaults.Key: Any?]
@@ -127,6 +128,7 @@ final class GeneralSettingsTests {
         Defaults.set(false, forKey: .showOnScroll)
         Defaults.set(false, forKey: .autoRehide)
         Defaults.set(true, forKey: .hideDockIconWhenToggling)
+        Defaults.set(false, forKey: .showDockIconWithSettings)
         Defaults.set(42.5, forKey: .rehideInterval)
 
         let settings = makeSettings()
@@ -142,6 +144,7 @@ final class GeneralSettingsTests {
         #expect(!settings.showOnScroll)
         #expect(!settings.autoRehide)
         #expect(settings.hideDockIconWhenToggling)
+        #expect(!settings.showDockIconWithSettings)
         #expect(settings.rehideInterval == 42.5)
     }
 
@@ -159,6 +162,7 @@ final class GeneralSettingsTests {
         #expect(settings.showOnHover == Defaults.DefaultValue.showOnHover)
         #expect(settings.autoRehide == Defaults.DefaultValue.autoRehide)
         #expect(settings.hideDockIconWhenToggling == Defaults.DefaultValue.hideDockIconWhenToggling)
+        #expect(settings.showDockIconWithSettings == Defaults.DefaultValue.showDockIconWithSettings)
         #expect(settings.rehideStrategy == Defaults.DefaultValue.rehideStrategy)
         #expect(settings.rehideInterval == Defaults.DefaultValue.rehideInterval)
         #expect(settings.lastCustomIceIcon == nil)
@@ -273,6 +277,7 @@ final class GeneralSettingsTests {
             ["key": "useIceBarOnlyOnNotchedDisplay", "value": true],
             ["key": "iceBarLocationOnHotkey", "value": true],
             ["key": "hideDockIconWhenToggling", "value": true],
+            ["key": "showDockIconWithSettings", "value": false],
         ])
 
         #expect(!settings.showIceIcon)
@@ -284,6 +289,7 @@ final class GeneralSettingsTests {
         #expect(settings.useIceBarOnlyOnNotchedDisplay)
         #expect(settings.iceBarLocationOnHotkey)
         #expect(settings.hideDockIconWhenToggling)
+        #expect(!settings.showDockIconWithSettings)
     }
 
     @Test("An external double change updates the rehide interval")

@@ -30,6 +30,15 @@ struct SearchIndexTests {
         #expect(!SearchIndex.entries.isEmpty)
     }
 
+    @Test("The show-Dock-icon-with-Settings row is indexed")
+    func showDockIconWithSettingsIsSearchable() {
+        let entry = SearchIndex.entries.first { $0.id == "general.showDockIconWithSettings" }
+
+        #expect(entry?.property == .general("showDockIconWithSettings"))
+        #expect(entry?.titleText == "Show Dock icon while Settings is open")
+        #expect(entry?.keywords.contains("recent apps") == true)
+    }
+
     @Test("The hide-Dock-icon-when-toggling row is indexed")
     func hideDockIconWhenTogglingIsSearchable() {
         let entry = SearchIndex.entries.first { $0.id == "general.hideDockIconWhenToggling" }

@@ -548,7 +548,7 @@ private struct IceBarContentView: View {
     private func openPermissionsSettings() {
         menuBarManager.section(withName: section)?.hide()
         appState.navigationState.settingsNavigationIdentifier = .advanced
-        appState.activate(withPolicy: .regular)
+        appState.activateForUserWindow()
         appState.openWindow(.settings)
     }
 
