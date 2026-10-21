@@ -610,7 +610,12 @@ extension MenuBarItemManager {
         }
 
         // Warp back once after all attempts, not per attempt, or the cursor oscillates.
-        let mouseLocation = options.hideCursorAcrossAttempts ? try getMouseLocation() : nil
+        // Saved even when the move doesn't own the cursor: an event posted off
+        // every display still has to be undone (#318).
+        let mouseLocation: CGPoint? = options.hideCursorAcrossAttempts
+            ? try getMouseLocation()
+            : try? getMouseLocation()
+        let cursorTrace = MoveCursorTrace()
         let cursorOwnershipStartedAt = ContinuousClock.now
         // The default 1 s watchdog is far too short; a premature fire flashes the
         // cursor mid-display. See cursorHideWatchdogTimeout.
@@ -628,15 +633,25 @@ extension MenuBarItemManager {
                 let physicalInputOccurred = MouseHelpers.physicalPointerInputOccurred(
                     since: cursorOwnershipStartedAt
                 )
+                let postedOffDisplay = cursorTrace.postedEventsOffEveryDisplay
                 if MouseHelpers.shouldRestoreSavedCursorPosition(
-                    physicalPointerInputOccurred: physicalInputOccurred
+                    physicalPointerInputOccurred: physicalInputOccurred,
+                    postedEventsOffEveryDisplay: postedOffDisplay,
+                    tookCursorOwnership: options.hideCursorAcrossAttempts
                 ) {
+                    if postedOffDisplay {
+                        MenuBarItemManager.diagLog.debug(
+                            "move: restoring the cursor that events posted off every display left on a display edge (physical input: \(physicalInputOccurred))"
+                        )
+                    }
                     MouseHelpers.restoreCursorPosition(to: mouseLocation)
-                } else {
+                } else if options.hideCursorAcrossAttempts {
                     MenuBarItemManager.diagLog.debug(
                         "move: preserving physical pointer movement made during the transaction"
                     )
                 }
+            }
+            if options.hideCursorAcrossAttempts {
                 MouseHelpers.showCursor()
             }
         }
@@ -698,7 +713,8 @@ extension MenuBarItemManager {
                     // drag, so this covers the parked endpoint, where the release
                     // has to stay on its planned off-screen point.
                     preferSourceAnchoredTeleport: policyState.revertedRun > 0
-                        || policyState.unattributableSilentRun > 0
+                        || policyState.unattributableSilentRun > 0,
+                    cursorTrace: cursorTrace
                 )
                 attemptStrategy = outcome.strategy
                 try await waitForLayoutToSettle(

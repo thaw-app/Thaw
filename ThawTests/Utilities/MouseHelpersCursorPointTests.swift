@@ -97,4 +97,67 @@ struct MouseHelpersCursorPointTests {
             physicalPointerInputOccurred: true
         ))
     }
+
+    /// The parked teleport from #318: press and release at x -3751, behind the
+    /// collapsed hidden divider, which no display contains.
+    @Test("A parked press point lies off every display")
+    func parkedPressPointIsOffEveryDisplay() {
+        #expect(MouseHelpers.isOffEveryDisplay(
+            CGPoint(x: -3751, y: 15),
+            displayBounds: displays
+        ))
+    }
+
+    @Test("A point on the bar of either display is on a display")
+    func onBarPointsAreOnADisplay() {
+        #expect(!MouseHelpers.isOffEveryDisplay(CGPoint(x: 1505, y: 15), displayBounds: displays))
+        #expect(!MouseHelpers.isOffEveryDisplay(CGPoint(x: -100, y: 15), displayBounds: displays))
+    }
+
+    @Test("With no displays known, every point counts as off-display")
+    func noDisplaysMeansOffEveryDisplay() {
+        #expect(MouseHelpers.isOffEveryDisplay(CGPoint(x: 10, y: 10), displayBounds: []))
+    }
+
+    /// #318: the user moved the mouse during a 127 ms rehide, so the old rule
+    /// kept the cursor where the parked press had clamped it, under the Apple menu.
+    @Test("An event posted off every display is undone even after physical input")
+    func offDisplayEventsAreRestoredDespitePhysicalInput() {
+        #expect(MouseHelpers.shouldRestoreSavedCursorPosition(
+            physicalPointerInputOccurred: true,
+            postedEventsOffEveryDisplay: true
+        ))
+        #expect(MouseHelpers.shouldRestoreSavedCursorPosition(
+            physicalPointerInputOccurred: false,
+            postedEventsOffEveryDisplay: true
+        ))
+    }
+
+    @Test("On-screen moves still respect the user's own movement")
+    func onScreenMovesKeepPhysicalInputRule() {
+        #expect(!MouseHelpers.shouldRestoreSavedCursorPosition(
+            physicalPointerInputOccurred: true,
+            postedEventsOffEveryDisplay: false
+        ))
+        #expect(MouseHelpers.shouldRestoreSavedCursorPosition(
+            physicalPointerInputOccurred: false,
+            postedEventsOffEveryDisplay: false
+        ))
+    }
+
+    /// Frontmost-app triggers move without hiding the cursor. They leave an
+    /// on-screen warp alone, as before, but must undo an off-display event.
+    @Test("A move without cursor ownership restores only after off-display events")
+    func moveWithoutOwnershipRestoresOnlyOffDisplay() {
+        #expect(!MouseHelpers.shouldRestoreSavedCursorPosition(
+            physicalPointerInputOccurred: false,
+            postedEventsOffEveryDisplay: false,
+            tookCursorOwnership: false
+        ))
+        #expect(MouseHelpers.shouldRestoreSavedCursorPosition(
+            physicalPointerInputOccurred: true,
+            postedEventsOffEveryDisplay: true,
+            tookCursorOwnership: false
+        ))
+    }
 }
