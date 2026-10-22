@@ -81,7 +81,7 @@ enum SettingsNavigationIdentifier: String, @MainActor NavigationIdentifier {
         case .profiles: "Saved layouts to switch between"
         case .advanced: "Advanced options"
         case .automation: "Triggers and scripts"
-        case .triggers: "Show items while an app runs"
+        case .triggers: "Show items when an app runs or an icon changes"
         case .scripts: "Run scripts before and after a profile switches"
         case .widgets: "The widget icon and \(Constants.displayName)'s panel"
         case .theLab: "Features still in testing"

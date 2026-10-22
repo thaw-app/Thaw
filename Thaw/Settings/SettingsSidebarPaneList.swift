@@ -39,10 +39,13 @@ enum SettingsSidebarPanes {
     /// Every page, in sidebar order.
     static let all: [SettingsNavigationIdentifier] = groups.flatMap(\.panes)
 
-    /// Pages that only open a module, by the module. Each one leaves the
-    /// sidebar while its module is off; Modules turns it back on. Widgets is
-    /// not one of them: it also holds the panel, which Thaw runs itself.
-    static let modulePanes: [SettingsNavigationIdentifier: ModuleIdentifier] = [.scripts: .scripts, .triggers: .triggers]
+    /// Pages that belong to a module, by the module. Each one leaves the
+    /// sidebar while its module is off; Modules turns it back on.
+    static let modulePanes: [SettingsNavigationIdentifier: ModuleIdentifier] = [
+        .scripts: .scripts,
+        .triggers: .triggers,
+        .widgets: .widgets,
+    ]
 
     /// The pages whose part is switched off in Modules, Profiles included.
     static func panesTurnedOff(isEnabled: (ModuleIdentifier) -> Bool, profilesOn: Bool = true) -> Set<SettingsNavigationIdentifier> {

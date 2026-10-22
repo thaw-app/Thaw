@@ -41,8 +41,8 @@ struct UXRefreshNavigationTests {
     @Test("A page that only opens a module leaves the sidebar while its module is off")
     func modulePanesFollowTheirModule() {
         let allOff = SettingsSidebarPanes.panesTurnedOff { _ in false }
-        #expect(allOff == [.scripts, .triggers])
-        #expect(SettingsSidebarPanes.panesTurnedOff { $0 == .scripts } == [.triggers])
+        #expect(allOff == [.scripts, .triggers, .widgets])
+        #expect(SettingsSidebarPanes.panesTurnedOff { $0 != .triggers } == [.triggers])
         #expect(SettingsSidebarPanes.panesTurnedOff { _ in true }.isEmpty)
         #expect(
             SettingsSidebarPanes.panesTurnedOff(isEnabled: { _ in true }, profilesOn: false) == [.profiles],
@@ -52,7 +52,8 @@ struct UXRefreshNavigationTests {
         let pages = SettingsSidebarPanes.rows(turnedOff: allOff).compactMap(\.page)
         #expect(!pages.contains(.scripts))
         #expect(!pages.contains(.triggers))
-        #expect(pages.contains(.widgets), "Widgets also holds the panel, which Thaw runs itself")
+        #expect(!pages.contains(.widgets))
+        #expect(pages.contains(.profiles))
     }
 
     @Test("A group whose pages are all off loses its heading, and the arrow keys skip what's off")
@@ -61,6 +62,7 @@ struct UXRefreshNavigationTests {
         #expect(!rows.contains(.heading(String(localized: "On"))))
         #expect(SettingsSidebarPanes.page(moving: .down, from: .hotkeys, in: rows) == .modules)
         let scriptsOff = SettingsSidebarPanes.rows(turnedOff: [.scripts])
+        #expect(SettingsSidebarPanes.page(moving: .up, from: .triggers, in: scriptsOff) == .profiles)
         #expect(SettingsSidebarPanes.page(moving: .down, from: .profiles, in: scriptsOff) == .triggers)
     }
 
@@ -73,7 +75,7 @@ struct UXRefreshNavigationTests {
         #expect(panes["lab.enableControlItemPanel"] == .widgets)
         #expect(panes["lab.enableMenuBarItemDescenders"] == .visibility)
         #expect(panes["advanced.autoZenWhileSharingScreen"] == .visibility)
-        #expect(panes["automation.menuBarItemAlertReveals"] == .visibility)
+        #expect(panes["automation.menuBarItemAlertReveals"] == .triggers)
         #expect(panes["lab.enableDesktopMenuHiding"] == .general)
         #expect(panes["lab.zenModeWhileRecording"] == .visibility)
         #expect(!SearchIndex.advancedEntries.contains { $0.pane == .theLab }, "Experiments is gone, so nothing searches to it")

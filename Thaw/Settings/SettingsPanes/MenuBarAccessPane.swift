@@ -8,7 +8,7 @@
 import SwiftUI
 import ThawUI
 
-/// The Visibility pane: revealing and rehiding, icon-change reveals, Zen Mode, the Swap Bar, search and hover.
+/// The Visibility pane: revealing and rehiding, Zen Mode, the Swap Bar, search and hover.
 struct MenuBarAccessPane: View {
     @Environment(AppState.self) private var appState
     @Bindable var settings: GeneralSettings
@@ -26,10 +26,6 @@ struct MenuBarAccessPane: View {
                 AutoRehideRow(settings: settings)
                     .annotation("Hidden items go away again when you click elsewhere or switch apps.")
                 tempShowIntervalRow
-            }
-
-            ThawSection("When an icon changes") {
-                AlertRevealItemList()
             }
 
             ThawSection("Zen Mode") {

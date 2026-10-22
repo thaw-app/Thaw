@@ -10,8 +10,8 @@ import ThawModuleKit
 import ThawUI
 
 /// Small things that show you something at a glance: the widget icon, which
-/// lives in the Thaw Widgets module, and the panel behind Thaw's icon, which
-/// Thaw runs itself, so the pane stays while the module is off.
+/// runs in the Widgets module, and the panel behind Thaw's icon. The page leaves
+/// the sidebar with the module, but the panel keeps following its own setting.
 struct WidgetsSettingsPane: View {
     @Bindable var settings: AdvancedSettings
 
