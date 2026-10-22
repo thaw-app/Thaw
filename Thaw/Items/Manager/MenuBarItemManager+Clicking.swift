@@ -419,13 +419,13 @@ extension MenuBarItemManager {
         guard reacted else {
             // Nothing opened, so nothing to wait for; the next method starts
             // from a concealed item.
-            controller.concealTemporarilyRevealedItem(identifier)
+            controller.concealTemporarilyRevealedItemUnlessHeld(identifier)
             return false
         }
 
         // Let the opened menu settle before scheduling the re-conceal.
         await eventSleep(for: Constants.MenuBarTuning.thawBarPostClickSettle)
-        controller.scheduleTemporaryItemConceal(identifier)
+        controller.scheduleTemporaryItemConcealUnlessHeld(identifier)
         return true
     }
 }

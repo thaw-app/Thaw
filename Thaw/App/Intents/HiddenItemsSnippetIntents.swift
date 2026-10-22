@@ -231,7 +231,7 @@ struct RevealMenuBarItemIntent: AppIntent {
         let controller = appState.menuBarManager.sectionController
         if controller.isOperational {
             controller.revealItemTemporarily(itemIdentifier)
-            controller.scheduleTemporaryItemConceal(itemIdentifier)
+            controller.scheduleTemporaryItemConcealUnlessHeld(itemIdentifier)
         } else {
             // Fall back to whole-section reveal when per-item reveal is unavailable.
             appState.menuBarManager.section(withName: .hidden)?.show()

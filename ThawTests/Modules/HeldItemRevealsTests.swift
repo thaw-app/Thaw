@@ -78,4 +78,23 @@ struct HeldItemRevealsTests {
         let match = SettingsURIHandler.resolveRevealItemIdentifier(bundle: "app", itemID: nil, candidates: holds.heldIdentifiers)
         #expect(match == "app:One")
     }
+
+    @Test("Other paths may conceal an item only while nobody holds it")
+    func otherPathsLeaveHeldItemsShown() {
+        let (holds, _) = make()
+        #expect(HeldItemReveals.mayConceal("app:Item", holds: nil), "Nothing held yet")
+        #expect(HeldItemReveals.mayConceal("app:Item", holds: holds))
+        holds.hold("app:Item", for: "triggers")
+        #expect(!HeldItemReveals.mayConceal("app:Item", holds: holds))
+        #expect(HeldItemReveals.mayConceal("app:Other", holds: holds))
+        holds.release("app:Item", for: "triggers")
+        #expect(HeldItemReveals.mayConceal("app:Item", holds: holds))
+    }
+
+    @Test("The holds made current are the ones other paths read")
+    func currentHolds() {
+        let (holds, _) = make()
+        holds.makeCurrent()
+        #expect(HeldItemReveals.current === holds)
+    }
 }

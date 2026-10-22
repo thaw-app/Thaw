@@ -27,6 +27,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             conceal: { [unowned self] in appState.menuBarManager.sectionController.concealTemporarilyRevealedItem($0) }
         )
         appState.moduleHost.onModuleQuit = { [weak holds] in holds?.releaseAll(for: $0) }
+        holds.makeCurrent()
         return holds
     }()
 
@@ -471,7 +472,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             return
         }
         sectionController.revealItemTemporarily(identifier)
-        sectionController.scheduleTemporaryItemConceal(identifier)
+        sectionController.scheduleTemporaryItemConcealUnlessHeld(identifier)
         appState.diagLog.info("Settings URI reveal-item: revealed \(identifier) for sender \(sender)")
     }
 

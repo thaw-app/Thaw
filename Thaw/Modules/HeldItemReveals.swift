@@ -11,6 +11,10 @@ import MenuBarModel
 /// lets go, and a module that quits lets go of everything, so a crash can't leave items stuck in view.
 @MainActor
 final class HeldItemReveals {
+    /// The app's held reveals, for the paths that conceal an item on their
+    /// own, such as a click from the Thaw Bar, and must leave a held one shown.
+    private(set) static weak var current: HeldItemReveals?
+
     private let reveal: (String) -> Void
     private let conceal: (String) -> Void
     private var holders: [String: Set<String>] = [:]
@@ -22,6 +26,17 @@ final class HeldItemReveals {
 
     func isHeld(_ identifier: String) -> Bool {
         holders[identifier] != nil
+    }
+
+    /// Whether a path that conceals an item on its own may conceal this one.
+    /// No holds at all, as before anything was held, never stand in the way.
+    static func mayConceal(_ identifier: String, holds: HeldItemReveals?) -> Bool {
+        holds?.isHeld(identifier) != true
+    }
+
+    /// Makes these the holds the other conceal paths respect.
+    func makeCurrent() {
+        Self.current = self
     }
 
     /// The items held for anyone, so a release can find the one it names.
@@ -51,5 +66,22 @@ final class HeldItemReveals {
         for identifier in holders.keys.sorted() where holders[identifier]?.contains(sender) == true {
             release(identifier, for: sender)
         }
+    }
+}
+
+@MainActor
+extension MenuBarSectionControlling {
+    /// Conceals a temporarily revealed item now, unless a module holds it
+    /// shown with thaw://reveal-item?hold=true.
+    func concealTemporarilyRevealedItemUnlessHeld(_ identifier: String, holds: HeldItemReveals? = .current) {
+        guard HeldItemReveals.mayConceal(identifier, holds: holds) else { return }
+        concealTemporarilyRevealedItem(identifier)
+    }
+
+    /// Schedules the re-concealment of a temporarily revealed item, unless a
+    /// module holds it shown.
+    func scheduleTemporaryItemConcealUnlessHeld(_ identifier: String, holds: HeldItemReveals? = .current) {
+        guard HeldItemReveals.mayConceal(identifier, holds: holds) else { return }
+        scheduleTemporaryItemConceal(identifier)
     }
 }
