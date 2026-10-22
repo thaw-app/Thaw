@@ -134,7 +134,7 @@ final class MenuBarItemAlertRevealWatcher {
             }
             diagLog.info("Icon change detected for \(identifier); revealing temporarily")
             sectionController.revealItemTemporarily(identifier)
-            sectionController.scheduleTemporaryItemConceal(identifier)
+            sectionController.scheduleTemporaryItemConcealUnlessHeld(identifier)
         }
 
         // Forget baselines for items that are no longer opted in or present.
