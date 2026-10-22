@@ -44,6 +44,10 @@ struct UXRefreshNavigationTests {
         #expect(allOff == [.scripts, .triggers])
         #expect(SettingsSidebarPanes.panesTurnedOff { $0 == .scripts } == [.triggers])
         #expect(SettingsSidebarPanes.panesTurnedOff { _ in true }.isEmpty)
+        #expect(
+            SettingsSidebarPanes.panesTurnedOff(isEnabled: { _ in true }, profilesOn: false) == [.profiles],
+            "Profiles leaves the sidebar while its switch in Modules is off"
+        )
 
         let pages = SettingsSidebarPanes.rows(turnedOff: allOff).compactMap(\.page)
         #expect(!pages.contains(.scripts))

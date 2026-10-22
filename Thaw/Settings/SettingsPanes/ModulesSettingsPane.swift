@@ -9,13 +9,26 @@ import SwiftUI
 import ThawModuleKit
 import ThawUI
 
-/// The optional parts of Thaw that run as their own apps. Each row switches
-/// one on or off; a module that's off doesn't run at all.
+/// The optional parts of Thaw, each with its on/off switch. Profiles is built
+/// into Thaw; the others run as their own apps, and one that's off doesn't
+/// run at all. A part that's off leaves the sidebar.
 struct ModulesSettingsPane: View {
     @Bindable var moduleHost: ModuleHost
+    @Bindable var profiles: ProfilesFeature
 
     var body: some View {
         ThawForm {
+            ThawSection {
+                Toggle(isOn: $profiles.isOn) {
+                    VStack(alignment: .leading, spacing: ThawSpacing.hairline) {
+                        Text("Profiles")
+                        Text("Switches between saved layouts by hand, with a shortcut, or when the display, Space or Focus changes. Saved profiles are kept while this is off.")
+                            .font(ThawType.detail)
+                            .foregroundStyle(ThawInk.supporting)
+                    }
+                }
+                .toggleStyle(.switch)
+            }
             if rows.isEmpty {
                 ThawSection {
                     ThawEmptyState(
@@ -74,7 +87,7 @@ struct ModulesSettingsPane: View {
         case .idle, .running, .restarting, .stopped, .refused(.launch), .refused(.notAModule):
             switch ModuleIdentifier(rawValue: identifier) {
             case .scripts: return "Runs your scripts when a profile switches."
-            case .triggers: return "Shows chosen menu bar items while an app runs."
+            case .triggers: return "Shows chosen menu bar items while an app runs or when their icon changes."
             case .widgets: return "Shows battery, Wi-Fi and other readings in one menu bar icon."
             case nil: return ""
             }

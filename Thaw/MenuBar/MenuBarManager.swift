@@ -1079,7 +1079,7 @@ final class MenuBarManager {
 
     /// Checks the active profile; returns nil when no profiles exist.
     private func makeProfilesMenuItem() -> NSMenuItem? {
-        guard let appState, !appState.profileManager.profiles.isEmpty else {
+        guard let appState, appState.profilesFeature.isOn, !appState.profileManager.profiles.isEmpty else {
             return nil
         }
 

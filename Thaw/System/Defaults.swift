@@ -355,6 +355,7 @@ extension Defaults {
         case thawIcon = "IceIcon"
         case customThawIconIsTemplate = "CustomIceIconIsTemplate"
         case simpleMode = "SimpleMode"
+        case profilesEnabled = "ProfilesEnabled"
         case showSettingDescriptions = "ShowSettingDescriptions"
         case blackSettingsBackground = "BlackSettingsBackground"
         case simpleModeShowsPreview = "SimpleModeShowsPreview"

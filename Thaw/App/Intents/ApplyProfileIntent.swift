@@ -18,6 +18,8 @@ enum ThawIntentError: Swift.Error, CustomLocalizedStringResourceConvertible {
     case appNotReady
     /// The entity identifier is not a UUID, possibly from a stale shortcut.
     case profileNotFound
+    /// Profiles are turned off on the Profiles page.
+    case profilesOff
 
     var localizedStringResource: LocalizedStringResource {
         switch self {
@@ -25,6 +27,8 @@ enum ThawIntentError: Swift.Error, CustomLocalizedStringResourceConvertible {
             "Thaw isn't running yet. Open Thaw and try again."
         case .profileNotFound:
             "That menu bar profile no longer exists."
+        case .profilesOff:
+            "Profiles are off. Turn them on in Thaw's Settings › Modules."
         }
     }
 }
@@ -49,6 +53,9 @@ struct ApplyProfileIntent: AppIntent {
     func perform() async throws -> some IntentResult & ProvidesDialog {
         guard let appState = thawAppState() else {
             throw ThawIntentError.appNotReady
+        }
+        guard appState.profilesFeature.isOn else {
+            throw ThawIntentError.profilesOff
         }
         guard let profileID = UUID(uuidString: profile.id) else {
             throw ThawIntentError.profileNotFound
