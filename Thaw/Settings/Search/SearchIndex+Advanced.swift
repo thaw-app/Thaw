@@ -95,7 +95,7 @@ nonisolated extension SearchIndex {
             id: "automation.menuBarItemAlertReveals",
             title: "Show an item when its icon changes",
             descriptionText: String(localized: "Briefly shows a hidden item in the menu bar when its icon changes, so you see its alert."),
-            pane: .visibility,
+            pane: .triggers,
             section: "When an icon changes",
             keywords: ["reveal", "alert", "icon", "change", "badge", "notification", "hidden", "temporarily"],
             property: nil

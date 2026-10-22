@@ -8,6 +8,7 @@
 import Combine
 import Foundation
 import MenuBarModel
+import ThawModuleKit
 
 // MARK: - MenuBarItemAlertReveals
 
@@ -17,6 +18,11 @@ import MenuBarModel
 enum MenuBarItemAlertReveals {
     static func identifiers() -> Set<String> {
         Set(Defaults.stringArray(forKey: .menuBarItemAlertReveals) ?? [])
+    }
+
+    /// The items to watch: the saved choice while Triggers is on, none while it is off.
+    static func watched(saved: Set<String>, triggersOn: Bool) -> Set<String> {
+        triggersOn ? saved : []
     }
 
     static func contains(_ identifier: String) -> Bool {
@@ -93,7 +99,11 @@ final class MenuBarItemAlertRevealWatcher {
     private func process(_ images: [MenuBarItemTag: MenuBarItemGlyphCapture]) {
         // Before setup this is an InertSectionController, whose reveal calls
         // are no-ops, so no extra guard is needed here.
-        process(images, sectionController: appState?.menuBarManager.sectionController)
+        process(
+            images,
+            sectionController: appState?.menuBarManager.sectionController,
+            triggersOn: appState?.moduleHost.isEnabled(.triggers) ?? false
+        )
     }
 
     /// Compares images against the baselines and reveals what changed, through
@@ -101,9 +111,14 @@ final class MenuBarItemAlertRevealWatcher {
     func process(
         _ images: [MenuBarItemTag: MenuBarItemGlyphCapture],
         sectionController: (any MenuBarSectionControlling)?,
+        triggersOn: Bool = true,
         now: ContinuousClock.Instant = .now
     ) {
-        let enabled = MenuBarItemAlertReveals.identifiers()
+        // Icon changes are one of the triggers, so they stop with the Triggers module.
+        let enabled = MenuBarItemAlertReveals.watched(
+            saved: MenuBarItemAlertReveals.identifiers(),
+            triggersOn: triggersOn
+        )
         guard !enabled.isEmpty else {
             baselines.removeAll()
             return
@@ -118,10 +133,7 @@ final class MenuBarItemAlertRevealWatcher {
             }
             let baseline = baselines[identifier]
             baselines[identifier] = image
-            guard let baseline else {
-                continue
-            }
-            guard !MenuBarItemGlyphCapture.isVisuallyEqual(baseline, image) else {
+            guard let baseline, !MenuBarItemGlyphCapture.isVisuallyEqual(baseline, image) else {
                 continue
             }
             // Only concealed items need surfacing; a visible item's icon

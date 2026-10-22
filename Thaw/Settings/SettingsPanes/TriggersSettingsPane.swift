@@ -9,9 +9,13 @@ import SwiftUI
 import ThawModuleKit
 import ThawUI
 
-/// App triggers live in the Thaw Triggers module; this pane opens its
-/// window and switches the module on or off.
+/// Everything that shows a hidden item on its own. App triggers run in the
+/// Thaw Triggers module, which this pane opens and switches on or off. Icon
+/// changes are watched by Thaw itself, since only it captures the icons, and
+/// only while Triggers is on.
 struct TriggersSettingsPane: View {
+    @Environment(AppState.self) private var appState
+
     var body: some View {
         ThawForm {
             ThawSection {
@@ -20,6 +24,11 @@ struct TriggersSettingsPane: View {
                     title: "When an app runs",
                     detail: "Triggers run in Thaw Triggers, a module that comes with \(Constants.displayName)."
                 )
+            }
+            if appState.moduleHost.isEnabled(.triggers) {
+                ThawSection("When an icon changes") {
+                    AlertRevealItemList()
+                }
             }
         }
     }
