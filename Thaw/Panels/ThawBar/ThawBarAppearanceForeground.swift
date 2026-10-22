@@ -96,6 +96,9 @@ enum ThawBarAppearanceForeground {
             // Average alpha of the four stops in MenuBarLiquidGlassFadeView.
             result = result.tinted(by: NSColor.black.cgColor, opacity: 0.5638)
         }
+        if style.darkening > 0 {
+            result = result.tinted(by: NSColor.black.cgColor, opacity: style.darkening)
+        }
         return result
     }
 }

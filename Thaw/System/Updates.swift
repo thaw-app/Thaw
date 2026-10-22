@@ -37,6 +37,8 @@ nonisolated enum UpdateChannel: String, CaseIterable, Identifiable {
     }
 
     /// Sparkle channel names to allow in addition to the default channel.
+    /// Alpha also takes betas: a beta is a later build than the alphas before
+    /// it, and releases are tagged with one channel each.
     var allowedSparkleChannels: Set<String> {
         switch self {
         case .stable:
@@ -44,7 +46,7 @@ nonisolated enum UpdateChannel: String, CaseIterable, Identifiable {
         case .beta:
             ["beta"]
         case .alpha:
-            ["alpha"]
+            ["alpha", "beta"]
         }
     }
 }
@@ -160,6 +162,13 @@ final class UpdatesManager: NSObject {
             .store(in: &cancellables)
     }
 
+    /// Whether the updater starts with the app, which needs only the in-app consent.
+    /// Starting it with Settings would leave a menu bar app without scheduled checks
+    /// until Settings opens. The settings process leaves checks to the app.
+    static nonisolated func startsAtLaunch(supportsSparkle: Bool, hasSeenConsent: Bool, isSettingsProcess: Bool) -> Bool {
+        supportsSparkle && hasSeenConsent && !isSettingsProcess
+    }
+
     func startUpdaterIfNeeded() {
         guard Constants.supportsSparkleUpdates else {
             return
@@ -260,7 +269,17 @@ extension UpdatesManager: @MainActor SPUStandardUserDriverDelegate {
         _: SUAppcastItem,
         andInImmediateFocus immediateFocus: Bool
     ) -> Bool {
-        NSApp.isActive && immediateFocus
+        Self.showsScheduledUpdateWindow(
+            appIsActive: NSApp.isActive,
+            immediateFocus: immediateFocus,
+            notificationsCanAlert: appState?.userNotificationManager.canAlert ?? true
+        )
+    }
+
+    /// Whether Sparkle shows a scheduled update's window itself. Otherwise Thaw
+    /// posts a notification, which nobody sees when notifications can't alert.
+    static nonisolated func showsScheduledUpdateWindow(appIsActive: Bool, immediateFocus: Bool, notificationsCanAlert: Bool) -> Bool {
+        (appIsActive && immediateFocus) || !notificationsCanAlert
     }
 
     func standardUserDriverWillHandleShowingUpdate(

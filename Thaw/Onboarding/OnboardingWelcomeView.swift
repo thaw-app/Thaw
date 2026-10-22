@@ -30,14 +30,9 @@ struct OnboardingWelcomeView: View {
             copyBlock
                 .padding(.top, ThawSpacing.inset)
 
-            Button(action: onContinue) {
+            OnboardingPrimaryButton(action: onContinue) {
                 Text("Continue")
-                    .font(ThawType.heading)
-                    // A fixed width clips longer translations; use a minimum.
-                    .frame(minWidth: 140, minHeight: 34)
             }
-            .buttonStyle(.glassProminent)
-            .keyboardShortcut(.defaultAction)
             .padding(.top, ThawSpacing.section)
 
             Spacer(minLength: ThawSpacing.gutter)
@@ -95,49 +90,28 @@ struct OnboardingWelcomeView: View {
     /// Present pre-permission facts in one glanceable row.
     private var factsRow: some View {
         HStack(spacing: ThawSpacing.base) {
-            fact(
+            OnboardingFactCapsule(
                 symbol: "lock.open",
                 label: Text("Open source"),
                 spoken: Text("Free and open source")
             )
-            fact(
+            OnboardingFactCapsule(
                 symbol: "hand.raised",
                 label: Text("No analytics or tracking"),
                 // Updates and release notes make outbound calls; claim no analytics, not "nothing leaves your Mac".
                 spoken: Text("No analytics, no tracking")
             )
-            fact(
+            OnboardingFactCapsule(
                 symbol: "record.circle",
                 label: Text("Screen Recording optional"),
                 spoken: Text("Screen Recording is optional")
             )
-            fact(
+            OnboardingFactCapsule(
                 symbol: "globe",
                 label: Text("20 languages"),
                 spoken: Text("Speaks 20 languages")
             )
         }
         .frame(maxWidth: 560)
-    }
-
-    /// Scale long translations rather than wrapping one capsule taller than its neighbours.
-    private func fact(symbol: String, label: Text, spoken: Text) -> some View {
-        HStack(spacing: ThawSpacing.compact) {
-            Image(systemName: symbol)
-                .font(ThawType.symbol)
-                .foregroundStyle(.secondary)
-
-            label
-                .font(ThawType.caption)
-                .foregroundStyle(.secondary)
-                .lineLimit(1)
-                .minimumScaleFactor(0.85)
-        }
-        .padding(.horizontal, ThawSpacing.inset)
-        .frame(maxWidth: .infinity)
-        .frame(height: 30)
-        .thawGlass(.control, in: Capsule(style: .continuous))
-        .accessibilityElement(children: .combine)
-        .accessibilityLabel(spoken)
     }
 }

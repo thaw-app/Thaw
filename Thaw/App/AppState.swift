@@ -42,6 +42,10 @@ final class AppState {
     /// The sections, their control items, and the show/hide state machine.
     let menuBarManager = MenuBarManager()
 
+    /// Shared by the menu bar manager, which acts on a display move, and the
+    /// event taps, which ask for a check.
+    private let activeDisplayWatcher = ActiveMenuBarDisplayWatcher()
+
     /// Paints tint, border, shadow and shape over the system menu bar.
     let appearanceManager = MenuBarAppearanceManager()
 
@@ -69,6 +73,13 @@ final class AppState {
 
     /// Owner of user-authored menu bar item groups.
     let itemGroupManager = MenuBarItemGroupManager()
+
+    /// Saves layout changes into the active profile when it keeps them.
+    @ObservationIgnored private(set) lazy var profileLayoutKeeper = ProfileLayoutKeeper(
+        profileManager: profileManager,
+        itemManager: itemManager,
+        groupManager: itemGroupManager
+    )
 
     /// Transient, user-facing explanations for refused layout actions.
     let layoutFeedback = LayoutBarFeedbackCenter()
@@ -136,7 +147,17 @@ final class AppState {
     // MARK: - Window bookkeeping
 
     /// Track open windows to prevent duplicates
-    private var openWindows = Set<ThawWindowIdentifier>()
+    private var openWindows = Set<ThawWindowIdentifier>() {
+        didSet {
+            guard openWindows.isEmpty != oldValue.isEmpty else { return }
+            WindowMenuTrimmer.shared.refresh()
+        }
+    }
+
+    /// Whether any Thaw window is open, for WindowMenuTrimmer.
+    var hasOpenWindow: Bool {
+        !openWindows.isEmpty
+    }
 
     /// Live windows keyed by scene identifier.
     /// - Note: onWindowChange supplies these because unreliable NSApp.windows KVO would leave openWindows stuck after closing.
@@ -189,7 +210,7 @@ final class AppState {
         diagLog.debug("bootstrap: permissions state = \(String(describing: self.permissions.permissionsState)), accessibility = \(self.permissions.accessibility.hasPermission), screenRecording = \(self.permissions.screenRecording.hasPermission)")
 
         settings.performSetup(with: self)
-        menuBarManager.performSetup(with: self)
+        menuBarManager.performSetup(with: self, activeDisplayWatcher: activeDisplayWatcher)
         // A refused preferences watcher stays stopped; recreate it after either a table-file grant or Full Disk Access.
         permissions.onPermissionTransition = { [weak self] permission, granted in
             guard let self, granted, permission === permissions.fullDiskAccess else { return }
@@ -198,7 +219,7 @@ final class AppState {
         diagLog.debug("bootstrap: settings and menuBarManager setup complete")
 
         appearanceManager.performSetup(with: self)
-        hidEventManager.performSetup(with: self)
+        hidEventManager.performSetup(with: self, activeDisplayWatcher: activeDisplayWatcher)
         diagLog.debug("bootstrap: starting itemManager setup")
         await itemManager.performSetup(with: self)
         diagLog.debug("bootstrap: itemManager setup scheduled, invalidating menuBarHeightCache")
@@ -217,8 +238,16 @@ final class AppState {
         groupFolders.performSetup(with: self)
         diagLog.debug("bootstrap: imageCache setup complete")
         updatesManager.performSetup(with: self)
+        if UpdatesManager.startsAtLaunch(
+            supportsSparkle: Constants.supportsSparkleUpdates,
+            hasSeenConsent: Defaults.bool(forKey: .hasSeenUpdateConsent),
+            isSettingsProcess: SettingsProcessApp.isRequested
+        ) {
+            startUpdaterIfNeeded()
+        }
         userNotificationManager.performSetup(with: self)
         profileManager.performSetup(with: self)
+        itemManager.repairs.onUserLayoutChange = { [weak self] in self?.profileLayoutKeeper.noteUserLayoutChange() }
         controlCommandObserver.performSetup(with: self)
         controlStatePublisher.performSetup(with: self)
         swapBarManager.performSetup(with: self)
@@ -352,6 +381,7 @@ final class AppState {
         config.addsToRecentItems = false
         config.createsNewApplicationInstance = true
         config.promptsUserIfNeeded = false
+        config.arguments = SingleInstanceRule.relaunchArguments(replacing: ProcessInfo.processInfo.processIdentifier)
 
         Task { @MainActor in
             do {
@@ -444,7 +474,9 @@ final class AppState {
                 let dragEnded = previous == true && !isDragging
                 previous = isDragging
                 isDraggingMenuBarItem = isDragging
-                if dragEnded {
+                if isDragging {
+                    itemManager.dragMembership.dragStarted()
+                } else if dragEnded {
                     itemManager.noteUserMenuBarDragEnded()
                 }
             }

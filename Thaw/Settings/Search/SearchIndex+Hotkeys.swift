@@ -18,7 +18,7 @@ nonisolated extension SearchIndex {
             title: "Toggle the Hidden section",
             descriptionText: nil,
             pane: .hotkeys,
-            section: "Menu bar sections",
+            section: "Visibility",
             keywords: ["toggle", "hidden", "section", "hotkey", "shortcut"],
             property: nil
         ),
@@ -27,7 +27,7 @@ nonisolated extension SearchIndex {
             title: "Toggle the Always Hidden section",
             descriptionText: nil,
             pane: .hotkeys,
-            section: "Menu bar sections",
+            section: "Visibility",
             keywords: ["toggle", "always hidden", "section", "hotkey", "shortcut"],
             property: nil
         ),
@@ -36,7 +36,7 @@ nonisolated extension SearchIndex {
             title: "Swap shown and hidden items",
             descriptionText: nil,
             pane: .hotkeys,
-            section: "Menu bar sections",
+            section: "Visibility",
             keywords: ["swap", "switch", "exchange", "shown", "hidden", "hotkey", "shortcut"],
             property: nil
         ),
@@ -72,7 +72,7 @@ nonisolated extension SearchIndex {
             title: "Reveal the menu bar",
             descriptionText: nil,
             pane: .hotkeys,
-            section: "Other",
+            section: "Visibility",
             keywords: ["reveal", "show", "menu bar", "auto-hide", "hotkey", "shortcut"],
             property: nil
         ),
@@ -82,8 +82,9 @@ nonisolated extension SearchIndex {
             titleText: "Turn \(Constants.displayName) Bar on or off",
             descriptionText: nil,
             pane: .hotkeys,
-            sectionKey: "Other",
-            sectionText: "Other",
+            // The section names the tab; its key stays "Thaw Bar" whatever the app is called.
+            sectionKey: "\(Constants.displayName) Bar",
+            sectionText: "Thaw Bar",
             keywords: ["enable", "toggle", "turn on", "turn off", "ice bar", "thaw bar", "hotkey", "shortcut", "keyboard shortcut"],
             property: nil
         ),
@@ -92,7 +93,7 @@ nonisolated extension SearchIndex {
             title: "Toggle application menus",
             descriptionText: nil,
             pane: .hotkeys,
-            section: "Other",
+            section: "Visibility",
             keywords: ["toggle", "application menus", "app menus", "hotkey", "shortcut"],
             property: nil
         ),
@@ -101,7 +102,7 @@ nonisolated extension SearchIndex {
             title: "Toggle automatic rehiding",
             descriptionText: nil,
             pane: .hotkeys,
-            section: "Other",
+            section: "Visibility",
             keywords: ["toggle", "auto rehide", "automatically rehide", "hotkey", "shortcut"],
             property: nil
         ),
@@ -110,7 +111,7 @@ nonisolated extension SearchIndex {
             title: "Toggle Zen Mode",
             descriptionText: nil,
             pane: .hotkeys,
-            section: "Other",
+            section: "Visibility",
             keywords: ["zen", "zen mode", "empty", "focus", "toggle", "hotkey", "shortcut"],
             property: nil
         ),
@@ -119,7 +120,7 @@ nonisolated extension SearchIndex {
             title: "Show Layout",
             descriptionText: nil,
             pane: .hotkeys,
-            section: "Other",
+            section: "Layout",
             keywords: ["layout", "show", "open", "settings", "hotkey", "shortcut"],
             property: nil
         ),

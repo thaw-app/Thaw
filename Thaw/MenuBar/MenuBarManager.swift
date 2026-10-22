@@ -12,6 +12,7 @@ import Observation
 import PlatformRuntimeKit
 import SwiftUI
 import ThawCapture
+import ThawUI
 
 /// Owns sections, panels, per-item hotkeys, and color samples, reacting to system and setting changes after setup.
 /// AppState owns this manager; methods stop when the weak back reference is gone.
@@ -33,7 +34,7 @@ final class MenuBarManager {
     /// Persisted _HIHideMenuBar value, unlike isMenuBarHiddenBySystem which also reflects transient app presentation options.
     private(set) var isMenuBarHiddenBySystemUserDefaults = false
 
-    /// Pause hover after an explicit toggle so it cannot undo the user; resume when the pointer leaves.
+    /// Pause hover after an explicit toggle so it cannot undo the user; HoverPauseLatch resumes it once the pointer leaves the hover band.
     var showOnHoverAllowed = true {
         didSet {
             // Hiding a section and the hover rearm both allow hover again, which undid Zen Mode's lock.
@@ -218,7 +219,7 @@ final class MenuBarManager {
     }
 
     /// Covers hidden items that flash during Clock or Notification Center shortcut bridging.
-    let clockBridgeCover = ClockBridgeCover()
+    let revealCover = RevealCover()
 
     /// What the bar is drawn over, for anything that paints over the bar.
     let backdrop = MenuBarBackdrop()
@@ -228,7 +229,7 @@ final class MenuBarManager {
 
     private var alwaysShowHiddenItemsController: AlwaysShowHiddenItemsController?
     /// Re-applies "Always show hidden items" when the active menu bar moves to another display.
-    private let activeDisplayWatcher = ActiveMenuBarDisplayWatcher()
+    private var activeDisplayWatcher: ActiveMenuBarDisplayWatcher?
 
     var shouldDeferBarMutation: Bool {
         guard let nativeMenuBarStateChangedAt else { return false }
@@ -281,8 +282,9 @@ final class MenuBarManager {
     /// Captured at launch setup so smart rehide reads menu-open state without reaching through the item manager.
     private var menuOpenMonitor: MenuOpenMonitor?
 
-    func performSetup(with appState: AppState) {
+    func performSetup(with appState: AppState, activeDisplayWatcher: ActiveMenuBarDisplayWatcher) {
         self.appState = appState
+        self.activeDisplayWatcher = activeDisplayWatcher
         configuration = appState.settings
         menuOpenMonitor = appState.itemManager.menuOpenMonitor
         installObservers()
@@ -317,7 +319,7 @@ final class MenuBarManager {
         MenuBarPresentationProvider.startDiagnosticSessionIfGated()
         leadingEdgeWatcher.performSetup(with: appState)
         backdrop.performSetup(with: appState)
-        clockBridgeCover.performSetup(with: appState)
+        revealCover.performSetup(with: appState)
         synchronizeAlwaysShowHiddenItems()
         rebuildItemHotkeys()
     }
@@ -480,14 +482,14 @@ final class MenuBarManager {
         } refreshControls: { [weak self] in
             self?.updateControlItemStates()
         }
-        activeDisplayWatcher.isNeeded = { [settings = appState.settings.displaySettings] in
+        activeDisplayWatcher?.isNeeded = { [settings = appState.settings.displaySettings] in
             settings.wideDisplayRule.isEnabled || settings.isAlwaysShowEnabledOnAnyDisplay
         }
-        activeDisplayWatcher.onChange = { [weak self] in
+        activeDisplayWatcher?.onChange = { [weak self] in
             self?.synchronizeAlwaysShowHiddenItems()
             self?.updateControlItemStates()
         }
-        activeDisplayWatcher.start()
+        activeDisplayWatcher?.start()
 
         // Debounce cache changes so new items become assignable without churning hotkey registrations each tick.
         let hotkeyTask = Task { @MainActor [weak self, itemManager = appState.itemManager] in

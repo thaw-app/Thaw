@@ -76,6 +76,20 @@ struct SettingsControlStyleGuardTests {
         #expect(violations.isEmpty, "Bordered or segmented controls: \(violations.joined(separator: ", ")).")
     }
 
+    @Test("no checkbox is drawn by macOS, which fills it solid gold")
+    func checkboxesUseThawStyle() throws {
+        var violations = [String]()
+        let sources = try Self.sources(in: "Thaw")
+        // A moved directory would otherwise scan nothing and pass.
+        #expect(sources.count > 100)
+        for (path, lines) in sources {
+            for (index, line) in lines.enumerated() where line.contains(".toggleStyle(.checkbox)") {
+                violations.append("\(path):\(index + 1)")
+            }
+        }
+        #expect(violations.isEmpty, "System checkboxes: \(violations.joined(separator: ", ")). Use .toggleStyle(.thawCheckbox).")
+    }
+
     @Test("the scan sees the Settings panes")
     func scanIsNotEmpty() throws {
         // A moved directory would otherwise scan nothing and pass.
@@ -95,9 +109,9 @@ struct SettingsControlStyleGuardTests {
         return ancestor.hasSuffix("Actions") || ancestor.contains("Menu") || ancestor.contains("Confirmation")
     }
 
-    private static func sources() throws -> [(path: String, lines: [String])] {
+    private static func sources(in scanned: String = scannedDirectory) throws -> [(path: String, lines: [String])] {
         let root = try #require(repositoryRoot(), "repository root not found from \(#filePath)")
-        let directory = root.appending(path: scannedDirectory)
+        let directory = root.appending(path: scanned)
         let enumerator = FileManager.default.enumerator(at: directory, includingPropertiesForKeys: nil)
         var result = [(path: String, lines: [String])]()
         while let url = enumerator?.nextObject() as? URL {

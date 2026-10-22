@@ -463,17 +463,24 @@ final class ThawBarPanel: NSPanel {
 
     /// The live status window can move displays before the AX cache catches up.
     /// Consuming that icon's mouse-down would close the panel before its action toggles it open again.
+    /// With the screen's top given, a click above the icon at the top of the screen counts too.
     static nonisolated func isControlItemClick(
         appKitLocation: CGPoint,
         liveControlItemFrame: CGRect?,
+        liveScreenMaxY: CGFloat? = nil,
         quartzLocation: CGPoint?,
-        cachedControlItemFrame: CGRect?
+        cachedControlItemFrame: CGRect?,
+        cachedScreenMinY: CGFloat? = nil
     ) -> Bool {
-        if let liveControlItemFrame, liveControlItemFrame.contains(appKitLocation) {
-            return true
+        if let liveControlItemFrame {
+            let column = liveScreenMaxY.map { ControlItemHitColumn.appKit(liveControlItemFrame, screenMaxY: $0) } ?? liveControlItemFrame
+            if column.contains(appKitLocation) {
+                return true
+            }
         }
         if let quartzLocation, let cachedControlItemFrame {
-            return cachedControlItemFrame.contains(quartzLocation)
+            let column = cachedScreenMinY.map { ControlItemHitColumn.quartz(cachedControlItemFrame, screenMinY: $0) } ?? cachedControlItemFrame
+            return column.contains(quartzLocation)
         }
         return false
     }
@@ -485,13 +492,17 @@ final class ThawBarPanel: NSPanel {
             return
         }
         // With the icon off there is no icon to click, only its 2-pt stand-in.
+        // Without a live window the cached frame still decides.
+        let iconWindow = appState?.menuBarManager.section(withName: .visible)?.controlItem.window
         if let appState,
            appState.settings.general.showThawIcon,
            Self.isControlItemClick(
                appKitLocation: NSEvent.mouseLocation,
-               liveControlItemFrame: appState.menuBarManager.section(withName: .visible)?.controlItem.window?.frame,
+               liveControlItemFrame: iconWindow?.frame,
+               liveScreenMaxY: iconWindow?.screen?.frame.maxY,
                quartzLocation: MouseHelpers.locationCoreGraphics,
-               cachedControlItemFrame: controlItemAnchorBounds(appState: appState)
+               cachedControlItemFrame: controlItemAnchorBounds(appState: appState),
+               cachedScreenMinY: iconWindow?.screen.map { CGDisplayBounds($0.displayID).minY }
            )
         {
             return

@@ -218,4 +218,60 @@ struct ObservedMembershipTests {
         let dividers = try #require(ObservedMembership.Dividers(hidden: 328, alwaysHidden: 1368, visibleControl: 161))
         #expect(ObservedMembership.moves(for: [], dividers: dividers).isEmpty)
     }
+
+    // MARK: Candidates from the assignment table
+
+    /// Weights read as in the reporter's table: Always Hidden 1368, Hidden 328, Visible control 161.
+    private static func adoptionMoves(
+        weights: [String: Int],
+        assignment: [String: MenuBarSectionName],
+        keepingAuthored: Bool
+    ) throws -> [String: MenuBarSectionName] {
+        let dividers = try #require(ObservedMembership.Dividers(hidden: 328, alwaysHidden: 1368, visibleControl: 161))
+        let items = weights.keys.sorted().map { item($0, windowID: CGWindowID(abs(weights[$0] ?? 0) + 1)) }
+        let candidates = ObservedMembership.candidates(
+            among: items,
+            weight: { weights[$0.title ?? ""] },
+            assignment: assignment,
+            isEligible: { _ in true }
+        )
+        return ObservedMembership.moves(for: candidates, dividers: dividers, keepingAuthored: keepingAuthored)
+            .reduce(into: [:]) { result, move in
+                for item in move.items {
+                    result[item.title ?? ""] = move.section
+                }
+            }
+    }
+
+    @Test("Launch adoption places an item the user never assigned from its weight, and keeps assigned ones")
+    func launchAdoptionPlacesUnassignedItems() throws {
+        let assigned = Self.item("assigned", windowID: 2)
+        let assignment = [MenuBarItemTag.canonicalPersistentIdentifier(assigned.uniqueIdentifier): MenuBarSectionName.visible]
+        let moves = try Self.adoptionMoves(
+            weights: ["legacy": 900, "assigned": 2000],
+            assignment: assignment,
+            keepingAuthored: true
+        )
+        #expect(moves == ["legacy": .hidden])
+    }
+
+    @Test("Candidates carry only explicit assignments, keyed by canonical identifier")
+    func candidatesCarryExplicitAssignments() {
+        let assigned = Self.item("assigned", windowID: 2)
+        let assignment = [MenuBarItemTag.canonicalPersistentIdentifier(assigned.uniqueIdentifier): MenuBarSectionName.hidden]
+        let candidates = ObservedMembership.candidates(
+            among: [assigned, Self.item("unassigned", windowID: 3), Self.item("ineligible", windowID: 4), Self.item("unweighted", windowID: 5)],
+            weight: { $0.title == "unweighted" ? nil : 500 },
+            assignment: assignment,
+            isEligible: { $0.title != "ineligible" }
+        )
+        #expect(candidates.map(\.item.title) == ["assigned", "unassigned"])
+        #expect(candidates.map(\.authored) == [.hidden, nil])
+    }
+
+    @Test("An item the user never assigned that sits in Visible is not moved")
+    func unassignedVisibleItemStays() throws {
+        #expect(try Self.adoptionMoves(weights: ["plain": 200], assignment: [:], keepingAuthored: false).isEmpty)
+        #expect(try Self.adoptionMoves(weights: ["plain": 200], assignment: [:], keepingAuthored: true).isEmpty)
+    }
 }

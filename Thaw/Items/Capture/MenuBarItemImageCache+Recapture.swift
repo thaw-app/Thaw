@@ -560,9 +560,10 @@ extension MenuBarItemImageCache {
         let maxAttempts = 20
         var previousByIdentifier = [String: MenuBarItem]()
         var settledByIdentifier = [String: MenuBarItem]()
+        let deadline = ContinuousClock.now + Constants.MenuBarTuning.revealCaptureSettleBudget
 
         for attempt in 0 ..< maxAttempts {
-            guard !Task.isCancelled else { return [] }
+            guard !Task.isCancelled, ContinuousClock.now < deadline else { break }
 
             let liveItems = await MenuBarItem.getMenuBarItems(
                 on: displayID,
@@ -620,6 +621,17 @@ extension MenuBarItemImageCache {
         /// The pause between stable AX bounds and a fully rendered glyph.
         let renderSettle: @MainActor () async -> Void
         let reader: any MenuBarCaptureReading
+        /// Raised before a batch is revealed and lowered after it is concealed,
+        /// so the user sees the bar as it was while the capture sees the reveal.
+        var cover: @MainActor () -> Void = {
+            // No cover unless the caller supplies one, as in tests.
+        }
+        var uncover: @MainActor () -> Void = {
+            // Nothing to take down when no cover was raised.
+        }
+        /// Asked right before each batch's reveal, since the hiding method can
+        /// change while a pass is suspended between batches.
+        var mayReveal: @MainActor () -> Bool = { true }
     }
 
     /// Reveals concealed items a few at a time and captures each group from
@@ -674,8 +686,7 @@ extension MenuBarItemImageCache {
             hasNotch: NSScreen.screen(for: displayID)?.hasNotch ?? false
         )
         await captureRevealBatches(
-            stride(from: 0, to: items.count, by: batchSize)
-                .map { Array(items[$0 ..< min($0 + batchSize, items.count)]) },
+            items.chunks(ofCount: batchSize),
             controller: controller,
             displayID: displayID,
             admittedDisplayID: admittedDisplayID,
@@ -685,7 +696,11 @@ extension MenuBarItemImageCache {
             sources: RevealCaptureSources(
                 settledItems: { await self.waitForRevealedItems(matching: $0, displayID: displayID) },
                 renderSettle: { try? await Task.sleep(for: Constants.MenuBarTuning.layoutPrewarmRenderSettle) },
-                reader: LiveMenuBarCaptureReader()
+                reader: LiveMenuBarCaptureReader(),
+                // Captures never see Thaw's own windows, so the cover hides the reveal from the user only.
+                cover: { appState.menuBarManager.revealCover.show() },
+                uncover: { appState.menuBarManager.revealCover.hide() },
+                mayReveal: { ConcealedPrewarmGate.mayReveal(for: appState) }
             )
         )
     }
@@ -710,8 +725,10 @@ extension MenuBarItemImageCache {
         for batch in batches {
             // A reveal during a move reflows the bar under the drag.
             await moveActivity?.waitUntilIdle()
-            guard !Task.isCancelled, !skipCaptureWhileScreenLocked("revealing capture batch") else { return }
+            guard !Task.isCancelled, !skipCaptureWhileScreenLocked("revealing capture batch"),
+                  sources.mayReveal() else { return }
 
+            sources.cover()
             for item in batch {
                 controller.revealItemTemporarily(item.uniqueIdentifier)
             }
@@ -719,6 +736,7 @@ extension MenuBarItemImageCache {
                 for item in batch {
                     controller.concealTemporarilyRevealedItem(item.uniqueIdentifier)
                 }
+                sources.uncover()
             }
 
             let revealed = await sources.settledItems(batch)
@@ -860,11 +878,7 @@ extension MenuBarItemImageCache {
     ) async {
         // Before the failure reset and the reveal: a locked pass must not toggle
         // the lock screen's bar or clear strikes it did not earn back.
-        // Without Screen Recording a reveal cannot be photographed; it would only flash hidden items on the bar.
-        guard !skipCaptureWhileScreenLocked("prewarmConcealedImages"),
-              appState?.menuBarManager.sectionController != nil,
-              appState?.isPermissionGranted(.screenRecording) == true
-        else {
+        guard !skipCaptureWhileScreenLocked("prewarmConcealedImages"), ConcealedPrewarmGate.mayReveal(for: appState) else {
             return
         }
 
@@ -872,7 +886,9 @@ extension MenuBarItemImageCache {
         // other's screenshot. A queued pass whose bar closed stops here.
         await beginConcealedPrewarm()
         defer { endConcealedPrewarm() }
-        guard !Task.isCancelled, !skipCaptureWhileScreenLocked("queued prewarm") else { return }
+        // The hiding method can change while a pass waits its turn.
+        guard !Task.isCancelled, !skipCaptureWhileScreenLocked("queued prewarm"),
+              ConcealedPrewarmGate.mayReveal(for: appState) else { return }
 
         let sections = requestedSections.reduce(into: [MenuBarSection.Name]()) { result, section in
             guard section != .visible, !result.contains(section) else { return }

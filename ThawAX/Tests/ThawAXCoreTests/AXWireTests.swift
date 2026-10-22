@@ -54,6 +54,7 @@ struct AXWireTests {
             .applicationMenuFrames(pid: 42),
             .hitTest(x: 120.5, y: 12),
             .pressStatusItem(pid: 42, targetX: 300, targetY: 11, tolerance: 10),
+            .showStatusItemMenu(pid: 42, targetX: 300, targetY: 11, tolerance: 10),
             .pressHostedItem(sourcePID: 77),
         ]
         for request in requests {
@@ -191,6 +192,7 @@ struct AXWireTests {
         #expect(AXHelperRequest.hitTest(x: 0, y: 0).lane == .pointer)
         #expect(AXHelperRequest.pressStatusItem(pid: 1, targetX: 0, targetY: 0, tolerance: 10).lane == .press)
         #expect(AXHelperRequest.pressHostedItem(sourcePID: 1).lane == .press)
+        #expect(AXHelperRequest.showStatusItemMenu(pid: 1, targetX: 0, targetY: 0, tolerance: 10).lane == .press)
     }
 
     @Test

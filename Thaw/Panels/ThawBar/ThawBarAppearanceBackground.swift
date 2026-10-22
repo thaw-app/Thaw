@@ -170,6 +170,7 @@ private struct ThawBarGlassSurface: NSViewRepresentable, Equatable {
                 )
             } else {
                 regular.style = config.style.nsGlassStyle
+                MenuBarPrivateGlass.apply(config.style.privateVariant, to: regular)
                 regular.cornerRadius = config.shape.cornerRadius
                 regular.tintColor = nil
             }

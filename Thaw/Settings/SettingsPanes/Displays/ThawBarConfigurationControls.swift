@@ -77,11 +77,11 @@ struct ThawBarConfigurationControls<ExtraControls: View>: View {
             }
             .annotation { locationAnnotation }
 
-            ThawPicker("Arrangement", selection: $layout) {
-                ForEach(ThawBarLayout.allCases) { layout in
-                    Text(layout.localized).tag(layout)
-                }
-            }
+            ThawPillPicker(
+                "Arrangement",
+                selection: $layout,
+                options: ThawBarLayout.allCases.map { ThawPillPicker.Option($0, title: $0.localized, systemImage: $0.systemImage) }
+            )
             .annotation { layoutAnnotation }
 
             if layout == .grid {

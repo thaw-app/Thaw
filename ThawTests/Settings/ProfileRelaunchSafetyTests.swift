@@ -65,17 +65,8 @@ struct ProfileRelaunchSafetyTests {
         #expect(merged.applyMode == .writeOnly)
     }
 
-    @Test("Applying an old profile leaves the user's safer settings in place")
+    @Test("Applying an old profile leaves the user's safer settings in place", .scratchDefaults)
     func applyKeepsSaferSettings() throws {
-        let suiteName = "ProfileRelaunchSafetyTests.\(UUID().uuidString)"
-        let scratch = try #require(UserDefaults(suiteName: suiteName))
-        let previous = Defaults.store
-        Defaults.store = scratch
-        defer {
-            Defaults.store = previous
-            ScratchDefaults.remove(suiteName)
-        }
-
         let displaySettings = DisplaySettingsManager()
         displaySettings.confirmSpacingRelaunch = true
         displaySettings.spacingApplyMode = .writeOnly

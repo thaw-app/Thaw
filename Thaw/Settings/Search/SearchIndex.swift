@@ -41,6 +41,17 @@ nonisolated struct SearchEntry: Identifiable, @unchecked Sendable {
         switch id {
         case "layout.spacers":
             .layoutSpacers
+        // Layout's Options tab.
+        case "advanced.menuBarArrangementMode", "advanced.enableAlwaysHiddenSection", "advanced.sectionDividerStyle",
+             "advanced.enableNativeAppHiding", "advanced.enableMenuBarItemOverflow",
+             "advanced.alwaysUseAppIconForMenuBarItems", "layout.resetMenuBarLayout":
+            .layoutOptions
+        case "layout.replaceControlCenterItems":
+            .layoutAppleItems
+        case "appearance.shapeFill":
+            .appearanceInsideShape
+        case "appearance.background":
+            .appearanceBehindShape
         // The two app-wide Thaw Bar toggles sit behind the page's disclosure.
         case "general.lockThawBarPosition", "general.thawBarLocationOnHotkey", "general.openHiddenItemsInMenuBar":
             .thawBarAppWideOptions
@@ -103,7 +114,7 @@ nonisolated enum SearchIndex {
             title: "Use app icons instead of live previews",
             descriptionText: String(localized: "Show each item's app icon in the Thaw Bar and Layout instead of a live screenshot."),
             pane: .menuBarLayout,
-            section: "More layout options",
+            section: "Overflow and previews",
             keywords: ["app icon", "live preview", "screenshot", "capture", "overflow", "notch", "advanced layout controls"],
             property: .advanced("alwaysUseAppIconForMenuBarItems")
         ),
@@ -173,6 +184,11 @@ nonisolated enum SearchIndex {
         .general("thawIconPersistenceError"),
         // The radius slider shows only under Round screen corners.
         .general("screenCornerRadius"),
+        // Its switch is on Simple Mode's one page, which has no search.
+        .general("simpleModeShowsPreview"),
+        // Shown under Section divider style only while Custom is chosen; search finds that.
+        .advanced("customSectionDividerImage"),
+        .advanced("customSectionDividerIsTemplate"),
         // The Everything option of the Hiding method picker, indexed under
         // advanced.enableNativeAppHiding.
         .advanced("enableExperimentalSystemItemHiding"),

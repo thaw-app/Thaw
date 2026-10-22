@@ -15,6 +15,8 @@ nonisolated enum SettingsLinkMessage: Codable, Equatable, Sendable {
     case settingsChanged
     /// The settings process can't show this pane, so the app shows it instead.
     case openInApp(pane: String)
+    /// The app's Settings window is up, so the settings process closes its own.
+    case shownInApp
     /// The settings process moved to this pane, so the app opens on it next time.
     case pageChanged(pane: String)
     /// The updater's state, sent by the app, which runs the updater.

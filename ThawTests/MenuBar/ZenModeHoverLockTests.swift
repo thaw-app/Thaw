@@ -11,17 +11,9 @@ import Testing
 
 /// Zen Mode keeps hover from revealing hidden items until it is turned off.
 @MainActor
-@Suite("Zen Mode hover lock", .serialized)
+@Suite("Zen Mode hover lock", .serialized, .scratchDefaults)
 struct ZenModeHoverLockTests {
-    private func withManager(_ body: (MenuBarManager) throws -> Void) throws {
-        let suite = "ZenModeHoverLockTests.\(UUID().uuidString)"
-        let store = try #require(UserDefaults(suiteName: suite))
-        let previousStore = Defaults.store
-        Defaults.store = store
-        defer {
-            Defaults.store = previousStore
-            ScratchDefaults.remove(suite)
-        }
+    private func withManager(_ body: (MenuBarManager) throws -> Void) rethrows {
         try body(AppState().menuBarManager)
     }
 

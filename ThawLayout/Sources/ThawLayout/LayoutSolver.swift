@@ -371,8 +371,10 @@ public nonisolated enum LayoutSolver {
         // back to namespace com.apple.controlcenter, which prevents
         // matching against savedSectionOrder (real bundle IDs). The
         // next cache pass with resolved sourcePIDs will handle
-        // relocation safely.
-        if hideableLeftmost.contains(where: { $0.sourcePID == nil }) {
+        // relocation safely. Only those items wait; the others are still
+        // judged on this pass.
+        let resolvedLeftmost = hideableLeftmost.filter { $0.sourcePID != nil }
+        if resolvedLeftmost.isEmpty, !hideableLeftmost.isEmpty {
             return .noop(reason: .unresolvedSourcePID)
         }
 
@@ -384,7 +386,7 @@ public nonisolated enum LayoutSolver {
             }
         }
 
-        let candidate = hideableLeftmost.first { item in
+        let candidate = resolvedLeftmost.first { item in
             let identifier = item.uniqueIdentifier
 
             // Items with a saved section belong to restoreItemsToSavedSections,

@@ -10,7 +10,7 @@ import ThawUI
 
 /// The About page: who Thaw is and which build this is, then one card for
 /// updates, then news and help actions. Project links and copyright form a
-/// quiet footer; badges and live repository statistics stay on the website.
+/// quiet footer; Floe and the community links sit in the actions' menu.
 struct AboutSettingsPane: View {
     @Bindable var updatesManager: UpdatesManager
     @Environment(AppState.self) private var appState
@@ -86,18 +86,21 @@ struct AboutSettingsPane: View {
 
     // MARK: Details
 
-    /// Labels right-aligned against a shared edge, values in monospace so a
-    /// hash and a build number line up and can be selected and pasted.
+    /// One line, monospaced so it can be selected and pasted. The copy button beside
+    /// it copies the full block a bug report asks for.
     private var details: some View {
         HStack(alignment: .firstTextBaseline, spacing: 10) {
-            Grid(alignment: .leadingFirstTextBaseline, horizontalSpacing: 10, verticalSpacing: 6) {
-                detailRow("Version", value: Constants.versionString, isPrimary: true)
-                detailRow("Build", value: Constants.buildString)
-                detailRow("Commit", value: Constants.commitString)
-            }
-            .font(.callout)
-            .accessibilityElement(children: .combine)
-            // Beside what it copies.
+            // The spoken label goes on a plain container. Selectable text is an AppKit
+            // text view underneath, and a label set on it directly makes SwiftUI ask
+            // that view for the label it is supplying, which recursed until the stack
+            // ran out when VoiceOver or another accessibility client read About.
+            Text(verbatim: "\(Constants.versionString) (\(Constants.buildString)) · \(Constants.commitString)")
+                .font(.callout)
+                .monospaced()
+                .foregroundStyle(ThawInk.supporting)
+                .textSelection(.enabled)
+                .accessibilityElement(children: .ignore)
+                .accessibilityLabel("Version \(Constants.versionString), build \(Constants.buildString), commit \(Constants.commitString)")
             Button {
                 copyVersionInfo()
             } label: {
@@ -111,23 +114,10 @@ struct AboutSettingsPane: View {
         }
     }
 
-    private func detailRow(_ label: LocalizedStringKey, value: String, isPrimary: Bool = false) -> some View {
-        GridRow {
-            Text(label)
-                .foregroundStyle(ThawInk.supporting)
-                .gridColumnAlignment(.trailing)
-            Text(verbatim: value)
-                .monospaced()
-                .fontWeight(isPrimary ? .medium : .regular)
-                .foregroundStyle(isPrimary ? Color.primary : ThawInk.supporting)
-                .textSelection(.enabled)
-        }
-    }
-
     // MARK: Actions
 
     private var actions: some View {
-        HStack(spacing: 8) {
+        ThawActionGroup {
             Button("What’s New") {
                 appState.openWindow(.whatsNew)
             }
@@ -145,10 +135,11 @@ struct AboutSettingsPane: View {
             }
             .help("More about \(Constants.displayName)")
             .accessibilityLabel("More about \(Constants.displayName)")
-            .background { MoreMenuAnchorView(anchor: menuAnchor) }
+            // The anchor only places the menu, so it stays out of the accessibility
+            // tree, where it could stand in for the labeled button.
+            .background { MoreMenuAnchorView(anchor: menuAnchor).accessibilityHidden(true) }
         }
-        .buttonStyle(.settingsGlass)
-        .controlSize(.regular)
+        .buttonStyle(.thawGrouped)
     }
 
     private var footer: some View {
@@ -171,10 +162,7 @@ struct AboutSettingsPane: View {
             .buttonStyle(.plain)
             .fixedSize(horizontal: false, vertical: true)
 
-            VStack(spacing: ThawSpacing.tight) {
-                Text(Constants.copyrightString)
-                Text(verbatim: "© 2026 Thaw-app")
-            }
+            Text(Constants.copyrightString)
         }
         .font(.footnote)
         .foregroundStyle(ThawInk.supporting)
@@ -198,11 +186,12 @@ struct AboutSettingsPane: View {
         let appState = appState
         let openURL = openURL
         menu.addItem(item(String(localized: "Frequent Issues"), "questionmark.circle") { openURL(Constants.frequentIssuesURL) })
+        menu.addItem(item(String(localized: "Show Welcome Screens Again"), "hand.wave") { appState.replayOnboarding() })
         menu.addItem(.separator())
         menu.addItem(item(String(localized: "Join the Discord"), "bubble.left.and.bubble.right") { openURL(Constants.discordURL) })
         menu.addItem(item(String(localized: "Help Translate"), "globe") { openURL(Constants.translateURL) })
         menu.addItem(.separator())
-        menu.addItem(item(String(localized: "Acknowledgements"), "text.book.closed") { appState.openWindow(.acknowledgements) })
+        menu.addItem(item("Floe", "snowflake") { openURL(Constants.floeURL) })
         guard let anchor = menuAnchor.view else { return }
         // The anchor's own coordinate system is not flipped, so minY is its
         // bottom edge and the menu opens just below the button.
@@ -211,28 +200,20 @@ struct AboutSettingsPane: View {
 
     // MARK: Updates
 
-    /// The pickers are borderless explicitly: outside a Form they default to bordered.
+    /// The choices are pills, short enough to sit beside their labels.
     /// Automatic updates is the same choice the Privacy pane lists with the network calls.
     private var updates: some View {
         VStack(spacing: 0) {
             updateRow("Update channel") {
-                Picker("Update channel", selection: $updatesManager.updateChannel) {
-                    ForEach(UpdateChannel.selectable) { channel in
-                        Text(channel.localized).tag(channel)
-                    }
-                }
-                .pickerStyle(.menu)
-                .buttonStyle(.borderless)
+                ThawPillPicker("Update channel", selection: $updatesManager.updateChannel, values: UpdateChannel.selectable, title: \.localized)
             }
             Divider()
             updateRow("Automatic updates") {
-                Picker("Automatic updates", selection: $updatesManager.automaticUpdates) {
-                    ForEach(AutomaticUpdates.allCases) { mode in
-                        Text(mode.localized).tag(mode)
-                    }
-                }
-                .pickerStyle(.menu)
-                .buttonStyle(.borderless)
+                ThawPillPicker(
+                    "Automatic updates",
+                    selection: $updatesManager.automaticUpdates,
+                    options: AutomaticUpdates.allCases.map { ThawPillPicker.Option($0, title: $0.shortLocalized, help: $0.localized) }
+                )
             }
             Divider()
             updateRow(updateFootnote, isSecondary: true) {

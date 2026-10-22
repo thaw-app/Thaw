@@ -28,7 +28,7 @@ struct ProfileLayoutVerdictTests {
     /// directory, so nothing reads or rewrites the tester's real profiles.
     private func withManager<T>(_ body: (ProfileManager) throws -> T) throws -> T {
         let tmp = FileManager.default.temporaryDirectory
-            .appendingPathComponent("ProfileLayoutVerdictTests.\(UUID().uuidString)", isDirectory: true)
+            .appendingPathComponent(ScratchDefaults.name("ProfileLayoutVerdictTests"), isDirectory: true)
         try FileManager.default.createDirectory(at: tmp, withIntermediateDirectories: true)
         defer { try? FileManager.default.removeItem(at: tmp) }
         return try body(ProfileManager(profilesDirectory: tmp))

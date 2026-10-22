@@ -134,7 +134,7 @@ struct ControlCenterReplacementsSection: View {
                         get: { settings.controlCenterReplacements.isReplaced(item) },
                         set: { settings.controlCenterReplacements.setReplaced(item, $0) }
                     ))
-                    .toggleStyle(.checkbox)
+                    .toggleStyle(.thawCheckbox)
                 }
             }
         }

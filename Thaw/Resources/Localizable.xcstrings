@@ -313,6 +313,15 @@
     "%@ Groups always move together, so no items were moved." : {
       "comment" : "Explanation shown when a whole-group move was refused"
     },
+    "%@ Is Already Running" : {
+
+    },
+    "%@ keeps a record of the apps it switches off in System Settings %@ Menu Bar, and that record can't be read. Until you set it aside, %@ won't show or hide apps that way." : {
+
+    },
+    "%@ keeps the file under a new name and starts a new record. Apps it hid before stay switched off, and you can choose which ones to show afterwards." : {
+
+    },
     "%@ The groups are in the menu bar now, but they will not come back after a restart." : {
 
     },
@@ -367,6 +376,9 @@
           }
         }
       }
+    },
+    "%@ are running." : {
+
     },
     "%@ can check for updates automatically. You can also check manually from the menu bar or Settings %@ About." : {
       "localizations" : {
@@ -662,6 +674,9 @@
     "%@ couldn’t load the release notes." : {
 
     },
+    "%@ didn’t quit, so this copy of %@ will quit instead." : {
+
+    },
     "%@ failed with exit status %d." : {
       "localizations" : {
         "en" : {
@@ -946,6 +961,9 @@
       }
     },
     "%@ is disconnected. You can still edit its saved configuration; it applies when this display reconnects." : {
+
+    },
+    "%@ stays in the menu bar. macOS shows this app as a whole, and another of its items is in Visible. Right-click to move them together." : {
 
     },
     "%@ is not in the menu bar. macOS hides this app as a whole, and another of its items is hidden. Right-click to move them together." : {
@@ -4500,6 +4518,9 @@
     "An early idea; the builder and the readings can change between releases." : {
 
     },
+    "Another Copy of %@ Is Running" : {
+
+    },
     "App" : {
       "comment" : "Section header on the Simple Mode page grouping app-level rows such as launch at login."
     },
@@ -7806,6 +7827,18 @@
           }
         }
       }
+    },
+    "Couldn’t Quit %@" : {
+
+    },
+    "Couldn’t Quit the Other Copies" : {
+
+    },
+    "Couldn’t Quit the Other Copy" : {
+
+    },
+    "Can't read the record of hidden apps" : {
+
     },
     "Couldn’t restart the menu bar" : {
 
@@ -20228,6 +20261,9 @@
     "Keep %@ up to date?" : {
 
     },
+    "Keep Hidden" : {
+
+    },
     "Keep search" : {
       "comment" : "A toggle to keep a search query open.",
       "localizations" : {
@@ -25712,6 +25748,9 @@
     "One shape around the app menus, one around the icons." : {
 
     },
+    "Only one copy of %@ can manage the menu bar at a time." : {
+
+    },
     "Opacity" : {
       "comment" : "A label for the opacity of the menu bar.",
       "localizations" : {
@@ -26290,6 +26329,9 @@
           }
         }
       }
+    },
+    "Other Copies of %@ Are Running" : {
+
     },
     "Other built-in items are managed separately, and third-party items can always be hidden.\n\nWhile the Thaw Bar is off, hidden Clock, Control Center and Siri stay pinned to the right side of the layout. You can still switch them between visible and hidden." : {
 
@@ -27614,6 +27656,9 @@
         }
       }
     },
+    "Quit %@ and Continue" : {
+
+    },
     "Quit %@ without granting access" : {
 
     },
@@ -27629,6 +27674,15 @@
     "Quit Control Center and delete its preference files so the state of Apple's menu bar items can rebuild." : {
 
     },
+    "Quit It and Continue" : {
+
+    },
+    "Quit Them and Continue" : {
+
+    },
+    "Quit This Copy" : {
+
+    },
     "Quit and Clear Cache" : {
 
     },
@@ -27639,6 +27693,15 @@
 
     },
     "Quit and clear cache?" : {
+
+    },
+    "Quit this copy, or quit %@ and continue opening this one." : {
+
+    },
+    "Quit this copy, or quit the other copy and continue opening this one." : {
+
+    },
+    "Quit this copy, or quit them and continue opening this one." : {
 
     },
     "Radius" : {
@@ -29349,6 +29412,9 @@
 
     },
     "Restore %@ settings to their defaults. Saved profiles, allowed apps, and user data are not deleted. This cannot be undone." : {
+
+    },
+    "Restore apps %@ hid" : {
 
     },
     "Restore every %@ setting to its default value." : {
@@ -31281,6 +31347,18 @@
     "Separate looks for Light and Dark Mode" : {
 
     },
+    "Set Aside" : {
+
+    },
+    "Set Aside Record…" : {
+
+    },
+    "Set aside the unreadable record?" : {
+
+    },
+    "Set Aside…" : {
+
+    },
     "Set Menu Bar Profile" : {
       "comment" : "Title and description of the Focus Filter.",
       "localizations" : {
@@ -32185,6 +32263,9 @@
           }
         }
       }
+    },
+    "Show Selected" : {
+
     },
     "Show Swap Bar" : {
 
@@ -33497,6 +33578,9 @@
 
     },
     "Shown when %@ has no picture of the item, which is always the case for a Thaw Bar Only item." : {
+
+    },
+    "Shown with %@’s other items" : {
 
     },
     "Shown, hidden and always hidden" : {
@@ -35040,6 +35124,9 @@
     "Thaw Bar Only items" : {
 
     },
+    "Thaw can't read its record of the apps it hid" : {
+
+    },
     "Thaw can’t read Control Center’s settings." : {
 
     },
@@ -35056,6 +35143,12 @@
 
     },
     "Thaw keeps items in the order you set in Layout. To move another app’s item it sometimes has to drag it for you, and your mouse is briefly unavailable while it does." : {
+
+    },
+    "Thaw keeps the file under a new name. Afterwards it can't tell which switched-off apps it hid, so you choose which ones to show and none are selected for you." : {
+
+    },
+    "Thaw moved the unreadable record to:" : {
 
     },
     "Thaw reads a %lld × %lld pt band at the top of the display. Nothing else on screen is captured." : {
@@ -35803,6 +35896,12 @@
         }
       }
     },
+    "The file that lists which apps Thaw switched off in System Settings → Menu Bar is damaged or was written by a version this one can't read. Until it is set aside, Thaw can't show which apps it hid." : {
+
+    },
+    "The hiding method can change again once the unreadable record is set aside." : {
+
+    },
     "The Lab" : {
       "comment" : "Sidebar and search title of The Lab pane."
     },
@@ -36107,6 +36206,9 @@
     "The other center symbols are decorative." : {
 
     },
+    "The other copy of %@ is still running, so this copy will quit instead." : {
+
+    },
     "The panel opens in the middle of the screen, the way Spotlight does, showing the items you used recently until you start typing." : {
 
     },
@@ -36177,6 +36279,9 @@
 
     },
     "The widget preview reads connection type from macOS locally. It does not contact a server or send network details. Monitoring runs only while the widget item is enabled in Widgets." : {
+
+    },
+    "These apps are switched off in System Settings %@ Menu Bar. An older version of %@ may have switched them off, or you may have, and %@ can't tell which. Select the ones you want back in the menu bar." : {
 
     },
     "These are sample readings." : {

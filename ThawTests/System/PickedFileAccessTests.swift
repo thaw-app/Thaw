@@ -18,10 +18,10 @@ struct PickedFileAccessTests {
 
     /// Runs body with a property list in a scratch folder and an empty scratch defaults suite.
     private func withFixture(_ body: (URL, UserDefaults) throws -> Void) throws {
-        let folder = FileManager.default.temporaryDirectory
-            .appendingPathComponent("PickedFileAccessTests.\(UUID().uuidString)", isDirectory: true)
+        // ScratchDefaults.name is already a full path in the temporary folder.
+        let folder = URL(fileURLWithPath: ScratchDefaults.name("PickedFileAccessTests"), isDirectory: true)
         try FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
-        let suiteName = "PickedFileAccessTests.\(UUID().uuidString)"
+        let suiteName = ScratchDefaults.name("PickedFileAccessTests")
         let defaults = try #require(UserDefaults(suiteName: suiteName))
         defer {
             ScratchDefaults.remove(suiteName)

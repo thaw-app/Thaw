@@ -38,4 +38,40 @@ struct AutomationSummaryTests {
         #expect(AutomationSummary.script(path: home + "g/a.sh") == home + "g/a.sh")
         #expect(AutomationSummary.script(path: "/opt/a.sh") == "/opt/a.sh")
     }
+
+    private func profile(_ name: String, display: String? = nil, space: String? = nil) -> ProfileMetadata {
+        ProfileMetadata(
+            id: UUID(), name: name, createdAt: .now, modifiedAt: .now,
+            associatedDisplayUUID: display.map { _ in UUID().uuidString }, associatedDisplayName: display,
+            associatedSpaceKey: space.map { _ in UUID().uuidString }, associatedSpaceName: space
+        )
+    }
+
+    @Test("Each profile's displays and Spaces become the summary under the list")
+    func assignmentsOfProfiles() {
+        let assignments = AutomationSummary.assignments(of: [
+            profile("Work", display: "Studio Display", space: "Desktop 2"),
+            profile("Travel"),
+        ])
+        #expect(assignments == [
+            .init(profile: "Work", place: "Studio Display"),
+            .init(profile: "Work", place: "Desktop 2"),
+        ])
+    }
+
+    @Test("A row says what switches to its profile, or that only you do")
+    func rowSummary() {
+        #expect(AutomationSummary.switches(of: profile("Work", display: "Studio Display", space: "Desktop 2")) == "Studio Display · Desktop 2")
+        #expect(AutomationSummary.switches(of: profile("Home", display: "Built-in")) == "Built-in")
+        #expect(AutomationSummary.switches(of: profile("Travel")) == "Manually or by shortcut")
+    }
+
+    @Test("A display or Space saved without a name still counts")
+    func unnamedPlaces() {
+        var unnamed = profile("Desk")
+        unnamed.associatedDisplayUUID = UUID().uuidString
+        unnamed.associatedSpaceKey = "space-1"
+        #expect(AutomationSummary.switches(of: unnamed) == "a display · a Space")
+        #expect(AutomationSummary.assignments(of: [unnamed]).map(\.place) == ["a display", "a Space"])
+    }
 }

@@ -66,6 +66,30 @@ struct OpaquePerimeterTests {
         #expect(image.hasOpaquePerimeter())
     }
 
+    @Test("the RGBA8 bitmap keeps the image's size and premultiplied bytes")
+    func rgba8FullSize() throws {
+        let image = try Self.rgba(width: 6, height: 3) { _, _ in (128, 0, 0, 128) }
+        let drawn = image.withPremultipliedRGBA8 { bytes, bytesPerRow in
+            (count: bytes.count, bytesPerRow: bytesPerRow, first: Array(bytes.prefix(4)))
+        }
+        let result = try #require(drawn)
+        #expect(result.bytesPerRow == 24)
+        #expect(result.count == 72)
+        #expect(result.first == [128, 0, 0, 128])
+    }
+
+    @Test("a wide image is scaled down to maximumWidth with its aspect ratio")
+    func rgba8Downscaled() throws {
+        let image = try Self.rgba(width: 40, height: 10) { _, _ in (255, 255, 255, 255) }
+        let drawn = image.withPremultipliedRGBA8(maximumWidth: 8) { bytes, bytesPerRow in
+            (rows: bytes.count / bytesPerRow, bytesPerRow: bytesPerRow)
+        }
+        let result = try #require(drawn)
+        #expect(result.bytesPerRow == 32)
+        #expect(result.rows == 2)
+        #expect(image.withPremultipliedRGBA8(maximumWidth: 0) { _, _ in true } == nil)
+    }
+
     // MARK: - Fixture
 
     private static func rgba(

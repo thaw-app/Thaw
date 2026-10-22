@@ -17,6 +17,7 @@ enum SettingsSearchNavigation {
         query: inout String
     ) {
         navigationState.requestedSettingsDisclosure = entry.disclosure
+        navigationState.requestedSettingsSection = entry.sectionText
         navigationState.settingsNavigationIdentifier = entry.pane
         query = ""
     }
@@ -29,17 +30,31 @@ enum SettingsSearchNavigation {
             return
         }
         navigationState.requestedSettingsDisclosure = nil
+        navigationState.requestedSettingsSection = nil
         navigationState.settingsNavigationIdentifier = pane
     }
 
-    static func consumeDisclosure(
-        _ disclosure: AppNavigationState.SettingsDisclosure,
-        navigationState: AppNavigationState
-    ) -> Bool {
-        guard navigationState.requestedSettingsDisclosure == disclosure else {
-            return false
+    /// The requested section, once, if tabFor finds a tab holding it.
+    static func consumeSection<Tab>(
+        navigationState: AppNavigationState,
+        tabFor: (String) -> Tab?
+    ) -> Tab? {
+        guard let section = navigationState.requestedSettingsSection, let tab = tabFor(section) else {
+            return nil
+        }
+        navigationState.requestedSettingsSection = nil
+        return tab
+    }
+
+    /// The requested disclosure's tab, once, if tabFor finds one.
+    static func consumeDisclosure<Tab>(
+        navigationState: AppNavigationState,
+        tabFor: (AppNavigationState.SettingsDisclosure) -> Tab?
+    ) -> Tab? {
+        guard let disclosure = navigationState.requestedSettingsDisclosure, let tab = tabFor(disclosure) else {
+            return nil
         }
         navigationState.requestedSettingsDisclosure = nil
-        return true
+        return tab
     }
 }

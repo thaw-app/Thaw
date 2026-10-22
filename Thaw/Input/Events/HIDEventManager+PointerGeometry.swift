@@ -109,15 +109,14 @@ extension HIDEventManager {
         )
     }
 
-    /// macOS 27 fallback when the bounds lookup table is empty or stale.
-    private func isMouseInsideManagedItemBounds(
-        appState: AppState,
-        at mouseLocation: CGPoint
-    ) -> Bool {
+    /// The cached item drawn under mouseLocation, if any. Also the macOS 27
+    /// fallback when the bounds lookup table is empty or stale.
+    func managedItem(appState: AppState, at mouseLocation: CGPoint?) -> MenuBarItem? {
+        guard let mouseLocation else { return nil }
         let controller = appState.menuBarManager.sectionController
         let effectivelyConcealed = controller.effectivelyConcealedIdentifiers
         let context = Self.displayContext(for: mouseLocation)
-        return appState.itemManager.managedItems.contains { item in
+        return appState.itemManager.managedItems.first { item in
             guard let bounds = MirroredBarGeometry.drawnFrame(
                 item.bounds,
                 on: context.destination,
@@ -147,7 +146,7 @@ extension HIDEventManager {
             return true
         }
 
-        if isMouseInsideManagedItemBounds(appState: appState, at: mouseLocation) {
+        if managedItem(appState: appState, at: mouseLocation) != nil {
             return true
         }
 
@@ -278,12 +277,12 @@ extension HIDEventManager {
             ),
             // The live window frame: controlItem.frame is debounced and can be
             // stale after the context menu closes, double-firing show/toggle.
-            let iconFrame = visibleSection.controlItem.window?.frame,
+            let iconWindow = visibleSection.controlItem.window,
             let mouseLocation = MouseHelpers.locationAppKit
         else {
             return false
         }
-        return iconFrame.contains(mouseLocation)
+        return ControlItemHitColumn.appKit(iconWindow.frame, screenMaxY: iconWindow.screen?.frame.maxY ?? iconWindow.frame.maxY).contains(mouseLocation)
     }
 
     /// Whether the cursor is in the app-menu region click-through uses, or nil

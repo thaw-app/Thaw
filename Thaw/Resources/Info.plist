@@ -30,6 +30,8 @@
 	<string>https://discord.gg/KDfWjWDnR4</string>
 	<key>ThawDonateURL</key>
 	<string>https://github.com/sponsors/stonerl</string>
+	<key>ThawFloeURL</key>
+	<string>https://github.com/thaw-app/Floe</string>
 	<key>ThawMenuBarItemSpacingExecutableURI</key>
 	<string>file:///usr/bin/env</string>
 	<key>ThawRepositoryURL</key>

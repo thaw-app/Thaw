@@ -10,14 +10,15 @@ import MenuBarModel
 // MARK: - Split Apps
 
 extension MenuBarItemManager {
-    /// The concealed section an item's app pulls it into, or nil when the
-    /// item is shown or its app is not split.
-    func sectionHidingItemWithItsApp(_ item: MenuBarItem, appState: AppState) -> MenuBarSection.Name? {
-        let controller = appState.menuBarManager.sectionController
-        guard controller.authoredSection(for: item.uniqueIdentifier) == .visible else { return nil }
-        return AppSiblingSections.concealingSiblingSection(
+    /// Where macOS puts an item of a split app under the hiding that is
+    /// running, or nil when its section in Layout holds.
+    func appWideOverride(for item: MenuBarItem, appState: AppState) -> AppWideOverride? {
+        let menuBarManager = appState.menuBarManager
+        let controller = menuBarManager.sectionController
+        return AppSiblingSections.appWideOverride(
             of: item,
             among: itemCache.managedItems,
+            rule: AppWideHidingRule(nativeAppHidingActive: menuBarManager.nativeAppHidingExperiment.isActive),
             section: { controller.authoredSection(for: $0.uniqueIdentifier) }
         )
     }

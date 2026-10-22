@@ -23,6 +23,8 @@ struct DisplaySettingsPane: View {
     @State var errorMessage: String?
     @State var selectedDisplayID: String?
 
+    @State private var tab = DisplaysTab.spacing
+
     var body: some View {
         ThawForm {
             // didSet cannot throw; surface write failures so unsaved values do not silently vanish on relaunch.
@@ -42,24 +44,32 @@ struct DisplaySettingsPane: View {
                 }
             }
 
-            // Keep confirmation with spacing because it governs how those edits are committed.
-            ThawSection("Menu bar item spacing") {
-                globalSection()
-                confirmSpacingRelaunchControls
-            }
+            SettingsPaneTabs(
+                selection: $tab,
+                tabs: DisplaysTab.allCases,
+                tabForSection: DisplaysTab.init(section:)
+            )
 
-            if selectedDisplay != nil {
-                ThawSection {
-                    Text("Per display")
-                } content: {
-                    perDisplayControls
+            switch tab {
+            case .spacing:
+                // The relaunch confirmation sits with spacing, since it decides when spacing edits apply.
+                ThawSection("Menu bar item spacing") {
+                    globalSection()
+                    confirmSpacingRelaunchControls
                 }
+                if selectedDisplay != nil {
+                    ThawSection {
+                        Text("Per display")
+                    } content: {
+                        perDisplayControls
+                    }
+                }
+            case .spaces:
+                // Spaces belong to displays in macOS, so their controls follow the display's.
+                SpacesControlsContent(activeSpaceID: UInt64(bitPattern: Int64(appState.activeSpace.spaceID)))
+            case .wideDisplays:
+                WideDisplayRuleSection(rule: displaySettings.wideDisplayRule)
             }
-
-            WideDisplayRuleSection(rule: displaySettings.wideDisplayRule)
-
-            // Spaces belong to displays in macOS, so their controls follow the display's.
-            SpacesControlsContent(activeSpaceID: UInt64(bitPattern: Int64(appState.activeSpace.spaceID)))
         }
         .alert(
             String(localized: "Apply spacing change?"),
@@ -130,6 +140,38 @@ private struct WideDisplayRuleSection: View {
                     Text("At least")
                 }
             }
+        }
+    }
+}
+
+nonisolated enum DisplaysTab: CaseIterable, ThawTab {
+    case spacing
+    case spaces
+    case wideDisplays
+
+    /// The tab holding a search result's section.
+    init?(section: String) {
+        switch section {
+        case "Menu bar item spacing": self = .spacing
+        case "This Space", "All Spaces": self = .spaces
+        case "Wide displays": self = .wideDisplays
+        default: return nil
+        }
+    }
+
+    var title: LocalizedStringKey {
+        switch self {
+        case .spacing: "Spacing"
+        case .spaces: "Spaces"
+        case .wideDisplays: "Wide Displays"
+        }
+    }
+
+    var systemImage: String {
+        switch self {
+        case .spacing: "arrow.left.and.right.text.vertical"
+        case .spaces: "rectangle.split.3x1"
+        case .wideDisplays: "display"
         }
     }
 }

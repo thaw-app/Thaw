@@ -280,6 +280,7 @@ private struct MenuBarLayoutEditorContentView: View {
             Button("Done") {
                 onDone?()
             }
+            .buttonStyle(.thawProminent)
             .keyboardShortcut(.defaultAction)
 
             Spacer()

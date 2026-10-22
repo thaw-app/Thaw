@@ -26,6 +26,20 @@ nonisolated struct ProfileMetadata: Codable, Identifiable, Hashable {
     /// The user-facing label for the associated Space. Spaces have no system
     /// name, so this is the label current when the association was made.
     var associatedSpaceName: String?
+    /// Whether drags and Layout edits are saved into this profile while it is
+    /// active. Nil in manifests written before the switch, which reads as on.
+    var keepsLayoutChangesSetting: Bool?
+    /// Whether Thaw applies this profile's layout again when it starts with
+    /// the profile already active. Nil reads as off.
+    var reappliesAtLaunchSetting: Bool?
+
+    var keepsLayoutChanges: Bool {
+        keepsLayoutChangesSetting ?? true
+    }
+
+    var reappliesAtLaunch: Bool {
+        reappliesAtLaunchSetting ?? false
+    }
 }
 
 // MARK: - GeneralSettingsSnapshot
@@ -523,6 +537,9 @@ nonisolated struct ProfileExportEntry: Codable {
     /// never match locally, so importing one is harmless rather than useful.
     var associatedSpaceKey: String?
     var associatedSpaceName: String?
+    /// The profile's layout switches. Nil in files exported before them.
+    var keepsLayoutChanges: Bool?
+    var reappliesAtLaunch: Bool?
 }
 
 /// Wrapper for exporting multiple profiles as a single file.

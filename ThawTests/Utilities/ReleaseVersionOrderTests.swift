@@ -26,6 +26,17 @@ struct ReleaseVersionOrderTests {
         #expect(!ReleaseVersionOrder.precedes(later, earlier))
     }
 
+    @Test("The prerelease tag drops the core and the build", arguments: [
+        ("3.0.0-alpha.10", "alpha.10"),
+        ("3.0.0-alpha.10+116", "alpha.10"),
+        ("2.0.1-rc.2", "rc.2"),
+        ("3.0.0", nil),
+        ("3.0.0+116", nil),
+    ] as [(String, String?)])
+    func prereleaseTag(version: String, tag: String?) {
+        #expect(ReleaseVersionOrder.prereleaseTag(of: version).map(String.init) == tag)
+    }
+
     @Test("A version does not precede itself")
     func equalVersions() {
         #expect(!ReleaseVersionOrder.precedes("3.0.0-alpha.10", "3.0.0-alpha.10"))

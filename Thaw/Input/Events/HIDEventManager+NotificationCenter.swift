@@ -62,16 +62,15 @@ extension HIDEventManager {
     }
 
     /// The one way concealment is released for an activation and put back:
-    /// cover the bar, lift the restriction, and hold layout still meanwhile.
+    /// lift the restriction and hold layout still meanwhile. No cover: the bar
+    /// changes its own look as Notification Center opens, so a band painted
+    /// from the bar as it was shows up as a discoloured strip.
     private func notificationCenterLease() -> (begin: () -> NotificationCenterActivation.Lease, restore: () -> Void)? {
         guard let appState else { return nil }
         let controller = appState.menuBarManager.sectionController
         return (
             begin: {
-                let cover = appState.menuBarManager.clockBridgeCover
-                cover.show()
                 guard controller.beginClockActivationBridge(scope: .global) else {
-                    cover.hide(immediately: true)
                     return .unavailable
                 }
                 appState.itemManager.beginNotificationCenterLayoutSuspension()
@@ -80,7 +79,6 @@ extension HIDEventManager {
             restore: {
                 controller.endClockActivationBridge()
                 appState.itemManager.endNotificationCenterLayoutSuspension()
-                appState.menuBarManager.clockBridgeCover.hide()
             }
         )
     }

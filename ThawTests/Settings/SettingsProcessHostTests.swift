@@ -5,13 +5,15 @@
 //  Copyright (Thaw) © 2026 Toni Förster
 //  Licensed under the GNU GPLv3
 
-import Foundation
+import AppKit
 import Testing
 @testable import Thaw
 
 /// Waits on the main actor until the condition holds, or gives up after the timeout.
+/// It returns as soon as the condition holds, so the generous limit only matters
+/// on a busy runner, where pipe messages can take seconds.
 @MainActor
-func settingsLinkWait(timeout: Duration = .seconds(3), until condition: () -> Bool) async -> Bool {
+func settingsLinkWait(timeout: Duration = .seconds(15), until condition: () -> Bool) async -> Bool {
     let clock = ContinuousClock()
     let deadline = clock.now + timeout
     while !condition() {
@@ -173,6 +175,37 @@ struct SettingsProcessHostTests {
         child.failsToLaunch = false
         #expect(host.show(pane: "General", simpleMode: false))
         #expect(child.launches.count == 1)
+    }
+
+    @Test("The app's window tells the process it's up only once it becomes key")
+    func appWindowWaitsForKey() async throws {
+        let host = host()
+        let window = NSWindow(contentRect: .zero, styleMask: [], backing: .buffered, defer: true)
+        host.appWindowOpened(window)
+        #expect(host.show(pane: "General", simpleMode: false))
+        host.appWindowOpened(window)
+        try await Task.sleep(for: .milliseconds(100))
+        #expect(!child.receivedMessages.contains(.shownInApp), "Nothing is sent before the window is key")
+        NotificationCenter.default.post(name: NSWindow.didBecomeKeyNotification, object: window)
+        #expect(await settingsLinkWait { child.receivedMessages.contains(.shownInApp) })
+        #expect(child.receivedMessages.count { $0 == .shownInApp } == 1)
+    }
+
+    @Test("A later app window replaces the wait for an earlier one")
+    func laterAppWindowReplacesWait() async throws {
+        let host = host()
+        let first = NSWindow(contentRect: .zero, styleMask: [], backing: .buffered, defer: true)
+        let second = NSWindow(contentRect: .zero, styleMask: [], backing: .buffered, defer: true)
+        #expect(host.show(pane: "General", simpleMode: false))
+        host.appWindowOpened(first)
+        host.appWindowOpened(second)
+        try await Task.sleep(for: .milliseconds(50))
+        NotificationCenter.default.post(name: NSWindow.didBecomeKeyNotification, object: first)
+        try await Task.sleep(for: .milliseconds(100))
+        #expect(!child.receivedMessages.contains(.shownInApp), "The earlier window no longer counts")
+        NotificationCenter.default.post(name: NSWindow.didBecomeKeyNotification, object: second)
+        #expect(await settingsLinkWait { child.receivedMessages.contains(.shownInApp) })
+        #expect(child.receivedMessages.count { $0 == .shownInApp } == 1)
     }
 
     @Test("Once the process closes its end, nothing more is sent to it")

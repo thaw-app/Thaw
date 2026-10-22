@@ -10,26 +10,11 @@ import Testing
 @testable import Thaw
 
 @MainActor
-@Suite("System item hiding compatibility", .serialized)
+@Suite("System item hiding compatibility", .serialized, .scratchDefaults)
 struct SystemItemHidingCompatibilityTests {
-    private func withScratchDefaults(_ body: () throws -> Void) throws {
-        let suiteName = "SystemItemHidingCompatibilityTests.\(UUID().uuidString)"
-        let scratch = try #require(UserDefaults(suiteName: suiteName))
-        let previous = Defaults.store
-        let previousCenter = SettingsURIHandler.settingsChangeNotificationCenter
-        Defaults.store = scratch
-        SettingsURIHandler.settingsChangeNotificationCenter = NotificationCenter()
-        defer {
-            SettingsURIHandler.settingsChangeNotificationCenter = previousCenter
-            Defaults.store = previous
-            ScratchDefaults.remove(suiteName)
-        }
-        try body()
-    }
-
     @Test("Enabling native hiding turns off system item hiding")
     func nativeHidingTakesPrecedence() throws {
-        try withScratchDefaults {
+        try withPrivateSettingsChangeCenter {
             let settings = AdvancedSettings()
             settings.enableExperimentalSystemItemHiding = true
             try #require(settings.enableExperimentalSystemItemHiding)
@@ -45,7 +30,7 @@ struct SystemItemHidingCompatibilityTests {
 
     @Test("System item hiding cannot override native hiding")
     func conflictingWriteIsRejected() throws {
-        try withScratchDefaults {
+        try withPrivateSettingsChangeCenter {
             let settings = AdvancedSettings()
             settings.enableNativeAppHiding = true
 
@@ -59,7 +44,7 @@ struct SystemItemHidingCompatibilityTests {
 
     @Test("Disabling native hiding does not re-enable system item hiding")
     func disablingNativeHidingRequiresExplicitOptIn() throws {
-        try withScratchDefaults {
+        try withPrivateSettingsChangeCenter {
             let settings = AdvancedSettings()
             settings.enableExperimentalSystemItemHiding = true
             settings.enableNativeAppHiding = true
@@ -76,7 +61,7 @@ struct SystemItemHidingCompatibilityTests {
 
     @Test("Profiles cannot enable system item hiding over native hiding", arguments: [false, true])
     func profileRespectsNativeHiding(nativeHiding: Bool) throws {
-        try withScratchDefaults {
+        try withPrivateSettingsChangeCenter {
             let settings = AdvancedSettings()
             settings.enableNativeAppHiding = nativeHiding
             var profile = AdvancedSettingsSnapshot.capture(from: settings)
@@ -92,7 +77,7 @@ struct SystemItemHidingCompatibilityTests {
 
     @Test("Restored settings give native hiding precedence", arguments: [false, true], [false, true])
     func restoreSettings(nativeHiding: Bool, systemItemHiding: Bool) throws {
-        try withScratchDefaults {
+        try withPrivateSettingsChangeCenter {
             Defaults.set(nativeHiding, forKey: .enableNativeAppHiding)
             Defaults.set(systemItemHiding, forKey: .enableExperimentalSystemItemHiding)
             let settings = AdvancedSettings()
@@ -113,7 +98,7 @@ struct SystemItemHidingCompatibilityTests {
 
     @Test("A queued URI change cannot re-enable system item hiding")
     func queuedURIChangeRespectsCurrentMode() throws {
-        try withScratchDefaults {
+        try withPrivateSettingsChangeCenter {
             let settings = AdvancedSettings()
             // URI writes precede their main-queue notification. Native hiding may start between the two.
             Defaults.set(true, forKey: .enableExperimentalSystemItemHiding)
@@ -132,7 +117,7 @@ struct SystemItemHidingCompatibilityTests {
 
     @Test("URI set refuses the incompatible setting", arguments: [false, true])
     func uriSetRespectsNativeHiding(nativeHiding: Bool) throws {
-        try withScratchDefaults {
+        try withPrivateSettingsChangeCenter {
             Defaults.set(nativeHiding, forKey: .enableNativeAppHiding)
 
             let accepted = SettingsURIHandler.handleSet(
@@ -147,7 +132,7 @@ struct SystemItemHidingCompatibilityTests {
 
     @Test("URI toggle refuses the incompatible setting", arguments: [false, true])
     func uriToggleRespectsNativeHiding(nativeHiding: Bool) throws {
-        try withScratchDefaults {
+        try withPrivateSettingsChangeCenter {
             Defaults.set(nativeHiding, forKey: .enableNativeAppHiding)
 
             let accepted = SettingsURIHandler.handleToggle(
@@ -162,7 +147,7 @@ struct SystemItemHidingCompatibilityTests {
 
     @Test("URI requests may still turn off an incompatible restored setting", arguments: [false, true])
     func uriCanClearConflict(toggle: Bool) throws {
-        try withScratchDefaults {
+        try withPrivateSettingsChangeCenter {
             Defaults.set(true, forKey: .enableNativeAppHiding)
             Defaults.set(true, forKey: .enableExperimentalSystemItemHiding)
 

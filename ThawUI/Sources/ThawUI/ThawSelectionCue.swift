@@ -19,6 +19,16 @@ public extension View {
     func thawSelectionCue(isSelected: Bool, in shape: some InsettableShape) -> some View {
         modifier(ThawSelectionRingCue(isSelected: isSelected, shape: shape))
     }
+
+    /// Thaw's shared see-through accent fill behind a selected row or control,
+    /// flat because glass on glass refracts.
+    func thawSelectedFill(_ isSelected: Bool, in shape: some InsettableShape) -> some View {
+        background {
+            if isSelected {
+                Color.clear.thawGlass(.selection(.accentColor, strength: .selected), in: shape)
+            }
+        }
+    }
 }
 
 private struct ThawSelectionBarCue: ViewModifier {

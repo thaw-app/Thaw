@@ -51,3 +51,31 @@ struct LegacySystemUIServerIdentityTests {
         #expect(identity(namespace: .controlCenter) == nil)
     }
 }
+
+@Suite("SystemUIServer display names")
+struct SystemUIServerDisplayNameTests {
+    @Test("Time Machine keeps its name when its live title is a bare Item-0")
+    func timeMachineFromTheTag() {
+        #expect(MenuBarItem.systemUIServerDisplayName(title: "Item-0", tagTitle: MenuBarItemTag.timeMachine.title) == "Time Machine")
+        #expect(MenuBarItem.systemUIServerDisplayName(title: "com.apple.menuextra.TimeMachine", tagTitle: "Item-0") == "Time Machine")
+    }
+
+    @Test("A Time Machine item with no source process is still named from its tag")
+    func timeMachineWithoutSourcePID() {
+        let item = MenuBarItem(
+            tag: .timeMachine,
+            windowID: 1,
+            ownerPID: 0,
+            sourcePID: nil,
+            bounds: .zero,
+            title: "Item-0",
+            isOnScreen: false
+        )
+        #expect(item.autoDetectedName == "Time Machine")
+    }
+
+    @Test("Other SystemUIServer items keep their own title")
+    func otherItems() {
+        #expect(MenuBarItem.systemUIServerDisplayName(title: "Siri", tagTitle: "Siri") == "Siri")
+    }
+}

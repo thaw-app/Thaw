@@ -30,6 +30,15 @@ enum ThawBarLayout: Int, CaseIterable, Codable, Identifiable {
         }
     }
 
+    /// The symbol beside the name in the arrangement pills.
+    var systemImage: String {
+        switch self {
+        case .horizontal: "rectangle.split.3x1"
+        case .vertical: "rectangle.split.1x2"
+        case .grid: "square.grid.2x2"
+        }
+    }
+
     /// Supports exact case names: "horizontal", "vertical", "grid"
     /// Or raw integer values: "0", "1", "2"
     static func fromString(_ value: String) -> ThawBarLayout? {

@@ -111,21 +111,39 @@ nonisolated enum MenuBarAXQueries {
 
     // MARK: Presses
 
+    /// How far a status item's frame centre may lie from the target point and still be the one pressed.
+    private static let statusItemMatchTolerance = 10.0
+
     /// Presses one of pid's own status items. With several, only the one
-    /// whose frame centre lies within 10 pt of target is pressed.
+    /// whose frame centre lies within statusItemMatchTolerance of target is pressed.
     @concurrent
     static func pressStatusItem(pid: pid_t, target: CGPoint) async -> Bool {
-        let tolerance = 10.0
-        if case let .press(pressed, _) = await viaHelper(
-            .pressStatusItem(pid: pid, targetX: target.x, targetY: target.y, tolerance: tolerance)
-        ) {
+        await pressNearestStatusItem(pid: pid, target: target, action: kAXPressAction) {
+            .pressStatusItem(pid: pid, targetX: target.x, targetY: target.y, tolerance: $0)
+        }
+    }
+
+    /// Opens the menu a right click would open on one of pid's status items,
+    /// matched to target the same way pressStatusItem matches.
+    @concurrent
+    static func showStatusItemMenu(pid: pid_t, target: CGPoint) async -> Bool {
+        await pressNearestStatusItem(pid: pid, target: target, action: kAXShowMenuAction) {
+            .showStatusItemMenu(pid: pid, targetX: target.x, targetY: target.y, tolerance: $0)
+        }
+    }
+
+    /// Through the AX helper when it answers, else in process.
+    @concurrent
+    private static func pressNearestStatusItem(
+        pid: pid_t,
+        target: CGPoint,
+        action: String,
+        request: (Double) -> AXHelperRequest
+    ) async -> Bool {
+        if case let .press(pressed, _) = await viaHelper(request(statusItemMatchTolerance)) {
             return pressed
         }
-        return AXPrimitives.pressNearestStatusItem(
-            pid: pid,
-            target: target,
-            tolerance: tolerance
-        )
+        return AXPrimitives.pressNearestStatusItem(pid: pid, target: target, tolerance: statusItemMatchTolerance, action: action)
     }
 
     /// Presses a status item MenuBarAgent hosts on behalf of sourcePID.

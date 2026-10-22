@@ -101,9 +101,11 @@ final class LayoutBarItemView: LayoutBarArrangedView {
     private var cachedImage: MenuBarItemGlyphCapture? {
         didSet {
             let previousSize = frame.size
-            cachedDrawImage = cachedImage.map {
-                NSImage(cgImage: $0.cgImage, size: $0.pointSize)
+            // An animating icon brings a new capture each frame; drop the old one's tinted copies.
+            if let previous = cachedDrawImage {
+                tintedImageCache[ObjectIdentifier(previous)] = nil
             }
+            cachedDrawImage = cachedImage.map(LayoutBarCaptureInk.drawImage(for:))
             systemItemHorizontalPadding = Self.systemItemHorizontalPadding(
                 for: item,
                 image: cachedImage,
@@ -533,17 +535,17 @@ final class LayoutBarItemView: LayoutBarArrangedView {
         showItemMenu(fallbackEvent: event)
     }
 
-    /// Container-supplied section concealing this Visible item along with an app sibling; drives the tooltip.
-    var hiddenWithAppSection: MenuBarSection.Name? {
+    /// Container-supplied place macOS puts this item because of its app's other items; drives the tooltip.
+    var appWideOverride: AppWideOverride? {
         didSet {
-            guard oldValue != hiddenWithAppSection else { return }
+            guard oldValue != appWideOverride else { return }
             tooltipController.text = tooltipText
+            setAccessibilityHelp(appWideOverride?.tooltip(itemName: item.displayName))
         }
     }
 
     private var tooltipText: String {
-        guard hiddenWithAppSection != nil else { return item.displayName }
-        return String(localized: "\(item.displayName) is not in the menu bar. macOS hides this app as a whole, and another of its items is hidden. Right-click to move them together.")
+        appWideOverride?.tooltip(itemName: item.displayName) ?? item.displayName
     }
 
     private func showItemMenu(fallbackEvent: NSEvent? = nil) {
@@ -664,7 +666,10 @@ final class LayoutBarItemView: LayoutBarArrangedView {
         if shouldPreferPlaceholderImage {
             drawOverflowFallback()
         } else if let capturedImage = cachedDrawImage {
-            capturedImage.draw(
+            let inked = capturedImage.isTemplate
+                ? tintedImage(for: capturedImage, tint: menuBarForegroundColor)
+                : capturedImage
+            inked.draw(
                 in: capturedImageDrawRect(for: capturedImage),
                 from: .zero,
                 operation: .sourceOver,
@@ -741,8 +746,8 @@ final class LayoutBarItemView: LayoutBarArrangedView {
         )
     }
 
-    /// App icons fill the available square, but Thaw's own control-item image
-    /// must match the native size used by its real status-item button.
+    /// App icons fill the available square, but Thaw's own control-item image and its
+    /// stand-ins' symbols must match the native size their real status items draw at.
     static func overflowFallbackDrawRect(
         for item: MenuBarItem,
         imageSize: CGSize,
@@ -750,7 +755,7 @@ final class LayoutBarItemView: LayoutBarArrangedView {
     ) -> CGRect {
         guard bounds.width > 0, bounds.height > 0 else { return .zero }
 
-        if item.tag.matchesVisibleControlItem, imageSize.width > 0, imageSize.height > 0 {
+        if item.tag.matchesVisibleControlItem || ThawExtraGlyph.isStandIn(item.tag), imageSize.width > 0, imageSize.height > 0 {
             let scale = min(
                 1,
                 bounds.width / imageSize.width,

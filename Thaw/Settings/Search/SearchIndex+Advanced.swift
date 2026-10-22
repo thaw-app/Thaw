@@ -131,7 +131,7 @@ nonisolated extension SearchIndex {
             title: "Move items that don’t fit into Hidden",
             descriptionText: String(localized: "When the menu bar is full, move the Visible items that don’t fit into Hidden and open them from the \(Constants.displayName) Bar."),
             pane: .menuBarLayout,
-            section: "More layout options",
+            section: "Overflow and previews",
             keywords: ["overflow", "notch", "fit", "visible", "hidden", "advanced layout controls"],
             property: .advanced("enableMenuBarItemOverflow")
         ),

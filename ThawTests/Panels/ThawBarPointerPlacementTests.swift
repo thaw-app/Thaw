@@ -10,7 +10,7 @@ import Testing
 @testable import Thaw
 
 @MainActor
-@Suite("Thaw Bar pointer placement", .serialized)
+@Suite("Thaw Bar pointer placement", .serialized, .scratchDefaults)
 struct ThawBarPointerPlacementTests {
     @Test("Resizing retains the opening pointer after it leaves empty menu bar space",
           arguments: [ThawBarLocation.dynamic, .mousePointer], [true, false])
@@ -126,16 +126,8 @@ struct ThawBarPointerPlacementTests {
         showsIcon: Bool = false,
         _ body: (PlacementFixture) throws -> Void
     ) throws {
-        let suite = "ThawBarPointerPlacementTests.\(UUID().uuidString)"
-        let store = try #require(UserDefaults(suiteName: suite))
-        let previousStore = Defaults.store
         let previousPolicy = NSApp.activationPolicy()
-        Defaults.store = store
-        defer {
-            Defaults.store = previousStore
-            ScratchDefaults.remove(suite)
-            NSApp.setActivationPolicy(previousPolicy)
-        }
+        defer { NSApp.setActivationPolicy(previousPolicy) }
         let fixture = try PlacementFixture(location: location, showsIcon: showsIcon)
         defer { fixture.panel.close() }
         try body(fixture)

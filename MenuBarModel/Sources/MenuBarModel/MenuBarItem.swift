@@ -157,6 +157,9 @@ public struct MenuBarItem: CustomStringConvertible, Sendable, Codable {
             (sourcePID ?? ownerPID) == (other.sourcePID ?? other.ownerPID)
     }
 
+    /// The lowest a live bar item's frame centre sits in the hosting-window space; below it, an item is parked off the bar.
+    public static let maxBarBandMidY: CGFloat = 80
+
     /// Whether AX reports this item parked outside the live bar. During
     /// assertion reflows macOS 27 parks items around y 1400 with a hidden-side
     /// X, which would falsely trigger divergence detection and reorders.
@@ -173,15 +176,15 @@ public struct MenuBarItem: CustomStringConvertible, Sendable, Codable {
         }
 
         // Live bar items sit in the top 60 pt or so of the hosting-window space.
-        if bounds.midY > 80 {
+        if bounds.midY > Self.maxBarBandMidY {
             return true
         }
 
         guard let barMidY = peers.first(where: {
-            $0.tag.matchesVisibleControlItem && $0.bounds.midY <= 80
+            $0.tag.matchesVisibleControlItem && $0.bounds.midY <= Self.maxBarBandMidY
         })?.bounds.midY
             ?? peers.first(where: {
-                $0.isControlItem && $0.bounds.width > 8 && $0.bounds.midY <= 80
+                $0.isControlItem && $0.bounds.width > 8 && $0.bounds.midY <= Self.maxBarBandMidY
             })?.bounds.midY
         else { return false }
         // The live band is about 30 pt; parked items are 1000+ pt away on Y.
@@ -242,7 +245,7 @@ public struct MenuBarItem: CustomStringConvertible, Sendable, Codable {
         /// Converts "UpperCamelCase" to "Title Case", but leaves a single
         /// lowercase letter before an uppercase one alone ("WiFi").
         func toTitleCase(_ s: some StringProtocol) -> String {
-            String(s).replacing(/([a-z]{2})([A-Z])/) { $0.output.1 + " " + $0.output.2 }
+            Self.titleCased(s)
         }
 
         guard !isControlItem else {
@@ -319,6 +322,10 @@ public struct MenuBarItem: CustomStringConvertible, Sendable, Codable {
             if tag.namespace == .menuBarAgent {
                 return menuBarAgentDisplayName(preferredTitle: title)
             }
+            // A restored hidden item has no PID, and its tag still names it.
+            if tag.namespace == .systemUIServer, let title {
+                return Self.systemUIServerDisplayName(title: title, tagTitle: tag.title)
+            }
             return namespaceDerivedName ?? fallbackName
         }
 
@@ -357,11 +364,7 @@ public struct MenuBarItem: CustomStringConvertible, Sendable, Codable {
                 toTitleCase(title)
             }
         case .systemUIServer:
-            if let match = title.firstMatch(of: /TimeMachine/) {
-                toTitleCase(match.output)
-            } else {
-                toTitleCase(title)
-            }
+            Self.systemUIServerDisplayName(title: title, tagTitle: tag.title)
         default:
             bestName
         }
@@ -418,5 +421,21 @@ extension MenuBarItem: Hashable {
         hasher.combine(bounds.size.height)
         hasher.combine(title)
         hasher.combine(isOnScreen)
+    }
+}
+
+extension MenuBarItem {
+    /// Splits a camel-cased name into words, as in "TimeMachine" to "Time Machine".
+    static func titleCased(_ s: some StringProtocol) -> String {
+        String(s).replacing(/([a-z]{2})([A-Z])/) { $0.output.1 + " " + $0.output.2 }
+    }
+
+    /// A SystemUIServer item's name. On macOS 27 Time Machine's live title can be
+    /// a bare "Item-0", so its identity in the tag names it when the title doesn't.
+    static func systemUIServerDisplayName(title: String, tagTitle: String) -> String {
+        if let match = title.firstMatch(of: /TimeMachine/) ?? tagTitle.firstMatch(of: /TimeMachine/) {
+            return titleCased(match.output)
+        }
+        return titleCased(title)
     }
 }

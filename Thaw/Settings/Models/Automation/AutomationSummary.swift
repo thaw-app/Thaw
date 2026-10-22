@@ -7,13 +7,40 @@
 
 import Foundation
 
-/// The one-line descriptions on the Automation page, which say what is set
-/// right now instead of explaining the control.
+/// The one-line descriptions of profile switching and scripts, which say
+/// what is set right now instead of explaining the control: one under the
+/// Profiles list for every profile, one on each profile's row.
 nonisolated enum AutomationSummary {
     /// A profile and the display or Space that switches to it.
     struct Assignment: Equatable {
         let profile: String
         let place: String
+    }
+
+    /// Every display and Space that switches to a profile, in profile order.
+    static func assignments(of profiles: [ProfileMetadata]) -> [Assignment] {
+        profiles.flatMap { profile -> [Assignment] in
+            places(of: profile).map { Assignment(profile: profile.name, place: $0) }
+        }
+    }
+
+    /// The display and Space that switch to a profile, for its row, or
+    /// "Manually or by shortcut" when neither is set.
+    static func switches(of profile: ProfileMetadata) -> String {
+        let places = places(of: profile)
+        return places.isEmpty ? String(localized: "Manually or by shortcut") : places.joined(separator: " · ")
+    }
+
+    /// The display and then the Space that switch to a profile.
+    private static func places(of profile: ProfileMetadata) -> [String] {
+        var places = [String]()
+        if profile.associatedDisplayUUID != nil {
+            places.append(profile.associatedDisplayName ?? String(localized: "a display"))
+        }
+        if profile.associatedSpaceKey != nil {
+            places.append(profile.associatedSpaceName ?? String(localized: "a Space"))
+        }
+        return places
     }
 
     /// Lists past this many names end in a count.

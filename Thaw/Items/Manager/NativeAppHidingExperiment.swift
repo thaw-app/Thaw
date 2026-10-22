@@ -18,6 +18,30 @@ nonisolated enum NativeHidingStart {
     static func keepsChoice(afterFailedStartAtLaunch isLaunch: Bool) -> Bool {
         isLaunch
     }
+
+    /// What Settings says after a start the user asked for fails. The choice going back to Standard
+    /// would otherwise look like the picker ignoring the click.
+    static func failureNotice(reason: String?) -> String {
+        let reason = reason ?? String(localized: "macOS gave no reason.")
+        return String(localized: "Native didn't start, so \(Constants.displayName) is using Standard: \(reason)")
+    }
+
+    /// Why this session uses Standard while Native stays chosen, or nil when Native is running.
+    /// An unreadable record has its own notice with the way out, so it gives no reason here.
+    static func fallbackReason(
+        nativeChosen: Bool,
+        isActive: Bool,
+        journalNeedsAttention: Bool,
+        lastError: String?
+    ) -> String? {
+        guard nativeChosen, !isActive, !journalNeedsAttention else { return nil }
+        return lastError
+    }
+
+    /// The hiding method can change only while native hiding is able to act on the change.
+    static func allowsMethodChange(journalNeedsAttention: Bool) -> Bool {
+        !journalNeedsAttention
+    }
 }
 
 /// Follows the switch for native app hiding, supplying the file grant and
@@ -33,22 +57,45 @@ final class NativeAppHidingExperiment {
         controller.lastError
     }
 
+    /// Why the last start the user asked for failed, until they try Native again.
+    private(set) var failedStartNotice: String?
+
     /// True while apps hidden in an earlier session could not be shown again at launch.
     var previousSessionRecoveryFailed: Bool {
         controller.previousSessionRecoveryFailed
     }
 
-    @ObservationIgnored private let controller: NativeAppHidingController = {
+    /// True while Thaw's record of the apps it hid exists but can't be read.
+    /// Native hiding changes nothing until the user sets the record aside, so
+    /// the hiding method stays as it is until then.
+    var journalNeedsAttention: Bool {
+        controller.journalNeedsAttention
+    }
+
+    @ObservationIgnored private let controller: NativeAppHidingController
+
+    /// Offers apps an older version may have left switched off.
+    let restoreOffer: HiddenAppsRestoreOffer
+
+    init() {
         let appListAccess = PickedFileAccess.controlCenterAppList
-        return NativeAppHidingController(environment: .init(
+        let controller = NativeAppHidingController(environment: .init(
             activateAccess: { appListAccess.activateIfNeeded() },
             requestAccess: { appListAccess.requestAccessViaOpenPanel() },
             ownsBundle: ExtraVisibilityChannel.keepsOffSystemList,
             hideOwnedBundles: ExtraVisibilityChannel.hide
         ))
-    }()
+        self.controller = controller
+        restoreOffer = HiddenAppsRestoreOffer(environment: .init(
+            findCandidates: { (try? controller.unjournaledHiddenApps()) ?? [] },
+            showApps: { try controller.showApps($0) },
+            isAnswered: { Defaults.bool(forKey: .hasAnsweredHiddenAppsRestoreOffer) },
+            markAnswered: { Defaults.set(true, forKey: .hasAnsweredHiddenAppsRestoreOffer) }
+        ))
+    }
 
     @ObservationIgnored private var observationTask: Task<Void, Never>?
+    @ObservationIgnored private weak var settings: AdvancedSettings?
 
     deinit {
         observationTask?.cancel()
@@ -61,6 +108,9 @@ final class NativeAppHidingExperiment {
 
     func start(controller sectionController: RuntimeSectionController, settings: AdvancedSettings) {
         controller.attach(to: sectionController)
+        self.settings = settings
+        // Before the first start, which takes over the apps it hides.
+        restoreOffer.captureCandidates()
         observationTask?.cancel()
         observationTask = Task { [weak self, weak settings] in
             guard let settings else { return }
@@ -70,13 +120,29 @@ final class NativeAppHidingExperiment {
                 guard !Task.isCancelled, let self else { return }
                 defer { isLaunch = false }
                 if enabled {
-                    if !controller.enable(), !NativeHidingStart.keepsChoice(afterFailedStartAtLaunch: isLaunch) {
-                        settings.enableNativeAppHiding = false
-                    }
+                    enable(settings: settings, isLaunch: isLaunch)
                 } else {
                     controller.disable()
                 }
             }
+        }
+    }
+
+    /// Moves the unreadable record aside after the user agreed, then starts
+    /// Native again when it is chosen. Apps hidden under the old record stay
+    /// switched off until the user picks them in the restore offer.
+    func setAsideUnreadableRecord() throws {
+        try controller.discardUnreadableJournal()
+        restoreOffer.offerAfterSettingRecordAside()
+        guard let settings, settings.enableNativeAppHiding, !controller.isActive else { return }
+        enable(settings: settings, isLaunch: false)
+    }
+
+    private func enable(settings: AdvancedSettings, isLaunch: Bool) {
+        failedStartNotice = nil
+        if !controller.enable(), !NativeHidingStart.keepsChoice(afterFailedStartAtLaunch: isLaunch) {
+            failedStartNotice = NativeHidingStart.failureNotice(reason: controller.lastError)
+            settings.enableNativeAppHiding = false
         }
     }
 

@@ -22,9 +22,9 @@ nonisolated extension SearchIndex {
         SearchEntry(
             id: "general.simpleMode",
             title: "Simple Mode",
-            descriptionText: String(localized: "Shows only the essential settings. All features keep working and keep their configuration."),
+            descriptionText: String(localized: "Shows only the essential settings, with a preview of your sections. Everything else keeps working as you set it."),
             pane: .general,
-            keywords: ["simple", "mode", "basic", "essential", "minimal", "advanced", "hide"],
+            keywords: ["simple", "mode", "basic", "essential", "minimal", "advanced", "hide", "drag"],
             property: .general("simpleMode")
         ),
         SearchEntry(

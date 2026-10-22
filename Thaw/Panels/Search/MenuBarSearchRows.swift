@@ -31,19 +31,19 @@ enum MenuBarSearchListContent: View {
 
     var body: some View {
         switch self {
+        // The same small heading as the settings sidebar's, so the panel's
+        // groups read like the window's.
         case let .header(name):
-            Text(name.localized)
-                .fontWeight(.semibold)
-                .foregroundStyle(.secondary)
+            ThawListHeading(Text(name.localized))
                 .frame(maxWidth: .infinity, alignment: .leading)
-                .padding(.vertical, ThawSpacing.row)
+                .padding(.top, ThawSpacing.row)
+                .padding(.bottom, ThawSpacing.tight)
                 .padding(.leading, ThawSpacing.compact)
         case let .label(text):
-            Text(text)
-                .fontWeight(.semibold)
-                .foregroundStyle(.secondary)
+            ThawListHeading(Text(text))
                 .frame(maxWidth: .infinity, alignment: .leading)
-                .padding(.vertical, ThawSpacing.row)
+                .padding(.top, ThawSpacing.row)
+                .padding(.bottom, ThawSpacing.tight)
                 .padding(.leading, ThawSpacing.compact)
         case let .item(item):
             MenuBarItemRow(item: item)
@@ -112,15 +112,8 @@ private struct MenuBarItemPlaceholderIcon: View {
     let length: CGFloat
 
     /// Measured against the accent: white on Thaw's light amber is only 2.1:1.
-    /// The shared foreground switch keeps both sides above 4.58:1.
     private var glyphColor: Color {
-        let accent = Color.accentColor.resolve(in: environment)
-        let luminance = ForegroundContrast.relativeLuminance(
-            linearRed: Double(accent.linearRed),
-            linearGreen: Double(accent.linearGreen),
-            linearBlue: Double(accent.linearBlue)
-        )
-        return ForegroundContrast.prefersDarkContent(onLuminance: luminance) ? .black : .white
+        ThawAccentInk.color(on: .accentColor, in: environment)
     }
 
     var body: some View {

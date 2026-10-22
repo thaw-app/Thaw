@@ -26,7 +26,7 @@ nonisolated extension SearchIndex {
             descriptionText: nil,
             pane: .menuBarLayout,
             section: "Sections",
-            keywords: ["divider", "style", "chevron", "separator", "section"],
+            keywords: ["divider", "style", "chevron", "line", "dot", "slash", "custom", "image", "separator", "section"],
             property: .advanced("sectionDividerStyle")
         ),
         SearchEntry(

@@ -24,16 +24,11 @@ struct AutomationSettingsPane: View {
     /// Bumped whenever a per-profile hook write completes, so SwiftUI
     /// re-reads the latest values from ProfileManager.
     @State private var profileHookRevision: Int = 0
-    @State private var isEditingProfileSwitching = false
     @State private var isShowingScriptEnvironment = false
 
     var body: some View {
         ThawForm {
             ThawSection {
-                if !appState.profileManager.profiles.isEmpty {
-                    profileSwitchingRow
-                }
-
                 Toggle(isOn: $advancedSettings.autoZenWhileSharingScreen) {
                     ThawRowLabel(
                         "Hide items while presenting",
@@ -52,14 +47,6 @@ struct AutomationSettingsPane: View {
         .fileImporter(isPresented: $isChoosingApp, allowedContentTypes: [.application]) { result in
             addChosenApp(result)
         }
-        .sheet(isPresented: $isEditingProfileSwitching) {
-            AutomationSheet(title: "Profile switching") {
-                ProfileAutoSwitchControls(
-                    profileManager: appState.profileManager,
-                    errorMessage: $hookErrorMessage
-                )
-            }
-        }
         .onAppear {
             if selectedHookProfileID == nil {
                 selectedHookProfileID = appState.profileManager.activeProfileID
@@ -74,35 +61,6 @@ struct AutomationSettingsPane: View {
                 selectedHookProfileID = appState.profileManager.activeProfileID
                     ?? updated.first?.id
             }
-        }
-    }
-
-    // MARK: - As you work
-
-    private var profileSwitchingRow: some View {
-        LabeledContent {
-            Button("Choose…") { isEditingProfileSwitching = true }
-                .buttonStyle(.settingsGlass)
-        } label: {
-            ThawRowLabel(
-                "Switch profiles by display or Space",
-                verbatimDetail: AutomationSummary.profileSwitching(profileAssignments)
-            )
-        }
-    }
-
-    private var profileAssignments: [AutomationSummary.Assignment] {
-        appState.profileManager.profiles.flatMap { profile -> [AutomationSummary.Assignment] in
-            var assignments = [AutomationSummary.Assignment]()
-            if profile.associatedDisplayUUID != nil {
-                let place = profile.associatedDisplayName ?? String(localized: "a display")
-                assignments.append(.init(profile: profile.name, place: place))
-            }
-            if profile.associatedSpaceKey != nil {
-                let place = profile.associatedSpaceName ?? String(localized: "a Space")
-                assignments.append(.init(profile: profile.name, place: place))
-            }
-            return assignments
         }
     }
 
@@ -278,34 +236,6 @@ struct AutomationSettingsPane: View {
                 }
             }
         )
-    }
-}
-
-// MARK: - AutomationSheet
-
-/// A sheet holding the controls that a summary row on the page opens.
-private struct AutomationSheet<Content: View>: View {
-    @Environment(\.dismiss) private var dismiss
-    let title: LocalizedStringKey
-    @ViewBuilder let content: Content
-
-    var body: some View {
-        VStack(spacing: 0) {
-            Text(title)
-                .font(ThawType.heading)
-                .padding(.top, ThawSpacing.gutter)
-            ThawForm {
-                content
-            }
-            HStack {
-                Spacer()
-                Button("Done") { dismiss() }
-                    .buttonStyle(.settingsGlass)
-                    .keyboardShortcut(.defaultAction)
-            }
-            .padding(ThawSpacing.gutter)
-        }
-        .frame(width: 520, height: 460)
     }
 }
 

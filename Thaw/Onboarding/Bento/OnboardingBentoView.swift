@@ -107,35 +107,26 @@ struct OnboardingBentoView: View {
 
     private var controls: some View {
         HStack(spacing: ThawSpacing.gutter) {
-            Picker("Simple Mode", selection: $simpleMode) {
-                Text("Simple Mode").tag(true)
-                Text("All Settings").tag(false)
-            }
-            .pickerStyle(.segmented)
-            .labelsHidden()
-            // Sized to its own labels rather than to a point width: both
-            // segments are translated and neither fits 180 in every language.
+            ThawPillPicker(selection: $simpleMode, options: [
+                ThawPillPicker.Option(true, title: "Simple Mode"),
+                ThawPillPicker.Option(false, title: "All Settings"),
+            ])
+            // Held at its labels' size, since both are translated and neither may be cut off.
             .fixedSize()
             .accessibilityLabel(Text("Simple Mode"))
 
             if Constants.supportsSparkleUpdates {
                 Toggle("Check for updates automatically", isOn: $automaticUpdates)
-                    .toggleStyle(.checkbox)
+                    .toggleStyle(.thawCheckbox)
             }
 
             Spacer()
 
-            Button {
+            OnboardingPrimaryButton {
                 finish(simpleMode: simpleMode, pane: nil)
             } label: {
                 Text(finishesFlow ? "Open \(Constants.displayName)" : "Continue")
-                    .font(ThawType.heading)
-                    // A minimum, not a width: "Open Thaw" is translated and
-                    // a hard 140 clips its longer forms.
-                    .frame(minWidth: 140, minHeight: 34)
             }
-            .buttonStyle(.glassProminent)
-            .keyboardShortcut(.defaultAction)
         }
     }
 

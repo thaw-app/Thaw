@@ -40,16 +40,9 @@ enum AXReader {
             }
             return .hitTest(hitTest(at: CGPoint(x: x, y: y)), accessibilityTrusted: true)
         case let .pressStatusItem(pid, targetX, targetY, tolerance):
-            guard AXIsProcessTrusted() else {
-                return .press(pressed: false, accessibilityTrusted: false)
-            }
-            let pressed = AXPrimitives.pressNearestStatusItem(
-                pid: pid,
-                target: CGPoint(x: targetX, y: targetY),
-                tolerance: tolerance,
-                messagingTimeout: messagingTimeout
-            )
-            return .press(pressed: pressed, accessibilityTrusted: true)
+            return pressStatusItem(pid: pid, target: CGPoint(x: targetX, y: targetY), tolerance: tolerance, action: kAXPressAction)
+        case let .showStatusItemMenu(pid, targetX, targetY, tolerance):
+            return pressStatusItem(pid: pid, target: CGPoint(x: targetX, y: targetY), tolerance: tolerance, action: kAXShowMenuAction)
         case let .pressHostedItem(sourcePID):
             guard AXIsProcessTrusted() else {
                 return .press(pressed: false, accessibilityTrusted: false)
@@ -60,6 +53,20 @@ enum AXReader {
             )
             return .press(pressed: pressed, accessibilityTrusted: true)
         }
+    }
+
+    private static func pressStatusItem(pid: pid_t, target: CGPoint, tolerance: Double, action: String) -> AXHelperReply {
+        guard AXIsProcessTrusted() else {
+            return .press(pressed: false, accessibilityTrusted: false)
+        }
+        let pressed = AXPrimitives.pressNearestStatusItem(
+            pid: pid,
+            target: target,
+            tolerance: tolerance,
+            action: action,
+            messagingTimeout: messagingTimeout
+        )
+        return .press(pressed: pressed, accessibilityTrusted: true)
     }
 
     static func enumerate(_ request: AXEnumerateRequest) -> AXEnumerateReply {

@@ -10,6 +10,7 @@ import Cocoa
 import MenuBarModel
 import os.lock
 import PlatformRuntimeKit
+import Synchronization
 import ThawAXCore
 import ThawConcurrency
 
@@ -174,21 +175,17 @@ nonisolated enum MenuBarItemAXProvider {
     }
 
     private static let lateAnswers = AsyncChannel<LateAnswer>()
-    private static let lateAnswerPumpStarted = OSAllocatedUnfairLock(initialState: false)
+    private static let lateAnswerPumpStarted = Atomic<Bool>(false)
     private static let mergedLateAnswers = OSAllocatedUnfairLock(
         initialState: [pid_t: LateAnswer]()
     )
 
-    /// Starts the one-time pump for late answers. The flag's result must be
-    /// used: a return inside the lock closure only leaves the closure, and
-    /// every enumeration would spawn another immortal consumer.
+    /// Starts the pump for late answers once. Each pump is a consumer that
+    /// never ends, so every later call must find the flag set and return.
     private static func startLateAnswerPump() {
-        let shouldStart = lateAnswerPumpStarted.withLock { started -> Bool in
-            guard !started else { return false }
-            started = true
-            return true
+        guard lateAnswerPumpStarted.compareExchange(expected: false, desired: true, ordering: .relaxed).exchanged else {
+            return
         }
-        guard shouldStart else { return }
         Task {
             for await answer in lateAnswers {
                 mergedLateAnswers.withLock { answers in
@@ -220,9 +217,7 @@ nonisolated enum MenuBarItemAXProvider {
         let formerHosts = UnseenMenuBarHosts.formerHosts()
         let runningApps = NSWorkspace.shared.runningApplications.filter { !$0.isTerminated }
         let appsByPID = Dictionary(runningApps.map { ($0.processIdentifier, $0) }, uniquingKeysWith: { first, _ in first })
-        let controlPIDs = Set(runningApps.filter {
-            $0.bundleIdentifier == ourBundleID || $0.bundleIdentifier == SharedConstants.menuBarHostingBundleID
-        }.map(\.processIdentifier))
+        let controlPIDs = controlPIDs(among: runningApps, ourBundleID: ourBundleID)
         var state = previousState
         let requiredOwners = controlPIDs.union(priorityPIDs)
         let pass = state.begin(
@@ -261,6 +256,11 @@ nonisolated enum MenuBarItemAXProvider {
         // counters tell one slow app from sheer app count in the log.
         var appsProbed = 0
         var appsWithExtrasBar = 0
+        // Owners that answered this pass with no items, so a drawn one can be told apart.
+        var answeredEmpty = Set<pid_t>()
+        let drawnOnlyCandidates = drawnOnly.candidates(
+            drawn: drawnBar.reading(since: walkStart - drawnReadAge)?.entries
+        ).subtracting(controlPIDs)
         defer {
             let elapsed = ContinuousClock.now - walkStart
             diagLog.info(
@@ -386,12 +386,24 @@ nonisolated enum MenuBarItemAXProvider {
                 }
             case let .some(result):
                 slowResponders.withLock { $0.answered(ownerPID) }
-                if !result.isEmpty {
+                if result.isEmpty {
+                    answeredEmpty.insert(ownerPID)
+                    // Waits for the drawn read after the loop. See DrawnOnlyItems.
+                    guard !drawnOnlyCandidates.contains(ownerPID) else { continue }
+                } else {
                     appsWithExtrasBar += 1
                 }
                 state.record(result, owner: ownerPID, generation: pass.generation)
             }
         }
+        // A drawn read taken mid-change keeps an owner's last answer, so the pass is incomplete.
+        truncated = recordDrawnOnlyOwners(
+            pending: answeredEmpty.intersection(drawnOnlyCandidates),
+            answeredEmpty: answeredEmpty.subtracting(controlPIDs),
+            context: (walkStart, appsByPID, controlPIDs),
+            into: &state,
+            generation: pass.generation
+        ) || truncated
 
         let items = assemble(state.observations)
         let freshItems = assemble(state.freshObservations(generation: pass.generation))
@@ -411,6 +423,58 @@ nonisolated enum MenuBarItemAXProvider {
             hasFreshKnownInventory: state.hasFreshKnownInventory(generation: pass.generation),
             hasFreshMoveInventory: hasFreshMoveInventory
         ), state)
+    }
+
+    /// This app's pids and MenuBarAgent's, whose items are controls rather than managed items.
+    private static func controlPIDs(among runningApps: [NSRunningApplication], ourBundleID: String?) -> Set<pid_t> {
+        Set(runningApps.filter {
+            $0.bundleIdentifier == ourBundleID || $0.bundleIdentifier == SharedConstants.menuBarHostingBundleID
+        }.map(\.processIdentifier))
+    }
+
+    /// The drawn-only items the helper process's walk adds besides raw, which it read without
+    /// noting who answered empty. See DrawnOnlyItems.confirmedItems.
+    static func confirmedDrawnOnlyItems(besides raw: [RawItem]) -> [RawItem] {
+        guard drawnOnly.hasConfirmedOwners else { return [] }
+        let runningApps = NSWorkspace.shared.runningApplications.filter { !$0.isTerminated }
+        let recent = drawnBar.reading(since: .now - drawnReadAge)
+        return drawnOnly.confirmedItems(
+            read: recent.map(\.entries) ?? drawnBar.read(),
+            apps: Dictionary(runningApps.map { ($0.processIdentifier, $0) }, uniquingKeysWith: { first, _ in first }),
+            excluded: controlPIDs(among: runningApps, ourBundleID: Bundle.main.bundleIdentifier),
+            axItems: raw
+        )
+    }
+
+    /// How old a drawn read may be when the walk starts and still count as this pass's.
+    private static let drawnReadAge = Duration.seconds(2)
+
+    /// Records the owners whose empty answer waited on the drawn read, reusing the plan's read when
+    /// it is recent. Subprocess walks add the confirmed owners through confirmedDrawnOnlyItems(besides:).
+    ///
+    /// - Returns: Whether a read taken mid-change left an owner's last answer in place.
+    private static func recordDrawnOnlyOwners(
+        pending: Set<pid_t>,
+        answeredEmpty: Set<pid_t>,
+        context: (walkStart: ContinuousClock.Instant, apps: [pid_t: NSRunningApplication], excluded: Set<pid_t>),
+        into state: inout MenuBarScanState<RawItem>,
+        generation: UInt64
+    ) -> Bool {
+        let recent = drawnBar.reading(since: context.walkStart - drawnReadAge)
+        let answers = drawnOnly.answers(
+            pending: pending,
+            answeredEmpty: answeredEmpty,
+            read: recent.map(\.entries) ?? (pending.isEmpty ? nil : drawnBar.read()),
+            apps: context.apps,
+            excluded: context.excluded,
+            axItems: state.freshObservations(generation: generation)
+        )
+        for (owner, answer) in answers {
+            if case let .record(items) = answer {
+                state.record(items, owner: owner, generation: generation)
+            }
+        }
+        return answers.values.contains(.keepPrior)
     }
 
     /// Awaits task's value, or nil if the waiter is cancelled first.
@@ -679,7 +743,7 @@ nonisolated enum MenuBarItemAXProvider {
     /// The bar as MenuBarAgent draws it, read off the main actor. Nil when unreadable or mid-change.
     @concurrent
     static func drawnBarConcurrent() async -> [MenuBarAgentWindow.Entry]? {
-        AXPrimitives.menuBarAgentSettledEntries()
+        drawnBar.read()
     }
 
     /// Re-reads the owners appearance already knows, skipping discovery's
@@ -709,7 +773,7 @@ nonisolated enum MenuBarItemAXProvider {
     ) async -> InventorySnapshot {
         let plan = InventoryWalkPlan.make(
             requested: priorityPIDs,
-            drawnOwners: AXPrimitives.menuBarAgentDrawnOwners(),
+            drawnOwners: drawnBar.read().map { Set($0.map(\.ownerPID)) },
             lastFullWalk: fullWalks.lastFullWalk
         )
         // A settled read waits out a full walk in flight. Cancelling it would put off the one read that checks the shortcut.
@@ -727,6 +791,12 @@ nonisolated enum MenuBarItemAXProvider {
 
     /// See InventoryWalkPlan.
     private static let fullWalks = FullWalkLedger()
+
+    /// The read of MenuBarAgent's window each plan is made from.
+    private static let drawnBar = DrawnBarLedger()
+
+    /// See DrawnOnlyItems.
+    private static let drawnOnly = DrawnOnlyInventory()
 
     /// See nativeOverflowControlBounds(on:).
     @concurrent
@@ -829,7 +899,7 @@ nonisolated enum MenuBarItemAXProvider {
         // reads the mask, not the bar; hold the last observation instead.
         // The same while Thaw's own menus are in the bar: AppKit answers those
         // hits on this thread and NSMenu asserts off the main one.
-        if ClockRevealMaskActivity.isAnyMaskShowing || isThawTheMenuBarOwner(NSWorkspace.shared.menuBarOwningApplication?.processIdentifier) {
+        if RevealCoverActivity.isAnyMaskShowing || isThawTheMenuBarOwner(NSWorkspace.shared.menuBarOwningApplication?.processIdentifier) {
             if memo.hint == nil, memo.lastAbsentAt == nil {
                 diagLog.debug(
                     "chevron: skipping the strip on display \(display) while it cannot be hit-tested; no absence recorded"
@@ -1089,7 +1159,7 @@ nonisolated enum MenuBarItemAXProvider {
     /// A pre-tag item collected from the AX walk.
     ///
     /// Internal plain data so assemble is testable with fixtures.
-    struct RawItem {
+    struct RawItem: Equatable {
         let namespace: MenuBarItemTag.Namespace
         let identityTitle: String
         let displayTitle: String

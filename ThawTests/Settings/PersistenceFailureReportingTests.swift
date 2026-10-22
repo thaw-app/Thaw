@@ -14,55 +14,38 @@ import Testing
 @MainActor
 @Suite("Persistence failure reporting", .serialized)
 struct PersistenceFailureReportingTests {
-    /// Runs body with Defaults pointed at an empty, throwaway suite.
-    private func withScratchDefaults<T>(_ body: (UserDefaults) throws -> T) throws -> T {
-        let suiteName = "PersistenceFailureReportingTests.\(UUID().uuidString)"
-        let scratch = try #require(UserDefaults(suiteName: suiteName))
-        let previous = Defaults.store
-        Defaults.store = scratch
-        defer {
-            Defaults.store = previous
-            ScratchDefaults.remove(suiteName)
-        }
-        return try body(scratch)
-    }
-
     // MARK: Appearance
 
-    @Test("A failed appearance write is reported, and the next good one clears it")
+    @Test("A failed appearance write is reported, and the next good one clears it", .scratchDefaults)
     func appearanceFailureCycle() throws {
-        try withScratchDefaults { _ in
-            let manager = MenuBarAppearanceManager()
-            #expect(manager.lastPersistenceFailure == nil, "Nothing has been written yet")
+        let manager = MenuBarAppearanceManager()
+        #expect(manager.lastPersistenceFailure == nil, "Nothing has been written yet")
 
-            // A non-finite Double is what JSONEncoder refuses by default,
-            // and margins are the plain Doubles on the configuration.
-            manager.configuration.leftMargin = .infinity
+        // A non-finite Double is what JSONEncoder refuses by default,
+        // and margins are the plain Doubles on the configuration.
+        manager.configuration.leftMargin = .infinity
 
-            let failure = try #require(manager.lastPersistenceFailure, "The encode threw and the pane has to hear it")
-            #expect(!failure.isEmpty)
-            #expect(
-                Defaults.data(forKey: .menuBarAppearanceConfigurationV2) == nil,
-                "Nothing reached the store, which is the whole reason the flag exists"
-            )
+        let failure = try #require(manager.lastPersistenceFailure, "The encode threw and the pane has to hear it")
+        #expect(!failure.isEmpty)
+        #expect(
+            Defaults.data(forKey: .menuBarAppearanceConfigurationV2) == nil,
+            "Nothing reached the store, which is the whole reason the flag exists"
+        )
 
-            manager.configuration.leftMargin = 4
+        manager.configuration.leftMargin = 4
 
-            #expect(manager.lastPersistenceFailure == nil, "A stale warning is as wrong as a missing one")
-            #expect(Defaults.data(forKey: .menuBarAppearanceConfigurationV2) != nil)
-        }
+        #expect(manager.lastPersistenceFailure == nil, "A stale warning is as wrong as a missing one")
+        #expect(Defaults.data(forKey: .menuBarAppearanceConfigurationV2) != nil)
     }
 
-    @Test("An appearance write that succeeds never raises the flag")
+    @Test("An appearance write that succeeds never raises the flag", .scratchDefaults)
     func appearanceSuccessIsSilent() throws {
-        try withScratchDefaults { _ in
-            let manager = MenuBarAppearanceManager()
+        let manager = MenuBarAppearanceManager()
 
-            manager.configuration.isInset.toggle()
+        manager.configuration.isInset.toggle()
 
-            #expect(manager.lastPersistenceFailure == nil)
-            #expect(Defaults.data(forKey: .menuBarAppearanceConfigurationV2) != nil)
-        }
+        #expect(manager.lastPersistenceFailure == nil)
+        #expect(Defaults.data(forKey: .menuBarAppearanceConfigurationV2) != nil)
     }
 
     // MARK: Displays
@@ -80,51 +63,45 @@ struct PersistenceFailureReportingTests {
         )
     }
 
-    @Test("A failed global display write is reported, and the next good one clears it")
+    @Test("A failed global display write is reported, and the next good one clears it", .scratchDefaults)
     func displayFailureCycle() throws {
-        try withScratchDefaults { _ in
-            let manager = DisplaySettingsManager()
-            #expect(manager.lastPersistenceFailure == nil, "A load from an empty store is not a failure")
+        let manager = DisplaySettingsManager()
+        #expect(manager.lastPersistenceFailure == nil, "A load from an empty store is not a failure")
 
-            manager.globalConfiguration = unencodableDisplayConfiguration
+        manager.globalConfiguration = unencodableDisplayConfiguration
 
-            let failure = try #require(manager.lastPersistenceFailure)
-            #expect(!failure.isEmpty)
-            #expect(Defaults.data(forKey: .globalDisplayConfiguration) == nil, "Nothing reached the store")
+        let failure = try #require(manager.lastPersistenceFailure)
+        #expect(!failure.isEmpty)
+        #expect(Defaults.data(forKey: .globalDisplayConfiguration) == nil, "Nothing reached the store")
 
-            manager.globalConfiguration = .defaultConfiguration
+        manager.globalConfiguration = .defaultConfiguration
 
-            #expect(manager.lastPersistenceFailure == nil)
-            #expect(Defaults.data(forKey: .globalDisplayConfiguration) != nil)
-        }
+        #expect(manager.lastPersistenceFailure == nil)
+        #expect(Defaults.data(forKey: .globalDisplayConfiguration) != nil)
     }
 
-    @Test("A display write that succeeds never raises the flag")
+    @Test("A display write that succeeds never raises the flag", .scratchDefaults)
     func displaySuccessIsSilent() throws {
-        try withScratchDefaults { _ in
-            let manager = DisplaySettingsManager()
+        let manager = DisplaySettingsManager()
 
-            manager.globalConfiguration = .defaultConfiguration.withUseThawBar(true)
+        manager.globalConfiguration = .defaultConfiguration.withUseThawBar(true)
 
-            #expect(manager.lastPersistenceFailure == nil)
-            #expect(Defaults.data(forKey: .globalDisplayConfiguration) != nil)
-        }
+        #expect(manager.lastPersistenceFailure == nil)
+        #expect(Defaults.data(forKey: .globalDisplayConfiguration) != nil)
     }
 
-    @Test("A per-display write clears a failure left by the global one")
+    @Test("A per-display write clears a failure left by the global one", .scratchDefaults)
     func displayFlagIsShared() throws {
-        try withScratchDefaults { _ in
-            let manager = DisplaySettingsManager()
-            manager.globalConfiguration = unencodableDisplayConfiguration
-            #expect(manager.lastPersistenceFailure != nil)
+        let manager = DisplaySettingsManager()
+        manager.globalConfiguration = unencodableDisplayConfiguration
+        #expect(manager.lastPersistenceFailure != nil)
 
-            // One flag covers every display write, so the pane's warning has
-            // to come down as soon as any of them lands.
-            manager.configurations = ["TEST-DISPLAY-UUID": .defaultConfiguration]
+        // One flag covers every display write, so the pane's warning has
+        // to come down as soon as any of them lands.
+        manager.configurations = ["TEST-DISPLAY-UUID": .defaultConfiguration]
 
-            #expect(manager.lastPersistenceFailure == nil)
-            #expect(Defaults.data(forKey: .displayThawBarConfigurations) != nil)
-        }
+        #expect(manager.lastPersistenceFailure == nil)
+        #expect(Defaults.data(forKey: .displayThawBarConfigurations) != nil)
     }
 
     // MARK: Spacers

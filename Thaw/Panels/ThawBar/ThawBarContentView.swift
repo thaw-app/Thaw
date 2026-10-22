@@ -123,9 +123,7 @@ struct ThawBarContentView: View {
         using images: [MenuBarItemTag: MenuBarItemDisplayImage]
     ) -> [CGFloat] {
         guard let maxHeight = itemMaxHeight, maxHeight > 0 else { return [] }
-        let rows = stride(from: 0, to: items.count, by: gridColumns).map { start in
-            Array(items[start ..< Swift.min(start + gridColumns, items.count)])
-        }
+        let rows = items.chunks(ofCount: gridColumns)
         return (0 ..< gridColumns).map { col in
             rows.compactMap { row in
                 guard col < row.count else { return nil }
@@ -417,9 +415,7 @@ struct ThawBarContentView: View {
                     let columnWidths = self.columnWidths(items: items, using: images)
                     ScrollView(.vertical) {
                         VStack(spacing: 0) {
-                            let rows = stride(from: 0, to: items.count, by: gridColumns).map { start in
-                                Array(items[start ..< Swift.min(start + gridColumns, items.count)])
-                            }
+                            let rows = items.chunks(ofCount: gridColumns)
                             ForEach(Array(rows.enumerated()), id: \.element.first?.uniqueIdentifier) { rowIndex, rowItems in
                                 HStack(spacing: itemSpacing) {
                                     ForEach(Array(rowItems.enumerated()), id: \.element.uniqueIdentifier) { colIndex, item in

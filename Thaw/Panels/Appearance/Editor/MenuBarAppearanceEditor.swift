@@ -24,6 +24,7 @@ struct MenuBarAppearanceEditor: View {
     @State private var editingAppearance = SystemAppearance.current
     @State private var systemAppearance = SystemAppearance.current
     @State private var reducesTransparency = NSWorkspace.shared.accessibilityDisplayShouldReduceTransparency
+    @State private var fillTab = AppearanceFillKind.shapeFill
 
     let location: Location
     let onDone: (() -> Void)?
@@ -98,6 +99,8 @@ struct MenuBarAppearanceEditor: View {
                 )
             }
 
+            MenuBarBackgroundWarning()
+
             if let failure = appearanceManager.lastPersistenceFailure {
                 SettingsWarningPill(
                     title: "Appearance change wasn’t saved",
@@ -113,25 +116,28 @@ struct MenuBarAppearanceEditor: View {
 
             // Shape determines which fill controls are available.
             ThawSection {
-                Text("Shape")
+                ThawTabStrip(selection: $appearanceManager.configuration.shapeKind, tabs: MenuBarShapeKind.allCases)
+                    .frame(maxWidth: .infinity)
+                    .accessibilityLabel("Shape")
             } content: {
                 MenuBarShapePicker(configuration: $appearanceManager.configuration)
                 insetToggle
             } footer: {
-                Text("Your menu bar changes as you edit.")
+                VStack(alignment: .leading, spacing: ThawSpacing.compact) {
+                    Text(configuration.shapeKind.caption)
+                    Text("Your menu bar changes as you edit.")
+                }
             }
 
             if hasShape {
-                fillSection(
-                    "Inside the shape",
-                    footer: "Fills the shape.",
-                    kind: .shapeFill
-                )
-                fillSection(
-                    "Behind the shape",
-                    footer: "Fills the whole menu bar. The shape is drawn on top.",
-                    kind: .background
-                )
+                // The two fills share their controls, so one shows at a time.
+                SettingsPaneTabs(selection: $fillTab, tabs: [.shapeFill, .background], tabForDisclosure: AppearanceFillKind.init)
+                switch fillTab {
+                case .shapeFill:
+                    fillSection(footer: "Fills the shape.", kind: .shapeFill)
+                case .background:
+                    fillSection(footer: "Fills the whole menu bar. The shape is drawn on top.", kind: .background)
+                }
             } else {
                 fillSection(
                     "Menu bar",
@@ -181,20 +187,11 @@ struct MenuBarAppearanceEditor: View {
             }
         } footer: {
             VStack(alignment: .leading, spacing: ThawSpacing.tight) {
-                if isAnyEffectActive {
-                    Text("If a change doesn’t show, turn off “Show menu bar background” in System Settings \(Constants.menuArrow) Menu Bar.")
-                }
                 if case .settings = location, appState.settings.advanced.enableSecondaryContextMenu {
                     Text("Right-click an empty part of the menu bar to edit the look without opening Settings.")
                 }
             }
         }
-    }
-
-    private var isAnyEffectActive: Bool {
-        configuration.current.tintKind != .noTint
-            || configuration.shapeKind != .noShape
-            || configuration.current.backgroundKind != .none
     }
 
     private var perSpaceControls: some View {
@@ -248,13 +245,11 @@ struct MenuBarAppearanceEditor: View {
         ThawSection {
             LabeledContent("Editing") {
                 HStack(spacing: 8) {
-                    Picker("Appearance mode", selection: $editingAppearance) {
-                        Text("Light").tag(SystemAppearance.light)
-                        Text("Dark").tag(SystemAppearance.dark)
-                    }
-                    .pickerStyle(.segmented)
-                    .labelsHidden()
-                    .fixedSize()
+                    ThawPillPicker(selection: $editingAppearance, options: [
+                        ThawPillPicker.Option(.light, title: "Light", systemImage: "sun.max"),
+                        ThawPillPicker.Option(.dark, title: "Dark", systemImage: "moon"),
+                    ])
+                    .accessibilityLabel("Editing")
 
                     if systemAppearance != editingAppearance {
                         HoldToPreviewButton(previewedAppearance: editingAppearance)
@@ -308,6 +303,7 @@ struct MenuBarAppearanceEditor: View {
                 dismissWindow()
             }
         }
+        .buttonStyle(.thawProminent)
         .keyboardShortcut(.defaultAction)
 
         Spacer()
@@ -320,16 +316,24 @@ struct MenuBarAppearanceEditor: View {
     }
 
     /// Background and shape fill share controls, differing only in title and footer.
-    private func fillSection(_ title: LocalizedStringKey, footer: LocalizedStringKey, kind: AppearanceFillKind) -> some View {
-        ThawSection {
-            Text(title)
-        } content: {
-            UnlabeledAppearanceFillEditor(
-                configuration: editedPartialConfiguration,
-                fillKind: kind
-            )
-        } footer: {
-            Text(footer)
+    /// A fill's controls. A fill picked from the tabs above takes no title, since the tab names it.
+    @ViewBuilder
+    private func fillSection(_ title: LocalizedStringKey? = nil, footer: LocalizedStringKey, kind: AppearanceFillKind) -> some View {
+        let editor = UnlabeledAppearanceFillEditor(configuration: editedPartialConfiguration, fillKind: kind)
+        if let title {
+            ThawSection {
+                Text(title)
+            } content: {
+                editor
+            } footer: {
+                Text(footer)
+            }
+        } else {
+            ThawSection {
+                editor
+            } footer: {
+                Text(footer)
+            }
         }
     }
 
@@ -344,9 +348,32 @@ struct MenuBarAppearanceEditor: View {
 
 // MARK: - Appearance Fill Editor
 
-private enum AppearanceFillKind {
+private nonisolated enum AppearanceFillKind: ThawTab {
     case background
     case shapeFill
+
+    var title: LocalizedStringKey {
+        switch self {
+        case .shapeFill: "Inside the Shape"
+        case .background: "Behind the Shape"
+        }
+    }
+
+    var systemImage: String {
+        switch self {
+        case .shapeFill: "capsule.inset.filled"
+        case .background: "rectangle.inset.filled"
+        }
+    }
+
+    /// The fill a search result opens.
+    init?(_ disclosure: AppNavigationState.SettingsDisclosure) {
+        switch disclosure {
+        case .appearanceInsideShape: self = .shapeFill
+        case .appearanceBehindShape: self = .background
+        default: return nil
+        }
+    }
 }
 
 /// Maps parallel background and shape-fill fields so shared controls need no per-kind switches.
@@ -528,7 +555,7 @@ private struct UnlabeledAppearanceFillEditor: View {
     private func accentAwareColorPicker(_ label: LocalizedStringKey) -> some View {
         HStack(spacing: ThawSpacing.base) {
             Toggle("Accent", isOn: binding(fields.usesAccentColor))
-                .toggleStyle(.checkbox)
+                .toggleStyle(.thawCheckbox)
                 .help("Follow the accent color set in System Settings \(Constants.menuArrow) Appearance")
             if !configuration[keyPath: fields.usesAccentColor] {
                 ColorPicker(label, selection: binding(fields.color), supportsOpacity: false)
@@ -551,24 +578,17 @@ private struct UnlabeledAppearanceFillEditor: View {
     }
 
     private func borderStylePicker(_ keyPath: WritableKeyPath<MenuBarAppearancePartialConfiguration, MenuBarBorderStyle>) -> some View {
-        Picker("Border style", selection: binding(keyPath)) {
-            ForEach(MenuBarBorderStyle.allCases, id: \.self) { style in
-                Text(style.localized).tag(style)
-            }
-        }
-        .labelsHidden()
-        .fixedSize()
+        ThawPillPicker("Border style", selection: binding(keyPath), values: MenuBarBorderStyle.allCases, title: \.localized)
+            .labelsHidden()
     }
 
     private var borderWidthPicker: some View {
-        Picker("Border width", selection: binding(fields.borderWidth)) {
-            Text("1 pt").tag(1.0)
-            Text("2 pt").tag(2.0)
-            Text("3 pt").tag(3.0)
-        }
-        .pickerStyle(.segmented)
-        .labelsHidden()
-        .fixedSize()
+        ThawPillPicker(selection: binding(fields.borderWidth), options: [
+            ThawPillPicker.Option(1.0, title: "1 pt"),
+            ThawPillPicker.Option(2.0, title: "2 pt"),
+            ThawPillPicker.Option(3.0, title: "3 pt"),
+        ])
+        .accessibilityLabel("Border width")
     }
 
     // MARK: Surface plumbing

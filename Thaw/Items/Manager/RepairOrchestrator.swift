@@ -88,6 +88,11 @@ final class RepairOrchestrator {
             interruptsAutomaticWork || [.userDragEnded, .userEdit, .sectionRevealed].contains(self)
         }
 
+        /// Causes that mean the user has changed the layout.
+        var isLayoutChangeByUser: Bool {
+            self == .userDragEnded || self == .userEdit
+        }
+
         /// Causes that call off the automatic passes asked for before them, which were planned on a bar the user is now changing.
         var interruptsAutomaticWork: Bool {
             [.revealStarting, .userDragStarted, .userClickedItem].contains(self)
@@ -109,8 +114,14 @@ final class RepairOrchestrator {
 
     // MARK: Asking
 
+    /// Told when the user has changed the layout, by a drag or a Layout edit.
+    var onUserLayoutChange: (@MainActor () -> Void)?
+
     /// Stamps a request with what asked for it.
     func request(_ work: Work, cause: Cause) {
+        if cause.isLayoutChangeByUser {
+            onUserLayoutChange?()
+        }
         if cause.interruptsAutomaticWork {
             interruptAutomaticWork(by: cause)
         } else if cause.isUserAction {

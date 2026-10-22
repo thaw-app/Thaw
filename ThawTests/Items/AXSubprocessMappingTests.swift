@@ -45,6 +45,25 @@ struct AXSubprocessMappingTests {
         #expect(items[0].tag.title == "Widget")
     }
 
+    @Test("items added besides the helper's are assembled with them, and see what the helper read")
+    func addedItemsAreAssembled() {
+        var seen = [MenuBarItemAXProvider.RawItem]()
+        let drawn = MenuBarItemAXProvider.RawItem(
+            namespace: .string("com.example.drawn"), identityTitle: "Item-0", displayTitle: "Item-0",
+            bounds: CGRect(x: 80, y: 0, width: 24, height: 24), ownerPID: 200
+        )
+        let items = MenuBarItemAXProvider.items(
+            fromSubprocess: [observation(bundleID: "com.example.app", title: "Widget", x: 40)],
+            adding: { raw in
+                seen = raw
+                return [drawn]
+            }
+        )
+        #expect(seen.map(\.ownerPID) == [100])
+        #expect(items.map(\.tag.namespace) == [.string("com.example.app"), .string("com.example.drawn")])
+        #expect(items.last?.ownerPID == 200)
+    }
+
     @Test("a titled app item keeps its namespace, title, and frame")
     func titledItem() {
         let items = MenuBarItemAXProvider.items(fromSubprocess: [

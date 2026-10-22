@@ -24,7 +24,6 @@ struct SettingsView: View {
     /// the single search entry point. The sidebar is navigation only, so
     /// results take over the detail column rather than the pane list.
     @State private var searchModel = SearchModel()
-    @State private var isCustomizeSidebarPresented = false
     @State private var paneHistory = SettingsPaneHistory()
 
     private var isSearching: Bool {
@@ -41,6 +40,8 @@ struct SettingsView: View {
                 fullSettingsScreen
             }
         }
+        // Glass buttons are capsules, as in macOS's own glass windows.
+        .buttonBorderShape(.capsule)
         // Applied here rather than on the Scene so it can follow the mode: with
         // .windowResizability(.contentSize) this minimum is the window's, and
         // the full layout's would otherwise hold Simple Mode open at a sidebar's
@@ -58,6 +59,7 @@ struct SettingsView: View {
         .onWindowChange { window in
             settingsWindow = window
             if let window {
+                appState.settingsProcessHost.appWindowOpened(window)
                 SettingsWindowDiagnostics.logWhenLaidOut(
                     window, zoomPercent: zoomPercent, isSimpleMode: generalSettings.simpleMode
                 )
@@ -106,7 +108,7 @@ struct SettingsView: View {
                 .help("Leave Simple Mode and show every settings page")
             }
             ToolbarItem(placement: .primaryAction) {
-                SettingsOverflowMenu(appState: appState, generalSettings: generalSettings, isCustomizeSidebarPresented: $isCustomizeSidebarPresented)
+                SettingsOverflowMenu(appState: appState, generalSettings: generalSettings)
             }
         }
     }
@@ -124,17 +126,12 @@ struct SettingsView: View {
                 .navigationTitle(toolbarTitle)
                 .navigationSubtitle(toolbarSubtitle)
                 .toolbar {
-                    // History on the leading edge, the active profile as the
-                    // one chip in the middle, and the overflow menu beside
-                    // search. Swap and Zen Mode live in the overflow menu.
+                    // History on the leading edge, the overflow menu beside search.
                     ToolbarItemGroup(placement: .navigation) {
                         SettingsHistoryButtons(history: paneHistory, navigationState: navigationState)
                     }
-                    ToolbarItem(placement: .principal) {
-                        SettingsProfileChip(appState: appState, navigationState: navigationState)
-                    }
                     ToolbarItem(placement: .primaryAction) {
-                        SettingsOverflowMenu(appState: appState, generalSettings: generalSettings, isCustomizeSidebarPresented: $isCustomizeSidebarPresented)
+                        SettingsOverflowMenu(appState: appState, generalSettings: generalSettings)
                     }
                 }
                 .onChange(of: navigationState.settingsNavigationIdentifier) { previous, _ in
@@ -177,9 +174,6 @@ struct SettingsView: View {
             placement: .toolbar,
             prompt: "Search"
         )
-        .sheet(isPresented: $isCustomizeSidebarPresented) {
-            CustomizeSidebarSheet(appState: appState)
-        }
     }
 
     /// Whether the toolbar search field has focus. Driven by ⌘F; the
@@ -389,7 +383,6 @@ extension PrimitiveButtonStyle where Self == GlassButtonStyle {
 private struct SettingsOverflowMenu: View {
     let appState: AppState
     let generalSettings: GeneralSettings
-    @Binding var isCustomizeSidebarPresented: Bool
 
     var body: some View {
         @Bindable var generalSettings = generalSettings
@@ -409,14 +402,6 @@ private struct SettingsOverflowMenu: View {
             }
             Divider()
             Toggle("Simple Mode", isOn: $generalSettings.simpleMode)
-            // Simple Mode has no sidebar to customize, and the sheet is only
-            // attached to the full window.
-            if !generalSettings.simpleMode {
-                Divider()
-                Button("Customize Sidebar…") {
-                    isCustomizeSidebarPresented = true
-                }
-            }
         } label: {
             Label("More", systemImage: "ellipsis.circle")
         }
@@ -469,239 +454,21 @@ private struct SettingsSearchResults: View {
 
 // MARK: - SettingsSidebar
 
-/// The sidebar: a plain source list of panes over a pinned profile control.
+/// The sidebar column: the list of pages, at Floe's width.
 ///
-/// The pane header names the pane; the sidebar only ever lists where to go
-/// and which profile is live.
+/// The pane header names the pane; the sidebar only lists where to go.
 private struct SettingsSidebar: View {
     @Environment(SearchModel.self) private var searchModel
     let appState: AppState
     let navigationState: AppNavigationState
     let generalSettings: GeneralSettings
 
-    private static let listWidth: CGFloat = 210
-
     var body: some View {
-        // The profile switcher lives in the toolbar, so the list runs to the
-        // foot of the sidebar.
         SettingsSidebarPaneList(navigationState: navigationState)
-            .navigationSplitViewColumnWidth(min: Self.listWidth, ideal: Self.listWidth, max: 250)
+            .navigationSplitViewColumnWidth(min: SettingsSidebarPaneList.listWidth, ideal: SettingsSidebarPaneList.listWidth, max: 250)
             .onChange(of: generalSettings.simpleMode) { _, _ in
                 searchModel.updateDisplayedItems()
             }
-    }
-}
-
-// MARK: - SettingsSidebarPanes
-
-/// The sidebar's direct destinations, one flat list with no headings.
-///
-/// The basics (General, Layout, Visibility, Appearance, Thaw Bar) sit at the
-/// top, with About last. Custom Status Icon is not a destination: it is an
-/// Experiments toggle. Scripts is an unbuilt
-/// placeholder with no route from the window.
-enum SettingsSidebarPanes {
-    /// One sidebar group: its direct destinations. Groups are separated by a
-    /// small gap, with no text heading, the way macOS Settings separates its
-    /// top group from the rest.
-    struct Group: Identifiable {
-        let panes: [SettingsNavigationIdentifier]
-
-        /// A group is never empty: visibleGroups(hidden:) drops empty ones.
-        var id: SettingsNavigationIdentifier {
-            panes[0]
-        }
-    }
-
-    static let groups: [Group] = [
-        // The basics sit at the top: the everyday surfaces (General, Menu Bar,
-        // Appearance, Thaw Bar) need no heading.
-        Group(panes: [
-            .general, .menuBarLayout, .visibility, .menuBarAppearance, .thawBar,
-            .profiles, .hotkeys, .automation, .displays,
-            .privacy, .theLab, .tools, .about,
-        ]),
-    ]
-
-    /// Every direct destination, flattened.
-    static let all: [SettingsNavigationIdentifier] = groups.flatMap(\.panes)
-
-    /// Groups with hidden panes filtered out. A group that empties entirely is
-    /// dropped so no empty section sits in the sidebar.
-    static func visibleGroups(hidden: Set<String>) -> [Group] {
-        groups.compactMap { group in
-            let panes = group.panes.filter { !hidden.contains($0.rawValue) }
-            return panes.isEmpty ? nil : Group(panes: panes)
-        }
-    }
-}
-
-// MARK: - SettingsProfileChip
-
-/// The toolbar's chip for the live profile, with a menu to switch, in the
-/// spot Xcode gives its scheme: the one setting people change most often
-/// without wanting the Profiles pane.
-private struct SettingsProfileChip: View {
-    @Environment(SearchModel.self) private var searchModel
-    let appState: AppState
-    let navigationState: AppNavigationState
-    @State private var errorMessage: String?
-
-    private var profileManager: ProfileManager {
-        appState.profileManager
-    }
-
-    private var activeProfile: ProfileMetadata? {
-        guard let id = profileManager.activeProfileID else {
-            return nil
-        }
-        return profileManager.profiles.first { $0.id == id }
-    }
-
-    private var activeProfileName: String {
-        activeProfile?.name ?? String(localized: "No active profile")
-    }
-
-    /// Loads and applies a profile the way the status item menu does.
-    ///
-    /// Throws rather than swallowing a failed load: a profile that cannot be
-    /// read closes the menu and changes nothing, which reads as the app
-    /// ignoring the choice. Callers surface it the way the Profiles pane
-    /// does, so the same failure says the same thing wherever it happens.
-    static func apply(_ metadata: ProfileMetadata, appState: AppState) throws {
-        let profileManager = appState.profileManager
-        guard metadata.id != profileManager.activeProfileID else {
-            return
-        }
-        let profile = try profileManager.loadProfile(id: metadata.id)
-        let previousID = profileManager.activeProfileID
-        profileManager.activeProfileID = metadata.id
-        profileManager.applyProfile(profile, to: appState, previousProfileID: previousID)
-    }
-
-    var body: some View {
-        Menu {
-            if profileManager.profiles.isEmpty {
-                Text("No profiles saved")
-            } else {
-                ForEach(profileManager.profiles) { profile in
-                    Button {
-                        apply(profile)
-                    } label: {
-                        if profile.id == profileManager.activeProfileID {
-                            Label(profile.name, systemImage: "checkmark")
-                        } else {
-                            Text(profile.name)
-                        }
-                    }
-                }
-            }
-            Divider()
-            Button("Manage Profiles…") {
-                // A sidebar jump ends the search, or the detail column keeps stale results.
-                searchModel.searchText = ""
-                SettingsSearchNavigation.selectSidebarPane(.profiles, navigationState: navigationState)
-            }
-        } label: {
-            Label(activeProfileName, systemImage: "person.crop.rectangle.stack")
-                .labelStyle(.titleAndIcon)
-                .lineLimit(1)
-        }
-        .menuIndicator(.visible)
-        .fixedSize()
-        .help("Active profile")
-        .accessibilityLabel("Active profile")
-        .accessibilityValue(activeProfileName)
-        .errorAlert("Couldn’t switch profile", message: $errorMessage)
-    }
-
-    private func apply(_ metadata: ProfileMetadata) {
-        do {
-            try Self.apply(metadata, appState: appState)
-        } catch {
-            errorMessage = error.localizedDescription
-        }
-    }
-}
-
-// MARK: - SettingsSidebarPaneList
-
-/// The settings sidebar navigation list: a standard macOS source list, one
-/// SF Symbol and one label per row, and nothing drawn by hand.
-///
-/// The selection binding is what makes it a source list rather than a stack
-/// of buttons: AppKit draws the selected row, walks it with the arrow keys,
-/// emphasises it while the list holds key focus and greys it when focus is
-/// elsewhere, and reports the selected row to VoiceOver. Selection, hover
-/// and keyboard focus are all the system's marks here; a row that paints
-/// its own only ends up fighting the fill underneath it.
-private struct SettingsSidebarPaneList: View {
-    @Environment(SearchModel.self) private var searchModel
-    let navigationState: AppNavigationState
-
-    /// Width of the icon column, so labels line up whatever each symbol's
-    /// own width is.
-    private static let iconColumn: CGFloat = 22
-
-    @Environment(\.colorScheme) private var colorScheme
-
-    /// The accent, deepened in dark mode so a light one such as yellow keeps
-    /// its contrast against the selected label.
-    private var accent: Color {
-        colorScheme == .dark ? Color.accentColor.mix(with: .black, by: 0.4) : Color.accentColor
-    }
-
-    private var selection: Binding<SettingsNavigationIdentifier?> {
-        Binding {
-            // Routes outside the sidebar, such as Scripts, select no row.
-            SettingsSidebarPanes.all.contains(navigationState.settingsNavigationIdentifier)
-                ? navigationState.settingsNavigationIdentifier
-                : nil
-        } set: { pane in
-            guard let pane else {
-                return
-            }
-            // Clear the search first: the clicked pane may already be selected,
-            // and a leftover search would keep the detail column on results.
-            searchModel.searchText = ""
-            SettingsSearchNavigation.selectSidebarPane(pane, navigationState: navigationState)
-        }
-    }
-
-    var body: some View {
-        let visible = SettingsSidebarPanes.visibleGroups(hidden: navigationState.hiddenSidebarPanes)
-            .flatMap(\.panes)
-        // One list and no Sections: a Section makes SwiftUI back the list with
-        // an outline view, and switching into that mode crashes AppKit on a
-        // freed row view (sizeLastColumnToFit) on macOS 27.0 and 27.2.
-        List(selection: selection) {
-            ForEach(visible, id: \.self) { identifier in
-                let isSelected = identifier == navigationState.settingsNavigationIdentifier
-                Label {
-                    Text(identifier.localized)
-                        .font(ThawType.detail.weight(.medium))
-                        .foregroundStyle(Color.primary)
-                        .lineLimit(1)
-                } icon: {
-                    identifier.iconResource.view
-                        .font(ThawType.symbol.weight(.medium))
-                        .foregroundStyle(Color.secondary)
-                        .frame(width: Self.iconColumn)
-                }
-                // Only the selection fill carries the accent. Applied per row,
-                // where the sidebar reads it.
-                .listItemTint(isSelected ? .preferred(accent) : .monochrome)
-            }
-        }
-        .listStyle(.sidebar)
-        // The selection fill uses the same deepened accent.
-        .tint(accent)
-        // Medium rows whatever the system's sidebar size: at Large the labels
-        // and symbols crowd a settings window this narrow.
-        .environment(\.sidebarRowSize, .medium)
-        .scrollContentBackground(.hidden)
-        .contentMargins(.horizontal, ThawSpacing.base, for: .scrollContent)
-        .scrollEdgeEffectStyle(.soft, for: .top)
     }
 }
 

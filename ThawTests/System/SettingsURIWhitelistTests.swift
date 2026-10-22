@@ -31,19 +31,6 @@ struct SettingsURIWhitelistTests {
         "com.example.thawtests.\(label).\(UUID().uuidString)"
     }
 
-    /// Runs body with Defaults pointed at an empty, throwaway suite.
-    private func withScratchDefaults<T>(_ body: (UserDefaults) throws -> T) throws -> T {
-        let suiteName = "SettingsURIWhitelistTests.\(UUID().uuidString)"
-        let scratch = try #require(UserDefaults(suiteName: suiteName))
-        let previous = Defaults.store
-        Defaults.store = scratch
-        defer {
-            Defaults.store = previous
-            ScratchDefaults.remove(suiteName)
-        }
-        return try body(scratch)
-    }
-
     // MARK: - Who may write
 
     @Test("A built-in app is trusted only when signed by this app's team")
@@ -57,94 +44,82 @@ struct SettingsURIWhitelistTests {
         #expect(!SettingsURIHandler.isBuiltInTrusted(bundleId: "com.example.other", senderTeamID: "TEAM", ownTeamID: "TEAM"))
     }
 
-    @Test("An app that was never approved does not pass the gate")
+    @Test("An app that was never approved does not pass the gate", .scratchDefaults)
     func unapprovedSenderIsRefused() throws {
-        try withScratchDefaults { _ in
-            #expect(SettingsURIHandler.getWhitelist().isEmpty, "A fresh install approves nobody")
-            #expect(!SettingsURIHandler.isWhitelisted(bundleIdentifier: unclaimedBundleID("stranger")))
-        }
+        #expect(SettingsURIHandler.getWhitelist().isEmpty, "A fresh install approves nobody")
+        #expect(!SettingsURIHandler.isWhitelisted(bundleIdentifier: unclaimedBundleID("stranger")))
     }
 
-    @Test("A request whose sender cannot be identified does not pass the gate", arguments: [nil, ""] as [String?])
+    @Test("A request whose sender cannot be identified does not pass the gate", .scratchDefaults, arguments: [nil, ""] as [String?])
     func unidentifiedSenderIsRefused(bundleIdentifier: String?) throws {
-        try withScratchDefaults { _ in
-            // The Apple Event carries no usable sender PID, or the process it
-            // named is gone. Anonymous has to mean refused, not "unknown app".
-            #expect(!SettingsURIHandler.isWhitelisted(bundleIdentifier: bundleIdentifier))
-        }
+        // The Apple Event carries no usable sender PID, or the process it
+        // named is gone. Anonymous has to mean refused, not "unknown app".
+        #expect(!SettingsURIHandler.isWhitelisted(bundleIdentifier: bundleIdentifier))
     }
 
-    @Test("Approving an app grants access, and the approval is written where a relaunch will find it")
+    @Test("Approving an app grants access, and the approval is written where a relaunch will find it", .scratchDefaults)
     func approvalGrantsAccessAndPersists() throws {
-        try withScratchDefaults { scratch in
-            let bundleID = unclaimedBundleID("approved")
-            SettingsURIHandler.addToWhitelist(bundleId: bundleID)
+        let scratch = Defaults.store
+        let bundleID = unclaimedBundleID("approved")
+        SettingsURIHandler.addToWhitelist(bundleId: bundleID)
 
-            #expect(SettingsURIHandler.isWhitelisted(bundleIdentifier: bundleID))
-            #expect(SettingsURIHandler.getWhitelist() == [bundleID])
+        #expect(SettingsURIHandler.isWhitelisted(bundleIdentifier: bundleID))
+        #expect(SettingsURIHandler.getWhitelist() == [bundleID])
 
-            // Read the suite directly rather than through the handler: the
-            // pane promises the approval survives a quit, so it has to be in
-            // the defaults domain and not cached for the life of the process.
-            let persisted = scratch.stringArray(forKey: Defaults.Key.settingsURIWhitelist.rawValue)
-            #expect(persisted == [bundleID], "The approval must be on disk, not only in memory")
-        }
+        // Read the suite directly rather than through the handler: the
+        // pane promises the approval survives a quit, so it has to be in
+        // the defaults domain and not cached for the life of the process.
+        let persisted = scratch.stringArray(forKey: Defaults.Key.settingsURIWhitelist.rawValue)
+        #expect(persisted == [bundleID], "The approval must be on disk, not only in memory")
     }
 
-    @Test("Approving the same app twice leaves one entry")
+    @Test("Approving the same app twice leaves one entry", .scratchDefaults)
     func approvalIsNotDuplicated() throws {
-        try withScratchDefaults { _ in
-            let bundleID = unclaimedBundleID("twice")
-            SettingsURIHandler.addToWhitelist(bundleId: bundleID)
-            SettingsURIHandler.addToWhitelist(bundleId: bundleID)
+        let bundleID = unclaimedBundleID("twice")
+        SettingsURIHandler.addToWhitelist(bundleId: bundleID)
+        SettingsURIHandler.addToWhitelist(bundleId: bundleID)
 
-            // A duplicate would survive a single removal and silently keep the
-            // access the user believes they just revoked.
-            #expect(SettingsURIHandler.getWhitelist() == [bundleID])
-        }
+        // A duplicate would survive a single removal and silently keep the
+        // access the user believes they just revoked.
+        #expect(SettingsURIHandler.getWhitelist() == [bundleID])
     }
 
-    @Test("Removing an app revokes its access and forgets the signature it was pinned to")
+    @Test("Removing an app revokes its access and forgets the signature it was pinned to", .scratchDefaults)
     func removalRevokesAccessAndForgetsTheSignature() throws {
-        try withScratchDefaults { scratch in
-            let bundleID = unclaimedBundleID("revoked")
-            SettingsURIHandler.addToWhitelist(bundleId: bundleID, teamIdentifier: "TEAMID1234")
-            SettingsURIHandler.removeFromWhitelist(bundleId: bundleID)
+        let scratch = Defaults.store
+        let bundleID = unclaimedBundleID("revoked")
+        SettingsURIHandler.addToWhitelist(bundleId: bundleID, teamIdentifier: "TEAMID1234")
+        SettingsURIHandler.removeFromWhitelist(bundleId: bundleID)
 
-            #expect(!SettingsURIHandler.isWhitelisted(bundleIdentifier: bundleID))
-            #expect(SettingsURIHandler.getWhitelist().isEmpty)
+        #expect(!SettingsURIHandler.isWhitelisted(bundleIdentifier: bundleID))
+        #expect(SettingsURIHandler.getWhitelist().isEmpty)
 
-            // The stored team identifier has to go with the entry. Left
-            // behind, an app re-approved under the same bundle id would
-            // inherit a pin the user never granted it.
-            let identities = scratch.data(forKey: Defaults.Key.settingsURISigningIdentities.rawValue)
-                .flatMap { try? JSONDecoder().decode([String: String].self, from: $0) } ?? [:]
-            #expect(identities[bundleID] == nil, "Revoking must not leave the old signature behind")
-        }
+        // The stored team identifier has to go with the entry. Left
+        // behind, an app re-approved under the same bundle id would
+        // inherit a pin the user never granted it.
+        let identities = scratch.data(forKey: Defaults.Key.settingsURISigningIdentities.rawValue)
+            .flatMap { try? JSONDecoder().decode([String: String].self, from: $0) } ?? [:]
+        #expect(identities[bundleID] == nil, "Revoking must not leave the old signature behind")
     }
 
-    @Test("Being on the list is not enough: an approval pinned to a team identifier dies with it")
+    @Test("Being on the list is not enough: an approval pinned to a team identifier dies with it", .scratchDefaults)
     func signatureDriftRevokesAccess() throws {
-        try withScratchDefaults { _ in
-            // Nothing installed claims this bundle id, so its current team
-            // identifier resolves to nil while the stored one says otherwise.
-            // That is the same shape as an approved app being replaced by an
-            // unsigned or differently signed binary at the same bundle id.
-            let bundleID = unclaimedBundleID("pinned")
-            SettingsURIHandler.addToWhitelist(bundleId: bundleID, teamIdentifier: "TEAMID1234")
+        // Nothing installed claims this bundle id, so its current team
+        // identifier resolves to nil while the stored one says otherwise.
+        // That is the same shape as an approved app being replaced by an
+        // unsigned or differently signed binary at the same bundle id.
+        let bundleID = unclaimedBundleID("pinned")
+        SettingsURIHandler.addToWhitelist(bundleId: bundleID, teamIdentifier: "TEAMID1234")
 
-            #expect(SettingsURIHandler.getWhitelist() == [bundleID], "Still listed…")
-            #expect(!SettingsURIHandler.isWhitelisted(bundleIdentifier: bundleID), "…and still refused")
-        }
+        #expect(SettingsURIHandler.getWhitelist() == [bundleID], "Still listed…")
+        #expect(!SettingsURIHandler.isWhitelisted(bundleIdentifier: bundleID), "…and still refused")
     }
 
-    @Test("The whole surface is off until the user turns it on")
+    @Test("The whole surface is off until the user turns it on", .scratchDefaults)
     func featureGateDefaultsOff() throws {
-        try withScratchDefaults { _ in
-            #expect(!SettingsURIHandler.isEnabled(), "thaw:// settings writes are opt-in")
-            Defaults.set(true, forKey: .settingsURIEnabled)
-            #expect(SettingsURIHandler.isEnabled())
-        }
+        #expect(!SettingsURIHandler.isEnabled(), "thaw:// settings writes are opt-in")
+        Defaults.set(true, forKey: .settingsURIEnabled)
+        #expect(SettingsURIHandler.isEnabled())
     }
 
     // MARK: - What may be written
@@ -175,47 +150,43 @@ struct SettingsURIWhitelistTests {
         }
     }
 
-    @Test("An unrecognised key is refused and writes nothing")
+    @Test("An unrecognised key is refused and writes nothing", .scratchDefaults)
     func unknownKeyWritesNothing() throws {
-        try withScratchDefaults { scratch in
-            let sender = unclaimedBundleID("sender")
+        let scratch = Defaults.store
+        let sender = unclaimedBundleID("sender")
 
-            #expect(!SettingsURIHandler.handleSet(key: "notASetting", value: "true", sender: sender))
-            #expect(!SettingsURIHandler.handleToggle(key: "notASetting", sender: sender))
-            #expect(!SettingsURIHandler.handleSet(key: "settingsURIWhitelist", value: "true", sender: sender))
+        #expect(!SettingsURIHandler.handleSet(key: "notASetting", value: "true", sender: sender))
+        #expect(!SettingsURIHandler.handleToggle(key: "notASetting", sender: sender))
+        #expect(!SettingsURIHandler.handleSet(key: "settingsURIWhitelist", value: "true", sender: sender))
 
-            #expect(scratch.object(forKey: "notASetting") == nil, "A refused write must not fall through")
-            #expect(
-                scratch.stringArray(forKey: Defaults.Key.settingsURIWhitelist.rawValue) == nil,
-                "A refused write must not reach the approval list"
-            )
-        }
+        #expect(scratch.object(forKey: "notASetting") == nil, "A refused write must not fall through")
+        #expect(
+            scratch.stringArray(forKey: Defaults.Key.settingsURIWhitelist.rawValue) == nil,
+            "A refused write must not reach the approval list"
+        )
     }
 
-    @Test("Toggle refuses a key that is not a Boolean", arguments: ["rehideInterval", "rehideStrategy"])
+    @Test("Toggle refuses a key that is not a Boolean", .scratchDefaults, arguments: ["rehideInterval", "rehideStrategy"])
     func toggleRefusesNonBooleanKeys(key: String) throws {
-        try withScratchDefaults { scratch in
-            // toggle flips a Bool. Pointed at a duration or an enum it would
-            // write true over a number, so it has to refuse rather than
-            // coerce, the caller is told to use set instead.
-            #expect(!SettingsURIHandler.handleToggle(key: key, sender: unclaimedBundleID("sender")))
-            #expect(scratch.object(forKey: key) == nil)
-        }
+        let scratch = Defaults.store
+        // toggle flips a Bool. Pointed at a duration or an enum it would
+        // write true over a number, so it has to refuse rather than
+        // coerce, the caller is told to use set instead.
+        #expect(!SettingsURIHandler.handleToggle(key: key, sender: unclaimedBundleID("sender")))
+        #expect(scratch.object(forKey: key) == nil)
     }
 
-    @Test("Toggle refuses a malformed display UUID, matching set")
+    @Test("Toggle refuses a malformed display UUID, matching set", .scratchDefaults)
     func toggleRefusesMalformedDisplayUUID() throws {
-        try withScratchDefaults { _ in
-            let sender = unclaimedBundleID("sender")
-            // Both contain a hyphen, which the old shape check accepted, but
-            // neither is a UUID. set has always refused them; toggle must
-            // reach the same verdict.
-            for malformed in ["not-a-uuid", "abc-def"] {
-                #expect(
-                    !SettingsURIHandler.handleToggle(key: "useThawBar", sender: sender, displayUUID: malformed),
-                    "\(malformed) is not a display UUID"
-                )
-            }
+        let sender = unclaimedBundleID("sender")
+        // Both contain a hyphen, which the old shape check accepted, but
+        // neither is a UUID. set has always refused them; toggle must
+        // reach the same verdict.
+        for malformed in ["not-a-uuid", "abc-def"] {
+            #expect(
+                !SettingsURIHandler.handleToggle(key: "useThawBar", sender: sender, displayUUID: malformed),
+                "\(malformed) is not a display UUID"
+            )
         }
     }
 
@@ -228,7 +199,7 @@ struct SettingsURIWhitelistTests {
         // main-queue delivery land while the scratch suite is still current,
         // so nothing a model persists in response reaches the real domain.
         let originalValue = Defaults.double(forKey: .tooltipDelay)
-        let suiteName = "SettingsURIWhitelistTests.\(UUID().uuidString)"
+        let suiteName = ScratchDefaults.name("SettingsURIWhitelistTests")
         let scratch = try #require(UserDefaults(suiteName: suiteName))
         let previousStore = Defaults.store
         Defaults.store = scratch

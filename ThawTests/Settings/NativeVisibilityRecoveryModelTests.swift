@@ -13,6 +13,8 @@ import Testing
 
 @MainActor
 struct NativeVisibilityRecoveryModelTests {
+    private struct UnreadableRecord: Error {}
+
     @MainActor
     private final class Harness {
         var conflicts: [String] = []
@@ -21,16 +23,30 @@ struct NativeVisibilityRecoveryModelTests {
         var inspected = false
         var restored: Set<String>?
         var failsRestore = false
+        var restoreError: Error?
         var disabled = ["com.example.recorded", "com.example.manual"]
         var recorded: Set<String> = ["com.example.recorded"]
+        var recordIsUnreadable = false
+        var setAsideCalls = 0
+        var failsSetAside = false
+        let movedRecord = URL(fileURLWithPath: "/tmp/NativeAppVisibilityJournal.unreadable-1.json")
 
         func model() -> NativeVisibilityRecoveryModel {
             NativeVisibilityRecoveryModel(environment: .init(
                 conflictingApplications: { self.conflicts },
                 disableNativeHiding: { self.nativeDisabled = true },
                 requestAccess: { self.grantsAccess },
-                inspect: { self.inspected = true; return (self.disabled, self.recorded) },
+                inspect: {
+                    self.inspected = true
+                    if self.recordIsUnreadable {
+                        throw UnreadableRecord()
+                    }
+                    return (self.disabled, self.recorded)
+                },
                 restore: {
+                    if let error = self.restoreError {
+                        throw error
+                    }
                     self.restored = $0
                     if self.failsRestore {
                         throw CocoaError(.fileWriteNoPermission)
@@ -38,7 +54,17 @@ struct NativeVisibilityRecoveryModelTests {
                     return self.recorded.count + $0.count
                 },
                 displayName: { $0 },
-                wait: {}
+                wait: {},
+                isUnreadableRecord: { $0 is UnreadableRecord },
+                setAsideUnreadableRecords: {
+                    self.setAsideCalls += 1
+                    if self.failsSetAside {
+                        throw CocoaError(.fileWriteNoPermission)
+                    }
+                    self.recordIsUnreadable = false
+                    self.recorded = []
+                    return [self.movedRecord]
+                }
             ))
         }
     }
@@ -123,5 +149,84 @@ struct NativeVisibilityRecoveryModelTests {
         #expect(model.selectedBundleIDs == ["com.example.manual"])
         #expect(model.recordedBundleIDs == ["com.example.recorded"])
         #expect(model.canRestore)
+    }
+
+    @Test func unreadableRecordShowsNoAppList() async {
+        let harness = Harness()
+        harness.recordIsUnreadable = true
+        let model = harness.model()
+        await model.load()
+        #expect(model.recordIsUnreadable)
+        #expect(model.errorMessage == nil)
+        #expect(!model.hasLoaded)
+        #expect(model.candidates.isEmpty)
+        #expect(!model.canRestore)
+        #expect(harness.setAsideCalls == 0, "Nothing is moved before the user confirms")
+    }
+
+    @Test func settingAsideListsEveryDisabledAppUnselected() async {
+        let harness = Harness()
+        harness.recordIsUnreadable = true
+        let model = harness.model()
+        await model.load()
+        model.setAsideUnreadableRecords()
+        #expect(harness.setAsideCalls == 1)
+        #expect(!model.recordIsUnreadable)
+        #expect(model.setAsideLocations == [harness.movedRecord])
+        #expect(model.hasLoaded)
+        #expect(model.recordedBundleIDs.isEmpty)
+        #expect(model.candidates.map(\.id) == ["com.example.recorded", "com.example.manual"])
+        #expect(model.selectedBundleIDs.isEmpty)
+        #expect(!model.canRestore)
+        model.selectedBundleIDs = ["com.example.manual"]
+        await model.restore()
+        #expect(harness.restored == ["com.example.manual"])
+    }
+
+    @Test func setAsideDoesNothingWhileTheRecordIsReadable() async {
+        let harness = Harness()
+        let model = harness.model()
+        await model.load()
+        model.setAsideUnreadableRecords()
+        #expect(harness.setAsideCalls == 0)
+        #expect(model.setAsideLocations.isEmpty)
+    }
+
+    @Test func failedSetAsideKeepsTheExplanation() async {
+        let harness = Harness()
+        harness.recordIsUnreadable = true
+        harness.failsSetAside = true
+        let model = harness.model()
+        await model.load()
+        model.setAsideUnreadableRecords()
+        #expect(model.recordIsUnreadable)
+        #expect(model.errorMessage != nil)
+        #expect(!model.hasLoaded)
+    }
+
+    @Test func setAsideWaitsForOtherCopiesToQuit() async {
+        let harness = Harness()
+        harness.recordIsUnreadable = true
+        let model = harness.model()
+        await model.load()
+        harness.conflicts = ["Thaw"]
+        model.setAsideUnreadableRecords()
+        #expect(harness.setAsideCalls == 0)
+        #expect(model.recordIsUnreadable)
+        #expect(model.errorMessage != nil)
+    }
+
+    @Test func recordTurningUnreadableBeforeRestoreHidesTheList() async {
+        let harness = Harness()
+        let model = harness.model()
+        await model.load()
+        model.selectedBundleIDs = ["com.example.manual"]
+        harness.recordIsUnreadable = true
+        harness.restoreError = UnreadableRecord()
+        await model.restore()
+        #expect(model.recordIsUnreadable)
+        #expect(!model.hasLoaded)
+        #expect(model.candidates.isEmpty)
+        #expect(model.errorMessage == nil)
     }
 }

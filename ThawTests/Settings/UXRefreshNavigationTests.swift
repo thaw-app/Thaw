@@ -8,31 +8,53 @@
 import Testing
 @testable import Thaw
 
-/// The sidebar is one flat list of direct destinations, ending with About.
+/// The sidebar lists direct destinations in groups, ending with About.
 /// Scripts is an unbuilt placeholder with no route from the window.
 @MainActor
 @Suite("UX refresh navigation")
 struct UXRefreshNavigationTests {
     // MARK: - Sidebar shape
 
-    @Test("The sidebar is one flat list, the basics first")
-    func sidebarIsOneList() {
-        #expect(SettingsSidebarPanes.groups.count == 1, "Got: \(SettingsSidebarPanes.groups.count)")
+    @Test("The sidebar puts Thaw's everyday pages first, then the extras under Modules, then Manage, About alone last")
+    func sidebarGroups() {
+        #expect(SettingsSidebarPanes.groups.map(\.heading) == [nil, "Modules", "Manage", nil])
         #expect(SettingsSidebarPanes.all == [
-            .general, .menuBarLayout, .visibility, .menuBarAppearance, .thawBar,
-            .profiles, .hotkeys, .automation, .displays,
-            .privacy, .theLab, .tools, .about,
+            .general, .menuBarLayout, .visibility, .menuBarAppearance, .thawBar, .displays, .hotkeys,
+            .profiles, .automation, .theLab,
+            .privacy, .tools,
+            .about,
         ], "Got: \(SettingsSidebarPanes.all)")
     }
 
-    @Test("About is visible by default and respects sidebar customization")
-    func aboutSidebarVisibility() {
-        let visible = SettingsSidebarPanes.visibleGroups(hidden: []).flatMap(\.panes)
-        #expect(visible.last == .about)
+    @Test("Modules and Manage have their headings, and About opens with a gap")
+    func headingsAndGaps() {
+        let rows = SettingsSidebarPanes.rows
+        #expect(rows.filter { $0.page == nil } == [.heading("Modules"), .heading("Manage"), .gap])
+        #expect(rows[7] == .heading("Modules"))
+        #expect(rows[11] == .heading("Manage"))
+        #expect(rows.compactMap(\.page) == SettingsSidebarPanes.all)
+    }
 
-        let customized = SettingsSidebarPanes.visibleGroups(hidden: [SettingsNavigationIdentifier.about.rawValue])
-            .flatMap(\.panes)
-        #expect(customized == visible.filter { $0 != .about })
+    @Test("The arrow keys step over headings and stop at the ends")
+    func arrowKeysSkipHeadings() {
+        #expect(SettingsSidebarPanes.page(moving: .down, from: .hotkeys) == .profiles)
+        #expect(SettingsSidebarPanes.page(moving: .up, from: .profiles) == .hotkeys)
+        #expect(SettingsSidebarPanes.page(moving: .up, from: .general) == nil)
+        #expect(SettingsSidebarPanes.page(moving: .down, from: .about) == nil)
+        #expect(SettingsSidebarPanes.page(moving: .down, from: .spaces) == nil)
+        #expect(SettingsSidebarPanes.page(moving: .left, from: .hotkeys) == nil)
+    }
+
+    @Test("No sidebar row is selected while search results show, so any row ends the search")
+    func searchDeselectsTheSidebar() {
+        #expect(SettingsSidebarPanes.selectedRow(current: .visibility, isSearching: false) == .visibility)
+        #expect(SettingsSidebarPanes.selectedRow(current: .visibility, isSearching: true) == nil)
+        #expect(SettingsSidebarPanes.selectedRow(current: .spaces, isSearching: false) == nil)
+    }
+
+    @Test("About is last")
+    func aboutIsLast() {
+        #expect(SettingsSidebarPanes.rows.last == .page(.about))
     }
 
     @Test("Placeholder and absorbed panes stay outside the sidebar")

@@ -61,6 +61,14 @@ struct AutomaticUpdatesTests {
     func choicesAreDistinctRows() {
         #expect(Set(AutomaticUpdates.allCases.map(\.id)).count == AutomaticUpdates.allCases.count)
     }
+
+    @Test("The pill names are the short ones")
+    func shortNames() {
+        #expect(AutomaticUpdates.off.shortLocalized == "Off")
+        #expect(AutomaticUpdates.check.shortLocalized == "Check")
+        #expect(AutomaticUpdates.download.shortLocalized == "Download")
+        #expect(AutomaticUpdates.check.shortLocalized != AutomaticUpdates.check.localized)
+    }
 }
 
 @MainActor

@@ -96,8 +96,7 @@ public struct SettingsWarningPill: View {
                 VStack(alignment: .trailing, spacing: 6) {
                     if let actionTitle, let action {
                         Button(actionTitle, action: action)
-                            .buttonStyle(.glassProminent)
-                            .tint(tint)
+                            .buttonStyle(.thawProminent(tint: tint))
                             .controlSize(.small)
                     }
 

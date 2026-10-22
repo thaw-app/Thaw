@@ -30,6 +30,20 @@ extension HIDEventManager {
         showOnHover && (!sectionIsHidden || showOnHoverAllowed)
     }
 
+    /// Whether hover reveals and hides wait while ⌘ is down or an item is being ⌘-dragged.
+    /// Showing or hiding a section reflows the bar, which shouldn't happen under a
+    /// drag MenuBarAgent is handling.
+    static nonisolated func holdsHoverChanges(
+        modifierFlags: NSEvent.ModifierFlags,
+        isDraggingMenuBarItem: Bool
+    ) -> Bool {
+        isDraggingMenuBarItem || modifierFlags.contains(.command)
+    }
+
+    private var hoverChangesAreHeld: Bool {
+        Self.holdsHoverChanges(modifierFlags: NSEvent.modifierFlags, isDraggingMenuBarItem: isDraggingMenuBarItem)
+    }
+
     private func isMouseNearMenuBar(screen: NSScreen, verticalPadding: CGFloat = 80) -> Bool {
         guard
             let mouseLocation = MouseHelpers.locationAppKit,
@@ -147,12 +161,21 @@ extension HIDEventManager {
         else {
             return
         }
+        releaseHoverPauseIfPointerLeft(appState: appState, screen: screen)
 
         guard Self.shouldProcessHover(
             showOnHover: configuration.showOnHover,
             showOnHoverAllowed: appState.menuBarManager.showOnHoverAllowed,
             sectionIsHidden: hiddenSection.isHidden
         ) else {
+            return
+        }
+
+        guard !hoverChangesAreHeld else {
+            if let pending = pendingHoverAction {
+                Self.diagLog.debug("hover: held while ⌘ is down or an item is dragged")
+                cancelPendingHover(pending)
+            }
             return
         }
 
@@ -195,6 +218,10 @@ extension HIDEventManager {
         }
         Self.diagLog.debug("hover show: armed for \(configuration.showOnHoverDelay) s")
         scheduleHover(.show, after: configuration.showOnHoverDelay) {
+            guard !self.hoverChangesAreHeld else {
+                Self.diagLog.debug("hover show: skipped, ⌘ is down or an item is dragged")
+                return
+            }
             // Recheck empty space and enabled state, skipped while the reveal was pending.
             guard
                 self.isEnabled,
@@ -271,6 +298,7 @@ extension HIDEventManager {
             // The await can allow newer pointer events to rearm or cancel this hide; recheck before hiding.
             guard
                 !Task.isCancelled,
+                !self.hoverChangesAreHeld,
                 self.isEnabled,
                 self.configuration.autoRehide,
                 !self.isMouseInsideMenuBarHoverBand(appState: appState, screen: screen),
@@ -281,60 +309,6 @@ extension HIDEventManager {
             Self.diagLog.debug("hover hide: hiding")
             self.isHoverReveal = false
             hiddenSection.hide()
-        }
-    }
-
-    // MARK: Handle Prevent Show On Hover
-
-    /// Suppresses show-on-hover after a press in the menu bar, until the
-    /// pointer leaves and hovering is allowed again.
-    func handlePreventShowOnHover(
-        with event: NSEvent,
-        appState: AppState,
-        screen: NSScreen
-    ) {
-        guard
-            configuration.showOnHover,
-            !appState.menuBarManager.shouldUseThawBar(for: screen.displayID)
-        else {
-            return
-        }
-
-        guard isMouseInsideMenuBar(appState: appState, screen: screen) else {
-            return
-        }
-
-        guard shouldPreventShowOnHover(for: event, appState: appState, screen: screen) else {
-            return
-        }
-
-        if appState.menuBarManager.showOnHoverAllowed {
-            Self.diagLog.debug("hover: a press in the menu bar pauses it until the pointer leaves")
-        }
-        appState.menuBarManager.showOnHoverAllowed = false
-    }
-
-    /// Empty-space presses suppress hover; item presses do so when a section is revealed or Thaw's icon is pressed.
-    private func shouldPreventShowOnHover(
-        for event: NSEvent,
-        appState: AppState,
-        screen: NSScreen
-    ) -> Bool {
-        guard isMouseInsideMenuBarItem(appState: appState, screen: screen) else {
-            // Exclude the frontmost app's menu; indeterminate answers count as empty menu bar space.
-            return isMouseInsideApplicationMenuClickRegion(
-                appState: appState,
-                screen: screen
-            ) != true
-        }
-        switch event.type {
-        case .leftMouseDown:
-            return appState.menuBarManager.hasVisibleSection
-                || isMouseInsideThawIcon(appState: appState)
-        case .rightMouseDown:
-            return appState.menuBarManager.hasVisibleSection
-        default:
-            return false
         }
     }
 

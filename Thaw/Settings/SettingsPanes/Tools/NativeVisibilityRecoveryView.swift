@@ -11,6 +11,7 @@ import ThawUI
 struct NativeVisibilityRecoveryView: View {
     @State private var model = NativeVisibilityRecoveryModel.live()
     @State private var confirmsRestore = false
+    @State private var confirmsSetAside = false
 
     var body: some View {
         VStack(alignment: .leading, spacing: ThawSpacing.gutter) {
@@ -25,7 +26,12 @@ struct NativeVisibilityRecoveryView: View {
                         ProgressView("Checking menu bar visibility…")
                     } else if let message = model.successMessage {
                         Text(message)
+                    } else if model.recordIsUnreadable {
+                        unreadableRecord
                     } else if model.hasLoaded {
+                        if !model.setAsideLocations.isEmpty {
+                            setAsideNotice
+                        }
                         if !model.recordedBundleIDs.isEmpty {
                             Text("Recorded changes to restore")
                                 .font(ThawType.heading)
@@ -76,7 +82,7 @@ struct NativeVisibilityRecoveryView: View {
                         .buttonStyle(.settingsGlass)
                         .disabled(model.isBusy)
                     Button("Restore Visibility…") { confirmsRestore = true }
-                        .buttonStyle(.settingsGlass)
+                        .buttonStyle(.thawProminent)
                         .disabled(!model.canRestore)
                         .keyboardShortcut(.defaultAction)
                 }
@@ -90,6 +96,35 @@ struct NativeVisibilityRecoveryView: View {
             Button("Cancel", role: .cancel) {}
         } message: {
             Text("Restore recorded states and enable the apps you selected. Your saved layout and positions will not be changed. Native hiding stays off.")
+        }
+        .alert("Set aside the unreadable record?", isPresented: $confirmsSetAside) {
+            Button("Set Aside") { model.setAsideUnreadableRecords() }
+            Button("Cancel", role: .cancel) {
+                // Closing the alert is all Cancel does; the record stays where it is.
+            }
+        } message: {
+            Text("Thaw keeps the file under a new name. Afterwards it can't tell which switched-off apps it hid, so you choose which ones to show and none are selected for you.")
+        }
+    }
+
+    /// Why there is no app list yet, and the one way forward.
+    @ViewBuilder
+    private var unreadableRecord: some View {
+        Text("Thaw can't read its record of the apps it hid")
+            .font(ThawType.heading)
+        Text("The file that lists which apps Thaw switched off in System Settings → Menu Bar is damaged or was written by a version this one can't read. Until it is set aside, Thaw can't show which apps it hid.")
+            .foregroundStyle(ThawInk.supporting)
+        Button("Set Aside Record…") { confirmsSetAside = true }
+            .buttonStyle(.settingsGlass)
+            .disabled(model.isBusy)
+    }
+
+    private var setAsideNotice: some View {
+        VStack(alignment: .leading, spacing: ThawSpacing.tight) {
+            Text("Thaw moved the unreadable record to:")
+            Text(verbatim: model.setAsideLocations.map(\.path).joined(separator: "\n"))
+                .font(ThawType.detail)
+                .textSelection(.enabled)
         }
     }
 

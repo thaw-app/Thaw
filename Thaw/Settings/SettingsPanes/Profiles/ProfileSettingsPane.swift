@@ -23,29 +23,59 @@ struct ProfileSettingsPane: View {
     @State private var profileToDelete: UUID?
     @State private var errorMessage: String?
     @State private var previewedProfile: Profile?
-    /// Compute with previewedProfile so drawing the popover does not re-read the bar.
+    /// Computed with previewedProfile when the selection changes, so drawing
+    /// the page does not re-read the bar.
     @State private var previewedDiff: ProfileLayoutDiff?
+    @State private var selectedProfileID: UUID?
+    @FocusState private var isListFocused: Bool
+
+    /// The profile whose details show under the list: the one picked, else
+    /// the active one, else the first.
+    private var selectedProfile: ProfileMetadata? {
+        let profiles = profileManager.profiles
+        return profiles.first { $0.id == selectedProfileID }
+            ?? profiles.first { $0.id == profileManager.activeProfileID }
+            ?? profiles.first
+    }
 
     var body: some View {
         ThawForm {
-            ThawSection("Profiles") {
+            ThawSection {
+                Text("Profiles")
+            } content: {
                 profileList
                 createProfileControls
-            }
-
-            if !profileManager.profiles.isEmpty {
-                // An inline link distinguishes navigation from a settings group.
-                HStack {
-                    Text("Automatic switching by display or Space")
+            } footer: {
+                if !profileManager.profiles.isEmpty {
+                    Text(AutomationSummary.profileSwitching(AutomationSummary.assignments(of: profileManager.profiles)))
                         .font(ThawType.footnote)
                         .foregroundStyle(ThawInk.supporting)
-                    Spacer()
-                    Button("Automation") {
-                        SettingsSearchNavigation.selectSidebarPane(.automation, navigationState: appState.navigationState)
-                    }
-                    .font(.footnote.weight(.medium))
-                    .buttonStyle(.plain)
                 }
+            }
+
+            if let selected = selectedProfile {
+                ProfileSwitchesSection(
+                    profileManager: profileManager,
+                    displaySettings: appState.settings.displaySettings,
+                    profile: selected,
+                    errorMessage: $errorMessage
+                )
+                ProfileLayoutBehaviorSection(
+                    profileManager: profileManager,
+                    profile: selected,
+                    errorMessage: $errorMessage
+                )
+                ProfileChangesSection(
+                    profile: previewedProfile,
+                    diff: previewedDiff,
+                    update: { updateProfile(id: selected.id, scope: $0) },
+                    updateAll: updateConfigurationOnAllProfiles
+                )
+            }
+        }
+        .onChange(of: selectedProfile?.id, initial: true) { _, id in
+            if let id {
+                previewProfile(id: id)
             }
         }
         .errorAlert("Couldn’t complete the profile action", message: $errorMessage)
@@ -70,12 +100,24 @@ struct ProfileSettingsPane: View {
                 caption: "Name your current setup below and choose Save Current to keep it as a profile."
             )
         } else {
-            ForEach(profileManager.profiles) { profile in
-                profileRow(for: profile)
-                    .contextMenu {
-                        profileActions(for: profile)
-                    }
+            // One block of rows drawn like the sidebar's, so picking a
+            // profile looks like picking a page, and the arrow keys step
+            // through it once it has focus.
+            VStack(spacing: ThawSpacing.hairline) {
+                ForEach(profileManager.profiles) { profile in
+                    profileRow(for: profile)
+                        .contextMenu {
+                            profileActions(for: profile)
+                        }
+                }
             }
+            .thawKeyboardList(isFocused: $isListFocused) { direction in
+                let ids = profileManager.profiles.map(\.id)
+                if let next = ProfileListStep.profile(after: selectedProfile?.id, in: ids, moving: direction) {
+                    selectedProfileID = next
+                }
+            }
+            .listRowInsets(EdgeInsets(top: ThawSpacing.tight, leading: ThawSpacing.tight, bottom: ThawSpacing.tight, trailing: ThawSpacing.tight))
         }
     }
 
@@ -103,97 +145,26 @@ struct ProfileSettingsPane: View {
     }
 
     private func profileRow(for profile: ProfileMetadata) -> some View {
-        HStack(spacing: ThawSpacing.inset) {
-            if editingProfileID == profile.id {
-                TextField("Profile name", text: $editingName, onCommit: {
-                    commitRename(id: profile.id)
-                })
-                .textFieldStyle(.roundedBorder)
-                .frame(maxWidth: 200)
+        ProfileListRow(
+            profile: profile,
+            isSelected: profile.id == selectedProfile?.id,
+            showsFocus: isListFocused,
+            isActive: profile.id == profileManager.activeProfileID,
+            isApplying: isApplying,
+            isEditing: editingProfileID == profile.id,
+            editingName: $editingName,
+            select: { selectedProfileID = profile.id },
+            apply: { applyProfile(id: profile.id) },
+            commitRename: { commitRename(id: profile.id) },
+            actions: { profileActions(for: profile) }
+        )
+    }
 
-                Button("Done") {
-                    commitRename(id: profile.id)
-                }
-                .buttonStyle(.settingsGlass)
-            } else {
-                Image(systemName: "checkmark.circle.fill")
-                    .foregroundStyle(.green)
-                    .font(.title2)
-                    .opacity(profile.id == profileManager.activeProfileID ? 1 : 0)
-
-                Text(profile.name)
-                    .font(.body.weight(.semibold))
-                    .lineLimit(1)
-
-                Spacer()
-
-                Button {
-                    previewProfile(id: profile.id)
-                } label: {
-                    Image(systemName: "eye")
-                }
-                .buttonStyle(.settingsGlass)
-                .help("Preview this profile’s saved layout and settings")
-                .accessibilityLabel("Preview this profile’s saved layout and settings")
-                .popover(
-                    isPresented: Binding(
-                        get: { previewedProfile?.id == profile.id },
-                        set: { isPresented in
-                            if !isPresented {
-                                previewedProfile = nil
-                            }
-                        }
-                    ),
-                    arrowEdge: .bottom
-                ) {
-                    if let previewedProfile {
-                        ProfilePreviewView(profile: previewedProfile, diff: previewedDiff)
-                    }
-                }
-
-                Button("Apply") {
-                    applyProfile(id: profile.id)
-                }
-                .buttonStyle(.settingsGlass)
-                .disabled(isApplying || profile.id == profileManager.activeProfileID)
-
-                ThawMenu(
-                    primaryAction: {
-                        updateProfile(id: profile.id, scope: .all)
-                    },
-                    content: {
-                        // Keep secondary dates in the menu so the profile name leads the row.
-                        Section {
-                            Text("Created \(profile.createdAt.formatted(date: .abbreviated, time: .shortened))")
-                                .font(ThawType.metric)
-                            Text("Modified \(profile.modifiedAt.formatted(date: .abbreviated, time: .shortened))")
-                                .font(ThawType.metric)
-                        }
-                        Divider()
-                        Button("Save Current Into This Profile") {
-                            updateProfile(id: profile.id, scope: .all)
-                        }
-                        Button("Save Layout Only") {
-                            updateProfile(id: profile.id, scope: .layoutOnly)
-                        }
-                        Button("Save Configuration Only") {
-                            updateProfile(id: profile.id, scope: .configurationOnly)
-                        }
-                        Divider()
-                        Button("Save Configuration on All Profiles") {
-                            updateConfigurationOnAllProfiles()
-                        }
-                    },
-                    title: {
-                        Text("Save Current")
-                    }
-                )
-                .help("Save the current configuration into this profile")
-
-                MoreActionsMenu(label: "More profile actions") {
-                    profileActions(for: profile)
-                }
-            }
+    /// Reads the selected profile again after it or the bar changed, so its
+    /// "Applying this profile changes" section stays true.
+    private func refreshPreview() {
+        if let id = selectedProfile?.id {
+            previewProfile(id: id)
         }
     }
 
@@ -275,7 +246,6 @@ struct ProfileSettingsPane: View {
         }
     }
 
-    /// Compute once at popover opening to avoid repeated item-cache and spacing-domain reads for a fixed preview.
     private func diff(for profile: Profile) -> ProfileLayoutDiff {
         var diff = ProfileLayoutDiff.between(
             current: profileManager.currentLayoutSnapshot(from: appState),
@@ -303,12 +273,9 @@ struct ProfileSettingsPane: View {
         isApplying = true
         Task {
             do {
-                let profile = try profileManager.loadProfile(id: id)
-                let previousID = profileManager.activeProfileID
-                profileManager.activeProfileID = id
-                profileManager.applyProfile(profile, to: appState, previousProfileID: previousID)
-                // Wait for the layout task to complete before re-enabling.
-                await profileManager.layoutTask?.value
+                // Waits for the layout task, so the Apply buttons stay off until it ends.
+                try await profileManager.applyProfileAwaitingLayout(id: id, to: appState)
+                refreshPreview()
                 if profileManager.layoutDidNotRun {
                     errorMessage = String(
                         localized: "The profile's settings were applied, but its menu bar arrangement was not: \(Constants.displayName) is not managing the menu bar yet. Apply it again once the menu bar is under \(Constants.displayName)'s control."
@@ -325,6 +292,7 @@ struct ProfileSettingsPane: View {
         do {
             let previous = try profileManager.loadProfile(id: id)
             try profileManager.updateProfile(id: id, scope: scope, appState: appState)
+            refreshPreview()
             let actionName = switch scope {
             case .all: String(localized: "Save Profile")
             case .layoutOnly: String(localized: "Save Layout")
@@ -353,6 +321,7 @@ struct ProfileSettingsPane: View {
                 failed += 1
             }
         }
+        refreshPreview()
         if failed > 0 {
             errorMessage = String(localized: "Failed to update configuration on \(failed) profiles.")
         }

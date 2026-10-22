@@ -208,9 +208,7 @@ struct ThawBarPreview: View {
         images: [MenuBarItemTag: NSImage]
     ) -> some View {
         let columnCount = max(2, gridColumns)
-        let rows = stride(from: 0, to: items.count, by: columnCount).map { start in
-            Array(items[start ..< min(start + columnCount, items.count)])
-        }
+        let rows = items.chunks(ofCount: columnCount)
         return Grid(horizontalSpacing: itemSpacing, verticalSpacing: itemSpacing) {
             ForEach(rows.indices, id: \.self) { index in
                 GridRow {

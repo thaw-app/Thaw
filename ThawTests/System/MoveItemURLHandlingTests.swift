@@ -115,38 +115,22 @@ extension SettingsURIResponseSuites {
             #expect(try LauncherURIRequest(url: #require(URL(string: "thaw://move-item?item-id=x&section=hidden")))?.operation == .moveItem)
         }
 
-        private func withScratchDefaults<T>(_ body: () throws -> T) throws -> T {
-            let suiteName = "MoveItemURLHandlingTests.\(UUID().uuidString)"
-            let scratch = try #require(UserDefaults(suiteName: suiteName))
-            let previous = Defaults.store
-            Defaults.store = scratch
-            defer {
-                Defaults.store = previous
-                ScratchDefaults.remove(suiteName)
-            }
-            return try body()
-        }
-
-        @Test("The gate move-item passes refuses an unapproved or unknown sender and admits an approved one")
+        @Test("The gate move-item passes refuses an unapproved or unknown sender and admits an approved one", .scratchDefaults)
         func gateRefusesUnapprovedSenders() throws {
-            try withScratchDefaults {
-                let sender = "com.example.thawtests.mover.\(UUID().uuidString)"
-                #expect(!SettingsURIHandler.isWhitelisted(bundleIdentifier: sender, builtInTrust: { _ in false }))
-                #expect(!SettingsURIHandler.isWhitelisted(bundleIdentifier: nil, builtInTrust: { _ in false }))
-                SettingsURIHandler.addToWhitelist(bundleId: sender)
-                #expect(SettingsURIHandler.isWhitelisted(bundleIdentifier: sender, builtInTrust: { _ in false }))
-                SettingsURIHandler.removeFromWhitelist(bundleId: sender)
-                #expect(!SettingsURIHandler.isWhitelisted(bundleIdentifier: sender, builtInTrust: { _ in false }))
-            }
+            let sender = "com.example.thawtests.mover.\(UUID().uuidString)"
+            #expect(!SettingsURIHandler.isWhitelisted(bundleIdentifier: sender, builtInTrust: { _ in false }))
+            #expect(!SettingsURIHandler.isWhitelisted(bundleIdentifier: nil, builtInTrust: { _ in false }))
+            SettingsURIHandler.addToWhitelist(bundleId: sender)
+            #expect(SettingsURIHandler.isWhitelisted(bundleIdentifier: sender, builtInTrust: { _ in false }))
+            SettingsURIHandler.removeFromWhitelist(bundleId: sender)
+            #expect(!SettingsURIHandler.isWhitelisted(bundleIdentifier: sender, builtInTrust: { _ in false }))
         }
 
-        @Test("An approved sender signed by a different team than it was approved with is refused")
+        @Test("An approved sender signed by a different team than it was approved with is refused", .scratchDefaults)
         func gateRefusesASignatureMismatch() throws {
-            try withScratchDefaults {
-                let sender = "com.example.thawtests.mover.\(UUID().uuidString)"
-                SettingsURIHandler.addToWhitelist(bundleId: sender, teamIdentifier: "TEAMID1234")
-                #expect(!SettingsURIHandler.isWhitelisted(bundleIdentifier: sender, builtInTrust: { _ in false }))
-            }
+            let sender = "com.example.thawtests.mover.\(UUID().uuidString)"
+            SettingsURIHandler.addToWhitelist(bundleId: sender, teamIdentifier: "TEAMID1234")
+            #expect(!SettingsURIHandler.isWhitelisted(bundleIdentifier: sender, builtInTrust: { _ in false }))
         }
     }
 }

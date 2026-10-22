@@ -230,7 +230,7 @@ extension DisplaySettingsPane {
             Button("Apply") {
                 requestSpacingApply(for: display, offset: Double(draft))
             }
-            .buttonStyle(.glassProminent)
+            .buttonStyle(.thawProminent)
             .controlSize(.small)
             .help(Text("Apply the spacing for this display"))
         }

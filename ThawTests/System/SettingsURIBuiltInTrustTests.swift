@@ -16,21 +16,6 @@ import Testing
 struct SettingsURIBuiltInTrustTests {
     private let floe = "com.thaw.floe"
 
-    private func withScratchDefaults<T>(_ body: (UserDefaults) throws -> T) throws -> T {
-        let suiteName = "SettingsURIBuiltInTrustTests.\(UUID().uuidString)"
-        let scratch = try #require(UserDefaults(suiteName: suiteName))
-        let previous = Defaults.store
-        let previousCenter = SettingsURIHandler.settingsChangeNotificationCenter
-        Defaults.store = scratch
-        SettingsURIHandler.settingsChangeNotificationCenter = NotificationCenter()
-        defer {
-            SettingsURIHandler.settingsChangeNotificationCenter = previousCenter
-            Defaults.store = previous
-            ScratchDefaults.remove(suiteName)
-        }
-        return try body(scratch)
-    }
-
     @Test("A built-in sender is trusted when both signatures carry the same team", arguments: [
         ("TEAM", "TEAM", true),
         ("OTHER", "TEAM", false),
@@ -82,9 +67,9 @@ struct SettingsURIBuiltInTrustTests {
         #expect(!SettingsURIHandler.isBuiltInTrustedSender(bundleIdentifier: floe, ownTeamID: { nil }))
     }
 
-    @Test("A built-in sender passes the gate without being in the approved list")
+    @Test("A built-in sender passes the gate without being in the approved list", .scratchDefaults)
     func builtInSenderSkipsTheWhitelist() throws {
-        try withScratchDefaults { _ in
+        try withPrivateSettingsChangeCenter {
             #expect(SettingsURIHandler.getWhitelist().isEmpty)
             #expect(SettingsURIHandler.isWhitelisted(bundleIdentifier: floe) { $0 == floe })
             #expect(!SettingsURIHandler.isWhitelisted(bundleIdentifier: floe) { _ in false })
@@ -92,9 +77,9 @@ struct SettingsURIBuiltInTrustTests {
         }
     }
 
-    @Test("A sender with no identity is refused before built-in trust is consulted", arguments: [nil, ""] as [String?])
+    @Test("A sender with no identity is refused before built-in trust is consulted", .scratchDefaults, arguments: [nil, ""] as [String?])
     func unidentifiedSenderNeverReachesBuiltInTrust(bundleIdentifier: String?) throws {
-        try withScratchDefaults { _ in
+        try withPrivateSettingsChangeCenter {
             var consulted = false
             let allowed = SettingsURIHandler.isWhitelisted(bundleIdentifier: bundleIdentifier) { _ in
                 consulted = true
@@ -108,7 +93,7 @@ struct SettingsURIBuiltInTrustTests {
     @Test("Something that is not a signed app has no team")
     func unsignedBundleHasNoTeam() throws {
         let folder = FileManager.default.temporaryDirectory
-            .appendingPathComponent("SettingsURIBuiltInTrustTests.\(UUID().uuidString)", isDirectory: true)
+            .appendingPathComponent(ScratchDefaults.name("SettingsURIBuiltInTrustTests"), isDirectory: true)
         try FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
         defer { try? FileManager.default.removeItem(at: folder) }
 
@@ -117,9 +102,9 @@ struct SettingsURIBuiltInTrustTests {
         #expect(SettingsURIHandler.teamIdentifier(ofAppAt: missing, logName: "missing app") == nil)
     }
 
-    @Test("Setting the rehide strategy stores its raw value and announces it")
+    @Test("Setting the rehide strategy stores its raw value and announces it", .scratchDefaults)
     func enumSettingIsStoredAndAnnounced() throws {
-        try withScratchDefaults { _ in
+        try withPrivateSettingsChangeCenter {
             nonisolated(unsafe) var announced = [[AnyHashable: Any]]()
             let observer = SettingsURIHandler.settingsChangeNotificationCenter.addObserver(
                 forName: .settingsDidChangeViaURI,

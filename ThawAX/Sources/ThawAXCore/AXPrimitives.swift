@@ -43,11 +43,12 @@ public enum AXPrimitives {
     @discardableResult
     public static func press(
         _ element: AXUIElement,
+        action: String = kAXPressAction,
         messagingTimeout: Float = defaultMessagingTimeout
     ) -> Bool {
         AXUIElementSetMessagingTimeout(element, messagingTimeout)
         return press(
-            perform: { AXUIElementPerformAction(element, kAXPressAction as CFString) },
+            perform: { AXUIElementPerformAction(element, action as CFString) },
             ownerPID: { pid(of: element) }
         )
     }
@@ -261,10 +262,12 @@ public enum AXPrimitives {
 
     /// Presses one of pid's own status items. With several, only the one
     /// whose frame centre lies within tolerance of target is pressed.
+    /// action is kAXPressAction for a left click, kAXShowMenuAction for the menu a right click opens.
     public static func pressNearestStatusItem(
         pid: pid_t,
         target: CGPoint,
         tolerance: Double,
+        action: String = kAXPressAction,
         messagingTimeout: Float = defaultMessagingTimeout
     ) -> Bool {
         guard let bar = extrasMenuBar(pid: pid, messagingTimeout: messagingTimeout) else {
@@ -273,7 +276,7 @@ public enum AXPrimitives {
         let items = children(of: bar)
         // One item is unambiguous; multiple items require a target match to avoid opening the wrong menu.
         if items.count == 1 {
-            return press(items[0], messagingTimeout: messagingTimeout)
+            return press(items[0], action: action, messagingTimeout: messagingTimeout)
         }
         let nearest = items
             .compactMap { item in
@@ -283,7 +286,7 @@ public enum AXPrimitives {
         guard let nearest, nearest.1 <= tolerance else {
             return false
         }
-        return press(nearest.0, messagingTimeout: messagingTimeout)
+        return press(nearest.0, action: action, messagingTimeout: messagingTimeout)
     }
 
     /// Presses a status item MenuBarAgent hosts on behalf of sourcePID.

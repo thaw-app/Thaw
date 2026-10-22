@@ -19,6 +19,8 @@ public enum AXHelperRequest: Codable, Sendable, Equatable {
     /// Presses one of an application's own status items. With several, the
     /// one whose frame centre lies within the tolerance of the target wins.
     case pressStatusItem(pid: pid_t, targetX: Double, targetY: Double, tolerance: Double)
+    /// Opens the menu a right click would open on the same status item, through AXShowMenu.
+    case showStatusItemMenu(pid: pid_t, targetX: Double, targetY: Double, tolerance: Double)
     /// Presses a status item MenuBarAgent hosts on behalf of sourcePID.
     case pressHostedItem(sourcePID: pid_t)
 }

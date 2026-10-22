@@ -87,7 +87,7 @@ struct AlwaysShowHiddenItemsTests {
         #expect(state.section == .hidden)
         #expect(state.reveals == (initialSection == .hidden ? [] : [.hidden]))
         #expect(state.resets == 0)
-        #expect(controller.shouldRestorePreZenReveals)
+        #expect(!controller.shouldRestorePreZenReveals, "the policy owns this reveal; Zen exit hands it back")
     }
 
     @Test("Changing displays withdraws only the policy-owned reveal once")
@@ -109,7 +109,7 @@ struct AlwaysShowHiddenItemsTests {
         #expect(controller.shouldRestorePreZenReveals)
     }
 
-    @Test("Zen suspends ownership and restores only an enabled policy", arguments: [false, true])
+    @Test("Zen exit hands an always-show reveal back to the policy, which restores it only when enabled", arguments: [false, true])
     func zenExitRespectsCurrentPolicy(enabledOnExit: Bool) {
         let state = ControllerState()
         state.enabledDisplayIDs = [1]
@@ -125,14 +125,14 @@ struct AlwaysShowHiddenItemsTests {
         #expect(state.reveals == [.hidden])
         #expect(state.resets == 0)
         state.isZenModeActive = false
-        #expect(controller.shouldRestorePreZenReveals == enabledOnExit)
+        #expect(!controller.shouldRestorePreZenReveals, "the policy's reveal isn't replayed as the user's")
         for _ in 0 ..< 2 {
             controller.synchronize()
         }
         #expect(state.section == (enabledOnExit ? .hidden : nil))
         #expect(state.reveals == (enabledOnExit ? [.hidden, .hidden] : [.hidden]))
         #expect(state.resets == (enabledOnExit ? 0 : 1))
-        #expect(controller.shouldRestorePreZenReveals)
+        #expect(controller.shouldRestorePreZenReveals == !enabledOnExit)
     }
 
     @Test("Configuration observations synchronize before refreshing controls", .timeLimit(.minutes(1)))

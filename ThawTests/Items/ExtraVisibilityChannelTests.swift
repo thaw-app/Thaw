@@ -17,7 +17,7 @@ import Testing
 struct ExtraVisibilityChannelTests {
     private func withScratchFolder(_ body: (URL) throws -> Void) throws {
         let folder = FileManager.default.temporaryDirectory
-            .appendingPathComponent("ExtraVisibilityChannelTests.\(UUID().uuidString)", isDirectory: true)
+            .appendingPathComponent(ScratchDefaults.name("ExtraVisibilityChannelTests"), isDirectory: true)
         defer { try? FileManager.default.removeItem(at: folder) }
         try body(folder)
     }

@@ -7,6 +7,7 @@
 
 import Foundation
 import OSLog
+import Synchronization
 
 /// Writes diagnostic log messages to a file on disk when enabled, so users
 /// can capture detailed logs for troubleshooting without a debug build.
@@ -16,17 +17,12 @@ public final class DiagnosticLogger: Sendable {
     public static let shared = DiagnosticLogger()
 
     /// Whether diagnostic logging to file is currently enabled.
-    /// Thread-safe via OSAllocatedUnfairLock.
-    private let isEnabledLock = OSAllocatedUnfairLock(initialState: false)
+    private let enabled = Atomic<Bool>(false)
 
     public var isEnabled: Bool {
-        get { isEnabledLock.withLock { $0 } }
+        get { enabled.load(ordering: .acquiring) }
         set {
-            let oldValue = isEnabledLock.withLock { current -> Bool in
-                let old = current
-                current = newValue
-                return old
-            }
+            let oldValue = enabled.exchange(newValue, ordering: .acquiringAndReleasing)
             if newValue, !oldValue {
                 openLogFile()
             } else if !newValue, oldValue {
@@ -116,11 +112,7 @@ public final class DiagnosticLogger: Sendable {
     /// wall clock can straddle a second and produce two files. Safe to call
     /// repeatedly; the existing handle is closed first.
     public func attachToFile(at fileURL: URL) {
-        let wasEnabled = isEnabledLock.withLock { current -> Bool in
-            let was = current
-            current = true
-            return was
-        }
+        let wasEnabled = enabled.exchange(true, ordering: .acquiringAndReleasing)
         if wasEnabled {
             closeLogFile()
         }
@@ -137,7 +129,7 @@ public final class DiagnosticLogger: Sendable {
             try FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
         } catch {
             osLog.error("Failed to create log directory at \(dir.path): \(error)")
-            isEnabledLock.withLock { $0 = false }
+            enabled.store(false, ordering: .releasing)
             return
         }
 
@@ -155,7 +147,7 @@ public final class DiagnosticLogger: Sendable {
             try FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
         } catch {
             osLog.error("Failed to create log directory at \(dir.path): \(error)")
-            isEnabledLock.withLock { $0 = false }
+            enabled.store(false, ordering: .releasing)
             return
         }
 
@@ -167,7 +159,7 @@ public final class DiagnosticLogger: Sendable {
         let fd = open(fileURL.path, O_WRONLY | O_APPEND | O_CREAT, 0o644)
         guard fd >= 0 else {
             osLog.error("Failed to open log file at \(fileURL.path): errno \(errno)")
-            isEnabledLock.withLock { $0 = false }
+            enabled.store(false, ordering: .releasing)
             return
         }
         let handle = FileHandle(fileDescriptor: fd, closeOnDealloc: true)

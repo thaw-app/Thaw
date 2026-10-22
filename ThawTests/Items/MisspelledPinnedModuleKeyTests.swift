@@ -31,7 +31,7 @@ struct MisspelledPinnedModuleKeyTests {
 
     @Test("A misspelled key is pruned on the first pass, with nothing else")
     func prunedWithoutASecondLaunch() throws {
-        let suite = "MisspelledPinnedModuleKeyTests.\(UUID().uuidString)"
+        let suite = ScratchDefaults.name("MisspelledPinnedModuleKeyTests")
         let defaults = try #require(UserDefaults(suiteName: suite))
         defer { ScratchDefaults.remove(suite) }
         var removed = Set<String>()

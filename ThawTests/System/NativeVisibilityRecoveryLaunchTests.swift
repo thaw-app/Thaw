@@ -6,6 +6,7 @@
 //  Licensed under the GNU GPLv3
 
 import AppKit
+import PlatformRuntimeKit
 import Testing
 @testable import Thaw
 
@@ -132,5 +133,31 @@ struct NativeVisibilityRecoveryLaunchTests {
             applicationURL: URL(fileURLWithPath: "/Applications/Utilities/Example App.app")
         ) == "Example App")
         #expect(Launch.displayName(forBundleID: "com.example.app", applicationURL: nil) == "com.example.app")
+    }
+
+    @Test("An unreadable record does not stop the handoff to recovery")
+    func unreadableRecordStillHandsOff() throws {
+        var attempts = 0
+        try Launch.preserveRecordsBeforeHandoff {
+            attempts += 1
+            throw NativeAppVisibilityStoreError.journalUnreadable
+        }
+        #expect(attempts == 1)
+    }
+
+    @Test("Any other failure to keep the records stops the handoff")
+    func otherFailuresStopTheHandoff() {
+        #expect(throws: NativeAppVisibilityStoreError.self) {
+            try Launch.preserveRecordsBeforeHandoff {
+                throw NativeAppVisibilityStoreError.preferencesChangedExternally
+            }
+        }
+    }
+
+    @Test("Only the unreadable journal error counts as an unreadable record")
+    func unreadableRecordIsRecognized() {
+        #expect(Launch.isUnreadableRecord(NativeAppVisibilityStoreError.journalUnreadable))
+        #expect(!Launch.isUnreadableRecord(NativeAppVisibilityStoreError.anotherProcessOwnsNativeHiding))
+        #expect(!Launch.isUnreadableRecord(CocoaError(.fileReadCorruptFile)))
     }
 }

@@ -75,8 +75,7 @@ final class FeatureTips {
 
     /// Tips stay off in unit tests, whose host is the app, and in SwiftUI previews.
     nonisolated static func isEnabled(environment: [String: String]) -> Bool {
-        let testKeys = ["XCTestConfigurationFilePath", "XCTestBundlePath", "XCTestSessionIdentifier"]
-        guard !testKeys.contains(where: { environment[$0] != nil }) else { return false }
+        guard !TestHosting.isActive(environment: environment) else { return false }
         return environment["XCODE_RUNNING_FOR_PREVIEWS"] != "1"
     }
 

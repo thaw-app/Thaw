@@ -75,7 +75,12 @@ struct HotkeyRecorder<Label: View>: View {
             displaySegment
             actionSegment
         }
-        .frame(minWidth: 132, idealWidth: 132, minHeight: 24, idealHeight: 24)
+        .frame(
+            minWidth: 132,
+            idealWidth: 132,
+            minHeight: SegmentButtonStyle.outerRadius * 2,
+            idealHeight: SegmentButtonStyle.outerRadius * 2
+        )
     }
 
     /// The wider half, which reports the current state and starts a recording.
@@ -234,6 +239,8 @@ private final class KeyCapture {
 /// The style shared by the recorder's two halves, which round off the outer
 /// end of the control and leave the inner end square.
 private struct SegmentButtonStyle: ButtonStyle {
+    /// Half the control's height, so the outer ends are round like the capsule buttons.
+    static let outerRadius: CGFloat = 12
     /// The end of the control a segment sits at.
     enum Side {
         case leading
@@ -244,7 +251,7 @@ private struct SegmentButtonStyle: ButtonStyle {
     var isHighlighted: Bool
 
     private var outline: some InsettableShape {
-        let r: CGFloat = 6
+        let r = Self.outerRadius
         let radii = switch side {
         case .leading: RectangleCornerRadii(topLeading: r, bottomLeading: r)
         case .trailing: RectangleCornerRadii(bottomTrailing: r, topTrailing: r)

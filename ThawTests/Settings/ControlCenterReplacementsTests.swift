@@ -87,23 +87,14 @@ struct ControlCenterReplacementsTests {
         #expect(ControlCenterReplacements.listed.allSatisfy { replacements.isReplaced($0) })
     }
 
-    @Test("The module choice round-trips through the settings")
-    func storesTheChoice() throws {
-        let suiteName = "ControlCenterReplacementsTests.\(UUID().uuidString)"
-        let scratch = try #require(UserDefaults(suiteName: suiteName))
-        let previous = Defaults.store
-        Defaults.store = scratch
-        defer {
-            Defaults.store = previous
-            ScratchDefaults.remove(suiteName)
-        }
-
+    @Test("The module choice round-trips through the settings", .scratchDefaults)
+    func storesTheChoice() {
         let settings = AdvancedSettings()
         settings.controlCenterReplacements = ControlCenterReplacements(
             modules: true, timeMachine: false, textInput: false, skipped: [.userSwitcher]
         )
         #expect(settings.skippedModuleStandIns == ["user"])
         #expect(settings.controlCenterReplacements.skipped == [.userSwitcher])
-        #expect(scratch.stringArray(forKey: "SkippedModuleStandIns") == ["user"])
+        #expect(Defaults.store.stringArray(forKey: "SkippedModuleStandIns") == ["user"])
     }
 }

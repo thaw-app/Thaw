@@ -16,7 +16,7 @@ import Testing
 @MainActor
 struct MenuBarItemImageCacheDiskStoreTests {
     private let directory = FileManager.default.temporaryDirectory
-        .appending(path: "MenuBarItemImageCacheDiskStoreTests.\(UUID().uuidString)", directoryHint: .isDirectory)
+        .appending(path: ScratchDefaults.name("MenuBarItemImageCacheDiskStoreTests"), directoryHint: .isDirectory)
 
     private var store: MenuBarItemImageCacheDiskStore {
         MenuBarItemImageCacheDiskStore(cachesDirectory: directory)

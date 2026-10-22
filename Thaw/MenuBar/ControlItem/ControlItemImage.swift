@@ -32,6 +32,9 @@ nonisolated enum ControlItemImage: Codable, Hashable {
             switch name {
             case .chevronLarge: Drawn.Chevron.large
             case .chevronSmall: Drawn.Chevron.small
+            case .dividerLine: DividerMark.line
+            case .dividerDot: DividerMark.dot
+            case .dividerSlash: DividerMark.slash
             }
         case let .symbol(name):
             NSImage(systemSymbolName: name, accessibilityDescription: nil)
@@ -51,6 +54,14 @@ nonisolated enum ControlItemImage: Codable, Hashable {
                     return image
                 }
         }
+    }
+
+    /// A Custom section divider's image, fitted to the menu bar like a custom Thaw icon.
+    @MainActor
+    static func dividerImage(for mark: SectionDividerCustomMark) -> NSImage? {
+        guard let image = NSImage(data: mark.data).flatMap(scaledToFitMenuBar) else { return nil }
+        image.isTemplate = mark.isTemplate
+        return image
     }
 
     /// Fits proportionally using the larger ratio so only the constraining dimension reaches maximumSize.
@@ -78,6 +89,9 @@ nonisolated extension ControlItemImage {
     enum ImageBuiltinName: Codable, Hashable {
         case chevronLarge
         case chevronSmall
+        case dividerLine
+        case dividerDot
+        case dividerSlash
     }
 }
 
@@ -113,5 +127,37 @@ extension ControlItemImage {
                 return image
             }
         }
+    }
+}
+
+/// The other section divider marks, sized to sit beside the small chevron.
+private enum DividerMark {
+    static let line = template(size: CGSize(width: 4, height: 14)) { bounds in
+        NSBezierPath(roundedRect: CGRect(x: bounds.midX - 0.75, y: bounds.minY, width: 1.5, height: bounds.height), xRadius: 0.75, yRadius: 0.75).fill()
+    }
+
+    static let dot = template(size: CGSize(width: 9, height: 9)) { bounds in
+        NSBezierPath(ovalIn: CGRect(x: bounds.midX - 2.5, y: bounds.midY - 2.5, width: 5, height: 5)).fill()
+    }
+
+    static let slash = template(size: CGSize(width: 8, height: 12)) { bounds in
+        let path = NSBezierPath()
+        path.move(to: CGPoint(x: bounds.minX + 1, y: bounds.minY + 1))
+        path.line(to: CGPoint(x: bounds.maxX - 1, y: bounds.maxY - 1))
+        path.lineWidth = 1.75
+        path.lineCapStyle = .round
+        path.stroke()
+    }
+
+    /// Black template drawing, so AppKit recolors it for the menu bar's appearance.
+    private static func template(size: CGSize, draw: @escaping (CGRect) -> Void) -> NSImage {
+        let image = NSImage(size: size, flipped: false) { bounds in
+            NSColor.black.setFill()
+            NSColor.black.setStroke()
+            draw(bounds)
+            return true
+        }
+        image.isTemplate = true
+        return image
     }
 }

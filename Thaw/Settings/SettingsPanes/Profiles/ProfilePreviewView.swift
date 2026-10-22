@@ -80,6 +80,10 @@ struct ProfilePreviewView: View {
     /// not walk the item cache during a view update.
     var diff: ProfileLayoutDiff?
 
+    /// Inline on the Profiles page, under the selected profile's name, the
+    /// preview leaves out the name and takes the page's width.
+    var isInline = false
+
     /// How many icons a section row shows before collapsing into "+N".
     private let maxIconsPerSection = 12
 
@@ -92,8 +96,10 @@ struct ProfilePreviewView: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: ThawSpacing.inset) {
-            Text(profile.name)
-                .font(ThawType.heading)
+            if !isInline {
+                Text(profile.name)
+                    .font(ThawType.heading)
+            }
 
             if let diff {
                 changeSummary(diff)
@@ -111,8 +117,9 @@ struct ProfilePreviewView: View {
                 .foregroundStyle(ThawInk.supporting)
                 .fixedSize(horizontal: false, vertical: true)
         }
-        .padding(14)
-        .frame(width: 360, alignment: .leading)
+        .padding(isInline ? 0 : 14)
+        .frame(width: isInline ? nil : 360, alignment: .leading)
+        .frame(maxWidth: isInline ? .infinity : nil, alignment: .leading)
     }
 
     private func changeSummary(_ diff: ProfileLayoutDiff) -> some View {

@@ -132,35 +132,11 @@ struct MenuBarLayoutSettingsPane: View {
                 LayoutBarsSection(itemManager: itemManager).holdsMultiSelectTip(whileLimitationsCardShows: !isLimitationsAcknowledged)
             }
 
-            if canArrangeLayout {
-                MenuBarLayoutGroupsSection()
-            }
-
-            LayoutSectionOptions(
-                settings: appState.settings.advanced,
+            LayoutDetailTabs(
+                itemManager: itemManager,
+                canArrangeLayout: canArrangeLayout,
                 isHidingUnavailable: isHidingUnavailable
             )
-
-            HidingMethodSection(settings: appState.settings.advanced, offersAppleItems: canArrangeLayout)
-
-            // Thaw Bar Only is unplugged; its switch returns to this section with its gate.
-            if canArrangeLayout {
-                ControlCenterReplacementsSection(settings: appState.settings.advanced)
-            }
-
-            LayoutMoreOptionsSection(
-                spacerManager: appState.spacerManager,
-                settings: appState.settings.advanced,
-                navigationState: appState.navigationState
-            )
-
-            if canArrangeLayout {
-                LayoutResetControls(
-                    itemManager: itemManager,
-                    controlItemsDisabled: itemManager.areControlItemsMissing,
-                    alwaysHiddenEnabled: appState.settings.advanced.enableAlwaysHiddenSection
-                )
-            }
         }
         .thawAnimation(ThawMotion.settle, value: showsHideByDragHint)
         .errorAlert("Couldn’t relaunch \(Constants.displayName)", message: $relaunchErrorMessage)
@@ -197,21 +173,50 @@ private struct HiddenSectionOccupancySync: ViewModifier {
     }
 }
 
-/// Keep infrequently changed options in one card below the drag editor.
-/// Only Spacers collapses because its rows grow; single-row options stay open without nested disclosures.
-private struct LayoutMoreOptionsSection: View {
-    let spacerManager: MenuBarSpacerManager
-    @Bindable var settings: AdvancedSettings
-    let navigationState: AppNavigationState
+/// The lists under the bars, one at a time: Options, Groups, Spacers and Apple's Items.
+/// Search results switch to the tab that holds them.
+private struct LayoutDetailTabs: View {
+    @Environment(AppState.self) private var appState
+    let itemManager: MenuBarItemManager
+    let canArrangeLayout: Bool
+    let isHidingUnavailable: Bool
 
-    @State private var isSpacersExpanded = false
+    @State private var tab = LayoutDetailTab.options
 
     var body: some View {
-        ThawSection("More layout options") {
-            DisclosureGroup("Spacers", isExpanded: $isSpacersExpanded) {
-                LayoutSpacersRows(spacerManager: spacerManager)
+        let settings = appState.settings.advanced
+        // Groups and Apple's items need the bars, so without them only Options and Spacers are offered.
+        let tabs = canArrangeLayout ? LayoutDetailTab.allCases : [.options, .spacers]
+        SettingsPaneTabs(selection: $tab, tabs: tabs, tabForDisclosure: { LayoutDetailTab.tab(for: $0) })
+        switch tabs.contains(tab) ? tab : .options {
+        case .groups:
+            MenuBarLayoutGroupsSection()
+        case .spacers:
+            ThawSection("Spacers") {
+                LayoutSpacersRows(spacerManager: appState.spacerManager)
             }
+        case .appleItems:
+            ControlCenterReplacementsSection(settings: settings)
+        case .options:
+            LayoutSectionOptions(settings: settings, isHidingUnavailable: isHidingUnavailable)
+            HidingMethodSection(settings: settings, offersAppleItems: canArrangeLayout)
+            LayoutOverflowSection(settings: settings)
+            if canArrangeLayout {
+                LayoutResetControls(
+                    itemManager: itemManager,
+                    controlItemsDisabled: itemManager.areControlItemsMissing,
+                    alwaysHiddenEnabled: settings.enableAlwaysHiddenSection
+                )
+            }
+        }
+    }
+}
 
+private struct LayoutOverflowSection: View {
+    @Bindable var settings: AdvancedSettings
+
+    var body: some View {
+        ThawSection("Overflow and previews") {
             Toggle(
                 "Move items that don’t fit into Hidden",
                 isOn: $settings.enableMenuBarItemOverflow
@@ -229,23 +234,6 @@ private struct LayoutMoreOptionsSection: View {
                 "Show each item's app icon in the Thaw Bar and Layout instead of a live screenshot.",
                 more: "Turn this on if macOS's overflow arrow shows up in item previews. The real menu bar is unaffected."
             )
-
-            // Hide reorder timeout until it has an effect; macOS 27's early-bail probe ends the wait first.
-//            LabeledContent("Reorder timeout") {
-//                ThawSlider(value: $settings.menuBarOrderFulfillmentTimeout, in: 1 ... 15, step: 0.5) {
-//                    SecondsLabel(value: $settings.menuBarOrderFulfillmentTimeout)
-//                }
-//            }
-//            .annotation("How long Thaw waits for macOS to apply a menu bar reorder before continuing with any remaining layout work.")
-        }
-        // Expand Spacers for search deep-links so the target is reachable.
-        .onChange(of: navigationState.requestedSettingsDisclosure, initial: true) { _, _ in
-            if SettingsSearchNavigation.consumeDisclosure(
-                .layoutSpacers,
-                navigationState: navigationState
-            ) {
-                isSpacersExpanded = true
-            }
         }
     }
 }
@@ -259,11 +247,12 @@ private struct LayoutSectionOptions: View {
             Text("Sections")
         } content: {
             // Arrangement leads because it gates the section controls.
-            ThawPicker("Item arrangement", selection: $settings.menuBarArrangementMode) {
-                ForEach(MenuBarArrangementMode.allCases) { mode in
-                    Text(mode.localized).tag(mode)
-                }
-            }
+            ThawPillPicker(
+                "Item arrangement",
+                selection: $settings.menuBarArrangementMode,
+                values: MenuBarArrangementMode.allCases,
+                title: \.localized
+            )
             .annotation(settings.menuBarArrangementMode.explanation)
 
             Toggle(
@@ -275,6 +264,9 @@ private struct LayoutSectionOptions: View {
                 ForEach(SectionDividerStyle.allCases) { style in
                     Text(style.localized).tag(style)
                 }
+            }
+            if settings.sectionDividerStyle == .custom {
+                CustomSectionDividerControls(settings: settings)
             }
         } footer: {
             if isHidingUnavailable {
@@ -352,8 +344,6 @@ private struct LayoutSpacersRows: View {
     }
 }
 
-/// The drag-and-drop icon editor. Not private: Simple Mode presents this same
-/// editor as its whole screen.
 struct LayoutBarsSection: View {
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @Environment(AppState.self) private var appState
@@ -386,9 +376,9 @@ struct LayoutBarsSection: View {
         layoutRefusalNotice
     }
 
-    /// Not inside the pop-out itself, and not in Simple Mode's single screen.
+    /// Not inside the pop-out itself.
     private var showsPopOutButton: Bool {
-        !appState.navigationState.isLayoutEditorPresented && !appState.settings.general.simpleMode
+        !appState.navigationState.isLayoutEditorPresented
     }
 
     private var popOutButton: some View {
@@ -429,7 +419,6 @@ struct LayoutBarsSection: View {
     }
 }
 
-/// Share layout recovery with SimpleModeSettingsPane so correcting mistakes does not require advanced tuning.
 struct LayoutResetControls: View {
     let itemManager: MenuBarItemManager
     let controlItemsDisabled: Bool
@@ -442,27 +431,18 @@ struct LayoutResetControls: View {
             LayoutResetFlow(
                 itemManager: itemManager,
                 controlItemsDisabled: controlItemsDisabled,
-                alwaysHiddenEnabled: alwaysHiddenEnabled,
-                presentation: .card
+                alwaysHiddenEnabled: alwaysHiddenEnabled
             )
         }
     }
 }
 
-/// Reset appears in a titled section here and a quiet footnote under Simple Mode's folded bar.
+/// Reset, in its titled section: a sentence beside a glass button.
 struct LayoutResetFlow: View {
-    enum Presentation {
-        /// Explanatory sentence beside a glass button, inside a card.
-        case card
-        /// A trailing text button alone; the confirm row explains itself.
-        case footnote
-    }
-
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     let itemManager: MenuBarItemManager
     let controlItemsDisabled: Bool
     let alwaysHiddenEnabled: Bool
-    var presentation: Presentation = .card
 
     @State private var isResetting = false
     @State private var isConfirming = false
@@ -471,11 +451,9 @@ struct LayoutResetFlow: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
             HStack(alignment: .top, spacing: 12) {
-                if presentation == .card {
-                    Text("Moves every movable item except the \(Constants.displayName) icon to the selected section, just like a fresh install.")
-                        .font(ThawType.footnote)
-                        .foregroundStyle(ThawInk.supporting)
-                }
+                Text("Moves every movable item except the \(Constants.displayName) icon to the selected section, just like a fresh install.")
+                    .font(ThawType.footnote)
+                    .foregroundStyle(ThawInk.supporting)
                 Spacer(minLength: 16)
                 trigger
                     .disabled(isResetting || controlItemsDisabled)
@@ -510,34 +488,17 @@ struct LayoutResetFlow: View {
         }
     }
 
-    @ViewBuilder
     private var trigger: some View {
-        switch presentation {
-        case .card:
-            Button {
-                isConfirming = true
-            } label: {
-                if isResetting {
-                    ProgressView().controlSize(.small)
-                } else {
-                    Text("Reset Layout…")
-                }
+        Button {
+            isConfirming = true
+        } label: {
+            if isResetting {
+                ProgressView().controlSize(.small)
+            } else {
+                Text("Reset Layout…")
             }
-            .buttonStyle(.settingsGlass)
-        case .footnote:
-            Button {
-                isConfirming = true
-            } label: {
-                if isResetting {
-                    ProgressView().controlSize(.small)
-                } else {
-                    Text("Reset Layout…")
-                        .font(.footnote.weight(.medium))
-                        .foregroundStyle(ThawInk.supporting)
-                }
-            }
-            .buttonStyle(.plain)
         }
+        .buttonStyle(.settingsGlass)
     }
 
     private var resetTransition: AnyTransition {
@@ -625,7 +586,7 @@ struct LayoutResetFlow: View {
     }
 }
 
-/// Not private: Simple Mode shows the same gate.
+/// Shown instead of the editor while macOS auto-hides the menu bar.
 struct CannotArrangeLayoutView: View {
     var body: some View {
         ThawEmptyState(

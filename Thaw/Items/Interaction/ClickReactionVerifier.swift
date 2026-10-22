@@ -71,6 +71,10 @@ nonisolated enum ClickReactionVerifier {
     /// only elapses when nothing happens, and bounds a wedged owner.
     private static let budget = Duration.milliseconds(250)
 
+    /// The extra wait an in-place press gets before it counts as a miss: some
+    /// apps build their menu slowly, and falling back would open it twice.
+    static let lateBudget = Duration.milliseconds(600)
+
     /// How often to look while waiting.
     private static let pollInterval = Duration.milliseconds(20)
 
@@ -99,7 +103,7 @@ nonisolated enum ClickReactionVerifier {
     ///
     /// Call after the click is posted and the cursor restored, so the caller's
     /// own overlay work has settled and the signal is the owner's.
-    static func verify(against snapshot: Snapshot) async -> Reaction {
+    static func verify(against snapshot: Snapshot, budget: Duration = budget) async -> Reaction {
         let deadline = ContinuousClock.now.advanced(by: budget)
         while true {
             if let reaction = observe(snapshot) {
@@ -115,6 +119,13 @@ nonisolated enum ClickReactionVerifier {
                 return .unobserved
             }
         }
+    }
+
+    /// verify(against:), then a further lateBudget for a menu that opens late.
+    static func verifyAllowingLateOpen(against snapshot: Snapshot) async -> Reaction {
+        let reaction = await verify(against: snapshot)
+        guard !reaction.didReact else { return reaction }
+        return await verify(against: snapshot, budget: lateBudget)
     }
 
     /// One look at the world. Returns nil when it is still too early to

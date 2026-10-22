@@ -14,7 +14,7 @@ import Testing
 struct MenuBarHistoryRemovalTests {
     @Test("Cleanup removes history without changing layout or hiding assignments")
     func clearsOnlyRetiredHistory() throws {
-        let suiteName = "MenuBarHistoryRemovalTests.\(UUID().uuidString)"
+        let suiteName = ScratchDefaults.name("MenuBarHistoryRemovalTests")
         let defaults = try #require(UserDefaults(suiteName: suiteName))
         defer { ScratchDefaults.remove(suiteName) }
         defaults.set(true, forKey: "EnableBarHygieneAudit")

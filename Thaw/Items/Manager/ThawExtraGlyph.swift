@@ -30,9 +30,22 @@ enum ThawExtraGlyph {
         return image
     }
 
+    /// Whether an item is one of Thaw's stand-ins. Their images are bare symbols with
+    /// no margin of their own, so previews draw them at their own size, not tile-filling.
+    nonisolated static func isStandIn(_ tag: MenuBarItemTag) -> Bool {
+        guard case let .string(bundleID) = tag.namespace else { return false }
+        return SystemExtraStandIn.owns(bundleIdentifier: bundleID) || ItemStandInSlot(bundleIdentifier: bundleID) != nil
+    }
+
+    /// Slot images are capped at the height the menu bar draws them.
+    private static let slotImageMaxHeight: CGFloat = 18
+
     private static func slotImage(_ slot: ItemStandInSlot) -> NSImage? {
         let folder = ItemStandInSlot.folder
         guard let image = NSImage(contentsOf: folder.appending(path: "slot\(slot.number).png")) else { return nil }
+        if image.size.height > slotImageMaxHeight {
+            image.size = NSSize(width: image.size.width * slotImageMaxHeight / image.size.height, height: slotImageMaxHeight)
+        }
         image.isTemplate = FileManager.default.fileExists(atPath: folder.appending(path: "slot\(slot.number).template").path)
         return image
     }

@@ -24,6 +24,14 @@ extension MenuBarItemManager {
         return lastUserMenuBarDragEnd.duration(to: .now) < Self.userArrangementQuietPeriod
     }
 
+    /// The stored weights as a baseline for a ⌘-drag starting now; nil unless the dividers read in order.
+    func dragStartReading() -> ObservedMembership.DragBaseline? {
+        currentObservedMembership().flatMap { observed in
+            guard case let .ordered(dividers) = observed.reading else { return nil }
+            return ObservedMembership.DragBaseline(candidates: observed.candidates, dividers: dividers)
+        }
+    }
+
     /// Records the end of a ⌘-drag and reads the sections it produced.
     func noteUserMenuBarDragEnded() {
         lastUserMenuBarDragEnd = .now
@@ -32,40 +40,57 @@ extension MenuBarItemManager {
 
     /// Adopt divider-weight membership without moving items: Manual after drags, mode switches, and launch; Automatic only after user drags.
     /// Leave unweighted, unhideable, Thaw Bar Only, and divider-slot items unchanged.
-    func adoptObservedMembership(reason: String, afterUserDrag: Bool = false) {
-        guard arrangementIsManual || afterUserDrag, let appState else { return }
-        let controller = appState.menuBarManager.sectionController
-        let items = itemCache.managedItems
-        let weights = StoredWeights(among: items)
-        guard weights.isAvailable else { return }
-        let weight = weights.weight(of:)
-        let found = ObservedMembership.DividerWeights(among: items, dividers: lastKnownControlItems, weight: weight)
-        let reading = found.reading(alwaysHiddenEnabled: configuration.isAlwaysHiddenSectionEnabled)
-        switch reading {
+    /// keepingAuthored only places items that have no section yet. After a drag, only items it carried across a divider move.
+    func adoptObservedMembership(reason: String, afterUserDrag: Bool = false, keepingAuthored: Bool = false) {
+        guard arrangementIsManual || afterUserDrag, let appState, let observed = currentObservedMembership() else { return }
+        switch observed.reading {
         case .ordered:
             break
         case .unavailable:
             MenuBarItemManager.diagLog.debug("observed membership (\(reason)): divider weights unavailable; skipping")
         case .outOfOrder:
             MenuBarItemManager.diagLog.warning(
-                "observed membership (\(reason)): dividers out of order (\(found.logString)); skipping"
+                "observed membership (\(reason)): dividers out of order (\(observed.found.logString)); skipping"
             )
         }
-        let experimentalSystemItemHiding = configuration.enableExperimentalSystemItemHiding
-        let candidates = items.compactMap { item -> ObservedMembership.Candidate? in
-            guard !item.isControlItem, item.tag.canBeHidden,
-                  item.isMovable(experimentalSystemItemHiding: experimentalSystemItemHiding),
-                  let itemWeight = weight(item), !weights.isParked(itemWeight)
-            else { return nil }
-            return .init(item: item, weight: itemWeight, authored: controller.authoredSection(for: item.uniqueIdentifier))
+        let baseline = afterUserDrag ? dragMembership.baseline : nil
+        if afterUserDrag, baseline == nil {
+            MenuBarItemManager.diagLog.debug("observed membership (\(reason)): no reading from the drag's start; skipping")
+            return
         }
-        for (section, sectionItems) in reading.moves(for: candidates) {
+        let moves = observed.reading.moves(for: observed.candidates, keepingAuthored: keepingAuthored, since: baseline)
+        for (section, sectionItems) in moves {
             MenuBarItemManager.diagLog.info(
                 "observed membership (\(reason)): \(sectionItems.count) item(s) sit in \(section.logString) on the bar: " +
                     sectionItems.map(\.logString).joined(separator: ", ")
             )
             _ = appState.menuBarManager.setSection(section, items: sectionItems)
         }
+    }
+
+    /// The stored weights read against the dividers, with the items a reading may move. Nil when the table can't be read.
+    private func currentObservedMembership() -> (
+        found: ObservedMembership.DividerWeights,
+        reading: ObservedMembership.DividerReading,
+        candidates: [ObservedMembership.Candidate]
+    )? {
+        guard let controller = appState?.menuBarManager.sectionController else { return nil }
+        let items = itemCache.managedItems
+        let weights = StoredWeights(among: items)
+        guard weights.isAvailable else { return nil }
+        let weight = weights.weight(of:)
+        let found = ObservedMembership.DividerWeights(among: items, dividers: lastKnownControlItems, weight: weight)
+        let experimentalSystemItemHiding = configuration.enableExperimentalSystemItemHiding
+        let candidates = ObservedMembership.candidates(
+            among: items,
+            weight: { weight($0).flatMap { weights.isParked($0) ? nil : $0 } },
+            assignment: controller.sectionAssignment,
+            isEligible: {
+                !$0.isControlItem && $0.tag.canBeHidden
+                    && $0.isMovable(experimentalSystemItemHiding: experimentalSystemItemHiding)
+            }
+        )
+        return (found, found.reading(alwaysHiddenEnabled: configuration.isAlwaysHiddenSectionEnabled), candidates)
     }
 
     /// Nothing restores a concealed section on reveal in Manual, so an explicit Layout edit writes its weights now.
@@ -101,15 +126,23 @@ extension MenuBarItemManager {
     }
 
     /// Waits for the position table to settle before adopting membership.
-    func scheduleObservedMembershipAdoption(reason: String, afterUserDrag: Bool = false) {
+    func scheduleObservedMembershipAdoption(reason: String, afterUserDrag: Bool = false, keepingAuthored: Bool = false) {
         guard arrangementIsManual || afterUserDrag else { return }
         manualMembershipTask?.cancel()
+        if !afterUserDrag {
+            dragMembership.clear()
+        }
         manualMembershipTask = Task { @MainActor [weak self] in
             try? await Task.sleep(for: Self.manualMembershipSettle)
             guard !Task.isCancelled, let self else { return }
             await cacheItemsRegardless(skipRecentMoveCheck: true, skipSavedLayoutApply: true)
             guard !Task.isCancelled else { return }
-            adoptObservedMembership(reason: reason, afterUserDrag: afterUserDrag)
+            adoptObservedMembership(reason: reason, afterUserDrag: afterUserDrag, keepingAuthored: keepingAuthored)
+            dragMembership.clear()
+            manualMembershipTask = nil
+            // The structural pass held off while this read the bar, so it runs
+            // now, from the sections just read.
+            scheduleStructuralNormalization(cause: afterUserDrag ? .userDragEnded : .rearmed)
         }
     }
 }

@@ -14,22 +14,25 @@ nonisolated enum ConcealedItemOpenMethod: String, CaseIterable, Sendable {
     case pressInPlace
     /// Reveal the item where it sits and click it there.
     case revealInPlace
+    /// AXShowMenu on the parked item, the menu a right click opens. Right clicks only.
+    case showMenuInPlace
 
-    /// Try the learned method first, then the cheapest; right clicks skip press because it opens the default action.
-    /// showInMenuBar overrides learning to reveal first, falling back to press if the click fails.
+    /// The learned method first, then the cheapest. Right clicks skip press, which opens the default action;
+    /// showInMenuBar reveals first.
     static func openMethodOrder(
         for mouseButton: CGMouseButton,
         learned: ConcealedItemOpenMethod?,
         showInMenuBar: Bool = false
     ) -> [ConcealedItemOpenMethod] {
         if mouseButton == .right {
-            return [.revealInPlace]
+            return showInMenuBar ? [.revealInPlace] : [.showMenuInPlace, .revealInPlace]
         }
         if showInMenuBar {
             return [.revealInPlace, .pressInPlace]
         }
         let candidates: [ConcealedItemOpenMethod] = [.pressInPlace, .revealInPlace]
-        guard let learned else { return candidates }
+        // A right click's method would open the wrong menu on a left click.
+        guard let learned, learned != .showMenuInPlace else { return candidates }
         return [learned] + candidates.filter { $0 != learned }
     }
 }

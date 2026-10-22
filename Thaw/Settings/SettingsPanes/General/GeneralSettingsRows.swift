@@ -8,8 +8,8 @@
 import SwiftUI
 import ThawUI
 
-// General settings shared by GeneralSettingsPane and SimpleModeSettingsPane,
-// defined once so the two panes' explanations cannot drift.
+// General settings rows, some also shown on Simple Mode's page, defined once
+// so their explanations cannot drift.
 
 // MARK: - LaunchAtLoginRow
 
@@ -106,9 +106,7 @@ struct ThawPlacementWarning: View {
             tint: .orange,
             actionTitle: "Open System Settings"
         ) {
-            if let url = Constants.menuBarSystemSettingsURL {
-                NSWorkspace.shared.open(url)
-            }
+            Constants.openMenuBarSystemSettings()
         }
     }
 }

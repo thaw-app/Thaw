@@ -43,20 +43,10 @@ enum MenuBarShapePathBuilder {
         return rect
     }
 
-    /// The path of one end cap: a square filling its bounds, or a circle
-    /// inscribed in them.
-    static func endCapPath(_ endCap: MenuBarEndCap, in bounds: CGRect) -> NSBezierPath {
-        switch endCap {
-        case .square: NSBezierPath(rect: bounds)
-        case .round: NSBezierPath(ovalIn: bounds)
-        }
-    }
-
-    /// A capsule-ish path filling rect, finished at each end by the given cap.
+    /// A path filling rect, finished at each end by the given cap.
     ///
-    /// The path is a bar with a cap laid over each end, unioned together, so a
-    /// square cap squares the end off and a round cap rounds it into a
-    /// semicircle of the bar's own height.
+    /// A round end curves by the caps' roundness, up to a semicircle of the
+    /// bar's own height; a square end is squared off.
     ///
     /// On displays without a notch the shape is pulled a hair inside rect:
     /// one point off the top and bottom, and one point off each rounded end so
@@ -80,26 +70,24 @@ enum MenuBarShapePathBuilder {
                 )
             }
 
-        // Each cap is a square the height of the bar, sitting at one end; the
-        // bar itself spans what is left between their centers.
-        let capSide = insetRect.height
-        let capSize = CGSize(width: capSide, height: capSide)
-        let leadingCapBounds = CGRect(origin: insetRect.origin, size: capSize)
-        let trailingCapBounds = CGRect(
-            origin: CGPoint(x: insetRect.maxX - capSide, y: insetRect.minY),
-            size: capSize
-        )
+        let radius = cornerRadius(of: insetRect, roundness: caps.roundness)
+        var path = NSBezierPath(roundedRect: insetRect, xRadius: radius, yRadius: radius)
+        // A square end covers the rounded corners on its half.
+        let halfWidth = insetRect.width / 2
+        if caps.leadingEndCap == .square {
+            path = path.union(NSBezierPath(rect: CGRect(x: insetRect.minX, y: insetRect.minY, width: halfWidth, height: insetRect.height)))
+        }
+        if caps.trailingEndCap == .square {
+            path = path.union(NSBezierPath(rect: CGRect(x: insetRect.midX, y: insetRect.minY, width: halfWidth, height: insetRect.height)))
+        }
+        return path
+    }
 
-        let barBounds = CGRect(
-            x: insetRect.minX + capSide / 2,
-            y: insetRect.minY,
-            width: insetRect.width - capSide,
-            height: insetRect.height
-        )
-
-        return NSBezierPath(rect: barBounds)
-            .union(endCapPath(caps.leadingEndCap, in: leadingCapBounds))
-            .union(endCapPath(caps.trailingEndCap, in: trailingCapBounds))
+    /// The corner radius for a roundness from 0 to 1; 1 is a half-circle the
+    /// height of rect, or of its width when it is narrower than it is tall.
+    static func cornerRadius(of rect: CGRect, roundness: Double) -> CGFloat {
+        guard rect.width > 0, rect.height > 0 else { return 0 }
+        return min(rect.width, rect.height) / 2 * CGFloat(min(max(roundness, 0), 1))
     }
 
     /// One path holding both pills of a two-part shape.

@@ -67,7 +67,10 @@ nonisolated enum MenuBarAXSubprocess {
             if untrustedPolicy.withLock({ $0.noteTrusted() }) {
                 diagLog.info("subprocess walk trusted again")
             }
-            return MenuBarItemAXProvider.items(fromSubprocess: reply.items)
+            return MenuBarItemAXProvider.items(
+                fromSubprocess: reply.items,
+                adding: MenuBarItemAXProvider.confirmedDrawnOnlyItems(besides:)
+            )
         } catch is CancellationError {
             // A newer walk superseded this one; nothing failed.
             return nil
@@ -144,8 +147,12 @@ extension MenuBarItemAXProvider {
     /// Mirrors the in-process per-app loop through MenuBarItemAXProvider.rawItem(namespace:identifier:childIdentifier:accessibilityDescription:childDescription:axTitle:fallbackIndex:bounds:ownerPID:):
     /// per-app fallback titles, the stable AX identifier rule including the
     /// nested-child fallback, identity derivation, and the overflow-control
-    /// skip. The helper already dropped oversized children.
-    static nonisolated func items(fromSubprocess observations: [AXItemObservation]) -> [MenuBarItem] {
+    /// skip. The helper already dropped oversized children. adding returns the items to add besides
+    /// the helper's, such as icons only MenuBarAgent's window lists.
+    static nonisolated func items(
+        fromSubprocess observations: [AXItemObservation],
+        adding extra: ([RawItem]) -> [RawItem] = { _ in [] }
+    ) -> [MenuBarItem] {
         var raw: [RawItem] = []
         var fallbackIndexByBundle: [String: Int] = [:]
 
@@ -171,7 +178,7 @@ extension MenuBarItemAXProvider {
             guard let item = derived.item else { continue }
             raw.append(item)
         }
-        return assemble(raw)
+        return assemble(raw + extra(raw))
     }
 
     private static nonisolated func nilIfBlank(_ value: String?) -> String? {

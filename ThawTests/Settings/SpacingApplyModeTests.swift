@@ -13,19 +13,6 @@ import Testing
 @MainActor
 @Suite("Spacing apply mode", .serialized)
 struct SpacingApplyModeTests {
-    /// Runs body with Defaults pointed at an empty, throwaway suite.
-    private func withScratchDefaults<T>(_ body: () throws -> T) throws -> T {
-        let suiteName = "SpacingApplyModeTests.\(UUID().uuidString)"
-        let scratch = try #require(UserDefaults(suiteName: suiteName))
-        let previous = Defaults.store
-        Defaults.store = scratch
-        defer {
-            Defaults.store = previous
-            ScratchDefaults.remove(suiteName)
-        }
-        return try body()
-    }
-
     /// An offset whose target differs from the real on-disk spacing. Read-only,
     /// so the tester's NSStatusItemSpacing is never written.
     private func offsetNotOnDisk() -> Int {
@@ -102,47 +89,39 @@ struct SpacingApplyModeTests {
 
     // MARK: Persistence
 
-    @Test("The mode is saved on change and read back by a new manager")
+    @Test("The mode is saved on change and read back by a new manager", .scratchDefaults)
     func modePersists() throws {
-        try withScratchDefaults {
-            let writer = DisplaySettingsManager()
-            #expect(writer.spacingApplyMode == .relaunchApps)
-            writer.spacingApplyMode = .writeOnly
-            #expect(Defaults.string(forKey: .spacingApplyMode) == SpacingApplyMode.writeOnly.rawValue)
+        let writer = DisplaySettingsManager()
+        #expect(writer.spacingApplyMode == .relaunchApps)
+        writer.spacingApplyMode = .writeOnly
+        #expect(Defaults.string(forKey: .spacingApplyMode) == SpacingApplyMode.writeOnly.rawValue)
 
-            #expect(DisplaySettingsManager().spacingApplyMode == .writeOnly)
-        }
+        #expect(DisplaySettingsManager().spacingApplyMode == .writeOnly)
     }
 
-    @Test("Don't ask again on Apply turns confirmations off")
+    @Test("Don't ask again on Apply turns confirmations off", .scratchDefaults)
     func suppressedApplyDisablesConfirmations() throws {
-        try withScratchDefaults {
-            let manager = DisplaySettingsManager()
-            manager.rememberSpacingRelaunchAnswer(approved: true)
+        let manager = DisplaySettingsManager()
+        manager.rememberSpacingRelaunchAnswer(approved: true)
 
-            #expect(!manager.confirmSpacingRelaunch)
-            #expect(manager.spacingApplyMode == .relaunchApps)
-        }
+        #expect(!manager.confirmSpacingRelaunch)
+        #expect(manager.spacingApplyMode == .relaunchApps)
     }
 
-    @Test("Don't ask again on Cancel stops relaunching, so the prompt stays away")
+    @Test("Don't ask again on Cancel stops relaunching, so the prompt stays away", .scratchDefaults)
     func suppressedCancelStopsRelaunching() throws {
-        try withScratchDefaults {
-            let manager = DisplaySettingsManager()
-            manager.rememberSpacingRelaunchAnswer(approved: false)
+        let manager = DisplaySettingsManager()
+        manager.rememberSpacingRelaunchAnswer(approved: false)
 
-            #expect(manager.spacingApplyMode == .writeOnly)
-            #expect(manager.confirmSpacingRelaunch, "a decline must never allow an unasked relaunch")
-            #expect(DisplaySettingsManager().spacingApplyMode == .writeOnly)
-        }
+        #expect(manager.spacingApplyMode == .writeOnly)
+        #expect(manager.confirmSpacingRelaunch, "a decline must never allow an unasked relaunch")
+        #expect(DisplaySettingsManager().spacingApplyMode == .writeOnly)
     }
 
-    @Test("An unknown saved value falls back to relaunching apps")
+    @Test("An unknown saved value falls back to relaunching apps", .scratchDefaults)
     func unknownSavedValueFallsBack() throws {
-        try withScratchDefaults {
-            Defaults.set("not-a-real-mode", forKey: .spacingApplyMode)
-            #expect(DisplaySettingsManager().spacingApplyMode == .relaunchApps)
-        }
+        Defaults.set("not-a-real-mode", forKey: .spacingApplyMode)
+        #expect(DisplaySettingsManager().spacingApplyMode == .relaunchApps)
     }
 
     // MARK: Profiles

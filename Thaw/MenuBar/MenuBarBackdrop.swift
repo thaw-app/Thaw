@@ -55,6 +55,7 @@ final class MenuBarBackdrop {
     private(set) var strips: [CGDirectDisplayID: Strip] = [:]
     private var refreshTask: Task<Void, Never>?
     private var observation: Task<Void, Never>?
+    private var cadence: Task<Void, Never>?
 
     func performSetup(with appState: AppState) {
         observation = Task { @MainActor [weak self] in
@@ -65,7 +66,33 @@ final class MenuBarBackdrop {
                 self?.refresh(force: true)
             }
         }
+        // Covers paint this strip, so a timer keeps it close to the live bar
+        // between the changes above. A window can repaint where it is, which
+        // the key cannot see, so each tick composites again.
+        cadence?.cancel()
+        cadence = Task { @MainActor [weak self, weak appState] in
+            while !Task.isCancelled {
+                let coverLikely = NSApp.isActive || appState?.menuBarManager.thawBarPanel.isVisible == true
+                let idle = MouseHelpers.secondsSinceLastInput
+                let interval = BackdropRefreshCadence.nextInterval(coverLikely: coverLikely, screenLocked: ScreenLock.isLocked, idleSeconds: idle)
+                try? await Task.sleep(for: interval ?? BackdropRefreshCadence.slow)
+                guard !Task.isCancelled, let self else { return }
+                if interval != nil {
+                    refresh(force: true)
+                }
+            }
+        }
         refresh(force: true)
+    }
+
+    /// What a strip was composited from. A window that moves under the bar
+    /// keeps its ID, so its place is part of the key, or the strip would go
+    /// stale until the window set itself changed. The windows stay in the
+    /// window server's front-to-back order, so a change in which one is on
+    /// top changes the key too.
+    nonisolated static func stripKey(rect: CGRect, windows: [(id: CGWindowID, bounds: CGRect)]) -> String {
+        let parts = windows.map { "\($0.id)@\($0.bounds)" }
+        return "\(rect)|\(parts.joined(separator: ","))"
     }
 
     func strip(for displayID: CGDirectDisplayID) -> Strip? {
@@ -88,8 +115,9 @@ final class MenuBarBackdrop {
         let known = force ? [:] : strips.mapValues(\.key)
         refreshTask = Task { [weak self] in
             for (displayID, rect) in requests {
-                let windowIDs = await Self.windowsBelowMenuBar(intersecting: rect)
-                let key = "\(rect)|\(windowIDs.sorted())"
+                let windows = await Self.windowsBelowMenuBar(intersecting: rect)
+                let windowIDs = windows.map(\.id)
+                let key = Self.stripKey(rect: rect, windows: windows)
                 guard key != known[displayID],
                       let image = await Self.composite(windowIDs, in: rect, resolution: .bestResolution)
                 else {
@@ -109,7 +137,7 @@ final class MenuBarBackdrop {
         resolution: CGWindowImageOption = .bestResolution,
         belowLayer ceiling: Int = Int(kCGMainMenuWindowLevel)
     ) async -> CGImage? {
-        let windowIDs = await Self.windowsBelowMenuBar(intersecting: cgRect, belowLayer: ceiling)
+        let windowIDs = await Self.windowsBelowMenuBar(intersecting: cgRect, belowLayer: ceiling).map(\.id)
         return await Self.composite(windowIDs, in: cgRect, resolution: resolution)
     }
 
@@ -128,9 +156,9 @@ final class MenuBarBackdrop {
     static nonisolated func windowsBelowMenuBar(
         intersecting cgRect: CGRect,
         belowLayer ceiling: Int = Int(kCGMainMenuWindowLevel)
-    ) async -> [CGWindowID] {
+    ) async -> [(id: CGWindowID, bounds: CGRect)] {
         WindowInfo.createWindows(option: .onScreen)
             .filter { $0.isOnScreen && $0.layer < ceiling && $0.bounds.intersects(cgRect) }
-            .map(\.windowID)
+            .map { ($0.windowID, $0.bounds) }
     }
 }

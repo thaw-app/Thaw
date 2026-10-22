@@ -238,6 +238,14 @@ nonisolated enum MouseHelpers {
         return false
     }
 
+    /// Seconds since the last input event of any kind, from the mouse, the
+    /// keyboard or another device.
+    static var secondsSinceLastInput: TimeInterval {
+        // kCGAnyInputEventType is a C macro, which Swift does not import.
+        guard let anyInput = CGEventType(rawValue: ~0) else { return 0 }
+        return CGEventSource.secondsSinceLastEventType(.combinedSessionState, eventType: anyInput)
+    }
+
     /// Returns a Boolean value that indicates whether the last mouse
     /// movement event occurred within the given duration.
     ///

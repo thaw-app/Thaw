@@ -16,17 +16,24 @@ struct WhatsNewView: View {
     @Environment(AppState.self) private var appState
 
     @State private var selectedVersion: String?
+    /// Every Thaw 3 release, newest first; the path shows the chosen channel's.
     @State private var releases: [ChangelogDocument.Release] = []
+    /// Opens on the running build's channel, so the newest notes for this Mac come first.
+    @State private var channel = UpdateChannel(version: Constants.versionString)
     @State private var source: ChangelogDocument.Source = .unavailable
     @State private var isLoading = true
 
+    private var channelReleases: [ChangelogDocument.Release] {
+        releases.filter { UpdateChannel(version: $0.version) == channel }
+    }
+
     private var selectedRelease: ChangelogDocument.Release? {
-        releases.first { $0.version == selectedVersion } ?? releases.first
+        channelReleases.first { $0.version == selectedVersion } ?? channelReleases.first
     }
 
     var body: some View {
         ReadingPage(
-            path: releases.map { ReadingPathItem(id: $0.version, label: $0.version) },
+            path: channelReleases.map { ReadingPathItem(id: $0.version, label: $0.version) },
             selection: $selectedVersion,
             title: title,
             subtitle: subtitle
@@ -34,11 +41,18 @@ struct WhatsNewView: View {
             if isLoading {
                 ProgressView()
                     .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .center)
-            } else if let release = selectedRelease {
+            } else if !releases.isEmpty {
                 VStack(alignment: .leading, spacing: 28) {
-                    updateNotice(for: release)
-                    sourceNotice
-                    releaseBody(release)
+                    channelPicker
+                    if let release = selectedRelease {
+                        updateNotice(for: release)
+                        sourceNotice
+                        releaseBody(release)
+                    } else {
+                        Text("There is no \(Text(channel.title)) release of \(Constants.displayName) 3 yet.")
+                            .font(ReadingPageType.body)
+                            .foregroundStyle(.secondary)
+                    }
                 }
             } else if source == .disabled {
                 Text("Fetching release notes is off in Privacy. Turn on “What’s New notes” there to load them.")
@@ -54,12 +68,6 @@ struct WhatsNewView: View {
                 openURL(Constants.releasesURL)
             }
             .buttonStyle(.settingsGlass)
-            Text(verbatim: "/")
-                .foregroundStyle(ThawInk.supporting)
-            Button("Experiments") {
-                openURL(Constants.labDiscussionURL)
-            }
-            .buttonStyle(.settingsGlass)
         }
         .task(id: TaskKey(fetch: appState.settings.advanced.fetchReleaseNotes, update: appState.pendingUpdateVersion)) {
             // Fetched when the Privacy switch allows it, otherwise the last
@@ -69,12 +77,27 @@ struct WhatsNewView: View {
             releases = loaded.document.map { ChangelogDocument.displayReleases(in: $0) } ?? []
             source = loaded.source
             if let update = appState.pendingUpdateVersion, releases.contains(where: { $0.version == update }) {
+                channel = UpdateChannel(version: update)
                 selectedVersion = update
             } else if selectedVersion == nil || !releases.contains(where: { $0.version == selectedVersion }) {
-                selectedVersion = releases.first?.version
+                selectedVersion = channelReleases.first?.version
             }
             isLoading = false
         }
+    }
+
+    /// Tabs, not a segmented control: ThawUI's style guard keeps segmented controls off Settings pages.
+    private var channelPicker: some View {
+        ThawTabStrip(
+            selection: Binding(
+                get: { channel },
+                set: { newChannel in
+                    channel = newChannel
+                    selectedVersion = channelReleases.first?.version
+                }
+            ),
+            tabs: UpdateChannel.allCases
+        )
     }
 
     /// Reloads when the Privacy switch flips or an update opens the window,

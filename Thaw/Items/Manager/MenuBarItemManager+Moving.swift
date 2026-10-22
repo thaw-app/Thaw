@@ -624,6 +624,10 @@ extension MenuBarItemManager {
                 guard deferralsRemaining > 0 else { return }
                 scheduleStructuralNormalization(cause: .rearmed, after: after, deferralsRemaining: deferralsRemaining - 1)
             }
+            // Until a ⌘-drag's sections are read off the bar, the bands would be
+            // laid from the old sections and put the dropped item back. The
+            // reading schedules this pass again once it is done.
+            guard manualMembershipTask == nil else { return }
             guard layoutPublication.canPublish(generation: layoutPublication.generation),
                   appState.menuBarManager.sectionController.revealedSection == nil,
                   !appState.menuBarManager.isRevealHideTransitionActive
@@ -651,6 +655,9 @@ extension MenuBarItemManager {
                     repairs.leave(hold)
                 }
             }
+            // A ⌘-drag can start or end while this waited, and its reading
+            // schedules the pass again once it is done.
+            guard !appState.isDraggingMenuBarItem, manualMembershipTask == nil else { return }
             guard layoutPublication.canPublish(generation: layoutPublication.generation),
                   ControlResortHold.allowsResort(for: "structural normalization", .init(of: self))
             else {

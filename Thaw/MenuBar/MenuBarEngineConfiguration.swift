@@ -17,6 +17,7 @@ protocol MenuBarEngineConfiguration: AnyObject, Observable {
     // Sections
     var isAlwaysHiddenSectionEnabled: Bool { get }
     var sectionDividerStyle: SectionDividerStyle { get }
+    var customSectionDividerMark: SectionDividerCustomMark? { get }
     var showAllSectionsOnUserDrag: Bool { get }
 
     // Reveal gestures
@@ -66,6 +67,12 @@ extension AppSettings: MenuBarEngineConfiguration {
 
     var sectionDividerStyle: SectionDividerStyle {
         advanced.sectionDividerStyle
+    }
+
+    var customSectionDividerMark: SectionDividerCustomMark? {
+        advanced.customSectionDividerImage.map {
+            SectionDividerCustomMark(data: $0, isTemplate: advanced.customSectionDividerIsTemplate)
+        }
     }
 
     var showAllSectionsOnUserDrag: Bool {

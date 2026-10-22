@@ -124,8 +124,8 @@ enum LayoutBarItemMenu {
         if let onRename {
             menu.addItem(ClosureMenuItem(title: String(localized: "Rename…"), handler: onRename))
         }
-        if let hidingSection = appState.itemManager.sectionHidingItemWithItsApp(item, appState: appState) {
-            addSplitAppEntries(to: menu, item: item, hidingSection: hidingSection, appState: appState)
+        if let override = appState.itemManager.appWideOverride(for: item, appState: appState) {
+            addSplitAppEntries(to: menu, item: item, override: override, appState: appState)
         }
         menu.addItem(moveEntry(for: item, appState: appState))
         menu.addItem(
@@ -143,21 +143,19 @@ enum LayoutBarItemMenu {
         )
     }
 
-    /// Explain app-wide hiding of Visible items and offer to move all siblings together.
+    /// Explain where app-wide hiding puts the item and offer to move all siblings together.
     private static func addSplitAppEntries(
         to menu: NSMenu,
         item: MenuBarItem,
-        hidingSection: MenuBarSection.Name,
+        override: AppWideOverride,
         appState: AppState
     ) {
         let appName = item.sourceApplication?.localizedName ?? item.displayName
-        let note = ClosureMenuItem(
-            title: String(localized: "Hidden with \(appName)’s other items"),
-            isEnabled: false
-        ) {}
-        menu.addItem(note)
+        menu.addItem(ClosureMenuItem(title: override.menuNote(appName: appName), isEnabled: false) {
+            // A note, not a command: the item is disabled and never runs this.
+        })
         let members = appState.itemManager.appItems(for: item)
-        for destination in [MenuBarSection.Name.visible, hidingSection] {
+        for destination in [MenuBarSection.Name.visible, override.concealedSection] {
             let title = String(
                 localized: "Move All \(appName) Items to \(MenuBarSearchItemActions.title(for: destination))"
             )

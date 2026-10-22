@@ -1,5 +1,5 @@
 //
-//  ClockBridgeCoverStyle.swift
+//  RevealCoverStyle.swift
 //  Project: Thaw
 //
 //  Copyright (Thaw) © 2026 Toni Förster
@@ -7,12 +7,12 @@
 
 import CoreGraphics
 
-/// How ClockBridgeCover paints Thaw's menu bar look over the wallpaper.
+/// How RevealCover paints Thaw's menu bar look over the wallpaper.
 ///
 /// The overlay's glass captures as flat grey, so the cover draws the wallpaper
 /// strip, blurred for glass, under flat washes of the configured fills.
 @MainActor
-enum ClockBridgeCoverStyle {
+enum RevealCoverStyle {
     /// One flat color laid over the wallpaper.
     struct Wash: Equatable {
         let color: CGColor
@@ -40,23 +40,27 @@ enum ClockBridgeCoverStyle {
     ) -> Style {
         var style = Style()
         add(
-            kind: fill(configuration.backgroundKind),
-            color: configuration.backgroundColor,
-            gradientAverage: configuration.backgroundGradient.averageColor(),
-            opacity: configuration.backgroundOpacity,
-            glassStyle: configuration.backgroundGlassStyle,
-            glassIsColored: configuration.backgroundGlassIsColored,
+            Layer(
+                kind: fill(configuration.backgroundKind),
+                color: configuration.backgroundColor,
+                gradientAverage: configuration.backgroundGradient.averageColor(),
+                opacity: configuration.backgroundOpacity,
+                glassStyle: configuration.backgroundGlassStyle,
+                glassIsColored: configuration.backgroundGlassIsColored
+            ),
             adaptiveColor: adaptiveColor,
             to: &style
         )
         if shapeKind == .noShape || shapeKind == .full {
             add(
-                kind: fill(configuration.tintKind),
-                color: configuration.tintColor,
-                gradientAverage: configuration.tintGradient.averageColor(),
-                opacity: configuration.tintOpacity,
-                glassStyle: configuration.tintGlassStyle,
-                glassIsColored: configuration.tintGlassIsColored,
+                Layer(
+                    kind: fill(configuration.tintKind),
+                    color: configuration.tintColor,
+                    gradientAverage: configuration.tintGradient.averageColor(),
+                    opacity: configuration.tintOpacity,
+                    glassStyle: configuration.tintGlassStyle,
+                    glassIsColored: configuration.tintGlassIsColored
+                ),
                 adaptiveColor: adaptiveColor,
                 to: &style
             )
@@ -66,6 +70,16 @@ enum ClockBridgeCoverStyle {
 
     private enum Fill {
         case none, solid, gradient, glass, adaptive
+    }
+
+    /// One of the two fills the band repeats: the shape's background or its tint.
+    private struct Layer {
+        let kind: Fill
+        let color: CGColor
+        let gradientAverage: CGColor?
+        let opacity: Double
+        let glassStyle: MenuBarGlassStyle
+        let glassIsColored: Bool
     }
 
     private static func fill(_ kind: MenuBarBackgroundKind) -> Fill {
@@ -88,24 +102,15 @@ enum ClockBridgeCoverStyle {
         }
     }
 
-    // swiftlint:disable:next function_parameter_count
-    private static func add(
-        kind: Fill,
-        color: CGColor,
-        gradientAverage: CGColor?,
-        opacity: Double,
-        glassStyle: MenuBarGlassStyle,
-        glassIsColored: Bool,
-        adaptiveColor: CGColor?,
-        to style: inout Style
-    ) {
-        switch kind {
+    private static func add(_ layer: Layer, adaptiveColor: CGColor?, to style: inout Style) {
+        let opacity = layer.opacity
+        switch layer.kind {
         case .none:
             break
         case .solid:
-            style.washes.append(Wash(color: color, opacity: opacity))
+            style.washes.append(Wash(color: layer.color, opacity: opacity))
         case .gradient:
-            if let gradientAverage {
+            if let gradientAverage = layer.gradientAverage {
                 style.washes.append(Wash(color: gradientAverage, opacity: opacity))
             }
         case .adaptive:
@@ -114,10 +119,10 @@ enum ClockBridgeCoverStyle {
             }
         case .glass:
             style.blursWallpaper = true
-            if glassStyle.usesTint, glassIsColored {
-                style.washes.append(Wash(color: color, opacity: opacity * glassStyle.effectOpacity))
+            if layer.glassStyle.usesTint, layer.glassIsColored {
+                style.washes.append(Wash(color: layer.color, opacity: opacity * layer.glassStyle.effectOpacity))
             }
-            if glassStyle.usesDarkFade {
+            if layer.glassStyle.usesDarkFade {
                 style.washes.append(Wash(color: CGColor(gray: 0, alpha: 1), opacity: darkFadeOpacity))
             }
         }

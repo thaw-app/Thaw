@@ -88,6 +88,15 @@ final class GeneralSettings {
         }
     }
 
+    /// A Boolean value that indicates whether Simple Mode's page shows the
+    /// preview of the Visible, Hidden and Always Hidden sections.
+    var simpleModeShowsPreview = Defaults.DefaultValue.simpleModeShowsPreview {
+        didSet {
+            guard oldValue != simpleModeShowsPreview else { return }
+            Defaults.set(simpleModeShowsPreview, forKey: .simpleModeShowsPreview)
+        }
+    }
+
     /// A Boolean value that indicates whether the Thaw Bar is pinned in
     /// place instead of being draggable by its background.
     var lockThawBarPosition = Defaults.DefaultValue.lockThawBarPosition {
@@ -258,6 +267,7 @@ final class GeneralSettings {
         Defaults.ifPresent(key: .customThawIconIsTemplate, assign: &customThawIconIsTemplate)
         Defaults.ifPresent(key: .simpleMode, assign: &simpleMode)
         Defaults.ifPresent(key: .showSettingDescriptions, assign: &showSettingDescriptions)
+        Defaults.ifPresent(key: .simpleModeShowsPreview, assign: &simpleModeShowsPreview)
         Defaults.ifPresent(key: .lockThawBarPosition, assign: &lockThawBarPosition)
         Defaults.ifPresent(key: .openHiddenItemsInMenuBar, assign: &openHiddenItemsInMenuBar)
         Defaults.ifPresent(key: .roundScreenCorners, assign: &roundScreenCorners)

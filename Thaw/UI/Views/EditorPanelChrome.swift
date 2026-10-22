@@ -41,11 +41,12 @@ struct EditorPanelChrome<Content: View, BottomBar: View>: View {
                 HStack(spacing: ThawSpacing.base) {
                     bottomBar
                 }
-                .buttonBorderShape(.capsule)
                 .padding(.horizontal, ThawSpacing.gutter)
                 .padding(.top, ThawSpacing.base)
                 .padding(.bottom, ThawSpacing.gutter)
             }
+            // Capsule buttons throughout, as in Settings.
+            .buttonBorderShape(.capsule)
     }
 
     private var heading: some View {

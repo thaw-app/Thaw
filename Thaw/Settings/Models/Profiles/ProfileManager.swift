@@ -23,7 +23,13 @@ final class ProfileManager {
     }
 
     /// The ID of the currently active profile, or nil.
-    var activeProfileID: UUID?
+    var activeProfileID: UUID? {
+        didSet { launchRecord?.lastActiveProfileID = activeProfileID }
+    }
+
+    /// Where the active profile is kept for the next launch. Nil for managers
+    /// pointed at a test directory, which must not write the user's defaults.
+    let launchRecord: ProfileLaunchApply.Record?
 
     /// The last manifest write that failed in a non-throwing path, or nil.
     private(set) var lastManifestError: String?
@@ -35,7 +41,7 @@ final class ProfileManager {
         return lastManifestError
     }
 
-    private let diagLog = DiagLog(category: "ProfileManager")
+    let diagLog = DiagLog(category: "ProfileManager")
     private let encoder: JSONEncoder
     private let decoder: JSONDecoder
     private let profilesDirectory: URL
@@ -80,7 +86,8 @@ final class ProfileManager {
     private var profileHotkeyCancellables = Set<AnyCancellable>()
 
     /// - Parameter profilesDirectory: Profile and manifest directory; defaults to Application Support. Tests use temporary directories to protect user profiles.
-    init(profilesDirectory: URL? = nil) {
+    init(profilesDirectory: URL? = nil, launchRecord: ProfileLaunchApply.Record? = nil) {
+        self.launchRecord = launchRecord ?? (profilesDirectory == nil ? ProfileLaunchApply.Record() : nil)
         let enc = JSONEncoder()
         enc.dateEncodingStrategy = .iso8601
         enc.outputFormatting = [.prettyPrinted, .sortedKeys]
@@ -220,7 +227,7 @@ final class ProfileManager {
     }
 
     /// Binding-driven association setters cannot throw; expose save failures through lastManifestError for the pane.
-    private func persistManifest() {
+    func persistManifest() {
         do {
             try saveManifest()
         } catch {
@@ -576,11 +583,14 @@ final class ProfileManager {
         let data = try encoder.encode(duplicate)
         try data.write(to: profileURL(for: duplicate.id), options: .atomic)
 
+        let source = profiles.first { $0.id == id }
         let metadata = ProfileMetadata(
             id: duplicate.id,
             name: duplicate.name,
             createdAt: duplicate.createdAt,
-            modifiedAt: duplicate.modifiedAt
+            modifiedAt: duplicate.modifiedAt,
+            keepsLayoutChangesSetting: source?.keepsLayoutChangesSetting,
+            reappliesAtLaunchSetting: source?.reappliesAtLaunchSetting
         )
         profiles.append(metadata)
         try saveManifest()
@@ -595,7 +605,9 @@ final class ProfileManager {
             associatedDisplayUUID: meta?.associatedDisplayUUID,
             associatedDisplayName: meta?.associatedDisplayName,
             associatedSpaceKey: meta?.associatedSpaceKey,
-            associatedSpaceName: meta?.associatedSpaceName
+            associatedSpaceName: meta?.associatedSpaceName,
+            keepsLayoutChanges: meta?.keepsLayoutChangesSetting,
+            reappliesAtLaunch: meta?.reappliesAtLaunchSetting
         )
         let bundle = ProfileExportBundle(entries: [entry])
         let data = try encoder.encode(bundle)
@@ -919,7 +931,9 @@ final class ProfileManager {
                 associatedDisplayUUID: meta.associatedDisplayUUID,
                 associatedDisplayName: meta.associatedDisplayName,
                 associatedSpaceKey: meta.associatedSpaceKey,
-                associatedSpaceName: meta.associatedSpaceName
+                associatedSpaceName: meta.associatedSpaceName,
+                keepsLayoutChanges: meta.keepsLayoutChangesSetting,
+                reappliesAtLaunch: meta.reappliesAtLaunchSetting
             ))
         }
         let bundle = ProfileExportBundle(entries: entries)
@@ -966,11 +980,17 @@ final class ProfileManager {
         persistManifest()
     }
 
-    /// Clears the display association from whichever profile currently holds it.
-    func setAssociatedDisplay(uuid _: String?, forDisplayUUID displayUUID: String) {
-        for index in profiles.indices where profiles[index].associatedDisplayUUID == displayUUID {
-            profiles[index].associatedDisplayUUID = nil
-            profiles[index].associatedDisplayName = nil
+    // MARK: - Layout Behavior
+
+    /// Sets whether the profile keeps layout changes and whether it applies
+    /// again at launch. A nil argument leaves that switch as it is.
+    func setLayoutBehavior(keepsChanges: Bool? = nil, reappliesAtLaunch: Bool? = nil, forProfileID profileID: UUID) {
+        guard let index = profiles.firstIndex(where: { $0.id == profileID }) else { return }
+        if let keepsChanges {
+            profiles[index].keepsLayoutChangesSetting = keepsChanges
+        }
+        if let reappliesAtLaunch {
+            profiles[index].reappliesAtLaunchSetting = reappliesAtLaunch
         }
         persistManifest()
     }
@@ -1135,6 +1155,7 @@ final class ProfileManager {
         guard meta.id != activeProfileID else { return }
         guard let appState else { return }
 
+        guard !keepsLiveLayoutAtLaunch(meta) else { return }
         diagLog.info("Auto-switching to profile \(meta.name) for display \(uuid)")
         do {
             let profile = try loadProfile(id: meta.id)
@@ -1152,6 +1173,7 @@ final class ProfileManager {
         guard meta.id != activeProfileID else { return }
         guard let appState else { return }
 
+        guard !keepsLiveLayoutAtLaunch(meta) else { return }
         diagLog.info("Auto-switching to profile \(meta.name) for Space \(key)")
         do {
             let profile = try loadProfile(id: meta.id)
@@ -1187,7 +1209,9 @@ final class ProfileManager {
                 id: imported.id,
                 name: imported.name,
                 createdAt: imported.createdAt,
-                modifiedAt: imported.modifiedAt
+                modifiedAt: imported.modifiedAt,
+                keepsLayoutChangesSetting: entry.keepsLayoutChanges,
+                reappliesAtLaunchSetting: entry.reappliesAtLaunch
             )
             profiles.append(metadata)
 

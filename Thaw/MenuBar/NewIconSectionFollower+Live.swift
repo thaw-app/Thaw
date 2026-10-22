@@ -31,14 +31,37 @@ final class NewIconSectionFollower {
                     continue
                 }
                 let placements = arrivals?.placements(
-                    current: current, saved: saved, authored: controller.authoredSection(for:)
+                    current: current,
+                    saved: saved,
+                    authored: controller.authoredSection(for:),
+                    newItemsSection: itemManager.effectiveNewItemsSection
                 ) ?? []
                 for placement in placements {
-                    Self.diagLog.info("\(placement.identifier) is new and its app is in \(placement.section); placing it there")
+                    Self.diagLog.info("\(placement.identifier) is new; placing it in \(placement.section)")
                     appState.menuBarManager.assignSection(placement.section, identifier: placement.identifier)
+                    if placement.isNewApp {
+                        Self.moveToNewItemsSlot(placement, itemManager: itemManager, controller: controller)
+                    }
                 }
             }
         }
+    }
+
+    /// Puts a new app's icon where Layout shows the New Items placeholder, next to its anchor item.
+    /// Manual arrangement keeps the slot in the saved order but leaves the bar as it is.
+    private static func moveToNewItemsSlot(
+        _ placement: NewIconArrivals.Placement,
+        itemManager: MenuBarItemManager,
+        controller: any MenuBarSectionControlling
+    ) {
+        let section = placement.section
+        let order = controller.sectionItemOrder[section] ?? []
+        let canonical = MenuBarItemTag.canonicalPersistentIdentifier(placement.identifier)
+        let others = order.filter { MenuBarItemTag.canonicalPersistentIdentifier($0) != canonical }
+        guard let index = itemManager.newItemsBadgeIndex(in: section, itemIdentifiers: others) else { return }
+        controller.setSectionOrder(NewIconArrivals.order(placing: placement.identifier, in: order, at: index), for: section)
+        itemManager.scheduleSectionOrderApply(for: section)
+        diagLog.info("\(placement.identifier) takes the New Items slot \(index) in \(section)")
     }
 
     private static func itemIdentifiers(in itemManager: MenuBarItemManager) -> [String] {

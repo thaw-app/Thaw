@@ -140,7 +140,7 @@ final class MenuBarLeadingEdgeWatcher {
             item.bounds.width > 0
                 && (item.tag.matchesVisibleControlItem || (item.isOnScreen && controller.section(for: item) == .visible))
         }
-        // Seated items only, as in ClockBridgeCover: an item parked at the
+        // Seated items only, as in RevealCover: an item parked at the
         // x == -1 sentinel would sort first, sit on no screen and leave the
         // edge unwatched.
         let screenFrames = NSScreen.screens.map(\.cgFrame)

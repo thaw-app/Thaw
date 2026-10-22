@@ -26,16 +26,24 @@ nonisolated enum ReleaseVersionOrder {
         }
     }
 
+    /// The prerelease part of version, such as alpha.10 in 3.0.0-alpha.10+116, or nil for a release.
+    static func prereleaseTag(of version: String) -> Substring? {
+        let parts = withoutBuild(version).split(separator: "-", maxSplits: 1)
+        return parts.count > 1 ? parts[1] : nil
+    }
+
+    private static func withoutBuild(_ version: String) -> Substring {
+        version.split(separator: "+", maxSplits: 1).first ?? ""
+    }
+
     /// The numeric core padded to three parts, and the dot-separated prerelease identifiers if any.
     private static func split(_ version: String) -> (core: [Int], prerelease: [Substring]?) {
-        let withoutBuild = version.split(separator: "+", maxSplits: 1).first ?? ""
-        let parts = withoutBuild.split(separator: "-", maxSplits: 1)
-        var core = (parts.first ?? "").split(separator: ".").map { Int($0) ?? 0 }
+        let coreText = withoutBuild(version).split(separator: "-", maxSplits: 1).first ?? ""
+        var core = coreText.split(separator: ".").map { Int($0) ?? 0 }
         while core.count < 3 {
             core.append(0)
         }
-        let prerelease = parts.count > 1 ? parts[1].split(separator: ".") : nil
-        return (core, prerelease)
+        return (core, prereleaseTag(of: version)?.split(separator: "."))
     }
 
     /// Numeric identifiers compare as numbers and come before text ones; a shorter list that matches so far comes first.

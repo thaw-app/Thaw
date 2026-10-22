@@ -78,11 +78,31 @@ nonisolated extension MenuBarShapeKind: Codable {
 }
 
 /// The end caps MenuBarShapeKind.full draws the bar with.
-nonisolated struct MenuBarFullShapeInfo: Codable, Hashable {
+nonisolated struct MenuBarFullShapeInfo: Hashable {
     /// How the left-hand end of the shape is finished.
     var leadingEndCap: MenuBarEndCap
     /// How the right-hand end of the shape is finished.
     var trailingEndCap: MenuBarEndCap
+    /// How far a round end curves, from 0 (square corners) to 1 (a half-circle the bar's height).
+    var roundness: Double = 1
+}
+
+nonisolated extension MenuBarFullShapeInfo: Codable {
+    private enum CodingKeys: CodingKey {
+        case leadingEndCap
+        case trailingEndCap
+        case roundness
+    }
+
+    init(from decoder: any Decoder) throws {
+        let stored = try decoder.container(keyedBy: CodingKeys.self)
+        leadingEndCap = try stored.decode(MenuBarEndCap.self, forKey: .leadingEndCap)
+        trailingEndCap = try stored.decode(MenuBarEndCap.self, forKey: .trailingEndCap)
+        // Looks saved before the slider existed had fully round ends.
+        // A damaged record is read inside 0 to 1, and as round when it isn't a number.
+        let decoded = try stored.decodeIfPresent(Double.self, forKey: .roundness) ?? 1
+        roundness = decoded.isFinite ? min(max(decoded, 0), 1) : 1
+    }
 }
 
 nonisolated extension MenuBarFullShapeInfo {
@@ -96,8 +116,33 @@ nonisolated extension MenuBarFullShapeInfo {
     static let defaultValue = MenuBarFullShapeInfo(leadingEndCap: .round, trailingEndCap: .round)
 }
 
+/// A shape drawn as two full shapes, one around the leading items and one
+/// around the trailing items.
+nonisolated protocol MenuBarTwoPartShapeInfo {
+    var leading: MenuBarFullShapeInfo { get }
+    var trailing: MenuBarFullShapeInfo { get }
+}
+
+nonisolated extension MenuBarTwoPartShapeInfo {
+    /// Whether either part rounds off an end.
+    var hasRoundedShape: Bool {
+        [leading, trailing].contains(where: \.hasRoundedShape)
+    }
+
+    /// The caps on the outermost ends of the two parts, what one full-width
+    /// shape wears in their place: when a split collapses into one, or on a
+    /// display without a notch.
+    var outerEndCaps: MenuBarFullShapeInfo {
+        MenuBarFullShapeInfo(
+            leadingEndCap: leading.leadingEndCap,
+            trailingEndCap: trailing.trailingEndCap,
+            roundness: leading.roundness
+        )
+    }
+}
+
 /// The two sub-shapes MenuBarShapeKind.split draws the bar with.
-nonisolated struct MenuBarSplitShapeInfo: Codable, Hashable {
+nonisolated struct MenuBarSplitShapeInfo: Codable, Hashable, MenuBarTwoPartShapeInfo {
     /// The sub-shape drawn around the leading items.
     var leading: MenuBarFullShapeInfo
     /// The sub-shape drawn around the trailing items.
@@ -105,30 +150,14 @@ nonisolated struct MenuBarSplitShapeInfo: Codable, Hashable {
 }
 
 nonisolated extension MenuBarSplitShapeInfo {
-    /// Whether either sub-shape rounds off an end.
-    var hasRoundedShape: Bool {
-        [leading, trailing].contains(where: \.hasRoundedShape)
-    }
-}
-
-nonisolated extension MenuBarSplitShapeInfo {
     static let defaultValue = MenuBarSplitShapeInfo(leading: .defaultValue, trailing: .defaultValue)
-
-    /// The caps on the outermost ends of the two sub-shapes, what a single
-    /// full-width shape wears when the split collapses into one.
-    var outerEndCaps: MenuBarFullShapeInfo {
-        MenuBarFullShapeInfo(
-            leadingEndCap: leading.leadingEndCap,
-            trailingEndCap: trailing.trailingEndCap
-        )
-    }
 }
 
 /// Information for the MenuBarShapeKind.notch menu bar shape kind.
 ///
 /// Without a notch it falls back to full width, using the leading cap on the
 /// left and the trailing cap on the right.
-nonisolated struct MenuBarNotchShapeInfo: Codable, Hashable {
+nonisolated struct MenuBarNotchShapeInfo: Codable, Hashable, MenuBarTwoPartShapeInfo {
     /// The leading shape info.
     var leading: MenuBarFullShapeInfo
     /// The trailing shape info.
@@ -136,23 +165,7 @@ nonisolated struct MenuBarNotchShapeInfo: Codable, Hashable {
 }
 
 nonisolated extension MenuBarNotchShapeInfo {
-    /// Whether either side rounds off an end.
-    var hasRoundedShape: Bool {
-        [leading, trailing].contains(where: \.hasRoundedShape)
-    }
-}
-
-nonisolated extension MenuBarNotchShapeInfo {
     static let defaultValue = MenuBarNotchShapeInfo(leading: .defaultValue, trailing: .defaultValue)
-
-    /// The caps on the outermost ends of the two sides, what the full-width
-    /// fallback shape wears on displays without a notch.
-    var outerEndCaps: MenuBarFullShapeInfo {
-        MenuBarFullShapeInfo(
-            leadingEndCap: leading.leadingEndCap,
-            trailingEndCap: trailing.trailingEndCap
-        )
-    }
 }
 
 /// A type that specifies how the background surrounding the shape is rendered.
@@ -196,13 +209,49 @@ nonisolated enum MenuBarGlassStyle: Int, CaseIterable, Codable, Hashable {
     case liquid = 2
     /// Clear Liquid Glass with a dark-to-clear vertical fade.
     case dynamic = 3
+    /// Experimental: glass that inverts what's behind it, from the private variant 6.
+    /// Shown as Invert. The case keeps solid, the name it first had.
+    case solid = 4
+    /// Experimental: clear glass with a bright rim, from the private variant 11.
+    case edge = 5
+    /// Experimental: soft, thin clear glass, from the private variant 15.
+    case sheer = 6
+    /// Experimental: a haze in light mode and smoky glass in dark mode, from the private variant 18.
+    case dim = 7
 
     @MainActor
     var nsGlassStyle: NSGlassEffectView.Style {
         switch self {
-        case .regular: .regular
-        case .clear, .liquid, .dynamic: .clear
+        case .regular, .solid, .dim: .regular
+        case .clear, .liquid, .dynamic, .edge, .sheer: .clear
         }
+    }
+
+    /// The private _variant the finish needs, or nil for the public styles.
+    var privateVariant: Int? {
+        switch self {
+        case .regular, .clear, .liquid, .dynamic: nil
+        case .solid: 6
+        case .edge: 11
+        case .sheer: 15
+        case .dim: 18
+        }
+    }
+
+    /// The finishes built on private settings, marked experimental in Settings.
+    var isExperimental: Bool {
+        privateVariant != nil
+    }
+
+    /// Whether the finish takes the icons' light or dark. Invert doesn't: dark,
+    /// it turns bright and would hide light icons.
+    var followsIconShade: Bool {
+        isExperimental && self != .solid
+    }
+
+    /// How dark the finish makes what's behind it, for reading the icons' contrast.
+    var darkening: Double {
+        self == .dim ? 0.5 : 0
     }
 
     var usesTint: Bool {
@@ -219,7 +268,7 @@ nonisolated enum MenuBarGlassStyle: Int, CaseIterable, Codable, Hashable {
 
     var effectOpacity: Double {
         switch self {
-        case .regular, .clear: 1
+        case .regular, .clear, .solid, .edge, .sheer, .dim: 1
         case .liquid, .dynamic: 0.45
         }
     }
@@ -230,6 +279,10 @@ nonisolated enum MenuBarGlassStyle: Int, CaseIterable, Codable, Hashable {
         case .clear: "Clear"
         case .liquid: "Liquid Glass"
         case .dynamic: "Dynamic Glass"
+        case .solid: "Invert (Experimental)"
+        case .edge: "Edge (Experimental)"
+        case .sheer: "Sheer (Experimental)"
+        case .dim: "Dim (Experimental)"
         }
     }
 }

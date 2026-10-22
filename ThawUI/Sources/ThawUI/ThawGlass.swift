@@ -205,6 +205,10 @@ public extension View {
 /// rounding, and the difference between a 10pt and a 16pt card is most of
 /// what makes a surface feel like it floats rather than sits.
 public enum ThawRadius {
+    /// A small mark inside a control, such as a checkbox.
+    public static let small: CGFloat = 4
+    /// A selectable row in a list, such as the sidebar's pages.
+    public static let row: CGFloat = 8
     /// Fields, pickers, small buttons, and strips inside a panel.
     public static let control: CGFloat = 12
     /// Grouped cards and hand-built card containers on a pane.

@@ -98,4 +98,48 @@ struct NewIconArrivalsTests {
         let wifi = "com.apple.controlcenter:WiFi", sound = "com.apple.controlcenter:Sound"
         #expect(placements(seen: [wifi], current: [wifi, sound], sections: [wifi: .hidden]).isEmpty)
     }
+
+    @Test("A new app's first icon goes to the New Items section, unless that is Visible")
+    func newAppFollowsNewItems() {
+        let orca = "dev.orca:Item-0"
+        var arrivals = NewIconArrivals(seen: [main])
+        let placed = arrivals.placements(current: [main, orca], saved: [main], authored: { _ in .visible }, newItemsSection: .hidden)
+        #expect(placed.map(\.identifier) == [orca])
+        #expect(placed.map(\.section) == [.hidden])
+        #expect(arrivals.placements(current: [main, orca], saved: [main], authored: { _ in .visible }, newItemsSection: .hidden).isEmpty,
+                "an arrival is placed once")
+
+        var visible = NewIconArrivals(seen: [main])
+        #expect(visible.placements(current: [main, orca], saved: [main], authored: { _ in .visible }, newItemsSection: .visible).isEmpty)
+    }
+
+    @Test("An app's new icon still follows its other icons, whatever the New Items section")
+    func knownAppIgnoresNewItems() {
+        let placed = placements(seen: [main], current: [main, player], sections: [main: .visible])
+        #expect(placed.isEmpty)
+        var arrivals = NewIconArrivals(seen: [main])
+        let hidden = arrivals.placements(current: [main, player], saved: [main], authored: { _ in .alwaysHidden }, newItemsSection: .hidden)
+        #expect(hidden.map(\.section) == [.alwaysHidden])
+    }
+
+    @Test("Only a new app's icon takes the New Items position; one that follows its app doesn't")
+    func onlyNewAppsTakeThePosition() {
+        let orca = "dev.orca:Item-0"
+        var arrivals = NewIconArrivals(seen: [main])
+        let placed = arrivals.placements(
+            current: [main, player, orca], saved: [main], authored: { _ in .hidden }, newItemsSection: .alwaysHidden
+        )
+        #expect(placed.first { $0.identifier == orca }?.isNewApp == true)
+        #expect(placed.first { $0.identifier == player }?.isNewApp == false)
+    }
+
+    @Test("A new icon goes into its section's order at the placeholder's slot, once")
+    func insertsAtTheSlot() {
+        let orca = "dev.orca:Item-0"
+        #expect(NewIconArrivals.order(placing: orca, in: ["a:1", "b:1", "c:1"], at: 1) == ["a:1", orca, "b:1", "c:1"])
+        #expect(NewIconArrivals.order(placing: orca, in: ["a:1", orca, "b:1"], at: 2) == ["a:1", "b:1", orca],
+                "the slot counts the order without the icon, which isn't listed twice")
+        #expect(NewIconArrivals.order(placing: orca, in: ["a:1"], at: 9) == ["a:1", orca])
+        #expect(NewIconArrivals.order(placing: orca, in: [], at: 0) == [orca])
+    }
 }

@@ -39,6 +39,15 @@ enum AutomaticUpdates: Hashable, CaseIterable, Identifiable {
         case .download: "Check and download"
         }
     }
+
+    /// The name in a pill, where the full one doesn't fit; the full one is its help.
+    var shortLocalized: LocalizedStringKey {
+        switch self {
+        case .off: "Off"
+        case .check: "Check"
+        case .download: "Download"
+        }
+    }
 }
 
 /// The updater's two switches, so the choice can be tested without Sparkle.

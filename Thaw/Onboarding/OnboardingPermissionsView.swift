@@ -52,16 +52,20 @@ struct ThawPermissionsView: View {
     }
 
     var body: some View {
-        Group {
+        // Centred between matched spacers, as the welcome screen is; the
+        // minimum spacing handles Larger Text with no spare height.
+        VStack(spacing: 0) {
+            Spacer(minLength: ThawSpacing.section)
             switch mode {
             case .onboarding:
                 onboardingLayout
             case .recovery:
                 recoveryLayout
             }
+            Spacer(minLength: ThawSpacing.section)
         }
-        .padding(.top, 28)
-        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
+        .padding(.horizontal, ThawSpacing.section)
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
         // The onboarding window has no close button, so offer a small way out.
         .overlay(alignment: .bottomTrailing) {
             HStack(spacing: 0) {
@@ -86,36 +90,35 @@ struct ThawPermissionsView: View {
     // MARK: - Recovery
 
     private var recoveryLayout: some View {
-        VStack(spacing: 18) {
+        VStack(spacing: ThawSpacing.gutter) {
             header(
                 title: "Enable Permissions",
                 body: "\(Constants.displayName) uses the permissions below to manage your menu bar. Permission checks happen on your Mac."
             )
 
-            HStack(alignment: .top, spacing: 14) {
+            // Two cards a row, as the bento lays out its cards: four across
+            // left each one too narrow for its details.
+            LazyVGrid(
+                columns: Array(repeating: GridItem(.flexible(), spacing: ThawSpacing.inset, alignment: .top), count: 2),
+                spacing: ThawSpacing.inset
+            ) {
                 ForEach(permissions.allPermissions) { permission in
                     OnboardingPermissionCard(permission: permission)
                 }
             }
-            .fixedSize(horizontal: false, vertical: true)
-            .padding(.horizontal, 30)
+            .frame(maxWidth: 620)
 
-            privacyPanel
+            privacyRow
 
-            VStack(spacing: 12) {
-                Button {
+            VStack(spacing: ThawSpacing.base) {
+                OnboardingPrimaryButton {
                     Task {
                         await permissions.refreshPermissionsState()
                         onContinue()
                     }
                 } label: {
                     Text(requiredGranted && !allGranted ? "Continue Without Screen Recording" : "Continue")
-                        .font(ThawType.heading)
-                        .frame(maxWidth: .infinity)
-                        .frame(height: 36)
                 }
-                .buttonStyle(.glassProminent)
-                .keyboardShortcut(.defaultAction)
                 .disabled(!requiredGranted)
 
                 Text("Accessibility is required to continue.")
@@ -124,15 +127,14 @@ struct ThawPermissionsView: View {
                     .multilineTextAlignment(.center)
                     .opacity(requiredGranted ? 0 : 1)
             }
-            .padding(.horizontal, 30)
-            .padding(.bottom, 24)
+            .padding(.top, ThawSpacing.base)
         }
     }
 
     // MARK: - Onboarding
 
     private var onboardingLayout: some View {
-        VStack(spacing: 18) {
+        VStack(spacing: ThawSpacing.gutter) {
             header(
                 title: "Allow access",
                 body: onboardingHeaderBody
@@ -141,11 +143,12 @@ struct ThawPermissionsView: View {
             // The page's primary action is below, so no second Grant button.
             OnboardingPermissionCard(permission: focusPermission, showsRequestButton: false)
                 .fixedSize(horizontal: false, vertical: true)
-                .padding(.horizontal, 30)
+                .frame(maxWidth: 420)
 
-            privacyPanel
+            privacyRow
 
             onboardingActions(for: focusPermission)
+                .padding(.top, ThawSpacing.base)
         }
     }
 
@@ -175,7 +178,7 @@ struct ThawPermissionsView: View {
     /// The page's action, its waiting state, and the System Settings route
     /// after a declined prompt.
     private func onboardingActions(for permission: Permission) -> some View {
-        VStack(spacing: 12) {
+        VStack(spacing: ThawSpacing.base) {
             if permission.wasDeclined {
                 SettingsWarningPill(
                     title: focusIsAccessibility
@@ -187,10 +190,11 @@ struct ThawPermissionsView: View {
                     actionTitle: "Open System Settings",
                     action: { permission.openSettingsPane() }
                 )
+                .frame(maxWidth: 520)
                 .transition(.opacity)
             }
 
-            Button {
+            OnboardingPrimaryButton {
                 if permission.hasPermission {
                     // Preflight only: the async probe can raise a Screen
                     // Recording prompt this page never mentioned.
@@ -202,12 +206,7 @@ struct ThawPermissionsView: View {
                 }
             } label: {
                 Text(onboardingActionTitle(for: permission))
-                    .font(ThawType.heading)
-                    .frame(maxWidth: .infinity)
-                    .frame(height: 36)
             }
-            .buttonStyle(.glassProminent)
-            .keyboardShortcut(.defaultAction)
 
             if hasRequested, !permission.hasPermission {
                 HStack(spacing: ThawSpacing.compact) {
@@ -221,8 +220,6 @@ struct ThawPermissionsView: View {
                 .transition(.opacity)
             }
         }
-        .padding(.horizontal, 30)
-        .padding(.bottom, 24)
         .thawAnimation(ThawMotion.settle, value: permission.wasDeclined)
         .thawAnimation(ThawMotion.settle, value: permission.hasPermission)
     }
@@ -253,7 +250,7 @@ struct ThawPermissionsView: View {
     // MARK: - Shared
 
     private func header(title: LocalizedStringKey, body: LocalizedStringKey) -> some View {
-        VStack(spacing: 7) {
+        VStack(spacing: ThawSpacing.compact) {
             Text(title)
                 .font(ThawType.display)
                 .multilineTextAlignment(.center)
@@ -269,31 +266,26 @@ struct ThawPermissionsView: View {
         .opacity(appeared ? 1 : 0)
     }
 
-    private var privacyPanel: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            privacyFact("No analytics or usage tracking")
-            privacyFact("Permission checks stay on your Mac")
-            privacyFact("Open source under GPL; inspect how it works")
+    /// The privacy facts as the welcome screen's capsules, in one row.
+    private var privacyRow: some View {
+        HStack(spacing: ThawSpacing.base) {
+            OnboardingFactCapsule(
+                symbol: "hand.raised",
+                label: Text("No analytics or tracking"),
+                spoken: Text("No analytics or usage tracking")
+            )
+            OnboardingFactCapsule(
+                symbol: "lock",
+                label: Text("Permission checks stay on your Mac"),
+                spoken: Text("Permission checks stay on your Mac")
+            )
+            OnboardingFactCapsule(
+                symbol: "lock.open",
+                label: Text("Open source"),
+                spoken: Text("Open source under GPL; inspect how it works")
+            )
         }
-        .padding(.horizontal, 16)
-        .padding(.vertical, 12)
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .thawGlass(.panel, in: RoundedRectangle(cornerRadius: ThawRadius.card, style: .continuous))
-        .padding(.horizontal, 30)
-    }
-
-    private func privacyFact(_ text: LocalizedStringKey) -> some View {
-        HStack(alignment: .top, spacing: 8) {
-            Image(systemName: "checkmark")
-                .font(ThawType.micro.weight(.bold))
-                .foregroundStyle(.secondary)
-                .padding(.top, 1.5)
-
-            Text(text)
-                .font(ThawType.caption)
-                .foregroundStyle(.secondary)
-                .fixedSize(horizontal: false, vertical: true)
-        }
+        .frame(maxWidth: 560)
     }
 }
 
@@ -304,7 +296,7 @@ private struct OnboardingPermissionCard: View {
     var showsRequestButton = true
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 12) {
+        VStack(alignment: .leading, spacing: ThawSpacing.inset) {
             PermissionLabel(
                 permission: permission,
                 titleFont: ThawType.heading,
@@ -335,7 +327,7 @@ private struct OnboardingPermissionCard: View {
                 PermissionStatusControl(permission: permission, layout: .filled)
             }
         }
-        .padding(14)
+        .padding(ThawSpacing.inset)
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
         .thawGlass(.panel, in: RoundedRectangle(cornerRadius: ThawRadius.card, style: .continuous))
         .thawAnimation(ThawMotion.settle, value: permission.hasPermission)

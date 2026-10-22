@@ -142,7 +142,7 @@ struct AXGeometryCatalogTests {
         #expect(AXGeometryCatalog.match(ownerPID: 1, identityTitle: "Item#", bounds: rect, in: snapshot) == .ambiguous)
     }
 
-    @Test("A stable identity cannot be replaced by its same-process neighbour")
+    @Test("A stable identity cannot be replaced by its same-process neighbour; it reads as moved")
     func stableIdentityRejectsSubstitution() {
         let old = CGRect(x: 100, y: 4.5, width: 24, height: 24)
         let moved = CGRect(x: 150, y: 4.5, width: 24, height: 24)
@@ -150,7 +150,49 @@ struct AXGeometryCatalogTests {
             AXGeometryCatalog.Entry(ownerPID: 1, itemIndex: 0, identityTitle: "CPU", frame: moved),
             AXGeometryCatalog.Entry(ownerPID: 1, itemIndex: 1, identityTitle: "Memory", frame: old),
         ]
-        #expect(AXGeometryCatalog.match(ownerPID: 1, identityTitle: "CPU", bounds: old, in: snapshot) == .ambiguous)
+        #expect(AXGeometryCatalog.match(ownerPID: 1, identityTitle: "CPU", bounds: old, in: snapshot) == .unavailable)
+    }
+
+    @Test("An item pushed along by a wider neighbour keeps its picture instead of losing it")
+    func itemShiftedByAWidthChangeReadsAsMoved() {
+        // From a live log: a traffic meter grew to 118 points and every icon to
+        // its right shifted, so each one's old bounds now held another app.
+        let stale = CGRect(x: 1332, y: 3, width: 24, height: 24)
+        let snapshot = [
+            AXGeometryCatalog.Entry(ownerPID: 66734, itemIndex: 0, identityTitle: "Item-0", frame: CGRect(x: 1216, y: 3, width: 24, height: 24)),
+            AXGeometryCatalog.Entry(ownerPID: 824, itemIndex: 0, identityTitle: "Item-0", frame: CGRect(x: 1361, y: 3, width: 118, height: 24)),
+            AXGeometryCatalog.Entry(ownerPID: 90241, itemIndex: 0, identityTitle: "Item-0", frame: CGRect(x: 1331, y: 3, width: 24, height: 24)),
+        ]
+        #expect(AXGeometryCatalog.match(ownerPID: 66734, identityTitle: "Item-0", bounds: stale, in: snapshot) == .unavailable)
+    }
+
+    @Test("An item that changed width keeps its picture even though its old rectangle now holds a neighbour")
+    func resizedItemReadsAsMoved() {
+        // From a live log: the traffic meter was cropped at its old 118-point
+        // rectangle after it had shifted, and a neighbour sat inside that rectangle.
+        let stale = CGRect(x: 1881, y: 3, width: 118, height: 24)
+        let snapshot = [
+            AXGeometryCatalog.Entry(ownerPID: 824, itemIndex: 0, identityTitle: "Item-0", frame: CGRect(x: 1843, y: 3, width: 118, height: 24)),
+            AXGeometryCatalog.Entry(ownerPID: 13600, itemIndex: 0, identityTitle: "LiquidPlayerMenuBar", frame: CGRect(x: 1968, y: 3, width: 57, height: 24)),
+        ]
+        #expect(AXGeometryCatalog.match(ownerPID: 824, identityTitle: "Item-0", bounds: stale, in: snapshot) == .unavailable)
+
+        // Same left edge, narrower: the meter shrank and a neighbour moved into the space it left.
+        let shrunk = [
+            AXGeometryCatalog.Entry(ownerPID: 824, itemIndex: 0, identityTitle: "Item-0", frame: CGRect(x: 1881, y: 3, width: 70, height: 24)),
+            AXGeometryCatalog.Entry(ownerPID: 13600, itemIndex: 0, identityTitle: "LiquidPlayerMenuBar", frame: CGRect(x: 1955, y: 3, width: 40, height: 24)),
+        ]
+        #expect(AXGeometryCatalog.match(ownerPID: 824, identityTitle: "Item-0", bounds: stale, in: shrunk) == .unavailable)
+    }
+
+    @Test("An item whose own frame is only a placeholder still checks its neighbours")
+    func placeholderFrameFallsBackToOverlapCheck() {
+        let rect = CGRect(x: 100, y: 4.5, width: 24, height: 24)
+        let snapshot = [
+            AXGeometryCatalog.Entry(ownerPID: 1, itemIndex: 0, identityTitle: "CPU", frame: .zero),
+            AXGeometryCatalog.Entry(ownerPID: 2, itemIndex: 0, identityTitle: "Item-0", frame: rect),
+        ]
+        #expect(AXGeometryCatalog.match(ownerPID: 1, identityTitle: "CPU", bounds: rect, in: snapshot) == .ambiguous)
     }
 
     @Test("An identified item and its descendants keep one ownership")
@@ -186,7 +228,8 @@ struct AXGeometryCatalogTests {
         for (index, rect) in frames.enumerated() {
             #expect(AXGeometryCatalog.match(ownerPID: 1, identityTitle: "Item-\(index)", bounds: rect, in: snapshot) == .frame(rect))
         }
-        #expect(AXGeometryCatalog.match(ownerPID: 1, identityTitle: "Item-0", bounds: frames[1], in: snapshot) == .ambiguous)
+        // Item-0 is known to sit elsewhere, so its sibling's crop is refused as a move.
+        #expect(AXGeometryCatalog.match(ownerPID: 1, identityTitle: "Item-0", bounds: frames[1], in: snapshot) == .unavailable)
     }
 
     @Test("Discovery-ineligible roots do not shift the next item's fallback name", arguments: [

@@ -41,14 +41,34 @@ final class AdvancedSettings {
         }
     }
 
+    /// The image a Custom section divider draws, or nil before one is chosen.
+    var customSectionDividerImage: Data? {
+        didSet {
+            guard oldValue != customSectionDividerImage else { return }
+            if let customSectionDividerImage {
+                Defaults.set(customSectionDividerImage, forKey: .customSectionDividerImage)
+            } else {
+                Defaults.removeObject(forKey: .customSectionDividerImage)
+            }
+        }
+    }
+
+    var customSectionDividerIsTemplate = Defaults.DefaultValue.customSectionDividerIsTemplate {
+        didSet {
+            guard oldValue != customSectionDividerIsTemplate else { return }
+            Defaults.set(customSectionDividerIsTemplate, forKey: .customSectionDividerIsTemplate)
+        }
+    }
+
     /// Manual arrangement disables moves and position-table writes, but keeps hiding and revealing.
     var menuBarArrangementMode = Defaults.DefaultValue.menuBarArrangementMode {
         didSet {
             guard oldValue != menuBarArrangementMode else { return }
             Defaults.set(menuBarArrangementMode.rawValue, forKey: .menuBarArrangementMode)
             if menuBarArrangementMode == .manual {
-                // Manual membership follows where items already sit in the bar.
-                appState?.itemManager.scheduleObservedMembershipAdoption(reason: "switched to Manual")
+                // Switching to Manual keeps the sections set in Layout, since the stored
+                // weights of concealed items can be out of date.
+                appState?.itemManager.scheduleObservedMembershipAdoption(reason: "switched to Manual", keepingAuthored: true)
             }
         }
     }
@@ -401,6 +421,8 @@ final class AdvancedSettings {
                 sectionDividerStyle = style
             }
         }
+        customSectionDividerImage = Defaults.data(forKey: .customSectionDividerImage)
+        Defaults.ifPresent(key: .customSectionDividerIsTemplate, assign: &customSectionDividerIsTemplate)
 
         Defaults.ifPresent(key: .menuBarArrangementMode) { rawValue in
             if let mode = MenuBarArrangementMode(rawValue: rawValue) {

@@ -7,6 +7,7 @@
 
 import Cocoa
 import os
+import Synchronization
 
 /// A snapshot of one window, as the window server described it.
 ///
@@ -151,7 +152,7 @@ public struct WindowInfo: Sendable {
 
 public extension WindowInfo {
     private static let diagLog = DiagLog(category: "WindowInfo")
-    private static let nilDescriptionLogged = OSAllocatedUnfairLock(initialState: false)
+    private static let nilDescriptionLogged = Atomic<Bool>(false)
 
     /// Describes a specific set of windows.
     ///
@@ -166,10 +167,7 @@ public extension WindowInfo {
         guard let raw = CGWindowListCreateDescriptionFromArray(array) else {
             // The window server answers nil for a whole process (the capture
             // service, for one), so the first refusal is the diagnostic.
-            let firstRefusal = nilDescriptionLogged.withLock { logged -> Bool in
-                defer { logged = true }
-                return !logged
-            }
+            let firstRefusal = !nilDescriptionLogged.exchange(true, ordering: .relaxed)
             if firstRefusal {
                 diagLog.warning("createWindows: CGWindowListCreateDescriptionFromArray returned nil for \(windowIDs.count) window IDs; further refusals log at debug")
             } else {

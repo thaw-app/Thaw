@@ -22,7 +22,7 @@ public extension AXHelperRequest {
         case .enumerate: .walk
         case .applicationMenuFrames: .menu
         case .hitTest: .pointer
-        case .pressStatusItem, .pressHostedItem: .press
+        case .pressStatusItem, .showStatusItemMenu, .pressHostedItem: .press
         }
     }
 }

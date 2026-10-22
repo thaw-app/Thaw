@@ -13,33 +13,19 @@ import Testing
 @Suite("Spaces pane redirect", .serialized)
 @MainActor
 struct SpacesPaneRedirectTests {
-    private func withStore(_ body: (UserDefaults) throws -> Void) throws {
-        let suite = "SpacesPaneRedirectTests.\(UUID().uuidString)"
-        let store = try #require(UserDefaults(suiteName: suite))
-        let previousStore = Defaults.store
-        Defaults.store = store
-        defer {
-            Defaults.store = previousStore
-            ScratchDefaults.remove(suite)
-        }
-        try body(store)
-    }
-
-    @Test("Selecting Spaces shows and saves Displays")
+    @Test("Selecting Spaces shows and saves Displays", .scratchDefaults)
     func selectingSpaces() throws {
-        try withStore { store in
-            let navigation = AppNavigationState()
-            navigation.settingsNavigationIdentifier = .spaces
-            #expect(navigation.settingsNavigationIdentifier == .displays)
-            #expect(store.string(forKey: Defaults.Key.lastSettingsPane.rawValue) == "Displays")
-        }
+        let store = Defaults.store
+        let navigation = AppNavigationState()
+        navigation.settingsNavigationIdentifier = .spaces
+        #expect(navigation.settingsNavigationIdentifier == .displays)
+        #expect(store.string(forKey: Defaults.Key.lastSettingsPane.rawValue) == "Displays")
     }
 
-    @Test("A saved Spaces pane opens Displays")
+    @Test("A saved Spaces pane opens Displays", .scratchDefaults)
     func restoringSpaces() throws {
-        try withStore { store in
-            store.set("Spaces", forKey: Defaults.Key.lastSettingsPane.rawValue)
-            #expect(AppNavigationState().settingsNavigationIdentifier == .displays)
-        }
+        let store = Defaults.store
+        store.set("Spaces", forKey: Defaults.Key.lastSettingsPane.rawValue)
+        #expect(AppNavigationState().settingsNavigationIdentifier == .displays)
     }
 }

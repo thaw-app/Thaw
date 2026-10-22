@@ -1,5 +1,5 @@
 //
-//  ClockBridgeCoverStyleTests.swift
+//  RevealCoverStyleTests.swift
 //  Project: Thaw
 //
 //  Copyright (Thaw) © 2026 Toni Förster
@@ -12,7 +12,7 @@ import Testing
 
 @MainActor
 @Suite("Clock bridge cover style")
-struct ClockBridgeCoverStyleTests {
+struct RevealCoverStyleTests {
     private let red = CGColor(red: 1, green: 0, blue: 0, alpha: 1)
 
     private func configuration(
@@ -35,35 +35,66 @@ struct ClockBridgeCoverStyleTests {
 
     @Test("No look means bare wallpaper")
     func bareWallpaper() {
-        let style = ClockBridgeCoverStyle.style(for: configuration(), shapeKind: .noShape, adaptiveColor: nil)
+        let style = RevealCoverStyle.style(for: configuration(), shapeKind: .noShape, adaptiveColor: nil)
         #expect(style.washes.isEmpty)
         #expect(!style.blursWallpaper)
     }
 
     @Test("The background fill always applies")
     func backgroundApplies() {
-        let style = ClockBridgeCoverStyle.style(for: configuration(background: .solid), shapeKind: .split, adaptiveColor: nil)
+        let style = RevealCoverStyle.style(for: configuration(background: .solid), shapeKind: .split, adaptiveColor: nil)
         #expect(style.washes == [.init(color: red, opacity: 0.5)])
     }
 
     @Test("The shape fill applies with no shape or a Full shape, not beside a Split or Notch shape")
     func shapeFillWhereItCoversTheBand() {
         let config = configuration(tint: .solid)
-        #expect(ClockBridgeCoverStyle.style(for: config, shapeKind: .noShape, adaptiveColor: nil).washes.count == 1)
-        #expect(ClockBridgeCoverStyle.style(for: config, shapeKind: .full, adaptiveColor: nil).washes.count == 1)
-        #expect(ClockBridgeCoverStyle.style(for: config, shapeKind: .split, adaptiveColor: nil).washes.isEmpty)
-        #expect(ClockBridgeCoverStyle.style(for: config, shapeKind: .notch, adaptiveColor: nil).washes.isEmpty)
+        #expect(RevealCoverStyle.style(for: config, shapeKind: .noShape, adaptiveColor: nil).washes.count == 1)
+        #expect(RevealCoverStyle.style(for: config, shapeKind: .full, adaptiveColor: nil).washes.count == 1)
+        #expect(RevealCoverStyle.style(for: config, shapeKind: .split, adaptiveColor: nil).washes.isEmpty)
+        #expect(RevealCoverStyle.style(for: config, shapeKind: .notch, adaptiveColor: nil).washes.isEmpty)
     }
 
     @Test("Colored liquid glass frosts the wallpaper and adds its tint at the glass strength")
     func coloredLiquidGlass() {
-        let style = ClockBridgeCoverStyle.style(
+        let style = RevealCoverStyle.style(
             for: configuration(tint: .glass, glass: .liquid, colored: true),
             shapeKind: .full,
             adaptiveColor: nil
         )
         #expect(style.blursWallpaper)
         #expect(style.washes == [.init(color: red, opacity: 0.4 * MenuBarGlassStyle.liquid.effectOpacity)])
+    }
+
+    @Test("A gradient fill washes its average color, and an empty gradient washes nothing")
+    func gradientFill() throws {
+        var config = configuration(background: .gradient)
+        config.backgroundGradient = ThawGradient(stops: [.white(location: 0), .white(location: 1)])
+        let style = RevealCoverStyle.style(for: config, shapeKind: .split, adaptiveColor: nil)
+        let wash = try #require(style.washes.first)
+        #expect(style.washes.count == 1)
+        #expect(wash.opacity == 0.5)
+        #expect(abs((wash.color.components?.first ?? 0) - 1) < 0.01, "white averages to white")
+        config.backgroundGradient = ThawGradient()
+        #expect(RevealCoverStyle.style(for: config, shapeKind: .split, adaptiveColor: nil).washes.isEmpty)
+    }
+
+    @Test("An adaptive fill washes the sampled color, and nothing until one is sampled")
+    func adaptiveFill() {
+        let sampled = CGColor(red: 0, green: 0, blue: 1, alpha: 1)
+        let config = configuration(tint: .adaptiveGradient)
+        #expect(RevealCoverStyle.style(for: config, shapeKind: .full, adaptiveColor: sampled).washes == [.init(color: sampled, opacity: 0.4)])
+        #expect(RevealCoverStyle.style(for: config, shapeKind: .full, adaptiveColor: nil).washes.isEmpty)
+    }
+
+    @Test("Dynamic glass adds its dark fade, and uncolored glass only frosts")
+    func dynamicGlass() {
+        let dynamic = RevealCoverStyle.style(for: configuration(tint: .glass, glass: .dynamic), shapeKind: .noShape, adaptiveColor: nil)
+        #expect(dynamic.blursWallpaper)
+        #expect(dynamic.washes == [.init(color: CGColor(gray: 0, alpha: 1), opacity: RevealCoverStyle.darkFadeOpacity)])
+        let plain = RevealCoverStyle.style(for: configuration(tint: .glass, glass: .regular, colored: true), shapeKind: .noShape, adaptiveColor: nil)
+        #expect(plain.blursWallpaper)
+        #expect(plain.washes.isEmpty, "regular glass takes no tint")
     }
 }
 

@@ -28,15 +28,23 @@ struct ConcealedItemOpenMethodTests {
         )
     }
 
-    @Test("a right click never tries the press, even when it was remembered")
+    @Test("a right click opens its menu in place first and never tries the press")
     func rightClickSkipsPress() {
         #expect(
             ConcealedItemOpenMethod.openMethodOrder(for: .right, learned: nil)
-                == [.revealInPlace]
+                == [.showMenuInPlace, .revealInPlace]
         )
         #expect(
             ConcealedItemOpenMethod.openMethodOrder(for: .right, learned: .pressInPlace)
-                == [.revealInPlace]
+                == [.showMenuInPlace, .revealInPlace]
+        )
+    }
+
+    @Test("a right click's method is never tried first on a left click")
+    func leftClickIgnoresLearnedShowMenu() {
+        #expect(
+            ConcealedItemOpenMethod.openMethodOrder(for: .left, learned: .showMenuInPlace)
+                == [.pressInPlace, .revealInPlace]
         )
     }
 

@@ -111,6 +111,14 @@ nonisolated enum AXGeometryCatalog {
         guard Set(selected.map(\.itemIndex)).count == 1, let root = selected.first else {
             return .ambiguous
         }
+        // The item is known and its frame no longer matches the bounds, so it moved
+        // or changed width after they were read. A traffic meter changes width, and
+        // the icons to its right move with it. Who owns the pixels is not in question,
+        // so no crop is taken here and the caller keeps the last picture.
+        let ownFrames = selected.map(\.frame).filter { !$0.isEmpty }
+        if !ownFrames.isEmpty, !ownFrames.contains(where: { matches(bounds, $0) }) {
+            return .unavailable
+        }
         // Include other owners even when their frames are byte-for-byte equal.
         // Only descendants of the selected AX root may repeat its rectangle.
         if entries.contains(where: {
@@ -122,6 +130,12 @@ nonisolated enum AXGeometryCatalog {
         }
         guard let frame = frame(overlapping: bounds, in: selected.map(\.frame)) else { return .unavailable }
         return .frame(frame)
+    }
+
+    /// Whether two frames are the same place and size, within a point.
+    private static func matches(_ lhs: CGRect, _ rhs: CGRect) -> Bool {
+        abs(lhs.minX - rhs.minX) <= 1 && abs(lhs.minY - rhs.minY) <= 1
+            && abs(lhs.width - rhs.width) <= 1 && abs(lhs.height - rhs.height) <= 1
     }
 
     private static func significantlyOverlaps(_ lhs: CGRect, _ rhs: CGRect) -> Bool {

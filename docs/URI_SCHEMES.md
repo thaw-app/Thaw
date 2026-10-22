@@ -65,6 +65,7 @@ Internal URLs configured in `Thaw/Resources/Info.plist`:
 | ------------------------------------- | ------------------------------------- | ------------------------------------ |
 | `ThawRepositoryURL`                   | `https://github.com/thaw-app/Thaw`    | GitHub repository                    |
 | `ThawDonateURL`                       | `https://github.com/sponsors/stonerl` | Sponsorship page                     |
+| `ThawFloeURL`                         | `https://github.com/thaw-app/Floe`    | Floe, linked from About              |
 | `ThawMenuBarItemSpacingExecutableURI` | `file:///usr/bin/env`                 | Executable path for spacing commands |
 
 ## System URLs

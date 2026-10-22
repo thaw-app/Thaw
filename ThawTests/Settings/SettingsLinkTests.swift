@@ -21,6 +21,7 @@ struct SettingsLinkTests {
         .updatesState(canCheck: false, lastCheck: nil),
         .checkForUpdates,
         .quit,
+        .shownInApp,
     ])
     func roundTrip(message: SettingsLinkMessage) {
         #expect(message.line.last == 0x0A)

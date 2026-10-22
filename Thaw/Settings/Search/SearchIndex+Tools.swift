@@ -16,15 +16,6 @@ nonisolated extension SearchIndex {
     /// drift guard covers it.
     static let toolsEntries: [SearchEntry] = [
         SearchEntry(
-            id: "tools.replayOnboarding",
-            title: "Replay onboarding",
-            descriptionText: String(localized: "Review the feature tour and permission setup again."),
-            pane: .tools,
-            section: "Onboarding",
-            keywords: ["onboarding", "replay", "tour", "welcome", "setup", "permissions", "intro", "tools"],
-            property: nil
-        ),
-        SearchEntry(
             id: "advanced.enableDiagnosticLogging",
             title: "Enable diagnostic logging",
             descriptionText: String(localized: "Writes detailed debug logs to a file for troubleshooting. Log files are saved to ~/Library/Logs/Thaw/."),
@@ -47,7 +38,7 @@ nonisolated extension SearchIndex {
             title: "Restore missing menu bar items",
             descriptionText: String(localized: "Restore app visibility without resetting saved positions or section assignments."),
             pane: .tools,
-            section: "Troubleshooting",
+            section: "Repair",
             keywords: ["missing", "icons", "visibility", "recovery", "native", "hidden", "control center"],
             property: nil
         ),
@@ -56,7 +47,7 @@ nonisolated extension SearchIndex {
             title: "Restart the menu bar",
             descriptionText: String(localized: "Restarts the system's menu bar service when it gets stuck, for example on top of full-screen apps. Your layout is kept."),
             pane: .tools,
-            section: "Troubleshooting",
+            section: "Repair",
             keywords: ["restart", "menu bar", "stuck", "full screen", "fullscreen", "killall", "MenuBarAgent", "tools"],
             property: nil
         ),
@@ -65,7 +56,7 @@ nonisolated extension SearchIndex {
             title: "Reset menu bar layout positions",
             descriptionText: String(localized: "Deletes every saved item position and restarts the system's menu bar service, so the layout rebuilds from scratch. Thaw saves a backup first. Use this when items won't return to the menu bar after you rearrange."),
             pane: .tools,
-            section: "Troubleshooting",
+            section: "Repair",
             keywords: ["layout", "positions", "reset", "backup", "restore", "rebuild", "menu bar host", "tools"],
             property: nil
         ),
@@ -74,7 +65,7 @@ nonisolated extension SearchIndex {
             title: "Reset permissions",
             descriptionText: String(localized: "Clear Accessibility and Screen Recording decisions for \(Constants.displayName)."),
             pane: .tools,
-            section: "Troubleshooting",
+            section: "Repair",
             keywords: ["permissions", "accessibility", "screen recording", "tccutil", "tools"],
             property: nil
         ),

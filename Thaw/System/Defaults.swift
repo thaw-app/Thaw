@@ -120,6 +120,7 @@ nonisolated enum Defaults {
             .customThawIconIsTemplate: DefaultValue.customThawIconIsTemplate,
             .simpleMode: DefaultValue.simpleMode,
             .showSettingDescriptions: DefaultValue.showSettingDescriptions,
+            .simpleModeShowsPreview: DefaultValue.simpleModeShowsPreview,
             .lockThawBarPosition: DefaultValue.lockThawBarPosition,
             .openHiddenItemsInMenuBar: DefaultValue.openHiddenItemsInMenuBar,
             .roundScreenCorners: DefaultValue.roundScreenCorners,
@@ -141,6 +142,7 @@ nonisolated enum Defaults {
             .showAllSectionsOnUserDrag: DefaultValue.showAllSectionsOnUserDrag,
             .newItemsSection: DefaultValue.newItemsSection,
             .sectionDividerStyle: DefaultValue.sectionDividerStyle.rawValue,
+            .customSectionDividerIsTemplate: DefaultValue.customSectionDividerIsTemplate,
             .hideApplicationMenus: DefaultValue.hideApplicationMenus,
             .enableSecondaryContextMenu: DefaultValue.enableSecondaryContextMenu,
             .showOnHoverDelay: DefaultValue.showOnHoverDelay,
@@ -226,6 +228,7 @@ extension Defaults {
         static let customThawIconIsTemplate = false
         static let simpleMode = false
         static let showSettingDescriptions = true
+        static let simpleModeShowsPreview = true
         static let lockThawBarPosition = true
         static let openHiddenItemsInMenuBar = false
         static let roundScreenCorners = false
@@ -253,6 +256,7 @@ extension Defaults {
         static let newItemsSection = "hidden"
         static let newItemsPlacementData: Data? = nil
         static let sectionDividerStyle: SectionDividerStyle = .noDivider
+        static let customSectionDividerIsTemplate = true
         static let hideApplicationMenus = true
         static let enableSecondaryContextMenu = true
         static let showOnHoverDelay: TimeInterval = 0.2
@@ -375,6 +379,7 @@ extension Defaults {
         case customThawIconIsTemplate = "CustomIceIconIsTemplate"
         case simpleMode = "SimpleMode"
         case showSettingDescriptions = "ShowSettingDescriptions"
+        case simpleModeShowsPreview = "SimpleModeShowsPreview"
         case lastSettingsPane = "LastSettingsPane"
         case hiddenSidebarPanes = "HiddenSidebarPanes"
         case settingsInOwnProcess = "SettingsInOwnProcess"
@@ -420,6 +425,8 @@ extension Defaults {
         case newItemsSection = "NewItemsSection"
         case newItemsPlacementData = "NewItemsPlacementData"
         case sectionDividerStyle = "SectionDividerStyle"
+        case customSectionDividerImage = "CustomSectionDividerImage"
+        case customSectionDividerIsTemplate = "CustomSectionDividerIsTemplate"
         case hideApplicationMenus = "HideApplicationMenus"
         case enableSecondaryContextMenu = "EnableSecondaryContextMenu"
         case showOnHoverDelay = "ShowOnHoverDelay"
@@ -639,6 +646,12 @@ extension Defaults {
 
         case hasSeenUpdateConsent
 
+        // MARK: Native Hiding
+
+        /// The user answered the one-time offer to show apps an older
+        /// version may have left switched off in System Settings.
+        case hasAnsweredHiddenAppsRestoreOffer
+
         // MARK: Onboarding
 
         case hasSeenOnboarding
@@ -664,5 +677,6 @@ extension Defaults {
         case globalPreProfileHook = "GlobalPreProfileHook"
         case globalPostProfileHook = "GlobalPostProfileHook"
         case lastSettledProfileID = "LastSettledProfileID"
+        case lastActiveProfileID = "LastActiveProfileID"
     }
 }

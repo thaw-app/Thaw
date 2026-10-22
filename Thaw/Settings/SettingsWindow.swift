@@ -21,12 +21,12 @@ enum SettingsWindowMetrics {
     /// this and the column stops growing, so the extra is empty margin.
     static let simpleDefault = CGSize(
         width: SettingsDetailLayout.columnMaxWidth + (SettingsDetailLayout.titleHorizontalInset * 2),
-        height: 640
+        height: 600
     )
 
     /// Low enough to let someone shrink past the reading column when they want
     /// the window out of the way; the grouped rows reflow rather than clip.
-    static let simpleMinimum = CGSize(width: 560, height: 480)
+    static let simpleMinimum = CGSize(width: 560, height: 440)
 
     static func minimum(simpleMode: Bool) -> CGSize {
         simpleMode ? simpleMinimum : fullMinimum
@@ -62,6 +62,15 @@ struct SettingsWindow: Scene {
                     appState.updatesManager.automaticallyChecksForUpdates = false
                 }
             }
+            .sheet(isPresented: Bindable(restoreOffer).isPresented) {
+                RestoreHiddenAppsSheet(offer: restoreOffer)
+            }
+            .onChange(of: appState.navigationState.isSettingsPresented, initial: true) {
+                presentRestoreOfferIfDue()
+            }
+            .onChange(of: appState.isUpdateConsentPresented) {
+                presentRestoreOfferIfDue()
+            }
         }
         .windowResizability(.contentSize)
         .defaultSize(
@@ -73,5 +82,20 @@ struct SettingsWindow: Scene {
         .commands { AppUIZoomCommands() }
         .environment(appState)
         .environment(appState.permissions)
+    }
+
+    private var restoreOffer: HiddenAppsRestoreOffer {
+        appState.menuBarManager.nativeAppHidingExperiment.restoreOffer
+    }
+
+    /// Settings is where the user is already deciding things, so the offer
+    /// waits for it to open, and for the update question to be answered first.
+    private func presentRestoreOfferIfDue() {
+        guard appState.navigationState.isSettingsPresented else { return }
+        restoreOffer.presentIfDue(
+            journalNeedsAttention: appState.menuBarManager.nativeAppHidingExperiment.journalNeedsAttention,
+            isAnotherSheetShowing: appState.isUpdateConsentPresented,
+            isDraggingMenuBarItem: appState.isDraggingMenuBarItem
+        )
     }
 }

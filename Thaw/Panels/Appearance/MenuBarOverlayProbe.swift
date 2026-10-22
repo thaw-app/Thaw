@@ -24,7 +24,7 @@ final class MissionControlShieldProbe {
 
     private let owningScreen: NSScreen
 
-    /// A tiny invisible window that Mission Control moves.
+    /// A tiny invisible window that Mission Control moves, or on macOS 27 takes off screen.
     private lazy var window: NSPanel = {
         let window = NSPanel(
             contentRect: CGRect(x: owningScreen.frame.midX, y: owningScreen.frame.midY, width: 1, height: 1),
@@ -42,8 +42,9 @@ final class MissionControlShieldProbe {
         window.hidesOnDeactivate = false
         window.isExcludedFromWindowsMenu = true
         // Not .stationary or .transient, so it can move. These two hide the
-        // 'Thaw' label.
-        window.collectionBehavior = [.ignoresCycle, .fullScreenAuxiliary]
+        // 'Thaw' label. On every Space, so off screen means Mission Control,
+        // not another desktop.
+        window.collectionBehavior = [.ignoresCycle, .fullScreenAuxiliary, .canJoinAllSpaces]
         // Low enough for Mission Control to arrange; centred so both axes move.
         window.level = .floating
         return window
@@ -154,8 +155,11 @@ final class MissionControlShieldProbe {
 
         guard let atRest = atRestOrigin else { return }
 
-        let isDisplaced = abs(actualOrigin.x - atRest.x) > 1.0 &&
-            abs(actualOrigin.y - atRest.y) > 1.0
+        let isDisplaced = Self.isDisplaced(
+            isOnScreen: Bridging.isWindowOnScreen(windowID),
+            origin: actualOrigin,
+            atRest: atRest
+        )
 
         let now = Date()
         var restDuration: TimeInterval?
@@ -204,6 +208,13 @@ final class MissionControlShieldProbe {
         DispatchQueue.main.async {
             current.cancel()
         }
+    }
+
+    /// Whether Mission Control has taken the probe from where it rests. Earlier macOS
+    /// moves it into the grid; macOS 27 takes it off screen and leaves its origin
+    /// alone, so an off-screen probe counts too. The Exposé shield still confirms it.
+    static nonisolated func isDisplaced(isOnScreen: Bool, origin: CGPoint, atRest: CGPoint) -> Bool {
+        !isOnScreen || (abs(origin.x - atRest.x) > 1.0 && abs(origin.y - atRest.y) > 1.0)
     }
 
     /// Whether WindowManager's Exposé shield is on screen. Mission Control

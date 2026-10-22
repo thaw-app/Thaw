@@ -16,7 +16,7 @@ import Testing
 struct ProfileApplyByIDTests {
     private func withManager(_ body: (ProfileManager, URL) async throws -> Void) async throws {
         let tmp = FileManager.default.temporaryDirectory
-            .appendingPathComponent("ProfileApplyByIDTests.\(UUID().uuidString)", isDirectory: true)
+            .appendingPathComponent(ScratchDefaults.name("ProfileApplyByIDTests"), isDirectory: true)
         try FileManager.default.createDirectory(at: tmp, withIntermediateDirectories: true)
         defer { try? FileManager.default.removeItem(at: tmp) }
         try await body(ProfileManager(profilesDirectory: tmp), tmp)

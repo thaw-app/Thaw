@@ -19,7 +19,7 @@ nonisolated enum HotkeyAction: String, Codable, CaseIterable {
     // MARK: Menu Bar Items
 
     /// Summons the search panel, in whichever face
-    /// AdvancedSettings.menuBarSearchPresentation asks for. The Lab palettes
+    /// AdvancedSettings.menuBarSearchPresentation asks for. The item palettes
     /// are modes of this panel, so this is the only way in.
     case searchMenuBarItems = "SearchMenuBarItems"
 

@@ -52,9 +52,7 @@ private struct SearchGroupSection: View {
                     .foregroundStyle(.secondary)
                     .frame(width: 18, height: 16)
 
-                Text(group.pane.localized)
-                    .font(ThawType.detail.weight(.semibold))
-                    .foregroundStyle(.secondary)
+                ThawListHeading(group.pane.localized)
             }
             .frame(maxWidth: .infinity, alignment: .leading)
             .padding(.horizontal, ThawSpacing.compact)

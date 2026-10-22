@@ -20,5 +20,13 @@ nonisolated extension SearchIndex {
             keywords: ["update", "channel", "beta", "alpha", "nightly", "automatic", "check", "download"],
             property: nil
         ),
+        SearchEntry(
+            id: "about.replayOnboarding",
+            title: "Show welcome screens again",
+            descriptionText: String(localized: "Review the feature tour and permission setup again."),
+            pane: .about,
+            keywords: ["onboarding", "replay", "tour", "welcome", "setup", "permissions", "intro"],
+            property: nil
+        ),
     ]
 }

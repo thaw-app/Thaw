@@ -66,14 +66,17 @@ struct LayoutEditorBars: View {
         let units = model.units[section] ?? []
         return ScrollView(.horizontal) {
             HStack(spacing: Metrics.tileSpacing) {
+                // Pushes icons to the trailing edge, as in the menu bar, and makes the
+                // empty part of the row a drop target.
+                Spacer(minLength: 0)
                 ForEach(units) { unit in
                     LayoutEditorTile(unit: unit, items: model.items(of: unit), section: section, appState: appState)
                 }
                 .reorderable(collectionID: section)
             }
             .padding(.horizontal, ThawSpacing.base)
-            // Icons sit against the trailing edge, as they do in the menu bar.
-            .frame(minWidth: rowWidth, minHeight: Metrics.rowHeight, alignment: .trailing)
+            .frame(minWidth: rowWidth, minHeight: Metrics.rowHeight)
+            .contentShape(.rect)
         }
         .scrollIndicators(.never)
         .defaultScrollAnchor(.trailing)
@@ -112,9 +115,8 @@ private struct LayoutEditorTile: View {
             ForEach(items, id: \.uniqueIdentifier) { item in
                 Group {
                     if let image = images[item.tag] {
-                        image.swiftUIImage
-                            .resizable()
-                            .scaledToFit()
+                        // Only scaled down: a stand-in's bare symbol stays at its own size.
+                        MenuBarItemGlyph(image: image, fittingHeight: Metrics.glyphHeight, reinksCaptures: true)
                     } else {
                         Image(systemName: "menubar.rectangle")
                     }

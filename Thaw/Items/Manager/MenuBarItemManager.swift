@@ -362,6 +362,9 @@ final class MenuBarItemManager {
     /// scheduleObservedMembershipAdoption(reason:).
     var manualMembershipTask: Task<Void, Never>?
 
+    /// What the stored weights read as when the user's ⌘-drag started.
+    let dragMembership = DragMembershipBaseline<ObservedMembership.DragBaseline>()
+
     /// When the user's last ⌘-drag in the menu bar ended. See
     /// isUserArrangingMenuBar.
     var lastUserMenuBarDragEnd: ContinuousClock.Instant?
@@ -1370,6 +1373,11 @@ final class MenuBarItemManager {
         loadSavedSectionOrder()
         loadNewItemsPlacementPreference()
         loadPreferredPositionsVerdict()
+        dragMembership.read = { [weak self] in self?.dragStartReading() }
+        dragMembership.cancelPendingRead = { [weak self] in
+            self?.manualMembershipTask?.cancel()
+            self?.manualMembershipTask = nil
+        }
         MenuBarItemManager.diagLog.debug("performSetup: loaded \(knownItemIdentifiers.count) known identifiers, \(pinnedHiddenBundleIDs.count) pinned hidden, \(pinnedAlwaysHiddenBundleIDs.count) pinned always-hidden, \(savedSectionOrder.values.map(\.count)) saved order entries")
         // On first launch (no known identifiers), avoid auto-relocating the leftmost item
         // so everything remains in the hidden section until the user interacts.

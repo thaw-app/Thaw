@@ -33,6 +33,7 @@ extension AppSettings {
         general.lastCustomThawIcon = nil
         general.customThawIconIsTemplate = Defaults.DefaultValue.customThawIconIsTemplate
         general.simpleMode = Defaults.DefaultValue.simpleMode
+        general.simpleModeShowsPreview = Defaults.DefaultValue.simpleModeShowsPreview
         general.showSettingDescriptions = Defaults.DefaultValue.showSettingDescriptions
         general.lockThawBarPosition = Defaults.DefaultValue.lockThawBarPosition
         general.openHiddenItemsInMenuBar = Defaults.DefaultValue.openHiddenItemsInMenuBar
@@ -56,6 +57,8 @@ extension AppSettings {
         advanced.showAllSectionsOnUserDrag = Defaults.DefaultValue.showAllSectionsOnUserDrag
         appState?.itemManager.updateNewItemsPlacement(section: .hidden, arrangedViews: [])
         advanced.sectionDividerStyle = Defaults.DefaultValue.sectionDividerStyle
+        advanced.customSectionDividerImage = nil
+        advanced.customSectionDividerIsTemplate = Defaults.DefaultValue.customSectionDividerIsTemplate
         advanced.menuBarArrangementMode = Defaults.DefaultValue.menuBarArrangementMode
         advanced.hideApplicationMenus = Defaults.DefaultValue.hideApplicationMenus
         advanced.enableSecondaryContextMenu = Defaults.DefaultValue.enableSecondaryContextMenu

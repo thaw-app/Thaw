@@ -8,6 +8,7 @@
 import Foundation
 import MenuBarModel
 import os.lock
+import ThawAXCore
 
 /// Which apps an inventory read asks.
 ///
@@ -55,5 +56,34 @@ nonisolated final class FullWalkLedger: Sendable {
     /// Makes the next read a full walk.
     func forget() {
         finishedAt.withLock { $0 = nil }
+    }
+}
+
+/// The last read of MenuBarAgent's window, so a walk can use the read its plan was made from
+/// instead of asking the agent again.
+nonisolated final class DrawnBarLedger: Sendable {
+    struct Reading: Sendable {
+        /// The entries when the bar was at rest, or nil when it could not be read or was mid-change.
+        let entries: [MenuBarAgentWindow.Entry]?
+        let takenAt: ContinuousClock.Instant
+    }
+
+    private let latest = OSAllocatedUnfairLock<Reading?>(initialState: nil)
+
+    /// Reads the window, keeps the reading and returns its settled entries.
+    func read(
+        using source: () -> [MenuBarAgentWindow.Entry]? = { AXPrimitives.menuBarAgentSettledEntries() },
+        now: ContinuousClock.Instant = .now
+    ) -> [MenuBarAgentWindow.Entry]? {
+        let entries = source()
+        latest.withLock { $0 = Reading(entries: entries, takenAt: now) }
+        return entries
+    }
+
+    /// The last reading when it was taken at or after instant.
+    func reading(since instant: ContinuousClock.Instant) -> Reading? {
+        latest.withLock { reading in
+            reading.flatMap { $0.takenAt >= instant ? $0 : nil }
+        }
     }
 }

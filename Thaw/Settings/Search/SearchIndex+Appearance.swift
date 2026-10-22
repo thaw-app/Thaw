@@ -43,7 +43,7 @@ nonisolated extension SearchIndex {
             descriptionText: nil,
             pane: .menuBarAppearance,
             section: "Shape",
-            keywords: ["shape", "full", "split", "notch", "end cap", "margin", "inset"],
+            keywords: ["shape", "full", "split", "notch", "corners", "round", "square", "margin", "inset"],
             property: nil
         ),
         SearchEntry(

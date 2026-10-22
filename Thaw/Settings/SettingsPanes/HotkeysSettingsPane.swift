@@ -11,40 +11,54 @@ import ThawUI
 struct HotkeysSettingsPane: View {
     @Environment(AppState.self) var appState
     let settings: HotkeysSettings
+    @State private var tab = ShortcutsTab.visibility
 
     var body: some View {
         // Read here, not inside the alert's binding, so the pane observes it.
         let persistenceError = settings.lastPersistenceError
 
+        // One tab per area, so a shortcut sits near its setting.
+        // Profiles has a tab only once a profile is saved.
+        let tabs = ShortcutsTab.allCases.filter { $0 != .profiles || !appState.profileManager.profiles.isEmpty }
         ThawForm {
-            ThawSection("Menu bar sections") {
-                hotkeyRecorder(forSection: .hidden)
-                hotkeyRecorder(forSection: .alwaysHidden)
-                hotkeyRecorder(forAction: .toggleSwap)
+            SettingsPaneTabs(
+                selection: $tab,
+                tabs: tabs,
+                tabForSection: ShortcutsTab.init(section:)
+            )
+            .onChange(of: tabs) { _, tabs in
+                // Deleting the last profile takes away the open tab, so the strip selects the first one again.
+                if !tabs.contains(tab) {
+                    tab = .visibility
+                }
             }
-            ThawSection("Menu bar items") {
-                hotkeyRecorder(forAction: .searchMenuBarItems)
-                hotkeyRecorder(forAction: .showItemHints)
-                MenuBarItemHotkeyList(
-                    menuBarManager: appState.menuBarManager,
-                    itemManager: appState.itemManager,
-                    imageCache: appState.imageCache
-                )
-            }
-            if !appState.profileManager.profiles.isEmpty {
-                ThawSection("Profiles") {
+            ThawSection {
+                switch tabs.contains(tab) ? tab : .visibility {
+                case .visibility:
+                    hotkeyRecorder(forSection: .hidden)
+                    hotkeyRecorder(forSection: .alwaysHidden)
+                    hotkeyRecorder(forAction: .toggleSwap)
+                    hotkeyRecorder(forAction: .toggleAutoRehide)
+                    hotkeyRecorder(forAction: .toggleZenMode)
+                    hotkeyRecorder(forAction: .toggleApplicationMenus)
+                    hotkeyRecorder(forAction: .revealSystemMenuBar)
+                case .menuBarItems:
+                    hotkeyRecorder(forAction: .searchMenuBarItems)
+                    hotkeyRecorder(forAction: .showItemHints)
+                    MenuBarItemHotkeyList(
+                        menuBarManager: appState.menuBarManager,
+                        itemManager: appState.itemManager,
+                        imageCache: appState.imageCache
+                    )
+                case .layout:
+                    hotkeyRecorder(forAction: .toggleLayoutEditor)
+                case .thawBar:
+                    hotkeyRecorder(forAction: .enableThawBar)
+                case .profiles:
                     ForEach(appState.profileManager.profiles) { meta in
                         profileHotkeyRecorder(for: meta)
                     }
                 }
-            }
-            ThawSection("Other") {
-                hotkeyRecorder(forAction: .revealSystemMenuBar)
-                hotkeyRecorder(forAction: .enableThawBar)
-                hotkeyRecorder(forAction: .toggleApplicationMenus)
-                hotkeyRecorder(forAction: .toggleAutoRehide)
-                hotkeyRecorder(forAction: .toggleZenMode)
-                hotkeyRecorder(forAction: .toggleLayoutEditor)
             }
         }
         // The shortcut is written from a change callback that cannot throw, so
@@ -276,5 +290,46 @@ private struct MenuBarItemHotkeyList: View {
     /// The bundle (namespace) component of an item identifier.
     private func bundle(forIdentifier identifier: String) -> String {
         String(identifier.split(separator: ":").first ?? "")
+    }
+}
+
+@MainActor
+enum ShortcutsTab: CaseIterable, @MainActor ThawTab {
+    case visibility
+    case menuBarItems
+    case layout
+    case thawBar
+    case profiles
+
+    /// The tab holding a search result's section.
+    init?(section: String) {
+        switch section {
+        case "Visibility": self = .visibility
+        case "Menu bar items": self = .menuBarItems
+        case "Layout": self = .layout
+        case "Thaw Bar": self = .thawBar
+        case "Profiles": self = .profiles
+        default: return nil
+        }
+    }
+
+    var title: LocalizedStringKey {
+        switch self {
+        case .visibility: SettingsNavigationIdentifier.visibility.localized
+        case .menuBarItems: "Menu Bar Items"
+        case .layout: SettingsNavigationIdentifier.menuBarLayout.localized
+        case .thawBar: SettingsNavigationIdentifier.thawBar.localized
+        case .profiles: SettingsNavigationIdentifier.profiles.localized
+        }
+    }
+
+    var systemImage: String {
+        switch self {
+        case .visibility: "eye"
+        case .menuBarItems: "magnifyingglass"
+        case .layout: "rectangle.3.group"
+        case .thawBar: "menubar.dock.rectangle"
+        case .profiles: "person.crop.rectangle.stack"
+        }
     }
 }

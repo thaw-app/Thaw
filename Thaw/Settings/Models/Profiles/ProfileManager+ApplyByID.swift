@@ -8,7 +8,7 @@
 import Foundation
 
 extension ProfileManager {
-    /// Applies the profile and waits for its layout task, for the Shortcuts intent and thaw://apply-profile.
+    /// Applies the profile and waits for its layout task, for the Shortcuts intent, thaw://apply-profile and the Profiles page.
     /// Read layoutDidNotRun afterwards to learn whether the layout half ran.
     @discardableResult
     func applyProfileAwaitingLayout(id: UUID, to appState: AppState) async throws -> Profile {

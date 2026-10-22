@@ -363,6 +363,12 @@ final class RuntimeSectionContextAdapter: RuntimeSectionContext {
 }
 
 extension RuntimeSectionContextAdapter {
+    /// The cache pass that publishes the on-screen items also records whether
+    /// its walk read every owner.
+    var completedLiveWalkGeneration: Int? {
+        onScreenItems.completedWalkGeneration
+    }
+
     /// An item no longer in the cache has no known owner, so any open menu holds it.
     func isMenuOpen(forItem identifier: String) async -> Bool {
         let key = MenuBarItemTag.canonicalPersistentIdentifier(identifier)

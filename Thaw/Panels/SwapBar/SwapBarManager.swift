@@ -313,12 +313,7 @@ struct SwapBarView: View {
             .contentShape(Capsule(style: .continuous))
         }
         .buttonStyle(.plain)
-        // A tinted fill, not a second glass layer: glass on glass refracts.
-        .background {
-            if isOn {
-                Capsule(style: .continuous).fill(Color.accentColor.opacity(0.18))
-            }
-        }
+        .thawSelectedFill(isOn, in: Capsule(style: .continuous))
         .thawSelectionCue(isSelected: isOn, in: Capsule(style: .continuous))
         .thawHoverLift()
         .help("Swap the shown and hidden menu bar items")
@@ -432,11 +427,7 @@ private struct SwapBarButton: View {
                 .contentShape(Circle())
         }
         .buttonStyle(.plain)
-        .background {
-            if isOn {
-                Circle().fill(Color.accentColor.opacity(0.18))
-            }
-        }
+        .thawSelectedFill(isOn, in: Circle())
         // Under Differentiate Without Color the tinted well alone is not a
         // mark; the cue rings the toggle and sets the selected trait.
         .thawSelectionCue(isSelected: isOn, in: Circle())

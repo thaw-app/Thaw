@@ -666,7 +666,7 @@ extension MenuBarItemManager {
             scheduleCoalescedCacheRerun()
             return
         }
-        onScreenItemSnapshot.update(inventory.freshItems.filter(\.isOnScreen))
+        onScreenItemSnapshot.update(inventory.freshItems.filter(\.isOnScreen), fromCompleteWalk: inventory.completed)
 
         MenuBarItemManager.diagLog.debug("cacheItemsRegardless: getMenuBarItems returned \(items.count) items")
 
@@ -741,10 +741,18 @@ extension MenuBarItemManager {
         // Seed corrected source-PID identities for known windows so relocation does not treat them as arrivals.
         // Skip unresolved PIDs to keep the placeholder Control Center namespace out of persisted identities.
         if !previousWindowIDs.isEmpty {
-            let previous = Set(previousWindowIDs)
+            let previousIdentifiers = Dictionary(
+                itemCache.managedItems.map { ($0.windowID, $0.uniqueIdentifier) },
+                uniquingKeysWith: { first, _ in first }
+            )
+            let seeds = KnownIdentitySeeding.learned(
+                current: items.map { .init(windowID: $0.windowID, identifier: $0.uniqueIdentifier, hasSourcePID: $0.sourcePID != nil) },
+                previousIdentifiers: previousIdentifiers,
+                known: knownItemIdentifiers
+            )
             var learned = false
-            for item in items where previous.contains(item.windowID) && item.sourcePID != nil {
-                learned = knownItemIdentifiers.insert(item.uniqueIdentifier).inserted || learned
+            for seed in seeds {
+                learned = knownItemIdentifiers.insert(seed).inserted || learned
             }
             // Saved only when something was learned: the write posts a defaults change to every observer.
             if learned {

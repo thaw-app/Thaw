@@ -39,6 +39,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             }
         #endif
 
+        // Another copy must be resolved before this one touches the menu bar, permissions or native hiding.
+        guard SingleInstanceGuard.enforce() else { return }
+
         // Set AX timeout before creating elements: synchronous IPC can stall when a target stops pumping events.
         // Override with defaults write com.stonerl.Thaw axMessagingTimeout -float <seconds>.
         AXElement.defaultMessagingTimeout = Float(
@@ -69,6 +72,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         for item in NSApp.mainMenu?.items ?? [] {
             item.isHidden = true
         }
+        WindowMenuTrimmer.shared.watch { [weak appState] in appState?.hasOpenWindow ?? false }
 
         // Allow hiding the mouse while the app is in the background
         // to make menu bar item movement less jarring.
@@ -166,7 +170,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         terminationTimeoutTask?.cancel()
         isPreparingForTermination = true
         hasRepliedToTerminationRequest = false
-        appState.diagLog.info("Application asked to terminate - restoring blocked items asynchronously")
+        appState.diagLog.info("Application asked to terminate \(QuitRequestSource.current()) - restoring blocked items asynchronously")
         appState.appRunningTriggers.stop()
 
         Task { @MainActor in

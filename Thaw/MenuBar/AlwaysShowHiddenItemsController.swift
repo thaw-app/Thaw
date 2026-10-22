@@ -50,9 +50,11 @@ final class AlwaysShowHiddenItemsController {
         return alwaysShow(displayID) && !usesThawBar(displayID)
     }
 
-    /// Zen suspends the policy without transferring its reveal to the user.
+    /// Zen suspends the policy without transferring its reveal to the user. A reveal
+    /// the policy owned goes back to the policy, which reveals inline again or resets;
+    /// replayed as the user's, it could open the Thaw Bar with the Thaw Bar off.
     var shouldRestorePreZenReveals: Bool {
-        !isAlwaysShowRevealActive || isEnabled
+        !isAlwaysShowRevealActive
     }
 
     func observeDisplaySettings(

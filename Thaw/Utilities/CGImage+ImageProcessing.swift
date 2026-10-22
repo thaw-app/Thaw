@@ -1162,31 +1162,41 @@ extension CGImage {
     }
 
     /// Draws the image into a premultiplied RGBA8 scratch bitmap and hands
-    /// its bytes to body, with the row stride. false when the image has no
-    /// area or the bitmap cannot be made.
+    /// its bytes to body, with the row stride. An image wider than
+    /// maximumWidth is scaled down to it, keeping its aspect ratio. nil when
+    /// the image has no area or the bitmap cannot be made.
+    ///
+    /// A scaled bitmap is smaller than the image, so a body that indexes by
+    /// row and column takes the width as bytesPerRow / 4 and the height as
+    /// bytes.count / bytesPerRow, not the image's own width and height.
     ///
     /// The bitmap memory is only valid inside body: a context keeps using
     /// the buffer it was given, so an escaping &array argument must not be
     /// what it gets.
-    private nonisolated func withPremultipliedRGBA8(
-        _ body: (UnsafeBufferPointer<UInt8>, Int) -> Bool
-    ) -> Bool {
-        guard width > 0, height > 0 else { return false }
-        let bytesPerRow = width * 4
-        var pixels = [UInt8](repeating: 0, count: bytesPerRow * height)
-        return pixels.withUnsafeMutableBytes { buffer -> Bool in
+    nonisolated func withPremultipliedRGBA8<Result>(
+        maximumWidth: Int = .max,
+        _ body: (_ bytes: UnsafeBufferPointer<UInt8>, _ bytesPerRow: Int) -> Result
+    ) -> Result? {
+        guard width > 0, height > 0, maximumWidth > 0 else { return nil }
+        let drawnWidth = min(width, maximumWidth)
+        let drawnHeight = drawnWidth == width
+            ? height
+            : max(1, Int((Double(height) * Double(drawnWidth) / Double(width)).rounded()))
+        let bytesPerRow = drawnWidth * 4
+        var pixels = [UInt8](repeating: 0, count: bytesPerRow * drawnHeight)
+        return pixels.withUnsafeMutableBytes { buffer -> Result? in
             guard let base = buffer.baseAddress, let context = CGContext(
                 data: base,
-                width: width,
-                height: height,
+                width: drawnWidth,
+                height: drawnHeight,
                 bitsPerComponent: 8,
                 bytesPerRow: bytesPerRow,
                 space: CGColorSpaceCreateDeviceRGB(),
                 bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue
             ) else {
-                return false
+                return nil
             }
-            context.draw(self, in: CGRect(x: 0, y: 0, width: width, height: height))
+            context.draw(self, in: CGRect(x: 0, y: 0, width: drawnWidth, height: drawnHeight))
             return body(UnsafeBufferPointer(buffer.bindMemory(to: UInt8.self)), bytesPerRow)
         }
     }
@@ -1226,7 +1236,7 @@ extension CGImage {
             }
             guard ringPixels > 0 else { return false }
             return Double(opaquePixels) / Double(ringPixels) >= minimumOpaqueShare
-        }
+        } ?? false
     }
 
     /// Whether the image is a single-ink glyph, one grey ink on
@@ -1270,7 +1280,7 @@ extension CGImage {
                 return false
             }
             return Double(vivid) / Double(visible) <= maximumVividShare
-        }
+        } ?? false
     }
 
     /// Slow path for isTransparent using AlphaMask.

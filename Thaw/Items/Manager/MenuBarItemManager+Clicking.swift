@@ -115,6 +115,15 @@ extension MenuBarItemManager {
         // macOS 27 the refreshed frame is stated in one display's space, so it
         // is rebased onto the bar under the cursor before the warp below.
         let resolvedBounds = try await getCurrentBounds(for: item)
+        // The re-read can still land on a parked or phantom frame mid-reflow.
+        if let rejection = ClickTargetCheck.rejection(for: resolvedBounds, barWidth: ClickTargetCheck.barWidth(for: resolvedBounds)) {
+            MenuBarItemManager.diagLog.warning("postClickEvents: \(item.logString) frame \(resolvedBounds) is \(rejection.rawValue); not clicking")
+            throw EventError.missingItemBounds(item)
+        }
+        guard SyntheticClickBudgetStore.shared.take() else {
+            MenuBarItemManager.diagLog.error("postClickEvents: synthetic click budget spent; not clicking \(item.logString)")
+            throw EventError.cannotComplete
+        }
         let clickPoint = Self.clickPoint(for: resolvedBounds)
         let restoreLocation = try getMouseLocation()
         let source = try getEventSource()

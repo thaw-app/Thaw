@@ -173,8 +173,9 @@ extension MenuBarItemManager {
             )
             // A bar arranged by hand while Thaw was not running, or under an
             // older build, has to be read once before its sections can be.
+            // Only items with no section yet: Layout's sections win over stale weights.
             if adoptsObservedMembership {
-                adoptObservedMembership(reason: "settled launch")
+                adoptObservedMembership(reason: "settled launch", keepingAuthored: true)
             }
 
             // Once per launch, after login items register: hygiene asks

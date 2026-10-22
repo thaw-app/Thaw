@@ -383,7 +383,7 @@ extension NotificationCenterActivationTests {
 
     @Test("The bridge is on unless the hidden default turns it off")
     func bridgeSwitch() throws {
-        let name = "NotificationCenterActivationTests.bridgeSwitch"
+        let name = ScratchDefaults.name("NotificationCenterActivationTests")
         let defaults = try #require(UserDefaults(suiteName: name))
         defer { ScratchDefaults.remove(name) }
         ScratchDefaults.remove(name)
