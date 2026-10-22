@@ -873,6 +873,11 @@ final class ProfileManager {
         }
         hotkeyProfileMap.removeAll()
         profileHotkeyCancellables.removeAll()
+        // With profiles off the shortcuts stay saved but nothing listens for them.
+        guard ProfilesFeature.isOnInDefaults else {
+            profileHotkeys = [:]
+            return
+        }
 
         // Clean up orphaned hotkey entries for deleted profiles.
         let profileIDs = Set(profiles.map(\.id.uuidString))
@@ -946,6 +951,7 @@ final class ProfileManager {
     func applyFocusFilterProfile(
         requested idString: String? = UserDefaults.standard.string(forKey: "FocusFilterRequestedProfileID")
     ) async {
+        guard ProfilesFeature.isOnInDefaults else { return }
         guard let idString, let profileID = UUID(uuidString: idString) else { return }
 
         guard profileID != activeProfileID, !keepsLiveLayoutAtLaunch(profileID: profileID) else {
@@ -984,6 +990,7 @@ final class ProfileManager {
     /// Reapply after spacing relaunch resets positions, since auto-switch does not fire for the same active profile.
     /// applyOffset no-ops and layout waits for expected-set settling; the active profile remains unchanged.
     func reapplyActiveProfile() {
+        guard ProfilesFeature.isOnInDefaults else { return }
         guard let appState else { return }
         guard let activeID = activeProfileID else { return }
         do {
@@ -997,12 +1004,15 @@ final class ProfileManager {
 
     /// Applies the profile associated with the given display UUID, if any.
     private func applyProfileForDisplay(uuid: String) async {
+        // Profiles switch on their own only while they are on.
+        guard ProfilesFeature.isOnInDefaults else { return }
         guard let meta = profiles.first(where: { $0.associatedDisplayUUID == uuid }), meta.id != activeProfileID, let appState else { return }
         switchAutomatically(to: meta, on: appState, trigger: "display \(uuid)", relaunchesApps: false)
     }
 
     /// Applies the profile associated with the given Space key, if any.
     private func applyProfileForSpace(key: String) async {
+        guard ProfilesFeature.isOnInDefaults else { return }
         guard let meta = profile(forSpaceKey: key), meta.id != activeProfileID, let appState else { return }
         switchAutomatically(to: meta, on: appState, trigger: "Space \(key)")
     }

@@ -304,7 +304,7 @@ struct SettingsView: View {
         case .tools:
             ToolsSettingsPane(settings: appState.settings.advanced)
         case .modules:
-            ModulesSettingsPane(moduleHost: appState.moduleHost)
+            ModulesSettingsPane(moduleHost: appState.moduleHost, profiles: appState.profilesFeature)
         case .about:
             AboutSettingsPane(updatesManager: appState.updatesManager)
         case .scripts:
@@ -460,7 +460,10 @@ private struct SettingsSidebar: View {
     var body: some View {
         SettingsSidebarPaneList(
             navigationState: navigationState,
-            turnedOff: SettingsSidebarPanes.panesTurnedOff(isEnabled: appState.moduleHost.isEnabled)
+            turnedOff: SettingsSidebarPanes.panesTurnedOff(
+                isEnabled: appState.moduleHost.isEnabled,
+                profilesOn: appState.profilesFeature.isOn
+            )
         )
             .navigationSplitViewColumnWidth(min: SettingsSidebarPaneList.listWidth, ideal: SettingsSidebarPaneList.listWidth, max: 250)
             .onChange(of: generalSettings.simpleMode) { _, _ in

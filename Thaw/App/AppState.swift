@@ -37,6 +37,9 @@ final class AppState {
     /// it neither needs nor supplies anything the menu bar stack depends on.
     let profileManager = ProfileManager()
 
+    /// Whether profiles are on. Held here so the menus and the Profiles pane observe one switch.
+    let profilesFeature = ProfilesFeature()
+
     // Menu bar stack. Set up in dependency order; see bootstrapTask.
 
     /// The sections, their control items, and the show/hide state machine.
@@ -249,6 +252,7 @@ final class AppState {
         profileManager.performSetup(with: self)
         itemManager.repairs.onUserLayoutChange = { [weak self] in self?.profileLayoutKeeper.noteUserLayoutChange() }
         itemManager.savedOrderMirrorGate.observe(displayInvalidations: displayEnvironment.invalidations)
+        profilesFeature.onChange = { [weak profileManager] in profileManager?.rebuildProfileHotkeys() }
         controlCommandObserver.performSetup(with: self)
         controlStatePublisher.performSetup(with: self)
         swapBarManager.performSetup(with: self, displaySettlements: displayEnvironment.settlements)

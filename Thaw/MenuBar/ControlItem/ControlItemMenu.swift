@@ -204,7 +204,7 @@ final class ControlItemMenuController: NSObject {
 
     private func profilesItem(appState: AppState, profileManager: ProfileManager?) -> NSMenuItem? {
         let profileManager = profileManager ?? appState.profileManager
-        guard !profileManager.profiles.isEmpty else {
+        guard appState.profilesFeature.isOn, !profileManager.profiles.isEmpty else {
             return nil
         }
 
