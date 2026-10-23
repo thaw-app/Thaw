@@ -105,6 +105,7 @@ struct ProfileManagerCRUDTests {
 
     // MARK: Export / import
 
+    /// Verifies that exporting and importing a profile adds a separate copy.
     @Test("An exported profile imports back as a new profile")
     func exportImportRoundTrips() throws {
         try withManager(seeding: [makeProfile(named: "Exported")]) { manager, tmp in
@@ -121,6 +122,8 @@ struct ProfileManagerCRUDTests {
         }
     }
 
+    /// Verifies that a single-profile export retains its Space key and label
+    /// after import and after reloading the profile manager from disk.
     @Test("A single-profile export preserves its Space association through import")
     func exportImportPreservesSpaceAssociation() throws {
         try withManager(seeding: [makeProfile(named: "Desk")]) { manager, tmp in
@@ -140,6 +143,8 @@ struct ProfileManagerCRUDTests {
         }
     }
 
+    /// Verifies that importing a profile assigns a new identifier without
+    /// colliding with the original profile in the same store.
     @Test("An imported profile is given a fresh identifier")
     func importAssignsANewIdentifier() throws {
         try withManager(seeding: [makeProfile(named: "Exported")]) { manager, tmp in
