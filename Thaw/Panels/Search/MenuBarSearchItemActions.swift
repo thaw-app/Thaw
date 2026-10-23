@@ -195,16 +195,9 @@ enum MenuBarSearchItemActions {
 
     // MARK: Menu construction
 
-    /// The section's name as a menu title. MenuBarSectionName.localized is
-    /// a LocalizedStringKey for SwiftUI's benefit and an NSMenuItem needs a
-    /// String, so the three keys are spelled again. They are the same keys,
-    /// so the two surfaces still share one catalog entry each.
+    /// Resolve the same section-name resource used by SwiftUI for an AppKit menu title.
     static func title(for name: MenuBarSection.Name) -> String {
-        switch name {
-        case .visible: String(localized: "Visible")
-        case .hidden: String(localized: "Hidden")
-        case .alwaysHidden: String(localized: "Always Hidden")
-        }
+        String(localized: name.localized)
     }
 
     // MARK: Move policy

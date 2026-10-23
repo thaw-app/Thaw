@@ -239,7 +239,7 @@ final class LayoutBarItemView: LayoutBarArrangedView {
         // Which section the tile sits in is what the editor is for, and it is
         // otherwise only shown by position.
         if let section = (superview as? LayoutBarContainer)?.section {
-            setAccessibilityValue(section.displayString)
+            setAccessibilityValue(String(localized: section.localized))
         }
         setAccessibilityEnabled(true)
         guard isEnabled, let appState else {

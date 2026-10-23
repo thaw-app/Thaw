@@ -152,7 +152,7 @@ struct LayoutBarItemInspector: View {
     /// Show section, position, and width on the item; the strip alone cannot expose these layout costs.
     private var facts: some View {
         VStack(alignment: .leading, spacing: 5) {
-            fact("Section", section.displayString)
+            fact("Section", String(localized: section.localized))
             if let position {
                 fact("Position", "\(position) of \(orderedItems.count)")
             }

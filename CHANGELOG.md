@@ -7,6 +7,12 @@ The `release.yml` workflow reads the section matching the release tag
 (`## [tag]`) and uses it as the release notes for both the GitHub Release
 and the Sparkle appcast, unless overridden with the `release_notes` input.
 
+## [Unreleased]
+
+### Fixed
+
+- Menu bar section names now use your chosen language in the Layout inspector, VoiceOver descriptions, and move menus.
+
 ## [3.0.0-beta.3] - 2026-10-19
 
 **macOS 27 only · Build 116**

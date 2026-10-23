@@ -129,6 +129,22 @@ struct LayoutBarSelectionTests {
         }
     }
 
+    @Test("Section names use existing catalog translations in menus and VoiceOver", arguments: [
+        (MenuBarSectionName.visible, "Visible"),
+        (.hidden, "Hidden"),
+        (.alwaysHidden, "Always-Hidden"),
+    ])
+    func sectionNamesUseCatalogTranslations(section: MenuBarSectionName, key: String) {
+        #expect(section.localized.key == key)
+        let expected = Bundle.main.localizedString(forKey: key, value: nil, table: nil)
+        #expect(String(localized: section.localized) == expected)
+        #expect(MenuBarSearchItemActions.title(for: section) == expected)
+        #expect(LayoutSelectionHighlight.accessibilityValue(section: section, isSelected: false) == expected)
+
+        let selectedFormat = Bundle.main.localizedString(forKey: "%@, selected", value: nil, table: nil)
+        #expect(LayoutSelectionHighlight.accessibilityValue(section: section, isSelected: true) == String(format: selectedFormat, expected))
+    }
+
     @Test("The bar lists its items as units, a bundle's items as one, and its control item as unselectable")
     func unitsFollowTheBar() throws {
         let alpha = World.item("Alpha")
@@ -234,7 +250,7 @@ struct LayoutBarSelectionTests {
         #expect(!views[0].isLayoutSelected)
         views[0].viewWillDraw()
         #expect(views[0].layer?.borderWidth == 0)
-        #expect((views[0].accessibilityValue() as? String) == MenuBarSection.Name.visible.displayString)
+        #expect((views[0].accessibilityValue() as? String) == String(localized: MenuBarSection.Name.visible.localized))
     }
 
     @Test("A right click on one of several selected items offers moving them all")
