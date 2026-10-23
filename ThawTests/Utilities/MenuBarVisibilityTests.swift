@@ -8,6 +8,7 @@
 
 import AppKit
 import CoreGraphics
+import MenuBarModel
 import Testing
 @testable import Thaw
 
@@ -39,5 +40,12 @@ struct MenuBarVisibilityTests {
     @Test("A bar that won't report its frame still counts")
     func unknownFrameCounts() {
         #expect(NSScreen.hasMenuBar(among: [nil], on: left))
+    }
+
+    @Test("Every bar on screen belongs to some live display")
+    @MainActor
+    func liveBarsBelongToADisplay() {
+        let anyBarOnScreen = !Bridging.getMenuBarWindowList(option: [.onScreen]).isEmpty
+        #expect(!anyBarOnScreen || NSScreen.screens.contains { $0.isSystemMenuBarVisible() })
     }
 }
