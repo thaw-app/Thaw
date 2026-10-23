@@ -105,6 +105,7 @@ struct ProfileManagerCRUDTests {
 
     // MARK: Export / import
 
+    /// Verifies that exporting and importing a profile adds a separate copy.
     @Test("An exported profile imports back as a new profile")
     func exportImportRoundTrips() throws {
         try withManager(seeding: [makeProfile(named: "Exported")]) { manager, tmp in
@@ -121,6 +122,29 @@ struct ProfileManagerCRUDTests {
         }
     }
 
+    /// Verifies that a single-profile export retains its Space key and label
+    /// after import and after reloading the profile manager from disk.
+    @Test("A single-profile export preserves its Space association through import")
+    func exportImportPreservesSpaceAssociation() throws {
+        try withManager(seeding: [makeProfile(named: "Desk")]) { manager, tmp in
+            let originalID = try #require(manager.profiles.first?.id)
+            manager.setAssociatedSpace(key: "SPACE-UUID-A", spaceName: "Desktop 2", forProfileID: originalID)
+            let file = tmp.appendingPathComponent("export.json")
+
+            try manager.exportProfile(id: originalID, to: file)
+            try manager.importProfile(from: file)
+
+            let imported = try #require(manager.profiles.first { $0.id != originalID })
+            #expect(imported.associatedSpaceKey == "SPACE-UUID-A")
+            #expect(imported.associatedSpaceName == "Desktop 2")
+            let reloaded = ProfileManager(profilesDirectory: tmp)
+            #expect(reloaded.profile(forSpaceKey: "SPACE-UUID-A")?.id == imported.id)
+            #expect(reloaded.profile(forSpaceKey: "SPACE-UUID-A")?.associatedSpaceName == "Desktop 2")
+        }
+    }
+
+    /// Verifies that importing a profile assigns a new identifier without
+    /// colliding with the original profile in the same store.
     @Test("An imported profile is given a fresh identifier")
     func importAssignsANewIdentifier() throws {
         try withManager(seeding: [makeProfile(named: "Exported")]) { manager, tmp in
