@@ -23,6 +23,18 @@ public enum MirroredBarGeometry {
         )
     }
 
+    /// Rebases to the display at the CG origin, or the first by minY then minX when none is at the origin.
+    /// Returns nil when no display contains the frame's midpoint.
+    public static func referenceAligned(_ frame: CGRect, displayBounds: [CGRect]) -> CGRect? {
+        let midpoint = CGPoint(x: frame.midX, y: frame.midY)
+        guard let source = displayBounds.first(where: { $0.contains(midpoint) }),
+              let reference = displayBounds.first(where: { $0.origin == .zero }) ?? displayBounds.min(by: {
+                  ($0.minY, $0.minX) < ($1.minY, $1.minX)
+              })
+        else { return nil }
+        return rebasedFrame(frame, from: source, to: reference)
+    }
+
     /// Finds the source display by frame midpoint, then rebases to destinationDisplay.
     /// Frames already there or outside every known display remain unchanged.
     public static func frame(
