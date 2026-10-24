@@ -158,6 +158,22 @@ extension MenuBarItemManager {
         )
     }
 
+    /// Takes the order the controller committed as Thaw's own saved order, so the two agree after it normalized.
+    func adoptControllerOrder(from controller: any MenuBarSectionControlling) {
+        savedSectionOrder = OrderRecording.savedOrder(from: controller.sectionItemOrder)
+        persistSavedSectionOrder()
+    }
+
+    /// Resets the controller's assignment, then keeps the order it left rather than clearing Thaw's copy.
+    /// The controller decides what survives a reset, such as the Visible order.
+    func resetControllerAssignment(
+        to assignment: [String: MenuBarSectionName],
+        controller: any MenuBarSectionControlling
+    ) {
+        controller.resetAssignment(to: assignment)
+        adoptControllerOrder(from: controller)
+    }
+
     private static func canonicalizedSectionOrder(
         _ order: [String: [String]]
     ) -> [String: [String]] {

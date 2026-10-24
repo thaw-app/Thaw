@@ -446,10 +446,6 @@ extension MenuBarItemManager {
             throw LayoutResetError.engineNotRunning
         }
 
-        // Drop any stale legacy persisted order so the two models never fight.
-        savedSectionOrder.removeAll()
-        persistSavedSectionOrder()
-
         // Refresh inventory to include layout-anchored system items for experimental hiding.
         await cacheItemsRegardless(skipRecentMoveCheck: true)
 
@@ -474,7 +470,7 @@ extension MenuBarItemManager {
             assignment[item.uniqueIdentifier] = target
         }
 
-        controller.resetAssignment(to: assignment)
+        resetControllerAssignment(to: assignment, controller: controller)
         if !skippedProtectedItems.isEmpty {
             MenuBarItemManager.diagLog.info("macOS 27 reset: skipped \(skippedProtectedItems.count) protected item(s): \(skippedProtectedItems)")
         }
@@ -548,10 +544,8 @@ extension MenuBarItemManager {
         pinnedHiddenBundleIDs.removeAll()
         pinnedAlwaysHiddenBundleIDs.removeAll()
         persistPinnedBundleIDs()
-        savedSectionOrder.removeAll()
-        persistSavedSectionOrder()
 
-        controller.resetAssignment(to: [:])
+        resetControllerAssignment(to: [:], controller: controller)
         MenuBarItemManager.diagLog.info("macOS 27 reset-to-visible: cleared all section assignments")
 
         await cacheItemsRegardless(skipRecentMoveCheck: true)
