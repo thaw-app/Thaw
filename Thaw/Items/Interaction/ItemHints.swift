@@ -8,6 +8,24 @@
 import AppKit
 import MenuBarModel
 
+/// The drawn seat used both to select hint targets and place their badges.
+nonisolated enum ItemHintGeometry {
+    static func frame(
+        _ bounds: CGRect,
+        on display: CGRect,
+        displays: [CGRect],
+        barHeight: CGFloat,
+        laneMinX: CGFloat?
+    ) -> CGRect? {
+        guard MenuBarItemGeometry.barScreen(holding: bounds, among: displays) != nil,
+              let drawn = MirroredBarGeometry.drawnFrame(
+                  bounds, on: display, displayBounds: displays, laneMinX: laneMinX
+              ), MenuBarItemGeometry.contains(drawn.center, inTopBandOf: display, height: barHeight)
+        else { return nil }
+        return drawn
+    }
+}
+
 /// Type an item's hint letter after the shortcut to open it as if clicked.
 /// Concealed frames are stale, so reveal the section or use search for those items.
 @MainActor
@@ -50,7 +68,7 @@ final class ItemHints {
             diagLog.info("No menu bar items to hint on display \(screen.displayID)")
             return
         }
-        let hints = zip(Self.letters, targets).map { Hint(letter: $0, item: $1) }
+        let hints = zip(Self.letters, targets).map { Hint(letter: $0, item: $1.item, bounds: $1.bounds) }
 
         let barHeight = screen.getMenuBarHeight() ?? screen.getMenuBarHeightEstimate()
         let frame = CGRect(
@@ -82,16 +100,22 @@ final class ItemHints {
     }
 
     /// Left-to-right items in shown sections on this screen, excluding Thaw controls.
-    private static func itemsOnBar(appState: AppState, screen: NSScreen) -> [MenuBarItem] {
+    private static func itemsOnBar(appState: AppState, screen: NSScreen) -> [(item: MenuBarItem, bounds: CGRect)] {
         let controller = appState.menuBarManager.sectionController
         // The kit reports Visible as hidden when nothing is revealed, but Visible is always on the bar.
         let shown = MenuBarSection.Name.allCases.filter { $0 == .visible || !controller.isSectionHidden($0) }
+        let display = CGDisplayBounds(screen.displayID)
+        let displays = NSScreen.allDisplayBoundsCG
+        let barHeight = screen.getMenuBarHeightEstimate()
+        let laneMinX = MenuBarItemAXProvider.nativeOverflowControlBounds(on: screen.displayID).map(\.minX).min()
+            ?? screen.frameOfNotch?.maxX
         return shown
             .flatMap { appState.itemManager.managedItems(for: $0) }
-            .filter { item in
-                !item.isControlItem
-                    && item.bounds.width > 0
-                    && screen.frame.contains(CGPoint(x: item.bounds.midX, y: screen.frame.maxY - item.bounds.midY))
+            .compactMap { item -> (item: MenuBarItem, bounds: CGRect)? in
+                guard !item.isControlItem, let bounds = ItemHintGeometry.frame(
+                    item.bounds, on: display, displays: displays, barHeight: barHeight, laneMinX: laneMinX
+                ) else { return nil }
+                return (item, bounds)
             }
             .sorted { $0.bounds.minX < $1.bounds.minX }
     }
@@ -99,6 +123,7 @@ final class ItemHints {
     fileprivate struct Hint {
         let letter: Character
         let item: MenuBarItem
+        let bounds: CGRect
     }
 
     /// Takes hint key presses without activating Thaw, preserving the front app's menus.
@@ -179,7 +204,7 @@ final class ItemHints {
                 let size = text.size(withAttributes: attributes)
                 let badgeWidth = max(size.width + 10, ItemHints.hintHeight - 2)
                 // Bounds use top-left global coordinates; view x starts at the screen's left edge.
-                let centerX = hint.item.bounds.midX - screenFrame.minX
+                let centerX = hint.bounds.midX - screenFrame.minX
                 let badge = CGRect(
                     x: centerX - badgeWidth / 2,
                     y: 2,
