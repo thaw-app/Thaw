@@ -355,9 +355,11 @@ extension MenuBarItemManager {
     func mirrorSavedSectionOrderIfSettled(
         from cache: ItemCache,
         controlItems: ControlItemPair? = nil,
-        displays: [CGRect] = activeDisplayBounds()
+        displays: [CGRect] = activeDisplayBounds(),
+        controller: (any MenuBarSectionControlling)? = nil
     ) {
-        let isAnySectionRevealed = appState?.menuBarManager.sectionController.revealedSection != nil
+        let controller = controller ?? appState?.menuBarManager.sectionController
+        let isAnySectionRevealed = controller?.revealedSection != nil
         let shouldPersistLayoutSnapshot = !isNotificationCenterLayoutSuspended
             && !isAnySectionRevealed
             && LayoutSolver.shouldPersistSavedOrder(
@@ -381,7 +383,7 @@ extension MenuBarItemManager {
 
         // Consolidate split groups before mirroring them back into savedSectionOrder.
         // Persistence guards ensure no move is in flight; healthy records incur no write or refresh.
-        appState?.menuBarManager.sectionController.repairGroupInvariantIfNeeded()
+        controller?.repairGroupInvariantIfNeeded()
 
         // Mirror RuntimeSectionController membership and cached order to keep profiles, defaults, and layout bars synchronized.
         // Preserve pending authored Visible edits over old geometry; otherwise mirror command-drags the controller cannot observe (hidden sections have no live geometry).
@@ -405,12 +407,10 @@ extension MenuBarItemManager {
                 savedOrderMirrorGate.noteMirrored()
             }
         }
-        guard resolvedMirrored != savedSectionOrder else { return }
-        savedSectionOrder = resolvedMirrored
-        persistSavedSectionOrder()
-        MenuBarItemManager.diagLog.debug(
-            "Mirrored macOS 27 section order: \(resolvedMirrored.mapValues(\.count))"
-        )
+        // The controller's record follows every accepted mirror, equal or not.
+        // A command-drag it cannot observe would otherwise leave it behind
+        // until a membership change rewrote it.
+        adoptMirroredOrder(resolvedMirrored, controller: controller)
     }
 
     /// Coalesce environment and cache rebalances to prevent assertion-reflow feedback.

@@ -8,6 +8,7 @@
 import AppKit
 import Foundation
 import MenuBarModel
+import PlatformRuntimeKit
 import ThawLayout
 
 extension MenuBarItemManager {
@@ -141,6 +142,20 @@ extension MenuBarItemManager {
         let key = "MenuBarItemManager.savedSectionOrder"
         savedSectionOrder = Self.canonicalizedSectionOrder(savedSectionOrder)
         UserDefaults.standard.set(savedSectionOrder, forKey: key)
+    }
+
+    /// Hands an accepted mirror to the controller, then keeps it as Thaw's own saved order when it differs.
+    func adoptMirroredOrder(
+        _ resolved: [String: [String]],
+        controller: (any MenuBarSectionControlling)?
+    ) {
+        (controller as? any ObservedOrderRecording)?.recordObservedOrder(OrderRecording.observedOrder(from: resolved))
+        guard resolved != savedSectionOrder else { return }
+        savedSectionOrder = resolved
+        persistSavedSectionOrder()
+        MenuBarItemManager.diagLog.debug(
+            "Mirrored macOS 27 section order: \(resolved.mapValues(\.count))"
+        )
     }
 
     private static func canonicalizedSectionOrder(
