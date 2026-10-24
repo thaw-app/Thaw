@@ -34,6 +34,20 @@ nonisolated enum ClickTargetCheck {
         barWidth(for: bounds, displays: NSScreen.screens.map(\.frame))
     }
 
+    /// A pointer on another bar selects its mirrored copy; desktop activation keeps the reported seat.
+    static func clickPoint(
+        for bounds: CGRect,
+        pointer: CGPoint,
+        display: CGRect,
+        menuBarHeight: CGFloat,
+        displays: [CGRect]
+    ) -> CGPoint {
+        guard MenuBarItemGeometry.contains(pointer, inTopBandOf: display, height: menuBarHeight) else {
+            return bounds.center
+        }
+        return MirroredBarGeometry.frame(bounds, on: display, displayBounds: displays).center
+    }
+
     /// - Parameter barWidth: The width of the bar the frame sits on; zero skips the width check.
     static func rejection(for bounds: CGRect, barWidth: CGFloat, displays: [CGRect]) -> Rejection? {
         guard !bounds.isNull, bounds.width.isFinite, bounds.height.isFinite,

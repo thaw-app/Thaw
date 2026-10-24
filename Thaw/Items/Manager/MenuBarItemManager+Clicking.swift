@@ -69,16 +69,13 @@ extension MenuBarItemManager {
         else {
             return bounds.center
         }
-        let displayBounds = CGDisplayBounds(screen.displayID)
-        guard pointer.y >= displayBounds.maxY - menuBarHeight else {
-            return bounds.center
-        }
-        let allDisplayBounds = NSScreen.allDisplayBoundsCG
-        return MirroredBarGeometry.frame(
-            bounds,
-            on: displayBounds,
-            displayBounds: allDisplayBounds
-        ).center
+        return ClickTargetCheck.clickPoint(
+            for: bounds,
+            pointer: pointer,
+            display: CGDisplayBounds(screen.displayID),
+            menuBarHeight: menuBarHeight,
+            displays: NSScreen.allDisplayBoundsCG
+        )
     }
 
     /// Synthesizes one click on item and waits for its owner to take

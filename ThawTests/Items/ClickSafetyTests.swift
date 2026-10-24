@@ -17,6 +17,24 @@ struct ClickSafetyTests {
         CGRect(x: 2560, y: 290, width: 1710, height: 1107),
     ]
 
+    @Test("Synthetic clicks follow the pointer only in its display's top bar")
+    func clickUsesTopBar() {
+        let bounds = CGRect(x: 2400, y: 5, width: 24, height: 24)
+        let lower = Self.screens[1]
+        for y: CGFloat in [290, 307, 324] {
+            #expect(ClickTargetCheck.clickPoint(
+                for: bounds, pointer: CGPoint(x: 4100, y: y), display: lower,
+                menuBarHeight: 34, displays: Self.screens
+            ) == CGPoint(x: 4122, y: 307))
+        }
+        for point in [CGPoint(x: 4100, y: 325), CGPoint(x: 4100, y: 1390), CGPoint(x: 2000, y: 307)] {
+            #expect(ClickTargetCheck.clickPoint(
+                for: bounds, pointer: point, display: lower,
+                menuBarHeight: 34, displays: Self.screens
+            ) == CGPoint(x: 2412, y: 17))
+        }
+    }
+
     @Test("A lower bar is safe to click, while frames below it and host windows are refused")
     func lowerDisplayClickSafety() {
         let seated = CGRect(x: 3600, y: 295, width: 24, height: 24)
