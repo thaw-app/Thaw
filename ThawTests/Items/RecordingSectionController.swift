@@ -47,9 +47,17 @@ final class RecordingSectionController: MenuBarSectionControlling, ObservedOrder
         var next = [MenuBarSectionName: [String]]()
         for section in MenuBarSectionName.allCases {
             guard let identifiers = itemOrder[section.rawValue] else { continue }
-            next[section] = identifiers.filter { seen.insert($0).inserted }
+            next[section] = identifiers.filter {
+                keepsInProfile($0, in: section) && seen.insert($0).inserted
+            }
         }
         sectionItemOrder = next
+    }
+
+    /// Thaw's own control items stay out of a profile's order, except the Visible control in Visible.
+    private func keepsInProfile(_ identifier: String, in section: MenuBarSectionName) -> Bool {
+        guard identifier.contains(ControlItemIdentifier.autosavePrefix) else { return true }
+        return section == .visible && identifier == MenuBarItemTag.visibleControlItem.tagIdentifier
     }
 
     func resetAssignment(to _: [String: MenuBarSectionName]) {

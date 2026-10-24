@@ -164,6 +164,16 @@ extension MenuBarItemManager {
         persistSavedSectionOrder()
     }
 
+    /// Applies a profile's layout to the controller, then keeps the order it committed rather than the profile's.
+    func commitProfileLayout(
+        itemSectionMap: [String: String],
+        itemOrder: [String: [String]],
+        to controller: any MenuBarSectionControlling
+    ) {
+        controller.applyProfileLayout(itemSectionMap: itemSectionMap, itemOrder: itemOrder)
+        adoptControllerOrder(from: controller)
+    }
+
     /// Resets the controller's assignment, then keeps the order it left rather than clearing Thaw's copy.
     /// The controller decides what survives a reset, such as the Visible order.
     func resetControllerAssignment(

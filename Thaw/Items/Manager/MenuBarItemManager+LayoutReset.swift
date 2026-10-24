@@ -400,13 +400,11 @@ extension MenuBarItemManager {
         // Controller assignments drive the assertion and persist via Thaw.simpleSectionAssignment; only profiles overwrite them.
         // Mirror savedSectionOrder from the controller, since restoring its lagging copy on windowID changes undoes user drags.
         if source == .profile {
-            controller.applyProfileLayout(
+            commitProfileLayout(
                 itemSectionMap: itemSectionMap,
-                itemOrder: itemOrder
+                itemOrder: itemOrder,
+                to: controller
             )
-
-            savedSectionOrder = itemOrder
-            persistSavedSectionOrder()
         }
 
         // Visible items have live AX elements, but only profiles reconcile synthetically; assignment mirroring owns membership.
@@ -427,7 +425,7 @@ extension MenuBarItemManager {
             "applyProfileLayout (macOS 27): applied \(controller.sectionAssignment.count) assignment(s)"
         )
 
-        persistProfileStateOnSuccess(source: source)
+        persistProfileStateOnSuccess(source: source, controller: controller)
         clearProfileState(source: source)
         scheduleDeferredCacheRefresh()
         return true
@@ -680,10 +678,12 @@ extension MenuBarItemManager {
     }
 
     /// Commits profile pins and order only after the bar reflects them; savedOrder leaves both stores unchanged.
-    private func persistProfileStateOnSuccess(source: ApplySource) {
+    /// The order written is the controller's as it stands now, so Thaw's copy agrees with it
+    /// when the apply is reported done.
+    func persistProfileStateOnSuccess(source: ApplySource, controller: any MenuBarSectionControlling) {
         guard case .profile = source else { return }
         persistPinnedBundleIDs()
-        persistSavedSectionOrder()
+        adoptControllerOrder(from: controller)
     }
 
     /// Clears the profile gate only for profile applies.
