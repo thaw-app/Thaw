@@ -277,12 +277,12 @@ extension MenuBarItemManager {
         PositionStoreItemSource.opaqueVisibleKeys(in: items)
     }
 
-    func freshestRecordedVisibleOrder(
-        controller: any MenuBarSectionControlling
-    ) -> [String] {
+    /// After a drag the mirror has not caught up with, the bar is the record and no order is returned.
+    func freshestRecordedVisibleOrder(controller: any MenuBarSectionControlling) -> [String] {
         ControlOrderRules.freshestRecordedVisibleOrder(
             mirroredOrder: savedSectionOrder[sectionKey(for: .visible)],
-            controllerOrder: controller.sectionItemOrder[.visible]
+            controllerOrder: controller.sectionItemOrder[.visible],
+            userDraggedSinceMirror: savedOrderMirrorGate.mirrorIsBehind(userDragEndedAt: lastUserMenuBarDragEnd)
         )
     }
 

@@ -145,4 +145,32 @@ struct SavedOrderMirrorGateTests {
     func noDisplays() {
         #expect(SavedOrderMirrorGate.transientFrame(among: [Self.item(x: 0)], displays: []) == nil)
     }
+
+    @Test("Without a drag the mirror is never behind")
+    func noDragIsNotBehind() {
+        let gate = SavedOrderMirrorGate(observesSystem: false)
+        #expect(!gate.mirrorIsBehind(userDragEndedAt: nil))
+        gate.noteMirrored(at: at(0))
+        #expect(!gate.mirrorIsBehind(userDragEndedAt: nil))
+    }
+
+    @Test("A drag after the last mirror leaves the mirror behind")
+    func dragAfterTheMirrorIsBehind() {
+        let gate = SavedOrderMirrorGate(observesSystem: false)
+        gate.noteMirrored(at: at(0))
+        #expect(gate.mirrorIsBehind(userDragEndedAt: at(2)))
+    }
+
+    @Test("A mirror after the drag catches up")
+    func mirrorAfterTheDragIsNotBehind() {
+        let gate = SavedOrderMirrorGate(observesSystem: false)
+        gate.noteMirrored(at: at(14))
+        #expect(!gate.mirrorIsBehind(userDragEndedAt: at(2)))
+    }
+
+    @Test("A drag with no mirror ever is behind")
+    func dragWithoutAnyMirrorIsBehind() {
+        let gate = SavedOrderMirrorGate(observesSystem: false)
+        #expect(gate.mirrorIsBehind(userDragEndedAt: at(2)))
+    }
 }

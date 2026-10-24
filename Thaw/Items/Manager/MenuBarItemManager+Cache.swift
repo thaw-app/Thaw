@@ -401,11 +401,11 @@ extension MenuBarItemManager {
         defer {
             if preservedVisible != nil {
                 scheduleArrivalOrderRestore()
+            } else {
+                savedOrderMirrorGate.noteMirrored()
             }
         }
-        guard resolvedMirrored != savedSectionOrder else {
-            return
-        }
+        guard resolvedMirrored != savedSectionOrder else { return }
         savedSectionOrder = resolvedMirrored
         persistSavedSectionOrder()
         MenuBarItemManager.diagLog.debug(

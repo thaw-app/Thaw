@@ -17,6 +17,9 @@ final class SavedOrderMirrorGate {
 
     private static let diagLog = DiagLog(category: "SavedOrderMirrorGate")
 
+    /// When the live order last became the saved order, or was found to match it.
+    private(set) var lastMirror: ContinuousClock.Instant?
+
     private var lastDisturbance: ContinuousClock.Instant?
     private var lastIdentifiers: Set<String>?
     private var systemEventTasks = [Task<Void, Never>]()
@@ -35,6 +38,20 @@ final class SavedOrderMirrorGate {
 
     func noteDisturbance(at instant: ContinuousClock.Instant = .now) {
         lastDisturbance = instant
+    }
+
+    /// Call once the saved order matches the bar, including when a mirror found nothing to change.
+    /// An order kept over an arrival differs from the bar and does not count.
+    func noteMirrored(at instant: ContinuousClock.Instant = .now) {
+        lastMirror = instant
+    }
+
+    /// Whether a drag on the bar ended after the saved order last caught up with it.
+    /// Until the next mirror the saved order predates the drag and must not be laid back over the bar.
+    func mirrorIsBehind(userDragEndedAt dragEnd: ContinuousClock.Instant?) -> Bool {
+        guard let dragEnd else { return false }
+        guard let lastMirror else { return true }
+        return dragEnd > lastMirror
     }
 
     /// Whether the cache holding these items may become the saved order now.

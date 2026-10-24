@@ -168,11 +168,19 @@ enum ControlOrderRules {
     /// savedSectionOrder tracks live geometry and pane edits. The controller's
     /// copy misses Command-drags on the real bar, so restoring it would snap
     /// items back to an old order on every reveal.
+    ///
+    /// The mirror only catches up after the bar has been quiet for a while. A drag that
+    /// ended since then has already put the bar in the order the user chose, so the bar is
+    /// the record and an empty order lets the structural segment follow the live geometry.
     static func freshestRecordedVisibleOrder(
         mirroredOrder: [String]?,
-        controllerOrder: [String]?
+        controllerOrder: [String]?,
+        userDraggedSinceMirror: Bool = false
     ) -> [String] {
-        mirroredOrder ?? controllerOrder ?? []
+        if userDraggedSinceMirror {
+            return []
+        }
+        return mirroredOrder ?? controllerOrder ?? []
     }
 
     /// Reject reversed Control Center/Clock ranks or non-anchors right of the trailing group; normalization repairs stable Siri stranding.
