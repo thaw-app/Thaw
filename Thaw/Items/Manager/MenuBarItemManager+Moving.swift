@@ -591,9 +591,10 @@ extension MenuBarItemManager {
     ) {
         structuralNormalizationTask?.cancel()
         structuralNormalizationTask = nil
-        guard !isInStartupSettling, !moveCircuitBreaker.isOpen,
-              !isNotificationCenterLayoutSuspended
-        else {
+        guard WriteHold.first(
+            [.startupSettling, .circuitBreakerOpen, .notificationCenterSuspended],
+            in: structuralNormalizationSituation(appState: appState)
+        ) == nil else {
             repairs.withdraw(.structuralNormalization)
             return
         }
@@ -602,19 +603,12 @@ extension MenuBarItemManager {
             try? await Task.sleep(for: ControlResortHold.debounce(after, for: "structural normalization", self.map(ControlResortHold.Signal.init(of:))))
             guard !Task.isCancelled, let self else { return }
             structuralNormalizationTask = nil
-            guard let appState,
-                  !appState.isDraggingMenuBarItem,
-                  !isInStartupSettling,
-                  !isApplyingProfileLayout
-            else { return }
+            guard let appState else { return }
+            let situation = structuralNormalizationSituation(appState: appState)
+            guard WriteHold.first([.userDragging, .startupSettling, .profileApplying], in: situation) == nil else { return }
             // Manual arrangement turns this off, except to re-lay a stranded
             // visible control item, which the user cannot drag back.
-            let manualAllowsControlRelay: Bool = {
-                guard arrangementIsManual else { return true }
-                let settled = itemCache.managedItems
-                return !settled.isEmpty && ControlOrderRules.visibleControlIsStranded(among: settled)
-            }()
-            guard manualAllowsControlRelay else {
+            guard manualArrangementAllowsControlRelay else {
                 MenuBarItemManager.diagLog.debug("structural normalization: skipping, manual arrangement is on")
                 return
             }
@@ -628,10 +622,7 @@ extension MenuBarItemManager {
             // laid from the old sections and put the dropped item back. The
             // reading schedules this pass again once it is done.
             guard manualMembershipTask == nil else { return }
-            guard layoutPublication.canPublish(generation: layoutPublication.generation),
-                  appState.menuBarManager.sectionController.revealedSection == nil,
-                  !appState.menuBarManager.isRevealHideTransitionActive
-            else {
+            guard WriteHold.first([.layoutPublicationStale, .sectionRevealed, .revealTransitionActive], in: situation) == nil else {
                 rearm()
                 return
             }
@@ -657,7 +648,8 @@ extension MenuBarItemManager {
             }
             // A ⌘-drag can start or end while this waited, and its reading
             // schedules the pass again once it is done.
-            guard !appState.isDraggingMenuBarItem, manualMembershipTask == nil else { return }
+            let admitted = structuralNormalizationSituation(appState: appState)
+            guard WriteHold.first([.userDragging, .membershipReadPending], in: admitted) == nil else { return }
             guard layoutPublication.canPublish(generation: layoutPublication.generation),
                   ControlResortHold.allowsResort(for: "structural normalization", .init(of: self))
             else {
