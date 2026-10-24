@@ -157,37 +157,41 @@ public struct MenuBarItem: CustomStringConvertible, Sendable, Codable {
             (sourcePID ?? ownerPID) == (other.sourcePID ?? other.ownerPID)
     }
 
-    /// The lowest a live bar item's frame centre sits in the hosting-window space; below it, an item is parked off the bar.
+    /// The lowest a live bar item's frame centre sits relative to its display's top edge.
     public static let maxBarBandMidY: CGFloat = 80
 
     /// Whether AX reports this item parked outside the live bar. During
     /// assertion reflows macOS 27 parks items around y 1400 with a hidden-side
     /// X, which would falsely trigger divergence detection and reorders.
     ///
-    /// The absolute Y check comes first: when the visible control parks too,
-    /// a peer-relative check would call everyone on-band.
+    /// The display's band check comes first: when the visible control parks
+    /// too, a peer-relative check would call everyone on-band.
     public func isParkedOffMenuBarBand(among peers: [MenuBarItem]) -> Bool {
-        guard bounds.width > 0, bounds.height > 0 else { return true }
+        isParkedOffMenuBarBand(among: peers, screens: activeMenuBarDisplayBounds())
+    }
 
-        // A parked item reports the leading-edge sentinel (origin.x == -1) in
-        // the bar's own Y band, so the Y checks below miss it.
-        if bounds.origin.x == -1 {
-            return true
+    /// Whether this item is parked outside the bar bands of the given CG-global screens.
+    /// References are seated controls on the same screen. Without screen bounds,
+    /// the original band measured from y zero and peer reference are used.
+    public func isParkedOffMenuBarBand(among peers: [MenuBarItem], screens: [CGRect]) -> Bool {
+        guard bounds.width > 0, bounds.height > 0, bounds.origin.x != -1 else { return true }
+
+        func barIndex(holding frame: CGRect) -> Int? {
+            guard !screens.isEmpty else {
+                return frame.midY <= Self.maxBarBandMidY ? 0 : nil
+            }
+            guard frame.width > 0, frame.height > 0, frame.origin.x != -1 else { return nil }
+            let centre = CGPoint(x: frame.midX, y: frame.midY)
+            return screens.firstIndex { screen in
+                screen.contains(centre) && frame.midY - screen.minY <= Self.maxBarBandMidY
+            }
         }
 
-        // Live bar items sit in the top 60 pt or so of the hosting-window space.
-        if bounds.midY > Self.maxBarBandMidY {
-            return true
-        }
-
-        guard let barMidY = peers.first(where: {
-            $0.tag.matchesVisibleControlItem && $0.bounds.midY <= Self.maxBarBandMidY
-        })?.bounds.midY
-            ?? peers.first(where: {
-                $0.isControlItem && $0.bounds.width > 8 && $0.bounds.midY <= Self.maxBarBandMidY
-            })?.bounds.midY
+        guard let index = barIndex(holding: bounds) else { return true }
+        let seated = peers.filter { barIndex(holding: $0.bounds) == index }
+        guard let barMidY = seated.first(where: { $0.tag.matchesVisibleControlItem })?.bounds.midY
+            ?? seated.first(where: { $0.isControlItem && $0.bounds.width > 8 })?.bounds.midY
         else { return false }
-        // The live band is about 30 pt; parked items are 1000+ pt away on Y.
         return abs(bounds.midY - barMidY) > 48
     }
 
@@ -438,4 +442,12 @@ extension MenuBarItem {
         }
         return titleCased(title)
     }
+}
+
+func activeMenuBarDisplayBounds() -> [CGRect] {
+    var count: UInt32 = 0
+    guard CGGetActiveDisplayList(0, nil, &count) == .success, count > 0 else { return [] }
+    var ids = [CGDirectDisplayID](repeating: 0, count: Int(count))
+    guard CGGetActiveDisplayList(count, &ids, &count) == .success else { return [] }
+    return ids.prefix(Int(count)).map(CGDisplayBounds)
 }

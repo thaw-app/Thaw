@@ -146,10 +146,11 @@ struct MultiBarFramesTests {
         // Frames from a reconnect: the dividers parked at y 113.5 while Stats
         // still read on the bar, so Stats looked stranded among hidden items.
         let stats = Self.item(x: -400, windowID: 1)
+        let displays = [CGRect(x: -1920, y: 0, width: 1920, height: 1080)]
 
         let parked = divider(y: 113.5)
-        #expect(ControlOrderRules.dividerIsOffTheBar(ControlItemPair(hidden: parked, alwaysHidden: nil), among: [parked, stats]))
+        #expect(ControlOrderRules.dividerIsOffTheBar(ControlItemPair(hidden: parked, alwaysHidden: nil), among: [parked, stats], displays: displays))
         let onBar = divider(y: 4.5)
-        #expect(!ControlOrderRules.dividerIsOffTheBar(ControlItemPair(hidden: onBar, alwaysHidden: nil), among: [onBar, stats]))
+        #expect(!ControlOrderRules.dividerIsOffTheBar(ControlItemPair(hidden: onBar, alwaysHidden: nil), among: [onBar, stats], displays: displays))
     }
 }
