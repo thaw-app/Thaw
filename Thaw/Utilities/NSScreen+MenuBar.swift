@@ -100,22 +100,11 @@ extension NSScreen {
         )
     }
 
-    private nonisolated struct DisplayCache {
-        var menuFrames = [CGDirectDisplayID: CGRect]()
-        var menuFramePID: pid_t?
-        var menuBarHeights = [CGDirectDisplayID: CGFloat]()
-    }
-
-    private static nonisolated let displayCache = OSAllocatedUnfairLock(initialState: DisplayCache())
+    private static nonisolated let displayCache = OSAllocatedUnfairLock(initialState: MenuBarDisplayCache())
 
     private static func invalidateApplicationMenuFrameCacheIfNeeded() {
         let currentPID = NSWorkspace.shared.frontmostApplication?.processIdentifier
-        displayCache.withLock { cache in
-            if currentPID != cache.menuFramePID {
-                cache.menuFrames.removeAll()
-                cache.menuFramePID = currentPID
-            }
-        }
+        displayCache.withLock { $0.applicationDidChange(to: currentPID) }
     }
 
     /// The tallest live menu bar height cached for any display, readable off the
@@ -124,17 +113,14 @@ extension NSScreen {
         displayCache.withLock { $0.menuBarHeights.values.max() }
     }
 
-    static func invalidateMenuBarHeightCache() {
-        displayCache.withLock { $0.menuBarHeights.removeAll() }
+    static func invalidateMenuBarGeometryCache() {
+        displayCache.withLock { $0.geometryDidChange() }
     }
 
     /// Reconnected displays get new IDs, so stale entries would pile up.
     static func cleanupDisconnectedDisplayCaches() {
         let connectedDisplayIDs = Set(NSScreen.managedScreens.map(\.displayID))
-        displayCache.withLock { cache in
-            cache.menuBarHeights = cache.menuBarHeights.filter { connectedDisplayIDs.contains($0.key) }
-            cache.menuFrames = cache.menuFrames.filter { connectedDisplayIDs.contains($0.key) }
-        }
+        displayCache.withLock { $0.removeDisconnectedDisplays(keeping: connectedDisplayIDs) }
         pendingRetryDisplays.withLock { $0 = $0.filter { connectedDisplayIDs.contains($0) } }
     }
 
@@ -158,16 +144,19 @@ extension NSScreen {
         guard isDisplayActive(displayID) else { return }
         let shouldSchedule = pendingRetryDisplays.withLock { $0.insert(displayID).inserted }
         guard shouldSchedule else { return }
+        let generation = displayCache.withLock { $0.generation }
         DispatchQueue.global(qos: .utility).asyncAfter(deadline: .now() + .milliseconds(500)) {
+            defer { _ = pendingRetryDisplays.withLock { $0.remove(displayID) } }
             if let menuBarWindow = WindowInfo.menuBarWindow(for: displayID) {
                 let height = menuBarWindow.bounds.height
                 if height > 0 {
-                    NSScreen.displayCache.withLock { $0.menuBarHeights[displayID] = height }
+                    guard NSScreen.displayCache.withLock({
+                        $0.storeHeight(height, for: displayID, generation: generation)
+                    }) else { return }
                     noteMenuBarFound(on: displayID)
                     NSScreen.diagLog.debug("getMenuBarHeight: retry succeeded for display=\(displayID) height=\(Double(height))")
                 }
             }
-            _ = pendingRetryDisplays.withLock { $0.remove(displayID) }
         }
     }
 
@@ -182,6 +171,7 @@ extension NSScreen {
         guard NSScreen.isDisplayActive(id) else {
             return nil
         }
+        let generation = NSScreen.displayCache.withLock { $0.generation }
         guard let menuBarWindow = WindowInfo.menuBarWindow(for: id) else {
             if Self.shouldWarnMissingMenuBar(on: id) {
                 Self.diagLog.warning("getMenuBarHeight: display=\(id) no menu bar window found, scheduling retry")
@@ -197,7 +187,7 @@ extension NSScreen {
             NSScreen.scheduleMenuBarHeightRetry(for: id)
             return nil
         }
-        NSScreen.displayCache.withLock { $0.menuBarHeights[id] = height }
+        NSScreen.displayCache.withLock { $0.storeHeight(height, for: id, generation: generation) }
         Self.noteMenuBarFound(on: id)
         Self.diagLog.debug("getMenuBarHeight: display=\(id) liveHeight=\(Double(height)) windowID=\(menuBarWindow.windowID)")
         return height
@@ -228,7 +218,7 @@ extension NSScreen {
     }
 
     /// The application menu frame from AX, not notch-capped. Cached per display
-    /// until the frontmost app changes.
+    /// until the frontmost app or display geometry changes.
     ///
     /// - Parameter bypassCache: Always query AX; use when polling for changes.
     func getApplicationMenuFrame(bypassCache: Bool = false) -> CGRect? {
@@ -238,9 +228,10 @@ extension NSScreen {
             return cached
         }
 
+        let generation = NSScreen.displayCache.withLock { $0.generation }
         let result = computeApplicationMenuFrame()
         if !bypassCache, let result {
-            NSScreen.displayCache.withLock { $0.menuFrames[id] = result }
+            NSScreen.displayCache.withLock { $0.storeMenuFrame(result, for: id, generation: generation) }
         }
         return result
     }

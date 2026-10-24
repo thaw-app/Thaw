@@ -111,7 +111,7 @@ extension HIDEventManager {
                 for: NSApplication.didChangeScreenParametersNotification
             )
             .sink { [weak self] _ in
-                NSScreen.invalidateMenuBarHeightCache()
+                NSScreen.invalidateMenuBarGeometryCache()
                 NSScreen.cleanupDisconnectedDisplayCaches()
                 self?.windowBoundsLock.withLock { $0.removeAll() }
                 // Active-display changes can leave itemCache unchanged; do not

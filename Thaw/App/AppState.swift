@@ -223,7 +223,7 @@ final class AppState {
         diagLog.debug("bootstrap: starting itemManager setup")
         await itemManager.performSetup(with: self)
         diagLog.debug("bootstrap: itemManager setup scheduled, invalidating menuBarHeightCache")
-        NSScreen.invalidateMenuBarHeightCache()
+        NSScreen.invalidateMenuBarGeometryCache()
         diagLog.debug("bootstrap: starting imageCache setup")
         imageCache.activate(with: self)
         alertRevealWatcher.performSetup(with: self)
