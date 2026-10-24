@@ -46,14 +46,16 @@ nonisolated enum ObservedMembership {
         func moves(
             for candidates: [Candidate],
             keepingAuthored: Bool = false,
-            since baseline: DragBaseline? = nil
+            since baseline: DragBaseline? = nil,
+            alwaysHiddenShownAtDrop: Bool? = nil
         ) -> [(section: MenuBarSectionName, items: [MenuBarItem])] {
             guard case let .ordered(dividers) = self else { return [] }
             return ObservedMembership.moves(
                 for: candidates,
                 dividers: dividers,
                 keepingAuthored: keepingAuthored,
-                since: baseline
+                since: baseline,
+                alwaysHiddenShownAtDrop: alwaysHiddenShownAtDrop
             )
         }
     }
@@ -163,12 +165,15 @@ nonisolated enum ObservedMembership {
     /// keepingAuthored leaves every item that already has a section alone, and only
     /// places the ones that have none: in Manual the stored weights go stale, and
     /// Layout's sections win over them. A baseline limits the moves to the items
-    /// a ⌘-drag carried across a divider.
+    /// a ⌘-drag carried across a divider. If Always Hidden was concealed at the
+    /// drop, a weight past its divider counts as Hidden. Nil leaves non-drag
+    /// readings unchanged.
     static func moves(
         for candidates: [Candidate],
         dividers: Dividers,
         keepingAuthored: Bool = false,
-        since baseline: DragBaseline? = nil
+        since baseline: DragBaseline? = nil,
+        alwaysHiddenShownAtDrop: Bool? = nil
     ) -> [(section: MenuBarSectionName, items: [MenuBarItem])] {
         let moving = candidates.compactMap { candidate -> (section: MenuBarSectionName, item: MenuBarItem)? in
             if keepingAuthored, candidate.authored != nil {
@@ -177,12 +182,29 @@ nonisolated enum ObservedMembership {
             if let baseline, !baseline.crossedDivider(candidate, dividers: dividers) {
                 return nil
             }
-            let observed = dividers.section(for: candidate.weight)
+            // An Always Hidden icon was not on screen, so the drag cannot have carried it.
+            if alwaysHiddenShownAtDrop == false, candidate.authored == .alwaysHidden {
+                return nil
+            }
+            let observed = observedSection(
+                for: candidate, dividers: dividers, alwaysHiddenShownAtDrop: alwaysHiddenShownAtDrop
+            )
             return observed == (candidate.authored ?? .visible) ? nil : (observed, candidate.item)
         }
         return Dictionary(grouping: moving, by: \.section)
             .sorted { $0.key.rawValue < $1.key.rawValue }
             .map { ($0.key, $0.value.map(\.item)) }
+    }
+
+    /// A weight past the Always Hidden divider reads as Hidden while that section was concealed at the drop.
+    private static func observedSection(
+        for candidate: Candidate,
+        dividers: Dividers,
+        alwaysHiddenShownAtDrop: Bool?
+    ) -> MenuBarSectionName {
+        let observed = dividers.section(for: candidate.weight)
+        guard alwaysHiddenShownAtDrop == false, observed == .alwaysHidden else { return observed }
+        return .hidden
     }
 }
 

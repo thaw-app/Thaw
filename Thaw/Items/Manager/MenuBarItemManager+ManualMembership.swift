@@ -35,13 +35,24 @@ extension MenuBarItemManager {
     /// Records the end of a ⌘-drag and reads the sections it produced.
     func noteUserMenuBarDragEnded() {
         lastUserMenuBarDragEnd = .now
-        scheduleObservedMembershipAdoption(reason: "⌘-drag", afterUserDrag: true)
+        // Coalesced drags share one adoption, so the last drop's visibility is what counts.
+        let alwaysHiddenShownAtDrop = appState?.menuBarManager.sectionController.revealedSection == .alwaysHidden
+        scheduleObservedMembershipAdoption(
+            reason: "⌘-drag",
+            afterUserDrag: true,
+            alwaysHiddenShownAtDrop: alwaysHiddenShownAtDrop
+        )
     }
 
     /// Adopt divider-weight membership without moving items: Manual after drags, mode switches, and launch; Automatic only after user drags.
     /// Leave unweighted, unhideable, Thaw Bar Only, and divider-slot items unchanged.
     /// keepingAuthored only places items that have no section yet. After a drag, only items it carried across a divider move.
-    func adoptObservedMembership(reason: String, afterUserDrag: Bool = false, keepingAuthored: Bool = false) {
+    func adoptObservedMembership(
+        reason: String,
+        afterUserDrag: Bool = false,
+        keepingAuthored: Bool = false,
+        alwaysHiddenShownAtDrop: Bool? = nil
+    ) {
         guard arrangementIsManual || afterUserDrag, let appState, let observed = currentObservedMembership() else { return }
         switch observed.reading {
         case .ordered:
@@ -58,7 +69,12 @@ extension MenuBarItemManager {
             MenuBarItemManager.diagLog.debug("observed membership (\(reason)): no reading from the drag's start; skipping")
             return
         }
-        let moves = observed.reading.moves(for: observed.candidates, keepingAuthored: keepingAuthored, since: baseline)
+        let moves = observed.reading.moves(
+            for: observed.candidates,
+            keepingAuthored: keepingAuthored,
+            since: baseline,
+            alwaysHiddenShownAtDrop: alwaysHiddenShownAtDrop
+        )
         for (section, sectionItems) in moves {
             MenuBarItemManager.diagLog.info(
                 "observed membership (\(reason)): \(sectionItems.count) item(s) sit in \(section.logString) on the bar: " +
@@ -126,7 +142,12 @@ extension MenuBarItemManager {
     }
 
     /// Waits for the position table to settle before adopting membership.
-    func scheduleObservedMembershipAdoption(reason: String, afterUserDrag: Bool = false, keepingAuthored: Bool = false) {
+    func scheduleObservedMembershipAdoption(
+        reason: String,
+        afterUserDrag: Bool = false,
+        keepingAuthored: Bool = false,
+        alwaysHiddenShownAtDrop: Bool? = nil
+    ) {
         guard arrangementIsManual || afterUserDrag else { return }
         manualMembershipTask?.cancel()
         if !afterUserDrag {
@@ -137,7 +158,12 @@ extension MenuBarItemManager {
             guard !Task.isCancelled, let self else { return }
             await cacheItemsRegardless(skipRecentMoveCheck: true, skipSavedLayoutApply: true)
             guard !Task.isCancelled else { return }
-            adoptObservedMembership(reason: reason, afterUserDrag: afterUserDrag, keepingAuthored: keepingAuthored)
+            adoptObservedMembership(
+                reason: reason,
+                afterUserDrag: afterUserDrag,
+                keepingAuthored: keepingAuthored,
+                alwaysHiddenShownAtDrop: alwaysHiddenShownAtDrop
+            )
             dragMembership.clear()
             manualMembershipTask = nil
             // The structural pass held off while this read the bar, so it runs

@@ -173,6 +173,82 @@ struct SectionReadingPropertyTests {
         #expect(moves.first?.items.map(\.windowID) == [carried.item.windowID])
     }
 
+    @Test("An Always Hidden icon the drag passed while Always Hidden was concealed at the drop stays put")
+    func alwaysHiddenIconStaysWhileConcealedAtDrop() throws {
+        let before = try #require(ObservedMembership.Dividers(hidden: 300, alwaysHidden: 1000, visibleControl: 100))
+        let after = try #require(ObservedMembership.Dividers(hidden: 300, alwaysHidden: 1400, visibleControl: 100))
+        let concealed = ObservedMembership.Candidate(item: Self.item(0), weight: 1200, authored: .alwaysHidden)
+        let baseline = ObservedMembership.DragBaseline(candidates: [concealed], dividers: before)
+        // The dragged Always Hidden divider passed the icon, which the agent saved at a new weight.
+        let resaved = ObservedMembership.Candidate(item: concealed.item, weight: 1300, authored: .alwaysHidden)
+        #expect(
+            ObservedMembership.moves(
+                for: [resaved], dividers: after, since: baseline, alwaysHiddenShownAtDrop: false
+            ).isEmpty
+        )
+    }
+
+    @Test("A drop past the Always Hidden divider counts as Hidden while it was concealed at the drop")
+    func dropPastConcealedAlwaysHiddenCountsAsHidden() throws {
+        let dividers = try #require(ObservedMembership.Dividers(hidden: 300, alwaysHidden: 1000, visibleControl: 100))
+        let unassigned = ObservedMembership.Candidate(item: Self.item(0), weight: 200, authored: nil)
+        let placed = ObservedMembership.Candidate(item: Self.item(1), weight: 200, authored: .hidden)
+        let baseline = ObservedMembership.DragBaseline(candidates: [unassigned, placed], dividers: dividers)
+        // The divider is invisible left of the revealed Hidden icons, so a drop at their far left lands past it.
+        let dropped = [
+            ObservedMembership.Candidate(item: unassigned.item, weight: 1500, authored: nil),
+            ObservedMembership.Candidate(item: placed.item, weight: 1500, authored: .hidden),
+        ]
+        let moves = ObservedMembership.DividerReading.ordered(dividers).moves(
+            for: dropped, since: baseline, alwaysHiddenShownAtDrop: false
+        )
+        #expect(moves.map(\.section) == [.hidden], "the drop read as Always Hidden")
+        #expect(moves.first?.items.map(\.windowID) == [unassigned.item.windowID])
+    }
+
+    @Test("With Always Hidden revealed at the drop, the same drop lands in Always Hidden")
+    func dropPastRevealedAlwaysHiddenLandsInAlwaysHidden() throws {
+        let dividers = try #require(ObservedMembership.Dividers(hidden: 300, alwaysHidden: 1000, visibleControl: 100))
+        let before = ObservedMembership.Candidate(item: Self.item(0), weight: 200, authored: nil)
+        let baseline = ObservedMembership.DragBaseline(candidates: [before], dividers: dividers)
+        let dropped = ObservedMembership.Candidate(item: before.item, weight: 1500, authored: nil)
+        let moves = ObservedMembership.moves(
+            for: [dropped], dividers: dividers, since: baseline, alwaysHiddenShownAtDrop: true
+        )
+        #expect(moves.map(\.section) == [.alwaysHidden])
+    }
+
+    @Test("A drop among Always Hidden icons revealed during the drag lands in Always Hidden")
+    func dropAfterMidDragRevealLandsInAlwaysHidden() throws {
+        let dividers = try #require(ObservedMembership.Dividers(hidden: 300, alwaysHidden: 1000, visibleControl: 100))
+        // The drag started with only Hidden revealed; the user revealed Always Hidden while holding it.
+        let unassigned = ObservedMembership.Candidate(item: Self.item(0), weight: 200, authored: nil)
+        let carriedOut = ObservedMembership.Candidate(item: Self.item(1), weight: 1200, authored: .alwaysHidden)
+        let baseline = ObservedMembership.DragBaseline(candidates: [unassigned, carriedOut], dividers: dividers)
+        let after = [
+            ObservedMembership.Candidate(item: unassigned.item, weight: 1500, authored: nil),
+            ObservedMembership.Candidate(item: carriedOut.item, weight: 200, authored: .alwaysHidden),
+        ]
+        let moves = ObservedMembership.moves(
+            for: after, dividers: dividers, since: baseline, alwaysHiddenShownAtDrop: true
+        )
+        #expect(moves.map(\.section) == [.alwaysHidden, .visible])
+        #expect(moves.first?.items.map(\.windowID) == [unassigned.item.windowID])
+        #expect(moves.last?.items.map(\.windowID) == [carriedOut.item.windowID])
+    }
+
+    @Test("Without the drop's visibility, a weight past the Always Hidden divider still adopts Always Hidden")
+    func withoutDropVisibilityAlwaysHiddenIsAdopted() throws {
+        let dividers = try #require(ObservedMembership.Dividers(hidden: 300, alwaysHidden: 1000, visibleControl: 100))
+        let candidates = [
+            ObservedMembership.Candidate(item: Self.item(0), weight: 1500, authored: nil),
+            ObservedMembership.Candidate(item: Self.item(1), weight: 1500, authored: .hidden),
+        ]
+        let moves = ObservedMembership.moves(for: candidates, dividers: dividers)
+        #expect(moves.map(\.section) == [.alwaysHidden])
+        #expect(moves.first?.items.map(\.windowID) == candidates.map(\.item.windowID))
+    }
+
     @Test("An item the drag's start did not see never moves")
     func unseenItemStays() throws {
         let dividers = try #require(ObservedMembership.Dividers(hidden: 300, alwaysHidden: 1000, visibleControl: 100))
