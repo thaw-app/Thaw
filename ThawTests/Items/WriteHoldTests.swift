@@ -53,3 +53,14 @@ struct WriteHoldTests {
         #expect(all.heldChecks == Set(WriteHold.Check.allCases))
     }
 }
+
+/// The normalization pass rechecks reveal state after taking the repair lane, so a reveal that
+/// starts during its waits rearms it instead of being written over.
+@Suite("Structural normalization holds")
+struct StructuralNormalizationHoldsTests {
+    @Test("The checks after lane admission include both reveal checks")
+    func afterAdmissionCoversRevealState() {
+        #expect(StructuralNormalizationHolds.afterAdmission.contains(.sectionRevealed))
+        #expect(StructuralNormalizationHolds.afterAdmission.contains(.revealTransitionActive))
+    }
+}

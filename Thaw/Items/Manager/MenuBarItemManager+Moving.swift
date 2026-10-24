@@ -622,7 +622,7 @@ extension MenuBarItemManager {
             // laid from the old sections and put the dropped item back. The
             // reading schedules this pass again once it is done.
             guard manualMembershipTask == nil else { return }
-            guard WriteHold.first([.layoutPublicationStale, .sectionRevealed, .revealTransitionActive], in: situation) == nil else {
+            guard WriteHold.first(StructuralNormalizationHolds.beforeAdmission, in: situation) == nil else {
                 rearm()
                 return
             }
@@ -650,7 +650,7 @@ extension MenuBarItemManager {
             // schedules the pass again once it is done.
             let admitted = structuralNormalizationSituation(appState: appState)
             guard WriteHold.first([.userDragging, .membershipReadPending], in: admitted) == nil else { return }
-            guard layoutPublication.canPublish(generation: layoutPublication.generation),
+            guard WriteHold.first(StructuralNormalizationHolds.afterAdmission, in: admitted) == nil,
                   ControlResortHold.allowsResort(for: "structural normalization", .init(of: self))
             else {
                 rearm()

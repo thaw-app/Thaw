@@ -76,3 +76,24 @@ nonisolated enum WriteHold {
         return checks.first { held.contains($0) }
     }
 }
+
+/// The hold check lists the structural normalization pass evaluates, in the
+/// order the pass checks them.
+nonisolated enum StructuralNormalizationHolds {
+    /// Checked after the debounce, before the cooldown waits and repair-lane
+    /// admission. A hold rearms the pass, bounded.
+    static let beforeAdmission: [WriteHold.Check] = [
+        .layoutPublicationStale,
+        .sectionRevealed,
+        .revealTransitionActive,
+    ]
+
+    /// Rechecked after lane admission, before the pass writes. A hold rearms
+    /// the pass, bounded. The control-resort hold is checked apart from this
+    /// list so its read stays where the pass always made it.
+    static let afterAdmission: [WriteHold.Check] = [
+        .layoutPublicationStale,
+        .sectionRevealed,
+        .revealTransitionActive,
+    ]
+}
