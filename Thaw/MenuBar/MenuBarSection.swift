@@ -375,15 +375,10 @@ final class MenuBarSection {
     /// Pointer activity in either bar defers rehide.
     private func isMouseInsideActiveArea() -> Bool {
         guard let appState else { return false }
-        if let screen = appState.hidEventManager.bestScreen(appState: appState),
-           appState.hidEventManager.isMouseInsideMenuBarHoverBand(appState: appState, screen: screen)
-        {
-            return true
-        }
-        if appState.hidEventManager.isMouseInsideThawBar(appState: appState) {
-            return true
-        }
-        return false
+        let hidEventManager = appState.hidEventManager
+        return NSScreen.screens.contains {
+            hidEventManager.isMouseInsideMenuBarHoverBand(appState: appState, screen: $0)
+        } || hidEventManager.isMouseInsideThawBar(appState: appState)
     }
 
     private func startRehideChecks() {
@@ -413,18 +408,8 @@ final class MenuBarSection {
                 guard now - Context.lastTime.withLock({ $0 }) > 0.05 else { return event }
                 Context.lastTime.withLock { $0 = now }
 
-                guard
-                    let self,
-                    let appState,
-                    let screen = NSScreen.main
-                else {
-                    return event
-                }
-                let mouseInActiveArea =
-                    NSEvent.mouseLocation.y >= screen.visibleFrame.maxY ||
-                    appState.hidEventManager.isMouseInsideThawBar(appState: appState)
-
-                if !mouseInActiveArea {
+                guard let self, appState != nil else { return event }
+                if !isMouseInsideActiveArea() {
                     if rehideTask == nil {
                         rehideTask = makeRehideTask(interval: configuration.rehideInterval) { [weak self] in
                             self?.diagLog.debug("Open menu detected - restarting timed rehide task")
