@@ -144,12 +144,16 @@ extension MenuBarItemManager {
         UserDefaults.standard.set(savedSectionOrder, forKey: key)
     }
 
-    /// Hands an accepted mirror to the controller, then keeps it as Thaw's own saved order when it differs.
+    /// Hands a mirror to the controller and adopts its committed order, since it may refuse membership changes.
     func adoptMirroredOrder(
         _ resolved: [String: [String]],
         controller: (any MenuBarSectionControlling)?
     ) {
-        (controller as? any ObservedOrderRecording)?.recordObservedOrder(OrderRecording.observedOrder(from: resolved))
+        if let controller, let recorder = controller as? any ObservedOrderRecording {
+            recorder.recordObservedOrder(OrderRecording.observedOrder(from: resolved))
+            adoptControllerOrder(from: controller)
+            return
+        }
         guard resolved != savedSectionOrder else { return }
         savedSectionOrder = resolved
         persistSavedSectionOrder()

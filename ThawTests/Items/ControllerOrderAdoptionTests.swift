@@ -42,6 +42,38 @@ struct ControllerOrderAdoptionTests {
         #expect(saved == ["visible": ["a", "b"], "alwaysHidden": ["c"]])
     }
 
+    @Test("A mirror keeps the controller's membership even when Thaw already holds the proposal", arguments: [false, true])
+    func mirrorAdoptsCommittedOrder(reordersHidden: Bool) {
+        preservingSavedOrder {
+            let controller = RecordingSectionController(order: [.hidden: ["b", "c"], .alwaysHidden: ["a"]])
+            let manager = MenuBarItemManager()
+            // With Always Hidden off, the cache reports its item among Hidden's icons.
+            let proposal = ["hidden": reordersHidden ? ["a", "c", "b"] : ["a", "b", "c"]]
+            manager.savedSectionOrder = proposal
+
+            manager.adoptMirroredOrder(proposal, controller: controller)
+
+            let expected = ["hidden": reordersHidden ? ["c", "b"] : ["b", "c"], "alwaysHidden": ["a"]]
+            #expect(controller.sectionItemOrder[.alwaysHidden] == ["a"])
+            #expect(controller.observedCommits == (reordersHidden ? 1 : 0))
+            #expect(manager.savedSectionOrder == expected)
+            #expect(UserDefaults.standard.dictionary(forKey: Self.orderKey) as? [String: [String]] == expected)
+        }
+    }
+
+    @Test("Without an order-recording controller, a mirror keeps the proposed order", arguments: [false, true])
+    func mirrorWithoutRecorderKeepsProposal(hasController: Bool) {
+        preservingSavedOrder {
+            let manager = MenuBarItemManager()
+            let proposal = ["hidden": ["a", "b"]]
+
+            manager.adoptMirroredOrder(proposal, controller: hasController ? InertSectionController() : nil)
+
+            #expect(manager.savedSectionOrder == proposal)
+            #expect(UserDefaults.standard.dictionary(forKey: Self.orderKey) as? [String: [String]] == proposal)
+        }
+    }
+
     @Test("A profile apply leaves Thaw holding the order the controller normalized")
     func profileApplyAdoptsNormalizedOrder() {
         preservingSavedOrder {
