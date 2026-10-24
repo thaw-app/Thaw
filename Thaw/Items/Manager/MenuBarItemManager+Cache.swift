@@ -475,39 +475,17 @@ extension MenuBarItemManager {
         }
     }
 
-    /// macOS 27 exposes neither AX elements nor windows for zero-length dividers; synthesize them rather than clearing the cache.
-    /// Place dividers at the display's leading edge so real items classify as visible; include always-hidden only when enabled.
-    private func synthesizedControlItemPair(
-        displayID: CGDirectDisplayID?,
-        hiddenControlItemWID: CGWindowID?,
-        alwaysHiddenControlItemWID: CGWindowID?
-    ) -> ControlItemPair {
-        let ourPID = ProcessInfo.processInfo.processIdentifier
-        let leadingX = displayID.map { CGDisplayBounds($0).minX } ?? (NSScreen.main?.frame.minX ?? 0)
-        let syntheticHidden = MenuBarItem(
-            tag: .hiddenControlItem,
-            windowID: hiddenControlItemWID ?? 0,
-            ownerPID: ourPID,
-            sourcePID: ourPID,
-            bounds: CGRect(x: leadingX, y: 0, width: 0, height: 0),
-            title: ControlItem.Identifier.hidden.rawValue,
-            isOnScreen: false
+    /// The dividers for a pass that works off the item cache, which drops them: the pair the last
+    /// walk found, otherwise stand-ins at the leading edge of the display the pass works on.
+    func cacheDividers(on displayID: CGDirectDisplayID? = nil) -> ControlItemPair {
+        let display = displayID ?? itemCache.displayID ?? Bridging.getActiveMenuBarDisplayID()
+        return CacheDividers.pair(
+            live: lastKnownControlItems,
+            // NSScreen.main is the screen with the key window, so it is only the last fallback.
+            leadingX: CacheDividers.leadingX(display: display.map { CGDisplayBounds($0) }, mainScreen: NSScreen.main?.frame),
+            alwaysHiddenEnabled: configuration.isAlwaysHiddenSectionEnabled,
+            ownerPID: ProcessInfo.processInfo.processIdentifier
         )
-        let syntheticAlwaysHidden: MenuBarItem? = {
-            guard configuration.isAlwaysHiddenSectionEnabled == true else {
-                return nil
-            }
-            return MenuBarItem(
-                tag: .alwaysHiddenControlItem,
-                windowID: alwaysHiddenControlItemWID ?? 0,
-                ownerPID: ourPID,
-                sourcePID: ourPID,
-                bounds: CGRect(x: leadingX, y: 0, width: 0, height: 0),
-                title: ControlItem.Identifier.alwaysHidden.rawValue,
-                isOnScreen: false
-            )
-        }()
-        return ControlItemPair(hidden: syntheticHidden, alwaysHidden: syntheticAlwaysHidden)
     }
 
     /// Retain the last good cache across control publication gaps to avoid vanishing icons and losing recovery snapshots.
@@ -552,11 +530,10 @@ extension MenuBarItemManager {
         }
 
         if MenuBarBackendProvider.current.canSynthesizeControlItems(snapshotItems: items) {
-            let controlItems = synthesizedControlItemPair(
-                displayID: displayID,
-                hiddenControlItemWID: hiddenControlItemWID,
-                alwaysHiddenControlItemWID: alwaysHiddenControlItemWID
-            )
+            // macOS 27 exposes neither AX elements nor windows for zero-length dividers. This walk
+            // found none, so no live pair is known any more, and the pass gets stand-ins.
+            lastKnownControlItems = nil
+            let controlItems = cacheDividers(on: displayID)
             await MainActor.run {
                 self.areControlItemsMissing = false
             }
@@ -823,7 +800,7 @@ extension MenuBarItemManager {
 
         // Partial inventory can populate the editor, but cannot authorize
         // boundary repairs or replace saved order with retained geometry.
-        lastKnownControlItems = controlItems
+        lastKnownControlItems = CacheDividers.live(controlItems)
         if !inventory.hasFreshKnownInventory {
             await uncheckedCacheItems(items: items, controlItems: controlItems, displayID: displayID, publicationGeneration: publicationGeneration, observationOnly: true)
             return
@@ -866,7 +843,7 @@ extension MenuBarItemManager {
 
         // Retain resolved dividers for synchronous drop-handler pre-seating, which cannot afford another AX walk.
         await MainActor.run {
-            self.lastKnownControlItems = controlItems
+            self.lastKnownControlItems = CacheDividers.live(controlItems)
         }
 
         // applySavedLayout owns cooldowns; profile apply marks restoring and recaches, while rejection leaves current-cache persistence enabled.

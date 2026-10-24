@@ -83,8 +83,12 @@ enum ControlOrderRules {
     /// Whether macOS has parked the Hidden divider off the bar, as it does while
     /// a display reconnects. Which side of a parked divider an item reads on is
     /// meaningless, so no order judged against it may be written.
+    ///
+    /// A stand-in from CacheDividers is never parked: its empty frame only says
+    /// that the cache dropped the divider, not where macOS put it.
     static func dividerIsOffTheBar(_ controlItems: ControlItemPair, among items: [MenuBarItem], displays: [CGRect] = MenuBarItemManager.activeDisplayBounds()) -> Bool {
-        controlItems.hidden.isParkedOffMenuBarBand(among: items, screens: displays)
+        !CacheDividers.isStandIn(controlItems.hidden)
+            && controlItems.hidden.isParkedOffMenuBarBand(among: items, screens: displays)
     }
 
     /// Whether item frames are stated against more than one display's bar.

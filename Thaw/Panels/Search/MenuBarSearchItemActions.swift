@@ -153,7 +153,7 @@ enum MenuBarSearchItemActions {
         let observed = MoveLanding.observedSection(
             of: current,
             liveItems: manager.itemCache.managedItems,
-            dividers: manager.lastKnownControlItems
+            dividers: manager.cacheDividers()
         )
         let message = MoveResultMessage.make(
             itemName: item.displayName,

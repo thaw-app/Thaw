@@ -89,4 +89,75 @@ struct SettledDividersTests {
     func noDividersIsNil() {
         #expect(ControlOrderRules.withDividers(cached, nil) == nil)
     }
+
+    @Test("With the cache's dividers dropped, the pre-reveal divider check passes")
+    func preRevealCheckPassesWithoutCachedDividers() {
+        let display = CGMainDisplayID()
+        let bounds = CGDisplayBounds(display)
+        let items = [
+            Self.item("A", x: bounds.maxX - 300, windowID: 1),
+            Self.item("B", x: bounds.maxX - 200, windowID: 2),
+        ]
+        var cache = MenuBarItemCache(displayID: display)
+        cache[.visible] = items
+        let manager = MenuBarItemManager()
+        manager.itemCache = cache
+        manager.lastKnownControlItems = nil
+
+        let dividers = manager.cacheDividers()
+
+        #expect(!ControlOrderRules.dividerIsOffTheBar(dividers, among: manager.managedItems, displays: [bounds]))
+        #expect(dividers.hidden.bounds.minX == bounds.minX)
+        #expect(manager.lastKnownControlItems == nil)
+    }
+
+    @Test("A stand-in pair is never kept as the last walk's dividers")
+    func standInsAreNeverKept() throws {
+        let standIns = CacheDividers.standIns(leadingX: 0, alwaysHiddenEnabled: true, ownerPID: 501)
+        #expect(CacheDividers.live(standIns) == nil)
+        let walked = try #require(CacheDividers.live(ControlItemPair(hidden: hidden, alwaysHidden: alwaysHidden)))
+        #expect(walked.hidden.windowID == 10)
+        #expect(walked.alwaysHidden?.windowID == 11)
+    }
+
+    @Test("Every cache-based pass gets the same pair for the same cache")
+    func oneSourceForEveryPass() {
+        let display = CGMainDisplayID()
+        var cache = MenuBarItemCache(displayID: display)
+        cache[.visible] = cached
+        let manager = MenuBarItemManager()
+        manager.itemCache = cache
+
+        manager.lastKnownControlItems = nil
+        let walkPass = manager.cacheDividers(on: display)
+        let cachePass = manager.cacheDividers()
+        #expect(walkPass.hidden == cachePass.hidden)
+        #expect(walkPass.alwaysHidden == cachePass.alwaysHidden)
+        #expect(CacheDividers.isStandIn(cachePass.hidden))
+
+        manager.lastKnownControlItems = ControlItemPair(hidden: hidden, alwaysHidden: alwaysHidden)
+        #expect(manager.cacheDividers(on: display).hidden == hidden)
+        #expect(manager.cacheDividers().hidden == hidden)
+        #expect(manager.cacheDividers().alwaysHidden == alwaysHidden)
+    }
+
+    @Test("Stand-ins sit at the leading edge of the pass's display, the main screen only as a fallback")
+    func standInsFollowThePassDisplay() {
+        let secondary = CGRect(x: 1920, y: 0, width: 1920, height: 1080)
+        let main = CGRect(x: 0, y: 0, width: 1920, height: 1080)
+        #expect(CacheDividers.leadingX(display: secondary, mainScreen: main) == 1920)
+        #expect(CacheDividers.leadingX(display: nil, mainScreen: main) == 0)
+        #expect(CacheDividers.leadingX(display: nil, mainScreen: nil) == 0)
+        let standIns = CacheDividers.standIns(leadingX: 1920, alwaysHiddenEnabled: false, ownerPID: 501)
+        #expect(standIns.hidden.bounds.minX == 1920)
+        #expect(standIns.alwaysHidden == nil)
+    }
+
+    @Test("Stand-ins added to the cache are judged like the walked pair")
+    func standInsJoinTheCachedItems() throws {
+        let standIns = CacheDividers.standIns(leadingX: 0, alwaysHiddenEnabled: true, ownerPID: 501)
+        let result = try #require(ControlOrderRules.withDividers(cached, standIns))
+        #expect(result.items.map(\.windowID) == [1, 2, CacheDividers.standInHiddenWindowID, CacheDividers.standInAlwaysHiddenWindowID])
+        #expect(!ControlOrderRules.dividerIsOffTheBar(result.controlItems, among: result.items, displays: []))
+    }
 }

@@ -95,7 +95,7 @@ extension MenuBarItemManager {
         let weights = StoredWeights(among: items)
         guard weights.isAvailable else { return nil }
         let weight = weights.weight(of:)
-        let found = ObservedMembership.DividerWeights(among: items, dividers: lastKnownControlItems, weight: weight)
+        let found = ObservedMembership.DividerWeights(among: items, dividers: cacheDividers(), weight: weight)
         let experimentalSystemItemHiding = configuration.enableExperimentalSystemItemHiding
         let candidates = ObservedMembership.candidates(
             among: items,

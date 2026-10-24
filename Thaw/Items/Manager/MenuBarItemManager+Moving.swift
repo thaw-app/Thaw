@@ -685,7 +685,7 @@ extension MenuBarItemManager {
                 }
                 return
             }
-            if let (controlItems, withDividers) = ControlOrderRules.withDividers(settledItems, lastKnownControlItems),
+            if let (controlItems, withDividers) = ControlOrderRules.withDividers(settledItems, cacheDividers()),
                restoreStructuralControlOrder(controlItems: controlItems, items: withDividers, permit: StoreWritePermit(hold)) {
                 moveActivity.noteMoveOperation()
             }
@@ -790,44 +790,8 @@ extension MenuBarItemManager {
         }
 
         let cachedItems = itemCache.managedItems
-        let controlItemWindowIDs = liveControlItemWindowIDs()
-        let discoveredControlItems = controlItemPair(in: cachedItems)
-        let controlItems: ControlItemPair
-        if let discoveredControlItems {
-            controlItems = discoveredControlItems
-        } else {
-            // Collapsed dividers have no AX element on macOS 27; the store
-            // resolves these synthetic stand-ins by tag and title.
-            let ourPID = ProcessInfo.processInfo.processIdentifier
-            let leadingX = itemCache.displayID.map { CGDisplayBounds($0).minX }
-                ?? (NSScreen.main?.frame.minX ?? 0)
-            let hidden = MenuBarItem(
-                tag: .hiddenControlItem,
-                windowID: controlItemWindowIDs.hidden ?? 0,
-                ownerPID: ourPID,
-                sourcePID: ourPID,
-                bounds: CGRect(x: leadingX, y: 0, width: 0, height: 0),
-                title: ControlItem.Identifier.hidden.rawValue,
-                isOnScreen: false
-            )
-            let alwaysHidden: MenuBarItem? = if configuration.isAlwaysHiddenSectionEnabled {
-                MenuBarItem(
-                    tag: .alwaysHiddenControlItem,
-                    windowID: controlItemWindowIDs.alwaysHidden ?? 0,
-                    ownerPID: ourPID,
-                    sourcePID: ourPID,
-                    bounds: CGRect(x: leadingX, y: 0, width: 0, height: 0),
-                    title: ControlItem.Identifier.alwaysHidden.rawValue,
-                    isOnScreen: false
-                )
-            } else {
-                nil
-            }
-            controlItems = ControlItemPair(
-                hidden: hidden,
-                alwaysHidden: alwaysHidden
-            )
-        }
+        // The cache never holds the dividers, so they come from the one source for cache-based passes.
+        let controlItems = cacheDividers()
 
         if !arrangementIsManual,
            repairs.writeNow(.preRevealOrder, cause: .revealStarting, { permit in
@@ -1413,7 +1377,7 @@ extension MenuBarItemManager {
         for section: MenuBarSection.Name,
         after predecessor: MenuBarItem?
     ) -> MoveDestination? {
-        guard let controlItems = lastKnownControlItems else { return nil }
+        let controlItems = cacheDividers()
         let bandBoundary: MoveDestination = switch section {
         case .visible:
             .rightOfItem(controlItems.hidden)
@@ -1443,9 +1407,10 @@ extension MenuBarItemManager {
         after predecessor: MenuBarItem? = nil,
         permit: borrowing StoreWritePermit
     ) -> Bool {
-        guard let appState, let controlItems = lastKnownControlItems,
+        guard let appState,
               let destination = sectionTransitionDestination(for: section, after: predecessor)
         else { return false }
+        let controlItems = cacheDividers()
         var liveItems = managedItems
         liveItems.append(controlItems.hidden)
         if let alwaysHidden = controlItems.alwaysHidden {
@@ -2521,7 +2486,7 @@ extension MenuBarItemManager {
                 controller: controller,
                 nudgeRan: nudgeRan
             )
-        } else if !SettledSectionOrder.isStored(section: section, desiredOrder: desiredOrder, liveItems: liveItems, dividers: lastKnownControlItems) {
+        } else if !SettledSectionOrder.isStored(section: section, desiredOrder: desiredOrder, liveItems: liveItems, dividers: cacheDividers()) {
             let trace = tracePositionWrite(
                 context: "section apply \(section.logString) reason=\(reason)",
                 items: liveItems,

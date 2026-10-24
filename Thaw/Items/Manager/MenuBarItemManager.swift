@@ -83,11 +83,11 @@ final class MenuBarItemManager {
         itemCache.managedItems
     }
 
-    /// The dividers as of the last cache walk.
+    /// The dividers as the last cache walk found them, or nil when it found none.
     ///
     /// MenuBarItemCache does not retain them, its initializer removes them
-    /// from the item list, so callers that need a divider outside a walk
-    /// would otherwise have to enumerate the bar again to find one.
+    /// from the item list. It never holds stand-ins, so passes that need a
+    /// divider outside a walk read cacheDividers(on:) instead.
     var lastKnownControlItems: ControlItemPair?
 
     @ObservationIgnored var lastVisibleControlDiagnosticState: String?
