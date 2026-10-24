@@ -22,9 +22,6 @@ nonisolated enum ClickTargetCheck {
         case tooWide
     }
 
-    /// The same limits MenuBarItem.isParkedOffMenuBarBand and the capture band use.
-    static let maxBarMidY = MenuBarItem.maxBarBandMidY
-
     /// The width of the bar bounds sits on: the widest display its centre falls on, or the widest
     /// display when it falls on none. Zero with no display.
     static func barWidth(for bounds: CGRect, displays: [CGRect]) -> CGFloat {
@@ -38,12 +35,14 @@ nonisolated enum ClickTargetCheck {
     }
 
     /// - Parameter barWidth: The width of the bar the frame sits on; zero skips the width check.
-    static func rejection(for bounds: CGRect, barWidth: CGFloat) -> Rejection? {
+    static func rejection(for bounds: CGRect, barWidth: CGFloat, displays: [CGRect]) -> Rejection? {
         guard !bounds.isNull, bounds.width.isFinite, bounds.height.isFinite,
               bounds.width > 0, bounds.height > 0
         else { return .empty }
         if bounds.origin.x == -1 { return .parked }
-        if bounds.midY > maxBarMidY { return .offBar }
+        if MenuBarItemGeometry.barScreen(holding: bounds, among: displays) == nil {
+            return .offBar
+        }
         if barWidth > 0, bounds.width > barWidth / 2 { return .tooWide }
         return nil
     }

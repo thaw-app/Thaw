@@ -14,10 +14,6 @@ extension HIDEventManager {
     /// Anything wider is an expanded section divider and is excluded.
     static nonisolated let maxReasonableItemWidth: CGFloat = 500
 
-    /// macOS 27 concealed items can keep phantom AX frames far below the bar;
-    /// those must not count as items in hit-testing.
-    static nonisolated let maxMenuBarItemMidY: CGFloat = MenuBarItemGeometry.maxOnBarMidY
-
     /// On macOS 27 synthetic window IDs have no live CG window, so cached AX
     /// bounds are trusted. Item frames are reported against one bar, so each
     /// entry is rebased onto destinationDisplay first (see MirroredBarGeometry).
@@ -109,12 +105,13 @@ extension HIDEventManager {
     static nonisolated func shouldIncludeItemInMenuBarBoundsLookup(
         _ item: MenuBarItem,
         section: MenuBarSection.Name?,
-        effectivelyConcealed: Set<String> = []
+        effectivelyConcealed: Set<String> = [],
+        screens: [CGRect]
     ) -> Bool {
         guard item.bounds.width > 0, item.bounds.width <= maxReasonableItemWidth else {
             return false
         }
-        guard item.bounds.midY <= maxMenuBarItemMidY else {
+        guard MenuBarItemGeometry.barScreen(holding: item.bounds, among: screens) != nil else {
             return false
         }
         if item.tag.isNativeOverflowControl {
@@ -159,15 +156,17 @@ extension HIDEventManager {
 
     /// Reads the concealed set once per rebuild, not once per item.
     private func boundsLookupInclusionFilter() -> (MenuBarItem) -> Bool {
+        let screens = MenuBarItemManager.activeDisplayBounds()
         guard let controller = appState?.menuBarManager.sectionController else {
-            return { Self.shouldIncludeItemInMenuBarBoundsLookup($0, section: nil) }
+            return { Self.shouldIncludeItemInMenuBarBoundsLookup($0, section: nil, screens: screens) }
         }
         let effectivelyConcealed = controller.effectivelyConcealedIdentifiers
         return { item in
             Self.shouldIncludeItemInMenuBarBoundsLookup(
                 item,
                 section: controller.section(for: item),
-                effectivelyConcealed: effectivelyConcealed
+                effectivelyConcealed: effectivelyConcealed,
+                screens: screens
             )
         }
     }

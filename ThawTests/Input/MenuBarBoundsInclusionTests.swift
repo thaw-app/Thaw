@@ -19,9 +19,29 @@ import Testing
 /// behind it.
 @Suite("Menu bar bounds inclusion")
 struct MenuBarBoundsInclusionTests {
+    private static let screens = [
+        CGRect(x: 0, y: 0, width: 2560, height: 1440),
+        CGRect(x: 2560, y: 290, width: 1710, height: 1107),
+    ]
+
+    @Test("A lower display's bar counts as occupied, but concealed and off-bar frames do not")
+    func lowerDisplayInclusion() {
+        let seated = item(bundle: "com.example.app", title: "Alpha", x: 3600, y: 295)
+        let parked = item(bundle: "com.example.app", title: "Alpha", x: 3600, y: 1068)
+        #expect(HIDEventManager.shouldIncludeItemInMenuBarBoundsLookup(seated, section: .visible, screens: Self.screens))
+        #expect(HIDEventManager.shouldIncludeItemInMenuBarBoundsLookup(seated, section: nil, screens: Self.screens))
+        #expect(HIDEventManager.shouldIncludeItemInMenuBarBoundsLookup(seated, section: .hidden, screens: Self.screens))
+        let concealedIncluded = HIDEventManager.shouldIncludeItemInMenuBarBoundsLookup(
+            seated, section: .hidden, effectivelyConcealed: [canonicalIdentifier(seated)], screens: Self.screens
+        )
+        #expect(!concealedIncluded)
+        #expect(!HIDEventManager.shouldIncludeItemInMenuBarBoundsLookup(parked, section: .visible, screens: Self.screens))
+    }
+
     private func item(
         bundle: String,
         title: String,
+        x: CGFloat = 600,
         y: CGFloat = 0,
         width: CGFloat = 24
     ) -> MenuBarItem {
@@ -30,7 +50,7 @@ struct MenuBarBoundsInclusionTests {
             windowID: 1,
             ownerPID: 100,
             sourcePID: 200,
-            bounds: CGRect(x: 600, y: y, width: width, height: 24),
+            bounds: CGRect(x: x, y: y, width: width, height: 24),
             title: title,
             isOnScreen: true
         )
@@ -44,7 +64,7 @@ struct MenuBarBoundsInclusionTests {
     func visibleItemIncluded() {
         let item = item(bundle: "com.example.app", title: "Alpha")
         #expect(
-            HIDEventManager.shouldIncludeItemInMenuBarBoundsLookup(item, section: .visible)
+            HIDEventManager.shouldIncludeItemInMenuBarBoundsLookup(item, section: .visible, screens: Self.screens)
         )
     }
 
@@ -54,7 +74,8 @@ struct MenuBarBoundsInclusionTests {
         let included = HIDEventManager.shouldIncludeItemInMenuBarBoundsLookup(
             item,
             section: .hidden,
-            effectivelyConcealed: [canonicalIdentifier(item)]
+            effectivelyConcealed: [canonicalIdentifier(item)],
+            screens: Self.screens
         )
         #expect(!included)
     }
@@ -66,7 +87,8 @@ struct MenuBarBoundsInclusionTests {
             HIDEventManager.shouldIncludeItemInMenuBarBoundsLookup(
                 item,
                 section: .hidden,
-                effectivelyConcealed: []
+                effectivelyConcealed: [],
+                screens: Self.screens
             )
         )
     }
@@ -78,7 +100,8 @@ struct MenuBarBoundsInclusionTests {
             HIDEventManager.shouldIncludeItemInMenuBarBoundsLookup(
                 item,
                 section: .alwaysHidden,
-                effectivelyConcealed: []
+                effectivelyConcealed: [],
+                screens: Self.screens
             )
         )
     }
@@ -90,7 +113,8 @@ struct MenuBarBoundsInclusionTests {
             HIDEventManager.shouldIncludeItemInMenuBarBoundsLookup(
                 item,
                 section: .hidden,
-                effectivelyConcealed: [canonicalIdentifier(item)]
+                effectivelyConcealed: [canonicalIdentifier(item)],
+                screens: Self.screens
             )
         )
     }
@@ -101,7 +125,8 @@ struct MenuBarBoundsInclusionTests {
         let included = HIDEventManager.shouldIncludeItemInMenuBarBoundsLookup(
             parked,
             section: .hidden,
-            effectivelyConcealed: []
+            effectivelyConcealed: [],
+            screens: Self.screens
         )
         #expect(!included)
     }

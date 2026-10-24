@@ -110,6 +110,20 @@ struct ParkedItemsTests {
         #expect(reading.parkedIDs == [5, 6])
     }
 
+    @Test("Only a Visible control off its display's bar needs stranded-control recovery")
+    func strandedVisibleControlUsesItsDisplay() {
+        let main = Self.item(.visibleControlItem, y: 3, windowID: 1)
+        let lower = Self.item(.visibleControlItem, x: 3722.5, y: 295, windowID: 2)
+        let parked = Self.item(.visibleControlItem, x: 3722.5, y: 1068, windowID: 3)
+        let sentinel = Self.item(.visibleControlItem, x: -1, y: 295, windowID: 4)
+        let app = Self.item(Self.appTag("A"), x: 3600, y: 1068, windowID: 5)
+        #expect(!MenuBarItemGeometry.isStrandedVisibleControl(main, screens: Self.screens))
+        #expect(!MenuBarItemGeometry.isStrandedVisibleControl(lower, screens: Self.screens))
+        #expect(MenuBarItemGeometry.isStrandedVisibleControl(parked, screens: Self.screens))
+        #expect(MenuBarItemGeometry.isStrandedVisibleControl(sentinel, screens: Self.screens))
+        #expect(!MenuBarItemGeometry.isStrandedVisibleControl(app, screens: Self.screens))
+    }
+
     @Test("The repair identity is the item's identifier and owning process")
     func repairIdentityFollowsIdentifierAndOwner() {
         let first = Self.item(Self.appTag("A"), y: 0, windowID: 2)

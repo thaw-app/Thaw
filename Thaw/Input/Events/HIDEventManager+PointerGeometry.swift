@@ -122,13 +122,12 @@ extension HIDEventManager {
                 on: context.destination,
                 displayBounds: context.all,
                 laneMinX: context.laneMinX
-            ), bounds.contains(mouseLocation) else {
-                return false
-            }
+            ), bounds.contains(mouseLocation) else { return false }
             return Self.shouldIncludeItemInMenuBarBoundsLookup(
                 item,
                 section: controller.section(for: item),
-                effectivelyConcealed: effectivelyConcealed
+                effectivelyConcealed: effectivelyConcealed,
+                screens: context.all
             )
         }
     }
@@ -248,13 +247,12 @@ extension HIDEventManager {
                 on: context.destination,
                 displayBounds: context.all,
                 laneMinX: context.laneMinX
-            ), bounds.contains(location) else {
-                return false
-            }
+            ), bounds.contains(location) else { return false }
             return Self.shouldIncludeItemInMenuBarBoundsLookup(
                 item,
                 section: controller.section(for: item),
-                effectivelyConcealed: effectivelyConcealed
+                effectivelyConcealed: effectivelyConcealed,
+                screens: context.all
             )
         }
     }

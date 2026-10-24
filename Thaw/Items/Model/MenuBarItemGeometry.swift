@@ -37,6 +37,12 @@ nonisolated enum MenuBarItemGeometry {
     /// item's sliver, not a glyph anything could be drawn under.
     static let phantomFramePeerMinimumWidth: CGFloat = 8
 
+    /// Whether the Visible control needs the Layout window's off-bar recovery path.
+    static func isStrandedVisibleControl(_ item: MenuBarItem, screens: [CGRect]) -> Bool {
+        item.tag.matchesVisibleControlItem
+            && barScreen(holding: item.bounds, among: screens) == nil
+    }
+
     /// The screen, of screenFrames in CG-global points, whose menu bar holds
     /// frame, or nil when frame is on no bar.
     ///

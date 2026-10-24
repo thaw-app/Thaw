@@ -12,25 +12,40 @@ import Testing
 @testable import Thaw
 
 struct ClickSafetyTests {
+    private static let screens = [
+        CGRect(x: 0, y: 0, width: 2560, height: 1440),
+        CGRect(x: 2560, y: 290, width: 1710, height: 1107),
+    ]
+
+    @Test("A lower bar is safe to click, while frames below it and host windows are refused")
+    func lowerDisplayClickSafety() {
+        let seated = CGRect(x: 3600, y: 295, width: 24, height: 24)
+        let parked = CGRect(x: 3600, y: 1068, width: 24, height: 24)
+        let host = CGRect(x: 2560, y: 295, width: 1000, height: 24)
+        #expect(ClickTargetCheck.rejection(for: seated, barWidth: 1710, displays: Self.screens) == nil)
+        #expect(ClickTargetCheck.rejection(for: parked, barWidth: 1710, displays: Self.screens) == .offBar)
+        #expect(ClickTargetCheck.rejection(for: host, barWidth: 1710, displays: Self.screens) == .tooWide)
+    }
+
     @Test
     func `a seated item frame is clicked`() {
-        #expect(ClickTargetCheck.rejection(for: CGRect(x: 1400, y: 0, width: 24, height: 30), barWidth: 1512) == nil)
+        #expect(ClickTargetCheck.rejection(for: CGRect(x: 1400, y: 0, width: 24, height: 30), barWidth: 1512, displays: Self.screens) == nil)
     }
 
     @Test
     func `parked, off-bar, empty and too-wide frames are refused`() {
-        #expect(ClickTargetCheck.rejection(for: CGRect(x: -1, y: 0, width: 24, height: 30), barWidth: 1512) == .parked)
-        #expect(ClickTargetCheck.rejection(for: CGRect(x: 7, y: 1068, width: 24, height: 30), barWidth: 1512) == .offBar)
-        #expect(ClickTargetCheck.rejection(for: .zero, barWidth: 1512) == .empty)
-        #expect(ClickTargetCheck.rejection(for: .null, barWidth: 1512) == .empty)
-        #expect(ClickTargetCheck.rejection(for: CGRect(x: 0, y: 0, width: 1512, height: 30), barWidth: 1512) == .tooWide)
+        #expect(ClickTargetCheck.rejection(for: CGRect(x: -1, y: 0, width: 24, height: 30), barWidth: 1512, displays: Self.screens) == .parked)
+        #expect(ClickTargetCheck.rejection(for: CGRect(x: 7, y: 1068, width: 24, height: 30), barWidth: 1512, displays: Self.screens) == .offBar)
+        #expect(ClickTargetCheck.rejection(for: .zero, barWidth: 1512, displays: Self.screens) == .empty)
+        #expect(ClickTargetCheck.rejection(for: .null, barWidth: 1512, displays: Self.screens) == .empty)
+        #expect(ClickTargetCheck.rejection(for: CGRect(x: 0, y: 0, width: 1512, height: 30), barWidth: 1512, displays: Self.screens) == .tooWide)
     }
 
     @Test
     func `a wide status item with text is clicked, and the width check needs a bar`() {
         let textItem = CGRect(x: 900, y: 0, width: 320, height: 30)
-        #expect(ClickTargetCheck.rejection(for: textItem, barWidth: 1512) == nil)
-        #expect(ClickTargetCheck.rejection(for: CGRect(x: 0, y: 0, width: 3000, height: 30), barWidth: 0) == nil)
+        #expect(ClickTargetCheck.rejection(for: textItem, barWidth: 1512, displays: Self.screens) == nil)
+        #expect(ClickTargetCheck.rejection(for: CGRect(x: 0, y: 0, width: 3000, height: 30), barWidth: 0, displays: Self.screens) == nil)
     }
 
     @Test
@@ -38,7 +53,7 @@ struct ClickSafetyTests {
         let displays = [CGRect(x: 0, y: 0, width: 1512, height: 982), CGRect(x: 1512, y: 0, width: 800, height: 600)]
         let textItem = CGRect(x: 900, y: 0, width: 450, height: 30)
         #expect(ClickTargetCheck.barWidth(for: textItem, displays: displays) == 1512)
-        #expect(ClickTargetCheck.rejection(for: textItem, barWidth: ClickTargetCheck.barWidth(for: textItem, displays: displays)) == nil)
+        #expect(ClickTargetCheck.rejection(for: textItem, barWidth: ClickTargetCheck.barWidth(for: textItem, displays: displays), displays: displays) == nil)
         #expect(ClickTargetCheck.barWidth(for: CGRect(x: 1700, y: 0, width: 24, height: 30), displays: displays) == 800)
         #expect(ClickTargetCheck.barWidth(for: CGRect(x: -400, y: 0, width: 24, height: 30), displays: displays) == 1512)
         #expect(ClickTargetCheck.barWidth(for: textItem, displays: []) == 0)
