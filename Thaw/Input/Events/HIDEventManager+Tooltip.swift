@@ -14,29 +14,15 @@ extension HIDEventManager {
     // MARK: Menu Bar Tooltips
 
     func handleMenuBarTooltip(appState: AppState, screen: NSScreen) {
-        guard ScreenCapture.hasCachedScreenRecordingPermission else {
+        guard ScreenCapture.hasCachedScreenRecordingPermission, configuration.showMenuBarTooltips else {
             return
         }
 
-        guard configuration.showMenuBarTooltips else {
-            return
-        }
-
-        guard isMouseInsideMenuBar(appState: appState, screen: screen) else {
-            dismissMenuBarTooltip()
-            return
-        }
-
-        guard let mouseLocation = MouseHelpers.locationCoreGraphics else {
-            dismissMenuBarTooltip()
-            return
-        }
-
-        // Cached bounds avoid per-event Window Server IPC.
-        let entries = windowBoundsLock.withLock { $0 }
-        let hoveredEntry = entries.first(where: { $0.bounds.contains(mouseLocation) })
-
-        guard let hoveredEntry else {
+        guard
+            isMouseInsideMenuBar(appState: appState, screen: screen),
+            let mouseLocation = MouseHelpers.locationCoreGraphics,
+            let hoveredEntry = tooltipTarget(at: mouseLocation)
+        else {
             dismissMenuBarTooltip()
             return
         }
@@ -50,7 +36,6 @@ extension HIDEventManager {
         dismissMenuBarTooltip()
         tooltipHoveredWindowID = hoveredID
 
-        let cachedBounds = hoveredEntry.bounds
         let delay = configuration.tooltipDelay
         tooltipTask = Task {
             if delay > 0 {
@@ -58,9 +43,8 @@ extension HIDEventManager {
             }
             try Task.checkCancellation()
 
-            // Re-read from the lock to pick up any cache rebuilds during the delay.
-            let freshEntries = windowBoundsLock.withLock { $0 }
-            let positionBounds = freshEntries.first(where: { $0.windowID == hoveredID })?.bounds ?? cachedBounds
+            // Re-read the cached bounds to pick up any cache rebuilds during the delay.
+            guard let target = tooltipTarget(at: mouseLocation), target.windowID == hoveredID else { return }
 
             let allItems = appState.itemManager.managedItems
             let displayName: String
@@ -75,11 +59,8 @@ extension HIDEventManager {
             }
 
             // Convert top-left Core Graphics bounds to bottom-left AppKit coordinates for the panel.
-            guard let primaryScreen = NSScreen.screens.first else { return }
-            let appKitOrigin = CGPoint(
-                x: positionBounds.midX,
-                y: primaryScreen.frame.height - positionBounds.maxY
-            )
+            guard let appKitBounds = NSScreen.cocoaRect(fromCG: target.bounds) else { return }
+            let appKitOrigin = CGPoint(x: appKitBounds.midX, y: appKitBounds.minY)
 
             CustomTooltipPanel.shared.show(
                 text: displayName,
@@ -88,6 +69,18 @@ extension HIDEventManager {
                 owner: "menuBar"
             )
         }
+    }
+
+    /// The drawn seat under the pointer, read from the cached bounds to avoid per-event Window Server IPC.
+    private func tooltipTarget(at mouseLocation: CGPoint) -> (windowID: CGWindowID, bounds: CGRect)? {
+        let context = Self.displayContext(for: mouseLocation)
+        return MenuBarTooltipGeometry.target(
+            at: mouseLocation,
+            entries: windowBoundsLock.withLock { $0 },
+            destinationDisplay: context.destination,
+            displayBounds: context.all,
+            laneMinX: context.laneMinX
+        )
     }
 
     /// Only dismisses panels owned by the menu bar tooltip handler.
