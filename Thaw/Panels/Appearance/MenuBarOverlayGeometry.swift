@@ -182,6 +182,8 @@ nonisolated enum MenuBarSplitPillGeometry {
         var section: (MenuBarItem) -> MenuBarSection.Name
         /// Whether the bar draws an item whatever its section says.
         var isDrawn: (MenuBarItem) -> Bool = { _ in false }
+        /// The CG frames of the displays whose bars an item may sit on.
+        var displayBounds: [CGRect] = BarAxis.liveDisplayBounds()
     }
 
     /// Picks drawable split-pill rectangles, preferring the last stable pair
@@ -305,7 +307,7 @@ nonisolated enum MenuBarSplitPillGeometry {
               !isHiddenSectionDivider,
               item.isOnScreen,
               !item.bounds.isEmpty,
-              !item.isParkedOffMenuBarBand(among: peers)
+              !item.isParkedOffMenuBarBand(among: peers, screens: context.displayBounds)
         else {
             return false
         }

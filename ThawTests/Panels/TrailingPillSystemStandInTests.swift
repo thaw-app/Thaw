@@ -14,12 +14,15 @@ import Testing
 /// The stand-in that keeps the split trailing pill at the display's trailing
 /// edge when the walk came back without any MenuBarAgent-published frame.
 struct TrailingPillSystemStandInTests {
+    private static let screenFrame = CGRect(x: 0, y: 0, width: 2177, height: 1407)
+    private let screenFrame = Self.screenFrame
+
+    /// The fixtures' display, so the result never depends on the Mac running the tests.
     private let context = MenuBarSplitPillGeometry.TrailingPillContext(
         revealedSection: nil,
-        section: { _ in .visible }
+        section: { _ in .visible },
+        displayBounds: [Self.screenFrame]
     )
-
-    private let screenFrame = CGRect(x: 0, y: 0, width: 2177, height: 1407)
 
     private func thirdPartyItem(_ title: String, x: CGFloat) -> MenuBarItem {
         MenuBarItem(
@@ -70,6 +73,23 @@ struct TrailingPillSystemStandInTests {
         #expect(bounds.count == 3)
     }
 
+    @Test("An item is judged against the context's displays, not the Mac's")
+    func itemsAreJudgedAgainstTheContextDisplays() {
+        let clock = systemItem(title: "com.apple.menuextra.clock", x: 2050)
+        let items = [thirdPartyItem("Stats", x: 1800), clock]
+        let narrow = MenuBarSplitPillGeometry.TrailingPillContext(
+            revealedSection: nil,
+            section: { _ in .visible },
+            displayBounds: [CGRect(x: 0, y: 0, width: 1920, height: 1080)]
+        )
+
+        let onWide = MenuBarSplitPillGeometry.trailingPillBounds(from: items, context: context)
+        let onNarrow = MenuBarSplitPillGeometry.trailingPillBounds(from: items, context: narrow)
+
+        #expect(onWide.contains(clock.bounds))
+        #expect(!onNarrow.contains(clock.bounds))
+    }
+
     /// At high resolutions macOS 27 drops the system modules from the walk;
     /// the pill must still reach the trailing edge, not the last third-party icon.
     @Test("A walk without system items gets a trailing stand-in")
@@ -97,7 +117,8 @@ struct TrailingPillSystemStandInTests {
         let items = [thirdPartyItem("Alfred", x: 800)]
         let hiddenContext = MenuBarSplitPillGeometry.TrailingPillContext(
             revealedSection: nil,
-            section: { _ in .hidden }
+            section: { _ in .hidden },
+            displayBounds: [screenFrame]
         )
 
         let bounds = MenuBarSplitPillGeometry.trailingPillBounds(
