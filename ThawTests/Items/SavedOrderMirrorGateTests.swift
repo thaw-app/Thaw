@@ -68,6 +68,15 @@ struct SavedOrderMirrorGateTests {
         #expect(gate.allowsMirror(identifiers: items, restrictionChange: nil, now: at(23)))
     }
 
+    @Test("The bar reads quiet only once the quiet period follows the last disturbance")
+    func quietAfterDisturbance() {
+        let gate = SavedOrderMirrorGate(observesSystem: false)
+        #expect(gate.isQuiet(now: at(0)))
+        gate.noteDisturbance(at: at(1))
+        #expect(!gate.isQuiet(now: at(12)))
+        #expect(gate.isQuiet(now: at(13.5)))
+    }
+
     @Test("The quiet rule on its own")
     func quietRule() {
         #expect(SavedOrderMirrorGate.isQuiet(now: at(10), events: [nil, at(2)], quietPeriod: .seconds(5)))
@@ -172,5 +181,27 @@ struct SavedOrderMirrorGateTests {
     func dragWithoutAnyMirrorIsBehind() {
         let gate = SavedOrderMirrorGate(observesSystem: false)
         #expect(gate.mirrorIsBehind(userDragEndedAt: at(2)))
+    }
+
+    @Test("A ⌘-drag becomes the saved order while the hold is still on")
+    func userDragSkipsTheHold() {
+        let key = "MenuBarItemManager.savedSectionOrder"
+        let previous = UserDefaults.standard.object(forKey: key)
+        defer { UserDefaults.standard.set(previous, forKey: key) }
+
+        let visible = [Self.item(x: 1600, windowID: 1), Self.item(x: 1700, windowID: 2)]
+        var cache = MenuBarItemCache(displayID: nil)
+        cache[.visible] = visible
+        let manager = MenuBarItemManager()
+        let visibleKey = MenuBarSectionName.visible.rawValue
+        let saved = [visibleKey: visible.reversed().map(\.uniqueIdentifier)]
+        manager.savedSectionOrder = saved
+        manager.savedOrderMirrorGate.noteDisturbance()
+
+        manager.mirrorSavedSectionOrderIfSettled(from: cache, displays: Self.displays)
+        #expect(manager.savedSectionOrder == saved)
+
+        manager.mirrorSavedSectionOrderIfSettled(from: cache, placedByUser: true, displays: Self.displays)
+        #expect(manager.savedSectionOrder[visibleKey] == visible.map(\.uniqueIdentifier))
     }
 }

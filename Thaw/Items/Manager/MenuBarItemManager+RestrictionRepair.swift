@@ -149,6 +149,14 @@ extension MenuBarItemManager {
         // A pulse can re-blank hiding-unsupported apps, so pulse only when
         // supported visible items are parked or blank.
         let displayID = Bridging.getActiveMenuBarDisplayID() ?? CGMainDisplayID()
+        // macOS can move the bar to a new main display after the display settle
+        // ends. Until the cache follows, every visible item reads as parked.
+        if let cachedDisplayID = itemDisplayID, cachedDisplayID != displayID {
+            MenuBarItemManager.diagLog.debug(
+                "post-restriction repair: deferred; the bar is on display \(displayID), the cache on \(cachedDisplayID)"
+            )
+            return true
+        }
         let liveItemIDs = Set(liveItems.map(PostRestrictionRepairItemID.init))
         postRestrictionUnrepairableItemIDs.formIntersection(liveItemIDs)
         boundaryRepairBreaker.prune(keeping: liveItemIDs)

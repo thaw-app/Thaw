@@ -5,15 +5,15 @@
 //  Copyright (Thaw) © 2026 Toni Förster
 //  Licensed under the GNU GPLv3
 
+import Foundation
 import MenuBarModel
-import SwiftUI
 
 nonisolated extension MenuBarSectionName {
-    var localized: LocalizedStringKey {
+    var localized: LocalizedStringResource {
         switch self {
-        case .visible: LocalizedStringKey("Visible")
-        case .hidden: LocalizedStringKey("Hidden")
-        case .alwaysHidden: LocalizedStringKey("Always-Hidden")
+        case .visible: "Visible"
+        case .hidden: "Hidden"
+        case .alwaysHidden: "Always-Hidden"
         }
     }
 

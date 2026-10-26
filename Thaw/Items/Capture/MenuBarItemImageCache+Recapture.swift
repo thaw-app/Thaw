@@ -931,12 +931,12 @@ extension MenuBarItemImageCache {
                 ?? windowServer.activeMenuBarDisplayID()
                 ?? CGMainDisplayID()
             let isNativeOverflowActive = controller.isNativeOverflowActive(on: displayID)
+            let displays = BarAxis.liveDisplayBounds()
             let itemsToCapture = sectionItems.filter { item in
-                // Native notch overflow remains in force when Thaw removes
-                // an item from its own concealment assertion. A prewarm in
-                // that state can only capture the system overflow chevron,
-                // never the item's real glyph.
-                guard !isNativeOverflowActive else {
+                // Native notch overflow remains in force when Thaw removes an item from its own
+                // concealment assertion. A prewarm in that state can only capture the system
+                // overflow chevron, never the item's real glyph.
+                guard !isNativeOverflowActive, !Self.isBlankOnTheBar(item.bounds, displays: displays) else {
                     return false
                 }
                 return !onlyMissingImages || Self.prewarmNeedsCapture(

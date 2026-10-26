@@ -48,7 +48,7 @@ and the Sparkle appcast, unless overridden with the `release_notes` input.
 - **Profiles shows one profile at a time.** Pick a profile in the list to see its shortcut, display, Space and Focus, and what applying it would change, on the page instead of in a sheet. Switching profiles by display or Space moved here from Automation. By @diazdesandi.
 - **Two hiding methods instead of three.** Standard now does what Everything did: it also hides Clock, Control Center and Siri when you put them in a hidden section. If you used Standard, those three now move with your other icons when Thaw puts your order back. By @diazdesandi.
 - **Native hiding is no longer marked beta,** and Replace Control Center items now is. By @diazdesandi.
-- **Thaw handles a display change in one pass.** When you plug in, unplug or rearrange displays, Thaw waits for the screens to settle, then updates spacing, switches to the display's profile, shows hidden items you always show, and takes new icon pictures, once each. On a newly connected display, those hidden items appear after about two seconds. By @diazdesandi.
+- **Thaw handles a display change in one pass.** When you plug in, unplug or rearrange displays, Thaw waits for the screens to settle, then updates spacing, switches to the display's profile, shows hidden items you always show, and takes new icon pictures, once each. On a newly connected display, those hidden items appear about 12 seconds later, once macOS has finished laying out the menu bar. By @diazdesandi.
 
 ### Fixed
 
@@ -102,12 +102,16 @@ and the Sparkle appcast, unless overridden with the `release_notes` input.
 - **Order and hiding work with a display below or beside your main one.** Thaw took that display's menu bar for icons parked off the bar and kept moving them, and clicks, hints and tooltips could land in the wrong place. Reported by @joaofrgomes in [#1367](https://github.com/thaw-app/Thaw/issues/1367). Fixed by @diazdesandi.
 - **Quick ⌘-drags inside Visible stick.** Thaw could put the icons back in the saved order, which takes a few seconds to catch up. The order also holds after a profile apply or a layout reset. By @diazdesandi.
 - **Dropping an icon at the far left of Hidden keeps it in Hidden.** It could land in Always Hidden, a section you couldn't see during the drag. By @diazdesandi.
-- **Section names are translated in Layout, VoiceOver and move errors.** Reported by @SakuraWang6 in [#1382](https://github.com/thaw-app/Thaw/issues/1382). Fixed by @diazdesandi.
+- **Section names are translated in Layout, VoiceOver and move errors.** Reported by @SakuraWang6 in [#1382](https://github.com/thaw-app/Thaw/issues/1382). Fixed by @SakuraWang6 and @diazdesandi.
 - **With a Focus filter on, Thaw keeps your layout at launch.** It applied the profile that was active when you quit again, undoing your changes. By @diazdesandi.
 - **Layout changes are saved to the right profile.** If no profile matched at launch, a later display or Space switch could save your current arrangement into the profile it switched to. By @diazdesandi.
 - **Right-clicking a hidden item no longer slows down its next left click.** By @diazdesandi.
 - **Hidden items stay hidden while Thaw takes their pictures on a crowded menu bar.** With many apps running, the cover over the bar could go away before the pictures were done. By @diazdesandi.
 - **Each display's menu bar shape takes a new picture only when its own bar changes.** Any display's color change made every display retake one, and turning a shade-following finish back on kept the old shade. By @diazdesandi.
+- **Icons you ⌘-drag with a section open keep their new order.** They snapped back about a second after the section closed, and the old order came back after a relaunch. By @camguillory.
+- **Clicking the top of a fullscreen app no longer opens hidden items or the Thaw Bar** when another display shows its menu bar. By @camguillory.
+- **No blank band over the menu bar when the Thaw Bar opens** with an app whose icon is turned off in its own settings. Thaw kept showing that app's empty item to take its picture, which covered the app menus for about four seconds. By @camguillory.
+- **Unplugging a display no longer scrambles your icons.** Thaw put your order back while macOS was still laying out the bar, then saved the scrambled order. It now waits for the bar to go quiet first. By @camguillory.
 
 ### Known issues
 

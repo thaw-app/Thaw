@@ -614,9 +614,9 @@ extension MenuBarItemManager {
             }
             // During a reveal the writes would flicker the bar, so re-arm a
             // bounded number of times instead of dropping the work.
-            @MainActor func rearm() {
+            @MainActor func rearm(cause: RepairOrchestrator.Cause = .rearmed) {
                 guard deferralsRemaining > 0 else { return }
-                scheduleStructuralNormalization(cause: .rearmed, after: after, deferralsRemaining: deferralsRemaining - 1)
+                scheduleStructuralNormalization(cause: cause, after: after, deferralsRemaining: deferralsRemaining - 1)
             }
             // Until a ⌘-drag's sections are read off the bar, the bands would be
             // laid from the old sections and put the dropped item back. The
@@ -637,9 +637,10 @@ extension MenuBarItemManager {
                 try? await Task.sleep(for: .milliseconds(400))
                 settleWaits += 1
             }
-            guard !Task.isCancelled else { return }
+            // Taking the lane clears the waiting causes, so read this first.
+            let followsUserDrag = repairs.ledger.causesWaiting(for: .structuralNormalization).contains(.userDragEnded)
             // Waiting is over; from here on this writes, so take the lane.
-            guard let hold = await repairs.enter(.structuralNormalization) else { return }
+            guard !Task.isCancelled, let hold = await repairs.enter(.structuralNormalization) else { return }
             var hasLeftLane = false
             defer {
                 if !hasLeftLane {
@@ -653,17 +654,16 @@ extension MenuBarItemManager {
             guard WriteHold.first(StructuralNormalizationHolds.checks, in: admitted) == nil,
                   ControlResortHold.allowsResort(for: "structural normalization", .init(of: self))
             else {
-                rearm()
+                // The lane already took the drag's cause, so the next pass needs it again.
+                rearm(cause: followsUserDrag ? .userDragEnded : .rearmed)
                 return
             }
-
-            // The debounce and settle waits can span a screen lock.
-            guard !refuseMenuBarMutationWhileScreenLocked("structural normalization") else { return }
 
             // The cache, not a fresh walk: the walk omits concealed members,
             // whose stale weights would then sit inside the new visible band.
             let settledItems = itemCache.managedItems
-            guard !settledItems.isEmpty else { return }
+            // The debounce and settle waits can span a screen lock.
+            guard !refuseMenuBarMutationWhileScreenLocked("structural normalization"), !settledItems.isEmpty else { return }
             if !arrangementIsManual, !menuBarAgentIgnoresPreferredPositions,
                ControlOrderRules.trailingSiriIsMisplaced(in: settledItems) {
                 // Siri needs one row repaired; no dividers required, which
@@ -685,9 +685,15 @@ extension MenuBarItemManager {
                 }
                 return
             }
-            if let (controlItems, withDividers) = ControlOrderRules.withDividers(settledItems, cacheDividers()),
-               restoreStructuralControlOrder(controlItems: controlItems, items: withDividers, permit: StoreWritePermit(hold)) {
-                moveActivity.noteMoveOperation()
+            if let (controlItems, withDividers) = ControlOrderRules.withDividers(settledItems, cacheDividers()) {
+                // The restore pins the saved order. A drag made with a section
+                // open is still held out of it, so record it first.
+                if followsUserDrag {
+                    mirrorSavedSectionOrderIfSettled(from: itemCache, controlItems: controlItems, placedByUser: true)
+                }
+                if restoreStructuralControlOrder(controlItems: controlItems, items: withDividers, permit: StoreWritePermit(hold)) {
+                    moveActivity.noteMoveOperation()
+                }
             }
             // The passes below have never run on macOS 27, since the cache holds no dividers; they stay off until checked live.
             guard controlItemPair(in: settledItems) != nil else { return }

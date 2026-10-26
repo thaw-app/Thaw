@@ -129,6 +129,20 @@ struct LayoutBarSelectionTests {
         }
     }
 
+    @Test("Section names use existing catalog translations in menus and VoiceOver", arguments: [
+        (MenuBarSectionName.visible, "Visible"),
+        (.hidden, "Hidden"),
+        (.alwaysHidden, "Always-Hidden"),
+    ])
+    func sectionNamesUseCatalogTranslations(section: MenuBarSectionName, key: String) {
+        let expected = Bundle.main.localizedString(forKey: key, value: nil, table: nil)
+        #expect(section.localizedName == expected)
+        #expect(LayoutSelectionHighlight.accessibilityValue(section: section, isSelected: false) == expected)
+
+        let selectedFormat = Bundle.main.localizedString(forKey: "%@, selected", value: nil, table: nil)
+        #expect(LayoutSelectionHighlight.accessibilityValue(section: section, isSelected: true) == String(format: selectedFormat, expected))
+    }
+
     @Test("The bar lists its items as units, a bundle's items as one, and its control item as unselectable")
     func unitsFollowTheBar() throws {
         let alpha = World.item("Alpha")
