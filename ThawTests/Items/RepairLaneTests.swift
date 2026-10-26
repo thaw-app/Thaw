@@ -11,31 +11,22 @@ import Testing
 @MainActor
 @Suite("Automatic repair passes follow one another")
 struct RepairLaneTests {
-    /// Yields until the lane has this many passes queued.
-    private func waitForQueue(_ count: Int, in lane: RepairLane) async {
-        for _ in 0 ..< 1000 where lane.queued.count != count {
-            await Task.yield()
-        }
-    }
-
     @Test("A free lane admits at once; later passes run in the order they asked")
     func passesRunInOrder() async throws {
         let lane = RepairLane()
         var order: [RepairOrchestrator.Work] = []
 
         let first = try #require(await lane.enter(.postRestrictionRepair))
-        let second = Task { @MainActor in
+        let second = await startedTask {
             guard let hold = await lane.enter(.structuralNormalization) else { return }
             order.append(hold.work)
             lane.leave(hold)
         }
-        await waitForQueue(1, in: lane)
-        let third = Task { @MainActor in
+        let third = await startedTask {
             guard let hold = await lane.enter(.overflowRebalance) else { return }
             order.append(hold.work)
             lane.leave(hold)
         }
-        await waitForQueue(2, in: lane)
 
         #expect(lane.current == .postRestrictionRepair)
         #expect(lane.queued == [.structuralNormalization, .overflowRebalance])
@@ -53,8 +44,8 @@ struct RepairLaneTests {
     func userWorkJumpsTheQueue() async throws {
         let lane = RepairLane()
         var order: [RepairOrchestrator.Work] = []
-        func queue(_ work: RepairOrchestrator.Work, _ priority: RepairLane.Priority) -> Task<Void, Never> {
-            Task { @MainActor in
+        func queue(_ work: RepairOrchestrator.Work, _ priority: RepairLane.Priority) async -> Task<Void, Never> {
+            await startedTask {
                 guard let hold = await lane.enter(work, priority: priority) else { return }
                 order.append(hold.work)
                 lane.leave(hold)
@@ -62,14 +53,10 @@ struct RepairLaneTests {
         }
 
         let holder = try #require(await lane.enter(.postRestrictionRepair))
-        let automatic = queue(.structuralNormalization, .automatic)
-        await waitForQueue(1, in: lane)
-        let firstUser = queue(.authoredOrderApply, .user)
-        await waitForQueue(2, in: lane)
-        let laterAutomatic = queue(.overflowRebalance, .automatic)
-        await waitForQueue(3, in: lane)
-        let secondUser = queue(.storeHygiene, .user)
-        await waitForQueue(4, in: lane)
+        let automatic = await queue(.structuralNormalization, .automatic)
+        let firstUser = await queue(.authoredOrderApply, .user)
+        let laterAutomatic = await queue(.overflowRebalance, .automatic)
+        let secondUser = await queue(.storeHygiene, .user)
 
         #expect(lane.current == .postRestrictionRepair)
         #expect(lane.queued == [.authoredOrderApply, .storeHygiene, .structuralNormalization, .overflowRebalance])
@@ -100,14 +87,12 @@ struct RepairLaneTests {
         let lane = RepairLane()
         let first = try #require(await lane.enter(.postRestrictionRepair))
 
-        let superseded = Task { @MainActor in
+        let superseded = await startedTask {
             await lane.enter(.structuralNormalization)
         }
-        await waitForQueue(1, in: lane)
-        let next = Task { @MainActor in
+        let next = await startedTask {
             await lane.enter(.arrivalOrderRestore)
         }
-        await waitForQueue(2, in: lane)
 
         superseded.cancel()
         #expect(await superseded.value == nil)
@@ -157,11 +142,11 @@ struct RepairLaneTests {
         let start = ContinuousClock.now
         let first = try #require(await lane.enter(.postRestrictionRepair, at: start))
 
-        let second = Task { @MainActor in
+        let second = await startedTask {
             await lane.enter(.overflowRebalance, at: start + .seconds(5))
         }
-        await waitForQueue(1, in: lane)
 
+        #expect(lane.queued == [.overflowRebalance])
         #expect(lane.takeovers == 0)
         #expect(lane.current == .postRestrictionRepair)
 
@@ -174,10 +159,8 @@ struct RepairLaneTests {
     func dropAutomaticWaiters() async throws {
         let lane = RepairLane()
         let holder = try #require(await lane.enter(.postRestrictionRepair))
-        let automatic = Task { @MainActor in await lane.enter(.overflowRebalance) }
-        await waitForQueue(1, in: lane)
-        let user = Task { @MainActor in await lane.enter(.revealReconcile, priority: .user) }
-        await waitForQueue(2, in: lane)
+        let automatic = await startedTask { await lane.enter(.overflowRebalance) }
+        let user = await startedTask { await lane.enter(.revealReconcile, priority: .user) }
 
         let dropped = lane.dropAutomaticWaiters { _ in true }
 

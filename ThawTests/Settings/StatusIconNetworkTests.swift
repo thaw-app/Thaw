@@ -100,14 +100,14 @@ struct StatusIconNetworkTests {
         #expect(state.sources.isEmpty)
     }
 
-    @Test("The live sampler resolves an initial network path")
-    func liveNetworkPath() async throws {
+    /// The path comes from the system when it has one, so the test waits for the sampler's next
+    /// update rather than a deadline, under the time limit.
+    @Test("The live sampler resolves an initial network path", .timeLimit(.minutes(1)))
+    func liveNetworkPath() async {
         let sampler = StatusIconLiveSampler()
         sampler.start()
         defer { sampler.stop() }
-        for _ in 0 ..< 20 where sampler.samples.network == .unknown {
-            try await Task.sleep(for: .milliseconds(100))
-        }
+        await waitUntil({ sampler.samples.network != .unknown }, wakingOn: sampler.$samples.dropFirst())
         #expect(sampler.samples.network != .unknown)
     }
 

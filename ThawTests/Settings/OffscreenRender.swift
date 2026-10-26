@@ -36,8 +36,12 @@ final class OffscreenRender<Content: View> {
 
     /// Lets SwiftUI apply pending updates until condition holds, or until
     /// timeout passes. Returns whether it held.
+    ///
+    /// SwiftUI says nothing when it has applied an update, so this checks
+    /// between run-loop turns. The default bound is far past any update, so a
+    /// busy machine slows a passing test rather than failing it.
     @discardableResult
-    func settle(within timeout: Duration = .seconds(2), until condition: () -> Bool) async -> Bool {
+    func settle(within timeout: Duration = .seconds(30), until condition: () -> Bool) async -> Bool {
         let deadline = ContinuousClock.now.advanced(by: timeout)
         while ContinuousClock.now < deadline {
             host.layoutSubtreeIfNeeded()

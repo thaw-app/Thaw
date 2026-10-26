@@ -179,7 +179,7 @@ struct LayoutEditorModelTests {
         #expect(world.appState.layoutFeedback.refusal != nil)
     }
 
-    @Test
+    @Test(.timeLimit(.minutes(1)))
     func aStartedModelFollowsTheItemCacheUntilItIsStopped() async {
         let world = World()
         let first = World.item("First")
@@ -191,8 +191,10 @@ struct LayoutEditorModelTests {
 
         let second = World.item("Second")
         world.seat([first, second])
-        for _ in 0 ..< 200 where ids(model).count < 2 {
-            try? await Task.sleep(for: .milliseconds(10))
+        await waitUntil {
+            ids(model).count >= 2
+        } tracking: {
+            _ = model.units
         }
         #expect(ids(model) == [first.uniqueIdentifier, second.uniqueIdentifier])
 

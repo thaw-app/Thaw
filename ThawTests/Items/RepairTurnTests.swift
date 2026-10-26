@@ -49,11 +49,12 @@ struct RepairTurnTests {
         let holder = try #require(await repairs.enter(.postRestrictionRepair))
         var received: Int? = -1
 
-        let turn = Task {
+        let turn = await startedTask {
             _ = await RepairTurn.run(.revealReconcile, on: repairs, readStaleAfter: .milliseconds(20), read: { 7 }, write: { reading, _ in
                 received = reading
             })
         }
+        // The turn is in line now; a sleep lasts at least as long as asked, so its reading is past 20 ms when admitted.
         try await Task.sleep(for: .milliseconds(120))
         repairs.leave(holder)
         await turn.value
@@ -191,7 +192,7 @@ struct RepairTurnTests {
     }
 
     @Test("A pass sees user work queue behind it, until it has left the lane")
-    func passSeesWaitingUserWork() async throws {
+    func passSeesWaitingUserWork() async {
         let repairs = RepairOrchestrator()
         var before: Bool?
         var whileQueued: Bool?
@@ -199,12 +200,11 @@ struct RepairTurnTests {
 
         _ = await RepairTurn.run(.postRestrictionRepair, on: repairs, read: { 1 }, write: { _, permit, writing in
             before = writing.userWorkIsWaiting
-            let edit = Task { @MainActor in
+            let edit = await startedTask {
                 if let hold = await repairs.enterForUserEdit() {
                     repairs.leave(hold)
                 }
             }
-            try? await Task.sleep(for: .milliseconds(50))
             whileQueued = writing.userWorkIsWaiting
             writing.end(permit)
             afterLeaving = writing.userWorkIsWaiting

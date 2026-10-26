@@ -149,7 +149,7 @@ struct SettingsProcessHostTests {
         let host = host()
         #expect(host.show(pane: "General", simpleMode: false))
         try #require(child.launches.first).onEnd(0)
-        try await Task.sleep(for: .milliseconds(50))
+        await mainActorQueueDrained()
         #expect(host.show(pane: "About", simpleMode: false))
         #expect(child.launches.count == 2)
     }
@@ -162,7 +162,7 @@ struct SettingsProcessHostTests {
         #expect(host.show(pane: "About", simpleMode: false))
         child.isRunning = true
         try #require(child.launches.first).onEnd(0)
-        try await Task.sleep(for: .milliseconds(50))
+        await mainActorQueueDrained()
         #expect(host.show(pane: "Privacy", simpleMode: false))
         #expect(child.launches.count == 2)
     }

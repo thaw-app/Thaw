@@ -22,16 +22,19 @@ final class ProfileLayoutKeeper {
     /// applied, otherwise nil.
     private let target: @MainActor () -> UUID?
     private let save: @MainActor (UUID) throws -> Void
+    private let sleep: @MainActor (Duration) async throws -> Void
     private var pending: Task<Void, Never>?
 
     init(
         delay: Duration = ProfileLayoutKeeper.settleDelay,
         target: @escaping @MainActor () -> UUID?,
-        save: @escaping @MainActor (UUID) throws -> Void
+        save: @escaping @MainActor (UUID) throws -> Void,
+        sleep: @escaping @MainActor (Duration) async throws -> Void = { try await Task.sleep(for: $0) }
     ) {
         self.delay = delay
         self.target = target
         self.save = save
+        self.sleep = sleep
     }
 
     /// The keeper for the app's profiles and live layout.
@@ -56,8 +59,8 @@ final class ProfileLayoutKeeper {
     func noteUserLayoutChange() {
         guard let id = target() else { return }
         pending?.cancel()
-        pending = Task { [weak self, delay] in
-            try? await Task.sleep(for: delay)
+        pending = Task { [weak self, delay, sleep] in
+            try? await sleep(delay)
             guard let self, !Task.isCancelled, target() == id else { return }
             pending = nil
             do {

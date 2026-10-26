@@ -12,7 +12,7 @@ import Testing
 @testable import Thaw
 
 /// Saving and reading the image cache file, in a throwaway Caches directory.
-@Suite("Image cache file")
+@Suite("Image cache file", .timeLimit(.minutes(1)))
 @MainActor
 struct MenuBarItemImageCacheDiskStoreTests {
     private let directory = FileManager.default.temporaryDirectory
@@ -32,11 +32,14 @@ struct MenuBarItemImageCacheDiskStoreTests {
         return MenuBarItemGlyphCapture(cgImage: context.makeImage()!, scale: 1)
     }
 
+    /// The save runs on the store's background queue, which can wait long behind a busy machine
+    /// and says nothing when it is done, so this checks for the file until it is there, under the
+    /// suite's time limit rather than a deadline of its own.
     private func waitForFile(_ url: URL) async -> Bool {
-        for _ in 0 ..< 300 where !FileManager.default.fileExists(atPath: url.path) {
+        while !FileManager.default.fileExists(atPath: url.path) {
             try? await Task.sleep(for: .milliseconds(10))
         }
-        return FileManager.default.fileExists(atPath: url.path)
+        return true
     }
 
     private func writePlist(_ root: [String: Any], to url: URL) throws {

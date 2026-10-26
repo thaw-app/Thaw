@@ -35,9 +35,12 @@ struct DisplayChangeReadersTests {
         center.post(name: NSApplication.didChangeScreenParametersNotification, object: nil)
     }
 
-    /// Lets a main-queue hop in a reader's pipeline run.
-    private func drainMainQueue() async throws {
-        try await Task.sleep(for: .milliseconds(50))
+    /// Lets a main-queue hop in a reader's pipeline run. The main queue runs its blocks in the order
+    /// they were queued, so the block queued here runs after any hop queued before it.
+    private func drainMainQueue() async {
+        await withCheckedContinuation { drained in
+            DispatchQueue.main.async { drained.resume() }
+        }
     }
 
     @Test("The overlay rebuilds at each settle, and once after a burst of postings")
@@ -61,7 +64,7 @@ struct DisplayChangeReadersTests {
     }
 
     @Test("The Thaw Bar drops its colour strip at the settle, not at the posting")
-    func thawBarColorWaitsForSettle() async throws {
+    func thawBarColorWaitsForSettle() async {
         environment.start()
         defer {
             gate.open()
@@ -70,16 +73,16 @@ struct DisplayChangeReadersTests {
         let appState = AppState()
         let colorManager = ThawBarColorManager()
         colorManager.performSetup(with: ThawBarPanel(), appState: appState, displaySettlements: environment.settlements)
-        try await drainMainQueue()
+        await drainMainQueue()
         let before = colorManager.windowImageGeneration
 
         postScreenChange()
-        try await drainMainQueue()
+        await drainMainQueue()
         #expect(colorManager.windowImageGeneration == before, "The posting alone leaves the strip")
 
         gate.open()
         await environment.waitUntilSettled()
-        try await drainMainQueue()
+        await drainMainQueue()
         #expect(colorManager.windowImageGeneration == before + 1)
     }
 

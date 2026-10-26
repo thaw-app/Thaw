@@ -24,8 +24,7 @@ struct RepairYieldTests {
     func automaticWaiterDoesNotCount() async throws {
         let repairs = RepairOrchestrator()
         let holder = try #require(await repairs.enter(.postRestrictionRepair))
-        let queued = Task { await repairs.enter(.overflowRebalance) }
-        try await Task.sleep(for: .milliseconds(50))
+        let queued = await startedTask { await repairs.enter(.overflowRebalance) }
 
         #expect(!repairs.userWorkIsWaiting)
 
@@ -38,8 +37,7 @@ struct RepairYieldTests {
     func userWaiterCounts() async throws {
         let repairs = RepairOrchestrator()
         let holder = try #require(await repairs.enter(.postRestrictionRepair))
-        let queued = Task { await repairs.enterForUserEdit() }
-        try await Task.sleep(for: .milliseconds(50))
+        let queued = await startedTask { await repairs.enterForUserEdit() }
 
         #expect(repairs.userWorkIsWaiting)
 

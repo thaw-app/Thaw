@@ -84,10 +84,7 @@ struct DisplayInvalidationReadersTests {
         defer { environment.stop() }
         Self.postScreenParametersChange(on: center)
         #expect(model.isRevealed, "The retract keeps its 0.2 s debounce")
-        let deadline = ContinuousClock.now + .seconds(3)
-        while model.isRevealed, ContinuousClock.now < deadline {
-            try? await Task.sleep(for: .milliseconds(20))
-        }
+        await waitUntil({ !model.isRevealed }, wakingOn: model.$isRevealed.dropFirst())
         #expect(!model.isRevealed)
     }
 }

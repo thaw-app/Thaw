@@ -13,74 +13,77 @@ import Testing
 struct NotificationCenterEventsTaskTests {
     private static let name = Notification.Name("NotificationCenterEventsTaskTests.event")
 
-    /// The app host's main actor is busy, so a result is waited for and not assumed after a fixed sleep.
-    private func eventually(_ condition: () -> Bool) async throws {
-        let deadline = ContinuousClock.now + .seconds(5)
-        while !condition(), ContinuousClock.now < deadline {
-            try await Task.sleep(for: .milliseconds(20))
+    /// Starts the task with a body that counts its runs and says when each ends, and returns once
+    /// the task listens: it adds its observer as it starts on the main actor.
+    private func listen(
+        on center: NotificationCenter,
+        debounce: Duration? = nil
+    ) async -> (task: Task<Void, Never>, runs: () -> Int, ran: AsyncStream<Void>) {
+        let (ran, signal) = AsyncStream<Void>.makeStream()
+        var runs = 0
+        let task = center.eventsTask(named: Self.name, debounce: debounce) {
+            runs += 1
+            signal.yield()
         }
+        await mainActorQueueDrained()
+        return (task, { runs }, ran)
     }
 
     @Test
     func `each posting runs the body once when there is no debounce`() async throws {
         let center = NotificationCenter()
-        var runs = 0
-        let task = center.eventsTask(named: Self.name) { runs += 1 }
+        let (task, runs, stream) = await listen(on: center)
+        var ran = stream.makeAsyncIterator()
         defer { task.cancel() }
-        try await Task.sleep(for: .milliseconds(50))
 
         center.post(name: Self.name, object: nil)
         center.post(name: Self.name, object: nil)
-        try await eventually { runs == 2 }
+        _ = await ran.next()
+        _ = await ran.next()
         try await Task.sleep(for: .milliseconds(100))
 
-        #expect(runs == 2)
+        #expect(runs() == 2)
     }
 
     @Test
     func `a burst runs the body once after it goes quiet`() async throws {
         let center = NotificationCenter()
-        var runs = 0
-        let task = center.eventsTask(named: Self.name, debounce: .milliseconds(100)) { runs += 1 }
+        let (task, runs, stream) = await listen(on: center, debounce: .milliseconds(100))
+        var ran = stream.makeAsyncIterator()
         defer { task.cancel() }
-        try await Task.sleep(for: .milliseconds(50))
 
         for _ in 0 ..< 5 {
             center.post(name: Self.name, object: nil)
         }
-        #expect(runs == 0)
-        try await eventually { runs == 1 }
+        #expect(runs() == 0)
+        _ = await ran.next()
         try await Task.sleep(for: .milliseconds(300))
 
-        #expect(runs == 1)
+        #expect(runs() == 1)
     }
 
     @Test
     func `a cancelled task stops listening`() async throws {
         let center = NotificationCenter()
-        var runs = 0
-        let task = center.eventsTask(named: Self.name) { runs += 1 }
-        try await Task.sleep(for: .milliseconds(50))
+        let (task, runs, _) = await listen(on: center)
         task.cancel()
-        try await Task.sleep(for: .milliseconds(50))
+        await task.value
 
         center.post(name: Self.name, object: nil)
         try await Task.sleep(for: .milliseconds(100))
 
-        #expect(runs == 0)
+        #expect(runs() == 0)
     }
 
     @Test
     func `another name does not run the body`() async throws {
         let center = NotificationCenter()
-        var runs = 0
-        let task = center.eventsTask(named: Self.name) { runs += 1 }
+        let (task, runs, _) = await listen(on: center)
         defer { task.cancel() }
-        try await Task.sleep(for: .milliseconds(50))
 
         center.post(name: Notification.Name("NotificationCenterEventsTaskTests.other"), object: nil)
         try await Task.sleep(for: .milliseconds(100))
 
-        #expect(runs == 0)
+        #expect(runs() == 0)
     }
 }

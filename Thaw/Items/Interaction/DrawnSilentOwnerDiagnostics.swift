@@ -130,9 +130,14 @@ nonisolated final class DrawnSilentOwnerDiagnostics: Sendable {
     private let diagLog = DiagLog(category: "MenuBarItemAXProvider")
     private let state = Mutex(State())
     private let retryDelay: Duration
+    private let sleep: @Sendable (Duration) async throws -> Void
 
-    init(retryDelay: Duration = DrawnSilentOwnerDiagnostics.retryDelay) {
+    init(
+        retryDelay: Duration = DrawnSilentOwnerDiagnostics.retryDelay,
+        sleep: @escaping @Sendable (Duration) async throws -> Void = { try await Task.sleep(for: $0) }
+    ) {
         self.retryDelay = retryDelay
+        self.sleep = sleep
     }
 
     /// Owners whose probe has not finished.
@@ -214,7 +219,7 @@ nonisolated final class DrawnSilentOwnerDiagnostics: Sendable {
         for owner in admitted {
             Task.detached(priority: .utility) { [self] in
                 let first = EmptyExtrasBarProbe.run(pid: owner.pid)
-                try? await Task.sleep(for: retryDelay)
+                try? await sleep(retryDelay)
                 let retry = EmptyExtrasBarProbe.run(pid: owner.pid)
                 let isNew = state.withLock { state in
                     state.inFlight.remove(owner.pid)

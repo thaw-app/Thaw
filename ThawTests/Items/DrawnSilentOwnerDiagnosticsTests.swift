@@ -92,9 +92,10 @@ struct DrawnSilentOwnerDiagnosticsTests {
         #expect(probe.outcome != .emptyExtrasBar)
     }
 
-    @Test
-    func `probes a silent drawn owner once per interval and never this app`() async {
-        let diagnostics = DrawnSilentOwnerDiagnostics(retryDelay: .milliseconds(10))
+    @Test(.timeLimit(.minutes(1)))
+    func `probes a silent drawn owner once per interval and never this app`() async throws {
+        let sleeps = RecordedSleeps()
+        let diagnostics = DrawnSilentOwnerDiagnostics(retryDelay: .milliseconds(10)) { try sleeps.sleep(for: $0) }
         let drawn = [
             MenuBarAgentWindow.Entry(ownerPID: 999_999, frame: CGRect(x: 100, y: 0, width: 30, height: 24)),
             MenuBarAgentWindow.Entry(ownerPID: getpid(), frame: CGRect(x: 140, y: 0, width: 30, height: 24)),
@@ -103,8 +104,12 @@ struct DrawnSilentOwnerDiagnosticsTests {
         let probed = diagnostics.note(drawn: drawn, answeredEmpty: [999_999, getpid()], apps: apps)
         #expect(probed.map(\.pid) == [999_999])
         #expect(diagnostics.note(drawn: drawn, answeredEmpty: [999_999, getpid()], apps: apps).isEmpty)
-        for _ in 0 ..< 200 where !diagnostics.probesInFlight.isEmpty {
-            try? await Task.sleep(for: .milliseconds(10))
+        await sleeps.waitForSleeps(1)
+        #expect(sleeps.durations == [.milliseconds(10)])
+        // The retry read follows on the probe's own task, which says nothing when it ends, so its
+        // end is waited for under the time limit rather than a deadline of its own.
+        while !diagnostics.probesInFlight.isEmpty {
+            try await Task.sleep(for: .milliseconds(1))
         }
         #expect(diagnostics.probesInFlight.isEmpty)
         #expect(diagnostics.note(drawn: drawn, answeredEmpty: [999_999], apps: apps).isEmpty)

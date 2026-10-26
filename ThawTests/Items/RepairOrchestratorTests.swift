@@ -74,10 +74,7 @@ struct RepairOrchestratorTests {
         let repairs = RepairOrchestrator()
         let holder = try #require(await repairs.enter(.postRestrictionRepair))
 
-        let waiting = Task { @MainActor in await repairs.enter(.overflowRebalance) }
-        for _ in 0 ..< 20 {
-            await Task.yield()
-        }
+        let waiting = await startedTask { await repairs.enter(.overflowRebalance) }
         waiting.cancel()
 
         #expect(await waiting.value == nil)
@@ -104,12 +101,11 @@ struct RepairOrchestratorTests {
         let move = try #require(repairs.beginMove())
         var passRan = false
 
-        let pass = Task { @MainActor in
+        let pass = await startedTask {
             guard let hold = await repairs.enter(.structuralNormalization) else { return }
             passRan = true
             repairs.leave(hold)
         }
-        try await Task.sleep(for: .milliseconds(50))
         #expect(!passRan)
         #expect(repairs.ledger.isRunning(.itemMove))
 
@@ -189,10 +185,7 @@ struct RepairOrchestratorTests {
         let repairs = RepairOrchestrator()
         let holder = try #require(await repairs.enter(.arrivalOrderRestore))
         repairs.request(.overflowRebalance, cause: .cachePublished)
-        let waiting = Task { @MainActor in await repairs.enter(.overflowRebalance) }
-        for _ in 0 ..< 20 {
-            await Task.yield()
-        }
+        let waiting = await startedTask { await repairs.enter(.overflowRebalance) }
 
         _ = repairs.writeNow(.preRevealOrder, cause: .revealStarting) { $0.door }
 
@@ -270,10 +263,7 @@ struct RepairOrchestratorTests {
         let repairs = RepairOrchestrator()
         let holder = try #require(await repairs.enter(.arrivalOrderRestore))
         repairs.request(.overflowRebalance, cause: .cachePublished)
-        let waiting = Task { @MainActor in await repairs.enter(.overflowRebalance) }
-        for _ in 0 ..< 20 {
-            await Task.yield()
-        }
+        let waiting = await startedTask { await repairs.enter(.overflowRebalance) }
 
         _ = repairs.writeNow(.preRevealOrder, cause: cause) { $0.door }
         repairs.leave(holder)

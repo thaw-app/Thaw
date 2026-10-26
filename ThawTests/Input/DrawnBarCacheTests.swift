@@ -17,38 +17,45 @@ import ThawAXCore
 struct DrawnBarCacheTests {
     private let bar = [MenuBarAgentWindow.Entry(ownerPID: 7, frame: CGRect(x: 1300, y: 0, width: 38, height: 30))]
 
-    private func answer(from cache: MenuBarPointerAXCache) async -> [MenuBarAgentWindow.Entry]? {
-        for _ in 0 ..< 100 {
-            if let answer = cache.drawnBarAnswer() { return answer.entries }
-            try? await Task.sleep(for: .milliseconds(10))
-        }
-        return nil
+    /// A cache whose reads of the bar each say so as they return. The read runs on the main actor
+    /// and the cache stores its answer before it next suspends, so once a test has seen a read,
+    /// the cache holds what it returned.
+    private func makeCache(reading answer: [MenuBarAgentWindow.Entry]?) -> (MenuBarPointerAXCache, AsyncStream<Void>) {
+        let (reads, signal) = AsyncStream<Void>.makeStream()
+        let cache = MenuBarPointerAXCache(readDrawnBar: {
+            signal.yield()
+            return answer
+        })
+        return (cache, reads)
     }
 
     @Test("A change reads the bar again, with no pointer movement")
     func changeReadsTheBar() async {
-        let bar = bar
-        let cache = MenuBarPointerAXCache(readDrawnBar: { bar })
+        let (cache, stream) = makeCache(reading: bar)
+        var reads = stream.makeAsyncIterator()
         cache.drawnBarDidChange()
-        #expect(await answer(from: cache) == bar)
+        _ = await reads.next()
+        #expect(cache.drawnBarAnswer()?.entries == bar)
     }
 
     @Test("An answer from before the last change is not used")
     func olderAnswerIsDropped() async {
-        let bar = bar
-        let cache = MenuBarPointerAXCache(readDrawnBar: { bar })
+        let (cache, stream) = makeCache(reading: bar)
+        var reads = stream.makeAsyncIterator()
         cache.drawnBarDidChange()
-        _ = await answer(from: cache)
+        _ = await reads.next()
         cache.drawnBarDidChange()
         #expect(cache.drawnBarAnswer() == nil)
-        #expect(await answer(from: cache) == bar)
+        _ = await reads.next()
+        #expect(cache.drawnBarAnswer()?.entries == bar)
     }
 
     @Test("A bar that cannot be read leaves no answer")
     func unreadableBar() async {
-        let cache = MenuBarPointerAXCache(readDrawnBar: { nil })
+        let (cache, stream) = makeCache(reading: nil)
+        var reads = stream.makeAsyncIterator()
         cache.drawnBarDidChange()
-        try? await Task.sleep(for: .milliseconds(50))
+        _ = await reads.next()
         #expect(cache.drawnBarAnswer() == nil)
     }
 }

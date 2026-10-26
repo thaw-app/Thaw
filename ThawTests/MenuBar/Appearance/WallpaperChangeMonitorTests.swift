@@ -11,7 +11,7 @@ import Testing
 
 /// Exercises the file-watch mechanism against a temporary file rather than
 /// the real wallpaper index, which cannot be changed from a test.
-@Suite("Wallpaper change monitor")
+@Suite("Wallpaper change monitor", .timeLimit(.minutes(1)))
 @MainActor
 struct WallpaperChangeMonitorTests {
     private func withWatchedFile(
@@ -31,57 +31,60 @@ struct WallpaperChangeMonitorTests {
         try await body(url, monitor)
     }
 
-    /// Polls rather than sleeping a fixed interval, so a slow machine adds
-    /// latency instead of a spurious failure.
-    private func waitForChange(_ counter: @MainActor () -> Int, from start: Int) async -> Bool {
-        for _ in 0 ..< 100 {
-            if counter() > start {
-                return true
-            }
-            try? await Task.sleep(for: .milliseconds(50))
+    /// Counts the monitor's changes and hands back each report as it comes. A file event arrives
+    /// when the system delivers it, so a test waits for the report, not a counter against a deadline.
+    private func watch(_ monitor: WallpaperChangeMonitor) -> (count: () -> Int, reports: AsyncStream<Void>) {
+        let (reports, signal) = AsyncStream<Void>.makeStream()
+        var count = 0
+        monitor.onChange = {
+            count += 1
+            signal.yield()
         }
-        return false
+        return ({ count }, reports)
     }
 
     @Test("A write to the watched file reports a change")
     func writeReportsChange() async throws {
         try await withWatchedFile { url, monitor in
-            var changes = 0
-            monitor.onChange = { changes += 1 }
+            let (changes, stream) = watch(monitor)
+            var reports = stream.makeAsyncIterator()
             monitor.start()
 
             let handle = try FileHandle(forWritingTo: url)
             try handle.write(contentsOf: Data("changed".utf8))
             try handle.close()
 
-            #expect(await waitForChange({ changes }, from: 0))
+            _ = await reports.next()
+            #expect(changes() == 1)
         }
     }
 
     @Test("An atomic replacement keeps reporting later changes")
     func atomicReplacementRearms() async throws {
         try await withWatchedFile { url, monitor in
-            var changes = 0
-            monitor.onChange = { changes += 1 }
+            let (changes, stream) = watch(monitor)
+            var reports = stream.makeAsyncIterator()
             monitor.start()
 
             // How the system actually rewrites the index: the watched inode
             // is unlinked rather than written in place. Without a re-open,
             // the monitor would go deaf after this first replacement.
             try Data("first".utf8).write(to: url, options: .atomic)
-            #expect(await waitForChange({ changes }, from: 0))
+            _ = await reports.next()
+            #expect(changes() >= 1)
 
-            let afterFirst = changes
+            let afterFirst = changes()
             try Data("second".utf8).write(to: url, options: .atomic)
-            #expect(await waitForChange({ changes }, from: afterFirst))
+            _ = await reports.next()
+            #expect(changes() > afterFirst)
         }
     }
 
     @Test("A burst of writes is coalesced into one change")
     func burstIsDebounced() async throws {
         try await withWatchedFile { url, monitor in
-            var changes = 0
-            monitor.onChange = { changes += 1 }
+            let (changes, stream) = watch(monitor)
+            var reports = stream.makeAsyncIterator()
             monitor.start()
 
             let handle = try FileHandle(forWritingTo: url)
@@ -90,10 +93,10 @@ struct WallpaperChangeMonitorTests {
             }
             try handle.close()
 
-            #expect(await waitForChange({ changes }, from: 0))
+            _ = await reports.next()
             // Let the debounce window close before reading the total.
             try? await Task.sleep(for: .milliseconds(300))
-            #expect(changes == 1)
+            #expect(changes() == 1)
         }
     }
 
