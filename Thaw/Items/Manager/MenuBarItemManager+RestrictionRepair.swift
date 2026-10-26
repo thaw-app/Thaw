@@ -432,17 +432,13 @@ extension MenuBarItemManager {
         liveItems: [MenuBarItem],
         controller: any MenuBarSectionControlling
     ) -> MenuBarItem? {
-        if let control = liveItems.first(where: {
-            $0.tag.matchesVisibleControlItem && !$0.isParkedOffMenuBarBand(among: liveItems)
-        }) {
+        let screens = BarAxis.liveDisplayBounds()
+        let onBand = liveItems.filter { !$0.isParkedOffMenuBarBand(among: liveItems, screens: screens) }
+        if let control = onBand.first(where: { $0.tag.matchesVisibleControlItem }) {
             return control
         }
-        return liveItems
-            .filter {
-                !$0.isControlItem &&
-                    controller.section(for: $0) == .visible &&
-                    !$0.isParkedOffMenuBarBand(among: liveItems)
-            }
+        return onBand
+            .filter { !$0.isControlItem && controller.section(for: $0) == .visible }
             .max(by: { $0.bounds.midX < $1.bounds.midX })
     }
 
@@ -454,13 +450,14 @@ extension MenuBarItemManager {
     ) -> [MoveDestination] {
         let experimentalSystemItemHiding = appState?.settings.advanced
             .enableExperimentalSystemItemHiding ?? false
+        let screens = BarAxis.liveDisplayBounds()
         let ordered = MenuBarItem.sortByLeadingEdge(
             liveItems.filter {
                 !$0.isSystemClone &&
                     !$0.isNativeOverflowControl &&
                     !$0.isControlItem &&
                     $0.bounds.width > 0 &&
-                    !$0.isParkedOffMenuBarBand(among: liveItems)
+                    !$0.isParkedOffMenuBarBand(among: liveItems, screens: screens)
             }
         )
         guard let anchorIndex = ordered.firstIndex(where: {

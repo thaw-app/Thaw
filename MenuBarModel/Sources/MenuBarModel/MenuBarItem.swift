@@ -188,7 +188,7 @@ public struct MenuBarItem: CustomStringConvertible, Sendable, Codable {
         }
 
         guard let index = barIndex(holding: bounds) else { return true }
-        let seated = peers.filter { barIndex(holding: $0.bounds) == index }
+        let seated = peers.lazy.filter { barIndex(holding: $0.bounds) == index }
         guard let barMidY = seated.first(where: { $0.tag.matchesVisibleControlItem })?.bounds.midY
             ?? seated.first(where: { $0.isControlItem && $0.bounds.width > 8 })?.bounds.midY
         else { return false }

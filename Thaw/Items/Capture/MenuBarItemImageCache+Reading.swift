@@ -210,11 +210,8 @@ extension MenuBarItemImageCache {
     ///
     /// A frame another on-band item occupies (hasPhantomFrame) or one parked
     /// off the band crops someone else's pixels; skip it rather than fail.
-    static nonisolated func hasUnusableCaptureGeometry(
-        _ item: MenuBarItem,
-        among peers: [MenuBarItem]
-    ) -> Bool {
-        item.hasPhantomFrame(among: peers) || item.isParkedOffMenuBarBand(among: peers)
+    static nonisolated func hasUnusableCaptureGeometry(_ item: MenuBarItem, among peers: [MenuBarItem], screens: [CGRect]) -> Bool {
+        item.hasPhantomFrame(among: peers) || item.isParkedOffMenuBarBand(among: peers, screens: screens)
     }
 
     /// Rejects hosting-window screenshots whose pixel size does not match

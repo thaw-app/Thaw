@@ -92,10 +92,11 @@ extension MenuBarItemImageCache {
         into result: inout CapturePass
     ) -> [(item: MenuBarItem, bounds: CGRect)] {
         let peers = candidates.map(\.item)
+        let screens = BarAxis.liveDisplayBounds()
         return candidates.filter { item, bounds in
             // Parked/overlapping frames cannot identify this item's pixels.
             // Skip without invalidating the glyph captured while it was seated.
-            if Self.hasUnusableCaptureGeometry(item, among: peers) {
+            if Self.hasUnusableCaptureGeometry(item, among: peers, screens: screens) {
                 Self.diagLog.debug("axBoundsCapture: \(item.logString) frame is parked or phantom; keeping its prior capture")
                 return false
             }

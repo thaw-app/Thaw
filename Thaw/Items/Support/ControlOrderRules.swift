@@ -45,11 +45,11 @@ enum ControlOrderRules {
         return alwaysHiddenX <= hiddenX && hiddenX <= visibleX
     }
 
-    static nonisolated func trailingSiriIsMisplaced(in items: [MenuBarItem]) -> Bool {
+    static nonisolated func trailingSiriIsMisplaced(in items: [MenuBarItem], displays: [CGRect] = BarAxis.liveDisplayBounds()) -> Bool {
         let onBar = items.filter {
             $0.isOnScreen && $0.bounds.width >= MenuBarItemGeometry.phantomFramePeerMinimumWidth &&
                 !$0.bounds.isEmpty && !$0.bounds.isInfinite &&
-                !$0.isParkedOffMenuBarBand(among: items)
+                !$0.isParkedOffMenuBarBand(among: items, screens: displays)
         }
         guard let siri = onBar.first(where: { $0.tag == .siri }) else { return false }
         return onBar.contains {
@@ -190,7 +190,8 @@ enum ControlOrderRules {
     /// Reject reversed Control Center/Clock ranks or non-anchors right of the trailing group; normalization repairs stable Siri stranding.
     /// Skip Thaw controls and sub-phantomFramePeerMinimumWidth slivers (including the intentionally zero-width icon); ranks also cover legacy spellings.
     static nonisolated func anchoredTrailingViolation(
-        in sortedLeftToRight: [MenuBarItem]
+        in sortedLeftToRight: [MenuBarItem],
+        displays: [CGRect] = BarAxis.liveDisplayBounds()
     ) -> String? {
         var lastAnchoredRank = Int.min
         var sawAnchored = false
@@ -198,7 +199,7 @@ enum ControlOrderRules {
             // A concealed item's parked or phantom frame says nothing about the bar's order.
             guard !item.isControlItem,
                   item.bounds.width >= MenuBarItemGeometry.phantomFramePeerMinimumWidth,
-                  !item.isParkedOffMenuBarBand(among: sortedLeftToRight),
+                  !item.isParkedOffMenuBarBand(among: sortedLeftToRight, screens: displays),
                   !item.hasPhantomFrame(among: sortedLeftToRight)
             else {
                 continue

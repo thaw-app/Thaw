@@ -195,6 +195,8 @@ struct NativeOverflowContaminationTests {
 /// or one parked off the band, is not capture geometry.
 @Suite("Unusable capture geometry")
 struct UnusableCaptureGeometryTests {
+    private static let screens = [CGRect(x: 0, y: 0, width: 1920, height: 1080)]
+
     private func item(
         _ title: String,
         x: CGFloat,
@@ -226,9 +228,9 @@ struct UnusableCaptureGeometryTests {
         let c = item("LinkLiar", x: 852.2, windowID: 3)
         let peers = [a, b, c]
 
-        #expect(MenuBarItemImageCache.hasUnusableCaptureGeometry(a, among: peers))
-        #expect(MenuBarItemImageCache.hasUnusableCaptureGeometry(b, among: peers))
-        #expect(MenuBarItemImageCache.hasUnusableCaptureGeometry(c, among: peers))
+        #expect(MenuBarItemImageCache.hasUnusableCaptureGeometry(a, among: peers, screens: Self.screens))
+        #expect(MenuBarItemImageCache.hasUnusableCaptureGeometry(b, among: peers, screens: Self.screens))
+        #expect(MenuBarItemImageCache.hasUnusableCaptureGeometry(c, among: peers, screens: Self.screens))
     }
 
     @Test("an item half-covering a neighbour is unusable")
@@ -239,8 +241,8 @@ struct UnusableCaptureGeometryTests {
         let wide = item("wide", x: 855, windowID: 2, width: 40)
         let peers = [narrow, wide]
 
-        #expect(MenuBarItemImageCache.hasUnusableCaptureGeometry(narrow, among: peers))
-        #expect(MenuBarItemImageCache.hasUnusableCaptureGeometry(wide, among: peers))
+        #expect(MenuBarItemImageCache.hasUnusableCaptureGeometry(narrow, among: peers, screens: Self.screens))
+        #expect(MenuBarItemImageCache.hasUnusableCaptureGeometry(wide, among: peers, screens: Self.screens))
     }
 
     @Test("healthy distinct frames are usable")
@@ -249,8 +251,8 @@ struct UnusableCaptureGeometryTests {
         let b = item("DockDoor", x: 830, windowID: 2, width: 36)
         let peers = [a, b]
 
-        #expect(!MenuBarItemImageCache.hasUnusableCaptureGeometry(a, among: peers))
-        #expect(!MenuBarItemImageCache.hasUnusableCaptureGeometry(b, among: peers))
+        #expect(!MenuBarItemImageCache.hasUnusableCaptureGeometry(a, among: peers, screens: Self.screens))
+        #expect(!MenuBarItemImageCache.hasUnusableCaptureGeometry(b, among: peers, screens: Self.screens))
     }
 
     /// Assertion-reflow collateral parks at y≈1400 while the bar reshuffles;
@@ -261,8 +263,8 @@ struct UnusableCaptureGeometryTests {
         let parked = item("DockDoor", x: 830, windowID: 2, y: 1400)
         let peers = [onBar, parked]
 
-        #expect(MenuBarItemImageCache.hasUnusableCaptureGeometry(parked, among: peers))
-        #expect(!MenuBarItemImageCache.hasUnusableCaptureGeometry(onBar, among: peers))
+        #expect(MenuBarItemImageCache.hasUnusableCaptureGeometry(parked, among: peers, screens: Self.screens))
+        #expect(!MenuBarItemImageCache.hasUnusableCaptureGeometry(onBar, among: peers, screens: Self.screens))
     }
 
     @Test("a degenerate frame is unusable")
@@ -271,7 +273,25 @@ struct UnusableCaptureGeometryTests {
         let sliver = item("ghost", x: 830, windowID: 2, width: 0)
         let peers = [healthy, sliver]
 
-        #expect(MenuBarItemImageCache.hasUnusableCaptureGeometry(sliver, among: peers))
+        #expect(MenuBarItemImageCache.hasUnusableCaptureGeometry(sliver, among: peers, screens: Self.screens))
+    }
+
+    @Test("a seated frame on a display the caller listed is usable")
+    func seatedOnListedDisplayUsable() {
+        let display = CGRect(x: 40000, y: 0, width: 1920, height: 1080)
+        let control = MenuBarItem(
+            tag: .visibleControlItem,
+            windowID: 9,
+            ownerPID: 100,
+            sourcePID: 100,
+            bounds: CGRect(x: 41000, y: 4, width: 24, height: 24),
+            title: "Visible",
+            isOnScreen: true
+        )
+        let seated = item("Alfred", x: 40800, windowID: 1)
+        let peers = [control, seated]
+
+        #expect(!MenuBarItemImageCache.hasUnusableCaptureGeometry(seated, among: peers, screens: [display]))
     }
 }
 
