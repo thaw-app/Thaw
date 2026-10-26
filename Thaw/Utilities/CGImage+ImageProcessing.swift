@@ -1162,13 +1162,9 @@ extension CGImage {
     }
 
     /// Draws the image into a premultiplied RGBA8 scratch bitmap and hands
-    /// its bytes to body, with the row stride. An image wider than
-    /// maximumWidth is scaled down to it, keeping its aspect ratio. nil when
-    /// the image has no area or the bitmap cannot be made.
-    ///
-    /// A scaled bitmap is smaller than the image, so a body that indexes by
-    /// row and column takes the width as bytesPerRow / 4 and the height as
-    /// bytes.count / bytesPerRow, not the image's own width and height.
+    /// its bytes and row stride to body, or returns nil when the image has no
+    /// area or the bitmap cannot be made. Scaled down to maximumWidth; index by
+    /// bytesPerRow / 4 and bytes.count / bytesPerRow, not the image size.
     ///
     /// The bitmap memory is only valid inside body: a context keeps using
     /// the buffer it was given, so an escaping &array argument must not be

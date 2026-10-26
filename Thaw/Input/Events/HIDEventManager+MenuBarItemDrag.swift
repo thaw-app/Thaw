@@ -37,11 +37,8 @@ extension HIDEventManager {
 
     // MARK: Handle Menu Bar Item Drag Start
 
-    /// Remembers the item a command-press landed on. By the first drag event
-    /// the pointer may already be over a neighbor, so the drag is judged by
-    /// what was grabbed rather than by what lies under the pointer. The press
-    /// position comes from the event, since a monitor can run after the
-    /// pointer has moved on.
+    /// The item under a ⌘-press, read from the event's position, since the
+    /// pointer may be over a neighbor by the time the drag starts.
     func notePressForItemDrag(_ event: NSEvent, appState: AppState) {
         pressedItemTag = event.modifierFlags.contains(.command)
             ? managedItem(appState: appState, at: event.cgEvent?.location ?? MouseHelpers.locationCoreGraphics)?.tag
@@ -88,12 +85,8 @@ extension HIDEventManager {
         }
     }
 
-    /// Whether a drag of the item with draggedTag opens the sections. Items
-    /// that can't go into a hidden section, such as the recording indicator
-    /// macOS places itself, gain nothing from it, and with native hiding the
-    /// reveal switches apps back on, which rebuilds the bar under the drag.
-    /// The item cache holds every item that can go into a hidden section and
-    /// leaves the indicators out, so an item it doesn't hold opens nothing.
+    /// Only hideable items the cache holds open the sections, so indicators and
+    /// control items don't. With native hiding a reveal would rebuild the bar under the drag.
     static nonisolated func dragRevealsSections(
         enabled: Bool,
         nativeHidingActive: Bool,

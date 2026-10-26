@@ -53,23 +53,15 @@ struct EnvironmentSnapshotTests {
         let snapshot = EnvironmentSnapshot(arrangement: Self.single)
         #expect(snapshot.generation == 0)
 
-        snapshot.invalidate()
-        #expect(!snapshot.isSettled)
         #expect(snapshot.settle(on: Self.docked) == .displayAdded)
-        #expect(snapshot.isSettled)
         #expect(snapshot.generation == 1)
         #expect(snapshot.arrangement == Self.docked)
 
-        snapshot.invalidate()
         #expect(snapshot.settle(on: Self.docked) == EnvironmentChange.none)
-        #expect(snapshot.isSettled)
         #expect(snapshot.generation == 1)
-        #expect(snapshot.change == .displayAdded, "An unchanged settle keeps the change that made the generation")
 
-        snapshot.invalidate()
         #expect(snapshot.settle(on: Self.single) == .displayRemoved)
         #expect(snapshot.generation == 2)
-        #expect(snapshot.change == .displayRemoved)
     }
 
     @Test("Two equal reads settle, and the read cap settles on the last read")

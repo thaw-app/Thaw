@@ -12,13 +12,9 @@ extension HIDEventManager {
     /// band, so its next return to the bar can reveal.
     func releaseHoverPauseIfPointerLeft(appState: AppState, screen: NSScreen) {
         let manager = appState.menuBarManager
+        // Zen Mode keeps hover paused until it ends.
         guard
-            !manager.showOnHoverAllowed,
-            HoverPauseLatch.releasesOnPointerMove(
-                isPaused: true,
-                pointerIsInsideHoverBand: isMouseInsideMenuBarHoverBand(appState: appState, screen: screen),
-                isZenModeActive: manager.isZenModeActive
-            )
+            !manager.showOnHoverAllowed, !manager.isZenModeActive, !isMouseInsideMenuBarHoverBand(appState: appState, screen: screen)
         else {
             return
         }
@@ -65,9 +61,7 @@ extension HIDEventManager {
             return isMouseInsideApplicationMenuClickRegion(
                 appState: appState,
                 screen: screen
-            ) != true && HoverPauseLatch.pausesOnEmptySpacePress(
-                hiddenSectionIsRevealed: appState.menuBarManager.section(withName: .hidden)?.isHidden == false
-            )
+            ) != true && appState.menuBarManager.section(withName: .hidden)?.isHidden == false
         }
         switch event.type {
         case .leftMouseDown:

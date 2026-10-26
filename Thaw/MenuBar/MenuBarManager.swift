@@ -34,7 +34,7 @@ final class MenuBarManager {
     /// Persisted _HIHideMenuBar value, unlike isMenuBarHiddenBySystem which also reflects transient app presentation options.
     private(set) var isMenuBarHiddenBySystemUserDefaults = false
 
-    /// Pause hover after an explicit toggle so it cannot undo the user; HoverPauseLatch resumes it once the pointer leaves the hover band.
+    /// Pause hover after an explicit toggle so it cannot undo the user; it resumes once the pointer leaves the hover band.
     var showOnHoverAllowed = true {
         didSet {
             // Hiding a section and the hover rearm both allow hover again, which undid Zen Mode's lock.
@@ -215,7 +215,7 @@ final class MenuBarManager {
             .map(MenuBarGroupMoveRefusal.init)
     }
 
-    /// Covers hidden items that flash during Clock or Notification Center shortcut bridging.
+    /// Covers hidden items that flash while an icon capture reveals them.
     let revealCover = RevealCover()
 
     /// What the bar is drawn over, for anything that paints over the bar.
@@ -290,7 +290,7 @@ final class MenuBarManager {
         appearanceEditorPanel.performSetup(with: appState)
         layoutEditorPanel.performSetup(with: appState, displayInvalidations: displays.invalidations)
         for section in sections {
-            section.performSetup(with: appState)
+            section.performSetup(with: appState, displays: displays)
         }
         // Divider reflow cannot hide items; a separate assignment model drives the restriction set.
         nativeAppHidingExperiment.recoverPreviousSession()

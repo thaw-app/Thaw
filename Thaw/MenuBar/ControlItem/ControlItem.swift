@@ -374,13 +374,6 @@ extension ControlItem {
     /// re-arming bounds the churn to one re-register per cooldown.
     static nonisolated let republishRearmCooldown: Duration = .seconds(60)
 
-    /// Re-publishes spent per identifier this session. See
-    /// republishIfUnseated(). Internal so tests can spend a budget.
-    static var republishCounts: [Identifier: Int] = [:]
-
-    /// When each identifier last re-published. Feeds the re-arm cooldown.
-    private static var republishLastAttempt: [Identifier: ContinuousClock.Instant] = [:]
-
     /// The decision for one unseated-window event. Pure, so the budget rule is
     /// testable without AppKit.
     static nonisolated func republishDecision(
@@ -405,11 +398,10 @@ extension ControlItem {
     @discardableResult
     func republishIfUnseated() -> RepublishDecision {
         let now = ContinuousClock.now
-        let priorCount = Self.republishCounts[identifier, default: 0]
-        let elapsedSinceLastAttempt = Self.republishLastAttempt[identifier].map { now - $0 }
+        let priorCount = ControlItemRepublishBudget.attempts(by: identifier)
         let decision = Self.republishDecision(
             priorCount: priorCount,
-            elapsedSinceLastAttempt: elapsedSinceLastAttempt
+            elapsedSinceLastAttempt: ControlItemRepublishBudget.elapsedSinceLastAttempt(by: identifier, now: now)
         )
         guard case let .republish(attempt) = decision else {
             diagLog.error(
@@ -422,8 +414,7 @@ extension ControlItem {
                 "republish budget for \(identifier.rawValue) re-armed; the parked item gets another re-register"
             )
         }
-        Self.republishCounts[identifier] = attempt
-        Self.republishLastAttempt[identifier] = now
+        ControlItemRepublishBudget.record(attempt: attempt, by: identifier, at: now)
 
         let oldWindowNumber = statusItem.button?.window?.windowNumber ?? -1
         cancellables.forEach { $0.cancel() }
@@ -638,9 +629,7 @@ extension ControlItem {
     /// Restores the re-publish budget after a window the host seated, so the
     /// next unseat starts with a fresh budget.
     func markSeated() {
-        guard Self.republishCounts[identifier] != nil else { return }
-        Self.republishCounts[identifier] = nil
-        Self.republishLastAttempt[identifier] = nil
+        guard ControlItemRepublishBudget.restore(for: identifier) else { return }
         diagLog.debug("republish budget for \(identifier.rawValue) restored; the fresh window seated")
     }
 
@@ -650,7 +639,7 @@ extension ControlItem {
     /// leaving rebuilds the bar, so the ladder gets a fresh attempt instead of
     /// staying latched off for the session.
     func resetOffBandRecovery() {
-        let spentRepublish = Self.republishCounts[identifier] != nil
+        let spentRepublish = ControlItemRepublishBudget.attempts(by: identifier) > 0
         guard offBandRecoveryExhausted || offBandRecoveryCycle > 0 || spentRepublish else {
             return
         }
@@ -658,8 +647,7 @@ extension ControlItem {
         offBandRecoveryLevel = 0
         offBandRecoveryCycle = 0
         placementBlock = nil
-        Self.republishCounts[identifier] = nil
-        Self.republishLastAttempt[identifier] = nil
+        ControlItemRepublishBudget.restore(for: identifier)
         diagLog.notice(
             "off-band recovery budget reset; the display configuration changed"
         )

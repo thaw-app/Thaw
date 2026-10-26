@@ -134,39 +134,38 @@ struct RevealCoverGeometryTests {
     }
 }
 
-@Suite("Reveal cover counter")
-struct RevealCoverCounterTests {
+@Suite("Reveal cover activity", .serialized)
+struct RevealCoverActivityTests {
+    private typealias Activity = RevealCoverActivity
+
+    private func drain() {
+        while Activity.isAnyMaskShowing {
+            Activity.noteHidden()
+        }
+    }
+
     @Test("The count goes up and down, and never below zero")
     func neverNegative() {
-        let counter = RevealCoverCounter()
-        #expect(!counter.isPositive)
-        counter.decrement()
-        #expect(!counter.isPositive)
-        counter.increment()
-        counter.increment()
-        counter.decrement()
-        #expect(counter.isPositive)
-        counter.decrement()
-        #expect(!counter.isPositive)
-        counter.increment()
-        #expect(counter.isPositive, "A decrement at zero did not leave a debt behind")
+        drain()
+        Activity.noteHidden()
+        #expect(!Activity.isAnyMaskShowing)
+        Activity.noteShown()
+        Activity.noteShown()
+        Activity.noteHidden()
+        #expect(Activity.isAnyMaskShowing)
+        Activity.noteHidden()
+        #expect(!Activity.isAnyMaskShowing)
+        Activity.noteShown()
+        #expect(Activity.isAnyMaskShowing, "A hide at zero did not leave a debt behind")
+        drain()
     }
 
     @Test("Concurrent shows and hides balance out")
     func concurrent() {
-        let counter = RevealCoverCounter()
-        DispatchQueue.concurrentPerform(iterations: 500) { _ in counter.increment() }
-        #expect(counter.isPositive)
-        DispatchQueue.concurrentPerform(iterations: 600) { _ in counter.decrement() }
-        #expect(!counter.isPositive)
-    }
-
-    @Test("The shared activity reports a cover while one is noted as shown")
-    func sharedActivity() {
-        let before = RevealCoverActivity.isAnyMaskShowing
-        RevealCoverActivity.noteShown()
-        #expect(RevealCoverActivity.isAnyMaskShowing)
-        RevealCoverActivity.noteHidden()
-        #expect(RevealCoverActivity.isAnyMaskShowing == before)
+        drain()
+        DispatchQueue.concurrentPerform(iterations: 500) { _ in Activity.noteShown() }
+        #expect(Activity.isAnyMaskShowing)
+        DispatchQueue.concurrentPerform(iterations: 600) { _ in Activity.noteHidden() }
+        #expect(!Activity.isAnyMaskShowing)
     }
 }

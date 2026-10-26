@@ -36,30 +36,18 @@ nonisolated enum EnvironmentChange: String, Equatable, Sendable {
 final class EnvironmentSnapshot {
     private(set) var generation = 0
     private(set) var arrangement: DisplayArrangement
-    /// The change that produced the current generation. An unchanged settle leaves it as it was.
-    private(set) var change = EnvironmentChange.none
-    /// False from the first screen-parameter posting until the geometry settles.
-    private(set) var isSettled = true
 
     init(arrangement: DisplayArrangement) {
         self.arrangement = arrangement
     }
 
-    func invalidate() {
-        if isSettled {
-            isSettled = false
-        }
-    }
-
     @discardableResult
     func settle(on newArrangement: DisplayArrangement) -> EnvironmentChange {
-        let newChange = EnvironmentChange(from: arrangement, to: newArrangement)
-        if newChange != .none {
+        let change = EnvironmentChange(from: arrangement, to: newArrangement)
+        if change != .none {
             arrangement = newArrangement
-            change = newChange
             generation += 1
         }
-        isSettled = true
-        return newChange
+        return change
     }
 }

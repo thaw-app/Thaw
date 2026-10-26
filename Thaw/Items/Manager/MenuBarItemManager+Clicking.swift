@@ -113,7 +113,7 @@ extension MenuBarItemManager {
         // is rebased onto the bar under the cursor before the warp below.
         let resolvedBounds = try await getCurrentBounds(for: item)
         // The re-read can still land on a parked or phantom frame mid-reflow.
-        let displays = Self.activeDisplayBounds()
+        let displays = BarAxis.liveDisplayBounds()
         if let rejection = ClickTargetCheck.rejection(
             for: resolvedBounds,
             barWidth: ClickTargetCheck.barWidth(for: resolvedBounds, displays: displays),

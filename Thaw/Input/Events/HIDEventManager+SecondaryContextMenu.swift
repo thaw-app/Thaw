@@ -188,16 +188,7 @@ extension HIDEventManager {
 
     /// The active display whose bounds contain frame's centre, if any.
     private static func displayBounds(containing frame: CGRect) -> CGRect? {
-        var ids = [CGDirectDisplayID](repeating: 0, count: 16)
-        var count: UInt32 = 0
-        guard CGGetActiveDisplayList(16, &ids, &count) == .success else { return nil }
-        for index in 0 ..< Int(count) {
-            let bounds = CGDisplayBounds(ids[index])
-            if bounds.contains(CGPoint(x: frame.midX, y: frame.midY)) {
-                return bounds
-            }
-        }
-        return nil
+        BarAxis.liveDisplayBounds().first { $0.contains(CGPoint(x: frame.midX, y: frame.midY)) }
     }
 
     func handleSecondaryContextMenu(

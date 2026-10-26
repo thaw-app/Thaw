@@ -66,9 +66,8 @@ final class MenuBarBackdrop {
                 self?.refresh(force: true)
             }
         }
-        // Covers paint this strip, so a timer keeps it close to the live bar
-        // between the changes above. A window can repaint where it is, which
-        // the key cannot see, so each tick composites again.
+        // Covers paint this strip. Recomposite on a timer: a window can repaint
+        // in place without changing the key.
         cadence?.cancel()
         cadence = Task { @MainActor [weak self, weak appState] in
             while !Task.isCancelled {
@@ -85,11 +84,8 @@ final class MenuBarBackdrop {
         refresh(force: true)
     }
 
-    /// What a strip was composited from. A window that moves under the bar
-    /// keeps its ID, so its place is part of the key, or the strip would go
-    /// stale until the window set itself changed. The windows stay in the
-    /// window server's front-to-back order, so a change in which one is on
-    /// top changes the key too.
+    /// What a strip was composited from. Includes each window's bounds, in
+    /// front-to-back order, so a window that moves or comes to the front invalidates the strip.
     nonisolated static func stripKey(rect: CGRect, windows: [(id: CGWindowID, bounds: CGRect)]) -> String {
         let parts = windows.map { "\($0.id)@\($0.bounds)" }
         return "\(rect)|\(parts.joined(separator: ","))"

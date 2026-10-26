@@ -60,13 +60,17 @@ nonisolated struct NewIconArrivals {
         }
     }
 
-    /// The section's order with identifier at index, the New Items placeholder's
-    /// slot, and nowhere else. The index counts the order without identifier.
-    static func order(placing identifier: String, in order: [String], at index: Int) -> [String] {
+    /// The section's order without identifier in any spelling: the list the New Items slot's index counts.
+    static func others(than identifier: String, in order: [String]) -> [String] {
         let canonical = MenuBarItemTag.canonicalPersistentIdentifier(identifier)
-        var others = order.filter { MenuBarItemTag.canonicalPersistentIdentifier($0) != canonical }
-        others.insert(identifier, at: min(max(index, 0), others.count))
-        return others
+        return order.filter { MenuBarItemTag.canonicalPersistentIdentifier($0) != canonical }
+    }
+
+    /// others with identifier at index, the New Items placeholder's slot.
+    static func order(placing identifier: String, among others: [String], at index: Int) -> [String] {
+        var order = others
+        order.insert(identifier, at: min(max(index, 0), others.count))
+        return order
     }
 
     /// The bundle ID in front of an identifier's first colon.

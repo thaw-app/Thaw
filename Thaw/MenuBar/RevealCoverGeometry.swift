@@ -121,50 +121,21 @@ nonisolated enum RevealCoverGeometry {
     }
 }
 
-/// A count of covers that are up, safe to read from any thread, that never
-/// goes below zero.
-nonisolated final class RevealCoverCounter: Sendable {
-    private let count = Atomic<Int>(0)
-
-    var isPositive: Bool {
-        count.load(ordering: .relaxed) > 0
-    }
-
-    func increment() {
-        count.wrappingAdd(1, ordering: .relaxed)
-    }
-
-    /// Counts one cover down, never below zero.
-    func decrement() {
-        var current = count.load(ordering: .relaxed)
-        while current > 0 {
-            let (exchanged, original) = count.compareExchange(
-                expected: current,
-                desired: current - 1,
-                ordering: .relaxed
-            )
-            if exchanged {
-                return
-            }
-            current = original
-        }
-    }
-}
-
 /// Whether a RevealCover is up, so the nonisolated chevron probe can
 /// tell a covered hit-test from a real bar reading.
 nonisolated enum RevealCoverActivity {
-    private static let covers = RevealCoverCounter()
+    private static let covers = Mutex(0)
 
     static var isAnyMaskShowing: Bool {
-        covers.isPositive
+        covers.withLock { $0 > 0 }
     }
 
     static func noteShown() {
-        covers.increment()
+        covers.withLock { $0 += 1 }
     }
 
+    /// Counts one cover down, never below zero.
     static func noteHidden() {
-        covers.decrement()
+        covers.withLock { $0 = max(0, $0 - 1) }
     }
 }

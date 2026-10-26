@@ -214,7 +214,7 @@ extension MenuBarItemManager {
                 !failureLedger.cannotCompleteMarked($0) &&
                 controller.section(for: $0) == .visible
         }
-        var liveParkedIDs = ParkedItems.parkedSetAndBarMidY(in: liveItems, screens: Self.activeDisplayBounds()).parkedIDs
+        var liveParkedIDs = ParkedItems.parkedSetAndBarMidY(in: liveItems, screens: BarAxis.liveDisplayBounds()).parkedIDs
         let prePulseParked = pulseCandidates.filter { liveParkedIDs.contains($0.windowID) }
         let prePulseOnBand = pulseCandidates.filter { !liveParkedIDs.contains($0.windowID) }
         // The picture came with the reading when there is one, so the lane does not wait on a capture.
@@ -240,7 +240,7 @@ extension MenuBarItemManager {
             }
             liveItems = await MenuBarItem.getMenuBarItems(option: .activeSpace)
             guard !arrangementIsManual, !Task.isCancelled else { return false }
-            liveParkedIDs = ParkedItems.parkedSetAndBarMidY(in: liveItems, screens: Self.activeDisplayBounds()).parkedIDs
+            liveParkedIDs = ParkedItems.parkedSetAndBarMidY(in: liveItems, screens: BarAxis.liveDisplayBounds()).parkedIDs
         } else if !needsPulse {
             MenuBarItemManager.diagLog.debug(
                 "post-restriction repair: pulse skipped, no non-hiding-unsupported items parked or blank"
@@ -392,7 +392,7 @@ extension MenuBarItemManager {
 
         let afterItems = await MenuBarItem.getMenuBarItems(option: .activeSpace)
         guard !Task.isCancelled else { return false }
-        let (_, afterParkedIDs) = ParkedItems.parkedSetAndBarMidY(in: afterItems, screens: Self.activeDisplayBounds())
+        let (_, afterParkedIDs) = ParkedItems.parkedSetAndBarMidY(in: afterItems, screens: BarAxis.liveDisplayBounds())
         // Hiding-unsupported items are excluded: their transient blanks would
         // drive repeated pulses.
         let onBandVisibleItems = afterItems.filter {

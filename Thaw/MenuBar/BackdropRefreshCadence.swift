@@ -17,9 +17,8 @@ nonisolated enum BackdropRefreshCadence {
     /// Input-free this long, the bar is left alone until someone is back.
     static let idleThreshold: TimeInterval = 120
 
-    /// The wait before the next refresh, or nil to skip this one.
-    /// coverLikely is true while Thaw is in front or the Thaw Bar is open,
-    /// which is when icon captures, and the cover over them, happen.
+    /// The wait before the next refresh, or nil to skip one. coverLikely: Thaw
+    /// is frontmost or the Thaw Bar is open, when icon captures happen.
     static func nextInterval(coverLikely: Bool, screenLocked: Bool, idleSeconds: TimeInterval) -> Duration? {
         guard !screenLocked, idleSeconds < idleThreshold else { return nil }
         return coverLikely ? fast : slow

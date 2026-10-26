@@ -260,13 +260,6 @@ extension MenuBarItemManager {
         case explicitLayoutRepair
     }
 
-    static func activeDisplayBounds() -> [CGRect] {
-        var ids = [CGDirectDisplayID](repeating: 0, count: 16)
-        var count: UInt32 = 0
-        guard CGGetActiveDisplayList(UInt32(ids.count), &ids, &count) == .success else { return [] }
-        return ids.prefix(Int(count)).map { CGDisplayBounds($0) }
-    }
-
     /// Keys for visible items with no AX child. Unmanaged, but they hold a
     /// visible slot so no divider sorts to their right. Never stale keys.
     @MainActor

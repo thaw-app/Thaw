@@ -21,7 +21,7 @@ extension HIDEventManager {
         guard
             isMouseInsideMenuBar(appState: appState, screen: screen),
             let mouseLocation = MouseHelpers.locationCoreGraphics,
-            let hoveredEntry = tooltipTarget(at: mouseLocation)
+            let hoveredEntry = drawnSeat(at: mouseLocation)
         else {
             dismissMenuBarTooltip()
             return
@@ -44,7 +44,7 @@ extension HIDEventManager {
             try Task.checkCancellation()
 
             // Re-read the cached bounds to pick up any cache rebuilds during the delay.
-            guard let target = tooltipTarget(at: mouseLocation), target.windowID == hoveredID else { return }
+            guard let target = drawnSeat(at: mouseLocation), target.windowID == hoveredID else { return }
 
             let allItems = appState.itemManager.managedItems
             let displayName: String
@@ -69,18 +69,6 @@ extension HIDEventManager {
                 owner: "menuBar"
             )
         }
-    }
-
-    /// The drawn seat under the pointer, read from the cached bounds to avoid per-event Window Server IPC.
-    private func tooltipTarget(at mouseLocation: CGPoint) -> (windowID: CGWindowID, bounds: CGRect)? {
-        let context = Self.displayContext(for: mouseLocation)
-        return MenuBarTooltipGeometry.target(
-            at: mouseLocation,
-            entries: windowBoundsLock.withLock { $0 },
-            destinationDisplay: context.destination,
-            displayBounds: context.all,
-            laneMinX: context.laneMinX
-        )
     }
 
     /// Only dismisses panels owned by the menu bar tooltip handler.

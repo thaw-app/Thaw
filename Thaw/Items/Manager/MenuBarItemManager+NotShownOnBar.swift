@@ -17,7 +17,7 @@ extension MenuBarItemManager {
         // Visible peers only: concealed items report parked frames on the
         // Thaw icon's seat. The Thaw icon itself is a visible item.
         let peers = visible
-        let screens = Self.activeDisplayBounds()
+        let screens = BarAxis.liveDisplayBounds()
         var streaks = [MenuBarItemTag: Int]()
         for item in visible where NotShownOnBar.looksNotShown(item, among: peers, screens: screens) {
             streaks[item.tag] = (notShownStreaks[item.tag] ?? 0) + 1

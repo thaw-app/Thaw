@@ -7,10 +7,8 @@
 
 import CoreGraphics
 
-/// Where a click counts as a click on Thaw's icon: its column from the top
-/// of its screen down to the icon's bottom edge. On macOS 27 the icon's frame
-/// starts a few points below the top of the screen, yet macOS still sends a
-/// click at the very top to the icon, so testing the frame alone misses it.
+/// Thaw's icon column from the screen top to the icon's bottom: on macOS 27 a
+/// click on the top row, above the icon's frame, still goes to the icon.
 nonisolated enum ControlItemHitColumn {
     /// In AppKit coordinates, where y grows upward and screenMaxY is the top
     /// of the icon's screen. One point more, since CGRect.contains leaves out

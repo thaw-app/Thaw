@@ -14,41 +14,6 @@ extension HIDEventManager {
     /// Anything wider is an expanded section divider and is excluded.
     static nonisolated let maxReasonableItemWidth: CGFloat = 500
 
-    /// On macOS 27 synthetic window IDs have no live CG window, so cached AX
-    /// bounds are trusted. Item frames are reported against one bar, so each
-    /// entry is rebased onto destinationDisplay first (see MirroredBarGeometry).
-    static nonisolated func menuBarBoundsLookupContains(
-        _ location: CGPoint,
-        entries: [(windowID: CGWindowID, bounds: CGRect)],
-        destinationDisplay: CGRect?,
-        displayBounds: [CGRect],
-        laneMinX: CGFloat? = nil,
-        trustCachedBoundsWithoutLiveWindowVerification: Bool,
-        liveWindowBounds: (CGWindowID) -> CGRect? = { Bridging.getWindowBounds(for: $0) }
-    ) -> Bool {
-        for entry in entries {
-            guard let bounds = MirroredBarGeometry.drawnFrame(
-                entry.bounds,
-                on: destinationDisplay,
-                displayBounds: displayBounds,
-                laneMinX: laneMinX
-            ), bounds.contains(location) else { continue }
-            if trustCachedBoundsWithoutLiveWindowVerification {
-                return true
-            }
-            if let currentBounds = liveWindowBounds(entry.windowID),
-               MirroredBarGeometry.frame(
-                   currentBounds,
-                   on: destinationDisplay,
-                   displayBounds: displayBounds
-               ).contains(location)
-            {
-                return true
-            }
-        }
-        return false
-    }
-
     /// AX can overstate the digital clock's height. Clip both native and
     /// mirrored frames to the destination bar, never the application below it.
     static nonisolated func systemClockItem(
@@ -156,7 +121,7 @@ extension HIDEventManager {
 
     /// Reads the concealed set once per rebuild, not once per item.
     private func boundsLookupInclusionFilter() -> (MenuBarItem) -> Bool {
-        let screens = MenuBarItemManager.activeDisplayBounds()
+        let screens = BarAxis.liveDisplayBounds()
         guard let controller = appState?.menuBarManager.sectionController else {
             return { Self.shouldIncludeItemInMenuBarBoundsLookup($0, section: nil, screens: screens) }
         }

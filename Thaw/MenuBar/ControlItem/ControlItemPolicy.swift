@@ -37,11 +37,8 @@ extension ControlItem {
         case custom(SectionDividerCustomMark)
     }
 
-    /// Whether a collapsed divider keeps a sliver during a drag, so the user
-    /// can see where one section ends and the next begins. Only a drag that
-    /// actually revealed a section needs it: a drag that opened nothing, as
-    /// with Native hiding or an indicator, left both slivers at the left end of
-    /// the visible icons with no hidden items between them.
+    /// A collapsed divider keeps a sliver marking its section's edge only while
+    /// a drag has a section revealed.
     static nonisolated func keepsDragSliver(
         showAllSectionsOnUserDrag: Bool,
         isDragging: Bool,

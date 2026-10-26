@@ -658,7 +658,7 @@ final class LayoutBarPaddingView: NSView {
             }
             do {
                 let recoveringStrandedVisibleControl = MenuBarItemGeometry.isStrandedVisibleControl(
-                    item, screens: MenuBarItemManager.activeDisplayBounds()
+                    item, screens: BarAxis.liveDisplayBounds()
                 )
                 let attemptMove = { () async throws -> Bool in
                     try await appState.itemManager.move(
@@ -1276,7 +1276,7 @@ final class LayoutBarPaddingView: NSView {
             try? await Task.sleep(for: .milliseconds(120))
             do {
                 let recoveringStrandedVisibleControl = MenuBarItemGeometry.isStrandedVisibleControl(
-                    item, screens: MenuBarItemManager.activeDisplayBounds()
+                    item, screens: BarAxis.liveDisplayBounds()
                 )
                 try await appState.itemManager.move(
                     item: item,

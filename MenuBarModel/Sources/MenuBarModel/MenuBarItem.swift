@@ -167,7 +167,7 @@ public struct MenuBarItem: CustomStringConvertible, Sendable, Codable {
     /// The display's band check comes first: when the visible control parks
     /// too, a peer-relative check would call everyone on-band.
     public func isParkedOffMenuBarBand(among peers: [MenuBarItem]) -> Bool {
-        isParkedOffMenuBarBand(among: peers, screens: activeMenuBarDisplayBounds())
+        isParkedOffMenuBarBand(among: peers, screens: BarAxis.liveDisplayBounds())
     }
 
     /// Whether this item is parked outside the bar bands of the given CG-global screens.
@@ -435,12 +435,4 @@ extension MenuBarItem {
         }
         return titleCased(title)
     }
-}
-
-func activeMenuBarDisplayBounds() -> [CGRect] {
-    var count: UInt32 = 0
-    guard CGGetActiveDisplayList(0, nil, &count) == .success, count > 0 else { return [] }
-    var ids = [CGDirectDisplayID](repeating: 0, count: Int(count))
-    guard CGGetActiveDisplayList(count, &ids, &count) == .success else { return [] }
-    return ids.prefix(Int(count)).map(CGDisplayBounds)
 }

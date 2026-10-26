@@ -136,10 +136,13 @@ struct NewIconArrivalsTests {
     @Test("A new icon goes into its section's order at the placeholder's slot, once")
     func insertsAtTheSlot() {
         let orca = "dev.orca:Item-0"
-        #expect(NewIconArrivals.order(placing: orca, in: ["a:1", "b:1", "c:1"], at: 1) == ["a:1", orca, "b:1", "c:1"])
-        #expect(NewIconArrivals.order(placing: orca, in: ["a:1", orca, "b:1"], at: 2) == ["a:1", "b:1", orca],
+        func placing(in order: [String], at index: Int) -> [String] {
+            NewIconArrivals.order(placing: orca, among: NewIconArrivals.others(than: orca, in: order), at: index)
+        }
+        #expect(placing(in: ["a:1", "b:1", "c:1"], at: 1) == ["a:1", orca, "b:1", "c:1"])
+        #expect(placing(in: ["a:1", orca, "b:1"], at: 2) == ["a:1", "b:1", orca],
                 "the slot counts the order without the icon, which isn't listed twice")
-        #expect(NewIconArrivals.order(placing: orca, in: ["a:1"], at: 9) == ["a:1", orca])
-        #expect(NewIconArrivals.order(placing: orca, in: [], at: 0) == [orca])
+        #expect(placing(in: ["a:1"], at: 9) == ["a:1", orca])
+        #expect(placing(in: [], at: 0) == [orca])
     }
 }

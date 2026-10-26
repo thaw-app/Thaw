@@ -137,12 +137,15 @@ final class MenuBarLeadingEdgeWatcher {
         guard let appState else { return }
         let controller = appState.menuBarManager.sectionController
         let visible = appState.itemManager.managedItems.filter { item in
-            item.bounds.width > 0
-                && (item.tag.matchesVisibleControlItem || (item.isOnScreen && controller.section(for: item) == .visible))
+            RevealCoverGeometry.anchorsBand(
+                width: item.bounds.width,
+                isVisibleControlItem: item.tag.matchesVisibleControlItem,
+                isOnScreen: item.isOnScreen,
+                isInVisibleSection: controller.section(for: item) == .visible
+            )
         }
-        // Seated items only, as in RevealCover: an item parked at the
-        // x == -1 sentinel would sort first, sit on no screen and leave the
-        // edge unwatched.
+        // Seated items only: an item parked at the x == -1 sentinel would
+        // sort first, sit on no screen and leave the edge unwatched.
         let screenFrames = NSScreen.screens.map(\.cgFrame)
         let seated = visible.compactMap { item in
             MenuBarItemGeometry.barScreen(holding: item.bounds, among: screenFrames).map { (item: item, screen: $0) }

@@ -54,16 +54,16 @@ struct DisplayInvalidationReadersTests {
         let (environment, center) = Self.makeEnvironment()
         let controlItem = ControlItem(identifier: .alwaysHidden)
         controlItem.observeDisplayInvalidations(environment.invalidations)
-        ControlItem.republishCounts[.alwaysHidden] = ControlItem.maximumRepublishes
-        defer { ControlItem.republishCounts[.alwaysHidden] = nil }
+        ControlItemRepublishBudget.spendAll(by: .alwaysHidden)
+        defer { ControlItemRepublishBudget.restore(for: .alwaysHidden) }
 
         Self.postScreenParametersChange(on: center)
-        #expect(ControlItem.republishCounts[.alwaysHidden] == ControlItem.maximumRepublishes)
+        #expect(ControlItemRepublishBudget.attempts(by: .alwaysHidden) == ControlItem.maximumRepublishes)
 
         environment.start()
         defer { environment.stop() }
         Self.postScreenParametersChange(on: center)
-        #expect(ControlItem.republishCounts[.alwaysHidden] == nil)
+        #expect(ControlItemRepublishBudget.attempts(by: .alwaysHidden) == 0)
     }
 
     @Test("A revealed descender retracts 0.2 s after an invalidation, and not before the environment relays one")

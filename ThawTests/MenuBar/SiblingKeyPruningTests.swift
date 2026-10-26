@@ -139,7 +139,7 @@ import Testing
         @Test("Seated item is not retracted")
         func seatedItemIsNotRetracted() {
             // Use live topology because fixed coordinates only fit one display arrangement.
-            let display = MenuBarItemManager.activeDisplayBounds().first
+            let display = BarAxis.liveDisplayBounds().first
                 ?? CGRect(x: 0, y: 0, width: 1920, height: 1080)
             let seated = MenuBarItem(
                 tag: .init(namespace: .string("com.raycast.macos"), title: "Item-0"),

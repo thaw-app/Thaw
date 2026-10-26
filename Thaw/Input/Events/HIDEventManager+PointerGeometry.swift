@@ -90,39 +90,46 @@ extension HIDEventManager {
         return (CGDisplayBounds(screen.displayID), all, laneMinX)
     }
 
+    /// The drawn seat under the pointer, read from the bounds table to avoid per-event Window
+    /// Server IPC. The table is trusted: on macOS 27 synthetic window IDs have no live window.
+    func drawnSeat(at mouseLocation: CGPoint) -> (windowID: CGWindowID, bounds: CGRect)? {
+        let context = Self.displayContext(for: mouseLocation)
+        return MenuBarTooltipGeometry.target(
+            at: mouseLocation,
+            entries: windowBoundsLock.withLock { $0 },
+            destinationDisplay: context.destination,
+            displayBounds: context.all,
+            laneMinX: context.laneMinX
+        )
+    }
+
     /// The fast path for hover and click hit-testing.
     private func isMouseInsideCachedMenuBarItem() -> Bool {
         guard let mouseLocation = MouseHelpers.locationCoreGraphics else {
             return false
         }
-
-        let entries = windowBoundsLock.withLock { $0 }
-        let context = Self.displayContext(for: mouseLocation)
-        let trustCachedBounds = true
-        return Self.menuBarBoundsLookupContains(
-            mouseLocation,
-            entries: entries,
-            destinationDisplay: context.destination,
-            displayBounds: context.all,
-            laneMinX: context.laneMinX,
-            trustCachedBoundsWithoutLiveWindowVerification: trustCachedBounds
-        )
+        return drawnSeat(at: mouseLocation) != nil
     }
 
     /// The cached item drawn under mouseLocation, if any. Also the macOS 27
     /// fallback when the bounds lookup table is empty or stale.
     func managedItem(appState: AppState, at mouseLocation: CGPoint?) -> MenuBarItem? {
         guard let mouseLocation else { return nil }
+        return drawnItem(in: appState.itemManager.managedItems, at: mouseLocation, appState: appState)
+    }
+
+    /// The first candidate drawn under location that show-on and tooltip hit-testing count.
+    private func drawnItem(in candidates: [MenuBarItem], at location: CGPoint, appState: AppState) -> MenuBarItem? {
         let controller = appState.menuBarManager.sectionController
         let effectivelyConcealed = controller.effectivelyConcealedIdentifiers
-        let context = Self.displayContext(for: mouseLocation)
-        return appState.itemManager.managedItems.first { item in
+        let context = Self.displayContext(for: location)
+        return candidates.first { item in
             guard let bounds = MirroredBarGeometry.drawnFrame(
                 item.bounds,
                 on: context.destination,
                 displayBounds: context.all,
                 laneMinX: context.laneMinX
-            ), bounds.contains(mouseLocation) else { return false }
+            ), bounds.contains(location) else { return false }
             return Self.shouldIncludeItemInMenuBarBoundsLookup(
                 item,
                 section: controller.section(for: item),
@@ -236,25 +243,9 @@ extension HIDEventManager {
     /// Whether location is inside any on-screen item's bounds, using the
     /// same live snapshot and concealment filter the reveal hit-tests read.
     private func isMouseInsideOnScreenItemBounds(appState: AppState, at location: CGPoint) -> Bool {
-        let controller = appState.menuBarManager.sectionController
-        let effectivelyConcealed = controller.effectivelyConcealedIdentifiers
         let candidates = appState.itemManager.onScreenItemSnapshot.items
             + appState.itemManager.managedItems
-        let context = Self.displayContext(for: location)
-        return candidates.contains { item in
-            guard let bounds = MirroredBarGeometry.drawnFrame(
-                item.bounds,
-                on: context.destination,
-                displayBounds: context.all,
-                laneMinX: context.laneMinX
-            ), bounds.contains(location) else { return false }
-            return Self.shouldIncludeItemInMenuBarBoundsLookup(
-                item,
-                section: controller.section(for: item),
-                effectivelyConcealed: effectivelyConcealed,
-                screens: context.all
-            )
-        }
+        return drawnItem(in: candidates, at: location, appState: appState) != nil
     }
 
     /// The frame is grown first, so drifting slightly off the edge does not count as leaving.

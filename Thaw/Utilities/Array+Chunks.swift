@@ -7,7 +7,7 @@
 
 nonisolated extension Array {
     /// The elements in runs of size, in order; the last run is shorter when
-    /// they don't divide evenly. A grid's rows, or a capture's batches.
+    /// they don't divide evenly.
     func chunks(ofCount size: Int) -> [[Element]] {
         precondition(size > 0, "a chunk holds at least one element")
         return stride(from: 0, to: count, by: size).map { Array(self[$0 ..< Swift.min($0 + size, count)]) }

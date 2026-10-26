@@ -22,18 +22,26 @@ struct DisplayEnvironmentTests {
     @Test("A burst of five postings invalidates at once and publishes one snapshot")
     func burstPublishesOnce() async {
         let harness = EnvironmentHarness(baseline: Self.single, reads: [Self.docked])
+        var invalidations = 0
+        var settles = [EnvironmentChange]()
+        let invalidated = harness.environment.invalidations.sink { invalidations += 1 }
+        let settled = harness.environment.settlements.sink { settles.append($0) }
         harness.environment.start()
-        defer { harness.environment.stop() }
+        defer {
+            harness.environment.stop()
+            invalidated.cancel()
+            settled.cancel()
+        }
 
         for _ in 0 ..< 5 {
             harness.center.post(name: NSApplication.didChangeScreenParametersNotification, object: nil)
         }
-        #expect(!harness.environment.snapshot.isSettled, "Readers must see the change before the settle")
+        #expect(invalidations == 5, "Readers must see the change before the settle")
+        #expect(settles.isEmpty)
 
         await harness.environment.waitUntilSettled()
-        #expect(harness.environment.snapshot.isSettled)
         #expect(harness.environment.snapshot.generation == 1)
-        #expect(harness.environment.snapshot.change == .displayAdded)
+        #expect(settles == [.displayAdded])
         #expect(harness.readCount == 2)
         #expect(harness.sleeps == [.milliseconds(300), .milliseconds(150)])
     }
@@ -65,12 +73,11 @@ struct DisplayEnvironmentTests {
         harness.environment.noteScreenParametersChanged()
         await harness.environment.waitUntilSettled()
         #expect(harness.environment.snapshot.generation == 1)
-        #expect(harness.environment.snapshot.isSettled)
 
         harness.environment.noteScreenParametersChanged()
         await harness.environment.waitUntilSettled()
         #expect(harness.environment.snapshot.generation == 2)
-        #expect(harness.environment.snapshot.change == .displayRemoved)
+        #expect(harness.environment.snapshot.arrangement == Self.single)
     }
 
     @Test("Readers hear every posting at once and one settle per burst, unchanged settles included")

@@ -215,11 +215,11 @@ final class MenuBarSection {
         self.init(name: name, controlItem: controlItem)
     }
 
-    func performSetup(with appState: AppState) {
+    func performSetup(with appState: AppState, displays: DisplayEnvironment) {
         self.appState = appState
         configuration = appState.settings
         menuOpenMonitor = appState.itemManager.menuOpenMonitor
-        controlItem.performSetup(with: appState, displayInvalidations: appState.displayEnvironment.invalidations)
+        controlItem.performSetup(with: appState, displayInvalidations: displays.invalidations)
         desiredState = controlItem.state
     }
 

@@ -86,7 +86,7 @@ enum ControlOrderRules {
     ///
     /// A stand-in from CacheDividers is never parked: its empty frame only says
     /// that the cache dropped the divider, not where macOS put it.
-    static func dividerIsOffTheBar(_ controlItems: ControlItemPair, among items: [MenuBarItem], displays: [CGRect] = MenuBarItemManager.activeDisplayBounds()) -> Bool {
+    static func dividerIsOffTheBar(_ controlItems: ControlItemPair, among items: [MenuBarItem], displays: [CGRect] = BarAxis.liveDisplayBounds()) -> Bool {
         !CacheDividers.isStandIn(controlItems.hidden)
             && controlItems.hidden.isParkedOffMenuBarBand(among: items, screens: displays)
     }
@@ -96,7 +96,7 @@ enum ControlOrderRules {
     /// macOS 27 draws the item set on every bar, and an app's AX frame names whichever bar
     /// it last laid out on. Frames from different bars share no x axis, so an order read
     /// from them is meaningless. Parked and off-band frames are ignored.
-    static func framesSpanSeveralBars(_ items: [MenuBarItem], displays: [CGRect] = MenuBarItemManager.activeDisplayBounds()) -> Bool {
+    static func framesSpanSeveralBars(_ items: [MenuBarItem], displays: [CGRect] = BarAxis.liveDisplayBounds()) -> Bool {
         let bandHeight = MenuBarItemAXProvider.maxItemHeight(menuBarHeight: NSScreen.tallestCachedMenuBarHeight)
         var bars = Set<Int>()
         for item in items where item.isOnScreen && item.bounds.origin.x != -1 && !item.bounds.isEmpty {

@@ -31,14 +31,10 @@ final class RevealCover {
         self.appState = appState
     }
 
-    // MARK: Bridge
+    // MARK: Holding
 
-    /// Covers the band the concealed items will appear in. Call right before
-    /// the restriction is released.
-    ///
-    /// Covers are counted: overlapping bridges share one cover, and it comes
-    /// down only when the last holder lets go. The cover never outlives
-    /// lifetime, since a stuck cover freezes a strip of bar.
+    /// Covers the band concealed items appear in. Counted: the last hide() takes
+    /// it down. It never outlives lifetime, since a stuck cover freezes a strip of bar.
     func show(lifetime: Duration) {
         hideTask?.cancel()
         holders += 1
@@ -53,7 +49,7 @@ final class RevealCover {
         for screen in NSScreen.screens {
             let displayID = screen.displayID
             guard let band = layout.bands[displayID] else {
-                // Hidden items will show on this display for the whole bridge.
+                // Hidden items show on this display while the cover is held.
                 diagLog.warning("no cover on display \(displayID): no band (\(layout.bands.isEmpty ? "no seated visible item to anchor on" : "band empty on this display"))")
                 continue
             }
@@ -84,22 +80,18 @@ final class RevealCover {
     }
 
     /// Removes the cover once the host has stopped drawing the revealed items.
-    /// Call when the restriction is back, or at once when it never dropped.
-    func hide(immediately: Bool = false) {
+    /// Call when the restriction is back.
+    func hide() {
         guard holders > 0 else { return }
         holders -= 1
         guard holders == 0 else { return }
         hideTask?.cancel()
-        guard !immediately else {
-            orderOutAll()
-            return
-        }
         hideTask = Task { [weak self] in
             try? await Task.sleep(for: Self.settleAfterRestore)
             guard !Task.isCancelled else { return }
             self?.orderOutAll()
             // Cheap and capture-indicator free, so take the chance to pick up
-            // anything that moved behind the bar during the bridge.
+            // anything that moved behind the bar while the cover was up.
             self?.appState?.menuBarManager.backdrop.refresh()
         }
     }
@@ -220,12 +212,12 @@ final class RevealCover {
 
     private func makePanel() -> NSPanel {
         // Not opaque: the left end fades into the live bar. Clicks go through
-        // to the bar: this only has to be seen, and it is up for a second.
+        // to the bar: this only has to be seen.
         let panel = NSPanel.menuBarOverlay(opaque: false, absorbsClicks: false)
         #if DEBUG
             // A debug build can let capture see it, so a screen recording can
             // check the cover.
-            if UserDefaults.standard.bool(forKey: "ClockBridgeCoverCapturable") {
+            if UserDefaults.standard.bool(forKey: "RevealCoverCapturable") {
                 panel.sharingType = .readOnly
             }
         #endif

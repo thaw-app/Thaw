@@ -55,11 +55,9 @@ final class NewIconSectionFollower {
         controller: any MenuBarSectionControlling
     ) {
         let section = placement.section
-        let order = controller.sectionItemOrder[section] ?? []
-        let canonical = MenuBarItemTag.canonicalPersistentIdentifier(placement.identifier)
-        let others = order.filter { MenuBarItemTag.canonicalPersistentIdentifier($0) != canonical }
+        let others = NewIconArrivals.others(than: placement.identifier, in: controller.sectionItemOrder[section] ?? [])
         guard let index = itemManager.newItemsBadgeIndex(in: section, itemIdentifiers: others) else { return }
-        controller.setSectionOrder(NewIconArrivals.order(placing: placement.identifier, in: order, at: index), for: section)
+        controller.setSectionOrder(NewIconArrivals.order(placing: placement.identifier, among: others, at: index), for: section)
         itemManager.scheduleSectionOrderApply(for: section)
         diagLog.info("\(placement.identifier) takes the New Items slot \(index) in \(section)")
     }

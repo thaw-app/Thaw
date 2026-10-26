@@ -9,8 +9,8 @@ import AppKit
 import Combine
 import MenuBarModel
 
-/// The one observer of screen-parameter changes. A posting invalidates the snapshot at once; the
-/// snapshot settles once two geometry reads agree, so a burst of postings publishes a single change.
+/// Publishes screen-parameter changes: each posting at once, and the snapshot once two geometry
+/// reads agree, so a burst of postings publishes a single change.
 @MainActor
 final class DisplayEnvironment {
     let snapshot: EnvironmentSnapshot
@@ -65,7 +65,6 @@ final class DisplayEnvironment {
 
     /// Restarts the settle, so the quiet period runs from the newest posting.
     func noteScreenParametersChanged() {
-        snapshot.invalidate()
         invalidationSubject.send()
         slot.replace { [weak self] ticket in
             await self?.settle(ticket)

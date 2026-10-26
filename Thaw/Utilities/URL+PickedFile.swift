@@ -8,10 +8,7 @@
 import Foundation
 
 extension URL {
-    /// The contents of a file the user picked in a file importer. Thaw is not
-    /// sandboxed, so a picked URL is often a plain file URL that grants no
-    /// security-scoped access; the file is read either way, and access is
-    /// released only when it was granted.
+    /// Reads a picked file, starting security-scoped access only when the URL grants it.
     nonisolated func contentsOfPickedFile() throws -> Data {
         let didAccess = startAccessingSecurityScopedResource()
         defer {

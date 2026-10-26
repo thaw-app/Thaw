@@ -355,7 +355,7 @@ extension MenuBarItemManager {
     func mirrorSavedSectionOrderIfSettled(
         from cache: ItemCache,
         controlItems: ControlItemPair? = nil,
-        displays: [CGRect] = activeDisplayBounds(),
+        displays: [CGRect] = BarAxis.liveDisplayBounds(),
         controller: (any MenuBarSectionControlling)? = nil
     ) {
         let controller = controller ?? appState?.menuBarManager.sectionController
