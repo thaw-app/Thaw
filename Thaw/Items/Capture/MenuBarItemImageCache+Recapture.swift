@@ -698,7 +698,7 @@ extension MenuBarItemImageCache {
                 renderSettle: { try? await Task.sleep(for: Constants.MenuBarTuning.layoutPrewarmRenderSettle) },
                 reader: LiveMenuBarCaptureReader(),
                 // Captures never see Thaw's own windows, so the cover hides the reveal from the user only.
-                cover: { appState.menuBarManager.revealCover.show() },
+                cover: { appState.menuBarManager.revealCover.show(lifetime: Constants.MenuBarTuning.revealCaptureCoverLifetime) },
                 uncover: { appState.menuBarManager.revealCover.hide() },
                 mayReveal: { ConcealedPrewarmGate.mayReveal(for: appState) }
             )

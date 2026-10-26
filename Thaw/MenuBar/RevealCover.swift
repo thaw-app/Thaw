@@ -26,9 +26,6 @@ final class RevealCover {
     /// Held after the assertion is back: the host keeps drawing the revealed
     /// items for roughly a second after the restriction returns.
     static let settleAfterRestore = Duration.milliseconds(1000)
-    /// A cover never outlives this, whatever the bridge does. A stuck cover is
-    /// a frozen strip of bar, which is worse than the flash it hides.
-    static let maximumLifetime = Duration.seconds(4)
 
     func performSetup(with appState: AppState) {
         self.appState = appState
@@ -40,11 +37,12 @@ final class RevealCover {
     /// the restriction is released.
     ///
     /// Covers are counted: overlapping bridges share one cover, and it comes
-    /// down only when the last holder lets go.
-    func show() {
+    /// down only when the last holder lets go. The cover never outlives
+    /// lifetime, since a stuck cover freezes a strip of bar.
+    func show(lifetime: Duration) {
         hideTask?.cancel()
         holders += 1
-        armWatchdog(Self.maximumLifetime)
+        armWatchdog(lifetime)
         guard holders == 1 || !isShowing, let appState else { return }
         // One position read on an element found ahead of time: a single
         // short IPC, cheap enough for the event tap, and it keeps a stale
