@@ -39,6 +39,7 @@ enum MenuBarAppearanceItems {
         }
         var context = context
         context.isDrawn = { isDrawn($0, in: snapshot.drawnBar) }
+        context.displayBounds = displayBounds
         func mirroredFrame(_ frame: CGRect) -> CGRect {
             MirroredBarGeometry.frame(frame, on: screenFrame, displayBounds: displayBounds)
         }

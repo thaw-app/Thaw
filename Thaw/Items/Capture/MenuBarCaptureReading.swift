@@ -12,6 +12,8 @@ import ThawCapture
 /// Window-server, screen-capture and AX reads used by one thumbnail pass.
 nonisolated protocol MenuBarCaptureReading: Sendable {
     func captureBand(displayID: CGDirectDisplayID) async -> (frame: CGRect, menuMaxX: CGFloat?)
+    /// The CG frames of the displays an item may be seated on, for the parked-frame checks.
+    func displayBounds() -> [CGRect]
     func overflowBounds(displayID: CGDirectDisplayID) async -> [CGRect]
     func hostingCapture(displayID: CGDirectDisplayID) async -> ScreenCapture.MenuBarHostingCapture?
     func barWindowCapture(ownerPID: pid_t, displayID: CGDirectDisplayID) async -> ScreenCapture.MenuBarHostingCapture?
@@ -36,6 +38,10 @@ nonisolated struct LiveMenuBarCaptureReader: MenuBarCaptureReading {
             }
             return (screen.frame, menuMaxX)
         }
+    }
+
+    func displayBounds() -> [CGRect] {
+        BarAxis.liveDisplayBounds()
     }
 
     func overflowBounds(displayID: CGDirectDisplayID) async -> [CGRect] {

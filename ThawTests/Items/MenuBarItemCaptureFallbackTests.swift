@@ -604,6 +604,10 @@ actor CaptureFixture {
         (CGRect(x: 0, y: 0, width: 1470, height: 956), 300)
     }
 
+    nonisolated func displayBounds() -> [CGRect] {
+        [CGRect(x: 0, y: 0, width: 1470, height: 956)]
+    }
+
     func overflowBounds(displayID _: CGDirectDisplayID) async -> [CGRect] {
         (captures.contains(.strip) ? stripOverflowBounds : [])
             + (captures.contains(.barWindow) ? ownerWindowOverflowBounds : [])
