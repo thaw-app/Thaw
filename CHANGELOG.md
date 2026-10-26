@@ -46,6 +46,9 @@ and the Sparkle appcast, unless overridden with the `release_notes` input.
 - **Simple Mode fits on one page.** It shows a preview of your sections, which you can turn off, then a few settings: launch at login, item arrangement, when items hide again, the Always Hidden section, the shortcut and automatic updates. Everything else keeps working and stays in the full window. By @diazdesandi.
 - **The profile menu left the Settings toolbar.** Switch profiles from Profiles, the Thaw menu or a shortcut. By @diazdesandi.
 - **Profiles shows one profile at a time.** Pick a profile in the list to see its shortcut, display, Space and Focus, and what applying it would change, on the page instead of in a sheet. Switching profiles by display or Space moved here from Automation. By @diazdesandi.
+- **Two hiding methods instead of three.** Standard now does what Everything did: it also hides Clock, Control Center and Siri when you put them in a hidden section. If you used Standard, those three now move with your other icons when Thaw puts your order back. By @diazdesandi.
+- **Native hiding is no longer marked beta,** and Replace Control Center items now is. By @diazdesandi.
+- **Thaw handles a display change in one pass.** When you plug in, unplug or rearrange displays, Thaw waits for the screens to settle, then updates spacing, switches to the display's profile, shows hidden items you always show, and takes new icon pictures, once each. On a newly connected display, those hidden items appear after about two seconds. By @diazdesandi.
 
 ### Fixed
 
@@ -89,6 +92,22 @@ and the Sparkle appcast, unless overridden with the `release_notes` input.
 - **Settings no longer blinks when a page moves to the app.** With Settings running in its own process, opening a page such as Layout closed the window about a second before the app's own Settings window appeared. Now the window stays until the new one is in front. By @diazdesandi.
 - **Always show hidden items follows the menu bar to another display right away.** When the active menu bar moved to another display, hidden items could take up to a second to show there. By @diazdesandi.
 - **Thaw changes nothing when it can't read its record of the apps it hid.** Layout locks the hiding method, says why and offers to set the record aside, then starts Native hiding again once you confirm. Restore Missing Items opens in that case too and lists every app switched off in System Settings, so you pick which ones to show. By @diazdesandi.
+- **Native hiding no longer drops back to Standard when it can't find macOS's list of apps.** Thaw now tells a missing list from one it can't read, and starts a new one. Reported by Let that sink in (neverthelessyo) on Discord. Fixed by @diazdesandi.
+- **Thaw puts your layout back within seconds of launch.** With two or more hidden apps not running yet, it waited a full minute first. By @diazdesandi.
+- **Hidden icons keep their pictures after a relaunch.** Layout and the Thaw Bar showed app icons for hidden items until you revealed them again. By @diazdesandi.
+- **After a Mac restart, apps that start slowly keep their section.** Their icon could come back in Visible, and with Native hiding stay on the menu bar. By @diazdesandi.
+- **Opening a section shows your icons in their saved order.** Thaw skipped putting the order back before most reveals, so a divider could sit in the wrong place and Hidden icons could open in Always Hidden. By @diazdesandi.
+- **Connecting a display no longer relaunches your menu bar apps.** By @diazdesandi.
+- **A display's profile is applied once when you connect it.** It ran a second time after the menu bar settled. By @diazdesandi.
+- **Order and hiding work with a display below or beside your main one.** Thaw took that display's menu bar for icons parked off the bar and kept moving them, and clicks, hints and tooltips could land in the wrong place. Reported by @joaofrgomes in [#1367](https://github.com/thaw-app/Thaw/issues/1367). Fixed by @diazdesandi.
+- **Quick ⌘-drags inside Visible stick.** Thaw could put the icons back in the saved order, which takes a few seconds to catch up. The order also holds after a profile apply or a layout reset. By @diazdesandi.
+- **Dropping an icon at the far left of Hidden keeps it in Hidden.** It could land in Always Hidden, a section you couldn't see during the drag. By @diazdesandi.
+- **Section names are translated in Layout, VoiceOver and move errors.** Reported by @SakuraWang6 in [#1382](https://github.com/thaw-app/Thaw/issues/1382). Fixed by @diazdesandi.
+- **With a Focus filter on, Thaw keeps your layout at launch.** It applied the profile that was active when you quit again, undoing your changes. By @diazdesandi.
+- **Layout changes are saved to the right profile.** If no profile matched at launch, a later display or Space switch could save your current arrangement into the profile it switched to. By @diazdesandi.
+- **Right-clicking a hidden item no longer slows down its next left click.** By @diazdesandi.
+- **Hidden items stay hidden while Thaw takes their pictures on a crowded menu bar.** With many apps running, the cover over the bar could go away before the pictures were done. By @diazdesandi.
+- **Each display's menu bar shape takes a new picture only when its own bar changes.** Any display's color change made every display retake one, and turning a shade-following finish back on kept the old shade. By @diazdesandi.
 
 ### Known issues
 
