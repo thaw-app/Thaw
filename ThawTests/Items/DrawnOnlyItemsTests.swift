@@ -339,6 +339,99 @@ struct DrawnOnlyItemsTests {
         let covered = DrawnOnlyItems.Pass(apps: [silentPID: app], excluded: [], axItems: [axItem(7, x: 1203)], ceiling: 40)
         #expect(DrawnOnlyItems.confirmedItems(confirmed: [silentPID], read: [entry(silentPID, x: 1200)], pass: covered).isEmpty)
     }
+
+    // MARK: Saved identity
+
+    private let savedTitle = "Silent Sync"
+
+    private func savedPass(_ order: [MenuBarSectionName: [String]]) -> DrawnOnlyItems.Pass {
+        let raw = Dictionary(uniqueKeysWithValues: order.map { ($0.key.rawValue, $0.value) })
+        return DrawnOnlyItems.Pass(
+            apps: [silentPID: app], excluded: [], axItems: [axItem(7, x: 100)], ceiling: 40,
+            savedTitles: DrawnOnlyItems.savedIdentityTitles(in: raw)
+        )
+    }
+
+    private func resolvedItem(_ pass: DrawnOnlyItems.Pass) throws -> MenuBarItem {
+        let now = ContinuousClock.now
+        let resolution = DrawnOnlyItems.resolve(
+            pending: [silentPID], read: [entry(silentPID, x: 1200)], pass: pass, ledger: confirmedLedger(now: now), now: now
+        )
+        let recorded: [RawItem]? = if case let .record(items) = resolution.answers[silentPID] {
+            items
+        } else {
+            nil
+        }
+        let items = try #require(recorded)
+        return try #require(MenuBarItemAXProvider.assemble(items).first)
+    }
+
+    @Test
+    func `the saved order gives each app its only saved identity`() {
+        let order = [
+            "hidden": ["com.example.silent:\(savedTitle)", "com.example.pair:One"],
+            "visible": ["com.example.pair:Two", "com.example.lone:Item-0"],
+            "alwaysHidden": ["com.example.twin:Clip", "com.example.twin:Clip:1", "com.example.second:Clip:1"],
+        ]
+        #expect(DrawnOnlyItems.savedIdentityTitles(in: order) == ["com.example.silent": savedTitle, "com.example.lone": "Item-0"])
+    }
+
+    @Test
+    func `an owner with one saved identity gets it and keeps its saved Hidden section`() throws {
+        let order: [MenuBarSectionName: [String]] = [.hidden: ["com.example.silent:\(savedTitle)"], .visible: ["com.example.other:Item-0"]]
+        let item = try resolvedItem(savedPass(order))
+        let titled = try #require(MenuBarItemAXProvider.rawItem(
+            namespace: .string("com.example.silent"),
+            identifier: savedTitle,
+            childIdentifier: nil,
+            accessibilityDescription: nil,
+            childDescription: nil,
+            axTitle: nil,
+            fallbackIndex: 0,
+            bounds: CGRect(x: 1200, y: 4, width: 30, height: 22),
+            ownerPID: silentPID
+        ).item)
+        let fromAX = try #require(MenuBarItemAXProvider.assemble([titled]).first)
+        #expect(item.tag == fromAX.tag)
+        #expect(item.windowID == fromAX.windowID)
+        #expect(RuntimePreferenceKeys.naiveKey(for: item) == RuntimePreferenceKeys.naiveKey(for: fromAX))
+        #expect(item.uniqueIdentifier == "com.example.silent:\(savedTitle)")
+        #expect(item.title == "Silent")
+        #expect(RuntimeSectionController.assignmentFromOrder(order)[item.uniqueIdentifier] == .hidden)
+    }
+
+    @Test
+    func `a helper walk gives a confirmed owner its one saved identity`() throws {
+        let items = DrawnOnlyItems.confirmedItems(
+            confirmed: [silentPID], read: [entry(silentPID, x: 1200)], pass: savedPass([.hidden: ["com.example.silent:\(savedTitle)"]])
+        )
+        #expect(try #require(items.first).identityTitle == savedTitle)
+    }
+
+    @Test
+    func `an owner with no saved identity stays Item-0`() throws {
+        let item = try resolvedItem(savedPass([.hidden: ["com.example.other:Other"]]))
+        #expect(item.tag.title == "Item-0")
+        #expect(item.windowID == PositionStoreItemSource.syntheticWindowID(
+            namespace: .string("com.example.silent"), title: "Item-0", instanceIndex: 0
+        ))
+    }
+
+    @Test
+    func `an owner with two saved identities stays Item-0`() throws {
+        let item = try resolvedItem(savedPass([.hidden: ["com.example.silent:\(savedTitle)"], .visible: ["com.example.silent:Other"]]))
+        #expect(item.tag.title == "Item-0")
+    }
+
+    @Test
+    func `an owner with several drawn entries stays out even with one saved identity`() {
+        let now = ContinuousClock.now
+        let twice = [entry(silentPID, x: 1100), entry(silentPID, x: 1200)]
+        let pass = savedPass([.hidden: ["com.example.silent:\(savedTitle)"]])
+        let resolution = DrawnOnlyItems.resolve(pending: [silentPID], read: twice, pass: pass, ledger: confirmedLedger(now: now), now: now)
+        #expect(resolution.answers == [silentPID: .record([])])
+        #expect(DrawnOnlyItems.confirmedItems(confirmed: [silentPID], read: twice, pass: pass).isEmpty)
+    }
 }
 
 private extension MenuBarItemAXProvider.RawItem {

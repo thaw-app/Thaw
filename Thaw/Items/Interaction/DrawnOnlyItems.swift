@@ -13,9 +13,11 @@ import ThawAXCore
 /// Status items that MenuBarAgent's window lists but whose app's own tree does not.
 ///
 /// Some apps answer the walk at once with no extras-bar items while MenuBarAgent draws their icon.
-/// For an app with exactly one drawn entry, the walk records the item an untitled extras-bar child of
-/// that app would give, so it gets the same tag, the same synthetic window ID and the same position
-/// store key. An app with more than one entry is left out, since nothing says which entry is which.
+/// For an app with exactly one drawn entry, the walk records the item an extras-bar child of that app
+/// would give, so it gets the same tag, the same synthetic window ID and the same position store key.
+/// The child carries the app's one identity in the saved section order, so the item keeps its saved
+/// section; with no such identity, or several, it is an untitled child, Item-0. An app with more than
+/// one entry is left out, since nothing says which entry is which.
 nonisolated enum DrawnOnlyItems {
     typealias Entry = MenuBarAgentWindow.Entry
     typealias RawItem = MenuBarItemAXProvider.RawItem
@@ -56,6 +58,8 @@ nonisolated enum DrawnOnlyItems {
         let axItems: [RawItem]
         /// The tallest frame that still counts as a status item.
         let ceiling: CGFloat
+        /// Each app's one saved identity title, by bundle ID. See savedIdentityTitles(in:).
+        var savedTitles: [String: String] = [:]
     }
 
     /// The result of settling a pass's waiting owners.
@@ -111,8 +115,9 @@ nonisolated enum DrawnOnlyItems {
         return shared > entry.width * overlapThreshold
     }
 
-    /// The item an untitled extras-bar child of the app would give, titled with the app's name.
-    static func rawItem(ownerPID: pid_t, app: App, frame: CGRect) -> RawItem? {
+    /// The item an extras-bar child of the app would give, titled with the app's name. The child has the
+    /// saved identity when there is one, and is untitled otherwise.
+    static func rawItem(ownerPID: pid_t, app: App, frame: CGRect, savedTitle: String? = nil) -> RawItem? {
         let namespace = MenuBarItemAXProvider.namespace(forBundleIdentifier: app.bundleID, localizedName: app.localizedName)
         guard let item = MenuBarItemAXProvider.rawItem(
             namespace: namespace,
@@ -127,8 +132,8 @@ nonisolated enum DrawnOnlyItems {
         ).item else { return nil }
         return RawItem(
             namespace: item.namespace,
-            identityTitle: item.identityTitle,
-            displayTitle: app.localizedName ?? item.displayTitle,
+            identityTitle: savedTitle ?? item.identityTitle,
+            displayTitle: app.localizedName ?? savedTitle ?? item.displayTitle,
             bounds: frame,
             ownerPID: ownerPID
         )
@@ -220,7 +225,8 @@ nonisolated enum DrawnOnlyItems {
     /// The item an owner's drawn entry stands for, sized to the band this pass's items sit in.
     private static func item(for owner: pid_t, entry: Entry, pass: Pass, band: Band?) -> RawItem? {
         guard let app = pass.apps[owner] else { return nil }
-        return rawItem(ownerPID: owner, app: app, frame: normalizedFrame(entry: entry.frame, band: band, ceiling: pass.ceiling))
+        let frame = normalizedFrame(entry: entry.frame, band: band, ceiling: pass.ceiling)
+        return rawItem(ownerPID: owner, app: app, frame: frame, savedTitle: app.bundleID.flatMap { pass.savedTitles[$0] })
     }
 }
 
@@ -305,6 +311,12 @@ nonisolated final class DrawnOnlyInventory: Sendable {
     private let diagLog = DiagLog(category: "MenuBarItemAXProvider")
     private let ledger = DrawnOnlyOwnerLedger()
     private let diagnostics = DrawnSilentOwnerDiagnostics()
+    private let savedOrder: @Sendable () -> [String: [String]]
+
+    /// - Parameter savedOrder: Reads the saved section order, by section, that gives a drawn-only item its identity.
+    init(savedOrder: @escaping @Sendable () -> [String: [String]] = { DrawnOnlyInventory.persistedSectionOrder() }) {
+        self.savedOrder = savedOrder
+    }
 
     /// Owners whose empty answer waits for the drawn read: those drawn, and those the ledger watches.
     func candidates(drawn: [DrawnOnlyItems.Entry]?) -> Set<pid_t> {
@@ -370,7 +382,8 @@ nonisolated final class DrawnOnlyInventory: Sendable {
             apps: apps.mapValues { DrawnOnlyItems.App(bundleID: $0.bundleIdentifier, localizedName: $0.localizedName) },
             excluded: excluded.union([getpid()]),
             axItems: axItems,
-            ceiling: MenuBarItemAXProvider.maxItemHeight(menuBarHeight: NSScreen.tallestCachedMenuBarHeight)
+            ceiling: MenuBarItemAXProvider.maxItemHeight(menuBarHeight: NSScreen.tallestCachedMenuBarHeight),
+            savedTitles: DrawnOnlyItems.savedIdentityTitles(in: savedOrder())
         )
     }
 }
