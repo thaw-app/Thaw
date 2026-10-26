@@ -87,7 +87,7 @@ extension MenuBarItemManager {
 
                 await cacheItemsRegardless(skipRecentMoveCheck: true, resolveSourcePID: true)
                 let managedCount = itemCache.managedItems.count
-                let unresolved = itemCache.managedItems.count(where: { $0.sourcePID == nil })
+                let unresolved = SettlingSourcePIDs.unresolvedCount(in: itemCache.managedItems)
                 let pidsOK = managedCount > 0 && unresolved <= 1
                 let minimumElapsed = settlingStartedAt.duration(to: .now) >= Self.startupMinimumSettlingDuration
                 let hostReady = menuBarHostItemsReady(in: itemCache)
