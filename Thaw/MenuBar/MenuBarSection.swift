@@ -59,10 +59,7 @@ final class MenuBarSection {
         capacity: MenuBarCapacitySnapshot,
         allowHidingApplicationMenus: Bool
     ) -> PresentationMode {
-        if let inlineWidth = capacity.availableWidth(
-            in: .inline,
-            applicationMenus: .visible
-        ), totalItemsWidth <= inlineWidth {
+        if let inlineWidth = capacity.availableWidth(applicationMenus: .visible), totalItemsWidth <= inlineWidth {
             return .inline
         }
 
@@ -70,10 +67,7 @@ final class MenuBarSection {
             return .thawBar
         }
 
-        if let inlineWidthWithoutAppMenus = capacity.availableWidth(
-            in: .inline,
-            applicationMenus: .hidden
-        ), totalItemsWidth <= inlineWidthWithoutAppMenus {
+        if let inlineWidthWithoutAppMenus = capacity.availableWidth(applicationMenus: .hidden), totalItemsWidth <= inlineWidthWithoutAppMenus {
             return .inlineHidingApplicationMenus
         }
 
@@ -87,7 +81,7 @@ final class MenuBarSection {
         allowHidingApplicationMenus: Bool
     ) -> Bool {
         let menus: MenuBarCapacitySnapshot.ApplicationMenus = allowHidingApplicationMenus ? .hidden : .visible
-        guard let width = capacity.availableWidth(in: .inline, applicationMenus: menus) else {
+        guard let width = capacity.availableWidth(applicationMenus: menus) else {
             return false
         }
         return totalItemsWidth > width

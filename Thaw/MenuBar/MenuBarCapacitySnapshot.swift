@@ -12,13 +12,6 @@ import MenuBarModel
 /// items. AppKit, AX, and Core Graphics agree on global X coordinates even
 /// though their Y axes differ, so capacity calculations deliberately ignore Y.
 nonisolated struct MenuBarCapacitySnapshot: Equatable, Sendable {
-    enum Region: Sendable {
-        /// The contiguous status-item lane nearest Control Center.
-        case trailing
-        /// Every usable inline lane, including space to the left of a notch.
-        case inline
-    }
-
     enum ApplicationMenus: Sendable {
         case visible
         case hidden
@@ -102,11 +95,10 @@ nonisolated struct MenuBarCapacitySnapshot: Equatable, Sendable {
     /// Usable width after clipping and unioning occupied intervals, so
     /// overlapping stale and live bounds are not subtracted twice.
     func availableWidth(
-        in region: Region,
         applicationMenus: ApplicationMenus,
         reserving occupiedBounds: [CGRect] = []
     ) -> CGFloat? {
-        guard let lanes = lanes(in: region, applicationMenus: applicationMenus) else {
+        guard let lanes = lanes(applicationMenus: applicationMenus) else {
             return nil
         }
 
@@ -119,10 +111,9 @@ nonisolated struct MenuBarCapacitySnapshot: Equatable, Sendable {
         }
     }
 
-    private func lanes(
-        in region: Region,
-        applicationMenus: ApplicationMenus
-    ) -> [Range<CGFloat>]? {
+    /// The status-item lane nearest Control Center. Beside a notch macOS never lays status items
+    /// left of it, however short the menus: what does not fit right of the notch goes behind ».
+    private func lanes(applicationMenus: ApplicationMenus) -> [Range<CGFloat>]? {
         guard !displayBounds.isNull,
               !displayBounds.isEmpty,
               displayBounds.minX.isFinite,
@@ -162,20 +153,11 @@ nonisolated struct MenuBarCapacitySnapshot: Equatable, Sendable {
             return nil
         }
 
-        let leftEnd = min(trailingBoundary, notchFrame.minX - Self.notchGap)
         let rightStart = max(
             notchFrame.maxX + Self.notchGap,
             applicationMenus == .visible ? menuBoundary : displayBounds.minX
         )
-        let trailingLane = min(max(rightStart, displayBounds.minX), trailingBoundary) ..< trailingBoundary
-
-        switch region {
-        case .trailing:
-            return [trailingLane]
-        case .inline:
-            let leftStart = min(max(menuBoundary, displayBounds.minX), leftEnd)
-            return [leftStart ..< leftEnd, trailingLane]
-        }
+        return [min(max(rightStart, displayBounds.minX), trailingBoundary) ..< trailingBoundary]
     }
 
     private func reservedWidth(

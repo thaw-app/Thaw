@@ -61,9 +61,9 @@ struct MenuBarCapacitySnapshotTests {
     @Test("A wrapped menu shortens the trailing lane to what lies right of its last title")
     func wrappedMenuShortensTrailingLane() {
         let unwrapped = snapshot(notch: notch, menu: menu(width: 500))
-            .availableWidth(in: .trailing, applicationMenus: .visible)
+            .availableWidth(applicationMenus: .visible)
         let wrapped = snapshot(notch: notch, menu: menu(width: 840))
-            .availableWidth(in: .trailing, applicationMenus: .visible)
+            .availableWidth(applicationMenus: .visible)
 
         // Unwrapped, the lane starts at the notch's right clearance.
         #expect(unwrapped == controlCenterMinX - (notch.maxX + MenuBarCapacitySnapshot.notchGap))
@@ -74,7 +74,7 @@ struct MenuBarCapacitySnapshotTests {
     @Test("A reveal that fits stays inline; one that overflows falls back to the Thaw Bar")
     func inlineOverflowDecision() {
         let capacity = snapshot(notch: nil, menu: menu(width: 400))
-        let free = capacity.availableWidth(in: .inline, applicationMenus: .visible) ?? 0
+        let free = capacity.availableWidth(applicationMenus: .visible) ?? 0
         #expect(!MenuBarSection.overflowsInline(
             totalItemsWidth: free - 1, capacity: capacity, allowHidingApplicationMenus: false
         ))
@@ -85,6 +85,24 @@ struct MenuBarCapacitySnapshotTests {
         #expect(!MenuBarSection.overflowsInline(
             totalItemsWidth: free + 1, capacity: capacity, allowHidingApplicationMenus: true
         ))
+    }
+
+    @Test("Beside a notch only the lane right of it holds status items, however short the menus", arguments: [false, true])
+    func notchRevealCountsOnlyTheRightLane(allowHidingApplicationMenus: Bool) {
+        let capacity = snapshot(notch: notch, menu: menu(width: 200))
+        let rightLane = controlCenterMinX - (notch.maxX + MenuBarCapacitySnapshot.notchGap)
+        // Wider than the right lane, narrower than both lanes together: macOS puts the rest behind ».
+        let tooWide = rightLane + 80
+
+        #expect(MenuBarSection.overflowsInline(
+            totalItemsWidth: tooWide, capacity: capacity, allowHidingApplicationMenus: allowHidingApplicationMenus
+        ))
+        #expect(MenuBarSection.presentationMode(
+            totalItemsWidth: tooWide, capacity: capacity, allowHidingApplicationMenus: allowHidingApplicationMenus
+        ) == .thawBar)
+        #expect(MenuBarSection.presentationMode(
+            totalItemsWidth: rightLane - 1, capacity: capacity, allowHidingApplicationMenus: allowHidingApplicationMenus
+        ) == .inline)
     }
 
     @Test("Unknown free width never forces the Thaw Bar")

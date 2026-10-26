@@ -170,7 +170,6 @@ extension MenuBarItemManager {
             overflowControlBounds: overflowControlBounds
         )
         let availableWidth = capacity.availableWidth(
-            in: .trailing,
             applicationMenus: .visible,
             reserving: permanentNonProfileBounds
         )
