@@ -17,11 +17,8 @@ nonisolated enum ConcealedPrewarmGate {
         )
     }
 
-    /// Without Screen Recording a reveal can't be photographed and would only
-    /// flash hidden items on the bar. With native hiding a reveal switches the
-    /// app back on in macOS's own list, which rebuilds the bar. The item then
-    /// lands beside macOS's chevron, where its picture is refused, so these
-    /// items keep the picture taken while they were shown.
+    /// No reveal without Screen Recording (nothing to photograph) or under Native hiding
+    /// (the reveal rebuilds the bar and the picture is refused).
     static func mayReveal(
         hasSectionController: Bool,
         screenRecordingGranted: Bool,

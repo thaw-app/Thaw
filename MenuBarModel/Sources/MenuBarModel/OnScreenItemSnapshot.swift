@@ -19,10 +19,7 @@ public final class OnScreenItemSnapshot {
     public private(set) var items: [MenuBarItem] = []
     public private(set) var timestamp: ContinuousClock.Instant?
 
-    /// Numbers the walk behind items when that walk read every owner, and is
-    /// nil when it did not or before any walk has. Each complete walk gets a
-    /// larger number than the one before, and the number stays the same until
-    /// the next update.
+    /// Increases with each walk that read every owner; nil after a partial walk or before the first.
     public private(set) var completedWalkGeneration: Int?
     private var completedWalkCount = 0
 

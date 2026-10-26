@@ -94,8 +94,7 @@ extension MenuBarItemManager {
     }
 
     func loadSavedSectionOrder() {
-        let key = "MenuBarItemManager.savedSectionOrder"
-        if let stored = UserDefaults.standard.dictionary(forKey: key) as? [String: [String]] {
+        if let stored = UserDefaults.standard.dictionary(forKey: SavedSectionOrderDefaults.key) as? [String: [String]] {
             savedSectionOrder = Self.canonicalizedSectionOrder(stored)
         }
     }
@@ -139,9 +138,8 @@ extension MenuBarItemManager {
     }
 
     func persistSavedSectionOrder() {
-        let key = "MenuBarItemManager.savedSectionOrder"
         savedSectionOrder = Self.canonicalizedSectionOrder(savedSectionOrder)
-        UserDefaults.standard.set(savedSectionOrder, forKey: key)
+        UserDefaults.standard.set(savedSectionOrder, forKey: SavedSectionOrderDefaults.key)
     }
 
     /// Hands a mirror to the controller and adopts its committed order, since it may refuse membership changes.

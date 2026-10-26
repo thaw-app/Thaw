@@ -10,8 +10,7 @@ import MenuBarModel
 /// A hidden item's glyph is only captured while revealed, so without it on disk a relaunch shows app icons
 /// until the next reveal. Visible glyphs are recaptured within seconds, so changes to only those skip the write.
 nonisolated enum ConcealedCapturePersistence {
-    /// Asks whether an image changed only for the hidden items among the captured tags, which are usually a
-    /// handful, since the comparison can read pixels and the live loop commits passes many times a second.
+    /// Whether a hidden item's image changed. Only hidden tags are compared, since comparing can read pixels.
     static func shouldSave(
         capturedTags: some Sequence<MenuBarItemTag>,
         concealedIdentifiers: Set<String>,

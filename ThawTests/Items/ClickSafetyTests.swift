@@ -5,7 +5,6 @@
 //  Copyright (Thaw) © 2026 Toni Förster
 //  Licensed under the GNU GPLv3
 
-import AppKit
 import CoreGraphics
 import Foundation
 import Testing
@@ -75,14 +74,6 @@ struct ClickSafetyTests {
         #expect(ClickTargetCheck.barWidth(for: CGRect(x: 1700, y: 0, width: 24, height: 30), displays: displays) == 800)
         #expect(ClickTargetCheck.barWidth(for: CGRect(x: -400, y: 0, width: 24, height: 30), displays: displays) == 1512)
         #expect(ClickTargetCheck.barWidth(for: textItem, displays: []) == 0)
-    }
-
-    @MainActor
-    @Test
-    func `the live bar width comes from the attached displays`() {
-        let frames = NSScreen.screens.map(\.frame)
-        let bounds = CGRect(x: frames.first?.midX ?? 0, y: 0, width: 24, height: 30)
-        #expect(ClickTargetCheck.barWidth(for: bounds) == ClickTargetCheck.barWidth(for: bounds, displays: frames))
     }
 
     @Test

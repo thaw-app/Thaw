@@ -29,10 +29,3 @@ nonisolated extension DrawnOnlyItems {
         }
     }
 }
-
-nonisolated extension DrawnOnlyInventory {
-    /// Read on each pass, so the last saved edit counts.
-    static func persistedSectionOrder() -> [String: [String]] {
-        UserDefaults.standard.dictionary(forKey: "MenuBarItemManager.savedSectionOrder") as? [String: [String]] ?? [:]
-    }
-}

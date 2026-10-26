@@ -131,13 +131,7 @@ nonisolated enum ObservedMembership {
         }
     }
 
-    /// Each item's stored weight, and the section it read as, when a ⌘-drag started.
-    ///
-    /// Items that are concealed keep weights that can be long out of date, and
-    /// MenuBarAgent saves every row on the bar again when a drag ends, which can
-    /// move the dividers' weights past those stale ones. An item the drag moved
-    /// has a new weight that reads as another section than before: the dragged
-    /// item, or an item on the bar that a dragged divider passed.
+    /// Weights and sections when a ⌘-drag started; after the drop only items whose weight crossed a divider move.
     struct DragBaseline {
         private let readings: [String: (weight: Int, section: MenuBarSectionName)]
 
@@ -162,12 +156,7 @@ nonisolated enum ObservedMembership {
     }
 
     /// The items to move, grouped by the section they sit in on the bar, in reading order.
-    /// keepingAuthored leaves every item that already has a section alone, and only
-    /// places the ones that have none: in Manual the stored weights go stale, and
-    /// Layout's sections win over them. A baseline limits the moves to the items
-    /// a ⌘-drag carried across a divider. If Always Hidden was concealed at the
-    /// drop, a weight past its divider counts as Hidden. Nil leaves non-drag
-    /// readings unchanged.
+    /// keepingAuthored places only unassigned items; a baseline limits moves to what the drag carried.
     static func moves(
         for candidates: [Candidate],
         dividers: Dividers,

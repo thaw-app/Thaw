@@ -673,7 +673,7 @@ final class ProfileManager {
             from: itemManager.itemCache
         )
         let persistedSectionOrder = UserDefaults.standard.dictionary(
-            forKey: "MenuBarItemManager.savedSectionOrder"
+            forKey: SavedSectionOrderDefaults.key
         ) as? [String: [String]] ?? [:]
 
         // An empty cache without a display ID is not meaningful; preserve mirrored assignments rather than erase the profile.

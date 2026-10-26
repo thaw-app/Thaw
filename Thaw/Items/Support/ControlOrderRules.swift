@@ -173,9 +173,7 @@ enum ControlOrderRules {
     /// copy misses Command-drags on the real bar, so restoring it would snap
     /// items back to an old order on every reveal.
     ///
-    /// The mirror only catches up after the bar has been quiet for a while. A drag that
-    /// ended since then has already put the bar in the order the user chose, so the bar is
-    /// the record and an empty order lets the structural segment follow the live geometry.
+    /// A drag since the last mirror makes the bar the record, so no order is returned.
     static func freshestRecordedVisibleOrder(
         mirroredOrder: [String]?,
         controllerOrder: [String]?,

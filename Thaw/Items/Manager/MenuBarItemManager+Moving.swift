@@ -593,7 +593,7 @@ extension MenuBarItemManager {
         structuralNormalizationTask = nil
         guard WriteHold.first(
             [.startupSettling, .circuitBreakerOpen, .notificationCenterSuspended],
-            in: structuralNormalizationSituation(appState: appState)
+            in: structuralNormalizationSituation()
         ) == nil else {
             repairs.withdraw(.structuralNormalization)
             return
@@ -604,7 +604,7 @@ extension MenuBarItemManager {
             guard !Task.isCancelled, let self else { return }
             structuralNormalizationTask = nil
             guard let appState else { return }
-            let situation = structuralNormalizationSituation(appState: appState)
+            let situation = structuralNormalizationSituation()
             guard WriteHold.first([.userDragging, .startupSettling, .profileApplying], in: situation) == nil else { return }
             // Manual arrangement turns this off, except to re-lay a stranded
             // visible control item, which the user cannot drag back.
@@ -622,7 +622,7 @@ extension MenuBarItemManager {
             // laid from the old sections and put the dropped item back. The
             // reading schedules this pass again once it is done.
             guard manualMembershipTask == nil else { return }
-            guard WriteHold.first(StructuralNormalizationHolds.beforeAdmission, in: situation) == nil else {
+            guard WriteHold.first(StructuralNormalizationHolds.checks, in: situation) == nil else {
                 rearm()
                 return
             }
@@ -648,9 +648,9 @@ extension MenuBarItemManager {
             }
             // A ⌘-drag can start or end while this waited, and its reading
             // schedules the pass again once it is done.
-            let admitted = structuralNormalizationSituation(appState: appState)
+            let admitted = structuralNormalizationSituation()
             guard WriteHold.first([.userDragging, .membershipReadPending], in: admitted) == nil else { return }
-            guard WriteHold.first(StructuralNormalizationHolds.afterAdmission, in: admitted) == nil,
+            guard WriteHold.first(StructuralNormalizationHolds.checks, in: admitted) == nil,
                   ControlResortHold.allowsResort(for: "structural normalization", .init(of: self))
             else {
                 rearm()
@@ -1330,15 +1330,7 @@ extension MenuBarItemManager {
         var previousMoved: MenuBarItem?
         for item in items where item.isOnScreen && !item.bounds.isEmpty {
             guard !Task.isCancelled else { return }
-            guard let destination = sectionTransitionDestination(
-                for: section,
-                after: previousMoved
-            ) else {
-                MenuBarItemManager.diagLog.warning(
-                    "No divider to move \(item.logString) behind before concealment"
-                )
-                break
-            }
+            let destination = sectionTransitionDestination(for: section, after: previousMoved)
             do {
                 // Position-only: the conceal assertion hides these items
                 // whether or not the write lands, so a synthetic drag would
@@ -1376,7 +1368,7 @@ extension MenuBarItemManager {
     private func sectionTransitionDestination(
         for section: MenuBarSection.Name,
         after predecessor: MenuBarItem?
-    ) -> MoveDestination? {
+    ) -> MoveDestination {
         let controlItems = cacheDividers()
         let bandBoundary: MoveDestination = switch section {
         case .visible:
@@ -1407,9 +1399,8 @@ extension MenuBarItemManager {
         after predecessor: MenuBarItem? = nil,
         permit: borrowing StoreWritePermit
     ) -> Bool {
-        guard let appState,
-              let destination = sectionTransitionDestination(for: section, after: predecessor)
-        else { return false }
+        guard let appState else { return false }
+        let destination = sectionTransitionDestination(for: section, after: predecessor)
         let controlItems = cacheDividers()
         var liveItems = managedItems
         liveItems.append(controlItems.hidden)

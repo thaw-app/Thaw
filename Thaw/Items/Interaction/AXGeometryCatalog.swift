@@ -111,10 +111,7 @@ nonisolated enum AXGeometryCatalog {
         guard Set(selected.map(\.itemIndex)).count == 1, let root = selected.first else {
             return .ambiguous
         }
-        // The item is known and its frame no longer matches the bounds, so it moved
-        // or changed width after they were read. A traffic meter changes width, and
-        // the icons to its right move with it. Who owns the pixels is not in question,
-        // so no crop is taken here and the caller keeps the last picture.
+        // The frame moved or resized since the read (a traffic meter changes width); keep the last picture.
         let ownFrames = selected.map(\.frame).filter { !$0.isEmpty }
         if !ownFrames.isEmpty, !ownFrames.contains(where: { matches(bounds, $0) }) {
             return .unavailable

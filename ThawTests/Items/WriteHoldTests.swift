@@ -25,7 +25,7 @@ struct WriteHoldTests {
     func noListedCheckHolds() {
         #expect(WriteHold.first(Array(WriteHold.Check.allCases), in: WriteHold.Situation()) == nil)
         var situation = WriteHold.Situation()
-        situation.manualArrangement = true
+        situation.profileApplying = true
         #expect(WriteHold.first([.startupSettling, .circuitBreakerOpen], in: situation) == nil)
     }
 
@@ -45,7 +45,6 @@ struct WriteHoldTests {
         all.notificationCenterSuspended = true
         all.userDragging = true
         all.profileApplying = true
-        all.manualArrangement = true
         all.membershipReadPending = true
         all.layoutPublicationStale = true
         all.sectionRevealed = true
@@ -58,9 +57,9 @@ struct WriteHoldTests {
 /// starts during its waits rearms it instead of being written over.
 @Suite("Structural normalization holds")
 struct StructuralNormalizationHoldsTests {
-    @Test("The checks after lane admission include both reveal checks")
-    func afterAdmissionCoversRevealState() {
-        #expect(StructuralNormalizationHolds.afterAdmission.contains(.sectionRevealed))
-        #expect(StructuralNormalizationHolds.afterAdmission.contains(.revealTransitionActive))
+    @Test("The checks include both reveal checks")
+    func checksCoverRevealState() {
+        #expect(StructuralNormalizationHolds.checks.contains(.sectionRevealed))
+        #expect(StructuralNormalizationHolds.checks.contains(.revealTransitionActive))
     }
 }

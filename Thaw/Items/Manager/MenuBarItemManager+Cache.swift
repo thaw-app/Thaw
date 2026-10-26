@@ -407,9 +407,8 @@ extension MenuBarItemManager {
                 savedOrderMirrorGate.noteMirrored()
             }
         }
-        // The controller's record follows every accepted mirror, equal or not.
-        // A command-drag it cannot observe would otherwise leave it behind
-        // until a membership change rewrote it.
+        // The controller's record follows every accepted mirror, equal or not, or a
+        // ⌘-drag it cannot observe would leave it behind until a membership change.
         adoptMirroredOrder(resolvedMirrored, controller: controller)
     }
 

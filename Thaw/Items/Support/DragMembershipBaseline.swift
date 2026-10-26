@@ -5,12 +5,8 @@
 //  Copyright (Thaw) © 2026 Toni Förster
 //  Licensed under the GNU GPLv3
 
-/// What the stored weights read as when the user's ⌘-drag started, so the read
-/// after the drop adopts only what the drag moved.
-///
-/// Two drags in quick succession share the first drag's reading: the read still
-/// waiting from the first drag is cancelled, and one read after the last drop
-/// covers both.
+/// What the stored weights read as when the user's ⌘-drag started, so the read after the drop adopts only what it moved.
+/// Quick successive drags share the first drag's reading, and one read after the last drop covers them all.
 @MainActor
 final class DragMembershipBaseline<Baseline> {
     /// Reads the stored weights now; nil when they can't be read in order.

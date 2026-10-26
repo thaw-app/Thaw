@@ -171,8 +171,7 @@ public struct MenuBarItem: CustomStringConvertible, Sendable, Codable {
     }
 
     /// Whether this item is parked outside the bar bands of the given CG-global screens.
-    /// References are seated controls on the same screen. Without screen bounds,
-    /// the original band measured from y zero and peer reference are used.
+    /// References are seated controls on the same screen. With no screens, the band is measured from y = 0.
     public func isParkedOffMenuBarBand(among peers: [MenuBarItem], screens: [CGRect]) -> Bool {
         guard bounds.width > 0, bounds.height > 0, bounds.origin.x != -1 else { return true }
 
@@ -246,12 +245,6 @@ public struct MenuBarItem: CustomStringConvertible, Sendable, Codable {
 
     /// Ignores any custom name, which lives in the app target.
     public var autoDetectedName: String {
-        /// Converts "UpperCamelCase" to "Title Case", but leaves a single
-        /// lowercase letter before an uppercase one alone ("WiFi").
-        func toTitleCase(_ s: some StringProtocol) -> String {
-            Self.titleCased(s)
-        }
-
         guard !isControlItem else {
             return ThawMenuBarIdentity.displayName
         }
@@ -272,18 +265,18 @@ public struct MenuBarItem: CustomStringConvertible, Sendable, Codable {
                 if let moduleName = SystemMenuBarModuleCatalog.moduleName(matching: candidate) {
                     // Keep human AX titles ("Wi-Fi"); map opaque IDs to catalog names.
                     let useCatalogName = candidate.hasPrefix("com.apple.") || candidate.hasPrefix("BentoBox")
-                    return toTitleCase(useCatalogName ? moduleName : candidate)
+                    return Self.titleCased(useCatalogName ? moduleName : candidate)
                 }
             }
             if let preferredTitle, let match = preferredTitle.prefixMatch(of: /Hearing/) {
-                return toTitleCase(match.output)
+                return Self.titleCased(match.output)
             }
             if let preferredTitle = significant(preferredTitle) {
                 if preferredTitle.hasPrefix("com.apple.menuextra.") {
                     let suffix = preferredTitle.dropFirst("com.apple.menuextra.".count)
-                    return toTitleCase(suffix.replacing("-", with: " "))
+                    return Self.titleCased(suffix.replacing("-", with: " "))
                 }
-                return toTitleCase(preferredTitle)
+                return Self.titleCased(preferredTitle)
             }
             if let identity = significant(tag.title) {
                 // A Control Center control that published no description falls
@@ -291,7 +284,7 @@ public struct MenuBarItem: CustomStringConvertible, Sendable, Codable {
                 if let chrono = ChronoControlIdentity(axIdentifier: identity) {
                     return chrono.derivedDisplayName
                 }
-                return toTitleCase(identity)
+                return Self.titleCased(identity)
             }
             return fallbackName
         }
@@ -319,7 +312,7 @@ public struct MenuBarItem: CustomStringConvertible, Sendable, Codable {
             guard let component = bundleIdentifier.split(separator: ".").last else {
                 return nil
             }
-            return toTitleCase(component.prefix(1).uppercased() + component.dropFirst())
+            return Self.titleCased(component.prefix(1).uppercased() + component.dropFirst())
         }
 
         guard let sourceApplication else {
@@ -358,14 +351,14 @@ public struct MenuBarItem: CustomStringConvertible, Sendable, Codable {
 
         let displayName = switch tag.namespace {
         case .passwords, .weather, .textInputMenuAgent:
-            toTitleCase(bestName.replacing(/Menu.*/, with: ""))
+            Self.titleCased(bestName.replacing(/Menu.*/, with: ""))
         case .menuBarAgent:
             menuBarAgentDisplayName(preferredTitle: title)
         case .controlCenter:
             if let match = title.prefixMatch(of: /Hearing/) {
-                toTitleCase(match.output)
+                Self.titleCased(match.output)
             } else {
-                toTitleCase(title)
+                Self.titleCased(title)
             }
         case .systemUIServer:
             Self.systemUIServerDisplayName(title: title, tagTitle: tag.title)
@@ -429,7 +422,7 @@ extension MenuBarItem: Hashable {
 }
 
 extension MenuBarItem {
-    /// Splits a camel-cased name into words, as in "TimeMachine" to "Time Machine".
+    /// Splits a camel-cased name into words, as in "TimeMachine" to "Time Machine". A single lowercase letter before a capital stays joined ("WiFi").
     static func titleCased(_ s: some StringProtocol) -> String {
         String(s).replacing(/([a-z]{2})([A-Z])/) { $0.output.1 + " " + $0.output.2 }
     }

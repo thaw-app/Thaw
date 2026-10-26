@@ -602,9 +602,9 @@ extension MenuBarItemImageCache {
             let missing = items
                 .filter { settledByIdentifier[$0.uniqueIdentifier] == nil }
                 .map(\.logString)
+            let ending = Task.isCancelled ? "before the wait was cancelled" : ContinuousClock.now < deadline ? "in \(maxAttempts) polls" : "within the settle budget"
             MenuBarItemImageCache.diagLog.debug(
-                "waitForRevealedItems: \(missing.count) of \(items.count) revealed item(s) never settled " +
-                    "after \(maxAttempts) polls; no capture for \(missing)"
+                "waitForRevealedItems: \(missing.count) of \(items.count) revealed item(s) never settled \(ending); no capture for \(missing)"
             )
         }
         return items.compactMap { item in

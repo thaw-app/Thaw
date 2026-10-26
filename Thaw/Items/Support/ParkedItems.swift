@@ -10,11 +10,8 @@ import MenuBarModel
 
 /// Which live items macOS has parked off the menu bar, read from their frames.
 nonisolated enum ParkedItems {
-    /// Each screen's bar centre comes from its seated Visible control, or a wide control.
-    /// Empty frames, frames on no bar, and frames too far from their own bar's centre
-    /// are parked. A bar without a reference skips the distance check. The returned
-    /// centre is the first screen's reference, falling back to the next with one.
-    /// Without screen frames the original band measured from y zero is used.
+    /// Parked: empty, on no bar, or too far from its own bar's control (a bar without one skips that check).
+    /// Returns the first bar's centre.
     static func parkedSetAndBarMidY(in items: [MenuBarItem], screens: [CGRect]) -> (barMidY: CGFloat?, parkedIDs: Set<CGWindowID>) {
         func barIndex(holding frame: CGRect) -> Int? {
             guard !screens.isEmpty else {

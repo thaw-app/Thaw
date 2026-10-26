@@ -18,7 +18,7 @@ extension MenuBarItemManager {
 
     /// Reads the manager's flags into the situation the structural
     /// normalization pass checks.
-    func structuralNormalizationSituation(appState: AppState?) -> WriteHold.Situation {
+    func structuralNormalizationSituation() -> WriteHold.Situation {
         var situation = WriteHold.Situation()
         situation.startupSettling = isInStartupSettling
         situation.circuitBreakerOpen = moveCircuitBreaker.isOpen
@@ -29,7 +29,6 @@ extension MenuBarItemManager {
         situation.layoutPublicationStale = !layoutPublication.canPublish(generation: layoutPublication.generation)
         situation.sectionRevealed = appState?.menuBarManager.sectionController.revealedSection != nil
         situation.revealTransitionActive = appState?.menuBarManager.isRevealHideTransitionActive ?? false
-        situation.manualArrangement = !manualArrangementAllowsControlRelay
         return situation
     }
 }

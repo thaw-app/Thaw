@@ -7,11 +7,8 @@
 
 import CoreGraphics
 
-/// Which identities a cache pass learns as known without anything placing them:
-/// the new identity of a window already known under another one, such as after
-/// its source PID resolved. A window only seen, not known, on the last pass stays
-/// new, or one pass that didn't place a brand-new icon would hide it from every
-/// later pass.
+/// A window known under an earlier identity (before its source PID resolved) is known under its new one;
+/// a window only seen stays new.
 nonisolated enum KnownIdentitySeeding {
     struct Item {
         let windowID: CGWindowID

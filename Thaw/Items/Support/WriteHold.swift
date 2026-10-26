@@ -5,31 +5,19 @@
 //  Copyright (Thaw) © 2026 Toni Förster
 //  Licensed under the GNU GPLv3
 
-/// One write pass's reasons to hold off writing the menu bar, checked through
-/// one gate: the pass builds a situation from its own flags and asks which of
-/// its named checks holds first. Pure values, so the lists are testable.
+/// Reasons a write pass holds off, checked in a caller-given order.
 nonisolated enum WriteHold {
     /// A condition a write pass can hold on, named after the condition.
     enum Check: String, CaseIterable {
-        /// The app is still settling at startup.
         case startupSettling
-        /// The move circuit breaker is open.
         case circuitBreakerOpen
-        /// Notification Center has suspended menu bar layout.
         case notificationCenterSuspended
-        /// The user is dragging a menu bar item.
         case userDragging
-        /// A profile layout is being applied.
         case profileApplying
-        /// Arrangement is manual and the stranded-control exception does not apply.
-        case manualArrangement
-        /// A membership read of a ⌘-drag is still pending.
         case membershipReadPending
         /// The layout publication is forbidden, so reads would show an old bar.
         case layoutPublicationStale
-        /// A section is revealed.
         case sectionRevealed
-        /// A reveal or hide transition is active.
         case revealTransitionActive
     }
 
@@ -40,7 +28,6 @@ nonisolated enum WriteHold {
         var notificationCenterSuspended = false
         var userDragging = false
         var profileApplying = false
-        var manualArrangement = false
         var membershipReadPending = false
         var layoutPublicationStale = false
         var sectionRevealed = false
@@ -54,7 +41,6 @@ nonisolated enum WriteHold {
                 (notificationCenterSuspended, .notificationCenterSuspended),
                 (userDragging, .userDragging),
                 (profileApplying, .profileApplying),
-                (manualArrangement, .manualArrangement),
                 (membershipReadPending, .membershipReadPending),
                 (layoutPublicationStale, .layoutPublicationStale),
                 (sectionRevealed, .sectionRevealed),
@@ -77,21 +63,11 @@ nonisolated enum WriteHold {
     }
 }
 
-/// The hold check lists the structural normalization pass evaluates, in the
-/// order the pass checks them.
+/// The holds the structural normalization pass checks, in order.
 nonisolated enum StructuralNormalizationHolds {
-    /// Checked after the debounce, before the cooldown waits and repair-lane
-    /// admission. A hold rearms the pass, bounded.
-    static let beforeAdmission: [WriteHold.Check] = [
-        .layoutPublicationStale,
-        .sectionRevealed,
-        .revealTransitionActive,
-    ]
-
-    /// Rechecked after lane admission, before the pass writes. A hold rearms
-    /// the pass, bounded. The control-resort hold is checked apart from this
-    /// list so its read stays where the pass always made it.
-    static let afterAdmission: [WriteHold.Check] = [
+    /// Checked after the debounce and again after repair-lane admission; a hold rearms the pass, bounded.
+    /// The control-resort hold is checked apart from this list, where the pass always read it.
+    static let checks: [WriteHold.Check] = [
         .layoutPublicationStale,
         .sectionRevealed,
         .revealTransitionActive,

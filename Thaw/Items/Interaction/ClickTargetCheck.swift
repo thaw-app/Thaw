@@ -5,7 +5,7 @@
 //  Copyright (Thaw) © 2026 Toni Förster
 //  Licensed under the GNU GPLv3
 
-import AppKit
+import CoreGraphics
 import MenuBarModel
 
 /// Whether a freshly read frame is safe to click: mid-reflow a re-read can return a parked or phantom
@@ -27,11 +27,6 @@ nonisolated enum ClickTargetCheck {
     static func barWidth(for bounds: CGRect, displays: [CGRect]) -> CGFloat {
         let under = displays.filter { $0.minX <= bounds.midX && bounds.midX < $0.maxX }
         return (under.isEmpty ? displays : under).map(\.width).max() ?? 0
-    }
-
-    @MainActor
-    static func barWidth(for bounds: CGRect) -> CGFloat {
-        barWidth(for: bounds, displays: NSScreen.screens.map(\.frame))
     }
 
     /// A pointer on another bar selects its mirrored copy; desktop activation keeps the reported seat.

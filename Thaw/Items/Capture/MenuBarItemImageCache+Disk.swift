@@ -38,8 +38,6 @@ extension MenuBarItemImageCache {
     ) -> Bool {
         let before = capturesByTag
         let didChange = commitRecapturePass(pass, admission: admission, ignoreRecentMove: ignoreRecentMove, appState: appState)
-        // The commit reports a change whenever a captured image differs from the one it had, so a changeless
-        // commit has nothing to compare.
         guard didChange else { return false }
         let concealed = concealedIdentifiers(in: appState)
         let after = capturesByTag

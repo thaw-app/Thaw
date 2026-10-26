@@ -13,10 +13,7 @@ import ThawAXCore
 /// Status items that MenuBarAgent's window lists but whose app's own tree does not.
 ///
 /// Some apps answer the walk at once with no extras-bar items while MenuBarAgent draws their icon.
-/// For an app with exactly one drawn entry, the walk records the item an extras-bar child of that app
-/// would give, so it gets the same tag, synthetic window ID and position store key. The child takes the
-/// app's one saved identity so the item keeps its section, or is Item-0 without one. An app with more
-/// than one entry is left out, since nothing says which entry is which.
+/// Only an app with exactly one drawn entry gets an item, recorded as its extras-bar child would be.
 nonisolated enum DrawnOnlyItems {
     typealias Entry = MenuBarAgentWindow.Entry
     typealias RawItem = MenuBarItemAXProvider.RawItem
@@ -263,7 +260,7 @@ nonisolated final class DrawnOnlyOwnerLedger: Sendable {
     /// The owners silent for at least the confirmation delay as of now.
     func confirmedOwners(now: ContinuousClock.Instant = .now) -> Set<pid_t> {
         state.withLock { state in
-            Set(state.silentSince.filter { now - $0.value >= Self.confirmationDelay }.keys)
+            Set(state.silentSince.filter { Self.hasStayedSilent(since: $0.value, now: now) }.keys)
         }
     }
 
@@ -312,7 +309,7 @@ nonisolated final class DrawnOnlyInventory: Sendable {
     private let savedOrder: @Sendable () -> [String: [String]]
 
     /// - Parameter savedOrder: Reads the saved section order that gives drawn-only items their identity.
-    init(savedOrder: @escaping @Sendable () -> [String: [String]] = { DrawnOnlyInventory.persistedSectionOrder() }) {
+    init(savedOrder: @escaping @Sendable () -> [String: [String]] = { SavedSectionOrderDefaults.read() }) {
         self.savedOrder = savedOrder
     }
 

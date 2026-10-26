@@ -416,9 +416,7 @@ public struct MenuBarItemTag: Hashable, CustomStringConvertible, Sendable, Codab
 
     /// System capture activity changes with ScreenCaptureKit sessions; it is
     /// not a user-arranged item and must not enter capture or order repair.
-    /// The screen sharing indicator counts too. macOS keeps it wherever the
-    /// user drops it, so treating it as a trailing anchor made order repair
-    /// rearrange the rest of the bar around it.
+    /// The screen-sharing indicator too: macOS keeps it where the user drops it, so it is no trailing anchor.
     public var isCaptureActivityIndicator: Bool {
         if namespace == .screenCaptureUI {
             return true
