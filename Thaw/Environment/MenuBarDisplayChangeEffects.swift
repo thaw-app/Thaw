@@ -10,11 +10,28 @@ final class MenuBarDisplayChangeEffects: DisplayChangeEffects {
     private let itemManager: MenuBarItemManager
     private let repairs: RepairOrchestrator
     private let imageCache: MenuBarItemImageCache
+    let displaySettings: any DisplayChangeSpacing
+    let profiles: ProfileManager
+    let presentationMonitor: PresentationMonitor
+    let menuBarManager: MenuBarManager
+    let displayProfileSwitch = DisplayProfileSwitch()
 
-    init(itemManager: MenuBarItemManager, repairs: RepairOrchestrator, imageCache: MenuBarItemImageCache) {
+    init(
+        itemManager: MenuBarItemManager,
+        repairs: RepairOrchestrator,
+        imageCache: MenuBarItemImageCache,
+        displaySettings: any DisplayChangeSpacing,
+        profiles: ProfileManager,
+        presentationMonitor: PresentationMonitor,
+        menuBarManager: MenuBarManager
+    ) {
         self.itemManager = itemManager
         self.repairs = repairs
         self.imageCache = imageCache
+        self.displaySettings = displaySettings
+        self.profiles = profiles
+        self.presentationMonitor = presentationMonitor
+        self.menuBarManager = menuBarManager
     }
 
     func stampDisplayChanged() {

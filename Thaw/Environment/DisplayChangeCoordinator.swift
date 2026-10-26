@@ -11,9 +11,14 @@ import MenuBarModel
 @MainActor
 protocol DisplayChangeEffects: AnyObject {
     func stampDisplayChanged()
+    func seedDisplayConfigurations()
     func startSettle(reason: String)
+    func resolveDisplayProfile() async
+    func applyDisplaySpacing()
     func awaitSettle() async
     func cleanImagesAfterRemoval() async
+    func applyPresentationPolicy()
+    func recaptureImages() async
 }
 
 /// Runs a display change's steps once per settled generation. A newer generation abandons the rest
@@ -79,12 +84,22 @@ final class DisplayChangeCoordinator {
         switch step {
         case .stampDisplayChanged:
             effects.stampDisplayChanged()
+        case .seedConfigurations:
+            effects.seedDisplayConfigurations()
         case let .startSettle(reason):
             effects.startSettle(reason: reason)
+        case .resolveProfile:
+            await effects.resolveDisplayProfile()
+        case .applySpacing:
+            effects.applyDisplaySpacing()
         case .awaitSettle:
             await effects.awaitSettle()
         case .cleanImages:
             await effects.cleanImagesAfterRemoval()
+        case .applyPresentationPolicy:
+            effects.applyPresentationPolicy()
+        case .recaptureImages:
+            await effects.recaptureImages()
         }
     }
 }

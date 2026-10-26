@@ -13,7 +13,7 @@ import Testing
 @Suite("Display change plan")
 struct DisplayChangePlanTests {
     @Test(
-        "A change that keeps every display stamps and starts the settle, with nothing to wait for after it",
+        "A change that keeps every display waits for the settle, then applies the presentation and recaptures",
         arguments: [
             (EnvironmentChange.displayAdded, "displayConnect"),
             (.rearranged, "displayArrangement"),
@@ -23,17 +23,28 @@ struct DisplayChangePlanTests {
     func stepsPerChange(change: EnvironmentChange, reason: String) {
         #expect(DisplayChangePlan.steps(for: change) == [
             .stampDisplayChanged,
+            .seedConfigurations,
             .startSettle(reason: reason),
+            .resolveProfile,
+            .applySpacing,
+            .awaitSettle,
+            .applyPresentationPolicy,
+            .recaptureImages,
         ])
     }
 
-    @Test("A removed display also waits out the settle, then cleans the stale images")
+    @Test("A removed display also cleans its stale images before the recapture")
     func removedDisplayCleansImages() {
         #expect(DisplayChangePlan.steps(for: .displayRemoved) == [
             .stampDisplayChanged,
+            .seedConfigurations,
             .startSettle(reason: "displayDisconnect"),
+            .resolveProfile,
+            .applySpacing,
             .awaitSettle,
+            .applyPresentationPolicy,
             .cleanImages,
+            .recaptureImages,
         ])
     }
 
@@ -96,7 +107,13 @@ struct DisplayChangeCoordinatorTests {
 
         #expect(effects.steps == [
             .stampDisplayChanged,
+            .seedConfigurations,
             .startSettle(reason: "displayConnect"),
+            .resolveProfile,
+            .applySpacing,
+            .awaitSettle,
+            .applyPresentationPolicy,
+            .recaptureImages,
         ])
     }
 
@@ -108,16 +125,26 @@ struct DisplayChangeCoordinatorTests {
         harness.settle(on: Self.single)
         await harness.effects.waitForHeldSettles(1)
         harness.settle(on: Self.docked)
-        await harness.coordinator.waitUntilIdle()
+        await harness.effects.waitForHeldSettles(2)
         harness.effects.releaseSettles()
-        await harness.effects.waitForReturnedSettles(1)
+        await harness.coordinator.waitUntilIdle()
+        await harness.effects.waitForReturnedSettles(2)
 
         #expect(harness.effects.steps == [
             .stampDisplayChanged,
+            .seedConfigurations,
             .startSettle(reason: "displayDisconnect"),
+            .resolveProfile,
+            .applySpacing,
             .awaitSettle,
             .stampDisplayChanged,
+            .seedConfigurations,
             .startSettle(reason: "displayConnect"),
+            .resolveProfile,
+            .applySpacing,
+            .awaitSettle,
+            .applyPresentationPolicy,
+            .recaptureImages,
         ])
     }
 
@@ -142,7 +169,7 @@ struct DisplayChangeCoordinatorTests {
         harness.settle(on: Self.single)
         await harness.coordinator.waitUntilIdle()
         #expect(harness.effects.steps.count(where: { $0 == .stampDisplayChanged }) == 2)
-        #expect(harness.effects.steps.last == .cleanImages)
+        #expect(harness.effects.steps.suffix(2) == [.cleanImages, .recaptureImages])
     }
 
     @Test("A stopped coordinator ignores later settles")
@@ -163,7 +190,7 @@ struct MenuBarDisplayChangeEffectsTests {
     @Test("The stamp calls off the automatic passes planned before the change")
     func stampCallsOffPlannedWork() {
         let manager = MenuBarItemManager()
-        let effects = MenuBarDisplayChangeEffects(itemManager: manager, repairs: manager.repairs, imageCache: MenuBarItemImageCache())
+        let effects = MenuBarDisplayChangeEffects(itemManager: manager, repairs: manager.repairs, imageCache: MenuBarItemImageCache(), displaySettings: DisplaySettingsManager(), profiles: ProfileManager(), presentationMonitor: PresentationMonitor(), menuBarManager: MenuBarManager())
         manager.repairs.request(.overflowRebalance, cause: .cachePublished)
 
         effects.stampDisplayChanged()
@@ -174,7 +201,7 @@ struct MenuBarDisplayChangeEffectsTests {
     @Test("Waiting for the settle returns at once when none is running")
     func awaitWithoutSettle() async {
         let manager = MenuBarItemManager()
-        let effects = MenuBarDisplayChangeEffects(itemManager: manager, repairs: manager.repairs, imageCache: MenuBarItemImageCache())
+        let effects = MenuBarDisplayChangeEffects(itemManager: manager, repairs: manager.repairs, imageCache: MenuBarItemImageCache(), displaySettings: DisplaySettingsManager(), profiles: ProfileManager(), presentationMonitor: PresentationMonitor(), menuBarManager: MenuBarManager())
 
         await effects.awaitSettle()
 
@@ -184,7 +211,7 @@ struct MenuBarDisplayChangeEffectsTests {
     @Test("Waiting for the settle follows a replaced settling task to the end")
     func awaitFollowsReplacedSettle() async {
         let manager = MenuBarItemManager()
-        let effects = MenuBarDisplayChangeEffects(itemManager: manager, repairs: manager.repairs, imageCache: MenuBarItemImageCache())
+        let effects = MenuBarDisplayChangeEffects(itemManager: manager, repairs: manager.repairs, imageCache: MenuBarItemImageCache(), displaySettings: DisplaySettingsManager(), profiles: ProfileManager(), presentationMonitor: PresentationMonitor(), menuBarManager: MenuBarManager())
         let finished = Flag()
         let replacement = Task { @MainActor in
             await Task.yield()
@@ -239,8 +266,20 @@ private final class RecordingEffects: DisplayChangeEffects {
         steps.append(.stampDisplayChanged)
     }
 
+    func seedDisplayConfigurations() {
+        steps.append(.seedConfigurations)
+    }
+
     func startSettle(reason: String) {
         steps.append(.startSettle(reason: reason))
+    }
+
+    func resolveDisplayProfile() async {
+        steps.append(.resolveProfile)
+    }
+
+    func applyDisplaySpacing() {
+        steps.append(.applySpacing)
     }
 
     func awaitSettle() async {
@@ -254,6 +293,14 @@ private final class RecordingEffects: DisplayChangeEffects {
 
     func cleanImagesAfterRemoval() async {
         steps.append(.cleanImages)
+    }
+
+    func applyPresentationPolicy() {
+        steps.append(.applyPresentationPolicy)
+    }
+
+    func recaptureImages() async {
+        steps.append(.recaptureImages)
     }
 
     func releaseSettles() {

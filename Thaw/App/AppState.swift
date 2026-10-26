@@ -52,7 +52,7 @@ final class AppState {
     /// Runs the settle a display change owes, and the image cleanup after a removal, once per settled generation.
     @ObservationIgnored private lazy var displayChangeCoordinator = DisplayChangeCoordinator(
         environment: displayEnvironment,
-        effects: MenuBarDisplayChangeEffects(itemManager: itemManager, repairs: itemManager.repairs, imageCache: imageCache)
+        effects: MenuBarDisplayChangeEffects(itemManager: itemManager, repairs: itemManager.repairs, imageCache: imageCache, displaySettings: settings.displaySettings, profiles: profileManager, presentationMonitor: presentationMonitor, menuBarManager: menuBarManager)
     )
 
     /// Paints tint, border, shadow and shape over the system menu bar.

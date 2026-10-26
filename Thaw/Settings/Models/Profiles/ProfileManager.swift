@@ -47,12 +47,10 @@ final class ProfileManager {
     private let manifestURL: URL
     private(set) weak var appState: AppState?
     private var cancellables = Set<AnyCancellable>()
-    /// Tracks the last seen active display UUID for auto-switch debouncing.
-    private var lastActiveDisplayUUID: String?
     /// Tracks the last seen active Space key for auto-switch debouncing.
     private var lastActiveSpaceKey: String?
     /// Whether a Focus Filter profile is currently applied.
-    private var focusFilterActive = false
+    private(set) var focusFilterActive = false
     /// The in-flight layout apply and its profile, for callers that wait for it (e.g. the Apply button).
     private(set) var layoutTask: Task<Void, Never>?
     private(set) var layoutTaskProfileID: UUID?
@@ -126,14 +124,7 @@ final class ProfileManager {
     /// Apply the current display's associated profile only after the menu bar settles.
     func performSetup(with appState: AppState) {
         self.appState = appState
-        lastActiveDisplayUUID = Bridging.getActiveMenuBarDisplayUUID()
         rebuildProfileHotkeys()
-
-        let displaySwitchTask = NotificationCenter.default.eventsTask(named: NSApplication.didChangeScreenParametersNotification, debounce: .seconds(1.5)) { [weak self] in
-            guard let self else { return }
-            await self.checkDisplayAndAutoSwitch()
-        }
-        cancellables.insert(AnyCancellable { displaySwitchTask.cancel() })
 
         // Debounce beyond the Space animation so rapid swipes apply only the final profile.
         let spaceSwitchTask = NSWorkspace.shared.notificationCenter.eventsTask(named: NSWorkspace.activeSpaceDidChangeNotification, debounce: .seconds(0.75)) { [weak self] in
@@ -188,7 +179,7 @@ final class ProfileManager {
         lastActiveSpaceKey = startupSpaceKey
         if let startupSpaceKey, profile(forSpaceKey: startupSpaceKey) != nil {
             await applyProfileForSpace(key: startupSpaceKey)
-        } else if let currentUUID = lastActiveDisplayUUID {
+        } else if let currentUUID = Bridging.getActiveMenuBarDisplayUUID() {
             await applyProfileForDisplay(uuid: currentUUID)
         }
     }
@@ -1058,26 +1049,6 @@ final class ProfileManager {
 
     // MARK: - Auto-Switch
 
-    /// Apply the new display's profile unless Focus or a Space association takes priority.
-    private func checkDisplayAndAutoSwitch() async {
-        guard let currentUUID = Bridging.getActiveMenuBarDisplayUUID() else { return }
-        guard currentUUID != lastActiveDisplayUUID else { return }
-        lastActiveDisplayUUID = currentUUID
-
-        // Don't override a Focus Filter profile with a display switch.
-        guard !focusFilterActive else { return }
-
-        // Explicit Space associations outrank incidental display changes such as docking, wake, or resolution changes.
-        if let spaceKey = SpaceInfo.activeSpace().persistentKey,
-           profile(forSpaceKey: spaceKey) != nil
-        {
-            diagLog.debug("Display auto-switch yielding to Space association \(spaceKey)")
-            return
-        }
-
-        await applyProfileForDisplay(uuid: currentUUID)
-    }
-
     /// Already-active guards make switches between Spaces sharing a profile no-ops.
     private func checkSpaceAndAutoSwitch() async {
         guard let key = SpaceInfo.activeSpace().persistentKey else {
@@ -1145,40 +1116,14 @@ final class ProfileManager {
 
     /// Applies the profile associated with the given display UUID, if any.
     private func applyProfileForDisplay(uuid: String) async {
-        guard let meta = profiles.first(where: { $0.associatedDisplayUUID == uuid }) else {
-            return
-        }
-        guard meta.id != activeProfileID else { return }
-        guard let appState else { return }
-
-        guard !keepsLiveLayoutAtLaunch(meta) else { return }
-        diagLog.info("Auto-switching to profile \(meta.name) for display \(uuid)")
-        do {
-            let profile = try loadProfile(id: meta.id)
-            let previousID = activeProfileID
-            activeProfileID = meta.id
-            applyProfile(profile, to: appState, previousProfileID: previousID)
-        } catch {
-            diagLog.error("Auto-switch failed: \(error)")
-        }
+        guard let meta = profiles.first(where: { $0.associatedDisplayUUID == uuid }), meta.id != activeProfileID, let appState else { return }
+        switchAutomatically(to: meta, on: appState, trigger: "display \(uuid)")
     }
 
     /// Applies the profile associated with the given Space key, if any.
     private func applyProfileForSpace(key: String) async {
-        guard let meta = profile(forSpaceKey: key) else { return }
-        guard meta.id != activeProfileID else { return }
-        guard let appState else { return }
-
-        guard !keepsLiveLayoutAtLaunch(meta) else { return }
-        diagLog.info("Auto-switching to profile \(meta.name) for Space \(key)")
-        do {
-            let profile = try loadProfile(id: meta.id)
-            let previousID = activeProfileID
-            activeProfileID = meta.id
-            applyProfile(profile, to: appState, previousProfileID: previousID)
-        } catch {
-            diagLog.error("Space auto-switch failed: \(error)")
-        }
+        guard let meta = profile(forSpaceKey: key), meta.id != activeProfileID, let appState else { return }
+        switchAutomatically(to: meta, on: appState, trigger: "Space \(key)")
     }
 
     /// Imports profiles from a file.

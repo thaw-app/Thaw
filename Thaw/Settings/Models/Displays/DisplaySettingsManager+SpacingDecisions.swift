@@ -16,6 +16,17 @@ extension DisplaySettingsManager {
         currentUUID == lastUUID
     }
 
+    /// The reason a display change applies spacing under, or nil when the display that owns the menu bar
+    /// is the one spacing was last applied for.
+    static func displayChangeSpacingReason(
+        currentActiveDisplayUUID currentUUID: String?,
+        lastAppliedActiveDisplayUUID lastUUID: String?
+    ) -> String? {
+        shouldSkipSpacingApply(currentActiveDisplayUUID: currentUUID, lastAppliedActiveDisplayUUID: lastUUID)
+            ? nil
+            : "screenParametersChanged"
+    }
+
     /// Seeding a display Thaw has never seen happens on a display change, so it must not relaunch apps.
     static func configurationsChangeReason(seedingConnectedDisplays: Bool) -> String {
         seedingConnectedDisplays ? "displaySeeded" : "configurationsChanged"
