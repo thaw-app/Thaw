@@ -55,6 +55,8 @@ final class MenuBarSearchPanel: NSPanel {
     private var spotlightedName: String?
 
     private let model = MenuBarSearchModel()
+    /// Each screen-parameter posting, from the display environment.
+    private var displayInvalidations: AnyPublisher<Void, Never> = Empty().eraseToAnyPublisher()
 
     /// The actions button the actions menu hangs from. Weak because the
     /// hosting view owns it.
@@ -173,8 +175,9 @@ final class MenuBarSearchPanel: NSPanel {
         close()
     }
 
-    func performSetup(with appState: AppState) {
+    func performSetup(with appState: AppState, displays: DisplayEnvironment? = nil) {
         self.appState = appState
+        displayInvalidations = (displays ?? appState.displayEnvironment).invalidations.eraseToAnyPublisher()
         moveActivity = appState.itemManager.moveActivity
 
         NSApp.publisher(for: \.effectiveAppearance)
@@ -190,17 +193,12 @@ final class MenuBarSearchPanel: NSPanel {
             }
             .store(in: &cancellables)
 
-        // A space or display change invalidates the position, so close.
-        Publishers.Merge(
-            NSWorkspace.shared.notificationCenter.publisher(
-                for: NSWorkspace.activeSpaceDidChangeNotification
-            ),
-            NotificationCenter.default.publisher(
-                for: NSApplication.didChangeScreenParametersNotification
-            )
-        )
-        .sink { [weak self] _ in self?.close() }
-        .store(in: &cancellables)
+        // A space or display change invalidates the position, so close; a display change closes at the posting, while the frame still belongs to its display.
+        NSWorkspace.shared.notificationCenter.publisher(for: NSWorkspace.activeSpaceDidChangeNotification)
+            .map { _ in () }
+            .merge(with: displayInvalidations)
+            .sink { [weak self] in self?.close() }
+            .store(in: &cancellables)
 
         // The mode is unknown until the first showing, so this runs in every
         // mode and retargetSpotlight() declines where it does not apply.
@@ -596,7 +594,7 @@ final class MenuBarSearchPanel: NSPanel {
         }
         isSamplingMenuBarColor = wanted
         if wanted {
-            model.attach(to: self)
+            model.attach(to: self, displayInvalidations: displayInvalidations)
         } else {
             model.detach()
         }

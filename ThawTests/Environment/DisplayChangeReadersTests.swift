@@ -1,0 +1,155 @@
+//
+//  DisplayChangeReadersTests.swift
+//  Project: Thaw
+//
+//  Copyright (Thaw) © 2026 Toni Förster
+//  Licensed under the GNU GPLv3
+
+import AppKit
+import Combine
+import Testing
+@testable import Thaw
+
+/// Readers hear display changes from DisplayEnvironment rather than from screen-parameter postings
+/// on the default center. The postings go to a private center: the default one would reach the
+/// observers of the app hosting the tests.
+@MainActor
+@Suite("Display change readers", .serialized, .timeLimit(.minutes(1)))
+struct DisplayChangeReadersTests {
+    private let center = NotificationCenter()
+    private let gate = SettleGate()
+    private let environment: DisplayEnvironment
+
+    init() {
+        let arrangement = DisplayArrangement(frames: [1: CGRect(x: 0, y: 0, width: 1512, height: 982)], mainDisplayID: 1)
+        environment = DisplayEnvironment(
+            center: center,
+            baseline: arrangement,
+            read: { arrangement },
+            sleep: { [gate] _ in
+                await gate.pass()
+                try Task.checkCancellation()
+            }
+        )
+    }
+
+    private func postScreenChange() {
+        center.post(name: NSApplication.didChangeScreenParametersNotification, object: nil)
+    }
+
+    /// Lets a main-queue hop in a reader's pipeline run.
+    private func drainMainQueue() async throws {
+        try await Task.sleep(for: .milliseconds(50))
+    }
+
+    @Test("The overlay rebuilds at each settle, and once after a burst of postings")
+    func overlayRebuildSignal() async throws {
+        var rebuilds = 0
+        let signal = MenuBarAppearanceManager.overlayRebuildSignal(
+            invalidations: environment.invalidations,
+            settlements: environment.settlements
+        )
+        .sink { rebuilds += 1 }
+        defer { signal.cancel() }
+
+        environment.settlements.send(.none)
+        #expect(rebuilds == 1, "A settle rebuilds at once, even when nothing moved")
+
+        for _ in 0 ..< 3 {
+            environment.invalidations.send()
+        }
+        #expect(rebuilds == 1, "Postings wait out their burst")
+        try await Task.sleep(for: .milliseconds(300))
+        #expect(rebuilds == 2, "A burst of postings rebuilds once, before the settle")
+    }
+
+    @Test("The Thaw Bar drops its colour strip at the settle, not at the posting")
+    func thawBarColorWaitsForSettle() async throws {
+        environment.start()
+        defer {
+            gate.open()
+            environment.stop()
+        }
+        let appState = AppState()
+        let colorManager = ThawBarColorManager()
+        colorManager.performSetup(with: ThawBarPanel(), appState: appState, displays: environment)
+        try await drainMainQueue()
+        let before = colorManager.windowImageGeneration
+
+        postScreenChange()
+        try await drainMainQueue()
+        #expect(colorManager.windowImageGeneration == before, "The posting alone leaves the strip")
+
+        gate.open()
+        await environment.waitUntilSettled()
+        try await drainMainQueue()
+        #expect(colorManager.windowImageGeneration == before + 1)
+    }
+
+    @Test("The search panel closes at the posting")
+    func searchPanelClosesAtPosting() {
+        environment.start()
+        defer {
+            gate.open()
+            environment.stop()
+        }
+        let appState = AppState()
+        let panel = MenuBarSearchPanel()
+        panel.performSetup(with: appState, displays: environment)
+        appState.navigationState.isSearchPresented = true
+
+        environment.settlements.send(.none)
+        #expect(appState.navigationState.isSearchPresented, "A settle on its own leaves the panel alone")
+
+        postScreenChange()
+        #expect(!appState.navigationState.isSearchPresented)
+    }
+
+    @Test("The Thaw Bar hides at the posting once it has been up a second")
+    func thawBarHidesAtPosting() async throws {
+        let screen = try #require(NSScreen.main)
+        environment.start()
+        let appState = AppState()
+        let panel = ThawBarPanel()
+        let originalPolicy = NSApp.activationPolicy()
+        defer {
+            panel.close()
+            NSApp.setActivationPolicy(originalPolicy)
+            gate.open()
+            environment.stop()
+        }
+        NSApp.setActivationPolicy(.accessory)
+        panel.performSetup(with: appState, displays: environment)
+        panel.dismissesOnOutsideClick = false
+        panel.show(section: .hidden, on: screen)
+        try await Task.sleep(for: .milliseconds(1100))
+        #expect(panel.isVisible)
+
+        environment.settlements.send(.displayAdded)
+        #expect(panel.isVisible, "A settle on its own leaves the bar up")
+
+        postScreenChange()
+        #expect(!panel.isVisible)
+    }
+}
+
+/// Holds the settle's waits until a test lets them through, so a test can look between the posting and the settle.
+@MainActor
+private final class SettleGate {
+    private var isOpen = false
+    private var waiters: [CheckedContinuation<Void, Never>] = []
+
+    func pass() async {
+        guard !isOpen else { return }
+        await withCheckedContinuation { waiters.append($0) }
+    }
+
+    func open() {
+        isOpen = true
+        let released = waiters
+        waiters.removeAll()
+        for waiter in released {
+            waiter.resume()
+        }
+    }
+}

@@ -123,8 +123,9 @@ final class ThawBarPanel: NSPanel {
         self.canHide = false
     }
 
-    func performSetup(with appState: AppState) {
+    func performSetup(with appState: AppState, displays: DisplayEnvironment? = nil) {
         self.appState = appState
+        let displays = displays ?? appState.displayEnvironment
 
         // Observations delivers the current lock value before subsequent changes.
         lockPositionObservationTask?.cancel()
@@ -136,22 +137,21 @@ final class ThawBarPanel: NSPanel {
             }
         }
 
-        // Activating an inactive screen posts a screen-change notification; do not let it close a just-opened bar.
-        Publishers.Merge(
-            NSWorkspace.shared.notificationCenter.publisher(for: NSWorkspace.activeSpaceDidChangeNotification),
-            NotificationCenter.default.publisher(for: NSApplication.didChangeScreenParametersNotification)
-        )
-        .sink { [weak self] _ in
-            guard
-                let self,
-                let ts = lastShowTimestamp,
-                Date().timeIntervalSince(ts) >= 1
-            else {
-                return
+        // Activating an inactive screen posts a screen-change notification; do not let it close a just-opened bar. The hide stays at the posting, in the turn of the other reveal and hide writers.
+        NSWorkspace.shared.notificationCenter.publisher(for: NSWorkspace.activeSpaceDidChangeNotification)
+            .map { _ in () }
+            .merge(with: displays.invalidations)
+            .sink { [weak self] in
+                guard
+                    let self,
+                    let ts = lastShowTimestamp,
+                    Date().timeIntervalSince(ts) >= 1
+                else {
+                    return
+                }
+                hide()
             }
-            hide()
-        }
-        .store(in: &cancellables)
+            .store(in: &cancellables)
 
         publisher(for: \.frame).map(\.size)
             .removeDuplicates()
@@ -163,7 +163,7 @@ final class ThawBarPanel: NSPanel {
             }
             .store(in: &cancellables)
 
-        colorManager.performSetup(with: self, appState: appState)
+        colorManager.performSetup(with: self, appState: appState, displays: displays)
     }
 
     /// Nil when the panel is wider than the screen and no placement fits.

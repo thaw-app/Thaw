@@ -106,6 +106,8 @@ final class ControlItem: NSObject {
     }
 
     private var cancellables = Set<AnyCancellable>()
+    /// Outlives a re-publish, which rebuilds cancellables.
+    private var displayInvalidation: AnyCancellable?
 
     /// Tasks backing the settings-observation reactions in
     /// observeSettings(appState:). GeneralSettings and
@@ -132,11 +134,12 @@ final class ControlItem: NSObject {
 
     /// Attaches the control item to the app and starts observing everything its
     /// appearance depends on.
-    func performSetup(with appState: AppState) {
+    func performSetup(with appState: AppState, displayInvalidations: some Publisher<Void, Never>) {
         self.appState = appState
         configuration = appState.settings
         menuController = ControlItemMenuController(appState: appState)
         beginObserving()
+        observeDisplayInvalidations(displayInvalidations)
     }
 }
 
@@ -372,8 +375,8 @@ extension ControlItem {
     static nonisolated let republishRearmCooldown: Duration = .seconds(60)
 
     /// Re-publishes spent per identifier this session. See
-    /// republishIfUnseated().
-    private static var republishCounts: [Identifier: Int] = [:]
+    /// republishIfUnseated(). Internal so tests can spend a budget.
+    static var republishCounts: [Identifier: Int] = [:]
 
     /// When each identifier last re-published. Feeds the re-arm cooldown.
     private static var republishLastAttempt: [Identifier: ContinuousClock.Instant] = [:]
@@ -662,6 +665,11 @@ extension ControlItem {
         )
         noteDegenerateFrame()
     }
+
+    /// A spent ladder was measured against one bar geometry; each display invalidation lets it retry, in the posting turn.
+    func observeDisplayInvalidations(_ invalidations: some Publisher<Void, Never>) {
+        displayInvalidation = invalidations.sink { [weak self] in self?.resetOffBandRecovery() }
+    }
 }
 
 // MARK: - Observation
@@ -696,15 +704,6 @@ extension ControlItem {
                 } else {
                     hotkey.disable()
                 }
-            }
-            .store(in: &cancellables)
-
-        // A spent off-band ladder was measured against one bar geometry; a
-        // display change rebuilds the bar, so let it retry.
-        NotificationCenter.default.publisher(for: NSApplication.didChangeScreenParametersNotification)
-            .receive(on: DispatchQueue.main)
-            .sink { [weak self] _ in
-                self?.resetOffBandRecovery()
             }
             .store(in: &cancellables)
 

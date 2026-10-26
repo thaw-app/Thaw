@@ -6,6 +6,7 @@
 //  Licensed under the GNU GPLv3
 
 import AppKit
+import Combine
 import MenuBarModel
 
 /// Holds back copying the live order into the saved order until the bar has been quiet for a while.
@@ -22,18 +23,20 @@ final class SavedOrderMirrorGate {
 
     private var lastDisturbance: ContinuousClock.Instant?
     private var lastIdentifiers: Set<String>?
-    private var systemEventTasks = [Task<Void, Never>]()
+    private var wakeTask: Task<Void, Never>?
+    private var displayInvalidation: AnyCancellable?
 
+    /// Observes screen wakes; display changes arrive through observe(displayInvalidations:).
     init(observesSystem: Bool = true) {
         guard observesSystem else { return }
-        systemEventTasks = [
-            NSWorkspace.shared.notificationCenter.eventsTask(named: NSWorkspace.screensDidWakeNotification) { [weak self] in
-                self?.noteDisturbance()
-            },
-            NotificationCenter.default.eventsTask(named: NSApplication.didChangeScreenParametersNotification) { [weak self] in
-                self?.noteDisturbance()
-            },
-        ]
+        wakeTask = NSWorkspace.shared.notificationCenter.eventsTask(named: NSWorkspace.screensDidWakeNotification) { [weak self] in
+            self?.noteDisturbance()
+        }
+    }
+
+    /// Counts each display invalidation as a disturbance, in the posting turn. A later call replaces the earlier source.
+    func observe(displayInvalidations: some Publisher<Void, Never>) {
+        displayInvalidation = displayInvalidations.sink { [weak self] in self?.noteDisturbance() }
     }
 
     func noteDisturbance(at instant: ContinuousClock.Instant = .now) {

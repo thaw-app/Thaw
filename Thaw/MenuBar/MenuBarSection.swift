@@ -219,7 +219,7 @@ final class MenuBarSection {
         self.appState = appState
         configuration = appState.settings
         menuOpenMonitor = appState.itemManager.menuOpenMonitor
-        controlItem.performSetup(with: appState)
+        controlItem.performSetup(with: appState, displayInvalidations: appState.displayEnvironment.invalidations)
         desiredState = controlItem.state
     }
 

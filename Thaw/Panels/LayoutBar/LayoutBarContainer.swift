@@ -238,9 +238,8 @@ final class LayoutBarContainer: NSView {
             AnyCancellable { badgeColorTask.cancel() }
                 .store(in: &subscriptions)
 
-            // Observe screen parameter changes (moving between displays) to update badge
-            NotificationCenter.default
-                .publisher(for: NSApplication.didChangeScreenParametersNotification)
+            // Update the badge once a display change settles.
+            appState.displayEnvironment.settlements
                 .sink { [weak self] _ in
                     guard let self else { return }
                     // Force update badge's color info and redraw when screen changes

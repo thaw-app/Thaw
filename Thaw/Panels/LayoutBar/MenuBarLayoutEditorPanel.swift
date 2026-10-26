@@ -98,9 +98,9 @@ final class MenuBarLayoutEditorPanel: NSObject, NSPopoverDelegate {
         return nil
     }
 
-    func performSetup(with appState: AppState) {
+    func performSetup(with appState: AppState, displays: DisplayEnvironment? = nil) {
         self.appState = appState
-        configureObservers()
+        configureObservers(displays: displays ?? appState.displayEnvironment)
     }
 
     /// usesReorderEditor nil follows the hidden default; the Layout pane's button passes true.
@@ -180,7 +180,7 @@ final class MenuBarLayoutEditorPanel: NSObject, NSPopoverDelegate {
 
     // MARK: Private
 
-    private func configureObservers() {
+    private func configureObservers(displays: DisplayEnvironment) {
         var c = Set<AnyCancellable>()
 
         NSApp.publisher(for: \.effectiveAppearance)
@@ -191,16 +191,15 @@ final class MenuBarLayoutEditorPanel: NSObject, NSPopoverDelegate {
 
         // A space switch or a display rearrangement invalidates where the
         // panel is hanging, and, worse, the menu bar it is describing. Take
-        // it down rather than leave a stale editor pinned to nothing.
+        // it down at the posting rather than leave a stale editor pinned to nothing.
         Publishers.Merge(
             NSWorkspace.shared.notificationCenter.publisher(
                 for: NSWorkspace.activeSpaceDidChangeNotification
-            ),
-            NotificationCenter.default.publisher(
-                for: NSApplication.didChangeScreenParametersNotification
             )
+            .map { _ in () },
+            displays.invalidations
         )
-        .sink { [weak self] _ in
+        .sink { [weak self] in
             // The window is not pinned to a bar, so it stays.
             self?.closePopover()
         }

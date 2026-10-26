@@ -55,7 +55,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         OverflowSpacer.shared.performSetup(with: appState)
 
         // Descenders observe their setting live and use app state to hit-test on-screen items.
-        notchPanelController.performSetup(with: appState)
+        notchPanelController.performSetup(with: appState, displayInvalidations: appState.displayEnvironment.invalidations)
 
         // Register thaw:// early so external tools can trigger background actions; individual actions may activate Thaw.
         NSAppleEventManager.shared().setEventHandler(

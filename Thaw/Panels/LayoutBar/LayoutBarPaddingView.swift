@@ -1321,9 +1321,8 @@ final class LayoutBarPaddingView: NSView {
             return
         }
 
-        NotificationCenter.default
-            .publisher(for: NSApplication.didChangeScreenParametersNotification)
-            .receive(on: DispatchQueue.main)
+        // The notch is read from the settled displays.
+        appState.displayEnvironment.settlements
             .sink { [weak self] _ in
                 self?.updateNotchPresentation()
             }

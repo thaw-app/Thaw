@@ -46,6 +46,15 @@ final class AppState {
     /// event taps, which ask for a check.
     private let activeDisplayWatcher = ActiveMenuBarDisplayWatcher()
 
+    /// Settles screen-parameter changes into one numbered snapshot; readers follow its invalidations and settlements.
+    let displayEnvironment = DisplayEnvironment()
+
+    /// Runs the settle and cache refresh a display change owes, once per settled generation.
+    @ObservationIgnored private lazy var displayChangeCoordinator = DisplayChangeCoordinator(
+        environment: displayEnvironment,
+        effects: MenuBarDisplayChangeEffects(itemManager: itemManager, repairs: itemManager.repairs, imageCache: imageCache)
+    )
+
     /// Paints tint, border, shadow and shape over the system menu bar.
     let appearanceManager = MenuBarAppearanceManager()
 
@@ -180,9 +189,6 @@ final class AppState {
     /// Watches navigationState's observable focus and Settings visibility.
     private var navigationStateObservationTask: Task<Void, Never>?
 
-    /// The last display arrangement seen, to tell connects, disconnects and rearrangements apart.
-    private var displayArrangement = DisplayArrangementWatch(.current)
-
     /// Prevent repeated restart attempts.
     private var isRestarting = false
 
@@ -209,6 +215,7 @@ final class AppState {
         permissions.stopAllChecks()
         diagLog.debug("bootstrap: permissions state = \(String(describing: self.permissions.permissionsState)), accessibility = \(self.permissions.accessibility.hasPermission), screenRecording = \(self.permissions.screenRecording.hasPermission)")
 
+        displayEnvironment.start()
         settings.performSetup(with: self)
         menuBarManager.performSetup(with: self, activeDisplayWatcher: activeDisplayWatcher)
         // A refused preferences watcher stays stopped; recreate it after either a table-file grant or Full Disk Access.
@@ -218,7 +225,7 @@ final class AppState {
         }
         diagLog.debug("bootstrap: settings and menuBarManager setup complete")
 
-        appearanceManager.performSetup(with: self)
+        appearanceManager.performSetup(with: self, displays: displayEnvironment)
         hidEventManager.performSetup(with: self, activeDisplayWatcher: activeDisplayWatcher)
         diagLog.debug("bootstrap: starting itemManager setup")
         await itemManager.performSetup(with: self)
@@ -233,7 +240,7 @@ final class AppState {
         )
         presentationMonitor.performSetup(with: self)
         spacerManager.performSetup(with: self)
-        screenCorners.performSetup(with: self)
+        screenCorners.performSetup(with: self, displays: displayEnvironment)
         itemHints.performSetup(with: self)
         groupFolders.performSetup(with: self)
         diagLog.debug("bootstrap: imageCache setup complete")
@@ -248,9 +255,10 @@ final class AppState {
         userNotificationManager.performSetup(with: self)
         profileManager.performSetup(with: self)
         itemManager.repairs.onUserLayoutChange = { [weak self] in self?.profileLayoutKeeper.noteUserLayoutChange() }
+        itemManager.savedOrderMirrorGate.observe(displayInvalidations: displayEnvironment.invalidations)
         controlCommandObserver.performSetup(with: self)
         controlStatePublisher.performSetup(with: self)
-        swapBarManager.performSetup(with: self)
+        swapBarManager.performSetup(with: self, displays: displayEnvironment)
         controlItemPanel.performSetup(with: self)
         recordingWatchManager.performSetup(with: self)
         applicationMenuCover.performSetup(with: self)
@@ -418,7 +426,7 @@ final class AppState {
         observeItemDrags()
         observeImageCacheTriggers()
         // Observation tracks owned-model reads through appState directly; no objectWillChange forwarding is needed.
-        observeDisplayTopology()
+        displayChangeCoordinator.start()
     }
 
     /// Frontmost-app changes cover space notifications missed on secondary displays.
@@ -481,8 +489,7 @@ final class AppState {
                 }
             }
         }
-        AnyCancellable { task.cancel() }
-            .store(in: &cancellables)
+        cancellables.insert(AnyCancellable { task.cancel() })
     }
 
     /// Refresh on frontmost Settings and once after bootstrap to populate the first draw.
@@ -509,48 +516,6 @@ final class AppState {
         await imageCache.recaptureIfWarranted()
         if imageCache.cacheSize > 15 {
             imageCache.logCacheStatus("Periodic update")
-        }
-    }
-
-    /// Handles a display topology change once a burst of screen changes goes quiet.
-    private func observeDisplayTopology() {
-        let topologyTask = NotificationCenter.default.eventsTask(named: NSApplication.didChangeScreenParametersNotification, debounce: .seconds(0.5)) { [weak self] in
-            guard let self else { return }
-            self.handleDisplayTopologyChange()
-        }
-        cancellables.insert(AnyCancellable { topologyTask.cancel() })
-    }
-
-    /// The debounced body of observeDisplayTopology().
-    private func handleDisplayTopologyChange() {
-        let change = displayArrangement.update(to: .current)
-        diagLog.debug("Display topology: \(change.logDescription)")
-        if change == .disconnected {
-            diagLog.info("Display disconnected: refresh item cache + cleanup image cache")
-            Task { @MainActor [weak self] in
-                guard let self else { return }
-                // Wait for disconnect geometry to settle; a stale Control Center edge yields a negative overflow budget and persists hidden items as visible.
-                itemManager.startSettlingPeriod(reason: "displayDisconnect")
-                // Force item cache rebuild so displayID reflects current
-                // display geometry (items moved to remaining display).
-                await itemManager.cacheItemsRegardless(skipRecentMoveCheck: true)
-                // Force image cache: remove entries for items no longer
-                // present, trigger re-capture for current display.
-                imageCache.performCacheCleanup()
-                await imageCache.recaptureNow(sections: MenuBarSection.Name.allCases)
-                diagLog.info("Cache refresh complete after display disconnect")
-            }
-        } else if change != .unchanged {
-            diagLog.info("\(change.logDescription): refresh item cache")
-            Task { @MainActor [weak self] in
-                guard let self else { return }
-                // Defer saved-layout restore until attached-display geometry settles, as on disconnect.
-                itemManager.startSettlingPeriod(reason: change.settlingReason)
-                // Items keep their windowIDs when moving to new display.
-                // Item cache rebuild picks up new items on the added display.
-                await itemManager.cacheItemsRegardless(skipRecentMoveCheck: true)
-                diagLog.info("Item cache refreshed after \(change.logDescription.lowercased())")
-            }
         }
     }
 

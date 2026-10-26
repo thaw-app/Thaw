@@ -110,10 +110,10 @@ final class MenuBarAppearanceManager {
     let menuBarInsetAmount: CGFloat = 3.5
 
     /// Call once to restore settings and start observing.
-    func performSetup(with appState: AppState) {
+    func performSetup(with appState: AppState, displays: DisplayEnvironment) {
         self.appState = appState
         loadInitialState()
-        configureCancellables()
+        configureCancellables(displays: displays)
     }
 
     /// Decode shared settings and overrides independently so one unreadable key does not block the other.
@@ -165,9 +165,9 @@ final class MenuBarAppearanceManager {
         spaceOverrides = [:]
     }
 
-    private func configureCancellables() {
+    private func configureCancellables(displays: DisplayEnvironment) {
         cancellables = [
-            observeScreenParameters(),
+            observeScreenParameters(displays),
             observeActiveSpace(),
             observeAccentColor(),
             observeSystemGlass(),
@@ -219,13 +219,22 @@ final class MenuBarAppearanceManager {
         }
     }
 
-    /// Rebuilds the overlay panels once a burst of screen changes goes quiet.
-    private func observeScreenParameters() -> AnyCancellable {
-        let task = NotificationCenter.default.eventsTask(named: NSApplication.didChangeScreenParametersNotification, debounce: .seconds(0.1)) { [weak self] in
-            guard let self else { return }
-            self.rebuildOverlayPanelsIfScreensMoved()
-        }
-        return AnyCancellable { task.cancel() }
+    /// When to look for moved screens: 100 ms after a burst of postings, because an overlay left on
+    /// the old geometry until the settle is visible, and again at each settle, in case the early
+    /// look caught the screens part way through the change. A look at unmoved screens does nothing.
+    static func overlayRebuildSignal(
+        invalidations: some Publisher<Void, Never>,
+        settlements: some Publisher<EnvironmentChange, Never>
+    ) -> AnyPublisher<Void, Never> {
+        invalidations
+            .debounce(for: .milliseconds(100), scheduler: DispatchQueue.main)
+            .merge(with: settlements.map { _ in () })
+            .eraseToAnyPublisher()
+    }
+
+    private func observeScreenParameters(_ displays: DisplayEnvironment) -> AnyCancellable {
+        Self.overlayRebuildSignal(invalidations: displays.invalidations, settlements: displays.settlements)
+            .sink { [weak self] in self?.rebuildOverlayPanelsIfScreensMoved() }
     }
 
     /// Update accent-following surfaces when the system accent changes.

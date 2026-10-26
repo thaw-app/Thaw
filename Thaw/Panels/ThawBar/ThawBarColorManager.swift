@@ -32,7 +32,7 @@ final class ThawBarColorManager {
     /// writes windowImage if the value still matches, so a late completion
     /// can't undo a freshly cleared image or overwrite a newer capture.
     @ObservationIgnored
-    private var windowImageGeneration: Int = 0
+    private(set) var windowImageGeneration: Int = 0
 
     @ObservationIgnored
     private var cancellables = Set<AnyCancellable>()
@@ -50,7 +50,7 @@ final class ThawBarColorManager {
         overridesMenuBar ? localSample : sharedSamples[displayID]
     }
 
-    func performSetup(with thawBarPanel: ThawBarPanel, appState: AppState) {
+    func performSetup(with thawBarPanel: ThawBarPanel, appState: AppState, displays: DisplayEnvironment) {
         self.thawBarPanel = thawBarPanel
         self.appState = appState
         stopPeriodicRefresh()
@@ -96,16 +96,14 @@ final class ThawBarColorManager {
         }
         AnyCancellable { appearanceTask.cancel() }.store(in: &cancellables)
 
-        // Space, display-parameter and theme changes all invalidate the strip.
+        // Space, settled display and theme changes all invalidate the strip.
         // Clear it first so a stale in-flight capture can't resurrect it, then
         // recapture if the panel is currently up.
         Publishers.Merge3(
             NSWorkspace.shared.notificationCenter
                 .publisher(for: NSWorkspace.activeSpaceDidChangeNotification)
                 .replace(with: ()),
-            NotificationCenter.default
-                .publisher(for: NSApplication.didChangeScreenParametersNotification)
-                .replace(with: ()),
+            displays.settlements.replace(with: ()),
             DistributedNotificationCenter.default()
                 .publisher(for: DistributedNotificationCenter.interfaceThemeChangedNotification)
                 .replace(with: ())
