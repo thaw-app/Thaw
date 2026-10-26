@@ -67,13 +67,6 @@ final class MenuBarManager {
     @ObservationIgnored
     private var cancellables = Set<AnyCancellable>()
 
-    /// Block nudges only during reveal reflow, not a settled reveal, so hidden moves retain their cursor-free path.
-    @ObservationIgnored
-    private var lastRevealTransition: Date?
-
-    /// Generous reflow window; observed settling takes tens of milliseconds.
-    private static let revealReflowSettleWindow: TimeInterval = 0.5
-
     /// Cancel delayed focus rehide on a newer focus change or user reveal so it cannot override new state.
     @ObservationIgnored
     private var focusChangeRehideTask: Task<Void, Never>?
@@ -188,6 +181,8 @@ final class MenuBarManager {
     let newIconFollower = NewIconSectionFollower()
     /// Who opened the current reveal, so Thaw's own reveals are not counted as the user's.
     let revealAttribution = RevealAttribution()
+    /// Block nudges only during reveal reflow, not a settled reveal, so hidden moves retain their cursor-free path.
+    let revealReflow = RevealReflowWindow()
 
     /// Panels observe reveals without holding a platform type; emits nothing without an engine.
     var revealedSectionChanges: AnyPublisher<MenuBarSectionName?, Never> {
@@ -309,6 +304,7 @@ final class MenuBarManager {
         sectionController = controller
         runtimeSectionController = controller
         revealAttribution.observe(revealedSectionChanges)
+        revealReflow.observe(revealedSectionChanges)
         nativeAppHidingExperiment.start(controller: controller, settings: appState.settings.advanced)
         systemExtraTakeover.start(controller: controller, settings: appState.settings.advanced) { [weak appState] identifier in
             guard let itemManager = appState?.itemManager,
@@ -345,7 +341,6 @@ final class MenuBarManager {
         observeDisplaySleepCycle(into: &bag)
         observeAdaptiveAppearance(into: &bag)
         observeApplicationMenuHiding(into: &bag)
-        observeRevealTransitions(into: &bag)
         cancellables = bag
     }
 
@@ -1498,26 +1493,8 @@ final class MenuBarManager {
         lastUserRevealDate = Date()
     }
 
-    /// Distinguish in-flight reveal reflow from a section simply left open.
-    private func observeRevealTransitions(into bag: inout Set<AnyCancellable>) {
-        revealedSectionChanges
-            .receive(on: DispatchQueue.main)
-            .sink { [weak self] _ in
-                self?.lastRevealTransition = .now
-            }
-            .store(in: &bag)
-    }
-
-    /// Whether a reveal or hide is still reflowing the bar.
-    var isRevealReflowSettling: Bool {
-        guard let lastRevealTransition else {
-            return false
-        }
-        return Date.now.timeIntervalSince(lastRevealTransition) < Self.revealReflowSettleWindow
-    }
-
     /// The kit suppresses nudges during assertion recompositing, which already lays out the bar; extra resizing flickers.
-    /// It clears this before position-restoring writes; isRevealReflowSettling guards new transitions during suspended restores.
+    /// It clears this before position-restoring writes; revealReflow guards new transitions during suspended restores.
     @ObservationIgnored
     private var revealHideTransitionActive = false
 
@@ -1534,7 +1511,7 @@ final class MenuBarManager {
 
     /// Suppress width nudges and structural normalization during the transition or fixed settling window.
     var shouldSuppressMenuBarAgentNudge: Bool {
-        isRevealReflowSettling || revealHideTransitionActive
+        revealReflow.isSettling || revealHideTransitionActive
     }
 
     /// Cursor-free invalidation after position writes; suppress during reflow to avoid missed rehide clicks, but allow settled reveals.
