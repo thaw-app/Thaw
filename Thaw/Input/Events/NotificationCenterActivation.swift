@@ -35,17 +35,17 @@ final class NotificationCenterActivation {
     private let activate: (Request) async -> Void
     private let panelPresenting: () -> Bool
     private let report: (Outcome) -> Void
-    private let now: () -> Date
+    private let now: () -> ContinuousClock.Instant
     private var pending: [Request] = []
     private var worker: Task<Void, Never>?
     private let restoreSlot = TaskSlot()
     private var restoreLease: (() -> Void)?
-    private var leaseAcquiredAt: Date?
+    private var leaseAcquiredAt: ContinuousClock.Instant?
     private var restorationPause: (Duration) async throws -> Void = { try await Task.sleep(for: $0) }
 
     /// How long a release must be held before the replayed activation posts,
     /// counted from lease acquisition (the physical press when prepared at mouse-down).
-    static let minimumReleaseAge: TimeInterval = 0.06
+    static let minimumReleaseAge = Duration.milliseconds(60)
 
     /// How often the restore task checks for the panel; every tick of lag
     /// keeps the hidden items in the bar.
@@ -78,7 +78,7 @@ final class NotificationCenterActivation {
         activate: @escaping (Request) async -> Void,
         panelPresenting: @escaping () -> Bool = NotificationCenterActivation.systemPanelPresenting,
         report: @escaping (Outcome) -> Void = { _ in },
-        now: @escaping () -> Date = { Date() }
+        now: @escaping () -> ContinuousClock.Instant = { ContinuousClock.now }
     ) {
         self.activate = activate
         self.panelPresenting = panelPresenting
@@ -207,10 +207,9 @@ final class NotificationCenterActivation {
             } else if let acquiredAt = leaseAcquiredAt {
                 // Prepared at mouse-down: wait out the rest of the minimum age,
                 // usually zero after a human click.
-                let age = now().timeIntervalSince(acquiredAt)
-                let remaining = Self.minimumReleaseAge - age
-                if remaining > 0 {
-                    try await pause(.milliseconds(Int((remaining * 1000).rounded())))
+                let remaining = Self.minimumReleaseAge - acquiredAt.duration(to: now())
+                if remaining > .zero {
+                    try await pause(remaining)
                 }
             }
             try Task.checkCancellation()

@@ -21,7 +21,7 @@ nonisolated struct BoundaryRepairBreaker<ID: Hashable> {
     }
 
     private var trips: [ID: Int] = [:]
-    private var suppressedAt: [ID: Date] = [:]
+    private var suppressedAt: [ID: ContinuousClock.Instant] = [:]
 
     var suppressedCount: Int {
         suppressedAt.count
@@ -32,8 +32,8 @@ nonisolated struct BoundaryRepairBreaker<ID: Hashable> {
     }
 
     /// Whether the item is suppressed and its cooldown has not yet passed.
-    func suppressionHolds(for id: ID, now: Date, cooldown: TimeInterval) -> Bool {
-        suppressedAt[id].map { now.timeIntervalSince($0) < cooldown } ?? false
+    func suppressionHolds(for id: ID, now: ContinuousClock.Instant, cooldown: Duration) -> Bool {
+        suppressedAt[id].map { $0.duration(to: now) < cooldown } ?? false
     }
 
     func trips(for id: ID) -> Int {
@@ -47,7 +47,7 @@ nonisolated struct BoundaryRepairBreaker<ID: Hashable> {
     /// Scores one repair attempt. A repair that worked clears the count; a failure adds to it,
     /// and the one that reaches tripLimit suppresses the item and clears the count.
     @discardableResult
-    mutating func record(repaired: Bool, for id: ID, tripLimit: Int, now: Date = Date()) -> Outcome {
+    mutating func record(repaired: Bool, for id: ID, tripLimit: Int, now: ContinuousClock.Instant = .now) -> Outcome {
         guard !repaired else {
             trips[id] = nil
             return Outcome(suppressed: false, trips: 0)
@@ -63,7 +63,7 @@ nonisolated struct BoundaryRepairBreaker<ID: Hashable> {
     }
 
     /// Suppresses an item outright, as for one carried over from an earlier launch.
-    mutating func suppress(_ id: ID, at now: Date = Date()) {
+    mutating func suppress(_ id: ID, at now: ContinuousClock.Instant = .now) {
         suppressedAt[id] = now
     }
 
@@ -80,8 +80,8 @@ nonisolated struct BoundaryRepairBreaker<ID: Hashable> {
 
     /// Re-arms every item whose cooldown has passed, and returns how many.
     @discardableResult
-    mutating func rearmExpired(now: Date, cooldown: TimeInterval) -> Int {
-        let expired = suppressedAt.filter { now.timeIntervalSince($0.value) >= cooldown }.keys
+    mutating func rearmExpired(now: ContinuousClock.Instant, cooldown: Duration) -> Int {
+        let expired = suppressedAt.filter { $0.value.duration(to: now) >= cooldown }.keys
         expired.forEach { rearm($0) }
         return expired.count
     }

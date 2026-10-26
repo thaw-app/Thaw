@@ -157,7 +157,7 @@ extension MenuBarItemManager {
             MouseHelpers.showCursor()
         }
 
-        let eventStartTime = Date.now
+        let eventStartTime = ContinuousClock.now
         do {
             try await postEventWithBarrier(
                 clickEvents.down,
@@ -171,7 +171,7 @@ extension MenuBarItemManager {
                 repeating: Self.clickMouseUpCount
             )
 
-            let successDuration = Duration.milliseconds(Date.now.timeIntervalSince(eventStartTime) * 1000)
+            let successDuration = eventStartTime.duration(to: .now)
             updateClickOperationTimeout(successDuration, for: item)
         } catch {
             // However this failed, the owner may be sitting on a press that was
@@ -333,18 +333,18 @@ extension MenuBarItemManager {
         // user sees as the item jittering, and the extra attempts have never
         // been what makes such an owner answer.
         let attemptBudget = failureLedger.isUnresponsive(item) ? 1 : max(1, maxAttempts)
-        let attemptStartTime = Date.now
+        let attemptStartTime = ContinuousClock.now
 
         for attempt in 1 ... attemptBudget {
             guard !Task.isCancelled else {
                 throw EventError.cannotComplete
             }
             do {
-                let clickStartTime = Date.now
+                let clickStartTime = ContinuousClock.now
                 let snapshot = ClickReactionVerifier.snapshot(for: item)
                 try await postClickEvents(item: item, mouseButton: mouseButton)
-                let clickDuration = Date.now.timeIntervalSince(clickStartTime)
-                MenuBarItemManager.diagLog.debug("Attempt \(attempt) succeeded in \(Int(clickDuration * 1000))ms, finished with click")
+                let clickDuration = clickStartTime.duration(to: .now)
+                MenuBarItemManager.diagLog.debug("Attempt \(attempt) succeeded in \(Int(clickDuration.milliseconds))ms, finished with click")
 
                 // The events landed. Whether the owner did anything with
                 // them is a separate question, and only a yes is allowed
@@ -362,8 +362,8 @@ extension MenuBarItemManager {
                 }
                 return reaction
             } catch {
-                let attemptDuration = Date.now.timeIntervalSince(attemptStartTime)
-                MenuBarItemManager.diagLog.debug("Attempt \(attempt) failed after \(Int(attemptDuration * 1000))ms: \(error)")
+                let attemptDuration = attemptStartTime.duration(to: .now)
+                MenuBarItemManager.diagLog.debug("Attempt \(attempt) failed after \(Int(attemptDuration.milliseconds))ms: \(error)")
 
                 guard attempt == attemptBudget else {
                     await eventSleep()

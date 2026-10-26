@@ -240,7 +240,7 @@ extension MenuBarItemManager {
 
         // Reset isRestoringItemOrder if it's been stuck for too long (10 seconds).
         // This prevents stale flags from blocking saves after user manual moves.
-        if isRestoringItemOrder, let timestamp = isRestoringItemOrderTimestamp, Date().timeIntervalSince(timestamp) > 10 {
+        if isRestoringItemOrder, let timestamp = isRestoringItemOrderTimestamp, timestamp.duration(to: .now) > .seconds(10) {
             MenuBarItemManager.diagLog.debug("Resetting stale isRestoringItemOrder flag (timeout)")
             isRestoringItemOrder = false
             isRestoringItemOrderTimestamp = nil

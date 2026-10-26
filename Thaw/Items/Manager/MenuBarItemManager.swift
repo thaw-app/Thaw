@@ -430,8 +430,8 @@ final class MenuBarItemManager {
     var isResettingLayout = false
     /// Suppresses saving section order during an active order-restore pass.
     var isRestoringItemOrder = false
-    /// Timestamp when isRestoringItemOrder was set (for timeout detection).
-    var isRestoringItemOrderTimestamp: Date?
+    /// When isRestoringItemOrder was set (for timeout detection).
+    var isRestoringItemOrderTimestamp: ContinuousClock.Instant?
     /// True during the startup settling period, during which restore operations
     /// and section-order saves are suppressed. This prevents cascading icon moves
     /// when many apps launch at login (login item boot) or restart in quick succession
@@ -501,7 +501,7 @@ final class MenuBarItemManager {
     var isApplyingProfileLayout = false
 
     /// Debounce for macOS 27 overflow rebalance (assignment backends skip legacy Phase 4).
-    var lastOverflowRebalance: Date?
+    var lastOverflowRebalance: ContinuousClock.Instant?
 
     /// Width the macOS 27 overflow budget gives up for a notch-covered control
     /// item and for parked Visible items. See OverflowDeficits.
@@ -691,7 +691,7 @@ final class MenuBarItemManager {
     static let boundaryRepairTripLimit = 2
 
     /// Suppressions older than this are cleared on the next repair pass.
-    static let boundaryRepairSuppressionCooldown: TimeInterval = 60
+    static let boundaryRepairSuppressionCooldown: Duration = .seconds(60)
 
     /// The display the last repair pass ran against, so a topology change can
     /// re-arm items that were only stranded by the old arrangement.

@@ -22,7 +22,7 @@ import Foundation
 /// maximumStrikes launches in a row is taken for one that stopped showing
 /// an item, and dropped.
 nonisolated struct UnseenMenuBarHosts: Equatable {
-    static let confirmationDelay: TimeInterval = 30
+    static let confirmationDelay: Duration = .seconds(30)
     static let maximumStrikes = 3
 
     /// Where persisted() is kept between launches.
@@ -36,7 +36,7 @@ nonisolated struct UnseenMenuBarHosts: Equatable {
     /// Bundles expected to host items, with how many launches in a row each
     /// has been flagged.
     private(set) var expected: [String: Int]
-    private var missingSince: [String: Date] = [:]
+    private var missingSince: [String: ContinuousClock.Instant] = [:]
     private(set) var flagged: Set<String> = []
 
     /// Hosts from the baseline that are running and missing from seen: the ones worth asking about.
@@ -53,7 +53,7 @@ nonisolated struct UnseenMenuBarHosts: Equatable {
     ///
     /// quiet holds running apps that show nothing and are not being missed: switched off in the
     /// system's Menu Bar list, or asked and answering that they have no items. They are never flagged.
-    mutating func update(seen: Set<String>, running: Set<String>, quiet: Set<String> = [], now: Date) -> Bool {
+    mutating func update(seen: Set<String>, running: Set<String>, quiet: Set<String> = [], now: ContinuousClock.Instant) -> Bool {
         let previous = flagged
         for bundle in seen {
             expected[bundle] = 0
@@ -67,7 +67,7 @@ nonisolated struct UnseenMenuBarHosts: Equatable {
             missingSince[bundle] = missingSince[bundle] ?? now
         }
         flagged = Set(missingSince.compactMap { bundle, since in
-            now.timeIntervalSince(since) >= Self.confirmationDelay ? bundle : nil
+            since.duration(to: now) >= Self.confirmationDelay ? bundle : nil
         })
         return flagged != previous
     }

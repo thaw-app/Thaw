@@ -188,9 +188,9 @@ final class SystemExtraStandInLauncher: SystemExtraReplacementProviding {
     private var watched: [SystemExtraStandIn: (app: NSRunningApplication, observation: NSKeyValueObservation)] = [:]
     /// Recent restarts per stand-in, so one that cannot stay up is not
     /// relaunched forever.
-    private var restarts: [SystemExtraStandIn: [Date]] = [:]
+    private var restarts: [SystemExtraStandIn: [ContinuousClock.Instant]] = [:]
     private static let restartLimit = 3
-    private static let restartWindow: TimeInterval = 30
+    private static let restartWindow: Duration = .seconds(30)
     private static let restartQuitTimeout: Duration = .seconds(3)
 
     func publish(item: SystemExtraItem, canonicalIdentifier: String, section: MenuBarSectionName) async throws {
@@ -283,8 +283,8 @@ final class SystemExtraStandInLauncher: SystemExtraReplacementProviding {
         guard let entry = watched[standIn], entry.app.processIdentifier == pid else { return }
         entry.observation.invalidate()
         watched[standIn] = nil
-        let now = Date()
-        let recent = (restarts[standIn] ?? []).filter { now.timeIntervalSince($0) < Self.restartWindow }
+        let now = ContinuousClock.now
+        let recent = (restarts[standIn] ?? []).filter { $0.duration(to: now) < Self.restartWindow }
         guard recent.count < Self.restartLimit else {
             log.error("\(standIn.rawValue) stand-in keeps exiting; not starting it again")
             return

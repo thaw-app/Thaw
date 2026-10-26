@@ -71,7 +71,7 @@ struct ThawBarItemView: View {
             guard let itemManager, let menuBarManager else {
                 return
             }
-            let clickStartTime = Date.now
+            let clickStartTime = ContinuousClock.now
             ThawBarItemView.diagLog.debug("click(\(button == .left ? "left" : "right")): user clicked \(item.logString)")
             let panel = menuBarManager.thawBarPanel
             menuBarManager.section(withName: section)?.hide()
@@ -80,8 +80,8 @@ struct ThawBarItemView: View {
                 // checking item visibility.
                 await panel.waitUntilClosed(timeout: .milliseconds(200))
                 await itemManager.clickConcealedItem(item: item, with: button, on: displayID)
-                let duration = Date.now.timeIntervalSince(clickStartTime)
-                ThawBarItemView.diagLog.debug("click(\(button == .left ? "left" : "right")): completed in \(Int(duration * 1000))ms (macOS 27 concealed-item path)")
+                let duration = clickStartTime.duration(to: .now)
+                ThawBarItemView.diagLog.debug("click(\(button == .left ? "left" : "right")): completed in \(Int(duration.milliseconds))ms (macOS 27 concealed-item path)")
             }
         }
     }
@@ -146,16 +146,17 @@ struct ThawBarItemClickView: NSViewRepresentable {
     /// A click must be quick and short; anything else is a drag of the panel,
     /// which is movable by its background.
     private struct PressTracker {
-        private var startDate = Date.distantPast
+        private var start: ContinuousClock.Instant?
         private var startLocation = CGPoint.zero
 
         mutating func pressBegan() {
-            startDate = .now
+            start = .now
             startLocation = NSEvent.mouseLocation
         }
 
         var releaseIsClick: Bool {
-            Date.now.timeIntervalSince(startDate) < 0.5
+            guard let start else { return false }
+            return start.duration(to: .now) < .milliseconds(500)
                 && startLocation.distance(to: NSEvent.mouseLocation) < 5
         }
     }

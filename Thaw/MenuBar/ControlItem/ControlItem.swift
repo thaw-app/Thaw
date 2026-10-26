@@ -60,7 +60,7 @@ final class ControlItem: NSObject {
 
     /// Pending re-check for a persistent off-band frame. See noteDegenerateFrame().
     private var offBandRecoveryTask: Task<Void, Never>?
-    private var lastOffBandEscalation = Date.distantPast
+    private var lastOffBandEscalation: ContinuousClock.Instant?
     private var offBandRecoveryLevel = 0
     private var offBandRecoveryCycle = 0
     private var offBandRecoveryExhausted = false
@@ -497,7 +497,7 @@ extension ControlItem {
     }
 
     /// How long a rung has to prove itself before the next one fires.
-    static nonisolated let offBandEscalationCooldown: TimeInterval = 5
+    static nonisolated let offBandEscalationCooldown: Duration = .seconds(5)
 
     /// Called from the geometry stream for every degenerate frame. Rearms a
     /// delayed re-check that escalates one rung per cooldown while the live
@@ -517,8 +517,8 @@ extension ControlItem {
         // A missing window is not health: an item that is added and has none counts as off-band.
         let frame = window?.frame ?? (isAddedToMenuBar ? CGRect.zero : nil)
         guard let frame, needsOffBandRecovery(frame) else { return }
-        let now = Date.now
-        guard now.timeIntervalSince(lastOffBandEscalation) >= Self.offBandEscalationCooldown else {
+        let now = ContinuousClock.now
+        if let last = lastOffBandEscalation, last.duration(to: now) < Self.offBandEscalationCooldown {
             noteDegenerateFrame()
             return
         }
@@ -612,7 +612,7 @@ extension ControlItem {
         case .republish:
             // A fresh window is out; give the host the escalation cooldown
             // to seat it before judging the frame again.
-            lastOffBandEscalation = Date.now
+            lastOffBandEscalation = .now
         case .exhausted:
             break
         }
@@ -1281,10 +1281,8 @@ extension ControlItem {
             // inline on the pressing queue. NSApp.currentEvent is main-thread
             // event state and is nil for AX-initiated presses anyway, so this
             // path only needs the hop, not the event.
-            DispatchQueue.main.async { [weak self] in
-                MainActor.assumeIsolated {
-                    self?.performActionOnMain()
-                }
+            Task { @MainActor [weak self] in
+                self?.performActionOnMain()
             }
         }
     }

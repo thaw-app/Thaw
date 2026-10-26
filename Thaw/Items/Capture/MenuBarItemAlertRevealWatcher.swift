@@ -41,17 +41,17 @@ enum MenuBarItemAlertReveals {
 nonisolated struct AlertRevealPolicy {
     /// The minimum time between reveals of the same item, so an icon that
     /// animates continuously can't bounce its item in and out of the bar.
-    var cooldown: TimeInterval = 45
+    var cooldown = Duration.seconds(45)
 
-    private(set) var lastRevealDates: [String: Date] = [:]
+    private(set) var lastReveals: [String: ContinuousClock.Instant] = [:]
 
     /// Returns whether identifier may reveal now, recording the reveal
-    /// date when it may.
-    mutating func shouldReveal(_ identifier: String, now: Date) -> Bool {
-        if let last = lastRevealDates[identifier], now.timeIntervalSince(last) < cooldown {
+    /// instant when it may.
+    mutating func shouldReveal(_ identifier: String, now: ContinuousClock.Instant) -> Bool {
+        if let last = lastReveals[identifier], last.duration(to: now) < cooldown {
             return false
         }
-        lastRevealDates[identifier] = now
+        lastReveals[identifier] = now
         return true
     }
 }
@@ -120,7 +120,7 @@ final class MenuBarItemAlertRevealWatcher {
             guard let section = sectionController.sectionAssignment[identifier], section != .visible else {
                 continue
             }
-            guard policy.shouldReveal(identifier, now: Date()) else {
+            guard policy.shouldReveal(identifier, now: .now) else {
                 continue
             }
             diagLog.info("Icon change detected for \(identifier); revealing temporarily")

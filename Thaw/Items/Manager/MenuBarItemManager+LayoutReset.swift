@@ -115,7 +115,7 @@ extension MenuBarItemManager {
         // Explicit requests and dependent probe transitions bypass the observation rate limit.
         if !immediate, !reason.permitsOrderEnforcement,
            let last = lastOverflowRebalance,
-           Date().timeIntervalSince(last) < 2.0
+           last.duration(to: .now) < .seconds(2)
         {
             return false
         }
@@ -350,7 +350,7 @@ extension MenuBarItemManager {
         )
         Self.logOverflowDiagnostics(overflowResult)
 
-        lastOverflowRebalance = Date()
+        lastOverflowRebalance = .now
         let overflowSet = Set(overflowResult.overflowUIDs)
         let overflowItems = visibleLive.filter { overflowSet.contains($0.uniqueIdentifier) }
         if overflowItems.count != overflowSet.count {
@@ -749,7 +749,7 @@ extension MenuBarItemManager {
 
         // Both apply sources must prevent the cache from saving intermediate positions.
         isRestoringItemOrder = true
-        isRestoringItemOrderTimestamp = Date()
+        isRestoringItemOrderTimestamp = .now
         defer {
             isRestoringItemOrder = false
             isRestoringItemOrderTimestamp = nil

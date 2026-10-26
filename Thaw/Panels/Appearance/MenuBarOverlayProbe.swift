@@ -55,21 +55,21 @@ final class MissionControlShieldProbe {
 
     /// When the probe was last seen at rest, or nil while displaced or
     /// calibrating. Drives the back-off in tickInterval(atRestFor:).
-    private var atRestSince: Date?
+    private var atRestSince: ContinuousClock.Instant?
 
     /// The time when the probe window first became displaced.
-    private var displacedSince: Date?
+    private var displacedSince: ContinuousClock.Instant?
 
     /// When the Exposé shield was last looked for. The scan walks every
     /// on-screen window and reveal-desktop can last indefinitely, so it is rationed.
-    private var shieldCheckedAt: Date?
+    private var shieldCheckedAt: ContinuousClock.Instant?
 
     /// The poll subscription, alive only while shouldRun holds.
     private var cancellable: AnyCancellable?
 
     /// The least time between two Exposé shield scans while the probe stays
     /// displaced.
-    private static let shieldCheckInterval: TimeInterval = 1.0
+    private static let shieldCheckInterval: Duration = .seconds(1)
 
     /// The rate the probe polls at while its answer might be changing:
     /// displaced, calibrating, or only briefly settled.
@@ -81,7 +81,7 @@ final class MissionControlShieldProbe {
 
     /// How long the probe must sit exactly at rest before its poll slows from
     /// activeInterval to restInterval.
-    static nonisolated let restSettleInterval: TimeInterval = 2.0
+    static nonisolated let restSettleInterval: Duration = .seconds(2)
 
     init(owningScreen: NSScreen) {
         self.owningScreen = owningScreen
@@ -119,11 +119,11 @@ final class MissionControlShieldProbe {
     }
 
     private func stopPolling() {
-        // A tick can end its own poll, so cancel on the next main-queue turn
+        // A tick can end its own poll, so cancel on a later main-actor turn
         // rather than release the closure that is still running.
         guard let current = cancellable else { return }
         cancellable = nil
-        DispatchQueue.main.async {
+        Task { @MainActor in
             current.cancel()
         }
     }
@@ -161,8 +161,8 @@ final class MissionControlShieldProbe {
             atRest: atRest
         )
 
-        let now = Date()
-        var restDuration: TimeInterval?
+        let now = ContinuousClock.now
+        var restDuration: Duration?
 
         if isDisplaced {
             atRestSince = nil
@@ -171,9 +171,9 @@ final class MissionControlShieldProbe {
                 // but raises no Exposé shield, and the bar must keep its look,
                 // so confirm the shield before fading. Rechecked at most once a second.
                 let shouldCheckShield = !isActive
-                    && now.timeIntervalSince(displacedSince) > 0.1
+                    && displacedSince.duration(to: now) > .milliseconds(100)
                     && shieldCheckedAt.map {
-                        now.timeIntervalSince($0) >= Self.shieldCheckInterval
+                        $0.duration(to: now) >= Self.shieldCheckInterval
                     } ?? true
                 if shouldCheckShield {
                     shieldCheckedAt = now
@@ -187,7 +187,7 @@ final class MissionControlShieldProbe {
             shieldCheckedAt = nil
             isActive = false
             if let since = atRestSince {
-                restDuration = now.timeIntervalSince(since)
+                restDuration = since.duration(to: now)
             } else {
                 atRestSince = now
             }
@@ -205,7 +205,7 @@ final class MissionControlShieldProbe {
     private func restartPolling(at interval: TimeInterval) {
         guard let current = cancellable else { return }
         cancellable = poll(every: interval)
-        DispatchQueue.main.async {
+        Task { @MainActor in
             current.cancel()
         }
     }
@@ -236,7 +236,7 @@ final class MissionControlShieldProbe {
     ///
     /// The active rate until the probe has rested for restSettleInterval; the
     /// cost is noticing Mission Control up to half a second late after that.
-    static nonisolated func tickInterval(atRestFor restDuration: TimeInterval?) -> TimeInterval {
+    static nonisolated func tickInterval(atRestFor restDuration: Duration?) -> TimeInterval {
         guard let restDuration,
               restDuration >= restSettleInterval
         else {

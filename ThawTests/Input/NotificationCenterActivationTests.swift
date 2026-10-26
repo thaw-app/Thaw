@@ -159,7 +159,7 @@ struct NotificationCenterActivationTests {
         var begins = 0
         var sends = 0
         var restores = 0
-        var now = Date(timeIntervalSinceReferenceDate: 0)
+        var now = ContinuousClock.now
         let bridge = NotificationCenterActivation(activate: { _ in }, panelPresenting: { sends == 1 }, now: { now })
         await bridge.replay(
             begin: { begins += 1; return .acquired },
@@ -170,7 +170,7 @@ struct NotificationCenterActivationTests {
                     await firstWait.wait()
                 } else {
                     #expect($0 == .milliseconds(60))
-                    now = now.addingTimeInterval(NotificationCenterActivation.minimumReleaseAge)
+                    now = now.advanced(by: NotificationCenterActivation.minimumReleaseAge)
                 }
             }
         )
@@ -279,7 +279,7 @@ extension NotificationCenterActivationTests {
         var calls: [String] = []
         var delays: [Duration] = []
         var isPresenting = false
-        var now = Date(timeIntervalSinceReferenceDate: 0)
+        var now = ContinuousClock.now
         let bridge = NotificationCenterActivation(
             activate: { _ in },
             panelPresenting: { isPresenting },
@@ -290,7 +290,7 @@ extension NotificationCenterActivationTests {
             restore: { calls.append("restore-prepare") }
         )
         #expect(bridge.isBusy)
-        now = now.addingTimeInterval(Double(ageMilliseconds) / 1000)
+        now = now.advanced(by: .milliseconds(ageMilliseconds))
         await bridge.replay(
             begin: { begins += 1; return .acquired },
             restore: { calls.append("restore-replay") },

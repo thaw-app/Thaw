@@ -196,7 +196,7 @@ extension MenuBarItemManager {
         // An expired suppression re-arms: the strand may have been fighting a
         // transient writer that has since settled.
         let rearmed = boundaryRepairBreaker.rearmExpired(
-            now: Date(), cooldown: MenuBarItemManager.boundaryRepairSuppressionCooldown
+            now: .now, cooldown: MenuBarItemManager.boundaryRepairSuppressionCooldown
         )
         if rearmed > 0 {
             MenuBarItemManager.diagLog.info(

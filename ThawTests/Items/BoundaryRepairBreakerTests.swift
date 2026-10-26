@@ -12,7 +12,7 @@ import Testing
 @MainActor
 @Suite("The boundary repair gives up on an item after repeated failures, and tries again later")
 struct BoundaryRepairBreakerTests {
-    private let start = Date(timeIntervalSince1970: 1000)
+    private let start = ContinuousClock.now
 
     @Test("Failures count up, and the one that reaches the limit suppresses the item")
     func failuresReachTheLimit() {
@@ -48,19 +48,19 @@ struct BoundaryRepairBreakerTests {
         var breaker = BoundaryRepairBreaker<String>()
         breaker.suppress("a", at: start)
 
-        #expect(breaker.suppressionHolds(for: "a", now: start + 59, cooldown: 60))
-        #expect(!breaker.suppressionHolds(for: "a", now: start + 60, cooldown: 60))
-        #expect(!breaker.suppressionHolds(for: "never suppressed", now: start, cooldown: 60))
+        #expect(breaker.suppressionHolds(for: "a", now: start + .seconds(59), cooldown: .seconds(60)))
+        #expect(!breaker.suppressionHolds(for: "a", now: start + .seconds(60), cooldown: .seconds(60)))
+        #expect(!breaker.suppressionHolds(for: "never suppressed", now: start, cooldown: .seconds(60)))
     }
 
     @Test("Re-arming the expired ones leaves the recent ones suppressed, and forgets the count")
     func rearmExpired() {
         var breaker = BoundaryRepairBreaker<String>()
         breaker.suppress("old", at: start)
-        breaker.suppress("recent", at: start + 50)
+        breaker.suppress("recent", at: start + .seconds(50))
         breaker.addTrip(for: "old")
 
-        let rearmed = breaker.rearmExpired(now: start + 60, cooldown: 60)
+        let rearmed = breaker.rearmExpired(now: start + .seconds(60), cooldown: .seconds(60))
 
         #expect(rearmed == 1)
         #expect(!breaker.isSuppressed("old"))

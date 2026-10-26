@@ -43,7 +43,7 @@ final class ThawBarPanel: NSPanel {
     private var hotkeyLocationOverride = false
 
     /// Suppress auto-hide when activating an inactive screen posts a notification racing with show().
-    private var lastShowTimestamp: Date?
+    private var lastShowTimestamp: ContinuousClock.Instant?
 
     private var cancellables = Set<AnyCancellable>()
 
@@ -142,7 +142,7 @@ final class ThawBarPanel: NSPanel {
                 guard
                     let self,
                     let ts = lastShowTimestamp,
-                    Date().timeIntervalSince(ts) >= 1
+                    ts.duration(to: .now) >= .seconds(1)
                 else {
                     return
                 }
@@ -367,7 +367,7 @@ final class ThawBarPanel: NSPanel {
         // Set navigation state and section before updating caches.
         appState.navigationState.isThawBarPresented = true
         currentSection = section
-        lastShowTimestamp = Date()
+        lastShowTimestamp = .now
 
         // Show cached data immediately; Observation renders background updates as they arrive.
         let inputs = ThawBarHostingView.Inputs(

@@ -63,7 +63,7 @@ nonisolated enum MoveJudgement: Equatable {
 nonisolated extension BoundaryRepairBreaker {
     /// Unjudgeable sets the item aside for the cooldown without a trip.
     @discardableResult
-    mutating func record(_ judgement: MoveJudgement, for id: ID, tripLimit: Int, now: Date = Date()) -> Outcome {
+    mutating func record(_ judgement: MoveJudgement, for id: ID, tripLimit: Int, now: ContinuousClock.Instant = .now) -> Outcome {
         guard case .unjudgeable = judgement else {
             return record(repaired: judgement == .applied, for: id, tripLimit: tripLimit, now: now)
         }

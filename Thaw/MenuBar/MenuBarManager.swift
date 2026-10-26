@@ -135,7 +135,7 @@ final class MenuBarManager {
     private var wakePollPrevColors: [CGDirectDisplayID: MenuBarAverageColorInfo]?
     private var wakePollStableCount = 0
     private var wakePollDidChange = false
-    private var wakePollStartTime: Date?
+    private var wakePollStartTime: ContinuousClock.Instant?
 
     /// Thaw has replaced the front app's menus with its own empty menus.
     private(set) var isHidingApplicationMenus = false
@@ -606,7 +606,7 @@ final class MenuBarManager {
         wakePollPrevColors = nil
         wakePollStableCount = 0
         wakePollDidChange = false
-        wakePollStartTime = Date()
+        wakePollStartTime = .now
         wakePollTimer = Timer.publish(every: 1, tolerance: 0.1, on: .main, in: .default)
             .autoconnect()
             .sink { [weak self] _ in
@@ -619,8 +619,8 @@ final class MenuBarManager {
     /// Await capture so comparisons use this tick's colors rather than exhausting the poll budget on stale values.
     /// Dropping wakePollTimer ends polling and releases the subscription.
     private func advanceWakeStabilizationPoll() async {
-        let elapsed = wakePollStartTime.map { Date().timeIntervalSince($0) } ?? 0
-        if elapsed >= 10 {
+        let elapsed = wakePollStartTime.map { $0.duration(to: .now) } ?? .zero
+        if elapsed >= .seconds(10) {
             endWakeStabilizationPoll()
             return
         }

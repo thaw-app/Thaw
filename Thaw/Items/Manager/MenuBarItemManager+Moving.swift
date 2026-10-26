@@ -998,12 +998,12 @@ extension MenuBarItemManager {
         let id = PostRestrictionRepairItemID(item)
         let outcome = boundaryRepairBreaker.record(judgement, for: id, tripLimit: Self.boundaryRepairTripLimit)
         if case let .unjudgeable(reason) = judgement {
-            MenuBarItemManager.diagLog.info("macOS 27 section boundary repair: can't judge \(item.logString) (\(reason.rawValue)); leaving it for \(Int(Self.boundaryRepairSuppressionCooldown)) s")
+            MenuBarItemManager.diagLog.info("macOS 27 section boundary repair: can't judge \(item.logString) (\(reason.rawValue)); leaving it for \(Self.boundaryRepairSuppressionCooldown.components.seconds) s")
         } else if outcome.suppressed {
             MenuBarItemManager.diagLog.warning(
                 "macOS 27 section boundary repair: suppressing \(item.logString) after " +
                     "\(Self.boundaryRepairTripLimit) failed reveals for " +
-                    "\(Int(Self.boundaryRepairSuppressionCooldown)) s"
+                    "\(Self.boundaryRepairSuppressionCooldown.components.seconds) s"
             )
         }
     }
@@ -1113,7 +1113,7 @@ extension MenuBarItemManager {
             let repairID = PostRestrictionRepairItemID(liveItem)
             if boundaryRepairBreaker.isSuppressed(repairID) {
                 if boundaryRepairBreaker.suppressionHolds(
-                    for: repairID, now: Date(), cooldown: Self.boundaryRepairSuppressionCooldown
+                    for: repairID, now: .now, cooldown: Self.boundaryRepairSuppressionCooldown
                 ) {
                     MenuBarItemManager.diagLog.debug(
                         "macOS 27 section boundary repair skipped for \(liveItem.logString): suppressed"

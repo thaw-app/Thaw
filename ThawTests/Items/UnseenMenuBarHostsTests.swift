@@ -11,7 +11,7 @@ import Testing
 
 @Suite("Unseen menu bar hosts")
 struct UnseenMenuBarHostsTests {
-    private let start = Date(timeIntervalSinceReferenceDate: 0)
+    private let start = ContinuousClock.now
     private let delay = UnseenMenuBarHosts.confirmationDelay
 
     @Test("A running host from last session is flagged only after the confirmation delay")
@@ -38,7 +38,7 @@ struct UnseenMenuBarHostsTests {
         var hosts = UnseenMenuBarHosts(expected: ["iordv.Droppy": 2])
         _ = hosts.update(seen: [], running: ["iordv.Droppy"], now: start)
         _ = hosts.update(seen: [], running: ["iordv.Droppy"], now: start + delay)
-        let changed = hosts.update(seen: ["iordv.Droppy"], running: ["iordv.Droppy"], now: start + delay + 1)
+        let changed = hosts.update(seen: ["iordv.Droppy"], running: ["iordv.Droppy"], now: start + delay + .seconds(1))
         #expect(changed)
         #expect(hosts.flagged.isEmpty)
         #expect(hosts.persisted() == ["iordv.Droppy": 0])
@@ -72,7 +72,7 @@ struct UnseenMenuBarHostsTests {
         #expect(hosts.flagged == ["com.example.app"])
 
         let changed = hosts.update(
-            seen: [], running: ["com.example.app"], quiet: ["com.example.app"], now: start + delay + 1
+            seen: [], running: ["com.example.app"], quiet: ["com.example.app"], now: start + delay + .seconds(1)
         )
         #expect(changed)
         #expect(hosts.flagged.isEmpty)

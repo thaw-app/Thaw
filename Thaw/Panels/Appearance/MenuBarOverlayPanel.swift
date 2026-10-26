@@ -274,7 +274,7 @@ final class MenuBarOverlayPanel: NSPanel {
     }
 
     /// Probe rate based on time at rest; see MissionControlShieldProbe.tickInterval(atRestFor:).
-    static nonisolated func missionControlProbeTickInterval(atRestFor restDuration: TimeInterval?) -> TimeInterval {
+    static nonisolated func missionControlProbeTickInterval(atRestFor restDuration: Duration?) -> TimeInterval {
         MissionControlShieldProbe.tickInterval(atRestFor: restDuration)
     }
 

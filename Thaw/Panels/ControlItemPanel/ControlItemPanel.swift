@@ -44,10 +44,10 @@ final class ControlItemPanelController: NSObject, NSPopoverDelegate {
     }
 
     /// Prevent reopening on mouse-up after outside mouse-down dismissal, so the icon can close the popover.
-    private static let reopenGuard: TimeInterval = 0.35
+    private static let reopenGuard: Duration = .milliseconds(350)
 
     /// When an outside press last took the popover down.
-    private var lastOutsideDismissal: Date?
+    private var lastOutsideDismissal: ContinuousClock.Instant?
 
     /// Takes the popover down on a press anywhere outside it. Global scope only:
     /// the popover is key while up, so its own clicks are local and never arrive.
@@ -61,7 +61,7 @@ final class ControlItemPanelController: NSObject, NSPopoverDelegate {
             return
         }
         if let lastOutsideDismissal,
-           Date().timeIntervalSince(lastOutsideDismissal) < Self.reopenGuard
+           lastOutsideDismissal.duration(to: .now) < Self.reopenGuard
         {
             // The press that opens this gesture is the one that just closed
             // the popover. Swallow the release rather than reopen.
@@ -189,7 +189,7 @@ final class ControlItemPanelController: NSObject, NSPopoverDelegate {
         ) { [weak self] _ in
             MainActor.assumeIsolated {
                 guard let self, self.isShown else { return }
-                self.lastOutsideDismissal = Date()
+                self.lastOutsideDismissal = .now
                 self.hide()
             }
         }

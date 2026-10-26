@@ -17,13 +17,13 @@ struct MissionControlProbeBackoffTests {
     @Test("displaced, calibrating, or freshly settled keeps the active rate")
     func unsettledHoldsActiveRate() {
         #expect(MenuBarOverlayPanel.missionControlProbeTickInterval(atRestFor: nil) == 0.1)
-        #expect(MenuBarOverlayPanel.missionControlProbeTickInterval(atRestFor: 0) == 0.1)
-        #expect(MenuBarOverlayPanel.missionControlProbeTickInterval(atRestFor: 1.9) == 0.1)
+        #expect(MenuBarOverlayPanel.missionControlProbeTickInterval(atRestFor: .zero) == 0.1)
+        #expect(MenuBarOverlayPanel.missionControlProbeTickInterval(atRestFor: .milliseconds(1900)) == 0.1)
     }
 
     @Test("rest beyond the settle window drops to the rest rate")
     func settledRestSlowsDown() {
-        #expect(MenuBarOverlayPanel.missionControlProbeTickInterval(atRestFor: 2.0) == 0.5)
-        #expect(MenuBarOverlayPanel.missionControlProbeTickInterval(atRestFor: 600) == 0.5)
+        #expect(MenuBarOverlayPanel.missionControlProbeTickInterval(atRestFor: .seconds(2)) == 0.5)
+        #expect(MenuBarOverlayPanel.missionControlProbeTickInterval(atRestFor: .seconds(600)) == 0.5)
     }
 }
