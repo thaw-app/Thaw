@@ -20,7 +20,6 @@ enum MemoryReclaimer {
 
     private static var pendingRelief: Task<Void, Never>?
     private static var pressureSource: DispatchSourceMemoryPressure?
-    private static var footprintLog: Task<Void, Never>?
 
     /// How often the footprint goes into the log, so a slow climb shows when it began.
     static let footprintLogInterval: Duration = .seconds(600)
@@ -44,7 +43,7 @@ enum MemoryReclaimer {
     }
 
     private static func startFootprintLog() {
-        footprintLog = Task {
+        Task {
             var warned = false
             // The continuous clock keeps counting while the Mac sleeps.
             for await _ in AsyncTimerSequence(interval: footprintLogInterval, clock: .continuous) {
@@ -65,7 +64,6 @@ enum MemoryReclaimer {
         return true
     }
 
-    /// Warns the first time the footprint passes the line, not on every sample after.
     static nonisolated func shouldWarn(megabytes: UInt64, alreadyWarned: Bool) -> Bool {
         !alreadyWarned && megabytes > footprintWarningMegabytes
     }

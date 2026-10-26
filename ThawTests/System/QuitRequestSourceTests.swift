@@ -5,6 +5,7 @@
 //  Copyright (Thaw) © 2026 Toni Förster
 //  Licensed under the GNU GPLv3
 
+import CoreServices
 import Foundation
 import Testing
 @testable import Thaw
@@ -30,15 +31,14 @@ struct QuitRequestSourceTests {
     }
 
     @Test func aLogoutGivesItsReason() {
-        let reason = QuitRequestSource.fourCharCode("logo")
+        let reason = OSType(kAELogOut)
         #expect(
             QuitRequestSource.describe(senderPID: 98, senderName: "loginwindow", reason: reason, ownPID: 42)
                 == "by loginwindow (pid 98), reason logo"
         )
     }
 
-    @Test func fourCharCodesPackTheirLetters() {
-        #expect(QuitRequestSource.fourCharCode("quit") == 0x7175_6974)
+    @Test func fourCharCodesReadAsTheirLetters() {
         #expect(QuitRequestSource.string(fromFourCharCode: 0x7175_6974) == "quit")
     }
 

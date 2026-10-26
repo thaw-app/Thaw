@@ -90,10 +90,8 @@ struct AboutSettingsPane: View {
     /// it copies the full block a bug report asks for.
     private var details: some View {
         HStack(alignment: .firstTextBaseline, spacing: 10) {
-            // The spoken label goes on a plain container. Selectable text is an AppKit
-            // text view underneath, and a label set on it directly makes SwiftUI ask
-            // that view for the label it is supplying, which recursed until the stack
-            // ran out when VoiceOver or another accessibility client read About.
+            // Label a container, not the selectable text: labeling the AppKit text view
+            // directly recurses until the stack overflows under VoiceOver.
             Text(verbatim: "\(Constants.versionString) (\(Constants.buildString)) · \(Constants.commitString)")
                 .font(.callout)
                 .monospaced()

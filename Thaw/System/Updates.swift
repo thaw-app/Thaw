@@ -162,9 +162,7 @@ final class UpdatesManager: NSObject {
             .store(in: &cancellables)
     }
 
-    /// Whether the updater starts with the app, which needs only the in-app consent.
-    /// Starting it with Settings would leave a menu bar app without scheduled checks
-    /// until Settings opens. The settings process leaves checks to the app.
+    /// Starts with the app once consent is given; the settings process leaves checks to the app.
     static nonisolated func startsAtLaunch(supportsSparkle: Bool, hasSeenConsent: Bool, isSettingsProcess: Bool) -> Bool {
         supportsSparkle && hasSeenConsent && !isSettingsProcess
     }

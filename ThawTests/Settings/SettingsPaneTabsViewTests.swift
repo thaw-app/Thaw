@@ -49,16 +49,16 @@ struct SettingsPaneTabsViewTests {
     @Test("A disclosure asked for while the page is open selects its tab")
     func disclosureWhileOpen() async throws {
         let appState = AppState()
-        let selection = Selection(ThawBarTab.display)
+        let selection = Selection(LayoutDetailTab.options)
         let render = render(
-            SettingsPaneTabs(selection: selection.binding, tabs: ThawBarTab.allCases, tabForDisclosure: ThawBarTab.init(disclosure:)),
+            SettingsPaneTabs(selection: selection.binding, tabs: LayoutDetailTab.allCases, tabForDisclosure: { LayoutDetailTab.tab(for: $0) }),
             appState: appState
         )
         let before = try render.pixels()
         #expect(before.contains { $0 != 0 }, "the strip draws its tabs")
-        appState.navigationState.requestedSettingsDisclosure = .thawBarAppWideOptions
-        await render.settle { selection.tab == .allDisplays }
-        #expect(selection.tab == .allDisplays)
+        appState.navigationState.requestedSettingsDisclosure = .layoutSpacers
+        await render.settle { selection.tab == .spacers }
+        #expect(selection.tab == .spacers)
         #expect(appState.navigationState.requestedSettingsDisclosure == nil)
         await render.settle { (try? render.pixels()) != before }
         #expect(try render.pixels() != before, "the strip redraws on the new tab")

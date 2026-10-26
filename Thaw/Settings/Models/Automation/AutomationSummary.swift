@@ -7,9 +7,7 @@
 
 import Foundation
 
-/// The one-line descriptions of profile switching and scripts, which say
-/// what is set right now instead of explaining the control: one under the
-/// Profiles list for every profile, one on each profile's row.
+/// One-line descriptions of what is set now, not of the control.
 nonisolated enum AutomationSummary {
     /// A profile and the display or Space that switches to it.
     struct Assignment: Equatable {

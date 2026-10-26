@@ -114,6 +114,9 @@ struct SettingsURIKeyTableTests {
                     !registered.contains(caseName),
                     "\(uriKey) must stay unregistered so its legacy-key migration still runs"
                 )
+            } else if SettingsURIHandler.computedBooleans[entry.defaultsKey] != nil {
+                // Read through the setting that derives it, never from Defaults.
+                #expect(!registered.contains(caseName), "\(uriKey) is computed, so a registered default would go unread")
             } else {
                 #expect(
                     registered.contains(caseName),

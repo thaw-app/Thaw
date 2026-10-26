@@ -52,9 +52,6 @@ nonisolated struct SearchEntry: Identifiable, @unchecked Sendable {
             .appearanceInsideShape
         case "appearance.background":
             .appearanceBehindShape
-        // The two app-wide Thaw Bar toggles sit behind the page's disclosure.
-        case "general.lockThawBarPosition", "general.thawBarLocationOnHotkey", "general.openHiddenItemsInMenuBar":
-            .thawBarAppWideOptions
         default:
             nil
         }

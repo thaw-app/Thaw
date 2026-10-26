@@ -32,11 +32,15 @@ struct SettingsPaneTabsTests {
     func thawBarOptions() {
         #expect(ThawBarTab(section: "Options for all displays") == .allDisplays)
         #expect(ThawBarTab(section: "Preview") == nil)
+        for id in ["general.lockThawBarPosition", "general.thawBarLocationOnHotkey", "general.openHiddenItemsInMenuBar"] {
+            let section = SearchIndex.entries.first { $0.id == id }?.sectionText
+            #expect(section.flatMap(ThawBarTab.init(section:)) == .allDisplays, "\(id) opens All Displays")
+        }
     }
 
-    @Test("Profile shortcuts have their own tab, and the welcome screens are found on About")
+    @Test("Profile shortcuts are searched on Profiles, and the welcome screens are found on About")
     func profilesTabAndWelcomeScreens() {
-        #expect(ShortcutsTab(section: "Profiles") == .profiles)
+        #expect(SearchIndex.entries.first { $0.id == "profiles.shortcuts" }?.pane == .profiles)
         #expect(SearchIndex.aboutEntries.first { $0.id == "about.replayOnboarding" }?.pane == .about)
         #expect(!SearchIndex.toolsEntries.contains { $0.id == "about.replayOnboarding" })
     }
@@ -55,12 +59,13 @@ struct SettingsPaneTabsTests {
     @Test("A disclosure is handed to the page whose tab holds it, once, then forgotten")
     func disclosureIsConsumedOnce() {
         let navigation = AppNavigationState()
-        navigation.requestedSettingsDisclosure = .thawBarAppWideOptions
+        navigation.requestedSettingsDisclosure = .appearanceInsideShape
         #expect(SettingsSearchNavigation.consumeDisclosure(navigationState: navigation, tabFor: LayoutDetailTab.tab(for:)) == nil)
-        #expect(navigation.requestedSettingsDisclosure == .thawBarAppWideOptions, "Another page's disclosure is left for that page")
-        #expect(SettingsSearchNavigation.consumeDisclosure(navigationState: navigation, tabFor: ThawBarTab.init(disclosure:)) == .allDisplays)
+        #expect(navigation.requestedSettingsDisclosure == .appearanceInsideShape, "Another page's disclosure is left for that page")
+        navigation.requestedSettingsDisclosure = .layoutSpacers
+        #expect(SettingsSearchNavigation.consumeDisclosure(navigationState: navigation, tabFor: LayoutDetailTab.tab(for:)) == .spacers)
         #expect(navigation.requestedSettingsDisclosure == nil)
-        #expect(SettingsSearchNavigation.consumeDisclosure(navigationState: navigation, tabFor: ThawBarTab.init(disclosure:)) == nil)
+        #expect(SettingsSearchNavigation.consumeDisclosure(navigationState: navigation, tabFor: LayoutDetailTab.tab(for:)) == nil)
     }
 
     @Test("Layout's disclosures open the tab that holds them")

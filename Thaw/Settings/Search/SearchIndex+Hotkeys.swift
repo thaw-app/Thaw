@@ -82,7 +82,7 @@ nonisolated extension SearchIndex {
             titleText: "Turn \(Constants.displayName) Bar on or off",
             descriptionText: nil,
             pane: .hotkeys,
-            // The section names the tab; its key stays "Thaw Bar" whatever the app is called.
+            // sectionText stays "Thaw Bar" so ShortcutsTab finds it whatever the app is called.
             sectionKey: "\(Constants.displayName) Bar",
             sectionText: "Thaw Bar",
             keywords: ["enable", "toggle", "turn on", "turn off", "ice bar", "thaw bar", "hotkey", "shortcut", "keyboard shortcut"],

@@ -168,10 +168,7 @@ private struct SettingsSidebarHeading: View {
     }
 }
 
-/// A page's row: its symbol and its name, on Thaw's shared selection fill
-/// when selected. The fill is the same whether the window is key or not,
-/// and the label keeps its own color on it. The selected row also wears the
-/// focus ring while the sidebar has keyboard focus.
+/// A page's row on the shared selection fill, with the focus ring while the sidebar has focus.
 private struct SettingsSidebarPageRow: View {
     let pane: SettingsNavigationIdentifier
     let isSelected: Bool

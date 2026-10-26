@@ -13,7 +13,7 @@ import UserNotifications
 final class UserNotificationManager: NSObject {
     private let diagLog = DiagLog(category: "UserNotificationManager")
     private(set) weak var appState: AppState?
-    private var activationObserver: (any NSObjectProtocol)?
+    private var activationTask: Task<Void, Never>?
 
     /// Whether a notification Thaw posts can show an alert, read at setup and each time
     /// Thaw becomes active. Optimistic until the first read returns.
@@ -27,15 +27,9 @@ final class UserNotificationManager: NSObject {
         self.appState = appState
         notificationCenter.delegate = self
         refreshAlertPermission()
-        if let activationObserver {
-            NotificationCenter.default.removeObserver(activationObserver)
-        }
-        activationObserver = NotificationCenter.default.addObserver(
-            forName: NSApplication.didBecomeActiveNotification,
-            object: nil,
-            queue: .main
-        ) { [weak self] _ in
-            MainActor.assumeIsolated { self?.refreshAlertPermission() }
+        activationTask?.cancel()
+        activationTask = NotificationCenter.default.eventsTask(named: NSApplication.didBecomeActiveNotification) { [weak self] in
+            self?.refreshAlertPermission()
         }
     }
 

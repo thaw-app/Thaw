@@ -8,10 +8,7 @@
 import SwiftUI
 import ThawUI
 
-/// One profile in the Profiles list, drawn like a sidebar row. Clicking it
-/// selects the profile, so its details show on the page, and its name turns
-/// into a text field while it is being renamed. The selected row wears the
-/// focus ring while the list has keyboard focus.
+/// One profile in the Profiles list, drawn like a sidebar row.
 struct ProfileListRow<Actions: View>: View {
     let profile: ProfileMetadata
     let isSelected: Bool

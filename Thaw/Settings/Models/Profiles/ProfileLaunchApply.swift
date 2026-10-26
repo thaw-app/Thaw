@@ -9,10 +9,8 @@ import Foundation
 
 /// Whether a profile switch at launch applies the profile's layout.
 ///
-/// A display, Space or Focus switches to its profile as Thaw starts. When that
-/// profile was already active when Thaw quit, applying it put back the layout
-/// it was saved with and undid every change made since (2026-10-22 report: an
-/// item dragged into Always Hidden went back to Hidden after each logout).
+/// Applying the profile already in place at launch would undo every layout
+/// change made since it was saved.
 nonisolated enum ProfileLaunchApply {
     /// Only the first switch of a launch, made while nothing is active yet,
     /// can find its profile already in place.
@@ -30,28 +28,22 @@ nonisolated enum ProfileLaunchApply {
     struct Record {
         static let key = Defaults.Key.lastActiveProfileID.rawValue
 
-        private let defaults: UserDefaults
+        private let stored: StoredProfileID
 
         init(defaults: UserDefaults = Defaults.store) {
-            self.defaults = defaults
+            stored = StoredProfileID(key: Self.key, defaults: defaults)
         }
 
         var lastActiveProfileID: UUID? {
-            get { defaults.string(forKey: Self.key).flatMap(UUID.init(uuidString:)) }
-            nonmutating set {
-                if let newValue {
-                    defaults.set(newValue.uuidString, forKey: Self.key)
-                } else {
-                    defaults.removeObject(forKey: Self.key)
-                }
-            }
+            get { stored.id }
+            nonmutating set { stored.id = newValue }
         }
 
         /// Marks a profile kept at launch as settled too, so the end of the
         /// startup settle doesn't apply it after all.
         func keep(_ profileID: UUID) {
             lastActiveProfileID = profileID
-            ProfileSettleReapply.Record(defaults: defaults).lastSettledProfileID = profileID
+            ProfileSettleReapply.Record(defaults: stored.defaults).lastSettledProfileID = profileID
         }
     }
 }

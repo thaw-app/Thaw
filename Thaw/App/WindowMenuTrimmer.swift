@@ -20,10 +20,11 @@ final class WindowMenuTrimmer {
     private var anyWindowOpen: () -> Bool = { false }
     private var mainMenuObservation: NSKeyValueObservation?
     private var activationTask: Task<Void, Never>?
+    private var windowsTask: Task<Void, Never>?
 
     /// Starts trimming. The main menu can appear after launch, and SwiftUI can
-    /// replace it, so the trimmer acts whenever it changes and when Thaw becomes active.
-    func watch(anyWindowOpen: @escaping () -> Bool) {
+    /// replace it, so the trimmer acts whenever it or `anyWindowOpen` changes and when Thaw becomes active.
+    func watch(anyWindowOpen: @escaping @MainActor @Sendable () -> Bool) {
         self.anyWindowOpen = anyWindowOpen
         mainMenuObservation = NSApp.observe(\.mainMenu, options: [.initial, .new]) { [weak self] _, _ in
             MainActor.assumeIsolated { self?.refresh() }
@@ -32,9 +33,15 @@ final class WindowMenuTrimmer {
         activationTask = NotificationCenter.default.eventsTask(named: NSApplication.didBecomeActiveNotification) { [weak self] in
             self?.refresh()
         }
+        windowsTask?.cancel()
+        windowsTask = Task { [weak self] in
+            for await _ in Observations({ anyWindowOpen() }) {
+                self?.refresh()
+            }
+        }
     }
 
-    func refresh() {
+    private func refresh() {
         update(anyWindowOpen: anyWindowOpen())
     }
 

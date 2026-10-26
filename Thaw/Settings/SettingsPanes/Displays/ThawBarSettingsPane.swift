@@ -51,8 +51,7 @@ struct ThawBarSettingsPane: View {
             SettingsPaneTabs(
                 selection: $tab,
                 tabs: ThawBarTab.allCases,
-                tabForSection: ThawBarTab.init(section:),
-                tabForDisclosure: ThawBarTab.init(disclosure:)
+                tabForSection: ThawBarTab.init(section:)
             )
 
             switch tab {
@@ -361,12 +360,6 @@ nonisolated enum ThawBarTab: CaseIterable, ThawTab {
     /// The tab holding a search result's section.
     init?(section: String) {
         guard section == "Options for all displays" else { return nil }
-        self = .allDisplays
-    }
-
-    /// The tab a search result's disclosure opens.
-    init?(disclosure: AppNavigationState.SettingsDisclosure) {
-        guard disclosure == .thawBarAppWideOptions else { return nil }
         self = .allDisplays
     }
 

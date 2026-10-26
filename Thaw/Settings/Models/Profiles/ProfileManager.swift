@@ -231,7 +231,7 @@ final class ProfileManager {
     }
 
     /// Binding-driven association setters cannot throw; expose save failures through lastManifestError for the pane.
-    func persistManifest() {
+    private func persistManifest() {
         do {
             try saveManifest()
         } catch {

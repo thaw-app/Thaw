@@ -17,11 +17,11 @@ nonisolated enum QuitRequestSource {
     @MainActor
     static func current() -> String {
         let event = NSAppleEventManager.shared().currentAppleEvent
-        let isQuit = event?.eventClass == fourCharCode("aevt") && event?.eventID == fourCharCode("quit")
+        let isQuit = event?.eventClass == AEEventClass(kCoreEventClass) && event?.eventID == AEEventID(kAEQuitApplication)
         let senderPID = isQuit
-            ? event?.attributeDescriptor(forKeyword: fourCharCode("spid"))?.int32Value
+            ? event?.attributeDescriptor(forKeyword: AEKeyword(keySenderPIDAttr))?.int32Value
             : nil
-        let reason = isQuit ? event?.paramDescriptor(forKeyword: fourCharCode("why?"))?.enumCodeValue : nil
+        let reason = isQuit ? event?.paramDescriptor(forKeyword: AEKeyword(kAEQuitReason))?.enumCodeValue : nil
         let senderName = senderPID.flatMap { NSRunningApplication(processIdentifier: $0)?.localizedName }
         return describe(senderPID: senderPID, senderName: senderName, reason: reason, ownPID: getpid())
     }
@@ -31,10 +31,6 @@ nonisolated enum QuitRequestSource {
         let sender = senderName.map { "\($0) (pid \(senderPID))" } ?? "pid \(senderPID)"
         let because = reason.map { ", reason \(string(fromFourCharCode: $0))" } ?? ""
         return "by \(sender)\(because)"
-    }
-
-    static func fourCharCode(_ code: String) -> OSType {
-        code.utf8.reduce(0) { $0 << 8 | OSType($1) }
     }
 
     static func string(fromFourCharCode code: OSType) -> String {

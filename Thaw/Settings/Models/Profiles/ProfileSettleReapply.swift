@@ -42,21 +42,15 @@ nonisolated enum ProfileSettleReapply {
     struct Record {
         static let key = Defaults.Key.lastSettledProfileID.rawValue
 
-        private let defaults: UserDefaults
+        private let stored: StoredProfileID
 
         init(defaults: UserDefaults = Defaults.store) {
-            self.defaults = defaults
+            stored = StoredProfileID(key: Self.key, defaults: defaults)
         }
 
         var lastSettledProfileID: UUID? {
-            get { defaults.string(forKey: Self.key).flatMap(UUID.init(uuidString:)) }
-            nonmutating set {
-                if let newValue {
-                    defaults.set(newValue.uuidString, forKey: Self.key)
-                } else {
-                    defaults.removeObject(forKey: Self.key)
-                }
-            }
+            get { stored.id }
+            nonmutating set { stored.id = newValue }
         }
 
         /// Records the active profile and says what this settle does with it.

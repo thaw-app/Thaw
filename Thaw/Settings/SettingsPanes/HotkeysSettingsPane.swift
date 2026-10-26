@@ -308,7 +308,6 @@ enum ShortcutsTab: CaseIterable, @MainActor ThawTab {
         case "Menu bar items": self = .menuBarItems
         case "Layout": self = .layout
         case "Thaw Bar": self = .thawBar
-        case "Profiles": self = .profiles
         default: return nil
         }
     }

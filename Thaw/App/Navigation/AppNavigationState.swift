@@ -17,13 +17,10 @@ final class AppNavigationState {
         case layoutSpacers
         /// Layout's Options tab, which holds the settings you rarely change.
         case layoutOptions
-        /// Layout's Apple's Items tab.
         case layoutAppleItems
         /// Appearance's fill tabs, inside and behind the shape.
         case appearanceInsideShape
         case appearanceBehindShape
-        /// The Thaw Bar page's app-wide options disclosure.
-        case thawBarAppWideOptions
     }
 
     var isAppFrontmost = false

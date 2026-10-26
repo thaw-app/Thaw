@@ -153,7 +153,6 @@ nonisolated enum Defaults {
             .autoZenWhileSharingScreen: DefaultValue.autoZenWhileSharingScreen,
             .enableDiagnosticLogging: DefaultValue.enableDiagnosticLogging,
             .enableMenuBarItemOverflow: DefaultValue.enableMenuBarItemOverflow,
-            .enableExperimentalSystemItemHiding: DefaultValue.enableExperimentalSystemItemHiding,
             .menuBarArrangementMode: DefaultValue.menuBarArrangementMode.rawValue,
             .enableExperimentalOverflowPrevention: DefaultValue.enableExperimentalOverflowPrevention,
             .alwaysUseAppIconForMenuBarItems: DefaultValue.alwaysUseAppIconForMenuBarItems,
@@ -272,7 +271,6 @@ extension Defaults {
             static let enableDiagnosticLogging = false
         #endif
         static let enableMenuBarItemOverflow = false
-        static let enableExperimentalSystemItemHiding = true
         static let menuBarArrangementMode = MenuBarArrangementMode.automatic
         static let enableExperimentalOverflowPrevention = false
         static let alwaysUseAppIconForMenuBarItems = false
