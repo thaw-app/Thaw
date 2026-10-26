@@ -13,7 +13,7 @@ import ThawUI
 /// Native rewrites another app's settings and is still unproven, so it stays opt-in and carries the beta badge.
 struct HidingMethodSection: View {
     @Bindable var settings: AdvancedSettings
-    /// False when the layout cannot be arranged, which leaves Apple's pinned items out of reach too.
+    /// False when the layout cannot be arranged, so the note on moving Apple's pinned items does not apply.
     let offersAppleItems: Bool
     @Environment(AppState.self) private var appState
     @Environment(\.openURL) private var openURL
@@ -25,10 +25,7 @@ struct HidingMethodSection: View {
     }
 
     private var method: HidingMethod {
-        HidingMethod(
-            nativeAppHidingEnabled: settings.enableNativeAppHiding,
-            hidesAppleItems: settings.enableExperimentalSystemItemHiding
-        )
+        HidingMethod(nativeAppHidingEnabled: settings.enableNativeAppHiding)
     }
 
     private var methodBinding: Binding<HidingMethod> {
@@ -38,22 +35,17 @@ struct HidingMethodSection: View {
                 guard NativeHidingStart.allowsMethodChange(journalNeedsAttention: experiment.journalNeedsAttention) else {
                     return
                 }
-                // Native first: turning it on clears the Apple-items switch, and that switch refuses to turn on beside it.
+                // The Apple-items switch follows: off under Native, on under Standard.
                 settings.enableNativeAppHiding = newValue.usesNativeAppHiding
-                settings.enableExperimentalSystemItemHiding = newValue.hidesAppleItems
             }
         )
-    }
-
-    private var offeredMethods: [HidingMethod] {
-        HidingMethod.allCases.filter { offersAppleItems || !$0.hidesAppleItems || $0 == method }
     }
 
     var body: some View {
         ThawSection {
             Text("Hiding")
         } content: {
-            ThawPillPicker("Hiding method", selection: methodBinding, values: offeredMethods, title: \.localized)
+            ThawPillPicker("Hiding method", selection: methodBinding, values: HidingMethod.allCases, title: \.localized)
                 .disabled(!NativeHidingStart.allowsMethodChange(journalNeedsAttention: experiment.journalNeedsAttention))
                 .annotation {
                     VStack(alignment: .leading, spacing: ThawSpacing.tight) {
@@ -71,7 +63,7 @@ struct HidingMethodSection: View {
                     }
                 }
 
-            if method.hidesAppleItems {
+            if method.hidesAppleItems, offersAppleItems {
                 // Blue denotes a limitation, not a failure.
                 SettingsWarningPill(
                     title: "Apple's items move differently",

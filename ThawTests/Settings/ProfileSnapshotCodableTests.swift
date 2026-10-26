@@ -86,7 +86,6 @@ struct ProfileSnapshotCodableTests {
         #expect(snapshot.autoZenWhileSharingScreen == Defaults.DefaultValue.autoZenWhileSharingScreen)
         #expect(snapshot.enableDiagnosticLogging == Defaults.DefaultValue.enableDiagnosticLogging)
         #expect(snapshot.enableMenuBarItemOverflow == Defaults.DefaultValue.enableMenuBarItemOverflow)
-        #expect(snapshot.enableExperimentalSystemItemHiding == Defaults.DefaultValue.enableExperimentalSystemItemHiding)
     }
 
     @Test("A profile saved with the removed search settings still loads")
@@ -135,7 +134,6 @@ struct ProfileSnapshotCodableTests {
             "autoZenWhileSharingScreen",
             "enableAlwaysHiddenSection",
             "enableDiagnosticLogging",
-            "enableExperimentalSystemItemHiding",
             "enableMenuBarItemOverflow",
             "enableSecondaryContextMenu",
             "hideApplicationMenus",
@@ -184,8 +182,7 @@ struct ProfileSnapshotCodableTests {
             iconRefreshInterval: 3.5,
             autoZenWhileSharingScreen: true,
             enableDiagnosticLogging: false,
-            enableMenuBarItemOverflow: false,
-            enableExperimentalSystemItemHiding: true
+            enableMenuBarItemOverflow: false
         )
     }
 

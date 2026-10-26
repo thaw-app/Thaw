@@ -154,7 +154,6 @@ extension ProfileLayoutDiff {
         "thawIcon": "Thaw icon",
         "iconRefreshInterval": "Icon refresh interval",
         "enableMenuBarItemOverflow": "Menu bar item overflow",
-        "enableExperimentalSystemItemHiding": "System item hiding",
         "sectionDividerStyle": "Section divider style",
     ]
 

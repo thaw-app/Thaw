@@ -11,15 +11,13 @@ import SwiftUI
 nonisolated enum HidingMethod: Int, CaseIterable, Identifiable {
     /// macOS's own per-app switch, the one in System Settings > Menu Bar. Nothing else leaves the bar.
     case native = 0
-    /// The restriction macOS applies to the whole bar, for apps' items.
+    /// The restriction macOS applies to the whole bar, for apps' items and for the items macOS pins
+    /// to the right: Clock, Control Center and Siri.
     case standard = 1
-    /// The same restriction, extended to the items macOS pins to the right: Clock, Control Center and Siri.
-    case everything = 2
 
-    /// The method the two stored switches stand for. Native wins: it releases the restriction the
-    /// other two need, so the Apple-items switch cannot be on beside it.
-    init(nativeAppHidingEnabled: Bool, hidesAppleItems: Bool) {
-        self = nativeAppHidingEnabled ? .native : (hidesAppleItems ? .everything : .standard)
+    /// The method the native switch stands for. Standard needs the restriction Native releases.
+    init(nativeAppHidingEnabled: Bool) {
+        self = nativeAppHidingEnabled ? .native : .standard
     }
 
     var id: Int {
@@ -33,14 +31,13 @@ nonisolated enum HidingMethod: Int, CaseIterable, Identifiable {
 
     /// What the Apple-items switch should read for this method.
     var hidesAppleItems: Bool {
-        self == .everything
+        self == .standard
     }
 
     var localized: LocalizedStringKey {
         switch self {
         case .native: "Native"
         case .standard: "Standard"
-        case .everything: "Everything"
         }
     }
 
@@ -50,8 +47,6 @@ nonisolated enum HidingMethod: Int, CaseIterable, Identifiable {
         case .native:
             "Keeps Live Activities, the camera indicator and Apple’s own items on the menu bar.\nCan’t hide Clock, Control Center or Siri. macOS may show the screen recording indicator."
         case .standard:
-            "Hides any app’s items.\nWhile they’re hidden, macOS also removes Live Activities and the camera indicator."
-        case .everything:
             "Hides any app’s items, and Clock, Control Center and Siri too.\nWhile they’re hidden, macOS also removes Live Activities and the camera indicator."
         }
     }

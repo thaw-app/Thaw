@@ -272,7 +272,7 @@ extension Defaults {
             static let enableDiagnosticLogging = false
         #endif
         static let enableMenuBarItemOverflow = false
-        static let enableExperimentalSystemItemHiding = false
+        static let enableExperimentalSystemItemHiding = true
         static let menuBarArrangementMode = MenuBarArrangementMode.automatic
         static let enableExperimentalOverflowPrevention = false
         static let alwaysUseAppIconForMenuBarItems = false

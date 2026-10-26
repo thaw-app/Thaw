@@ -195,7 +195,7 @@ nonisolated struct AdvancedSettingsSnapshot: Codable {
     var autoZenWhileSharingScreen: Bool
     var enableDiagnosticLogging: Bool
     var enableMenuBarItemOverflow: Bool
-    var enableExperimentalSystemItemHiding: Bool
+    // Apple-item hiding follows the hiding method, which profiles do not switch, so older profiles' value is ignored.
 
     /// The value every field takes when a profile predates it.
     static let defaults = AdvancedSettingsSnapshot(
@@ -210,8 +210,7 @@ nonisolated struct AdvancedSettingsSnapshot: Codable {
         iconRefreshInterval: Defaults.DefaultValue.iconRefreshInterval,
         autoZenWhileSharingScreen: Defaults.DefaultValue.autoZenWhileSharingScreen,
         enableDiagnosticLogging: Defaults.DefaultValue.enableDiagnosticLogging,
-        enableMenuBarItemOverflow: Defaults.DefaultValue.enableMenuBarItemOverflow,
-        enableExperimentalSystemItemHiding: Defaults.DefaultValue.enableExperimentalSystemItemHiding
+        enableMenuBarItemOverflow: Defaults.DefaultValue.enableMenuBarItemOverflow
     )
 
     @MainActor
@@ -228,8 +227,7 @@ nonisolated struct AdvancedSettingsSnapshot: Codable {
             iconRefreshInterval: settings.iconRefreshInterval,
             autoZenWhileSharingScreen: settings.autoZenWhileSharingScreen,
             enableDiagnosticLogging: settings.enableDiagnosticLogging,
-            enableMenuBarItemOverflow: settings.enableMenuBarItemOverflow,
-            enableExperimentalSystemItemHiding: settings.enableExperimentalSystemItemHiding
+            enableMenuBarItemOverflow: settings.enableMenuBarItemOverflow
         )
     }
 
@@ -249,7 +247,6 @@ nonisolated struct AdvancedSettingsSnapshot: Codable {
         settings.autoZenWhileSharingScreen = autoZenWhileSharingScreen
         settings.enableDiagnosticLogging = enableDiagnosticLogging
         settings.enableMenuBarItemOverflow = enableMenuBarItemOverflow
-        settings.enableExperimentalSystemItemHiding = enableExperimentalSystemItemHiding
     }
 }
 
@@ -289,10 +286,6 @@ nonisolated extension AdvancedSettingsSnapshot {
         )
         enableMenuBarItemOverflow = try container.decode(
             .enableMenuBarItemOverflow, default: Self.defaults.enableMenuBarItemOverflow
-        )
-        enableExperimentalSystemItemHiding = try container.decode(
-            .enableExperimentalSystemItemHiding,
-            default: Self.defaults.enableExperimentalSystemItemHiding
         )
     }
 }

@@ -210,9 +210,7 @@ final class AdvancedSettings {
     var enableNativeAppHiding = Defaults.DefaultValue.enableNativeAppHiding {
         didSet {
             guard oldValue != enableNativeAppHiding else { return }
-            if enableNativeAppHiding {
-                enableExperimentalSystemItemHiding = false
-            }
+            enableExperimentalSystemItemHiding = !enableNativeAppHiding
             Defaults.set(enableNativeAppHiding, forKey: .enableNativeAppHiding)
         }
     }
@@ -304,13 +302,15 @@ final class AdvancedSettings {
         }
     }
 
-    /// Clock, Control Center, and Siri require the assertion that native hiding releases.
+    /// Clock, Control Center, and Siri require the assertion that native hiding releases. Standard always
+    /// hides them, so this is on exactly when native hiding is off, whatever a profile or older build wrote.
     var enableExperimentalSystemItemHiding = Defaults.DefaultValue.enableExperimentalSystemItemHiding {
         didSet {
-            if enableNativeAppHiding, enableExperimentalSystemItemHiding {
-                enableExperimentalSystemItemHiding = false
-                // A queued URI notification may follow a persisted write, even when the model was already false.
-                Defaults.set(false, forKey: .enableExperimentalSystemItemHiding)
+            let required = !enableNativeAppHiding
+            if enableExperimentalSystemItemHiding != required {
+                enableExperimentalSystemItemHiding = required
+                // A stored value from an older build, a profile or a queued URI notification may disagree.
+                Defaults.set(required, forKey: .enableExperimentalSystemItemHiding)
                 return
             }
             guard oldValue != enableExperimentalSystemItemHiding else { return }
