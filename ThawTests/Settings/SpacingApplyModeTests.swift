@@ -87,6 +87,23 @@ struct SpacingApplyModeTests {
         ) == confirmationsEnabled)
     }
 
+    // MARK: Relaunch on display changes
+
+    @Test("A display change never relaunches apps, a spacing edit does")
+    func onlySpacingEditsRelaunch() {
+        #expect(!DisplaySettingsManager.spacingApplyRelaunchesApps(reason: "screenParametersChanged"))
+        #expect(DisplaySettingsManager.spacingApplyRelaunchesApps(reason: "configurationsChanged"))
+        #expect(DisplaySettingsManager.spacingApplyRelaunchesApps(reason: "userReapply"))
+    }
+
+    @Test("Seeding a newly connected display's configuration never relaunches apps")
+    func seedingANewDisplayNeverRelaunches() {
+        let seeded = DisplaySettingsManager.configurationsChangeReason(seedingConnectedDisplays: true)
+        let edited = DisplaySettingsManager.configurationsChangeReason(seedingConnectedDisplays: false)
+        #expect(!DisplaySettingsManager.spacingApplyRelaunchesApps(reason: seeded))
+        #expect(DisplaySettingsManager.spacingApplyRelaunchesApps(reason: edited))
+    }
+
     // MARK: Persistence
 
     @Test("The mode is saved on change and read back by a new manager", .scratchDefaults)

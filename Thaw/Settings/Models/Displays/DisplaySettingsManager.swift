@@ -33,7 +33,9 @@ final class DisplaySettingsManager {
         didSet {
             guard oldValue != configurations else { return }
             persistConfigurations()
-            applyActiveDisplaySpacing(reason: "configurationsChanged")
+            applyActiveDisplaySpacing(
+                reason: Self.configurationsChangeReason(seedingConnectedDisplays: isSeedingConnectedDisplays)
+            )
         }
     }
 
@@ -142,6 +144,10 @@ final class DisplaySettingsManager {
     /// Internal access so unit tests in ThawTests can seed and assert it.
     var lastAppliedActiveDisplayUUID: String?
 
+    /// True while a newly connected display's configuration is seeded from the template.
+    @ObservationIgnored
+    private var isSeedingConnectedDisplays = false
+
     /// UUID of the display that currently owns the menu bar, or nil if it
     /// cannot be determined. Exposed for views that need to decide whether
     /// a spacing change will trigger the relaunch wave (only writes against
@@ -208,7 +214,9 @@ final class DisplaySettingsManager {
             knownDisplays = updated
         }
         if configurationsChanged {
+            isSeedingConnectedDisplays = true
             configurations = seededConfigurations
+            isSeedingConnectedDisplays = false
         }
     }
 
@@ -398,19 +406,6 @@ final class DisplaySettingsManager {
         cancellables = c
     }
 
-    /// Whether a screen-parameters change should be ignored because the active
-    /// menu bar display is unchanged. A resolution change, lid open/close or
-    /// sleep transition that leaves the UUID the same is not a reason to
-    /// re-apply spacing and risk a relaunch wave.
-    ///
-    /// Pure on its inputs so it can be tested without AppState or real events.
-    static func shouldSkipSpacingApply(
-        currentActiveDisplayUUID currentUUID: String?,
-        lastAppliedActiveDisplayUUID lastUUID: String?
-    ) -> Bool {
-        currentUUID == lastUUID
-    }
-
     /// Reads the active display's spacing offset and applies it.
     /// applyOffset's no-op guard makes this safe on every configurations
     /// change, and a real relaunch wave starts a settling period so a later
@@ -432,15 +427,6 @@ final class DisplaySettingsManager {
         )
     }
 
-    /// Whether to ask before a relaunch wave. Write-only mode relaunches
-    /// nothing, so it never asks, whatever the confirmation toggle says.
-    static func needsSpacingRelaunchConfirmation(
-        applyMode: SpacingApplyMode,
-        confirmationsEnabled: Bool
-    ) -> Bool {
-        applyMode == .relaunchApps && confirmationsEnabled
-    }
-
     private func applyActiveDisplaySpacing(reason: String, forceRelaunch: Bool = false) {
         guard let appState else { return }
         let desired = Int(configurationForActiveDisplay().itemSpacingOffset.rounded())
@@ -448,7 +434,7 @@ final class DisplaySettingsManager {
         // every menu bar app for it, Chrome included, was far worse than a
         // gap that is off until those apps next launch, so a display change
         // only writes the new display's value. Reapply Spacing applies it now.
-        let relaunchApps = reason != "screenParametersChanged"
+        let relaunchApps = Self.spacingApplyRelaunchesApps(reason: reason)
         if !relaunchApps, appState.spacingManager.willRelaunch(forOffset: desired) {
             diagLog.info("Active display changed; saving spacing \(desired) without relaunching menu bar apps")
         }
