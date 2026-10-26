@@ -68,6 +68,15 @@ struct SavedOrderMirrorGateTests {
         #expect(gate.allowsMirror(identifiers: items, restrictionChange: nil, now: at(23)))
     }
 
+    @Test("The bar reads quiet only once the quiet period follows the last disturbance")
+    func quietAfterDisturbance() {
+        let gate = SavedOrderMirrorGate(observesSystem: false)
+        #expect(gate.isQuiet(now: at(0)))
+        gate.noteDisturbance(at: at(1))
+        #expect(!gate.isQuiet(now: at(12)))
+        #expect(gate.isQuiet(now: at(13.5)))
+    }
+
     @Test("The quiet rule on its own")
     func quietRule() {
         #expect(SavedOrderMirrorGate.isQuiet(now: at(10), events: [nil, at(2)], quietPeriod: .seconds(5)))

@@ -91,6 +91,9 @@ extension MenuBarItemManager {
                 let pidsOK = managedCount > 0 && unresolved <= 1
                 let minimumElapsed = settlingStartedAt.duration(to: .now) >= Self.startupMinimumSettlingDuration
                 let hostReady = menuBarHostItemsReady(in: itemCache)
+                // After a display change macOS keeps re-laying the bar well past a
+                // stable item count, and a restore read from those frames scrambles it.
+                let barQuiet = !reason.hasPrefix("display") || savedOrderMirrorGate.isQuiet()
 
                 if useExpectedSet {
                     let presentBundleIDs: Set<String> = Set(
@@ -119,7 +122,8 @@ extension MenuBarItemManager {
                     if pidsOK,
                        managedCount == lastSeenCount,
                        minimumElapsed,
-                       hostReady
+                       hostReady,
+                       barQuiet
                     {
                         stablePolls += 1
                         if stablePolls >= stableTarget {
@@ -140,6 +144,10 @@ extension MenuBarItemManager {
                         } else if !hostReady {
                             MenuBarItemManager.diagLog.debug(
                                 "\(reason): waiting for menu bar host modules (MenuBarAgent / BentoBox)"
+                            )
+                        } else if !barQuiet {
+                            MenuBarItemManager.diagLog.debug(
+                                "\(reason): waiting for the bar to go quiet after the display change"
                             )
                         }
                         stablePolls = 0

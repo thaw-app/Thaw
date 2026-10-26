@@ -37,6 +37,11 @@ final class SavedOrderMirrorGate {
         lastDisturbance = instant
     }
 
+    /// Whether the quiet period has passed since the last disturbance.
+    func isQuiet(now: ContinuousClock.Instant = .now) -> Bool {
+        Self.isQuiet(now: now, events: [lastDisturbance], quietPeriod: Self.quietPeriod)
+    }
+
     /// Whether the cache holding these items may become the saved order now.
     /// A changed item set, a revealed section and an item with a transient frame each count as a disturbance.
     func allowsMirror(
