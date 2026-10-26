@@ -219,7 +219,7 @@ extension MenuBarItemImageCache {
             pass.absorb(sectionResult)
         }
 
-        return commitRecapturePass(
+        return commitRecapturePassSavingConcealed(
             pass, admission: admission, ignoreRecentMove: ignoreRecentMove, appState: appState
         )
     }

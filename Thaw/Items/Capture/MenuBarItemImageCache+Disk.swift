@@ -16,20 +16,38 @@ extension MenuBarItemImageCache {
     func saveToDisk() {
         guard !capturesByTag.isEmpty else { return }
 
-        let concealedIdentifiers = appState.map { appState in
-            Set(
-                MenuBarSection.Name.allCases
-                    .filter { $0 != .visible }
-                    .flatMap { appState.itemManager.itemCache[$0] }
-                    .map(\.tag.tagIdentifier)
-            )
-        } ?? []
         diskStore.enqueueSave(
             Self.diskPersistableCaptures(
                 capturesByTag: capturesByTag,
                 accessTimestamps: accessTimestamps
             ),
-            concealedIdentifiers: concealedIdentifiers
+            concealedIdentifiers: appState.map(concealedIdentifiers(in:)) ?? []
+        )
+    }
+
+    /// Commits a pass, then saves when it changed a hidden item's image, which only a reveal can capture again.
+    func commitRecapturePassSavingConcealed(
+        _ pass: CapturePass,
+        admission: CapturePublicationAdmission,
+        ignoreRecentMove: Bool,
+        appState: AppState
+    ) -> Bool {
+        let before = capturesByTag
+        let didChange = commitRecapturePass(pass, admission: admission, ignoreRecentMove: ignoreRecentMove, appState: appState)
+        let changedTags = pass.captured.keys.filter { !MenuBarItemGlyphCapture.isVisuallyEqual(before[$0], capturesByTag[$0]) }
+        if ConcealedCapturePersistence.shouldSave(changedTags: changedTags, concealedIdentifiers: concealedIdentifiers(in: appState)) {
+            saveToDisk()
+        }
+        return didChange
+    }
+
+    /// The identities of the items in Hidden and Always Hidden.
+    func concealedIdentifiers(in appState: AppState) -> Set<String> {
+        Set(
+            MenuBarSection.Name.allCases
+                .filter { $0 != .visible }
+                .flatMap { appState.itemManager.itemCache[$0] }
+                .map(\.tag.tagIdentifier)
         )
     }
 
