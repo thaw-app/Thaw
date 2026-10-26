@@ -61,6 +61,15 @@ extension MenuBarItemImageCache {
         return false
     }
 
+    /// Whether an item sits on a display's bar yet is too narrow for a glyph,
+    /// such as a status item whose app has its icon turned off. Revealing it
+    /// for a picture covers the bar while waiting for an icon that never
+    /// draws. A narrow frame parked off every display is a concealed item.
+    static nonisolated func isBlankOnTheBar(_ frame: CGRect, displays: [CGRect]) -> Bool {
+        frame.width > 0 && frame.width < MenuBarItemGeometry.phantomFramePeerMinimumWidth
+            && displays.contains { $0.contains(CGPoint(x: frame.midX, y: frame.midY)) }
+    }
+
     /// Resolves the capture a consumer would draw for tag, and the key it is
     /// filed under, without touching the access order.
     ///

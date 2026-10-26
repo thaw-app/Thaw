@@ -620,9 +620,9 @@ extension MenuBarItemManager {
             }
             // During a reveal the writes would flicker the bar, so re-arm a
             // bounded number of times instead of dropping the work.
-            @MainActor func rearm() {
+            @MainActor func rearm(cause: RepairOrchestrator.Cause = .rearmed) {
                 guard deferralsRemaining > 0 else { return }
-                scheduleStructuralNormalization(cause: .rearmed, after: after, deferralsRemaining: deferralsRemaining - 1)
+                scheduleStructuralNormalization(cause: cause, after: after, deferralsRemaining: deferralsRemaining - 1)
             }
             guard layoutPublication.canPublish(generation: layoutPublication.generation),
                   appState.menuBarManager.sectionController.revealedSection == nil,
@@ -643,6 +643,8 @@ extension MenuBarItemManager {
                 settleWaits += 1
             }
             guard !Task.isCancelled else { return }
+            // Taking the lane clears the waiting causes, so read this first.
+            let followsUserDrag = repairs.ledger.causesWaiting(for: .structuralNormalization).contains(.userDragEnded)
             // Waiting is over; from here on this writes, so take the lane.
             guard let hold = await repairs.enter(.structuralNormalization) else { return }
             var hasLeftLane = false
@@ -654,7 +656,8 @@ extension MenuBarItemManager {
             guard layoutPublication.canPublish(generation: layoutPublication.generation),
                   ControlResortHold.allowsResort(for: "structural normalization", .init(of: self))
             else {
-                rearm()
+                // The lane already took the drag's cause, so the next pass needs it again.
+                rearm(cause: followsUserDrag ? .userDragEnded : .rearmed)
                 return
             }
 
@@ -686,9 +689,15 @@ extension MenuBarItemManager {
                 }
                 return
             }
-            if let (controlItems, withDividers) = ControlOrderRules.withDividers(settledItems, lastKnownControlItems),
-               restoreStructuralControlOrder(controlItems: controlItems, items: withDividers, permit: StoreWritePermit(hold)) {
-                moveActivity.noteMoveOperation()
+            if let (controlItems, withDividers) = ControlOrderRules.withDividers(settledItems, lastKnownControlItems) {
+                // The restore pins the saved order. A drag made with a section
+                // open is still held out of it, so record it first.
+                if followsUserDrag {
+                    mirrorSavedSectionOrderIfSettled(from: itemCache, controlItems: controlItems, placedByUser: true)
+                }
+                if restoreStructuralControlOrder(controlItems: controlItems, items: withDividers, permit: StoreWritePermit(hold)) {
+                    moveActivity.noteMoveOperation()
+                }
             }
             // The passes below have never run on macOS 27, since the cache holds no dividers; they stay off until checked live.
             guard controlItemPair(in: settledItems) != nil else { return }
