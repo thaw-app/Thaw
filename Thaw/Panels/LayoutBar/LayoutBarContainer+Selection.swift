@@ -87,7 +87,7 @@ extension LayoutBarContainer {
         let count = selection.count
         return selection.moveTargets(in: LayoutBatchMoveExecutor.snapshot(appState: appState)).map { target in
             let title = String(
-                localized: "Move \(count) Items to \(MenuBarSearchItemActions.title(for: target))",
+                localized: "Move \(count) Items to \(target.localizedName)",
                 comment: "Menu entry that moves every selected Layout item to a section"
             )
             return (title, { [weak self] in self?.moveSelection(to: target, placement: .end) })

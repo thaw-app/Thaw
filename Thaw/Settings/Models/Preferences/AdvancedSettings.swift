@@ -210,8 +210,8 @@ final class AdvancedSettings {
     var enableNativeAppHiding = Defaults.DefaultValue.enableNativeAppHiding {
         didSet {
             guard oldValue != enableNativeAppHiding else { return }
-            enableExperimentalSystemItemHiding = !enableNativeAppHiding
             Defaults.set(enableNativeAppHiding, forKey: .enableNativeAppHiding)
+            appState?.menuBarManager.sectionController.refresh()
         }
     }
 
@@ -302,21 +302,10 @@ final class AdvancedSettings {
         }
     }
 
-    /// Clock, Control Center, and Siri require the assertion that native hiding releases. Standard always
-    /// hides them, so this is on exactly when native hiding is off, whatever a profile or older build wrote.
-    var enableExperimentalSystemItemHiding = Defaults.DefaultValue.enableExperimentalSystemItemHiding {
-        didSet {
-            let required = !enableNativeAppHiding
-            if enableExperimentalSystemItemHiding != required {
-                enableExperimentalSystemItemHiding = required
-                // A stored value from an older build, a profile or a queued URI notification may disagree.
-                Defaults.set(required, forKey: .enableExperimentalSystemItemHiding)
-                return
-            }
-            guard oldValue != enableExperimentalSystemItemHiding else { return }
-            Defaults.set(enableExperimentalSystemItemHiding, forKey: .enableExperimentalSystemItemHiding)
-            appState?.menuBarManager.sectionController.refresh()
-        }
+    /// Clock, Control Center and Siri need the assertion native hiding releases, so this is on exactly when native hiding is off.
+    /// Derived, not stored: a value an older build saved under its Defaults key is never read.
+    var enableExperimentalSystemItemHiding: Bool {
+        HidingMethod(nativeAppHidingEnabled: enableNativeAppHiding).hidesAppleItems
     }
 
     /// Extreme hidden-item weights try to make native overflow collapse them first on macOS 27 notched displays.
@@ -380,7 +369,6 @@ final class AdvancedSettings {
         Defaults.ifPresent(key: .enableDiagnosticLogging, assign: &enableDiagnosticLogging)
         Defaults.ifPresent(key: .enableMenuBarItemOverflow, assign: &enableMenuBarItemOverflow)
         Defaults.ifPresent(key: .enableNativeAppHiding, assign: &enableNativeAppHiding)
-        Defaults.ifPresent(key: .enableExperimentalSystemItemHiding, assign: &enableExperimentalSystemItemHiding)
         Defaults.ifPresent(key: .enableExperimentalOverflowPrevention, assign: &enableExperimentalOverflowPrevention)
         Defaults.ifPresent(key: .alwaysUseAppIconForMenuBarItems, assign: &alwaysUseAppIconForMenuBarItems)
         Defaults.ifPresent(key: .enableMenuBarItemDescenders, assign: &enableMenuBarItemDescenders)
@@ -470,8 +458,6 @@ final class AdvancedSettings {
                 enableDiagnosticLogging = boolValue
             case "enableMenuBarItemOverflow":
                 enableMenuBarItemOverflow = boolValue
-            case "enableExperimentalSystemItemHiding":
-                enableExperimentalSystemItemHiding = boolValue
             case "enableExperimentalOverflowPrevention":
                 enableExperimentalOverflowPrevention = boolValue
             case "alwaysUseAppIconForMenuBarItems":

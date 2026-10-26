@@ -8,34 +8,27 @@
 import Combine
 import MenuBarModel
 
-/// Who opened the section that is revealed now: the user, or Thaw by itself.
+/// Who opened the revealed section: the user, or Thaw by itself for always-show and the zen restore.
+/// Thaw's reveals carry ``RepairOrchestrator/Cause/policyReveal``, which neither calls off planned
+/// passes nor refills the loop budget.
 ///
-/// Always-show and the zen restore reveal sections with nobody at the bar. They run their
-/// reveals through ``policy(_:)``, and the repairs those reveals ask for carry
-/// ``RepairOrchestrator/Cause/policyReveal``, which neither calls off the automatic passes
-/// that are planned nor refills the loop budget.
-///
-/// The kit pins the order inside `show`, before it changes the revealed section, so
-/// ``preRevealCause`` answers for the call in progress. It asks for the settled restore about
-/// a second after `show` returns, so ``reconcileCause`` answers for the reveal on screen. That
-/// reveal stays Thaw's until the revealed section goes back to nil, or until a reveal made
-/// outside ``policy(_:)`` replaces it.
+/// The kit pins the order inside `show`, so ``preRevealCause`` answers for the call in progress. It asks
+/// for the settled restore about a second later, so ``reconcileCause`` answers for the reveal on screen
+/// until it is hidden or replaced by a reveal made outside ``policy(_:)``.
 @MainActor
 final class RevealAttribution {
-    /// Something the attribution is told: a policy call starting or ending, or the revealed section changing.
     nonisolated enum Event: Equatable {
         case policyBegan
         case policyEnded
         case revealedSectionChanged(MenuBarSectionName?)
     }
 
-    /// What the attribution has seen, kept apart from the publisher so it can be driven one event at a time.
+    /// Kept apart from the publisher so it can be driven one event at a time.
     nonisolated struct State: Equatable {
-        /// How many policy calls are running. A reveal made inside one is Thaw's own.
+        /// A reveal made inside a policy call is Thaw's own.
         private(set) var policyCalls = 0
-        /// Whether the section revealed now was revealed inside a policy call.
         private(set) var revealIsPolicy = false
-        /// The section revealed now, so the same value published again changes nothing.
+        /// Kept so the same value published again changes nothing.
         private(set) var revealed: MenuBarSectionName?
 
         var isInPolicyCall: Bool {

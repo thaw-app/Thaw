@@ -50,7 +50,7 @@ final class ThawBarColorManager {
         overridesMenuBar ? localSample : sharedSamples[displayID]
     }
 
-    func performSetup(with thawBarPanel: ThawBarPanel, appState: AppState, displays: DisplayEnvironment) {
+    func performSetup(with thawBarPanel: ThawBarPanel, appState: AppState, displaySettlements: some Publisher<EnvironmentChange, Never>) {
         self.thawBarPanel = thawBarPanel
         self.appState = appState
         stopPeriodicRefresh()
@@ -103,7 +103,7 @@ final class ThawBarColorManager {
             NSWorkspace.shared.notificationCenter
                 .publisher(for: NSWorkspace.activeSpaceDidChangeNotification)
                 .replace(with: ()),
-            displays.settlements.replace(with: ()),
+            displaySettlements.replace(with: ()),
             DistributedNotificationCenter.default()
                 .publisher(for: DistributedNotificationCenter.interfaceThemeChangedNotification)
                 .replace(with: ())

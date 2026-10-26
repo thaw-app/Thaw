@@ -267,7 +267,7 @@ final class LayoutBarItemView: LayoutBarArrangedView {
         actions.append(contentsOf: MenuBarSearchItemActions.moveDestinations(appState: appState).compactMap { name in
             guard let name, name != current else { return nil }
             return NSAccessibilityCustomAction(
-                name: String(localized: "Move to \(MenuBarSearchItemActions.title(for: name))")
+                name: String(localized: "Move to \(name.localizedName)")
             ) { [weak appState] in
                 guard let appState else { return false }
                 MenuBarSearchItemActions.move(item, to: name, appState: appState)

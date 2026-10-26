@@ -16,12 +16,11 @@ nonisolated enum EnvironmentSettle {
         var maxReads = 6
     }
 
-    /// Two equal reads in a row settle, and so does reaching the read cap.
     static func isSettled(previous: DisplayArrangement?, current: DisplayArrangement, reads: Int, timing: Timing) -> Bool {
         previous == current || reads >= timing.maxReads
     }
 
-    /// The wait before the given read, counted from 1.
+    /// Reads are counted from 1.
     static func delay(beforeRead read: Int, timing: Timing) -> Duration {
         read <= 1 ? timing.quiet : timing.confirm
     }

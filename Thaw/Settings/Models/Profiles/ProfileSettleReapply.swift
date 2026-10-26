@@ -22,9 +22,8 @@ nonisolated enum ProfileSettleReapply {
     enum Step: Equatable {
         /// Apply it, because the last settle left another profile in place.
         case reapply
-        /// Leave the apply already running for it to finish. A display switch applies the profile
-        /// during the settle, and applying it again would run its hooks and snapshot twice. Its layout
-        /// waits for the settling task, so the settle must not wait for it in turn.
+        /// A display switch applies the profile during the settle, and applying it again would run its hooks
+        /// and snapshot twice. Its layout waits for the settling task, so the settle must not wait for it.
         case leavePendingApply
         /// Leave it, so drags made since it was applied survive.
         case keep
@@ -58,11 +57,6 @@ nonisolated enum ProfileSettleReapply {
                     defaults.removeObject(forKey: Self.key)
                 }
             }
-        }
-
-        /// Records the active profile and says whether this settle should apply it.
-        func settle(activeProfileID: UUID?) -> Bool {
-            settle(activeProfileID: activeProfileID, pendingApplyProfileID: nil) == .reapply
         }
 
         /// Records the active profile and says what this settle does with it.

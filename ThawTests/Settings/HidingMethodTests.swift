@@ -33,6 +33,15 @@ struct HidingMethodTests {
         #expect(!HidingMethod.native.hidesAppleItems)
     }
 
+    @Test("The Apple-items switch reads what each method needs", .scratchDefaults, arguments: HidingMethod.allCases)
+    func appleItemsSwitchFollowsTheMethod(method: HidingMethod) {
+        withPrivateSettingsChangeCenter {
+            let settings = AdvancedSettings()
+            settings.enableNativeAppHiding = method.usesNativeAppHiding
+            #expect(settings.enableExperimentalSystemItemHiding == method.hidesAppleItems)
+        }
+    }
+
     @Test("Every method has its own identity, name and explanation")
     func methodsAreTellableApart() {
         let methods = HidingMethod.allCases

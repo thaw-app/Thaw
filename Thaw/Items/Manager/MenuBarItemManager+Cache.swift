@@ -530,8 +530,7 @@ extension MenuBarItemManager {
         }
 
         if MenuBarBackendProvider.current.canSynthesizeControlItems(snapshotItems: items) {
-            // macOS 27 exposes neither AX elements nor windows for zero-length dividers. This walk
-            // found none, so no live pair is known any more, and the pass gets stand-ins.
+            // macOS 27 exposes no AX element or window for zero-length dividers, so no live pair is known any more.
             lastKnownControlItems = nil
             let controlItems = cacheDividers(on: displayID)
             await MainActor.run {

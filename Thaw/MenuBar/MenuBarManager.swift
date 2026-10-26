@@ -279,16 +279,16 @@ final class MenuBarManager {
     /// Captured at launch setup so smart rehide reads menu-open state without reaching through the item manager.
     private var menuOpenMonitor: MenuOpenMonitor?
 
-    func performSetup(with appState: AppState, activeDisplayWatcher: ActiveMenuBarDisplayWatcher) {
+    func performSetup(with appState: AppState, activeDisplayWatcher: ActiveMenuBarDisplayWatcher, displays: DisplayEnvironment) {
         self.appState = appState
         self.activeDisplayWatcher = activeDisplayWatcher
         configuration = appState.settings
         menuOpenMonitor = appState.itemManager.menuOpenMonitor
         installObservers()
-        thawBarPanel.performSetup(with: appState)
-        searchPanel.performSetup(with: appState)
+        thawBarPanel.performSetup(with: appState, displayInvalidations: displays.invalidations, displaySettlements: displays.settlements)
+        searchPanel.performSetup(with: appState, displayInvalidations: displays.invalidations)
         appearanceEditorPanel.performSetup(with: appState)
-        layoutEditorPanel.performSetup(with: appState)
+        layoutEditorPanel.performSetup(with: appState, displayInvalidations: displays.invalidations)
         for section in sections {
             section.performSetup(with: appState)
         }

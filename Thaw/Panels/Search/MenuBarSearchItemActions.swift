@@ -157,7 +157,7 @@ enum MenuBarSearchItemActions {
         )
         let message = MoveResultMessage.make(
             itemName: item.displayName,
-            sectionTitle: title(for: section),
+            sectionTitle: section.localizedName,
             committed: committed,
             landed: MoveLanding.landed(
                 in: section,
@@ -191,13 +191,6 @@ enum MenuBarSearchItemActions {
         SettingsSearchNavigation.selectSidebarPane(.menuBarLayout, navigationState: appState.navigationState)
         appState.activate(withPolicy: .regular)
         appState.openWindow(.settings)
-    }
-
-    // MARK: Menu construction
-
-    /// The section's name as a menu title, the same one its heading shows.
-    static func title(for name: MenuBarSection.Name) -> String {
-        name.localizedName
     }
 
     // MARK: Move policy

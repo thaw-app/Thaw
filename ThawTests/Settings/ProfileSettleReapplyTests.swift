@@ -124,7 +124,7 @@ struct ProfileSettleReapplyTests {
         let record = ProfileSettleReapply.Record(defaults: freshDefaults())
         var applied = [UUID]()
         for active in [work, work, work, home, home, work] {
-            if record.settle(activeProfileID: active) {
+            if record.settle(activeProfileID: active, pendingApplyProfileID: nil) == .reapply {
                 applied.append(active)
             }
         }
@@ -134,9 +134,9 @@ struct ProfileSettleReapplyTests {
     @Test("Settling with no active profile forgets the last one")
     func settleWithoutProfileForgets() {
         let record = ProfileSettleReapply.Record(defaults: freshDefaults())
-        #expect(record.settle(activeProfileID: work))
-        #expect(!record.settle(activeProfileID: nil))
+        #expect(record.settle(activeProfileID: work, pendingApplyProfileID: nil) == .reapply)
+        #expect(record.settle(activeProfileID: nil, pendingApplyProfileID: nil) == .keep)
         #expect(record.lastSettledProfileID == nil)
-        #expect(record.settle(activeProfileID: work))
+        #expect(record.settle(activeProfileID: work, pendingApplyProfileID: nil) == .reapply)
     }
 }

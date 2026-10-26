@@ -611,17 +611,6 @@ extension MenuBarItemManager {
         isApplyingProfileLayout = false
     }
 
-    /// Recheck settling after each await: performSetup re-entry can cancel the captured task and start a new window.
-    private func waitForStartupSettlingToEnd() async {
-        while isInStartupSettling {
-            guard let settlingTask = startupSettlingTask else { break }
-            MenuBarItemManager.diagLog.debug(
-                "applyProfileLayout: waiting for startup settling to end"
-            )
-            await settlingTask.value
-        }
-    }
-
     /// Selects entry/exit state handling; the rest of the apply path is shared.
     enum ApplySource {
         /// A profile spec overwrites savedSectionOrder, the pinning sets and
@@ -722,7 +711,11 @@ extension MenuBarItemManager {
         // MARK: Phase 0: gate on startup settling
 
         // cacheItemsRegardless skips restore during settling, which would silently shadow these moves.
-        await waitForStartupSettlingToEnd()
+        // performSetup re-entry can replace the settling task, so the wait follows the replacement.
+        if isInStartupSettling {
+            MenuBarItemManager.diagLog.debug("applyProfileLayout: waiting for startup settling to end")
+        }
+        await SettlingWait.follow(isSettling: { isInStartupSettling }, currentTask: { startupSettlingTask })
 
         // A newer apply may cancel us during settling; do not arm the superseded profile's state.
         if Task.isCancelled {

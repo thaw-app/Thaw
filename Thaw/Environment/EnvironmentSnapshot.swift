@@ -5,9 +5,6 @@
 //  Copyright (Thaw) © 2026 Toni Förster
 //  Licensed under the GNU GPLv3
 
-import Observation
-
-/// What a settled display change did, judged from the arrangement before and after it.
 nonisolated enum EnvironmentChange: String, Equatable, Sendable {
     case displayAdded
     case displayRemoved
@@ -17,8 +14,8 @@ nonisolated enum EnvironmentChange: String, Equatable, Sendable {
     case resolutionOnly
     case none
 
-    /// Counts decide first. A new size on the same displays counts as a resolution change even when a
-    /// neighbour's origin shifts with it, because macOS moves the neighbours to keep them adjacent.
+    /// A new size counts as a resolution change even when a neighbour's origin shifts, because macOS
+    /// moves the neighbours to keep them adjacent.
     init(from previous: DisplayArrangement, to current: DisplayArrangement) {
         if current.frames.count > previous.frames.count {
             self = .displayAdded
@@ -34,10 +31,8 @@ nonisolated enum EnvironmentChange: String, Equatable, Sendable {
     }
 }
 
-/// The display arrangement readers may rely on, and whether a change is still settling.
-/// The generation rises once for each settled change, so a reader can tell one change from the next.
+/// The generation rises once per settled change, so a reader can tell one change from the next.
 @MainActor
-@Observable
 final class EnvironmentSnapshot {
     private(set) var generation = 0
     private(set) var arrangement: DisplayArrangement
@@ -56,7 +51,6 @@ final class EnvironmentSnapshot {
         }
     }
 
-    /// Takes the settled arrangement and returns how it differs from the last one.
     @discardableResult
     func settle(on newArrangement: DisplayArrangement) -> EnvironmentChange {
         let newChange = EnvironmentChange(from: arrangement, to: newArrangement)

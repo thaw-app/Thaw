@@ -46,10 +46,10 @@ final class AppState {
     /// event taps, which ask for a check.
     private let activeDisplayWatcher = ActiveMenuBarDisplayWatcher()
 
-    /// Settles screen-parameter changes into one numbered snapshot; readers follow its invalidations and settlements.
+    /// Settles screen-parameter changes into one numbered snapshot.
     let displayEnvironment = DisplayEnvironment()
 
-    /// Runs the settle and cache refresh a display change owes, once per settled generation.
+    /// Runs the settle a display change owes, and the image cleanup after a removal, once per settled generation.
     @ObservationIgnored private lazy var displayChangeCoordinator = DisplayChangeCoordinator(
         environment: displayEnvironment,
         effects: MenuBarDisplayChangeEffects(itemManager: itemManager, repairs: itemManager.repairs, imageCache: imageCache)
@@ -217,7 +217,7 @@ final class AppState {
 
         displayEnvironment.start()
         settings.performSetup(with: self)
-        menuBarManager.performSetup(with: self, activeDisplayWatcher: activeDisplayWatcher)
+        menuBarManager.performSetup(with: self, activeDisplayWatcher: activeDisplayWatcher, displays: displayEnvironment)
         // A refused preferences watcher stays stopped; recreate it after either a table-file grant or Full Disk Access.
         permissions.onPermissionTransition = { [weak self] permission, granted in
             guard let self, granted, permission === permissions.fullDiskAccess else { return }
@@ -225,7 +225,7 @@ final class AppState {
         }
         diagLog.debug("bootstrap: settings and menuBarManager setup complete")
 
-        appearanceManager.performSetup(with: self, displays: displayEnvironment)
+        appearanceManager.performSetup(with: self, displayInvalidations: displayEnvironment.invalidations, displaySettlements: displayEnvironment.settlements)
         hidEventManager.performSetup(with: self, activeDisplayWatcher: activeDisplayWatcher)
         diagLog.debug("bootstrap: starting itemManager setup")
         await itemManager.performSetup(with: self)
@@ -240,7 +240,7 @@ final class AppState {
         )
         presentationMonitor.performSetup(with: self)
         spacerManager.performSetup(with: self)
-        screenCorners.performSetup(with: self, displays: displayEnvironment)
+        screenCorners.performSetup(with: self, displaySettlements: displayEnvironment.settlements)
         itemHints.performSetup(with: self)
         groupFolders.performSetup(with: self)
         diagLog.debug("bootstrap: imageCache setup complete")
@@ -258,7 +258,7 @@ final class AppState {
         itemManager.savedOrderMirrorGate.observe(displayInvalidations: displayEnvironment.invalidations)
         controlCommandObserver.performSetup(with: self)
         controlStatePublisher.performSetup(with: self)
-        swapBarManager.performSetup(with: self, displays: displayEnvironment)
+        swapBarManager.performSetup(with: self, displaySettlements: displayEnvironment.settlements)
         controlItemPanel.performSetup(with: self)
         recordingWatchManager.performSetup(with: self)
         applicationMenuCover.performSetup(with: self)

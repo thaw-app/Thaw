@@ -189,8 +189,6 @@ nonisolated enum SearchIndex {
         // Shown under Section divider style only while Custom is chosen; search finds that.
         .advanced("customSectionDividerImage"),
         .advanced("customSectionDividerIsTemplate"),
-        // Follows the Hiding method picker, indexed under advanced.enableNativeAppHiding.
-        .advanced("enableExperimentalSystemItemHiding"),
         // Its row is commented out of Layout: the timeout has no effect on macOS 27.
         .advanced("menuBarOrderFulfillmentTimeout"),
         // Set by Replace Control Center items, indexed under advanced.enableModuleStandIns.

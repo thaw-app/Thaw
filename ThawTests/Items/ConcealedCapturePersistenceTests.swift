@@ -22,25 +22,54 @@ struct ConcealedCapturePersistenceTests {
     @Test("A pass that changed a hidden item's image is saved")
     func hiddenChangeSaves() {
         #expect(ConcealedCapturePersistence.shouldSave(
-            changedTags: [visible, hidden], concealedIdentifiers: [hidden.tagIdentifier]
+            capturedTags: [visible, hidden], concealedIdentifiers: [hidden.tagIdentifier], imageChanged: { _ in true }
         ))
     }
 
     @Test("A pass that changed only visible items is not saved, since the live loop refreshes those")
     func visibleChangeDoesNotSave() {
         #expect(!ConcealedCapturePersistence.shouldSave(
-            changedTags: [visible], concealedIdentifiers: [hidden.tagIdentifier]
+            capturedTags: [visible], concealedIdentifiers: [hidden.tagIdentifier], imageChanged: { _ in true }
         ))
     }
 
     @Test("A pass that changed nothing is not saved")
     func noChangeDoesNotSave() {
-        #expect(!ConcealedCapturePersistence.shouldSave(changedTags: [], concealedIdentifiers: [hidden.tagIdentifier]))
+        #expect(!ConcealedCapturePersistence.shouldSave(
+            capturedTags: [visible, hidden], concealedIdentifiers: [hidden.tagIdentifier], imageChanged: { _ in false }
+        ))
     }
 
     @Test("A hidden item matches by identity, whatever its window ID")
     func matchesIgnoringWindowID() {
         let live = MenuBarItemTag(namespace: .string("com.example.hidden"), title: "Item-0", windowID: 42, instanceIndex: 0)
-        #expect(ConcealedCapturePersistence.shouldSave(changedTags: [live], concealedIdentifiers: [hidden.tagIdentifier]))
+        #expect(ConcealedCapturePersistence.shouldSave(
+            capturedTags: [live], concealedIdentifiers: [hidden.tagIdentifier], imageChanged: { _ in true }
+        ))
+    }
+
+    @Test("Only hidden items' images are compared, since a comparison can read pixels")
+    func comparesOnlyHiddenItems() {
+        var compared: [MenuBarItemTag] = []
+
+        _ = ConcealedCapturePersistence.shouldSave(
+            capturedTags: [visible, hidden], concealedIdentifiers: [hidden.tagIdentifier],
+            imageChanged: { compared.append($0); return false }
+        )
+
+        #expect(compared == [hidden])
+    }
+
+    @Test("With nothing hidden no image is compared")
+    func nothingHiddenComparesNothing() {
+        var comparisons = 0
+
+        let saves = ConcealedCapturePersistence.shouldSave(
+            capturedTags: [visible, hidden], concealedIdentifiers: [],
+            imageChanged: { _ in comparisons += 1; return true }
+        )
+
+        #expect(!saves)
+        #expect(comparisons == 0)
     }
 }

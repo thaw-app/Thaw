@@ -666,7 +666,7 @@ extension ControlItem {
         noteDegenerateFrame()
     }
 
-    /// A spent ladder was measured against one bar geometry; each display invalidation lets it retry, in the posting turn.
+    /// A spent ladder was measured against one bar geometry, so each display invalidation lets it retry.
     func observeDisplayInvalidations(_ invalidations: some Publisher<Void, Never>) {
         displayInvalidation = invalidations.sink { [weak self] in self?.resetOffBandRecovery() }
     }

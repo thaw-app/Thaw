@@ -790,7 +790,7 @@ extension MenuBarItemManager {
         }
 
         let cachedItems = itemCache.managedItems
-        // The cache never holds the dividers, so they come from the one source for cache-based passes.
+        // The cache never holds the dividers.
         let controlItems = cacheDividers()
 
         if !arrangementIsManual,

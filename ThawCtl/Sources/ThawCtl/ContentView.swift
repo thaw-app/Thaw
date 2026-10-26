@@ -162,7 +162,7 @@ struct ContentView: View {
     /// Keep this list in step with SettingsURIHandler.keyTable in
     /// Thaw/System/SettingsURIHandler.swift. ThawCtl is a separate package and
     /// cannot import the app target, so the names are repeated rather than
-    /// derived.
+    /// derived. Only writable keys belong here; getKeys lists the read-only ones.
     private var booleanKeys: [String] {
         [
             "showThawIcon", "customThawIconIsTemplate", "simpleMode",
@@ -172,7 +172,7 @@ struct ContentView: View {
             "autoRehide", "enableAlwaysHiddenSection", "showAllSectionsOnUserDrag",
             "hideApplicationMenus", "enableSecondaryContextMenu", "showMenuBarTooltips",
             "autoZenWhileSharingScreen", "enableDiagnosticLogging",
-            "enableMenuBarItemOverflow", "enableExperimentalSystemItemHiding",
+            "enableMenuBarItemOverflow",
             "enableExperimentalOverflowPrevention", "alwaysUseAppIconForMenuBarItems",
             "enableMenuBarItemDescenders", "enableSwapBar", "enableControlItemPanel",
             "fetchReleaseNotes", "enableRecordingWatch", "zenModeWhileRecording",
@@ -183,6 +183,7 @@ struct ContentView: View {
 
     private var getKeys: [String] {
         ["all"] + booleanKeys + [
+            "enableExperimentalSystemItemHiding",
             "rehideInterval", "tempShowInterval", "showOnHoverDelay", "tooltipDelay",
             "iconRefreshInterval", "menuBarItemAlertRevealCooldown",
             "menuBarOrderFulfillmentTimeout", "rehideStrategy", "useThawBar",

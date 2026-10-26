@@ -27,11 +27,6 @@ struct SectionNameLocalizationTests {
         #expect(MenuBarSectionName.alwaysHidden.localizedName(in: chinese) == "永久隐藏")
     }
 
-    @Test("Menus use the same name as the headings", arguments: MenuBarSectionName.allCases)
-    func menuTitleMatches(section: MenuBarSectionName) {
-        #expect(MenuBarSearchItemActions.title(for: section) == section.localizedName)
-    }
-
     @Test("A Layout tile's VoiceOver value names its section as the heading does", arguments: MenuBarSectionName.allCases)
     func accessibilityValueUsesTheTranslation(section: MenuBarSectionName) {
         #expect(LayoutSelectionHighlight.accessibilityValue(section: section, isSelected: false) == section.localizedName)

@@ -7,13 +7,17 @@
 
 import MenuBarModel
 
-/// Whether a capture pass is worth writing to disk.
-///
-/// A hidden item's glyph can only be captured while it is revealed, and the live loop never refreshes it,
-/// so a relaunch without that capture on disk shows app icons until the next reveal. A visible item's
-/// glyph is captured again within seconds of any open, so passes that change only those skip the write.
+/// A hidden item's glyph is only captured while revealed, so without it on disk a relaunch shows app icons
+/// until the next reveal. Visible glyphs are recaptured within seconds, so changes to only those skip the write.
 nonisolated enum ConcealedCapturePersistence {
-    static func shouldSave(changedTags: some Sequence<MenuBarItemTag>, concealedIdentifiers: Set<String>) -> Bool {
-        changedTags.contains { concealedIdentifiers.contains($0.tagIdentifier) }
+    /// Asks whether an image changed only for the hidden items among the captured tags, which are usually a
+    /// handful, since the comparison can read pixels and the live loop commits passes many times a second.
+    static func shouldSave(
+        capturedTags: some Sequence<MenuBarItemTag>,
+        concealedIdentifiers: Set<String>,
+        imageChanged: (MenuBarItemTag) -> Bool
+    ) -> Bool {
+        guard !concealedIdentifiers.isEmpty else { return false }
+        return capturedTags.contains { concealedIdentifiers.contains($0.tagIdentifier) && imageChanged($0) }
     }
 }

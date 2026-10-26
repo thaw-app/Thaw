@@ -70,7 +70,6 @@ extension AppSettings {
         advanced.menuBarOrderFulfillmentTimeout = Defaults.DefaultValue.menuBarOrderFulfillmentTimeout
         advanced.enableDiagnosticLogging = Defaults.DefaultValue.enableDiagnosticLogging
         advanced.enableMenuBarItemOverflow = Defaults.DefaultValue.enableMenuBarItemOverflow
-        advanced.enableExperimentalSystemItemHiding = Defaults.DefaultValue.enableExperimentalSystemItemHiding
         advanced.enableExperimentalOverflowPrevention = Defaults.DefaultValue.enableExperimentalOverflowPrevention
         advanced.alwaysUseAppIconForMenuBarItems = Defaults.DefaultValue.alwaysUseAppIconForMenuBarItems
         advanced.enableMenuBarItemDescenders = Defaults.DefaultValue.enableMenuBarItemDescenders

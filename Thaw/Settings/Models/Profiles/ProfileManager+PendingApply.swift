@@ -8,7 +8,6 @@
 import Foundation
 
 extension ProfileManager {
-    /// The profile whose apply is still running, if any.
     var pendingApplyProfileID: UUID? {
         layoutTask == nil ? nil : layoutTaskProfileID
     }

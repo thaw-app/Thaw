@@ -98,9 +98,9 @@ final class MenuBarLayoutEditorPanel: NSObject, NSPopoverDelegate {
         return nil
     }
 
-    func performSetup(with appState: AppState, displays: DisplayEnvironment? = nil) {
+    func performSetup(with appState: AppState, displayInvalidations: some Publisher<Void, Never>) {
         self.appState = appState
-        configureObservers(displays: displays ?? appState.displayEnvironment)
+        configureObservers(displayInvalidations: displayInvalidations)
     }
 
     /// usesReorderEditor nil follows the hidden default; the Layout pane's button passes true.
@@ -180,7 +180,7 @@ final class MenuBarLayoutEditorPanel: NSObject, NSPopoverDelegate {
 
     // MARK: Private
 
-    private func configureObservers(displays: DisplayEnvironment) {
+    private func configureObservers(displayInvalidations: some Publisher<Void, Never>) {
         var c = Set<AnyCancellable>()
 
         NSApp.publisher(for: \.effectiveAppearance)
@@ -197,7 +197,7 @@ final class MenuBarLayoutEditorPanel: NSObject, NSPopoverDelegate {
                 for: NSWorkspace.activeSpaceDidChangeNotification
             )
             .map { _ in () },
-            displays.invalidations
+            displayInvalidations
         )
         .sink { [weak self] in
             // The window is not pinned to a bar, so it stays.

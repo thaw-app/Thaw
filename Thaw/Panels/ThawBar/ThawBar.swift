@@ -123,9 +123,8 @@ final class ThawBarPanel: NSPanel {
         self.canHide = false
     }
 
-    func performSetup(with appState: AppState, displays: DisplayEnvironment? = nil) {
+    func performSetup(with appState: AppState, displayInvalidations: some Publisher<Void, Never>, displaySettlements: some Publisher<EnvironmentChange, Never>) {
         self.appState = appState
-        let displays = displays ?? appState.displayEnvironment
 
         // Observations delivers the current lock value before subsequent changes.
         lockPositionObservationTask?.cancel()
@@ -137,10 +136,10 @@ final class ThawBarPanel: NSPanel {
             }
         }
 
-        // Activating an inactive screen posts a screen-change notification; do not let it close a just-opened bar. The hide stays at the posting, in the turn of the other reveal and hide writers.
+        // Activating an inactive screen posts a screen-change notification; do not let it close a just-opened bar. The hide runs at the posting, with the other reveal and hide writers.
         NSWorkspace.shared.notificationCenter.publisher(for: NSWorkspace.activeSpaceDidChangeNotification)
             .map { _ in () }
-            .merge(with: displays.invalidations)
+            .merge(with: displayInvalidations)
             .sink { [weak self] in
                 guard
                     let self,
@@ -163,7 +162,7 @@ final class ThawBarPanel: NSPanel {
             }
             .store(in: &cancellables)
 
-        colorManager.performSetup(with: self, appState: appState, displays: displays)
+        colorManager.performSetup(with: self, appState: appState, displaySettlements: displaySettlements)
     }
 
     /// Nil when the panel is wider than the screen and no placement fits.

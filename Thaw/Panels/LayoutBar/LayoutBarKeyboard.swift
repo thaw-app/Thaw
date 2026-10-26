@@ -320,7 +320,7 @@ enum LayoutBarKeyboard {
         )
         announce(
             String(
-                localized: "Moved \(item.displayName) to \(MenuBarSearchItemActions.title(for: target))"
+                localized: "Moved \(item.displayName) to \(target.localizedName)"
             )
         )
         refocusAfterRebuild(tag: item.tag, in: target, window: view.window)

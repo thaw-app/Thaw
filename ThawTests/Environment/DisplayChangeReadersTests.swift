@@ -10,9 +10,7 @@ import Combine
 import Testing
 @testable import Thaw
 
-/// Readers hear display changes from DisplayEnvironment rather than from screen-parameter postings
-/// on the default center. The postings go to a private center: the default one would reach the
-/// observers of the app hosting the tests.
+/// The postings go to a private center, since the default one would reach the app hosting the tests.
 @MainActor
 @Suite("Display change readers", .serialized, .timeLimit(.minutes(1)))
 struct DisplayChangeReadersTests {
@@ -45,18 +43,17 @@ struct DisplayChangeReadersTests {
     @Test("The overlay rebuilds at each settle, and once after a burst of postings")
     func overlayRebuildSignal() async throws {
         var rebuilds = 0
-        let signal = MenuBarAppearanceManager.overlayRebuildSignal(
-            invalidations: environment.invalidations,
-            settlements: environment.settlements
-        )
-        .sink { rebuilds += 1 }
+        let invalidations = PassthroughSubject<Void, Never>()
+        let settlements = PassthroughSubject<EnvironmentChange, Never>()
+        let signal = MenuBarAppearanceManager.overlayRebuildSignal(invalidations: invalidations, settlements: settlements)
+            .sink { rebuilds += 1 }
         defer { signal.cancel() }
 
-        environment.settlements.send(.none)
+        settlements.send(.none)
         #expect(rebuilds == 1, "A settle rebuilds at once, even when nothing moved")
 
         for _ in 0 ..< 3 {
-            environment.invalidations.send()
+            invalidations.send()
         }
         #expect(rebuilds == 1, "Postings wait out their burst")
         try await Task.sleep(for: .milliseconds(300))
@@ -72,7 +69,7 @@ struct DisplayChangeReadersTests {
         }
         let appState = AppState()
         let colorManager = ThawBarColorManager()
-        colorManager.performSetup(with: ThawBarPanel(), appState: appState, displays: environment)
+        colorManager.performSetup(with: ThawBarPanel(), appState: appState, displaySettlements: environment.settlements)
         try await drainMainQueue()
         let before = colorManager.windowImageGeneration
 
@@ -86,6 +83,7 @@ struct DisplayChangeReadersTests {
         #expect(colorManager.windowImageGeneration == before + 1)
     }
 
+    /// The panel takes only the invalidations, so a settle cannot reach it.
     @Test("The search panel closes at the posting")
     func searchPanelClosesAtPosting() {
         environment.start()
@@ -95,11 +93,8 @@ struct DisplayChangeReadersTests {
         }
         let appState = AppState()
         let panel = MenuBarSearchPanel()
-        panel.performSetup(with: appState, displays: environment)
+        panel.performSetup(with: appState, displayInvalidations: environment.invalidations)
         appState.navigationState.isSearchPresented = true
-
-        environment.settlements.send(.none)
-        #expect(appState.navigationState.isSearchPresented, "A settle on its own leaves the panel alone")
 
         postScreenChange()
         #expect(!appState.navigationState.isSearchPresented)
@@ -111,6 +106,7 @@ struct DisplayChangeReadersTests {
         environment.start()
         let appState = AppState()
         let panel = ThawBarPanel()
+        let settlements = PassthroughSubject<EnvironmentChange, Never>()
         let originalPolicy = NSApp.activationPolicy()
         defer {
             panel.close()
@@ -119,13 +115,13 @@ struct DisplayChangeReadersTests {
             environment.stop()
         }
         NSApp.setActivationPolicy(.accessory)
-        panel.performSetup(with: appState, displays: environment)
+        panel.performSetup(with: appState, displayInvalidations: environment.invalidations, displaySettlements: settlements)
         panel.dismissesOnOutsideClick = false
         panel.show(section: .hidden, on: screen)
         try await Task.sleep(for: .milliseconds(1100))
         #expect(panel.isVisible)
 
-        environment.settlements.send(.displayAdded)
+        settlements.send(.displayAdded)
         #expect(panel.isVisible, "A settle on its own leaves the bar up")
 
         postScreenChange()

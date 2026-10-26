@@ -110,10 +110,14 @@ final class MenuBarAppearanceManager {
     let menuBarInsetAmount: CGFloat = 3.5
 
     /// Call once to restore settings and start observing.
-    func performSetup(with appState: AppState, displays: DisplayEnvironment) {
+    func performSetup(
+        with appState: AppState,
+        displayInvalidations: some Publisher<Void, Never>,
+        displaySettlements: some Publisher<EnvironmentChange, Never>
+    ) {
         self.appState = appState
         loadInitialState()
-        configureCancellables(displays: displays)
+        configureCancellables(displayInvalidations: displayInvalidations, displaySettlements: displaySettlements)
     }
 
     /// Decode shared settings and overrides independently so one unreadable key does not block the other.
@@ -165,9 +169,12 @@ final class MenuBarAppearanceManager {
         spaceOverrides = [:]
     }
 
-    private func configureCancellables(displays: DisplayEnvironment) {
+    private func configureCancellables(
+        displayInvalidations: some Publisher<Void, Never>,
+        displaySettlements: some Publisher<EnvironmentChange, Never>
+    ) {
         cancellables = [
-            observeScreenParameters(displays),
+            observeScreenParameters(invalidations: displayInvalidations, settlements: displaySettlements),
             observeActiveSpace(),
             observeAccentColor(),
             observeSystemGlass(),
@@ -219,9 +226,8 @@ final class MenuBarAppearanceManager {
         }
     }
 
-    /// When to look for moved screens: 100 ms after a burst of postings, because an overlay left on
-    /// the old geometry until the settle is visible, and again at each settle, in case the early
-    /// look caught the screens part way through the change. A look at unmoved screens does nothing.
+    /// Looks 100 ms after a burst, since an overlay left on the old geometry until the settle shows, and
+    /// again at each settle in case the early look caught the screens mid-change.
     static func overlayRebuildSignal(
         invalidations: some Publisher<Void, Never>,
         settlements: some Publisher<EnvironmentChange, Never>
@@ -232,8 +238,11 @@ final class MenuBarAppearanceManager {
             .eraseToAnyPublisher()
     }
 
-    private func observeScreenParameters(_ displays: DisplayEnvironment) -> AnyCancellable {
-        Self.overlayRebuildSignal(invalidations: displays.invalidations, settlements: displays.settlements)
+    private func observeScreenParameters(
+        invalidations: some Publisher<Void, Never>,
+        settlements: some Publisher<EnvironmentChange, Never>
+    ) -> AnyCancellable {
+        Self.overlayRebuildSignal(invalidations: invalidations, settlements: settlements)
             .sink { [weak self] in self?.rebuildOverlayPanelsIfScreensMoved() }
     }
 

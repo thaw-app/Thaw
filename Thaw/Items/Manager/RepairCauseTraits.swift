@@ -9,9 +9,8 @@
 nonisolated struct RepairCauseTraits: Equatable, Sendable {
     /// Someone is at the bar, so the passes this cause starts are not a loop.
     var isUserAction = false
-    /// The user has changed the layout.
     var isLayoutChangeByUser = false
-    /// The automatic passes asked for before this cause were planned on a bar that is changing under them, so they are called off.
+    /// Calls off the automatic passes already planned, since the bar is changing under them.
     var callsOffPlannedWork = false
     /// The loop budget starts again, lifting a pause.
     var refillsBudget = false
@@ -24,7 +23,6 @@ nonisolated struct RepairCauseTraits: Equatable, Sendable {
     /// The user acting at the bar without changing the layout.
     static let userAction = Self(isUserAction: true, refillsBudget: true, keepsTurnOnUserInput: true)
 
-    /// The user changing the layout.
     static let userLayoutChange = Self(isUserAction: true, isLayoutChangeByUser: true, refillsBudget: true, keepsTurnOnUserInput: true)
 
     /// The user starting something that changes the bar under the passes already planned.

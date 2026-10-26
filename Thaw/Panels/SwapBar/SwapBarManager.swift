@@ -35,12 +35,12 @@ final class SwapBarManager {
         advancedSettings?.enableSwapBar ?? false
     }
 
-    func performSetup(with appState: AppState, displays: DisplayEnvironment) {
+    func performSetup(with appState: AppState, displaySettlements: some Publisher<EnvironmentChange, Never>) {
         self.appState = appState
         advancedSettings = appState.settings.advanced
         cancellables = [
             observeSettingFlips(),
-            observeDisplayChanges(displays),
+            observeDisplayChanges(displaySettlements),
         ]
     }
 
@@ -55,13 +55,13 @@ final class SwapBarManager {
 
     /// A Space change or a settled display change moves the bottom edge;
     /// re-place rather than trust the old frame.
-    private func observeDisplayChanges(_ displays: DisplayEnvironment) -> AnyCancellable {
+    private func observeDisplayChanges(_ settlements: some Publisher<EnvironmentChange, Never>) -> AnyCancellable {
         let cancellable = Publishers.Merge(
             NSWorkspace.shared.notificationCenter.publisher(
                 for: NSWorkspace.activeSpaceDidChangeNotification
             )
             .map { _ in () },
-            displays.settlements.map { _ in () }
+            settlements.map { _ in () }
         )
         .sink { [weak self] in
             self?.currentDisplayID = nil

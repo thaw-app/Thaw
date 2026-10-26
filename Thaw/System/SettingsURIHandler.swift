@@ -389,7 +389,7 @@ enum SettingsURIHandler {
 
     /// Unset keys use shipped defaults registered through object(forKey:).
     private static func effectiveBool(for entry: SettingURIEntry) -> Bool {
-        (Defaults.object(forKey: entry.defaultsKey) as? Bool) ?? false
+        computedBooleans[entry.defaultsKey]?() ?? (Defaults.object(forKey: entry.defaultsKey) as? Bool) ?? false
     }
 
     /// Reads a double setting's effective value, with the same registered-default

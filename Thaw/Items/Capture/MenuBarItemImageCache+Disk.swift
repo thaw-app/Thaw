@@ -14,6 +14,10 @@ extension MenuBarItemImageCache {
     /// Persists what is currently trusted for a faster restart. The file,
     /// its format, and the save queue live on MenuBarItemImageCacheDiskStore.
     func saveToDisk() {
+        saveToDisk(concealedIdentifiers: appState.map(concealedIdentifiers(in:)) ?? [])
+    }
+
+    private func saveToDisk(concealedIdentifiers: Set<String>) {
         guard !capturesByTag.isEmpty else { return }
 
         diskStore.enqueueSave(
@@ -21,7 +25,7 @@ extension MenuBarItemImageCache {
                 capturesByTag: capturesByTag,
                 accessTimestamps: accessTimestamps
             ),
-            concealedIdentifiers: appState.map(concealedIdentifiers(in:)) ?? []
+            concealedIdentifiers: concealedIdentifiers
         )
     }
 
@@ -34,14 +38,23 @@ extension MenuBarItemImageCache {
     ) -> Bool {
         let before = capturesByTag
         let didChange = commitRecapturePass(pass, admission: admission, ignoreRecentMove: ignoreRecentMove, appState: appState)
-        let changedTags = pass.captured.keys.filter { !MenuBarItemGlyphCapture.isVisuallyEqual(before[$0], capturesByTag[$0]) }
-        if ConcealedCapturePersistence.shouldSave(changedTags: changedTags, concealedIdentifiers: concealedIdentifiers(in: appState)) {
-            saveToDisk()
+        // The commit reports a change whenever a captured image differs from the one it had, so a changeless
+        // commit has nothing to compare.
+        guard didChange else { return false }
+        let concealed = concealedIdentifiers(in: appState)
+        let after = capturesByTag
+        let shouldSave = ConcealedCapturePersistence.shouldSave(capturedTags: pass.captured.keys, concealedIdentifiers: concealed) {
+            !MenuBarItemGlyphCapture.isVisuallyEqual(before[$0], after[$0])
+        }
+        if shouldSave {
+            saveToDisk(concealedIdentifiers: concealed)
         }
         return didChange
     }
 
-    /// The identities of the items in Hidden and Always Hidden.
+    /// The identifiers of the items the item cache places outside the visible section, keyed as the disk file
+    /// keys them. This is section membership by tagIdentifier, not the section controller's effective
+    /// concealment by uniqueIdentifier.
     func concealedIdentifiers(in appState: AppState) -> Set<String> {
         Set(
             MenuBarSection.Name.allCases

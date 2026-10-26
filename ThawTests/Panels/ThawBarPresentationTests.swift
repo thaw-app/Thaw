@@ -6,6 +6,7 @@
 //  Licensed under the GNU GPLv3
 
 import AppKit
+import Combine
 import Testing
 @testable import Thaw
 
@@ -23,7 +24,11 @@ struct ThawBarPresentationTests {
             NSApp.setActivationPolicy(originalPolicy)
         }
         NSApp.setActivationPolicy(.accessory)
-        panel.performSetup(with: appState)
+        panel.performSetup(
+            with: appState,
+            displayInvalidations: Empty<Void, Never>(completeImmediately: false),
+            displaySettlements: Empty<EnvironmentChange, Never>(completeImmediately: false)
+        )
         // This test asserts on a panel that stays up. The dismissal monitor is
         // global, so a click anywhere, any app on the machine running the
         // suite, would close the panel between the show and the assertions.

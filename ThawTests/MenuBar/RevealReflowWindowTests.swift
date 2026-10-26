@@ -15,9 +15,8 @@ import Testing
 @MainActor
 @Suite("Reveal reflow window")
 struct RevealReflowWindowTests {
-    /// A clock the test moves by hand.
     private final class ManualClock {
-        var now = Date(timeIntervalSinceReferenceDate: 1000)
+        var now = ContinuousClock.now
     }
 
     @Test("With no transition seen the bar is settled")
@@ -38,10 +37,10 @@ struct RevealReflowWindowTests {
         revealed.send(.hidden)
         #expect(window.isSettling)
 
-        clock.now += RevealReflowWindow.settleWindow - 0.01
+        clock.now += RevealReflowWindow.settleWindow - .milliseconds(10)
         #expect(window.isSettling)
 
-        clock.now += 0.02
+        clock.now += .milliseconds(20)
         #expect(!window.isSettling)
     }
 
@@ -90,9 +89,9 @@ struct RevealReflowWindowTests {
         window.observe(revealed.eraseToAnyPublisher())
 
         revealed.send(.hidden)
-        clock.now += RevealReflowWindow.settleWindow - 0.1
+        clock.now += RevealReflowWindow.settleWindow - .milliseconds(100)
         revealed.send(nil)
-        clock.now += 0.2
+        clock.now += .milliseconds(200)
 
         #expect(window.isSettling)
     }
@@ -117,13 +116,13 @@ struct RevealReflowWindowTests {
     }
 
     @Test("The window is open strictly before its length has passed", arguments: [
-        (0.0, true),
-        (0.49, true),
-        (0.5, false),
-        (2.0, false),
+        (Duration.zero, true),
+        (.milliseconds(490), true),
+        (.milliseconds(500), false),
+        (.seconds(2), false),
     ])
-    func decision(elapsed: TimeInterval, settling: Bool) {
-        let last = Date(timeIntervalSinceReferenceDate: 0)
+    func decision(elapsed: Duration, settling: Bool) {
+        let last = ContinuousClock.now
 
         #expect(RevealReflowWindow.isSettling(lastTransition: last, now: last + elapsed) == settling)
         #expect(!RevealReflowWindow.isSettling(lastTransition: nil, now: last + elapsed))

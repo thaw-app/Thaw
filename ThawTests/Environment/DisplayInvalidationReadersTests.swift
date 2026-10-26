@@ -10,7 +10,6 @@ import Combine
 import Testing
 @testable import Thaw
 
-/// The readers that drop state at a display change follow DisplayEnvironment's invalidations.
 /// Each environment here posts on its own notification center, so a posting it does not relay reaches no reader.
 @MainActor
 @Suite("Display invalidation readers", .serialized, .timeLimit(.minutes(1)))

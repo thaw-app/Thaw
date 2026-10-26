@@ -13,21 +13,35 @@ import Testing
 @Suite("Display change plan")
 struct DisplayChangePlanTests {
     @Test(
-        "Each kind of change runs the stamp, the settle, its wait and the cache refresh, in that order",
+        "A change that keeps every display stamps and starts the settle, with nothing to wait for after it",
         arguments: [
-            (EnvironmentChange.displayAdded, "displayConnect", false),
-            (.displayRemoved, "displayDisconnect", true),
-            (.rearranged, "displayArrangement", false),
-            (.resolutionOnly, "displayArrangement", false),
+            (EnvironmentChange.displayAdded, "displayConnect"),
+            (.rearranged, "displayArrangement"),
+            (.resolutionOnly, "displayArrangement"),
         ]
     )
-    func stepsPerChange(change: EnvironmentChange, reason: String, cleansImages: Bool) {
+    func stepsPerChange(change: EnvironmentChange, reason: String) {
         #expect(DisplayChangePlan.steps(for: change) == [
             .stampDisplayChanged,
             .startSettle(reason: reason),
-            .awaitSettle,
-            .refreshCaches(cleansImages: cleansImages),
         ])
+    }
+
+    @Test("A removed display also waits out the settle, then cleans the stale images")
+    func removedDisplayCleansImages() {
+        #expect(DisplayChangePlan.steps(for: .displayRemoved) == [
+            .stampDisplayChanged,
+            .startSettle(reason: "displayDisconnect"),
+            .awaitSettle,
+            .cleanImages,
+        ])
+    }
+
+    @Test("Only a removed display cleans images")
+    func onlyRemovalCleansImages() {
+        for change in [EnvironmentChange.displayAdded, .rearranged, .resolutionOnly, .none] {
+            #expect(!DisplayChangePlan.steps(for: change).contains(.cleanImages))
+        }
     }
 
     @Test("An unchanged settle plans nothing")
@@ -83,32 +97,27 @@ struct DisplayChangeCoordinatorTests {
         #expect(effects.steps == [
             .stampDisplayChanged,
             .startSettle(reason: "displayConnect"),
-            .awaitSettle,
-            .refreshCaches(cleansImages: false),
         ])
     }
 
-    @Test("A newer generation mid-run abandons the rest and restarts the order for the new one")
+    @Test("A newer generation mid-run abandons the rest and runs the new one's steps")
     func newerGenerationRestarts() async {
-        let harness = CoordinatorHarness(baseline: Self.single)
+        let harness = CoordinatorHarness(baseline: Self.docked)
         harness.effects.holdsSettle = true
 
-        harness.settle(on: Self.docked)
-        await harness.effects.waitForHeldSettles(1)
         harness.settle(on: Self.single)
-        await harness.effects.waitForHeldSettles(2)
-        harness.effects.releaseSettles()
-        await harness.effects.waitForReturnedSettles(2)
+        await harness.effects.waitForHeldSettles(1)
+        harness.settle(on: Self.docked)
         await harness.coordinator.waitUntilIdle()
+        harness.effects.releaseSettles()
+        await harness.effects.waitForReturnedSettles(1)
 
         #expect(harness.effects.steps == [
             .stampDisplayChanged,
-            .startSettle(reason: "displayConnect"),
-            .awaitSettle,
-            .stampDisplayChanged,
             .startSettle(reason: "displayDisconnect"),
             .awaitSettle,
-            .refreshCaches(cleansImages: true),
+            .stampDisplayChanged,
+            .startSettle(reason: "displayConnect"),
         ])
     }
 
@@ -133,7 +142,7 @@ struct DisplayChangeCoordinatorTests {
         harness.settle(on: Self.single)
         await harness.coordinator.waitUntilIdle()
         #expect(harness.effects.steps.count(where: { $0 == .stampDisplayChanged }) == 2)
-        #expect(harness.effects.steps.last == .refreshCaches(cleansImages: true))
+        #expect(harness.effects.steps.last == .cleanImages)
     }
 
     @Test("A stopped coordinator ignores later settles")
@@ -199,7 +208,6 @@ private final class Flag {
     var value = false
 }
 
-/// A snapshot and a settlement stream the test drives by hand, feeding a coordinator with recording effects.
 @MainActor
 private final class CoordinatorHarness {
     let snapshot: EnvironmentSnapshot
@@ -213,7 +221,6 @@ private final class CoordinatorHarness {
         coordinator.start()
     }
 
-    /// Settles the snapshot on the arrangement and sends the change, as the environment does.
     func settle(on arrangement: DisplayArrangement) {
         settlements.send(snapshot.settle(on: arrangement))
     }
@@ -245,8 +252,8 @@ private final class RecordingEffects: DisplayChangeEffects {
         returnedCount += 1
     }
 
-    func refreshCaches(cleansImages: Bool) async {
-        steps.append(.refreshCaches(cleansImages: cleansImages))
+    func cleanImagesAfterRemoval() async {
+        steps.append(.cleanImages)
     }
 
     func releaseSettles() {

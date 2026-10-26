@@ -8,12 +8,9 @@
 import CoreGraphics
 import MenuBarModel
 
-/// The dividers for passes that work off the item cache, which drops them.
-///
-/// The pair the last walk found is used when there is one. Otherwise the pair is a stand-in:
-/// on macOS 27 a collapsed divider has no accessibility element, so a walk never finds it.
-/// Stand-ins carry window IDs that only this type hands out, so a frame check can tell them
-/// apart from a real divider that macOS parked off the bar.
+/// The dividers for passes that work off the item cache, which drops them. On macOS 27 a collapsed
+/// divider has no accessibility element, so without a walked pair the pass gets stand-ins, whose window
+/// IDs let a frame check tell them from a real divider macOS parked off the bar.
 nonisolated enum CacheDividers {
     /// Below the high bit every synthetic accessibility window ID sets, and far above the IDs
     /// the window server hands out, so no walked item ever carries one.
@@ -22,7 +19,6 @@ nonisolated enum CacheDividers {
     /// The Always Hidden stand-in's window ID, chosen the same way.
     static let standInAlwaysHiddenWindowID: CGWindowID = 0x7FFF_FF01
 
-    /// The live pair when there is one, otherwise stand-ins at the leading edge.
     static func pair(
         live: ControlItemPair?,
         leadingX: CGFloat,
@@ -33,7 +29,7 @@ nonisolated enum CacheDividers {
     }
 
     /// Zero-size dividers at the display's leading edge, so every walked item reads as Visible.
-    /// The store resolves them by tag and title. Always Hidden is included only when enabled.
+    /// The store resolves them by tag and title.
     static func standIns(leadingX: CGFloat, alwaysHiddenEnabled: Bool, ownerPID: pid_t) -> ControlItemPair {
         func standIn(_ tag: MenuBarItemTag, windowID: CGWindowID, title: String) -> MenuBarItem {
             MenuBarItem(
@@ -54,20 +50,17 @@ nonisolated enum CacheDividers {
         )
     }
 
-    /// Whether the divider is a stand-in from this type rather than one a walk found.
     static func isStandIn(_ divider: MenuBarItem) -> Bool {
         divider.isControlItem
             && (divider.windowID == standInHiddenWindowID || divider.windowID == standInAlwaysHiddenWindowID)
     }
 
-    /// The pair to remember as the last walk's dividers, or nil for stand-ins, which must never pass as live.
+    /// Nil for stand-ins, which must never pass as live.
     static func live(_ pair: ControlItemPair) -> ControlItemPair? {
         isStandIn(pair.hidden) ? nil : pair
     }
 
-    /// The x stand-ins sit at: the leading edge of the display the pass works on. The main
-    /// screen is only the last fallback, since it is the screen with the key window, which
-    /// need not be the one showing the menu bar.
+    /// The main screen is only the last fallback: it has the key window, not necessarily the menu bar.
     static func leadingX(display: CGRect?, mainScreen: CGRect?) -> CGFloat {
         display?.minX ?? mainScreen?.minX ?? 0
     }

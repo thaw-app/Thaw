@@ -250,10 +250,9 @@ extension MenuBarItemManager {
         }
     }
 
-    /// Only a profile other than the one already in place is applied, so drags made since survive.
-    /// An apply this settle starts is awaited, so applySavedLayout after it cannot race it. One
-    /// already running is left alone: its layout waits for this settle's task, so awaiting it here
-    /// would never return, and it lays itself out once the task ends.
+    /// Only a profile other than the one in place is applied, so drags made since survive. An apply started
+    /// here is awaited so applySavedLayout can't race it; one already running waits on this settle's task,
+    /// so awaiting it here would deadlock.
     private func settleActiveProfile(reason: String) async {
         guard let profiles = appState?.profileManager else { return }
         switch ProfileSettleReapply.Record().settle(

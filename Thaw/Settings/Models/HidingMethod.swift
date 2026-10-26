@@ -15,7 +15,7 @@ nonisolated enum HidingMethod: Int, CaseIterable, Identifiable {
     /// to the right: Clock, Control Center and Siri.
     case standard = 1
 
-    /// The method the native switch stands for. Standard needs the restriction Native releases.
+    /// Standard needs the restriction Native releases.
     init(nativeAppHidingEnabled: Bool) {
         self = nativeAppHidingEnabled ? .native : .standard
     }

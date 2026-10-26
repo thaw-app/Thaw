@@ -157,7 +157,7 @@ enum LayoutBarItemMenu {
         let members = appState.itemManager.appItems(for: item)
         for destination in [MenuBarSection.Name.visible, override.concealedSection] {
             let title = String(
-                localized: "Move All \(appName) Items to \(MenuBarSearchItemActions.title(for: destination))"
+                localized: "Move All \(appName) Items to \(destination.localizedName)"
             )
             menu.addItem(
                 ClosureMenuItem(title: title) {
@@ -174,7 +174,7 @@ enum LayoutBarItemMenu {
 
         for (index, name) in MenuBarSearchItemActions.moveDestinations(appState: appState).enumerated() {
             guard let name else { continue }
-            let entry = ClosureMenuItem(title: MenuBarSearchItemActions.title(for: name)) {
+            let entry = ClosureMenuItem(title: name.localizedName) {
                 MenuBarSearchItemActions.move(item, to: name, appState: appState)
             }
             entry.state = name == current ? .on : .off

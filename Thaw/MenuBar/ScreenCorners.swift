@@ -18,7 +18,7 @@ final class ScreenCorners {
     private var observationTask: Task<Void, Never>?
     private var displayObservation: AnyCancellable?
 
-    func performSetup(with appState: AppState, displays: DisplayEnvironment) {
+    func performSetup(with appState: AppState, displaySettlements: some Publisher<EnvironmentChange, Never>) {
         self.appState = appState
         observationTask = Task { @MainActor [weak self, general = appState.settings.general] in
             for await _ in Observations({ (general.roundScreenCorners, general.screenCornerRadius) }) {
@@ -27,7 +27,7 @@ final class ScreenCorners {
         }
         // Once per settle, unchanged ones included: a display that drops out and comes back within
         // one settle reads as unchanged, but macOS may have moved its corners in between.
-        displayObservation = displays.settlements.sink { [weak self] _ in
+        displayObservation = displaySettlements.sink { [weak self] _ in
             self?.reconcile()
         }
     }

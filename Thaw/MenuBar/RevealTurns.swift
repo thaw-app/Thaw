@@ -9,9 +9,7 @@ import MenuBarModel
 
 /// The two passes a reveal asks for, each run as one turn through the repair orchestrator.
 /// The kit cancels its task on hide, so a restore still queued then never writes.
-/// The cause says who opened the reveal, `.sectionRevealed` for the user or `.policyReveal` for Thaw
-/// itself. Either way the turn takes the lane at user priority: priority orders the queue, and the
-/// cause is only the accounting.
+/// Either cause takes the lane at user priority; the cause only does the accounting.
 @MainActor
 enum RevealTurns {
     /// Puts the revealed section back in its saved order.

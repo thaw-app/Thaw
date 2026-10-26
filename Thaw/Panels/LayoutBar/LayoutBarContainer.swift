@@ -238,7 +238,6 @@ final class LayoutBarContainer: NSView {
             AnyCancellable { badgeColorTask.cancel() }
                 .store(in: &subscriptions)
 
-            // Update the badge once a display change settles.
             appState.displayEnvironment.settlements
                 .sink { [weak self] _ in
                     guard let self else { return }

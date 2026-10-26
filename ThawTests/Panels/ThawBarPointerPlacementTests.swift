@@ -6,6 +6,7 @@
 //  Licensed under the GNU GPLv3
 
 import AppKit
+import Combine
 import Testing
 @testable import Thaw
 
@@ -167,7 +168,11 @@ private struct PlacementFixture {
             pointerLocation: { pointer.location },
             pointerInEmptyMenuBarSpace: { _, _ in pointer.inEmptyMenuBarSpace }
         )
-        panel.performSetup(with: appState)
+        panel.performSetup(
+            with: appState,
+            displayInvalidations: Empty<Void, Never>(completeImmediately: false),
+            displaySettlements: Empty<EnvironmentChange, Never>(completeImmediately: false)
+        )
     }
 
     func show(triggeredByHotkey: Bool = false, openedFrom iconFrame: CGRect? = nil) {

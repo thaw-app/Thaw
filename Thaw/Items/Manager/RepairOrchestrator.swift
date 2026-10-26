@@ -44,7 +44,7 @@ final class RepairOrchestrator {
         case itemMove
     }
 
-    /// What asked for a piece of work. What a request with each cause does to the other passes is in ``RepairCauseTraits``.
+    /// What asked for a piece of work. ``RepairCauseTraits`` says what each cause does to other passes.
     enum Cause: String, CaseIterable, Sendable {
         /// The user finished ⌘-dragging an icon on the bar.
         case userDragEnded
@@ -84,13 +84,9 @@ final class RepairOrchestrator {
         case userClickedItem
         /// Thaw revealed a section by itself (always-show, zen restore), not the user.
         case policyReveal
-        /// The display arrangement changed: a screen was added, removed or rearranged.
         case displayChanged
-        /// The active Space changed.
         case spaceChanged
-        /// An app launched.
         case appLaunched
-        /// An app quit.
         case appTerminated
     }
 

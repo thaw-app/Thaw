@@ -14,10 +14,9 @@ import ThawAXCore
 ///
 /// Some apps answer the walk at once with no extras-bar items while MenuBarAgent draws their icon.
 /// For an app with exactly one drawn entry, the walk records the item an extras-bar child of that app
-/// would give, so it gets the same tag, the same synthetic window ID and the same position store key.
-/// The child carries the app's one identity in the saved section order, so the item keeps its saved
-/// section; with no such identity, or several, it is an untitled child, Item-0. An app with more than
-/// one entry is left out, since nothing says which entry is which.
+/// would give, so it gets the same tag, synthetic window ID and position store key. The child takes the
+/// app's one saved identity so the item keeps its section, or is Item-0 without one. An app with more
+/// than one entry is left out, since nothing says which entry is which.
 nonisolated enum DrawnOnlyItems {
     typealias Entry = MenuBarAgentWindow.Entry
     typealias RawItem = MenuBarItemAXProvider.RawItem
@@ -58,7 +57,7 @@ nonisolated enum DrawnOnlyItems {
         let axItems: [RawItem]
         /// The tallest frame that still counts as a status item.
         let ceiling: CGFloat
-        /// Each app's one saved identity title, by bundle ID. See savedIdentityTitles(in:).
+        /// By bundle ID, from savedIdentityTitles(in:).
         var savedTitles: [String: String] = [:]
     }
 
@@ -115,8 +114,7 @@ nonisolated enum DrawnOnlyItems {
         return shared > entry.width * overlapThreshold
     }
 
-    /// The item an extras-bar child of the app would give, titled with the app's name. The child has the
-    /// saved identity when there is one, and is untitled otherwise.
+    /// The item an extras-bar child of the app would give, with the saved identity when there is one.
     static func rawItem(ownerPID: pid_t, app: App, frame: CGRect, savedTitle: String? = nil) -> RawItem? {
         let namespace = MenuBarItemAXProvider.namespace(forBundleIdentifier: app.bundleID, localizedName: app.localizedName)
         guard let item = MenuBarItemAXProvider.rawItem(
@@ -313,7 +311,7 @@ nonisolated final class DrawnOnlyInventory: Sendable {
     private let diagnostics = DrawnSilentOwnerDiagnostics()
     private let savedOrder: @Sendable () -> [String: [String]]
 
-    /// - Parameter savedOrder: Reads the saved section order, by section, that gives a drawn-only item its identity.
+    /// - Parameter savedOrder: Reads the saved section order that gives drawn-only items their identity.
     init(savedOrder: @escaping @Sendable () -> [String: [String]] = { DrawnOnlyInventory.persistedSectionOrder() }) {
         self.savedOrder = savedOrder
     }

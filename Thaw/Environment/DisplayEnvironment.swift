@@ -15,9 +15,12 @@ import MenuBarModel
 final class DisplayEnvironment {
     let snapshot: EnvironmentSnapshot
     /// Sends at each screen-parameter posting, in the posting turn, for readers that drop state at once.
-    let invalidations = PassthroughSubject<Void, Never>()
-    /// Sends once per settle with what changed, ``EnvironmentChange/none`` included, for readers that rebuild on the settled geometry.
-    let settlements = PassthroughSubject<EnvironmentChange, Never>()
+    let invalidations: AnyPublisher<Void, Never>
+    /// Sends once per settle, ``EnvironmentChange/none`` included, for readers that rebuild on settled geometry.
+    let settlements: AnyPublisher<EnvironmentChange, Never>
+
+    private let invalidationSubject = PassthroughSubject<Void, Never>()
+    private let settlementSubject = PassthroughSubject<EnvironmentChange, Never>()
 
     private let center: NotificationCenter
     private let timing: EnvironmentSettle.Timing
@@ -39,9 +42,11 @@ final class DisplayEnvironment {
         self.read = read
         self.sleep = sleep
         snapshot = EnvironmentSnapshot(arrangement: baseline ?? read())
+        invalidations = invalidationSubject.eraseToAnyPublisher()
+        settlements = settlementSubject.eraseToAnyPublisher()
     }
 
-    /// Starts observing. Calling it again while observing does nothing.
+    /// Calling it again while observing does nothing.
     func start() {
         guard observer == nil else { return }
         // The main queue delivers in the posting turn, so readers see the invalidation before anything else runs.
@@ -58,16 +63,15 @@ final class DisplayEnvironment {
         slot.cancel()
     }
 
-    /// Invalidates the snapshot and restarts the settle, so the quiet period runs from the newest posting.
+    /// Restarts the settle, so the quiet period runs from the newest posting.
     func noteScreenParametersChanged() {
         snapshot.invalidate()
-        invalidations.send()
+        invalidationSubject.send()
         slot.replace { [weak self] ticket in
             await self?.settle(ticket)
         }
     }
 
-    /// Returns once no settle is running.
     func waitUntilSettled() async {
         await slot.waitUntilFinished()
     }
@@ -94,7 +98,7 @@ final class DisplayEnvironment {
 
     private func publish(_ arrangement: DisplayArrangement, reads: Int) {
         let change = snapshot.settle(on: arrangement)
-        settlements.send(change)
+        settlementSubject.send(change)
         if change == .none {
             diagLog.debug("Display environment settled unchanged at generation \(snapshot.generation) after \(reads) reads")
         } else {

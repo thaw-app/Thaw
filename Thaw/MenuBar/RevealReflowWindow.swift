@@ -9,21 +9,19 @@ import Combine
 import Foundation
 import MenuBarModel
 
-/// Whether a reveal or hide is still reflowing the bar, as opposed to a section simply left open.
-///
-/// The window opens each time the revealed section changes and lasts ``settleWindow``. It sits
-/// inside the kit's own reveal/hide transition window, which opens at the same change and lasts
-/// longer, so it only holds the MenuBarAgent nudge off if that flag is cleared early.
+/// Whether a reveal or hide is still reflowing the bar, as opposed to a section left open. It sits inside
+/// the kit's longer transition window, so it only holds the MenuBarAgent nudge off if that flag clears early.
 @MainActor
 final class RevealReflowWindow {
     /// Generous reflow window; observed settling takes tens of milliseconds.
-    static nonisolated let settleWindow: TimeInterval = 0.5
+    static nonisolated let settleWindow = Duration.milliseconds(500)
 
-    private let now: () -> Date
-    private var lastTransition: Date?
+    /// A monotonic clock, so a wall-clock change can't open or close the window.
+    private let now: () -> ContinuousClock.Instant
+    private var lastTransition: ContinuousClock.Instant?
     private var subscription: AnyCancellable?
 
-    init(now: @escaping () -> Date = Date.init) {
+    init(now: @escaping () -> ContinuousClock.Instant = { ContinuousClock.now }) {
         self.now = now
     }
 
@@ -31,20 +29,19 @@ final class RevealReflowWindow {
         Self.isSettling(lastTransition: lastTransition, now: now())
     }
 
-    static nonisolated func isSettling(lastTransition: Date?, now: Date) -> Bool {
+    static nonisolated func isSettling(lastTransition: ContinuousClock.Instant?, now: ContinuousClock.Instant) -> Bool {
         guard let lastTransition else {
             return false
         }
-        return now.timeIntervalSince(lastTransition) < settleWindow
+        return lastTransition.duration(to: now) < settleWindow
     }
 
     func noteTransition() {
         lastTransition = now()
     }
 
-    /// Follows the revealed section. The first value is the section revealed when the subscription
-    /// starts, not a change. Each change is taken as it is made, on the main actor, so the window
-    /// opens at the change and not after whatever the main thread does next.
+    /// The first value is the current section, not a change. Changes are taken on the main actor as they
+    /// are made, so the window opens at the change and not after whatever the main thread does next.
     func observe(_ revealedSection: AnyPublisher<MenuBarSectionName?, Never>) {
         subscription = revealedSection
             .dropFirst()

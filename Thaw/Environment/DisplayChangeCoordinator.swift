@@ -8,18 +8,16 @@
 import Combine
 import MenuBarModel
 
-/// What the coordinator's steps do to the rest of the app.
 @MainActor
 protocol DisplayChangeEffects: AnyObject {
     func stampDisplayChanged()
     func startSettle(reason: String)
     func awaitSettle() async
-    func refreshCaches(cleansImages: Bool) async
+    func cleanImagesAfterRemoval() async
 }
 
-/// Runs the work a display change owes once per settled generation, in the order ``DisplayChangePlan`` gives.
-/// Each step first checks the generation it started for: a newer one abandons the rest, and its own run
-/// starts the order again.
+/// Runs a display change's steps once per settled generation. A newer generation abandons the rest
+/// of the run and starts the steps again.
 @MainActor
 final class DisplayChangeCoordinator {
     private let snapshot: EnvironmentSnapshot
@@ -39,7 +37,7 @@ final class DisplayChangeCoordinator {
         self.init(snapshot: environment.snapshot, settlements: environment.settlements, effects: effects)
     }
 
-    /// Starts listening for settles. Calling it again while listening does nothing.
+    /// Calling it again while listening does nothing.
     func start() {
         guard subscription == nil else { return }
         subscription = settlements.sink { [weak self] change in
@@ -52,7 +50,6 @@ final class DisplayChangeCoordinator {
         slot.cancel()
     }
 
-    /// Returns once no run is in progress.
     func waitUntilIdle() async {
         await slot.waitUntilFinished()
     }
@@ -86,8 +83,8 @@ final class DisplayChangeCoordinator {
             effects.startSettle(reason: reason)
         case .awaitSettle:
             await effects.awaitSettle()
-        case let .refreshCaches(cleansImages):
-            await effects.refreshCaches(cleansImages: cleansImages)
+        case .cleanImages:
+            await effects.cleanImagesAfterRemoval()
         }
     }
 }
