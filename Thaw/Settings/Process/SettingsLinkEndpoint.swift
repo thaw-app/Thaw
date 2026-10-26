@@ -18,6 +18,7 @@ final class SettingsLinkEndpoint {
     private var defaultsObserver: AnyCancellable?
     private var isReloading = false
     private var isClosed = false
+    private let chunks: AsyncStream<Data>.Continuation
 
     private let onMessage: @MainActor (SettingsLinkMessage) -> Void
     private let onClose: @MainActor () -> Void
@@ -35,30 +36,32 @@ final class SettingsLinkEndpoint {
         self.output = output
         self.onMessage = onMessage
         self.onClose = onClose
+        let (stream, chunks) = AsyncStream<Data>.makeStream()
+        self.chunks = chunks
         // A write after the other end has gone then fails with EPIPE instead of killing this process.
         _ = fcntl(output.fileDescriptor, F_SETNOSIGPIPE, 1)
         // Not input.bytes.lines: Foundation reads every AsyncBytes in a process on one serial
         // queue with a blocking read, so this pipe, open as long as Settings is, would stall the rest.
-        input.readabilityHandler = { [weak self] handle in
+        input.readabilityHandler = { handle in
             let data = handle.availableData
             // At the end of the pipe the handler keeps firing with nothing read until it is removed.
             if data.isEmpty {
                 handle.readabilityHandler = nil
             }
-            Self.deliver(data, to: self)
+            chunks.yield(data)
+        }
+        // One consumer reads the stream, so the chunks reach received(_:) in the order they were read.
+        Task { @MainActor [weak self] in
+            for await data in stream {
+                guard let self else { return }
+                received(data)
+            }
         }
         defaultsObserver = NotificationCenter.default
             .publisher(for: UserDefaults.didChangeNotification)
             .filter { [weak self] _ in self?.isReloading == false }
             .debounce(for: .milliseconds(200), scheduler: DispatchQueue.main)
             .sink { [weak self] _ in self?.send(.settingsChanged) }
-    }
-
-    /// The main queue keeps the chunks in the order they were read.
-    private nonisolated static func deliver(_ data: Data, to endpoint: SettingsLinkEndpoint?) {
-        DispatchQueue.main.async { [weak endpoint] in
-            MainActor.assumeIsolated { endpoint?.received(data) }
-        }
     }
 
     private func received(_ data: Data) {
@@ -91,6 +94,7 @@ final class SettingsLinkEndpoint {
     func close() {
         isClosed = true
         input.readabilityHandler = nil
+        chunks.finish()
         defaultsObserver = nil
     }
 

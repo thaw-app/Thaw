@@ -25,7 +25,7 @@ final class ActiveMenuBarDisplayWatcher {
     private var lastDisplayID: CGDirectDisplayID?
     private var lastCheck: ContinuousClock.Instant?
     /// Set by start(), in the +Live file.
-    var observers: [any NSObjectProtocol] = []
+    var observationTasks: [Task<Void, Never>] = []
     var timer: Timer?
 
     init(readDisplayID: @escaping () -> CGDirectDisplayID? = { Bridging.getActiveMenuBarDisplayID() }) {
