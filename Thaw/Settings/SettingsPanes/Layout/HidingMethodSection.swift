@@ -10,13 +10,12 @@ import ThawUI
 
 /// The one place to choose how items are hidden, with what each method gives and costs.
 ///
-/// Native rewrites another app's settings and is still unproven, so it stays opt-in and carries the beta badge.
+/// Native rewrites another app's settings, so it stays opt-in.
 struct HidingMethodSection: View {
     @Bindable var settings: AdvancedSettings
     /// False when the layout cannot be arranged, so the note on moving Apple's pinned items does not apply.
     let offersAppleItems: Bool
     @Environment(AppState.self) private var appState
-    @Environment(\.openURL) private var openURL
     @State private var confirmsSetAside = false
     @State private var setAsideError: String?
 
@@ -121,15 +120,13 @@ struct HidingMethodSection: View {
         }
     }
 
-    /// The beta badge, why this session fell back to Standard, and where to send feedback.
+    /// Why this session fell back to Standard, when it did.
     @ViewBuilder
     private var nativeStatus: some View {
-        ThawBadge.beta
         if let fallbackReason {
             Text("Using Standard for now: \(fallbackReason) Choose Standard and then Native to try again.")
                 .foregroundStyle(.orange)
         }
-        feedbackButtons
     }
 
     /// Why this session went back to Standard while Native stays chosen, or nil when Native is running.
@@ -140,38 +137,5 @@ struct HidingMethodSection: View {
             journalNeedsAttention: experiment.journalNeedsAttention,
             lastError: experiment.lastError
         )
-    }
-
-    /// Praise goes to Discord, where it costs nobody a closed issue; problems
-    /// go to GitHub, where they are tracked.
-    private var feedbackButtons: some View {
-        HStack(spacing: ThawSpacing.compact) {
-            Text("How is it working?")
-            Button("Tell Us on Discord") { openURL(Constants.discordURL) }
-                .buttonStyle(.settingsGlass)
-                .help("Opens the \(Constants.displayName) Discord")
-            Button("Report a Problem…") { openURL(Self.problemReportURL) }
-                .buttonStyle(.settingsGlass)
-                .help("Opens a new GitHub issue with your versions filled in")
-        }
-        .controlSize(.small)
-    }
-
-    /// Prefill build and macOS versions so reports include them without manual lookup.
-    private static var problemReportURL: URL {
-        let body = """
-        What happened:
-
-        \(Constants.buildDescription)
-        """
-        var components = URLComponents(
-            url: Constants.issuesURL.appendingPathComponent("new"),
-            resolvingAgainstBaseURL: false
-        )
-        components?.queryItems = [
-            URLQueryItem(name: "title", value: "Native app hiding: problem"),
-            URLQueryItem(name: "body", value: body),
-        ]
-        return components?.url ?? Constants.issuesURL
     }
 }

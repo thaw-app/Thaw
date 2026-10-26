@@ -17,7 +17,7 @@ enum FirstRunHint: String, CaseIterable, Sendable {
     case hideByDrag
     /// The one-time confirmation after the first drop into Hidden.
     case firstHideConfirmed
-    /// The launch prompt offering the beta native app hiding.
+    /// The launch prompt offering native app hiding.
     case nativeAppHidingOffer
 }
 

@@ -81,7 +81,7 @@ private struct PlatformLimitationsList: View {
 
             limitation("**Several items from one app:** some apps’ menu bar items cannot be hidden independently with the current macOS 27 mechanism. An item assigned to Hidden can remain visible when another item from the same app is assigned to Visible. To hide them, put all of that app’s items in the same section.")
 
-            limitation("**Apple’s own items:** with the Standard and Everything hiding methods, macOS hides Focus, AirDrop, Now Playing, Fast User Switching, Live Activities and the camera indicator whenever any other item is hidden, and never hides Time Machine or the Input menu. Choose the Native hiding method to keep them on the menu bar, or turn on Replace Control Center items further down this page to put \(Constants.displayName) icons in their place, which you can move and hide.")
+            limitation("**Apple’s own items:** with the Standard hiding method, macOS hides Focus, AirDrop, Now Playing, Fast User Switching, Live Activities and the camera indicator whenever any other item is hidden, and never hides Time Machine or the Input menu. Choose the Native hiding method to keep them on the menu bar, or turn on Replace Control Center items further down this page to put \(Constants.displayName) icons in their place, which you can move and hide.")
         }
         .font(ThawType.body)
         .foregroundStyle(.primary)

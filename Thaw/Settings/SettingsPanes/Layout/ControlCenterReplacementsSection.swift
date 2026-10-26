@@ -108,7 +108,7 @@ struct ControlCenterReplacementsSection: View {
             Toggle(isOn: $settings.controlCenterReplacements.isOn) {
                 HStack(spacing: ThawSpacing.compact) {
                     Text("Replace Control Center items")
-                    ThawBadge.alpha
+                    ThawBadge.beta
                 }
             }
             .annotation {

@@ -158,11 +158,11 @@ nonisolated extension SearchIndex {
         SearchEntry(
             id: "advanced.enableNativeAppHiding",
             title: "Hiding method",
-            descriptionText: String(localized: "Native keeps Live Activities, the camera indicator and Apple’s own items on the menu bar. Standard hides any app’s items. Everything also hides Clock, Control Center and Siri."),
+            descriptionText: String(localized: "Native keeps Live Activities, the camera indicator and Apple’s own items on the menu bar. Standard hides any app’s items, and Clock, Control Center and Siri too."),
             pane: .menuBarLayout,
             section: "Hiding",
             keywords: [
-                "live activities", "camera", "microphone", "indicator", "native", "standard", "everything", "hiding", "method", "beta",
+                "live activities", "camera", "microphone", "indicator", "native", "standard", "everything", "hiding", "method",
                 "notification center", "clock", "control center", "siri",
             ],
             property: .advanced("enableNativeAppHiding")
