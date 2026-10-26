@@ -41,6 +41,11 @@ final class SettingsProcessHost {
     /// Counts the launches, so a process that ends after another has started is not taken for it.
     private var generation = 0
     private var link: SettingsLinkEndpoint?
+    /// Whether messages still reach the settings process.
+    var isLinked: Bool {
+        link != nil
+    }
+
     private var updatesWatch: Task<Void, Never>?
     /// Waits for the app's window to become key; a later window or the process ending cancels it.
     private var shownInAppWait: Task<Void, Never>?

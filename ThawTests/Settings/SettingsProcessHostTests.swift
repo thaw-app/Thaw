@@ -214,7 +214,7 @@ struct SettingsProcessHostTests {
         #expect(host.show(pane: "General", simpleMode: false))
         let launched = try #require(child.launches.first)
         try launched.fromChild.fileHandleForWriting.close()
-        try await Task.sleep(for: .milliseconds(100))
+        #expect(await settingsLinkWait { !host.isLinked })
         #expect(host.show(pane: "Privacy", simpleMode: false))
         try await Task.sleep(for: .milliseconds(100))
         #expect(!child.receivedMessages.contains(.show(pane: "Privacy")))
