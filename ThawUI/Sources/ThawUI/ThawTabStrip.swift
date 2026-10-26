@@ -13,22 +13,10 @@ public nonisolated protocol ThawTab: Hashable {
     var systemImage: String { get }
 }
 
-/// Tabs, each an icon and its name, in one glass capsule like Xcode's navigator bar,
-/// switching what a page shows below it. Settings pages use it where a segmented
-/// control is not allowed. The tabs share the strip's width evenly, so it fills the
-/// page it heads instead of sitting as a small pill in a wide card.
+/// Icon-and-title tabs sharing the strip's width; the full-width counterpart to
+/// ThawPillPicker, for Settings pages, where a segmented control is not allowed.
 public struct ThawTabStrip<Tab: Hashable>: View {
-    public struct Item {
-        let tab: Tab
-        let title: LocalizedStringKey
-        let systemImage: String
-
-        public init(_ tab: Tab, title: LocalizedStringKey, systemImage: String) {
-            self.tab = tab
-            self.title = title
-            self.systemImage = systemImage
-        }
-    }
+    public typealias Item = ThawSegment<Tab>
 
     @Binding private var selection: Tab
     private let items: [Item]
@@ -44,12 +32,6 @@ public struct ThawTabStrip<Tab: Hashable>: View {
     }
 
     public var body: some View {
-        ThawCapsuleSegments(
-            selection: $selection,
-            segments: items.map { item in
-                .init(value: item.tab, title: item.title, systemImage: item.systemImage, help: nil)
-            },
-            sizing: .filling
-        )
+        ThawCapsuleSegments(selection: $selection, segments: items, sizing: .filling)
     }
 }

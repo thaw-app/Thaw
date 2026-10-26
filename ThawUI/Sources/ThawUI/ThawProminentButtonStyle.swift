@@ -28,13 +28,13 @@ public struct ThawProminentButtonStyle: ButtonStyle {
             .padding(.vertical, padding.vertical)
             .background {
                 if isEnabled {
-                    Color.clear.thawGlass(.selection(tint, strength: .selected), in: shape)
-                        // Pressing deepens the fill a step, as the system buttons do.
-                        .overlay(shape.fill(Color.primary.opacity(configuration.isPressed ? 0.1 : 0)))
+                    // Pressing deepens the fill a step, as the system buttons do.
+                    shape.fill(Color.primary.opacity(configuration.isPressed ? 0.1 : 0))
                 } else {
                     shape.fill(.quaternary)
                 }
             }
+            .thawSelectedFill(isEnabled, tint: tint, in: shape)
             .contentShape([.interaction, .focusEffect], shape)
     }
 

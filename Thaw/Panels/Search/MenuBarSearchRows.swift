@@ -31,20 +31,10 @@ enum MenuBarSearchListContent: View {
 
     var body: some View {
         switch self {
-        // The same small heading as the settings sidebar's, so the panel's
-        // groups read like the window's.
         case let .header(name):
-            ThawListHeading(Text(name.localized))
-                .frame(maxWidth: .infinity, alignment: .leading)
-                .padding(.top, ThawSpacing.row)
-                .padding(.bottom, ThawSpacing.tight)
-                .padding(.leading, ThawSpacing.compact)
+            heading(Text(name.localized))
         case let .label(text):
-            ThawListHeading(Text(text))
-                .frame(maxWidth: .infinity, alignment: .leading)
-                .padding(.top, ThawSpacing.row)
-                .padding(.bottom, ThawSpacing.tight)
-                .padding(.leading, ThawSpacing.compact)
+            heading(Text(text))
         case let .item(item):
             MenuBarItemRow(item: item)
         case let .launcherItem(item, ownerName):
@@ -52,6 +42,15 @@ enum MenuBarSearchListContent: View {
         case let .assistedItem(item, ownerName):
             paletteRow(item, ownerName: ownerName, presentation: .assisted)
         }
+    }
+
+    /// Matches the settings sidebar's group headings.
+    private func heading(_ text: Text) -> some View {
+        ThawListHeading(text)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(.top, ThawSpacing.row)
+            .padding(.bottom, ThawSpacing.tight)
+            .padding(.leading, ThawSpacing.compact)
     }
 
     /// The launcher row at one face's proportions; a face with no rowMetrics

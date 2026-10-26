@@ -22,10 +22,10 @@ public extension View {
 
     /// Thaw's shared see-through accent fill behind a selected row or control,
     /// flat because glass on glass refracts.
-    func thawSelectedFill(_ isSelected: Bool, in shape: some InsettableShape) -> some View {
+    func thawSelectedFill(_ isSelected: Bool, tint: Color = .accentColor, in shape: some InsettableShape) -> some View {
         background {
             if isSelected {
-                Color.clear.thawGlass(.selection(.accentColor, strength: .selected), in: shape)
+                Color.clear.thawGlass(.selection(tint, strength: .selected), in: shape)
             }
         }
     }

@@ -99,11 +99,8 @@ final class ThawBarColorManager {
         // Space, settled display and theme changes all invalidate the strip.
         // Clear it first so a stale in-flight capture can't resurrect it, then
         // recapture if the panel is currently up.
-        Publishers.Merge3(
-            NSWorkspace.shared.notificationCenter
-                .publisher(for: NSWorkspace.activeSpaceDidChangeNotification)
-                .replace(with: ()),
-            displaySettlements.replace(with: ()),
+        Publishers.Merge(
+            DisplayEnvironment.spaceOrDisplayChanges(merging: displaySettlements.replace(with: ())),
             DistributedNotificationCenter.default()
                 .publisher(for: DistributedNotificationCenter.interfaceThemeChangedNotification)
                 .replace(with: ())

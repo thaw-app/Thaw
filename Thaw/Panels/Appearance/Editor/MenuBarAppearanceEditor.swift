@@ -315,8 +315,7 @@ struct MenuBarAppearanceEditor: View {
         }
     }
 
-    /// Background and shape fill share controls, differing only in title and footer.
-    /// A fill's controls. A fill picked from the tabs above takes no title, since the tab names it.
+    /// A fill's controls; a fill picked from the tabs takes no title, since the tab names it.
     @ViewBuilder
     private func fillSection(_ title: LocalizedStringKey? = nil, footer: LocalizedStringKey, kind: AppearanceFillKind) -> some View {
         let editor = UnlabeledAppearanceFillEditor(configuration: editedPartialConfiguration, fillKind: kind)

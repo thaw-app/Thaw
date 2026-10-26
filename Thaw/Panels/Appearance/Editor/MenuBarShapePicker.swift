@@ -98,7 +98,7 @@ nonisolated enum MenuBarShapeRoundness {
     /// The part every end gets for a slider value: square ends at 0, round
     /// ends curved by the value above it.
     static func info(for value: Double) -> MenuBarFullShapeInfo {
-        let value = min(max(value, 0), 1)
+        let value = value.clamped(to: 0 ... 1)
         let cap: MenuBarEndCap = value > 0 ? .round : .square
         return MenuBarFullShapeInfo(leadingEndCap: cap, trailingEndCap: cap, roundness: value)
     }

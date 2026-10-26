@@ -87,7 +87,7 @@ enum MenuBarShapePathBuilder {
     /// height of rect, or of its width when it is narrower than it is tall.
     static func cornerRadius(of rect: CGRect, roundness: Double) -> CGFloat {
         guard rect.width > 0, rect.height > 0 else { return 0 }
-        return min(rect.width, rect.height) / 2 * CGFloat(min(max(roundness, 0), 1))
+        return min(rect.width, rect.height) / 2 * CGFloat(roundness.clamped(to: 0 ... 1))
     }
 
     /// One path holding both pills of a two-part shape.

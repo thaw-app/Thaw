@@ -35,6 +35,5 @@ public enum ThawSpacing {
     public static let section: CGFloat = 24
 
     /// Between a glass capsule's edge and the segments or buttons it holds.
-    /// A role rather than a step on the scale, shared by every such capsule.
     public static let capsuleInset: CGFloat = 3
 }

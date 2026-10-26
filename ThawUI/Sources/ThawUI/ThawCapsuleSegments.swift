@@ -7,16 +7,24 @@
 
 import SwiftUI
 
+/// One choice in a ThawPillPicker or one tab in a ThawTabStrip.
+public struct ThawSegment<Value: Hashable> {
+    let value: Value
+    let title: LocalizedStringKey
+    let systemImage: String?
+    let help: LocalizedStringKey?
+
+    public init(_ value: Value, title: LocalizedStringKey, systemImage: String? = nil, help: LocalizedStringKey? = nil) {
+        self.value = value
+        self.title = title
+        self.systemImage = systemImage
+        self.help = help
+    }
+}
+
 /// The glass capsule of segments that ThawPillPicker and ThawTabStrip draw:
 /// one plain button per value, the selected one filled and in a heavier weight.
 struct ThawCapsuleSegments<Value: Hashable>: View {
-    struct Segment {
-        let value: Value
-        let title: LocalizedStringKey
-        let systemImage: String?
-        let help: LocalizedStringKey?
-    }
-
     /// How the capsule and its segments take up space.
     enum Sizing: Equatable {
         /// Each segment as wide as its label, which may be a symbol alone.
@@ -65,7 +73,7 @@ struct ThawCapsuleSegments<Value: Hashable>: View {
     }
 
     @Binding var selection: Value
-    let segments: [Segment]
+    let segments: [ThawSegment<Value>]
     let sizing: Sizing
 
     var body: some View {
@@ -80,7 +88,7 @@ struct ThawCapsuleSegments<Value: Hashable>: View {
         .accessibilityElement(children: .contain)
     }
 
-    private func segmentButton(_ segment: Segment) -> some View {
+    private func segmentButton(_ segment: ThawSegment<Value>) -> some View {
         let isSelected = segment.value == selection
         let shape = Capsule(style: .continuous)
         // Styled on each part: a section header sets its own text colour over the label's.

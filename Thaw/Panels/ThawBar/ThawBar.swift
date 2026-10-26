@@ -136,10 +136,8 @@ final class ThawBarPanel: NSPanel {
             }
         }
 
-        // Activating an inactive screen posts a screen-change notification; do not let it close a just-opened bar. The hide runs at the posting, with the other reveal and hide writers.
-        NSWorkspace.shared.notificationCenter.publisher(for: NSWorkspace.activeSpaceDidChangeNotification)
-            .map { _ in () }
-            .merge(with: displayInvalidations)
+        // Activating an inactive screen posts a screen change; don't let it close a bar opened under a second ago.
+        DisplayEnvironment.spaceOrDisplayChanges(merging: displayInvalidations)
             .sink { [weak self] in
                 guard
                     let self,

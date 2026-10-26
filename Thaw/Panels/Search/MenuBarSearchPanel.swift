@@ -193,9 +193,7 @@ final class MenuBarSearchPanel: NSPanel {
             .store(in: &cancellables)
 
         // A display change closes at the posting, while the frame still belongs to its display.
-        NSWorkspace.shared.notificationCenter.publisher(for: NSWorkspace.activeSpaceDidChangeNotification)
-            .map { _ in () }
-            .merge(with: displayInvalidations)
+        DisplayEnvironment.spaceOrDisplayChanges(merging: displayInvalidations)
             .sink { [weak self] in self?.close() }
             .store(in: &cancellables)
 

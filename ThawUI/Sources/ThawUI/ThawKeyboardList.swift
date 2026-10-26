@@ -22,9 +22,8 @@ public extension View {
             .onMoveCommand(perform: onMove)
     }
 
-    /// Draws the system keyboard focus ring just outside shape while
-    /// isShown is true and the window is key, for the selected row of a
-    /// list that has focus.
+    /// Draws the system keyboard focus ring just outside shape, for the
+    /// selected row of a list that has focus.
     func thawFocusRing(_ isShown: Bool, in shape: some InsettableShape) -> some View {
         modifier(ThawFocusRing(isShown: isShown, shape: shape))
     }
@@ -43,7 +42,6 @@ private struct ThawFocusRing<S: InsettableShape>: ViewModifier {
     func body(content: Content) -> some View {
         content
             .overlay {
-                // AppKit hides a focus ring while its window isn't key, and so does this one.
                 if ThawFocusRingRule.isVisible(isShown: isShown, activeState: controlActiveState) {
                     shape
                         .inset(by: -Self.width)

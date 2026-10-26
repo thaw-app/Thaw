@@ -666,14 +666,11 @@ final class LayoutBarItemView: LayoutBarArrangedView {
         if shouldPreferPlaceholderImage {
             drawOverflowFallback()
         } else if let capturedImage = cachedDrawImage {
-            let inked = capturedImage.isTemplate
-                ? tintedImage(for: capturedImage, tint: menuBarForegroundColor)
-                : capturedImage
-            inked.draw(
+            draw(
+                capturedImage,
                 in: capturedImageDrawRect(for: capturedImage),
-                from: .zero,
-                operation: .sourceOver,
-                fraction: isEnabled ? 1.0 : 0.67
+                fraction: isEnabled ? 1.0 : 0.67,
+                templateTint: menuBarForegroundColor
             )
         } else {
             drawPlaceholder()

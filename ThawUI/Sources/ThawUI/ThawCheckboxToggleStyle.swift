@@ -40,7 +40,7 @@ public struct ThawCheckboxToggleStyle: ToggleStyle {
                 .font(.system(size: 9, weight: .bold))
                 .foregroundStyle(.primary)
                 .frame(width: Self.side, height: Self.side)
-                .thawGlass(.selection(.accentColor, strength: .selected), in: Self.shape)
+                .thawSelectedFill(true, in: Self.shape)
         } else {
             Self.shape
                 .strokeBorder(.secondary, lineWidth: 1)

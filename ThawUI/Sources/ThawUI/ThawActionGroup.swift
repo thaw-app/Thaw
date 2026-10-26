@@ -7,9 +7,8 @@
 
 import SwiftUI
 
-/// Related buttons joined in one glass capsule with a hairline between each, like
-/// Run and Stop in Xcode's toolbar. Give the buttons .buttonStyle(.thawGrouped) so
-/// they draw flat inside the capsule.
+/// Related buttons in one glass capsule with a hairline between each. Give the
+/// buttons .buttonStyle(.thawGrouped) so they draw flat inside the capsule.
 public struct ThawActionGroup<Content: View>: View {
     private let content: Content
 

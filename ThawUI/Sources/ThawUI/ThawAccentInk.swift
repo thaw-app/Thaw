@@ -7,8 +7,8 @@
 
 import SwiftUI
 
-/// The label colour on a solid accent fill: white on the light gold is 1.6:1, so it's the lightest shade
-/// of the fill that clears 7:1, pure black under Increase Contrast, and white on a dark fill.
+/// Label colour on a solid accent fill: white on a dark fill, black under Increase Contrast,
+/// otherwise the lightest shade of the fill that reaches 7:1.
 public nonisolated enum ThawAccentInk {
     /// An sRGB colour with gamma-encoded channels from 0 to 1.
     public struct RGB: Equatable, Sendable {

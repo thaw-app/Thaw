@@ -192,18 +192,12 @@ final class MenuBarLayoutEditorPanel: NSObject, NSPopoverDelegate {
         // A space switch or a display rearrangement invalidates where the
         // panel is hanging, and, worse, the menu bar it is describing. Take
         // it down at the posting rather than leave a stale editor pinned to nothing.
-        Publishers.Merge(
-            NSWorkspace.shared.notificationCenter.publisher(
-                for: NSWorkspace.activeSpaceDidChangeNotification
-            )
-            .map { _ in () },
-            displayInvalidations
-        )
-        .sink { [weak self] in
-            // The window is not pinned to a bar, so it stays.
-            self?.closePopover()
-        }
-        .store(in: &c)
+        DisplayEnvironment.spaceOrDisplayChanges(merging: displayInvalidations)
+            .sink { [weak self] in
+                // The window is not pinned to a bar, so it stays.
+                self?.closePopover()
+            }
+            .store(in: &c)
 
         cancellables = c
     }

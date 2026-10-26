@@ -93,8 +93,8 @@ final class MenuBarSearchModel {
     /// Attaches the model to panel, replacing any earlier attachment.
     ///
     /// While attached, the average menu bar color tracks whichever screen the
-    /// panel is showing on, and is dropped again once the panel hides or the
-    /// display arrangement changes underneath it, which displayInvalidations reports at each posting.
+    /// panel is showing on, and is dropped when the panel hides or
+    /// displayInvalidations fires.
     func attach(to panel: MenuBarSearchPanel, displayInvalidations: some Publisher<Void, Never>) {
         cancellables.removeAll()
 

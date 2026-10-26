@@ -18,6 +18,6 @@ public enum ThawInk {
     /// 6.02:1 dark.
     public static let supporting = Color.primary.opacity(0.7)
 
-    /// The opacity a disabled control draws at, so every dimmed control matches.
+    /// Opacity for a disabled hand-drawn control.
     public static let disabledOpacity = 0.5
 }
