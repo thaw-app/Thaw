@@ -40,8 +40,6 @@ struct SettingsView: View {
                 fullSettingsScreen
             }
         }
-        // Glass buttons are capsules, as in macOS's own glass windows.
-        .buttonBorderShape(.capsule)
         // Applied here rather than on the Scene so it can follow the mode: with
         // .windowResizability(.contentSize) this minimum is the window's, and
         // the full layout's would otherwise hold Simple Mode open at a sidebar's

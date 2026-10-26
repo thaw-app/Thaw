@@ -69,6 +69,8 @@ private struct ThawWindowContent<Content: View>: View {
             if appState.isWindowOpen(id) {
                 content()
                     .modifier(AppUIZoomModifier())
+                    // Glass buttons are capsules, as in macOS's own glass windows.
+                    .buttonBorderShape(.capsule)
             }
         }
         .onWindowChange { window in

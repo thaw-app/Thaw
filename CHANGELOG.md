@@ -32,7 +32,7 @@ and the Sparkle appcast, unless overridden with the `release_notes` input.
 - **The menu bar shape is picked from tabs.** In Settings > Appearance, None, Full, Split and Notch are tabs like the others in Settings, and what the selected shape does is written below them. By @diazdesandi.
 - **About is simpler.** The version, build and commit are on one line next to the copy button. The update channel and automatic updates are pills instead of menus, What's New, Report a Bug and ⋯ sit together in one bar, and Floe moved into the ⋯ menu. By @diazdesandi.
 - **Short choices are pills.** Item arrangement, the hiding method, the Thaw Bar's arrangement, and the border style and width in Appearance are pills you click instead of menus. By @diazdesandi.
-- **Buttons in Settings are capsules,** like the glass buttons in macOS's own apps, instead of rounded rectangles. By @diazdesandi.
+- **Buttons in Settings and What's New are capsules,** like the glass buttons in macOS's own apps, instead of rounded rectangles. By @diazdesandi.
 - **The permissions window looks like the welcome screens.** When a permission goes missing, the window that asks for it again is laid out like onboarding, with its cards two to a row. By @diazdesandi.
 - **Appearance says when macOS's menu bar background covers your look.** If "Show menu bar background" is on in System Settings > Menu Bar, Appearance says so and opens that page, in place of a note that always showed. By @diazdesandi.
 - **Selected rows look the same everywhere.** The Swap Bar's buttons use the same see-through gold as the search results, and the gold follows Reduce Transparency and Increase Contrast. By @diazdesandi.
