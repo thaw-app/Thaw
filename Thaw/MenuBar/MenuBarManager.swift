@@ -224,7 +224,7 @@ final class MenuBarManager {
     /// The live left edge of the visible run, for anything drawn against it.
     let leadingEdgeWatcher = MenuBarLeadingEdgeWatcher()
 
-    private var alwaysShowHiddenItemsController: AlwaysShowHiddenItemsController?
+    var alwaysShowHiddenItemsController: AlwaysShowHiddenItemsController?
     /// Re-applies "Always show hidden items" when the active menu bar moves to another display.
     private var activeDisplayWatcher: ActiveMenuBarDisplayWatcher?
 

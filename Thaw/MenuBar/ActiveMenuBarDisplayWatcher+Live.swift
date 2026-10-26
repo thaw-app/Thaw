@@ -8,7 +8,7 @@
 import AppKit
 
 extension ActiveMenuBarDisplayWatcher {
-    /// Checks on app activation, a Space change and once a second, and reports every display change.
+    /// Checks on app activation, a Space change and once a second.
     func start() {
         guard observationTasks.isEmpty else { return }
         check()
@@ -18,9 +18,6 @@ extension ActiveMenuBarDisplayWatcher {
                 self?.check()
             })
         }
-        observationTasks.append(NotificationCenter.default.eventsTask(named: NSApplication.didChangeScreenParametersNotification) { [weak self] in
-            self?.screenParametersChanged()
-        })
         timer = Timer.scheduledTimer(withTimeInterval: 1, repeats: true) { [weak self] _ in
             MainActor.assumeIsolated {
                 guard let self, self.isNeeded() else { return }

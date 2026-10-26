@@ -18,8 +18,9 @@ import MenuBarModel
 /// screen: CGDisplayIsCaptured reports only the legacy exclusive-capture mode,
 /// and ScreenCaptureKit has no observer for other clients. So this covers the
 /// two publicly observable states. Mirroring (CGDisplayIsInMirrorSet, the
-/// projector case) follows didChangeScreenParametersNotification and costs
-/// nothing at rest. Screen sharing and remote management are detected by the
+/// projector case) is checked by the display-change coordinator's presentation
+/// step once the displays settle, and costs nothing at rest. Screen sharing and
+/// remote management are detected by the
 /// presence of screensharingd, which has no notification and so is polled,
 /// only while the setting is on.
 ///
@@ -36,13 +37,17 @@ final class PresentationMonitor {
     private let diagLog = DiagLog(category: "PresentationMonitor")
 
     private weak var appState: AppState?
+    private let readPresenting: @MainActor () -> Bool
 
     private var settingTask: Task<Void, Never>?
-    private var screenParametersTask: Task<Void, Never>?
     private var pollTask: Task<Void, Never>?
 
     /// The last evaluated state, kept so a repeated signal doesn't re-log.
     private var isPresenting = false
+
+    init(readPresenting: (@MainActor () -> Bool)? = nil) {
+        self.readPresenting = readPresenting ?? { Self.isMirroring() || Self.isScreenBeingShared() }
+    }
 
     func performSetup(with appState: AppState) {
         self.appState = appState
@@ -62,13 +67,8 @@ final class PresentationMonitor {
         }
     }
 
-    private func startObserving() {
-        guard screenParametersTask == nil else { return }
-
-        screenParametersTask = NotificationCenter.default.eventsTask(named: NSApplication.didChangeScreenParametersNotification) { [weak self] in
-            guard let self else { return }
-            evaluate()
-        }
+    func startObserving() {
+        guard pollTask == nil else { return }
 
         pollTask = Task { @MainActor [weak self] in
             while !Task.isCancelled {
@@ -82,8 +82,6 @@ final class PresentationMonitor {
     }
 
     private func stopObserving() {
-        screenParametersTask?.cancel()
-        screenParametersTask = nil
         pollTask?.cancel()
         pollTask = nil
         // Withdraw anything this monitor engaged; a manual zen mode is left
@@ -92,8 +90,14 @@ final class PresentationMonitor {
         appState?.menuBarManager.setAutomaticZenMode(false, reason: .screenSharing)
     }
 
+    /// The display-change coordinator's entry, once per settled change. It does nothing while the setting is off.
+    func evaluateAfterDisplayChange() {
+        guard pollTask != nil else { return }
+        evaluate()
+    }
+
     private func evaluate() {
-        let presenting = Self.isMirroring() || Self.isScreenBeingShared()
+        let presenting = readPresenting()
         defer { appState?.menuBarManager.setAutomaticZenMode(presenting, reason: .screenSharing) }
 
         guard presenting != isPresenting else { return }

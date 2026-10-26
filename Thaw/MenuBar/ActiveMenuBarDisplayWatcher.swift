@@ -9,7 +9,8 @@ import AppKit
 import MenuBarModel
 
 /// Reports when the active menu bar moves to another display. macOS sends no notification for the move,
-/// so app, Space, display and click events ask, and a one-second check catches the rest.
+/// so app, Space and click events ask, and a one-second check catches the rest. A display change is the
+/// display-change coordinator's presentation step instead.
 @MainActor
 final class ActiveMenuBarDisplayWatcher {
     var onChange: (() -> Void)?
@@ -45,12 +46,5 @@ final class ActiveMenuBarDisplayWatcher {
         if let lastDisplayID, lastDisplayID != displayID {
             onChange?()
         }
-    }
-
-    /// Reports a display change even on the same display, since a new resolution changes its width.
-    func screenParametersChanged() {
-        guard let displayID = readDisplayID() else { return }
-        lastDisplayID = displayID
-        onChange?()
     }
 }

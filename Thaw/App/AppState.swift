@@ -50,7 +50,7 @@ final class AppState {
     let displayEnvironment = DisplayEnvironment()
 
     /// Runs the settle a display change owes, and the image cleanup after a removal, once per settled generation.
-    @ObservationIgnored private lazy var displayChangeCoordinator = DisplayChangeCoordinator(
+    @ObservationIgnored lazy var displayChangeCoordinator = DisplayChangeCoordinator(
         environment: displayEnvironment,
         effects: MenuBarDisplayChangeEffects(itemManager: itemManager, repairs: itemManager.repairs, imageCache: imageCache, displaySettings: settings.displaySettings, profiles: profileManager, presentationMonitor: presentationMonitor, menuBarManager: menuBarManager)
     )
@@ -421,7 +421,7 @@ final class AppState {
         observeItemDrags()
         observeImageCacheTriggers()
         // Observation tracks owned-model reads through appState directly; no objectWillChange forwarding is needed.
-        displayChangeCoordinator.start()
+        startDisplayChangeCoordinator()
     }
 
     /// Frontmost-app changes cover space notifications missed on secondary displays.

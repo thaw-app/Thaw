@@ -98,21 +98,6 @@ struct ActiveMenuBarDisplayWatcherTests {
         #expect(probe.changes == 1)
     }
 
-    @Test("A new resolution on the same display is reported, since the rule reads its width")
-    func reportsAResolutionChange() {
-        let probe = Probe()
-        let watcher = ActiveMenuBarDisplayWatcher(readDisplayID: { probe.displayID })
-        watcher.onChange = { probe.changes += 1 }
-        watcher.check()
-        watcher.screenParametersChanged()
-        #expect(probe.changes == 1)
-        watcher.check()
-        #expect(probe.changes == 1)
-        probe.displayID = nil
-        watcher.screenParametersChanged()
-        #expect(probe.changes == 1)
-    }
-
     @Test("Losing track of the active display is not a move")
     func ignoresUnknown() {
         let probe = Probe()
