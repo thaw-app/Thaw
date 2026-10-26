@@ -17,8 +17,8 @@ enum SettingsSearchNavigation {
         query: inout String
     ) {
         navigationState.requestedSettingsDisclosure = entry.disclosure
-        navigationState.requestedSettingsSection = entry.sectionText
         navigationState.settingsNavigationIdentifier = entry.pane
+        navigationState.requestedSettingsSection = entry.sectionText
         query = ""
     }
 

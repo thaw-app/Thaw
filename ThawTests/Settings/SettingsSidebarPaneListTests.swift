@@ -56,6 +56,19 @@ struct SettingsSidebarPaneListTests {
         #expect(searchModel.searchText.isEmpty)
     }
 
+    @Test("A section a search left unused is dropped when another page opens")
+    func leftoverSectionIsDroppedOnAnotherPage() throws {
+        let navigation = AppNavigationState()
+        navigation.settingsNavigationIdentifier = .general
+        var query = "sections"
+        let entry = try #require(SearchIndex.entries.first { $0.pane == .menuBarLayout && $0.sectionText != nil })
+        SettingsSearchNavigation.selectSearchResult(entry, navigationState: navigation, query: &query)
+        #expect(navigation.requestedSettingsSection == entry.sectionText)
+
+        navigation.settingsNavigationIdentifier = .hotkeys
+        #expect(navigation.requestedSettingsSection == nil)
+    }
+
     @Test("The arrow keys move through the pages past the headings and stop at either end")
     func arrowKeys() {
         let navigation = AppNavigationState()

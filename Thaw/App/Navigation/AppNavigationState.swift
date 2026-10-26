@@ -120,6 +120,10 @@ final class AppNavigationState {
                 settingsNavigationIdentifier = destination
                 return
             }
+            // A search sets its section after the page, so only a section left from another page is dropped.
+            if settingsNavigationIdentifier != oldValue {
+                requestedSettingsSection = nil
+            }
             Defaults.set(settingsNavigationIdentifier.rawValue, forKey: .lastSettingsPane)
             // Which pane is showing decides whether capture is on, so moving
             // from General to Layout has to re-evaluate without a window toggle.
