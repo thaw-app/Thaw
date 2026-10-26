@@ -284,7 +284,7 @@ final class MenuBarItemImageCache: @unchecked Sendable {
     /// A layout pane opened earlier does not, or background passes would undo
     /// the idle trim.
     @MainActor
-    private func hasBackgroundCaptureDemand() -> Bool {
+    func hasBackgroundCaptureDemand() -> Bool {
         !MenuBarItemAlertReveals.identifiers().isEmpty
     }
 
@@ -303,8 +303,9 @@ final class MenuBarItemImageCache: @unchecked Sendable {
 
     /// Installs every subscription the cache runs on, replacing any earlier set.
     ///
-    /// Space switches, display changes and item-cache digests feed one
-    /// debounced recapture; navigation state starts and stops the live loop.
+    /// Space switches and item-cache digests feed one debounced recapture; the
+    /// display-change coordinator recaptures after a display change.
+    /// Navigation state starts and stops the live loop.
     @MainActor
     private func installObservers() {
         var installed = Set<AnyCancellable>()
@@ -328,18 +329,6 @@ final class MenuBarItemImageCache: @unchecked Sendable {
             source.resume()
             memoryPressureSource = source
 
-            let spaceChangePublisher: AnyPublisher<Void, Never> = NSWorkspace.shared.notificationCenter.publisher(
-                for: NSWorkspace.activeSpaceDidChangeNotification
-            )
-            .map { _ in () }
-            .eraseToAnyPublisher()
-
-            let screenChangePublisher: AnyPublisher<Void, Never> = NotificationCenter.default.publisher(
-                for: NSApplication.didChangeScreenParametersNotification
-            )
-            .map { _ in () }
-            .eraseToAnyPublisher()
-
             // Bridges the observed item cache into the Combine merge below.
             let itemCacheChangeSubject = PassthroughSubject<Void, Never>()
             let itemCacheTask = Task { @MainActor [weak self, itemManager = appState.itemManager] in
@@ -358,14 +347,7 @@ final class MenuBarItemImageCache: @unchecked Sendable {
             }
             AnyCancellable { itemCacheTask.cancel() }
                 .store(in: &installed)
-            let itemCacheChangePublisher: AnyPublisher<Void, Never> = itemCacheChangeSubject
-                .eraseToAnyPublisher()
-
-            Publishers.MergeMany([
-                spaceChangePublisher,
-                screenChangePublisher,
-                itemCacheChangePublisher,
-            ])
+            ImageRecaptureTriggers.changes(itemCacheChanges: itemCacheChangeSubject)
             .debounce(
                 for: .milliseconds(Constants.MenuBarTuning.imageCaptureObserverDebounceMilliseconds),
                 scheduler: DispatchQueue.main
@@ -467,7 +449,7 @@ final class MenuBarItemImageCache: @unchecked Sendable {
     ///
     /// The background arm (alert reveal only) re-arms the idle trim on the way
     /// out, or it would leave a cache nobody is looking at resident.
-    private func refreshVisibleConsumersOrPrewarmLayoutCache(allowBackgroundCapture: Bool = false) async {
+    func refreshVisibleConsumersOrPrewarmLayoutCache(allowBackgroundCapture: Bool = false) async {
         guard appState != nil else {
             return
         }

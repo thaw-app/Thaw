@@ -9,7 +9,7 @@
 final class MenuBarDisplayChangeEffects: DisplayChangeEffects {
     private let itemManager: MenuBarItemManager
     private let repairs: RepairOrchestrator
-    private let imageCache: MenuBarItemImageCache
+    let imageCache: any DisplayChangeImageCache
     let displaySettings: any DisplayChangeSpacing
     let profiles: ProfileManager
     let presentationMonitor: PresentationMonitor
@@ -19,7 +19,7 @@ final class MenuBarDisplayChangeEffects: DisplayChangeEffects {
     init(
         itemManager: MenuBarItemManager,
         repairs: RepairOrchestrator,
-        imageCache: MenuBarItemImageCache,
+        imageCache: any DisplayChangeImageCache,
         displaySettings: any DisplayChangeSpacing,
         profiles: ProfileManager,
         presentationMonitor: PresentationMonitor,
@@ -54,6 +54,5 @@ final class MenuBarDisplayChangeEffects: DisplayChangeEffects {
     /// read would cost seconds with many apps.
     func cleanImagesAfterRemoval() async {
         imageCache.performCacheCleanup()
-        await imageCache.recaptureNow(sections: MenuBarSection.Name.allCases)
     }
 }
