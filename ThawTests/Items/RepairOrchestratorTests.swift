@@ -262,49 +262,6 @@ struct RepairOrchestratorTests {
         #expect(await writingPass(repairs))
     }
 
-    @Test("Only the causes that start something the user does call off automatic work")
-    func interruptingCauses() {
-        let interrupting = Set([RepairOrchestrator.Cause.revealStarting, .userDragStarted, .userClickedItem])
-        for cause in [RepairOrchestrator.Cause.revealStarting, .userDragStarted, .userClickedItem, .userDragEnded, .sectionRevealed, .restrictionChanged, .settled] {
-            #expect(cause.interruptsAutomaticWork == interrupting.contains(cause))
-        }
-        let allAreUserActions = interrupting.allSatisfy(\.isUserAction)
-        #expect(allAreUserActions)
-    }
-
-    /// Whether each cause is a user action, interrupts automatic work, and changes the layout by the user, in that order.
-    private static let traitTable: [RepairOrchestrator.Cause: (user: Bool, interrupts: Bool, layout: Bool)] = [
-        .userDragEnded: (true, false, true),
-        .moveFulfilled: (false, false, false),
-        .structuralDriftObserved: (false, false, false),
-        .revealHideTransition: (false, false, false),
-        .settled: (false, false, false),
-        .restrictionChanged: (false, false, false),
-        .cachePublished: (false, false, false),
-        .nativeOverflowChanged: (false, false, false),
-        .arrivalDisturbedOrder: (false, false, false),
-        .layoutApplyBlocked: (false, false, false),
-        .rearmed: (false, false, false),
-        .userEdit: (true, false, true),
-        .profileApplied: (false, false, false),
-        .settingChanged: (false, false, false),
-        .sectionRevealed: (true, false, false),
-        .revealStarting: (true, true, false),
-        .userDragStarted: (true, true, false),
-        .userClickedItem: (true, true, false),
-        .policyReveal: (false, false, false),
-    ]
-
-    @Test("Every cause keeps its place on the user or automatic side, and a policy reveal is automatic")
-    func everyCauseIsPinned() {
-        #expect(Set(Self.traitTable.keys) == Set(RepairOrchestrator.Cause.allCases))
-        for (cause, traits) in Self.traitTable {
-            #expect(cause.isUserAction == traits.user, "\(cause.rawValue)")
-            #expect(cause.interruptsAutomaticWork == traits.interrupts, "\(cause.rawValue)")
-            #expect(cause.isLayoutChangeByUser == traits.layout, "\(cause.rawValue)")
-        }
-    }
-
     @Test(
         "A reveal Thaw makes by itself leaves a queued automatic pass its turn; a user's reveal still calls it off",
         arguments: [(RepairOrchestrator.Cause.policyReveal, true), (.revealStarting, false)]

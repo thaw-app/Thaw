@@ -44,7 +44,7 @@ final class RepairOrchestrator {
         case itemMove
     }
 
-    /// What asked for a piece of work.
+    /// What asked for a piece of work. What a request with each cause does to the other passes is in ``RepairCauseTraits``.
     enum Cause: String, CaseIterable, Sendable {
         /// The user finished ⌘-dragging an icon on the bar.
         case userDragEnded
@@ -84,27 +84,14 @@ final class RepairOrchestrator {
         case userClickedItem
         /// Thaw revealed a section by itself (always-show, zen restore), not the user.
         case policyReveal
-
-        /// Causes that mean someone is at the bar, so the passes they start are not a loop.
-        var isUserAction: Bool {
-            interruptsAutomaticWork || [.userDragEnded, .userEdit, .sectionRevealed].contains(self)
-        }
-
-        /// Causes that mean the user has changed the layout.
-        var isLayoutChangeByUser: Bool {
-            self == .userDragEnded || self == .userEdit
-        }
-
-        /// Causes that call off the automatic passes asked for before them, which were planned on a bar the user is now changing.
-        var interruptsAutomaticWork: Bool {
-            [.revealStarting, .userDragStarted, .userClickedItem].contains(self)
-        }
-
-        /// Causes whose passes keep their turn when the user acts. A policy reveal is not the user,
-        /// but the restores it asks for run at user priority, so later input never calls them off.
-        var keepsTurnOnUserInput: Bool {
-            isUserAction || self == .policyReveal
-        }
+        /// The display arrangement changed: a screen was added, removed or rearranged.
+        case displayChanged
+        /// The active Space changed.
+        case spaceChanged
+        /// An app launched.
+        case appLaunched
+        /// An app quit.
+        case appTerminated
     }
 
     private static let diagLog = DiagLog(category: "RepairOrchestrator")
@@ -127,15 +114,16 @@ final class RepairOrchestrator {
 
     /// Stamps a request with what asked for it.
     func request(_ work: Work, cause: Cause) {
-        if cause.isLayoutChangeByUser {
+        let traits = cause.traits
+        if traits.isLayoutChangeByUser {
             onUserLayoutChange?()
         }
-        if cause.interruptsAutomaticWork {
+        if traits.callsOffPlannedWork {
             interruptAutomaticWork(by: cause)
-        } else if cause.isUserAction {
+        } else if traits.refillsBudget {
             budget.noteUserAction()
         }
-        interruption.noteRequest(work, byUser: cause.keepsTurnOnUserInput)
+        interruption.noteRequest(work, byUser: traits.keepsTurnOnUserInput)
         ledger.request(work, cause: cause)
     }
 
@@ -145,10 +133,13 @@ final class RepairOrchestrator {
         interruption.forget(work)
     }
 
-    /// Calls off the automatic passes asked for before this user input.
+    /// Calls off the automatic passes asked for before this user input or display change.
     /// One still waiting for the lane is turned away; one writing stops at its next check of ``userWorkIsWaiting``.
     func interruptAutomaticWork(by cause: Cause) {
-        budget.noteUserAction()
+        let traits = cause.traits
+        if traits.refillsBudget {
+            budget.noteUserAction()
+        }
         let calledOff = interruption.noteUserInput()
         let withdrawn = Set(calledOff + lane.dropAutomaticWaiters(where: interruption.isCalledOff))
         for work in withdrawn {
@@ -158,7 +149,7 @@ final class RepairOrchestrator {
         guard !withdrawn.isEmpty || stopping != nil else { return }
         let names = withdrawn.map(\.rawValue).sorted().joined(separator: ", ")
         Self.diagLog.info(
-            "\(cause.rawValue): user input called off [\(names)]" + (stopping.map { "; \($0.rawValue) stops at its next check" } ?? "")
+            "\(cause.rawValue): \(traits.isUserAction ? "user input" : "the change") called off [\(names)]" + (stopping.map { "; \($0.rawValue) stops at its next check" } ?? "")
         )
     }
 
