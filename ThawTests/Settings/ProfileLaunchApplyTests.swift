@@ -45,41 +45,52 @@ struct ProfileLaunchApplyTests {
         #expect(record.lastActiveProfileID == nil)
     }
 
-    @Test func theManagerKeepsTheProfileActiveAtQuit() throws {
+    @Test func theManagerKeepsTheProfileActiveAtQuit() async throws {
         let defaults = try #require(suites.make())
-        try ProfileTestDirectory.withManager(seeding: ["Default"], launchRecord: .init(defaults: defaults)) { manager, _ in
-            let meta = try #require(manager.profiles.first)
-            ProfileLaunchApply.Record(defaults: defaults).lastActiveProfileID = meta.id
-
-            #expect(manager.keepsLiveLayoutAtLaunch(meta))
-            #expect(manager.activeProfileID == meta.id)
-            #expect(ProfileSettleReapply.Record(defaults: defaults).lastSettledProfileID == meta.id)
-            #expect(!manager.keepsLiveLayoutAtLaunch(meta), "a later switch applies as before")
+        try await ProfileTestDirectory.withProfileActiveAtQuit(defaults: defaults) { manager, id in
+            #expect(manager.keepsLiveLayoutAtLaunch(profileID: id))
+            #expect(manager.activeProfileID == id)
+            #expect(ProfileSettleReapply.Record(defaults: defaults).lastSettledProfileID == id)
+            #expect(!manager.keepsLiveLayoutAtLaunch(profileID: id), "a later switch applies as before")
         }
     }
 
     @Test func aFocusFilterAtLaunchKeepsTheProfileActiveAtQuit() async throws {
         let defaults = try #require(suites.make())
-        let tmp = try ProfileTestDirectory.make(seeding: ["Default"])
-        defer { try? FileManager.default.removeItem(at: tmp) }
-        let id = try #require(ProfileManager(profilesDirectory: tmp).profiles.first?.id)
-        ProfileLaunchApply.Record(defaults: defaults).lastActiveProfileID = id
-        let manager = ProfileManager(profilesDirectory: tmp, launchRecord: .init(defaults: defaults))
+        try await ProfileTestDirectory.withProfileActiveAtQuit(defaults: defaults) { manager, id in
+            await manager.applyFocusFilterProfile(requested: id.uuidString)
 
-        await manager.applyFocusFilterProfile(requested: id.uuidString)
-
-        #expect(manager.activeProfileID == id)
-        #expect(ProfileSettleReapply.Record(defaults: defaults).lastSettledProfileID == id)
+            #expect(manager.activeProfileID == id)
+            #expect(ProfileSettleReapply.Record(defaults: defaults).lastSettledProfileID == id)
+        }
     }
 
-    @Test func theManagerAppliesAProfileSetToApplyAtLaunch() throws {
+    @Test func aSwitchAfterTheStartupSwitchApplies() async throws {
         let defaults = try #require(suites.make())
-        try ProfileTestDirectory.withManager(seeding: ["Default"], launchRecord: .init(defaults: defaults)) { manager, _ in
-            let id = try #require(manager.profiles.first?.id)
-            ProfileLaunchApply.Record(defaults: defaults).lastActiveProfileID = id
+        try await ProfileTestDirectory.withProfileActiveAtQuit(defaults: defaults) { manager, id in
+            manager.launchGate.close()
+
+            #expect(!manager.keepsLiveLayoutAtLaunch(profileID: id))
+            #expect(manager.activeProfileID == nil)
+        }
+    }
+
+    @Test func theGateReadsTheRecordOnce() throws {
+        let record = try ProfileLaunchApply.Record(defaults: #require(suites.make()))
+        record.lastActiveProfileID = home
+        let gate = ProfileLaunchGate(record: record)
+        record.lastActiveProfileID = work
+
+        let meta = ProfileMetadata(id: work, name: "Work", createdAt: .now, modifiedAt: .now)
+        #expect(!gate.keepsLiveLayout(meta, activeProfileID: nil), "a profile made active this session is not the one active at quit")
+    }
+
+    @Test func theManagerAppliesAProfileSetToApplyAtLaunch() async throws {
+        let defaults = try #require(suites.make())
+        try await ProfileTestDirectory.withProfileActiveAtQuit(defaults: defaults) { manager, id in
             manager.setLayoutBehavior(reappliesAtLaunch: true, forProfileID: id)
 
-            #expect(!manager.keepsLiveLayoutAtLaunch(try #require(manager.profiles.first)))
+            #expect(!manager.keepsLiveLayoutAtLaunch(profileID: id))
             #expect(manager.activeProfileID == nil)
         }
     }
@@ -132,6 +143,18 @@ enum ProfileTestDirectory {
         let tmp = try make(seeding: names)
         defer { try? FileManager.default.removeItem(at: tmp) }
         try body(ProfileManager(profilesDirectory: tmp, launchRecord: launchRecord), tmp)
+    }
+
+    /// A manager over one profile that `defaults` records as active when Thaw quit, created after the record is written.
+    static func withProfileActiveAtQuit(
+        defaults: UserDefaults,
+        _ body: (ProfileManager, UUID) async throws -> Void
+    ) async throws {
+        let tmp = try make(seeding: ["Default"])
+        defer { try? FileManager.default.removeItem(at: tmp) }
+        let id = try #require(ProfileManager(profilesDirectory: tmp).profiles.first?.id)
+        ProfileLaunchApply.Record(defaults: defaults).lastActiveProfileID = id
+        try await body(ProfileManager(profilesDirectory: tmp, launchRecord: .init(defaults: defaults)), id)
     }
 
     /// A new temporary directory holding the named profiles and their manifest. The caller removes it.

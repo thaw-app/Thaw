@@ -24,12 +24,11 @@ final class ProfileManager {
 
     /// The ID of the currently active profile, or nil.
     var activeProfileID: UUID? {
-        didSet { launchRecord?.lastActiveProfileID = activeProfileID }
+        didSet { launchGate.record?.lastActiveProfileID = activeProfileID }
     }
 
-    /// Where the active profile is kept for the next launch. Nil for managers
-    /// pointed at a test directory, which must not write the user's defaults.
-    let launchRecord: ProfileLaunchApply.Record?
+    /// Keeps the active profile for the next launch and decides the switch at this one.
+    let launchGate: ProfileLaunchGate
 
     /// The last manifest write that failed in a non-throwing path, or nil.
     private(set) var lastManifestError: String?
@@ -93,7 +92,7 @@ final class ProfileManager {
 
     /// - Parameter profilesDirectory: Profile and manifest directory; defaults to Application Support. Tests use temporary directories to protect user profiles.
     init(profilesDirectory: URL? = nil, launchRecord: ProfileLaunchApply.Record? = nil) {
-        self.launchRecord = launchRecord ?? (profilesDirectory == nil ? ProfileLaunchApply.Record() : nil)
+        launchGate = ProfileLaunchGate(record: launchRecord ?? (profilesDirectory == nil ? ProfileLaunchApply.Record() : nil))
         let enc = JSONEncoder()
         enc.dateEncodingStrategy = .iso8601
         enc.outputFormatting = [.prettyPrinted, .sortedKeys]
@@ -167,31 +166,30 @@ final class ProfileManager {
             }
             .store(in: &cancellables)
 
-        // Check if a Focus Filter is currently active. If so, apply it;
-        // otherwise fall back to display-based profile.
-        Task { [weak self] in
-            guard let self else { return }
-            do {
-                let current = try await ThawFocusFilter.current
-                if current.profile != nil {
-                    _ = try await current.perform()
-                    await self.applyFocusFilterProfile()
-                    return
-                }
-            } catch {
-                diagLog.debug("No active Focus Filter on startup: \(error)")
-            }
-            // Without Focus, prefer Space over display; always apply spacing to correct offsets left by another display's session.
-            // Matching on-disk offsets no-op without relaunching.
-            let startupSpaceKey = SpaceInfo.activeSpace().persistentKey
-            self.lastActiveSpaceKey = startupSpaceKey
-            if let startupSpaceKey, self.profile(forSpaceKey: startupSpaceKey) != nil {
-                await self.applyProfileForSpace(key: startupSpaceKey)
+        Task { [weak self] in await self?.applyStartupProfile() }
+    }
+
+    /// Applies the active Focus Filter's profile, else the Space's, else the display's.
+    private func applyStartupProfile() async {
+        defer { launchGate.close() }
+        do {
+            let current = try await ThawFocusFilter.current
+            if current.profile != nil {
+                _ = try await current.perform()
+                await applyFocusFilterProfile()
                 return
             }
-            if let currentUUID = lastActiveDisplayUUID {
-                await self.applyProfileForDisplay(uuid: currentUUID)
-            }
+        } catch {
+            diagLog.debug("No active Focus Filter on startup: \(error)")
+        }
+        // Without Focus, prefer Space over display; always apply spacing to correct offsets left by another display's session.
+        // Matching on-disk offsets no-op without relaunching.
+        let startupSpaceKey = SpaceInfo.activeSpace().persistentKey
+        lastActiveSpaceKey = startupSpaceKey
+        if let startupSpaceKey, profile(forSpaceKey: startupSpaceKey) != nil {
+            await applyProfileForSpace(key: startupSpaceKey)
+        } else if let currentUUID = lastActiveDisplayUUID {
+            await applyProfileForDisplay(uuid: currentUUID)
         }
     }
 
