@@ -754,8 +754,8 @@ private final class MenuBarOverlayPanelContentView: NSView {
                     for await colors in changes {
                         guard let self, let panel = self.overlayPanel else { return }
                         averageColorInfo = colors[panel.owningScreen.displayID]
-                        // A new average means the bar changed, and macOS may have flipped the icons.
-                        readIconShadeIfFollowed(force: true)
+                        // The schedule reads again only when this display's own average changed.
+                        readIconShadeIfFollowed()
                     }
                 }
                 AnyCancellable { colorsTask.cancel() }
@@ -845,7 +845,7 @@ private final class MenuBarOverlayPanelContentView: NSView {
 
         $fullConfiguration.replace(with: ())
             .merge(with: $previewConfiguration.replace(with: ()))
-            .merge(with: $averageColorInfo.replace(with: ()))
+            .merge(with: $averageColorInfo.removeDuplicates().replace(with: ()))
             .merge(with: $wallpaperPalette.replace(with: ()))
             .merge(with: $iconShade.replace(with: ()))
             .sink { [weak self] _ in
@@ -1277,11 +1277,11 @@ private final class MenuBarOverlayPanelContentView: NSView {
     }
 
     /// Reads the icons' shade when a finish follows it and it's unknown, or
-    /// again when force says the bar changed. IconShadeReadSchedule decides when.
-    private func readIconShadeIfFollowed(force: Bool = false) {
+    /// again when the bar changed. IconShadeReadSchedule decides when.
+    private func readIconShadeIfFollowed() {
         let followed = configuration.tintGlassStyle.followsIconShade || configuration.backgroundGlassStyle.followsIconShade
         guard followed, let panel = overlayPanel,
-              iconShadeSchedule.shouldStart(force: force, hasShade: iconShade != nil)
+              iconShadeSchedule.shouldStart(bar: averageColorInfo, hasShade: iconShade != nil)
         else {
             return
         }
@@ -1294,7 +1294,7 @@ private final class MenuBarOverlayPanelContentView: NSView {
                 iconShade = shade
             }
             if iconShadeSchedule.finish(found: shade != nil) {
-                readIconShadeIfFollowed(force: true)
+                readIconShadeIfFollowed()
             }
         }
     }
