@@ -54,6 +54,16 @@ nonisolated struct RepublishAbsenceMemo {
         live.isEmpty ? [] : wanted.subtracting(live)
     }
 
+    /// The wanted members nothing can republish: their app has no item on the bar and is not
+    /// running, as when an app was removed or changed its bundle identifier. A running app may
+    /// still publish, so it is waited for. Members not named by a bundle identifier are kept.
+    static func unreachable(wanted: Set<String>, liveNamespaces: Set<String>, runningBundleIDs: Set<String>) -> Set<String> {
+        wanted.filter { identifier in
+            let namespace = String(identifier.prefix { $0 != ":" })
+            return namespace.contains(".") && !liveNamespaces.contains(namespace) && !runningBundleIDs.contains(namespace)
+        }
+    }
+
     /// Empties the memo so the next pass waits for every member again.
     mutating func forget() {
         missingSince.removeAll()

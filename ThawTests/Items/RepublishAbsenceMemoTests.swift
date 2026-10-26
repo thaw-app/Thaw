@@ -107,4 +107,26 @@ struct RepublishAbsenceMemoTests {
     func aReadWithItemsNamesTheWantedMembersItLacks() {
         #expect(RepublishAbsenceMemo.absentees(wanted: ["a", "b"], live: ["a", "c"]) == ["b"])
     }
+
+    @Test("A member whose app is neither running nor on the bar cannot republish")
+    func unreachableNeedsNoRunningAppAndNoLiveItem() {
+        let unreachable = RepublishAbsenceMemo.unreachable(
+            wanted: ["com.old.floe:Floe", "com.example.launching:Item-0", "com.apple.MenuBarAgent:com.apple.menuextra.wifi", "com.example.live:Second"],
+            liveNamespaces: ["com.apple.MenuBarAgent", "com.example.live"],
+            runningBundleIDs: ["com.example.launching", "com.example.live"]
+        )
+
+        #expect(unreachable == ["com.old.floe:Floe"], "A running app may still publish, and a live app's item may still return")
+    }
+
+    @Test("An item that is not named by an app's bundle is still waited for")
+    func nonBundleNamespacesStayAwaited() {
+        let unreachable = RepublishAbsenceMemo.unreachable(
+            wanted: ["null:Item-0", "8A1F3E7C-2B4D-4E5F-9A6B-7C8D9E0F1A2B:Item-0"],
+            liveNamespaces: [],
+            runningBundleIDs: []
+        )
+
+        #expect(unreachable.isEmpty)
+    }
 }

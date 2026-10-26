@@ -112,6 +112,7 @@ and the Sparkle appcast, unless overridden with the `release_notes` input.
 - **Clicking the top of a fullscreen app no longer opens hidden items or the Thaw Bar** when another display shows its menu bar. By @camguillory.
 - **No blank band over the menu bar when the Thaw Bar opens** with an app whose icon is turned off in its own settings. Thaw kept showing that app's empty item to take its picture, which covered the app menus for about four seconds. By @camguillory.
 - **Unplugging a display no longer scrambles your icons.** Thaw put your order back while macOS was still laying out the bar, then saved the scrambled order. It now waits for the bar to go quiet first. By @camguillory.
+- **Moving an icon into Visible no longer pauses for an app that's gone.** If your saved order named an app that was removed or changed its identifier, such as Floe, Thaw waited three seconds for it on every move. By @diazdesandi.
 
 ### Known issues
 

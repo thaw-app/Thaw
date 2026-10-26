@@ -2416,7 +2416,7 @@ extension MenuBarItemManager {
         // set is satisfied by the first enumeration.
         let knownAbsent = wantedIDs.filter {
             missingRepublishMemo.isKnownAbsent($0) || MoveTargeting.namesPinnedSystemItem($0)
-        }
+        }.union(RepublishAbsenceMemo.unreachable(wanted: wantedIDs, liveNamespaces: Set(itemCache.managedItems.map(\.tag.namespace.description)), runningBundleIDs: await RunningApplicationSnapshot.current().bundleIdentifiers))
         let awaitedIDs = wantedIDs.subtracting(knownAbsent)
         if !knownAbsent.isEmpty {
             MenuBarItemManager.diagLog.debug(
