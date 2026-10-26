@@ -197,7 +197,7 @@ struct ThawBarContentView: View {
                 }
             }
         } else {
-            itemManager.managedItems(for: section)
+            UserSwitchedOffApps.excluding(itemManager.managedItems(for: section), switchedOff: menuBarManager.nativeAppHidingExperiment.userSwitchedOffBundleIDs)
         }
         ZStack {
             ThawBarChrome(

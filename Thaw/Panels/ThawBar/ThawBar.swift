@@ -331,12 +331,11 @@ final class ThawBarPanel: NSPanel {
         folderMembers: [String]? = nil,
         openedFrom iconFrame: CGRect? = nil
     ) {
-        guard let appState else {
-            return
-        }
+        guard let appState else { return }
         self.presentation = presentation
         folderMemberIdentifiers = presentation == .folder ? folderMembers : nil
         openingIconFrame = iconFrame
+        appState.menuBarManager.nativeAppHidingExperiment.refreshUserSwitchedOffApps(among: appState.itemManager.managedItems)
         let location = appState.settings.displaySettings.thawBarLocation(for: screen.displayID)
         let opensAtPointer = Self.concreteLocation(
             for: location,

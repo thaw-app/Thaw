@@ -6,6 +6,7 @@
 //  Licensed under the GNU GPLv3
 
 import Foundation
+import MenuBarModel
 import Observation
 import PlatformRuntimeKit
 
@@ -59,6 +60,20 @@ final class NativeAppHidingExperiment {
 
     /// Why the last start the user asked for failed, until they try Native again.
     private(set) var failedStartNotice: String?
+
+    /// Apps the user switched off in System Settings, as of the last refresh.
+    private(set) var userSwitchedOffBundleIDs: Set<String> = []
+
+    /// Reads which of these items' apps are switched off in System Settings without being in
+    /// Thaw's record. Named explicitly, so the read works with either hiding method; one that
+    /// fails, as without access to the system list, keeps the last answer.
+    func refreshUserSwitchedOffApps(among items: [MenuBarItem]) {
+        guard let switchedOff = try? controller.unjournaledHiddenApps(among: UserSwitchedOffApps.bundleIDs(of: items)) else { return }
+        let bundleIDs = UserSwitchedOffApps.bundleIDs(switchedOff: switchedOff, ownedByThaw: ExtraVisibilityChannel.keepsOffSystemList)
+        if bundleIDs != userSwitchedOffBundleIDs {
+            userSwitchedOffBundleIDs = bundleIDs
+        }
+    }
 
     /// True while apps hidden in an earlier session could not be shown again at launch.
     var previousSessionRecoveryFailed: Bool {
