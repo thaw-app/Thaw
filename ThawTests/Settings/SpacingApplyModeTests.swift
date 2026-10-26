@@ -98,10 +98,25 @@ struct SpacingApplyModeTests {
 
     @Test("Seeding a newly connected display's configuration never relaunches apps")
     func seedingANewDisplayNeverRelaunches() {
-        let seeded = DisplaySettingsManager.configurationsChangeReason(seedingConnectedDisplays: true)
-        let edited = DisplaySettingsManager.configurationsChangeReason(seedingConnectedDisplays: false)
+        let seeded = DisplaySettingsManager.configurationsChangeReason(writeOnlyReason: "displaySeeded")
+        let edited = DisplaySettingsManager.configurationsChangeReason(writeOnlyReason: nil)
         #expect(!DisplaySettingsManager.spacingApplyRelaunchesApps(reason: seeded))
         #expect(DisplaySettingsManager.spacingApplyRelaunchesApps(reason: edited))
+    }
+
+    @Test("A profile a display change switches to writes its spacing without relaunching apps")
+    func displayProfileSwitchNeverRelaunches() {
+        let reason = DisplaySettingsManager.configurationsChangeReason(writeOnlyReason: DisplaySettingsManager.displayProfileSwitchReason)
+        #expect(reason == "displayProfileSwitch")
+        #expect(!DisplaySettingsManager.spacingApplyRelaunchesApps(reason: reason))
+    }
+
+    @Test("Assigning a profile's configurations write-only leaves later edits free to relaunch", arguments: [false, true])
+    func writeOnlyAssignmentIsScoped(writeOnly: Bool) {
+        let manager = DisplaySettingsManager()
+        manager.assignConfigurations(["display": .defaultConfiguration], writeOnly: writeOnly)
+        #expect(manager.configurations["display"] == .defaultConfiguration)
+        #expect(manager.writeOnlyConfigurationsReason == nil)
     }
 
     // MARK: Persistence

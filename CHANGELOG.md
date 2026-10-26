@@ -97,7 +97,7 @@ and the Sparkle appcast, unless overridden with the `release_notes` input.
 - **Hidden icons keep their pictures after a relaunch.** Layout and the Thaw Bar showed app icons for hidden items until you revealed them again. By @diazdesandi.
 - **After a Mac restart, apps that start slowly keep their section.** Their icon could come back in Visible, and with Native hiding stay on the menu bar. By @diazdesandi.
 - **Opening a section shows your icons in their saved order.** Thaw skipped putting the order back before most reveals, so a divider could sit in the wrong place and Hidden icons could open in Always Hidden. By @diazdesandi.
-- **Connecting a display no longer relaunches your menu bar apps.** By @diazdesandi.
+- **Connecting a display no longer relaunches your menu bar apps,** including when it switches to a profile with different spacing. The new spacing is saved, and apps use it the next time they start, or right away with Reapply Spacing. By @diazdesandi.
 - **A display's profile is applied once when you connect it.** It ran a second time after the menu bar settled. By @diazdesandi.
 - **Order and hiding work with a display below or beside your main one.** Thaw took that display's menu bar for icons parked off the bar and kept moving them, and clicks, hints and tooltips could land in the wrong place. Reported by @joaofrgomes in [#1367](https://github.com/thaw-app/Thaw/issues/1367). Fixed by @diazdesandi.
 - **Quick ⌘-drags inside Visible stick.** Thaw could put the icons back in the saved order, which takes a few seconds to catch up. The order also holds after a profile apply or a layout reset. By @diazdesandi.

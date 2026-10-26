@@ -27,14 +27,24 @@ extension DisplaySettingsManager {
             : "screenParametersChanged"
     }
 
-    /// Seeding a display Thaw has never seen happens on a display change, so it must not relaunch apps.
-    static func configurationsChangeReason(seedingConnectedDisplays: Bool) -> String {
-        seedingConnectedDisplays ? "displaySeeded" : "configurationsChanged"
+    /// The reason a profile a display change switched to applies its spacing under.
+    static let displayProfileSwitchReason = "displayProfileSwitch"
+
+    /// Seeding a new display and a display-driven profile switch both happen on a display change, so they only write.
+    static func configurationsChangeReason(writeOnlyReason: String?) -> String {
+        writeOnlyReason ?? "configurationsChanged"
     }
 
     /// Plugging or unplugging a display is not a spacing edit, so it only writes the value.
     static func spacingApplyRelaunchesApps(reason: String) -> Bool {
-        reason != "screenParametersChanged" && reason != "displaySeeded"
+        !["screenParametersChanged", "displaySeeded", displayProfileSwitchReason].contains(reason)
+    }
+
+    /// Takes a profile's configurations; write-only when a display change switched to the profile.
+    func assignConfigurations(_ newConfigurations: [String: DisplayThawBarConfiguration], writeOnly: Bool) {
+        writeOnlyConfigurationsReason = writeOnly ? Self.displayProfileSwitchReason : nil
+        defer { writeOnlyConfigurationsReason = nil }
+        configurations = newConfigurations
     }
 
     /// Write-only mode relaunches nothing, so it never asks.

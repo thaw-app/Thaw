@@ -33,7 +33,7 @@ final class DisplaySettingsManager {
             guard oldValue != configurations else { return }
             persistConfigurations()
             applyActiveDisplaySpacing(
-                reason: Self.configurationsChangeReason(seedingConnectedDisplays: isSeedingConnectedDisplays)
+                reason: Self.configurationsChangeReason(writeOnlyReason: writeOnlyConfigurationsReason)
             )
         }
     }
@@ -136,9 +136,9 @@ final class DisplaySettingsManager {
     /// Internal access so unit tests in ThawTests can seed and assert it.
     var lastAppliedActiveDisplayUUID: String?
 
-    /// True while a newly connected display's configuration is seeded from the template.
+    /// Set while a configuration change must only write spacing: seeding a new display or a display-driven profile.
     @ObservationIgnored
-    private var isSeedingConnectedDisplays = false
+    var writeOnlyConfigurationsReason: String?
 
     /// UUID of the display that currently owns the menu bar, or nil if it
     /// cannot be determined. Exposed for views that need to decide whether
@@ -205,9 +205,9 @@ final class DisplaySettingsManager {
             knownDisplays = updated
         }
         if configurationsChanged {
-            isSeedingConnectedDisplays = true
+            writeOnlyConfigurationsReason = "displaySeeded"
             configurations = seededConfigurations
-            isSeedingConnectedDisplays = false
+            writeOnlyConfigurationsReason = nil
         }
     }
 
