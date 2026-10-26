@@ -42,6 +42,43 @@ struct ProfileSettleReapplyTests {
         #expect(ProfileSettleReapply.shouldReapply(activeProfileID: home, lastSettledProfileID: work))
     }
 
+    @Test("A display switch whose apply is still running is left to finish, not applied a second time")
+    func pendingApplyOfTheActiveProfileIsLeftToFinish() {
+        #expect(ProfileSettleReapply.step(
+            activeProfileID: home, lastSettledProfileID: work, pendingApplyProfileID: home
+        ) == .leavePendingApply)
+    }
+
+    @Test("A pending apply of another profile still leaves the active one to apply")
+    func pendingApplyOfAnotherProfileReapplies() {
+        #expect(ProfileSettleReapply.step(
+            activeProfileID: home, lastSettledProfileID: work, pendingApplyProfileID: work
+        ) == .reapply)
+    }
+
+    @Test("Without a pending apply the step follows shouldReapply", arguments: [false, true])
+    func noPendingApplyFollowsShouldReapply(changed: Bool) {
+        let last = changed ? work : home
+        #expect(ProfileSettleReapply.step(
+            activeProfileID: home, lastSettledProfileID: last, pendingApplyProfileID: nil
+        ) == (changed ? .reapply : .keep))
+    }
+
+    @Test("No active profile keeps, whatever is pending")
+    func noActiveProfileKeeps() {
+        #expect(ProfileSettleReapply.step(
+            activeProfileID: nil, lastSettledProfileID: work, pendingApplyProfileID: home
+        ) == .keep)
+    }
+
+    @Test("Settling while the active profile's apply is pending records it and leaves the apply running")
+    func settleRecordsAPendingApply() {
+        let record = ProfileSettleReapply.Record(defaults: freshDefaults())
+        record.lastSettledProfileID = work
+        #expect(record.settle(activeProfileID: home, pendingApplyProfileID: home) == .leavePendingApply)
+        #expect(record.lastSettledProfileID == home)
+    }
+
     @Test("Without a store given, the record keeps to the app's defaults store")
     func recordUsesAppStore() {
         let defaults = freshDefaults()

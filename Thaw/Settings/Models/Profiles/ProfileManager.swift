@@ -54,9 +54,9 @@ final class ProfileManager {
     private var lastActiveSpaceKey: String?
     /// Whether a Focus Filter profile is currently applied.
     private var focusFilterActive = false
-    /// The in-flight layout apply task. Exposed for callers that need to
-    /// wait for the layout to finish (e.g. the Apply button).
+    /// The in-flight layout apply and its profile, for callers that wait for it (e.g. the Apply button).
     private(set) var layoutTask: Task<Void, Never>?
+    private(set) var layoutTaskProfileID: UUID?
 
     /// Callers awaiting layoutTask use this to report an unavailable layout engine, even when profile settings applied.
     /// Cleared at the start of each apply.
@@ -66,10 +66,16 @@ final class ProfileManager {
     private var layoutGeneration: UInt = 0
 
     /// Clear the verdict and issue a reporting generation; separate from app relaunches so tests need no AppState.
-    func beginLayoutApply() -> UInt {
+    func beginLayoutApply(profileID: UUID? = nil) -> UInt {
         layoutDidNotRun = false
+        layoutTaskProfileID = profileID
         layoutGeneration &+= 1
         return layoutGeneration
+    }
+
+    private func endLayoutTask(generation: UInt) {
+        guard layoutGeneration == generation else { return }
+        layoutTask = nil
     }
 
     /// Ignore superseded failures so late tasks cannot overwrite a newer apply's clean verdict.
@@ -305,7 +311,7 @@ final class ProfileManager {
         // Cancel any in-flight layout task before starting a new one.
         // Prevents two profile applies from fighting over item positions.
         layoutTask?.cancel()
-        let generation = beginLayoutApply()
+        let generation = beginLayoutApply(profileID: profile.id)
 
         let pinnedHidden = Set(profile.menuBarLayout.pinnedHiddenBundleIDs)
         let pinnedAlwaysHidden = Set(profile.menuBarLayout.pinnedAlwaysHiddenBundleIDs)
@@ -407,9 +413,7 @@ final class ProfileManager {
 
             // Reverse pre-hook order for teardown; skip post-hooks when a newer apply cancels this task.
             if Task.isCancelled {
-                if self?.layoutGeneration == generation {
-                    self?.layoutTask = nil
-                }
+                self?.endLayoutTask(generation: generation)
                 return
             }
             await HookRunner.runIfEnabled(profilePost, context: HookRunner.Context(
@@ -422,9 +426,7 @@ final class ProfileManager {
             ))
             // Recheck cancellation after a long profile script to avoid firing global teardown for a superseded apply.
             if Task.isCancelled {
-                if self?.layoutGeneration == generation {
-                    self?.layoutTask = nil
-                }
+                self?.endLayoutTask(generation: generation)
                 return
             }
             await HookRunner.runIfEnabled(globalPost, context: HookRunner.Context(
@@ -436,9 +438,7 @@ final class ProfileManager {
                 previousProfileName: baseContext.previousName
             ))
 
-            if self?.layoutGeneration == generation {
-                self?.layoutTask = nil
-            }
+            self?.endLayoutTask(generation: generation)
         }
     }
 

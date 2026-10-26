@@ -190,17 +190,7 @@ extension MenuBarItemManager {
                 }
             }
 
-            // Only a profile other than the one already in place is applied, so drags made since survive.
-            // Await it so applySavedLayout below cannot race it.
-            if let appState = self.appState,
-               ProfileSettleReapply.Record().settle(activeProfileID: appState.profileManager.activeProfileID)
-            {
-                MenuBarItemManager.diagLog.info(
-                    "\(reason): applying active display profile after settling"
-                )
-                appState.profileManager.reapplyActiveProfile()
-                await appState.profileManager.layoutTask?.value
-            }
+            await settleActiveProfile(reason: reason)
 
             MenuBarItemManager.diagLog.debug(
                 "\(reason): running fast restore without sourcePID resolution"
@@ -257,6 +247,25 @@ extension MenuBarItemManager {
     private func menuBarHostItemsReady(in cache: ItemCache) -> Bool {
         cache.managedItems.contains {
             $0.tag.namespace == .menuBarAgent || $0.tag.isBentoBox
+        }
+    }
+
+    /// Only a profile other than the one already in place is applied, so drags made since survive.
+    /// An apply this settle starts is awaited, so applySavedLayout after it cannot race it. One
+    /// already running is left alone: its layout waits for this settle's task, so awaiting it here
+    /// would never return, and it lays itself out once the task ends.
+    private func settleActiveProfile(reason: String) async {
+        guard let profiles = appState?.profileManager else { return }
+        switch ProfileSettleReapply.Record().settle(
+            activeProfileID: profiles.activeProfileID,
+            pendingApplyProfileID: profiles.pendingApplyProfileID
+        ) {
+        case .reapply:
+            MenuBarItemManager.diagLog.info("\(reason): applying active display profile after settling")
+            profiles.reapplyActiveProfile()
+            await profiles.layoutTask?.value
+        case .leavePendingApply, .keep:
+            break
         }
     }
 }
