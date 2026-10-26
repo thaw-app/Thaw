@@ -783,7 +783,7 @@ extension MenuBarItemManager {
 
     /// Applies the saved order before the restriction is released, so the bar
     /// reveals straight into it without moving Thaw's click target.
-    func applySavedOrderBeforeReveal() {
+    func applySavedOrderBeforeReveal(cause: RepairOrchestrator.Cause) {
         guard appState != nil
         else {
             return
@@ -794,7 +794,7 @@ extension MenuBarItemManager {
         let controlItems = cacheDividers()
 
         if !arrangementIsManual,
-           repairs.writeNow(.preRevealOrder, cause: .revealStarting, { permit in
+           repairs.writeNow(.preRevealOrder, cause: cause, { permit in
                restoreStructuralControlOrder(
                    controlItems: controlItems,
                    items: cachedItems,

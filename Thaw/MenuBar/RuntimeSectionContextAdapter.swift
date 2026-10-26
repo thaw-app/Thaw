@@ -24,9 +24,11 @@ final class RuntimeSectionContextAdapter: RuntimeSectionContext {
     /// without reaching through the item manager.
     private let menuOpenMonitor: MenuOpenMonitor
     private let onScreenItems: OnScreenItemSnapshot
+    private let revealAttribution: RevealAttribution
 
-    init(appState: AppState) {
+    init(appState: AppState, revealAttribution: RevealAttribution) {
         self.appState = appState
+        self.revealAttribution = revealAttribution
         configuration = appState.settings
         menuOpenMonitor = appState.itemManager.menuOpenMonitor
         onScreenItems = appState.itemManager.onScreenItemSnapshot
@@ -174,20 +176,6 @@ final class RuntimeSectionContextAdapter: RuntimeSectionContext {
             try? await Task.sleep(for: .milliseconds(750))
             await runSceneProbe(reason: "after-apply+1000ms")
         }
-    }
-
-    func synchronizeVisibleItemGeometry(revealing section: MenuBarSectionName) async {
-        guard let itemManager = appState?.itemManager else { return }
-        await RevealTurns.restoreOrder(revealing: section, on: itemManager)
-    }
-
-    func reconcileSectionOrderAfterRecovery(revealing section: MenuBarSectionName) async {
-        guard let itemManager = appState?.itemManager else { return }
-        await RevealTurns.reconcileBoundaries(revealing: section, on: itemManager)
-    }
-
-    func prepareRevealedOrder() {
-        appState?.itemManager.applySavedOrderBeforeReveal()
     }
 
     func mirrorSectionOrder(_ identifiers: [String], for section: MenuBarSectionName) {
@@ -363,6 +351,20 @@ final class RuntimeSectionContextAdapter: RuntimeSectionContext {
 }
 
 extension RuntimeSectionContextAdapter {
+    func synchronizeVisibleItemGeometry(revealing section: MenuBarSectionName) async {
+        guard let itemManager = appState?.itemManager else { return }
+        await RevealTurns.restoreOrder(revealing: section, cause: revealAttribution.reconcileCause, on: itemManager)
+    }
+
+    func reconcileSectionOrderAfterRecovery(revealing section: MenuBarSectionName) async {
+        guard let itemManager = appState?.itemManager else { return }
+        await RevealTurns.reconcileBoundaries(revealing: section, cause: revealAttribution.reconcileCause, on: itemManager)
+    }
+
+    func prepareRevealedOrder() {
+        appState?.itemManager.applySavedOrderBeforeReveal(cause: revealAttribution.preRevealCause)
+    }
+
     /// The cache pass that publishes the on-screen items also records whether
     /// its walk read every owner.
     var completedLiveWalkGeneration: Int? {

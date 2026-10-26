@@ -186,6 +186,8 @@ final class MenuBarManager {
     /// Per-extra opt-in stand-ins for Apple extras removed in hidden sections; see SystemExtraTakeoverCoordinator.
     let systemExtraTakeover = SystemExtraTakeoverCoordinator()
     let newIconFollower = NewIconSectionFollower()
+    /// Who opened the current reveal, so Thaw's own reveals are not counted as the user's.
+    let revealAttribution = RevealAttribution()
 
     /// Panels observe reveals without holding a platform type; emits nothing without an engine.
     var revealedSectionChanges: AnyPublisher<MenuBarSectionName?, Never> {
@@ -301,11 +303,12 @@ final class MenuBarManager {
         // Recovery and overflow need notch coverage kept current across display changes.
         MenuBarNotchGeometry.refresh()
         let controller = RuntimeSectionController(
-            context: RuntimeSectionContextAdapter(appState: appState)
+            context: RuntimeSectionContextAdapter(appState: appState, revealAttribution: revealAttribution)
         )
         controller.start()
         sectionController = controller
         runtimeSectionController = controller
+        revealAttribution.observe(revealedSectionChanges)
         nativeAppHidingExperiment.start(controller: controller, settings: appState.settings.advanced)
         systemExtraTakeover.start(controller: controller, settings: appState.settings.advanced) { [weak appState] identifier in
             guard let itemManager = appState?.itemManager,
@@ -460,13 +463,7 @@ final class MenuBarManager {
             usesThawBar: { [weak self] in self?.shouldUseThawBar(for: $0) ?? true },
             isZenModeActive: { [weak self] in self?.isZenModeActive == true },
             revealedSection: { [weak self] in self?.sectionController.revealedSection },
-            reveal: { [weak self] target in
-                if let target {
-                    self?.sectionController.show(target)
-                } else {
-                    self?.sectionController.hideRevealedSections()
-                }
-            },
+            reveal: { [weak self] in self?.presentAlwaysShowTarget($0) },
             resetPresentation: { [weak self] in
                 guard let self else { return }
                 showOnHoverAllowed = true
@@ -1287,7 +1284,7 @@ final class MenuBarManager {
             sectionsRevealedBeforeZenMode = []
         }
         for name in sectionsRevealedBeforeZenMode {
-            section(withName: name)?.show()
+            revealAttribution.policy { section(withName: name)?.show() }
         }
         sectionsRevealedBeforeZenMode = []
         synchronizeAlwaysShowHiddenItems()

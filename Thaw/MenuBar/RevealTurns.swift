@@ -9,16 +9,19 @@ import MenuBarModel
 
 /// The two passes a reveal asks for, each run as one turn through the repair orchestrator.
 /// The kit cancels its task on hide, so a restore still queued then never writes.
+/// The cause says who opened the reveal, `.sectionRevealed` for the user or `.policyReveal` for Thaw
+/// itself. Either way the turn takes the lane at user priority: priority orders the queue, and the
+/// cause is only the accounting.
 @MainActor
 enum RevealTurns {
     /// Puts the revealed section back in its saved order.
-    static func restoreOrder(revealing section: MenuBarSectionName, on itemManager: MenuBarItemManager) async {
+    static func restoreOrder(revealing section: MenuBarSectionName, cause: RepairOrchestrator.Cause, on itemManager: MenuBarItemManager) async {
         let read: () async -> [MenuBarItem]? = {
             // Nothing is restored while the user arranges, so nothing is read.
             guard !itemManager.arrangementIsManual, !itemManager.isUserArrangingMenuBar else { return nil }
             return await MenuBarItem.getMenuBarItems(option: .activeSpace)
         }
-        itemManager.repairs.request(.revealReconcile, cause: .sectionRevealed)
+        itemManager.repairs.request(.revealReconcile, cause: cause)
         let aftermath = RepairTurn.Aftermath()
         await RepairTurn.run(.revealReconcile, priority: .user, on: itemManager.repairs, read: read) { items, permit in
             await itemManager.synchronizeRevealedOrder(revealing: section, readBeforeTurn: items, aftermath: aftermath, permit: permit)
@@ -27,9 +30,9 @@ enum RevealTurns {
     }
 
     /// Moves items that ended on the wrong side of a divider after a recovery.
-    static func reconcileBoundaries(revealing section: MenuBarSectionName, on itemManager: MenuBarItemManager) async {
+    static func reconcileBoundaries(revealing section: MenuBarSectionName, cause: RepairOrchestrator.Cause, on itemManager: MenuBarItemManager) async {
         let nothingToRead: () async -> Bool? = { nil }
-        itemManager.repairs.request(.revealReconcile, cause: .sectionRevealed)
+        itemManager.repairs.request(.revealReconcile, cause: cause)
         let aftermath = RepairTurn.Aftermath()
         await RepairTurn.run(.revealReconcile, priority: .user, on: itemManager.repairs, read: nothingToRead) { _, permit in
             await itemManager.reconcileSectionBoundaries(revealing: section, aftermath: aftermath, permit: permit)

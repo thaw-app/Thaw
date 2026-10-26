@@ -271,4 +271,100 @@ struct RepairOrchestratorTests {
         let allAreUserActions = interrupting.allSatisfy(\.isUserAction)
         #expect(allAreUserActions)
     }
+
+    /// Whether each cause is a user action, interrupts automatic work, and changes the layout by the user, in that order.
+    private static let traitTable: [RepairOrchestrator.Cause: (user: Bool, interrupts: Bool, layout: Bool)] = [
+        .userDragEnded: (true, false, true),
+        .moveFulfilled: (false, false, false),
+        .structuralDriftObserved: (false, false, false),
+        .revealHideTransition: (false, false, false),
+        .settled: (false, false, false),
+        .restrictionChanged: (false, false, false),
+        .cachePublished: (false, false, false),
+        .nativeOverflowChanged: (false, false, false),
+        .arrivalDisturbedOrder: (false, false, false),
+        .layoutApplyBlocked: (false, false, false),
+        .rearmed: (false, false, false),
+        .userEdit: (true, false, true),
+        .profileApplied: (false, false, false),
+        .settingChanged: (false, false, false),
+        .sectionRevealed: (true, false, false),
+        .revealStarting: (true, true, false),
+        .userDragStarted: (true, true, false),
+        .userClickedItem: (true, true, false),
+        .policyReveal: (false, false, false),
+    ]
+
+    @Test("Every cause keeps its place on the user or automatic side, and a policy reveal is automatic")
+    func everyCauseIsPinned() {
+        #expect(Set(Self.traitTable.keys) == Set(RepairOrchestrator.Cause.allCases))
+        for (cause, traits) in Self.traitTable {
+            #expect(cause.isUserAction == traits.user, "\(cause.rawValue)")
+            #expect(cause.interruptsAutomaticWork == traits.interrupts, "\(cause.rawValue)")
+            #expect(cause.isLayoutChangeByUser == traits.layout, "\(cause.rawValue)")
+        }
+    }
+
+    @Test(
+        "A reveal Thaw makes by itself leaves a queued automatic pass its turn; a user's reveal still calls it off",
+        arguments: [(RepairOrchestrator.Cause.policyReveal, true), (.revealStarting, false)]
+    )
+    func preRevealWriteAndAQueuedPass(cause: RepairOrchestrator.Cause, passRuns: Bool) async throws {
+        let repairs = RepairOrchestrator()
+        let holder = try #require(await repairs.enter(.arrivalOrderRestore))
+        repairs.request(.overflowRebalance, cause: .cachePublished)
+        let waiting = Task { @MainActor in await repairs.enter(.overflowRebalance) }
+        for _ in 0 ..< 20 {
+            await Task.yield()
+        }
+
+        _ = repairs.writeNow(.preRevealOrder, cause: cause) { $0.door }
+        repairs.leave(holder)
+
+        let hold = await waiting.value
+        #expect((hold != nil) == passRuns)
+        if let hold {
+            repairs.leave(hold)
+        }
+    }
+
+    @Test(
+        "A policy reveal's restore request leaves a planned pass alone; a user's reveal calls it off",
+        arguments: [(RepairOrchestrator.Cause.policyReveal, true), (.revealStarting, false)]
+    )
+    func revealRequestAndAPlannedPass(cause: RepairOrchestrator.Cause, passRuns: Bool) async {
+        let repairs = RepairOrchestrator()
+        repairs.request(.postRestrictionRepair, cause: .restrictionChanged)
+
+        repairs.request(.revealReconcile, cause: cause)
+
+        let hold = await repairs.enter(.postRestrictionRepair)
+        #expect((hold != nil) == passRuns)
+        if let hold {
+            repairs.leave(hold)
+        }
+    }
+
+    @Test("A policy reveal leaves the loop pause in place")
+    func policyRevealKeepsThePause() async {
+        let repairs = RepairOrchestrator()
+        for _ in 0 ... AutomaticWriteBudget.limit {
+            _ = await writingPass(repairs)
+        }
+
+        _ = repairs.writeNow(.preRevealOrder, cause: .policyReveal) { $0.door }
+        repairs.request(.revealReconcile, cause: .policyReveal)
+
+        #expect(await repairs.enter(.structuralNormalization) == nil)
+    }
+
+    @Test("The restore a policy reveal asked for keeps its turn when the user clicks")
+    func policyRevealRestoreSurvivesAClick() {
+        let repairs = RepairOrchestrator()
+        repairs.request(.revealReconcile, cause: .policyReveal)
+
+        repairs.interruptAutomaticWork(by: .userClickedItem)
+
+        #expect(repairs.ledger.causesWaiting(for: .revealReconcile) == [.policyReveal])
+    }
 }

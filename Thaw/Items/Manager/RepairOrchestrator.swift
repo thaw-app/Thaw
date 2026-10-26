@@ -45,7 +45,7 @@ final class RepairOrchestrator {
     }
 
     /// What asked for a piece of work.
-    enum Cause: String, Sendable {
+    enum Cause: String, CaseIterable, Sendable {
         /// The user finished ⌘-dragging an icon on the bar.
         case userDragEnded
         /// A move Thaw made was honoured and needs pinning as weights.
@@ -82,6 +82,8 @@ final class RepairOrchestrator {
         case userDragStarted
         /// The user opened an item from the Thaw Bar, search or a hint.
         case userClickedItem
+        /// Thaw revealed a section by itself (always-show, zen restore), not the user.
+        case policyReveal
 
         /// Causes that mean someone is at the bar, so the passes they start are not a loop.
         var isUserAction: Bool {
@@ -96,6 +98,12 @@ final class RepairOrchestrator {
         /// Causes that call off the automatic passes asked for before them, which were planned on a bar the user is now changing.
         var interruptsAutomaticWork: Bool {
             [.revealStarting, .userDragStarted, .userClickedItem].contains(self)
+        }
+
+        /// Causes whose passes keep their turn when the user acts. A policy reveal is not the user,
+        /// but the restores it asks for run at user priority, so later input never calls them off.
+        var keepsTurnOnUserInput: Bool {
+            isUserAction || self == .policyReveal
         }
     }
 
@@ -127,7 +135,7 @@ final class RepairOrchestrator {
         } else if cause.isUserAction {
             budget.noteUserAction()
         }
-        interruption.noteRequest(work, byUser: cause.isUserAction)
+        interruption.noteRequest(work, byUser: cause.keepsTurnOnUserInput)
         ledger.request(work, cause: cause)
     }
 
