@@ -22,4 +22,10 @@ extension ProfileManager {
         launchRecord?.keep(meta.id)
         return true
     }
+
+    /// keepsLiveLayoutAtLaunch(_:) for the profile with this ID, false when there is none.
+    func keepsLiveLayoutAtLaunch(profileID: UUID) -> Bool {
+        guard let meta = profiles.first(where: { $0.id == profileID }) else { return false }
+        return keepsLiveLayoutAtLaunch(meta)
+    }
 }

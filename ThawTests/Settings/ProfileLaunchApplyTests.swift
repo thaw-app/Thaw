@@ -58,6 +58,20 @@ struct ProfileLaunchApplyTests {
         }
     }
 
+    @Test func aFocusFilterAtLaunchKeepsTheProfileActiveAtQuit() async throws {
+        let defaults = try #require(suites.make())
+        let tmp = try ProfileTestDirectory.make(seeding: ["Default"])
+        defer { try? FileManager.default.removeItem(at: tmp) }
+        let id = try #require(ProfileManager(profilesDirectory: tmp).profiles.first?.id)
+        ProfileLaunchApply.Record(defaults: defaults).lastActiveProfileID = id
+        let manager = ProfileManager(profilesDirectory: tmp, launchRecord: .init(defaults: defaults))
+
+        await manager.applyFocusFilterProfile(requested: id.uuidString)
+
+        #expect(manager.activeProfileID == id)
+        #expect(ProfileSettleReapply.Record(defaults: defaults).lastSettledProfileID == id)
+    }
+
     @Test func theManagerAppliesAProfileSetToApplyAtLaunch() throws {
         let defaults = try #require(suites.make())
         try ProfileTestDirectory.withManager(seeding: ["Default"], launchRecord: .init(defaults: defaults)) { manager, _ in
@@ -115,8 +129,14 @@ enum ProfileTestDirectory {
         launchRecord: ProfileLaunchApply.Record? = nil,
         _ body: (ProfileManager, URL) throws -> Void
     ) throws {
-        let tmp = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString, isDirectory: true)
+        let tmp = try make(seeding: names)
         defer { try? FileManager.default.removeItem(at: tmp) }
+        try body(ProfileManager(profilesDirectory: tmp, launchRecord: launchRecord), tmp)
+    }
+
+    /// A new temporary directory holding the named profiles and their manifest. The caller removes it.
+    static func make(seeding names: [String]) throws -> URL {
+        let tmp = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString, isDirectory: true)
         try FileManager.default.createDirectory(at: tmp, withIntermediateDirectories: true)
 
         let encoder = JSONEncoder()
@@ -130,6 +150,6 @@ enum ProfileTestDirectory {
             metadata.append(ProfileMetadata(id: profile.id, name: profile.name, createdAt: profile.createdAt, modifiedAt: profile.modifiedAt))
         }
         try encoder.encode(metadata).write(to: tmp.appendingPathComponent("profiles.json"))
-        try body(ProfileManager(profilesDirectory: tmp, launchRecord: launchRecord), tmp)
+        return tmp
     }
 }
