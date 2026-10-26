@@ -30,7 +30,7 @@ enum LayoutDropCommit {
             appState.layoutFeedback.post(
                 LayoutBarFeedbackCenter.Refusal(
                     title: String(
-                        localized: "“\(Constants.displayName)” couldn’t move to \(MenuBarSection.Name.visible.displayString)",
+                        localized: "“\(Constants.displayName)” couldn’t move to \(MenuBarSection.Name.visible.localizedName)",
                         comment: "Title shown when the Thaw control icon is dropped outside the Visible section"
                     ),
                     message: String(

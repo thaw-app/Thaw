@@ -79,7 +79,7 @@ final class LayoutBarFeedbackCenter {
     ) -> Refusal {
         Refusal(
             title: String(
-                localized: "“\(groupName)” couldn’t move to \(section.displayString)",
+                localized: "“\(groupName)” couldn’t move to \(section.localizedName)",
                 comment: "Title shown when a whole-group move was refused"
             ),
             message: String(
@@ -102,7 +102,7 @@ final class LayoutBarFeedbackCenter {
     ) -> Refusal {
         Refusal(
             title: String(
-                localized: "“\(itemName)” couldn’t move to \(section.displayString)",
+                localized: "“\(itemName)” couldn’t move to \(section.localizedName)",
                 comment: "Title shown when an Apple item was refused because system item hiding is off"
             ),
             message: String(
@@ -123,7 +123,7 @@ final class LayoutBarFeedbackCenter {
     ) -> Refusal {
         Refusal(
             title: String(
-                localized: "“\(itemName)” couldn’t move to \(section.displayString)",
+                localized: "“\(itemName)” couldn’t move to \(section.localizedName)",
                 comment: "Title shown when an item cannot be assigned to a section"
             ),
             message: String(
@@ -190,7 +190,7 @@ final class LayoutBarFeedbackCenter {
                 comment: "Title shown when a group reorder did not converge"
             ),
             message: String(
-                localized: "macOS didn’t apply every move in \(section.displayString). The group’s saved order is correct and \(Constants.displayName) will try again.",
+                localized: "macOS didn’t apply every move in \(section.localizedName). The group’s saved order is correct and \(Constants.displayName) will try again.",
                 comment: "Explanation shown when a group reorder did not converge"
             )
         )

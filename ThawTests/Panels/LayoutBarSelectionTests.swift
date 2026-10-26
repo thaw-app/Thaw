@@ -234,7 +234,7 @@ struct LayoutBarSelectionTests {
         #expect(!views[0].isLayoutSelected)
         views[0].viewWillDraw()
         #expect(views[0].layer?.borderWidth == 0)
-        #expect((views[0].accessibilityValue() as? String) == MenuBarSection.Name.visible.displayString)
+        #expect((views[0].accessibilityValue() as? String) == MenuBarSection.Name.visible.localizedName)
     }
 
     @Test("A right click on one of several selected items offers moving them all")

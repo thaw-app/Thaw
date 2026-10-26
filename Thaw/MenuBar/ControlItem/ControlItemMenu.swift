@@ -197,7 +197,7 @@ final class ControlItemMenuController: NSObject {
         case (false, .alwaysHidden):
             String(localized: "Hide Always Hidden Items")
         default:
-            String(localized: "\(section.isHidden ? "Show" : "Hide") \(name.displayString) Items")
+            String(localized: "\(section.isHidden ? "Show" : "Hide") \(name.localizedName) Items")
         }
     }
 

@@ -139,7 +139,7 @@ final class LayoutSelectionModel {
         }
         return LayoutBarFeedbackCenter.Refusal(
             title: String(
-                localized: "The selected items couldn’t move to \(section.displayString)",
+                localized: "The selected items couldn’t move to \(section.localizedName)",
                 comment: "Title shown when a move of several selected Layout items was refused"
             ),
             message: String(

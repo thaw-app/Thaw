@@ -143,7 +143,7 @@ struct FoldedMenuBar: View {
         }
         .menuStyle(.borderlessButton)
         .fixedSize()
-        .accessibilityLabel("Sort \(section.displayString) items")
+        .accessibilityLabel("Sort \(section.localizedName) items")
         .help("Sort this section by name. Groups stay together.")
     }
 

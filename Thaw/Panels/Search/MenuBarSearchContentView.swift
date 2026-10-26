@@ -504,7 +504,7 @@ private struct MenuBarSearchContentView: View {
         var rows = [
             RankableRow(
                 listItem: ListItem(content: .header(name), id: .header(name), isSelectable: false, action: nil),
-                title: name.displayString
+                title: name.localizedName
             ),
         ]
         for item in itemManager.managedItems(for: name).reversed() where !item.isControlItem {
