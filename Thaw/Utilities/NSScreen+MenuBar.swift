@@ -224,7 +224,16 @@ extension NSScreen {
     func isSystemMenuBarVisible() -> Bool {
         // macOS 27 has no status-item windows, so an .itemsOnly list is always
         // empty. The bar window's on-screen state still tracks fullscreen auto-hide.
-        return !Bridging.getMenuBarWindowList(option: [.onScreen]).isEmpty
+        let barFrames = Bridging.getMenuBarWindowList(option: [.onScreen]).map(Bridging.getWindowBounds(for:))
+        return Self.hasMenuBar(among: barFrames, on: CGDisplayBounds(displayID))
+    }
+
+    /// Each display has its own bar window, and a fullscreen app hides only
+    /// its own display's. A bar that won't report its frame counts as here.
+    static nonisolated func hasMenuBar(among onScreenBarFrames: [CGRect?], on displayBounds: CGRect) -> Bool {
+        onScreenBarFrames.contains { frame in
+            frame.map { displayBounds.contains(CGPoint(x: $0.midX, y: $0.midY)) } ?? true
+        }
     }
 
     /// The application menu frame from AX, not notch-capped. Cached per display

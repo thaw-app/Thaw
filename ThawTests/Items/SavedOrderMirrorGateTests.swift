@@ -145,4 +145,26 @@ struct SavedOrderMirrorGateTests {
     func noDisplays() {
         #expect(SavedOrderMirrorGate.transientFrame(among: [Self.item(x: 0)], displays: []) == nil)
     }
+
+    @Test("A ⌘-drag becomes the saved order while the hold is still on")
+    func userDragSkipsTheHold() {
+        let key = "MenuBarItemManager.savedSectionOrder"
+        let previous = UserDefaults.standard.object(forKey: key)
+        defer { UserDefaults.standard.set(previous, forKey: key) }
+
+        let visible = [Self.item(x: 1600, windowID: 1), Self.item(x: 1700, windowID: 2)]
+        var cache = MenuBarItemCache(displayID: nil)
+        cache[.visible] = visible
+        let manager = MenuBarItemManager()
+        let visibleKey = MenuBarSectionName.visible.rawValue
+        let saved = [visibleKey: visible.reversed().map(\.uniqueIdentifier)]
+        manager.savedSectionOrder = saved
+        manager.savedOrderMirrorGate.noteDisturbance()
+
+        manager.mirrorSavedSectionOrderIfSettled(from: cache, displays: Self.displays)
+        #expect(manager.savedSectionOrder == saved)
+
+        manager.mirrorSavedSectionOrderIfSettled(from: cache, placedByUser: true, displays: Self.displays)
+        #expect(manager.savedSectionOrder[visibleKey] == visible.map(\.uniqueIdentifier))
+    }
 }

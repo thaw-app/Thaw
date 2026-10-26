@@ -352,9 +352,11 @@ extension MenuBarItemManager {
     }
 
     /// Mirror only settled, concealed geometry; reveal interleaving must not become saved order that reconciliation enforces.
+    /// `placedByUser` skips the quiet period after a ⌘-drag, whose order is the user's own; every other guard still applies.
     func mirrorSavedSectionOrderIfSettled(
         from cache: ItemCache,
         controlItems: ControlItemPair? = nil,
+        placedByUser: Bool = false,
         displays: [CGRect] = activeDisplayBounds()
     ) {
         let isAnySectionRevealed = appState?.menuBarManager.sectionController.revealedSection != nil
@@ -366,7 +368,7 @@ extension MenuBarItemManager {
                 isInStartupSettling: isInStartupSettling,
                 isApplyingProfileLayout: isApplyingProfileLayout
             )
-        guard savedOrderMirrorGate.allowsMirror(identifiers: Set(cache.managedItems.map(\.uniqueIdentifier)), restrictionChange: lastRestrictionChangeTimestamp, sectionRevealed: isAnySectionRevealed, transientFrame: SavedOrderMirrorGate.transientFrame(among: cache[.visible], displays: displays)), shouldPersistLayoutSnapshot else {
+        guard placedByUser || savedOrderMirrorGate.allowsMirror(identifiers: Set(cache.managedItems.map(\.uniqueIdentifier)), restrictionChange: lastRestrictionChangeTimestamp, sectionRevealed: isAnySectionRevealed, transientFrame: SavedOrderMirrorGate.transientFrame(among: cache[.visible], displays: displays)), shouldPersistLayoutSnapshot else {
             return
         }
         // Concealed buckets retain old frames, which cannot describe the current bar.
