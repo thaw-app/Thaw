@@ -24,12 +24,19 @@ the items under New and Fixed.
 
 ## [Unreleased]
 
+## [3.0.0-beta.5] - 2026-10-27
+
+**macOS 27 only**
+
+Most of the fixes in this release harden security, and they come from findings in a CodeRabbit deep scan.
+
 ### Changed
 
 - **thaw://proxy-press needs settings access and an app you allowed,** like thaw://set, since it presses another app's menu bar item.
 - **thaw://toggle-thawbar needs settings access,** like thaw://set and thaw://toggle, since it saves a setting.
 - **thaw://dump-items needs settings access, and reports back only to the app that asked.** It no longer opens web links.
 - **An imported profile arrives with "Ask before restarting" on,** and Thaw refuses a file with more than 100 profiles.
+- **thawctl get says it can't return a value** instead of sending a request whose reply goes nowhere. Read settings from the ThawCtl app or your own app's callback.
 
 ### Fixed
 
@@ -39,6 +46,14 @@ the items under New and Fixed.
 - **A shortcut with an impossible key code no longer makes Thaw quit,** when a profile with one is applied or at the next launch. Thaw skips that shortcut.
 - **Another app can't switch your profile by pretending a Focus started or ended.** Thaw checks the Focus state itself before it switches.
 - **Applying a profile no longer restarts menu bar apps without asking.** With spacing set to ask first, the Profiles pane asks, and a profile applied from the menu, a shortcut, Shortcuts, a link, a Focus or a Space saves its spacing for when the apps next start.
+- **The profile preview warns that applying will restart menu bar apps** when the profile has its own spacing for the display you're on.
+- **The profile preview shows when a profile only reorders items in a section,** instead of saying nothing would change.
+- **Timed rehide hides the section again even if you don't move the pointer** after showing it with a shortcut or a click.
+- **A system item's stand-in turned off while it was starting no longer keeps running.**
+- **When a Focus ends, Thaw switches to the current Space's profile** if it has one, as it does at launch, rather than the display's.
+- **thawctl set accepts the key=value form its help shows,** such as `thawctl set showOnHover=true`.
+- **An app you add by hand under Automation can use thaw:// links.** It's pinned to its own signature, like an app you allow from the prompt, instead of being listed but always refused.
+- **A Focus profile stays on when Thaw can't read the Focus state.** Only the system reporting that the Focus ended switches back.
 
 ## [2.1.0] - 2026-10-14
 **macOS 26 only**
