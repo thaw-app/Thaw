@@ -282,7 +282,7 @@ final class DisplaySettingsManager {
     /// global domain. Returns nil when the key is unset, letting callers
     /// distinguish "user has explicitly configured spacing" from "macOS
     /// default applies".
-    private static func currentSystemSpacing() -> Int? {
+    static func currentSystemSpacing() -> Int? {
         CFPreferencesCopyValue(
             "NSStatusItemSpacing" as CFString,
             kCFPreferencesAnyApplication,
@@ -296,8 +296,8 @@ final class DisplaySettingsManager {
     /// another value on disk and relaunches items to overwrite the user's.
     /// The padding key is not read, so padding that differs from spacing gets
     /// one normalising relaunch.
-    private func seedConfigurationsFromSystemSpacing() {
-        guard let onDisk = Self.currentSystemSpacing(),
+    func seedConfigurationsFromSystemSpacing(_ onDisk: Int? = DisplaySettingsManager.currentSystemSpacing()) {
+        guard let onDisk,
               onDisk != Self.systemSpacingDefault
         else {
             return
@@ -498,7 +498,7 @@ final class DisplaySettingsManager {
     }
 
     /// Handles per-display settings changed externally via Settings URI scheme.
-    private func handleExternalPerDisplaySettingsChange(_ notification: Notification) {
+    func handleExternalPerDisplaySettingsChange(_ notification: Notification) {
         guard let key = notification.userInfo?["key"] as? String,
               let scopeRaw = notification.userInfo?["scope"] as? String
         else {
