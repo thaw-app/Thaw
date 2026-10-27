@@ -26,7 +26,7 @@ the items under New and Fixed.
 
 ## [3.0.0-beta.5] - 2026-10-27
 
-**macOS 27 only**
+**macOS 27 only · Build 118**
 
 Most of the fixes in this release harden security, and they come from findings in a CodeRabbit deep scan.
 
