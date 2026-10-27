@@ -62,7 +62,7 @@ final class MenuBarItemFailureLedger {
         let cutoff = Date.now.addingTimeInterval(-Self.markLifetime)
         let versionChanged = Defaults.string(forKey: .menuBarFailureLedgerVersion) != Self.currentBuildVersion
 
-        func load(_ key: Defaults.Key, cutoff: Date = cutoff) -> (marks: [String: Date], stored: Int) {
+        func load(_ key: Defaults.Key, cutoff: Date) -> (marks: [String: Date], stored: Int) {
             let stored = Defaults.dictionary(forKey: key) as? [String: Double] ?? [:]
             guard !versionChanged else {
                 return ([:], stored.count)
@@ -74,8 +74,8 @@ final class MenuBarItemFailureLedger {
             return (marks, stored.count)
         }
 
-        let unresponsive = load(.unresponsiveMenuBarItems)
-        let cannot = load(.cannotCompleteMenuBarItems)
+        let unresponsive = load(.unresponsiveMenuBarItems, cutoff: cutoff)
+        let cannot = load(.cannotCompleteMenuBarItems, cutoff: cutoff)
         let stranded = load(.strandedMenuBarItems, cutoff: Date.now.addingTimeInterval(-Self.strandLifetime))
         markDates = unresponsive.marks
         cannotCompleteDates = cannot.marks

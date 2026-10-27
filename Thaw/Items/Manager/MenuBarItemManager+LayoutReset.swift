@@ -404,10 +404,7 @@ extension MenuBarItemManager {
                 itemOrder: itemOrder,
                 to: controller
             )
-        }
-
-        // Visible items have live AX elements, but only profiles reconcile synthetically; assignment mirroring owns membership.
-        if source == .profile {
+            // Visible items have live AX elements, but only profiles reconcile synthetically; assignment mirroring owns membership.
             await applySectionItemOrder(
                 sections: [.visible],
                 controller: controller,

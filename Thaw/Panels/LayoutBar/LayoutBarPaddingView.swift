@@ -429,7 +429,6 @@ final class LayoutBarPaddingView: NSView {
                                     )
                                 )
                             }
-                            return
                         }
                     } else {
                         controller?.setSection(targetSection, item: item)
@@ -1146,7 +1145,6 @@ final class LayoutBarPaddingView: NSView {
                             refusal: refusal
                         )
                     )
-                    return
                 }
             }
 
