@@ -920,16 +920,7 @@ final class ProfileManager {
 
     /// Enforce unique Space ownership and cache the display label.
     func setAssociatedSpace(key: String?, spaceName: String? = nil, forProfileID profileID: UUID) {
-        if let key {
-            for index in profiles.indices where profiles[index].associatedSpaceKey == key {
-                profiles[index].associatedSpaceKey = nil
-                profiles[index].associatedSpaceName = nil
-            }
-        }
-        if let index = profiles.firstIndex(where: { $0.id == profileID }) {
-            profiles[index].associatedSpaceKey = key
-            profiles[index].associatedSpaceName = key != nil ? spaceName : nil
-        }
+        ProfileAssociations.assignSpace(key, name: spaceName, to: profileID, in: &profiles)
         persistManifest()
     }
 
@@ -942,16 +933,7 @@ final class ProfileManager {
 
     /// Enforce unique display ownership and retain its name for disconnected displays.
     func setAssociatedDisplay(uuid: String?, displayName: String? = nil, forProfileID profileID: UUID) {
-        if let uuid {
-            for index in profiles.indices where profiles[index].associatedDisplayUUID == uuid {
-                profiles[index].associatedDisplayUUID = nil
-                profiles[index].associatedDisplayName = nil
-            }
-        }
-        if let index = profiles.firstIndex(where: { $0.id == profileID }) {
-            profiles[index].associatedDisplayUUID = uuid
-            profiles[index].associatedDisplayName = uuid != nil ? displayName : nil
-        }
+        ProfileAssociations.assignDisplay(uuid, name: displayName, to: profileID, in: &profiles)
         persistManifest()
     }
 
@@ -1119,17 +1101,26 @@ final class ProfileManager {
     }
 
     /// Imports profiles from a file.
+    /// Profiles are staged in memory and published once, so the hotkey rebuild and the manifest write run once per file.
     func importProfile(from url: URL) throws {
         let data = try Data(contentsOf: url)
         let bundle = try decoder.decode(ProfileExportBundle.self, from: data)
+        try ProfileImportPolicy.validate(bundle)
+
+        var staged = profiles
+        var published = false
+        // A write that fails part-way still publishes the profiles before it, so their files aren't orphaned.
+        defer {
+            if !published, staged.count != profiles.count {
+                profiles = staged
+                persistManifest()
+            }
+        }
 
         for entry in bundle.entries {
-            // An imported hook must not run until the user has seen it and switched it on.
-            var content = entry.profile.content
-            content.automation = content.automation?.disabledUntilApproved
             let imported = Profile(
                 name: entry.profile.name,
-                content: content
+                content: ProfileImportPolicy.sanitized(entry.profile.content)
             )
 
             let importedData = try encoder.encode(imported)
@@ -1138,35 +1129,26 @@ final class ProfileManager {
                 options: .atomic
             )
 
-            let metadata = ProfileMetadata(
+            staged.append(ProfileMetadata(
                 id: imported.id,
                 name: imported.name,
                 createdAt: imported.createdAt,
                 modifiedAt: imported.modifiedAt,
                 keepsLayoutChangesSetting: entry.keepsLayoutChanges,
                 reappliesAtLaunchSetting: entry.reappliesAtLaunch
-            )
-            profiles.append(metadata)
+            ))
 
-            // Reconcile display ownership through the setter so any existing
-            // profile that owns this display has its association cleared first.
+            // Any existing profile that owns this display or Space gives it up; foreign-Mac Space keys stay inert.
             if let displayUUID = entry.associatedDisplayUUID {
-                setAssociatedDisplay(
-                    uuid: displayUUID,
-                    displayName: entry.associatedDisplayName,
-                    forProfileID: imported.id
-                )
+                ProfileAssociations.assignDisplay(displayUUID, name: entry.associatedDisplayName, to: imported.id, in: &staged)
             }
-
-            // Reconcile Space ownership too; foreign-Mac keys remain inert when no local Space matches.
             if let spaceKey = entry.associatedSpaceKey {
-                setAssociatedSpace(
-                    key: spaceKey,
-                    spaceName: entry.associatedSpaceName,
-                    forProfileID: imported.id
-                )
+                ProfileAssociations.assignSpace(spaceKey, name: entry.associatedSpaceName, to: imported.id, in: &staged)
             }
         }
+
+        published = true
+        profiles = staged
         try saveManifest()
     }
 }
