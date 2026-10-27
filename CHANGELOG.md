@@ -24,6 +24,10 @@ the items under New and Fixed.
 
 ## [Unreleased]
 
+### Changed
+
+- **thaw://proxy-press needs settings access and an app you allowed,** like thaw://set, since it presses another app's menu bar item.
+
 ### Fixed
 
 - **Thaw no longer quits when a group folder's icon briefly has no window.** On macOS 27 that happens after the menu bar rearranges, and Thaw read the placeholder number macOS gives such an icon as a window ID. Reported by @perlytiara in [#1397](https://github.com/thaw-app/Thaw/issues/1397).

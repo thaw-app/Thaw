@@ -125,7 +125,7 @@ struct SettingsURIDispatchInventoryTests {
 
         // Each mutating action must be handed the bundle id the gate approved.
         // A call passing anything else is a route around the check.
-        for action in ["handleSetURL", "handleToggleURL", "handleRevealItemURL", "handleLauncherURL"] {
+        for action in ["handleSetURL", "handleToggleURL", "handleRevealItemURL", "handleLauncherURL", "handleProxyPressURL"] {
             let calls = dispatch.filter { $0.contains("\(action)(") && !$0.contains("func \(action)(") }
             #expect(calls.count == 1, "Expected exactly one \(action) call in handleSettingsURL, found \(calls.count)")
             for call in calls {
@@ -163,12 +163,13 @@ struct SettingsURIDispatchInventoryTests {
         let dispatch = try Self.body(of: "handleSettingsURL", in: lines)
         let handler = try Self.body(of: "handleLauncherURL", in: lines)
 
-        // A host missing from the first list falls through to the ungated switch;
-        // one missing from the second passes the gate and then does nothing.
+        // A host missing from the route list falls through to the ungated switch;
+        // one missing from the dispatch passes the gate and then does nothing.
+        #expect(router.contains { $0.contains("SettingsURIRoute.requiresAuthorization(host)") })
         for operation in LauncherURIOperation.allCases {
             let literal = "\"\(operation.rawValue)\""
             #expect(
-                router.contains { $0.contains(literal) },
+                SettingsURIRoute.requiresAuthorization(operation.rawValue),
                 "\(operation.rawValue) is not routed to handleSettingsURL"
             )
             #expect(
@@ -181,6 +182,19 @@ struct SettingsURIDispatchInventoryTests {
         let callers = lines.filter { $0.contains("SettingsURIHandler.handleLauncherRequest(") }
         #expect(callers.count == 1, "Expected one handleLauncherRequest call, found \(callers.count)")
         #expect(handler.contains { $0.contains("SettingsURIHandler.handleLauncherRequest(") })
+    }
+
+    @Test("Every gated host is dispatched after the whitelist check and never in the ungated switch")
+    func everyGatedHostIsDispatchedBehindTheGate() throws {
+        let lines = try Self.sourceLines("Thaw/App/AppDelegate.swift")
+        let router = try Self.body(of: "handleURL", in: lines)
+        let dispatch = try Self.body(of: "handleSettingsURL", in: lines)
+
+        for host in SettingsURIRoute.authorizedHosts {
+            let literal = "\"\(host)\""
+            #expect(dispatch.contains { $0.contains(literal) }, "\(host) passes the gate and then does nothing")
+            #expect(!router.contains { $0.contains(literal) }, "\(host) also has an ungated branch in handleURL")
+        }
     }
 
     @Test("Callback URLs still refuse the schemes that can run code or read files")

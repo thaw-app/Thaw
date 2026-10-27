@@ -237,8 +237,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         handleURL(url, sender: SettingsURISender.identify(from: event))
     }
 
-    /// Routes thaw:// actions and settings requests; settings changes and per-item reveals require whitelist authorization.
-    /// proxy-press?bundle=X presses a hosted item by owner, while toggle-layout-editor opens quick edit without Settings.
+    /// Routes thaw:// actions and settings requests; hosts listed in SettingsURIRoute require whitelist authorization.
+    /// toggle-layout-editor opens quick edit without Settings.
     private func handleURL(_ url: URL, sender: SettingsURISender? = nil) {
         let host = url.host?.lowercased() ?? ""
 
@@ -248,20 +248,14 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             return
         }
 
-        switch host {
-        case "set", "toggle", "get", "authorize", "reveal-item",
-             "list-items", "activate-item", "list-profiles", "apply-profile", "get-appearance", "move-item":
+        if SettingsURIRoute.requiresAuthorization(host) {
             handleSettingsURL(url, host: host, sender: sender)
             return
-        default:
-            break
         }
 
         switch host {
         case "toggle-hidden":
             HotkeyAction.toggleHiddenSection.perform(appState: appState)
-        case "proxy-press":
-            handleProxyPressURL(url)
         case "toggle-always-hidden":
             HotkeyAction.toggleAlwaysHiddenSection.perform(appState: appState)
         case "toggle-swap":
@@ -294,7 +288,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     /// Handles thaw://proxy-press?bundle=X, AXPresses a hosted menu bar item
     /// by owner bundle, materializing it even when the host has parked it.
-    private func handleProxyPressURL(_ url: URL) {
+    private func handleProxyPressURL(_ url: URL, sender: String) {
         guard let components = URLComponents(url: url, resolvingAgainstBaseURL: false),
               let bundle = components.queryItems?.first(where: { $0.name == "bundle" })?.value,
               !bundle.isEmpty
@@ -308,7 +302,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         }
         let pid = app.processIdentifier
         let state = appState
-        appState.diagLog.info("proxy-press: pressing hosted item for \(bundle) (pid \(pid))")
+        appState.diagLog.info("proxy-press: pressing hosted item for \(bundle) (pid \(pid)) for sender \(sender)")
         Task {
             let pressed = await MenuBarAXQueries.pressHostedItem(sourcePID: pid)
             await MainActor.run {
@@ -373,6 +367,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             handleRevealItemURL(url, sender: effectiveBundleId)
         case "list-items", "activate-item", "list-profiles", "apply-profile", "get-appearance", "move-item":
             handleLauncherURL(url, sender: effectiveBundleId)
+        case "proxy-press":
+            handleProxyPressURL(url, sender: effectiveBundleId)
         default:
             break
         }
