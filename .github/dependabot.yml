@@ -36,3 +36,23 @@ updates:
       # gh-aw pins these in the generated *.lock.yml files; a bump without
       # `gh aw compile` desyncs them and breaks the workflow (see #926).
       - dependency-name: "github/gh-aw-actions/*"
+
+  # Thaw 2 lives on legacy/thaw-2. Dependabot reads this file only from the
+  # default branch, so the legacy line's Actions updates are configured here.
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+    open-pull-requests-limit: 5
+    labels:
+      - "dependencies"
+    assignees:
+      - "diazdesandi"
+    target-branch: "legacy/thaw-2"
+    groups:
+      github-actions:
+        patterns:
+          - "*"
+    ignore:
+      - dependency-name: "github/gh-aw-actions/*"

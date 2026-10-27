@@ -2,11 +2,11 @@
 
 Notes for AI coding agents and the people driving them. Read this before changing code.
 
-Thaw 2 (macOS 26) lives on `development`. Thaw 3 (macOS 27) lives on `feat/thaw-3`. Open the PR against the branch for the line you changed. Where the two branches differ, this file says so.
+Thaw 3 (macOS 27) lives on `development`. Thaw 2 (macOS 26) lives on `legacy/thaw-2`, which takes fixes and 2.x releases only and never merges back. Open the PR against the branch for the line you changed. Where the two branches differ, this file says so.
 
 ## Don't add responsibilities to the big types
 
-We are breaking up a handful of types that do too much. Bug fixes are still the priority, but no change should give these types more to do. This applies on both branches, and matters most on `feat/thaw-3`, where the breakup is happening.
+We are breaking up a handful of types that do too much. Bug fixes are still the priority, but no change should give these types more to do. This applies on both branches, and matters most on `development`, where the breakup is happening.
 
 | Type | What it does today |
 |---|---|
@@ -49,14 +49,14 @@ Lint locally, then let CI confirm. A green Xcode build is not proof that lint pa
 
 On `development`:
 
+- Run `sh scripts/lint.sh --strict`. It checks that the SwiftLint version matches `.swiftlint-version`, and CI runs the same.
+- The file, function, type, complexity and nesting limits are on. Violations that were already there are kept in `.swiftlint.baseline`, so only new ones report. Don't add entries to the baseline to make room for new code.
+
+On `legacy/thaw-2`:
+
 - Run `swiftlint lint --strict`. CI runs the same.
 - The Xcode build phase runs `swiftlint` without `--strict` and always marks itself done, so it doesn't reliably stop the build.
 - When you add, delete or rename a Swift file in a linted directory, regenerate the input list with `bash scripts/generate-swiftlint-inputs.sh`. The script reads Git-tracked paths, so stage new files first. CI regenerates the list and fails if it differs from `scripts/swiftlint-inputs.xcfilelist`.
-
-On `feat/thaw-3`:
-
-- Run `sh scripts/lint.sh --strict`. It checks that the SwiftLint version matches `.swiftlint-version`, and CI runs the same.
-- The file, function, type, complexity and nesting limits are on. Violations that were already there are kept in `.swiftlint.baseline`, so only new ones report. Don't add entries to the baseline to make room for new code.
 
 ## Tests and formatting
 

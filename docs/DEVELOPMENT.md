@@ -4,10 +4,10 @@ Contribution requirements, review expectations, and security reporting are in th
 
 ## Requirements
 
-- macOS 26 or 27.
-- Xcode 26.3 or later. CI tests with Xcode 26.6 and 27.0.
+- macOS 27.
+- Xcode 27 or later. CI tests with Xcode 27.0.
 
-Thaw 2.x ships for macOS 26; 3.0 ships for macOS 27.
+This branch is Thaw 3, for macOS 27. Thaw 2, for macOS 26, is on `legacy/thaw-2`.
 
 ## Build
 
@@ -21,7 +21,7 @@ Configuration lives in [`.swiftlint.yml`](../.swiftlint.yml) and [`.swiftformat`
 
 ```sh
 swiftformat .
-swiftlint lint --strict
+sh scripts/lint.sh --strict
 ```
 
 ## Tests
