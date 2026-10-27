@@ -32,6 +32,7 @@ $(SRCROOT)/Thaw/Hotkeys/KeyCombination.swift
 $(SRCROOT)/Thaw/Hotkeys/Modifiers.swift
 $(SRCROOT)/Thaw/Main/AppDelegate.swift
 $(SRCROOT)/Thaw/Main/AppState.swift
+$(SRCROOT)/Thaw/Main/AutomaticUpdates.swift
 $(SRCROOT)/Thaw/Main/IceApp.swift
 $(SRCROOT)/Thaw/Main/LayoutResetCommand.swift
 $(SRCROOT)/Thaw/Main/Navigation/AppNavigationState.swift
@@ -202,6 +203,7 @@ $(SRCROOT)/Thaw/Settings/SettingsPanes/MenuBarLayoutSettingsPane.swift
 $(SRCROOT)/Thaw/Settings/SettingsPanes/ProfilePreviewView.swift
 $(SRCROOT)/Thaw/Settings/SettingsPanes/ProfileSettingsPane.swift
 $(SRCROOT)/Thaw/Settings/SettingsPanes/SimpleModeSettingsPane.swift
+$(SRCROOT)/Thaw/Settings/SettingsPanes/SpacingApplyChoice.swift
 $(SRCROOT)/Thaw/Settings/SettingsPanes/ToolsSettingsPane.swift
 $(SRCROOT)/Thaw/Settings/SettingsPanes/Triggers/BluetoothDevicePicker.swift
 $(SRCROOT)/Thaw/Settings/SettingsPanes/Triggers/CommitTextField.swift

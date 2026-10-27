@@ -471,50 +471,6 @@ nonisolated enum SearchIndex {
 
     private static let advancedEntries: [SearchEntry] = [
         SearchEntry(
-            id: "advanced.searchSectionOrder",
-            titleKey: "Search section ordering",
-            titleText: "Search section ordering",
-            descriptionText: "Choose which menu bar sections appear in the search panel, and in what order.",
-            pane: .advanced,
-            sectionKey: "Menu Bar Search",
-            sectionText: "Menu Bar Search",
-            keywords: ["search", "section", "order", "panel", "reorder"],
-            property: .advanced("searchSectionOrder")
-        ),
-        SearchEntry(
-            id: "advanced.searchIncludeVisible",
-            titleKey: "Include visible section in search",
-            titleText: "Include visible section in search",
-            descriptionText: nil,
-            pane: .advanced,
-            sectionKey: "Menu Bar Search",
-            sectionText: "Menu Bar Search",
-            keywords: ["search", "visible", "include", "section"],
-            property: .advanced("searchIncludeVisible")
-        ),
-        SearchEntry(
-            id: "advanced.searchIncludeHidden",
-            titleKey: "Include hidden section in search",
-            titleText: "Include hidden section in search",
-            descriptionText: nil,
-            pane: .advanced,
-            sectionKey: "Menu Bar Search",
-            sectionText: "Menu Bar Search",
-            keywords: ["search", "hidden", "include", "section"],
-            property: .advanced("searchIncludeHidden")
-        ),
-        SearchEntry(
-            id: "advanced.searchIncludeAlwaysHidden",
-            titleKey: "Include always-hidden section in search",
-            titleText: "Include always-hidden section in search",
-            descriptionText: nil,
-            pane: .advanced,
-            sectionKey: "Menu Bar Search",
-            sectionText: "Menu Bar Search",
-            keywords: ["search", "always hidden", "include", "section"],
-            property: .advanced("searchIncludeAlwaysHidden")
-        ),
-        SearchEntry(
             id: "advanced.moveCursorToRevealedItem",
             titleKey: "Move the pointer to revealed items",
             titleText: "Move the pointer to revealed items",
@@ -703,25 +659,14 @@ nonisolated enum SearchIndex {
             property: nil
         ),
         SearchEntry(
-            id: "displays.confirmSpacingRelaunch",
-            titleKey: "Confirm before relaunching apps",
-            titleText: "Confirm before relaunching apps",
-            descriptionText: "Before a display change or spacing edit relaunches your menu bar apps, \(Constants.displayName) asks you to confirm.",
-            pane: .displays,
-            sectionKey: nil,
-            sectionText: nil,
-            keywords: ["confirm", "relaunch", "apps", "spacing", "restart"],
-            property: nil
-        ),
-        SearchEntry(
             id: "displays.spacingApplyMode",
-            titleKey: "When applying spacing",
-            titleText: "When applying spacing",
-            descriptionText: "Choose whether spacing changes restart menu bar apps immediately or wait until the next restart. macOS only reads menu bar spacing when a status item's owner starts, so restarting apps applies the change now; waiting leaves every app running and the new spacing appears the next time each app starts.",
+            titleKey: "When spacing changes",
+            titleText: "When spacing changes",
+            descriptionText: "Ask before restarting menu bar apps, restart them right away, or wait until they restart. macOS only reads menu bar spacing when an app with a menu bar item starts.",
             pane: .displays,
             sectionKey: nil,
             sectionText: nil,
-            keywords: ["spacing", "relaunch", "restart", "apps", "disable", "without", "immediate", "next restart"],
+            keywords: ["spacing", "confirm", "relaunch", "restart", "apps", "ask", "wait", "next restart", "profile"],
             property: nil
         ),
     ]

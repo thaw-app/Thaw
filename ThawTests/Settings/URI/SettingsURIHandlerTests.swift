@@ -360,9 +360,6 @@ nonisolated enum SettingsURIKeyTable {
         "iceBarLocationOnHotkey",
         "enableMenuBarItemOverflow",
         "useThawBarOnNotchOverflow",
-        "searchIncludeVisible",
-        "searchIncludeHidden",
-        "searchIncludeAlwaysHidden",
         "moveCursorToRevealedItem",
     ]
 

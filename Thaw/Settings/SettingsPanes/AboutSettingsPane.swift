@@ -34,8 +34,7 @@ struct AboutSettingsPane: View {
                     .padding(.vertical, 8)
             }
             IceSection("Updates") {
-                automaticallyCheckForUpdates
-                automaticallyDownloadUpdates
+                automaticUpdates
                 updateChannel
                 checkForUpdates
             }
@@ -177,18 +176,12 @@ struct AboutSettingsPane: View {
         NSWorkspace.shared.open(url)
     }
 
-    private var automaticallyCheckForUpdates: some View {
-        Toggle(
-            "Automatically check for updates",
-            isOn: $updatesManager.automaticallyChecksForUpdates
-        )
-    }
-
-    private var automaticallyDownloadUpdates: some View {
-        Toggle(
-            "Automatically download updates",
-            isOn: $updatesManager.automaticallyDownloadsUpdates
-        )
+    private var automaticUpdates: some View {
+        IcePicker("Automatic updates", selection: $updatesManager.automaticUpdates) {
+            ForEach(AutomaticUpdates.allCases) { choice in
+                Text(choice.localized).tag(choice)
+            }
+        }
     }
 
     private var updateChannel: some View {

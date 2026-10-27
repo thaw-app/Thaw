@@ -39,9 +39,6 @@ enum SettingsURIHandler {
         "iceBarLocationOnHotkey",
         "enableMenuBarItemOverflow",
         "useThawBarOnNotchOverflow",
-        "searchIncludeVisible",
-        "searchIncludeHidden",
-        "searchIncludeAlwaysHidden",
         "moveCursorToRevealedItem",
     ]
 
@@ -88,9 +85,6 @@ enum SettingsURIHandler {
         "iceBarLocationOnHotkey": .iceBarLocationOnHotkey,
         "enableMenuBarItemOverflow": .enableMenuBarItemOverflow,
         "useThawBarOnNotchOverflow": .useThawBarOnNotchOverflow,
-        "searchIncludeVisible": .searchIncludeVisible,
-        "searchIncludeHidden": .searchIncludeHidden,
-        "searchIncludeAlwaysHidden": .searchIncludeAlwaysHidden,
         "moveCursorToRevealedItem": .moveCursorToRevealedItem,
         "rehideInterval": .rehideInterval,
         "tempShowInterval": .tempShowInterval,

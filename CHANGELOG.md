@@ -34,6 +34,8 @@ the items under New and Fixed.
 - **Importing a profile doesn't turn on its scripts.** Scripts that run before or after the profile applies arrive switched off, and "Confirm before relaunching apps" arrives on. Turn them on in Profiles if you trust the file.
 - **thaw://toggle-thawbar needs settings access,** like thaw://set and thaw://toggle, since it saves a setting.
 - **Settings buttons look the same everywhere.** Main actions, other actions and buttons inside a row each have one style, and the update prompt and permission windows answer Return and Escape.
+- **One choice where there were several.** Automatic updates in About is off, check only, or check and download. Spacing in Displays is one "When spacing changes" choice (ask first, restart menu bar apps right away, or wait until they restart), with "Save spacing to every profile" when it restarts without asking. Your settings carry over.
+- **Search lists every section in menu bar order.** The order buttons and the per-section switches under Menu Bar Search are gone, along with their thaw:// keys.
 - **Fewer switches in General and Advanced.** One "Double-click to open always-hidden section" switch covers the Thaw icon and the empty menu bar, and Option-click always opens that section. A ⌘-drag always shows every section, the secondary context menu always ends with Quit, and the Dock icon follows "Hide app menus when showing menu bar items" instead of a separate switch. The thaw:// keys for the removed switches are gone.
 
 ### Fixed

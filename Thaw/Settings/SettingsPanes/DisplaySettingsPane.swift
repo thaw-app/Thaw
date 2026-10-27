@@ -136,35 +136,33 @@ struct DisplaySettingsPane: View {
 
     @ViewBuilder
     private var confirmSpacingRelaunchControls: some View {
-        IcePicker(
-            "When applying spacing",
-            selection: $displaySettings.spacingApplyMode
-        ) {
-            Text("Apply spacing immediately (restarts menu bar apps)")
-                .tag(SpacingApplyMode.relaunchApps)
-            Text("Wait until next restart (no apps restarted)")
-                .tag(SpacingApplyMode.writeOnly)
+        IcePicker("When spacing changes", selection: spacingApplyChoice) {
+            Text("Ask before restarting menu bar apps").tag(SpacingApplyChoice.askFirst)
+            Text("Restart menu bar apps right away").tag(SpacingApplyChoice.relaunchNow)
+            Text("Wait until the apps restart").tag(SpacingApplyChoice.waitForRestart)
         }
-        .annotation("macOS only reads menu bar spacing when a status item's owner starts. Restarting apps applies the change now; waiting leaves every app running and the new spacing appears the next time each app starts (after a restart, or when you reopen it).")
+        .annotation("macOS only reads menu bar spacing when an app with a menu bar item starts. Restarting apps applies the change now; waiting leaves every app running and the new spacing appears the next time each app starts.")
 
-        // Confirmations only matter when a relaunch wave can actually fire.
-        // Under writeOnly nothing is restarted, so there is nothing to ask
-        // about and nothing to save-scope.
-        if displaySettings.spacingApplyMode == .relaunchApps {
-            Toggle("Confirm before relaunching apps", isOn: $displaySettings.confirmSpacingRelaunch)
-                .annotation("Before a display change or spacing edit relaunches your menu bar apps, Thaw asks you to confirm. Turn this off to apply spacing changes and relaunch apps without confirmation.")
+        // Without a question to ask, the change needs to know which profiles it is saved to.
+        if spacingApplyChoice.wrappedValue != .askFirst {
+            Toggle("Save spacing to every profile", isOn: Binding(
+                get: { displaySettings.unconfirmedSpacingProfileScope == .allProfiles },
+                set: { displaySettings.unconfirmedSpacingProfileScope = $0 ? .allProfiles : .activeProfile }
+            ))
+            .annotation("On, a spacing change saves to every profile, and Apply to All Displays saves the whole global template to every profile. Off, both save to the active profile only.")
+        }
+    }
 
-            if !displaySettings.confirmSpacingRelaunch {
-                IcePicker(
-                    "Without confirmation, save spacing to",
-                    selection: $displaySettings.unconfirmedSpacingProfileScope
-                ) {
-                    Text("Active profile").tag(SpacingProfileSaveScope.activeProfile)
-                    Text("All profiles").tag(SpacingProfileSaveScope.allProfiles)
+    private var spacingApplyChoice: Binding<SpacingApplyChoice> {
+        Binding(
+            get: { SpacingApplyChoice(mode: displaySettings.spacingApplyMode, confirms: displaySettings.confirmSpacingRelaunch) },
+            set: { choice in
+                displaySettings.spacingApplyMode = choice.mode
+                if let confirms = choice.confirms {
+                    displaySettings.confirmSpacingRelaunch = confirms
                 }
-                .annotation("When a profile is active, choose whether spacing changes save to just the active profile or to every profile.")
             }
-        }
+        )
     }
 
     /// One controls block driven by a display picker, instead of repeating
@@ -704,9 +702,13 @@ struct DisplaySettingsPane: View {
         let displayCount = displaySettings.allDisplays().count
         let activeID = appState.profileManager.activeProfileID
 
-        // Confirmations disabled: broadcast directly, saving to the chosen
+        // Without a question to ask, broadcast directly and save to the chosen
         // profile target instead of staging the alert.
-        if !displaySettings.confirmSpacingRelaunch {
+        if !SpacingApplyChoice.globalApplyAsks(
+            mode: displaySettings.spacingApplyMode,
+            confirms: displaySettings.confirmSpacingRelaunch,
+            hasActiveProfile: activeID != nil
+        ) {
             commitGlobalApplyWithoutConfirmation(activeProfileID: activeID)
             return
         }

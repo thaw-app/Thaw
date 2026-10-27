@@ -479,22 +479,6 @@ private struct MenuBarSearchContentView: View {
                     selectFirstDisplayedItem()
                 }
             }
-            .onChange(of: appState.settings.advanced.searchSectionOrder) {
-                updateDisplayedItems()
-                ensureValidSelection()
-            }
-            .onChange(of: appState.settings.advanced.searchIncludeVisible) {
-                updateDisplayedItems()
-                ensureValidSelection()
-            }
-            .onChange(of: appState.settings.advanced.searchIncludeHidden) {
-                updateDisplayedItems()
-                ensureValidSelection()
-            }
-            .onChange(of: appState.settings.advanced.searchIncludeAlwaysHidden) {
-                updateDisplayedItems()
-                ensureValidSelection()
-            }
     }
 
     @ViewBuilder
@@ -624,18 +608,9 @@ private struct MenuBarSearchContentView: View {
         }
         typealias ScoredItem = (listItem: ListItem, score: Double)
 
-        let advanced = appState.settings.advanced
-        let orderedNames = advanced.searchSectionOrder
-
-        let searchItems: [SearchItem] = orderedNames
+        // Every enabled section, in menu bar order.
+        let searchItems: [SearchItem] = MenuBarSection.Name.allCases
             .reduce(into: []) { items, name in
-                let included = switch name {
-                case .visible: advanced.searchIncludeVisible
-                case .hidden: advanced.searchIncludeHidden
-                case .alwaysHidden: advanced.searchIncludeAlwaysHidden
-                }
-                guard included else { return }
-
                 if
                     let section = appState.menuBarManager.section(
                         withName: name

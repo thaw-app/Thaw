@@ -110,9 +110,6 @@ Read and write Thaw settings via `thaw://` URLs, gated by a security whitelist. 
 | `enableMenuBarItemOverflow`                | Bool | Eject items that would fall behind the notch |
 | `useThawBarOnNotchOverflow`                | Bool | Send ejected overflow items to the Thaw Bar  |
 | `moveCursorToRevealedItem`                 | Bool | Move the cursor onto an item once revealed   |
-| `searchIncludeVisible`                     | Bool | Include visible items in search results      |
-| `searchIncludeHidden`                      | Bool | Include hidden items in search results       |
-| `searchIncludeAlwaysHidden`                | Bool | Include always-hidden items in search        |
 
 #### Double/Time Interval Settings
 

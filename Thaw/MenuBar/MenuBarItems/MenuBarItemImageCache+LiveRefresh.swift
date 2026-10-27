@@ -231,19 +231,7 @@ extension MenuBarItemImageCache {
                 && nav.settingsNavigationIdentifier == .hotkeys
                 && isItemHotkeyListExpanded
             if nav.isSearchPresented || isLayoutPane || isHotkeyListVisible {
-                if nav.isSearchPresented, !isLayoutPane, !isHotkeyListVisible {
-                    // Search is the only consumer here that can omit sections.
-                    let advanced = appState.settings.advanced
-                    consumerSections = Set(MenuBarSection.Name.allCases.filter { name in
-                        switch name {
-                        case .visible: advanced.searchIncludeVisible
-                        case .hidden: advanced.searchIncludeHidden
-                        case .alwaysHidden: advanced.searchIncludeAlwaysHidden
-                        }
-                    })
-                } else {
-                    consumerSections = Set(MenuBarSection.Name.allCases)
-                }
+                consumerSections = Set(MenuBarSection.Name.allCases)
             } else if nav.isIceBarPresented,
                       let current = appState.menuBarManager.iceBarPanel.currentSection
             {
