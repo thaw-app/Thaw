@@ -127,4 +127,17 @@ struct MenuBarCaptureReadingTests {
         #expect(band.frame == expected ?? .zero)
         #expect(!reader.displayBounds().isEmpty)
     }
+
+    @Test("The menu bar host's bar window, when it runs, is the widest strip on the display")
+    func hostBarWindow() {
+        let host = NSRunningApplication.runningApplications(withBundleIdentifier: SharedConstants.menuBarHostingBundleID).first
+        guard let pid = host?.processIdentifier else { return }
+        let display = CGDisplayBounds(CGMainDisplayID())
+
+        guard let window = MenuBarItemImageCache.barWindow(for: pid, displayBounds: display) else { return }
+
+        #expect(window.windowID != 0)
+        #expect(window.frame.width > 0)
+        #expect(window.frame.width <= display.width + 1)
+    }
 }

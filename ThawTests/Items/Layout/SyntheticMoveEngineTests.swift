@@ -176,6 +176,30 @@ struct SyntheticMoveEngineTests {
         #expect(recorder.drags.isEmpty)
     }
 
+    @Test("An anchored system item is refused as the drop target")
+    func anchoredTargetRefused() async throws {
+        let recorder = DragRecorder()
+        let engine = makeEngine(recorder: recorder, afterDrag: [])
+        let clock = MenuBarItem(
+            tag: .clock,
+            windowID: 700,
+            ownerPID: 999_996,
+            sourcePID: 999_996,
+            bounds: anchor.bounds.offsetBy(dx: 90, dy: 0),
+            title: nil,
+            isOnScreen: true
+        )
+
+        do {
+            try await engine.move(item: mover, to: .rightOfItem(clock))
+            Issue.record("An anchored target must be refused")
+        } catch let MenuBarItemManager.EventError.itemNotMovable(refused, _) {
+            #expect(refused.windowID == clock.windowID)
+        }
+        #expect(recorder.drags.isEmpty)
+        #expect(recorder.prepared.isEmpty)
+    }
+
     @Test("A control item is refused as the dragged item")
     func controlItemRefused() async throws {
         let recorder = DragRecorder()
