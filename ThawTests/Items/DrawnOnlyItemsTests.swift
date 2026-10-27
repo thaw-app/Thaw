@@ -130,7 +130,7 @@ struct DrawnOnlyItemsTests {
             RawItem(namespace: .string("a"), identityTitle: "x", displayTitle: "x", bounds: CGRect(x: 180, y: 6, width: 24, height: 18), ownerPID: 3),
             axItem(4, x: 220, namespace: .menuBarAgent).withBounds(CGRect(x: 220, y: 0, width: 30, height: 30)),
         ]
-        let band = DrawnOnlyItems.band(of: items)
+        let band = DrawnOnlyItems.band(of: items, around: silentFrame, screens: [])
         #expect(band == DrawnOnlyItems.Band(minY: 4, height: 22))
         let frame = DrawnOnlyItems.normalizedFrame(entry: silentFrame, band: band, ceiling: 40)
         #expect(frame == CGRect(x: 1200, y: 4, width: 30, height: 22))
@@ -138,7 +138,26 @@ struct DrawnOnlyItemsTests {
 
     @Test
     func `has no band without items outside MenuBarAgent`() {
-        #expect(DrawnOnlyItems.band(of: [axItem(4, x: 220, namespace: .menuBarAgent)]) == nil)
+        #expect(DrawnOnlyItems.band(of: [axItem(4, x: 220, namespace: .menuBarAgent)], around: silentFrame, screens: []) == nil)
+    }
+
+    @Test
+    func `takes the band only from items seated on the entry's bar`() {
+        let display = CGRect(x: 0, y: 0, width: 1728, height: 1117)
+        let parked = [axItem(1, x: 100), axItem(2, x: 140).withBounds(CGRect(x: 140, y: 1400, width: 24, height: 22)), axItem(3, x: 180).withBounds(CGRect(x: 180, y: 1400, width: 24, height: 22))]
+
+        #expect(DrawnOnlyItems.band(of: parked, around: silentFrame, screens: [display]) == DrawnOnlyItems.Band(minY: 4, height: 22))
+    }
+
+    @Test
+    func `takes the band from the entry's own display when displays are stacked`() {
+        let main = CGRect(x: 0, y: 0, width: 1728, height: 1117)
+        let lower = CGRect(x: 0, y: 1117, width: 1920, height: 1080)
+        let peers = [axItem(1, x: 100), axItem(2, x: 140).withBounds(CGRect(x: 140, y: 1121, width: 24, height: 22))]
+        let lowerEntry = CGRect(x: 1200, y: 1117, width: 30, height: 30)
+
+        #expect(DrawnOnlyItems.band(of: peers, around: lowerEntry, screens: [main, lower]) == DrawnOnlyItems.Band(minY: 1121, height: 22))
+        #expect(DrawnOnlyItems.band(of: [axItem(1, x: 100)], around: lowerEntry, screens: [main, lower]) == nil, "No seated peer on its bar: the entry keeps its own frame")
     }
 
     @Test

@@ -56,6 +56,8 @@ nonisolated enum DrawnOnlyItems {
         let ceiling: CGFloat
         /// By bundle ID, from savedIdentityTitles(in:).
         var savedTitles: [String: String] = [:]
+        /// The CG frames of the displays, to find the bar an entry sits on. Empty measures from y = 0.
+        var screens: [CGRect] = []
     }
 
     /// The result of settling a pass's waiting owners.
@@ -134,10 +136,16 @@ nonisolated enum DrawnOnlyItems {
         )
     }
 
-    /// The median band of this pass's items. MenuBarAgent's own items are left out: its wrappers
-    /// span the full bar height.
-    static func band(of axItems: [RawItem]) -> Band? {
-        let frames = axItems.filter { $0.namespace != .menuBarAgent }.map(\.bounds)
+    /// The median band of this pass's items seated on the entry's bar. MenuBarAgent's own items are
+    /// left out, since its wrappers span the full bar height, and so are items parked off the bar or
+    /// on another display, which would move the entry there. With none, the entry keeps its frame.
+    static func band(of axItems: [RawItem], around entry: CGRect, screens: [CGRect]) -> Band? {
+        func bar(holding frame: CGRect) -> CGRect? {
+            guard !screens.isEmpty else { return frame.midY <= MenuBarItemGeometry.maxOnBarMidY ? .zero : nil }
+            return MenuBarItemGeometry.barScreen(holding: frame, among: screens)
+        }
+        guard let entryBar = bar(holding: entry) else { return nil }
+        let frames = axItems.filter { $0.namespace != .menuBarAgent && bar(holding: $0.bounds) == entryBar }.map(\.bounds)
         guard !frames.isEmpty else { return nil }
         return Band(minY: median(frames.map(\.minY)), height: median(frames.map(\.height)))
     }
@@ -183,11 +191,10 @@ nonisolated enum DrawnOnlyItems {
             running: Set(pass.apps.keys),
             now: now
         )
-        let band = band(of: pass.axItems)
         var answers: [pid_t: Answer] = [:]
         for owner in pending {
             guard confirmation.confirmed.contains(owner), let entry = selection.owners[owner],
-                  let item = item(for: owner, entry: entry, pass: pass, band: band)
+                  let item = item(for: owner, entry: entry, pass: pass)
             else {
                 answers[owner] = .record([])
                 continue
@@ -211,15 +218,15 @@ nonisolated enum DrawnOnlyItems {
         let selection = silentDrawnOwners(
             entries: read, answeredEmpty: silent, excluded: pass.excluded, apps: pass.apps, axItems: pass.axItems
         )
-        let band = band(of: pass.axItems)
         return selection.owners.sorted { $0.key < $1.key }.compactMap { owner, entry in
-            item(for: owner, entry: entry, pass: pass, band: band)
+            item(for: owner, entry: entry, pass: pass)
         }
     }
 
     /// The item an owner's drawn entry stands for, sized to the band this pass's items sit in.
-    private static func item(for owner: pid_t, entry: Entry, pass: Pass, band: Band?) -> RawItem? {
+    private static func item(for owner: pid_t, entry: Entry, pass: Pass) -> RawItem? {
         guard let app = pass.apps[owner] else { return nil }
+        let band = band(of: pass.axItems, around: entry.frame, screens: pass.screens)
         let frame = normalizedFrame(entry: entry.frame, band: band, ceiling: pass.ceiling)
         return rawItem(ownerPID: owner, app: app, frame: frame, savedTitle: app.bundleID.flatMap { pass.savedTitles[$0] })
     }
@@ -378,7 +385,8 @@ nonisolated final class DrawnOnlyInventory: Sendable {
             excluded: excluded.union([getpid()]),
             axItems: axItems,
             ceiling: MenuBarItemAXProvider.maxItemHeight(menuBarHeight: NSScreen.tallestCachedMenuBarHeight),
-            savedTitles: DrawnOnlyItems.savedIdentityTitles(in: savedOrder())
+            savedTitles: DrawnOnlyItems.savedIdentityTitles(in: savedOrder()),
+            screens: BarAxis.liveDisplayBounds()
         )
     }
 }
