@@ -685,75 +685,31 @@ public nonisolated enum LayoutSolver {
         allCurrentBaseIdentifiers: Set<String>,
         allCurrentNamespaces: Set<String> = []
     ) -> [String] {
-        var identifiers = currentInSection
-
-        for (oldIdx, savedUID) in oldSavedForSection.enumerated() {
-            // Already in the new list (currently present) or already
-            // inserted by an earlier iteration: skip.
-            if identifiers.contains(savedUID) {
-                continue
-            }
-            // Present somewhere in the cache (other section): drop the
-            // saved entry; the item moved, do not re-preserve it here.
+        SavedSectionOrderMerge.merge(
+            currentInSection: currentInSection,
+            oldSavedForSection: oldSavedForSection
+        ) { savedUID in
+            // Present somewhere in the cache (other section): the item moved, do not re-preserve it here.
             if allCurrentIdentifiers.contains(savedUID) {
-                continue
+                return true
             }
-            // Stale instance index: the app is back with a different
-            // :N suffix. The cache already has it under its new uid;
-            // drop the stale saved entry.
+            // Stale instance index: the app is back with a different :N suffix and the cache has its new uid.
             let base = savedUID.split(separator: ":", maxSplits: 2)
                 .prefix(2).joined(separator: ":")
             if allCurrentBaseIdentifiers.contains(base) {
-                continue
+                return true
             }
-            // Stale title-variant of a still-running app: the namespace is in
-            // the cache but this exact identifier is not. Items that vary their
-            // title (countdowns, live metrics) mint a fresh identifier on every
-            // change; preserving each as a "closed app" grows oldSavedForSection
-            // without bound and makes this O(n²) merge pathologically slow. The
-            // live item is already in currentInSection, so drop the variant.
-            // The namespace is the prefix up to the first ':' (a bundle id or
-            // reserved keyword never contains one).
+            // Stale title-variant of a still-running app: items that vary their title mint a fresh identifier
+            // on every change, and the live item is already in currentInSection, so drop the variant.
+            // The namespace is the prefix up to the first ':' (a bundle id or reserved keyword never contains one).
             if !allCurrentNamespaces.isEmpty {
                 let namespace = savedUID.prefix { $0 != ":" }
                 if !namespace.isEmpty, allCurrentNamespaces.contains(String(namespace)) {
-                    continue
+                    return true
                 }
             }
-
-            // Find an anchor in oldSavedForSection that's also in the
-            // new identifiers list. Forward-first (closest successor),
-            // then backward (closest predecessor), then append.
-            var insertAt: Int = identifiers.count
-
-            // Forward scan from oldIdx+1.
-            var foundForward = false
-            if oldIdx + 1 < oldSavedForSection.count {
-                for i in (oldIdx + 1) ..< oldSavedForSection.count {
-                    let candidate = oldSavedForSection[i]
-                    if let anchorIdx = identifiers.firstIndex(of: candidate) {
-                        insertAt = anchorIdx
-                        foundForward = true
-                        break
-                    }
-                }
-            }
-
-            // Backward scan from oldIdx-1 (only if forward didn't find one).
-            if !foundForward, oldIdx > 0 {
-                for i in stride(from: oldIdx - 1, through: 0, by: -1) {
-                    let candidate = oldSavedForSection[i]
-                    if let anchorIdx = identifiers.firstIndex(of: candidate) {
-                        insertAt = anchorIdx + 1
-                        break
-                    }
-                }
-            }
-
-            identifiers.insert(savedUID, at: insertAt)
+            return false
         }
-
-        return identifiers
     }
 
     // MARK: - Identifier and key parsing
