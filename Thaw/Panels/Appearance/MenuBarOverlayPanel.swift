@@ -206,8 +206,8 @@ final class MenuBarOverlayPanel: NSPanel {
             observeShowRequests(),
         ]
         if let appState {
-            subscriptions.append(observeMenuBarVisibility(appState: appState))
-            subscriptions.append(observeConfigurationForWindowLevel(appState: appState))
+            subscriptions.append(observeMenuBarVisibility(menuBarManager: appState.menuBarManager))
+            subscriptions.append(observeConfigurationForWindowLevel(appearanceManager: appState.appearanceManager))
             subscriptions.append(observeActiveSpaceSamples(appState: appState))
         }
         cancellables = Set(subscriptions)
@@ -351,11 +351,11 @@ final class MenuBarOverlayPanel: NSPanel {
 
     /// Fade when macOS hides the bar or Mission Control takes the screen.
     /// Observe MenuBarManager and the Published probe separately; each update reads both current values.
-    private func observeMenuBarVisibility(appState: AppState) -> AnyCancellable {
+    private func observeMenuBarVisibility(menuBarManager: MenuBarManager) -> AnyCancellable {
         func applyVisibility(_ self: MenuBarOverlayPanel, menuBarManager _: MenuBarManager) {
             self.applyVisibility()
         }
-        let task = Task { @MainActor [weak self, menuBarManager = appState.menuBarManager] in
+        let task = Task { @MainActor [weak self, menuBarManager] in
             let changes = Observations { menuBarManager.isMenuBarHiddenBySystem }
             for await _ in changes {
                 guard let self else { return }
@@ -363,7 +363,7 @@ final class MenuBarOverlayPanel: NSPanel {
             }
         }
         let missionControlCancellable = missionControlProbe.$isActive
-            .sink { [weak self, weak menuBarManager = appState.menuBarManager] _ in
+            .sink { [weak self, weak menuBarManager] _ in
                 guard let self, let menuBarManager else { return }
                 applyVisibility(self, menuBarManager: menuBarManager)
             }
@@ -374,8 +374,8 @@ final class MenuBarOverlayPanel: NSPanel {
     }
 
     /// Observe effective appearance for window-level changes; wrap the task in the panel's cancellable set.
-    private func observeConfigurationForWindowLevel(appState: AppState) -> AnyCancellable {
-        let task = Task { @MainActor [weak self, appearanceManager = appState.appearanceManager] in
+    private func observeConfigurationForWindowLevel(appearanceManager: MenuBarAppearanceManager) -> AnyCancellable {
+        let task = Task { @MainActor [weak self, appearanceManager] in
             let changes = Observations { appearanceManager.effectiveConfiguration }
             for await _ in changes {
                 guard let self else { return }
