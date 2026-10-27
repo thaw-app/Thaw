@@ -68,7 +68,8 @@ final class NativeAppHidingExperiment {
     /// Thaw's record. Named explicitly, so the read works with either hiding method; one that
     /// fails, as without access to the system list, keeps the last answer.
     func refreshUserSwitchedOffApps(among items: [MenuBarItem]) {
-        guard let switchedOff = try? controller.unjournaledHiddenApps(among: UserSwitchedOffApps.bundleIDs(of: items)) else { return }
+        let candidates = UserSwitchedOffApps.bundleIDs(of: items)
+        guard !candidates.isEmpty, let switchedOff = try? controller.unjournaledHiddenApps(among: candidates) else { return }
         let bundleIDs = UserSwitchedOffApps.bundleIDs(switchedOff: switchedOff, ownedByThaw: ExtraVisibilityChannel.keepsOffSystemList)
         if bundleIDs != userSwitchedOffBundleIDs {
             userSwitchedOffBundleIDs = bundleIDs
