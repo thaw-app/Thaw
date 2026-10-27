@@ -5,6 +5,7 @@
 //  Copyright (Thaw) © 2026 Toni Förster
 //  Licensed under the GNU GPLv3
 
+import AppIntents
 import Foundation
 import Testing
 @testable import Thaw
@@ -74,5 +75,25 @@ struct FocusFilterSignalTests {
         await manager.handleFocusFilterSignal()
         #expect(!manager.focusFilterActive)
         #expect(manager.activeProfileID == nil)
+    }
+
+    private struct ReadFailure: Error {}
+
+    @Test("A failed read of the system's Focus state leaves an active Focus profile in place")
+    func failedReadIsIgnored() async {
+        let failing = FocusFilterSignal { throw ReadFailure() }
+        #expect(await failing.action(focusFilterActive: true) == .ignore)
+        #expect(await failing.action(focusFilterActive: false) == .ignore)
+    }
+
+    @Test("No active Focus filter reads as no profile, and other errors stay failures")
+    func notFoundMeansNoProfile() async throws {
+        let none = try await FocusFilterSignal.profileID { throw SetFocusFilterIntentError.notFound }
+        #expect(none == nil)
+        let id = UUID().uuidString
+        #expect(try await FocusFilterSignal.profileID { id } == id)
+        await #expect(throws: ReadFailure.self) {
+            try await FocusFilterSignal.profileID { throw ReadFailure() }
+        }
     }
 }
