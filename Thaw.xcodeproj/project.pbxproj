@@ -1108,7 +1108,7 @@
 			repositoryURL = "https://github.com/swiftlang/swift-subprocess";
 			requirement = {
 				kind = upToNextMajorVersion;
-				minimumVersion = 1.0.0;
+				minimumVersion = 1.0.2;
 			};
 		};
 		D27A00002F40000000000000 /* XCRemoteSwiftPackageReference "prk-bin" */ = {
