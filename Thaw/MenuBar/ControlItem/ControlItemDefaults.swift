@@ -19,13 +19,13 @@ nonisolated enum ControlItemDefaults {
     /// Drop divider placement writes; persisted slots compete with relative positioning on each layout pass.
     static subscript<Value>(key: Key<Value>, autosaveName: String) -> Value? {
         get {
-            UserDefaults.standard.object(forKey: key.stringKey(for: autosaveName)) as? Value
+            Defaults.store.object(forKey: key.stringKey(for: autosaveName)) as? Value
         }
         set {
             guard !(key.isPreferredPosition && isSectionDivider(autosaveName: autosaveName)) else {
                 return
             }
-            UserDefaults.standard.set(newValue, forKey: key.stringKey(for: autosaveName))
+            Defaults.store.set(newValue, forKey: key.stringKey(for: autosaveName))
         }
     }
 
