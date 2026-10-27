@@ -585,13 +585,35 @@ final nonisolated class DiagnosticLogger: @unchecked Sendable {
         writeQueue.async { [weak self] in
             guard let self else { return }
             let timestamp = timestampFormatter.string(from: now)
-            let line = "\(timestamp) [\(level.rawValue)] [\(category)] \(message)\n"
+            let line = Self.record(timestamp: timestamp, level: level, category: category, message: message)
             guard let data = line.data(using: .utf8) else { return }
             fileHandleLock.withLock { handle in
                 handle?.write(data)
             }
             checkSizeAfterWrite(byteCount: data.count)
         }
+    }
+
+    /// One file record. Line breaks inside the text are escaped, so a message can't
+    /// forge a separate record, such as a path read from an imported profile.
+    static func record(timestamp: String, level: Level, category: String, message: String) -> String {
+        "\(timestamp) [\(level.rawValue)] [\(escapingLineBreaks(category))] \(escapingLineBreaks(message))\n"
+    }
+
+    static func escapingLineBreaks(_ text: String) -> String {
+        guard text.contains(where: \.isNewline) else { return text }
+        var escaped = ""
+        escaped.reserveCapacity(text.count)
+        for character in text {
+            switch character {
+            case "\n": escaped += "\\n"
+            case "\r": escaped += "\\r"
+            case "\r\n": escaped += "\\r\\n"
+            case _ where character.isNewline: escaped += "\\u{\(String(character.unicodeScalars.first?.value ?? 0, radix: 16))}"
+            default: escaped.append(character)
+            }
+        }
+        return escaped
     }
 
     /// Rotates when this process's own writes have pushed the file past the
