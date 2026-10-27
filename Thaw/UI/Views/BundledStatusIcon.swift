@@ -77,7 +77,8 @@ enum BundledStatusIcon {
             let key = (name as NSString).deletingPathExtension.lowercased()
             guard !appIconNames.contains(key), !key.contains("appicon"), seen.insert(key).inserted else { continue }
             guard let image = bundle.image(forResource: name) ?? looseImage(named: name, in: bundle),
-                  fitsMenuBar(image)
+                  fitsMenuBar(image),
+                  fitsPixelBudget(image)
             else { continue }
             markTemplateIfSingleInk(image)
             result.append(Candidate(name: name, image: image, isLoose: looseNames.contains(name)))
@@ -146,6 +147,20 @@ enum BundledStatusIcon {
         let size = image.size
         guard pointHeights.contains(size.height) else { return false }
         return size.width / size.height <= 3
+    }
+
+    /// The largest side in pixels a candidate may have, read from its header
+    /// before anything is decoded, since another app's file can be huge.
+    static let maxPixelSide = 512
+
+    /// Every representation stays within the budget. Vector representations
+    /// report zero pixels and are bounded by the point-size check instead.
+    static func fitsPixelBudget(_ pixelSizes: [(width: Int, height: Int)]) -> Bool {
+        pixelSizes.allSatisfy { $0.width <= maxPixelSide && $0.height <= maxPixelSide }
+    }
+
+    static func fitsPixelBudget(_ image: NSImage) -> Bool {
+        fitsPixelBudget(image.representations.map { (width: $0.pixelsWide, height: $0.pixelsHigh) })
     }
 }
 
