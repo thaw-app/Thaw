@@ -186,6 +186,9 @@ final class SystemExtraStandInLauncher: SystemExtraReplacementProviding {
     /// own is started again. The app is held for as long as it is observed:
     /// KVO on a released NSRunningApplication crashes.
     private var watched: [SystemExtraStandIn: (app: NSRunningApplication, observation: NSKeyValueObservation)] = [:]
+    /// Stand-ins launched and not stopped since. An open still waiting on the system when its
+    /// stand-in is turned off checks this afterwards and quits what it started.
+    private(set) var wanted: Set<SystemExtraStandIn> = []
     /// Recent restarts per stand-in, so one that cannot stay up is not
     /// relaunched forever.
     private var restarts: [SystemExtraStandIn: [ContinuousClock.Instant]] = [:]
@@ -210,12 +213,14 @@ final class SystemExtraStandInLauncher: SystemExtraReplacementProviding {
             throw SystemExtraTakeoverError.replacementUnavailable
         }
         markKnown?(MenuBarItemTag.canonicalPersistentIdentifier(standIn.itemIdentifier))
+        wanted.insert(standIn)
         place(standIn, after: original, in: section)
         try await open(standIn)
         log.info("launched \(standIn.rawValue) stand-in in \(section.rawValue)")
     }
 
     func stop(_ standIn: SystemExtraStandIn) {
+        wanted.remove(standIn)
         placed.remove(standIn)
         watched[standIn]?.observation.invalidate()
         watched[standIn] = nil
@@ -253,6 +258,7 @@ final class SystemExtraStandInLauncher: SystemExtraReplacementProviding {
     /// After a Thaw relaunch macOS may hand back the dying previous instance;
     /// the watch restarts it when it exits.
     private func open(_ standIn: SystemExtraStandIn) async throws {
+        guard wanted.contains(standIn) else { return }
         let app: NSRunningApplication
         if let running = NSRunningApplication.runningApplications(withBundleIdentifier: standIn.bundleIdentifier)
             .first(where: { !$0.isTerminated })
@@ -267,6 +273,11 @@ final class SystemExtraStandInLauncher: SystemExtraReplacementProviding {
             // than the bundle keeps it from latching onto an instance mid-quit.
             configuration.arguments = ["--parent-pid", String(ProcessInfo.processInfo.processIdentifier)]
             app = try await NSWorkspace.shared.openApplication(at: standIn.bundleURL, configuration: configuration)
+        }
+        guard wanted.contains(standIn) else {
+            log.info("\(standIn.rawValue) stand-in was turned off while it started; quitting it")
+            app.terminate()
+            return
         }
         let observation = app.observe(\.isTerminated, options: [.new]) { [weak self] app, _ in
             guard app.isTerminated else { return }
