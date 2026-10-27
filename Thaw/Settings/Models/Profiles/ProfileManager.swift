@@ -51,6 +51,8 @@ final class ProfileManager {
     private var lastActiveSpaceKey: String?
     /// Whether a Focus Filter profile is currently applied.
     private(set) var focusFilterActive = false
+    /// Reads the system's Focus filter state; tests replace it.
+    @ObservationIgnored var focusFilterSignal = FocusFilterSignal.system
     /// The in-flight layout apply and its profile, for callers that wait for it (e.g. the Apply button).
     private(set) var layoutTask: Task<Void, Never>?
     private(set) var layoutTaskProfileID: UUID?
@@ -133,26 +135,14 @@ final class ProfileManager {
         }
         cancellables.insert(AnyCancellable { spaceSwitchTask.cancel() })
 
-        DistributedNotificationCenter.default()
-            .publisher(for: Notification.Name("com.stonerl.Thaw.focusFilterActivated"))
+        // Any process can post these, so both only wake the check against the system's Focus filter state.
+        let center = DistributedNotificationCenter.default()
+        center.publisher(for: Notification.Name("com.stonerl.Thaw.focusFilterActivated"))
+            .merge(with: center.publisher(for: Notification.Name("com.stonerl.Thaw.focusFilterDeactivated")))
             .debounce(for: .seconds(0.5), scheduler: DispatchQueue.main)
             .sink { [weak self] _ in
-                guard let self else { return }
                 Task { [weak self] in
-                    guard let self else { return }
-                    await self.applyFocusFilterProfile()
-                }
-            }
-            .store(in: &cancellables)
-
-        DistributedNotificationCenter.default()
-            .publisher(for: Notification.Name("com.stonerl.Thaw.focusFilterDeactivated"))
-            .debounce(for: .seconds(0.5), scheduler: DispatchQueue.main)
-            .sink { [weak self] _ in
-                guard let self else { return }
-                Task { [weak self] in
-                    guard let self else { return }
-                    await self.handleFocusFilterDeactivated()
+                    await self?.handleFocusFilterSignal()
                 }
             }
             .store(in: &cancellables)
@@ -1085,14 +1075,20 @@ final class ProfileManager {
         }
     }
 
-    /// Called when the Focus Filter deactivates (Focus mode turned off).
-    /// Reverts to the display-based profile.
-    private func handleFocusFilterDeactivated() async {
-        guard focusFilterActive else { return }
-        focusFilterActive = false
-        diagLog.info("Focus Filter deactivated; reverting to display profile")
-        if let uuid = Bridging.getActiveMenuBarDisplayUUID() {
-            await applyProfileForDisplay(uuid: uuid)
+    /// Handles a Focus filter notification by asking the system which Focus filter is active.
+    /// Only that answer applies a profile or reverts to the display's profile.
+    func handleFocusFilterSignal() async {
+        switch await focusFilterSignal.action(focusFilterActive: focusFilterActive) {
+        case let .apply(profileID):
+            await applyFocusFilterProfile(requested: profileID)
+        case .revert:
+            focusFilterActive = false
+            diagLog.info("Focus Filter deactivated; reverting to display profile")
+            if let uuid = Bridging.getActiveMenuBarDisplayUUID() {
+                await applyProfileForDisplay(uuid: uuid)
+            }
+        case .ignore:
+            diagLog.debug("Focus Filter notification while no Focus Filter is active; ignoring it")
         }
     }
 
