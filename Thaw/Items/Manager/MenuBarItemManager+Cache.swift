@@ -424,6 +424,7 @@ extension MenuBarItemManager {
         let request = OverflowRebalanceRequest(reason: reason, immediate: immediate)
         let merged = request.merged(into: overflowRebalance.intent)
         overflowRebalance.request(merged, cause: cause, on: repairs)
+        let readCache: @MainActor () async -> Void = { [weak self] in await self?.cacheItemsRegardless(skipRecentMoveCheck: true) }
         overflowRebalance.arm { turn in
             Task { [weak self] in
                 guard let self else { return }
@@ -439,7 +440,6 @@ extension MenuBarItemManager {
                     permit: StoreWritePermit(hold)
                 )
                 self.repairs.leave(hold)
-                func readCache() async { await self.cacheItemsRegardless(skipRecentMoveCheck: true) }
                 await aftermath.readCacheIfOwed(readCache)
                 // Cancelled tasks leave merged intent for their replacements.
                 guard !Task.isCancelled else { return }
