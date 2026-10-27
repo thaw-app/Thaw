@@ -86,7 +86,10 @@ final class ControlStatePublisher {
     /// not entitled to, which is precisely the case worth surviving: an
     /// unsigned or wrongly-signed build should degrade to "controls show
     /// nothing" rather than trap.
-    private let defaults = UserDefaults(suiteName: ControlStatePublisher.suiteName)
+    private let defaults: UserDefaults?
+
+    /// Asks Control Center to redraw one control kind. Tests record the requests instead.
+    private let reloadControl: (String) -> Void
 
     /// The last snapshot actually written, so an unchanged recomputation costs
     /// nothing. ControlCenter.reloadControls is a cross-process nudge to
@@ -97,6 +100,14 @@ final class ControlStatePublisher {
     private var observationTask: Task<Void, Never>?
     private var cancellables = Set<AnyCancellable>()
     private var isObserving = false
+
+    init(
+        defaults: UserDefaults? = UserDefaults(suiteName: ControlStatePublisher.suiteName),
+        reloadControl: @escaping (String) -> Void = { ControlCenter.shared.reloadControls(ofKind: $0) }
+    ) {
+        self.defaults = defaults
+        self.reloadControl = reloadControl
+    }
 
     func performSetup(with appState: AppState) {
         guard !isObserving else { return }
@@ -163,7 +174,7 @@ final class ControlStatePublisher {
     /// A missing AppState (setup has not run, or teardown has) is reported
     /// as everything-off, which is the same fallback the appex uses when it
     /// finds no snapshot at all.
-    private static func snapshot(for appState: AppState?) -> Snapshot {
+    static func snapshot(for appState: AppState?) -> Snapshot {
         guard let appState else {
             return Snapshot(isHiddenSectionRevealed: false, isZenModeActive: false)
         }
@@ -204,7 +215,7 @@ final class ControlStatePublisher {
     /// notification it posts has no listener. Removing the key makes the
     /// controls fall back to off, which is both true and what the next launch
     /// will find.
-    private func handleTermination() {
+    func handleTermination() {
         defaults?.removeObject(forKey: Self.stateKey)
         lastPublished = nil
         reloadControls()
@@ -219,7 +230,7 @@ final class ControlStatePublisher {
     /// happened.
     private func reloadControls() {
         for kind in Self.controlKinds {
-            ControlCenter.shared.reloadControls(ofKind: kind)
+            reloadControl(kind)
         }
     }
 }
