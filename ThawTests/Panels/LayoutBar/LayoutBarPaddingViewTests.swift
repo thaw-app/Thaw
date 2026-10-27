@@ -242,4 +242,64 @@ struct LayoutBarPaddingViewTests {
         handle.mouseDown(with: event)
         handle.mouseDragged(with: event)
     }
+
+    @Test("A group is drawn as one cluster, snapshotted together and dragged as one block")
+    func groupCluster() throws {
+        let pair = Self.pair()
+        let alpha = World.item("Alpha")
+        let bars = try Bars(pair + [alpha])
+        let container = try bars.container()
+        let groups = container.resolvedGroups()
+        #expect(groups.count == 1)
+        #expect(container.resolvedGroups().map(\.memberIndices) == groups.map(\.memberIndices), "the groups are memoized")
+
+        let views = try bars.itemViews()
+        let pairViews = views.filter { view in pair.contains { $0.tag == view.item.tag } }
+        let loneView = try #require(views.first { $0.item.tag == alpha.tag })
+        #expect(container.dragUnitViews(for: pairViews[0]).count == 2)
+        #expect(container.dragUnitViews(for: loneView).count == 1)
+        #expect(container.dragUnitViews(for: LayoutBarNewItemsBadgeView()).count == 1, "a view not in the bar moves alone")
+
+        let snapshot = try #require(container.snapshotCluster(memberIdentifiers: pair.map(\.uniqueIdentifier)))
+        #expect(snapshot.rect.width >= pairViews.map(\.frame.width).reduce(0, +))
+        #expect(container.snapshotCluster(memberIdentifiers: ["missing"]) == nil)
+
+        #expect(container.orderedItemsForMenu().count == 3)
+        #expect(container.closestView(toX: loneView.frame.midX) === loneView)
+        #expect(container.closestView(toX: loneView.frame.midX, excludingBadge: true) === loneView)
+
+        container.groupDropMarkerX = loneView.frame.minX
+        let bitmap = try #require(container.bitmapImageRepForCachingDisplay(in: container.bounds))
+        container.cacheDisplay(in: container.bounds, to: bitmap)
+        let bytes = try #require(bitmap.bitmapData)
+        #expect(Data(bytes: bytes, count: bitmap.bytesPerRow * bitmap.pixelsHigh).contains { $0 != 0 }, "the cluster and marker are drawn")
+        container.groupDropMarkerX = nil
+    }
+
+    @Test("A resized tile reflows the bar, and a tile from elsewhere is ignored")
+    func resizedTileReflows() throws {
+        let items = ["A", "B"].map(World.item)
+        let bars = try Bars(items)
+        let container = try bars.container()
+        let views = try bars.itemViews()
+        let before = views[1].frame.minX
+        views[0].setFrameSize(NSSize(width: views[0].frame.width + 20, height: views[0].frame.height))
+        container.itemPreferredSizeDidChange(views[0])
+        container.layoutSubtreeIfNeeded()
+        #expect(views[1].frame.minX > before, "the next tile moves over")
+        container.itemPreferredSizeDidChange(LayoutBarNewItemsBadgeView())
+    }
+
+    @Test("A bar picks up a new item once the menu bar reports a change")
+    func rebuildsOnSystemChanges() async throws {
+        let bars = try Bars([World.item("A")])
+        let beta = World.item("B")
+        bars.world.appState.itemManager.itemCache[.visible] = bars.world.appState.itemManager.itemCache[.visible] + [beta]
+        NotificationCenter.default.post(name: .menuBarAgentPositionsDidChange, object: nil)
+        for _ in 0 ..< 50 where try !bars.itemViews().contains(where: { $0.item.tag == beta.tag }) {
+            try await Task.sleep(for: .milliseconds(20))
+        }
+        #expect(try bars.itemViews().contains { $0.item.tag == beta.tag })
+        bars.window.contentView = nil
+    }
 }
