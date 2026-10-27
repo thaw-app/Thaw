@@ -64,6 +64,111 @@ struct MoveEventCoordinatesTests {
         #expect(eventLocations.release == destination)
     }
 
+    /// Before macOS 26 a press at the destination hit-tests onto Thaw's control item.
+    @Test("A pre-26 teleport presses off-screen and puts the cursor at the destination")
+    func pre26TeleportPressesOffscreen() {
+        let destination = CGPoint(x: 812, y: 0)
+        let offscreen = CGPoint(x: 20000, y: 20000)
+
+        let eventLocations = MenuBarItemManager.moveEventLocations(
+            targetPoints: (start: destination, end: destination),
+            faithfulDragStart: nil,
+            offscreenPress: offscreen
+        )
+
+        #expect(eventLocations.press == offscreen)
+        #expect(eventLocations.release == destination)
+        #expect(eventLocations.cursor == destination)
+    }
+
+    @Test("A teleport on macOS 26 presses and puts the cursor at the destination")
+    func teleportPressesAtDestination() {
+        let destination = CGPoint(x: 812, y: 0)
+
+        let eventLocations = MenuBarItemManager.moveEventLocations(
+            targetPoints: (start: destination, end: destination),
+            faithfulDragStart: nil
+        )
+
+        #expect(eventLocations.press == destination)
+        #expect(eventLocations.cursor == destination)
+    }
+
+    @Test("A source-anchored or faithful press keeps its own point before macOS 26")
+    func anchoredPressesIgnoreOffscreenTeleport() {
+        let source = CGPoint(x: 640, y: 15)
+        let faithfulStart = CGPoint(x: 100, y: 15)
+        let destination = CGPoint(x: 812, y: 15)
+
+        let anchored = MenuBarItemManager.moveEventLocations(
+            targetPoints: (start: destination, end: destination),
+            faithfulDragStart: nil,
+            sourceAnchoredStart: source,
+            offscreenPress: CGPoint(x: 20000, y: 20000)
+        )
+        let faithful = MenuBarItemManager.moveEventLocations(
+            targetPoints: (start: destination, end: destination),
+            faithfulDragStart: faithfulStart,
+            offscreenPress: CGPoint(x: 20000, y: 20000)
+        )
+
+        #expect(anchored.press == source)
+        #expect(anchored.cursor == source)
+        #expect(faithful.press == faithfulStart)
+        #expect(faithful.cursor == faithfulStart)
+    }
+
+    /// The off-screen press moves the real cursor too, so the move's cursor trace has
+    /// to count it and put the cursor back afterwards.
+    @MainActor
+    @Test("The cursor trace counts the off-screen press as off every display")
+    func cursorTraceCountsOffscreenPress() {
+        let displays = [CGRect(x: 0, y: 0, width: 1470, height: 956)]
+        let trace = MenuBarItemManager.MoveCursorTrace()
+
+        trace.notePostedEvents(
+            at: [MenuBarItemManager.offscreenTeleportPress(outside: displays), CGPoint(x: 812, y: 0)],
+            displayBounds: displays
+        )
+
+        #expect(trace.postedEventsOffEveryDisplay)
+    }
+
+    @Test("The off-screen press is (20000, 20000) for an ordinary layout")
+    func offscreenPressDefaultsToIcePoint() {
+        let displays = [
+            CGRect(x: 0, y: 0, width: 1470, height: 956),
+            CGRect(x: -1920, y: -124, width: 1920, height: 1080),
+        ]
+
+        #expect(MenuBarItemManager.offscreenTeleportPress(outside: displays) == CGPoint(x: 20000, y: 20000))
+        #expect(MenuBarItemManager.offscreenTeleportPress(outside: []) == CGPoint(x: 20000, y: 20000))
+    }
+
+    @Test("The off-screen press moves past a display that covers (20000, 20000)")
+    func offscreenPressAvoidsFarDisplays() {
+        let displays = [
+            CGRect(x: 0, y: 0, width: 1470, height: 956),
+            CGRect(x: 19000, y: 19500, width: 2560, height: 1440),
+        ]
+
+        let point = MenuBarItemManager.offscreenTeleportPress(outside: displays)
+
+        for display in displays {
+            #expect(!display.contains(point))
+        }
+    }
+
+    @Test("The off-screen press lies outside this machine's displays")
+    func offscreenPressIsOutsideActiveDisplays() {
+        let displays = MenuBarItemManager.activeDisplayBounds()
+        let point = MenuBarItemManager.offscreenTeleportPress(outside: displays)
+
+        for display in displays {
+            #expect(!display.contains(point))
+        }
+    }
+
     @Test("Faithful drag takes precedence over a source-anchored retry")
     func faithfulDragStartTakesPrecedence() {
         let faithfulStart = CGPoint(x: 100, y: 15)
