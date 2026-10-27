@@ -87,11 +87,13 @@ enum BundledStatusIcon {
             }
         }
         return result.sorted { lhs, rhs in
-            let lhsItem = lhs.name.contains(statusItemName), rhsItem = rhs.name.contains(statusItemName)
+            let lhsItem = lhs.name.contains(statusItemName)
+            let rhsItem = rhs.name.contains(statusItemName)
             if lhsItem != rhsItem {
                 return lhsItem
             }
-            let lhsStatus = lhs.name.contains(statusName), rhsStatus = rhs.name.contains(statusName)
+            let lhsStatus = lhs.name.contains(statusName)
+            let rhsStatus = rhs.name.contains(statusName)
             if lhsStatus != rhsStatus {
                 return lhsStatus
             }
@@ -135,7 +137,9 @@ enum BundledStatusIcon {
         let pixels = data.bindMemory(to: UInt8.self, capacity: cgImage.width * cgImage.height * 4)
         var inked = 0
         for index in stride(from: 0, to: cgImage.width * cgImage.height * 4, by: 4) where pixels[index + 3] > 32 {
-            let red = Int(pixels[index]), green = Int(pixels[index + 1]), blue = Int(pixels[index + 2])
+            let red = Int(pixels[index])
+            let green = Int(pixels[index + 1])
+            let blue = Int(pixels[index + 2])
             guard max(red, green, blue) - min(red, green, blue) <= 24 else { return }
             inked += 1
         }
