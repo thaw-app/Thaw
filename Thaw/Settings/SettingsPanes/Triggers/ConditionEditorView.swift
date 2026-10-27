@@ -125,6 +125,7 @@ struct ConditionEditorView: View {
                         condition = condition.withLocation(latitude: coordinate.latitude, longitude: coordinate.longitude)
                     }
                 }
+                .buttonStyle(.thawSecondary)
                 .disabled(coordinate == nil)
                 Spacer()
                 if location.latitude != 0 || location.longitude != 0 {

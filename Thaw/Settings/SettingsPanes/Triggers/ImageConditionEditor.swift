@@ -113,6 +113,7 @@ struct ImageConditionEditor: View {
 
             HStack(spacing: 12) {
                 Button(isCapturing ? "Capturing…" : "Capture Reference") { capture() }
+                .buttonStyle(.thawSecondary)
                     .disabled(isCapturing || watchedID.isEmpty)
                 Spacer()
                 referenceStatus

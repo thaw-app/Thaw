@@ -35,12 +35,15 @@ struct UpdateConsentSheet: View {
                     isProcessing = true
                     onDisable()
                 }
+                .buttonStyle(.thawSecondary)
                 .disabled(isProcessing)
+                .keyboardShortcut(.cancelAction)
                 Button("Check Automatically") {
                     guard !isProcessing else { return }
                     isProcessing = true
                     onEnable(autoDownload)
                 }
+                .buttonStyle(.thawPrimary)
                 .keyboardShortcut(.defaultAction)
                 .disabled(isProcessing)
             }

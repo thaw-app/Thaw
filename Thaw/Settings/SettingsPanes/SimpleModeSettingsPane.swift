@@ -93,6 +93,7 @@ struct SimpleModeSettingsPane: View {
                     Button("Enable") {
                         permission.performRequest()
                     }
+                    .buttonStyle(.thawSecondary)
                 }
             }
         } footer: {
@@ -115,6 +116,7 @@ struct SimpleModeSettingsPane: View {
                 Button("Check for Updates") {
                     updatesManager.checkForUpdates()
                 }
+                .buttonStyle(.thawSecondary)
             }
         }
     }

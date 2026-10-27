@@ -212,7 +212,7 @@ struct AboutSettingsPane: View {
         } label: {
             Label("Update", systemImage: "arrow.clockwise")
         }
-        .buttonStyle(.settingsGlass)
+        .buttonStyle(.thawSecondary)
         .disabled(!updatesManager.canCheckForUpdates)
         .accessibilityLabel("Check for Updates")
     }

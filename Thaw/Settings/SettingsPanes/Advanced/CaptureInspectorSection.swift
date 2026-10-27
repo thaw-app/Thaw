@@ -76,6 +76,7 @@ struct CaptureInspectorSection: View {
                     Text("Capture One Frame")
                 }
             }
+            .buttonStyle(.thawSecondary)
             .disabled(isCapturing || !ScreenCapture.cachedCheckPermissions())
 
             if !ScreenCapture.cachedCheckPermissions() {

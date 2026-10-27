@@ -82,6 +82,7 @@ struct DeveloperSettingsPane: View {
                     } label: {
                         Label("All Off", systemImage: "power")
                     }
+                    .buttonStyle(.thawSecondary)
                     .disabled(!flags.hasEnabledFlags)
                 }
                 Text("Turn on the trigger sources you want to use. Each one adds its conditions to the Triggers pane and starts a background monitor. Battery and power conditions are always available.")

@@ -126,24 +126,27 @@ struct MenuBarAppearanceEditor: View {
                 if appearanceManager.activeSpaceHasOverride {
                     Text("This Space uses a saved override. Changes above apply to this Space only.")
                         .foregroundStyle(.secondary)
-                    Button("Remove Override for This Space") {
+                    Button("Remove Override for This Space", role: .destructive) {
                         appearanceManager.removeOverrideForActiveSpace()
                     }
+                    .buttonStyle(.thawSecondary)
                 } else {
                     Text("This Space uses the shared appearance.")
                         .foregroundStyle(.secondary)
                     Button("Use Current Appearance for This Space") {
                         appearanceManager.saveOverrideForActiveSpace()
                     }
+                    .buttonStyle(.thawSecondary)
                 }
                 if !appearanceManager.spaceOverrides.isEmpty {
                     HStack {
                         Text("Spaces with overrides: \(appearanceManager.spaceOverrides.count)")
                             .foregroundStyle(.secondary)
                         Spacer()
-                        Button("Remove All") {
+                        Button("Remove All", role: .destructive) {
                             appearanceManager.removeAllSpaceOverrides()
                         }
+                        .buttonStyle(.thawSecondary)
                     }
                 }
             }
@@ -194,6 +197,7 @@ struct MenuBarAppearanceEditor: View {
                         dismissWindow()
                     }
                 }
+                .buttonStyle(.thawPrimary)
             }
 
             Spacer()
@@ -205,6 +209,7 @@ struct MenuBarAppearanceEditor: View {
                 Button("Reset") {
                     isResetPromptPresented = true
                 }
+                .thawGlassButtonStyle()
                 .alert("Reset Menu Bar Appearance", isPresented: $isResetPromptPresented) {
                     Button("Cancel", role: .cancel) {
                         isResetPromptPresented = false

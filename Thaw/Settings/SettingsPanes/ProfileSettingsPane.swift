@@ -112,7 +112,7 @@ struct ProfileSettingsPane: View {
                 Button("Done") {
                     commitRename(id: profile.id)
                 }
-                .buttonStyle(.settingsGlass)
+                .buttonStyle(.thawSecondary)
             } else {
                 Image(systemName: "checkmark.circle.fill")
                     .foregroundStyle(.green)
@@ -137,7 +137,7 @@ struct ProfileSettingsPane: View {
                 } label: {
                     Image(systemName: "eye")
                 }
-                .buttonStyle(.settingsGlass)
+                .buttonStyle(.thawSecondary)
                 .help("Preview this profile's saved layout and settings")
                 .popover(
                     isPresented: Binding(
@@ -161,7 +161,7 @@ struct ProfileSettingsPane: View {
                 Button("Apply") {
                     applyProfile(id: profile.id)
                 }
-                .buttonStyle(.settingsGlass)
+                .buttonStyle(.thawSecondary)
                 .disabled(isApplying || profile.id == profileManager.activeProfileID)
 
                 IceMenu(
@@ -231,7 +231,7 @@ struct ProfileSettingsPane: View {
             Button("Save Current") {
                 createProfile()
             }
-            .buttonStyle(.settingsGlass)
+            .buttonStyle(.thawSecondary)
             .disabled(newProfileName.trimmingCharacters(in: .whitespaces).isEmpty)
         }
 
@@ -246,7 +246,7 @@ struct ProfileSettingsPane: View {
                     Text("Import Profile(s)")
                 }
             }
-            .buttonStyle(.settingsGlass)
+            .buttonStyle(.thawSecondary)
 
             if !profileManager.profiles.isEmpty {
                 Button {
@@ -258,7 +258,7 @@ struct ProfileSettingsPane: View {
                         Text("Export Profile(s)")
                     }
                 }
-                .buttonStyle(.settingsGlass)
+                .buttonStyle(.thawSecondary)
             }
         }
     }
@@ -369,6 +369,7 @@ struct ProfileSettingsPane: View {
                     Button("Remove") {
                         profileManager.setAssociatedSpace(key: nil, forProfileID: profile.id)
                     }
+                    .buttonStyle(.thawSecondary)
                 }
             }
         }

@@ -269,7 +269,7 @@ struct TriggerRow: View {
             } label: {
                 Image(systemName: "trash")
             }
-            .buttonStyle(.borderless)
+            .buttonStyle(.thawInline)
             .help("Delete this trigger")
         }
     }
@@ -281,7 +281,7 @@ struct TriggerRow: View {
             Image(systemName: isCollapsed ? "chevron.right" : "chevron.down")
                 .frame(width: 14)
         }
-        .buttonStyle(.borderless)
+        .buttonStyle(.thawInline)
         .help(isCollapsed ? "Expand trigger" : "Collapse trigger")
     }
 
@@ -326,7 +326,7 @@ struct TriggerRow: View {
                 .disabled(!canMoveDown)
                 .help("Move trigger down")
             }
-            .buttonStyle(.borderless)
+            .buttonStyle(.thawInline)
             .controlSize(.mini)
         }
         .fixedSize()
@@ -411,7 +411,8 @@ struct TriggerRow: View {
                     } label: {
                         Image(systemName: "minus.circle")
                     }
-                    .buttonStyle(.borderless)
+                    .buttonStyle(.thawInline)
+                    .help("Remove this item")
                 }
             }
             if advancedEnabled {
@@ -420,7 +421,7 @@ struct TriggerRow: View {
                 } label: {
                     Label("Also move another item", systemImage: "plus")
                 }
-                .buttonStyle(.borderless)
+                .buttonStyle(.thawInline)
             }
 
             Toggle("Notify when this reveals the item", isOn: $trigger.notifyOnReveal)
@@ -567,7 +568,7 @@ struct TriggerRow: View {
                         } label: {
                             Image(systemName: "minus.circle")
                         }
-                        .buttonStyle(.borderless)
+                        .buttonStyle(.thawInline)
                         .help("Remove this condition")
                     }
                 }
@@ -578,7 +579,7 @@ struct TriggerRow: View {
                     } label: {
                         Label("Add Condition", systemImage: "plus")
                     }
-                    .buttonStyle(.borderless)
+                    .buttonStyle(.thawInline)
                 }
             }
         }
@@ -798,6 +799,7 @@ struct TriggerRow: View {
                         )
                     }
                 }
+                .buttonStyle(.thawSecondary)
                 .disabled(coordinate == nil)
 
                 Spacer()

@@ -78,7 +78,7 @@ struct SettingsWarningPill: View {
 
             if let actionTitle, let action {
                 Button(actionTitle, action: action)
-                    .thawGlassButtonStyle(prominent: true)
+                    .buttonStyle(.thawPrimary)
                     .tint(tint)
                     .controlSize(.small)
                     .fixedSize()

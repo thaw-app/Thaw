@@ -170,6 +170,7 @@ struct ToolsSettingsPane: View {
                     Button("Show Log Files in Finder") {
                         NSWorkspace.shared.open(DiagnosticLogger.shared.logDirectory)
                     }
+                    .buttonStyle(.thawSecondary)
                 }
 
                 if let currentLogFileName {
@@ -250,6 +251,7 @@ struct ToolsSettingsPane: View {
                 Button("Relaunch Now") {
                     relaunchApp()
                 }
+                .buttonStyle(.thawSecondary)
             }
         }
     }
@@ -298,7 +300,7 @@ struct ToolsSettingsPane: View {
             }
             Spacer(minLength: 12)
             Button(buttonTitle, role: role, action: action)
-                .buttonStyle(.settingsGlass)
+                .buttonStyle(.thawSecondary)
         }
     }
 

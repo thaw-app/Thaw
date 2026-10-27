@@ -166,7 +166,7 @@ struct AutomationSettingsPane: View {
                 Button("Add") {
                     addBundleId()
                 }
-                .buttonStyle(.settingsGlass)
+                .buttonStyle(.thawSecondary)
                 .disabled({
                     let trimmed = newBundleId.trimmingCharacters(in: .whitespacesAndNewlines)
                     return trimmed.isEmpty || !AutomationSettings.isValidBundleId(trimmed)
@@ -176,7 +176,7 @@ struct AutomationSettingsPane: View {
                     Button("Add \(Constants.displayName) (Test)") {
                         settings.addCurrentApp()
                     }
-                    .buttonStyle(.settingsGlass)
+                    .buttonStyle(.thawSecondary)
                     .help("Add \(Constants.displayName) itself for testing")
                 #endif
             }
@@ -385,7 +385,7 @@ private struct HookRow: View {
                     .frame(maxWidth: .infinity, alignment: .leading)
 
                 Button("Choose Script…") { chooseScript() }
-                    .buttonStyle(.settingsGlass)
+                    .buttonStyle(.thawSecondary)
 
                 Button(role: .destructive) {
                     hook = nil

@@ -69,11 +69,13 @@ struct AdvancedSettingsPane: View {
 
             Spacer()
 
-            Button(String(localized: "Reset \(Constants.displayName)", comment: "A button that resets all settings to defaults")) {
+            Button(
+                String(localized: "Reset \(Constants.displayName)", comment: "A button that resets all settings to defaults"),
+                role: .destructive
+            ) {
                 isConfirmingReset = true
             }
-            .buttonStyle(.bordered)
-            .tint(.red)
+            .buttonStyle(.thawSecondary)
         }
         .alert(String(localized: "Reset all settings?"), isPresented: $isConfirmingReset) {
             Button(String(localized: "Reset"), role: .destructive) {
@@ -151,6 +153,7 @@ struct AdvancedSettingsPane: View {
                         let url = DiagnosticLogger.shared.logDirectory
                         NSWorkspace.shared.open(url)
                     }
+                    .buttonStyle(.thawSecondary)
                 }
 
                 if let currentLogFileName {
@@ -251,7 +254,7 @@ struct AdvancedSettingsPane: View {
             } label: {
                 Image(systemName: "chevron.up")
             }
-            .buttonStyle(.borderless)
+            .buttonStyle(.thawInline)
             .disabled(isFirst)
             .accessibilityLabel(String(localized: "Move up"))
             Button {
@@ -259,7 +262,7 @@ struct AdvancedSettingsPane: View {
             } label: {
                 Image(systemName: "chevron.down")
             }
-            .buttonStyle(.borderless)
+            .buttonStyle(.thawInline)
             .disabled(isLast)
             .accessibilityLabel(String(localized: "Move down"))
             Toggle(name.localized, isOn: searchInclusionBinding(for: name))
@@ -434,6 +437,7 @@ struct AdvancedSettingsPane: View {
                     Button("Grant Permission") {
                         permission.performRequest()
                     }
+                    .buttonStyle(.thawSecondary)
                 }
             } label: {
                 Text(permission.title)

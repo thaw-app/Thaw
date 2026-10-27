@@ -16,24 +16,3 @@ enum SettingsDetailLayout {
     /// Leading inset aligned with grouped form section cards / headers.
     static let titleHorizontalInset: CGFloat = 28
 }
-
-// MARK: - SettingsGlassButtonStyle
-
-struct SettingsGlassButtonStyle: PrimitiveButtonStyle {
-    func makeBody(configuration: Configuration) -> some View {
-        Button(role: configuration.role) {
-            configuration.trigger()
-        } label: {
-            configuration.label
-                .padding(.horizontal, 16)
-        }
-        .thawGlassButtonStyle()
-        .buttonBorderShape(.roundedRectangle(radius: ThawRadius.card))
-    }
-}
-
-extension PrimitiveButtonStyle where Self == SettingsGlassButtonStyle {
-    static var settingsGlass: SettingsGlassButtonStyle {
-        .init()
-    }
-}

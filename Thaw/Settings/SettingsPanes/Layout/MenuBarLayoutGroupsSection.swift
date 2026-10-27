@@ -127,6 +127,7 @@ struct MenuBarLayoutGroupsSection: View {
             Button("Create Group") {
                 createGroup()
             }
+            .buttonStyle(.thawSecondary)
             .disabled(primarySelection == nil || secondarySelection == nil || primarySelection == secondarySelection)
             .annotation("Grouped items stay adjacent: drag any member and the whole group moves with it.")
         }
@@ -173,6 +174,7 @@ struct MenuBarLayoutGroupsSection: View {
                 Button("Ungroup", role: .destructive) {
                     appState.itemGroupManager.ungroup(row.origin)
                 }
+                .buttonStyle(.thawSecondary)
             }
 
             ForEach(row.memberIdentifiers, id: \.self) { identifier in
@@ -194,7 +196,7 @@ struct MenuBarLayoutGroupsSection: View {
                         } label: {
                             Image(systemName: "minus.circle")
                         }
-                        .buttonStyle(.borderless)
+                        .buttonStyle(.thawInline)
                         .help("Remove from group")
                     }
                 }

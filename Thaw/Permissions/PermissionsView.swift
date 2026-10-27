@@ -117,7 +117,7 @@ struct PermissionsView<Manager: PermissionsManaging>: View {
             Text("Quit")
                 .frame(maxWidth: .infinity)
         }
-        .buttonStyle(.bordered)
+        .thawGlassButtonStyle()
     }
 
     /// Disabled until at least the required permissions are granted.
@@ -129,7 +129,8 @@ struct PermissionsView<Manager: PermissionsManaging>: View {
                 .frame(maxWidth: .infinity)
                 .foregroundStyle(continueButtonForegroundStyle)
         }
-        .buttonStyle(.borderedProminent)
+        .buttonStyle(.thawPrimary)
+        .keyboardShortcut(.defaultAction)
         .disabled(manager.permissionsState == .missing)
     }
 
@@ -173,6 +174,7 @@ struct PermissionsView<Manager: PermissionsManaging>: View {
                     Button("Import Settings") {
                         importIceSettings()
                     }
+                    .buttonStyle(.thawSecondary)
                     .disabled(isImportingIceSettings)
                 }
             }
@@ -260,7 +262,7 @@ struct PermissionCard: View {
                             .frame(maxWidth: .infinity)
                     }
                 }
-                .buttonStyle(.borderedProminent)
+                .buttonStyle(.thawPrimary)
                 .tint(permission.hasPermission ? .green : .accentColor)
                 .allowsHitTesting(!permission.hasPermission)
             }

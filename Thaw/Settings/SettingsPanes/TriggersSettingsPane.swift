@@ -417,7 +417,7 @@ struct TriggersSettingsPane: View {
         } label: {
             Label("Add Trigger", systemImage: "plus")
         }
-        .controlSize(.large)
+        .buttonStyle(.thawSecondary)
     }
 
     private func addTrigger() {

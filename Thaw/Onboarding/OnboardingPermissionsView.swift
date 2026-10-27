@@ -79,7 +79,8 @@ struct ThawPermissionsView: View {
                             .frame(maxWidth: .infinity)
                             .frame(height: 36)
                     }
-                    .thawGlassButtonStyle(prominent: true)
+                    .buttonStyle(.thawPrimary)
+                    .keyboardShortcut(.defaultAction)
                     .disabled(!requiredGranted)
                 }
             }

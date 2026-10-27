@@ -231,7 +231,7 @@ struct DisplaySettingsPane: View {
                 Button("Remove", role: .destructive) {
                     pendingDisplayRemoval = display
                 }
-                .buttonStyle(.borderless)
+                .buttonStyle(.thawInline)
                 .help(Text("Remove this display and its saved settings from the list. It reappears if you connect it again."))
             }
         }
@@ -341,6 +341,7 @@ struct DisplaySettingsPane: View {
                 Button("Apply") {
                     requestSpacingApply(for: display, offset: Double(draft))
                 }
+                .buttonStyle(.thawSecondary)
                 .help(Text("Apply the spacing for this display"))
                 .disabled(!canApply || !editsActiveDisplay)
 
@@ -349,7 +350,7 @@ struct DisplaySettingsPane: View {
                 } label: {
                     Image(systemName: "arrow.counterclockwise.circle.fill")
                 }
-                .buttonStyle(.borderless)
+                .buttonStyle(.thawInline)
                 .help(Text("Reset to the default spacing"))
                 .disabled(savedOffset == 0 && draft == 0)
                 .disabled(!editsActiveDisplay)
@@ -627,6 +628,7 @@ struct DisplaySettingsPane: View {
             Button("Apply to All Displays") {
                 requestGlobalApply()
             }
+            .buttonStyle(.thawSecondary)
             .disabled(!canApplyGlobal)
         } label: {
             Text("Broadcast")

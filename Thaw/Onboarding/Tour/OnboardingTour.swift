@@ -136,7 +136,7 @@ struct ThawOnboardingTour: View {
                     .font(.subheadline.weight(.semibold))
                     .frame(width: 140, height: 34)
             }
-            .thawGlassButtonStyle(prominent: true)
+            .buttonStyle(.thawPrimary)
             .keyboardShortcut(.defaultAction)
         }
         .padding(.horizontal, 24)

@@ -29,6 +29,7 @@ struct ScriptConditionEditor: View {
                     focusID: "scriptpath-\(focusID)"
                 )
                 Button("Choose…") { chooseScript() }
+                .buttonStyle(.thawSecondary)
             }
             CommitTextField(
                 title: "Expected output (optional)",

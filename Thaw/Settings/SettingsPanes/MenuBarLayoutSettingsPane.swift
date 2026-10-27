@@ -93,12 +93,14 @@ struct MenuBarLayoutSettingsPane: View {
                             Text(verbatim: "\(Int(spacer.width)) pt")
                                 .monospacedDigit()
                         }
-                        Button {
+                        Button(role: .destructive) {
                             appState.spacerManager.removeSpacer(id: spacer.id)
                         } label: {
                             Image(systemName: "trash")
                         }
+                        .buttonStyle(.thawInline)
                         .help("Remove this spacer")
+                        .accessibilityLabel("Remove this spacer")
                     }
                 } label: {
                     Text("Spacer")
@@ -108,6 +110,7 @@ struct MenuBarLayoutSettingsPane: View {
             Button("Add Spacer") {
                 appState.spacerManager.addSpacer()
             }
+            .buttonStyle(.thawSecondary)
             .annotation("Inserts an empty gap item into the menu bar. Position it like any other item — hold \u{2318} Command and drag it in the menu bar.")
         }
     }

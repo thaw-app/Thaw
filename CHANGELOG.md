@@ -33,6 +33,7 @@ the items under New and Fixed.
 
 - **Importing a profile doesn't turn on its scripts.** Scripts that run before or after the profile applies arrive switched off, and "Confirm before relaunching apps" arrives on. Turn them on in Profiles if you trust the file.
 - **thaw://toggle-thawbar needs settings access,** like thaw://set and thaw://toggle, since it saves a setting.
+- **Settings buttons look the same everywhere.** Main actions, other actions and buttons inside a row each have one style, and the update prompt and permission windows answer Return and Escape.
 
 ### Fixed
 

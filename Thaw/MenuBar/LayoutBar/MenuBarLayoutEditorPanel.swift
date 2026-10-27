@@ -130,6 +130,7 @@ private struct MenuBarLayoutEditorContentView: View {
             Button("Done") {
                 onDone?()
             }
+            .buttonStyle(.thawPrimary)
             // The popover is semitransient, so Escape doesn't dismiss it;
             // without a shortcut a keyboard-only user can't close the editor.
             .keyboardShortcut(.defaultAction)

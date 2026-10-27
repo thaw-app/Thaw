@@ -147,7 +147,7 @@ struct LayoutBarsSection: View {
                         itemManager.sortSection(name)
                     }
                     .help(Text("Sort the items in this section alphabetically by name."))
-                    .buttonStyle(.borderless)
+                    .buttonStyle(.thawInline)
                 }
 
                 LayoutBar(section: name)
@@ -214,7 +214,7 @@ struct LayoutResetControls: View {
                         Text("Reset Layout…")
                     }
                 }
-                .buttonStyle(.bordered)
+                .buttonStyle(.thawSecondary)
                 .disabled(isResettingLayout || controlItemsDisabled)
             }
 
@@ -247,7 +247,7 @@ struct LayoutResetControls: View {
                     isConfirmingReset = false
                 }
             }
-            .buttonStyle(.bordered)
+            .buttonStyle(.thawSecondary)
         }
     }
 
