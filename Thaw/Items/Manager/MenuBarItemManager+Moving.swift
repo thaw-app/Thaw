@@ -2438,15 +2438,13 @@ extension MenuBarItemManager {
         var liveItems = liveItems
         var didReorder = false
         var structuralApplied = false
-        if section == .visible {
-            if let controlItems = controlItemPair(in: liveItems) {
-                structuralApplied = restoreStructuralControlOrder(
-                    controlItems: controlItems,
-                    items: liveItems,
-                    diagnosticContext: "section apply \(section.logString) reason=\(reason)",
-                    permit: permit
-                )
-            }
+        if section == .visible, let controlItems = controlItemPair(in: liveItems) {
+            structuralApplied = restoreStructuralControlOrder(
+                controlItems: controlItems,
+                items: liveItems,
+                diagnosticContext: "section apply \(section.logString) reason=\(reason)",
+                permit: permit
+            )
         }
         if structuralApplied {
             controller.notePreferredPositionsSelfWrite()

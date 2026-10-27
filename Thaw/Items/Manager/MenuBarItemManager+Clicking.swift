@@ -300,27 +300,25 @@ extension MenuBarItemManager {
         // An owner marked unresponsive is deliberately not skipped here: the
         // mark records that it drops synthetic events, which is the case this
         // path is most likely to succeed at.
-        if mouseButton == .left {
-            if let reaction = await MenuBarItemDirectPresser.press(item: item) {
-                if reaction.didReact {
-                    MenuBarItemManager.diagLog.debug(
-                        "Opened \(item.logString) without synthesizing events"
-                    )
-                    failureLedger.recordSuccess(for: item)
-                    return reaction
-                }
-                // Some owners accept the press and open nothing. Callers that
-                // need a reaction post a real click; a second activation would re-toggle the rest.
-                guard requireObservedReaction else {
-                    MenuBarItemManager.diagLog.debug(
-                        "Pressed \(item.logString) without synthesizing events; no reaction seen"
-                    )
-                    return reaction
-                }
+        if mouseButton == .left, let reaction = await MenuBarItemDirectPresser.press(item: item) {
+            if reaction.didReact {
                 MenuBarItemManager.diagLog.debug(
-                    "\(item.logString) took the press but was not seen reacting; posting a real click"
+                    "Opened \(item.logString) without synthesizing events"
                 )
+                failureLedger.recordSuccess(for: item)
+                return reaction
             }
+            // Some owners accept the press and open nothing. Callers that
+            // need a reaction post a real click; a second activation would re-toggle the rest.
+            guard requireObservedReaction else {
+                MenuBarItemManager.diagLog.debug(
+                    "Pressed \(item.logString) without synthesizing events; no reaction seen"
+                )
+                return reaction
+            }
+            MenuBarItemManager.diagLog.debug(
+                "\(item.logString) took the press but was not seen reacting; posting a real click"
+            )
         }
 
         appState.hidEventManager.stopAll()

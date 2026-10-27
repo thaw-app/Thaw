@@ -133,11 +133,10 @@ final class AppNavigationState {
         // Restore the full window's last pane for returning from Simple Mode; init assignment does not persist via didSet.
         // Ignore panes no longer in the sidebar so selection and detail stay connected.
         if let rawValue = Defaults.string(forKey: .lastSettingsPane),
-           let pane = SettingsNavigationIdentifier(rawValue: rawValue)?.destination
+           let pane = SettingsNavigationIdentifier(rawValue: rawValue)?.destination,
+           SettingsSidebarPanes.all.contains(pane)
         {
-            if SettingsSidebarPanes.all.contains(pane) {
-                settingsNavigationIdentifier = pane
-            }
+            settingsNavigationIdentifier = pane
         }
         // Panes hidden by the old customizable sidebar show again.
         Defaults.removeObject(forKey: .hiddenSidebarPanes)
