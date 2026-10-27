@@ -472,11 +472,11 @@ final class DisplaySettingsManager {
         }
     }
 
-    /// Presents an app-modal confirmation before a display transition fires the
-    /// relaunch wave, returning whether the user approved. A ticked
+    /// Presents an app-modal confirmation before a display transition or a
+    /// profile apply fires the relaunch wave, returning whether the user approved. A ticked
     /// suppression box makes the answer stick either way; see
     /// rememberSpacingRelaunchAnswer(approved:).
-    private func presentSpacingRelaunchConfirmation() -> Bool {
+    func presentSpacingRelaunchConfirmation() -> Bool {
         NSApp.activate(ignoringOtherApps: true)
         let alert = NSAlert()
         alert.messageText = String(localized: "Apply menu bar spacing change?")

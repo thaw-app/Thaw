@@ -38,6 +38,7 @@ the items under New and Fixed.
 - **An app you allowed to use thaw:// links is checked by its own signature,** so another app can't borrow the permission by using the same name. An app allowed without a signing team is asked again when its code changes.
 - **A shortcut with an impossible key code no longer makes Thaw quit,** when a profile with one is applied or at the next launch. Thaw skips that shortcut.
 - **Another app can't switch your profile by pretending a Focus started or ended.** Thaw checks the Focus state itself before it switches.
+- **Applying a profile no longer restarts menu bar apps without asking.** With spacing set to ask first, the Profiles pane asks, and a profile applied from the menu, a shortcut, Shortcuts, a link, a Focus or a Space saves its spacing for when the apps next start.
 
 ## [2.1.0] - 2026-10-14
 **macOS 26 only**

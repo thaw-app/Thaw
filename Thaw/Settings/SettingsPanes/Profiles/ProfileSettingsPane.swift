@@ -246,7 +246,7 @@ struct ProfileSettingsPane: View {
         }
     }
 
-    private func diff(for profile: Profile) -> ProfileLayoutDiff {
+    func diff(for profile: Profile) -> ProfileLayoutDiff {
         var diff = ProfileLayoutDiff.between(
             current: profileManager.currentLayoutSnapshot(from: appState),
             profile: profile.menuBarLayout
@@ -274,7 +274,7 @@ struct ProfileSettingsPane: View {
         Task {
             do {
                 // Waits for the layout task, so the Apply buttons stay off until it ends.
-                try await profileManager.applyProfileAwaitingLayout(id: id, to: appState)
+                try await profileManager.applyProfileAwaitingLayout(id: id, to: appState, spacingRelaunchApproved: approvesSpacingRelaunch(forProfileID: id))
                 refreshPreview()
                 if profileManager.layoutDidNotRun {
                     errorMessage = String(

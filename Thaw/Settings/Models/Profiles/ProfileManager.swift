@@ -274,7 +274,8 @@ final class ProfileManager {
 
     /// Apply spacing after settings; applyOffset avoids relaunches for matching on-disk offsets.
     /// Capture previousProfileID before changing activeProfileID so hooks receive THAW_PREVIOUS_PROFILE_ID.
-    func applyProfile(_ profile: Profile, to appState: AppState, previousProfileID: UUID? = nil, relaunchesApps: Bool = true) {
+    /// While relaunches need confirmation, spacing is only written unless spacingRelaunchApproved says the user agreed.
+    func applyProfile(_ profile: Profile, to appState: AppState, previousProfileID: UUID? = nil, relaunchesApps: Bool = true, spacingRelaunchApproved: Bool = false) {
         diagLog.debug(
             "applyProfile entered: name=\(profile.name)"
         )
@@ -335,7 +336,7 @@ final class ProfileManager {
                 return
             }
 
-            self?.applySnapshot(profile, to: appState, relaunchesApps: relaunchesApps)
+            let mayRelaunch = self?.applySnapshot(profile, to: appState, relaunchesApps: relaunchesApps, spacingRelaunchApproved: spacingRelaunchApproved) ?? false
 
             // Apply spacing before layout: relaunches reset item positions; matching offsets no-op.
             // Arm settling before relaunch to suppress partial cache restores, then wait for reattachment before layout.
@@ -347,7 +348,7 @@ final class ProfileManager {
             do {
                 // An unstructured wave survives superseding layout-task cancellation; see sleepIgnoringCancellation(for:).
                 let outcome = try await Task {
-                    try await appState.spacingManager.applyOffset(relaunchApps: relaunchesApps)
+                    try await appState.spacingManager.applyOffset(relaunchApps: mayRelaunch)
                 }.value
                 didRelaunch = outcome.didRelaunch
                 recovered = outcome.recoveredBundleIDs
@@ -417,7 +418,8 @@ final class ProfileManager {
         }
     }
 
-    private func applySnapshot(_ profile: Profile, to appState: AppState, relaunchesApps: Bool) {
+    /// Returns whether the apply may restart apps for its spacing.
+    private func applySnapshot(_ profile: Profile, to appState: AppState, relaunchesApps: Bool, spacingRelaunchApproved: Bool) -> Bool {
         profile.generalSettings.apply(to: appState.settings.general)
         profile.advancedSettings.merged(onto: .capture(from: appState.settings.advanced)).apply(to: appState.settings.advanced)
 
@@ -445,8 +447,12 @@ final class ProfileManager {
         appState.settings.displaySettings.globalConfiguration = profile.globalDisplayConfiguration
 
         // Set before the configurations, whose change applies spacing under these settings.
-        ProfileRelaunchSafety.apply(profile, to: appState.settings.displaySettings)
-        appState.settings.displaySettings.assignConfigurations(profile.displayConfigurations, writeOnly: !relaunchesApps)
+        let relaunchSettings = ProfileRelaunchSafety.apply(profile, to: appState.settings.displaySettings)
+        let mayRelaunch = ProfileRelaunchSafety.relaunchesApps(requested: relaunchesApps, settings: relaunchSettings, approved: spacingRelaunchApproved)
+        if relaunchesApps, !mayRelaunch, relaunchSettings.applyMode == .relaunchApps {
+            diagLog.info("Profile \(profile.name): restarting apps needs confirmation; saving spacing without relaunching")
+        }
+        appState.settings.displaySettings.assignConfigurations(profile.displayConfigurations, writeOnly: !mayRelaunch)
         appState.settings.displaySettings.unconfirmedSpacingProfileScope = profile.unconfirmedSpacingProfileScope
         appState.appearanceManager.configuration = profile.appearanceConfiguration
 
@@ -470,6 +476,7 @@ final class ProfileManager {
         if let placement = profile.menuBarLayout.newItemsPlacement {
             appState.itemManager.applyNewItemsPlacement(placement)
         }
+        return mayRelaunch
     }
 
     func deleteProfile(id: UUID) throws {
