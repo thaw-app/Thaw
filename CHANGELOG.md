@@ -24,6 +24,10 @@ the items under New and Fixed.
 
 ## [Unreleased]
 
+## [2.2.0-beta.1] - 2026-10-27
+
+**macOS 15 and 26 · Build 64**
+
 ### New
 
 - Thaw 2 runs on macOS 15 Sequoia again. Its windows use a plain material there instead of Liquid Glass, and the menu bar's glass background and tint aren't offered.
