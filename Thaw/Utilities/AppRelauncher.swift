@@ -16,15 +16,25 @@ enum AppRelauncher {
     ///
     /// Throws and keeps the app running if the watcher cannot start.
     static func relaunch() throws {
-        let pid = ProcessInfo.processInfo.processIdentifier
-        let bundlePath = Bundle.main.bundlePath
         let process = Process()
         process.executableURL = URL(fileURLWithPath: "/bin/sh")
-        process.arguments = [
-            "-c",
-            "while /bin/kill -0 \(pid) 2>/dev/null; do /bin/sleep 0.1; done; /usr/bin/open \"\(bundlePath)\"",
-        ]
+        process.arguments = watcherArguments(
+            pid: ProcessInfo.processInfo.processIdentifier,
+            bundlePath: Bundle.main.bundlePath
+        )
         try process.run()
         NSApp.terminate(nil)
+    }
+
+    /// The shell program is fixed and reads the PID and bundle path as positional
+    /// parameters, so a path holding quotes or $() is never parsed as shell code.
+    static nonisolated func watcherArguments(pid: pid_t, bundlePath: String) -> [String] {
+        [
+            "-c",
+            "while /bin/kill -0 \"$1\" 2>/dev/null; do /bin/sleep 0.1; done; /usr/bin/open \"$2\"",
+            "sh",
+            String(pid),
+            bundlePath,
+        ]
     }
 }

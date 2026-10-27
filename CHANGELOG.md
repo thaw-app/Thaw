@@ -27,6 +27,7 @@ the items under New and Fixed.
 ### Fixed
 
 - **Thaw no longer quits when a group folder's icon briefly has no window.** On macOS 27 that happens after the menu bar rearranges, and Thaw read the placeholder number macOS gives such an icon as a window ID. Reported by @perlytiara in [#1397](https://github.com/thaw-app/Thaw/issues/1397).
+- **Relaunch Now can't run commands hidden in the name of the folder Thaw is in.**
 
 ## [2.1.0] - 2026-10-14
 **macOS 26 only**
