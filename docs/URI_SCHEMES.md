@@ -88,6 +88,7 @@ Read and write Thaw settings via `thaw://` URLs, gated by a security whitelist. 
 3. First-time authorization: new apps trigger a confirmation dialog with app name and permissions. Apps can proactively request authorization via `thaw://authorize` without reading or writing settings
 4. Silent failures: unauthorized requests fail without user interruption
 5. Signature pinning: the sending app is identified by its own code signature, not only by its bundle ID. An approval is tied to the app's signing team, or for an app signed without a team, to that exact build, so a rebuilt unsigned app is asked again
+6. Diagnostics: `thaw://proxy-press` and `thaw://dump-items` need the same switch and approval. `dump-items` writes its report to `~/Library/Logs/Thaw` and sends the report path only to a `callback` whose URL scheme the requesting app handles itself, never to a web address
 
 ### Supported Settings Keys
 

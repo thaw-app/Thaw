@@ -28,6 +28,7 @@ the items under New and Fixed.
 
 - **thaw://proxy-press needs settings access and an app you allowed,** like thaw://set, since it presses another app's menu bar item.
 - **thaw://toggle-thawbar needs settings access,** like thaw://set and thaw://toggle, since it saves a setting.
+- **thaw://dump-items needs settings access, and reports back only to the app that asked.** It no longer opens web links.
 
 ### Fixed
 

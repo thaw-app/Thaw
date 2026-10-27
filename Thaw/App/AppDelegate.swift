@@ -269,12 +269,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         case "toggle-layout-editor":
             // Use the hotkey's "Edit Layout" quick-edit panel, not the Settings window.
             HotkeyAction.toggleLayoutEditor.perform(appState: appState)
-        case "dump-items":
-            let callback = URLComponents(url: url, resolvingAgainstBaseURL: false)?
-                .queryItems?.first { $0.name == "callback" }?.value
-            if let fileURL = ItemEnumerationDump.run() {
-                ItemEnumerationDump.respond(fileURL: fileURL, callback: callback)
-            }
         case "open-settings":
             openSettingsWindow()
         case "item-hints":
@@ -311,6 +305,22 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                 }
             }
         }
+    }
+
+    /// Writes the item dump for an approved sender and returns its path only to a callback that sender handles.
+    private func handleDumpItemsURL(_ url: URL, sender: String) {
+        let requested = URLComponents(url: url, resolvingAgainstBaseURL: false)?
+            .queryItems?.first { $0.name == "callback" }?.value
+        let callback = ItemEnumerationDump.deliverableCallback(requested, senderBundleIdentifier: sender) { target in
+            NSWorkspace.shared.urlForApplication(toOpen: target).flatMap { Bundle(url: $0)?.bundleIdentifier }
+        }
+        if requested != nil, callback == nil {
+            appState.diagLog.warning("dump-items: refusing callback that \(sender) does not handle")
+        }
+        guard let fileURL = ItemEnumerationDump.run(), let callback else {
+            return
+        }
+        ItemEnumerationDump.respond(fileURL: fileURL, callback: callback)
     }
 
     /// Handles settings manipulation URLs (set/toggle).
@@ -370,6 +380,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         case "toggle-thawbar":
             // It saves the active display's Thaw Bar setting, so it answers to the same gate as set and toggle.
             HotkeyAction.enableThawBar.perform(appState: appState)
+        case "dump-items":
+            handleDumpItemsURL(url, sender: effectiveBundleId)
         default:
             break
         }

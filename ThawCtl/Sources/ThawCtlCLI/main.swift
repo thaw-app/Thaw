@@ -34,7 +34,7 @@ private struct Command {
         Command(name: "toggle-zen-mode", host: "toggle-zen-mode", valueParams: [], flagParams: [], usage: "thawctl toggle-zen-mode", needsAuth: false),
         Command(name: "toggle-layout-editor", host: "toggle-layout-editor", valueParams: [], flagParams: [], usage: "thawctl toggle-layout-editor", needsAuth: false),
         Command(name: "open-settings", host: "open-settings", valueParams: [], flagParams: [], usage: "thawctl open-settings", needsAuth: false),
-        Command(name: "dump-items", host: "dump-items", valueParams: [], flagParams: [], usage: "thawctl dump-items", needsAuth: false),
+        Command(name: "dump-items", host: "dump-items", valueParams: [], flagParams: [], usage: "thawctl dump-items", needsAuth: true),
         Command(name: "set", host: "set", valueParams: ["key", "value"], flagParams: ["display"], usage: "thawctl set <key>=<value> [--display <uuid>]", needsAuth: true),
         Command(name: "toggle-setting", host: "toggle", valueParams: ["key"], flagParams: ["display"], usage: "thawctl toggle-setting <key> [--display <uuid>]", needsAuth: true),
         Command(name: "get", host: "get", valueParams: ["key"], flagParams: ["display"], usage: "thawctl get <key> [--display <uuid>]", needsAuth: true),

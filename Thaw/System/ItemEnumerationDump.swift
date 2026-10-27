@@ -10,7 +10,8 @@ import MenuBarModel
 import ThawAXCore
 
 /// Diagnose stable item keys by recording raw AXExtrasMenuBar identity attributes in local JSON; no network upload.
-/// thaw://dump-items?callback=<url> writes to ~/Library/Logs/Thaw/ and returns only a path and per-app summary via URL.
+/// thaw://dump-items?callback=<url> writes to ~/Library/Logs/Thaw/ and returns only a path and per-app summary
+/// to a callback the approved sender itself handles.
 enum ItemEnumerationDump {
     private static let diagLog = DiagLog(category: "ItemEnumerationDump")
 
@@ -171,19 +172,36 @@ enum ItemEnumerationDump {
         return fileURL
     }
 
-    /// Send only the file path and a URL-sized per-app summary through the thawctl callback.
-    static func respond(fileURL: URL, callback: String?) {
-        guard let callback, !callback.isEmpty else {
-            return
-        }
-        guard var components = URLComponents(string: callback),
-              components.scheme?.isEmpty == false
-        else {
-            diagLog.warning("dump: invalid callback URL \(callback)")
-            return
-        }
+    /// Schemes a dump never goes to: web and messaging schemes would carry it off the machine,
+    /// and the rest run code or read files.
+    static let refusedCallbackSchemes: Set<String> = [
+        "http", "https", "ftp", "ftps", "sftp", "ws", "wss", "mailto", "sms", "tel",
+        "file", "javascript", "data", "about", "blob",
+    ]
 
-        let summary: [[String: Any]] = readApps(from: fileURL).map { app in
+    /// The callback a dump may be delivered to, or nil unless its scheme is handled by the approved sender itself.
+    /// handlerBundleIdentifier names the app that would open a URL, which tests supply directly.
+    static func deliverableCallback(
+        _ callback: String?,
+        senderBundleIdentifier: String,
+        handlerBundleIdentifier: (URL) -> String?
+    ) -> URLComponents? {
+        guard let callback, !callback.isEmpty,
+              let components = URLComponents(string: callback),
+              let scheme = components.scheme?.lowercased(), !scheme.isEmpty,
+              !refusedCallbackSchemes.contains(scheme), !scheme.hasPrefix("x-apple-"),
+              let url = components.url,
+              let handler = handlerBundleIdentifier(url),
+              handler.caseInsensitiveCompare(senderBundleIdentifier) == .orderedSame
+        else {
+            return nil
+        }
+        return components
+    }
+
+    /// The callback URL with only the file path and a URL-sized per-app summary appended.
+    static func callbackURL(_ callback: URLComponents, fileURL: URL, apps: [DumpedApp]) -> URL? {
+        let summary: [[String: Any]] = apps.map { app in
             [
                 "bundle": app.bundleIdentifier,
                 "count": app.items.count,
@@ -191,17 +209,22 @@ enum ItemEnumerationDump {
             ]
         }
 
+        var components = callback
         var queryItems = components.queryItems ?? []
         queryItems.append(URLQueryItem(name: "type", value: "item-dump"))
         queryItems.append(URLQueryItem(name: "file", value: fileURL.path))
-        if let summaryData = try? JSONSerialization.data(withJSONObject: summary),
+        if let summaryData = try? JSONSerialization.data(withJSONObject: summary, options: .sortedKeys),
            let summaryJSON = String(data: summaryData, encoding: .utf8)
         {
             queryItems.append(URLQueryItem(name: "data", value: summaryJSON))
         }
         components.queryItems = queryItems
+        return components.url
+    }
 
-        guard let url = components.url else {
+    /// Sends the dump's path and summary to a callback that deliverableCallback accepted.
+    static func respond(fileURL: URL, callback: URLComponents) {
+        guard let url = callbackURL(callback, fileURL: fileURL, apps: readApps(from: fileURL)) else {
             diagLog.warning("dump: failed to compose callback URL")
             return
         }
