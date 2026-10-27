@@ -522,7 +522,8 @@ final class ProfileManager {
         }
     }
 
-    /// Undo saved content without applying it; reverting a saved copy must not rearrange the live bar.
+    /// Saves a profile to disk and updates the manifest, without applying it; reverting a saved copy
+    /// must not rearrange the live bar.
     func replaceProfile(_ profile: Profile) throws {
         let data = try encoder.encode(profile)
         try data.write(to: profileURL(for: profile.id), options: .atomic)
@@ -723,17 +724,6 @@ final class ProfileManager {
         profile.appearanceConfiguration = appState.appearanceManager.configuration
     }
 
-    /// Saves a profile to disk and updates the manifest.
-    private func saveProfileAndUpdateManifest(_ profile: Profile) throws {
-        let data = try encoder.encode(profile)
-        try data.write(to: profileURL(for: profile.id), options: .atomic)
-
-        if let index = profiles.firstIndex(where: { $0.id == profile.id }) {
-            profiles[index].modifiedAt = profile.modifiedAt
-        }
-        try saveManifest()
-    }
-
     // MARK: - Scoped Updates
 
     /// What parts of a profile to update.
@@ -789,7 +779,7 @@ final class ProfileManager {
         )
         profile.menuBarLayout = layout
         profile.modifiedAt = Date()
-        try saveProfileAndUpdateManifest(profile)
+        try replaceProfile(profile)
         rearmActiveLayoutIfNeeded(updatedID: id, scope: .layoutOnly, layout: layout, itemManager: itemManager)
     }
 
@@ -820,7 +810,7 @@ final class ProfileManager {
         var profile = try loadProfile(id: id)
         applyCurrentConfiguration(to: &profile, from: appState)
         profile.modifiedAt = Date()
-        try saveProfileAndUpdateManifest(profile)
+        try replaceProfile(profile)
     }
 
     /// Broadcast spacing to every profile's display entry, creating missing entries from the global template.
@@ -900,7 +890,7 @@ final class ProfileManager {
         }
         profile.automation = automation.isEmpty ? nil : automation
         profile.modifiedAt = Date()
-        try saveProfileAndUpdateManifest(profile)
+        try replaceProfile(profile)
     }
 
     /// Exports all profiles as a single JSON file including metadata.
