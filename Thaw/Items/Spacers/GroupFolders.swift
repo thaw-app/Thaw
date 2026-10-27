@@ -47,7 +47,7 @@ final class GroupFolders {
     @ObservationIgnored private var observationTask: Task<Void, Never>?
 
     init() {
-        let stored = UserDefaults.standard.stringArray(forKey: Self.foldersKey) ?? []
+        let stored = Defaults.store.stringArray(forKey: Self.foldersKey) ?? []
         folderIDs = Set(stored.compactMap(UUID.init(uuidString:)))
         styles = Self.loadStyles()
     }
@@ -63,7 +63,7 @@ final class GroupFolders {
     }
 
     private static func loadStyles() -> [UUID: Style] {
-        let stored = UserDefaults.standard.dictionary(forKey: stylesKey) as? [String: [String: String]] ?? [:]
+        let stored = Defaults.store.dictionary(forKey: stylesKey) as? [String: [String: String]] ?? [:]
         var styles: [UUID: Style] = [:]
         for (key, entry) in stored {
             guard let id = UUID(uuidString: key) else { continue }
@@ -86,7 +86,7 @@ final class GroupFolders {
 
     static nonisolated func label(for tag: MenuBarItemTag) -> String? {
         guard tag.isThawOwnedNamespace, tag.title.hasPrefix(autosavePrefix) else { return nil }
-        let labels = UserDefaults.standard.dictionary(forKey: labelsKey) as? [String: String]
+        let labels = Defaults.store.dictionary(forKey: labelsKey) as? [String: String]
         return labels?[tag.title]
     }
 
@@ -128,14 +128,14 @@ final class GroupFolders {
     }
 
     private func persist() {
-        UserDefaults.standard.set(folderIDs.map(\.uuidString).sorted(), forKey: Self.foldersKey)
+        Defaults.store.set(folderIDs.map(\.uuidString).sorted(), forKey: Self.foldersKey)
         var stored: [String: [String: String]] = [:]
         for (id, style) in styles where folderIDs.contains(id) {
             var entry = ["symbol": style.symbol]
             entry["color"] = style.color?.hexString
             stored[id.uuidString] = entry
         }
-        UserDefaults.standard.set(stored, forKey: Self.stylesKey)
+        Defaults.store.set(stored, forKey: Self.stylesKey)
     }
 
     private func applyStyle(to id: UUID) {
@@ -173,7 +173,7 @@ final class GroupFolders {
             statusItem.button?.setAccessibilityLabel(name)
             labels[Self.autosaveName(for: group.id)] = name
         }
-        UserDefaults.standard.set(labels, forKey: Self.labelsKey)
+        Defaults.store.set(labels, forKey: Self.labelsKey)
     }
 
     private func folderName(for group: MenuBarItemGroup) -> String {
