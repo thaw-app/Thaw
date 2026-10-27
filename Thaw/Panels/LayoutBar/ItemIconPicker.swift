@@ -50,7 +50,8 @@ enum ItemIconPicker {
     }
 }
 
-private struct ItemIconPickerView: View {
+/// Internal rather than private so tests can render the picker without opening its window.
+struct ItemIconPickerView: View {
     @Environment(AppState.self) private var appState
     let item: MenuBarItem
     let candidates: [BundledStatusIcon.Candidate]
