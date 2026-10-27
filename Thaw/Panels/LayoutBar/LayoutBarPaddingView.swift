@@ -413,22 +413,20 @@ final class LayoutBarPaddingView: NSView {
                             targetSection,
                             items: groupMembers,
                             atomically: true
-                        ) {
-                            if let appState = container.appState {
-                                let sourceItems = appState.itemManager.itemCache
-                                    .managedItems(for: sourceSection)
-                                appState.layoutFeedback.post(
-                                    LayoutBarFeedbackCenter.blockedGroupMove(
-                                        groupName: groupDisplayName(
-                                            for: groupMembers,
-                                            in: sourceItems,
-                                            appState: appState
-                                        ),
-                                        section: targetSection,
-                                        refusal: refusal
-                                    )
+                        ), let appState = container.appState {
+                            let sourceItems = appState.itemManager.itemCache
+                                .managedItems(for: sourceSection)
+                            appState.layoutFeedback.post(
+                                LayoutBarFeedbackCenter.blockedGroupMove(
+                                    groupName: groupDisplayName(
+                                        for: groupMembers,
+                                        in: sourceItems,
+                                        appState: appState
+                                    ),
+                                    section: targetSection,
+                                    refusal: refusal
                                 )
-                            }
+                            )
                         }
                     } else {
                         controller?.setSection(targetSection, item: item)
