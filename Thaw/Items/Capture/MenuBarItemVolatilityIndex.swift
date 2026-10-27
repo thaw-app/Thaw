@@ -142,7 +142,7 @@ final class MenuBarItemVolatilityIndex {
         records.removeAll()
         persistableKeys.removeAll()
         lastLoggedSummary = nil
-        UserDefaults.standard.removeObject(forKey: Defaults.Key.menuBarItemVolatilityIndex.rawValue)
+        Defaults.removeObject(forKey: .menuBarItemVolatilityIndex)
     }
 
     /// Logs stability distribution to assess the value of overlays and long-lived disk caching.
@@ -197,9 +197,7 @@ final class MenuBarItemVolatilityIndex {
     // MARK: Persistence
 
     private func loadFromDefaults() {
-        guard let data = UserDefaults.standard.data(
-            forKey: Defaults.Key.menuBarItemVolatilityIndex.rawValue
-        ) else {
+        guard let data = Defaults.data(forKey: .menuBarItemVolatilityIndex) else {
             return
         }
         let store: PersistedStore
@@ -213,7 +211,7 @@ final class MenuBarItemVolatilityIndex {
             Self.diagLog.notice(
                 "Volatility: dropping persisted store (version \(store.version) != \(Self.currentStoreVersion))"
             )
-            UserDefaults.standard.removeObject(forKey: Defaults.Key.menuBarItemVolatilityIndex.rawValue)
+            Defaults.removeObject(forKey: .menuBarItemVolatilityIndex)
             return
         }
         let cutoff = Date().addingTimeInterval(-Thresholds.persistedRecordLifetime)
@@ -230,7 +228,7 @@ final class MenuBarItemVolatilityIndex {
         let store = PersistedStore(version: Self.currentStoreVersion, records: persistable)
         do {
             let data = try JSONEncoder().encode(store)
-            UserDefaults.standard.set(data, forKey: Defaults.Key.menuBarItemVolatilityIndex.rawValue)
+            Defaults.set(data, forKey: .menuBarItemVolatilityIndex)
         } catch {
             Self.diagLog.error("Volatility: failed to encode store: \(error)")
         }
