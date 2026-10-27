@@ -1,0 +1,34 @@
+name: Website docs
+
+# getthaw.app reads docs/, CHANGELOG.md and FREQUENT_ISSUES.md from development
+# when it builds, so a change to them asks Vercel for a fresh build.
+on:
+  push:
+    branches:
+      - development
+    paths:
+      - "docs/**"
+      - "CHANGELOG.md"
+      - "FREQUENT_ISSUES.md"
+  workflow_dispatch:
+
+permissions: {}
+
+concurrency:
+  group: website-docs
+  cancel-in-progress: true
+
+jobs:
+  rebuild:
+    if: github.repository == 'thaw-app/Thaw'
+    runs-on: ubuntu-slim
+    steps:
+      - name: Rebuild getthaw.app
+        env:
+          DEPLOY_HOOK: ${{ secrets.WEBSITE_DEPLOY_HOOK }}
+        run: |
+          if [ -z "$DEPLOY_HOOK" ]; then
+            echo "::warning::WEBSITE_DEPLOY_HOOK is not set, so the website was not rebuilt."
+            exit 0
+          fi
+          curl --fail --silent --show-error --retry 3 --request POST "$DEPLOY_HOOK" > /dev/null
