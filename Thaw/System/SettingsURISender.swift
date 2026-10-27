@@ -5,6 +5,7 @@
 //  Copyright (Thaw) © 2026 Toni Förster
 //  Licensed under the GNU GPLv3
 
+import Algorithms
 import AppKit
 import Security
 
@@ -49,9 +50,9 @@ nonisolated struct SettingsURISender: Equatable, Sendable {
         }
         let team = (info[kSecCodeInfoTeamIdentifier as String] as? String).flatMap { $0.isEmpty ? nil : $0 }
         let hash = (info[kSecCodeInfoUnique as String] as? Data).flatMap { $0.isEmpty ? nil : hexString($0) }
-        let name = ["CFBundleDisplayName", "CFBundleName"].lazy.compactMap { key in
+        let name = ["CFBundleDisplayName", "CFBundleName"].firstNonNil { key in
             (plist?[key] as? String).flatMap { $0.isEmpty ? nil : $0 }
-        }.first
+        }
         return SettingsURISender(bundleIdentifier: bundleIdentifier, teamIdentifier: team, codeHash: hash, displayName: name)
     }
 

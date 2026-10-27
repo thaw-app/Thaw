@@ -5,6 +5,7 @@
 //  Copyright (Thaw) © 2026 Toni Förster
 //  Licensed under the GNU GPLv3
 
+import Algorithms
 import AppKit
 
 /// Selection input for one Layout bar, seen ahead of the item views, which keep everything it passes on.
@@ -129,6 +130,6 @@ final class LayoutSelectionInteraction {
     }
 
     private static func itemView(containing view: NSView) -> LayoutBarItemView? {
-        sequence(first: view, next: \.superview).lazy.compactMap { $0 as? LayoutBarItemView }.first
+        sequence(first: view, next: \.superview).firstNonNil { $0 as? LayoutBarItemView }
     }
 }

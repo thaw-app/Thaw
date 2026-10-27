@@ -5,6 +5,7 @@
 //  Copyright (Thaw) © 2026 Toni Förster
 //  Licensed under the GNU GPLv3
 
+import Algorithms
 import AppKit
 import MenuBarModel
 
@@ -39,9 +40,8 @@ enum LayoutDisplayedItems {
         appState: AppState,
         runningApplications: [NSRunningApplication]
     ) -> [MenuBarItem] {
-        var seen = Set<String>()
-        return items(in: section, appState: appState, runningApplications: runningApplications)
+        items(in: section, appState: appState, runningApplications: runningApplications)
             .filter(LayoutBarPaddingView.acceptsLayoutDrag(of:))
-            .filter { seen.insert($0.uniqueIdentifier).inserted }
+            .uniqued(on: \.uniqueIdentifier)
     }
 }

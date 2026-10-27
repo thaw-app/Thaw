@@ -5,6 +5,7 @@
 //  Copyright (Thaw) © 2026 Toni Förster
 //  Licensed under the GNU GPLv3
 
+import Algorithms
 import Combine
 import MenuBarModel
 import SwiftUI
@@ -126,8 +127,7 @@ struct ThawBarContentView: View {
         let rows = items.chunks(ofCount: gridColumns)
         return (0 ..< gridColumns).map { col in
             rows.compactMap { row in
-                guard col < row.count else { return nil }
-                guard let image = images[row[col].tag] else { return nil }
+                guard let item = row.dropFirst(col).first, let image = images[item.tag] else { return nil }
                 return image.targetSize(fittingHeight: maxHeight).width
             }.max() ?? 0
         }

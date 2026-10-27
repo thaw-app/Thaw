@@ -5,6 +5,7 @@
 //  Copyright (Thaw) © 2026 Toni Förster
 //  Licensed under the GNU GPLv3
 
+import Algorithms
 import Cocoa
 import MenuBarModel
 import ThawCapture
@@ -687,7 +688,7 @@ extension MenuBarItemImageCache {
             hasNotch: NSScreen.screen(for: displayID)?.hasNotch ?? false
         )
         await captureRevealBatches(
-            items.chunks(ofCount: batchSize),
+            items.chunks(ofCount: batchSize).map(Array.init),
             controller: controller,
             target: RevealCaptureTarget(displayID: displayID, admittedDisplayID: admittedDisplayID, scale: scale),
             missPolicy: missPolicy,

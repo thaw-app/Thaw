@@ -5,6 +5,7 @@
 //  Copyright (Thaw) © 2026 Toni Förster
 //  Licensed under the GNU GPLv3
 
+import Algorithms
 import MenuBarModel
 import SwiftUI
 import ThawUI
@@ -210,9 +211,9 @@ struct ThawBarPreview: View {
         let columnCount = max(2, gridColumns)
         let rows = items.chunks(ofCount: columnCount)
         return Grid(horizontalSpacing: itemSpacing, verticalSpacing: itemSpacing) {
-            ForEach(rows.indices, id: \.self) { index in
+            ForEach(Array(rows.enumerated()), id: \.offset) { _, row in
                 GridRow {
-                    ForEach(rows[index], id: \.tag) { item in icon(for: images[item.tag]) }
+                    ForEach(row, id: \.tag) { item in icon(for: images[item.tag]) }
                 }
             }
         }

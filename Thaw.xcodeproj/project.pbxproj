@@ -13,6 +13,7 @@
 		7188A6882E27F9ED008F131D /* ThawCapture in Frameworks */ = {isa = PBXBuildFile; productRef = 7188A6872E27F9ED008F131D /* ThawCapture */; };
 		7188A6892E27F9ED008F131D /* MenuBarCaptureService.xpc in Embed XPC Services */ = {isa = PBXBuildFile; fileRef = 7188A6842E27F9ED008F131D /* MenuBarCaptureService.xpc */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
 		9570E4A96CDEC0BEBAA5573F /* AsyncAlgorithms in Frameworks */ = {isa = PBXBuildFile; productRef = 43C5F05D006747974015EBD9 /* AsyncAlgorithms */; };
+		8A9B3C0882A8086D09565228 /* Algorithms in Frameworks */ = {isa = PBXBuildFile; productRef = DBEECB5D91402D78F32DF659 /* Algorithms */; };
 		A7C4F0012F60000000000001 /* ThawCapture in Frameworks */ = {isa = PBXBuildFile; productRef = A7C4F0032F60000000000003 /* ThawCapture */; };
 		A9E1F0032F70000000000003 /* ThawUI in Frameworks */ = {isa = PBXBuildFile; productRef = A9E1F0022F70000000000002 /* ThawUI */; };
 		A7C4F0022F60000000000002 /* ThawCapture in Frameworks */ = {isa = PBXBuildFile; productRef = A7C4F0042F60000000000004 /* ThawCapture */; };
@@ -192,6 +193,7 @@
 				170423D92B56DE78004A2549 /* Sparkle in Frameworks */,
 				7127A9FF2C4886D100D99DEF /* IfritStatic in Frameworks */,
 				9570E4A96CDEC0BEBAA5573F /* AsyncAlgorithms in Frameworks */,
+				8A9B3C0882A8086D09565228 /* Algorithms in Frameworks */,
 				C9858DF951474BBA89EEC700 /* Subprocess in Frameworks */,
 				17F71BB52B880B4500905CBA /* CompactSlider in Frameworks */,
 				D85602169B8B4308ACEB30A0 /* MenuBarModel in Frameworks */,
@@ -286,6 +288,7 @@
 				17F71BB42B880B4500905CBA /* CompactSlider */,
 				7127A9FE2C4886D100D99DEF /* IfritStatic */,
 				43C5F05D006747974015EBD9 /* AsyncAlgorithms */,
+				DBEECB5D91402D78F32DF659 /* Algorithms */,
 				D578D4A98E514566A18944B0 /* MenuBarModel */,
 				A7C4F0032F60000000000003 /* ThawCapture */,
 				A9E1F0022F70000000000002 /* ThawUI */,
@@ -432,6 +435,7 @@
 				17F71BB32B880B4500905CBA /* XCRemoteSwiftPackageReference "CompactSlider" */,
 				7127A9FB2C4881BC00D99DEF /* XCRemoteSwiftPackageReference "Ifrit" */,
 				1ADDA61D49BE1BA7CA5EA059 /* XCRemoteSwiftPackageReference "swift-async-algorithms" */,
+				6299E164B288ACBB011AC6B1 /* XCRemoteSwiftPackageReference "swift-algorithms" */,
 				7A0DF10D46BE41C9B7301DBB /* XCRemoteSwiftPackageReference "swift-subprocess" */,
 				D27A00002F40000000000000 /* XCRemoteSwiftPackageReference "prk-bin" */,
 				A4E38A6A423944089D70B9BB /* XCLocalSwiftPackageReference "MenuBarModel" */,
@@ -1119,6 +1123,14 @@
 				version = 1.2.7;
 			};
 		};
+		6299E164B288ACBB011AC6B1 /* XCRemoteSwiftPackageReference "swift-algorithms" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/apple/swift-algorithms";
+			requirement = {
+				kind = exactVersion;
+				version = 1.2.1;
+			};
+		};
 /* End XCRemoteSwiftPackageReference section */
 
 /* Begin XCSwiftPackageProductDependency section */
@@ -1226,6 +1238,11 @@
 			isa = XCSwiftPackageProductDependency;
 			package = B1B1B1B1B1B1B1B1B1B1B101 /* XCLocalSwiftPackageReference "ThawLayout" */;
 			productName = ThawLayout;
+		};
+		DBEECB5D91402D78F32DF659 /* Algorithms */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 6299E164B288ACBB011AC6B1 /* XCRemoteSwiftPackageReference "swift-algorithms" */;
+			productName = Algorithms;
 		};
 /* End XCSwiftPackageProductDependency section */
 	};
