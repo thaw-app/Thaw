@@ -188,6 +188,70 @@ struct SectionMovePlanTests {
         #expect(execution.needsReplan)
     }
 
+    @Test("A vanished mover is skipped and the next move resolves")
+    func vanishedMoverIsSkipped() {
+        let a = item("a", x: 0)
+        let b = item("b", x: 24)
+        var execution = LayoutMoveSequenceExecution(moves: [
+            .init(uid: "com.example.gone:gone", destination: .leftOfUID(a.uniqueIdentifier)),
+            .init(uid: b.uniqueIdentifier, destination: .leftOfUID(a.uniqueIdentifier)),
+        ])
+
+        let resolved = SectionMovePlanning.nextResolvedPlannedMove(from: &execution, in: [a, b], controlItems: nil)
+
+        #expect(resolved?.item.uniqueIdentifier == b.uniqueIdentifier)
+        #expect(resolved?.destination == .leftOfItem(a))
+        #expect(resolved?.isBoundary == false)
+    }
+
+    @Test("A leftward anchor that vanished skips the move")
+    func vanishedLeftAnchor() {
+        let b = item("b", x: 24)
+        var execution = LayoutMoveSequenceExecution(moves: [
+            .init(uid: b.uniqueIdentifier, destination: .leftOfUID("com.example.gone:gone")),
+        ])
+
+        #expect(SectionMovePlanning.nextResolvedPlannedMove(from: &execution, in: [b], controlItems: nil) == nil)
+        #expect(execution.needsReplan)
+    }
+
+    @Test("A boundary move without dividers on the bar is skipped")
+    func boundaryWithoutDividers() {
+        let b = item("b", x: 24)
+        var execution = LayoutMoveSequenceExecution(moves: [
+            .init(uid: b.uniqueIdentifier, destination: .sectionBoundary(.hidden)),
+        ])
+
+        #expect(SectionMovePlanning.nextResolvedPlannedMove(from: &execution, in: [b], controlItems: nil) == nil)
+    }
+
+    @Test("A boundary move resolves against the dividers and says so")
+    func boundaryWithDividers() {
+        let b = item("b", x: 24)
+        let hidden = MenuBarItem(
+            tag: .hiddenControlItem,
+            windowID: 900,
+            ownerPID: 100,
+            sourcePID: 100,
+            bounds: CGRect(x: 60, y: 0, width: 1, height: 24),
+            title: nil,
+            isOnScreen: true
+        )
+        var execution = LayoutMoveSequenceExecution(moves: [
+            .init(uid: b.uniqueIdentifier, destination: .sectionBoundary(.hidden)),
+        ])
+
+        let resolved = SectionMovePlanning.nextResolvedPlannedMove(
+            from: &execution,
+            in: [b, hidden],
+            controlItems: ControlItemPair(hidden: hidden, alwaysHidden: nil)
+        )
+
+        #expect(resolved?.item.uniqueIdentifier == b.uniqueIdentifier)
+        #expect(resolved?.isBoundary == true)
+        #expect(resolved?.destination.targetItem.tag == .hiddenControlItem)
+    }
+
     private func item(_ title: String, namespace: String? = nil, x: CGFloat) -> MenuBarItem {
         MenuBarItem(
             tag: MenuBarItemTag(namespace: .string(namespace ?? "com.example.\(title)"), title: title, instanceIndex: 0),
