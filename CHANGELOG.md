@@ -116,6 +116,8 @@ and the Sparkle appcast, unless overridden with the `release_notes` input.
 - **On a MacBook with a notch, hidden items that don't fit open in the Thaw Bar.** Thaw counted the space left of the notch as room for icons, but macOS never puts them there. So it showed Hidden in the menu bar, and macOS tucked the rest behind ». By @diazdesandi.
 - **The Thaw Bar leaves out apps you switched off in System Settings › Menu Bar.** macOS never draws them, but the Thaw Bar listed them with their app icons. Apps that Native hiding switched off still show. Reported in [#1260](https://github.com/thaw-app/Thaw/issues/1260). Fixed by @diazdesandi.
 - **"Move items that don't fit into Hidden" moves the icons behind macOS's arrows.** On macOS 27.0.1 those icons weren't counted as missing from the bar, so Thaw thought everything fit and left them behind the arrows. They now go to Hidden and open from the Thaw Bar. By @diazdesandi.
+- **Icons that only macOS draws get the right position with several displays.** Thaw could place such an icon on another display's bar or below the bar, so it couldn't take its picture or click it. By @diazdesandi.
+- **Moving the menu bar to another display switches that display's profile and spacing again.** With displays that keep the same arrangement, Thaw kept the previous display's profile and spacing. By @diazdesandi.
 
 ### Known issues
 

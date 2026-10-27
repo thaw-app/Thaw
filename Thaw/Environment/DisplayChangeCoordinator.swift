@@ -29,6 +29,8 @@ final class DisplayChangeCoordinator {
     private let settlements: AnyPublisher<EnvironmentChange, Never>
     private let effects: any DisplayChangeEffects
     private let slot = TaskSlot()
+    /// Runs apart from the slot, so an unchanged settle never calls off a change still running.
+    private var activeDisplayCheck: Task<Void, Never>?
     private var subscription: AnyCancellable?
     private let diagLog = DiagLog(category: "DisplayChangeCoordinator")
 
@@ -53,15 +55,29 @@ final class DisplayChangeCoordinator {
     func stop() {
         subscription = nil
         slot.cancel()
+        activeDisplayCheck?.cancel()
     }
 
     func waitUntilIdle() async {
+        await waitForActiveDisplayCheck()
         await slot.waitUntilFinished()
+    }
+
+    func waitForActiveDisplayCheck() async {
+        await activeDisplayCheck?.value
     }
 
     private func run(_ change: EnvironmentChange) {
         let steps = DisplayChangePlan.steps(for: change)
-        guard !steps.isEmpty else { return }
+        guard change != .none else {
+            activeDisplayCheck = Task { [weak self, previous = activeDisplayCheck] in
+                await previous?.value
+                for step in steps {
+                    await self?.perform(step)
+                }
+            }
+            return
+        }
         let generation = snapshot.generation
         slot.replace { [weak self] _ in
             await self?.perform(steps, for: change, generation: generation)

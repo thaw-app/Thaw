@@ -55,9 +55,10 @@ struct DisplayChangePlanTests {
         }
     }
 
-    @Test("An unchanged settle plans nothing")
-    func unchangedPlansNothing() {
-        #expect(DisplayChangePlan.steps(for: .none).isEmpty)
+    @Test("An unchanged settle checks only the active display's profile and spacing")
+    func unchangedPlansActiveDisplayChecks() {
+        // The active menu bar can move to another display without the frames changing.
+        #expect(DisplayChangePlan.steps(for: .none) == [.resolveProfile, .applySpacing])
     }
 
     @Test("Each plan stamps the display change exactly once")
@@ -148,14 +149,30 @@ struct DisplayChangeCoordinatorTests {
         ])
     }
 
-    @Test("An unchanged settle runs nothing")
-    func unchangedSettleRunsNothing() async {
+    @Test("An unchanged settle checks the active display's profile and spacing")
+    func unchangedSettleChecksTheActiveDisplay() async {
         let harness = CoordinatorHarness(baseline: Self.single)
 
         harness.settle(on: Self.single)
         await harness.coordinator.waitUntilIdle()
 
-        #expect(harness.effects.steps.isEmpty)
+        #expect(harness.effects.steps == [.resolveProfile, .applySpacing])
+    }
+
+    @Test("An unchanged settle leaves a change that is still running to finish")
+    func unchangedSettleKeepsTheRunningChange() async {
+        let harness = CoordinatorHarness(baseline: Self.docked)
+        harness.effects.holdsSettle = true
+
+        harness.settle(on: Self.single)
+        await harness.effects.waitForHeldSettles(1)
+        harness.settle(on: Self.single)
+        await harness.coordinator.waitForActiveDisplayCheck()
+        harness.effects.releaseSettles()
+        await harness.coordinator.waitUntilIdle()
+
+        #expect(harness.effects.steps.suffix(3) == [.applyPresentationPolicy, .cleanImages, .recaptureImages])
+        #expect(harness.effects.steps.count(where: { $0 == .applySpacing }) == 2)
     }
 
     @Test("Each run asks for the display change once")

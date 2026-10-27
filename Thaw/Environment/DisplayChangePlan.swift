@@ -26,10 +26,12 @@ nonisolated enum DisplayChangeStep: Equatable, Sendable {
 }
 
 nonisolated enum DisplayChangePlan {
-    /// An unchanged settle runs none. The presentation and the recapture wait for the settled bar, and only a
-    /// removed display cleans its stale images before the recapture.
+    /// An unchanged settle only checks the active display's profile and spacing: the active menu bar can
+    /// move to another display without the frames changing, and both steps do nothing when it did not.
+    /// The presentation and the recapture wait for the settled bar, and only a removed display cleans its
+    /// stale images before the recapture.
     static func steps(for change: EnvironmentChange) -> [DisplayChangeStep] {
-        guard let reason = settlingReason(for: change) else { return [] }
+        guard let reason = settlingReason(for: change) else { return [.resolveProfile, .applySpacing] }
         let beforeSettle: [DisplayChangeStep] = [
             .stampDisplayChanged, .seedConfigurations, .startSettle(reason: reason), .resolveProfile, .applySpacing,
             .awaitSettle, .applyPresentationPolicy,
