@@ -168,7 +168,7 @@ final class NotchAccessoryWidget: NotchWidget {
     /// A glyph for the condition the text describes, when it names one plainly
     /// enough to be sure. Keyword matching only holds for English, and an
     /// unrecognized string gets no glyph rather than a wrong one.
-    private static func symbol(for detail: String) -> String? {
+    static func symbol(for detail: String) -> String? {
         let conditions: [(keyword: String, symbol: String)] = [
             ("thunder", "cloud.bolt.fill"),
             ("snow", "cloud.snow.fill"),
