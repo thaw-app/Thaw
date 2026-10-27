@@ -54,6 +54,7 @@ Most of the fixes in this release harden security, and they come from findings i
 - **thawctl set accepts the key=value form its help shows,** such as `thawctl set showOnHover=true`.
 - **An app you add by hand under Automation can use thaw:// links.** It's pinned to its own signature, like an app you allow from the prompt, instead of being listed but always refused.
 - **A Focus profile stays on when Thaw can't read the Focus state.** Only the system reporting that the Focus ended switches back.
+- **Your saved menu bar order holds when icons go missing or overflow.** An icon that briefly disappears keeps its place, icons behind the overflow arrows keep their order while you edit Visible, Always Hidden keeps its items while it's turned off, and items a profile doesn't mention stay where they were.
 
 ## [2.2.0-beta.1] - 2026-10-27
 
