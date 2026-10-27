@@ -149,29 +149,19 @@ enum SettingsURIHandler {
         return senderTeamID == ownTeamID
     }
 
-    /// Whether the installed app with this bundle ID is a built-in trusted sender.
+    /// Whether the sender is a built-in trusted sender, judged by its own signature.
     /// Such a sender also works while the Settings URI feature is switched off.
-    /// The team lookups are parameters so the rule can be tested without a signed build.
+    /// The own team lookup is a parameter so the rule can be tested without a signed build.
     static func isBuiltInTrustedSender(
-        bundleIdentifier: String?,
-        senderTeamID: (String) -> String? = { getTeamIdentifier(for: $0) },
+        _ sender: SettingsURISender?,
         ownTeamID: () -> String? = { teamIdentifier(ofAppAt: Bundle.main.bundleURL, logName: "this app") }
     ) -> Bool {
-        guard let bundleIdentifier, builtInTrustedBundleIDs.contains(bundleIdentifier) else { return false }
+        guard let sender, builtInTrustedBundleIDs.contains(sender.bundleIdentifier) else { return false }
         return isBuiltInTrusted(
-            bundleId: bundleIdentifier,
-            senderTeamID: senderTeamID(bundleIdentifier),
+            bundleId: sender.bundleIdentifier,
+            senderTeamID: sender.teamIdentifier,
             ownTeamID: ownTeamID()
         )
-    }
-
-    /// Gets the team identifier for a bundle ID by checking the app's code signature.
-    private static func getTeamIdentifier(for bundleId: String) -> String? {
-        guard let appURL = NSWorkspace.shared.urlForApplication(withBundleIdentifier: bundleId) else {
-            diagLog.debug("Settings URI: Cannot find app URL for \(bundleId)")
-            return nil
-        }
-        return teamIdentifier(ofAppAt: appURL, logName: bundleId)
     }
 
     /// The team identifier in the code signature of the app at appURL.
@@ -198,24 +188,8 @@ enum SettingsURIHandler {
         return nil
     }
 
-    /// Verifies that an app's current code signature matches the stored signing identity.
-    private static func verifyCodeSignature(bundleId: String, storedTeamId: String?) -> Bool {
-        // Without a stored team ID, authorize only apps that also have no current team ID.
-        guard let storedTeamId else {
-            let currentTeamId = getTeamIdentifier(for: bundleId)
-            return currentTeamId == nil
-        }
-
-        guard let currentTeamId = getTeamIdentifier(for: bundleId) else {
-            diagLog.warning("Settings URI: App \(bundleId) is unsigned but was authorized with team ID")
-            return false
-        }
-
-        return currentTeamId == storedTeamId
-    }
-
-    private static func getSigningIdentities() -> [String: String] {
-        guard let data = Defaults.data(forKey: .settingsURISigningIdentities),
+    private static func loadIdentityMap(_ key: Defaults.Key) -> [String: String] {
+        guard let data = Defaults.data(forKey: key),
               let identities = try? JSONDecoder().decode([String: String].self, from: data)
         else {
             return [:]
@@ -223,23 +197,24 @@ enum SettingsURIHandler {
         return identities
     }
 
-    private static func saveSigningIdentities(_ identities: [String: String]) {
+    private static func saveIdentityMap(_ identities: [String: String], key: Defaults.Key) {
         if let data = try? JSONEncoder().encode(identities) {
-            Defaults.set(data, forKey: .settingsURISigningIdentities)
+            Defaults.set(data, forKey: key)
         }
     }
 
-    /// Checks if the sender is in the whitelist and has valid code signature.
+    /// Checks that the sender is approved and is the same code it was approved as.
     static func isWhitelisted(
-        bundleIdentifier: String?,
-        builtInTrust: (String) -> Bool = { isBuiltInTrustedSender(bundleIdentifier: $0) }
+        sender: SettingsURISender?,
+        builtInTrust: (SettingsURISender) -> Bool = { isBuiltInTrustedSender($0) }
     ) -> Bool {
-        guard let bundleId = bundleIdentifier, !bundleId.isEmpty else {
-            diagLog.warning("Settings URI: No sender bundle ID provided")
+        guard let sender, !sender.bundleIdentifier.isEmpty else {
+            diagLog.warning("Settings URI: No sender identity provided")
             return false
         }
+        let bundleId = sender.bundleIdentifier
 
-        if builtInTrust(bundleId) {
+        if builtInTrust(sender) {
             diagLog.debug("Settings URI: Authorized built-in request from \(bundleId)")
             return true
         }
@@ -250,11 +225,10 @@ enum SettingsURIHandler {
             return false
         }
 
-        let signingIdentities = getSigningIdentities()
-        let storedTeamId = signingIdentities[bundleId]
-
-        guard verifyCodeSignature(bundleId: bundleId, storedTeamId: storedTeamId) else {
-            diagLog.warning("Settings URI: Code signature mismatch for \(bundleId)")
+        let storedTeamId = loadIdentityMap(.settingsURISigningIdentities)[bundleId]
+        let storedCodeHash = loadIdentityMap(.settingsURICodeHashes)[bundleId]
+        guard sender.matchesGrant(storedTeamIdentifier: storedTeamId, storedCodeHash: storedCodeHash) else {
+            diagLog.warning("Settings URI: Code signature of \(bundleId) does not match its approval")
             return false
         }
 
@@ -264,9 +238,10 @@ enum SettingsURIHandler {
 
     /// Shows NSAlert confirmation dialog for first-time authorization.
     /// Returns true if user approves, false otherwise.
-    static func promptForAuthorization(bundleId: String) -> Bool {
-        let appName = getAppName(for: bundleId) ?? bundleId
-        let teamId = getTeamIdentifier(for: bundleId)
+    static func promptForAuthorization(sender: SettingsURISender) -> Bool {
+        let bundleId = sender.bundleIdentifier
+        let appName = sender.displayName
+        let teamId = sender.teamIdentifier
 
         let alert = NSAlert()
         alert.messageText = String(localized: "Allow “\(appName)” to control \(Constants.displayName) settings?")
@@ -303,7 +278,7 @@ enum SettingsURIHandler {
 
         if approved {
             diagLog.info("Settings URI: User authorized \(bundleId) (team: \(teamId ?? "unsigned"))")
-            addToWhitelist(bundleId: bundleId, teamIdentifier: teamId)
+            addToWhitelist(bundleId: bundleId, teamIdentifier: teamId, codeHash: teamId == nil ? sender.codeHash : nil)
         } else {
             diagLog.info("Settings URI: User denied \(bundleId)")
         }
@@ -311,19 +286,25 @@ enum SettingsURIHandler {
         return approved
     }
 
-    /// Adds a bundle ID to the whitelist with its signing identity.
-    static func addToWhitelist(bundleId: String, teamIdentifier: String? = nil) {
+    /// Adds a bundle ID to the whitelist, pinned to a team or, for code without a team, a code hash.
+    /// Approving an app that is already listed replaces the identity it was pinned to.
+    static func addToWhitelist(bundleId: String, teamIdentifier: String? = nil, codeHash: String? = nil) {
         var whitelist = Defaults.stringArray(forKey: .settingsURIWhitelist) ?? []
-        guard !whitelist.contains(bundleId) else { return }
+        let isListed = whitelist.contains(bundleId)
+        guard !isListed || teamIdentifier != nil || codeHash != nil else { return }
 
-        whitelist.append(bundleId)
-        Defaults.set(whitelist, forKey: .settingsURIWhitelist)
-
-        if let teamId = teamIdentifier {
-            var identities = getSigningIdentities()
-            identities[bundleId] = teamId
-            saveSigningIdentities(identities)
+        if !isListed {
+            whitelist.append(bundleId)
+            Defaults.set(whitelist, forKey: .settingsURIWhitelist)
         }
+
+        var identities = loadIdentityMap(.settingsURISigningIdentities)
+        identities[bundleId] = teamIdentifier
+        saveIdentityMap(identities, key: .settingsURISigningIdentities)
+
+        var codeHashes = loadIdentityMap(.settingsURICodeHashes)
+        codeHashes[bundleId] = teamIdentifier == nil ? codeHash : nil
+        saveIdentityMap(codeHashes, key: .settingsURICodeHashes)
 
         diagLog.info("Settings URI: Added \(bundleId) to whitelist (team: \(teamIdentifier ?? "unsigned"))")
         NotificationCenter.default.post(name: .settingsURIWhitelistDidChange, object: nil)
@@ -335,9 +316,13 @@ enum SettingsURIHandler {
         whitelist.removeAll { $0 == bundleId }
         Defaults.set(whitelist, forKey: .settingsURIWhitelist)
 
-        var identities = getSigningIdentities()
+        var identities = loadIdentityMap(.settingsURISigningIdentities)
         identities.removeValue(forKey: bundleId)
-        saveSigningIdentities(identities)
+        saveIdentityMap(identities, key: .settingsURISigningIdentities)
+
+        var codeHashes = loadIdentityMap(.settingsURICodeHashes)
+        codeHashes.removeValue(forKey: bundleId)
+        saveIdentityMap(codeHashes, key: .settingsURICodeHashes)
 
         diagLog.info("Settings URI: Removed \(bundleId) from whitelist")
         NotificationCenter.default.post(name: .settingsURIWhitelistDidChange, object: nil)

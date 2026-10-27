@@ -223,7 +223,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     // MARK: Other Methods
 
-    /// Handles kAEGetURL Apple Events and forwards thaw:// URLs to handleURL(_:senderBundleId:).
+    /// Handles kAEGetURL Apple Events and forwards thaw:// URLs to handleURL(_:sender:).
     @objc private func handleURLAppleEvent(
         _ event: NSAppleEventDescriptor,
         withReplyEvent _: NSAppleEventDescriptor
@@ -234,55 +234,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             url.scheme?.lowercased() == "thaw"
         else { return }
 
-        let senderBundleId = extractSenderBundleId(from: event)
-        handleURL(url, senderBundleId: senderBundleId)
-    }
-
-    /// Extracts the sender's bundle identifier from an Apple Event.
-    private func extractSenderBundleId(from event: NSAppleEventDescriptor) -> String? {
-        let keySenderPID = AEKeyword(keySenderPIDAttr)
-
-        guard let pidDesc = event.attributeDescriptor(forKeyword: keySenderPID) else {
-            return nil
-        }
-
-        // macOS 26 stores keySenderPIDAttr as typeUInt32 ('magn') on arm64.
-        // Accept any numeric type and extract the PID from raw descriptor data.
-        let integerTypes: Set<OSType> = [
-            typeSInt16, typeSInt32, typeSInt64,
-            typeUInt16, typeUInt32, typeUInt64,
-            typeIEEE32BitFloatingPoint, typeIEEE64BitFloatingPoint,
-        ]
-
-        var pid: pid_t = 0
-
-        if integerTypes.contains(pidDesc.descriptorType) {
-            let data = pidDesc.data
-            let copyCount = min(data.count, MemoryLayout<pid_t>.size)
-            data.withUnsafeBytes { src in
-                withUnsafeMutableBytes(of: &pid) { dest in
-                    guard let srcPtr = src.baseAddress, let destPtr = dest.baseAddress else { return }
-                    memcpy(destPtr, srcPtr, copyCount)
-                }
-            }
-        } else {
-            let coerced = pidDesc.int32Value
-            guard coerced > 0 else { return nil }
-            pid = pid_t(coerced)
-        }
-
-        guard pid > 0 else { return nil }
-
-        guard let app = NSRunningApplication(processIdentifier: pid) else {
-            return nil
-        }
-
-        return app.bundleIdentifier
+        handleURL(url, sender: SettingsURISender.identify(from: event))
     }
 
     /// Routes thaw:// actions and settings requests; settings changes and per-item reveals require whitelist authorization.
     /// proxy-press?bundle=X presses a hosted item by owner, while toggle-layout-editor opens quick edit without Settings.
-    private func handleURL(_ url: URL, senderBundleId: String? = nil) {
+    private func handleURL(_ url: URL, sender: SettingsURISender? = nil) {
         let host = url.host?.lowercased() ?? ""
 
         // Nothing below is set up while the reduced mode runs.
@@ -294,7 +251,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         switch host {
         case "set", "toggle", "get", "authorize", "reveal-item",
              "list-items", "activate-item", "list-profiles", "apply-profile", "get-appearance", "move-item":
-            handleSettingsURL(url, host: host, senderBundleId: senderBundleId)
+            handleSettingsURL(url, host: host, sender: sender)
             return
         default:
             break
@@ -365,10 +322,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     /// Handles settings manipulation URLs (set/toggle).
-    private func handleSettingsURL(_ url: URL, host: String, senderBundleId: String?) {
+    private func handleSettingsURL(_ url: URL, host: String, sender: SettingsURISender?) {
         // A built-in trusted sender works out of the box; everyone else needs the feature on.
         guard SettingsURIHandler.isEnabled()
-            || SettingsURIHandler.isBuiltInTrustedSender(bundleIdentifier: senderBundleId)
+            || SettingsURIHandler.isBuiltInTrustedSender(sender)
         else {
             appState.diagLog.debug("Settings URI is disabled, ignoring: \(url.absoluteString)")
             return
@@ -383,21 +340,22 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             return
         }
 
-        guard let effectiveBundleId = determineEffectiveBundleId(url: url, senderBundleId: senderBundleId) else {
-            appState.diagLog.debug("Settings URI: Cannot determine sender bundle ID, ignoring: \(url.absoluteString)")
+        guard let identity = determineEffectiveSender(url: url, sender: sender) else {
+            appState.diagLog.debug("Settings URI: Cannot identify the sender, ignoring: \(url.absoluteString)")
             return
         }
+        let effectiveBundleId = identity.bundleIdentifier
 
         if host == "authorize" {
-            if !SettingsURIHandler.isWhitelisted(bundleIdentifier: effectiveBundleId) {
-                _ = SettingsURIHandler.promptForAuthorization(bundleId: effectiveBundleId)
+            if !SettingsURIHandler.isWhitelisted(sender: identity) {
+                _ = SettingsURIHandler.promptForAuthorization(sender: identity)
             }
             return
         }
 
         // Verify sender is whitelisted, or prompt for first-time authorization
-        if !SettingsURIHandler.isWhitelisted(bundleIdentifier: effectiveBundleId) {
-            let approved = SettingsURIHandler.promptForAuthorization(bundleId: effectiveBundleId)
+        if !SettingsURIHandler.isWhitelisted(sender: identity) {
+            let approved = SettingsURIHandler.promptForAuthorization(sender: identity)
             guard approved else {
                 // Declined authorization fails silently.
                 return
@@ -420,10 +378,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         }
     }
 
-    /// Determines the effective bundle ID for authorization.
-    /// Uses manual override (DEBUG only) if auto-detection fails.
-    private func determineEffectiveBundleId(url: URL, senderBundleId: String?) -> String? {
-        if let sender = senderBundleId {
+    /// The sender identified from its code signature, or in DEBUG builds a manual override
+    /// that carries no signature and so never matches a stored approval.
+    private func determineEffectiveSender(url: URL, sender: SettingsURISender?) -> SettingsURISender? {
+        if let sender {
             return sender
         }
 
@@ -431,7 +389,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             // Debug-only override supports Terminal 'open' testing when sender detection fails.
             if let manualBundleId = extractManualBundleId(from: url) {
                 appState.diagLog.warning("Settings URI: Using DEBUG manual bundleId=\(manualBundleId) - FOR TESTING ONLY")
-                return manualBundleId
+                return SettingsURISender(bundleIdentifier: manualBundleId, teamIdentifier: nil, codeHash: nil)
             }
         #endif
 

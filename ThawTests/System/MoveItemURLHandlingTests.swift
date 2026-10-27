@@ -116,21 +116,23 @@ extension SettingsURIResponseSuites {
         }
 
         @Test("The gate move-item passes refuses an unapproved or unknown sender and admits an approved one", .scratchDefaults)
-        func gateRefusesUnapprovedSenders() throws {
-            let sender = "com.example.thawtests.mover.\(UUID().uuidString)"
-            #expect(!SettingsURIHandler.isWhitelisted(bundleIdentifier: sender, builtInTrust: { _ in false }))
-            #expect(!SettingsURIHandler.isWhitelisted(bundleIdentifier: nil, builtInTrust: { _ in false }))
-            SettingsURIHandler.addToWhitelist(bundleId: sender)
-            #expect(SettingsURIHandler.isWhitelisted(bundleIdentifier: sender, builtInTrust: { _ in false }))
-            SettingsURIHandler.removeFromWhitelist(bundleId: sender)
-            #expect(!SettingsURIHandler.isWhitelisted(bundleIdentifier: sender, builtInTrust: { _ in false }))
+        func gateRefusesUnapprovedSenders() {
+            let bundleID = "com.example.thawtests.mover.\(UUID().uuidString)"
+            let sender = SettingsURISender(bundleIdentifier: bundleID, teamIdentifier: "TEAMID1234", codeHash: nil)
+            #expect(!SettingsURIHandler.isWhitelisted(sender: sender, builtInTrust: { _ in false }))
+            #expect(!SettingsURIHandler.isWhitelisted(sender: nil, builtInTrust: { _ in false }))
+            SettingsURIHandler.addToWhitelist(bundleId: bundleID, teamIdentifier: "TEAMID1234")
+            #expect(SettingsURIHandler.isWhitelisted(sender: sender, builtInTrust: { _ in false }))
+            SettingsURIHandler.removeFromWhitelist(bundleId: bundleID)
+            #expect(!SettingsURIHandler.isWhitelisted(sender: sender, builtInTrust: { _ in false }))
         }
 
         @Test("An approved sender signed by a different team than it was approved with is refused", .scratchDefaults)
-        func gateRefusesASignatureMismatch() throws {
-            let sender = "com.example.thawtests.mover.\(UUID().uuidString)"
-            SettingsURIHandler.addToWhitelist(bundleId: sender, teamIdentifier: "TEAMID1234")
-            #expect(!SettingsURIHandler.isWhitelisted(bundleIdentifier: sender, builtInTrust: { _ in false }))
+        func gateRefusesASignatureMismatch() {
+            let bundleID = "com.example.thawtests.mover.\(UUID().uuidString)"
+            SettingsURIHandler.addToWhitelist(bundleId: bundleID, teamIdentifier: "TEAMID1234")
+            let impostor = SettingsURISender(bundleIdentifier: bundleID, teamIdentifier: "OTHERTEAM1", codeHash: nil)
+            #expect(!SettingsURIHandler.isWhitelisted(sender: impostor, builtInTrust: { _ in false }))
         }
     }
 }

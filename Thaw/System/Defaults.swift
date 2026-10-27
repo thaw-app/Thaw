@@ -669,6 +669,7 @@ extension Defaults {
         case settingsURIEnabled = "SettingsURIEnabled"
         case settingsURIWhitelist = "SettingsURIWhitelist"
         case settingsURISigningIdentities = "SettingsURISigningIdentities"
+        case settingsURICodeHashes = "SettingsURICodeHashes"
 
         // MARK: Profile Hooks
 
