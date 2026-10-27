@@ -274,10 +274,7 @@ extension MenuBarItemManager {
         // x == -1 means not placed yet. A user's drag is often the fix, so only
         // automatic passes are refused, except in the rescue direction.
         if (try? Self.currentBounds(for: item, among: livePeers))?.origin.x == -1 {
-            let rescueDirection = switch destination {
-            case .rightOfItem: true
-            default: item.tag.matchesVisibleControlItem
-            }
+            let rescueDirection = destination.isRightward || item.tag.matchesVisibleControlItem
             let allowsBlockedMove = options.isUserInitiated || rescueDirection
             guard allowsBlockedMove else {
                 MenuBarItemManager.diagLog.warning("Skipping move for \(item.logString) - item is blocked (x=-1)")

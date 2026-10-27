@@ -593,12 +593,9 @@ private struct MenuBarSearchContentView: View {
     private func candidateRows(for candidates: [PaletteCandidate]) -> [ListItem] {
         candidates.map { candidate in
             let item = candidate.item
-            let content: MenuBarSearchListContent = switch presentation {
-            case .assisted:
-                .assistedItem(item, ownerName: candidate.subtitle)
-            default:
-                .launcherItem(item, ownerName: candidate.subtitle)
-            }
+            let content: MenuBarSearchListContent = presentation == .assisted
+                ? .assistedItem(item, ownerName: candidate.subtitle)
+                : .launcherItem(item, ownerName: candidate.subtitle)
             return ListItem(
                 content: content,
                 id: .item(item.tag, windowID: item.windowID),
