@@ -35,6 +35,7 @@ the items under New and Fixed.
 - **Thaw no longer quits when a group folder's icon briefly has no window.** On macOS 27 that happens after the menu bar rearranges, and Thaw read the placeholder number macOS gives such an icon as a window ID. Reported by @perlytiara in [#1397](https://github.com/thaw-app/Thaw/issues/1397).
 - **Relaunch Now can't run commands hidden in the name of the folder Thaw is in.**
 - **An app you allowed to use thaw:// links is checked by its own signature,** so another app can't borrow the permission by using the same name. An app allowed without a signing team is asked again when its code changes.
+- **A shortcut with an impossible key code no longer makes Thaw quit,** when a profile with one is applied or at the next launch. Thaw skips that shortcut.
 
 ## [2.1.0] - 2026-10-14
 **macOS 26 only**

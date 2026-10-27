@@ -80,7 +80,12 @@ extension KeyCombination: Codable {
             let description = "Expected 2 encoded values, found \(container.count ?? 0)"
             throw DecodingError.dataCorruptedError(in: container, debugDescription: description)
         }
-        self.key = try KeyCode(rawValue: container.decode(Int.self))
+        let rawKey = try container.decode(Int.self)
+        // Saved or imported data can hold any number, and Carbon traps on a code it can't take.
+        guard KeyCode.validRawValues.contains(rawKey) else {
+            throw DecodingError.dataCorruptedError(in: container, debugDescription: "Key code \(rawKey) is out of range")
+        }
+        self.key = KeyCode(rawValue: rawKey)
         self.modifiers = try Modifiers(rawValue: container.decode(Int.self))
     }
 

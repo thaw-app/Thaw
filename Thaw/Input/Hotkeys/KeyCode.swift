@@ -16,6 +16,14 @@ import Carbon.HIToolbox
 nonisolated struct KeyCode: Codable, Hashable, RawRepresentable {
     let rawValue: Int
 
+    /// The codes a key event can carry, which is also what Carbon accepts.
+    static let validRawValues = 0 ... Int(UInt16.max)
+
+    /// Whether the code is one a real key event can carry.
+    var isValid: Bool {
+        Self.validRawValues.contains(rawValue)
+    }
+
     // MARK: Letters
 
     static let a = KeyCode(rawValue: kVK_ANSI_A)
