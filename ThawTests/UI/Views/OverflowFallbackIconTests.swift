@@ -231,6 +231,19 @@ struct MenuBarItemGlyphTests {
         #expect(empty.targetSize(fittingHeight: 10) == .zero)
     }
 
+    @Test("An app icon standing in for a capture is drawn no taller than a menu bar glyph, whatever the row")
+    func appIconCappedToGlyphHeight() {
+        let image = MenuBarItemDisplayImage.appIcon(NSImage(size: CGSize(width: 32, height: 32)))
+        let glyph = MenuBarItemDisplayImage.appIconHeight
+        #expect(image.targetSize(fittingHeight: 37) == CGSize(width: glyph, height: glyph), "a notched menu bar's row height")
+        #expect(image.targetSize(fittingHeight: nil) == CGSize(width: glyph, height: glyph))
+        #expect(image.targetSize(fittingHeight: 0) == CGSize(width: glyph, height: glyph))
+        #expect(image.targetSize(fittingHeight: 12) == CGSize(width: 12, height: 12), "a shorter row still wins")
+
+        let small = MenuBarItemDisplayImage.appIcon(NSImage(size: CGSize(width: 16, height: 16)))
+        #expect(small.targetSize(fittingHeight: 37) == CGSize(width: 16, height: 16), "a smaller icon isn't scaled up")
+    }
+
     @Test("The glyph draws at its fitted size")
     func glyphDraws() throws {
         let image = try MenuBarItemDisplayImage.capture(Self.capture(width: 40, height: 32, scale: 2))
