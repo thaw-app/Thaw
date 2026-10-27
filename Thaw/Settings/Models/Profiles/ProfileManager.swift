@@ -163,14 +163,17 @@ final class ProfileManager {
         } catch {
             diagLog.debug("No active Focus Filter on startup: \(error)")
         }
-        // Without Focus, prefer Space over display; always apply spacing to correct offsets left by another display's session.
-        // Matching on-disk offsets no-op without relaunching.
-        let startupSpaceKey = SpaceInfo.activeSpace().persistentKey
-        lastActiveSpaceKey = startupSpaceKey
-        if let startupSpaceKey, profile(forSpaceKey: startupSpaceKey) != nil {
-            await applyProfileForSpace(key: startupSpaceKey)
-        } else if let currentUUID = Bridging.getActiveMenuBarDisplayUUID() {
-            await applyProfileForDisplay(uuid: currentUUID)
+        // Always apply spacing to correct offsets left by another display's session; matching offsets no-op.
+        await applyProfileForSpaceOrDisplay()
+    }
+
+    /// Without a Focus profile, the current Space's profile wins over the display's.
+    private func applyProfileForSpaceOrDisplay() async {
+        lastActiveSpaceKey = SpaceInfo.activeSpace().persistentKey
+        switch AutomaticProfileChoice.choose(spaceKey: lastActiveSpaceKey, spaceHasProfile: { profile(forSpaceKey: $0) != nil }, displayUUID: Bridging.getActiveMenuBarDisplayUUID()) {
+        case let .space(key): await applyProfileForSpace(key: key)
+        case let .display(uuid): await applyProfileForDisplay(uuid: uuid)
+        case .none: break
         }
     }
 
@@ -1055,17 +1058,15 @@ final class ProfileManager {
     }
 
     /// Handles a Focus filter notification by asking the system which Focus filter is active.
-    /// Only that answer applies a profile or reverts to the display's profile.
+    /// Only that answer applies a profile or reverts to the Space's or display's profile.
     func handleFocusFilterSignal() async {
         switch await focusFilterSignal.action(focusFilterActive: focusFilterActive) {
         case let .apply(profileID):
             await applyFocusFilterProfile(requested: profileID)
         case .revert:
             focusFilterActive = false
-            diagLog.info("Focus Filter deactivated; reverting to display profile")
-            if let uuid = Bridging.getActiveMenuBarDisplayUUID() {
-                await applyProfileForDisplay(uuid: uuid)
-            }
+            diagLog.info("Focus Filter deactivated; reverting to the Space's or display's profile")
+            await applyProfileForSpaceOrDisplay()
         case .ignore:
             diagLog.debug("Focus Filter notification while no Focus Filter is active; ignoring it")
         }
