@@ -127,9 +127,13 @@ nonisolated struct LayoutBatchMove: Equatable, Sendable {
 
     static func parse(_ url: URL) -> Result<Self, LayoutBatchMoveError> {
         let queryItems = URLComponents(url: url, resolvingAgainstBaseURL: false)?.queryItems ?? []
-        let itemIDs = queryItems.filter { $0.name == "item-id" }.compactMap(\.value).filter { !$0.isEmpty }
-        let sectionValue = queryItems.first { $0.name == "section" }?.value ?? ""
-        let afterID = queryItems.first { $0.name == "after-id" }?.value.flatMap { $0.isEmpty ? nil : $0 }
+        return parse(SettingsURIMoveQuery(queryItems: queryItems))
+    }
+
+    static func parse(_ query: SettingsURIMoveQuery) -> Result<Self, LayoutBatchMoveError> {
+        let itemIDs = query.itemIDs
+        let sectionValue = query.section
+        let afterID = query.afterID
 
         guard !itemIDs.isEmpty else { return .failure(.missingItem) }
         guard !sectionValue.isEmpty else { return .failure(.missingSection) }

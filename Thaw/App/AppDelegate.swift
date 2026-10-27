@@ -237,42 +237,28 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         handleURL(url, sender: SettingsURISender.identify(from: event))
     }
 
-    /// Routes thaw:// actions and settings requests; hosts listed in SettingsURIRoute require whitelist authorization.
-    /// toggle-layout-editor opens quick edit without Settings.
+    /// Routes thaw:// actions and settings requests; requests that need authorization go through handleSettingsURL.
     private func handleURL(_ url: URL, sender: SettingsURISender? = nil) {
-        let host = url.host?.lowercased() ?? ""
-
         // Nothing below is set up while the reduced mode runs.
         if ReducedModeController.shared.isRunning {
             ReducedModeController.shared.handle(url)
             return
         }
 
-        if SettingsURIRoute.requiresAuthorization(host) {
-            handleSettingsURL(url, host: host, sender: sender)
+        let request = SettingsURIParser.parse(url)
+        if request.requiresAuthorization {
+            handleSettingsURL(url, request: request, sender: sender)
             return
         }
 
-        switch host {
-        case "toggle-hidden":
-            HotkeyAction.toggleHiddenSection.perform(appState: appState)
-        case "toggle-always-hidden":
-            HotkeyAction.toggleAlwaysHiddenSection.perform(appState: appState)
-        case "toggle-swap":
-            HotkeyAction.toggleSwap.perform(appState: appState)
-        case "search":
-            HotkeyAction.searchMenuBarItems.perform(appState: appState)
-        case "toggle-application-menus":
-            HotkeyAction.toggleApplicationMenus.perform(appState: appState)
-        case "toggle-zen-mode":
-            HotkeyAction.toggleZenMode.perform(appState: appState)
-        case "toggle-layout-editor":
-            // Use the hotkey's "Edit Layout" quick-edit panel, not the Settings window.
-            HotkeyAction.toggleLayoutEditor.perform(appState: appState)
-        case "open-settings":
+        switch request.route {
+        case .action(.openSettings):
             openSettingsWindow()
-        case "item-hints":
+        case .action(.itemHints):
             appState.itemHints.toggle()
+        case let .action(action):
+            // The hotkey's actions, so toggle-layout-editor opens the quick-edit panel, not Settings.
+            action.hotkeyAction?.perform(appState: appState)
         default:
             appState.diagLog.warning("Received unrecognized thaw:// URL: \(url.absoluteString)")
         }
@@ -280,14 +266,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     /// Handles thaw://proxy-press?bundle=X, AXPresses a hosted menu bar item
     /// by owner bundle, materializing it even when the host has parked it.
-    private func handleProxyPressURL(_ url: URL, sender: String) {
-        guard let components = URLComponents(url: url, resolvingAgainstBaseURL: false),
-              let bundle = components.queryItems?.first(where: { $0.name == "bundle" })?.value,
-              !bundle.isEmpty
-        else {
-            appState.diagLog.warning("proxy-press: missing bundle in \(url.absoluteString)")
-            return
-        }
+    private func handleProxyPressRequest(bundle: String, sender: String) {
         guard let app = NSRunningApplication.runningApplications(withBundleIdentifier: bundle).first else {
             appState.diagLog.warning("proxy-press: \(bundle) is not running")
             return
@@ -308,9 +287,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     /// Writes the item dump for an approved sender and returns its path only to a callback that sender handles.
-    private func handleDumpItemsURL(_ url: URL, sender: String) {
-        let requested = URLComponents(url: url, resolvingAgainstBaseURL: false)?
-            .queryItems?.first { $0.name == "callback" }?.value
+    private func handleDumpItemsRequest(callback requested: String?, sender: String) {
         let callback = ItemEnumerationDump.deliverableCallback(requested, senderBundleIdentifier: sender) { target in
             NSWorkspace.shared.urlForApplication(toOpen: target).flatMap { Bundle(url: $0)?.bundleIdentifier }
         }
@@ -323,8 +300,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         ItemEnumerationDump.respond(fileURL: fileURL, callback: callback)
     }
 
-    /// Handles settings manipulation URLs (set/toggle).
-    private func handleSettingsURL(_ url: URL, host: String, sender: SettingsURISender?) {
+    /// Runs a request that needs the Settings URI switch and an approved sender.
+    private func handleSettingsURL(_ url: URL, request: SettingsURIRequest, sender: SettingsURISender?) {
         // A built-in trusted sender works out of the box; everyone else needs the feature on.
         guard SettingsURIHandler.isEnabled()
             || SettingsURIHandler.isBuiltInTrustedSender(sender)
@@ -334,11 +311,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         }
 
         // Handle version get request without auth (read-only metadata)
-        if host == "get",
-           let components = URLComponents(url: url, resolvingAgainstBaseURL: false),
-           components.queryItems?.first(where: { $0.name == "key" })?.value == "version"
-        {
-            handleGetURL(url, sender: nil)
+        if request.isVersionRead, case let .get(query) = request.route {
+            handleGetRequest(query, sender: nil)
             return
         }
 
@@ -346,9 +320,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             appState.diagLog.debug("Settings URI: Cannot identify the sender, ignoring: \(url.absoluteString)")
             return
         }
-        let effectiveBundleId = identity.bundleIdentifier
 
-        if host == "authorize" {
+        if request.route == .authorize {
             if !SettingsURIHandler.isWhitelisted(sender: identity) {
                 _ = SettingsURIHandler.promptForAuthorization(sender: identity)
             }
@@ -364,25 +337,34 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             }
         }
 
-        switch host {
-        case "set":
-            handleSetURL(url, sender: effectiveBundleId)
-        case "toggle":
-            handleToggleURL(url, sender: effectiveBundleId)
-        case "get":
-            handleGetURL(url, sender: effectiveBundleId)
-        case "reveal-item":
-            handleRevealItemURL(url, sender: effectiveBundleId)
-        case "list-items", "activate-item", "list-profiles", "apply-profile", "get-appearance", "move-item":
-            handleLauncherURL(url, sender: effectiveBundleId)
-        case "proxy-press":
-            handleProxyPressURL(url, sender: effectiveBundleId)
-        case "toggle-thawbar":
+        if case let .malformed(host) = request.route {
+            appState.diagLog.warning("Settings URI \(host): missing required parameters in \(url.absoluteString)")
+            return
+        }
+        dispatchAuthorizedRoute(request.route, sender: identity.bundleIdentifier)
+    }
+
+    /// Runs a route whose sender passed the whitelist check.
+    private func dispatchAuthorizedRoute(_ route: SettingsURIRoute, sender effectiveBundleId: String) {
+        switch route {
+        case let .set(key, value, displayUUID):
+            handleSetRequest(key: key, value: value, displayUUID: displayUUID, sender: effectiveBundleId)
+        case let .toggle(key, displayUUID):
+            handleToggleRequest(key: key, displayUUID: displayUUID, sender: effectiveBundleId)
+        case let .get(query):
+            handleGetRequest(query, sender: effectiveBundleId)
+        case let .revealItem(bundle, itemID):
+            handleRevealItemRequest(bundle: bundle, itemID: itemID, sender: effectiveBundleId)
+        case let .launcher(operation, query):
+            handleLauncherRequest(LauncherURIRequest(operation: operation, query: query), sender: effectiveBundleId)
+        case let .proxyPress(bundle):
+            handleProxyPressRequest(bundle: bundle, sender: effectiveBundleId)
+        case .toggleThawBar:
             // It saves the active display's Thaw Bar setting, so it answers to the same gate as set and toggle.
             HotkeyAction.enableThawBar.perform(appState: appState)
-        case "dump-items":
-            handleDumpItemsURL(url, sender: effectiveBundleId)
-        default:
+        case let .dumpItems(callback):
+            handleDumpItemsRequest(callback: callback, sender: effectiveBundleId)
+        case .authorize, .action, .malformed, .unrecognized:
             break
         }
     }
@@ -440,54 +422,23 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         }
     #endif
 
-    /// Handles thaw://set?key=X&value=Y URL.
-    private func handleSetURL(_ url: URL, sender: String?) {
-        guard let components = URLComponents(url: url, resolvingAgainstBaseURL: false),
-              let key = components.queryItems?.first(where: { $0.name == "key" })?.value,
-              let value = components.queryItems?.first(where: { $0.name == "value" })?.value
-        else {
-            appState.diagLog.warning("Settings URI set: missing key or value in \(url.absoluteString)")
-            return
-        }
-
-        // Extract optional display UUID parameter for per-display settings
-        let displayUUID = components.queryItems?.first(where: { $0.name == "display" })?.value
-
-        let success = SettingsURIHandler.handleSet(key: key, value: value, sender: sender, displayUUID: displayUUID)
-        if !success {
+    /// Handles thaw://set?key=X&value=Y.
+    private func handleSetRequest(key: String, value: String, displayUUID: String?, sender: String) {
+        if !SettingsURIHandler.handleSet(key: key, value: value, sender: sender, displayUUID: displayUUID) {
             appState.diagLog.warning("Settings URI set: failed to set \(key) = \(value)")
         }
     }
 
-    /// Handles thaw://toggle?key=X URL.
-    private func handleToggleURL(_ url: URL, sender: String?) {
-        guard let components = URLComponents(url: url, resolvingAgainstBaseURL: false),
-              let key = components.queryItems?.first(where: { $0.name == "key" })?.value
-        else {
-            appState.diagLog.warning("Settings URI toggle: missing key in \(url.absoluteString)")
-            return
-        }
-
-        // Extract optional display UUID parameter for per-display settings
-        let displayUUID = components.queryItems?.first(where: { $0.name == "display" })?.value
-
-        let success = SettingsURIHandler.handleToggle(key: key, sender: sender, displayUUID: displayUUID)
-        if !success {
+    /// Handles thaw://toggle?key=X.
+    private func handleToggleRequest(key: String, displayUUID: String?, sender: String) {
+        if !SettingsURIHandler.handleToggle(key: key, sender: sender, displayUUID: displayUUID) {
             appState.diagLog.warning("Settings URI toggle: failed to toggle \(key)")
         }
     }
 
     /// thaw://reveal-item?bundle=X or ?item-id=Y reveals one item without its section.
     /// Reconceals with the Thaw Bar click path's menu-open-aware delay.
-    private func handleRevealItemURL(_ url: URL, sender: String?) {
-        guard let components = URLComponents(url: url, resolvingAgainstBaseURL: false) else {
-            appState.diagLog.warning("Settings URI reveal-item: invalid URL \(url.absoluteString)")
-            return
-        }
-
-        let bundle = components.queryItems?.first(where: { $0.name == "bundle" })?.value
-        let itemID = components.queryItems?.first(where: { $0.name == "item-id" })?.value
-
+    private func handleRevealItemRequest(bundle: String?, itemID: String?, sender: String) {
         let sectionController = appState.menuBarManager.sectionController
         guard sectionController.isOperational else {
             appState.diagLog.warning("Settings URI reveal-item: per-item reveal is unavailable on this OS")
@@ -499,51 +450,36 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             itemID: itemID,
             sectionAssignment: sectionController.sectionAssignment
         ) else {
-            appState.diagLog.warning("Settings URI reveal-item: missing or ambiguous bundle/item-id in \(url.absoluteString)")
+            appState.diagLog.warning("Settings URI reveal-item: missing or ambiguous bundle/item-id")
             return
         }
 
         sectionController.revealItemTemporarily(identifier)
         sectionController.scheduleTemporaryItemConceal(identifier)
-        appState.diagLog.info("Settings URI reveal-item: revealed \(identifier) for sender \(sender ?? "unknown")")
+        appState.diagLog.info("Settings URI reveal-item: revealed \(identifier) for sender \(sender)")
     }
 
     /// Handles the launcher operations, including get-appearance.
     /// The work is async because activation and profile layout report an outcome once they finish.
-    private func handleLauncherURL(_ url: URL, sender: String?) {
-        guard let request = LauncherURIRequest(url: url) else {
-            appState.diagLog.warning("Launcher URI: invalid URL \(url.absoluteString)")
-            return
-        }
+    private func handleLauncherRequest(_ request: LauncherURIRequest, sender: String) {
         let state = appState
         Task {
             await SettingsURIHandler.handleLauncherRequest(request, sender: sender, appState: state)
         }
     }
 
-    /// Handles thaw://get?key=X&callback=Y URLs.
-    private func handleGetURL(_ url: URL, sender _: String?) {
-        guard let components = URLComponents(url: url, resolvingAgainstBaseURL: false) else {
-            appState.diagLog.warning("Settings URI get: invalid URL \(url.absoluteString)")
-            return
-        }
-
-        let key = components.queryItems?.first(where: { $0.name == "key" })?.value
-        let displayUUID = components.queryItems?.first(where: { $0.name == "display" })?.value
-        let callback = components.queryItems?.first(where: { $0.name == "callback" })?.value
-        let broadcast = components.queryItems?.first(where: { $0.name == "broadcast" })?.value == "true"
-        let requestId = components.queryItems?.first(where: { $0.name == "requestId" })?.value
-
+    /// Handles thaw://get?key=X&callback=Y.
+    private func handleGetRequest(_ query: SettingsURIGetQuery, sender _: String?) {
         let success = SettingsURIHandler.handleGet(
-            key: key,
-            displayUUID: displayUUID,
-            callback: callback,
-            broadcast: broadcast,
-            requestId: requestId
+            key: query.key,
+            displayUUID: query.displayUUID,
+            callback: query.callback,
+            broadcast: query.broadcast,
+            requestId: query.requestId
         )
 
         if !success {
-            appState.diagLog.warning("Settings URI get: failed to get \(key ?? "unknown")")
+            appState.diagLog.warning("Settings URI get: failed to get \(query.key ?? "unknown")")
         }
     }
 
