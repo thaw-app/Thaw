@@ -75,7 +75,7 @@ What does this PR change or add, and why?
 - [ ] I've noted which macOS versions I tested on (26, 27, or both).
 - [ ] I've documented new public APIs / non-obvious helpers.
 - [ ] I've updated documentation as needed.
-- [ ] This PR targets `development` (Thaw 2) or `feat/thaw-3` (Thaw 3).
+- [ ] This PR targets `development` (Thaw 3) or `legacy/thaw-2` (Thaw 2).
 - [ ] I didn't add new responsibilities to the big types listed above.
 - [ ] New code has at least 80% test coverage and the SonarCloud scan reports no new issues (see [AGENTS.md](https://github.com/thaw-app/Thaw/blob/development/AGENTS.md#sonarcloud)). Fork PRs skip the scan, so it can't confirm this for them.
 - [ ] If this PR changes dependencies / lockfiles (`Package.resolved`, Actions pins, etc.), `dependency-sca` is green, or any `osv-scanner.toml` suppression includes both `reason` and `ignoreUntil` (see [Thaw/Floe Security Policy](https://github.com/thaw-app/.github/blob/main/.github/SECURITY.md#dependency-findings)).

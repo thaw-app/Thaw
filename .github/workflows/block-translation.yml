@@ -21,4 +21,4 @@ jobs:
         with:
           product: Thaw
           crowdin-url: https://crowdin.com/project/thaw
-          translation-sync-branch: l10n_development
+          translation-sync-branch: l10n_legacy/thaw-2

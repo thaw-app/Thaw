@@ -15,7 +15,7 @@ on:
         default: "300"
   push:
     branches:
-      - development
+      - legacy/thaw-2
     paths:
       - "Fuzzing/**"
       - "Thaw/Utilities/SettingsURIParser.swift"

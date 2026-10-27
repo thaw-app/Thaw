@@ -28,9 +28,9 @@ jobs:
         with:
           comment-marker: "<!-- thaw-pr-conventions -->"
           title-example-scope: menubar
-          translation-sync-branch: l10n_development
+          translation-sync-branch: l10n_legacy/thaw-2
           maintainer-only-base: main
-          contributor-base: development
+          contributor-base: legacy/thaw-2
           require-closes: "true"
           require-signoff: "true"
           area-rules: |

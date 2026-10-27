@@ -8,7 +8,7 @@ on:
   pull_request:
   push:
     branches:
-      - development
+      - legacy/thaw-2
   workflow_dispatch:
 
 permissions:
