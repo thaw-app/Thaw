@@ -24,6 +24,14 @@ the items under New and Fixed.
 
 ## [Unreleased]
 
+### New
+
+- You can skip menu bar visibility recovery when a removed app blocks it. Thaw keeps the recovery records as backups and leaves Native hiding off.
+
+### Fixed
+
+- The recovery warning no longer reports every failed restore as an unreadable Control Center setting.
+
 ## [3.0.0-beta.5] - 2026-10-27
 
 **macOS 27 only · Build 118**

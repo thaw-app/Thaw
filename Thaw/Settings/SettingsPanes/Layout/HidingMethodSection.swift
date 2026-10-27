@@ -77,7 +77,7 @@ struct HidingMethodSection: View {
             } else if experiment.previousSessionRecoveryFailed {
                 SettingsWarningPill(
                     title: "Some apps may still be hidden",
-                    message: "\(Constants.displayName) couldn't read Control Center's settings at launch, so apps it hid earlier weren't shown again. Restore them from Tools.",
+                    message: "Some apps hidden in a previous session couldn't be restored. Open Tools to review their recovery records.",
                     tint: .orange,
                     actionTitle: "Open Tools"
                 ) {
