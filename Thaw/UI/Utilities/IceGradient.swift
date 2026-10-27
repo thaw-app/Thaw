@@ -132,8 +132,16 @@ nonisolated struct IceGradient: Codable, Hashable {
             return CGColorSpaceCreateDeviceRGB()
         }()
 
-        let colors = stride(from: 0, through: 1, by: 1 / CGFloat(stops.count)).compactMap { location in
-            color(at: location, using: colorSpace)
+        // One gradient for every sample, and at most maxAverageSamples of them, so the
+        // cost stays linear however many stops an imported gradient carries.
+        guard let space = NSColorSpace(cgColorSpace: colorSpace),
+              let gradient = nsGradient(using: space)
+        else {
+            return nil
+        }
+        let sampleCount = min(stops.count, Self.maxAverageSamples)
+        let colors = stride(from: 0, through: 1, by: 1 / CGFloat(sampleCount)).compactMap { location in
+            gradient.interpolatedColor(atLocation: location).cgColor
         }
 
         var totals: (red: CGFloat, green: CGFloat, blue: CGFloat, alpha: CGFloat) = (0, 0, 0, 0)
@@ -171,6 +179,12 @@ nonisolated struct IceGradient: Codable, Hashable {
 // MARK: IceGradient Static Members
 
 nonisolated extension IceGradient {
+    /// The most samples averageColor takes; one per stop below that.
+    static let maxAverageSamples = 64
+
+    /// The most stops an imported gradient keeps.
+    static let maxImportedStops = 64
+
     /// The default menu bar tint gradient.
     static let defaultMenuBarTint = IceGradient(stops: [
         ColorStop.white(location: 0),

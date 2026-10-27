@@ -5,6 +5,7 @@
 //  Copyright (Thaw) © 2026 Toni Förster
 //  Licensed under the GNU GPLv3
 
+import CoreGraphics
 import Testing
 @testable import Thaw
 
@@ -58,5 +59,33 @@ struct IceGradientAverageColorTests {
         for component in components {
             #expect(component.isFinite)
         }
+    }
+
+    // MARK: Many stops
+
+    /// Averaging builds the gradient once and takes at most maxAverageSamples samples,
+    /// so an imported gradient with thousands of stops stays cheap.
+    @Test("A gradient with thousands of stops still averages to a mid gray")
+    func manyStopsAverage() throws {
+        let count = 10000
+        let gradient = IceGradient(stops: (0 ..< count).map { index in
+            let location = CGFloat(index) / CGFloat(count - 1)
+            return index.isMultiple(of: 2) ? .white(location: location) : .black(location: location)
+        })
+
+        let components = try #require(gradient.averageColor()?.components)
+
+        let allFinite = components.allSatisfy(\.isFinite)
+        #expect(allFinite)
+        #expect(components[0] > 0.2 && components[0] < 0.8)
+    }
+
+    @Test("Two stops average the same as before the sample cap")
+    func twoStopsUnchanged() throws {
+        let gradient = IceGradient(stops: [.white(location: 0), .black(location: 1)])
+
+        let components = try #require(gradient.averageColor()?.components)
+
+        #expect(abs(components[0] - 0.5) < 0.05)
     }
 }
