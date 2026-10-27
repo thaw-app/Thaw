@@ -724,7 +724,7 @@ enum SettingsURIHandler {
             userInfo["toggle"] = true
         }
 
-        NotificationCenter.default.post(
+        settingsChangeNotificationCenter.post(
             name: .perDisplaySettingsDidChangeViaURI,
             object: nil,
             userInfo: userInfo
