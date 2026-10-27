@@ -77,7 +77,7 @@ final class NotificationCenterActivation {
     init(
         activate: @escaping (Request) async -> Void,
         panelPresenting: @escaping () -> Bool = NotificationCenterActivation.systemPanelPresenting,
-        report: @escaping (Outcome) -> Void = { _ in },
+        report: @escaping (Outcome) -> Void = { _ in /* Callers that don't track outcomes pass nothing, so the default ignores them. */ },
         now: @escaping () -> ContinuousClock.Instant = { ContinuousClock.now }
     ) {
         self.activate = activate

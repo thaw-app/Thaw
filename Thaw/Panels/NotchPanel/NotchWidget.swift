@@ -40,7 +40,7 @@ protocol NotchWidget: AnyObject {
 }
 
 extension NotchWidget {
-    func prepare(for _: MenuBarItem) {}
+    func prepare(for _: MenuBarItem) { /* Most widgets show the same content for every item, so they have nothing to prepare. */ }
 }
 
 // MARK: - NotchWidgetRegistry

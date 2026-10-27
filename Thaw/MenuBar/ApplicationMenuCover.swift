@@ -62,7 +62,7 @@ final class ApplicationMenuCover {
     /// Observes the property rather than defaults, so the pane, a thaw:// flip
     /// and a profile apply are all caught.
     private func observeSettingFlips() -> AnyCancellable {
-        guard let advanced = advancedSettings else { return AnyCancellable {} }
+        guard let advanced = advancedSettings else { return AnyCancellable { /* Nothing was observed, so there is nothing to cancel. */ } }
         return advanced.observe(\.enableDesktopMenuHiding) { [weak self] _ in
             self?.update()
         }

@@ -81,7 +81,7 @@ struct ProfileSettingsPane: View {
         .errorAlert("Couldn’t complete the profile action", message: $errorMessage)
         .alert("Delete Profile?", item: $profileToDelete) { id in
             Button("Delete", role: .destructive) { deleteProfile(id: id) }
-            Button("Cancel", role: .cancel) {}
+            Button("Cancel", role: .cancel) { /* The alert dismisses itself; cancelling needs no other work. */ }
         } message: { id in
             if let profile = profileManager.profiles.first(where: { $0.id == id }) {
                 Text("“\(profile.name)” will be deleted. You can undo this with Command-Z.")

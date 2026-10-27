@@ -93,7 +93,7 @@ struct NativeVisibilityRecoveryView: View {
         .task { await model.load() }
         .confirmationDialog("Restore these visibility settings?", isPresented: $confirmsRestore, titleVisibility: .visible) {
             Button("Restore Visibility") { Task { await model.restore() } }
-            Button("Cancel", role: .cancel) {}
+            Button("Cancel", role: .cancel) { /* The dialog dismisses itself; cancelling needs no other work. */ }
         } message: {
             Text("Restore recorded states and enable the apps you selected. Your saved layout and positions will not be changed. Native hiding stays off.")
         }

@@ -203,7 +203,7 @@ enum LayoutBarItemMenu {
                 ClosureMenuItem(
                     title: String(localized: "“\(item.displayName)” can’t be grouped"),
                     isEnabled: false
-                ) {}
+                ) { /* This disabled item only explains why grouping isn't offered. */ }
             )
             return
         }

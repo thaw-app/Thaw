@@ -484,7 +484,7 @@ struct LayoutResetFlow: View {
             if alwaysHiddenEnabled {
                 Button("Always Hidden") { reset(to: .alwaysHidden) }
             }
-            Button("Cancel", role: .cancel) {}
+            Button("Cancel", role: .cancel) { /* The dialog dismisses itself; cancelling needs no other work. */ }
         }
     }
 

@@ -102,7 +102,7 @@ struct MenuBarLayoutBackupsSection: View {
             Button("Restore") {
                 Task { await restore(backup) }
             }
-            Button("Cancel", role: .cancel) {}
+            Button("Cancel", role: .cancel) { /* The alert dismisses itself; cancelling needs no other work. */ }
         } message: { _ in
             Text("The saved positions in this backup replace the ones in use now. \(Constants.displayName) backs up the current positions first, so you can restore your way back. The menu bar restarts, and \(Constants.displayName) has to relaunch afterward.")
         }
@@ -114,7 +114,7 @@ struct MenuBarLayoutBackupsSection: View {
             Button("Delete", role: .destructive) {
                 Task { await delete(backup) }
             }
-            Button("Cancel", role: .cancel) {}
+            Button("Cancel", role: .cancel) { /* The alert dismisses itself; cancelling needs no other work. */ }
         } message: { _ in
             Text("The saved positions in it are gone for good. This does not change your current menu bar.")
         }

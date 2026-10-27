@@ -161,7 +161,7 @@ final class NotchAccessoryWidget: NotchWidget {
         }
     }
 
-    func refresh() {}
+    func refresh() { /* The readout is read once per hover in prepare(for:), so there is nothing to refresh. */ }
 
     // MARK: Presentation helpers
 

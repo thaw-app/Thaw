@@ -164,7 +164,7 @@ struct MenuBarAppearanceEditor: View {
             }
         }
         .alert("Reset Appearance", isPresented: $isResetAlertPresented) {
-            Button("Cancel", role: .cancel) {}
+            Button("Cancel", role: .cancel) { /* The alert dismisses itself; cancelling needs no other work. */ }
             Button("Reset", role: .destructive) { appearanceManager.configuration = .defaultConfiguration }
         } message: {
             Text("Your menu bar’s shape, colors and border go back to the defaults. This can’t be undone.")
