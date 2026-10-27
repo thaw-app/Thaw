@@ -171,6 +171,7 @@ $(SRCROOT)/Thaw/Settings/Models/MenuBarItemTrigger.swift
 $(SRCROOT)/Thaw/Settings/Models/MenuBarItemTriggersManager+Live.swift
 $(SRCROOT)/Thaw/Settings/Models/MenuBarItemTriggersManager.swift
 $(SRCROOT)/Thaw/Settings/Models/Profile.swift
+$(SRCROOT)/Thaw/Settings/Models/ProfileImportPolicy.swift
 $(SRCROOT)/Thaw/Settings/Models/ProfileManager+Live.swift
 $(SRCROOT)/Thaw/Settings/Models/ProfileManager.swift
 $(SRCROOT)/Thaw/Settings/Models/RehideStrategy.swift

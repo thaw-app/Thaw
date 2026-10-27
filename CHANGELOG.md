@@ -29,6 +29,10 @@ the items under New and Fixed.
 - Thaw 2 runs on macOS 15 Sequoia again. Its windows use a plain material there instead of Liquid Glass, and the menu bar's glass background and tint aren't offered.
 - A General setting, Show Dock icon while Settings is open. Turn it off to keep Thaw out of the Dock and its recent apps when you open Settings and its other windows.
 
+### Changed
+
+- **Importing a profile doesn't turn on its scripts.** Scripts that run before or after the profile applies arrive switched off, and "Confirm before relaunching apps" arrives on. Turn them on in Profiles if you trust the file.
+
 ### Fixed
 
 - On macOS 15, clicking a hidden item no longer makes the Thaw icon shake while the item stays hidden. Thanks to @edsonboldrini, who found the cause.
