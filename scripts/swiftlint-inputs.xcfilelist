@@ -269,6 +269,7 @@ $(SRCROOT)/Thaw/Utilities/Predicates.swift
 $(SRCROOT)/Thaw/Utilities/ScreenCapture.swift
 $(SRCROOT)/Thaw/Utilities/SettingsURIHandler.swift
 $(SRCROOT)/Thaw/Utilities/SettingsURIParser.swift
+$(SRCROOT)/Thaw/Utilities/SettingsURISender.swift
 $(SRCROOT)/Thaw/Utilities/SimpleSemaphore.swift
 $(SRCROOT)/Thaw/Utilities/SpaceInfo.swift
 $(SRCROOT)/Thaw/Utilities/Swizzling.swift

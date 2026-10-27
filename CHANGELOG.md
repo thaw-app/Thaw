@@ -32,11 +32,13 @@ the items under New and Fixed.
 ### Changed
 
 - **Importing a profile doesn't turn on its scripts.** Scripts that run before or after the profile applies arrive switched off, and "Confirm before relaunching apps" arrives on. Turn them on in Profiles if you trust the file.
+- **thaw://toggle-thawbar needs settings access,** like thaw://set and thaw://toggle, since it saves a setting.
 
 ### Fixed
 
 - On macOS 15, clicking a hidden item no longer makes the Thaw icon shake while the item stays hidden. Thanks to @edsonboldrini, who found the cause.
 - On macOS 15, hidden items show their icons in the Thaw Bar, Layout and search.
+- An app you allowed to change settings through thaw:// links is checked by its own signature, so another app can't borrow the permission by using the same name.
 - With the menu bar set to hide automatically, an item opened from the Thaw Bar could stay in the visible section until its app was relaunched. It now goes back once the menu bar shows again.
 - After Thaw moved an item, the Thaw Bar could keep showing it in its old section for several minutes.
 - Rehiding an item while the mouse was moving could leave the pointer in the top-left corner of the screen, under the Apple menu.

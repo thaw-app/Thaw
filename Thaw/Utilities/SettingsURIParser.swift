@@ -18,6 +18,16 @@ nonisolated enum SettingsURIAction: String, CaseIterable, Equatable, Sendable {
     case toggleThawbar = "toggle-thawbar"
     case toggleApplicationMenus = "toggle-application-menus"
     case openSettings = "open-settings"
+
+    /// Whether the action saves a setting, which needs settings access like a set or toggle.
+    var persistsSettings: Bool {
+        switch self {
+        case .toggleThawbar:
+            true
+        case .toggleHidden, .toggleAlwaysHidden, .search, .toggleApplicationMenus, .openSettings:
+            false
+        }
+    }
 }
 
 /// The decoded intent of an incoming `thaw://` URL.

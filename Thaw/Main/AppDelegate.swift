@@ -197,7 +197,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         }
     }
 
-    /// Handles `kAEGetURL` Apple Events and forwards `thaw://` URLs to `handleURL(_:senderBundleId:)`.
+    /// Handles kAEGetURL Apple Events and forwards thaw:// URLs to handleURL(_:sender:).
     @objc private func handleURLAppleEvent(
         _ event: NSAppleEventDescriptor,
         withReplyEvent _: NSAppleEventDescriptor
@@ -208,52 +208,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             url.scheme?.lowercased() == "thaw"
         else { return }
 
-        let senderBundleId = extractSenderBundleId(from: event)
-        handleURL(url, senderBundleId: senderBundleId)
-    }
-
-    /// Extracts the sender's bundle identifier from an Apple Event.
-    private func extractSenderBundleId(from event: NSAppleEventDescriptor) -> String? {
-        let keySenderPID = AEKeyword(keySenderPIDAttr)
-
-        guard let pidDesc = event.attributeDescriptor(forKeyword: keySenderPID) else {
-            return nil
-        }
-
-        // macOS 26 stores keySenderPIDAttr as typeUInt32 ('magn') on arm64.
-        // Accept any numeric type and extract the PID from raw descriptor data.
-        let integerTypes: Set<OSType> = [
-            typeSInt16, typeSInt32, typeSInt64,
-            typeUInt16, typeUInt32, typeUInt64,
-            typeIEEE32BitFloatingPoint, typeIEEE64BitFloatingPoint,
-        ]
-
-        var pid: pid_t = 0
-
-        if integerTypes.contains(pidDesc.descriptorType) {
-            // Copy raw bytes regardless of storage type (typeUInt32, typeSInt64, etc.)
-            let data = pidDesc.data
-            let copyCount = min(data.count, MemoryLayout<pid_t>.size)
-            data.withUnsafeBytes { src in
-                withUnsafeMutableBytes(of: &pid) { dest in
-                    guard let srcPtr = src.baseAddress, let destPtr = dest.baseAddress else { return }
-                    memcpy(destPtr, srcPtr, copyCount)
-                }
-            }
-        } else {
-            // Fallback: try coercion for unknown types
-            let coerced = pidDesc.int32Value
-            guard coerced > 0 else { return nil }
-            pid = pid_t(coerced)
-        }
-
-        guard pid > 0 else { return nil }
-
-        guard let app = NSRunningApplication(processIdentifier: pid) else {
-            return nil
-        }
-
-        return app.bundleIdentifier
+        handleURL(url, sender: SettingsURISender.identify(from: event))
     }
 
     /// Dispatches an incoming `thaw://` URL to the appropriate action.
@@ -262,20 +217,30 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     /// - `thaw://toggle-hidden` — toggle the hidden menu bar section
     /// - `thaw://toggle-always-hidden` — toggle the always-hidden menu bar section
     /// - `thaw://search` — open the menu bar item search panel
-    /// - `thaw://toggle-thawbar` — toggle the IceBar on the active display
+    /// - `thaw://toggle-thawbar` — toggle the IceBar on the active display; it saves the
+    ///   setting, so it needs settings access and an approved sender like the Settings URLs
     /// - `thaw://toggle-application-menus` — toggle application menus
     /// - `thaw://open-settings` — open the Thaw settings window
     ///
     /// Supported Settings URLs (requires whitelist authorization):
     /// - `thaw://set?key=X&value=Y` — set a boolean setting
     /// - `thaw://toggle?key=X` — toggle a boolean setting
-    private func handleURL(_ url: URL, senderBundleId: String? = nil) {
+    private func handleURL(_ url: URL, sender: SettingsURISender? = nil) {
         let request = SettingsURIParser.parse(url)
 
         switch request.route {
         case .set, .toggle, .get, .authorize:
-            handleSettingsURL(url, request: request, senderBundleId: senderBundleId)
+            handleSettingsURL(url, request: request, sender: sender)
         case let .action(action):
+            // A persistent change answers to the same switch and approval as a settings URL.
+            if action.persistsSettings {
+                guard SettingsURIHandler.isEnabled(),
+                      authorizeSender(request: request, sender: sender, url: url) != nil
+                else {
+                    appState.diagLog.debug("Settings URI: refusing \(url.absoluteString) without settings access")
+                    return
+                }
+            }
             perform(action)
         case let .malformed(host):
             // Rejected ahead of the authorization gate: an incomplete URL must
@@ -307,7 +272,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     /// Handles settings manipulation URLs (set/toggle).
-    private func handleSettingsURL(_ url: URL, request: SettingsURIRequest, senderBundleId: String?) {
+    private func handleSettingsURL(_ url: URL, request: SettingsURIRequest, sender: SettingsURISender?) {
         guard SettingsURIHandler.isEnabled() else {
             appState.diagLog.debug("Settings URI is disabled, ignoring: \(url.absoluteString)")
             return
@@ -319,29 +284,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             return
         }
 
-        guard let effectiveBundleId = determineEffectiveBundleId(
-            request: request,
-            senderBundleId: senderBundleId
-        ) else {
-            appState.diagLog.debug("Settings URI: Cannot determine sender bundle ID, ignoring: \(url.absoluteString)")
+        // An authorize request only raises the dialog, so it stops here either way.
+        guard let effectiveBundleId = authorizeSender(request: request, sender: sender, url: url),
+              request.route != .authorize
+        else {
             return
-        }
-
-        // Handle authorize request - triggers auth dialog if not already authorized
-        if case .authorize = request.route {
-            if !SettingsURIHandler.isWhitelisted(bundleIdentifier: effectiveBundleId) {
-                _ = SettingsURIHandler.promptForAuthorization(bundleId: effectiveBundleId)
-            }
-            return
-        }
-
-        // Verify sender is whitelisted, or prompt for first-time authorization
-        if !SettingsURIHandler.isWhitelisted(bundleIdentifier: effectiveBundleId) {
-            let approved = SettingsURIHandler.promptForAuthorization(bundleId: effectiveBundleId)
-            guard approved else {
-                // Unauthorized - silent fail
-                return
-            }
         }
 
         switch request.route {
@@ -373,24 +320,39 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     /// Determines the effective bundle ID for authorization.
     /// Uses manual override (DEBUG only) if auto-detection fails.
-    private func determineEffectiveBundleId(
-        request: SettingsURIRequest,
-        senderBundleId: String?
-    ) -> String? {
-        if let sender = senderBundleId {
-            return sender
+    /// The approved sender's bundle identifier, prompting once for a sender that isn't
+    /// approved yet. Nil when it can't be identified or the user refuses.
+    private func authorizeSender(request: SettingsURIRequest, sender: SettingsURISender?, url: URL) -> String? {
+        let bundleId: String
+        let identity: SettingsURIHandler.TeamIdentifierLookup?
+        if let sender {
+            bundleId = sender.bundleIdentifier
+            identity = sender.team
+        } else {
+            #if DEBUG
+                // When the sender can't be identified (e.g. Terminal's open), a debug
+                // build may name one by hand.
+                guard let manualBundleId = request.bundleIdOverride else {
+                    appState.diagLog.debug("Settings URI: Cannot identify the sender, ignoring: \(url.absoluteString)")
+                    return nil
+                }
+                appState.diagLog.warning("Settings URI: Using DEBUG manual bundleId=\(manualBundleId) - FOR TESTING ONLY")
+                bundleId = manualBundleId
+                identity = nil
+            #else
+                appState.diagLog.debug("Settings URI: Cannot identify the sender, ignoring: \(url.absoluteString)")
+                return nil
+            #endif
         }
 
-        #if DEBUG
-            // In DEBUG builds, allow manual bundleId override for testing
-            // when auto-detection fails (e.g., from Terminal 'open' command)
-            if let manualBundleId = request.bundleIdOverride {
-                appState.diagLog.warning("Settings URI: Using DEBUG manual bundleId=\(manualBundleId) - FOR TESTING ONLY")
-                return manualBundleId
-            }
-        #endif
-
-        return nil
+        if SettingsURIHandler.isWhitelisted(bundleIdentifier: bundleId, senderIdentity: identity) {
+            return bundleId
+        }
+        return SettingsURIHandler.promptForAuthorization(
+            bundleId: bundleId,
+            senderIdentity: identity,
+            senderName: sender?.displayName
+        ) ? bundleId : nil
     }
 
     private func replyToTerminationRequest(

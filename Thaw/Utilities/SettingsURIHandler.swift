@@ -124,7 +124,7 @@ enum SettingsURIHandler {
     /// A bare optional cannot tell an app that is validly signed without a team
     /// from an app that could not be located or inspected at all, and those two
     /// must not be treated alike when verifying a whitelist entry.
-    enum TeamIdentifierLookup: Equatable {
+    nonisolated enum TeamIdentifierLookup: Equatable, Sendable {
         /// The app resolved and its signature names this team identifier.
         case team(String)
 
@@ -180,8 +180,15 @@ enum SettingsURIHandler {
     }
 
     /// Verifies that an app's current code signature matches the stored signing identity.
-    private static func verifyCodeSignature(bundleId: String, storedTeamId: String?) -> Bool {
-        let lookup = lookUpTeamIdentifier(for: bundleId)
+    ///
+    /// lookup is the sending process's own signature when known; otherwise the app
+    /// installed under bundleId is read.
+    private static func verifyCodeSignature(
+        bundleId: String,
+        storedTeamId: String?,
+        lookup senderLookup: TeamIdentifierLookup? = nil
+    ) -> Bool {
+        let lookup = senderLookup ?? lookUpTeamIdentifier(for: bundleId)
 
         // If no stored team ID, only allow if app is also unsigned (legacy entries)
         guard let storedTeamId else {
@@ -225,7 +232,13 @@ enum SettingsURIHandler {
     }
 
     /// Checks if the sender is in the whitelist and has valid code signature.
-    static func isWhitelisted(bundleIdentifier: String?) -> Bool {
+    ///
+    /// Pass senderIdentity, read from the sending process, so the check covers the
+    /// sender's own code rather than whichever app is installed under the bundle ID.
+    static func isWhitelisted(
+        bundleIdentifier: String?,
+        senderIdentity: TeamIdentifierLookup? = nil
+    ) -> Bool {
         guard let bundleId = bundleIdentifier, !bundleId.isEmpty else {
             diagLog.warning("Settings URI: No sender bundle ID provided")
             return false
@@ -240,7 +253,7 @@ enum SettingsURIHandler {
         let signingIdentities = getSigningIdentities()
         let storedTeamId = signingIdentities[bundleId]
 
-        guard verifyCodeSignature(bundleId: bundleId, storedTeamId: storedTeamId) else {
+        guard verifyCodeSignature(bundleId: bundleId, storedTeamId: storedTeamId, lookup: senderIdentity) else {
             diagLog.warning("Settings URI: Code signature mismatch for \(bundleId)")
             return false
         }
@@ -251,9 +264,16 @@ enum SettingsURIHandler {
 
     /// Shows NSAlert confirmation dialog for first-time authorization.
     /// Returns true if user approves, false otherwise.
-    static func promptForAuthorization(bundleId: String) -> Bool {
-        let appName = getAppName(for: bundleId) ?? bundleId
-        let teamId = getTeamIdentifier(for: bundleId)
+    ///
+    /// Pass senderName, read from the sender's own signature, so an app claiming another
+    /// app's bundle ID isn't shown under that app's name.
+    static func promptForAuthorization(
+        bundleId: String,
+        senderIdentity: TeamIdentifierLookup? = nil,
+        senderName: String? = nil
+    ) -> Bool {
+        let appName = senderName ?? getAppName(for: bundleId) ?? bundleId
+        let teamId = senderIdentity.map(\.teamIdentifier) ?? getTeamIdentifier(for: bundleId)
 
         let alert = NSAlert()
         alert.messageText = String(localized: "Allow \"\(appName)\" to control \(Constants.displayName) settings?")
