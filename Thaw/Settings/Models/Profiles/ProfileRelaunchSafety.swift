@@ -48,6 +48,18 @@ nonisolated enum ProfileRelaunchSafety {
         )
     }
 
+    /// The spacing offset the profile leaves on the display that has the menu bar, which is the one
+    /// applied: its own entry for that display, else its template.
+    @MainActor
+    static func spacingOffset(of profile: Profile, activeDisplayUUID: String?) -> Int {
+        let configuration = DisplaySettingsManager.resolvedConfiguration(
+            displayUUID: activeDisplayUUID,
+            configurations: profile.displayConfigurations,
+            globalConfiguration: profile.globalDisplayConfiguration
+        )
+        return Int(configuration.itemSpacingOffset.rounded())
+    }
+
     /// Whether applying the profile has to ask before its spacing change restarts apps.
     @MainActor
     static func needsConfirmation(for profile: Profile, displaySettings: DisplaySettingsManager) -> Bool {

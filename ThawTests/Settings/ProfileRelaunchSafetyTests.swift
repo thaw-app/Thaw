@@ -136,4 +136,17 @@ struct ProfileRelaunchSafetyTests {
 
         #expect(!ProfileRelaunchSafety.needsConfirmation(for: profile, displaySettings: displaySettings))
     }
+
+    @Test("The applied spacing is the profile's entry for the menu bar's display, else its template")
+    func spacingOffsetFollowsActiveDisplay() throws {
+        var profile = try JSONDecoder().decode(Profile.self, from: Data("{}".utf8))
+        profile.globalDisplayConfiguration = DisplayThawBarConfiguration.defaultConfiguration.withItemSpacingOffset(-2)
+        profile.displayConfigurations = [
+            "ACTIVE": DisplayThawBarConfiguration.defaultConfiguration.withItemSpacingOffset(5),
+        ]
+
+        #expect(ProfileRelaunchSafety.spacingOffset(of: profile, activeDisplayUUID: "ACTIVE") == 5)
+        #expect(ProfileRelaunchSafety.spacingOffset(of: profile, activeDisplayUUID: "OTHER") == -2)
+        #expect(ProfileRelaunchSafety.spacingOffset(of: profile, activeDisplayUUID: nil) == -2)
+    }
 }

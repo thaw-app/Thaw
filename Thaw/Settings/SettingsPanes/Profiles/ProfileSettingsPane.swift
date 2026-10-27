@@ -259,10 +259,10 @@ struct ProfileSettingsPane: View {
             return ProfileLayoutDiff.settingChanges(current: current, profile: profile.advancedSettings.merged(onto: current))
         }()
 
-        // Warn only if applying the profile's display spacing would relaunch apps.
-        let offset = Int(profile.globalDisplayConfiguration.itemSpacingOffset.rounded())
-        // The profile's own mode is the one in effect by the time its spacing is applied.
-        let applyMode = profile.spacingApplyMode ?? appState.settings.displaySettings.spacingApplyMode
+        // Warn only if the spacing the apply leaves on the menu bar's display would relaunch apps.
+        let offset = ProfileRelaunchSafety.spacingOffset(of: profile, activeDisplayUUID: appState.settings.displaySettings.activeMenuBarDisplayUUID)
+        // The mode in effect once the profile is applied, merged the way the apply merges it.
+        let applyMode = ProfileRelaunchSafety.merged(profile, onto: appState.settings.displaySettings).applyMode
         if applyMode == .relaunchApps, !appState.spacingManager.isOnDisk(offset: offset) {
             diff.relaunchingSpacingOffset = offset
         }
