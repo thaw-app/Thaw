@@ -55,6 +55,33 @@ Most of the fixes in this release harden security, and they come from findings i
 - **An app you add by hand under Automation can use thaw:// links.** It's pinned to its own signature, like an app you allow from the prompt, instead of being listed but always refused.
 - **A Focus profile stays on when Thaw can't read the Focus state.** Only the system reporting that the Focus ended switches back.
 
+## [2.2.0-beta.1] - 2026-10-27
+
+**macOS 15 and 26 · Build 64**
+
+### New
+
+- Thaw 2 runs on macOS 15 Sequoia again. Its windows use a plain material there instead of Liquid Glass, and the menu bar's glass background and tint aren't offered.
+- A General setting, Show Dock icon while Settings is open. Turn it off to keep Thaw out of the Dock and its recent apps when you open Settings and its other windows.
+
+### Changed
+
+- **Importing a profile doesn't turn on its scripts.** Scripts that run before or after the profile applies arrive switched off, and "Confirm before relaunching apps" arrives on. Turn them on in Profiles if you trust the file.
+- **thaw://toggle-thawbar needs settings access,** like thaw://set and thaw://toggle, since it saves a setting.
+- **Settings buttons look the same everywhere.** Main actions, other actions and buttons inside a row each have one style, and the update prompt and permission windows answer Return and Escape.
+- **One choice where there were several.** Automatic updates in About is off, check only, or check and download. Spacing in Displays is one "When spacing changes" choice (ask first, restart menu bar apps right away, or wait until they restart), with "Save spacing to every profile" when it restarts without asking. Your settings carry over.
+- **Search lists every section in menu bar order.** The order buttons and the per-section switches under Menu Bar Search are gone, along with their thaw:// keys.
+- **Fewer switches in General and Advanced.** One "Double-click to open always-hidden section" switch covers the Thaw icon and the empty menu bar, and Option-click always opens that section. A ⌘-drag always shows every section, the secondary context menu always ends with Quit, and the Dock icon follows "Hide app menus when showing menu bar items" instead of a separate switch. The thaw:// keys for the removed switches are gone.
+
+### Fixed
+
+- On macOS 15, clicking a hidden item no longer makes the Thaw icon shake while the item stays hidden. Thanks to @edsonboldrini, who found the cause.
+- On macOS 15, hidden items show their icons in the Thaw Bar, Layout and search.
+- An app you allowed to change settings through thaw:// links is checked by its own signature, so another app can't borrow the permission by using the same name.
+- With the menu bar set to hide automatically, an item opened from the Thaw Bar could stay in the visible section until its app was relaunched. It now goes back once the menu bar shows again.
+- After Thaw moved an item, the Thaw Bar could keep showing it in its old section for several minutes.
+- Rehiding an item while the mouse was moving could leave the pointer in the top-left corner of the screen, under the Apple menu.
+
 ## [2.1.0] - 2026-10-14
 **macOS 26 only**
 
