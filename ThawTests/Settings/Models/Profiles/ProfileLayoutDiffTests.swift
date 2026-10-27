@@ -31,6 +31,40 @@ struct ProfileLayoutDiffTests {
         )
     }
 
+    @Test("A profile that only reorders items within their sections is not reported as identical")
+    func reorderWithinSection() {
+        let current = Self.layout(order: ["visible": ["com.a:A", "com.b:B", "com.c:C"], "hidden": ["com.d:D", "com.e:E"]])
+        let profile = Self.layout(order: ["visible": ["com.c:C", "com.a:A", "com.b:B"], "hidden": ["com.d:D", "com.e:E"]])
+
+        let diff = ProfileLayoutDiff.between(current: current, profile: profile)
+
+        #expect(diff.moves.isEmpty)
+        #expect(diff.reorderedSections == ["visible"])
+        #expect(!diff.isEmpty)
+    }
+
+    @Test("Moved, missing and extra items don't count as a reorder of the items that stay")
+    func reorderIgnoresOtherChanges() {
+        let current = Self.layout(order: ["visible": ["com.a:A", "com.x:X", "com.b:B", "com.extra:E"]])
+        let profile = Self.layout(order: [
+            "visible": ["com.a:A", "com.gone:G", "com.b:B"],
+            "hidden": ["com.x:X"],
+        ])
+
+        let diff = ProfileLayoutDiff.between(current: current, profile: profile)
+
+        #expect(diff.reorderedSections.isEmpty)
+        #expect(diff.moves.map(\.item.id) == ["com.x:X"])
+    }
+
+    @Test("The same order on both sides is still identical")
+    func sameOrder() {
+        let order = ["visible": ["com.a:A", "com.b:B"], "hidden": ["com.c:C"]]
+        let diff = ProfileLayoutDiff.between(current: Self.layout(order: order), profile: Self.layout(order: order, useItemOrder: false))
+        #expect(diff.reorderedSections.isEmpty)
+        #expect(diff.isEmpty)
+    }
+
     @Test("Items in another section move, missing ones are unavailable, extra ones unmentioned")
     func between() {
         let current = Self.layout(order: [

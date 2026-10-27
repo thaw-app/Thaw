@@ -54,6 +54,9 @@ nonisolated struct ProfileLayoutDiff: Equatable {
     /// Current items absent from the profile follow new-item placement rather than profile-determined sections.
     var unmentioned: [Item] = []
 
+    /// Sections whose items stay put but come in a different order, in display order.
+    var reorderedSections: [String] = []
+
     /// Compare encoded snapshots so newly added settings appear without updating this type.
     var settingChanges: [SettingChange] = []
 
@@ -63,6 +66,7 @@ nonisolated struct ProfileLayoutDiff: Equatable {
     /// Whether applying would leave the setup as it stands.
     var isEmpty: Bool {
         moves.isEmpty
+            && reorderedSections.isEmpty
             && unavailable.isEmpty
             && settingChanges.isEmpty
             && relaunchingSpacingOffset == nil
@@ -100,6 +104,15 @@ nonisolated struct ProfileLayoutDiff: Equatable {
             for identifier in identifiers where profileSections[identifier] == nil {
                 diff.unmentioned.append(item(identifier, named: current.customNames))
             }
+        }
+
+        diff.reorderedSections = sectionKeys.filter { key in
+            // Only items in this section on both sides; a move or an absence is reported elsewhere.
+            let staying = { (identifier: String) in currentSections[identifier] == key && profileSections[identifier] == key }
+            let before = ((current.itemOrder ?? current.savedSectionOrder)[key] ?? []).filter(staying)
+            let after = ((profile.itemOrder ?? profile.savedSectionOrder)[key] ?? []).filter(staying)
+            let shared = Set(before).intersection(after)
+            return before.filter(shared.contains) != after.filter(shared.contains)
         }
 
         return diff
