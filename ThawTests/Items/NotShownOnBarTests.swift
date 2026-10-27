@@ -66,4 +66,16 @@ struct NotShownOnBarTests {
         let flat = item("Flat", x: 1600, width: 0, windowID: 1)
         #expect(NotShownOnBar.looksNotShown(flat, among: [flat], screens: Self.screens))
     }
+
+    @Test("Behind macOS's overflow arrow, a Visible item parked at x = -1 or on another item's seat is off the bar")
+    func overflowedItemsAreOffTheBar() {
+        let seated = item("Seated", x: 1600, windowID: 1)
+        let neighbour = item("Neighbour", x: 1630, windowID: 2)
+        let parked = item("Parked", x: -1, windowID: 3)
+        let underSeated = item("Under", x: 1600, windowID: 4)
+
+        #expect(!NotShownOnBar.isLeftOffTheBar(neighbour, among: [seated, neighbour], screens: Self.screens))
+        #expect(NotShownOnBar.isLeftOffTheBar(parked, among: [seated, parked], screens: Self.screens))
+        #expect(NotShownOnBar.isLeftOffTheBar(underSeated, among: [seated, underSeated], screens: Self.screens))
+    }
 }

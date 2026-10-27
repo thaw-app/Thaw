@@ -302,7 +302,7 @@ extension MenuBarItemManager {
             effectiveAvailableWidth = max(1, effectiveAvailableWidth - width)
         }
 
-        // Visible items parked at x == -1 indicate the bar had no room to draw them.
+        // Visible items macOS left off the bar, parked or behind its arrow, mean it had no room for them.
         // Only on a settled, concealed bar: a reveal fills the bar with hidden
         // items, or with whole apps under native hiding, and macOS parks Visible
         // items that fit again once it closes. Counting them hid them for good.
@@ -311,8 +311,8 @@ extension MenuBarItemManager {
         let isBarSettled = controller.revealedSection == nil
             && !appState.menuBarManager.isRevealHideTransitionActive
         let parkedWidths = !isBarSettled ? [] : visibleLive
-            .filter { item in
-                item.bounds.minX == MenuBarItemGeometry.transientSentinelX
+            .filter { [screens = BarAxis.liveDisplayBounds()] item in
+                NotShownOnBar.isLeftOffTheBar(item, among: visibleLive, screens: screens)
                     && !ItemConcealment.isConcealed(item.uniqueIdentifier, in: overflowIdentifiers)
                     && !ItemConcealment.isConcealed(item.uniqueIdentifier, in: concealedIdentifiers)
             }

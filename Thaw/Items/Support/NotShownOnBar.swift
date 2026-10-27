@@ -27,4 +27,10 @@ nonisolated enum NotShownOnBar {
         }
         return item.hasPhantomFrame(among: peers)
     }
+
+    /// Whether macOS left a Visible item off the bar for lack of room. macOS 27 parks such an
+    /// item at x == -1, and 27.0.1 also lays it on another item's seat behind its overflow arrow.
+    static func isLeftOffTheBar(_ item: MenuBarItem, among peers: [MenuBarItem], screens: [CGRect]) -> Bool {
+        item.bounds.minX == MenuBarItemGeometry.transientSentinelX || looksNotShown(item, among: peers, screens: screens)
+    }
 }

@@ -115,6 +115,7 @@ and the Sparkle appcast, unless overridden with the `release_notes` input.
 - **Moving an icon into Visible no longer pauses for an app that's gone.** If your saved order named an app that was removed or changed its identifier, such as Floe, Thaw waited three seconds for it on every move. By @diazdesandi.
 - **On a MacBook with a notch, hidden items that don't fit open in the Thaw Bar.** Thaw counted the space left of the notch as room for icons, but macOS never puts them there. So it showed Hidden in the menu bar, and macOS tucked the rest behind ». By @diazdesandi.
 - **The Thaw Bar leaves out apps you switched off in System Settings › Menu Bar.** macOS never draws them, but the Thaw Bar listed them with their app icons. Apps that Native hiding switched off still show. Reported in [#1260](https://github.com/thaw-app/Thaw/issues/1260). Fixed by @diazdesandi.
+- **"Move items that don't fit into Hidden" moves the icons behind macOS's arrows.** On macOS 27.0.1 those icons weren't counted as missing from the bar, so Thaw thought everything fit and left them behind the arrows. They now go to Hidden and open from the Thaw Bar. By @diazdesandi.
 
 ### Known issues
 
