@@ -209,14 +209,13 @@ enum LayoutBarItemMenu {
         }
 
         // Groups require two members, so creation must offer another loose item.
+        let groupedTags = Set(groups.flatMap { group in
+            group.memberIndices.filter { orderedItems.indices.contains($0) }.map { orderedItems[$0].tag }
+        })
         let partners = orderedItems.filter { candidate in
             candidate.tag != item.tag
                 && MenuBarItemGrouping.isGroupable(candidate.tag)
-                && !groups.contains { group in
-                    group.memberIndices.contains { index in
-                        orderedItems.indices.contains(index) && orderedItems[index].tag == candidate.tag
-                    }
-                }
+                && !groupedTags.contains(candidate.tag)
         }
         if !partners.isEmpty {
             let submenu = NSMenu()

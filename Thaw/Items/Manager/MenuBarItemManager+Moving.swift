@@ -685,12 +685,11 @@ extension MenuBarItemManager {
             // slots make the next reveal expand in authored order.
             if !arrangementIsManual, !menuBarAgentIgnoresPreferredPositions {
                 let sectionController = appState.menuBarManager.sectionController
+                let settledByID = Dictionary(settledItems.map { ($0.uniqueIdentifier, $0) }, uniquingKeysWith: { first, _ in first })
                 for section in MenuBarSection.Name.allCases where section != .visible {
                     let desiredOrder = sectionController.sectionItemOrder[section] ?? []
                     guard desiredOrder.count > 1 else { continue }
-                    let members = desiredOrder.compactMap { identifier in
-                        settledItems.first { $0.uniqueIdentifier == identifier }
-                    }
+                    let members = desiredOrder.compactMap { settledByID[$0] }
                     guard members.count > 1 else { continue }
                     guard !refuseMenuBarMutationWhileScreenLocked("concealed-band normalization") else { return }
                     let trace = tracePositionWrite(

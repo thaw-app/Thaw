@@ -428,8 +428,7 @@ extension MenuBarItemManager {
             Task { [weak self] in
                 guard let self else { return }
                 try? await Task.sleep(for: .milliseconds(300))
-                guard !Task.isCancelled else { return }
-                guard let hold = await self.repairs.enter(.overflowRebalance) else { return }
+                guard !Task.isCancelled, let hold = await self.repairs.enter(.overflowRebalance) else { return }
                 // Read after the wait, so requests merged while queued are honoured.
                 let effective = self.overflowRebalance.intent ?? request
                 let aftermath = RepairTurn.Aftermath()
@@ -440,7 +439,8 @@ extension MenuBarItemManager {
                     permit: StoreWritePermit(hold)
                 )
                 self.repairs.leave(hold)
-                await aftermath.readCacheIfOwed { await self.cacheItemsRegardless(skipRecentMoveCheck: true) }
+                func readCache() async { await self.cacheItemsRegardless(skipRecentMoveCheck: true) }
+                await aftermath.readCacheIfOwed(readCache)
                 // Cancelled tasks leave merged intent for their replacements.
                 guard !Task.isCancelled else { return }
                 self.overflowRebalance.fulfil(turn)

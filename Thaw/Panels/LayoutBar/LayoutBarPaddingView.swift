@@ -1030,7 +1030,7 @@ final class LayoutBarPaddingView: NSView {
             let liveOrder: @MainActor () -> [MenuBarItem] = {
                 appState.itemManager.managedItems(for: section)
             }
-            let liveItem: @MainActor (MenuBarItemTag) -> MenuBarItem? = { tag in
+            @MainActor func liveItem(_ tag: MenuBarItemTag) -> MenuBarItem? {
                 liveOrder().first { $0.tag == tag }
             }
             let block = GroupBlockPlacement(members: memberOrder, anchor: anchorTag, insertsLeftOfAnchor: insertToLeftOfAnchor)
