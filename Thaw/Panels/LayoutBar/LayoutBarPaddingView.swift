@@ -661,21 +661,16 @@ final class LayoutBarPaddingView: NSView {
                     item, screens: BarAxis.liveDisplayBounds()
                 )
                 let attemptMove = { () async throws -> Bool in
+                    // A divider-anchored destination is a deliberate section transition;
+                    // without the opt-in, move() refuses control item targets on macOS 27.
+                    // A layout-pane drop is the user's direct action: it must preempt
+                    // an in-flight background reconcile on the serial gate.
+                    // A drop is the user's explicit request; the drag runs only
+                    // after the store write was refused.
                     try await appState.itemManager.move(
                         item: item,
                         to: destination,
-                        skipInputPause: true,
-                        // A divider-anchored destination is a deliberate section transition;
-                        // without the opt-in, move() refuses control item targets on macOS 27.
-                        allowSectionBoundaryTarget: destination.targetItem.isControlItem,
-                        allowParkedOffMenuBarSource: recoveringStrandedVisibleControl,
-                        anchorFallbacks: anchorFallbacks,
-                        // A layout-pane drop is the user's direct action: it must preempt
-                        // an in-flight background reconcile on the serial gate.
-                        isUserInitiated: true,
-                        // A drop is the user's explicit request; the drag runs only
-                        // after the store write was refused.
-                        allowSyntheticDrag: true
+                        options: ItemMoveOptions(skipInputPause: true, allowSectionBoundaryTarget: destination.targetItem.isControlItem, allowParkedOffMenuBarSource: recoveringStrandedVisibleControl, anchorFallbacks: anchorFallbacks, isUserInitiated: true, allowSyntheticDrag: true)
                     )
                 }
 
@@ -1067,13 +1062,11 @@ final class LayoutBarPaddingView: NSView {
                         insertToLeftOfAnchor ? .leftOfItem(anchor) : .rightOfItem(anchor)
                     var moved = false
                     do {
+                        // User-driven group reorder: preempt background reconcile.
                         moved = try await appState.itemManager.move(
                             item: member,
                             to: destination,
-                            skipInputPause: true,
-                            // User-driven group reorder: preempt background reconcile.
-                            isUserInitiated: true,
-                            allowSyntheticDrag: false
+                            options: ItemMoveOptions(skipInputPause: true, isUserInitiated: true, allowSyntheticDrag: false)
                         )
                     } catch {
                         Self.diagLog.error("Group reorder move failed for \(member.logString): \(error)")
@@ -1278,19 +1271,14 @@ final class LayoutBarPaddingView: NSView {
                 let recoveringStrandedVisibleControl = MenuBarItemGeometry.isStrandedVisibleControl(
                     item, screens: BarAxis.liveDisplayBounds()
                 )
+                // A divider-anchored destination is a deliberate section
+                // transition; without the opt-in, move() refuses control
+                // item targets on macOS 27.
+                // User-driven placement recovery: preempt background reconcile.
                 try await appState.itemManager.move(
                     item: item,
                     to: destination,
-                    skipInputPause: true,
-                    // A divider-anchored destination is a deliberate section
-                    // transition; without the opt-in, move() refuses control
-                    // item targets on macOS 27.
-                    allowSectionBoundaryTarget: destination.targetItem.isControlItem,
-                    allowParkedOffMenuBarSource: recoveringStrandedVisibleControl,
-                    anchorFallbacks: anchorFallbacks,
-                    // User-driven placement recovery: preempt background reconcile.
-                    isUserInitiated: true,
-                    allowSyntheticDrag: false
+                    options: ItemMoveOptions(skipInputPause: true, allowSectionBoundaryTarget: destination.targetItem.isControlItem, allowParkedOffMenuBarSource: recoveringStrandedVisibleControl, anchorFallbacks: anchorFallbacks, isUserInitiated: true, allowSyntheticDrag: false)
                 )
                 await appState.itemManager.cacheItemsRegardless(skipRecentMoveCheck: true)
             } catch {

@@ -13,6 +13,13 @@ import Cocoa
 /// about without a live panel: every value a path depends on is a parameter,
 /// and nothing here touches the view's state.
 enum MenuBarShapePathBuilder {
+    /// The configured margins, in points, at the bar's ends and either side of the notch.
+    struct Margins {
+        var left: Double
+        var right: Double
+        var notch: Double
+    }
+
     /// Pulls rect in so that an inset shape clears the edges of a notched
     /// menu bar.
     ///
@@ -144,9 +151,7 @@ enum MenuBarShapePathBuilder {
         info: MenuBarNotchShapeInfo,
         isInset: Bool,
         screen: NSScreen,
-        leftMargin: Double,
-        rightMargin: Double,
-        notchMargin: Double,
+        margins: Margins,
         insetAmount: CGFloat?
     ) -> NSBezierPath {
         guard let insetAmount else {
@@ -163,8 +168,8 @@ enum MenuBarShapePathBuilder {
                 info: info.outerEndCaps,
                 isInset: isInset,
                 screen: screen,
-                leftMargin: leftMargin,
-                rightMargin: rightMargin,
+                leftMargin: margins.left,
+                rightMargin: margins.right,
                 insetAmount: insetAmount
             )
         }
@@ -180,15 +185,15 @@ enum MenuBarShapePathBuilder {
         let screenOrigin = screen.frame.minX
 
         let leadingBounds: CGRect = {
-            let notchLeftX = topLeft.maxX - screenOrigin - notchMargin
-            let adjustedMinX = rect.minX + leftMargin
+            let notchLeftX = topLeft.maxX - screenOrigin - margins.notch
+            let adjustedMinX = rect.minX + margins.left
             let width = max(0, notchLeftX - adjustedMinX)
             return CGRect(x: adjustedMinX, y: rect.minY, width: width, height: rect.height)
         }()
 
         let trailingBounds: CGRect = {
-            let notchRightX = topRight.minX - screenOrigin + notchMargin
-            let maxX = rect.maxX - rightMargin
+            let notchRightX = topRight.minX - screenOrigin + margins.notch
+            let maxX = rect.maxX - margins.right
             let width = max(0, maxX - notchRightX)
             return CGRect(x: notchRightX, y: rect.minY, width: width, height: rect.height)
         }()
@@ -201,8 +206,8 @@ enum MenuBarShapePathBuilder {
                 info: info.outerEndCaps,
                 isInset: isInset,
                 screen: screen,
-                leftMargin: leftMargin,
-                rightMargin: rightMargin,
+                leftMargin: margins.left,
+                rightMargin: margins.right,
                 insetAmount: insetAmount
             )
         }

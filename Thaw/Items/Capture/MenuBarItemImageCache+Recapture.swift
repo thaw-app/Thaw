@@ -688,9 +688,7 @@ extension MenuBarItemImageCache {
         await captureRevealBatches(
             items.chunks(ofCount: batchSize),
             controller: controller,
-            displayID: displayID,
-            admittedDisplayID: admittedDisplayID,
-            scale: scale,
+            target: RevealCaptureTarget(displayID: displayID, admittedDisplayID: admittedDisplayID, scale: scale),
             missPolicy: missPolicy,
             appState: appState,
             sources: RevealCaptureSources(
@@ -715,9 +713,7 @@ extension MenuBarItemImageCache {
     func captureRevealBatches(
         _ batches: [[MenuBarItem]],
         controller: any MenuBarSectionControlling,
-        displayID: CGDirectDisplayID,
-        admittedDisplayID: CGDirectDisplayID?,
-        scale: CGFloat,
+        target: RevealCaptureTarget,
         missPolicy: RevealMissPolicy,
         appState: AppState,
         sources: RevealCaptureSources
@@ -757,7 +753,7 @@ extension MenuBarItemImageCache {
             // reject every batch. From here on a change is a real move.
             let admission = CapturePublicationPolicy.admit(
                 layout: appState.itemManager.layoutPublication,
-                displayID: admittedDisplayID
+                displayID: target.admittedDisplayID
             )
             // A move already running, or a display that switched while the
             // reveal settled: do not screenshot a bar this batch cannot publish.
@@ -779,8 +775,8 @@ extension MenuBarItemImageCache {
             // and can crop one display's bounds against another's screenshot.
             let captureResult = await axBoundsCapture(
                 revealed.map { (item: $0.live, bounds: $0.live.bounds) },
-                scale: scale,
-                displayID: displayID,
+                scale: target.scale,
+                displayID: target.displayID,
                 validateFreshBounds: true,
                 // This path just revealed the items itself and waited for
                 // their live AX elements, so none of them is concealed here.

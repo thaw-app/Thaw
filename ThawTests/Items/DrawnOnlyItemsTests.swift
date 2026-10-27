@@ -100,11 +100,7 @@ struct DrawnOnlyItemsTests {
         let synthesized = try #require(DrawnOnlyItems.rawItem(ownerPID: silentPID, app: app, frame: silentFrame))
         let untitled = try #require(MenuBarItemAXProvider.rawItem(
             namespace: .string("com.example.silent"),
-            identifier: nil,
-            childIdentifier: nil,
-            accessibilityDescription: nil,
-            childDescription: nil,
-            axTitle: nil,
+            labels: AXItemLabels(),
             fallbackIndex: 0,
             bounds: silentFrame,
             ownerPID: silentPID
@@ -401,11 +397,7 @@ struct DrawnOnlyItemsTests {
         let item = try resolvedItem(savedPass(order))
         let titled = try #require(MenuBarItemAXProvider.rawItem(
             namespace: .string("com.example.silent"),
-            identifier: savedTitle,
-            childIdentifier: nil,
-            accessibilityDescription: nil,
-            childDescription: nil,
-            axTitle: nil,
+            labels: AXItemLabels(identifier: savedTitle),
             fallbackIndex: 0,
             bounds: CGRect(x: 1200, y: 4, width: 30, height: 22),
             ownerPID: silentPID

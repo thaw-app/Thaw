@@ -889,8 +889,7 @@ extension MenuBarItemManager {
             let fulfilled = try await move(
                 item: plannedMove.item,
                 to: plannedMove.destination,
-                skipInputPause: true,
-                allowParkedOffMenuBarSource: true
+                options: ItemMoveOptions(skipInputPause: true, allowParkedOffMenuBarSource: true)
             )
             guard fulfilled else {
                 // MenuBarAgent can store a position without resorting; the control has no synthetic-drag fallback.
@@ -904,8 +903,7 @@ extension MenuBarItemManager {
                     let retried = try await move(
                         item: plannedMove.item,
                         to: plannedMove.destination,
-                        skipInputPause: true,
-                        allowParkedOffMenuBarSource: true
+                        options: ItemMoveOptions(skipInputPause: true, allowParkedOffMenuBarSource: true)
                     )
                     guard retried else {
                         recordVisibleControlHostState(reason: "restore-unfulfilled")

@@ -501,9 +501,7 @@ extension MenuBarItemManager {
         try await move(
             item: item,
             to: .leftOfItem(anchor),
-            skipInputPause: true,
-            allowParkedOffMenuBarSource: true,
-            anchorFallbacks: anchorFallbacks
+            options: ItemMoveOptions(skipInputPause: true, allowParkedOffMenuBarSource: true, anchorFallbacks: anchorFallbacks)
         )
     }
 }

@@ -147,8 +147,7 @@ struct TrailingPillSystemStandInTests {
             screenFrame: screenFrame,
             leadingOutset: 6,
             trailingOutset: 6,
-            notchFrame: nil,
-            notchMargin: 0
+            notch: .none
         )
 
         #expect(pill != .zero)

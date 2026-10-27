@@ -316,15 +316,7 @@ extension MenuBarItemImageCache {
         from candidates: [(item: MenuBarItem, bounds: CGRect)],
         capture: ScreenCapture.MenuBarHostingCapture,
         source: CaptureSource,
-        knockOutBackground: Bool,
-        validateFreshBounds: Bool,
-        absenceMeansMoved: Bool,
-        postCaptureBoundsByID: [String: CGRect],
-        captureTimeBoundsByID: [String: CGRect],
-        overflowBounds: [CGRect],
-        concealedIdentifiers: Set<String>,
-        ambiguousIdentifiers: Set<String>,
-        forgivenTags: Set<MenuBarItemTag>,
+        rules: AXCropRules,
         cropRectOwners: inout [CGRect: MenuBarItemTag],
         into result: inout CapturePass
     ) {
@@ -334,12 +326,12 @@ extension MenuBarItemImageCache {
         let scale = capture.scale
 
         for (item, bounds) in candidates {
-            if !forgivenTags.contains(item.tag), shouldSkipCapture(for: item) {
+            if !rules.forgivenTags.contains(item.tag), shouldSkipCapture(for: item) {
                 result.unreadable.append(item)
                 continue
             }
 
-            if ambiguousIdentifiers.contains(item.uniqueIdentifier) {
+            if rules.ambiguousIdentifiers.contains(item.uniqueIdentifier) {
                 MenuBarItemImageCache.diagLog.debug(
                     "CaptureOwnershipTrace: rejecting ambiguous owner for \(item.logString) at \(bounds); invalidating prior glyph"
                 )
@@ -352,7 +344,7 @@ extension MenuBarItemImageCache {
             // A concealed item is removed from MenuBarAgent, so its stale bounds
             // crop whatever now sits there. The concealment set is the test,
             // because the AX provider reports isOnScreen: true for every item.
-            if ItemConcealment.isConcealed(item.uniqueIdentifier, in: concealedIdentifiers) {
+            if ItemConcealment.isConcealed(item.uniqueIdentifier, in: rules.concealedIdentifiers) {
                 // Applies to hiding-unsupported items too: the assertion claims them.
                 MenuBarItemImageCache.diagLog.debug(
                     "axBoundsCapture: \(item.logString) is concealed; keeping its prior image " +
@@ -364,7 +356,7 @@ extension MenuBarItemImageCache {
                 continue
             }
 
-            if Self.isContaminatedByNativeOverflow(bounds, overflowBounds: overflowBounds) {
+            if Self.isContaminatedByNativeOverflow(bounds, overflowBounds: rules.overflowBounds) {
                 MenuBarItemImageCache.diagLog.debug(
                     "axBoundsCapture: overflow geometry changed while capturing \(item.logString); " +
                         "clearing prior image for app-icon fallback"
@@ -380,7 +372,7 @@ extension MenuBarItemImageCache {
             if let covered = Self.coveredIdentifier(
                 bounds,
                 ownIdentifier: item.uniqueIdentifier,
-                liveBounds: captureTimeBoundsByID
+                liveBounds: rules.captureTimeBoundsByID
             ) {
                 MenuBarItemImageCache.diagLog.debug(
                     "axBoundsCapture: \(item.logString) bounds \(bounds) cover \(covered); " +
@@ -392,10 +384,10 @@ extension MenuBarItemImageCache {
                 continue
             }
 
-            if validateFreshBounds {
+            if rules.validateFreshBounds {
                 // Only a re-read rect that disagrees costs the capture. Absence
                 // is not movement: some apps vend their AX element intermittently.
-                if let postCaptureBounds = postCaptureBoundsByID[item.uniqueIdentifier] {
+                if let postCaptureBounds = rules.postCaptureBoundsByID[item.uniqueIdentifier] {
                     guard Self.hasStableCaptureBounds(before: bounds, after: postCaptureBounds) else {
                         MenuBarItemImageCache.diagLog.debug(
                             // A delta shared by every item means stale bounds or a
@@ -405,7 +397,7 @@ extension MenuBarItemImageCache {
                         result.unreadable.append(item)
                         continue
                     }
-                } else if absenceMeansMoved {
+                } else if rules.absenceMeansMoved {
                     // The map came from the identity catalog, so no entry means
                     // the item is not where the crop was cut.
                     MenuBarItemImageCache.diagLog.debug(
@@ -517,7 +509,7 @@ extension MenuBarItemImageCache {
                     continue
                 }
                 croppedImage = cleaned
-            } else if knockOutBackground {
+            } else if rules.knockOutBackground {
                 guard let cleaned = rawCroppedImage.knockingOutNearUniformBackground() else {
                     MenuBarItemImageCache.diagLog.debug(
                         "axBoundsCapture: could not separate \(item.logString) from the menu bar " +
@@ -666,9 +658,7 @@ extension MenuBarItemImageCache {
             scale: scale,
             displayID: displayID,
             screenFrame: screenFrame,
-            freshBounds: freshBounds,
-            concealedIdentifiers: concealedIdentifiers,
-            forgivenTags: forgivenTags,
+            options: CaptureOptions(freshBounds: freshBounds, concealedIdentifiers: concealedIdentifiers, forgivenTags: forgivenTags),
             using: LiveMenuBarCaptureReader(geometryOwners: geometryOwners)
         )
     }
@@ -679,14 +669,12 @@ extension MenuBarItemImageCache {
         scale: CGFloat,
         displayID: CGDirectDisplayID,
         screenFrame: CGRect?,
-        freshBounds: Bool,
-        concealedIdentifiers: Set<String>,
-        forgivenTags: Set<MenuBarItemTag> = [],
+        options: CaptureOptions,
         using reader: any MenuBarCaptureReading = LiveMenuBarCaptureReader()
     ) async -> CapturePass {
         guard !screenIsLocked(), !Task.isCancelled else { return CapturePass() }
         let liveBoundsByID: [String: CGRect]
-        if freshBounds {
+        if options.freshBounds {
             let liveItems = await reader.menuBarItems(displayID: displayID)
             guard !screenIsLocked(), !Task.isCancelled else { return CapturePass() }
             liveBoundsByID = Dictionary(
@@ -699,7 +687,7 @@ extension MenuBarItemImageCache {
 
         let axItems = Self.captureBounds(
             for: items,
-            freshBounds: freshBounds,
+            freshBounds: options.freshBounds,
             liveBoundsByID: liveBoundsByID,
             screenFrame: screenFrame
         )
@@ -715,9 +703,9 @@ extension MenuBarItemImageCache {
             axItems,
             scale: scale,
             displayID: displayID,
-            validateFreshBounds: freshBounds,
-            concealedIdentifiers: concealedIdentifiers,
-            forgivenTags: forgivenTags,
+            validateFreshBounds: options.freshBounds,
+            concealedIdentifiers: options.concealedIdentifiers,
+            forgivenTags: options.forgivenTags,
             using: reader
         )
     }

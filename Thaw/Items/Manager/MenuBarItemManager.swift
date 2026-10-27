@@ -316,7 +316,7 @@ final class MenuBarItemManager {
 
     /// Count of user-initiated reorders currently queued on (or holding)
     /// moveSerialSemaphore. The automatic per-pair reconcile loop in
-    /// applySectionItemOrder(sections:controller:whileRevealing:repairAfterRestriction:visibleOrderOverride:reason:preferredMoveUIDs:)
+    /// applySectionItemOrder(sections:controller:whileRevealing:visibleOrderOverride:reason:preferredMoveUIDs:permit:)
     /// polls this between pairs and stops issuing further background moves while
     /// it is non-zero, so a user's layout-pane drop is not stuck behind a
     /// multi-second background drag on the serial gate. The in-flight drag is

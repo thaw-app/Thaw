@@ -243,15 +243,12 @@ nonisolated enum AXGeometryCatalog {
                 )
                 walk(
                     child,
-                    ownerPID: pid,
-                    itemIndex: itemIndex,
-                    identityTitle: identity,
+                    scope: AXGeometryWalkScope(ownerPID: pid, itemIndex: itemIndex, identityTitle: identity, deadline: deadline),
                     attributes: attributes,
                     childAttributes: innerAttributes,
                     depth: 1,
                     visited: &visited,
-                    into: &results,
-                    deadline: deadline
+                    into: &results
                 )
             }
         }
@@ -266,18 +263,15 @@ nonisolated enum AXGeometryCatalog {
     /// and its children.
     private static nonisolated func walk(
         _ element: AXElement,
-        ownerPID: pid_t,
-        itemIndex: Int,
-        identityTitle: String?,
+        scope: AXGeometryWalkScope,
         attributes: AXHelpers.MenuBarChildAttributes? = nil,
         childAttributes: [AXHelpers.MenuBarChildAttributes]? = nil,
         depth: Int,
         visited: inout Int,
-        into results: inout [Entry],
-        deadline: ContinuousClock.Instant
+        into results: inout [Entry]
     ) {
         guard depth <= maxWalkDepth, visited < maxElementsVisited else { return }
-        guard canContinue(until: deadline) else { return }
+        guard canContinue(until: scope.deadline) else { return }
         visited += 1
 
         element.setMessagingTimeout(messagingTimeout)
@@ -290,27 +284,24 @@ nonisolated enum AXGeometryCatalog {
         let ceiling = MenuBarItemAXProvider.maxItemHeight(menuBarHeight: NSScreen.tallestCachedMenuBarHeight)
         let frame = attributes.frame.map { AXPrimitives.itemFrame($0, maximumHeight: ceiling) ?? $0 } ?? .zero
         results.append(Entry(
-            ownerPID: ownerPID,
-            itemIndex: itemIndex,
-            identityTitle: identityTitle,
+            ownerPID: scope.ownerPID,
+            itemIndex: scope.itemIndex,
+            identityTitle: scope.identityTitle,
             frame: frame
         ))
 
-        guard depth < maxWalkDepth, canContinue(until: deadline) else { return }
+        guard depth < maxWalkDepth, canContinue(until: scope.deadline) else { return }
         let children = attributes.children
         for (index, child) in children.enumerated() {
             guard visited < maxElementsVisited else { return }
-            guard canContinue(until: deadline) else { return }
+            guard canContinue(until: scope.deadline) else { return }
             walk(
                 child,
-                ownerPID: ownerPID,
-                itemIndex: itemIndex,
-                identityTitle: identityTitle,
+                scope: scope,
                 attributes: childAttributes.flatMap { index < $0.count ? $0[index] : nil },
                 depth: depth + 1,
                 visited: &visited,
-                into: &results,
-                deadline: deadline
+                into: &results
             )
         }
     }
@@ -373,4 +364,12 @@ private actor GeometryWalkExecutor {
     func snapshot(hostProcessIdentifiers: [pid_t], deadline: ContinuousClock.Instant) -> [AXGeometryCatalog.Entry] {
         AXGeometryCatalog.performSnapshot(hostProcessIdentifiers: hostProcessIdentifiers, deadline: deadline)
     }
+}
+
+/// The item one geometry walk belongs to, and when it must stop, the same at every depth.
+private nonisolated struct AXGeometryWalkScope {
+    let ownerPID: pid_t
+    let itemIndex: Int
+    let identityTitle: String?
+    let deadline: ContinuousClock.Instant
 }

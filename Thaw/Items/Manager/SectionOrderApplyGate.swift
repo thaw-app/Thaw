@@ -28,36 +28,6 @@ nonisolated enum SectionOrderApplyGate {
         /// Consulted only for cursor-free automatic visible passes, excluding authored edits and repairs.
         let isConvergenceBudgetExhausted: () -> Bool
         let prefersPositionWrites: Bool
-
-        init(
-            isCancelled: Bool,
-            controllerRevealedSection: MenuBarSection.Name?,
-            revealedSection: MenuBarSection.Name?,
-            circuitBreakerOpen: Bool,
-            reason: LayoutChangeReason,
-            arrangementIsManual: Bool,
-            isExplicitLayoutEdit: Bool,
-            nativeMenuBarDeferred: Bool,
-            isWithinSettleWindow: Bool,
-            repairAfterRestriction: Bool,
-            applicationMenuWrapsPastNotch: @escaping () -> String?,
-            isConvergenceBudgetExhausted: @escaping () -> Bool,
-            prefersPositionWrites: Bool
-        ) {
-            self.isCancelled = isCancelled
-            self.controllerRevealedSection = controllerRevealedSection
-            self.revealedSection = revealedSection
-            self.circuitBreakerOpen = circuitBreakerOpen
-            self.reason = reason
-            self.arrangementIsManual = arrangementIsManual
-            self.isExplicitLayoutEdit = isExplicitLayoutEdit
-            self.nativeMenuBarDeferred = nativeMenuBarDeferred
-            self.isWithinSettleWindow = isWithinSettleWindow
-            self.repairAfterRestriction = repairAfterRestriction
-            self.applicationMenuWrapsPastNotch = applicationMenuWrapsPastNotch
-            self.isConvergenceBudgetExhausted = isConvergenceBudgetExhausted
-            self.prefersPositionWrites = prefersPositionWrites
-        }
     }
 
     /// Refusals in evaluation order.

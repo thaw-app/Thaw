@@ -49,8 +49,8 @@ struct MenuBarItemCaptureFallbackTests {
             let result = await cache.captureImages(
                 of: [stale], scale: 2, displayID: 42,
                 screenFrame: CGRect(x: 0, y: 0, width: 1470, height: 956),
-                freshBounds: MenuBarItemImageCache.shouldUseFreshBounds(for: sections[0], revealedSection: nil),
-                concealedIdentifiers: [], using: reader
+                options: .init(freshBounds: MenuBarItemImageCache.shouldUseFreshBounds(for: sections[0], revealedSection: nil)),
+                using: reader
             )
 
             let glyph = try #require(result.captured[stale.tag])
@@ -71,8 +71,8 @@ struct MenuBarItemCaptureFallbackTests {
         let cache = MenuBarItemImageCache(screenIsLocked: { false })
         let result = await cache.captureImages(
             of: [item], scale: 2, displayID: 42, screenFrame: nil,
-            freshBounds: MenuBarItemImageCache.shouldUseFreshBounds(for: .visible, revealedSection: nil),
-            concealedIdentifiers: [], using: reader
+            options: .init(freshBounds: MenuBarItemImageCache.shouldUseFreshBounds(for: .visible, revealedSection: nil)),
+            using: reader
         )
 
         #expect(result.captured.isEmpty)
@@ -95,8 +95,8 @@ struct MenuBarItemCaptureFallbackTests {
         let cache = MenuBarItemImageCache(screenIsLocked: { false })
         let result = await cache.captureImages(
             of: [stale], scale: 2, displayID: 42, screenFrame: nil,
-            freshBounds: MenuBarItemImageCache.shouldUseFreshBounds(for: .visible, revealedSection: nil),
-            concealedIdentifiers: [], using: reader
+            options: .init(freshBounds: MenuBarItemImageCache.shouldUseFreshBounds(for: .visible, revealedSection: nil)),
+            using: reader
         )
 
         #expect(result.captured.isEmpty)

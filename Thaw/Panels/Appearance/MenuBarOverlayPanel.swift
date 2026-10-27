@@ -72,14 +72,10 @@ final class MenuBarLiquidGlassContainerView: NSView {
 
     func update(
         path: CGPath,
-        isColored: Bool,
-        tintColor: CGColor,
-        tintOpacity: Double,
+        tint: Tint,
         effectOpacity: Double,
         usesDarkFade: Bool,
-        borderColor: CGColor?,
-        borderWidth: Double,
-        borderStyle: MenuBarBorderStyle = .solid,
+        border: Border,
         cornerRadius: CGFloat? = nil
     ) {
         let componentBounds = MenuBarLiquidGlassGeometry.componentBounds(of: path)
@@ -101,8 +97,8 @@ final class MenuBarLiquidGlassContainerView: NSView {
                 for: componentBounds, pathCornerRadius: cornerRadius
             )
             glassView.alphaValue = effectOpacity
-            glassView.tintColor = isColored
-                ? NSColor(cgColor: tintColor)?.withAlphaComponent(tintOpacity)
+            glassView.tintColor = tint.isColored
+                ? NSColor(cgColor: tint.color)?.withAlphaComponent(tint.opacity)
                 : nil
             glassView.isHidden = false
         }
@@ -113,10 +109,10 @@ final class MenuBarLiquidGlassContainerView: NSView {
         maskLayer.path = path
         borderLayer.frame = bounds
         borderLayer.path = path
-        borderLayer.strokeColor = borderColor
-        borderLayer.lineWidth = borderWidth * 2
-        borderLayer.lineDashPattern = borderStyle.dashPattern(width: borderWidth)?.map { NSNumber(value: Double($0)) }
-        borderLayer.isHidden = borderColor == nil
+        borderLayer.strokeColor = border.color
+        borderLayer.lineWidth = border.width * 2
+        borderLayer.lineDashPattern = border.style.dashPattern(width: border.width)?.map { NSNumber(value: Double($0)) }
+        borderLayer.isHidden = border.color == nil
     }
 
     override func hitTest(_: NSPoint) -> NSView? {
@@ -962,8 +958,7 @@ private final class MenuBarOverlayPanelContentView: NSView {
             screenFrame: screenFrame,
             trailingPadding: trailingPadding,
             leadingMargin: fullConfiguration.leftMargin,
-            notchFrame: screen.frameOfNotch,
-            notchMargin: fullConfiguration.notchMargin
+            notch: .init(frame: screen.frameOfNotch, margin: fullConfiguration.notchMargin)
         )
     }
 
@@ -1010,8 +1005,7 @@ private final class MenuBarOverlayPanelContentView: NSView {
             screenFrame: screenFrame,
             leadingOutset: leadingOutset,
             trailingOutset: trailingOutset,
-            notchFrame: screen.frameOfNotch,
-            notchMargin: fullConfiguration.notchMargin
+            notch: .init(frame: screen.frameOfNotch, margin: fullConfiguration.notchMargin)
         )
     }
 
@@ -1233,13 +1227,10 @@ private final class MenuBarOverlayPanelContentView: NSView {
             )
             backgroundLiquidGlassView.update(
                 path: CGPath(rect: glassBounds, transform: nil),
-                isColored: configuration.backgroundGlassIsColored,
-                tintColor: configuration.backgroundColor,
-                tintOpacity: configuration.backgroundOpacity,
+                tint: .init(isColored: configuration.backgroundGlassIsColored, color: configuration.backgroundColor, opacity: configuration.backgroundOpacity),
                 effectOpacity: style.effectOpacity,
                 usesDarkFade: style.usesDarkFade,
-                borderColor: nil,
-                borderWidth: 0
+                border: .none
             )
             backgroundLiquidGlassView.isHidden = false
         } else {
@@ -1322,14 +1313,10 @@ private final class MenuBarOverlayPanelContentView: NSView {
 
             tintLiquidGlassView.update(
                 path: shapeCGPath,
-                isColored: configuration.tintGlassIsColored,
-                tintColor: configuration.tintColor,
-                tintOpacity: configuration.tintOpacity,
+                tint: .init(isColored: configuration.tintGlassIsColored, color: configuration.tintColor, opacity: configuration.tintOpacity),
                 effectOpacity: style.effectOpacity,
                 usesDarkFade: style.usesDarkFade,
-                borderColor: configuration.hasBorder ? configuration.borderColor : nil,
-                borderWidth: configuration.borderWidth,
-                borderStyle: configuration.borderStyle
+                border: .init(color: configuration.hasBorder ? configuration.borderColor : nil, width: configuration.borderWidth, style: configuration.borderStyle)
             )
             tintGlassView.isHidden = true
             tintGlassBorderLayer.isHidden = true
@@ -1472,9 +1459,7 @@ private final class MenuBarOverlayPanelContentView: NSView {
                     info: fullConfiguration.notchShapeInfo,
                     isInset: fullConfiguration.isInset,
                     screen: overlayPanel.owningScreen,
-                    leftMargin: fullConfiguration.leftMargin,
-                    rightMargin: fullConfiguration.rightMargin,
-                    notchMargin: fullConfiguration.notchMargin,
+                    margins: .init(left: fullConfiguration.leftMargin, right: fullConfiguration.rightMargin, notch: fullConfiguration.notchMargin),
                     insetAmount: overlayPanel.appState?.appearanceManager.menuBarInsetAmount
                 )
             }

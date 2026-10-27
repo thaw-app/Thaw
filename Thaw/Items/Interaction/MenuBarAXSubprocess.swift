@@ -144,7 +144,7 @@ nonisolated struct UntrustedHelperPolicy {
 extension MenuBarItemAXProvider {
     /// Builds [MenuBarItem] from a subprocess observation list.
     ///
-    /// Mirrors the in-process per-app loop through MenuBarItemAXProvider.rawItem(namespace:identifier:childIdentifier:accessibilityDescription:childDescription:axTitle:fallbackIndex:bounds:ownerPID:):
+    /// Mirrors the in-process per-app loop through MenuBarItemAXProvider.rawItem(namespace:labels:fallbackIndex:bounds:ownerPID:):
     /// per-app fallback titles, the stable AX identifier rule including the
     /// nested-child fallback, identity derivation, and the overflow-control
     /// skip. The helper already dropped oversized children. adding returns the items to add besides
@@ -165,11 +165,13 @@ extension MenuBarItemAXProvider {
             let fallbackIndex = fallbackIndexByBundle[bundleKey, default: 0]
             let derived = rawItem(
                 namespace: namespace,
-                identifier: nilIfBlank(observation.identifier),
-                childIdentifier: nilIfBlank(observation.childIdentifier),
-                accessibilityDescription: nilIfBlank(observation.accessibilityDescription),
-                childDescription: nilIfBlank(observation.childDescription),
-                axTitle: nilIfBlank(observation.title),
+                labels: AXItemLabels(
+                    identifier: nilIfBlank(observation.identifier),
+                    childIdentifier: nilIfBlank(observation.childIdentifier),
+                    accessibilityDescription: nilIfBlank(observation.accessibilityDescription),
+                    childDescription: nilIfBlank(observation.childDescription),
+                    axTitle: nilIfBlank(observation.title)
+                ),
                 fallbackIndex: fallbackIndex,
                 bounds: observation.frame,
                 ownerPID: observation.ownerPID
