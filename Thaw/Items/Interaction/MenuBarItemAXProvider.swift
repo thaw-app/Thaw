@@ -265,7 +265,7 @@ nonisolated enum MenuBarItemAXProvider {
             let elapsed = ContinuousClock.now - walkStart
             diagLog.info(
                 """
-                menuBarItems: \(scope == .discovery ? "discovery" : scope == .settledOwners ? "settled" : "targeted") walk \
+                menuBarItems: \(scope.walkLabel) walk \
                 \(truncated ? "TRUNCATED" : "completed") in \(elapsed), \
                 probed \(appsProbed)/\(pass.owners.count) selected / \(runningApps.count) running app(s), \
                 \(appsWithExtrasBar) had an extras menu bar, budget \(globalBudget)
