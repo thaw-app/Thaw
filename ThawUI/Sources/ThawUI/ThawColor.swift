@@ -35,6 +35,14 @@ nonisolated extension ThawColor: Codable {
                 debugDescription: "Invalid ICC profile data"
             )
         }
+        // CGColor reads one value per channel plus alpha, so a short array would be read past its end.
+        guard components.count == colorSpace.numberOfComponents + 1 else {
+            throw DecodingError.dataCorruptedError(
+                forKey: .components,
+                in: container,
+                debugDescription: "Expected \(colorSpace.numberOfComponents + 1) components, found \(components.count)"
+            )
+        }
         guard let cgColor = CGColor(colorSpace: colorSpace, components: &components) else {
             throw DecodingError.dataCorrupted(
                 DecodingError.Context(
