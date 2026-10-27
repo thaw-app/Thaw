@@ -88,7 +88,7 @@ final class MenuBarSection {
             notchFrame: screen.frameOfNotch,
             allowHidingApplicationMenus: Self.allowsHidingApplicationMenus(
                 hideApplicationMenus: appState.settings.advanced.hideApplicationMenus,
-                hideDockIconWhenToggling: appState.settings.general.hideDockIconWhenToggling
+                hideDockIconWhenToggling: false
             )
         )
     }

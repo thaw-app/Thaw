@@ -39,9 +39,6 @@ struct AdvancedSettingsPane: View {
                 hideApplicationMenus
                 autoZenWhileSharingScreen
                 enableSecondaryContextMenu
-                if settings.enableSecondaryContextMenu {
-                    enableSecondaryContextMenuQuit
-                }
             }
             IceSection("Permissions") {
                 allPermissions
@@ -359,23 +356,8 @@ struct AdvancedSettingsPane: View {
             Text(
                 """
                 Right-click in an empty area of the menu bar to display a minimal \
-                version of \(Constants.displayName)'s menu. Disable this setting if you encounter conflicts \
-                with other apps.
-                """
-            )
-            .padding(.trailing, 75)
-        }
-    }
-
-    private var enableSecondaryContextMenuQuit: some View {
-        Toggle(
-            "Enable secondary context menu quit",
-            isOn: $settings.enableSecondaryContextMenuQuit
-        )
-        .annotation {
-            Text(
-                """
-                Add a Quit \(Constants.displayName) item to the bottom of the secondary context menu.
+                version of \(Constants.displayName)'s menu, with Quit at the bottom. Disable this setting \
+                if you encounter conflicts with other apps.
                 """
             )
             .padding(.trailing, 75)

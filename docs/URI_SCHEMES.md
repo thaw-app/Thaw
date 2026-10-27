@@ -95,21 +95,17 @@ Read and write Thaw settings via `thaw://` URLs, gated by a security whitelist. 
 | ----------------------------------------- | ---- | -------------------------------------------- |
 | `autoRehide`                              | Bool | Auto-rehide hidden items after interval      |
 | `showOnClick`                             | Bool | Show hidden items when clicking the menu bar |
-| `showOnDoubleClick`                       | Bool | Show hidden items on double-click            |
+| `showOnDoubleClick`                       | Bool | Double-click shows always-hidden items       |
 | `showOnHover`                             | Bool | Show hidden items on hover                   |
 | `showOnScroll`                            | Bool | Show hidden items on scroll                  |
 | `useIceBarOnlyOnNotchedDisplay`           | Bool | Thaw Bar only on Macs with notch             |
 | `hideApplicationMenus`                    | Bool | Hide application menu titles                 |
 | `enableAlwaysHiddenSection`               | Bool | Enable the always-hidden section             |
-| `useOptionClickToShowAlwaysHiddenSection` | Bool | Option-click shows always-hidden items       |
-| `useDoubleClickToShowAlwaysHiddenSection` | Bool | Double-click Thaw icon shows always-hidden   |
 | `enableSecondaryContextMenu`              | Bool | Right-click shows alternate menu             |
-| `showAllSectionsOnUserDrag`               | Bool | Reveal all sections during drag              |
 | `showMenuBarTooltips`                     | Bool | Show hover tooltips on menu bar items        |
 | `enableDiagnosticLogging`                 | Bool | Enable debug logging                         |
 | `customIceIconIsTemplate`                 | Bool | Custom icon renders as template              |
 | `showIceIcon`                             | Bool | Show the Thaw icon in menu bar               |
-| `hideDockIconWhenToggling`                | Bool | Hide Dock icon on menu-bar toggle; overflow uses Thaw Bar |
 | `iceBarLocationOnHotkey`                  | Bool | Thaw Bar appears at mouse location on hotkey     |
 | `enableMenuBarItemOverflow`                | Bool | Eject items that would fall behind the notch |
 | `useThawBarOnNotchOverflow`                | Bool | Send ejected overflow items to the Thaw Bar  |

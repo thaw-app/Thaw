@@ -31,9 +31,6 @@ struct GeneralSettingsPane: View {
             IceSection("Empty menu bar area") {
                 emptyAreaOptions
             }
-            IceSection("While rearranging") {
-                showAllSectionsOnUserDrag
-            }
             IceSection("After revealing") {
                 rehideOptions
             }
@@ -54,8 +51,6 @@ struct GeneralSettingsPane: View {
             .annotation("Shows only the essential settings. All features keep working and keep their configuration.")
         Toggle("Show setting descriptions", isOn: $settings.showSettingDescriptions)
             .annotation("Explains what a setting does directly beneath it, like this text.")
-        Toggle("Hide Dock icon when toggling the menu bar", isOn: $settings.hideDockIconWhenToggling)
-            .annotation("Keep the app's icon out of the Dock when showing or hiding hidden menu bar items. If they need extra space, they open in the Thaw Bar instead of hiding the app menus. Settings windows still appear normally.")
         Toggle("Show Dock icon while Settings is open", isOn: $settings.showDockIconWithSettings)
             .annotation("Turn this off to keep Thaw out of the Dock and its recent apps when you open Settings and other windows. They still open in front and take keyboard focus. Hiding the app menus can still show the Dock icon.")
     }
@@ -71,16 +66,8 @@ struct GeneralSettingsPane: View {
     @ViewBuilder
     private var alwaysHiddenIconGestures: some View {
         if advancedSettings.enableAlwaysHiddenSection {
-            Toggle(
-                "Use Option-click to open always-hidden section",
-                isOn: $advancedSettings.useOptionClickToShowAlwaysHiddenSection
-            )
-            if settings.showIceIcon {
-                Toggle(
-                    "Double-click \(Constants.displayName) icon to open always-hidden section",
-                    isOn: $advancedSettings.useDoubleClickToShowAlwaysHiddenSection
-                )
-            }
+            Toggle("Double-click to open always-hidden section", isOn: $settings.showOnDoubleClick)
+                .annotation("Double-click the \(Constants.displayName) icon, or an empty area of the menu bar while Show on click is on. Option-click always opens it.")
         } else {
             Text("Enable the always-hidden section in Layout to configure icon gestures for that section.")
                 .foregroundStyle(.secondary)
@@ -93,15 +80,8 @@ struct GeneralSettingsPane: View {
 
     @ViewBuilder
     private var emptyAreaOptions: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            Toggle("Show on click", isOn: $settings.showOnClick)
-                .annotation("Click an empty area of the menu bar to show hidden menu bar items.")
-
-            if settings.showOnClick, advancedSettings.enableAlwaysHiddenSection {
-                Toggle("Double-click for always-hidden", isOn: $settings.showOnDoubleClick)
-                    .annotation("Double-click an empty area of the menu bar to show always-hidden menu bar items.")
-            }
-        }
+        Toggle("Show on click", isOn: $settings.showOnClick)
+            .annotation("Click an empty area of the menu bar to show hidden menu bar items.")
         Toggle("Show on hover", isOn: $settings.showOnHover)
             .annotation("Hover over an empty area of the menu bar to show hidden menu bar items.")
         if settings.showOnHover {
@@ -128,15 +108,6 @@ struct GeneralSettingsPane: View {
                 }
         }
         .annotation("The amount of time to wait before showing on hover.")
-    }
-
-    // MARK: While Rearranging
-
-    private var showAllSectionsOnUserDrag: some View {
-        Toggle(
-            "Show all sections when ⌘ Command + dragging menu bar items",
-            isOn: $advancedSettings.showAllSectionsOnUserDrag
-        )
     }
 
     // MARK: After Revealing

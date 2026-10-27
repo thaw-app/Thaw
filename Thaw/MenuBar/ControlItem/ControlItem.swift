@@ -588,7 +588,6 @@ final class ControlItem {
 
                     // We still want a subtle marker between sections.
                     let showsMarker = appState.isDraggingMenuBarItem
-                        && appState.settings.advanced.showAllSectionsOnUserDrag
                     setIfChanged(button, \.title, showsMarker ? "|" : "")
                 case .chevron:
                     updateStatusItemVisibility(true)
@@ -661,10 +660,8 @@ final class ControlItem {
             updateSpacerItems(forHiddenState: shouldUseSpacers)
         } else {
             updateSpacerItems(forHiddenState: false)
-            let showOnDrag = appState.settings.advanced.showAllSectionsOnUserDrag
-            let isDragging = appState.isDraggingMenuBarItem
-
-            let shouldShow = showOnDrag && isDragging
+            // A ⌘-drag always opens every section, or there'd be nowhere to drop into a hidden one.
+            let shouldShow = appState.isDraggingMenuBarItem
 
             if let constraint {
                 setIfChanged(constraint, \.isActive, false)
@@ -809,7 +806,7 @@ final class ControlItem {
             // responsiveness of the status item's button.
             Task { [appState] in
                 if
-                    appState.settings.advanced.useDoubleClickToShowAlwaysHiddenSection,
+                    appState.settings.general.showOnDoubleClick,
                     event.clickCount > 1,
                     identifier == .visible,
                     let alwaysHidden = menuBarManager.section(withName: .alwaysHidden),
@@ -827,7 +824,6 @@ final class ControlItem {
                 if modifierFlags.contains(.option) {
                     // Option-click: only toggle always-hidden if enabled.
                     if
-                        appState.settings.advanced.useOptionClickToShowAlwaysHiddenSection,
                         let section = menuBarManager.section(withName: .alwaysHidden),
                         section.isEnabled
                     {
