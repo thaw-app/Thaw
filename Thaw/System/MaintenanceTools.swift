@@ -21,21 +21,6 @@ import Subprocess
 /// bundle identifier and the menu bar's saved positions. They are intentionally
 /// narrow: no sudo, and no other apps' preferences.
 nonisolated enum MaintenanceTools {
-    nonisolated enum ToolError: LocalizedError {
-        case commandFailed(String, Int32, String)
-
-        var errorDescription: String? {
-            switch self {
-            case let .commandFailed(command, status, detail):
-                let trimmed = detail.trimmingCharacters(in: .whitespacesAndNewlines)
-                if trimmed.isEmpty {
-                    return String(localized: "\(command) failed with exit status \(status).")
-                }
-                return String(localized: "\(command) failed with exit status \(status): \(trimmed)")
-            }
-        }
-    }
-
     /// Quits the menu bar hosting process and deletes the files holding saved
     /// status-item positions, so every position is rebuilt from scratch.
     ///
@@ -149,9 +134,9 @@ nonisolated enum MaintenanceTools {
     /// user can re-grant them on the next launch.
     @concurrent
     static func resetAppPermissions() async throws {
-        let bundleID = Constants.bundleIdentifier
-        try await run(path: "/usr/bin/tccutil", arguments: ["reset", "Accessibility", bundleID])
-        try await run(path: "/usr/bin/tccutil", arguments: ["reset", "ScreenCapture", bundleID])
+        for arguments in permissionResetArguments(bundleID: Constants.bundleIdentifier) {
+            try await run(path: "/usr/bin/tccutil", arguments: arguments)
+        }
     }
 
     @concurrent

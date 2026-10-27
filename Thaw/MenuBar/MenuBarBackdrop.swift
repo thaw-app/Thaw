@@ -84,13 +84,6 @@ final class MenuBarBackdrop {
         refresh(force: true)
     }
 
-    /// What a strip was composited from. Includes each window's bounds, in
-    /// front-to-back order, so a window that moves or comes to the front invalidates the strip.
-    nonisolated static func stripKey(rect: CGRect, windows: [(id: CGWindowID, bounds: CGRect)]) -> String {
-        let parts = windows.map { "\($0.id)@\($0.bounds)" }
-        return "\(rect)|\(parts.joined(separator: ","))"
-    }
-
     func strip(for displayID: CGDirectDisplayID) -> Strip? {
         strips[displayID]
     }
