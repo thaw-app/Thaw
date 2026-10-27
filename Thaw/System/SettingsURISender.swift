@@ -82,6 +82,21 @@ nonisolated struct SettingsURISender: Equatable, Sendable {
         guard SecCodeCopyStaticCode(code, [], &staticCode) == errSecSuccess, let staticCode else {
             return nil
         }
+        return identity(of: staticCode)
+    }
+
+    /// The identity in the validated signature of the app at url, for an app the user picks by hand.
+    static func identify(appAt url: URL) -> SettingsURISender? {
+        var staticCode: SecStaticCode?
+        guard SecStaticCodeCreateWithPath(url as CFURL, [], &staticCode) == errSecSuccess, let staticCode,
+              SecStaticCodeCheckValidity(staticCode, [], nil) == errSecSuccess
+        else {
+            return nil
+        }
+        return identity(of: staticCode)
+    }
+
+    private static func identity(of staticCode: SecStaticCode) -> SettingsURISender? {
         var info: CFDictionary?
         guard SecCodeCopySigningInformation(staticCode, SecCSFlags(rawValue: kSecCSSigningInformation), &info) == errSecSuccess, let info = info as? [String: Any]
         else {

@@ -282,4 +282,43 @@ struct SettingsURIWhitelistTests {
         #expect(SettingsURIHandler.isValidSettingsKey("showIceIcon"))
         #expect(SettingsURIHandler.canonicalKey("showThawIcon") == "showThawIcon", "Current names pass through")
     }
+
+    // MARK: - Adding an app by hand
+
+    @Test("An app added by hand is pinned to its own signature, so its requests pass", .scratchDefaults)
+    func manualAddIsPinned() {
+        let settings = AutomationSettings()
+        let teamApp = unclaimedBundleID("manual-team")
+        let adhocApp = unclaimedBundleID("manual-adhoc")
+        let url = URL(fileURLWithPath: "/Applications/Example.app")
+
+        #expect(settings.addToWhitelist(appAt: url, bundleID: teamApp) { _ in sender(teamApp, team: "TEAMID1234") })
+        #expect(settings.addToWhitelist(appAt: url, bundleID: adhocApp) { _ in sender(adhocApp, hash: "aaaa") })
+
+        #expect(SettingsURIHandler.isWhitelisted(sender: sender(teamApp, team: "TEAMID1234")))
+        #expect(!SettingsURIHandler.isWhitelisted(sender: sender(teamApp, team: "OTHERTEAM1")))
+        #expect(SettingsURIHandler.isWhitelisted(sender: sender(adhocApp, hash: "aaaa")))
+        #expect(!SettingsURIHandler.isWhitelisted(sender: sender(adhocApp, hash: "bbbb")))
+        #expect(settings.whitelistedApps.map(\.bundleId).sorted() == [adhocApp, teamApp].sorted())
+    }
+
+    @Test("A hand-picked app whose signature can't be read or names another app is not added", .scratchDefaults)
+    func manualAddRefusesUnsignedOrMismatched() {
+        let settings = AutomationSettings()
+        let bundleID = unclaimedBundleID("manual-refused")
+        let url = URL(fileURLWithPath: "/Applications/Example.app")
+
+        #expect(!settings.addToWhitelist(appAt: url, bundleID: bundleID) { _ in nil })
+        #expect(!settings.addToWhitelist(appAt: url, bundleID: bundleID) { _ in sender("com.example.other", team: "TEAMID1234") })
+        #expect(!settings.addToWhitelist(appAt: url, bundleID: bundleID) { _ in sender(bundleID, team: nil, hash: nil) })
+        #expect(SettingsURIHandler.getWhitelist().isEmpty)
+    }
+
+    @Test("An app's identity is read from its own validated signature")
+    func identifyAppOnDisk() {
+        let calculator = SettingsURISender.identify(appAt: URL(fileURLWithPath: "/System/Applications/Calculator.app"))
+        #expect(calculator?.bundleIdentifier == "com.apple.calculator")
+        #expect(calculator?.codeHash != nil)
+        #expect(SettingsURISender.identify(appAt: FileManager.default.temporaryDirectory) == nil)
+    }
 }

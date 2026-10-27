@@ -144,7 +144,10 @@ struct AutomationSettingsPane: View {
         let bundleID = Bundle(url: url)?.bundleIdentifier
         switch AutomationSettings.choice(forBundleID: bundleID, allowed: settings.whitelistedApps.map(\.bundleId)) {
         case let .add(bundleID):
-            settings.addToWhitelist(bundleId: bundleID)
+            guard settings.addToWhitelist(appAt: url, bundleID: bundleID) else {
+                showError("“\(FileManager.default.displayName(atPath: url.path))” has no valid code signature, so Thaw can't tell it apart from another app.")
+                return
+            }
             isShowingAddError = false
         case .alreadyAllowed:
             showError("“\(FileManager.default.displayName(atPath: url.path))” is already allowed.")
