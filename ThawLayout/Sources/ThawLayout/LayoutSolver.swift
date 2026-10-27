@@ -585,6 +585,15 @@ public nonisolated enum LayoutSolver {
         unmanagedSet: Set<String>,
         uidWidths: [String: CGFloat]
     ) -> [OverflowUnit] {
+        // Gather each group's members in one pass, in lane order, so a long
+        // lane is not rescanned once per group.
+        var membersByGroup = [Int: [String]]()
+        for uid in uids {
+            if let group = groups.groupIndex(of: uid) {
+                membersByGroup[group, default: []].append(uid)
+            }
+        }
+
         var units = [OverflowUnit]()
         var emittedGroups = Set<Int>()
 
@@ -602,7 +611,7 @@ public nonisolated enum LayoutSolver {
             guard emittedGroups.insert(group).inserted else {
                 continue // already emitted at this group's leftmost member
             }
-            let members = uids.filter { groups.groupIndex(of: $0) == group }
+            let members = membersByGroup[group, default: []]
             units.append(
                 OverflowUnit(
                     members: members,
