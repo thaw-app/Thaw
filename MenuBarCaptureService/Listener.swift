@@ -33,49 +33,52 @@ final nonisolated class Listener: @unchecked Sendable {
 
     private func handleMessage(_ message: XPCReceivedMessage) -> MenuBarCaptureService.Response? {
         do {
-            let request = try message.decode(as: MenuBarCaptureService.Request.self)
-            switch request {
-            case .start:
-                return .start
-            case let .configureLogging(filePath, rotationPolicy):
-                if let rotationPolicy {
-                    // Prune by the app's retention policy, not this target's defaults.
-                    DiagnosticLogger.shared.setRotationPolicy(rotationPolicy)
-                }
-                guard let filePath else {
-                    // Diagnostic logging is off in the app; stop holding the
-                    // shared file open here too.
-                    DiagnosticLogger.shared.isEnabled = false
-                    return .configureLogging
-                }
-                let requested = URL(fileURLWithPath: filePath)
-                    .standardizedFileURL.resolvingSymlinksInPath()
-                let approvedDir = DiagnosticLogger.shared.logDirectory
-                    .standardizedFileURL.resolvingSymlinksInPath()
-                guard requested.path.hasPrefix(approvedDir.path + "/") else {
-                    diagLog.error(
-                        "Capture listener rejected configureLogging path outside approved log directory: \(filePath)"
-                    )
-                    return nil
-                }
-                guard DiagnosticLogger.shared.attachToFile(at: requested) else {
-                    // Replying success would leave this process writing to the old
-                    // segment, which retention later deletes. Failing makes the app retry.
-                    diagLog.error(
-                        "Capture listener failed to attach diagnostic logging to \(requested.path)"
-                    )
-                    return nil
-                }
-                return .configureLogging
-            case let .captureBatch(batch):
-                return capture(batch)
-            case .recycle:
-                scheduleExit()
-                return .recycle
-            }
+            return try handle(message.decode(as: MenuBarCaptureService.Request.self))
         } catch {
             diagLog.error("Capture listener failed to handle message with error \(error)")
             return nil
+        }
+    }
+
+    private func handle(_ request: MenuBarCaptureService.Request) -> MenuBarCaptureService.Response? {
+        switch request {
+        case .start:
+            return .start
+        case let .configureLogging(filePath, rotationPolicy):
+            if let rotationPolicy {
+                // Prune by the app's retention policy, not this target's defaults.
+                DiagnosticLogger.shared.setRotationPolicy(rotationPolicy)
+            }
+            guard let filePath else {
+                // Diagnostic logging is off in the app; stop holding the
+                // shared file open here too.
+                DiagnosticLogger.shared.isEnabled = false
+                return .configureLogging
+            }
+            let requested = URL(fileURLWithPath: filePath)
+                .standardizedFileURL.resolvingSymlinksInPath()
+            let approvedDir = DiagnosticLogger.shared.logDirectory
+                .standardizedFileURL.resolvingSymlinksInPath()
+            guard requested.path.hasPrefix(approvedDir.path + "/") else {
+                diagLog.error(
+                    "Capture listener rejected configureLogging path outside approved log directory: \(filePath)"
+                )
+                return nil
+            }
+            guard DiagnosticLogger.shared.attachToFile(at: requested) else {
+                // Replying success would leave this process writing to the old
+                // segment, which retention later deletes. Failing makes the app retry.
+                diagLog.error(
+                    "Capture listener failed to attach diagnostic logging to \(requested.path)"
+                )
+                return nil
+            }
+            return .configureLogging
+        case let .captureBatch(batch):
+            return capture(batch)
+        case .recycle:
+            scheduleExit()
+            return .recycle
         }
     }
 
@@ -211,15 +214,59 @@ final nonisolated class Listener: @unchecked Sendable {
         )
     }
 
-    /// Before macOS 26 the listener stays down: without the peer requirement API,
-    /// any local process could capture windows under Thaw's Screen Recording grant.
+    /// Serves connections through the C XPC API, which has a peer requirement
+    /// before macOS 26. Never returns.
+    func runLegacyMain() -> Never {
+        if CodeSigningInfo.processTeamIdentifier == nil {
+            diagLog.warning(
+                "Capture listener is active WITHOUT peer validation (ad-hoc/teamless build): any local process may connect"
+            )
+        }
+        xpc_main { connection in
+            Listener.shared.acceptLegacy(connection)
+        }
+    }
+
+    private func acceptLegacy(_ connection: xpc_connection_t) {
+        guard LegacyXPCMessage.applySameTeamRequirement(
+            to: connection,
+            teamIdentifier: CodeSigningInfo.processTeamIdentifier
+        ) else {
+            diagLog.error("Capture listener could not require a same-team peer; refusing the connection")
+            LegacyXPCMessage.discard(connection)
+            return
+        }
+        let sendable = SendableXPCObject(object: connection)
+        xpc_connection_set_event_handler(connection) { [self] event in
+            guard xpc_get_type(event) == XPC_TYPE_DICTIONARY else { return }
+            handleLegacy(event, on: sendable.object)
+        }
+        xpc_connection_activate(connection)
+    }
+
+    private func handleLegacy(_ message: xpc_object_t, on connection: xpc_connection_t) {
+        guard let reply = xpc_dictionary_create_reply(message) else { return }
+        do {
+            guard let data = LegacyXPCMessage.payload(in: message) else {
+                diagLog.error("Capture listener got a message without a payload")
+                xpc_connection_send_message(connection, reply)
+                return
+            }
+            let request = try LegacyXPCMessage.decode(MenuBarCaptureService.Request.self, from: data)
+            if let response = handle(request) {
+                try LegacyXPCMessage.setPayload(response, in: reply)
+            }
+        } catch {
+            diagLog.error("Capture listener failed to handle message with error \(error)")
+        }
+        // An empty reply tells the app the request failed.
+        xpc_connection_send_message(connection, reply)
+    }
+
+    @available(macOS 26.0, *)
     func activate() {
         guard xpcListener == nil else {
             diagLog.notice("Capture listener is already active")
-            return
-        }
-        guard #available(macOS 26.0, *) else {
-            diagLog.notice("Capture listener: not activating before macOS 26")
             return
         }
         do {

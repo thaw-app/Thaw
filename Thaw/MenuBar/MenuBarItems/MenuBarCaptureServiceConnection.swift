@@ -36,16 +36,6 @@ extension MenuBarCaptureService {
 
         private let loggingSync: OSAllocatedUnfairLock<LoggingSyncState>
 
-        /// Whether the helper runs at all. Before macOS 26 it cannot require a
-        /// same-team peer, so it stays down; see its Listener.
-        static var isServiceAvailable: Bool {
-            if #available(macOS 26.0, *) {
-                true
-            } else {
-                false
-            }
-        }
-
         private init() {
             let queue = DispatchQueue.targetingGlobal(
                 label: "MenuBarCaptureService.Connection.queue",
@@ -63,7 +53,6 @@ extension MenuBarCaptureService {
         }
 
         func start() async {
-            guard Self.isServiceAvailable else { return }
             await syncLogging()
             _ = await session.sendAsync(request: .start)
         }
@@ -76,7 +65,6 @@ extension MenuBarCaptureService {
         /// prunes by the app's rules. The file is read at send time, since a
         /// concurrent caller returns early and relies on the running sender.
         func syncLogging() async {
-            guard Self.isServiceAvailable else { return }
             // One sender at a time, or an older configuration can land last.
             let isSender = loggingSync.withLock { state -> Bool in
                 state.isPending = true
@@ -118,7 +106,6 @@ extension MenuBarCaptureService {
         }
 
         func recycle() async {
-            guard Self.isServiceAvailable else { return }
             _ = await session.sendAsync(request: .recycle)
             session.cancel(reason: "recycle")
         }
@@ -128,7 +115,6 @@ extension MenuBarCaptureService {
             scale: CGFloat,
             option: CGWindowImageOption
         ) async -> [Frame] {
-            guard Self.isServiceAvailable else { return [] }
             // Checked here, not on rotation: the helper is launched on
             // demand, and a rotation push would spin one up for nothing.
             let logFile = DiagnosticLogger.shared.currentLogFile
@@ -267,6 +253,8 @@ extension MenuBarCaptureService {
         }
 
         private let storage: OSAllocatedUnfairLock<Storage>
+        /// Stands in for XPCSession before macOS 26, which can't require a same-team peer.
+        private let legacyConnection: LegacyXPCConnection
         private let diagLog: DiagLog
 
         init(
@@ -277,6 +265,13 @@ extension MenuBarCaptureService {
             self.storage = OSAllocatedUnfairLock(
                 initialState: Storage(queue: queue, diagLog: diagLog, onInvalidate: onInvalidate)
             )
+            self.legacyConnection = LegacyXPCConnection(
+                serviceName: MenuBarCaptureService.name,
+                queue: queue,
+                teamIdentifier: CodeSigningInfo.processTeamIdentifier,
+                diagLog: diagLog,
+                onInvalidate: onInvalidate
+            )
             self.diagLog = diagLog
         }
 
@@ -286,11 +281,13 @@ extension MenuBarCaptureService {
 
         func cancel(reason: String) {
             storage.withLock { $0.cancel(reason: reason) }
+            legacyConnection.cancel()
         }
 
         func sendAsync(request: Request) async -> Response? {
-            // The service never activates its listener before macOS 26.
-            guard #available(macOS 26.0, *) else { return nil }
+            guard #available(macOS 26.0, *) else {
+                return await legacyConnection.send(request, as: Response.self)
+            }
             let xpcSession: XPCSession
             do {
                 xpcSession = try storage.withLock { try $0.getSession() }

@@ -32,6 +32,7 @@ the items under New and Fixed.
 ### Fixed
 
 - On macOS 15, clicking a hidden item no longer makes the Thaw icon shake while the item stays hidden. Thanks to @edsonboldrini, who found the cause.
+- On macOS 15, hidden items show their icons in the Thaw Bar, Layout and search.
 - With the menu bar set to hide automatically, an item opened from the Thaw Bar could stay in the visible section until its app was relaunched. It now goes back once the menu bar shows again.
 - After Thaw moved an item, the Thaw Bar could keep showing it in its old section for several minutes.
 - Rehiding an item while the mouse was moving could leave the pointer in the top-left corner of the screen, under the Apple menu.

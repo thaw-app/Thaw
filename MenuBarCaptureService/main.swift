@@ -7,10 +7,13 @@
 
 import Foundation
 
-Listener.shared.activate()
-
-while true {
-    autoreleasepool {
-        _ = RunLoop.current.run(mode: .default, before: Date(timeIntervalSinceNow: 60))
+if #available(macOS 26.0, *) {
+    Listener.shared.activate()
+    while true {
+        autoreleasepool {
+            _ = RunLoop.current.run(mode: .default, before: Date(timeIntervalSinceNow: 60))
+        }
     }
+} else {
+    Listener.shared.runLegacyMain()
 }
