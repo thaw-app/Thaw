@@ -262,8 +262,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             HotkeyAction.toggleSwap.perform(appState: appState)
         case "search":
             HotkeyAction.searchMenuBarItems.perform(appState: appState)
-        case "toggle-thawbar":
-            HotkeyAction.enableThawBar.perform(appState: appState)
         case "toggle-application-menus":
             HotkeyAction.toggleApplicationMenus.perform(appState: appState)
         case "toggle-zen-mode":
@@ -369,6 +367,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             handleLauncherURL(url, sender: effectiveBundleId)
         case "proxy-press":
             handleProxyPressURL(url, sender: effectiveBundleId)
+        case "toggle-thawbar":
+            // It saves the active display's Thaw Bar setting, so it answers to the same gate as set and toggle.
+            HotkeyAction.enableThawBar.perform(appState: appState)
         default:
             break
         }

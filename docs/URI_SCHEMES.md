@@ -13,7 +13,7 @@ Thaw registers the `thaw://` scheme in `Info.plist` (`CFBundleURLTypes`).
 | `thaw://toggle-hidden`            | Toggle Hidden Section | Shows/hides the hidden menu bar section  |
 | `thaw://toggle-always-hidden`     | Toggle Always-Hidden  | Shows/hides the always-hidden section    |
 | `thaw://search`                   | Open Search Panel     | Displays the menu bar item search panel  |
-| `thaw://toggle-thawbar`           | Toggle Thaw Bar       | Toggles the Thaw Bar on the active display |
+| `thaw://toggle-thawbar`           | Toggle Thaw Bar       | Toggles the Thaw Bar on the active display and saves it; needs Settings URI on and an approved app |
 | `thaw://toggle-application-menus` | Toggle App Menus      | Shows/hides application menus            |
 | `thaw://open-settings`            | Open Settings         | Opens the Thaw settings window           |
 | `thaw://authorize`                | Authorize App         | Triggers auth dialog to grant an app whitelist access to settings |

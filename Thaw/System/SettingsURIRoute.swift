@@ -11,7 +11,7 @@ nonisolated enum SettingsURIRoute {
     static let authorizedHosts: Set<String> = [
         "set", "toggle", "get", "authorize", "reveal-item",
         "list-items", "activate-item", "list-profiles", "apply-profile", "get-appearance", "move-item",
-        "proxy-press",
+        "proxy-press", "toggle-thawbar",
     ]
 
     static func requiresAuthorization(_ host: String) -> Bool {

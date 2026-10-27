@@ -13,7 +13,7 @@ import Testing
 struct SettingsURIRouteTests {
     @Test("Settings, launcher and item-driving hosts need an approved sender", arguments: [
         "set", "toggle", "get", "authorize", "reveal-item", "list-items", "activate-item",
-        "list-profiles", "apply-profile", "get-appearance", "move-item", "proxy-press", "PROXY-PRESS",
+        "list-profiles", "apply-profile", "get-appearance", "move-item", "proxy-press", "PROXY-PRESS", "toggle-thawbar",
     ])
     func gatedHostsNeedApproval(host: String) {
         #expect(SettingsURIRoute.requiresAuthorization(host))

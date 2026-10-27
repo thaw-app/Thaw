@@ -29,7 +29,7 @@ private struct Command {
         Command(name: "toggle-hidden", host: "toggle-hidden", valueParams: [], flagParams: [], usage: "thawctl toggle-hidden", needsAuth: false),
         Command(name: "toggle-always-hidden", host: "toggle-always-hidden", valueParams: [], flagParams: [], usage: "thawctl toggle-always-hidden", needsAuth: false),
         Command(name: "search", host: "search", valueParams: [], flagParams: [], usage: "thawctl search", needsAuth: false),
-        Command(name: "toggle-thawbar", host: "toggle-thawbar", valueParams: [], flagParams: [], usage: "thawctl toggle-thawbar", needsAuth: false),
+        Command(name: "toggle-thawbar", host: "toggle-thawbar", valueParams: [], flagParams: [], usage: "thawctl toggle-thawbar", needsAuth: true),
         Command(name: "toggle-application-menus", host: "toggle-application-menus", valueParams: [], flagParams: [], usage: "thawctl toggle-application-menus", needsAuth: false),
         Command(name: "toggle-zen-mode", host: "toggle-zen-mode", valueParams: [], flagParams: [], usage: "thawctl toggle-zen-mode", needsAuth: false),
         Command(name: "toggle-layout-editor", host: "toggle-layout-editor", valueParams: [], flagParams: [], usage: "thawctl toggle-layout-editor", needsAuth: false),
