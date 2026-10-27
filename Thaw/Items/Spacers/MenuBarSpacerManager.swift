@@ -54,12 +54,7 @@ final class MenuBarSpacerManager {
 
     /// Match by window while delayed button-window titles leave cached tags as generic "Item-0".
     func ownsWindowID(_ windowID: CGWindowID) -> Bool {
-        statusItems.values.contains { item in
-            guard let windowNumber = item.button?.window?.windowNumber, windowNumber > 0 else {
-                return false
-            }
-            return CGWindowID(windowNumber) == windowID
-        }
+        statusItems.values.contains { $0.button?.window?.windowServerID == windowID }
     }
 
     private let diagLog = DiagLog(category: "MenuBarSpacerManager")
