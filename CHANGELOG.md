@@ -24,19 +24,15 @@ the items under New and Fixed.
 
 ## [Unreleased]
 
-### New
-
-- You can skip menu bar visibility recovery when a removed app blocks it. Thaw keeps the recovery records as backups and leaves Native hiding off.
-
-### Fixed
-
-- The recovery warning no longer reports every failed restore as an unreadable Control Center setting.
-
 ## [3.0.0-beta.5] - 2026-10-27
 
 **macOS 27 only · Build 118**
 
 Most of the fixes in this release harden security, and they come from findings in a CodeRabbit deep scan.
+
+### New
+
+- You can skip menu bar visibility recovery when a removed app blocks it. Thaw keeps the recovery records as backups and leaves Native hiding off.
 
 ### Changed
 
@@ -48,6 +44,8 @@ Most of the fixes in this release harden security, and they come from findings i
 
 ### Fixed
 
+- Items moved to Hidden by automatic overflow remain available in Layout and the Thaw Bar when Native hiding removes them from the menu bar.
+- The recovery warning no longer reports every failed restore as an unreadable Control Center setting.
 - **Thaw no longer quits when a group folder's icon briefly has no window.** On macOS 27 that happens after the menu bar rearranges, and Thaw read the placeholder number macOS gives such an icon as a window ID. Reported by @perlytiara in [#1397](https://github.com/thaw-app/Thaw/issues/1397).
 - **Relaunch Now can't run commands hidden in the name of the folder Thaw is in.**
 - **An app you allowed to use thaw:// links is checked by its own signature,** so another app can't borrow the permission by using the same name. An app allowed without a signing team is asked again when its code changes.
