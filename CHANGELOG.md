@@ -31,6 +31,7 @@ the items under New and Fixed.
 ### Fixed
 
 - Dragging an item inside Hidden no longer moves an Always Hidden item out of Always Hidden while that section is turned off.
+- Dropping a Visible item back where it was no longer drops the saved place of a Visible item that is off screen at that moment.
 
 ## [3.0.0-beta.5] - 2026-10-28
 

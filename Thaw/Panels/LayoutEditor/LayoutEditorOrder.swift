@@ -87,4 +87,38 @@ nonisolated enum LayoutEditorOrder {
         // A different set means an item came or went; the authored order is stale.
         return Set(authored) == Set(live)
     }
+
+    /// Merges the achievable on-screen order into the saved order. Off-screen entries keep their
+    /// slots, and an entry the saved order lacks goes after its predecessor, or first.
+    static func mergingAchievableOrder(_ achievable: [String], into saved: [String]) -> [String] {
+        let achievableSet = Set(achievable)
+        let savedSet = Set(saved)
+        var fill = achievable.filter { savedSet.contains($0) }.makeIterator()
+        var result = saved.map { id in
+            achievableSet.contains(id) ? (fill.next() ?? id) : id
+        }
+        for (index, id) in achievable.enumerated() where !savedSet.contains(id) {
+            let at = index > 0 ? result.firstIndex(of: achievable[index - 1]).map { $0 + 1 } : 0
+            result.insert(id, at: at ?? result.endIndex)
+        }
+        return result
+    }
+
+    /// The merged Visible order as live items, off-screen ones included. An identifier with no live
+    /// item drops out, because the kit restores saved entries for apps that are not running.
+    static func itemsMergingAchievableOrder(
+        _ achievable: [String],
+        into saved: [String],
+        candidates: [MenuBarItem]
+    ) -> [MenuBarItem] {
+        let merged = mergingAchievableOrder(
+            MenuBarItemTag.canonicalPersistentIdentifiers(achievable),
+            into: saved
+        )
+        let byIdentifier = Dictionary(
+            candidates.map { (MenuBarItemTag.canonicalPersistentIdentifier($0.uniqueIdentifier), $0) },
+            uniquingKeysWith: { first, _ in first }
+        )
+        return merged.compactMap { byIdentifier[$0] }
+    }
 }

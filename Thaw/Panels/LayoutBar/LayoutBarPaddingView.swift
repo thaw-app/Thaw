@@ -494,7 +494,14 @@ final class LayoutBarPaddingView: NSView {
                             desired=\(desiredIDs) live=\(MenuBarLayoutPlannerProvider.current.orderDescription(liveItems))
                             """
                         )
-                        controller?.setSectionOrder(from: achievableItems, for: .visible)
+                        // Merged into the saved order so live items that are off
+                        // screen keep their slots instead of dropping out of it.
+                        let committed = LayoutEditorOrder.itemsMergingAchievableOrder(
+                            achievableItems.map(\.uniqueIdentifier),
+                            into: controller?.sectionItemOrder[.visible] ?? [],
+                            candidates: appState.itemManager.managedItems(for: .visible)
+                        )
+                        controller?.setSectionOrder(from: committed, for: .visible)
                         Task { await appState.itemManager.cacheItemsRegardless(skipRecentMoveCheck: true) }
                     }
                     return true

@@ -68,4 +68,96 @@ struct LayoutEditorOrderTests {
         #expect(!LayoutEditorOrder.keepsAuthoredOrder(authored: ["b", "a"], live: ["a", "b"], elapsed: .seconds(9), limit: limit))
         #expect(!LayoutEditorOrder.keepsAuthoredOrder(authored: ["b", "a"], live: ["a", "b", "c"], elapsed: .seconds(1), limit: limit))
     }
+
+    @Test
+    func anOffScreenSavedEntryKeepsItsSlotWhenOnScreenItemsReorder() {
+        let merged = LayoutEditorOrder.mergingAchievableOrder(
+            ["c", "b", "a"],
+            into: ["a", "parked", "b", "c"]
+        )
+        #expect(merged == ["c", "parked", "b", "a"])
+    }
+
+    @Test
+    func aNoOpProjectionLeavesTheSavedOrderUntouched() {
+        let saved = ["a", "parked", "b", "tail"]
+        #expect(LayoutEditorOrder.mergingAchievableOrder(["a", "b"], into: saved) == saved)
+    }
+
+    @Test
+    func anEntryMissingFromTheSavedOrderFollowsItsOnScreenNeighbour() {
+        let merged = LayoutEditorOrder.mergingAchievableOrder(
+            ["a", "new", "b"],
+            into: ["a", "parked", "b"]
+        )
+        #expect(merged == ["a", "new", "parked", "b"])
+    }
+
+    @Test
+    func anEntryMissingFromTheSavedOrderWithNoPredecessorGoesFirst() {
+        let merged = LayoutEditorOrder.mergingAchievableOrder(["new", "a"], into: ["parked", "a"])
+        #expect(merged == ["new", "parked", "a"])
+    }
+
+    @Test
+    func anEmptySavedOrderTakesTheProjection() {
+        #expect(LayoutEditorOrder.mergingAchievableOrder(["a", "b"], into: []) == ["a", "b"])
+    }
+
+    private func id(_ item: MenuBarItem) -> String {
+        MenuBarItemTag.canonicalPersistentIdentifier(item.uniqueIdentifier)
+    }
+
+    @Test
+    func anOffScreenLiveItemKeepsItsSlotInTheCommittedItems() {
+        let a = LayoutEditorWorld.item("A")
+        let parked = LayoutEditorWorld.item("Parked")
+        let b = LayoutEditorWorld.item("B")
+        let items = LayoutEditorOrder.itemsMergingAchievableOrder(
+            [b.uniqueIdentifier, a.uniqueIdentifier],
+            into: [id(a), id(parked), id(b)],
+            candidates: [a, parked, b]
+        )
+        #expect(items.map(\.uniqueIdentifier) == [b, parked, a].map(\.uniqueIdentifier))
+    }
+
+    @Test
+    func anIdentifierWithNoLiveItemIsDropped() {
+        let a = LayoutEditorWorld.item("A")
+        let items = LayoutEditorOrder.itemsMergingAchievableOrder(
+            [a.uniqueIdentifier],
+            into: ["gone", id(a)],
+            candidates: [a]
+        )
+        #expect(items.map(\.uniqueIdentifier) == [a.uniqueIdentifier])
+    }
+
+    @Test
+    func aRawSpellingMatchesItsSavedCanonicalEntry() throws {
+        // Rectangle's old AppKit placeholder title canonicalizes to Item-0.
+        let raw = "com.knollsoft.Rectangle:_NS:12"
+        let rectangle = LayoutEditorWorld.item(
+            MenuBarItemTag(namespace: .string("com.knollsoft.Rectangle"), title: "Item-0", instanceIndex: 0)
+        )
+        let b = LayoutEditorWorld.item("B")
+        try #require(MenuBarItemTag.canonicalPersistentIdentifier(raw) == id(rectangle))
+
+        let items = LayoutEditorOrder.itemsMergingAchievableOrder(
+            [b.uniqueIdentifier, raw],
+            into: [id(rectangle), id(b)],
+            candidates: [rectangle, b]
+        )
+        #expect(items.map(\.uniqueIdentifier) == [b, rectangle].map(\.uniqueIdentifier))
+    }
+
+    @Test
+    func aRepeatedCandidateIsListedOnce() {
+        let a = LayoutEditorWorld.item("A")
+        let items = LayoutEditorOrder.itemsMergingAchievableOrder(
+            [a.uniqueIdentifier],
+            into: [id(a)],
+            candidates: [a, a]
+        )
+        #expect(items.count == 1)
+    }
 }
