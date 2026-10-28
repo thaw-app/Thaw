@@ -1498,8 +1498,8 @@ extension MenuBarItemManager {
         }
 
         // Every strand verdict and store write below is judged against the divider.
-        if ControlOrderRules.dividerIsOffTheBar(controlItems, among: liveItems) {
-            MenuBarItemManager.diagLog.debug("boundary repair: the Hidden divider is parked off the bar; skipping the pass")
+        if let misplaced = ControlOrderRules.dividerMisplacement(controlItems, among: liveItems) {
+            MenuBarItemManager.diagLog.debug("boundary repair: \(misplaced); skipping the pass")
             return (liveItems, false, false)
         }
 

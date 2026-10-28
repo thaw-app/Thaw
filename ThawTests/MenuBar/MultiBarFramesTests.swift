@@ -181,4 +181,50 @@ struct MultiBarFramesTests {
         #expect(ControlOrderRules.dividerIsOffTheBar(atMinusOne, among: [stats], displays: Self.displays))
         #expect(ControlOrderRules.dividerIsOffTheBar(empty, among: [stats], displays: Self.displays))
     }
+
+    private static func hiddenDivider(x: CGFloat) -> ControlItemPair {
+        let hidden = MenuBarItem(
+            tag: .hiddenControlItem,
+            windowID: 9,
+            ownerPID: 501,
+            sourcePID: 501,
+            bounds: CGRect(x: x, y: 4.5, width: 2, height: 24),
+            title: ControlItemIdentifier.hidden.rawValue,
+            isOnScreen: true
+        )
+        return ControlItemPair(hidden: hidden, alwaysHidden: nil)
+    }
+
+    private static func anchored(_ title: String, x: CGFloat, width: CGFloat) -> MenuBarItem {
+        MenuBarItem(
+            tag: MenuBarItemTag(namespace: .menuBarAgent, title: title),
+            windowID: 20,
+            ownerPID: 400,
+            sourcePID: 400,
+            bounds: CGRect(x: x, y: 3.5, width: width, height: 24),
+            title: title,
+            isOnScreen: true
+        )
+    }
+
+    @Test("A Hidden divider read after the Clock, as after a display change, is caught")
+    func dividerAfterClock() {
+        let items = [Self.item(x: 1398, windowID: 1), Self.anchored("com.apple.menuextra.controlcenter", x: 1929, width: 26),
+                     Self.anchored("com.apple.menuextra.clock", x: 1971, width: 56)]
+        #expect(ControlOrderRules.dividerIsRightOfTrailingAnchors(Self.hiddenDivider(x: 2046.5), among: items, displays: Self.displays))
+        #expect(ControlOrderRules.dividerMisplacement(Self.hiddenDivider(x: 2046.5), among: items, displays: Self.displays) != nil)
+        #expect(ControlOrderRules.dividerMisplacement(Self.hiddenDivider(x: 1350), among: items, displays: Self.displays) == nil)
+    }
+
+    @Test("A Hidden divider left of the visible items is not")
+    func dividerInPlace() {
+        let items = [Self.item(x: 1398, windowID: 1), Self.anchored("com.apple.menuextra.clock", x: 1840, width: 56)]
+        #expect(!ControlOrderRules.dividerIsRightOfTrailingAnchors(Self.hiddenDivider(x: 1350), among: items, displays: Self.displays))
+    }
+
+    @Test("A Clock on another display's bar says nothing about this divider")
+    func clockOnOtherBar() {
+        let items = [Self.anchored("com.apple.menuextra.clock", x: 1500, width: 56)]
+        #expect(!ControlOrderRules.dividerIsRightOfTrailingAnchors(Self.hiddenDivider(x: 3800), among: items, displays: Self.displays))
+    }
 }
