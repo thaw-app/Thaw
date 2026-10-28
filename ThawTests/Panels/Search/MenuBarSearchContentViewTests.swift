@@ -67,12 +67,37 @@ struct MenuBarSearchContentViewTests {
         let harness = Harness(.inspector, visible: [alpha, beta, World.item(.visibleControlItem)], hidden: [gamma])
         await harness.settle { !harness.model.displayedItems.isEmpty }
 
+        // With no section engine in the test every item reads as Visible, as it does in the Layout previews.
         let ids = harness.ids
-        #expect(ids.prefix(3) == [.header(.visible), Self.itemID(beta), Self.itemID(alpha)])
+        #expect(ids.first == .header(.visible))
+        #expect(Set(ids.dropFirst().prefix(3)) == [Self.itemID(alpha), Self.itemID(beta), Self.itemID(gamma)])
         #expect(ids.contains(.header(.hidden)))
-        #expect(ids.contains(Self.itemID(gamma)))
         #expect(!harness.model.displayedItems.contains { $0.id == .header(.visible) && $0.isSelectable })
-        #expect(harness.model.selection == Self.itemID(beta), "the first item row is highlighted")
+        #expect(harness.model.selection == ids.dropFirst().first, "the first item row is highlighted")
+    }
+
+    @Test("The inspector lists what the Layout previews list and leaves out apps that quit")
+    func inspectorListsTheLayoutInventory() async {
+        let alpha = World.item("Alpha")
+        let quit = World.item(
+            MenuBarItemTag(namespace: .string("com.example.Quit"), title: "Quit", instanceIndex: 0),
+            ownerPID: pid_t.max
+        )
+        let harness = Harness(.inspector, visible: [alpha, quit, World.item(.visibleControlItem)])
+        await harness.settle { !harness.model.displayedItems.isEmpty }
+
+        let layout = LayoutDisplayedItems.items(
+            in: .visible,
+            appState: harness.world.appState,
+            runningApplications: NSWorkspace.shared.runningApplications
+        )
+        #expect(layout.contains(alpha))
+        #expect(!layout.contains(quit))
+        #expect(harness.ids.contains(Self.itemID(alpha)))
+        #expect(!harness.ids.contains(Self.itemID(quit)), "the previews drop it, so Search does too")
+        #expect(!harness.ids.contains { id in
+            if case let .item(tag, _) = id { tag.matchesVisibleControlItem } else { false }
+        }, "control items stay out of Search")
     }
 
     @Test("A query in the inspector ranks matching items and drops the headings")

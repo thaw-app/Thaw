@@ -36,6 +36,7 @@ the items under New and Fixed.
 - Dragging an item inside Hidden no longer moves an Always Hidden item out of Always Hidden while that section is turned off.
 - Dropping a Visible item back where it was no longer drops the saved place of a Visible item that is off screen at that moment.
 - On macOS 27, items can now be moved to the right of Siri. macOS only pins Control Center and Clock, so Thaw no longer treats Siri as fixed or pulls it back to the end.
+- Menu Bar Search now lists the same items the Layout previews show, instead of dropping an item that is briefly missing from the live read.
 
 ## [3.0.0-beta.5] - 2026-10-28
 

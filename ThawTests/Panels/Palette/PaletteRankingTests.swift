@@ -70,4 +70,12 @@ struct PaletteRankingTests {
         })
         #expect(candidates.allSatisfy { $0.identityKey == $0.item.uniqueIdentifier })
     }
+
+    @Test("Inventory from a cache lists that cache's actionable items")
+    func inventoryFromACache() {
+        let kept = LayoutEditorWorld.item("Kept")
+        var cache = MenuBarItemCache(displayID: nil)
+        cache[.hidden] = [kept]
+        #expect(PaletteCandidate.inventory(from: cache).map(\.item) == [kept])
+    }
 }

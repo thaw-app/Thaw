@@ -59,7 +59,12 @@ extension PaletteCandidate {
     /// Use the warm item cache, not an AX walk: application timeouts do not propagate to children, so hung publishers could stall hotkeys.
     @MainActor
     static func inventory(from itemManager: MenuBarItemManager) -> [PaletteCandidate] {
-        let items = itemManager.managedItems.filter(\.isUserActionable)
+        inventory(from: itemManager.itemCache)
+    }
+
+    @MainActor
+    static func inventory(from cache: MenuBarItemCache) -> [PaletteCandidate] {
+        let items = cache.managedItems.filter(\.isUserActionable)
         // Menu bar order breaks equal-rank ties left to right.
         let ordered = items.sorted { $0.bounds.minX < $1.bounds.minX }
         return ordered.map { item in

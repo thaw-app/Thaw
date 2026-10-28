@@ -75,4 +75,18 @@ struct MenuBarSearchRecentsTests {
         #expect(resolved.map(\.tag) == [hidden.tag, visible.tag])
         #expect(recents.identifiers.count == 3, "an entry with no live item stays stored")
     }
+
+    @Test("Resolving against a cache lists only the items that cache holds")
+    func resolveAgainstACache() throws {
+        let suites = ScratchSuites(prefix: "SearchRecents")
+        let recents = try recents(suites)
+        let kept = World.item("Kept")
+        let dropped = World.item("Dropped")
+        recents.record(kept)
+        recents.record(dropped)
+        var cache = MenuBarItemCache(displayID: nil)
+        cache[.hidden] = [kept]
+
+        #expect(recents.resolve(in: cache).map(\.tag) == [kept.tag])
+    }
 }

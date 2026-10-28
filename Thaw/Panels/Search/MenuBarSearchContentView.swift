@@ -464,13 +464,15 @@ private struct MenuBarSearchContentView: View {
     /// Rebuilds the rows from the item cache, section by section and, when a
     /// query is present, ranked against it.
     private func rebuildSectionedRows() {
-        let rows = MenuBarSection.Name.allCases.flatMap { sectionRows(for: $0) }
+        // The same inventory the Layout previews list.
+        let inventory = DisplayedItemInventory.cache(appState: appState)
+        let rows = MenuBarSection.Name.allCases.flatMap { sectionRows(for: $0, in: inventory) }
 
         guard !model.searchText.isEmpty else {
             // Recents ride on top of the unfiltered list, Spotlight-style.
             // They only render when resolvable, stale identifiers expire
             // silently (see MenuBarSearchRecents).
-            let recentItems = recents.resolve(in: itemManager)
+            let recentItems = recents.resolve(in: inventory)
             var items = [ListItem]()
             if !recentItems.isEmpty {
                 items.append(recentsHeaderRow)
@@ -496,7 +498,7 @@ private struct MenuBarSearchContentView: View {
 
     /// One section's slice of the search list: its header row followed by
     /// its items in reverse cache order. Empty when the section is turned off.
-    private func sectionRows(for name: MenuBarSection.Name) -> [RankableRow] {
+    private func sectionRows(for name: MenuBarSection.Name, in inventory: MenuBarItemCache) -> [RankableRow] {
         if let section = appState.menuBarManager.section(withName: name), !section.isEnabled {
             return []
         }
@@ -507,7 +509,7 @@ private struct MenuBarSearchContentView: View {
                 title: name.localizedName
             ),
         ]
-        for item in itemManager.managedItems(for: name).reversed() where !item.isControlItem {
+        for item in inventory.managedItems(for: name).reversed() where !item.isControlItem {
             rows.append(RankableRow(
                 listItem: ListItem(
                     content: .item(item),
@@ -538,7 +540,8 @@ private struct MenuBarSearchContentView: View {
     /// accelerator.
     private func rebuildRankedRows(recentsOnlyWhenEmpty: Bool) {
         let query = model.searchText.trimmingCharacters(in: .whitespaces)
-        let inventory = launcherInventory()
+        let retained = DisplayedItemInventory.cache(appState: appState)
+        let inventory = launcherInventory(from: retained)
 
         guard !query.isEmpty else {
             // A launcher opens on recents unless the presentation lists the
@@ -552,7 +555,7 @@ private struct MenuBarSearchContentView: View {
                 inventory.map { ($0.identityKey, $0) },
                 uniquingKeysWith: { first, _ in first }
             )
-            let recentCandidates = recents.resolve(in: itemManager).compactMap { byIdentity[$0.uniqueIdentifier] }
+            let recentCandidates = recents.resolve(in: retained).compactMap { byIdentity[$0.uniqueIdentifier] }
             let recentRows = recentCandidates.isEmpty
                 ? []
                 : [recentsHeaderRow] + candidateRows(for: recentCandidates)
@@ -574,9 +577,9 @@ private struct MenuBarSearchContentView: View {
     /// MenuBarItemDisplayName exists to keep out of per-keystroke work. So
     /// the list is cached on the model and only dropped when the cache it was
     /// derived from turns over.
-    private func launcherInventory() -> [PaletteCandidate] {
+    private func launcherInventory(from retained: MenuBarItemCache) -> [PaletteCandidate] {
         if model.launcherCandidates.isEmpty {
-            model.launcherCandidates = PaletteCandidate.inventory(from: itemManager)
+            model.launcherCandidates = PaletteCandidate.inventory(from: retained)
         }
         return model.launcherCandidates
     }
