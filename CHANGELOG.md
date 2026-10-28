@@ -72,6 +72,10 @@ Most of the fixes in this release harden security, and they come from findings i
 - **Your saved menu bar order holds when icons go missing or overflow.** An icon that briefly disappears keeps its place, icons behind the overflow arrows keep their order while you edit Visible, Always Hidden keeps its items while it's turned off, and items a profile doesn't mention stay where they were.
 - **The Thaw Bar draws an app's icon at menu bar size** when it has no picture of the item yet, instead of nearly twice the height of the icons around it on a notched display. Reported by @eisaias2000 in [#1401](https://github.com/thaw-app/Thaw/issues/1401).
 
+### Known issues
+
+- **On macOS 27.0.1, videos in a browser can't go full screen, and the menu bar can stay on screen over full-screen apps.** This is a macOS 27 bug, not one in Thaw. Quitting MenuBarAgent in Activity Monitor fixes it until it comes back. Reported by @deadcoder0904 in [#1404](https://github.com/thaw-app/Thaw/issues/1404).
+
 ## [2.2.0-beta.1] - 2026-10-27
 
 **macOS 15 and 26 · Build 64**
