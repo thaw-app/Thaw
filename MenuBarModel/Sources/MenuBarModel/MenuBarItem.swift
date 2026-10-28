@@ -127,7 +127,7 @@ public struct MenuBarItem: CustomStringConvertible, Sendable, Codable {
         // hideable. Hiding-unsupported and agent-ungoverned items stay
         // forced-visible, since a hidden assignment could never be carried out.
         guard experimentalSystemItemHiding,
-              tag.isLayoutAnchoredSystemItem,
+              tag.needsRestrictionAssertionToHide,
               basePolicy.isForcedVisible,
               !tag.isHidingUnsupported,
               !tag.isAgentUngoverned

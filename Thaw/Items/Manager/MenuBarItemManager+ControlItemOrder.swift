@@ -278,13 +278,12 @@ extension MenuBarItemManager {
         )
     }
 
-    /// Detects control-trio inversions and a stranded Siri on an ambient pass
+    /// Detects control-trio inversions on an ambient pass
     /// and schedules the debounced normalization, which waits for a quiet bar
     /// and so avoids the oscillation an inline rewrite would cause.
     func scheduleStructuralNormalizationIfControlItemsOutOfOrder(
         controlItems: ControlItemPair,
-        items: [MenuBarItem],
-        displayID: CGDirectDisplayID?
+        items: [MenuBarItem]
     ) {
         // The visible control is not part of ControlItemPair; locate it the
         // same way restoreStructuralControlOrder does.
@@ -293,10 +292,7 @@ extension MenuBarItemManager {
         }
         let alwaysHidden = controlItems.alwaysHidden
         let hidden = controlItems.hidden
-        let siriIsMisplaced = displayID.map { display in
-            ControlOrderRules.trailingSiriIsMisplaced(in: items.filter { CGDisplayBounds(display).intersects($0.bounds) })
-        } ?? false
-        guard siriIsMisplaced || !ControlOrderRules.controlTrioInCanonicalOrder(
+        guard !ControlOrderRules.controlTrioInCanonicalOrder(
             alwaysHidden: alwaysHidden,
             hidden: hidden,
             visible: visible
@@ -308,7 +304,7 @@ extension MenuBarItemManager {
         let vX = visible.bounds.midX
         MenuBarItemManager.diagLog.info(
             "structural controls out of order on ambient pass"
-                + " (Siri misplaced=\(siriIsMisplaced), AH@\(ahX.map { String(describing: $0) } ?? "nil"), H@\(hX), V@\(vX));"
+                + " (AH@\(ahX.map { String(describing: $0) } ?? "nil"), H@\(hX), V@\(vX));"
                 + " scheduling structural normalization"
         )
         scheduleStructuralNormalization(cause: .structuralDriftObserved)

@@ -476,12 +476,12 @@ extension MenuBarItemManager {
         if experimentalSystemItemHiding,
            assignment.contains(where: { identifier, _ in
                itemCache.managedItems.contains {
-                   $0.uniqueIdentifier == identifier && $0.tag.isLayoutAnchoredSystemItem
+                   $0.uniqueIdentifier == identifier && $0.tag.needsRestrictionAssertionToHide
                }
-                   || controller.snapshot(for: identifier)?.tag.isLayoutAnchoredSystemItem == true
+                   || controller.snapshot(for: identifier)?.tag.needsRestrictionAssertionToHide == true
            })
         {
-            MenuBarItemManager.diagLog.info("macOS 27 reset: pulsing restriction for layout-anchored system items")
+            MenuBarItemManager.diagLog.info("macOS 27 reset: pulsing restriction for Clock, Control Center and Siri")
             controller.refresh(forceRestrictionPulse: true)
             await cacheItemsRegardless(skipRecentMoveCheck: true)
         }

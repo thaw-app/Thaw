@@ -644,27 +644,6 @@ extension MenuBarItemManager {
             let settledItems = itemCache.managedItems
             // The debounce and settle waits can span a screen lock.
             guard !refuseMenuBarMutationWhileScreenLocked("structural normalization"), !settledItems.isEmpty else { return }
-            if !arrangementIsManual, !menuBarAgentIgnoresPreferredPositions,
-               ControlOrderRules.trailingSiriIsMisplaced(in: settledItems) {
-                // Siri needs one row repaired; no dividers required, which
-                // managedItems omits.
-                _ = moveCircuitBreaker.note(.storeWrite)
-                let changed = PermittedPositionStore.repairTrailingSiri(
-                    liveItems: settledItems,
-                    permit: StoreWritePermit(hold)
-                )
-                if !changed.isEmpty {
-                    appState.menuBarManager.sectionController.notePreferredPositionsSelfWrite()
-                    moveActivity.noteMoveOperation()
-                    // The one write is made. The wait and the cache pass after it only read.
-                    hasLeftLane = true
-                    repairs.leave(hold)
-                    try? await Task.sleep(for: .milliseconds(200))
-                    guard !Task.isCancelled else { return }
-                    await cacheItemsRegardless(skipRecentMoveCheck: true)
-                }
-                return
-            }
             if let (controlItems, withDividers) = ControlOrderRules.withDividers(settledItems, cacheDividers()) {
                 // The restore pins the saved order. A drag made with a section
                 // open is still held out of it, so record it first.

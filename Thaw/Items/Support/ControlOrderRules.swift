@@ -45,18 +45,6 @@ enum ControlOrderRules {
         return alwaysHiddenX <= hiddenX && hiddenX <= visibleX
     }
 
-    static nonisolated func trailingSiriIsMisplaced(in items: [MenuBarItem], displays: [CGRect] = BarAxis.liveDisplayBounds()) -> Bool {
-        let onBar = items.filter {
-            $0.isOnScreen && $0.bounds.width >= MenuBarItemGeometry.phantomFramePeerMinimumWidth &&
-                !$0.bounds.isEmpty && !$0.bounds.isInfinite &&
-                !$0.isParkedOffMenuBarBand(among: items, screens: displays)
-        }
-        guard let siri = onBar.first(where: { $0.tag == .siri }) else { return false }
-        return onBar.contains {
-            !$0.tag.isLayoutAnchoredSystemItem && $0.bounds.midX > siri.bounds.midX
-        }
-    }
-
     /// The cached items with the dividers from the last walk put back, since the cache drops them.
     /// Nil without a known Hidden divider, as nothing can be put in order then.
     static nonisolated func withDividers(
@@ -146,9 +134,21 @@ enum ControlOrderRules {
             using: savedOrder
         )
         // Forced-visible agent children have no authored slot; put them first
-        // so the trailing item (normally Thaw) stays trailing. Replaying an
-        // interleaved Siri slot would undo the anchor repair.
-        return RuntimeSectionController.anchoredSystemItemsTrail(in: newlyForcedVisible + authoredVisible)
+        // so the trailing item (normally Thaw) stays trailing.
+        let leading = newlyForcedVisible.filter { !$0.tag.isSiri }
+        guard leading.count < newlyForcedVisible.count else {
+            return RuntimeSectionController.anchoredSystemItemsTrail(in: newlyForcedVisible + authoredVisible)
+        }
+        // Siri is no anchor, so nothing else would move an unsaved one back; it keeps its live slot.
+        let byIdentifier = Dictionary(
+            liveSegment.map { ($0.uniqueIdentifier, $0) },
+            uniquingKeysWith: { first, _ in first }
+        )
+        let completed = LayoutEditorOrder.completingOrder(
+            (leading + authoredVisible).map(\.uniqueIdentifier),
+            withLive: liveSegment.map(\.uniqueIdentifier)
+        )
+        return RuntimeSectionController.anchoredSystemItemsTrail(in: completed.compactMap { byIdentifier[$0] })
     }
 
     /// Left-to-right structural sequence for the position store. The Always
@@ -185,7 +185,7 @@ enum ControlOrderRules {
         return mirroredOrder ?? controllerOrder ?? []
     }
 
-    /// Reject reversed Control Center/Clock ranks or non-anchors right of the trailing group; normalization repairs stable Siri stranding.
+    /// Reject reversed Control Center/Clock ranks or non-anchors right of the trailing group.
     /// Skip Thaw controls and sub-phantomFramePeerMinimumWidth slivers (including the intentionally zero-width icon); ranks also cover legacy spellings.
     static nonisolated func anchoredTrailingViolation(
         in sortedLeftToRight: [MenuBarItem],

@@ -816,8 +816,7 @@ extension MenuBarItemManager {
             // An ambient pass only observes drift; schedule debounced normalization rather than waiting for explicit reveal or repair.
             scheduleStructuralNormalizationIfControlItemsOutOfOrder(
                 controlItems: controlItems,
-                items: items,
-                displayID: displayID
+                items: items
             )
         }
 

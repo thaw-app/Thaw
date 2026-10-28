@@ -35,6 +35,7 @@ the items under New and Fixed.
 - In Automatic arrangement, a Visible item that macOS shows only some of the time, such as Focus or Sound, goes back to its place in your layout when it reappears, instead of keeping the place macOS gave it. Reported by @michaeljauk in [#1410](https://github.com/thaw-app/Thaw/issues/1410).
 - Dragging an item inside Hidden no longer moves an Always Hidden item out of Always Hidden while that section is turned off.
 - Dropping a Visible item back where it was no longer drops the saved place of a Visible item that is off screen at that moment.
+- On macOS 27, items can now be moved to the right of Siri. macOS only pins Control Center and Clock, so Thaw no longer treats Siri as fixed or pulls it back to the end.
 
 ## [3.0.0-beta.5] - 2026-10-28
 

@@ -18,14 +18,14 @@ struct TrailingSiriLayoutTests {
                     title: tag.title, isOnScreen: onScreen)
     }
 
-    @Test(arguments: [false, true])
-    func structuralPlanRejectsSavedSiriInterleaving(hasSavedOrder: Bool) {
+    @Test
+    func structuralPlanKeepsASavedSiriSlot() {
         let app = item(MenuBarItemTag(namespace: .string("com.example.app"), title: "Item"), x: 100)
         let siri = item(.siri, x: 130)
         let visible = item(.visibleControlItem, x: 160)
         let cc = item(MenuBarItemTag(namespace: .menuBarAgent, title: "ControlCenter"), x: 190)
         let clock = item(MenuBarItemTag(namespace: .menuBarAgent, title: "Clock"), x: 220)
-        let saved = hasSavedOrder ? [siri, app, visible, cc, clock].map(\.uniqueIdentifier) : []
+        let saved = [siri, app, visible, cc, clock].map(\.uniqueIdentifier)
 
         let plan = ControlOrderRules.structuralVisibleSegment(
             ordinaryVisibleItems: [app, siri, cc, clock],
@@ -33,28 +33,60 @@ struct TrailingSiriLayoutTests {
             savedOrder: saved
         )
 
-        #expect(plan.map(\.uniqueIdentifier) == [app, visible, siri, cc, clock].map(\.uniqueIdentifier))
+        #expect(plan.map(\.uniqueIdentifier) == [siri, app, visible, cc, clock].map(\.uniqueIdentifier))
     }
 
     @Test
-    func ambientRepairDetectsSiriBeforeTheVisibleControl() {
-        let siri = item(.siri, x: 100)
-        let visible = item(.visibleControlItem, x: 130)
-        let cc = item(MenuBarItemTag(namespace: .menuBarAgent, title: "ControlCenter"), x: 160)
-        #expect(ControlOrderRules.trailingSiriIsMisplaced(in: [siri, visible, cc]))
-        #expect(ControlOrderRules.trailingSiriIsMisplaced(in: [item(.siri, x: 150), visible, cc]) == false)
-        #expect(ControlOrderRules.trailingSiriIsMisplaced(in: [siri, item(.visibleControlItem, x: 130, onScreen: false), cc]) == false)
-        #expect(ControlOrderRules.trailingSiriIsMisplaced(in: [visible, cc]) == false)
+    func structuralPlanKeepsAnUnsavedSiriWhereItSits() {
+        let app = item(MenuBarItemTag(namespace: .string("com.example.app"), title: "Item"), x: 100)
+        let siri = item(.siri, x: 130)
+        let visible = item(.visibleControlItem, x: 160)
+        let cc = item(MenuBarItemTag(namespace: .menuBarAgent, title: "ControlCenter"), x: 190)
+        let clock = item(MenuBarItemTag(namespace: .menuBarAgent, title: "Clock"), x: 220)
+        let saved = [app, visible, cc, clock].map(\.uniqueIdentifier)
+
+        let plan = ControlOrderRules.structuralVisibleSegment(
+            ordinaryVisibleItems: [app, siri, cc, clock],
+            visibleControl: visible,
+            savedOrder: saved
+        )
+
+        #expect(plan.map(\.uniqueIdentifier) == [app, siri, visible, cc, clock].map(\.uniqueIdentifier))
     }
 
     @Test
-    func validationDetectsSiriBeforeAnOrdinaryApp() {
+    func structuralPlanKeepsSiriWhereItSitsWithoutASavedOrder() {
+        let app = item(MenuBarItemTag(namespace: .string("com.example.app"), title: "Item"), x: 100)
+        let siri = item(.siri, x: 130)
+        let visible = item(.visibleControlItem, x: 160)
+        let cc = item(MenuBarItemTag(namespace: .menuBarAgent, title: "ControlCenter"), x: 190)
+        let clock = item(MenuBarItemTag(namespace: .menuBarAgent, title: "Clock"), x: 220)
+
+        let plan = ControlOrderRules.structuralVisibleSegment(
+            ordinaryVisibleItems: [app, siri, cc, clock],
+            visibleControl: visible,
+            savedOrder: []
+        )
+
+        #expect(plan.map(\.uniqueIdentifier) == [app, siri, visible, cc, clock].map(\.uniqueIdentifier))
+    }
+
+    @Test
+    func validationAcceptsSiriAnywhereLeftOfTheAnchors() {
         let siri = item(.siri, x: 100)
         let app = item(MenuBarItemTag(namespace: .string("com.example.app"), title: "Item"), x: 130)
         let cc = item(MenuBarItemTag(namespace: .menuBarAgent, title: "ControlCenter"), x: 160)
         let clock = item(MenuBarItemTag(namespace: .menuBarAgent, title: "Clock"), x: 190)
-        #expect(ControlOrderRules.anchoredTrailingViolation(in: [siri, app, cc, clock]) != nil)
+        #expect(ControlOrderRules.anchoredTrailingViolation(in: [siri, app, cc, clock]) == nil)
         #expect(ControlOrderRules.anchoredTrailingViolation(in: [app, siri, cc, clock]) == nil)
+    }
+
+    @Test
+    func validationRejectsSiriRightOfTheAnchoredGroup() {
+        let cc = item(MenuBarItemTag(namespace: .menuBarAgent, title: "ControlCenter"), x: 160)
+        let clock = item(MenuBarItemTag(namespace: .menuBarAgent, title: "Clock"), x: 190)
+        let siri = item(.siri, x: 220)
+        #expect(ControlOrderRules.anchoredTrailingViolation(in: [cc, clock, siri]) != nil)
     }
 
     @Test

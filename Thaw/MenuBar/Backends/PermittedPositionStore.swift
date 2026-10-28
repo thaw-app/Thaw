@@ -189,15 +189,6 @@ struct PermittedPositionStore {
 
     // MARK: Writes the kit exposes outside the store protocol
 
-    /// Repairs the one row that puts Siri back at the trailing edge.
-    static func repairTrailingSiri(
-        liveItems: [MenuBarItem],
-        permit: borrowing StoreWritePermit
-    ) -> [String] {
-        StoreWriteAudit.note(permit, write: "repairTrailingSiri")
-        return RuntimePositionStore.repairTrailingSiri(liveItems: liveItems)
-    }
-
     /// Carries a same-app cluster across a section divider in one write.
     static func writeClusterBoundaryCrossing(
         items: [MenuBarItem],
