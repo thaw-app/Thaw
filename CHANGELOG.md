@@ -44,6 +44,7 @@ Most of the fixes in this release harden security, and they come from findings i
 
 ### Fixed
 
+- Restored translations for menu bar controls, appearance, overflow and Zen Mode that had fallen back to English after labels or punctuation changed.
 - Items moved to Hidden by automatic overflow remain available in Layout and the Thaw Bar when Native hiding removes them from the menu bar.
 - The recovery warning no longer reports every failed restore as an unreadable Control Center setting.
 - **Thaw no longer quits when a group folder's icon briefly has no window.** On macOS 27 that happens after the menu bar rearranges, and Thaw read the placeholder number macOS gives such an icon as a window ID. Reported by @perlytiara in [#1397](https://github.com/thaw-app/Thaw/issues/1397).

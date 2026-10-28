@@ -23199,14 +23199,14 @@
       "localizations" : {
         "cs" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Allow “%1$@” to control %2$@ settings?"
+            "state" : "translated",
+            "value" : "Povolit aplikaci „%1$@“, aby měnila nastavení %2$@?"
           }
         },
         "de" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Allow “%1$@” to control %2$@ settings?"
+            "state" : "translated",
+            "value" : "\"%1$@\" erlauben, %2$@ Einstellungen zu kontrollieren?"
           }
         },
         "en" : {
@@ -23217,104 +23217,104 @@
         },
         "es" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Allow “%1$@” to control %2$@ settings?"
+            "state" : "translated",
+            "value" : "¿Permitir que \"%1$@\" controle los ajustes de %2$@?"
           }
         },
         "fr" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Allow “%1$@” to control %2$@ settings?"
+            "state" : "translated",
+            "value" : "Autoriser \"%1$@\" à gérer les paramètres de %2$@?"
           }
         },
         "hu" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Allow “%1$@” to control %2$@ settings?"
+            "state" : "translated",
+            "value" : "Engedélyezi, hogy \"%1$@\" vezérelje %2$@ beállításait?"
           }
         },
         "id" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Allow “%1$@” to control %2$@ settings?"
+            "state" : "translated",
+            "value" : "Izinkan \"%1$@\" untuk mengendalikan pengaturan %2$@?"
           }
         },
         "it" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Allow “%1$@” to control %2$@ settings?"
+            "state" : "translated",
+            "value" : "Permetti a \"%1$@\" di controllare le impostazioni di %2$@?"
           }
         },
         "ja" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Allow “%1$@” to control %2$@ settings?"
+            "state" : "translated",
+            "value" : "「%1$@」が「%2$@」の設定を制御することを許可しますか？"
           }
         },
         "ko" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Allow “%1$@” to control %2$@ settings?"
+            "state" : "translated",
+            "value" : "\"%1$@\"(이)가 %2$@ 설정을 제어하도록 허용하시겠습니까?"
           }
         },
         "nl" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Allow “%1$@” to control %2$@ settings?"
+            "state" : "translated",
+            "value" : "Mag “%1$@” de instellingen van %2$@ beheren?"
           }
         },
         "pl" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Allow “%1$@” to control %2$@ settings?"
+            "state" : "translated",
+            "value" : "Pozwolić „%1$@” kontrolować ustawienia %2$@ ?"
           }
         },
         "pt-BR" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Allow “%1$@” to control %2$@ settings?"
+            "state" : "translated",
+            "value" : "Permitir que “%1$@” controle as configurações de %2$@?"
           }
         },
         "ru" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Allow “%1$@” to control %2$@ settings?"
+            "state" : "translated",
+            "value" : "Разрешить \"%1$@\" для управления настройками %2$@?"
           }
         },
         "th" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Allow “%1$@” to control %2$@ settings?"
+            "state" : "translated",
+            "value" : "อนุญาตให้ \"%1$@\" ควบคุมการตั้งค่า %2$@ หรือไม่?"
           }
         },
         "tr" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Allow “%1$@” to control %2$@ settings?"
+            "state" : "translated",
+            "value" : "%1$@ uygulamasının %2$@ ayarlarını kontrol etmesine izin verilsin mi?"
           }
         },
         "uk" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Allow “%1$@” to control %2$@ settings?"
+            "state" : "translated",
+            "value" : "Дозволити \"%1$@\" керувати налаштуваннями %2$@?"
           }
         },
         "vi" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Allow “%1$@” to control %2$@ settings?"
+            "state" : "translated",
+            "value" : "Cho phép \"%1$@\" kiểm soát cài đặt %2$@?"
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Allow “%1$@” to control %2$@ settings?"
+            "state" : "translated",
+            "value" : "允许“%1$@”控制 %2$@ 设置吗？"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Allow “%1$@” to control %2$@ settings?"
+            "state" : "translated",
+            "value" : "允許「%1$@」更改 %2$@ 的設定嗎？"
           }
         }
       }
@@ -32251,8 +32251,8 @@
         },
         "ja" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Automatic"
+            "state" : "translated",
+            "value" : "自動"
           }
         },
         "ko" : {
@@ -32269,8 +32269,8 @@
         },
         "pl" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Automatic"
+            "state" : "translated",
+            "value" : "automatyczny"
           }
         },
         "pt-BR" : {
@@ -32281,14 +32281,14 @@
         },
         "ru" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Automatic"
+            "state" : "translated",
+            "value" : "автоматически"
           }
         },
         "th" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Automatic"
+            "state" : "translated",
+            "value" : "อัตโนมัติ"
           }
         },
         "tr" : {
@@ -32311,14 +32311,14 @@
         },
         "zh-Hans" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Automatic"
+            "state" : "translated",
+            "value" : "自动"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Automatic"
+            "state" : "translated",
+            "value" : "自動"
           }
         }
       }
@@ -35997,116 +35997,116 @@
       "localizations" : {
         "cs" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Border color"
+            "state" : "translated",
+            "value" : "Barva okraje"
           }
         },
         "de" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Border color"
+            "state" : "translated",
+            "value" : "Farbe"
           }
         },
         "es" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Border color"
+            "state" : "translated",
+            "value" : "Color del borde"
           }
         },
         "fr" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Border color"
+            "state" : "translated",
+            "value" : "Couleur de la bordure"
           }
         },
         "hu" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Border color"
+            "state" : "translated",
+            "value" : "Szegély színe"
           }
         },
         "id" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Border color"
+            "state" : "translated",
+            "value" : "Warna garis tepi"
           }
         },
         "it" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Border color"
+            "state" : "translated",
+            "value" : "Colore Bordo"
           }
         },
         "ja" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Border color"
+            "state" : "translated",
+            "value" : "ボーダーカラー"
           }
         },
         "ko" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Border color"
+            "state" : "translated",
+            "value" : "테두리 색상"
           }
         },
         "nl" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Border color"
+            "state" : "translated",
+            "value" : "Rand kleur"
           }
         },
         "pl" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Border color"
+            "state" : "translated",
+            "value" : "Kolor ramki"
           }
         },
         "pt-BR" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Border color"
+            "state" : "translated",
+            "value" : "Cor da Borda"
           }
         },
         "ru" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Border color"
+            "state" : "translated",
+            "value" : "Цвет рамки"
           }
         },
         "th" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Border color"
+            "state" : "translated",
+            "value" : "สีของเส้นขอบ"
           }
         },
         "tr" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Border color"
+            "state" : "translated",
+            "value" : "Kenarlık Rengi"
           }
         },
         "uk" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Border color"
+            "state" : "translated",
+            "value" : "Колір рамки"
           }
         },
         "vi" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Border color"
+            "state" : "translated",
+            "value" : "Màu viền"
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Border color"
+            "state" : "translated",
+            "value" : "边框颜色"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Border color"
+            "state" : "translated",
+            "value" : "邊框顏色"
           }
         }
       }
@@ -36233,116 +36233,116 @@
       "localizations" : {
         "cs" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Border width"
+            "state" : "translated",
+            "value" : "Šířka okraje"
           }
         },
         "de" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Border width"
+            "state" : "translated",
+            "value" : "Breite"
           }
         },
         "es" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Border width"
+            "state" : "translated",
+            "value" : "Grosor del borde"
           }
         },
         "fr" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Border width"
+            "state" : "translated",
+            "value" : "Épaisseur de la bordure"
           }
         },
         "hu" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Border width"
+            "state" : "translated",
+            "value" : "Szegély vastagsága"
           }
         },
         "id" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Border width"
+            "state" : "translated",
+            "value" : "Ketebalan garis tepi"
           }
         },
         "it" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Border width"
+            "state" : "translated",
+            "value" : "Larghezza bordo"
           }
         },
         "ja" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Border width"
+            "state" : "translated",
+            "value" : "ボーダー幅"
           }
         },
         "ko" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Border width"
+            "state" : "translated",
+            "value" : "테두리 너비"
           }
         },
         "nl" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Border width"
+            "state" : "translated",
+            "value" : "Randbreedte"
           }
         },
         "pl" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Border width"
+            "state" : "translated",
+            "value" : "Szerokość ramki"
           }
         },
         "pt-BR" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Border width"
+            "state" : "translated",
+            "value" : "Largura da Borda"
           }
         },
         "ru" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Border width"
+            "state" : "translated",
+            "value" : "Толщина рамки"
           }
         },
         "th" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Border width"
+            "state" : "translated",
+            "value" : "ความหนาของเส้นขอบ"
           }
         },
         "tr" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Border width"
+            "state" : "translated",
+            "value" : "Kenarlık Kalınlığı"
           }
         },
         "uk" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Border width"
+            "state" : "translated",
+            "value" : "Товщина рамки"
           }
         },
         "vi" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Border width"
+            "state" : "translated",
+            "value" : "Độ rộng viền"
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Border width"
+            "state" : "translated",
+            "value" : "边框宽度"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Border width"
+            "state" : "translated",
+            "value" : "邊框寬度"
           }
         }
       }
@@ -41568,116 +41568,116 @@
       "localizations" : {
         "cs" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Choose Image…"
+            "state" : "translated",
+            "value" : "Vybrat obrázek…"
           }
         },
         "de" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Choose Image…"
+            "state" : "translated",
+            "value" : "Bild auswählen…"
           }
         },
         "es" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Choose Image…"
+            "state" : "translated",
+            "value" : "Elegir imagen…"
           }
         },
         "fr" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Choose Image…"
+            "state" : "translated",
+            "value" : "Choisir une image…"
           }
         },
         "hu" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Choose Image…"
+            "state" : "translated",
+            "value" : "Kép kiválasztása…"
           }
         },
         "id" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Choose Image…"
+            "state" : "translated",
+            "value" : "Pilih gambar…"
           }
         },
         "it" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Choose Image…"
+            "state" : "translated",
+            "value" : "Scegli l'immagine…"
           }
         },
         "ja" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Choose Image…"
+            "state" : "translated",
+            "value" : "画像を選択…"
           }
         },
         "ko" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Choose Image…"
+            "state" : "translated",
+            "value" : "이미지 선택…"
           }
         },
         "nl" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Choose Image…"
+            "state" : "translated",
+            "value" : "Kies afbeelding…"
           }
         },
         "pl" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Choose Image…"
+            "state" : "translated",
+            "value" : "Wybierz obraz…"
           }
         },
         "pt-BR" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Choose Image…"
+            "state" : "translated",
+            "value" : "Escolher imagem…"
           }
         },
         "ru" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Choose Image…"
+            "state" : "translated",
+            "value" : "Выбрать изображение…"
           }
         },
         "th" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Choose Image…"
+            "state" : "translated",
+            "value" : "เลือกรูปภาพ…"
           }
         },
         "tr" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Choose Image…"
+            "state" : "translated",
+            "value" : "Görsel seç…"
           }
         },
         "uk" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Choose Image…"
+            "state" : "translated",
+            "value" : "Вибрати зображення…"
           }
         },
         "vi" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Choose Image…"
+            "state" : "translated",
+            "value" : "Chọn hình ảnh…"
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Choose Image…"
+            "state" : "translated",
+            "value" : "选择图片…"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Choose Image…"
+            "state" : "translated",
+            "value" : "選擇圖片⋯"
           }
         }
       }
@@ -54935,8 +54935,8 @@
         },
         "de" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Couldn’t run tool"
+            "state" : "translated",
+            "value" : "Das Tool konnte nicht ausgeführt werden"
           }
         },
         "es" : {
@@ -54989,8 +54989,8 @@
         },
         "pl" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Couldn’t run tool"
+            "state" : "translated",
+            "value" : "Nie udało się uruchomić narzędzia"
           }
         },
         "pt-BR" : {
@@ -55001,14 +55001,14 @@
         },
         "ru" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Couldn’t run tool"
+            "state" : "translated",
+            "value" : "Не удалось запустить инструмент"
           }
         },
         "th" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Couldn’t run tool"
+            "state" : "translated",
+            "value" : "ไม่สามารถรันเครื่องมือได้"
           }
         },
         "tr" : {
@@ -55031,14 +55031,14 @@
         },
         "zh-Hans" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Couldn’t run tool"
+            "state" : "translated",
+            "value" : "无法运行工具"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Couldn’t run tool"
+            "state" : "translated",
+            "value" : "無法執行工具"
           }
         }
       }
@@ -59540,116 +59540,116 @@
       "localizations" : {
         "cs" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Delete…"
+            "state" : "translated",
+            "value" : "Smazat…"
           }
         },
         "de" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Delete…"
+            "state" : "translated",
+            "value" : "Löschen…"
           }
         },
         "es" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Delete…"
+            "state" : "translated",
+            "value" : "Eliminar…"
           }
         },
         "fr" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Delete…"
+            "state" : "translated",
+            "value" : "Supprimer…"
           }
         },
         "hu" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Delete…"
+            "state" : "translated",
+            "value" : "Törlés…"
           }
         },
         "id" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Delete…"
+            "state" : "translated",
+            "value" : "Hapus…"
           }
         },
         "it" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Delete…"
+            "state" : "translated",
+            "value" : "Cancella…"
           }
         },
         "ja" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Delete…"
+            "state" : "translated",
+            "value" : "削除…"
           }
         },
         "ko" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Delete…"
+            "state" : "translated",
+            "value" : "삭제…"
           }
         },
         "nl" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Delete…"
+            "state" : "translated",
+            "value" : "Verwijderen…"
           }
         },
         "pl" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Delete…"
+            "state" : "translated",
+            "value" : "Usuń…"
           }
         },
         "pt-BR" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Delete…"
+            "state" : "translated",
+            "value" : "Excluir…"
           }
         },
         "ru" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Delete…"
+            "state" : "translated",
+            "value" : "Удалить…"
           }
         },
         "th" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Delete…"
+            "state" : "translated",
+            "value" : "ลบ…"
           }
         },
         "tr" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Delete…"
+            "state" : "translated",
+            "value" : "Sil…"
           }
         },
         "uk" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Delete…"
+            "state" : "translated",
+            "value" : "Видалити…"
           }
         },
         "vi" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Delete…"
+            "state" : "translated",
+            "value" : "Xóa…"
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Delete…"
+            "state" : "translated",
+            "value" : "删除…"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Delete…"
+            "state" : "translated",
+            "value" : "刪除…"
           }
         }
       }
@@ -62623,116 +62623,116 @@
       "localizations" : {
         "cs" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Don’t ask again"
+            "state" : "translated",
+            "value" : "Příště se neptat"
           }
         },
         "de" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Don’t ask again"
+            "state" : "translated",
+            "value" : "Nicht nochmal fragen"
           }
         },
         "es" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Don’t ask again"
+            "state" : "translated",
+            "value" : "No preguntar de nuevo"
           }
         },
         "fr" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Don’t ask again"
+            "state" : "translated",
+            "value" : "Ne plus demander"
           }
         },
         "hu" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Don’t ask again"
+            "state" : "translated",
+            "value" : "Ne kérdezze meg többet"
           }
         },
         "id" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Don’t ask again"
+            "state" : "translated",
+            "value" : "Jangan tanya lagi"
           }
         },
         "it" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Don’t ask again"
+            "state" : "translated",
+            "value" : "Non chiederlo di nuovo"
           }
         },
         "ja" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Don’t ask again"
+            "state" : "translated",
+            "value" : "次回から表示しない"
           }
         },
         "ko" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Don’t ask again"
+            "state" : "translated",
+            "value" : "다시 묻지 않기"
           }
         },
         "nl" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Don’t ask again"
+            "state" : "translated",
+            "value" : "Niet opnieuw vragen"
           }
         },
         "pl" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Don’t ask again"
+            "state" : "translated",
+            "value" : "Ne pytaj ponownie"
           }
         },
         "pt-BR" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Don’t ask again"
+            "state" : "translated",
+            "value" : "Não perguntar novamente"
           }
         },
         "ru" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Don’t ask again"
+            "state" : "translated",
+            "value" : "Больше не спрашивать"
           }
         },
         "th" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Don’t ask again"
+            "state" : "translated",
+            "value" : "ไม่ต้องถามอีก"
           }
         },
         "tr" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Don’t ask again"
+            "state" : "translated",
+            "value" : "Uygulamaları yeniden başlatmadan önce onay iste"
           }
         },
         "uk" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Don’t ask again"
+            "state" : "translated",
+            "value" : "Не запитувати знову"
           }
         },
         "vi" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Don’t ask again"
+            "state" : "translated",
+            "value" : "Không hỏi lại"
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Don’t ask again"
+            "state" : "translated",
+            "value" : "不再询问"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Don’t ask again"
+            "state" : "translated",
+            "value" : "之後不再詢問"
           }
         }
       }
@@ -74102,116 +74102,116 @@
       "localizations" : {
         "cs" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Export…"
+            "state" : "translated",
+            "value" : "Exportovat…"
           }
         },
         "de" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Export…"
+            "state" : "translated",
+            "value" : "Exportieren…"
           }
         },
         "es" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Export…"
+            "state" : "translated",
+            "value" : "Exportar…"
           }
         },
         "fr" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Export…"
+            "state" : "translated",
+            "value" : "Exporter…"
           }
         },
         "hu" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Export…"
+            "state" : "translated",
+            "value" : "Exportálás…"
           }
         },
         "id" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Export…"
+            "state" : "translated",
+            "value" : "Ekspor…"
           }
         },
         "it" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Export…"
+            "state" : "translated",
+            "value" : "Esporta…"
           }
         },
         "ja" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Export…"
+            "state" : "translated",
+            "value" : "エクスポート…"
           }
         },
         "ko" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Export…"
+            "state" : "translated",
+            "value" : "내보내기…"
           }
         },
         "nl" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Export…"
+            "state" : "translated",
+            "value" : "Exporteer…"
           }
         },
         "pl" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Export…"
+            "state" : "translated",
+            "value" : "Eksportuj…"
           }
         },
         "pt-BR" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Export…"
+            "state" : "translated",
+            "value" : "Exportar…"
           }
         },
         "ru" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Export…"
+            "state" : "translated",
+            "value" : "Экспорт…"
           }
         },
         "th" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Export…"
+            "state" : "translated",
+            "value" : "ส่งออก…"
           }
         },
         "tr" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Export…"
+            "state" : "translated",
+            "value" : "Dışa Aktar…"
           }
         },
         "uk" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Export…"
+            "state" : "translated",
+            "value" : "Експортувати…"
           }
         },
         "vi" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Export…"
+            "state" : "translated",
+            "value" : "Xuất…"
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Export…"
+            "state" : "translated",
+            "value" : "导出…"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Export…"
+            "state" : "translated",
+            "value" : "導出…"
           }
         }
       }
@@ -89387,14 +89387,14 @@
       "localizations" : {
         "cs" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "If granted, this app will be able to:\n\n• Read current settings and configurations\n• Turn features and options on or off\n• Adjust timing values (delays, intervals, timers)\n• Change how %1$@ Bar behaves\n• Customize settings for each display\n\nThis permission stays active until removed in %2$@’s Automation settings."
+            "state" : "translated",
+            "value" : "Pokud bude povolení uděleno, bude tato aplikace moci:\n\n• Číst aktuální nastavení a konfigurace\n• Zapínat a vypínat funkce a nastavení\n• Upravovat časové hodnoty (prodlevy, intervaly, časovače)\n• Měnit chování řádku %1$@\n• Upravovat konfigurace pro jednotlivé obrazovky\n\nToto oprávnění zůstává platné, dokud aplikaci ručně neodstraníte v nastavení Automatizace aplikace %2$@."
           }
         },
         "de" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "If granted, this app will be able to:\n\n• Read current settings and configurations\n• Turn features and options on or off\n• Adjust timing values (delays, intervals, timers)\n• Change how %1$@ Bar behaves\n• Customize settings for each display\n\nThis permission stays active until removed in %2$@’s Automation settings."
+            "state" : "translated",
+            "value" : "Wenn das erlaubt wird, kann die Anwendung folgendes tun:\n\n• aktuelle Einstellungen und Konfiguration lesen\n• An- und Abschalten von Einstellungen und Funktionen\n• anpassen von Zeitwerten (Timer, Zeitversatz, Intervalle)\n• ändern des Verhaltens der %1$@-Leiste\n• Einstellungen für jeden Bildschirm anpassen\n\nDiese Berechtigung bleibt aktiv, bis sie in den Automatisierungs-Einstellungen von %2$@ entfernt wird."
           }
         },
         "en" : {
@@ -89405,80 +89405,80 @@
         },
         "es" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "If granted, this app will be able to:\n\n• Read current settings and configurations\n• Turn features and options on or off\n• Adjust timing values (delays, intervals, timers)\n• Change how %1$@ Bar behaves\n• Customize settings for each display\n\nThis permission stays active until removed in %2$@’s Automation settings."
+            "state" : "translated",
+            "value" : "Si se concede, esta aplicación podrá:\n\n• Leer los ajustes y configuraciones actuales\n• Activar o desactivar funciones y opciones\n• Ajustar los valores de temporización (retrasos, intervalos, temporizadores)\n• Modificar el comportamiento de %1$@ Bar\n• Personalizar los ajustes de cada pantalla\n\nEste permiso permanecerá activo hasta que se elimine en los ajustes de automatización de %2$@."
           }
         },
         "fr" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "If granted, this app will be able to:\n\n• Read current settings and configurations\n• Turn features and options on or off\n• Adjust timing values (delays, intervals, timers)\n• Change how %1$@ Bar behaves\n• Customize settings for each display\n\nThis permission stays active until removed in %2$@’s Automation settings."
+            "state" : "translated",
+            "value" : "Si autorisé, cette application pourra :\n\n• Lire les paramètres et configurations actuels\n• Activer ou désactiver des fonctionnalités et options\n• Modifier les valeurs de temporisation (délais, intervalles, timer)\n• Modifier le comportement de %1$@ Bar\n• Personnaliser les paramètres de chaque écran\n\nCette autorisation reste active jusqu'à ce qu'elle soit supprimée dans les paramètres d'automatisation de %2$@."
           }
         },
         "hu" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "If granted, this app will be able to:\n\n• Read current settings and configurations\n• Turn features and options on or off\n• Adjust timing values (delays, intervals, timers)\n• Change how %1$@ Bar behaves\n• Customize settings for each display\n\nThis permission stays active until removed in %2$@’s Automation settings."
+            "state" : "translated",
+            "value" : "Ha engedélyezed, ez az alkalmazás a következőkre lesz képes:\n\n• Jelenlegi beállítások és konfigurációk olvasása\n• Funkciók és beállítások be- vagy kikapcsolása\n• Időzítési értékek módosítása (késleltetések, időközök, időzítők)\n• A %1$@ sáv viselkedésének módosítása\n• Beállítások testreszabása minden kijelzőhöz\n\nEz az engedély addig marad aktív, amíg el nem távolítod a %2$@ Automatizálás beállításaiban."
           }
         },
         "id" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "If granted, this app will be able to:\n\n• Read current settings and configurations\n• Turn features and options on or off\n• Adjust timing values (delays, intervals, timers)\n• Change how %1$@ Bar behaves\n• Customize settings for each display\n\nThis permission stays active until removed in %2$@’s Automation settings."
+            "state" : "translated",
+            "value" : "Jika izin ini diberikan, aplikasi ini akan dapat:\n\n• Membaca pengaturan dan konfigurasi saat ini\n• Mengaktifkan atau menonaktifkan fitur dan opsi\n• Menyesuaikan nilai waktu (penundaan, interval, pengatur waktu)\n• Mengubah perilaku %1$@ Bar\n• Menyesuaikan pengaturan untuk setiap tampilan\n\nIzin ini akan tetap aktif hingga dihapus di pengaturan Otomatisasi %2$@."
           }
         },
         "it" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "If granted, this app will be able to:\n\n• Read current settings and configurations\n• Turn features and options on or off\n• Adjust timing values (delays, intervals, timers)\n• Change how %1$@ Bar behaves\n• Customize settings for each display\n\nThis permission stays active until removed in %2$@’s Automation settings."
+            "state" : "translated",
+            "value" : "Se concesso, questa applicazione potrà:\n\n• Leggere le attuali impostazioni e configurazioni\n• Attivare o disattivare funzionalità e impostazioni\n• Modificare valori di tempistiche (ritardi, intervalli, timer)\n• Cambiare il comportamento della Barra di %1$@\n• Personalizzare le impostazioni per ogni schermo\n\nQuesto permesso rimane attivo finché non viene rimosso l'Impostazione automatica di %2$@."
           }
         },
         "ja" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "If granted, this app will be able to:\n\n• Read current settings and configurations\n• Turn features and options on or off\n• Adjust timing values (delays, intervals, timers)\n• Change how %1$@ Bar behaves\n• Customize settings for each display\n\nThis permission stays active until removed in %2$@’s Automation settings."
+            "state" : "translated",
+            "value" : "許可された場合、このアプリは次のようなことができます:\n\n・現在の設定と構成を確認する\n・機能やオプションを有効/無能にする\n・%1$@ の動作を変更する\n・ディスプレイごとに設定をカスタマイズする\n\nこの権限は、%2$@ のオートメーション設定で削除されるまで有効です。"
           }
         },
         "ko" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "If granted, this app will be able to:\n\n• Read current settings and configurations\n• Turn features and options on or off\n• Adjust timing values (delays, intervals, timers)\n• Change how %1$@ Bar behaves\n• Customize settings for each display\n\nThis permission stays active until removed in %2$@’s Automation settings."
+            "state" : "translated",
+            "value" : "권한을 부여하면 이 앱은 다음을 수행할 수 있습니다:\n\n• 현재 설정과 구성 읽기\n• 기능과 옵션을 활성화하거나 비활성화하기\n• 타이밍 값 조절 (지연, 간격, 타이머)\n• %1$@ 바의 동작 방식 변경\n• 각 디스플레이별 설정 사용자화\n\n이 권한은 %2$@의 자동화 설정에서 제거될 때까지 활성화됩니다."
           }
         },
         "nl" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "If granted, this app will be able to:\n\n• Read current settings and configurations\n• Turn features and options on or off\n• Adjust timing values (delays, intervals, timers)\n• Change how %1$@ Bar behaves\n• Customize settings for each display\n\nThis permission stays active until removed in %2$@’s Automation settings."
+            "state" : "translated",
+            "value" : "Als deze toestemming wordt verleend, kan deze app het volgende doen:\n\n• De huidige instellingen en configuraties lezen\n• Functies en opties in- of uitschakelen\n• Tijdinstellingen aanpassen (vertragingen, intervallen, timers)\n• Het gedrag van %1$@ Bar wijzigen\n• Instellingen voor elk scherm aanpassen\n\nDeze toestemming blijft actief totdat deze wordt ingetrokken in de automatiseringsinstellingen van %2$@."
           }
         },
         "pl" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "If granted, this app will be able to:\n\n• Read current settings and configurations\n• Turn features and options on or off\n• Adjust timing values (delays, intervals, timers)\n• Change how %1$@ Bar behaves\n• Customize settings for each display\n\nThis permission stays active until removed in %2$@’s Automation settings."
+            "state" : "translated",
+            "value" : "Udzielenie uprawnienia umożliwi tej aplikacji:\n\n• odczyt aktualnych ustawień i konfiguracji\n• włączanie lub wyłączanie funkcji i opcji\n• modyfikację wartości czasowych (opóźnienia, interwały, timery)\n• zmianę zachowania paska %1$@\n• dostosowanie ustawień dla każdego wyświetlacza\n\nUprawnienie pozostanie aktywne do momentu usunięcia go w ustawieniach automatyzacji aplikacji %2$@."
           }
         },
         "pt-BR" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "If granted, this app will be able to:\n\n• Read current settings and configurations\n• Turn features and options on or off\n• Adjust timing values (delays, intervals, timers)\n• Change how %1$@ Bar behaves\n• Customize settings for each display\n\nThis permission stays active until removed in %2$@’s Automation settings."
+            "state" : "translated",
+            "value" : "Se concedida, este aplicativo poderá:\n\n• Ler as configurações e ajustes atuais\n• Ativar ou desativar recursos e opções\n• Ajustar valores de tempo (atrasos, intervalos, temporizadores)\n• Alterar o comportamento da Barra %1$@\n• Personalizar as configurações de cada tela\n\nEsta permissão permanecerá ativa até ser removida nas configurações de Automação do %2$@."
           }
         },
         "ru" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "If granted, this app will be able to:\n\n• Read current settings and configurations\n• Turn features and options on or off\n• Adjust timing values (delays, intervals, timers)\n• Change how %1$@ Bar behaves\n• Customize settings for each display\n\nThis permission stays active until removed in %2$@’s Automation settings."
+            "state" : "translated",
+            "value" : "В случае предоставления этого разрешения приложение сможет:\n\n• Считывать текущие настройки и конфигурации\n• Включать и отключать функции и параметры\n• Настраивать временные параметры (задержки, интервалы, таймеры)\n• Изменять поведение панели %1$@\n• Настраивать параметры для каждого дисплея\n\nЭто разрешение остается активным до тех пор, пока его не будет удалено в настройках автоматизации %2$@."
           }
         },
         "th" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "If granted, this app will be able to:\n\n• Read current settings and configurations\n• Turn features and options on or off\n• Adjust timing values (delays, intervals, timers)\n• Change how %1$@ Bar behaves\n• Customize settings for each display\n\nThis permission stays active until removed in %2$@’s Automation settings."
+            "state" : "translated",
+            "value" : "หากได้รับอนุญาต แอปนี้จะสามารถ:\n\n• อ่านการตั้งค่าและการกำหนดค่าปัจจุบัน\n• เปิดหรือปิดฟีเจอร์และตัวเลือกต่าง ๆ\n• ปรับค่าเวลา (การหน่วง, ช่วงเวลา, ตัวตั้งเวลา)\n• เปลี่ยนพฤติกรรมการทำงานของแถบ %1$@ \n• กำหนดการตั้งค่าแยกสำหรับแต่ละจอแสดงผล\n\nสิทธิ์นี้จะยังคงใช้งานได้จนกว่าจะถูกลบออกในการตั้งค่าระบบอัตโนมัติของ %2$@"
           }
         },
         "tr" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "If granted, this app will be able to:\n\n• Read current settings and configurations\n• Turn features and options on or off\n• Adjust timing values (delays, intervals, timers)\n• Change how %1$@ Bar behaves\n• Customize settings for each display\n\nThis permission stays active until removed in %2$@’s Automation settings."
+            "state" : "translated",
+            "value" : "Verilirse, bu uygulama şunları yapabilecektir:\n\n• Mevcut ayarları ve yapılandırmaları okuma\n• Özellikleri ve seçenekleri açma veya kapatma\n• Zamanlama değerlerini ayarlama (gecikmeler, aralıklar, zamanlayıcılar)\n• %1$@ Çubuğunun nasıl davrandığını değiştirme\n• Her ekran için ayarları özelleştirme\n\nBu izin, %2$@ uygulamasının Otomasyon ayarlarından kaldırılana kadar aktif kalır."
           }
         },
         "uk" : {
@@ -89489,20 +89489,20 @@
         },
         "vi" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "If granted, this app will be able to:\n\n• Read current settings and configurations\n• Turn features and options on or off\n• Adjust timing values (delays, intervals, timers)\n• Change how %1$@ Bar behaves\n• Customize settings for each display\n\nThis permission stays active until removed in %2$@’s Automation settings."
+            "state" : "translated",
+            "value" : "Nếu được cấp, ứng dụng này sẽ có thể:\n\n• Đọc các cài đặt và cấu hình hiện tại\n• Bật hoặc tắt các tính năng và tùy chọn\n• Điều chỉnh các giá trị thời gian (độ trễ, khoảng thời gian, bộ hẹn giờ)\n• Thay đổi cách hoạt động của %1$@ Bar\n• Tùy chỉnh cài đặt cho từng màn hình\n\nQuyền này vẫn hoạt động cho đến khi bị xóa trong cài đặt Tự động hóa của %2$@."
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "If granted, this app will be able to:\n\n• Read current settings and configurations\n• Turn features and options on or off\n• Adjust timing values (delays, intervals, timers)\n• Change how %1$@ Bar behaves\n• Customize settings for each display\n\nThis permission stays active until removed in %2$@’s Automation settings."
+            "state" : "translated",
+            "value" : "如果授予权限，此应用将能够：\n\n• 读取当前设置和配置\n• 开启或关闭功能和选项\n• 调整时间值（延迟、间隔、计时器）\n• 更改 %1$@ Bar 的行为方式\n• 自定义每个显示器的设置\n\n此权限将保持有效，直到在 %2$@ 的“自动化”设置中将其移除。"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "If granted, this app will be able to:\n\n• Read current settings and configurations\n• Turn features and options on or off\n• Adjust timing values (delays, intervals, timers)\n• Change how %1$@ Bar behaves\n• Customize settings for each display\n\nThis permission stays active until removed in %2$@’s Automation settings."
+            "state" : "translated",
+            "value" : "若授予權限，此應用程式將能夠：\n\n讀取目前的設定與配置\n\n開啟或關閉功能與選項\n\n調整時間值（延遲、間隔、計時器）\n\n變更 %1$@ 列的運作方式\n\n為每個顯示器自訂設定\n\n此權限將持續有效，直到從 %2$@ 的「自動化」設定中移除為止。"
           }
         }
       }
@@ -102311,20 +102311,20 @@
       "localizations" : {
         "cs" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Max"
+            "state" : "translated",
+            "value" : "maximum"
           }
         },
         "de" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Max"
+            "state" : "translated",
+            "value" : "maximal"
           }
         },
         "es" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Max"
+            "state" : "translated",
+            "value" : "máx"
           }
         },
         "fr" : {
@@ -102341,8 +102341,8 @@
         },
         "id" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Max"
+            "state" : "translated",
+            "value" : "maks"
           }
         },
         "it" : {
@@ -102353,14 +102353,14 @@
         },
         "ja" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Max"
+            "state" : "translated",
+            "value" : "最大"
           }
         },
         "ko" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Max"
+            "state" : "translated",
+            "value" : "최대"
           }
         },
         "nl" : {
@@ -102371,56 +102371,56 @@
         },
         "pl" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Max"
+            "state" : "translated",
+            "value" : "maks"
           }
         },
         "pt-BR" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Max"
+            "state" : "translated",
+            "value" : "máx"
           }
         },
         "ru" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Max"
+            "state" : "translated",
+            "value" : "макс."
           }
         },
         "th" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Max"
+            "state" : "translated",
+            "value" : "สูงสุด"
           }
         },
         "tr" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Max"
+            "state" : "translated",
+            "value" : "maks"
           }
         },
         "uk" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Max"
+            "state" : "translated",
+            "value" : "макс."
           }
         },
         "vi" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Max"
+            "state" : "translated",
+            "value" : "tối đa"
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Max"
+            "state" : "translated",
+            "value" : "最大"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Max"
+            "state" : "translated",
+            "value" : "最大"
           }
         }
       }
@@ -102797,8 +102797,8 @@
         },
         "es" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Menu Bar Item"
+            "state" : "translated",
+            "value" : "Elemento de la barra de menús"
           }
         },
         "fr" : {
@@ -102827,8 +102827,8 @@
         },
         "ja" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Menu Bar Item"
+            "state" : "translated",
+            "value" : "メニューバー項目"
           }
         },
         "ko" : {
@@ -102845,8 +102845,8 @@
         },
         "pl" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Menu Bar Item"
+            "state" : "translated",
+            "value" : "Element paska menu"
           }
         },
         "pt-BR" : {
@@ -102857,14 +102857,14 @@
         },
         "ru" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Menu Bar Item"
+            "state" : "translated",
+            "value" : "Элемент строки меню"
           }
         },
         "th" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Menu Bar Item"
+            "state" : "translated",
+            "value" : "รายการแถบเมนู"
           }
         },
         "tr" : {
@@ -102887,8 +102887,8 @@
         },
         "zh-Hans" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Menu Bar Item"
+            "state" : "translated",
+            "value" : "菜单栏项目"
           }
         },
         "zh-Hant" : {
@@ -103614,116 +103614,116 @@
       "localizations" : {
         "cs" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Menu bar"
+            "state" : "translated",
+            "value" : "Řádek nabídek"
           }
         },
         "de" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Menu bar"
+            "state" : "translated",
+            "value" : "Menüleiste"
           }
         },
         "es" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Menu bar"
+            "state" : "translated",
+            "value" : "Barra de menús"
           }
         },
         "fr" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Menu bar"
+            "state" : "translated",
+            "value" : "Barre des menus"
           }
         },
         "hu" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Menu bar"
+            "state" : "translated",
+            "value" : "Menüsor"
           }
         },
         "id" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Menu bar"
+            "state" : "translated",
+            "value" : "Bar Menu"
           }
         },
         "it" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Menu bar"
+            "state" : "translated",
+            "value" : "Barra dei menu"
           }
         },
         "ja" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Menu bar"
+            "state" : "translated",
+            "value" : "メニューバー"
           }
         },
         "ko" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Menu bar"
+            "state" : "translated",
+            "value" : "메뉴 막대"
           }
         },
         "nl" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Menu bar"
+            "state" : "translated",
+            "value" : "Menubalk"
           }
         },
         "pl" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Menu bar"
+            "state" : "translated",
+            "value" : "Pasek menu"
           }
         },
         "pt-BR" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Menu bar"
+            "state" : "translated",
+            "value" : "Barra de Menus"
           }
         },
         "ru" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Menu bar"
+            "state" : "translated",
+            "value" : "Строка меню"
           }
         },
         "th" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Menu bar"
+            "state" : "translated",
+            "value" : "แถบเมนู"
           }
         },
         "tr" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Menu bar"
+            "state" : "translated",
+            "value" : "Menü Çubuğu"
           }
         },
         "uk" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Menu bar"
+            "state" : "translated",
+            "value" : "Рядок меню"
           }
         },
         "vi" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Menu bar"
+            "state" : "translated",
+            "value" : "Thanh menu"
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Menu bar"
+            "state" : "translated",
+            "value" : "菜单栏"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Menu bar"
+            "state" : "translated",
+            "value" : "選單條"
           }
         }
       }
@@ -104443,116 +104443,116 @@
       "localizations" : {
         "cs" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Menu bar items"
+            "state" : "translated",
+            "value" : "Ikony řádku nabídek"
           }
         },
         "de" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Menu bar items"
+            "state" : "translated",
+            "value" : "Menüleisten-Einträge"
           }
         },
         "es" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Menu bar items"
+            "state" : "translated",
+            "value" : "Elementos de la barra de menús"
           }
         },
         "fr" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Menu bar items"
+            "state" : "translated",
+            "value" : "Éléments de la barre des menus"
           }
         },
         "hu" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Menu bar items"
+            "state" : "translated",
+            "value" : "Menüsor elemek"
           }
         },
         "id" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Menu bar items"
+            "state" : "translated",
+            "value" : "Item Bar Menu"
           }
         },
         "it" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Menu bar items"
+            "state" : "translated",
+            "value" : "Elementi della barra dei menu"
           }
         },
         "ja" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Menu bar items"
+            "state" : "translated",
+            "value" : "メニューバー項目"
           }
         },
         "ko" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Menu bar items"
+            "state" : "translated",
+            "value" : "메뉴 막대 항목"
           }
         },
         "nl" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Menu bar items"
+            "state" : "translated",
+            "value" : "Menubalkitems"
           }
         },
         "pl" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Menu bar items"
+            "state" : "translated",
+            "value" : "Elementy paska menu"
           }
         },
         "pt-BR" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Menu bar items"
+            "state" : "translated",
+            "value" : "Itens da Barra de Menus"
           }
         },
         "ru" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Menu bar items"
+            "state" : "translated",
+            "value" : "Элементы строки меню"
           }
         },
         "th" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Menu bar items"
+            "state" : "translated",
+            "value" : "รายการในแถบเมนู"
           }
         },
         "tr" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Menu bar items"
+            "state" : "translated",
+            "value" : "Menü Çubuğu Öğeleri"
           }
         },
         "uk" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Menu bar items"
+            "state" : "translated",
+            "value" : "Об'єкти рядка меню"
           }
         },
         "vi" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Menu bar items"
+            "state" : "translated",
+            "value" : "Các mục trên thanh menu"
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Menu bar items"
+            "state" : "translated",
+            "value" : "菜单栏项目"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Menu bar items"
+            "state" : "translated",
+            "value" : "選單列項目"
           }
         }
       }
@@ -105508,116 +105508,116 @@
       "localizations" : {
         "cs" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Menu bar search"
+            "state" : "translated",
+            "value" : "Vyhledávání v řádku nabídek"
           }
         },
         "de" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Menu bar search"
+            "state" : "translated",
+            "value" : "Menüleisten-Suche"
           }
         },
         "es" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Menu bar search"
+            "state" : "translated",
+            "value" : "Búsqueda en la barra de menús"
           }
         },
         "fr" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Menu bar search"
+            "state" : "translated",
+            "value" : "Recherche dans la barre des menus"
           }
         },
         "hu" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Menu bar search"
+            "state" : "translated",
+            "value" : "Menüsor keresés"
           }
         },
         "id" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Menu bar search"
+            "state" : "translated",
+            "value" : "Pencarian Bar Menu"
           }
         },
         "it" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Menu bar search"
+            "state" : "translated",
+            "value" : "Ricerca barra dei menu"
           }
         },
         "ja" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Menu bar search"
+            "state" : "translated",
+            "value" : "メニューバー検索"
           }
         },
         "ko" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Menu bar search"
+            "state" : "translated",
+            "value" : "메뉴 막대 검색"
           }
         },
         "nl" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Menu bar search"
+            "state" : "translated",
+            "value" : "Menubalk zoeken"
           }
         },
         "pl" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Menu bar search"
+            "state" : "translated",
+            "value" : "Wyszukiwanie w pasku menu"
           }
         },
         "pt-BR" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Menu bar search"
+            "state" : "translated",
+            "value" : "Busca na Barra de Menus"
           }
         },
         "ru" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Menu bar search"
+            "state" : "translated",
+            "value" : "Поиск в строке меню"
           }
         },
         "th" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Menu bar search"
+            "state" : "translated",
+            "value" : "ค้นหาแถบเมนู"
           }
         },
         "tr" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Menu bar search"
+            "state" : "translated",
+            "value" : "Menü Çubuğu Arama"
           }
         },
         "uk" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Menu bar search"
+            "state" : "translated",
+            "value" : "Пошук у рядку меню"
           }
         },
         "vi" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Menu bar search"
+            "state" : "translated",
+            "value" : "Tìm kiếm thanh menu"
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Menu bar search"
+            "state" : "translated",
+            "value" : "搜索菜单栏"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Menu bar search"
+            "state" : "translated",
+            "value" : "選單列搜尋"
           }
         }
       }
@@ -108367,116 +108367,116 @@
       "localizations" : {
         "cs" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Move items that don’t fit into Hidden"
+            "state" : "translated",
+            "value" : "Přesouvat položky, které se nevejdou, mezi skryté"
           }
         },
         "de" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Move items that don’t fit into Hidden"
+            "state" : "translated",
+            "value" : "Nicht passende Einträge nach Versteckt verschieben"
           }
         },
         "es" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Move items that don’t fit into Hidden"
+            "state" : "translated",
+            "value" : "Mover a Oculto los elementos que no caben"
           }
         },
         "fr" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Move items that don’t fit into Hidden"
+            "state" : "translated",
+            "value" : "Déplacer vers Masqué les éléments qui ne tiennent pas"
           }
         },
         "hu" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Move items that don’t fit into Hidden"
+            "state" : "translated",
+            "value" : "A ki nem férő elemek áthelyezése a Rejtett szakaszba"
           }
         },
         "id" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Move items that don’t fit into Hidden"
+            "state" : "translated",
+            "value" : "Pindahkan item yang tidak muat ke Tersembunyi"
           }
         },
         "it" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Move items that don’t fit into Hidden"
+            "state" : "translated",
+            "value" : "Sposta in Nascosto gli elementi che non entrano"
           }
         },
         "ja" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Move items that don’t fit into Hidden"
+            "state" : "translated",
+            "value" : "収まらない項目を非表示に移動"
           }
         },
         "ko" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Move items that don’t fit into Hidden"
+            "state" : "translated",
+            "value" : "공간이 부족한 항목을 숨김으로 이동"
           }
         },
         "nl" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Move items that don’t fit into Hidden"
+            "state" : "translated",
+            "value" : "Items die niet passen naar Verborgen verplaatsen"
           }
         },
         "pl" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Move items that don’t fit into Hidden"
+            "state" : "translated",
+            "value" : "Przenieś do sekcji Ukryte pozycje, które się nie mieszczą"
           }
         },
         "pt-BR" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Move items that don’t fit into Hidden"
+            "state" : "translated",
+            "value" : "Mover para Ocultos os itens que não couberem"
           }
         },
         "ru" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Move items that don’t fit into Hidden"
+            "state" : "translated",
+            "value" : "Перемещать не помещающиеся элементы в «Скрытые»"
           }
         },
         "th" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Move items that don’t fit into Hidden"
+            "state" : "translated",
+            "value" : "ย้ายรายการที่ไม่พอดีไปยังที่ซ่อนอยู่"
           }
         },
         "tr" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Move items that don’t fit into Hidden"
+            "state" : "translated",
+            "value" : "Sığmayan ögeleri Gizli bölüme taşı"
           }
         },
         "uk" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Move items that don’t fit into Hidden"
+            "state" : "translated",
+            "value" : "Переміщати обʼєкти, що не вміщуються, до «Прихованих»"
           }
         },
         "vi" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Move items that don’t fit into Hidden"
+            "state" : "translated",
+            "value" : "Chuyển các mục không vừa sang phần Ẩn"
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Move items that don’t fit into Hidden"
+            "state" : "translated",
+            "value" : "将放不下的项目移入“隐藏”区域"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Move items that don’t fit into Hidden"
+            "state" : "translated",
+            "value" : "將容納不下的項目移至「隱藏」區域"
           }
         }
       }
@@ -117013,116 +117013,116 @@
       "localizations" : {
         "cs" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Not executable. Run “chmod +x” on the file."
+            "state" : "translated",
+            "value" : "Soubor není spustitelný. Spusťte soubor příkazem „chmod +x“."
           }
         },
         "de" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Not executable. Run “chmod +x” on the file."
+            "state" : "translated",
+            "value" : "Nicht ausführbar. Führe 'chmod +x' für die Datei aus."
           }
         },
         "es" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Not executable. Run “chmod +x” on the file."
+            "state" : "translated",
+            "value" : "No es ejecutable. Ejecuta «chmod +x» en el archivo."
           }
         },
         "fr" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Not executable. Run “chmod +x” on the file."
+            "state" : "translated",
+            "value" : "Non exécutable. Exécutez \"chmod +x\" sur le fichier."
           }
         },
         "hu" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Not executable. Run “chmod +x” on the file."
+            "state" : "translated",
+            "value" : "Nem futtatható. Futtasd a \"chmod +x\" parancsot a fájlon."
           }
         },
         "id" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Not executable. Run “chmod +x” on the file."
+            "state" : "translated",
+            "value" : "Tidak dapat dijalankan. Jalankan \"chmod +x\" pada berkas ini."
           }
         },
         "it" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Not executable. Run “chmod +x” on the file."
+            "state" : "translated",
+            "value" : "Non è eseguibile. Esegui il comando \"chmod +x\" sul file."
           }
         },
         "ja" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Not executable. Run “chmod +x” on the file."
+            "state" : "translated",
+            "value" : "実行できません。ファイルに「chmod +x」を実行してください。"
           }
         },
         "ko" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Not executable. Run “chmod +x” on the file."
+            "state" : "translated",
+            "value" : "실행할 수 없습니다. 파일에 \"chmod +x\" 명령을 실행해주세요."
           }
         },
         "nl" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Not executable. Run “chmod +x” on the file."
+            "state" : "translated",
+            "value" : "Niet uitvoerbaar. Voer \"chmod +x\" uit op het bestand."
           }
         },
         "pl" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Not executable. Run “chmod +x” on the file."
+            "state" : "translated",
+            "value" : "Plik nie jest wykonywalny. Uruchom polecenie \"chmod +x\" na tym pliku."
           }
         },
         "pt-BR" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Not executable. Run “chmod +x” on the file."
+            "state" : "translated",
+            "value" : "Não é executável. Execute o comando “chmod +x” no arquivo."
           }
         },
         "ru" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Not executable. Run “chmod +x” on the file."
+            "state" : "translated",
+            "value" : "Файл не является исполняемым. Выполните chmod +x для этого файла."
           }
         },
         "th" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Not executable. Run “chmod +x” on the file."
+            "state" : "translated",
+            "value" : "ไฟล์ไม่สามารถรันได้ ให้ใช้คำสั่ง \"chmod +x\" กับไฟล์"
           }
         },
         "tr" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Not executable. Run “chmod +x” on the file."
+            "state" : "translated",
+            "value" : "Çalıştırılabilir değil. Dosya üzerinde \"chmod +x\" komutunu çalıştırın."
           }
         },
         "uk" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Not executable. Run “chmod +x” on the file."
+            "state" : "translated",
+            "value" : "Не є виконуваним. Виконайте «chmod +x» для цього файлу."
           }
         },
         "vi" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Not executable. Run “chmod +x” on the file."
+            "state" : "translated",
+            "value" : "Không thực thi được. Chạy \"chmod +x\" trên tệp."
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Not executable. Run “chmod +x” on the file."
+            "state" : "translated",
+            "value" : "文件不可执行。请先对该文件运行 \"chmod +x\"。"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Not executable. Run “chmod +x” on the file."
+            "state" : "translated",
+            "value" : "沒有執行權限。請對此檔案執行 chmod +x。"
           }
         }
       }
@@ -123640,116 +123640,116 @@
       "localizations" : {
         "cs" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Open Thaw Settings"
+            "state" : "translated",
+            "value" : "Otevřít nastavení Thaw"
           }
         },
         "de" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Open Thaw Settings"
+            "state" : "translated",
+            "value" : "Öffne Thaw-Einstellungen"
           }
         },
         "es" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Open Thaw Settings"
+            "state" : "translated",
+            "value" : "Abrir ajustes de Thaw"
           }
         },
         "fr" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Open Thaw Settings"
+            "state" : "translated",
+            "value" : "Ouvrir les réglages de Thaw"
           }
         },
         "hu" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Open Thaw Settings"
+            "state" : "translated",
+            "value" : "Thaw beállítások megnyitása"
           }
         },
         "id" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Open Thaw Settings"
+            "state" : "translated",
+            "value" : "Buka Pengaturan Thaw"
           }
         },
         "it" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Open Thaw Settings"
+            "state" : "translated",
+            "value" : "Apri Thaw Impostazioni"
           }
         },
         "ja" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Open Thaw Settings"
+            "state" : "translated",
+            "value" : "Thaw 設定を開く"
           }
         },
         "ko" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Open Thaw Settings"
+            "state" : "translated",
+            "value" : "Thaw 설정 열기"
           }
         },
         "nl" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Open Thaw Settings"
+            "state" : "translated",
+            "value" : "Open Thaw Instellingen"
           }
         },
         "pl" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Open Thaw Settings"
+            "state" : "translated",
+            "value" : "Otwórz ustawienia Thaw"
           }
         },
         "pt-BR" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Open Thaw Settings"
+            "state" : "translated",
+            "value" : "Abrir Configurações Thaw"
           }
         },
         "ru" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Open Thaw Settings"
+            "state" : "translated",
+            "value" : "Открыть настройки Thaw"
           }
         },
         "th" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Open Thaw Settings"
+            "state" : "translated",
+            "value" : "เปิดการตั้งค่า Thaw"
           }
         },
         "tr" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Open Thaw Settings"
+            "state" : "translated",
+            "value" : "Thaw Ayarlarını Aç"
           }
         },
         "uk" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Open Thaw Settings"
+            "state" : "translated",
+            "value" : "Відкрити налаштування Thaw"
           }
         },
         "vi" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Open Thaw Settings"
+            "state" : "translated",
+            "value" : "Mở Cài đặt Thaw"
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Open Thaw Settings"
+            "state" : "translated",
+            "value" : "打开 Thaw 设置"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Open Thaw Settings"
+            "state" : "translated",
+            "value" : "開啟 Thaw 設定"
           }
         }
       }
@@ -137517,8 +137517,8 @@
         },
         "es" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Remove from Group"
+            "state" : "translated",
+            "value" : "Eliminar del grupo"
           }
         },
         "fr" : {
@@ -137541,8 +137541,8 @@
         },
         "it" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Remove from Group"
+            "state" : "translated",
+            "value" : "Rimuovi dal gruppo"
           }
         },
         "ja" : {
@@ -137553,8 +137553,8 @@
         },
         "ko" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Remove from Group"
+            "state" : "translated",
+            "value" : "그룹에서 제거"
           }
         },
         "nl" : {
@@ -137565,8 +137565,8 @@
         },
         "pl" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Remove from Group"
+            "state" : "translated",
+            "value" : "Usuń z grupy"
           }
         },
         "pt-BR" : {
@@ -137577,14 +137577,14 @@
         },
         "ru" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Remove from Group"
+            "state" : "translated",
+            "value" : "Удалить из группы"
           }
         },
         "th" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Remove from Group"
+            "state" : "translated",
+            "value" : "ลบออกจากกลุ่ม"
           }
         },
         "tr" : {
@@ -137607,8 +137607,8 @@
         },
         "zh-Hans" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Remove from Group"
+            "state" : "translated",
+            "value" : "从该分组移除"
           }
         },
         "zh-Hant" : {
@@ -138806,116 +138806,116 @@
       "localizations" : {
         "cs" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Rename…"
+            "state" : "translated",
+            "value" : "Přejmenovat…"
           }
         },
         "de" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Rename…"
+            "state" : "translated",
+            "value" : "Umbenennen…"
           }
         },
         "es" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Rename…"
+            "state" : "translated",
+            "value" : "Renombrar…"
           }
         },
         "fr" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Rename…"
+            "state" : "translated",
+            "value" : "Renommer…"
           }
         },
         "hu" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Rename…"
+            "state" : "translated",
+            "value" : "Átnevezés…"
           }
         },
         "id" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Rename…"
+            "state" : "translated",
+            "value" : "Ubah Nama…"
           }
         },
         "it" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Rename…"
+            "state" : "translated",
+            "value" : "Rinomina…"
           }
         },
         "ja" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Rename…"
+            "state" : "translated",
+            "value" : "名前を変更…"
           }
         },
         "ko" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Rename…"
+            "state" : "translated",
+            "value" : "이름 변경…"
           }
         },
         "nl" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Rename…"
+            "state" : "translated",
+            "value" : "Hernoemen…"
           }
         },
         "pl" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Rename…"
+            "state" : "translated",
+            "value" : "Zmień nazwę…"
           }
         },
         "pt-BR" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Rename…"
+            "state" : "translated",
+            "value" : "Renomear…"
           }
         },
         "ru" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Rename…"
+            "state" : "translated",
+            "value" : "Переименовать…"
           }
         },
         "th" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Rename…"
+            "state" : "translated",
+            "value" : "เปลี่ยนชื่อ…"
           }
         },
         "tr" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Rename…"
+            "state" : "translated",
+            "value" : "Yeniden adlandır…"
           }
         },
         "uk" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Rename…"
+            "state" : "translated",
+            "value" : "Перейменувати…"
           }
         },
         "vi" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Rename…"
+            "state" : "translated",
+            "value" : "Đổi tên…"
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Rename…"
+            "state" : "translated",
+            "value" : "重命名…"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Rename…"
+            "state" : "translated",
+            "value" : "重新命名…"
           }
         }
       }
@@ -140698,56 +140698,56 @@
       "localizations" : {
         "cs" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Reset %@…"
+            "state" : "translated",
+            "value" : "Obnovit nastavení %@…"
           }
         },
         "de" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Reset %@…"
+            "state" : "translated",
+            "value" : "%@ zurücksetzen…"
           }
         },
         "es" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Reset %@…"
+            "state" : "translated",
+            "value" : "Reiniciar %@…"
           }
         },
         "fr" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Reset %@…"
+            "state" : "translated",
+            "value" : "Réinitialiser %@…"
           }
         },
         "hu" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Reset %@…"
+            "state" : "translated",
+            "value" : "%@ visszaállítása…"
           }
         },
         "id" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Reset %@…"
+            "state" : "translated",
+            "value" : "Atur ulang %@…"
           }
         },
         "it" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Reset %@…"
+            "state" : "translated",
+            "value" : "Ripristina %@…"
           }
         },
         "ja" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Reset %@…"
+            "state" : "translated",
+            "value" : "%@ をリセット…"
           }
         },
         "ko" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Reset %@…"
+            "state" : "translated",
+            "value" : "%@ 재설정…"
           }
         },
         "nl" : {
@@ -140758,56 +140758,56 @@
         },
         "pl" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Reset %@…"
+            "state" : "translated",
+            "value" : "Zresetuj %@…"
           }
         },
         "pt-BR" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Reset %@…"
+            "state" : "translated",
+            "value" : "Redefinir %@…"
           }
         },
         "ru" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Reset %@…"
+            "state" : "translated",
+            "value" : "Сбросить %@…"
           }
         },
         "th" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Reset %@…"
+            "state" : "translated",
+            "value" : "รีเซ็ต %@…"
           }
         },
         "tr" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Reset %@…"
+            "state" : "translated",
+            "value" : "%@ Sıfırla…"
           }
         },
         "uk" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Reset %@…"
+            "state" : "translated",
+            "value" : "Скинути %@…"
           }
         },
         "vi" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Reset %@…"
+            "state" : "translated",
+            "value" : "Cài lại %@…"
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Reset %@…"
+            "state" : "translated",
+            "value" : "重置 %@…"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Reset %@…"
+            "state" : "translated",
+            "value" : "重置 %@…"
           }
         }
       }
@@ -140934,116 +140934,116 @@
       "localizations" : {
         "cs" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Reset Appearance…"
+            "state" : "translated",
+            "value" : "Obnovit vzhled…"
           }
         },
         "de" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Reset Appearance…"
+            "state" : "translated",
+            "value" : "Darstellung zurücksetzen…"
           }
         },
         "es" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Reset Appearance…"
+            "state" : "translated",
+            "value" : "Restablecer apariencia…"
           }
         },
         "fr" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Reset Appearance…"
+            "state" : "translated",
+            "value" : "Réinitialiser l'apparence…"
           }
         },
         "hu" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Reset Appearance…"
+            "state" : "translated",
+            "value" : "Megjelenés visszaállítása…"
           }
         },
         "id" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Reset Appearance…"
+            "state" : "translated",
+            "value" : "Atur Ulang Tampilan…"
           }
         },
         "it" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Reset Appearance…"
+            "state" : "translated",
+            "value" : "Resetta Aspetto…"
           }
         },
         "ja" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Reset Appearance…"
+            "state" : "translated",
+            "value" : "外観をリセット…"
           }
         },
         "ko" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Reset Appearance…"
+            "state" : "translated",
+            "value" : "모양 재설정…"
           }
         },
         "nl" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Reset Appearance…"
+            "state" : "translated",
+            "value" : "Reset uiterlijk…"
           }
         },
         "pl" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Reset Appearance…"
+            "state" : "translated",
+            "value" : "Przywróć domyślny wygląd…"
           }
         },
         "pt-BR" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Reset Appearance…"
+            "state" : "translated",
+            "value" : "Redefinir Aparência…"
           }
         },
         "ru" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Reset Appearance…"
+            "state" : "translated",
+            "value" : "Сбросить оформление…"
           }
         },
         "th" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Reset Appearance…"
+            "state" : "translated",
+            "value" : "รีเซ็ตลักษณะ…"
           }
         },
         "tr" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Reset Appearance…"
+            "state" : "translated",
+            "value" : "Görünümü Sıfırla…"
           }
         },
         "uk" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Reset Appearance…"
+            "state" : "translated",
+            "value" : "Скинути зовнішній вигляд…"
           }
         },
         "vi" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Reset Appearance…"
+            "state" : "translated",
+            "value" : "Đặt lại giao diện…"
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Reset Appearance…"
+            "state" : "translated",
+            "value" : "重置外观…"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Reset Appearance…"
+            "state" : "translated",
+            "value" : "重設外觀…"
           }
         }
       }
@@ -141884,14 +141884,14 @@
         },
         "de" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Reset Permissions…"
+            "state" : "translated",
+            "value" : "Berechtigungen zurücksetzen…"
           }
         },
         "es" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Reset Permissions…"
+            "state" : "translated",
+            "value" : "Restablece Permisos…"
           }
         },
         "fr" : {
@@ -141902,8 +141902,8 @@
         },
         "hu" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Reset Permissions…"
+            "state" : "translated",
+            "value" : "Jogosultságok alaphelyzetbe állítása…"
           }
         },
         "id" : {
@@ -141926,8 +141926,8 @@
         },
         "ko" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Reset Permissions…"
+            "state" : "translated",
+            "value" : "권한 초기화…"
           }
         },
         "nl" : {
@@ -141938,8 +141938,8 @@
         },
         "pl" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Reset Permissions…"
+            "state" : "translated",
+            "value" : "Przywróć domyślne uprawnienia…"
           }
         },
         "pt-BR" : {
@@ -141950,14 +141950,14 @@
         },
         "ru" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Reset Permissions…"
+            "state" : "translated",
+            "value" : "Сбросить разрешения…"
           }
         },
         "th" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Reset Permissions…"
+            "state" : "translated",
+            "value" : "รีเซ็ตสิทธิ์…"
           }
         },
         "tr" : {
@@ -141980,14 +141980,14 @@
         },
         "zh-Hans" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Reset Permissions…"
+            "state" : "translated",
+            "value" : "重置授权…"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Reset Permissions…"
+            "state" : "translated",
+            "value" : "重置權限…"
           }
         }
       }
@@ -144025,56 +144025,56 @@
       "localizations" : {
         "cs" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Reset…"
+            "state" : "translated",
+            "value" : "Obnovit nastavení…"
           }
         },
         "de" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Reset…"
+            "state" : "translated",
+            "value" : "Zurücksetzen…"
           }
         },
         "es" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Reset…"
+            "state" : "translated",
+            "value" : "Restablecer…"
           }
         },
         "fr" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Reset…"
+            "state" : "translated",
+            "value" : "Réinitialiser…"
           }
         },
         "hu" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Reset…"
+            "state" : "translated",
+            "value" : "Visszaállítás…"
           }
         },
         "id" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Reset…"
+            "state" : "translated",
+            "value" : "Atur Ulang…"
           }
         },
         "it" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Reset…"
+            "state" : "translated",
+            "value" : "Resetta…"
           }
         },
         "ja" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Reset…"
+            "state" : "translated",
+            "value" : "リセット…"
           }
         },
         "ko" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Reset…"
+            "state" : "translated",
+            "value" : "재설정…"
           }
         },
         "nl" : {
@@ -144085,56 +144085,56 @@
         },
         "pl" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Reset…"
+            "state" : "translated",
+            "value" : "Resetuj…"
           }
         },
         "pt-BR" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Reset…"
+            "state" : "translated",
+            "value" : "Redefinir…"
           }
         },
         "ru" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Reset…"
+            "state" : "translated",
+            "value" : "Сбросить…"
           }
         },
         "th" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Reset…"
+            "state" : "translated",
+            "value" : "รีเซ็ต…"
           }
         },
         "tr" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Reset…"
+            "state" : "translated",
+            "value" : "Sıfırla…"
           }
         },
         "uk" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Reset…"
+            "state" : "translated",
+            "value" : "Скинути…"
           }
         },
         "vi" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Reset…"
+            "state" : "translated",
+            "value" : "Đặt lại…"
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Reset…"
+            "state" : "translated",
+            "value" : "重置…"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Reset…"
+            "state" : "translated",
+            "value" : "重置…"
           }
         }
       }
@@ -152302,26 +152302,26 @@
       "localizations" : {
         "cs" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Save the global template to the active profile “%@”, or save it to every profile."
+            "state" : "translated",
+            "value" : "Uložit nastavení obecné šablony do aktivního profilu „%@“, nebo do všech profilů."
           }
         },
         "de" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Save the global template to the active profile “%@”, or save it to every profile."
+            "state" : "translated",
+            "value" : "Die globale Vorlage zum aktiven Profil \"%@\" oder zu jedem Profil speichern."
           }
         },
         "es" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Save the global template to the active profile “%@”, or save it to every profile."
+            "state" : "translated",
+            "value" : "Guarda el nuevo espaciado en el perfil activo %@ o guárdalo en todos los perfiles."
           }
         },
         "fr" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Save the global template to the active profile “%@”, or save it to every profile."
+            "state" : "translated",
+            "value" : "Enregistrez le modèle global dans le profil actif \"%@\", ou enregistrez-le dans chaque profil."
           }
         },
         "hu" : {
@@ -152332,8 +152332,8 @@
         },
         "id" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Save the global template to the active profile “%@”, or save it to every profile."
+            "state" : "translated",
+            "value" : "Simpan templat global ke profil aktif \"%@\", atau simpan ke semua profil."
           }
         },
         "it" : {
@@ -152350,20 +152350,20 @@
         },
         "ko" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Save the global template to the active profile “%@”, or save it to every profile."
+            "state" : "translated",
+            "value" : "전역 서식 파일을 활성 프로필 \"%@\"(으)로 저장하거나 모든 프로필에 저장하세요."
           }
         },
         "nl" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Save the global template to the active profile “%@”, or save it to every profile."
+            "state" : "translated",
+            "value" : "Sla het algemene sjabloon op in het actieve profiel “%@”, of sla deze op in alle profielen."
           }
         },
         "pl" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Save the global template to the active profile “%@”, or save it to every profile."
+            "state" : "translated",
+            "value" : "Zapisz szablon globalny w aktywnym profilu \"%@\" lub we wszystkich profilach."
           }
         },
         "pt-BR" : {
@@ -152374,20 +152374,20 @@
         },
         "ru" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Save the global template to the active profile “%@”, or save it to every profile."
+            "state" : "translated",
+            "value" : "Сохранить глобальный шаблон для активного профиля \"%@\" или для всех профилей."
           }
         },
         "th" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Save the global template to the active profile “%@”, or save it to every profile."
+            "state" : "translated",
+            "value" : "บันทึกเทมเพลตโดยรวมไปยังโปรไฟล์ที่ใช้งานอยู่ “%@” หรือบันทึกไปยังทุกโปรไฟล์"
           }
         },
         "tr" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Save the global template to the active profile “%@”, or save it to every profile."
+            "state" : "translated",
+            "value" : "Yeni genel ayarı aktif profil \"%@\" için kaydet veya tüm profiller için kaydet."
           }
         },
         "uk" : {
@@ -152398,20 +152398,20 @@
         },
         "vi" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Save the global template to the active profile “%@”, or save it to every profile."
+            "state" : "translated",
+            "value" : "Lưu mẫu chung vào hồ sơ đang hoạt động \"%@\" hoặc lưu nó vào mọi hồ sơ."
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Save the global template to the active profile “%@”, or save it to every profile."
+            "state" : "translated",
+            "value" : "将全局模板保存到当前配置文件“%@”，或保存到所有配置文件。"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Save the global template to the active profile “%@”, or save it to every profile."
+            "state" : "translated",
+            "value" : "儲存全域模板至目前啟用的 %@ 設定檔，或者儲存至所有設定檔。"
           }
         }
       }
@@ -158354,8 +158354,8 @@
         },
         "de" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Settings…"
+            "state" : "translated",
+            "value" : "Einstellungen…"
           }
         },
         "es" : {
@@ -158390,8 +158390,8 @@
         },
         "ja" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Settings…"
+            "state" : "translated",
+            "value" : "設定…"
           }
         },
         "ko" : {
@@ -158408,8 +158408,8 @@
         },
         "pl" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Settings…"
+            "state" : "translated",
+            "value" : "Ustawienia…"
           }
         },
         "pt-BR" : {
@@ -158420,14 +158420,14 @@
         },
         "ru" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Settings…"
+            "state" : "translated",
+            "value" : "Настройки…"
           }
         },
         "th" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Settings…"
+            "state" : "translated",
+            "value" : "การตั้งค่า…"
           }
         },
         "tr" : {
@@ -158450,14 +158450,14 @@
         },
         "zh-Hans" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Settings…"
+            "state" : "translated",
+            "value" : "设置…"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Settings…"
+            "state" : "translated",
+            "value" : "設定…"
           }
         }
       }
@@ -163225,8 +163225,8 @@
         },
         "hu" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Show hidden menu bar items in a separate bar below the menu bar."
+            "state" : "translated",
+            "value" : "Rejtett menüsor elemek megjelenítése egy külön sávban a menüsor alatt."
           }
         },
         "id" : {
@@ -163237,8 +163237,8 @@
         },
         "it" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Show hidden menu bar items in a separate bar below the menu bar."
+            "state" : "translated",
+            "value" : "Mostra gli elementi nascosti della barra dei menu in una barra separata sotto la barra dei menu."
           }
         },
         "ja" : {
@@ -163249,8 +163249,8 @@
         },
         "ko" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Show hidden menu bar items in a separate bar below the menu bar."
+            "state" : "translated",
+            "value" : "메뉴 막대 아래의 별도 바에 숨겨진 메뉴 막대 항목을 표시합니다."
           }
         },
         "nl" : {
@@ -163267,8 +163267,8 @@
         },
         "pt-BR" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Show hidden menu bar items in a separate bar below the menu bar."
+            "state" : "translated",
+            "value" : "Mostrar itens ocultos da barra de menus em uma barra separada abaixo da barra de menus."
           }
         },
         "ru" : {
@@ -172443,116 +172443,116 @@
       "localizations" : {
         "cs" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Support Thaw"
+            "state" : "translated",
+            "value" : "Podpořit Thaw"
           }
         },
         "de" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Support Thaw"
+            "state" : "translated",
+            "value" : "Unterstütze Thaw"
           }
         },
         "es" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Support Thaw"
+            "state" : "translated",
+            "value" : "Apoyar a Thaw"
           }
         },
         "fr" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Support Thaw"
+            "state" : "translated",
+            "value" : "Soutenir Thaw"
           }
         },
         "hu" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Support Thaw"
+            "state" : "translated",
+            "value" : "Thaw támogatása"
           }
         },
         "id" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Support Thaw"
+            "state" : "translated",
+            "value" : "Dukung Thaw"
           }
         },
         "it" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Support Thaw"
+            "state" : "translated",
+            "value" : "Supporto Thaw"
           }
         },
         "ja" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Support Thaw"
+            "state" : "translated",
+            "value" : "Thaw をサポート"
           }
         },
         "ko" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Support Thaw"
+            "state" : "translated",
+            "value" : "Thaw 지원하기"
           }
         },
         "nl" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Support Thaw"
+            "state" : "translated",
+            "value" : "Ondersteuning Thaw"
           }
         },
         "pl" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Support Thaw"
+            "state" : "translated",
+            "value" : "Wesprzyj Thaw"
           }
         },
         "pt-BR" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Support Thaw"
+            "state" : "translated",
+            "value" : "Apoie o Thaw"
           }
         },
         "ru" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Support Thaw"
+            "state" : "translated",
+            "value" : "Поддержать Thaw"
           }
         },
         "th" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Support Thaw"
+            "state" : "translated",
+            "value" : "สนับสนุน Thaw"
           }
         },
         "tr" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Support Thaw"
+            "state" : "translated",
+            "value" : "Thaw Destekle"
           }
         },
         "uk" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Support Thaw"
+            "state" : "translated",
+            "value" : "Підтримати Thaw"
           }
         },
         "vi" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Support Thaw"
+            "state" : "translated",
+            "value" : "Hỗ trợ Thaw"
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Support Thaw"
+            "state" : "translated",
+            "value" : "赞助 Thaw"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Support Thaw"
+            "state" : "translated",
+            "value" : "贊助 Thaw"
           }
         }
       }
@@ -176811,14 +176811,14 @@
       "localizations" : {
         "cs" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Thaw Bar"
+            "state" : "translated",
+            "value" : "Lišta Thaw"
           }
         },
         "de" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Thaw Bar"
+            "state" : "translated",
+            "value" : "Thaw-Leiste"
           }
         },
         "es" : {
@@ -176835,92 +176835,92 @@
         },
         "hu" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Thaw Bar"
+            "state" : "translated",
+            "value" : "Thaw Sáv"
           }
         },
         "id" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Thaw Bar"
+            "state" : "translated",
+            "value" : "Bar Thaw"
           }
         },
         "it" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Thaw Bar"
+            "state" : "translated",
+            "value" : "Thaw Barra"
           }
         },
         "ja" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Thaw Bar"
+            "state" : "translated",
+            "value" : "Thaw バー"
           }
         },
         "ko" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Thaw Bar"
+            "state" : "translated",
+            "value" : "Thaw 바"
           }
         },
         "nl" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Thaw Bar"
+            "state" : "translated",
+            "value" : "Thaw Balk"
           }
         },
         "pl" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Thaw Bar"
+            "state" : "translated",
+            "value" : "Pasek Thaw"
           }
         },
         "pt-BR" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Thaw Bar"
+            "state" : "translated",
+            "value" : "Barra Thaw"
           }
         },
         "ru" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Thaw Bar"
+            "state" : "translated",
+            "value" : "Панель Thaw"
           }
         },
         "th" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Thaw Bar"
+            "state" : "translated",
+            "value" : "แถบ Thaw"
           }
         },
         "tr" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Thaw Bar"
+            "state" : "translated",
+            "value" : "Thaw Çubuğu"
           }
         },
         "uk" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Thaw Bar"
+            "state" : "translated",
+            "value" : "Панель Thaw"
           }
         },
         "vi" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Thaw Bar"
+            "state" : "translated",
+            "value" : "Thaw Thanh"
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Thaw Bar"
+            "state" : "translated",
+            "value" : "Thaw 工具栏"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Thaw Bar"
+            "state" : "translated",
+            "value" : "Thaw 列"
           }
         }
       }
@@ -189302,116 +189302,116 @@
       "localizations" : {
         "cs" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Toggle Application Menus"
+            "state" : "translated",
+            "value" : "Zobrazit/skrýt okno aplikace"
           }
         },
         "de" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Toggle Application Menus"
+            "state" : "translated",
+            "value" : "Anwendungs-Menü umschalten"
           }
         },
         "es" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Toggle Application Menus"
+            "state" : "translated",
+            "value" : "Mostrar/ocultar menús de la aplicación"
           }
         },
         "fr" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Toggle Application Menus"
+            "state" : "translated",
+            "value" : "Afficher / masquer les menus des applications"
           }
         },
         "hu" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Toggle Application Menus"
+            "state" : "translated",
+            "value" : "Alkalmazásmenük ki-/bekapcsolása"
           }
         },
         "id" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Toggle Application Menus"
+            "state" : "translated",
+            "value" : "Tampilkan/Sembunyikan menu aplikasi"
           }
         },
         "it" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Toggle Application Menus"
+            "state" : "translated",
+            "value" : "Attiva/disattiva i menu delle applicazioni"
           }
         },
         "ja" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Toggle Application Menus"
+            "state" : "translated",
+            "value" : "アプリメニューの切り替え"
           }
         },
         "ko" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Toggle Application Menus"
+            "state" : "translated",
+            "value" : "앱 메뉴 전환"
           }
         },
         "nl" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Toggle Application Menus"
+            "state" : "translated",
+            "value" : "Schakel de applicatie menu’s in of uit"
           }
         },
         "pl" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Toggle Application Menus"
+            "state" : "translated",
+            "value" : "Przełącz menu aplikacji"
           }
         },
         "pt-BR" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Toggle Application Menus"
+            "state" : "translated",
+            "value" : "Ativar menus de aplicativos"
           }
         },
         "ru" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Toggle Application Menus"
+            "state" : "translated",
+            "value" : "Переключить меню приложений"
           }
         },
         "th" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Toggle Application Menus"
+            "state" : "translated",
+            "value" : "สลับเมนูแอปพลิเคชัน"
           }
         },
         "tr" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Toggle Application Menus"
+            "state" : "translated",
+            "value" : "Uygulama menülerini aç/kapat"
           }
         },
         "uk" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Toggle Application Menus"
+            "state" : "translated",
+            "value" : "Перемкнути меню програм"
           }
         },
         "vi" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Toggle Application Menus"
+            "state" : "translated",
+            "value" : "Chuyển đổi menu ứng dụng"
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Toggle Application Menus"
+            "state" : "translated",
+            "value" : "切换应用菜单"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Toggle Application Menus"
+            "state" : "translated",
+            "value" : "切換應用程式選單"
           }
         }
       }
@@ -189698,8 +189698,8 @@
         },
         "ja" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Toggle Zen Mode"
+            "state" : "translated",
+            "value" : "Zenモードの切り替え"
           }
         },
         "ko" : {
@@ -189716,8 +189716,8 @@
         },
         "pl" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Toggle Zen Mode"
+            "state" : "translated",
+            "value" : "Przełącz w tryb Zen"
           }
         },
         "pt-BR" : {
@@ -189728,14 +189728,14 @@
         },
         "ru" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Toggle Zen Mode"
+            "state" : "translated",
+            "value" : "Переключить режим без отвлекающих элементов"
           }
         },
         "th" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Toggle Zen Mode"
+            "state" : "translated",
+            "value" : "สลับโหมดเซน"
           }
         },
         "tr" : {
@@ -189758,8 +189758,8 @@
         },
         "zh-Hans" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Toggle Zen Mode"
+            "state" : "translated",
+            "value" : "切换禅模式"
           }
         },
         "zh-Hant" : {
@@ -190248,116 +190248,116 @@
       "localizations" : {
         "cs" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Toggle the Hidden section"
+            "state" : "translated",
+            "value" : "Zobrazit/skrýt skrytou část"
           }
         },
         "de" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Toggle the Hidden section"
+            "state" : "translated",
+            "value" : "Versteckten Bereich umschalten"
           }
         },
         "es" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Toggle the Hidden section"
+            "state" : "translated",
+            "value" : "Mostrar/ocultar la sección oculta"
           }
         },
         "fr" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Toggle the Hidden section"
+            "state" : "translated",
+            "value" : "Afficher / masquer la section masquée"
           }
         },
         "hu" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Toggle the Hidden section"
+            "state" : "translated",
+            "value" : "Rejtett szakasz ki-/bekapcsolása"
           }
         },
         "id" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Toggle the Hidden section"
+            "state" : "translated",
+            "value" : "Tampilkan/Sembunyikan bagian tersembunyi"
           }
         },
         "it" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Toggle the Hidden section"
+            "state" : "translated",
+            "value" : "Attiva/disattiva la sezione nascosta"
           }
         },
         "ja" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Toggle the Hidden section"
+            "state" : "translated",
+            "value" : "非表示セクションを切り替え"
           }
         },
         "ko" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Toggle the Hidden section"
+            "state" : "translated",
+            "value" : "숨김 섹션 전환"
           }
         },
         "nl" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Toggle the Hidden section"
+            "state" : "translated",
+            "value" : "Schakel het verborgen gedeelte in of uit"
           }
         },
         "pl" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Toggle the Hidden section"
+            "state" : "translated",
+            "value" : "Przełącz ukrytą sekcję"
           }
         },
         "pt-BR" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Toggle the Hidden section"
+            "state" : "translated",
+            "value" : "Ativar a seção Ocultos"
           }
         },
         "ru" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Toggle the Hidden section"
+            "state" : "translated",
+            "value" : "Переключить секцию скрытых"
           }
         },
         "th" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Toggle the Hidden section"
+            "state" : "translated",
+            "value" : "สลับ “หมวดหมู่ที่ซ่อนอยู่”"
           }
         },
         "tr" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Toggle the Hidden section"
+            "state" : "translated",
+            "value" : "Gizli bölümü aç/kapat"
           }
         },
         "uk" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Toggle the Hidden section"
+            "state" : "translated",
+            "value" : "Перемкнути розділ «Приховані»"
           }
         },
         "vi" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Toggle the Hidden section"
+            "state" : "translated",
+            "value" : "Chuyển đổi phần ẩn"
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Toggle the Hidden section"
+            "state" : "translated",
+            "value" : "切换隐藏区域"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Toggle the Hidden section"
+            "state" : "translated",
+            "value" : "切換隱藏區域"
           }
         }
       }
@@ -201856,8 +201856,8 @@
         },
         "de" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "What Thaw sees"
+            "state" : "translated",
+            "value" : "Was Thaw sieht"
           }
         },
         "es" : {
@@ -201910,8 +201910,8 @@
         },
         "pl" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "What Thaw sees"
+            "state" : "translated",
+            "value" : "Co widzi Thaw"
           }
         },
         "pt-BR" : {
@@ -201922,14 +201922,14 @@
         },
         "ru" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "What Thaw sees"
+            "state" : "translated",
+            "value" : "Что видит Thaw"
           }
         },
         "th" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "What Thaw sees"
+            "state" : "translated",
+            "value" : "สิ่งที่ Thaw เห็น"
           }
         },
         "tr" : {
@@ -201952,14 +201952,14 @@
         },
         "zh-Hans" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "What Thaw sees"
+            "state" : "translated",
+            "value" : "Thaw可以看到"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "What Thaw sees"
+            "state" : "translated",
+            "value" : "Thaw 看到的畫面"
           }
         }
       }
@@ -207956,8 +207956,8 @@
         },
         "pl" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Zen Mode is off"
+            "state" : "translated",
+            "value" : "Tryb Zen wyłączony"
           }
         },
         "pt-BR" : {
@@ -207968,14 +207968,14 @@
         },
         "ru" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Zen Mode is off"
+            "state" : "translated",
+            "value" : "Режим без отвлекающих элементов выключен"
           }
         },
         "th" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Zen Mode is off"
+            "state" : "translated",
+            "value" : "โหมดเซนปิดอยู่"
           }
         },
         "tr" : {
@@ -207998,8 +207998,8 @@
         },
         "zh-Hans" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Zen Mode is off"
+            "state" : "translated",
+            "value" : "禅模式已关闭"
           }
         },
         "zh-Hant" : {
@@ -208074,8 +208074,8 @@
         },
         "pl" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Zen Mode is on"
+            "state" : "translated",
+            "value" : "Tryb Zen włączony"
           }
         },
         "pt-BR" : {
@@ -208086,14 +208086,14 @@
         },
         "ru" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Zen Mode is on"
+            "state" : "translated",
+            "value" : "Режим без отвлекающих элементов включён"
           }
         },
         "th" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Zen Mode is on"
+            "state" : "translated",
+            "value" : "โหมดเซนเปิดอยู่"
           }
         },
         "tr" : {
@@ -218866,6 +218866,368 @@
           "stringUnit" : {
             "state" : "new",
             "value" : "⌘-click or ⇧-click icons, then drag one or right-click to move them all."
+          }
+        }
+      }
+    },
+    "Add Trigger" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Auslöser hinzufügen"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "トリガーを追加"
+          }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Dodaj wyzwalacz"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Добавить триггер"
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "เพิ่มทริกเกอร์"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "添加触发器"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "新增觸發條件"
+          }
+        }
+      }
+    },
+    "Choose…" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Wähle..."
+          }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Wybierz…"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Выбрать…"
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "เลือก…"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "选择"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "選擇⋯"
+          }
+        }
+      }
+    },
+    "Triggers" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Auslöser"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "トリガー"
+          }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Wyzwalacze"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Триггеры"
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ทริกเกอร์"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "触发器"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "觸發條件"
+          }
+        }
+      }
+    },
+    "%@ Settings" : {
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nastavení %@"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ Einstellungen"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ Ajustes"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Réglages de %@"
+          }
+        },
+        "hu" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ Beállítások"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Pengaturan %@"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Impostazioni %@"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ 設定"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ 설정"
+          }
+        },
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ Instellingen"
+          }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ustawienia %@"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Configurações %@"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Настройки %@"
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ ตั้งค่า"
+          }
+        },
+        "tr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ Ayarlar"
+          }
+        },
+        "uk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Налаштування %@"
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ Cài đặt"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ 设置"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ 設定"
+          }
+        }
+      }
+    },
+    "Open Focus Settings…" : {
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Otevřít nastavení Soustředění…"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Fokus-Einstellungen öffnen…"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Abrir Ajustes de Enfoque…"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ouvrir les réglages du Focus…"
+          }
+        },
+        "hu" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Fókuszbeállítások megnyitása…"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Buka Pengaturan Fokus…"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Apri impostazioni Focus…"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "集中モード設定を開く…"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "집중 모드 설정 열기…"
+          }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Otwórz ustawienia trybu skupienia…"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Abrir Ajustes de Foco…"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Открыть настройки Фокуса…"
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "เปิดการตั้งค่า Focus…"
+          }
+        },
+        "tr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Odak Ayarlarını Aç…"
+          }
+        },
+        "uk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Відкрити налаштування Фокусування…"
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Mở cài đặt Focus…"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "打开专注模式…"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "開啟專注模式設定…"
           }
         }
       }
