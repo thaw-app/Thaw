@@ -5,6 +5,7 @@
 //  Copyright (Thaw) © 2026 Toni Förster
 //  Licensed under the GNU GPLv3
 
+import MenuBarModel
 import Testing
 @testable import Thaw
 
@@ -64,5 +65,25 @@ struct DragMembershipBaselineTests {
         #expect(holder.baseline == nil)
         holder.dragStarted()
         #expect(holder.baseline == 3)
+    }
+
+    @Test("Successive drags collect the items grabbed, and clearing forgets them")
+    func collectsPressedItems() {
+        let (holder, _) = holder(reading: [1])
+        let first = MenuBarItemTag(namespace: .string("com.example.first"), title: "Item-0", instanceIndex: 0)
+        let second = MenuBarItemTag(namespace: .string("com.example.second"), title: "Item-0", instanceIndex: 0)
+        holder.dragStarted(pressing: first)
+        holder.dragStarted(pressing: second)
+        #expect(holder.pressed == [first, second])
+        holder.clear()
+        #expect(holder.pressed == [])
+    }
+
+    @Test("A drag on an item that couldn't be named leaves every crossing item eligible")
+    func unnamedPressAllowsAll() {
+        let (holder, _) = holder(reading: [1])
+        holder.dragStarted(pressing: MenuBarItemTag(namespace: .string("com.example.first"), title: "Item-0", instanceIndex: 0))
+        holder.dragStarted()
+        #expect(holder.pressed == nil)
     }
 }

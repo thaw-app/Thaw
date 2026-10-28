@@ -69,10 +69,15 @@ extension MenuBarItemManager {
             MenuBarItemManager.diagLog.debug("observed membership (\(reason)): no reading from the drag's start; skipping")
             return
         }
+        if afterUserDrag {
+            let grabbed = dragMembership.pressed.map { $0.map(\.description).sorted().joined(separator: ", ") } ?? "unknown"
+            MenuBarItemManager.diagLog.debug("observed membership (\(reason)): grabbed \(grabbed)")
+        }
         let moves = observed.reading.moves(
             for: observed.candidates,
             keepingAuthored: keepingAuthored,
             since: baseline,
+            pressed: afterUserDrag ? dragMembership.pressed : nil,
             alwaysHiddenShownAtDrop: alwaysHiddenShownAtDrop
         )
         for (section, sectionItems) in moves {

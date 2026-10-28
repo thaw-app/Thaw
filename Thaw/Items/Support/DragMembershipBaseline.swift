@@ -5,6 +5,8 @@
 //  Copyright (Thaw) © 2026 Toni Förster
 //  Licensed under the GNU GPLv3
 
+import MenuBarModel
+
 /// What the stored weights read as when the user's ⌘-drag started, so the read after the drop adopts only what it moved.
 /// Quick successive drags share the first drag's reading, and one read after the last drop covers them all.
 @MainActor
@@ -19,13 +21,24 @@ final class DragMembershipBaseline<Baseline> {
 
     private(set) var baseline: Baseline?
 
-    func dragStarted() {
+    /// The items the user grabbed in these drags. A drop shifts the stored weights of
+    /// its neighbours too, so only these may change section. Nil once a drag started
+    /// on an item that couldn't be named, which leaves every crossing item eligible.
+    private(set) var pressed: Set<MenuBarItemTag>? = []
+
+    func dragStarted(pressing tag: MenuBarItemTag? = nil) {
         cancelPendingRead()
+        if let tag {
+            pressed?.insert(tag)
+        } else {
+            pressed = nil
+        }
         guard baseline == nil else { return }
         baseline = read()
     }
 
     func clear() {
         baseline = nil
+        pressed = []
     }
 }

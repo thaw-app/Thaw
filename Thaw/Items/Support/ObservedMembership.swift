@@ -47,6 +47,7 @@ nonisolated enum ObservedMembership {
             for candidates: [Candidate],
             keepingAuthored: Bool = false,
             since baseline: DragBaseline? = nil,
+            pressed: Set<MenuBarItemTag>? = nil,
             alwaysHiddenShownAtDrop: Bool? = nil
         ) -> [(section: MenuBarSectionName, items: [MenuBarItem])] {
             guard case let .ordered(dividers) = self else { return [] }
@@ -55,6 +56,7 @@ nonisolated enum ObservedMembership {
                 dividers: dividers,
                 keepingAuthored: keepingAuthored,
                 since: baseline,
+                pressed: pressed,
                 alwaysHiddenShownAtDrop: alwaysHiddenShownAtDrop
             )
         }
@@ -162,6 +164,7 @@ nonisolated enum ObservedMembership {
         dividers: Dividers,
         keepingAuthored: Bool = false,
         since baseline: DragBaseline? = nil,
+        pressed: Set<MenuBarItemTag>? = nil,
         alwaysHiddenShownAtDrop: Bool? = nil
     ) -> [(section: MenuBarSectionName, items: [MenuBarItem])] {
         let moving = candidates.compactMap { candidate -> (section: MenuBarSectionName, item: MenuBarItem)? in
@@ -169,6 +172,10 @@ nonisolated enum ObservedMembership {
                 return nil
             }
             if let baseline, !baseline.crossedDivider(candidate, dividers: dividers) {
+                return nil
+            }
+            // A neighbour the drop shifted across a divider was not dragged there.
+            if let pressed, !pressed.contains(candidate.item.tag) {
                 return nil
             }
             // An Always Hidden icon was not on screen, so the drag cannot have carried it.

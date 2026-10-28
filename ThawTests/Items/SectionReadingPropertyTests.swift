@@ -137,6 +137,26 @@ struct SectionReadingPropertyTests {
         #expect(moved.count == (crossed && differsFromLayout ? 1 : 0), "seed \(seed)")
     }
 
+    @Test("A neighbour the drop shifted across the divider keeps its section; the grabbed item still moves")
+    func shiftedNeighbourStays() throws {
+        let dividers = try #require(ObservedMembership.Dividers(hidden: 300, alwaysHidden: 1000, visibleControl: 100))
+        let neighbour = Self.item(0), grabbed = Self.item(1)
+        let before = [
+            ObservedMembership.Candidate(item: neighbour, weight: 298, authored: .visible),
+            ObservedMembership.Candidate(item: grabbed, weight: 250, authored: .visible),
+        ]
+        let baseline = ObservedMembership.DragBaseline(candidates: before, dividers: dividers)
+        // The grabbed item is dropped past the divider, and the drop pushes the neighbour past it too.
+        let after = [
+            ObservedMembership.Candidate(item: neighbour, weight: 302, authored: .visible),
+            ObservedMembership.Candidate(item: grabbed, weight: 400, authored: .visible),
+        ]
+        let moved = ObservedMembership.moves(for: after, dividers: dividers, since: baseline, pressed: [grabbed.tag]).flatMap(\.items)
+        #expect(moved.map(\.windowID) == [grabbed.windowID])
+        // With the grabbed item unknown, every crossing item stays eligible, as before.
+        #expect(ObservedMembership.moves(for: after, dividers: dividers, since: baseline).flatMap(\.items).count == 2)
+    }
+
     @Test("Rows the agent saves again on their own side of every divider never move", arguments: 0 ..< 200)
     func resavedRowsStay(seed: Int) throws {
         let random = GKMersenneTwisterRandomSource(seed: UInt64(seed))
