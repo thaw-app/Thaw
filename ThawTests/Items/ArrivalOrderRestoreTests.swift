@@ -86,6 +86,41 @@ struct ArrivalOrderRestoreTests {
         ) == nil)
     }
 
+    @Test("An item that comes back takes its recorded slot, not the one macOS gave it")
+    func returningItemTakesItsRecordedSlot() {
+        // Focus left the bar and came back on the far left; the others did not move.
+        let result = preserved(
+            saved: ["notion", "raycast", "focus", "sound"],
+            mirrored: ["focus", "notion", "raycast", "sound"],
+            previous: ["notion", "raycast", "sound"],
+            current: ["notion", "raycast", "sound", "focus"]
+        )
+        #expect(result == ["notion", "raycast", "focus", "sound"])
+    }
+
+    @Test("Returning items are restored while a new item keeps its slot")
+    func returningAndNewItemsTogether() {
+        // Issue 1410: Focus and Sound came back beside Now Playing, which is new.
+        let result = preserved(
+            saved: ["notion", "tailscale", "raycast", "focus", "sound", "wifi"],
+            mirrored: ["nowplaying", "focus", "sound", "notion", "tailscale", "raycast", "wifi"],
+            previous: ["notion", "tailscale", "raycast", "wifi"],
+            current: ["nowplaying", "focus", "sound", "notion", "tailscale", "raycast", "wifi"]
+        )
+        #expect(result == ["nowplaying", "notion", "tailscale", "raycast", "focus", "sound", "wifi"])
+    }
+
+    @Test("A returning item already in its recorded slot changes nothing")
+    func returningItemInPlaceIsLeftAlone() {
+        let result = preserved(
+            saved: ["a", "b", "c"],
+            mirrored: ["a", "b", "c"],
+            previous: ["a", "c"],
+            current: ["a", "b", "c"]
+        )
+        #expect(result == nil)
+    }
+
     @Test("Saved entries for closed apps keep their slots")
     func closedAppEntriesAreUntouched() {
         let result = preserved(

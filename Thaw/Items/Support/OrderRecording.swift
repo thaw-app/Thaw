@@ -35,7 +35,8 @@ nonisolated enum OrderRecording {
     }
 
     /// The Visible order to keep when an arrival disturbed the items already on the bar, or nil to mirror as is.
-    /// A ⌘-drag leaves the item set unchanged, so only a pure arrival counts; the newcomer keeps its slot.
+    /// A ⌘-drag leaves the item set unchanged, so only a pure arrival counts.
+    /// An item that comes back to a slot it has in the saved order takes that slot again; only a new item keeps the one macOS gave it.
     static func visibleOrderPreservedAcrossArrival(
         savedOrder: [String],
         mirroredOrder: [String],
@@ -43,15 +44,17 @@ nonisolated enum OrderRecording {
         currentLive: Set<String>
     ) -> [String]? {
         guard currentLive != previousLive, currentLive.isSuperset(of: previousLive) else { return nil }
-        let savedStayed = savedOrder.filter(previousLive.contains)
-        let mirroredStayed = mirroredOrder.filter(previousLive.contains)
-        guard savedStayed != mirroredStayed,
-              savedStayed.count == mirroredStayed.count,
-              Set(savedStayed) == Set(mirroredStayed)
+        let returning = currentLive.subtracting(previousLive).intersection(savedOrder)
+        let recorded = previousLive.union(returning)
+        let savedRecorded = savedOrder.filter(recorded.contains)
+        let mirroredRecorded = mirroredOrder.filter(recorded.contains)
+        guard savedRecorded != mirroredRecorded,
+              savedRecorded.count == mirroredRecorded.count,
+              Set(savedRecorded) == Set(mirroredRecorded)
         else { return nil }
-        var iterator = savedStayed.makeIterator()
+        var iterator = savedRecorded.makeIterator()
         return mirroredOrder.map { identifier in
-            previousLive.contains(identifier) ? (iterator.next() ?? identifier) : identifier
+            recorded.contains(identifier) ? (iterator.next() ?? identifier) : identifier
         }
     }
 
