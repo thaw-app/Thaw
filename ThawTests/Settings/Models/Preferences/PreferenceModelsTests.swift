@@ -31,6 +31,7 @@ struct PreferenceModelsTests {
         settings.customThawIconIsTemplate = !Defaults.DefaultValue.customThawIconIsTemplate
         settings.simpleMode = !Defaults.DefaultValue.simpleMode
         settings.showSettingDescriptions = !Defaults.DefaultValue.showSettingDescriptions
+        settings.blackSettingsBackground = !Defaults.DefaultValue.blackSettingsBackground
         settings.simpleModeShowsPreview = !Defaults.DefaultValue.simpleModeShowsPreview
         settings.lockThawBarPosition = !Defaults.DefaultValue.lockThawBarPosition
         settings.roundScreenCorners = !Defaults.DefaultValue.roundScreenCorners
@@ -61,6 +62,7 @@ struct PreferenceModelsTests {
         #expect(reloaded.customThawIconIsTemplate == settings.customThawIconIsTemplate)
         #expect(reloaded.simpleMode == settings.simpleMode)
         #expect(reloaded.showSettingDescriptions == settings.showSettingDescriptions)
+        #expect(reloaded.blackSettingsBackground == settings.blackSettingsBackground)
         #expect(reloaded.simpleModeShowsPreview == settings.simpleModeShowsPreview)
         #expect(reloaded.lockThawBarPosition == settings.lockThawBarPosition)
         #expect(reloaded.roundScreenCorners == settings.roundScreenCorners)
@@ -113,6 +115,7 @@ struct PreferenceModelsTests {
         let paths: [String: ReferenceWritableKeyPath<GeneralSettings, Bool>] = [
             "showThawIcon": \.showThawIcon, "customThawIconIsTemplate": \.customThawIconIsTemplate,
             "simpleMode": \.simpleMode, "showSettingDescriptions": \.showSettingDescriptions,
+            "blackSettingsBackground": \.blackSettingsBackground,
             "lockThawBarPosition": \.lockThawBarPosition, "openHiddenItemsInMenuBar": \.openHiddenItemsInMenuBar,
             "useThawBarOnlyOnNotchedDisplay": \.useThawBarOnlyOnNotchedDisplay,
             "thawBarLocationOnHotkey": \.thawBarLocationOnHotkey, "showOnClick": \.showOnClick,

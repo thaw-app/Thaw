@@ -49,6 +49,7 @@ struct SettingsView: View {
             minHeight: SettingsWindowMetrics.minimum(simpleMode: generalSettings.simpleMode).height / zoomScale
         )
         .environment(\.settingsDescriptionsVisible, generalSettings.showSettingDescriptions)
+        .settingsWindowBackground(SettingsWindowBackground(isBlack: generalSettings.blackSettingsBackground))
         .environment(searchModel)
         // Both layouts title the toolbar themselves: the full one with the
         // pane, Simple Mode with the app and the mode. Cleared here so the

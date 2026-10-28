@@ -88,6 +88,15 @@ final class GeneralSettings {
         }
     }
 
+    /// A Boolean value that indicates whether the settings window draws its
+    /// panes on pure black, for OLED displays.
+    var blackSettingsBackground = Defaults.DefaultValue.blackSettingsBackground {
+        didSet {
+            guard oldValue != blackSettingsBackground else { return }
+            Defaults.set(blackSettingsBackground, forKey: .blackSettingsBackground)
+        }
+    }
+
     /// A Boolean value that indicates whether Simple Mode's page shows the
     /// preview of the Visible, Hidden and Always Hidden sections.
     var simpleModeShowsPreview = Defaults.DefaultValue.simpleModeShowsPreview {
@@ -267,6 +276,7 @@ final class GeneralSettings {
         Defaults.ifPresent(key: .customThawIconIsTemplate, assign: &customThawIconIsTemplate)
         Defaults.ifPresent(key: .simpleMode, assign: &simpleMode)
         Defaults.ifPresent(key: .showSettingDescriptions, assign: &showSettingDescriptions)
+        Defaults.ifPresent(key: .blackSettingsBackground, assign: &blackSettingsBackground)
         Defaults.ifPresent(key: .simpleModeShowsPreview, assign: &simpleModeShowsPreview)
         Defaults.ifPresent(key: .lockThawBarPosition, assign: &lockThawBarPosition)
         Defaults.ifPresent(key: .openHiddenItemsInMenuBar, assign: &openHiddenItemsInMenuBar)
@@ -341,6 +351,8 @@ final class GeneralSettings {
                 simpleMode = boolValue
             case "showSettingDescriptions" where showSettingDescriptions != boolValue:
                 showSettingDescriptions = boolValue
+            case "blackSettingsBackground" where blackSettingsBackground != boolValue:
+                blackSettingsBackground = boolValue
             case "lockThawBarPosition" where lockThawBarPosition != boolValue:
                 lockThawBarPosition = boolValue
             case "openHiddenItemsInMenuBar" where openHiddenItemsInMenuBar != boolValue:

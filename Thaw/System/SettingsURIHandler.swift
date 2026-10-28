@@ -62,6 +62,7 @@ enum SettingsURIHandler {
         "customThawIconIsTemplate": SettingURIEntry(defaultsKey: .customThawIconIsTemplate, kind: .boolean, isWritable: true),
         "simpleMode": SettingURIEntry(defaultsKey: .simpleMode, kind: .boolean, isWritable: true),
         "showSettingDescriptions": SettingURIEntry(defaultsKey: .showSettingDescriptions, kind: .boolean, isWritable: true),
+        "blackSettingsBackground": SettingURIEntry(defaultsKey: .blackSettingsBackground, kind: .boolean, isWritable: true),
         "lockThawBarPosition": SettingURIEntry(defaultsKey: .lockThawBarPosition, kind: .boolean, isWritable: true),
         "openHiddenItemsInMenuBar": SettingURIEntry(defaultsKey: .openHiddenItemsInMenuBar, kind: .boolean, isWritable: true),
         "useThawBarOnlyOnNotchedDisplay": SettingURIEntry(defaultsKey: .useThawBarOnlyOnNotchedDisplay, kind: .boolean, isWritable: true),

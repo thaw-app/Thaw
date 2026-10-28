@@ -47,6 +47,14 @@ nonisolated extension SearchIndex {
             property: .general("showSettingDescriptions")
         ),
         SearchEntry(
+            id: "general.blackSettingsBackground",
+            title: "Black background in dark mode",
+            descriptionText: String(localized: "Draws this window on pure black for OLED displays. Light mode is unchanged."),
+            pane: .general,
+            keywords: ["black", "oled", "dark", "dark mode", "background", "theme", "appearance"],
+            property: .general("blackSettingsBackground")
+        ),
+        SearchEntry(
             id: "general.showThawIcon",
             titleKey: "Show \(Constants.displayName) icon",
             titleText: "Show \(Constants.displayName) icon",

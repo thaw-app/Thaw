@@ -44,10 +44,10 @@ struct AboutSettingsPane: View {
         .defaultScrollAnchor(.center, for: .alignment)
         .scrollContentBackground(.hidden)
         .scrollEdgeEffectStyle(.soft, for: .top)
-        // The sidebar's behind-window material, so About reads as one surface
-        // with it. Other panes keep the window background for their forms.
+        // The sidebar's material, so About reads as one surface with it, or black on a
+        // black window. Other panes keep the window background for their forms.
         .background {
-            BehindWindowMaterialBackground(material: .sidebar)
+            SettingsPaneBackdrop(material: .sidebar)
                 .ignoresSafeArea()
         }
         .onChange(of: colorScheme, initial: true) {
