@@ -66,4 +66,19 @@ enum LayoutDropCommit {
         )
         return true
     }
+
+    /// Records a drop into a section that is not physically live. Only a lane change reassigns the
+    /// item, so an Always Hidden item folded into Hidden keeps its assignment on a same-lane drop.
+    static func recordIntent(
+        of item: MenuBarItem,
+        orderedAs orderedItems: [MenuBarItem],
+        from source: MenuBarSection.Name,
+        to target: MenuBarSection.Name,
+        controller: (any MenuBarSectionControlling)?
+    ) {
+        if source != target {
+            controller?.setSection(target, item: item)
+        }
+        controller?.setSectionOrder(from: orderedItems, for: target)
+    }
 }

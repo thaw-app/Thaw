@@ -344,8 +344,7 @@ final class LayoutBarPaddingView: NSView {
                 return false
             }
 
-            controller?.setSection(container.section, item: item)
-            controller?.setSectionOrder(from: orderedItems, for: container.section)
+            LayoutDropCommit.recordIntent(of: item, orderedAs: orderedItems, from: sourceSection, to: container.section, controller: controller)
             if let appState = container.appState {
                 appState.itemManager.scheduleSectionOrderApply(for: container.section)
                 Task { await appState.itemManager.cacheItemsRegardless(skipRecentMoveCheck: true) }
@@ -537,8 +536,7 @@ final class LayoutBarPaddingView: NSView {
 
             // Non-live sections record intent, not a completed move. Visible
             // intent needs an explicit apply; concealed sections wait for reveal.
-            controller?.setSection(container.section, item: item)
-            controller?.setSectionOrder(from: orderedItems, for: container.section)
+            LayoutDropCommit.recordIntent(of: item, orderedAs: orderedItems, from: sourceSection, to: container.section, controller: controller)
 
             if let appState = container.appState {
                 appState.itemManager.scheduleSectionOrderApply(for: container.section)

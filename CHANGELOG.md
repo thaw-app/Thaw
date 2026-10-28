@@ -28,6 +28,10 @@ the items under New and Fixed.
 
 - **Black background for Settings.** Turn it on in General to draw the settings window on pure black, which suits OLED displays. The window stays in dark mode while it's on, and the sidebar, toolbar and rows keep their glass.
 
+### Fixed
+
+- Dragging an item inside Hidden no longer moves an Always Hidden item out of Always Hidden while that section is turned off.
+
 ## [3.0.0-beta.5] - 2026-10-28
 
 **macOS 27 only · Build 118**
