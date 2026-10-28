@@ -63,6 +63,30 @@ extension SettingsURIResponseSuites {
             #expect((response["data"] as? [String: Any])?["outcome"] as? String == "unchanged")
         }
 
+        @Test("A move the bar did not follow is an error that keeps the payload")
+        func notAppliedMoveIsAnError() async throws {
+            let fake = FakeLauncherEnvironment()
+            fake.moveOutcome = { command in
+                .notApplied(LayoutBatchMovePlan(
+                    itemIDs: command.itemIDs,
+                    source: .hidden,
+                    target: command.section,
+                    previousTargetOrder: [],
+                    targetOrder: command.itemIDs
+                ))
+            }
+            let response = try await fake.send("thaw://move-item?item-id=a&section=visible&after-id=w&\(callback)").callbackResponse()
+
+            #expect(response["status"] as? String == "error")
+            #expect(response["error"] as? String == "notApplied")
+            #expect((response["details"] as? String)?.contains("did not follow") == true)
+            let data = try #require(response["data"] as? [String: Any])
+            #expect(data["itemIds"] as? [String] == ["a"])
+            #expect(data["section"] as? String == "visible")
+            #expect(data["afterId"] as? String == "w")
+            #expect(data["outcome"] as? String == "notApplied")
+        }
+
         @Test("A refused move is an error with its code and reason")
         func refusedMoveReportsWhy() async throws {
             let fake = FakeLauncherEnvironment()

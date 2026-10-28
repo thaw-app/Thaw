@@ -15,6 +15,7 @@ import Testing
 private final class MovePath {
     var snapshot = LayoutBatchMoveTests.snapshot
     var accepts = true
+    var barFollows: ((LayoutBatchMovePlan) async -> Bool)?
     private(set) var events = [String]()
     private(set) var plans = [LayoutBatchMovePlan]()
 
@@ -26,7 +27,8 @@ private final class MovePath {
                 self.events.append("commit")
                 self.plans.append(plan)
                 return self.accepts
-            }
+            },
+            barFollows: barFollows
         )
     }
 }
@@ -50,6 +52,93 @@ struct LayoutBatchMoveExecutorTests {
         #expect(outcome == .moved(plan))
     }
 
+    @Test("A Visible move the bar never follows is reported as not applied")
+    func unfollowedVisibleMoveIsNotApplied() async throws {
+        let path = MovePath()
+        path.barFollows = { _ in false }
+        let outcome = try await path.executor.run(command("thaw://move-item?item-id=h1&section=visible"))
+
+        guard case let .notApplied(plan) = outcome else {
+            Issue.record("expected notApplied, got \(outcome)")
+            return
+        }
+        #expect(plan.itemIDs == ["h1"])
+    }
+
+    @Test("A Visible move the bar follows, or one that is not verified, is moved")
+    func followedOrUnverifiedMoveIsMoved() async throws {
+        let path = MovePath()
+        path.barFollows = { _ in true }
+        let followed = try await path.executor.run(command("thaw://move-item?item-id=h1&section=visible"))
+        path.barFollows = nil
+        let unverified = try await path.executor.run(command("thaw://move-item?item-id=h1&section=visible"))
+
+        for outcome in [followed, unverified] {
+            guard case .moved = outcome else {
+                Issue.record("expected moved, got \(outcome)")
+                return
+            }
+        }
+    }
+
+    @Test("Only a Visible target is verified")
+    func concealedTargetSkipsVerification() async throws {
+        let path = MovePath()
+        var checks = 0
+        path.barFollows = { _ in
+            checks += 1
+            return false
+        }
+        let outcome = try await path.executor.run(command("thaw://move-item?item-id=x&section=hidden&after-id=h1"))
+
+        guard case .moved = outcome else {
+            Issue.record("expected moved, got \(outcome)")
+            return
+        }
+        #expect(checks == 0)
+    }
+
+    @Test("The poll returns true on the first match without spending the budget")
+    func pollStopsOnMatch() async {
+        var sleeps = [Duration]()
+        var polls = 0
+        let followed = await LayoutBatchMoveExecutor.pollBarFollows(
+            budget: .seconds(8),
+            sleep: { sleeps.append($0) },
+            matches: {
+                polls += 1
+                return polls == 2
+            }
+        )
+
+        #expect(followed)
+        #expect(polls == 2)
+        #expect(sleeps == [.milliseconds(400), .seconds(1)])
+    }
+
+    @Test("The poll gives up once the budget is spent")
+    func pollGivesUpAtDeadline() async {
+        var slept = Duration.zero
+        var polls = 0
+        let followed = await LayoutBatchMoveExecutor.pollBarFollows(
+            budget: .seconds(3),
+            sleep: { slept += $0 },
+            matches: {
+                polls += 1
+                return false
+            }
+        )
+
+        #expect(!followed)
+        #expect(polls == 4)
+        #expect(slept == .milliseconds(3400))
+    }
+
+    @Test("The budget outlasts the manager's own apply passes")
+    func budgetCoversApplyAttempts() {
+        #expect(LayoutBatchMoveExecutor.barApplyBudget > .seconds(MenuBarItemManager.authoredVisibleOrderApplyAttempts))
+    }
+
     @Test("A refused batch never reaches the repair lane or the drop path")
     func refusedBatchDoesNothing() async throws {
         let path = MovePath()
@@ -66,6 +155,21 @@ struct LayoutBatchMoveExecutorTests {
 
         guard case .unchanged = outcome else {
             Issue.record("Expected unchanged, got \(outcome)")
+            return
+        }
+        #expect(path.events.isEmpty)
+    }
+
+    @Test("A retry the saved order already holds is not applied while the bar still disagrees")
+    func unchangedMoveChecksTheBar() async throws {
+        let path = MovePath()
+        path.barFollows = { _ in false }
+        let disagrees = try await path.executor.run(command("thaw://move-item?item-id=c&section=visible"))
+        path.barFollows = { _ in true }
+        let agrees = try await path.executor.run(command("thaw://move-item?item-id=c&section=visible"))
+
+        guard case .notApplied = disagrees, case .unchanged = agrees else {
+            Issue.record("Expected notApplied then unchanged, got \(disagrees) and \(agrees)")
             return
         }
         #expect(path.events.isEmpty)

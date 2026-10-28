@@ -179,6 +179,8 @@ extension SettingsURIHandler {
         }
         if case let .refused(error) = outcome {
             diagLog.warning("Launcher URI move-item: refused, \(error.details)")
+        } else if case .notApplied = outcome {
+            diagLog.warning("Launcher URI move-item: order saved but the bar did not follow")
         } else {
             diagLog.info("Launcher URI move-item: \(command?.itemIDs ?? []) -> \(command?.section.rawValue ?? "?"): \(outcome)")
         }
@@ -234,7 +236,7 @@ extension SettingsURIHandler.LauncherEnvironment {
                 try await manager.applyProfileAwaitingLayout(id: profileID, to: appState)
                 return !manager.layoutDidNotRun
             },
-            moveItems: { await LayoutBatchMoveExecutor(appState: appState).run($0) }
+            moveItems: { await LayoutBatchMoveExecutor(appState: appState, verifiesBar: true).run($0) }
         )
     }
 }

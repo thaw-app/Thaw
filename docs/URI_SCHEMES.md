@@ -469,6 +469,7 @@ Thaw checks every item before it moves any. If one is unknown, is one of Thaw's 
 | `itemNotMovable` | A control item, a group member listed without the rest of its group, or an item that cannot go to that section |
 | `sectionDisabled` | The target section is turned off |
 | `anchorUnavailable` | `after-id` is not in the target section |
+| `notApplied` | A move to Visible was saved, but the bar still did not show the new order after about eight seconds, so `move-item` waits that long before answering. Moves to other sections do not wait and answer `moved` |
 | `moveRefused` | The move path declined the move, for example because an item quit in the meantime or macOS would not assign it |
 
 `move-item` is not available in reduced mode.
