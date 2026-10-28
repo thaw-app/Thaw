@@ -1421,9 +1421,18 @@ extension MenuBarItemManager {
             MenuBarLayoutPlannerProvider.current.isEligibleForSectionOrder($0, section: section) &&
                 controller.section(for: $0) == section
         }
+        // The write completed a Visible order the same way, so judge it the same way.
+        let completedOrder = section == .visible
+            ? VisibleOrderCompletion.completed(
+                desiredOrder,
+                liveItems: items,
+                controller: controller,
+                experimentalSystemItemHiding: configuration.enableExperimentalSystemItemHiding
+            )
+            : desiredOrder
         return MenuBarLayoutPlannerProvider.current.nextAchievableOrderMove(
             items: sectionItems,
-            desiredOrder: desiredOrder,
+            desiredOrder: completedOrder,
             experimentalSystemItemHiding: configuration.enableExperimentalSystemItemHiding
         ) == nil
     }
@@ -2091,7 +2100,12 @@ extension MenuBarItemManager {
             if section == .visible {
                 let republished = await awaitVisibleMembersRepublished(desiredOrder: desiredOrder)
                 liveItems = republished.liveItems
-                desiredOrder = republished.desiredOrder
+                desiredOrder = VisibleOrderCompletion.completed(
+                    republished.desiredOrder,
+                    liveItems: liveItems,
+                    controller: controller,
+                    experimentalSystemItemHiding: experimentalSystemItemHiding
+                )
             }
 
             // AX enumeration can finish after a hide cancelled this reveal.

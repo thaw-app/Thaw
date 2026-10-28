@@ -97,8 +97,27 @@ nonisolated enum LayoutEditorOrder {
         var result = saved.map { id in
             achievableSet.contains(id) ? (fill.next() ?? id) : id
         }
-        for (index, id) in achievable.enumerated() where !savedSet.contains(id) {
-            let at = index > 0 ? result.firstIndex(of: achievable[index - 1]).map { $0 + 1 } : 0
+        return insertingUnnamed(achievable, into: result)
+    }
+
+    /// Adds the live items an order leaves out, each after its live predecessor or first, matched by
+    /// canonical spelling. The kit writes nothing for a section whose order omits a live item.
+    static func completingOrder(_ order: [String], withLive live: [String]) -> [String] {
+        insertingUnnamed(live, into: order, key: MenuBarItemTag.canonicalPersistentIdentifier)
+    }
+
+    /// Inserts each entry of ordered that base lacks after the entry that precedes it in ordered, or first.
+    private static func insertingUnnamed(
+        _ ordered: [String],
+        into base: [String],
+        key: (String) -> String = { $0 }
+    ) -> [String] {
+        let named = Set(base.map(key))
+        var result = base
+        for (index, id) in ordered.enumerated() where !named.contains(key(id)) {
+            let at = index > 0
+                ? result.firstIndex { key($0) == key(ordered[index - 1]) }.map { $0 + 1 }
+                : 0
             result.insert(id, at: at ?? result.endIndex)
         }
         return result

@@ -30,6 +30,7 @@ the items under New and Fixed.
 
 ### Fixed
 
+- Re-applying your saved Visible order now works when the bar has an item your layout does not name yet, such as a newly appearing Now Playing. That item stays where it is and the rest go back to your order. Reported by @michaeljauk in [#1410](https://github.com/thaw-app/Thaw/issues/1410).
 - `thaw://move-item` now answers `notApplied` instead of `moved` when a move to Visible is saved but the menu bar does not take the new order. Reported by @michaeljauk in [#1410](https://github.com/thaw-app/Thaw/issues/1410).
 - In Automatic arrangement, a Visible item that macOS shows only some of the time, such as Focus or Sound, goes back to its place in your layout when it reappears, instead of keeping the place macOS gave it. Reported by @michaeljauk in [#1410](https://github.com/thaw-app/Thaw/issues/1410).
 - Dragging an item inside Hidden no longer moves an Always Hidden item out of Always Hidden while that section is turned off.

@@ -160,4 +160,42 @@ struct LayoutEditorOrderTests {
         )
         #expect(items.count == 1)
     }
+
+    @Test
+    func aNewcomerBetweenNamedItemsKeepsItsSlot() {
+        let completed = LayoutEditorOrder.completingOrder(["a", "b", "c"], withLive: ["a", "new", "b", "c"])
+        #expect(completed == ["a", "new", "b", "c"])
+    }
+
+    @Test
+    func aNewcomerBeforeEveryNamedItemGoesFirst() {
+        let completed = LayoutEditorOrder.completingOrder(["a", "b"], withLive: ["new", "a", "b"])
+        #expect(completed == ["new", "a", "b"])
+    }
+
+    @Test
+    func newcomersInARunStayInLiveOrder() {
+        let completed = LayoutEditorOrder.completingOrder(["b", "a"], withLive: ["a", "n1", "n2", "b"])
+        #expect(completed == ["b", "a", "n1", "n2"])
+    }
+
+    @Test
+    func aSavedEntryWithNoLiveItemStaysWhereItIs() {
+        let completed = LayoutEditorOrder.completingOrder(["a", "gone", "b"], withLive: ["a", "b", "new"])
+        #expect(completed == ["a", "gone", "b", "new"])
+    }
+
+    @Test
+    func completionMatchesAnIdentifierByItsCanonicalSpelling() {
+        let spelled = "com.bjango.istatmenus-setapp.status:CPU 42%"
+        let live = "com.bjango.istatmenus-setapp.status:CPU 43%"
+        let completed = LayoutEditorOrder.completingOrder([spelled, "b"], withLive: [live, "new", "b"])
+        #expect(completed == [spelled, "new", "b"])
+    }
+
+    @Test
+    func anOrderThatNamesEveryLiveItemIsReturnedUnchanged() {
+        #expect(LayoutEditorOrder.completingOrder(["b", "a"], withLive: ["a", "b"]) == ["b", "a"])
+        #expect(LayoutEditorOrder.completingOrder(["a", "b"], withLive: []) == ["a", "b"])
+    }
 }
