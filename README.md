@@ -28,6 +28,7 @@
 
 <p align="center">
   <a href="https://vercel.com/open-source-program"><img alt="Vercel OSS Program" src="https://vercel.com/oss/program-badge-2026.svg" /></a>
+  <a href="https://www.producthunt.com/products/thaw-2"><picture><source media="(prefers-color-scheme: dark)" srcset="https://shieldcn.dev/badge/FEATURED_ON-PRODUCT_HUNT.svg?variant=ghost&amp;size=xs&amp;font=geist-mono&amp;logo=producthunt&amp;mode=dark" /><img alt="Featured on Product Hunt" src="https://shieldcn.dev/badge/FEATURED_ON-PRODUCT_HUNT.svg?variant=ghost&amp;size=xs&amp;font=geist-mono&amp;logo=producthunt&amp;mode=light" /></picture></a>
 </p>
 
 ![Thaw settings](docs/images/readme-hero.jpeg)
