@@ -814,7 +814,7 @@ extension MenuBarItemManager {
             scheduleDeferredLayoutReconcile(after: .seconds(5), reason: "move cooldown")
             return false
         }
-        // MoveInputSuppression cannot retract a delivered mouse-down; synthetic events during ⌘-drag can duplicate icons or crash Finder.
+        // Events Thaw posts during a user ⌘-drag can duplicate icons or crash Finder.
         // The drop republishes itemCache and starts the move cooldown before applying.
         if appState?.isDraggingMenuBarItem ?? false {
             MenuBarItemManager.diagLog.debug("applySavedLayout: skipping, user ⌘-drag in progress")

@@ -13,7 +13,7 @@ extension MenuBarItemManager {
     /// Whether the store path should be skipped for this move.
     ///
     /// On macOS 27 the table lives in a protected group container. Without
-    /// access cfprefsd refuses every read, so go straight to the synthetic drag.
+    /// access cfprefsd refuses every read, so there is nothing to write.
     var menuBarAgentIgnoresPreferredPositions: Bool {
         !positionsDomainAccessible
     }
@@ -70,7 +70,7 @@ extension MenuBarItemManager {
     func noteMenuBarAgentIgnoredPreferredPositions() {
         preferredPositionsIgnoredEvidence += 1
         MenuBarItemManager.diagLog.debug(
-            "Preferred-position write unverified (\(preferredPositionsIgnoredEvidence) this session); falling back per move"
+            "Preferred-position write unverified (\(preferredPositionsIgnoredEvidence) this session)"
         )
     }
 
@@ -88,49 +88,5 @@ extension MenuBarItemManager {
         guard section != .visible else { return false }
         let revealed = controller.revealedSection
         return !(revealed == section || (section == .hidden && revealed == .alwaysHidden))
-    }
-}
-
-/// Items whose preferred-position writes MenuBarAgent keeps ignoring. Some
-/// items are never laid out by their weight (seen for a helper without a
-/// registered bundle), so every move paid the verification wait before its
-/// drag. Whether the bar moved is no verdict: items with live-width titles
-/// shift it all the time. After two unverified writes in a row the item goes
-/// straight to the drag. A verified write clears it, and after ``retryAfter``
-/// the write gets one more try.
-struct IgnoredPreferredWrites {
-    static let strikes = 2
-
-    /// How long an item stays on the drag before its writes get one more try.
-    /// The agent can start honouring an item again, after its app relaunches
-    /// or the bar re-lays, and without a retry the item would stay on the
-    /// drag, and out of every automatic move, for the rest of the session.
-    static let retryAfter: Duration = .seconds(600)
-
-    private struct Record {
-        var count: Int
-        var skipUntil: ContinuousClock.Instant?
-    }
-
-    private var records: [String: Record] = [:]
-
-    func skipsWrite(for identifier: String, at now: ContinuousClock.Instant = .now) -> Bool {
-        guard let skipUntil = records[identifier]?.skipUntil else { return false }
-        return now < skipUntil
-    }
-
-    mutating func noteUnverified(_ identifier: String, at now: ContinuousClock.Instant = .now) {
-        var record = records[identifier] ?? Record(count: 0)
-        if let skipUntil = record.skipUntil, now >= skipUntil {
-            // The retry failed too: one strike is enough to go back to the drag.
-            record.count = Self.strikes - 1
-        }
-        record.count += 1
-        record.skipUntil = record.count >= Self.strikes ? now + Self.retryAfter : nil
-        records[identifier] = record
-    }
-
-    mutating func noteVerified(_ identifier: String) {
-        records[identifier] = nil
     }
 }

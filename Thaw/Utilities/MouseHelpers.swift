@@ -102,7 +102,7 @@ nonisolated enum MouseHelpers {
         if enabled {
             diagLog.info("Background cursor hiding enabled for this connection")
         } else {
-            diagLog.warning("Background cursor hiding refused; the pointer will show during synthetic drags")
+            diagLog.warning("Background cursor hiding refused; the pointer will show while Thaw posts mouse events")
         }
         return enabled
     }()

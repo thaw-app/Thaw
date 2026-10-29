@@ -298,7 +298,7 @@ final class LayoutBarPaddingView: NSView {
 
         // Concealment is assignment-backed, but the real divider is still the
         // spatial boundary between sections. Cross-section drops first
-        // Command-drag the live item across that divider and only commit the new
+        // move the live item across that divider and only commit the new
         // assignment after AX order verifies the physical transition.
         if draggingSource.isNewItemsBadge {
             container.appState?.itemManager.updateNewItemsPlacement(
@@ -667,12 +667,10 @@ final class LayoutBarPaddingView: NSView {
                     // without the opt-in, move() refuses control item targets on macOS 27.
                     // A layout-pane drop is the user's direct action: it must preempt
                     // an in-flight background reconcile on the serial gate.
-                    // A drop is the user's explicit request; the drag runs only
-                    // after the store write was refused.
                     try await appState.itemManager.move(
                         item: item,
                         to: destination,
-                        options: ItemMoveOptions(skipInputPause: true, allowSectionBoundaryTarget: destination.targetItem.isControlItem, allowParkedOffMenuBarSource: recoveringStrandedVisibleControl, anchorFallbacks: anchorFallbacks, isUserInitiated: true, allowSyntheticDrag: true)
+                        options: ItemMoveOptions(skipInputPause: true, allowSectionBoundaryTarget: destination.targetItem.isControlItem, allowParkedOffMenuBarSource: recoveringStrandedVisibleControl, anchorFallbacks: anchorFallbacks, isUserInitiated: true)
                     )
                 }
 
@@ -1068,7 +1066,7 @@ final class LayoutBarPaddingView: NSView {
                         moved = try await appState.itemManager.move(
                             item: member,
                             to: destination,
-                            options: ItemMoveOptions(skipInputPause: true, isUserInitiated: true, allowSyntheticDrag: false)
+                            options: ItemMoveOptions(skipInputPause: true, isUserInitiated: true)
                         )
                     } catch {
                         Self.diagLog.error("Group reorder move failed for \(member.logString): \(error)")
@@ -1279,7 +1277,7 @@ final class LayoutBarPaddingView: NSView {
                 try await appState.itemManager.move(
                     item: item,
                     to: destination,
-                    options: ItemMoveOptions(skipInputPause: true, allowSectionBoundaryTarget: destination.targetItem.isControlItem, allowParkedOffMenuBarSource: recoveringStrandedVisibleControl, anchorFallbacks: anchorFallbacks, isUserInitiated: true, allowSyntheticDrag: false)
+                    options: ItemMoveOptions(skipInputPause: true, allowSectionBoundaryTarget: destination.targetItem.isControlItem, allowParkedOffMenuBarSource: recoveringStrandedVisibleControl, anchorFallbacks: anchorFallbacks, isUserInitiated: true)
                 )
                 await appState.itemManager.cacheItemsRegardless(skipRecentMoveCheck: true)
             } catch {

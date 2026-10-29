@@ -94,35 +94,6 @@ struct MenuBarItemEventSupportTests {
         #expect(event.getIntegerValueField(.eventTargetUnixProcessID) == 4321)
     }
 
-    @Test("User mouse input is suppressed during a move, but Thaw's own events pass")
-    func moveInputSuppression() throws {
-        let source = try #require(CGEventSource(stateID: .privateState))
-        let user = try #require(CGEvent(
-            mouseEventSource: source,
-            mouseType: .leftMouseDown,
-            mouseCursorPosition: .zero,
-            mouseButton: .left
-        ))
-        user.setIntegerValueField(.eventSourceUserData, value: 0)
-        let userData = user.getIntegerValueField(.eventSourceUserData)
-        #expect(userData == 0)
-        #expect(MoveInputSuppression.shouldSuppress(user))
-
-        let synthetic = try #require(CGEvent(
-            mouseEventSource: source,
-            mouseType: .leftMouseDragged,
-            mouseCursorPosition: .zero,
-            mouseButton: .left
-        ))
-        MoveInputSuppression.markSyntheticMoveEvent(synthetic)
-        #expect(synthetic.getIntegerValueField(.eventSourceUserData) != 0)
-        #expect(!MoveInputSuppression.shouldSuppress(synthetic))
-
-        let key = try #require(CGEvent(keyboardEventSource: source, virtualKey: 0, keyDown: true))
-        key.setIntegerValueField(.eventSourceUserData, value: 0)
-        #expect(!MoveInputSuppression.shouldSuppress(key))
-    }
-
     @Test("Durations convert to fractional milliseconds")
     func durationMilliseconds() {
         #expect(Duration.seconds(2).milliseconds == 2000)

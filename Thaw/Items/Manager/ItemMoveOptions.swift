@@ -10,8 +10,7 @@ import MenuBarModel
 /// How MenuBarItemManager.move(item:to:on:options:) may carry out one move.
 ///
 /// The defaults describe an automatic move: it waits for the user to stop
-/// typing or pointing, refuses unusual sources and targets, and may fall back
-/// to the synthetic drag.
+/// typing or pointing, and refuses unusual sources and targets.
 nonisolated struct ItemMoveOptions {
     /// Skips waiting for the user to pause input, for callers that already did.
     var skipInputPause = false
@@ -25,6 +24,4 @@ nonisolated struct ItemMoveOptions {
     var isUserInitiated = false
     /// Skips the after-move position check, which a recovery move cannot pass.
     var recoveringUnplacedItem = false
-    /// Allows the synthetic drag when the position write cannot express the move.
-    var allowSyntheticDrag = true
 }

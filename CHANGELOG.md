@@ -24,6 +24,10 @@ the items under New and Fixed.
 
 ## [Unreleased]
 
+### Changed
+
+- **Thaw no longer takes over the pointer to move an item.** When macOS declines a move, the item stays where it is instead of being dragged across the bar with a synthetic Command-drag, which could leave the pointer or the item stuck.
+
 ## [3.0.0-alpha.11] - 2026-10-28
 
 **macOS 27 only · Build 118**

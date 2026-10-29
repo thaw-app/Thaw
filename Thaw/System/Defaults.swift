@@ -191,9 +191,6 @@ nonisolated enum Defaults {
 
             // Event Delivery
             .axMessagingTimeout: DefaultValue.axMessagingTimeout,
-            .addressMoveDragToMenuBarAgent: DefaultValue.addressMoveDragToMenuBarAgent,
-            .addressMoveDragViaEventRecord: DefaultValue.addressMoveDragViaEventRecord,
-            .useHeldCommandDrag: DefaultValue.useHeldCommandDrag,
             .useLCSSectionOrderPlanner: DefaultValue.useLCSSectionOrderPlanner,
             .inputPauseThresholdMs: DefaultValue.inputPauseThresholdMs,
             .platformLimitationsAcknowledged: DefaultValue.platformLimitationsAcknowledged,
@@ -338,20 +335,6 @@ extension Defaults {
         // MARK: Event Delivery
 
         static let axMessagingTimeout = 1.0
-
-        /// On by default: the first drag attempt goes to MenuBarAgent's PID and
-        /// only the retry uses the HID tap, costing at most one attempt per move.
-        /// Whether MenuBarAgent honors the addressed drag is still unverified.
-        static let addressMoveDragToMenuBarAgent = true
-
-        /// The first drag attempt as SkyLight event records. Off because the
-        /// agent accepts but ignores them, wasting 1.5 s per move. Default: false.
-        static let addressMoveDragViaEventRecord = false
-
-        /// On by default: Command-drags use slower steps and a hold before
-        /// release, which survives cross-divider moves where the faster
-        /// gesture failed with cannotComplete.
-        static let useHeldCommandDrag = true
 
         /// On by default: plan section-order drags with the LCS planner, one
         /// move per misplaced item, instead of the pairwise walk.
@@ -573,27 +556,6 @@ extension Defaults {
         ///
         /// Hidden diagnostic flag; not exposed in Settings. Default: 1.0.
         case axMessagingTimeout
-
-        /// Whether the reorder drag is addressed to MenuBarAgent instead of the
-        /// HID stream, avoiding the cursor warp. MenuBarAgent is resolved by
-        /// name, since ownerPID is the third-party app.
-        ///
-        /// Hidden diagnostic flag; not exposed in Settings. Default: true.
-        case addressMoveDragToMenuBarAgent
-
-        /// Whether the first synthetic-drag attempt is delivered as event
-        /// records addressed to MenuBarAgent (see
-        /// DefaultValue.addressMoveDragViaEventRecord).
-        ///
-        /// Hidden diagnostic flag; not exposed in Settings. Default: false.
-        case addressMoveDragViaEventRecord
-
-        /// Whether synthetic Command-drags use the held HID gesture (see
-        /// DefaultValue.useHeldCommandDrag). Off selects the original
-        /// addressed gesture, kept for comparison.
-        ///
-        /// Hidden diagnostic flag; not exposed in Settings. Default: true.
-        case useHeldCommandDrag
 
         /// Whether automatic section-order passes plan drags with the LCS
         /// planner (see DefaultValue.useLCSSectionOrderPlanner).

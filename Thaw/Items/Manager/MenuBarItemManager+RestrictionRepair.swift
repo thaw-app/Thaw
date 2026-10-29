@@ -255,7 +255,7 @@ extension MenuBarItemManager {
             )
         }
 
-        // Denylisted hiding-unsupported items are excluded from synthetic drag
+        // Denylisted hiding-unsupported items are excluded from unpark moves
         // and retry signals. Their glyphs may transiently blank on assertion
         // reflows, but repeatedly pulsing can make that worse.
         var failedUnparkIDs = Set<CGWindowID>()
