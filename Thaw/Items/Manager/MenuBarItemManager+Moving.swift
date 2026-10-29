@@ -1159,8 +1159,8 @@ extension MenuBarItemManager {
     /// group keeps its order instead of stacking into one slot.
     ///
     /// The weight is only a hint: an item leaving the visible bar is also
-    /// dragged across the divider here; one arriving from a concealed section
-    /// is dragged by the strand pass. The commit runs under the same permit,
+    /// moved across the divider here; one arriving from a concealed section
+    /// is moved by the strand pass. The commit runs under the same permit,
     /// so the next drop never starts from an uncommitted assignment.
     @MainActor
     func seatItemsForSectionTransition(
@@ -1240,6 +1240,8 @@ extension MenuBarItemManager {
             guard !Task.isCancelled else { return }
             let destination = sectionTransitionDestination(for: section, after: previousMoved)
             do {
+                // The conceal assertion hides these items whether or not the
+                // write lands, so a declined move does not hold up the commit.
                 if try await moveWhileHoldingMutation(
                     item: item,
                     to: destination,

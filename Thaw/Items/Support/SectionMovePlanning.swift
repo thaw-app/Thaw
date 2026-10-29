@@ -16,11 +16,11 @@ import PlatformRuntimeKit
 /// against the desired order drags only the items that are out of place,
 /// anchored on the items that stay put. The pairwise walk in the runtime
 /// coordinator is a bubble pass by comparison: for [a, x, b, c, d] wanting
-/// [a, b, c, d, x] it drags b, c and d, which were already in order, and
+/// [a, b, c, d, x] it moves b, c and d, which were already in order, and
 /// never x. The plan here is exactly one move, x to the right of d.
 ///
 /// Planning happens once per pass from the post-write snapshot; each move is
-/// re-resolved against the live bar right before it is dragged, and a move
+/// re-resolved against the live bar right before it is made, and a move
 /// whose item or anchor is gone is skipped along with any moves depending on
 /// it. Independent moves can finish before a bounded replan from fresh state.
 enum SectionMovePlanning {
