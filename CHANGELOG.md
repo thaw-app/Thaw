@@ -24,11 +24,7 @@ the items under New and Fixed.
 
 ## [Unreleased]
 
-### Fixed
-
-- Exporting a single profile now preserves its Space association, so importing it on the same Mac restores the association.
-
-## [2.2.0-beta.1] - 2026-10-27
+## [2.2.0-beta.1] - 2026-10-28
 
 **macOS 15 and 26 · Build 64**
 
@@ -54,6 +50,7 @@ the items under New and Fixed.
 - With the menu bar set to hide automatically, an item opened from the Thaw Bar could stay in the visible section until its app was relaunched. It now goes back once the menu bar shows again.
 - After Thaw moved an item, the Thaw Bar could keep showing it in its old section for several minutes.
 - Rehiding an item while the mouse was moving could leave the pointer in the top-left corner of the screen, under the Apple menu.
+- Exporting a single profile keeps its Space association, so importing it on the same Mac restores it. Thanks to @Belligerently, who reported it in #1384 and fixed it in #1385.
 
 ## [2.1.0] - 2026-10-14
 **macOS 26 only**
