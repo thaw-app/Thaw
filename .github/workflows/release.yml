@@ -143,7 +143,7 @@ jobs:
       contents: read
       id-token: write
       attestations: write
-    uses: thaw-app/org-ci/.github/workflows/build-macos-app.yml@50987e89e9ede1d982d81135c69ca66db11beedb
+    uses: thaw-app/org-ci/.github/workflows/build-macos-app.yml@c39fb8cc3058d77573a4e60cb65ccfc4e2aed611
     with:
       ref: refs/tags/${{ needs.meta.outputs.tag }}
       version: ${{ needs.meta.outputs.tag }}
@@ -174,7 +174,7 @@ jobs:
     permissions:
       contents: write
       id-token: write
-    uses: thaw-app/org-ci/.github/workflows/release-macos-app.yml@50987e89e9ede1d982d81135c69ca66db11beedb
+    uses: thaw-app/org-ci/.github/workflows/release-macos-app.yml@c39fb8cc3058d77573a4e60cb65ccfc4e2aed611
     with:
       tag: ${{ needs.meta.outputs.tag }}
       channel: ${{ needs.meta.outputs.channel }}
@@ -185,6 +185,7 @@ jobs:
       asset-prefix: Thaw
       commit: ${{ needs.build.outputs.commit }}
       build-artifact: ${{ needs.build.outputs.artifact-name }}
+      provenance-artifact: ${{ needs.build.outputs.provenance-artifact-name }}
       app-zip-name: ${{ needs.build.outputs.app-zip-name }}
       dmg-name: ${{ needs.build.outputs.dmg-name }}
       dmg-digest: ${{ needs.build.outputs.dmg-digest }}
