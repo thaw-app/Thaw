@@ -24,20 +24,6 @@ the items under New and Fixed.
 
 ## [Unreleased]
 
-### New
-
-- **Black background for Settings.** Turn it on in General to draw the settings window on pure black, which suits OLED displays. The window stays in dark mode while it's on, and the sidebar, toolbar and rows keep their glass.
-
-### Fixed
-
-- Re-applying your saved Visible order now works when the bar has an item your layout does not name yet, such as a newly appearing Now Playing. That item stays where it is and the rest go back to your order. Reported by @michaeljauk in [#1410](https://github.com/thaw-app/Thaw/issues/1410).
-- `thaw://move-item` now answers `notApplied` instead of `moved` when a move to Visible is saved but the menu bar does not take the new order. Reported by @michaeljauk in [#1410](https://github.com/thaw-app/Thaw/issues/1410).
-- In Automatic arrangement, a Visible item that macOS shows only some of the time, such as Focus or Sound, goes back to its place in your layout when it reappears, instead of keeping the place macOS gave it. Reported by @michaeljauk in [#1410](https://github.com/thaw-app/Thaw/issues/1410).
-- Dragging an item inside Hidden no longer moves an Always Hidden item out of Always Hidden while that section is turned off.
-- Dropping a Visible item back where it was no longer drops the saved place of a Visible item that is off screen at that moment.
-- On macOS 27, items can now be moved to the right of Siri. macOS only pins Control Center and Clock, so Thaw no longer treats Siri as fixed or pulls it back to the end.
-- Menu Bar Search now lists the same items the Layout previews show, instead of dropping an item that is briefly missing from the live read.
-
 ## [3.0.0-beta.5] - 2026-10-28
 
 **macOS 27 only · Build 118**
@@ -47,6 +33,7 @@ Most of the fixes in this release harden security, and they come from findings i
 ### New
 
 - You can skip menu bar visibility recovery when a removed app blocks it. Thaw keeps the recovery records as backups and leaves Native hiding off.
+- **Settings can use a pure black background in dark mode.** Turn on "Black background in dark mode" in General if you have an OLED display. Light mode looks the same as before, and the sidebar, toolbar and rows keep their glass.
 
 ### Changed
 
@@ -77,6 +64,13 @@ Most of the fixes in this release harden security, and they come from findings i
 - **A Focus profile stays on when Thaw can't read the Focus state.** Only the system reporting that the Focus ended switches back.
 - **Your saved menu bar order holds when icons go missing or overflow.** An icon that briefly disappears keeps its place, icons behind the overflow arrows keep their order while you edit Visible, Always Hidden keeps its items while it's turned off, and items a profile doesn't mention stay where they were.
 - **The Thaw Bar draws an app's icon at menu bar size** when it has no picture of the item yet, instead of nearly twice the height of the icons around it on a notched display. Reported by @eisaias2000 in [#1401](https://github.com/thaw-app/Thaw/issues/1401).
+- **Focus, Sound and other items macOS shows only some of the time go back to their place in your layout when they reappear,** instead of staying where macOS put them. This was one way the Visible order drifted during the day in Automatic arrangement. Reported by @michaeljauk in [#1410](https://github.com/thaw-app/Thaw/issues/1410).
+- **Thaw can put your Visible order back when the bar has an item your layout doesn't name yet,** such as Now Playing. That item stays where it is, and the others return to your order. Before, Thaw gave up after three tries. Reported by @michaeljauk in [#1410](https://github.com/thaw-app/Thaw/issues/1410).
+- **`thaw://move-item` answers `notApplied` when the menu bar doesn't take a move to Visible.** It used to answer `moved` once the order was saved. Reported by @michaeljauk in [#1410](https://github.com/thaw-app/Thaw/issues/1410).
+- **You can move items to the right of Siri on macOS 27.** macOS doesn't pin Siri, so Thaw no longer treats it as fixed or moves it back to the end.
+- **Search lists the same items as Layout,** including hidden items macOS isn't drawing at the moment, and no longer lists items from apps you quit.
+- **Dragging an item inside Hidden keeps your Always Hidden items in Always Hidden** while that section is turned off.
+- **Dropping a Visible item back where it was keeps the saved place of Visible items that are off screen** at that moment.
 
 ### Known issues
 
