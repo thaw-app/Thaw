@@ -42,7 +42,7 @@ Beyond hiding items, Thaw lets you organize them into groups, switch between pro
 
 [Explore all features →](https://www.getthaw.app/#features)
 
-## Install
+### Install
 
 <p>
   <picture><source media="(prefers-color-scheme: dark)" srcset="https://shieldcn.dev/group/badge/THAW_2-MACOS_15--26+badge/THAW_3-MACOS_27.svg?variant=ghost&amp;font=geist-mono&amp;mode=dark" /><img alt="Thaw 2 for macOS 15 to 26, Thaw 3 for macOS 27" src="https://shieldcn.dev/group/badge/THAW_2-MACOS_15--26+badge/THAW_3-MACOS_27.svg?variant=ghost&amp;font=geist-mono&amp;mode=light" /></picture>
@@ -55,10 +55,10 @@ brew install thaw@beta
 
 Or download the disk image from the [releases](https://github.com/thaw-app/Thaw/releases) and drag Thaw to Applications.
 
-## Contributing
+### Contributing
 
 Please read the [contributing guide](https://github.com/thaw-app/.github/blob/main/.github/CONTRIBUTING.md). Pull requests go against the `development` branch. Translations go through [Crowdin](https://crowdin.com/project/thaw), and everyone who has helped is on the [community page](https://www.getthaw.app/community).
 
-## License
+### License
 
 Licensed under the [GPL-3.0 license](LICENSE), with an [additional permission](LICENSE-EXCEPTION) to link PlatformRuntimeKit.
