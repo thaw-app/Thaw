@@ -241,7 +241,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private func handleURL(_ url: URL, sender: SettingsURISender? = nil) {
         // Nothing below is set up while the reduced mode runs.
         if ReducedModeController.shared.isRunning {
-            ReducedModeController.shared.handle(url)
+            ReducedModeController.shared.handle(url, senderIsApproved: SettingsURIHandler.isApproved(sender))
             return
         }
 

@@ -29,6 +29,7 @@ the items under New and Fixed.
 - **Thaw no longer moves your pointer to reorder menu bar items.** When macOS declines a move, the item stays where it is. Before, Thaw dragged it with a simulated mouse drag, which could leave the pointer or the item stuck.
 - **A thaw:// sender's developer team counts only when Apple vouches for it.** An app signed some other way is approved by its own signature instead, so it can't claim a trusted team.
 - **Replies to thaw:// requests go only to the app that asked,** checked by its signature, not to any app that handles the same link.
+- **In Reduced Mode, thaw://hide-app and thaw://show-app need an app you allowed,** since they change which apps stay hidden. thaw://toggle-hidden still works for anyone.
 
 ### Fixed
 

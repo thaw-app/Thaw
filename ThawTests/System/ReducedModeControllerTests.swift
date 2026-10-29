@@ -71,21 +71,40 @@ struct ReducedModeControllerTests {
         let recorder = Recorder()
         let (controller, _) = makeController(recorder)
 
-        try controller.handle(#require(URL(string: "thaw://hide-app?bundle=com.example.a")))
+        try controller.handle(#require(URL(string: "thaw://hide-app?bundle=com.example.a")), senderIsApproved: true)
         #expect(recorder.saved == ["com.example.a"])
         #expect(recorder.hides.last == ["com.example.a"])
 
-        try controller.handle(#require(URL(string: "thaw://toggle-hidden")))
+        try controller.handle(#require(URL(string: "thaw://toggle-hidden")), senderIsApproved: true)
         #expect(recorder.hides.last == [])
         #expect(recorder.saved == ["com.example.a"])
 
-        try controller.handle(#require(URL(string: "thaw://show-app?bundle=com.example.a")))
+        try controller.handle(#require(URL(string: "thaw://show-app?bundle=com.example.a")), senderIsApproved: true)
         #expect(recorder.saved.isEmpty)
 
         let before = recorder.hides.count
-        try controller.handle(#require(URL(string: "thaw://hide-app")))
-        try controller.handle(#require(URL(string: "thaw://open-settings")))
+        try controller.handle(#require(URL(string: "thaw://hide-app")), senderIsApproved: true)
+        try controller.handle(#require(URL(string: "thaw://open-settings")), senderIsApproved: true)
         #expect(recorder.hides.count == before)
+    }
+
+    @Test
+    func `only an approved sender can change which apps are saved as hidden`() throws {
+        let recorder = Recorder()
+        let (controller, _) = makeController(recorder)
+
+        try controller.handle(#require(URL(string: "thaw://hide-app?bundle=com.example.a")), senderIsApproved: false)
+        #expect(recorder.saved.isEmpty)
+        #expect(recorder.hides.isEmpty)
+
+        try controller.handle(#require(URL(string: "thaw://hide-app?bundle=com.example.a")), senderIsApproved: true)
+        try controller.handle(#require(URL(string: "thaw://show-app?bundle=com.example.a")), senderIsApproved: false)
+        #expect(recorder.saved == ["com.example.a"])
+
+        // Showing and hiding the saved set changes nothing that is saved, so anyone may ask.
+        try controller.handle(#require(URL(string: "thaw://toggle-hidden")), senderIsApproved: false)
+        #expect(recorder.hides.last == [])
+        #expect(recorder.saved == ["com.example.a"])
     }
 
     @Test
