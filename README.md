@@ -41,8 +41,7 @@ Thaw hides the menu bar items you don't need, brings them back on demand, and fi
 ## Install
 
 <p>
-  <picture><source media="(prefers-color-scheme: dark)" srcset="https://shieldcn.dev/badge/THAW_2-MACOS_15--26.svg?variant=ghost&amp;font=geist-mono&amp;logo=apple&amp;mode=dark" /><img alt="Thaw 2 for macOS 15 to 26" src="https://shieldcn.dev/badge/THAW_2-MACOS_15--26.svg?variant=ghost&amp;font=geist-mono&amp;logo=apple&amp;mode=light" /></picture>
-  <picture><source media="(prefers-color-scheme: dark)" srcset="https://shieldcn.dev/badge/THAW_3-MACOS_27.svg?variant=ghost&amp;font=geist-mono&amp;logo=apple&amp;mode=dark" /><img alt="Thaw 3 for macOS 27" src="https://shieldcn.dev/badge/THAW_3-MACOS_27.svg?variant=ghost&amp;font=geist-mono&amp;logo=apple&amp;mode=light" /></picture>
+  <picture><source media="(prefers-color-scheme: dark)" srcset="https://shieldcn.dev/group/badge/THAW_2-MACOS_15--26+badge/THAW_3-MACOS_27.svg?variant=ghost&amp;font=geist-mono&amp;mode=dark" /><img alt="Thaw 2 for macOS 15 to 26, Thaw 3 for macOS 27" src="https://shieldcn.dev/group/badge/THAW_2-MACOS_15--26+badge/THAW_3-MACOS_27.svg?variant=ghost&amp;font=geist-mono&amp;mode=light" /></picture>
 </p>
 
 ```sh
