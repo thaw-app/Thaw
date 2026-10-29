@@ -31,7 +31,10 @@
   <a href="https://www.producthunt.com/products/thaw-2"><picture><source media="(prefers-color-scheme: dark)" srcset="https://shieldcn.dev/badge/FEATURED_ON-PRODUCT_HUNT.svg?variant=ghost&amp;size=sm&amp;font=geist-mono&amp;logo=producthunt&amp;mode=dark" /><img alt="Featured on Product Hunt" src="https://shieldcn.dev/badge/FEATURED_ON-PRODUCT_HUNT.svg?variant=ghost&amp;size=sm&amp;font=geist-mono&amp;logo=producthunt&amp;mode=light" /></picture></a>
 </p>
 
-![Thaw settings](docs/images/readme-hero.jpeg)
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="docs/images/readme-hero-dark.jpeg">
+  <img alt="Thaw settings" src="docs/images/readme-hero-light.jpeg">
+</picture>
 
 Thaw hides the menu bar items you don't need, brings them back on demand, and finds any of them in a keystroke. Free under GPL-3.0, with no tracking and no account.
 
