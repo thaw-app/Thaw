@@ -157,6 +157,27 @@ struct SectionReadingPropertyTests {
         #expect(ObservedMembership.moves(for: after, dividers: dividers, since: baseline).flatMap(\.items).count == 2)
     }
 
+    @Test("The grabbed item still moves when the read after the drop sees it under a new window")
+    func grabbedItemMatchesAcrossWindowChurn() throws {
+        let dividers = try #require(ObservedMembership.Dividers(hidden: 300, alwaysHidden: 1000, visibleControl: 100))
+        let namespace = MenuBarItemTag.Namespace.string("com.property.meters")
+        // macOS 27 hands an item a new window between reads, so the press's tag names an older one.
+        let pressedTag = MenuBarItemTag(namespace: namespace, title: "Item-0", windowID: 41)
+        let dropped = MenuBarItem(
+            tag: MenuBarItemTag(namespace: namespace, title: "Item-0", windowID: 77),
+            windowID: 77, ownerPID: 1, sourcePID: 1,
+            bounds: CGRect(x: 30, y: 3, width: 24, height: 24), title: "Item-0", isOnScreen: true
+        )
+        let baseline = ObservedMembership.DragBaseline(
+            candidates: [ObservedMembership.Candidate(item: dropped, weight: 250, authored: .visible)],
+            dividers: dividers
+        )
+        let after = [ObservedMembership.Candidate(item: dropped, weight: 400, authored: .visible)]
+
+        let moved = ObservedMembership.moves(for: after, dividers: dividers, since: baseline, pressed: [pressedTag])
+        #expect(moved.flatMap(\.items).map(\.windowID) == [77])
+    }
+
     @Test("Rows the agent saves again on their own side of every divider never move", arguments: 0 ..< 200)
     func resavedRowsStay(seed: Int) throws {
         let random = GKMersenneTwisterRandomSource(seed: UInt64(seed))

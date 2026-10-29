@@ -174,8 +174,9 @@ nonisolated enum ObservedMembership {
             if let baseline, !baseline.crossedDivider(candidate, dividers: dividers) {
                 return nil
             }
-            // A neighbour the drop shifted across a divider was not dragged there.
-            if let pressed, !pressed.contains(candidate.item.tag) {
+            // A neighbour the drop shifted across a divider was not dragged there. Matched
+            // without the window, which macOS 27 can change between the press and this read.
+            if let pressed, !pressed.contains(where: { $0.matchesIgnoringWindowID(candidate.item.tag) }) {
                 return nil
             }
             // An Always Hidden icon was not on screen, so the drag cannot have carried it.

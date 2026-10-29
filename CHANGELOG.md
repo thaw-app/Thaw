@@ -30,6 +30,7 @@ the items under New and Fixed.
 
 ### Fixed
 
+- **⌘-dragging an item into Hidden or back keeps working when macOS renews the item between the press and the drop.** Thaw sometimes left the item you dragged in its old section.
 - Updating all of a profile’s settings and layout now preserves its pre/post scripts.
 
 - Profiles whose saved files are missing can now be removed from the profile list.
