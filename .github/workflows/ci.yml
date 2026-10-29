@@ -51,7 +51,7 @@ jobs:
         run: |
           set -uo pipefail
           code=true
-          if changed=$(git diff --name-only --no-renames "$BEFORE" "$AFTER" 2>/dev/null) \
+          if changed=$(git -c core.quotePath=false diff --name-only --no-renames "$BEFORE" "$AFTER" 2>/dev/null) \
             && ! grep -Eq "$CODE_PATTERNS" <<<"$changed"; then
             runs=$(curl -fsS -H "Authorization: Bearer $GH_TOKEN" -H "Accept: application/vnd.github+json" \
               "https://api.github.com/repos/$REPO/actions/workflows/ci.yml/runs?head_sha=$BEFORE&event=pull_request&status=success&per_page=1" \

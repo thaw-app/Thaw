@@ -10,7 +10,7 @@ https://github.com/thaw-app/Thaw/blob/development/docs/CODING_STANDARDS.md
 
 Tests use Swift Testing. Write new tests with @Test and #expect, not XCTest.
 
-External contributors: a new feature needs an issue that a maintainer agreed to before the pull request, or it may be closed without review. A bug fix can come straight in; link its issue if there is one.
+External contributors: a new feature needs an issue that a maintainer agreed to before writing code, or it may be closed without review. A bug fix can come straight in; link its issue if there is one.
 -->
 
 ## Linked issue (required)
@@ -82,7 +82,7 @@ PR Type says what changed (CI/CD, Documentation, Other for chores). Tick ops for
 - [ ] This PR targets `development` (Thaw 3) or `legacy/thaw-2` (Thaw 2).
 - [ ] I didn't add new responsibilities to the big types listed in the coding standards.
 - [ ] New code has at least 80% test coverage and the SonarCloud scan reports no new issues (see [AGENTS.md](https://github.com/thaw-app/Thaw/blob/development/AGENTS.md#sonarcloud)). Fork PRs skip the scan, so it can't confirm this for them.
-- [ ] If this PR changes dependencies or lockfiles (`Package.resolved`, Actions pins and so on), `dependency-sca` is green, or any `osv-scanner.toml` suppression has both `reason` and `ignoreUntil` (see the [Thaw/Floe Security Policy](https://github.com/thaw-app/.github/blob/main/.github/SECURITY.md#dependency-findings)).
+- [ ] If this PR changes `Package.resolved` or `osv-scanner.toml`, `dependency-sca` is green, or any `osv-scanner.toml` suppression has both `reason` and `ignoreUntil`; `dependency-sca` doesn't check Actions pins, so a pin bump names the release it moves to (see the [Thaw/Floe Security Policy](https://github.com/thaw-app/.github/blob/main/.github/SECURITY.md#dependency-findings)).
 
 Test commands run:
 
