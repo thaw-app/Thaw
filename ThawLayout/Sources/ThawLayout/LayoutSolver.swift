@@ -534,6 +534,14 @@ public nonisolated enum LayoutSolver {
             .map { $0 + 1 } ?? desiredFiltered.endIndex
         let hiddenEnd = controlUIDs.alwaysHidden.flatMap { desiredFiltered.firstIndex(of: $0) }
             ?? desiredFiltered.endIndex
+        // Always Hidden ahead of Hidden is no layout this can rebuild; slicing it would trap.
+        guard hiddenStart <= hiddenEnd else {
+            return NotchOverflowResult(
+                overflowUIDs: [],
+                updatedDesiredFiltered: desiredFiltered,
+                updatedSectionMap: sectionMap
+            )
+        }
         let existingHidden = desiredFiltered[hiddenStart ..< hiddenEnd]
             .filter { !controlSet.contains($0) }
 
