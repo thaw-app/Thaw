@@ -72,6 +72,9 @@ Most of the fixes in this release harden security, and they come from findings i
 - **Search lists the same items as Layout,** including hidden items macOS isn't drawing at the moment, and no longer lists items from apps you quit.
 - **Dragging an item inside Hidden keeps your Always Hidden items in Always Hidden** while that section is turned off.
 - **Dropping a Visible item back where it was keeps the saved place of Visible items that are off screen** at that moment.
+- **Clock, Control Center and other system items you put in Hidden stay there** after you switch away from Standard hiding and back. Thaw used to forget their place the first time it checked the bar with Standard hiding off.
+- **Moving an item no longer pushes its neighbours into Hidden or Always Hidden,** and no longer moves the item you dropped it next to when two items shared a position.
+- **Thaw can restore your Visible order after every item in front of the Hidden divider has moved across it.** Before, some items got no place and stayed where they were.
 
 ### Known issues
 
