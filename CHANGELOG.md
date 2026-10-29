@@ -27,6 +27,7 @@ the items under New and Fixed.
 ### Changed
 
 - **Thaw no longer moves your pointer to reorder menu bar items.** When macOS declines a move, the item stays where it is. Before, Thaw dragged it with a simulated mouse drag, which could leave the pointer or the item stuck.
+- **A thaw:// sender's developer team counts only when Apple vouches for it.** An app signed some other way is approved by its own signature instead, so it can't claim a trusted team.
 
 ### Fixed
 

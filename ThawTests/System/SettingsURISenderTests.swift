@@ -24,10 +24,37 @@ struct SettingsURISenderTests {
             kSecCodeInfoTeamIdentifier as String: "TEAM123456",
             kSecCodeInfoUnique as String: hashBytes,
         ]
-        let sender = try #require(SettingsURISender.identity(fromSigningInfo: info))
+        let sender = try #require(SettingsURISender.identity(fromSigningInfo: info, teamIsAnchored: true))
         #expect(sender.bundleIdentifier == "com.example.app")
         #expect(sender.teamIdentifier == "TEAM123456")
         #expect(sender.codeHash == "0aff1000")
+    }
+
+    @Test("A team that no Apple-issued certificate vouches for is not the sender's team")
+    func unanchoredTeamIsDropped() throws {
+        let info: [String: Any] = [
+            kSecCodeInfoPList as String: ["CFBundleIdentifier": "com.thaw.floe"],
+            kSecCodeInfoTeamIdentifier as String: "TEAM123456",
+            kSecCodeInfoUnique as String: hashBytes,
+        ]
+        let sender = try #require(SettingsURISender.identity(fromSigningInfo: info))
+        #expect(sender.teamIdentifier == nil, "a self-made signature can write any team into its code directory")
+        #expect(sender.codeHash == "0aff1000", "it can still be approved by its code hash")
+    }
+
+    @Test("The team requirement names an Apple-issued certificate for that team")
+    func teamRequirementIsAppleAnchored() throws {
+        let text = try #require(SettingsURISender.anchoredTeamRequirement("TEAM123456"))
+        #expect(text == #"anchor apple generic and certificate leaf[subject.OU] = "TEAM123456""#)
+        var requirement: SecRequirement?
+        #expect(SecRequirementCreateWithString(text as CFString, [], &requirement) == errSecSuccess)
+    }
+
+    @Test("A team that isn't ten letters and digits gets no requirement", arguments: [
+        "", "TEAM12345", "team123456", #"TEAM12345" or anchor apple"#, "TEAM123456X",
+    ])
+    func malformedTeamHasNoRequirement(team: String) {
+        #expect(SettingsURISender.anchoredTeamRequirement(team) == nil)
     }
 
     @Test("Code without an Info.plist is named by its signing identifier and may have no team")

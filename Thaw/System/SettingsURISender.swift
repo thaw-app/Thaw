@@ -41,14 +41,15 @@ nonisolated struct SettingsURISender: Equatable, Sendable {
 
     /// The bundle identifier from the signed Info.plist, or the signing identifier for code
     /// without one, along with the team, code hash and the name the signed Info.plist gives.
-    static func identity(fromSigningInfo info: [String: Any]) -> SettingsURISender? {
+    /// The team is kept only when teamIsAnchored: any signer can write a team into the code directory.
+    static func identity(fromSigningInfo info: [String: Any], teamIsAnchored: Bool = false) -> SettingsURISender? {
         let plist = info[kSecCodeInfoPList as String] as? [String: Any]
         let plistIdentifier = (plist?["CFBundleIdentifier"] as? String).flatMap { $0.isEmpty ? nil : $0 }
         let signingIdentifier = (info[kSecCodeInfoIdentifier as String] as? String).flatMap { $0.isEmpty ? nil : $0 }
         guard let bundleIdentifier = plistIdentifier ?? signingIdentifier else {
             return nil
         }
-        let team = (info[kSecCodeInfoTeamIdentifier as String] as? String).flatMap { $0.isEmpty ? nil : $0 }
+        let team = teamIsAnchored ? teamIdentifier(inSigningInfo: info) : nil
         let hash = (info[kSecCodeInfoUnique as String] as? Data).flatMap { $0.isEmpty ? nil : hexString($0) }
         let name = ["CFBundleDisplayName", "CFBundleName"].firstNonNil { key in
             (plist?[key] as? String).flatMap { $0.isEmpty ? nil : $0 }
@@ -102,7 +103,30 @@ nonisolated struct SettingsURISender: Equatable, Sendable {
         else {
             return nil
         }
-        return identity(fromSigningInfo: info)
+        let anchored = teamIdentifier(inSigningInfo: info).map { isAnchored(staticCode, toTeam: $0) } ?? false
+        return identity(fromSigningInfo: info, teamIsAnchored: anchored)
+    }
+
+    private static func teamIdentifier(inSigningInfo info: [String: Any]) -> String? {
+        (info[kSecCodeInfoTeamIdentifier as String] as? String).flatMap { $0.isEmpty ? nil : $0 }
+    }
+
+    /// A requirement that only an Apple-issued developer certificate for team satisfies, or nil
+    /// when team isn't a team ID, so nothing a signer wrote can change the requirement's meaning.
+    static func anchoredTeamRequirement(_ team: String) -> String? {
+        guard team.wholeMatch(of: /[A-Z0-9]{10}/) != nil else { return nil }
+        return #"anchor apple generic and certificate leaf[subject.OU] = "\#(team)""#
+    }
+
+    private static func isAnchored(_ staticCode: SecStaticCode, toTeam team: String) -> Bool {
+        var requirement: SecRequirement?
+        guard let text = anchoredTeamRequirement(team),
+              SecRequirementCreateWithString(text as CFString, [], &requirement) == errSecSuccess,
+              let requirement
+        else {
+            return false
+        }
+        return SecStaticCodeCheckValidity(staticCode, [], requirement) == errSecSuccess
     }
 
     /// macOS 26 stores the sender PID as a UInt32 on arm64, so any integer type is read raw.
