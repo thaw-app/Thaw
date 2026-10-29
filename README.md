@@ -13,14 +13,12 @@ The open source menu bar manager for macOS. Hide the items you don't need, bring
 
 ## Install
 
-| macOS | Thaw | Homebrew |
-|---|---|---|
-| 15 to 26 | Thaw 2 | `brew install thaw`, or `brew install thaw@beta` on macOS 15 until Thaw 2.2 is out of beta |
-| 27 | Thaw 3, in beta | `brew install thaw@beta` |
+```sh
+brew install thaw        # macOS 15 to 26
+brew install thaw@beta   # macOS 27
+```
 
-Without Homebrew, download the disk image from the [releases](https://github.com/thaw-app/Thaw/releases) and drag Thaw to Applications. [Versions and update channels](docs/VERSIONS.md) covers macOS 14 and the update channels.
-
-Thaw asks for Accessibility to move menu bar items, and on macOS 27 for Menu Bar Layout Access, the one file where macOS keeps the menu bar's order. Screen Recording is optional; without it, items show as their app's icon. [Getting started](docs/GETTING_STARTED.md) walks through the first run.
+Or download the disk image from the [releases](https://github.com/thaw-app/Thaw/releases) and drag Thaw to Applications.
 
 ## Documentation
 
