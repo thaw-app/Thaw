@@ -44,32 +44,18 @@ struct ThawBarConfigurationControls<ExtraControls: View>: View {
     }
 
     var body: some View {
-        Toggle("Use \(Constants.displayName) Bar", isOn: $useThawBar)
-            .annotation("Show hidden menu bar items in a separate bar below the menu bar.")
-
-        Toggle("Always show hidden items", isOn: $alwaysShowHiddenItems)
-            .disabled(useThawBar)
-            .annotation {
-                if useThawBar {
-                    switch context {
-                    case .display:
-                        Text("Not available because the \(Constants.displayName) Bar is enabled for this display.")
-                    case .globalTemplate:
-                        Text("Not available because the \(Constants.displayName) Bar is enabled in the global template.")
-                    }
-                } else {
-                    switch context {
-                    case .display:
-                        Text("Always show hidden menu bar items in the menu bar on this display.")
-                    case .globalTemplate:
-                        Text("Always show hidden menu bar items in the menu bar.")
-                    }
-                }
+        ThawPillPicker(
+            "Hidden items",
+            selection: presentation,
+            options: HiddenItemsPresentation.allCases.map {
+                ThawPillPicker.Option($0, title: $0.localized, systemImage: $0.systemImage)
             }
+        )
+        .annotation { presentationAnnotation }
 
         extraControls()
 
-        if useThawBar {
+        if presentation.wrappedValue == .thawBar {
             ThawPicker("Location", selection: $location) {
                 ForEach(ThawBarLocation.allCases) { location in
                     Text(location.localized).tag(location)
@@ -94,6 +80,36 @@ struct ThawBarConfigurationControls<ExtraControls: View>: View {
                 }
                 .annotation("Maximum number of items per row in the grid arrangement.")
             }
+        }
+    }
+
+    /// Reads and writes the two switches as one choice.
+    var presentation: Binding<HiddenItemsPresentation> {
+        Binding(
+            get: {
+                HiddenItemsPresentation(useThawBar: useThawBar, alwaysShowHiddenItems: alwaysShowHiddenItems)
+            },
+            set: { choice in
+                let switches = choice.switches
+                useThawBar = switches.useThawBar
+                alwaysShowHiddenItems = switches.alwaysShowHiddenItems
+            }
+        )
+    }
+
+    @ViewBuilder
+    private var presentationAnnotation: some View {
+        switch (presentation.wrappedValue, context) {
+        case (.onClick, .display):
+            Text("Hidden items appear in the menu bar when you reveal them on this display.")
+        case (.onClick, .globalTemplate):
+            Text("Hidden items appear in the menu bar when you reveal them.")
+        case (.thawBar, _):
+            Text("Hidden items appear in a separate bar below the menu bar.")
+        case (.alwaysShown, .display):
+            Text("Hidden items stay in the menu bar on this display.")
+        case (.alwaysShown, .globalTemplate):
+            Text("Hidden items stay in the menu bar.")
         }
     }
 

@@ -42,6 +42,7 @@ Most of the fixes in this release harden security, and they come from findings i
 - **thaw://dump-items needs settings access, and reports back only to the app that asked.** It no longer opens web links.
 - **An imported profile arrives with "Ask before restarting" on,** and Thaw refuses a file with more than 100 profiles.
 - **thawctl get says it can't return a value** instead of sending a request whose reply goes nowhere. Read settings from the ThawCtl app or your own app's callback.
+- **One "Hidden items" picker replaces the "Use Thaw Bar" and "Always show hidden items" switches.** Choose On click, Thaw Bar or Always shown for each display and for the global template. Your saved choice carries over, and thaw://set works as before.
 
 ### Fixed
 

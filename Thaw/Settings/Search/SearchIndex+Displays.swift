@@ -16,22 +16,14 @@ nonisolated extension SearchIndex {
     /// discoverability.
     static let displayEntries: [SearchEntry] = [
         SearchEntry(
-            id: "displays.useThawBar",
-            titleKey: "Use \(Constants.displayName) Bar",
-            titleText: "Use \(Constants.displayName) Bar",
-            descriptionText: String(localized: "Show hidden menu bar items in a separate bar below the menu bar."),
+            id: "displays.hiddenItemsPresentation",
+            title: "Hidden items",
+            descriptionText: String(localized: "Choose whether hidden items appear on click, in the \(Constants.displayName) Bar below the menu bar, or stay in the menu bar."),
             pane: .thawBar,
-            sectionKey: nil,
-            sectionText: nil,
-            keywords: ["ice bar", "thaw bar", "hidden", "separate bar"],
-            property: nil
-        ),
-        SearchEntry(
-            id: "displays.alwaysShowHiddenItems",
-            title: "Always show hidden items",
-            descriptionText: String(localized: "Always show hidden menu bar items in the menu bar. Not available on a display that uses the \(Constants.displayName) Bar."),
-            pane: .thawBar,
-            keywords: ["always", "show", "hidden", "visible"],
+            keywords: [
+                "ice bar", "thaw bar", "use thaw bar", "separate bar", "hidden",
+                "always show hidden items", "always shown", "always", "show", "visible", "on click",
+            ],
             property: nil
         ),
         SearchEntry(

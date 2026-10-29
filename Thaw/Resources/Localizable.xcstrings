@@ -219231,6 +219231,30 @@
           }
         }
       }
+    },
+    "On click" : {
+
+    },
+    "Always shown" : {
+
+    },
+    "Hidden items appear in the menu bar when you reveal them on this display." : {
+
+    },
+    "Hidden items appear in the menu bar when you reveal them." : {
+
+    },
+    "Hidden items appear in a separate bar below the menu bar." : {
+
+    },
+    "Hidden items stay in the menu bar on this display." : {
+
+    },
+    "Hidden items stay in the menu bar." : {
+
+    },
+    "Choose whether hidden items appear on click, in the %@ Bar below the menu bar, or stay in the menu bar." : {
+
     }
   },
   "version" : "1.1"
