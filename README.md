@@ -61,4 +61,4 @@ Please read the [contributing guide](https://github.com/thaw-app/.github/blob/ma
 
 ## License
 
-Licensed under the [GPL-3.0 license](LICENSE), with an [additional permission](LICENSE-EXCEPTION) to link PlatformRuntimeKit.
+Licensed under the [GPL-3.0 license](LICENSE).
