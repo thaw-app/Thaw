@@ -78,4 +78,31 @@ struct LayoutDropCommitTests {
         let group = [World.item("One"), World.item("Two")]
         #expect(!LayoutDropCommit.refuses(drop(group, from: .visible, to: .hidden), appState: world.appState))
     }
+
+    @Test
+    func aSameLaneDropOnlyRecordsOrder() {
+        let controller = RecordingSectionController()
+        let folded = World.item("Folded")
+        let other = World.item("Other")
+
+        LayoutDropCommit.recordIntent(of: folded, orderedAs: [other, folded], from: .hidden, to: .hidden, controller: controller)
+
+        #expect(controller.sectionAssignments.isEmpty)
+        #expect(controller.sectionOrderCalls.count == 1)
+        #expect(controller.sectionOrderCalls.first?.0 == .hidden)
+        #expect(controller.sectionOrderCalls.first?.1 == [other, folded].map(\.uniqueIdentifier))
+    }
+
+    @Test
+    func aCrossLaneDropReassignsThenRecordsOrder() {
+        let controller = RecordingSectionController()
+        let item = World.item("Moved")
+
+        LayoutDropCommit.recordIntent(of: item, orderedAs: [item], from: .visible, to: .hidden, controller: controller)
+
+        #expect(controller.sectionAssignments.count == 1)
+        #expect(controller.sectionAssignments.first?.0 == .hidden)
+        #expect(controller.sectionAssignments.first?.1 == item.uniqueIdentifier)
+        #expect(controller.sectionOrderCalls.first?.0 == .hidden)
+    }
 }

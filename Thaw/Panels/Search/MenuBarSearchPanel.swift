@@ -54,7 +54,7 @@ final class MenuBarSearchPanel: NSPanel {
     /// selection has moved on.
     private var spotlightedName: String?
 
-    private let model = MenuBarSearchModel()
+    let model = MenuBarSearchModel()
     private var displayInvalidations: AnyPublisher<Void, Never> = Empty().eraseToAnyPublisher()
 
     /// The actions button the actions menu hangs from. Weak because the

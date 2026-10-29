@@ -10,7 +10,8 @@ import MenuBarModel
 import ThawAXCore
 
 /// Diagnose stable item keys by recording raw AXExtrasMenuBar identity attributes in local JSON; no network upload.
-/// thaw://dump-items?callback=<url> writes to ~/Library/Logs/Thaw/ and returns only a path and per-app summary via URL.
+/// thaw://dump-items?callback=<url> writes to ~/Library/Logs/Thaw/ and returns only a path and per-app summary
+/// to a callback the approved sender itself handles.
 enum ItemEnumerationDump {
     private static let diagLog = DiagLog(category: "ItemEnumerationDump")
 
@@ -171,37 +172,9 @@ enum ItemEnumerationDump {
         return fileURL
     }
 
-    /// Send only the file path and a URL-sized per-app summary through the thawctl callback.
-    static func respond(fileURL: URL, callback: String?) {
-        guard let callback, !callback.isEmpty else {
-            return
-        }
-        guard var components = URLComponents(string: callback),
-              components.scheme?.isEmpty == false
-        else {
-            diagLog.warning("dump: invalid callback URL \(callback)")
-            return
-        }
-
-        let summary: [[String: Any]] = readApps(from: fileURL).map { app in
-            [
-                "bundle": app.bundleIdentifier,
-                "count": app.items.count,
-                "keyed": app.items.filter { $0.identifier != nil || $0.description != nil || $0.title != nil }.count,
-            ]
-        }
-
-        var queryItems = components.queryItems ?? []
-        queryItems.append(URLQueryItem(name: "type", value: "item-dump"))
-        queryItems.append(URLQueryItem(name: "file", value: fileURL.path))
-        if let summaryData = try? JSONSerialization.data(withJSONObject: summary),
-           let summaryJSON = String(data: summaryData, encoding: .utf8)
-        {
-            queryItems.append(URLQueryItem(name: "data", value: summaryJSON))
-        }
-        components.queryItems = queryItems
-
-        guard let url = components.url else {
+    /// Sends the dump's path and summary to a callback that deliverableCallback accepted.
+    static func respond(fileURL: URL, callback: URLComponents) {
+        guard let url = callbackURL(callback, fileURL: fileURL, apps: readApps(from: fileURL)) else {
             diagLog.warning("dump: failed to compose callback URL")
             return
         }

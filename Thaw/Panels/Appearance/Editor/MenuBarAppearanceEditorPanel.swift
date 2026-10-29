@@ -35,7 +35,7 @@ final class MenuBarAppearanceEditorPanel: NSObject, NSPopoverDelegate {
 
     func performSetup(with appState: AppState) {
         self.appState = appState
-        configureObservers(with: appState)
+        configureObservers(appearanceManager: appState.appearanceManager)
     }
 
     func show(on screen: NSScreen, onDone: (() -> Void)? = nil) {
@@ -78,7 +78,7 @@ final class MenuBarAppearanceEditorPanel: NSObject, NSPopoverDelegate {
 
     /// Keeps the popover matched to the app's appearance and to the size the
     /// editor currently needs.
-    private func configureObservers(with appState: AppState) {
+    private func configureObservers(appearanceManager: MenuBarAppearanceManager) {
         cancellables = [
             NSApp.publisher(for: \.effectiveAppearance)
                 .sink { [weak self] appearance in
@@ -86,7 +86,7 @@ final class MenuBarAppearanceEditorPanel: NSObject, NSPopoverDelegate {
                 },
         ]
         configurationObservationTask?.cancel()
-        configurationObservationTask = Task { @MainActor [weak self, appearanceManager = appState.appearanceManager] in
+        configurationObservationTask = Task { @MainActor [weak self, appearanceManager] in
             let changes = Observations { appearanceManager.configuration }
             for await _ in changes {
                 guard let self else { return }

@@ -68,17 +68,12 @@ extension HIDEventManager {
         appState: AppState,
         clickLocation: CGPoint
     ) -> Bool {
+        // Do not store AppKit frames as the fullscreen fallback; it uses Core Graphics pointers and cached bounds.
         if let liveFrame = controlItemContextMenuFrame(of: controlItem),
-           isUsableControlItemFrame(liveFrame)
+           isUsableControlItemFrame(liveFrame),
+           Self.shouldShowControlItemContextMenu(usesMenuBarAgent: true, controlItemFrame: liveFrame, clickLocation: clickLocation)
         {
-            // Do not store AppKit frames as the fullscreen fallback; it uses Core Graphics pointers and cached bounds.
-            if Self.shouldShowControlItemContextMenu(
-                usesMenuBarAgent: true,
-                controlItemFrame: liveFrame,
-                clickLocation: clickLocation
-            ) {
-                return true
-            }
+            return true
         }
         // AX bounds are Core Graphics rects, so the pointer is re-read in that space.
         guard let pointerLocation = MouseHelpers.locationCoreGraphics else {

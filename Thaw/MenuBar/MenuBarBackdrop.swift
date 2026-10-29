@@ -12,10 +12,12 @@ import ThawCapture
 /// What the transparent macOS 27 menu bar is drawn over, per display, for
 /// anything that paints over the bar and must match it.
 ///
-/// Composited via SLWindowListCreateImageFromArray, which needs no
-/// ScreenCaptureKit stream and never lights the recording indicator. The bar's
-/// blur and tint belong to no window (including them renders flat grey), so
-/// only windows below kCGMainMenuWindowLevel are requested.
+/// Composited through the capture helper from the windows below the bar. That
+/// reads other apps' windows, so macOS 27 can show the recording indicator while
+/// it runs, and it must only run when the strip is needed and the bar can be
+/// seen (a full-screen app under it would be captured). The bar's blur and tint
+/// belong to no window (including them renders flat grey), so only windows below
+/// kCGMainMenuWindowLevel are requested.
 @MainActor
 final class MenuBarBackdrop {
     /// One display's strip under the menu bar.
@@ -66,29 +68,29 @@ final class MenuBarBackdrop {
                 self?.refresh(force: true)
             }
         }
-        // Covers paint this strip. Recomposite on a timer: a window can repaint
-        // in place without changing the key.
+        // Covers paint this strip. Check on a timer for windows that moved, and
+        // while a cover is likely also recomposite, since a window can repaint
+        // in place without changing the key. Never while no bar is on screen.
         cadence?.cancel()
         cadence = Task { @MainActor [weak self, weak appState] in
             while !Task.isCancelled {
                 let coverLikely = NSApp.isActive || appState?.menuBarManager.thawBarPanel.isVisible == true
                 let idle = MouseHelpers.secondsSinceLastInput
-                let interval = BackdropRefreshCadence.nextInterval(coverLikely: coverLikely, screenLocked: ScreenLock.isLocked, idleSeconds: idle)
+                let barVisible = NSScreen.screens.contains { $0.isSystemMenuBarVisible() }
+                let interval = BackdropRefreshCadence.nextInterval(
+                    coverLikely: coverLikely,
+                    barVisible: barVisible,
+                    screenLocked: ScreenLock.isLocked,
+                    idleSeconds: idle
+                )
                 try? await Task.sleep(for: interval ?? BackdropRefreshCadence.slow)
                 guard !Task.isCancelled, let self else { return }
                 if interval != nil {
-                    refresh(force: true)
+                    refresh(force: BackdropRefreshCadence.forcesRecomposite(coverLikely: coverLikely))
                 }
             }
         }
         refresh(force: true)
-    }
-
-    /// What a strip was composited from. Includes each window's bounds, in
-    /// front-to-back order, so a window that moves or comes to the front invalidates the strip.
-    nonisolated static func stripKey(rect: CGRect, windows: [(id: CGWindowID, bounds: CGRect)]) -> String {
-        let parts = windows.map { "\($0.id)@\($0.bounds)" }
-        return "\(rect)|\(parts.joined(separator: ","))"
     }
 
     func strip(for displayID: CGDirectDisplayID) -> Strip? {
@@ -97,10 +99,11 @@ final class MenuBarBackdrop {
 
     /// Re-composites each display's strip when what is behind it changed.
     /// Cheap when nothing did: one window-list read per display. force
-    /// re-composites regardless, for changes the key cannot see.
+    /// re-composites regardless, for changes the key cannot see. Displays whose
+    /// bar is not on screen are left alone.
     func refresh(force: Bool = false) {
         refreshTask?.cancel()
-        let requests = NSScreen.screens.map { screen in
+        let requests = NSScreen.screens.filter { $0.isSystemMenuBarVisible() }.map { screen in
             (screen.displayID, CGRect(
                 x: screen.cgFrame.minX,
                 y: screen.cgFrame.minY,

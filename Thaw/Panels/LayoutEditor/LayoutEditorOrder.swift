@@ -87,4 +87,57 @@ nonisolated enum LayoutEditorOrder {
         // A different set means an item came or went; the authored order is stale.
         return Set(authored) == Set(live)
     }
+
+    /// Merges the achievable on-screen order into the saved order. Off-screen entries keep their
+    /// slots, and an entry the saved order lacks goes after its predecessor, or first.
+    static func mergingAchievableOrder(_ achievable: [String], into saved: [String]) -> [String] {
+        let achievableSet = Set(achievable)
+        let savedSet = Set(saved)
+        var fill = achievable.filter { savedSet.contains($0) }.makeIterator()
+        var result = saved.map { id in
+            achievableSet.contains(id) ? (fill.next() ?? id) : id
+        }
+        return insertingUnnamed(achievable, into: result)
+    }
+
+    /// Adds the live items an order leaves out, each after its live predecessor or first, matched by
+    /// canonical spelling. The kit writes nothing for a section whose order omits a live item.
+    static func completingOrder(_ order: [String], withLive live: [String]) -> [String] {
+        insertingUnnamed(live, into: order, key: MenuBarItemTag.canonicalPersistentIdentifier)
+    }
+
+    /// Inserts each entry of ordered that base lacks after the entry that precedes it in ordered, or first.
+    private static func insertingUnnamed(
+        _ ordered: [String],
+        into base: [String],
+        key: (String) -> String = { $0 }
+    ) -> [String] {
+        let named = Set(base.map(key))
+        var result = base
+        for (index, id) in ordered.enumerated() where !named.contains(key(id)) {
+            let at = index > 0
+                ? result.firstIndex { key($0) == key(ordered[index - 1]) }.map { $0 + 1 }
+                : 0
+            result.insert(id, at: at ?? result.endIndex)
+        }
+        return result
+    }
+
+    /// The merged Visible order as live items, off-screen ones included. An identifier with no live
+    /// item drops out, because the kit restores saved entries for apps that are not running.
+    static func itemsMergingAchievableOrder(
+        _ achievable: [String],
+        into saved: [String],
+        candidates: [MenuBarItem]
+    ) -> [MenuBarItem] {
+        let merged = mergingAchievableOrder(
+            MenuBarItemTag.canonicalPersistentIdentifiers(achievable),
+            into: saved
+        )
+        let byIdentifier = Dictionary(
+            candidates.map { (MenuBarItemTag.canonicalPersistentIdentifier($0.uniqueIdentifier), $0) },
+            uniquingKeysWith: { first, _ in first }
+        )
+        return merged.compactMap { byIdentifier[$0] }
+    }
 }

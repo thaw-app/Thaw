@@ -47,14 +47,23 @@ enum MenuBarItemDisplayImage {
         }
     }
 
+    /// The tallest an app icon standing in for a capture is drawn, about a menu bar glyph's height,
+    /// so it doesn't tower over captures in a row as tall as a notched menu bar.
+    static let appIconHeight: CGFloat = 18
+
     /// Fit downward only; upscaling native raster glyphs blurs them in taller rows.
-    /// Nil or non-positive row/image heights leave intrinsic size unchanged.
+    /// Nil or non-positive row/image heights leave intrinsic size unchanged, except that an app icon
+    /// is never drawn taller than appIconHeight.
     func targetSize(fittingHeight rowHeight: CGFloat?) -> CGSize {
         let intrinsic = pointSize
-        guard intrinsic.height > 0, let rowHeight, rowHeight > 0 else {
+        var limit = rowHeight.flatMap { $0 > 0 ? $0 : nil }
+        if case .appIcon = self {
+            limit = min(limit ?? Self.appIconHeight, Self.appIconHeight)
+        }
+        guard intrinsic.height > 0, let limit else {
             return intrinsic
         }
-        let scale = min(1, rowHeight / intrinsic.height)
+        let scale = min(1, limit / intrinsic.height)
         return CGSize(width: intrinsic.width * scale, height: intrinsic.height * scale)
     }
 }

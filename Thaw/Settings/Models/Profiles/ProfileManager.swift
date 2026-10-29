@@ -51,6 +51,8 @@ final class ProfileManager {
     private var lastActiveSpaceKey: String?
     /// Whether a Focus Filter profile is currently applied.
     private(set) var focusFilterActive = false
+    /// Reads the system's Focus filter state; tests replace it.
+    @ObservationIgnored var focusFilterSignal = FocusFilterSignal.system
     /// The in-flight layout apply and its profile, for callers that wait for it (e.g. the Apply button).
     private(set) var layoutTask: Task<Void, Never>?
     private(set) var layoutTaskProfileID: UUID?
@@ -133,26 +135,14 @@ final class ProfileManager {
         }
         cancellables.insert(AnyCancellable { spaceSwitchTask.cancel() })
 
-        DistributedNotificationCenter.default()
-            .publisher(for: Notification.Name("com.stonerl.Thaw.focusFilterActivated"))
+        // Any process can post these, so both only wake the check against the system's Focus filter state.
+        let center = DistributedNotificationCenter.default()
+        center.publisher(for: Notification.Name("com.stonerl.Thaw.focusFilterActivated"))
+            .merge(with: center.publisher(for: Notification.Name("com.stonerl.Thaw.focusFilterDeactivated")))
             .debounce(for: .seconds(0.5), scheduler: DispatchQueue.main)
             .sink { [weak self] _ in
-                guard let self else { return }
                 Task { [weak self] in
-                    guard let self else { return }
-                    await self.applyFocusFilterProfile()
-                }
-            }
-            .store(in: &cancellables)
-
-        DistributedNotificationCenter.default()
-            .publisher(for: Notification.Name("com.stonerl.Thaw.focusFilterDeactivated"))
-            .debounce(for: .seconds(0.5), scheduler: DispatchQueue.main)
-            .sink { [weak self] _ in
-                guard let self else { return }
-                Task { [weak self] in
-                    guard let self else { return }
-                    await self.handleFocusFilterDeactivated()
+                    await self?.handleFocusFilterSignal()
                 }
             }
             .store(in: &cancellables)
@@ -173,14 +163,17 @@ final class ProfileManager {
         } catch {
             diagLog.debug("No active Focus Filter on startup: \(error)")
         }
-        // Without Focus, prefer Space over display; always apply spacing to correct offsets left by another display's session.
-        // Matching on-disk offsets no-op without relaunching.
-        let startupSpaceKey = SpaceInfo.activeSpace().persistentKey
-        lastActiveSpaceKey = startupSpaceKey
-        if let startupSpaceKey, profile(forSpaceKey: startupSpaceKey) != nil {
-            await applyProfileForSpace(key: startupSpaceKey)
-        } else if let currentUUID = Bridging.getActiveMenuBarDisplayUUID() {
-            await applyProfileForDisplay(uuid: currentUUID)
+        // Always apply spacing to correct offsets left by another display's session; matching offsets no-op.
+        await applyProfileForSpaceOrDisplay()
+    }
+
+    /// Without a Focus profile, the current Space's profile wins over the display's.
+    private func applyProfileForSpaceOrDisplay() async {
+        lastActiveSpaceKey = SpaceInfo.activeSpace().persistentKey
+        switch AutomaticProfileChoice.choose(spaceKey: lastActiveSpaceKey, spaceHasProfile: { profile(forSpaceKey: $0) != nil }, displayUUID: Bridging.getActiveMenuBarDisplayUUID()) {
+        case let .space(key): await applyProfileForSpace(key: key)
+        case let .display(uuid): await applyProfileForDisplay(uuid: uuid)
+        case .none: break
         }
     }
 
@@ -284,7 +277,8 @@ final class ProfileManager {
 
     /// Apply spacing after settings; applyOffset avoids relaunches for matching on-disk offsets.
     /// Capture previousProfileID before changing activeProfileID so hooks receive THAW_PREVIOUS_PROFILE_ID.
-    func applyProfile(_ profile: Profile, to appState: AppState, previousProfileID: UUID? = nil, relaunchesApps: Bool = true) {
+    /// While relaunches need confirmation, spacing is only written unless spacingRelaunchApproved says the user agreed.
+    func applyProfile(_ profile: Profile, to appState: AppState, previousProfileID: UUID? = nil, relaunchesApps: Bool = true, spacingRelaunchApproved: Bool = false) {
         diagLog.debug(
             "applyProfile entered: name=\(profile.name)"
         )
@@ -345,7 +339,7 @@ final class ProfileManager {
                 return
             }
 
-            self?.applySnapshot(profile, to: appState, relaunchesApps: relaunchesApps)
+            let mayRelaunch = self?.applySnapshot(profile, to: appState, relaunchesApps: relaunchesApps, spacingRelaunchApproved: spacingRelaunchApproved) ?? false
 
             // Apply spacing before layout: relaunches reset item positions; matching offsets no-op.
             // Arm settling before relaunch to suppress partial cache restores, then wait for reattachment before layout.
@@ -357,7 +351,7 @@ final class ProfileManager {
             do {
                 // An unstructured wave survives superseding layout-task cancellation; see sleepIgnoringCancellation(for:).
                 let outcome = try await Task {
-                    try await appState.spacingManager.applyOffset(relaunchApps: relaunchesApps)
+                    try await appState.spacingManager.applyOffset(relaunchApps: mayRelaunch)
                 }.value
                 didRelaunch = outcome.didRelaunch
                 recovered = outcome.recoveredBundleIDs
@@ -427,7 +421,8 @@ final class ProfileManager {
         }
     }
 
-    private func applySnapshot(_ profile: Profile, to appState: AppState, relaunchesApps: Bool) {
+    /// Returns whether the apply may restart apps for its spacing.
+    private func applySnapshot(_ profile: Profile, to appState: AppState, relaunchesApps: Bool, spacingRelaunchApproved: Bool) -> Bool {
         profile.generalSettings.apply(to: appState.settings.general)
         profile.advancedSettings.merged(onto: .capture(from: appState.settings.advanced)).apply(to: appState.settings.advanced)
 
@@ -455,8 +450,12 @@ final class ProfileManager {
         appState.settings.displaySettings.globalConfiguration = profile.globalDisplayConfiguration
 
         // Set before the configurations, whose change applies spacing under these settings.
-        ProfileRelaunchSafety.apply(profile, to: appState.settings.displaySettings)
-        appState.settings.displaySettings.assignConfigurations(profile.displayConfigurations, writeOnly: !relaunchesApps)
+        let relaunchSettings = ProfileRelaunchSafety.apply(profile, to: appState.settings.displaySettings)
+        let mayRelaunch = ProfileRelaunchSafety.relaunchesApps(requested: relaunchesApps, settings: relaunchSettings, approved: spacingRelaunchApproved)
+        if relaunchesApps, !mayRelaunch, relaunchSettings.applyMode == .relaunchApps {
+            diagLog.info("Profile \(profile.name): restarting apps needs confirmation; saving spacing without relaunching")
+        }
+        appState.settings.displaySettings.assignConfigurations(profile.displayConfigurations, writeOnly: !mayRelaunch)
         appState.settings.displaySettings.unconfirmedSpacingProfileScope = profile.unconfirmedSpacingProfileScope
         appState.appearanceManager.configuration = profile.appearanceConfiguration
 
@@ -480,6 +479,7 @@ final class ProfileManager {
         if let placement = profile.menuBarLayout.newItemsPlacement {
             appState.itemManager.applyNewItemsPlacement(placement)
         }
+        return mayRelaunch
     }
 
     func deleteProfile(id: UUID) throws {
@@ -525,7 +525,8 @@ final class ProfileManager {
         }
     }
 
-    /// Undo saved content without applying it; reverting a saved copy must not rearrange the live bar.
+    /// Saves a profile to disk and updates the manifest, without applying it; reverting a saved copy
+    /// must not rearrange the live bar.
     func replaceProfile(_ profile: Profile) throws {
         let data = try encoder.encode(profile)
         try data.write(to: profileURL(for: profile.id), options: .atomic)
@@ -726,17 +727,6 @@ final class ProfileManager {
         profile.appearanceConfiguration = appState.appearanceManager.configuration
     }
 
-    /// Saves a profile to disk and updates the manifest.
-    private func saveProfileAndUpdateManifest(_ profile: Profile) throws {
-        let data = try encoder.encode(profile)
-        try data.write(to: profileURL(for: profile.id), options: .atomic)
-
-        if let index = profiles.firstIndex(where: { $0.id == profile.id }) {
-            profiles[index].modifiedAt = profile.modifiedAt
-        }
-        try saveManifest()
-    }
-
     // MARK: - Scoped Updates
 
     /// What parts of a profile to update.
@@ -792,7 +782,7 @@ final class ProfileManager {
         )
         profile.menuBarLayout = layout
         profile.modifiedAt = Date()
-        try saveProfileAndUpdateManifest(profile)
+        try replaceProfile(profile)
         rearmActiveLayoutIfNeeded(updatedID: id, scope: .layoutOnly, layout: layout, itemManager: itemManager)
     }
 
@@ -823,7 +813,7 @@ final class ProfileManager {
         var profile = try loadProfile(id: id)
         applyCurrentConfiguration(to: &profile, from: appState)
         profile.modifiedAt = Date()
-        try saveProfileAndUpdateManifest(profile)
+        try replaceProfile(profile)
     }
 
     /// Broadcast spacing to every profile's display entry, creating missing entries from the global template.
@@ -903,7 +893,7 @@ final class ProfileManager {
         }
         profile.automation = automation.isEmpty ? nil : automation
         profile.modifiedAt = Date()
-        try saveProfileAndUpdateManifest(profile)
+        try replaceProfile(profile)
     }
 
     /// Exports all profiles as a single JSON file including metadata.
@@ -930,16 +920,7 @@ final class ProfileManager {
 
     /// Enforce unique Space ownership and cache the display label.
     func setAssociatedSpace(key: String?, spaceName: String? = nil, forProfileID profileID: UUID) {
-        if let key {
-            for index in profiles.indices where profiles[index].associatedSpaceKey == key {
-                profiles[index].associatedSpaceKey = nil
-                profiles[index].associatedSpaceName = nil
-            }
-        }
-        if let index = profiles.firstIndex(where: { $0.id == profileID }) {
-            profiles[index].associatedSpaceKey = key
-            profiles[index].associatedSpaceName = key != nil ? spaceName : nil
-        }
+        ProfileAssociations.assignSpace(key, name: spaceName, to: profileID, in: &profiles)
         persistManifest()
     }
 
@@ -952,16 +933,7 @@ final class ProfileManager {
 
     /// Enforce unique display ownership and retain its name for disconnected displays.
     func setAssociatedDisplay(uuid: String?, displayName: String? = nil, forProfileID profileID: UUID) {
-        if let uuid {
-            for index in profiles.indices where profiles[index].associatedDisplayUUID == uuid {
-                profiles[index].associatedDisplayUUID = nil
-                profiles[index].associatedDisplayName = nil
-            }
-        }
-        if let index = profiles.firstIndex(where: { $0.id == profileID }) {
-            profiles[index].associatedDisplayUUID = uuid
-            profiles[index].associatedDisplayName = uuid != nil ? displayName : nil
-        }
+        ProfileAssociations.assignDisplay(uuid, name: displayName, to: profileID, in: &profiles)
         persistManifest()
     }
 
@@ -1085,14 +1057,18 @@ final class ProfileManager {
         }
     }
 
-    /// Called when the Focus Filter deactivates (Focus mode turned off).
-    /// Reverts to the display-based profile.
-    private func handleFocusFilterDeactivated() async {
-        guard focusFilterActive else { return }
-        focusFilterActive = false
-        diagLog.info("Focus Filter deactivated; reverting to display profile")
-        if let uuid = Bridging.getActiveMenuBarDisplayUUID() {
-            await applyProfileForDisplay(uuid: uuid)
+    /// Handles a Focus filter notification by asking the system which Focus filter is active.
+    /// Only that answer applies a profile or reverts to the Space's or display's profile.
+    func handleFocusFilterSignal() async {
+        switch await focusFilterSignal.action(focusFilterActive: focusFilterActive) {
+        case let .apply(profileID):
+            await applyFocusFilterProfile(requested: profileID)
+        case .revert:
+            focusFilterActive = false
+            diagLog.info("Focus Filter deactivated; reverting to the Space's or display's profile")
+            await applyProfileForSpaceOrDisplay()
+        case .ignore:
+            diagLog.debug("Focus Filter notification while no Focus Filter is active; ignoring it")
         }
     }
 
@@ -1123,17 +1099,26 @@ final class ProfileManager {
     }
 
     /// Imports profiles from a file.
+    /// Profiles are staged in memory and published once, so the hotkey rebuild and the manifest write run once per file.
     func importProfile(from url: URL) throws {
         let data = try Data(contentsOf: url)
         let bundle = try decoder.decode(ProfileExportBundle.self, from: data)
+        try ProfileImportPolicy.validate(bundle)
+
+        var staged = profiles
+        var published = false
+        // A write that fails part-way still publishes the profiles before it, so their files aren't orphaned.
+        defer {
+            if !published, staged.count != profiles.count {
+                profiles = staged
+                persistManifest()
+            }
+        }
 
         for entry in bundle.entries {
-            // An imported hook must not run until the user has seen it and switched it on.
-            var content = entry.profile.content
-            content.automation = content.automation?.disabledUntilApproved
             let imported = Profile(
                 name: entry.profile.name,
-                content: content
+                content: ProfileImportPolicy.sanitized(entry.profile.content)
             )
 
             let importedData = try encoder.encode(imported)
@@ -1142,35 +1127,26 @@ final class ProfileManager {
                 options: .atomic
             )
 
-            let metadata = ProfileMetadata(
+            staged.append(ProfileMetadata(
                 id: imported.id,
                 name: imported.name,
                 createdAt: imported.createdAt,
                 modifiedAt: imported.modifiedAt,
                 keepsLayoutChangesSetting: entry.keepsLayoutChanges,
                 reappliesAtLaunchSetting: entry.reappliesAtLaunch
-            )
-            profiles.append(metadata)
+            ))
 
-            // Reconcile display ownership through the setter so any existing
-            // profile that owns this display has its association cleared first.
+            // Any existing profile that owns this display or Space gives it up; foreign-Mac Space keys stay inert.
             if let displayUUID = entry.associatedDisplayUUID {
-                setAssociatedDisplay(
-                    uuid: displayUUID,
-                    displayName: entry.associatedDisplayName,
-                    forProfileID: imported.id
-                )
+                ProfileAssociations.assignDisplay(displayUUID, name: entry.associatedDisplayName, to: imported.id, in: &staged)
             }
-
-            // Reconcile Space ownership too; foreign-Mac keys remain inert when no local Space matches.
             if let spaceKey = entry.associatedSpaceKey {
-                setAssociatedSpace(
-                    key: spaceKey,
-                    spaceName: entry.associatedSpaceName,
-                    forProfileID: imported.id
-                )
+                ProfileAssociations.assignSpace(spaceKey, name: entry.associatedSpaceName, to: imported.id, in: &staged)
             }
         }
+
+        published = true
+        profiles = staged
         try saveManifest()
     }
 }

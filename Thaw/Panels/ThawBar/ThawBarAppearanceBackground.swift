@@ -158,13 +158,10 @@ private struct ThawBarGlassSurface: NSViewRepresentable, Equatable {
             if config.style.usesShapeAwareSurface {
                 liquid.update(
                     path: config.shape.path(in: bounds).cgPath,
-                    isColored: config.colored,
-                    tintColor: config.color,
-                    tintOpacity: config.opacity,
+                    tint: .init(isColored: config.colored, color: config.color, opacity: config.opacity),
                     effectOpacity: config.style.effectOpacity,
                     usesDarkFade: config.style.usesDarkFade,
-                    borderColor: nil,
-                    borderWidth: 0,
+                    border: .none,
                     // The bar is not always a capsule, so the glass takes the clip's corners.
                     cornerRadius: config.shape.cornerRadius - config.shape.insetAmount
                 )

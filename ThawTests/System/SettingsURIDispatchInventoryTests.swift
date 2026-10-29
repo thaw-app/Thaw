@@ -110,24 +110,33 @@ struct SettingsURIDispatchInventoryTests {
     @Test("Every settings action is dispatched with the authorized sender")
     func everySettingsActionCarriesTheApprovedSender() throws {
         let lines = try Self.sourceLines("Thaw/App/AppDelegate.swift")
-        let dispatch = try Self.body(of: "handleSettingsURL", in: lines)
+        let gate = try Self.body(of: "handleSettingsURL", in: lines)
+        let dispatch = try Self.body(of: "dispatchAuthorizedRoute", in: lines)
 
-        // The gate has to be consulted before the routing switch, not after.
+        // The gate has to be consulted before the routes are dispatched, not after.
         let gateIndex = try #require(
-            dispatch.firstIndex { $0.contains("SettingsURIHandler.isWhitelisted") },
+            gate.firstIndex { $0.contains("SettingsURIHandler.isWhitelisted") },
             "handleSettingsURL no longer consults the whitelist"
         )
-        let switchIndex = try #require(
-            dispatch.firstIndex { $0.trimmingCharacters(in: .whitespaces) == "switch host {" },
-            "handleSettingsURL no longer routes on the URL host"
+        let dispatchIndex = try #require(
+            gate.firstIndex { $0.contains("dispatchAuthorizedRoute(request.route, sender: identity.bundleIdentifier)") },
+            "handleSettingsURL no longer dispatches with the identified sender"
         )
-        #expect(gateIndex < switchIndex, "The whitelist check must run before the action is dispatched")
+        #expect(gateIndex < dispatchIndex, "The whitelist check must run before the action is dispatched")
+
+        // The gate is the only way into the dispatch.
+        let dispatchCalls = lines.filter { $0.contains("dispatchAuthorizedRoute(") && !$0.contains("func dispatchAuthorizedRoute(") }
+        #expect(dispatchCalls.count == 1, "Expected one dispatchAuthorizedRoute call, found \(dispatchCalls.count)")
 
         // Each mutating action must be handed the bundle id the gate approved.
         // A call passing anything else is a route around the check.
-        for action in ["handleSetURL", "handleToggleURL", "handleRevealItemURL", "handleLauncherURL"] {
+        let actions = [
+            "handleSetRequest", "handleToggleRequest", "handleRevealItemRequest",
+            "handleLauncherRequest", "handleProxyPressRequest", "handleDumpItemsRequest",
+        ]
+        for action in actions {
             let calls = dispatch.filter { $0.contains("\(action)(") && !$0.contains("func \(action)(") }
-            #expect(calls.count == 1, "Expected exactly one \(action) call in handleSettingsURL, found \(calls.count)")
+            #expect(calls.count == 1, "Expected exactly one \(action) call in dispatchAuthorizedRoute, found \(calls.count)")
             for call in calls {
                 #expect(
                     call.contains("sender: effectiveBundleId"),
@@ -140,17 +149,19 @@ struct SettingsURIDispatchInventoryTests {
     @Test("The only request served without approval is the version read")
     func theOnlyUnauthenticatedRouteIsVersion() throws {
         let lines = try Self.sourceLines("Thaw/App/AppDelegate.swift")
-        let dispatch = try Self.body(of: "handleSettingsURL", in: lines)
+        let gate = try Self.body(of: "handleSettingsURL", in: lines)
+        let dispatch = try Self.body(of: "dispatchAuthorizedRoute", in: lines)
 
         // Only the public app-version read may use sender: nil; any other route would bypass authentication.
-        let anonymous = dispatch.enumerated().filter { $0.element.contains("sender: nil") }
+        #expect(!dispatch.contains { $0.contains("sender: nil") }, "An approved route is dispatched without its sender")
+        let anonymous = gate.enumerated().filter { $0.element.contains("sender: nil") }
         #expect(anonymous.count == 1, "Expected one unauthenticated route, found \(anonymous.count)")
 
         for (offset, line) in anonymous {
-            #expect(line.contains("handleGetURL"), "An unauthenticated route may only read: \(line)")
-            let preceding = dispatch.dropFirst(max(0, offset - 8)).prefix(9)
+            #expect(line.contains("handleGetRequest"), "An unauthenticated route may only read: \(line)")
+            let preceding = gate.dropFirst(max(0, offset - 3)).prefix(4)
             #expect(
-                preceding.contains { $0.contains("\"version\"") },
+                preceding.contains { $0.contains("request.isVersionRead") },
                 "The unauthenticated route is no longer restricted to the version key"
             )
         }
@@ -160,27 +171,46 @@ struct SettingsURIDispatchInventoryTests {
     func launcherOperationsAreGated() throws {
         let lines = try Self.sourceLines("Thaw/App/AppDelegate.swift")
         let router = try Self.body(of: "handleURL", in: lines)
-        let dispatch = try Self.body(of: "handleSettingsURL", in: lines)
-        let handler = try Self.body(of: "handleLauncherURL", in: lines)
+        let dispatch = try Self.body(of: "dispatchAuthorizedRoute", in: lines)
+        let handler = try Self.body(of: "handleLauncherRequest", in: lines)
 
-        // A host missing from the first list falls through to the ungated switch;
-        // one missing from the second passes the gate and then does nothing.
+        // A route that does not require authorization falls through to the ungated switch;
+        // one missing from the dispatch passes the gate and then does nothing.
+        #expect(router.contains { $0.contains("if request.requiresAuthorization {") })
         for operation in LauncherURIOperation.allCases {
-            let literal = "\"\(operation.rawValue)\""
-            #expect(
-                router.contains { $0.contains(literal) },
-                "\(operation.rawValue) is not routed to handleSettingsURL"
-            )
-            #expect(
-                dispatch.contains { $0.contains(literal) },
-                "\(operation.rawValue) is not dispatched after the whitelist check"
-            )
+            let request = try SettingsURIParser.parse(#require(URL(string: "thaw://\(operation.rawValue)")))
+            #expect(request.requiresAuthorization, "\(operation.rawValue) is not routed to handleSettingsURL")
+            guard case let .launcher(parsed, _) = request.route else {
+                Issue.record("\(operation.rawValue) is not parsed as a launcher operation")
+                continue
+            }
+            #expect(parsed == operation)
         }
+        #expect(dispatch.contains { $0.contains("case let .launcher(") }, "Launcher operations are not dispatched after the whitelist check")
 
-        // handleLauncherURL is the only caller, so nothing else can reach the operations.
+        // handleLauncherRequest is the only caller, so nothing else can reach the operations.
         let callers = lines.filter { $0.contains("SettingsURIHandler.handleLauncherRequest(") }
         #expect(callers.count == 1, "Expected one handleLauncherRequest call, found \(callers.count)")
         #expect(handler.contains { $0.contains("SettingsURIHandler.handleLauncherRequest(") })
+    }
+
+    @Test("Every gated route is dispatched after the whitelist check and never in the ungated switch")
+    func everyGatedRouteIsDispatchedBehindTheGate() throws {
+        let lines = try Self.sourceLines("Thaw/App/AppDelegate.swift")
+        let router = try Self.body(of: "handleURL", in: lines)
+        let dispatch = try Self.body(of: "dispatchAuthorizedRoute", in: lines)
+
+        let gatedCases = [".set(", ".toggle(", ".get(", ".revealItem(", ".launcher(", ".proxyPress(", ".toggleThawBar:", ".dumpItems("]
+        for gatedCase in gatedCases {
+            #expect(
+                dispatch.contains { $0.contains("case") && $0.contains(gatedCase) },
+                "\(gatedCase) passes the gate and then does nothing"
+            )
+            #expect(
+                !router.contains { $0.contains("case") && $0.contains(gatedCase) },
+                "\(gatedCase) also has an ungated branch in handleURL"
+            )
+        }
     }
 
     @Test("Callback URLs still refuse the schemes that can run code or read files")

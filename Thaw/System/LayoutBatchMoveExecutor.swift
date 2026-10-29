@@ -20,6 +20,8 @@ struct LayoutBatchMoveExecutor {
     var noteUserInput: (RepairOrchestrator.Cause) -> Void
     /// Hands a checked plan to the Layout pane's drop path; false when that path declined it.
     var commit: (LayoutBatchMovePlan) async -> Bool
+    /// Waits to see whether the bar took a committed Visible plan; nil skips the wait.
+    var barFollows: ((LayoutBatchMovePlan) async -> Bool)?
 
     func run(_ command: LayoutBatchMove) async -> LayoutBatchMoveOutcome {
         let plan: LayoutBatchMovePlan
@@ -28,24 +30,75 @@ struct LayoutBatchMoveExecutor {
         case let .failure(error): return .refused(error)
         }
         guard !plan.changesNothing else {
+            // A retry after notApplied matches the saved order, so only the bar can say it worked.
+            if plan.target == .visible, let barFollows, await !barFollows(plan) {
+                return .notApplied(plan)
+            }
             return .unchanged(plan)
         }
         // A user edit, so automatic passes queued before it yield and the write budget resets.
         noteUserInput(.userEdit)
-        return await commit(plan) ? .moved(plan) : .refused(.moveRefused)
+        guard await commit(plan) else { return .refused(.moveRefused) }
+        if plan.target == .visible, let barFollows, await !barFollows(plan) {
+            return .notApplied(plan)
+        }
+        return .moved(plan)
     }
 }
 
 extension LayoutBatchMoveExecutor {
-    init(appState: AppState) {
+    /// With verifiesBar, run waits for the Visible order to reach the bar; the Layout pane leaves it off so it never waits.
+    init(appState: AppState, verifiesBar: Bool = false) {
         self.init(
             snapshot: { Self.snapshot(appState: appState) },
             noteUserInput: { appState.itemManager.repairs.interruptAutomaticWork(by: $0) },
             commit: { plan in
                 guard let drop = Self.drop(for: plan, appState: appState) else { return false }
                 return await LayoutDropCommit.perform(drop, appState: appState)
+            },
+            barFollows: verifiesBar ? { plan in await Self.visibleOrderReachesBar(plan, appState: appState) } : nil
+        )
+    }
+
+    /// The manager debounces 400 ms, then runs a few passes of a few seconds each, so wait slightly longer than that.
+    static var barApplyBudget: Duration {
+        .milliseconds(400) + .milliseconds(2500) * MenuBarItemManager.authoredVisibleOrderApplyAttempts
+    }
+
+    private static func visibleOrderReachesBar(_ plan: LayoutBatchMovePlan, appState: AppState) async -> Bool {
+        let controller = appState.menuBarManager.sectionController
+        return await pollBarFollows(
+            budget: barApplyBudget,
+            sleep: { try? await Task.sleep(for: $0) },
+            matches: {
+                let items = await MenuBarItem.getMenuBarItems(option: .activeSpace)
+                return appState.itemManager.liveOrderMatches(
+                    plan.targetOrder,
+                    section: .visible,
+                    controller: controller,
+                    items: items
+                )
             }
         )
+    }
+
+    /// Checks after the apply's debounce and then every interval; true on the first match, false once the budget is spent.
+    /// The sleep is injected so the elapsed time is counted, not measured.
+    static func pollBarFollows(
+        budget: Duration,
+        initialDelay: Duration = .milliseconds(400),
+        interval: Duration = .seconds(1),
+        sleep: (Duration) async -> Void,
+        matches: () async -> Bool
+    ) async -> Bool {
+        var elapsed = initialDelay
+        await sleep(initialDelay)
+        while true {
+            if await matches() { return true }
+            guard elapsed < budget else { return false }
+            await sleep(interval)
+            elapsed += interval
+        }
     }
 
     private static func editorItems(appState: AppState) -> [MenuBarSectionName: [MenuBarItem]] {

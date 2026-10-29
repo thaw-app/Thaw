@@ -86,12 +86,27 @@ final class AutomationSettings {
         }
     }
 
-    func addToWhitelist(bundleId: String) {
-        let trimmed = bundleId.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !trimmed.isEmpty else { return }
-
-        SettingsURIHandler.addToWhitelist(bundleId: trimmed)
+    /// Allows the app at url, pinned to the team or code hash in its own signature, the way an approval
+    /// from the prompt is. Returns false when its signature doesn't name bundleID, since no request
+    /// could then match the grant.
+    @discardableResult
+    func addToWhitelist(
+        appAt url: URL,
+        bundleID: String,
+        identify: (URL) -> SettingsURISender? = SettingsURISender.identify(appAt:)
+    ) -> Bool {
+        guard let identity = identify(url), identity.bundleIdentifier == bundleID,
+              identity.teamIdentifier != nil || identity.codeHash != nil
+        else {
+            return false
+        }
+        SettingsURIHandler.addToWhitelist(
+            bundleId: bundleID,
+            teamIdentifier: identity.teamIdentifier,
+            codeHash: identity.teamIdentifier == nil ? identity.codeHash : nil
+        )
         refreshWhitelist()
+        return true
     }
 
     func removeFromWhitelist(bundleId: String) {
@@ -102,7 +117,7 @@ final class AutomationSettings {
     /// Attempts to add the currently running app to the whitelist (for testing).
     func addCurrentApp() {
         guard let bundleId = Bundle.main.bundleIdentifier else { return }
-        addToWhitelist(bundleId: bundleId)
+        addToWhitelist(appAt: Bundle.main.bundleURL, bundleID: bundleId)
     }
 
     /// What picking an app in the allowed-apps chooser does.

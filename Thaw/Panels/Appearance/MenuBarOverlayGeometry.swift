@@ -66,6 +66,14 @@ nonisolated enum MenuBarLiquidGlassGeometry {
 }
 
 nonisolated enum MenuBarSplitPillGeometry {
+    /// The notch a pill must stay clear of, and by how much; a nil frame means the display has none.
+    struct Notch {
+        static let none = Notch(frame: nil, margin: 0)
+
+        var frame: CGRect?
+        var margin: CGFloat
+    }
+
     static func followingVisibleEdge(
         _ sample: MenuBarLeadingEdgeSample,
         itemBounds: [CGRect],
@@ -113,8 +121,7 @@ nonisolated enum MenuBarSplitPillGeometry {
         screenFrame: CGRect,
         trailingPadding: CGFloat,
         leadingMargin: CGFloat,
-        notchFrame: CGRect?,
-        notchMargin: CGFloat
+        notch: Notch
     ) -> CGRect {
         let screenOriginX = screenFrame.minX
         let leftX = rect.minX + leadingMargin
@@ -124,8 +131,8 @@ nonisolated enum MenuBarSplitPillGeometry {
             rect.maxX
         }
 
-        if let notchFrame {
-            rightX = min(rightX, notchFrame.minX - screenOriginX - notchMargin)
+        if let notchFrame = notch.frame {
+            rightX = min(rightX, notchFrame.minX - screenOriginX - notch.margin)
         }
         if let trailingContentMinX {
             rightX = min(rightX, trailingContentMinX - screenOriginX - 4)
@@ -146,8 +153,7 @@ nonisolated enum MenuBarSplitPillGeometry {
         screenFrame: CGRect,
         leadingOutset: CGFloat,
         trailingOutset: CGFloat,
-        notchFrame: CGRect?,
-        notchMargin: CGFloat
+        notch: Notch
     ) -> CGRect {
         let displayItemBounds = itemBounds.filter { bounds in
             bounds.midX >= screenFrame.minX && bounds.midX <= screenFrame.maxX
@@ -161,8 +167,8 @@ nonisolated enum MenuBarSplitPillGeometry {
         var leftX = contentMinX - leadingOutset - screenOriginX
         var rightX = contentMaxX + trailingOutset - screenOriginX
 
-        if let notchFrame {
-            leftX = max(leftX, notchFrame.maxX - screenOriginX + notchMargin)
+        if let notchFrame = notch.frame {
+            leftX = max(leftX, notchFrame.maxX - screenOriginX + notch.margin)
         }
 
         leftX = min(max(leftX, rect.minX), rect.maxX)

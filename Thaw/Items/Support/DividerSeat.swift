@@ -5,6 +5,7 @@
 //  Copyright (Thaw) © 2026 Toni Förster
 //  Licensed under the GNU GPLv3
 
+import Algorithms
 import CoreGraphics
 import MenuBarModel
 
@@ -37,8 +38,8 @@ nonisolated enum DividerSeat {
             .compactMap { item in weight(item).map { (item, $0) } }
         guard neighbours.count > 1 else { return nil }
 
-        let falling = zip(neighbours, neighbours.dropFirst()).count { $0.weight > $1.weight }
-        let rising = zip(neighbours, neighbours.dropFirst()).count { $0.weight < $1.weight }
+        let falling = neighbours.adjacentPairs().count { $0.weight > $1.weight }
+        let rising = neighbours.adjacentPairs().count { $0.weight < $1.weight }
         guard falling != rising else { return nil }
         let isDescending = falling > rising
         func inOrder(_ left: Int, _ right: Int) -> Bool {

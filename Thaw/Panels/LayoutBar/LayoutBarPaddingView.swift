@@ -344,8 +344,7 @@ final class LayoutBarPaddingView: NSView {
                 return false
             }
 
-            controller?.setSection(container.section, item: item)
-            controller?.setSectionOrder(from: orderedItems, for: container.section)
+            LayoutDropCommit.recordIntent(of: item, orderedAs: orderedItems, from: sourceSection, to: container.section, controller: controller)
             if let appState = container.appState {
                 appState.itemManager.scheduleSectionOrderApply(for: container.section)
                 Task { await appState.itemManager.cacheItemsRegardless(skipRecentMoveCheck: true) }
@@ -413,23 +412,20 @@ final class LayoutBarPaddingView: NSView {
                             targetSection,
                             items: groupMembers,
                             atomically: true
-                        ) {
-                            if let appState = container.appState {
-                                let sourceItems = appState.itemManager.itemCache
-                                    .managedItems(for: sourceSection)
-                                appState.layoutFeedback.post(
-                                    LayoutBarFeedbackCenter.blockedGroupMove(
-                                        groupName: groupDisplayName(
-                                            for: groupMembers,
-                                            in: sourceItems,
-                                            appState: appState
-                                        ),
-                                        section: targetSection,
-                                        refusal: refusal
-                                    )
+                        ), let appState = container.appState {
+                            let sourceItems = appState.itemManager.itemCache
+                                .managedItems(for: sourceSection)
+                            appState.layoutFeedback.post(
+                                LayoutBarFeedbackCenter.blockedGroupMove(
+                                    groupName: groupDisplayName(
+                                        for: groupMembers,
+                                        in: sourceItems,
+                                        appState: appState
+                                    ),
+                                    section: targetSection,
+                                    refusal: refusal
                                 )
-                            }
-                            return
+                            )
                         }
                     } else {
                         controller?.setSection(targetSection, item: item)
@@ -498,7 +494,14 @@ final class LayoutBarPaddingView: NSView {
                             desired=\(desiredIDs) live=\(MenuBarLayoutPlannerProvider.current.orderDescription(liveItems))
                             """
                         )
-                        controller?.setSectionOrder(from: achievableItems, for: .visible)
+                        // Merged into the saved order so live items that are off
+                        // screen keep their slots instead of dropping out of it.
+                        let committed = LayoutEditorOrder.itemsMergingAchievableOrder(
+                            achievableItems.map(\.uniqueIdentifier),
+                            into: controller?.sectionItemOrder[.visible] ?? [],
+                            candidates: appState.itemManager.managedItems(for: .visible)
+                        )
+                        controller?.setSectionOrder(from: committed, for: .visible)
                         Task { await appState.itemManager.cacheItemsRegardless(skipRecentMoveCheck: true) }
                     }
                     return true
@@ -540,8 +543,7 @@ final class LayoutBarPaddingView: NSView {
 
             // Non-live sections record intent, not a completed move. Visible
             // intent needs an explicit apply; concealed sections wait for reveal.
-            controller?.setSection(container.section, item: item)
-            controller?.setSectionOrder(from: orderedItems, for: container.section)
+            LayoutDropCommit.recordIntent(of: item, orderedAs: orderedItems, from: sourceSection, to: container.section, controller: controller)
 
             if let appState = container.appState {
                 appState.itemManager.scheduleSectionOrderApply(for: container.section)
@@ -661,21 +663,16 @@ final class LayoutBarPaddingView: NSView {
                     item, screens: BarAxis.liveDisplayBounds()
                 )
                 let attemptMove = { () async throws -> Bool in
+                    // A divider-anchored destination is a deliberate section transition;
+                    // without the opt-in, move() refuses control item targets on macOS 27.
+                    // A layout-pane drop is the user's direct action: it must preempt
+                    // an in-flight background reconcile on the serial gate.
+                    // A drop is the user's explicit request; the drag runs only
+                    // after the store write was refused.
                     try await appState.itemManager.move(
                         item: item,
                         to: destination,
-                        skipInputPause: true,
-                        // A divider-anchored destination is a deliberate section transition;
-                        // without the opt-in, move() refuses control item targets on macOS 27.
-                        allowSectionBoundaryTarget: destination.targetItem.isControlItem,
-                        allowParkedOffMenuBarSource: recoveringStrandedVisibleControl,
-                        anchorFallbacks: anchorFallbacks,
-                        // A layout-pane drop is the user's direct action: it must preempt
-                        // an in-flight background reconcile on the serial gate.
-                        isUserInitiated: true,
-                        // A drop is the user's explicit request; the drag runs only
-                        // after the store write was refused.
-                        allowSyntheticDrag: true
+                        options: ItemMoveOptions(skipInputPause: true, allowSectionBoundaryTarget: destination.targetItem.isControlItem, allowParkedOffMenuBarSource: recoveringStrandedVisibleControl, anchorFallbacks: anchorFallbacks, isUserInitiated: true, allowSyntheticDrag: true)
                     )
                 }
 
@@ -1035,7 +1032,7 @@ final class LayoutBarPaddingView: NSView {
             let liveOrder: @MainActor () -> [MenuBarItem] = {
                 appState.itemManager.managedItems(for: section)
             }
-            let liveItem: @MainActor (MenuBarItemTag) -> MenuBarItem? = { tag in
+            @MainActor func liveItem(_ tag: MenuBarItemTag) -> MenuBarItem? {
                 liveOrder().first { $0.tag == tag }
             }
             let block = GroupBlockPlacement(members: memberOrder, anchor: anchorTag, insertsLeftOfAnchor: insertToLeftOfAnchor)
@@ -1067,13 +1064,11 @@ final class LayoutBarPaddingView: NSView {
                         insertToLeftOfAnchor ? .leftOfItem(anchor) : .rightOfItem(anchor)
                     var moved = false
                     do {
+                        // User-driven group reorder: preempt background reconcile.
                         moved = try await appState.itemManager.move(
                             item: member,
                             to: destination,
-                            skipInputPause: true,
-                            // User-driven group reorder: preempt background reconcile.
-                            isUserInitiated: true,
-                            allowSyntheticDrag: false
+                            options: ItemMoveOptions(skipInputPause: true, isUserInitiated: true, allowSyntheticDrag: false)
                         )
                     } catch {
                         Self.diagLog.error("Group reorder move failed for \(member.logString): \(error)")
@@ -1153,7 +1148,6 @@ final class LayoutBarPaddingView: NSView {
                             refusal: refusal
                         )
                     )
-                    return
                 }
             }
 
@@ -1278,19 +1272,14 @@ final class LayoutBarPaddingView: NSView {
                 let recoveringStrandedVisibleControl = MenuBarItemGeometry.isStrandedVisibleControl(
                     item, screens: BarAxis.liveDisplayBounds()
                 )
+                // A divider-anchored destination is a deliberate section
+                // transition; without the opt-in, move() refuses control
+                // item targets on macOS 27.
+                // User-driven placement recovery: preempt background reconcile.
                 try await appState.itemManager.move(
                     item: item,
                     to: destination,
-                    skipInputPause: true,
-                    // A divider-anchored destination is a deliberate section
-                    // transition; without the opt-in, move() refuses control
-                    // item targets on macOS 27.
-                    allowSectionBoundaryTarget: destination.targetItem.isControlItem,
-                    allowParkedOffMenuBarSource: recoveringStrandedVisibleControl,
-                    anchorFallbacks: anchorFallbacks,
-                    // User-driven placement recovery: preempt background reconcile.
-                    isUserInitiated: true,
-                    allowSyntheticDrag: false
+                    options: ItemMoveOptions(skipInputPause: true, allowSectionBoundaryTarget: destination.targetItem.isControlItem, allowParkedOffMenuBarSource: recoveringStrandedVisibleControl, anchorFallbacks: anchorFallbacks, isUserInitiated: true, allowSyntheticDrag: false)
                 )
                 await appState.itemManager.cacheItemsRegardless(skipRecentMoveCheck: true)
             } catch {

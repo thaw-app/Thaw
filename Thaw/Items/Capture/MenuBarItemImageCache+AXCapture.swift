@@ -270,10 +270,7 @@ extension MenuBarItemImageCache {
             "axBoundsCapture: \(sourceLabel) \(capture.image.width)×\(capture.image.height)px, cropping \(candidates.count) item(s)"
         )
         let isStrip = source == .displayStrip
-        appendAXBoundsCrops(
-            from: candidates,
-            capture: capture,
-            source: source,
+        let rules = AXCropRules(
             knockOutBackground: isStrip,
             validateFreshBounds: isStrip || context.validateFreshBounds,
             absenceMeansMoved: isStrip || !context.validateFreshBounds,
@@ -282,7 +279,13 @@ extension MenuBarItemImageCache {
             overflowBounds: context.overflowBounds,
             concealedIdentifiers: context.concealedIdentifiers,
             ambiguousIdentifiers: context.ambiguousIdentifiers,
-            forgivenTags: context.forgivenTags,
+            forgivenTags: context.forgivenTags
+        )
+        appendAXBoundsCrops(
+            from: candidates,
+            capture: capture,
+            source: source,
+            rules: rules,
             cropRectOwners: &cropRectOwners,
             into: &result
         )

@@ -1,5 +1,5 @@
 {
-  "originHash" : "5e5b16aa6ea144c37b53a6153de36951b84236dffe989237a819f889171962c5",
+  "originHash" : "a882f0a3e7345de4e7a3f07fb2d3d791a6731f2f6e203e97a7aaed6c574e8672",
   "pins" : [
     {
       "identity" : "compactslider",
@@ -24,8 +24,8 @@
       "kind" : "remoteSourceControl",
       "location" : "https://github.com/thaw-app/prk-bin",
       "state" : {
-        "revision" : "9e9ec20dc084c46a718538c955cd525cda5b8ccc",
-        "version" : "1.2.7"
+        "revision" : "458113a1b93a76ed93edeb6969459e0129531401",
+        "version" : "1.2.10"
       }
     },
     {
@@ -35,6 +35,15 @@
       "state" : {
         "revision" : "eef1a539a373c1f1a320624b1130fc5de7b2e100",
         "version" : "2.10.0"
+      }
+    },
+    {
+      "identity" : "swift-algorithms",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/apple/swift-algorithms",
+      "state" : {
+        "revision" : "87e50f483c54e6efd60e885f7f5aa946cee68023",
+        "version" : "1.2.1"
       }
     },
     {
@@ -53,6 +62,15 @@
       "state" : {
         "revision" : "3b69cedbaa49957e97c092ae400bb57602ef941f",
         "version" : "1.7.2"
+      }
+    },
+    {
+      "identity" : "swift-numerics",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/apple/swift-numerics.git",
+      "state" : {
+        "revision" : "0c0290ff6b24942dadb83a929ffaaa1481df04a2",
+        "version" : "1.1.1"
       }
     },
     {

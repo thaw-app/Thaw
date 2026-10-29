@@ -12,5 +12,6 @@ let package = Package(
         // case-insensitive, so Sources/ AND .build/debug/<name> would
         // otherwise collide and running the CLI launches the GUI instead.
         .executableTarget(name: "thawctl-cli", path: "Sources/ThawCtlCLI"),
+        .testTarget(name: "ThawCtlCLITests", dependencies: ["thawctl-cli"], path: "Tests/ThawCtlCLITests"),
     ]
 )

@@ -35,6 +35,7 @@ extension AppSettings {
         general.simpleMode = Defaults.DefaultValue.simpleMode
         general.simpleModeShowsPreview = Defaults.DefaultValue.simpleModeShowsPreview
         general.showSettingDescriptions = Defaults.DefaultValue.showSettingDescriptions
+        general.blackSettingsBackground = Defaults.DefaultValue.blackSettingsBackground
         general.lockThawBarPosition = Defaults.DefaultValue.lockThawBarPosition
         general.openHiddenItemsInMenuBar = Defaults.DefaultValue.openHiddenItemsInMenuBar
         general.roundScreenCorners = Defaults.DefaultValue.roundScreenCorners

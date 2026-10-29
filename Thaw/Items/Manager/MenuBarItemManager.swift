@@ -316,7 +316,7 @@ final class MenuBarItemManager {
 
     /// Count of user-initiated reorders currently queued on (or holding)
     /// moveSerialSemaphore. The automatic per-pair reconcile loop in
-    /// applySectionItemOrder(sections:controller:whileRevealing:repairAfterRestriction:visibleOrderOverride:reason:preferredMoveUIDs:)
+    /// applySectionItemOrder(sections:controller:whileRevealing:visibleOrderOverride:reason:preferredMoveUIDs:permit:)
     /// polls this between pairs and stops issuing further background moves while
     /// it is non-zero, so a user's layout-pane drop is not stuck behind a
     /// multi-second background drag on the serial gate. The in-flight drag is
@@ -1382,7 +1382,7 @@ final class MenuBarItemManager {
         // On first launch (no known identifiers), avoid auto-relocating the leftmost item
         // so everything remains in the hidden section until the user interacts.
         suppressNextNewLeftmostItemRelocation = knownItemIdentifiers.isEmpty
-        configureObservers(with: appState)
+        configureObservers(itemGroupManager: appState.itemGroupManager, navigationState: appState.navigationState)
         initialCacheTask?.cancel()
         MenuBarItemManager.diagLog.debug("performSetup: scheduling initial cacheItemsRegardless off the startup critical path")
         self.initialCacheTask = Task { @MainActor [weak self] in
@@ -1447,7 +1447,7 @@ final class MenuBarItemManager {
     /// group edits, app launches and terminations, space and display changes,
     /// and a slow periodic tick for the changes that announce themselves
     /// through none of those.
-    private func configureObservers(with appState: AppState) {
+    private func configureObservers(itemGroupManager: MenuBarItemGroupManager, navigationState: AppNavigationState) {
         var registered = Set<AnyCancellable>()
 
         // Creating, editing or dissolving a group only rewrites
@@ -1461,7 +1461,7 @@ final class MenuBarItemManager {
         // Observations task dedupes and skips the initial element, then feeds
         // a subject so the Combine debounce keeps its semantics.
         let groupSetChangeSubject = PassthroughSubject<Void, Never>()
-        let groupOrderTask = Task { @MainActor [weak self, itemGroupManager = appState.itemGroupManager] in
+        let groupOrderTask = Task { @MainActor [weak self, itemGroupManager] in
             let changes = Observations { itemGroupManager.groupSet }
             var previous: MenuBarItemGroupSet?
             var isFirst = true
@@ -1591,7 +1591,7 @@ final class MenuBarItemManager {
         // a forced full recapture can replace settled glyphs with native
         // overflow chevron crops.
         navigationStateObservationTask?.cancel()
-        navigationStateObservationTask = Task { @MainActor [weak self, navigationState = appState.navigationState] in
+        navigationStateObservationTask = Task { @MainActor [weak self, navigationState] in
             let changes = Observations {
                 (navigationState.settingsNavigationIdentifier, navigationState.isSettingsPresented)
             }

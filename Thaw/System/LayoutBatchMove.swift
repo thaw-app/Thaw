@@ -127,9 +127,13 @@ nonisolated struct LayoutBatchMove: Equatable, Sendable {
 
     static func parse(_ url: URL) -> Result<Self, LayoutBatchMoveError> {
         let queryItems = URLComponents(url: url, resolvingAgainstBaseURL: false)?.queryItems ?? []
-        let itemIDs = queryItems.filter { $0.name == "item-id" }.compactMap(\.value).filter { !$0.isEmpty }
-        let sectionValue = queryItems.first { $0.name == "section" }?.value ?? ""
-        let afterID = queryItems.first { $0.name == "after-id" }?.value.flatMap { $0.isEmpty ? nil : $0 }
+        return parse(SettingsURIMoveQuery(queryItems: queryItems))
+    }
+
+    static func parse(_ query: SettingsURIMoveQuery) -> Result<Self, LayoutBatchMoveError> {
+        let itemIDs = query.itemIDs
+        let sectionValue = query.section
+        let afterID = query.afterID
 
         guard !itemIDs.isEmpty else { return .failure(.missingItem) }
         guard !sectionValue.isEmpty else { return .failure(.missingSection) }
@@ -214,6 +218,8 @@ nonisolated struct LayoutBatchMove: Equatable, Sendable {
 nonisolated enum LayoutBatchMoveOutcome: Equatable, Sendable {
     case moved(LayoutBatchMovePlan)
     case unchanged(LayoutBatchMovePlan)
+    /// The order was saved but the bar did not follow within the wait.
+    case notApplied(LayoutBatchMovePlan)
     case refused(LayoutBatchMoveError)
 }
 
@@ -236,6 +242,7 @@ extension LauncherURIResponse {
         let code: String = switch outcome {
         case .moved: "moved"
         case .unchanged: "unchanged"
+        case .notApplied: "notApplied"
         case let .refused(error): error.code
         }
         let payload = LauncherURIPayload.ItemMove(
@@ -244,9 +251,15 @@ extension LauncherURIResponse {
             afterId: command?.afterID,
             outcome: code
         )
-        guard case let .refused(error) = outcome else {
+        let details: String
+        switch outcome {
+        case let .refused(error):
+            details = error.details
+        case .notApplied:
+            details = "The new order was saved, but the menu bar did not follow it. Check the bar and retry."
+        case .moved, .unchanged:
             return success(payload, operation: .moveItem, requestId: requestId)
         }
-        return failure(code, details: error.details, payload: payload, operation: .moveItem, requestId: requestId)
+        return failure(code, details: details, payload: payload, operation: .moveItem, requestId: requestId)
     }
 }

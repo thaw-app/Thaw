@@ -57,13 +57,18 @@ final class MenuBarSearchRecents {
     /// still the same identity. Unresolvable entries are dropped from the
     /// result only, see the class comment for why they stay in storage.
     func resolve(in manager: MenuBarItemManager) -> [MenuBarItem] {
+        resolve(in: manager.itemCache)
+    }
+
+    /// Resolves stored identifiers against cache, the inventory the list shows.
+    func resolve(in cache: MenuBarItemCache) -> [MenuBarItem] {
         let storedIdentifiers = identifiers
         guard !storedIdentifiers.isEmpty else { return [] }
         // A canonical identifier can resolve more than once across sections
         // while an item is mid-move; the first hit wins.
         var itemsByIdentifier = [String: MenuBarItem]()
         for name in MenuBarSection.Name.allCases {
-            for item in manager.managedItems(for: name) where !item.isControlItem {
+            for item in cache.managedItems(for: name) where !item.isControlItem {
                 guard let identifier = MenuBarItemTag.canonicalPersistentIdentifiers([item.tag.tagIdentifier]).first,
                       itemsByIdentifier[identifier] == nil
                 else { continue }

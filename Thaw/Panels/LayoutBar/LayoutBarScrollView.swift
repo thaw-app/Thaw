@@ -5,6 +5,7 @@
 //  Copyright (Thaw) © 2026 Toni Förster
 //  Licensed under the GNU GPLv3
 
+import Algorithms
 import Cocoa
 
 final class LayoutBarScrollView: NSScrollView {
@@ -29,7 +30,7 @@ final class LayoutBarScrollView: NSScrollView {
 
     /// The bar's item container, which the padding view wraps.
     private var container: LayoutBarContainer? {
-        paddingView.subviews.lazy.compactMap { $0 as? LayoutBarContainer }.first
+        paddingView.subviews.firstNonNil { $0 as? LayoutBarContainer }
     }
 
     /// Creates a layout bar scroll view with the given app state, section, and spacing.

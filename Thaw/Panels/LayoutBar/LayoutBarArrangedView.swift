@@ -112,12 +112,10 @@ extension LayoutBarArrangedView: NSDraggingSource {
                 return
             }
             container.animatesNextLayoutPass = false
-            if wasGroupDrag {
-                // Only self carries oldContainerInfo; rebuild from the unchanged cache to restore all removed group members.
-                if container.appState != nil {
-                    container.rebuildViews()
-                    return
-                }
+            // Only self carries oldContainerInfo; rebuild from the unchanged cache to restore all removed group members.
+            if wasGroupDrag, container.appState != nil {
+                container.rebuildViews()
+                return
             }
             container.arrangedViews.insert(self, at: index)
         }

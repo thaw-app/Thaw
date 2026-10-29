@@ -197,7 +197,7 @@ final class RecordingWatchManager {
     /// Starts and stops the poller with the Lab flag. Observes the property,
     /// not defaults, so pane, thaw:// and profile changes all land.
     private func observeSettingFlips() -> AnyCancellable {
-        guard let advanced = advancedSettings else { return AnyCancellable {} }
+        guard let advanced = advancedSettings else { return AnyCancellable { /* Nothing was observed, so there is nothing to cancel. */ } }
         let flagTask = advanced.observe(\.enableRecordingWatch) { [weak self] enabled in
             if enabled {
                 self?.start()

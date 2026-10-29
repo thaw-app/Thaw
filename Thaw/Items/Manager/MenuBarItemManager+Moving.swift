@@ -98,9 +98,7 @@ extension MenuBarItemManager {
                     item: item,
                     to: .rightOfItem(anchor),
                     on: displayID,
-                    skipInputPause: true,
-                    allowParkedOffMenuBarSource: true,
-                    recoveringUnplacedItem: true
+                    options: ItemMoveOptions(skipInputPause: true, allowParkedOffMenuBarSource: true, recoveringUnplacedItem: true)
                 )
                 MenuBarItemManager.diagLog.info("Successfully recovered \(item.logString) from blocked state to visible section")
             } catch {
@@ -157,42 +155,31 @@ extension MenuBarItemManager {
     /// - Parameters:
     ///   - item: The item to move.
     ///   - destination: Where it should end up, relative to another item.
-    ///   - anchorFallbacks: Alternates captured beside the anchor at planning
-    ///     time, tried in order if it vanished.
+    ///   - options: How the move may be carried out; see ItemMoveOptions.
     /// - Returns: Whether the item is now at destination.
     @discardableResult
     func move(
         item: MenuBarItem,
         to destination: MoveDestination,
         on displayID: CGDirectDisplayID? = nil,
-        skipInputPause: Bool = false,
-        allowSectionBoundaryTarget: Bool = false,
-        allowParkedOffMenuBarSource: Bool = false,
-        anchorFallbacks: [MoveDestination] = [],
-        isUserInitiated: Bool = false,
-        recoveringUnplacedItem: Bool = false,
-        allowSyntheticDrag: Bool = true
+        options: ItemMoveOptions = ItemMoveOptions()
     ) async throws -> Bool {
-        if !skipInputPause {
+        if !options.skipInputPause {
             guard await waitForUserToPauseInput(timeout: nil) else { throw CancellationError() }
         }
-        let fulfilled = try await withMenuBarMutation(isUserInitiated: isUserInitiated) { permit in
+        let fulfilled = try await withMenuBarMutation(isUserInitiated: options.isUserInitiated) { permit in
             try await moveWhileHoldingMutation(
                 item: item,
                 to: destination,
                 on: displayID,
-                allowSectionBoundaryTarget: allowSectionBoundaryTarget,
-                allowParkedOffMenuBarSource: allowParkedOffMenuBarSource,
-                anchorFallbacks: anchorFallbacks,
-                isUserInitiated: isUserInitiated,
-                allowSyntheticDrag: allowSyntheticDrag,
+                options: options,
                 permit: permit
             )
         }
         // A window the host never laid out reports failure by construction, so only a
         // failed move or one aimed at the hidden divider is worth the AX walk that checks.
         // Nothing to check under the lock screen; a recovery move would be refused too.
-        if !recoveringUnplacedItem, !screenLockTransitions.isLocked,
+        if !options.recoveringUnplacedItem, !screenLockTransitions.isLocked,
            !fulfilled || Self.targetsAlwaysHiddenDivider(destination)
         {
             await validateItemPositionAfterMove(item: item, destination: destination, on: displayID)
@@ -242,18 +229,14 @@ extension MenuBarItemManager {
         to destination: MoveDestination,
         transitionSection: MenuBarSection.Name? = nil,
         on displayID: CGDirectDisplayID? = nil,
-        allowSectionBoundaryTarget: Bool = false,
-        allowParkedOffMenuBarSource: Bool = false,
-        anchorFallbacks: [MoveDestination] = [],
-        isUserInitiated: Bool = false,
-        allowSyntheticDrag: Bool = true,
+        options: ItemMoveOptions,
         permit: borrowing StoreWritePermit
     ) async throws -> Bool {
         if let refusal = moveRefusal(
             item: item,
             destination: destination,
-            isUserInitiated: isUserInitiated,
-            allowSectionBoundaryTarget: allowSectionBoundaryTarget
+            isUserInitiated: options.isUserInitiated,
+            allowSectionBoundaryTarget: options.allowSectionBoundaryTarget
         ) {
             switch refusal {
             case .unfulfilled:
@@ -267,7 +250,7 @@ extension MenuBarItemManager {
             if moveFulfilled, !Task.isCancelled, OrderRecording.shouldNormalizeStructureAfterMove(
                 item: item,
                 destination: destination,
-                isUserInitiated: isUserInitiated
+                isUserInitiated: options.isUserInitiated
             ) {
                 scheduleStructuralNormalization(cause: .moveFulfilled)
             }
@@ -278,7 +261,7 @@ extension MenuBarItemManager {
         let experimentalSystemItemHiding = configuration.enableExperimentalSystemItemHiding
 
         let geometryStarted = ContinuousClock.now
-        let priorityPIDs = Set(([item, destination.targetItem] + anchorFallbacks.map(\.targetItem)).flatMap {
+        let priorityPIDs = Set(([item, destination.targetItem] + options.anchorFallbacks.map(\.targetItem)).flatMap {
             [$0.ownerPID, $0.sourcePID].compactMap(\.self)
         })
         guard let livePeers = await MenuBarItem.getFreshMenuBarItemsForMove(priorityPIDs: priorityPIDs) else {
@@ -291,11 +274,8 @@ extension MenuBarItemManager {
         // x == -1 means not placed yet. A user's drag is often the fix, so only
         // automatic passes are refused, except in the rescue direction.
         if (try? Self.currentBounds(for: item, among: livePeers))?.origin.x == -1 {
-            let rescueDirection = switch destination {
-            case .rightOfItem: true
-            default: item.tag.matchesVisibleControlItem
-            }
-            let allowsBlockedMove = isUserInitiated || rescueDirection
+            let rescueDirection = destination.isRightward || item.tag.matchesVisibleControlItem
+            let allowsBlockedMove = options.isUserInitiated || rescueDirection
             guard allowsBlockedMove else {
                 MenuBarItemManager.diagLog.warning("Skipping move for \(item.logString) - item is blocked (x=-1)")
                 throw EventError.cannotComplete
@@ -305,8 +285,8 @@ extension MenuBarItemManager {
 
         // Same for the reflow's parking band: automatic passes leave it alone,
         // the user's drag unparks it.
-        if !allowParkedOffMenuBarSource,
-           !isUserInitiated,
+        if !options.allowParkedOffMenuBarSource,
+           !options.isUserInitiated,
            item.isParkedOffMenuBarBand(among: livePeers)
         {
             MenuBarItemManager.diagLog.warning(
@@ -314,7 +294,7 @@ extension MenuBarItemManager {
             )
             throw EventError.cannotComplete
         }
-        if isUserInitiated, item.isParkedOffMenuBarBand(among: livePeers) {
+        if options.isUserInitiated, item.isParkedOffMenuBarBand(among: livePeers) {
             MenuBarItemManager.diagLog.debug(
                 "Proceeding with move of parked \(item.logString); the user's drop is the unpark"
             )
@@ -324,7 +304,7 @@ extension MenuBarItemManager {
         // by key. Only the drag path, which needs geometry, fails on it.
         let liveDestination = MoveTargeting.resolvedDestination(
             for: destination,
-            fallbacks: anchorFallbacks,
+            fallbacks: options.anchorFallbacks,
             item: item,
             among: livePeers
         )
@@ -377,7 +357,7 @@ extension MenuBarItemManager {
             transitionSection: transitionSection,
             liveItems: liveItems,
             experimentalSystemItemHiding: experimentalSystemItemHiding,
-            isUserInitiated: isUserInitiated,
+            isUserInitiated: options.isUserInitiated,
             permit: permit
         ) {
             moveMonitor.recordStoreMove(
@@ -393,7 +373,7 @@ extension MenuBarItemManager {
         // drop the icon blind, so that move waits for the reveal. Opted-in
         // section transitions are exempt: the drag re-resolves the collapsed
         // divider mid-gesture.
-        let targetIsUsable = allowSectionBoundaryTarget
+        let targetIsUsable = options.allowSectionBoundaryTarget
             || (destination.targetItem.isOnScreen && !destination.targetItem.bounds.isEmpty)
         let canDragSynthetically = item.isOnScreen && !item.bounds.isEmpty
             && targetIsUsable
@@ -422,13 +402,13 @@ extension MenuBarItemManager {
 
         // A user move falls through to the Command-drag after a store decline.
         // Background passes never take the cursor, and callers may refuse the drag.
-        guard allowSyntheticDrag else {
+        guard options.allowSyntheticDrag else {
             MenuBarItemManager.diagLog.debug(
                 "Position-only move of \(item.logString): the caller refused the synthetic drag"
             )
             return false
         }
-        if isUserInitiated {
+        if options.isUserInitiated {
             guard await waitForUserToPauseInput(timeout: .seconds(1.5)) else {
                 try Task.checkCancellation()
                 return false
@@ -664,27 +644,6 @@ extension MenuBarItemManager {
             let settledItems = itemCache.managedItems
             // The debounce and settle waits can span a screen lock.
             guard !refuseMenuBarMutationWhileScreenLocked("structural normalization"), !settledItems.isEmpty else { return }
-            if !arrangementIsManual, !menuBarAgentIgnoresPreferredPositions,
-               ControlOrderRules.trailingSiriIsMisplaced(in: settledItems) {
-                // Siri needs one row repaired; no dividers required, which
-                // managedItems omits.
-                _ = moveCircuitBreaker.note(.storeWrite)
-                let changed = PermittedPositionStore.repairTrailingSiri(
-                    liveItems: settledItems,
-                    permit: StoreWritePermit(hold)
-                )
-                if !changed.isEmpty {
-                    appState.menuBarManager.sectionController.notePreferredPositionsSelfWrite()
-                    moveActivity.noteMoveOperation()
-                    // The one write is made. The wait and the cache pass after it only read.
-                    hasLeftLane = true
-                    repairs.leave(hold)
-                    try? await Task.sleep(for: .milliseconds(200))
-                    guard !Task.isCancelled else { return }
-                    await cacheItemsRegardless(skipRecentMoveCheck: true)
-                }
-                return
-            }
             if let (controlItems, withDividers) = ControlOrderRules.withDividers(settledItems, cacheDividers()) {
                 // The restore pins the saved order. A drag made with a section
                 // open is still held out of it, so record it first.
@@ -702,12 +661,11 @@ extension MenuBarItemManager {
             // slots make the next reveal expand in authored order.
             if !arrangementIsManual, !menuBarAgentIgnoresPreferredPositions {
                 let sectionController = appState.menuBarManager.sectionController
+                let settledByID = Dictionary(settledItems.map { ($0.uniqueIdentifier, $0) }, uniquingKeysWith: { first, _ in first })
                 for section in MenuBarSection.Name.allCases where section != .visible {
                     let desiredOrder = sectionController.sectionItemOrder[section] ?? []
                     guard desiredOrder.count > 1 else { continue }
-                    let members = desiredOrder.compactMap { identifier in
-                        settledItems.first { $0.uniqueIdentifier == identifier }
-                    }
+                    let members = desiredOrder.compactMap { settledByID[$0] }
                     guard members.count > 1 else { continue }
                     guard !refuseMenuBarMutationWhileScreenLocked("concealed-band normalization") else { return }
                     let trace = tracePositionWrite(
@@ -1137,8 +1095,7 @@ extension MenuBarItemManager {
                 let moved = try await move(
                     item: liveItem,
                     to: destination,
-                    skipInputPause: true,
-                    allowSectionBoundaryTarget: true
+                    options: ItemMoveOptions(skipInputPause: true, allowSectionBoundaryTarget: true)
                 )
                 liveItems = await MenuBarItem.getMenuBarItems(option: .activeSpace)
                 // A re-hide mid-move leaves nothing to judge; no strike.
@@ -1345,9 +1302,7 @@ extension MenuBarItemManager {
                     item: item,
                     to: destination,
                     transitionSection: section,
-                    allowSectionBoundaryTarget: true,
-                    isUserInitiated: true,
-                    allowSyntheticDrag: false,
+                    options: ItemMoveOptions(allowSectionBoundaryTarget: true, isUserInitiated: true, allowSyntheticDrag: false),
                     permit: permit
                 ) {
                     previousMoved = item
@@ -1445,9 +1400,18 @@ extension MenuBarItemManager {
             MenuBarLayoutPlannerProvider.current.isEligibleForSectionOrder($0, section: section) &&
                 controller.section(for: $0) == section
         }
+        // The write completed a Visible order the same way, so judge it the same way.
+        let completedOrder = section == .visible
+            ? VisibleOrderCompletion.completed(
+                desiredOrder,
+                liveItems: items,
+                controller: controller,
+                experimentalSystemItemHiding: configuration.enableExperimentalSystemItemHiding
+            )
+            : desiredOrder
         return MenuBarLayoutPlannerProvider.current.nextAchievableOrderMove(
             items: sectionItems,
-            desiredOrder: desiredOrder,
+            desiredOrder: completedOrder,
             experimentalSystemItemHiding: configuration.enableExperimentalSystemItemHiding
         ) == nil
     }
@@ -1525,7 +1489,7 @@ extension MenuBarItemManager {
         var pass = BoundaryRepairPass()
 
         var itemsForControlDiscovery = liveItems
-        guard let controlItems = ControlItemPair(
+        guard var controlItems = ControlItemPair(
             items: &itemsForControlDiscovery,
             hiddenControlItemWindowID: hiddenControlItemWindowID,
             alwaysHiddenControlItemWindowID: alwaysHiddenControlItemWindowID
@@ -1534,9 +1498,10 @@ extension MenuBarItemManager {
         }
 
         // Every strand verdict and store write below is judged against the divider.
-        if ControlOrderRules.dividerIsOffTheBar(controlItems, among: liveItems) {
-            MenuBarItemManager.diagLog.debug("boundary repair: the Hidden divider is parked off the bar; skipping the pass")
-            return (liveItems, false, false)
+        // Reported as remaining, so the bounded retry tries again once the divider has settled.
+        if let misplaced = ControlOrderRules.dividerMisplacement(controlItems, among: liveItems) {
+            MenuBarItemManager.diagLog.debug("boundary repair: \(misplaced); skipping the pass")
+            return (liveItems, false, true)
         }
 
         // When app menus wrap past the notch, evicted items leave stale frames
@@ -1629,11 +1594,33 @@ extension MenuBarItemManager {
             }
         }
 
+        // After an attempt, strands are picked and judged against the divider the refreshed walk read.
+        // False when that walk lost the divider or misreads it, which leaves the strands for the bounded retry.
+        func refreshDividers() -> Bool {
+            guard !pass.attempted.isEmpty else { return true }
+            guard let refreshed = ControlOrderRules.refreshedControlItems(
+                in: liveItems,
+                hiddenControlItemWindowID: hiddenControlItemWindowID,
+                alwaysHiddenControlItemWindowID: alwaysHiddenControlItemWindowID
+            ) else {
+                MenuBarItemManager.diagLog.debug("boundary repair: the refreshed walk lost the Hidden divider; stopping the pass")
+                return false
+            }
+            if let misplaced = ControlOrderRules.dividerMisplacement(refreshed, among: liveItems) {
+                MenuBarItemManager.diagLog.debug("boundary repair: \(misplaced); stopping the pass")
+                return false
+            }
+            controlItems = refreshed
+            return true
+        }
+
         // Re-read geometry after each attempt. Each strand gets one attempt
         // per pass, but remains eligible for a later pass until verified or
         // suppressed by the breaker.
         var iterations = 0
-        while let strand = pass.next(in: failingStrands()) {
+        while true {
+            guard refreshDividers() else { return (liveItems, false, true) }
+            guard let strand = pass.next(in: failingStrands()) else { break }
             guard !arrangementIsManual, !Task.isCancelled else { return (liveItems, true, false) }
             iterations += 1
             if iterations > 6 {
@@ -1827,8 +1814,7 @@ extension MenuBarItemManager {
                 let fulfilled = try await move(
                     item: dragItem,
                     to: destination,
-                    skipInputPause: true,
-                    allowSectionBoundaryTarget: true
+                    options: ItemMoveOptions(skipInputPause: true, allowSectionBoundaryTarget: true)
                 )
                 liveItems = await MenuBarItem.getMenuBarItems(option: .activeSpace)
                 guard !arrangementIsManual, !Task.isCancelled else { return (liveItems, true, false) }
@@ -1882,6 +1868,7 @@ extension MenuBarItemManager {
             }
         }
 
+        guard refreshDividers() else { return (liveItems, false, true) }
         recordBoundaryRepairOutcomes(
             attempted: pass.attempted,
             liveItems: liveItems,
@@ -2058,7 +2045,6 @@ extension MenuBarItemManager {
         sections: [MenuBarSection.Name],
         controller: any MenuBarSectionControlling,
         whileRevealing revealedSection: MenuBarSection.Name? = nil,
-        repairAfterRestriction: Bool = false,
         visibleOrderOverride: [String]? = nil,
         reason: LayoutChangeReason,
         preferredMoveUIDs: Set<String> = [],
@@ -2069,7 +2055,7 @@ extension MenuBarItemManager {
         if skipSectionOrderApply(
             controller: controller,
             revealedSection: revealedSection,
-            repairAfterRestriction: repairAfterRestriction,
+            repairAfterRestriction: false,
             reason: reason
         ) {
             return
@@ -2117,7 +2103,12 @@ extension MenuBarItemManager {
             if section == .visible {
                 let republished = await awaitVisibleMembersRepublished(desiredOrder: desiredOrder)
                 liveItems = republished.liveItems
-                desiredOrder = republished.desiredOrder
+                desiredOrder = VisibleOrderCompletion.completed(
+                    republished.desiredOrder,
+                    liveItems: liveItems,
+                    controller: controller,
+                    experimentalSystemItemHiding: experimentalSystemItemHiding
+                )
             }
 
             // AX enumeration can finish after a hide cancelled this reveal.
@@ -2143,9 +2134,8 @@ extension MenuBarItemManager {
                 didReorder = didReorder || write.didReorder
             }
 
-            // After a restriction reflow drags fail and strand collateral; the
-            // write above is enough. A write-only reason never drags at all.
-            if repairAfterRestriction || reason.isPositionWriteOnly {
+            // A write-only reason never drags at all; the write above is enough.
+            if reason.isPositionWriteOnly {
                 continue
             }
 
@@ -2255,7 +2245,7 @@ extension MenuBarItemManager {
                     plannedMove: plannedMove,
                     isUserInitiated: isUserInitiated,
                     usesPlan: usesPlan,
-                    repairAfterRestriction: repairAfterRestriction,
+                    repairAfterRestriction: false,
                     liveItems: liveItems,
                     desiredOrder: desiredOrder
                 ) {
@@ -2273,9 +2263,7 @@ extension MenuBarItemManager {
                     let fulfilled = try await move(
                         item: plannedMove.item,
                         to: plannedMove.destination,
-                        skipInputPause: true,
-                        allowSectionBoundaryTarget: plannedMove.isBoundary,
-                        allowParkedOffMenuBarSource: repairAfterRestriction
+                        options: ItemMoveOptions(skipInputPause: true, allowSectionBoundaryTarget: plannedMove.isBoundary)
                     )
                     guard fulfilled else {
                         moveFailures.recordFailure(of: rememberedMove, desiredOrder: desiredOrder)
@@ -2463,15 +2451,13 @@ extension MenuBarItemManager {
         var liveItems = liveItems
         var didReorder = false
         var structuralApplied = false
-        if section == .visible {
-            if let controlItems = controlItemPair(in: liveItems) {
-                structuralApplied = restoreStructuralControlOrder(
-                    controlItems: controlItems,
-                    items: liveItems,
-                    diagnosticContext: "section apply \(section.logString) reason=\(reason)",
-                    permit: permit
-                )
-            }
+        if section == .visible, let controlItems = controlItemPair(in: liveItems) {
+            structuralApplied = restoreStructuralControlOrder(
+                controlItems: controlItems,
+                items: liveItems,
+                diagnosticContext: "section apply \(section.logString) reason=\(reason)",
+                permit: permit
+            )
         }
         if structuralApplied {
             controller.notePreferredPositionsSelfWrite()

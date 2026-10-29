@@ -5,6 +5,7 @@
 //  Copyright (Thaw) © 2026 Toni Förster
 //  Licensed under the GNU GPLv3
 
+import Algorithms
 import Foundation
 
 /// Decides whether this launch of Thaw may go on while other copies of Thaw are running.
@@ -63,8 +64,7 @@ nonisolated enum SingleInstanceRule {
         case several([String])
 
         init(_ others: [RunningProcess]) {
-            var seen = Set<String>()
-            let names = others.map(\.displayName).filter { seen.insert($0).inserted }
+            let names = Array(others.map(\.displayName).uniqued())
             switch names.count {
             case 0: self = .unnamed
             case 1: self = .one(names[0])

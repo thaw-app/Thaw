@@ -1006,7 +1006,7 @@ final class LayoutBarItemView: LayoutBarArrangedView {
         draw(
             image,
             in: iconRect,
-            fraction: isEnabled ? (image.isTemplate ? 0.8 : 0.9) : 0.5,
+            fraction: LayoutBarCaptureInk.placeholderFraction(isEnabled: isEnabled, isTemplate: image.isTemplate),
             templateTint: item.tag.matchesVisibleControlItem ? menuBarForegroundColor : .secondaryLabelColor
         )
     }

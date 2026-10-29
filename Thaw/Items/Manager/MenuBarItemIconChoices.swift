@@ -30,8 +30,12 @@ final class MenuBarItemIconChoices {
 
     @ObservationIgnored private var images: [String: NSImage] = [:]
 
-    private init() {
-        let data = UserDefaults.standard.data(forKey: Self.defaultsKey)
+    /// Where choices are stored. Tests pass a scratch suite instead of the shared store.
+    @ObservationIgnored private let defaults: UserDefaults
+
+    init(defaults: UserDefaults = .standard) {
+        self.defaults = defaults
+        let data = defaults.data(forKey: Self.defaultsKey)
         stored = data.flatMap { try? JSONDecoder().decode([String: Stored].self, from: $0) } ?? [:]
     }
 
@@ -66,7 +70,7 @@ final class MenuBarItemIconChoices {
             stored[key] = nil
         }
         if let data = try? JSONEncoder().encode(stored) {
-            UserDefaults.standard.set(data, forKey: Self.defaultsKey)
+            defaults.set(data, forKey: Self.defaultsKey)
         }
         revision += 1
     }

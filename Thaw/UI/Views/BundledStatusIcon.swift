@@ -77,7 +77,8 @@ enum BundledStatusIcon {
             let key = (name as NSString).deletingPathExtension.lowercased()
             guard !appIconNames.contains(key), !key.contains("appicon"), seen.insert(key).inserted else { continue }
             guard let image = bundle.image(forResource: name) ?? looseImage(named: name, in: bundle),
-                  fitsMenuBar(image)
+                  fitsMenuBar(image),
+                  fitsPixelBudget(image)
             else { continue }
             markTemplateIfSingleInk(image)
             result.append(Candidate(name: name, image: image, isLoose: looseNames.contains(name)))
@@ -86,11 +87,13 @@ enum BundledStatusIcon {
             }
         }
         return result.sorted { lhs, rhs in
-            let lhsItem = lhs.name.contains(statusItemName), rhsItem = rhs.name.contains(statusItemName)
+            let lhsItem = lhs.name.contains(statusItemName)
+            let rhsItem = rhs.name.contains(statusItemName)
             if lhsItem != rhsItem {
                 return lhsItem
             }
-            let lhsStatus = lhs.name.contains(statusName), rhsStatus = rhs.name.contains(statusName)
+            let lhsStatus = lhs.name.contains(statusName)
+            let rhsStatus = rhs.name.contains(statusName)
             if lhsStatus != rhsStatus {
                 return lhsStatus
             }
@@ -134,7 +137,9 @@ enum BundledStatusIcon {
         let pixels = data.bindMemory(to: UInt8.self, capacity: cgImage.width * cgImage.height * 4)
         var inked = 0
         for index in stride(from: 0, to: cgImage.width * cgImage.height * 4, by: 4) where pixels[index + 3] > 32 {
-            let red = Int(pixels[index]), green = Int(pixels[index + 1]), blue = Int(pixels[index + 2])
+            let red = Int(pixels[index])
+            let green = Int(pixels[index + 1])
+            let blue = Int(pixels[index + 2])
             guard max(red, green, blue) - min(red, green, blue) <= 24 else { return }
             inked += 1
         }
@@ -146,6 +151,20 @@ enum BundledStatusIcon {
         let size = image.size
         guard pointHeights.contains(size.height) else { return false }
         return size.width / size.height <= 3
+    }
+
+    /// The largest side in pixels a candidate may have, read from its header
+    /// before anything is decoded, since another app's file can be huge.
+    static let maxPixelSide = 512
+
+    /// Every representation stays within the budget. Vector representations
+    /// report zero pixels and are bounded by the point-size check instead.
+    static func fitsPixelBudget(_ pixelSizes: [(width: Int, height: Int)]) -> Bool {
+        pixelSizes.allSatisfy { $0.width <= maxPixelSide && $0.height <= maxPixelSide }
+    }
+
+    static func fitsPixelBudget(_ image: NSImage) -> Bool {
+        fitsPixelBudget(image.representations.map { (width: $0.pixelsWide, height: $0.pixelsHigh) })
     }
 }
 

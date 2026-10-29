@@ -89,4 +89,64 @@ struct ProfileRelaunchSafetyTests {
         )
         #expect(merged.applyMode == .relaunchApps)
     }
+
+    @Test("A profile apply restarts apps without asking only when confirmation is off")
+    func relaunchesWithoutAskingOnlyWhenConfirmationIsOff() {
+        let unconfirmed = Settings(confirmRelaunch: false, applyMode: .relaunchApps)
+        #expect(ProfileRelaunchSafety.relaunchesApps(requested: true, settings: unconfirmed, approved: false))
+    }
+
+    @Test("While confirmation is on, a profile apply only writes spacing until the user agrees")
+    func confirmationHoldsTheRelaunch() {
+        let confirmed = Settings(confirmRelaunch: true, applyMode: .relaunchApps)
+        #expect(!ProfileRelaunchSafety.relaunchesApps(requested: true, settings: confirmed, approved: false))
+        #expect(ProfileRelaunchSafety.relaunchesApps(requested: true, settings: confirmed, approved: true))
+    }
+
+    @Test("Write-only mode and a write-only caller never restart apps, approved or not")
+    func writeOnlyNeverRelaunches() {
+        let writeOnly = Settings(confirmRelaunch: false, applyMode: .writeOnly)
+        #expect(!ProfileRelaunchSafety.relaunchesApps(requested: true, settings: writeOnly, approved: true))
+        let relaunching = Settings(confirmRelaunch: false, applyMode: .relaunchApps)
+        #expect(!ProfileRelaunchSafety.relaunchesApps(requested: false, settings: relaunching, approved: true))
+    }
+
+    @Test("Applying returns the settings it put in place", .scratchDefaults)
+    func applyReturnsTheMergedSettings() throws {
+        let displaySettings = DisplaySettingsManager()
+        displaySettings.confirmSpacingRelaunch = false
+        displaySettings.spacingApplyMode = .relaunchApps
+        var profile = try JSONDecoder().decode(Profile.self, from: Data("{}".utf8))
+        profile.confirmSpacingRelaunch = true
+
+        #expect(ProfileRelaunchSafety.needsConfirmation(for: profile, displaySettings: displaySettings))
+        let settings = ProfileRelaunchSafety.apply(profile, to: displaySettings)
+
+        #expect(settings == Settings(confirmRelaunch: true, applyMode: .relaunchApps))
+        #expect(displaySettings.confirmSpacingRelaunch)
+    }
+
+    @Test("A profile needs no confirmation when the user turned it off and the profile agrees", .scratchDefaults)
+    func noConfirmationWhenBothOff() throws {
+        let displaySettings = DisplaySettingsManager()
+        displaySettings.confirmSpacingRelaunch = false
+        displaySettings.spacingApplyMode = .relaunchApps
+        var profile = try JSONDecoder().decode(Profile.self, from: Data("{}".utf8))
+        profile.confirmSpacingRelaunch = false
+
+        #expect(!ProfileRelaunchSafety.needsConfirmation(for: profile, displaySettings: displaySettings))
+    }
+
+    @Test("The applied spacing is the profile's entry for the menu bar's display, else its template")
+    func spacingOffsetFollowsActiveDisplay() throws {
+        var profile = try JSONDecoder().decode(Profile.self, from: Data("{}".utf8))
+        profile.globalDisplayConfiguration = DisplayThawBarConfiguration.defaultConfiguration.withItemSpacingOffset(-2)
+        profile.displayConfigurations = [
+            "ACTIVE": DisplayThawBarConfiguration.defaultConfiguration.withItemSpacingOffset(5),
+        ]
+
+        #expect(ProfileRelaunchSafety.spacingOffset(of: profile, activeDisplayUUID: "ACTIVE") == 5)
+        #expect(ProfileRelaunchSafety.spacingOffset(of: profile, activeDisplayUUID: "OTHER") == -2)
+        #expect(ProfileRelaunchSafety.spacingOffset(of: profile, activeDisplayUUID: nil) == -2)
+    }
 }

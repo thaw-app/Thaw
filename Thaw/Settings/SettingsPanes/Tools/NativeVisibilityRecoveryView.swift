@@ -12,6 +12,7 @@ struct NativeVisibilityRecoveryView: View {
     @State private var model = NativeVisibilityRecoveryModel.live()
     @State private var confirmsRestore = false
     @State private var confirmsSetAside = false
+    @State private var confirmsBypass = false
 
     var body: some View {
         VStack(alignment: .leading, spacing: ThawSpacing.gutter) {
@@ -26,6 +27,9 @@ struct NativeVisibilityRecoveryView: View {
                         ProgressView("Checking menu bar visibility…")
                     } else if let message = model.successMessage {
                         Text(message)
+                        if !model.setAsideLocations.isEmpty {
+                            setAsideNotice
+                        }
                     } else if model.recordIsUnreadable {
                         unreadableRecord
                     } else if model.hasLoaded {
@@ -78,6 +82,11 @@ struct NativeVisibilityRecoveryView: View {
                     .disabled(model.isBusy)
                     .keyboardShortcut(.cancelAction)
                 if model.successMessage == nil {
+                    if model.supportsRecoveryBypass {
+                        Button("Skip Recovery…") { confirmsBypass = true }
+                            .buttonStyle(.settingsGlass)
+                            .disabled(model.isBusy)
+                    }
                     Button("Check Again") { Task { await model.load() } }
                         .buttonStyle(.settingsGlass)
                         .disabled(model.isBusy)
@@ -93,9 +102,17 @@ struct NativeVisibilityRecoveryView: View {
         .task { await model.load() }
         .confirmationDialog("Restore these visibility settings?", isPresented: $confirmsRestore, titleVisibility: .visible) {
             Button("Restore Visibility") { Task { await model.restore() } }
-            Button("Cancel", role: .cancel) {}
+            Button("Cancel", role: .cancel) { /* The dialog dismisses itself; cancelling needs no other work. */ }
         } message: {
             Text("Restore recorded states and enable the apps you selected. Your saved layout and positions will not be changed. Native hiding stays off.")
+        }
+        .alert("Skip recovery?", isPresented: $confirmsBypass) {
+            Button("Skip Recovery") { model.bypassRecovery() }
+            Button("Cancel", role: .cancel) {
+                // Keep recovery active unless the user confirms.
+            }
+        } message: {
+            Text("Thaw will keep the recovery records as backups and continue with Native hiding off. Some apps may remain hidden. Your saved layout and positions will not be changed.")
         }
         .alert("Set aside the unreadable record?", isPresented: $confirmsSetAside) {
             Button("Set Aside") { model.setAsideUnreadableRecords() }
@@ -121,7 +138,7 @@ struct NativeVisibilityRecoveryView: View {
 
     private var setAsideNotice: some View {
         VStack(alignment: .leading, spacing: ThawSpacing.tight) {
-            Text("Thaw moved the unreadable record to:")
+            Text("The previous recovery records are kept at:")
             Text(verbatim: model.setAsideLocations.map(\.path).joined(separator: "\n"))
                 .font(ThawType.detail)
                 .textSelection(.enabled)

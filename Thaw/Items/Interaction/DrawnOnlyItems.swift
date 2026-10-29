@@ -118,11 +118,7 @@ nonisolated enum DrawnOnlyItems {
         let namespace = MenuBarItemAXProvider.namespace(forBundleIdentifier: app.bundleID, localizedName: app.localizedName)
         guard let item = MenuBarItemAXProvider.rawItem(
             namespace: namespace,
-            identifier: nil,
-            childIdentifier: nil,
-            accessibilityDescription: nil,
-            childDescription: nil,
-            axTitle: nil,
+            labels: AXItemLabels(),
             fallbackIndex: 0,
             bounds: frame,
             ownerPID: ownerPID

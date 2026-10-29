@@ -7,27 +7,6 @@
 
 import Foundation
 
-/// The thaw:// operations a launcher drives: it queries, ranks and picks an
-/// identifier; Thaw resolves it, acts, and reports what happened.
-nonisolated enum LauncherURIOperation: String, CaseIterable, Sendable {
-    case listItems = "list-items"
-    case activateItem = "activate-item"
-    case listProfiles = "list-profiles"
-    case applyProfile = "apply-profile"
-    case getAppearance = "get-appearance"
-    case moveItem = "move-item"
-
-    /// The query parameter carrying the identifier the operation acts on.
-    var identifierParameter: String? {
-        switch self {
-        case .listItems, .listProfiles, .getAppearance: nil
-        case .activateItem: "item-id"
-        case .applyProfile: "profile-id"
-        case .moveItem: "item-id"
-        }
-    }
-}
-
 /// A parsed launcher URL. The response parameters are the ones thaw://get
 /// already takes, so a client has one convention to implement.
 nonisolated struct LauncherURIRequest: Equatable, Sendable {
@@ -45,25 +24,21 @@ nonisolated struct LauncherURIRequest: Equatable, Sendable {
         callback != nil || broadcast
     }
 
+    init(operation: LauncherURIOperation, query: SettingsURILauncherQuery) {
+        self.operation = operation
+        self.identifier = query.identifier
+        self.callback = query.callback
+        self.broadcast = query.broadcast
+        self.requestId = query.requestId
+        self.move = query.move.map(LayoutBatchMove.parse)
+    }
+
     /// Returns nil when the URL's host is not a launcher operation.
     init?(url: URL) {
-        guard let operation = LauncherURIOperation(rawValue: url.host?.lowercased() ?? "") else {
+        guard case let .launcher(operation, query) = SettingsURIParser.parse(url).route else {
             return nil
         }
-        let queryItems = URLComponents(url: url, resolvingAgainstBaseURL: false)?.queryItems ?? []
-        func value(_ name: String) -> String? {
-            guard let value = queryItems.first(where: { $0.name == name })?.value, !value.isEmpty else {
-                return nil
-            }
-            return value
-        }
-
-        self.operation = operation
-        self.identifier = operation.identifierParameter.flatMap(value)
-        self.callback = value("callback")
-        self.broadcast = value("broadcast") == "true"
-        self.requestId = value("requestId")
-        self.move = operation == .moveItem ? LayoutBatchMove.parse(url) : nil
+        self.init(operation: operation, query: query)
     }
 }
 

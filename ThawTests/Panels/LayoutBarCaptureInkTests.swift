@@ -42,4 +42,11 @@ struct LayoutBarCaptureInkTests {
         let image = try LayoutBarCaptureInk.drawImage(for: Self.glyph(red: 0.1, green: 0.4, blue: 0.95))
         #expect(!image.isTemplate)
     }
+
+    @Test("A placeholder icon is lighter as a template and faded while disabled", arguments: [
+        (true, true, 0.8), (true, false, 0.9), (false, true, 0.5), (false, false, 0.5),
+    ])
+    func placeholderFraction(isEnabled: Bool, isTemplate: Bool, expected: CGFloat) {
+        #expect(LayoutBarCaptureInk.placeholderFraction(isEnabled: isEnabled, isTemplate: isTemplate) == expected)
+    }
 }

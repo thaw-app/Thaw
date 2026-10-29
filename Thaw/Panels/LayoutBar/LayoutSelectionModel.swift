@@ -31,7 +31,7 @@ final class LayoutSelectionModel {
 
     init(
         announce: @escaping @MainActor (String) -> Void = LayoutSelectionModel.postAnnouncement,
-        onMultiSelect: @escaping @MainActor () -> Void = {}
+        onMultiSelect: @escaping @MainActor () -> Void = { /* Callers that don't react to multiple selection pass nothing. */ }
     ) {
         self.announce = announce
         self.onMultiSelect = onMultiSelect

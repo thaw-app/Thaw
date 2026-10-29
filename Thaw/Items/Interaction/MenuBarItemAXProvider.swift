@@ -265,7 +265,7 @@ nonisolated enum MenuBarItemAXProvider {
             let elapsed = ContinuousClock.now - walkStart
             diagLog.info(
                 """
-                menuBarItems: \(scope == .discovery ? "discovery" : scope == .settledOwners ? "settled" : "targeted") walk \
+                menuBarItems: \(scope.walkLabel) walk \
                 \(truncated ? "TRUNCATED" : "completed") in \(elapsed), \
                 probed \(appsProbed)/\(pass.owners.count) selected / \(runningApps.count) running app(s), \
                 \(appsWithExtrasBar) had an extras menu bar, budget \(globalBudget)
@@ -1360,11 +1360,13 @@ nonisolated enum MenuBarItemAXProvider {
         )
         let derived = rawItem(
             namespace: namespace,
-            identifier: directIdentifier,
-            childIdentifier: childIdentifier,
-            accessibilityDescription: directDescription,
-            childDescription: childDescription,
-            axTitle: attributes.title?.nonEmpty,
+            labels: AXItemLabels(
+                identifier: directIdentifier,
+                childIdentifier: childIdentifier,
+                accessibilityDescription: directDescription,
+                childDescription: childDescription,
+                axTitle: attributes.title?.nonEmpty
+            ),
             fallbackIndex: fallbackIndex,
             bounds: frame,
             ownerPID: ownerPID
@@ -1380,20 +1382,16 @@ nonisolated enum MenuBarItemAXProvider {
     /// items keep the in-process walk's "Item-N" numbering.
     static func rawItem(
         namespace: MenuBarItemTag.Namespace,
-        identifier: String?,
-        childIdentifier: String?,
-        accessibilityDescription: String?,
-        childDescription: String?,
-        axTitle: String?,
+        labels: AXItemLabels,
         fallbackIndex: Int,
         bounds: CGRect,
         ownerPID: pid_t
     ) -> (item: RawItem?, identityTitle: String, fallbackIndex: Int) {
-        let identifier = stableAXIdentifier(identifier?.nonEmpty)
-            ?? stableAXIdentifier(childIdentifier?.nonEmpty)
-        let accessibilityDescription = accessibilityDescription?.nonEmpty
-            ?? childDescription?.nonEmpty
-        let axTitle = axTitle?.nonEmpty
+        let identifier = stableAXIdentifier(labels.identifier?.nonEmpty)
+            ?? stableAXIdentifier(labels.childIdentifier?.nonEmpty)
+        let accessibilityDescription = labels.accessibilityDescription?.nonEmpty
+            ?? labels.childDescription?.nonEmpty
+        let axTitle = labels.axTitle?.nonEmpty
         let fallbackTitle = "Item-\(fallbackIndex)"
         let displayTitle = axTitle ?? accessibilityDescription ?? identifier ?? fallbackTitle
         let nextFallbackIndex = axTitle == nil && accessibilityDescription == nil && identifier == nil

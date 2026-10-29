@@ -5,6 +5,7 @@
 //  Copyright (Thaw) © 2026 Toni Förster
 //  Licensed under the GNU GPLv3
 
+import Algorithms
 import MenuBarModel
 
 /// Whether a concealed section's members already sit in the stored order, each on its side of the dividers.
@@ -23,7 +24,7 @@ enum SettledSectionOrder {
               known.allSatisfy({ dividers.section(for: $0) == section })
         else { return false }
         let leftIsHigher = dividers.hidden > dividers.visibleControl
-        return zip(known, known.dropFirst()).allSatisfy { leftIsHigher ? $0 > $1 : $0 < $1 }
+        return known.adjacentPairs().allSatisfy { leftIsHigher ? $0 > $1 : $0 < $1 }
     }
 
     @MainActor

@@ -10,9 +10,15 @@ import AppKit
 import MenuBarModel
 
 extension NSWindow {
-    /// Nil without a positive backing window number; converting a negative number to unsigned CGWindowID traps.
+    /// Nil unless the window number is a valid CGWindowID.
     var windowServerID: CGWindowID? {
-        windowNumber > 0 ? CGWindowID(windowNumber) : nil
+        Self.windowServerID(forWindowNumber: windowNumber)
+    }
+
+    /// On macOS 27 a status item's window number can be a synthetic value above UInt32.max,
+    /// so a checked conversion would trap.
+    static nonisolated func windowServerID(forWindowNumber windowNumber: Int) -> CGWindowID? {
+        windowNumber > 0 ? CGWindowID(exactly: windowNumber) : nil
     }
 
     /// Register when ordered in so MenuOpenMonitor does not mistake Thaw's overlay for an open menu.

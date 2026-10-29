@@ -70,7 +70,7 @@ struct HotkeysSettingsPane: View {
                 set: { _ in settings.clearPersistenceError() }
             )
         ) { _ in
-            Button("OK") {}
+            Button("OK") { /* The alert dismisses itself, and its binding clears the error. */ }
         } message: { message in
             Text(message)
         }

@@ -120,6 +120,7 @@ nonisolated enum Defaults {
             .customThawIconIsTemplate: DefaultValue.customThawIconIsTemplate,
             .simpleMode: DefaultValue.simpleMode,
             .showSettingDescriptions: DefaultValue.showSettingDescriptions,
+            .blackSettingsBackground: DefaultValue.blackSettingsBackground,
             .simpleModeShowsPreview: DefaultValue.simpleModeShowsPreview,
             .lockThawBarPosition: DefaultValue.lockThawBarPosition,
             .openHiddenItemsInMenuBar: DefaultValue.openHiddenItemsInMenuBar,
@@ -227,6 +228,7 @@ extension Defaults {
         static let customThawIconIsTemplate = false
         static let simpleMode = false
         static let showSettingDescriptions = true
+        static let blackSettingsBackground = false
         static let simpleModeShowsPreview = true
         static let lockThawBarPosition = true
         static let openHiddenItemsInMenuBar = false
@@ -377,6 +379,7 @@ extension Defaults {
         case customThawIconIsTemplate = "CustomIceIconIsTemplate"
         case simpleMode = "SimpleMode"
         case showSettingDescriptions = "ShowSettingDescriptions"
+        case blackSettingsBackground = "BlackSettingsBackground"
         case simpleModeShowsPreview = "SimpleModeShowsPreview"
         case lastSettingsPane = "LastSettingsPane"
         case hiddenSidebarPanes = "HiddenSidebarPanes"
@@ -669,6 +672,7 @@ extension Defaults {
         case settingsURIEnabled = "SettingsURIEnabled"
         case settingsURIWhitelist = "SettingsURIWhitelist"
         case settingsURISigningIdentities = "SettingsURISigningIdentities"
+        case settingsURICodeHashes = "SettingsURICodeHashes"
 
         // MARK: Profile Hooks
 

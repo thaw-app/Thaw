@@ -5,6 +5,7 @@
 //  Copyright (Thaw) © 2026 Toni Förster
 //  Licensed under the GNU GPLv3
 
+import Algorithms
 import MenuBarModel
 import SwiftUI
 import ThawUI
@@ -62,12 +63,9 @@ struct AlertRevealItemList: View {
         let cache = appState.itemManager.itemCache
         let concealable = cache[.hidden] + cache[.alwaysHidden]
 
-        var seen = Set<String>()
-        var rows = concealable.compactMap { item -> Row? in
-            let identifier = item.tag.tagIdentifier
-            guard seen.insert(identifier).inserted else { return nil }
-            return Row(
-                id: identifier,
+        var rows = concealable.uniqued(on: \.tag.tagIdentifier).map { item in
+            Row(
+                id: item.tag.tagIdentifier,
                 name: MenuBarItemDisplayName.displayName(for: item),
                 isPresent: true
             )
@@ -75,7 +73,7 @@ struct AlertRevealItemList: View {
         .sorted { $0.name.localizedStandardCompare($1.name) == .orderedAscending }
 
         rows += enabledIdentifiers
-            .subtracting(seen)
+            .subtracting(rows.map(\.id))
             .sorted()
             .map { Row(id: $0, name: $0, isPresent: false) }
 

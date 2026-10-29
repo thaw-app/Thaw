@@ -88,4 +88,40 @@ struct MenuBarItemGlyphCaptureTests {
         #expect(capture.hashValue == sameImageSameScale.hashValue)
         #expect(capture != sameImageOtherScale)
     }
+
+    @Test("The horizontal trim drops transparent side columns and is memoized")
+    func horizontalTrim() throws {
+        let context = try #require(CGContext(
+            data: nil,
+            width: 20,
+            height: 16,
+            bitsPerComponent: 8,
+            bytesPerRow: 80,
+            space: CGColorSpaceCreateDeviceRGB(),
+            bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue
+        ))
+        context.setFillColor(CGColor(red: 0, green: 0, blue: 0, alpha: 1))
+        context.fill(CGRect(x: 6, y: 2, width: 8, height: 12))
+        let capture = try MenuBarItemGlyphCapture(cgImage: #require(context.makeImage()), scale: 1)
+
+        let trimmed = try #require(capture.horizontallyTrimmedCGImage)
+
+        #expect(trimmed.width == 8)
+        #expect(trimmed.height == 16)
+        #expect(capture.horizontallyTrimmedCGImage === trimmed)
+        // A copy of the value shares the memoized trim.
+        let copy = capture
+        #expect(copy.horizontallyTrimmedCGImage === trimmed)
+    }
+
+    @Test("A fully transparent crop has nothing to trim to")
+    func trimOfBlankCrop() throws {
+        #expect(try Self.capture(gray: nil).horizontallyTrimmedCGImage == nil)
+    }
+
+    @Test("Same-size crops with different pixels are not visually equal")
+    func differentPixelsDiffer() throws {
+        #expect(try !MenuBarItemGlyphCapture.isVisuallyEqual(Self.capture(gray: 1), Self.capture(gray: 0.2)))
+        #expect(try MenuBarItemGlyphCapture.isVisuallyEqual(Self.capture(gray: 0.5), Self.capture(gray: 0.5)))
+    }
 }

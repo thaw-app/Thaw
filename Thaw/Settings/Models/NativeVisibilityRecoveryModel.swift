@@ -28,6 +28,8 @@ final class NativeVisibilityRecoveryModel {
         var isUnreadableRecord: (Error) -> Bool = { _ in false }
         /// Moves the unreadable records aside and returns where they went.
         var setAsideUnreadableRecords: () throws -> [URL] = { [] }
+        /// Present only when the runtime can back up and skip recovery without changing visibility.
+        var bypassRecovery: (() throws -> [URL])?
     }
 
     private(set) var candidates: [Candidate] = []
@@ -46,6 +48,10 @@ final class NativeVisibilityRecoveryModel {
 
     init(environment: Environment) {
         self.environment = environment
+    }
+
+    var supportsRecoveryBypass: Bool {
+        environment.bypassRecovery != nil
     }
 
     var canRestore: Bool {
@@ -89,6 +95,28 @@ final class NativeVisibilityRecoveryModel {
             setAsideLocations = try environment.setAsideUnreadableRecords()
             recordIsUnreadable = false
             try loadInventory()
+        } catch {
+            noteFailure(error)
+        }
+    }
+
+    /// The view calls this only after the user confirmed that unresolved apps may stay hidden.
+    func bypassRecovery() {
+        guard !isBusy, let bypass = environment.bypassRecovery else { return }
+        isBusy = true
+        errorMessage = nil
+        successMessage = nil
+        defer { isBusy = false }
+        do {
+            try requireExclusiveAccess()
+            environment.disableNativeHiding()
+            setAsideLocations = try bypass()
+            hasLoaded = false
+            recordIsUnreadable = false
+            recordedBundleIDs = []
+            selectedBundleIDs = []
+            candidates = []
+            successMessage = String(localized: "Recovery was skipped. Your saved layout and positions were not changed. Quit recovery and reopen Thaw. Native hiding remains off.")
         } catch {
             noteFailure(error)
         }

@@ -5,6 +5,7 @@
 //  Copyright (Thaw) © 2026 Toni Förster
 //  Licensed under the GNU GPLv3
 
+import AppKit
 import CoreGraphics
 import Testing
 @testable import Thaw
@@ -118,5 +119,77 @@ struct MenuBarCapacitySnapshotTests {
         #expect(!MenuBarSection.overflowsInline(
             totalItemsWidth: 10000, capacity: capacity, allowHidingApplicationMenus: false
         ))
+    }
+
+    private func plain(
+        trailing: CGFloat? = 1300,
+        notch: CGRect? = nil,
+        overflow: [CGRect] = []
+    ) -> MenuBarCapacitySnapshot {
+        MenuBarCapacitySnapshot(
+            displayID: 1,
+            displayBounds: display,
+            notchFrame: notch,
+            applicationMenuFrame: menu(width: 300),
+            trailingBoundary: trailing,
+            overflowControlBounds: overflow
+        )
+    }
+
+    private func bar(_ minX: CGFloat, _ maxX: CGFloat) -> CGRect {
+        CGRect(x: minX, y: 4, width: maxX - minX, height: 16)
+    }
+
+    @Test("Reserved spans are clipped to the lane and counted once where they overlap")
+    func reservationsMerge() {
+        let snapshot = plain()
+        // The lane runs from the menus' end at 300 to Control Center at 1300.
+        #expect(snapshot.availableWidth(applicationMenus: .visible) == 1000)
+        #expect(snapshot.availableWidth(applicationMenus: .hidden) == 1300)
+
+        let overlapping = [bar(400, 500), bar(450, 600), bar(450, 520)]
+        #expect(snapshot.availableWidth(applicationMenus: .visible, reserving: overlapping) == 800)
+
+        let apart = [bar(400, 500), bar(700, 750)]
+        #expect(snapshot.availableWidth(applicationMenus: .visible, reserving: apart) == 850)
+
+        let clipped = [bar(200, 350), bar(1250, 1400)]
+        #expect(snapshot.availableWidth(applicationMenus: .visible, reserving: clipped) == 900, "only the parts inside the lane count")
+
+        let ignored = [CGRect.null, .zero, bar(100, 200), CGRect(x: 2000, y: 4, width: 50, height: 16)]
+        #expect(snapshot.availableWidth(applicationMenus: .visible, reserving: ignored) == 1000)
+    }
+
+    @Test("The native overflow control is reserved like any other item")
+    func overflowControlReserved() {
+        let snapshot = plain(overflow: [bar(1200, 1230)])
+        #expect(snapshot.availableWidth(applicationMenus: .visible) == 970)
+        #expect(snapshot.availableWidth(applicationMenus: .visible, reserving: [bar(1210, 1240)]) == 960)
+    }
+
+    @Test("No width is known without a usable trailing boundary, menu frame or notch")
+    func unknownWidth() {
+        #expect(plain(trailing: nil).availableWidth(applicationMenus: .hidden) == nil)
+        #expect(plain(trailing: 0).availableWidth(applicationMenus: .hidden) == nil)
+        #expect(plain(trailing: 2000).availableWidth(applicationMenus: .hidden) == nil)
+        #expect(plain(trailing: .infinity).availableWidth(applicationMenus: .hidden) == nil)
+        #expect(plain(notch: .zero).availableWidth(applicationMenus: .hidden) == nil)
+        #expect(snapshot(notch: nil, menu: nil).availableWidth(applicationMenus: .visible) == nil)
+        #expect(snapshot(notch: nil, menu: nil).availableWidth(applicationMenus: .hidden) == 1300)
+    }
+
+    @Test("A snapshot of a real screen covers that display and finds its trailing boundary")
+    @MainActor
+    func captureRealScreen() throws {
+        let screen = try #require(NSScreen.screens.first)
+        let bounds = CGDisplayBounds(screen.displayID)
+        let empty = MenuBarCapacitySnapshot.capture(on: screen, items: [])
+        #expect(empty.displayID == screen.displayID)
+        #expect(empty.displayBounds == bounds)
+        #expect(empty.trailingBoundary == bounds.maxX, "with no Control Center the display's edge bounds the lane")
+        #expect(empty.notchFrame == screen.frameOfNotch)
+        if screen.frameOfNotch == nil {
+            #expect(!MenuBarCapacitySnapshot.applicationMenuWrapsPastNotch(on: screen))
+        }
     }
 }

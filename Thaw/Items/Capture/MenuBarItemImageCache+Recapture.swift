@@ -5,6 +5,7 @@
 //  Copyright (Thaw) © 2026 Toni Förster
 //  Licensed under the GNU GPLv3
 
+import Algorithms
 import Cocoa
 import MenuBarModel
 import ThawCapture
@@ -602,7 +603,8 @@ extension MenuBarItemImageCache {
             let missing = items
                 .filter { settledByIdentifier[$0.uniqueIdentifier] == nil }
                 .map(\.logString)
-            let ending = Task.isCancelled ? "before the wait was cancelled" : ContinuousClock.now < deadline ? "in \(maxAttempts) polls" : "within the settle budget"
+            let budgetEnding = ContinuousClock.now < deadline ? "in \(maxAttempts) polls" : "within the settle budget"
+            let ending = Task.isCancelled ? "before the wait was cancelled" : budgetEnding
             MenuBarItemImageCache.diagLog.debug(
                 "waitForRevealedItems: \(missing.count) of \(items.count) revealed item(s) never settled \(ending); no capture for \(missing)"
             )
@@ -686,11 +688,9 @@ extension MenuBarItemImageCache {
             hasNotch: NSScreen.screen(for: displayID)?.hasNotch ?? false
         )
         await captureRevealBatches(
-            items.chunks(ofCount: batchSize),
+            items.chunks(ofCount: batchSize).map(Array.init),
             controller: controller,
-            displayID: displayID,
-            admittedDisplayID: admittedDisplayID,
-            scale: scale,
+            target: RevealCaptureTarget(displayID: displayID, admittedDisplayID: admittedDisplayID, scale: scale),
             missPolicy: missPolicy,
             appState: appState,
             sources: RevealCaptureSources(
@@ -715,9 +715,7 @@ extension MenuBarItemImageCache {
     func captureRevealBatches(
         _ batches: [[MenuBarItem]],
         controller: any MenuBarSectionControlling,
-        displayID: CGDirectDisplayID,
-        admittedDisplayID: CGDirectDisplayID?,
-        scale: CGFloat,
+        target: RevealCaptureTarget,
         missPolicy: RevealMissPolicy,
         appState: AppState,
         sources: RevealCaptureSources
@@ -757,7 +755,7 @@ extension MenuBarItemImageCache {
             // reject every batch. From here on a change is a real move.
             let admission = CapturePublicationPolicy.admit(
                 layout: appState.itemManager.layoutPublication,
-                displayID: admittedDisplayID
+                displayID: target.admittedDisplayID
             )
             // A move already running, or a display that switched while the
             // reveal settled: do not screenshot a bar this batch cannot publish.
@@ -779,8 +777,8 @@ extension MenuBarItemImageCache {
             // and can crop one display's bounds against another's screenshot.
             let captureResult = await axBoundsCapture(
                 revealed.map { (item: $0.live, bounds: $0.live.bounds) },
-                scale: scale,
-                displayID: displayID,
+                scale: target.scale,
+                displayID: target.displayID,
                 validateFreshBounds: true,
                 // This path just revealed the items itself and waited for
                 // their live AX elements, so none of them is concealed here.

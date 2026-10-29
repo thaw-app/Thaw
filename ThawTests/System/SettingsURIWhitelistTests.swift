@@ -23,12 +23,13 @@ import Testing
 @Suite("Settings URI whitelist gate", .serialized)
 struct SettingsURIWhitelistTests {
     /// A bundle identifier no installed app can claim.
-    ///
-    /// The gate resolves a sender through LaunchServices, so a fabricated id
-    /// is what makes these tests deterministic: the lookup finds nothing and
-    /// the "current team identifier" is reliably nil.
     private func unclaimedBundleID(_ label: String) -> String {
         "com.example.thawtests.\(label).\(UUID().uuidString)"
+    }
+
+    /// A sender as the Apple Event's validated signature would name it.
+    private func sender(_ bundleID: String, team: String? = nil, hash: String? = "c0ffee") -> SettingsURISender {
+        SettingsURISender(bundleIdentifier: bundleID, teamIdentifier: team, codeHash: hash)
     }
 
     // MARK: - Who may write
@@ -45,25 +46,26 @@ struct SettingsURIWhitelistTests {
     }
 
     @Test("An app that was never approved does not pass the gate", .scratchDefaults)
-    func unapprovedSenderIsRefused() throws {
+    func unapprovedSenderIsRefused() {
         #expect(SettingsURIHandler.getWhitelist().isEmpty, "A fresh install approves nobody")
-        #expect(!SettingsURIHandler.isWhitelisted(bundleIdentifier: unclaimedBundleID("stranger")))
+        #expect(!SettingsURIHandler.isWhitelisted(sender: sender(unclaimedBundleID("stranger"))))
     }
 
-    @Test("A request whose sender cannot be identified does not pass the gate", .scratchDefaults, arguments: [nil, ""] as [String?])
-    func unidentifiedSenderIsRefused(bundleIdentifier: String?) throws {
-        // The Apple Event carries no usable sender PID, or the process it
+    @Test("A request whose sender cannot be identified does not pass the gate", .scratchDefaults)
+    func unidentifiedSenderIsRefused() {
+        // The Apple Event carries no validated signature, or the process it
         // named is gone. Anonymous has to mean refused, not "unknown app".
-        #expect(!SettingsURIHandler.isWhitelisted(bundleIdentifier: bundleIdentifier))
+        #expect(!SettingsURIHandler.isWhitelisted(sender: nil))
+        #expect(!SettingsURIHandler.isWhitelisted(sender: sender("")))
     }
 
     @Test("Approving an app grants access, and the approval is written where a relaunch will find it", .scratchDefaults)
-    func approvalGrantsAccessAndPersists() throws {
+    func approvalGrantsAccessAndPersists() {
         let scratch = Defaults.store
         let bundleID = unclaimedBundleID("approved")
-        SettingsURIHandler.addToWhitelist(bundleId: bundleID)
+        SettingsURIHandler.addToWhitelist(bundleId: bundleID, teamIdentifier: "TEAMID1234")
 
-        #expect(SettingsURIHandler.isWhitelisted(bundleIdentifier: bundleID))
+        #expect(SettingsURIHandler.isWhitelisted(sender: sender(bundleID, team: "TEAMID1234")))
         #expect(SettingsURIHandler.getWhitelist() == [bundleID])
 
         // Read the suite directly rather than through the handler: the
@@ -74,7 +76,7 @@ struct SettingsURIWhitelistTests {
     }
 
     @Test("Approving the same app twice leaves one entry", .scratchDefaults)
-    func approvalIsNotDuplicated() throws {
+    func approvalIsNotDuplicated() {
         let bundleID = unclaimedBundleID("twice")
         SettingsURIHandler.addToWhitelist(bundleId: bundleID)
         SettingsURIHandler.addToWhitelist(bundleId: bundleID)
@@ -85,13 +87,13 @@ struct SettingsURIWhitelistTests {
     }
 
     @Test("Removing an app revokes its access and forgets the signature it was pinned to", .scratchDefaults)
-    func removalRevokesAccessAndForgetsTheSignature() throws {
+    func removalRevokesAccessAndForgetsTheSignature() {
         let scratch = Defaults.store
         let bundleID = unclaimedBundleID("revoked")
         SettingsURIHandler.addToWhitelist(bundleId: bundleID, teamIdentifier: "TEAMID1234")
         SettingsURIHandler.removeFromWhitelist(bundleId: bundleID)
 
-        #expect(!SettingsURIHandler.isWhitelisted(bundleIdentifier: bundleID))
+        #expect(!SettingsURIHandler.isWhitelisted(sender: sender(bundleID, team: "TEAMID1234")))
         #expect(SettingsURIHandler.getWhitelist().isEmpty)
 
         // The stored team identifier has to go with the entry. Left
@@ -103,20 +105,65 @@ struct SettingsURIWhitelistTests {
     }
 
     @Test("Being on the list is not enough: an approval pinned to a team identifier dies with it", .scratchDefaults)
-    func signatureDriftRevokesAccess() throws {
-        // Nothing installed claims this bundle id, so its current team
-        // identifier resolves to nil while the stored one says otherwise.
-        // That is the same shape as an approved app being replaced by an
-        // unsigned or differently signed binary at the same bundle id.
+    func signatureDriftRevokesAccess() {
+        // Another app claiming the approved bundle id, unsigned or signed by
+        // another team, is refused even though the id is on the list.
         let bundleID = unclaimedBundleID("pinned")
         SettingsURIHandler.addToWhitelist(bundleId: bundleID, teamIdentifier: "TEAMID1234")
 
         #expect(SettingsURIHandler.getWhitelist() == [bundleID], "Still listed…")
-        #expect(!SettingsURIHandler.isWhitelisted(bundleIdentifier: bundleID), "…and still refused")
+        #expect(!SettingsURIHandler.isWhitelisted(sender: sender(bundleID)), "…and still refused")
+        #expect(!SettingsURIHandler.isWhitelisted(sender: sender(bundleID, team: "OTHERTEAM1")))
+    }
+
+    @Test("An approval without a team is pinned to the approved code hash", .scratchDefaults)
+    func noTeamApprovalNeedsTheSameCode() {
+        let scratch = Defaults.store
+        let bundleID = unclaimedBundleID("adhoc")
+        SettingsURIHandler.addToWhitelist(bundleId: bundleID, codeHash: "aaaa")
+
+        #expect(SettingsURIHandler.isWhitelisted(sender: sender(bundleID, hash: "aaaa")))
+        #expect(!SettingsURIHandler.isWhitelisted(sender: sender(bundleID, hash: "bbbb")), "Other unsigned code is refused")
+        #expect(!SettingsURIHandler.isWhitelisted(sender: sender(bundleID, hash: nil)))
+
+        let hashes = scratch.data(forKey: Defaults.Key.settingsURICodeHashes.rawValue)
+            .flatMap { try? JSONDecoder().decode([String: String].self, from: $0) } ?? [:]
+        #expect(hashes[bundleID] == "aaaa")
+
+        SettingsURIHandler.removeFromWhitelist(bundleId: bundleID)
+        let remaining = scratch.data(forKey: Defaults.Key.settingsURICodeHashes.rawValue)
+            .flatMap { try? JSONDecoder().decode([String: String].self, from: $0) } ?? [:]
+        #expect(remaining[bundleID] == nil, "Revoking forgets the code hash too")
+    }
+
+    @Test("An older approval with neither team nor code hash asks again, then is upgraded", .scratchDefaults)
+    func legacyNoTeamApprovalIsUpgraded() {
+        let bundleID = unclaimedBundleID("legacy")
+        SettingsURIHandler.addToWhitelist(bundleId: bundleID)
+        #expect(!SettingsURIHandler.isWhitelisted(sender: sender(bundleID, hash: "aaaa")), "No pin yet, so the user is asked")
+
+        // Approving the prompt records the sender's code hash on the existing entry.
+        SettingsURIHandler.addToWhitelist(bundleId: bundleID, codeHash: "aaaa")
+        #expect(SettingsURIHandler.getWhitelist() == [bundleID])
+        #expect(SettingsURIHandler.isWhitelisted(sender: sender(bundleID, hash: "aaaa")))
+    }
+
+    @Test("Approving an app again replaces the identity it was pinned to", .scratchDefaults)
+    func reapprovalReplacesThePin() {
+        let bundleID = unclaimedBundleID("repinned")
+        SettingsURIHandler.addToWhitelist(bundleId: bundleID, codeHash: "aaaa")
+        SettingsURIHandler.addToWhitelist(bundleId: bundleID, teamIdentifier: "TEAMID1234")
+
+        #expect(SettingsURIHandler.isWhitelisted(sender: sender(bundleID, team: "TEAMID1234")))
+        #expect(!SettingsURIHandler.isWhitelisted(sender: sender(bundleID, hash: "aaaa")), "The old code hash no longer counts")
+
+        // A plain add from the settings pane keeps the pin it already has.
+        SettingsURIHandler.addToWhitelist(bundleId: bundleID)
+        #expect(SettingsURIHandler.isWhitelisted(sender: sender(bundleID, team: "TEAMID1234")))
     }
 
     @Test("The whole surface is off until the user turns it on", .scratchDefaults)
-    func featureGateDefaultsOff() throws {
+    func featureGateDefaultsOff() {
         #expect(!SettingsURIHandler.isEnabled(), "thaw:// settings writes are opt-in")
         Defaults.set(true, forKey: .settingsURIEnabled)
         #expect(SettingsURIHandler.isEnabled())
@@ -136,7 +183,7 @@ struct SettingsURIWhitelistTests {
         // An empty list is not a pass: it would satisfy every check below.
         #expect(!published.isEmpty, "No keys were published; the allow-list check proves nothing")
 
-        for key in ["settingsURIEnabled", "settingsURIWhitelist", "settingsURISigningIdentities"] {
+        for key in ["settingsURIEnabled", "settingsURIWhitelist", "settingsURISigningIdentities", "settingsURICodeHashes"] {
             #expect(!published.contains(key))
             #expect(!SettingsURIHandler.isValidSettingsKey(key), "\(key) must not be settable over thaw://")
         }
@@ -151,7 +198,7 @@ struct SettingsURIWhitelistTests {
     }
 
     @Test("An unrecognised key is refused and writes nothing", .scratchDefaults)
-    func unknownKeyWritesNothing() throws {
+    func unknownKeyWritesNothing() {
         let scratch = Defaults.store
         let sender = unclaimedBundleID("sender")
 
@@ -167,7 +214,7 @@ struct SettingsURIWhitelistTests {
     }
 
     @Test("Toggle refuses a key that is not a Boolean", .scratchDefaults, arguments: ["rehideInterval", "rehideStrategy"])
-    func toggleRefusesNonBooleanKeys(key: String) throws {
+    func toggleRefusesNonBooleanKeys(key: String) {
         let scratch = Defaults.store
         // toggle flips a Bool. Pointed at a duration or an enum it would
         // write true over a number, so it has to refuse rather than
@@ -177,7 +224,7 @@ struct SettingsURIWhitelistTests {
     }
 
     @Test("Toggle refuses a malformed display UUID, matching set", .scratchDefaults)
-    func toggleRefusesMalformedDisplayUUID() throws {
+    func toggleRefusesMalformedDisplayUUID() {
         let sender = unclaimedBundleID("sender")
         // Both contain a hyphen, which the old shape check accepted, but
         // neither is a UUID. set has always refused them; toggle must
@@ -234,5 +281,44 @@ struct SettingsURIWhitelistTests {
         #expect(SettingsURIHandler.canonicalKey("useIceBar") == "useThawBar")
         #expect(SettingsURIHandler.isValidSettingsKey("showIceIcon"))
         #expect(SettingsURIHandler.canonicalKey("showThawIcon") == "showThawIcon", "Current names pass through")
+    }
+
+    // MARK: - Adding an app by hand
+
+    @Test("An app added by hand is pinned to its own signature, so its requests pass", .scratchDefaults)
+    func manualAddIsPinned() {
+        let settings = AutomationSettings()
+        let teamApp = unclaimedBundleID("manual-team")
+        let adhocApp = unclaimedBundleID("manual-adhoc")
+        let url = URL(fileURLWithPath: "/Applications/Example.app")
+
+        #expect(settings.addToWhitelist(appAt: url, bundleID: teamApp) { _ in sender(teamApp, team: "TEAMID1234") })
+        #expect(settings.addToWhitelist(appAt: url, bundleID: adhocApp) { _ in sender(adhocApp, hash: "aaaa") })
+
+        #expect(SettingsURIHandler.isWhitelisted(sender: sender(teamApp, team: "TEAMID1234")))
+        #expect(!SettingsURIHandler.isWhitelisted(sender: sender(teamApp, team: "OTHERTEAM1")))
+        #expect(SettingsURIHandler.isWhitelisted(sender: sender(adhocApp, hash: "aaaa")))
+        #expect(!SettingsURIHandler.isWhitelisted(sender: sender(adhocApp, hash: "bbbb")))
+        #expect(settings.whitelistedApps.map(\.bundleId).sorted() == [adhocApp, teamApp].sorted())
+    }
+
+    @Test("A hand-picked app whose signature can't be read or names another app is not added", .scratchDefaults)
+    func manualAddRefusesUnsignedOrMismatched() {
+        let settings = AutomationSettings()
+        let bundleID = unclaimedBundleID("manual-refused")
+        let url = URL(fileURLWithPath: "/Applications/Example.app")
+
+        #expect(!settings.addToWhitelist(appAt: url, bundleID: bundleID) { _ in nil })
+        #expect(!settings.addToWhitelist(appAt: url, bundleID: bundleID) { _ in sender("com.example.other", team: "TEAMID1234") })
+        #expect(!settings.addToWhitelist(appAt: url, bundleID: bundleID) { _ in sender(bundleID, team: nil, hash: nil) })
+        #expect(SettingsURIHandler.getWhitelist().isEmpty)
+    }
+
+    @Test("An app's identity is read from its own validated signature")
+    func identifyAppOnDisk() {
+        let calculator = SettingsURISender.identify(appAt: URL(fileURLWithPath: "/System/Applications/Calculator.app"))
+        #expect(calculator?.bundleIdentifier == "com.apple.calculator")
+        #expect(calculator?.codeHash != nil)
+        #expect(SettingsURISender.identify(appAt: FileManager.default.temporaryDirectory) == nil)
     }
 }

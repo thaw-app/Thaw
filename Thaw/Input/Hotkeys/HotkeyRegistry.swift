@@ -85,6 +85,11 @@ final class HotkeyRegistry {
             return nil
         }
 
+        guard let carbonCodes = Self.carbonCodes(for: keyCombination) else {
+            diagLog.error("Hotkey key code \(keyCombination.key.rawValue) is out of range; skipping it")
+            return nil
+        }
+
         let installStatus = installEventHandlerIfNeeded()
         guard installStatus == noErr else {
             diagLog.error("Hotkey event handler installation failed with status \(installStatus)")
@@ -102,8 +107,8 @@ final class HotkeyRegistry {
         let binding = Binding(
             identifier: EventHotKeyID(signature: signature, id: id),
             eventKind: eventKind,
-            carbonKeyCode: UInt32(keyCombination.key.rawValue),
-            carbonModifiers: UInt32(keyCombination.modifiers.carbonFlags),
+            carbonKeyCode: carbonCodes.keyCode,
+            carbonModifiers: carbonCodes.modifiers,
             perform: handler
         )
 
@@ -113,6 +118,18 @@ final class HotkeyRegistry {
 
         bindings[id] = binding
         return id
+    }
+
+    /// The Carbon key code and modifiers, or nil when either doesn't fit, so a bad binding is skipped instead of trapping.
+    static func carbonCodes(for keyCombination: KeyCombination) -> (keyCode: UInt32, modifiers: UInt32)? {
+        guard
+            keyCombination.key.isValid,
+            let keyCode = UInt32(exactly: keyCombination.key.rawValue),
+            let modifiers = UInt32(exactly: keyCombination.modifiers.carbonFlags)
+        else {
+            return nil
+        }
+        return (keyCode, modifiers)
     }
 
     /// - Parameter id: The ID returned by register(hotkey:eventKind:handler:).

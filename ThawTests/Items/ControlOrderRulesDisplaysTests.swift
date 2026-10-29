@@ -21,16 +21,6 @@ struct ControlOrderRulesDisplaysTests {
                     title: tag.title, isOnScreen: true)
     }
 
-    @Test("Siri left of the Visible control is found on a listed display")
-    func trailingSiriOnListedDisplay() {
-        let items = [
-            item(.siri, x: 100),
-            item(.visibleControlItem, x: 130),
-            item(MenuBarItemTag(namespace: .menuBarAgent, title: "ControlCenter"), x: 160),
-        ]
-        #expect(ControlOrderRules.trailingSiriIsMisplaced(in: items, displays: [Self.display]))
-    }
-
     @Test("an app right of the anchored group is found on a listed display")
     func anchoredViolationOnListedDisplay() {
         let items = [

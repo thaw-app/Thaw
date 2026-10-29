@@ -30,7 +30,7 @@ struct ThawBarItemView: View {
     var activationRequest = 0
     /// Told when the pointer enters this item, so the keyboard highlight can
     /// give way to it.
-    var onPointerEntered: () -> Void = {}
+    var onPointerEntered: () -> Void = { /* Items outside a keyboard-driven list have no highlight to clear. */ }
 
     @State private var isHovered = false
     @Environment(\.accessibilityReduceMotion) private var reduceMotion

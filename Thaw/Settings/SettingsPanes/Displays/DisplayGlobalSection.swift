@@ -221,12 +221,12 @@ extension DisplaySettingsPane {
                     errorMessage = error.localizedDescription
                 }
             }
-            Button(String(localized: "Cancel"), role: .cancel) {}
+            Button(String(localized: "Cancel"), role: .cancel) { /* The dialog dismisses itself; cancelling needs no other work. */ }
         } else {
             Button(String(localized: "Apply"), role: .destructive) {
                 commitGlobalApply()
             }
-            Button(String(localized: "Cancel"), role: .cancel) {}
+            Button(String(localized: "Cancel"), role: .cancel) { /* The dialog dismisses itself; cancelling needs no other work. */ }
         }
     }
 

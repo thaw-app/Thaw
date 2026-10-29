@@ -21,4 +21,11 @@ enum LayoutBarCaptureInk {
         image.isTemplate = capture.isSingleInkGlyph
         return image
     }
+
+    /// How opaquely a placeholder's app icon is drawn: a template a little
+    /// lighter than a colour icon, and either one faded while disabled.
+    static func placeholderFraction(isEnabled: Bool, isTemplate: Bool) -> CGFloat {
+        guard isEnabled else { return 0.5 }
+        return isTemplate ? 0.8 : 0.9
+    }
 }

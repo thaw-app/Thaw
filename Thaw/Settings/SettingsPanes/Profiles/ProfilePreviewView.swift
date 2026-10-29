@@ -164,6 +164,7 @@ struct ProfilePreviewView: View {
                         .font(.caption)
                         .foregroundStyle(ThawInk.supporting)
                 }
+                reorderedSections(diff)
 
                 if !diff.unavailable.isEmpty {
                     Text("\(diff.unavailable.count) saved items are not on the bar right now and will be left alone")
@@ -215,6 +216,14 @@ struct ProfilePreviewView: View {
                     }
                 }
             }
+        }
+    }
+
+    private func reorderedSections(_ diff: ProfileLayoutDiff) -> some View {
+        ForEach(diff.reorderedSections, id: \.self) { key in
+            Text("Reorders items in \(Text(sectionTitle(for: key)))")
+                .font(.caption)
+                .foregroundStyle(ThawInk.supporting)
         }
     }
 

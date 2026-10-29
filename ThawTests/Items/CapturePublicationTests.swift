@@ -257,7 +257,7 @@ private struct CaptureWorld {
     func capture(forgiving forgivenTags: Set<MenuBarItemTag>) async -> MenuBarItemImageCache.CapturePass {
         await cache.captureImages(
             of: items, scale: 2, displayID: Self.display, screenFrame: nil,
-            freshBounds: true, concealedIdentifiers: [], forgivenTags: forgivenTags, using: reader
+            options: .init(freshBounds: true, forgivenTags: forgivenTags), using: reader
         )
     }
 
@@ -506,9 +506,7 @@ struct GroupedRevealPublicationTests {
         await world.cache.captureRevealBatches(
             [[world.fresh], [world.retried]],
             controller: controller,
-            displayID: CaptureWorld.display,
-            admittedDisplayID: world.appState.itemManager.itemDisplayID,
-            scale: 2,
+            target: .init(displayID: CaptureWorld.display, admittedDisplayID: world.appState.itemManager.itemDisplayID, scale: 2),
             missPolicy: .dropUntrustedEntries,
             appState: world.appState,
             sources: .init(
@@ -536,9 +534,7 @@ struct GroupedRevealPublicationTests {
         await world.cache.captureRevealBatches(
             [[world.fresh], [world.retried]],
             controller: controller,
-            displayID: CaptureWorld.display,
-            admittedDisplayID: world.appState.itemManager.itemDisplayID,
-            scale: 2,
+            target: .init(displayID: CaptureWorld.display, admittedDisplayID: world.appState.itemManager.itemDisplayID, scale: 2),
             missPolicy: .dropUntrustedEntries,
             appState: world.appState,
             sources: .init(
@@ -561,9 +557,7 @@ struct GroupedRevealPublicationTests {
         await world.cache.captureRevealBatches(
             [[world.fresh], [world.retried]],
             controller: controller,
-            displayID: CaptureWorld.display,
-            admittedDisplayID: world.appState.itemManager.itemDisplayID,
-            scale: 2,
+            target: .init(displayID: CaptureWorld.display, admittedDisplayID: world.appState.itemManager.itemDisplayID, scale: 2),
             missPolicy: .dropUntrustedEntries,
             appState: world.appState,
             sources: .init(

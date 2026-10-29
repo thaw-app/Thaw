@@ -17,7 +17,7 @@ extension View {
         role: ButtonRole? = nil
     ) -> some View {
         alert(title, item: message) { _ in
-            Button("OK", role: role) {}
+            Button("OK", role: role) { /* The alert dismisses itself, and its binding clears the message. */ }
         } message: { message in
             Text(message)
         }

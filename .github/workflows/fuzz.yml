@@ -18,7 +18,7 @@ on:
       - development
     paths:
       - "Fuzzing/**"
-      - "Thaw/Utilities/SettingsURIParser.swift"
+      - "Thaw/System/SettingsURIParser.swift"
       - ".github/workflows/fuzz.yml"
 
 concurrency:

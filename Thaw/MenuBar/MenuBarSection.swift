@@ -377,6 +377,7 @@ final class MenuBarSection {
 
     private func startRehideChecks() {
         rehideTask?.cancel()
+        rehideTask = nil
         rehideMonitor?.stop()
 
         guard
@@ -403,22 +404,29 @@ final class MenuBarSection {
                 Context.lastTime.withLock { $0 = now }
 
                 guard let self, appState != nil else { return event }
-                if !isMouseInsideActiveArea() {
-                    if rehideTask == nil {
-                        rehideTask = makeRehideTask(interval: configuration.rehideInterval) { [weak self] in
-                            self?.diagLog.debug("Open menu detected - restarting timed rehide task")
-                            await self?.restartTimedRehideTimer()
-                        }
-                    }
-                } else {
-                    rehideTask?.cancel()
-                    rehideTask = nil
-                }
+                updateTimedRehide()
                 return event
             }
 
             rehideMonitor?.start()
+            // A reveal may be followed by no movement at all, so the countdown starts now.
+            updateTimedRehide()
         case .focusedApp:
+            break
+        }
+    }
+
+    private func updateTimedRehide() {
+        switch TimedRehideStep.next(pointerInBar: isMouseInsideActiveArea(), countdownRunning: rehideTask != nil) {
+        case .start:
+            rehideTask = makeRehideTask(interval: configuration.rehideInterval) { [weak self] in
+                self?.diagLog.debug("Open menu detected - restarting timed rehide task")
+                await self?.restartTimedRehideTimer()
+            }
+        case .cancel:
+            rehideTask?.cancel()
+            rehideTask = nil
+        case .keep:
             break
         }
     }

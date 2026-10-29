@@ -58,7 +58,7 @@ final class InertSectionController: MenuBarSectionControlling {
         false
     }
 
-    func endClockActivationBridge() {}
+    func endClockActivationBridge() { /* Nothing to do until setup supplies the real controller. */ }
 
     func displayOrdered(_ items: [MenuBarItem], in _: MenuBarSectionName) -> [MenuBarItem] {
         items
@@ -88,21 +88,21 @@ final class InertSectionController: MenuBarSectionControlling {
         []
     }
 
-    func resetAssignment(to _: [String: MenuBarSectionName]) {}
+    func resetAssignment(to _: [String: MenuBarSectionName]) { /* Nothing to do until setup supplies the real controller. */ }
 
-    func applyProfileLayout(itemSectionMap _: [String: String], itemOrder _: [String: [String]]) {}
+    func applyProfileLayout(itemSectionMap _: [String: String], itemOrder _: [String: [String]]) { /* Nothing to do until setup supplies the real controller. */ }
 
-    func show(_: MenuBarSectionName, reconcileBoundary _: Bool, synchronizeOrder _: Bool) {}
+    func show(_: MenuBarSectionName, reconcileBoundary _: Bool, synchronizeOrder _: Bool) { /* Nothing to do until setup supplies the real controller. */ }
 
-    func hideRevealedSections() {}
+    func hideRevealedSections() { /* Nothing to do until setup supplies the real controller. */ }
 
-    func revealItemTemporarily(_: String) {}
+    func revealItemTemporarily(_: String) { /* Nothing to do until setup supplies the real controller. */ }
 
-    func scheduleTemporaryItemConceal(_: String) {}
+    func scheduleTemporaryItemConceal(_: String) { /* Nothing to do until setup supplies the real controller. */ }
 
-    func setSectionOrder(_: [String], for _: MenuBarSectionName) {}
+    func setSectionOrder(_: [String], for _: MenuBarSectionName) { /* Nothing to do until setup supplies the real controller. */ }
 
-    func setSectionOrder(from _: [MenuBarItem], for _: MenuBarSectionName) {}
+    func setSectionOrder(from _: [MenuBarItem], for _: MenuBarSectionName) { /* Nothing to do until setup supplies the real controller. */ }
 
     var sectionItemOrder: [MenuBarSectionName: [String]] {
         [:]
@@ -120,29 +120,29 @@ final class InertSectionController: MenuBarSectionControlling {
         false
     }
 
-    func setSection(_: MenuBarSectionName, identifier _: String) {}
+    func setSection(_: MenuBarSectionName, identifier _: String) { /* Nothing to do until setup supplies the real controller. */ }
 
-    func setSection(_: MenuBarSectionName, item _: MenuBarItem) {}
+    func setSection(_: MenuBarSectionName, item _: MenuBarItem) { /* Nothing to do until setup supplies the real controller. */ }
 
-    func concealTemporarilyRevealedItem(_: String) {}
+    func concealTemporarilyRevealedItem(_: String) { /* Nothing to do until setup supplies the real controller. */ }
 
-    func concealItemTemporarily(_: String) {}
+    func concealItemTemporarily(_: String) { /* Nothing to do until setup supplies the real controller. */ }
 
-    func revealTransientlyConcealedItem(_: String) {}
+    func revealTransientlyConcealedItem(_: String) { /* Nothing to do until setup supplies the real controller. */ }
 
-    func regatherGroups() {}
+    func regatherGroups() { /* Nothing to do until setup supplies the real controller. */ }
 
     func pulseRestrictionAfterReflow(liveItems _: [MenuBarItem]) -> Bool {
         false
     }
 
-    func notePreferredPositionsSelfWrite() {}
+    func notePreferredPositionsSelfWrite() { /* Nothing to do until setup supplies the real controller. */ }
 
     func refreshHidingAvailability() -> Bool {
         false
     }
 
-    func refresh(forceRestrictionPulse _: Bool, forceReapply _: Bool) {}
+    func refresh(forceRestrictionPulse _: Bool, forceReapply _: Bool) { /* Nothing to do until setup supplies the real controller. */ }
 
     func repairGroupInvariantIfNeeded() -> MenuBarItemGroupPolicy.CanonicalizationReport? {
         nil

@@ -16,76 +16,68 @@ import Testing
 struct SettingsURIBuiltInTrustTests {
     private let floe = "com.thaw.floe"
 
+    private func sender(_ bundleID: String, team: String?) -> SettingsURISender {
+        SettingsURISender(bundleIdentifier: bundleID, teamIdentifier: team, codeHash: "c0ffee")
+    }
+
     @Test("A built-in sender is trusted when both signatures carry the same team", arguments: [
         ("TEAM", "TEAM", true),
         ("OTHER", "TEAM", false),
         (nil, "TEAM", false),
         ("TEAM", nil, false),
     ] as [(String?, String?, Bool)])
-    func builtInSenderNeedsTheSameTeam(sender: String?, own: String?, trusted: Bool) {
-        var lookedUp = [String]()
-        let result = SettingsURIHandler.isBuiltInTrustedSender(
-            bundleIdentifier: floe,
-            senderTeamID: { bundleID in
-                lookedUp.append(bundleID)
-                return sender
-            },
-            ownTeamID: { own }
-        )
-
+    func builtInSenderNeedsTheSameTeam(senderTeam: String?, own: String?, trusted: Bool) {
+        // The team comes from the sending process's own signature, not from an installed app.
+        let result = SettingsURIHandler.isBuiltInTrustedSender(sender(floe, team: senderTeam), ownTeamID: { own })
         #expect(result == trusted)
-        #expect(lookedUp == [floe], "The team is read from the sender's own installed app")
     }
 
-    @Test("A sender outside the built-in list is refused without reading any signature", arguments: [
-        nil, "", "com.example.other", "com.thaw.floe.helper",
-    ] as [String?])
-    func otherSendersAreNeverBuiltIn(bundleIdentifier: String?) {
+    @Test("A sender outside the built-in list is refused without reading this app's signature", arguments: [
+        "", "com.example.other", "com.thaw.floe.helper",
+    ])
+    func otherSendersAreNeverBuiltIn(bundleIdentifier: String) {
         var lookups = 0
-        let result = SettingsURIHandler.isBuiltInTrustedSender(
-            bundleIdentifier: bundleIdentifier,
-            senderTeamID: { _ in
-                lookups += 1
-                return "TEAM"
-            },
-            ownTeamID: {
-                lookups += 1
-                return "TEAM"
-            }
-        )
+        let result = SettingsURIHandler.isBuiltInTrustedSender(sender(bundleIdentifier, team: "TEAM")) {
+            lookups += 1
+            return "TEAM"
+        }
 
         #expect(!result)
         #expect(lookups == 0)
+        #expect(!SettingsURIHandler.isBuiltInTrustedSender(nil) { "TEAM" })
     }
 
     @Test("A build with no team of its own never grants built-in trust")
     func unsignedBuildTrustsNobody() {
         let ownTeam = SettingsURIHandler.teamIdentifier(ofAppAt: Bundle.main.bundleURL, logName: "this app")
-        let trusted = SettingsURIHandler.isBuiltInTrustedSender(bundleIdentifier: floe)
+        let trusted = SettingsURIHandler.isBuiltInTrustedSender(sender(floe, team: "TEAM"))
 
-        #expect(!trusted || ownTeam != nil)
-        #expect(!SettingsURIHandler.isBuiltInTrustedSender(bundleIdentifier: floe, ownTeamID: { nil }))
+        #expect(!trusted || ownTeam == "TEAM")
+        #expect(!SettingsURIHandler.isBuiltInTrustedSender(sender(floe, team: nil), ownTeamID: { nil }))
     }
 
     @Test("A built-in sender passes the gate without being in the approved list", .scratchDefaults)
     func builtInSenderSkipsTheWhitelist() throws {
         try withPrivateSettingsChangeCenter {
+            let floeSender = sender(floe, team: "TEAM")
             #expect(SettingsURIHandler.getWhitelist().isEmpty)
-            #expect(SettingsURIHandler.isWhitelisted(bundleIdentifier: floe) { $0 == floe })
-            #expect(!SettingsURIHandler.isWhitelisted(bundleIdentifier: floe) { _ in false })
+            #expect(SettingsURIHandler.isWhitelisted(sender: floeSender) { $0.bundleIdentifier == floe })
+            #expect(!SettingsURIHandler.isWhitelisted(sender: floeSender) { _ in false })
             #expect(SettingsURIHandler.getWhitelist().isEmpty, "Built-in trust is not remembered as an approval")
         }
     }
 
-    @Test("A sender with no identity is refused before built-in trust is consulted", .scratchDefaults, arguments: [nil, ""] as [String?])
-    func unidentifiedSenderNeverReachesBuiltInTrust(bundleIdentifier: String?) throws {
+    @Test("A sender with no identity is refused before built-in trust is consulted", .scratchDefaults)
+    func unidentifiedSenderNeverReachesBuiltInTrust() throws {
         try withPrivateSettingsChangeCenter {
             var consulted = false
-            let allowed = SettingsURIHandler.isWhitelisted(bundleIdentifier: bundleIdentifier) { _ in
-                consulted = true
-                return true
+            for candidate in [nil, sender("", team: "TEAM")] {
+                let allowed = SettingsURIHandler.isWhitelisted(sender: candidate) { _ in
+                    consulted = true
+                    return true
+                }
+                #expect(!allowed)
             }
-            #expect(!allowed)
             #expect(!consulted)
         }
     }

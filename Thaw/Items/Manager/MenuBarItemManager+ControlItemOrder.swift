@@ -107,7 +107,7 @@ extension MenuBarItemManager {
                 try await move(
                     item: thawIcon,
                     to: .rightOfItem(controlItems.hidden),
-                    skipInputPause: true
+                    options: ItemMoveOptions(skipInputPause: true)
                 )
             } catch {
                 MenuBarItemManager.diagLog.error("Failed to relocate Thaw icon \(thawIcon.logString): \(error)")
@@ -121,7 +121,7 @@ extension MenuBarItemManager {
                 try await move(
                     item: systemItem,
                     to: .rightOfItem(controlItems.hidden),
-                    skipInputPause: true
+                    options: ItemMoveOptions(skipInputPause: true)
                 )
             } catch {
                 MenuBarItemManager.diagLog.error("Failed to relocate system item \(systemItem.logString): \(error)")
@@ -207,13 +207,12 @@ extension MenuBarItemManager {
             }
 
             do {
+                // An arrival the host parked has no frame to grab, so the
+                // weight write is the only way to seat it.
                 let moved = try await move(
                     item: candidate,
                     to: destination,
-                    skipInputPause: true,
-                    // An arrival the host parked has no frame to grab, so the
-                    // weight write is the only way to seat it.
-                    allowParkedOffMenuBarSource: candidate.isParkedOffMenuBarBand(among: items)
+                    options: ItemMoveOptions(skipInputPause: true, allowParkedOffMenuBarSource: candidate.isParkedOffMenuBarBand(among: items))
                 )
                 guard moved else {
                     Self.refusedArrivalRelocations[arrivalIdentity] = Date()
@@ -279,13 +278,12 @@ extension MenuBarItemManager {
         )
     }
 
-    /// Detects control-trio inversions and a stranded Siri on an ambient pass
+    /// Detects control-trio inversions on an ambient pass
     /// and schedules the debounced normalization, which waits for a quiet bar
     /// and so avoids the oscillation an inline rewrite would cause.
     func scheduleStructuralNormalizationIfControlItemsOutOfOrder(
         controlItems: ControlItemPair,
-        items: [MenuBarItem],
-        displayID: CGDirectDisplayID?
+        items: [MenuBarItem]
     ) {
         // The visible control is not part of ControlItemPair; locate it the
         // same way restoreStructuralControlOrder does.
@@ -294,10 +292,7 @@ extension MenuBarItemManager {
         }
         let alwaysHidden = controlItems.alwaysHidden
         let hidden = controlItems.hidden
-        let siriIsMisplaced = displayID.map { display in
-            ControlOrderRules.trailingSiriIsMisplaced(in: items.filter { CGDisplayBounds(display).intersects($0.bounds) })
-        } ?? false
-        guard siriIsMisplaced || !ControlOrderRules.controlTrioInCanonicalOrder(
+        guard !ControlOrderRules.controlTrioInCanonicalOrder(
             alwaysHidden: alwaysHidden,
             hidden: hidden,
             visible: visible
@@ -309,7 +304,7 @@ extension MenuBarItemManager {
         let vX = visible.bounds.midX
         MenuBarItemManager.diagLog.info(
             "structural controls out of order on ambient pass"
-                + " (Siri misplaced=\(siriIsMisplaced), AH@\(ahX.map { String(describing: $0) } ?? "nil"), H@\(hX), V@\(vX));"
+                + " (AH@\(ahX.map { String(describing: $0) } ?? "nil"), H@\(hX), V@\(vX));"
                 + " scheduling structural normalization"
         )
         scheduleStructuralNormalization(cause: .structuralDriftObserved)
@@ -329,8 +324,8 @@ extension MenuBarItemManager {
             MenuBarItemManager.diagLog.debug("Skipping \(diagnosticContext): item frames span more than one bar")
             return false
         }
-        guard !ControlOrderRules.dividerIsOffTheBar(controlItems, among: items) else {
-            MenuBarItemManager.diagLog.debug("Skipping \(diagnosticContext): the Hidden divider is parked off the bar")
+        if let misplaced = ControlOrderRules.dividerMisplacement(controlItems, among: items) {
+            MenuBarItemManager.diagLog.debug("Skipping \(diagnosticContext): \(misplaced)")
             return false
         }
         // A batch weight write cannot fall back per item; when the agent
@@ -473,8 +468,7 @@ extension MenuBarItemManager {
             try await move(
                 item: hidden,
                 to: destination,
-                skipInputPause: true,
-                allowSectionBoundaryTarget: true
+                options: ItemMoveOptions(skipInputPause: true, allowSectionBoundaryTarget: true)
             )
             didRestoreOrder = true
         } catch {
@@ -497,7 +491,7 @@ extension MenuBarItemManager {
                 try await move(
                     item: alwaysHidden,
                     to: .leftOfItem(hidden),
-                    skipInputPause: true
+                    options: ItemMoveOptions(skipInputPause: true)
                 )
                 didRestoreOrder = true
             } catch {

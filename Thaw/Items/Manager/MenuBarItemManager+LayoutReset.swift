@@ -404,10 +404,7 @@ extension MenuBarItemManager {
                 itemOrder: itemOrder,
                 to: controller
             )
-        }
-
-        // Visible items have live AX elements, but only profiles reconcile synthetically; assignment mirroring owns membership.
-        if source == .profile {
+            // Visible items have live AX elements, but only profiles reconcile synthetically; assignment mirroring owns membership.
             await applySectionItemOrder(
                 sections: [.visible],
                 controller: controller,
@@ -479,12 +476,12 @@ extension MenuBarItemManager {
         if experimentalSystemItemHiding,
            assignment.contains(where: { identifier, _ in
                itemCache.managedItems.contains {
-                   $0.uniqueIdentifier == identifier && $0.tag.isLayoutAnchoredSystemItem
+                   $0.uniqueIdentifier == identifier && $0.tag.needsRestrictionAssertionToHide
                }
-                   || controller.snapshot(for: identifier)?.tag.isLayoutAnchoredSystemItem == true
+                   || controller.snapshot(for: identifier)?.tag.needsRestrictionAssertionToHide == true
            })
         {
-            MenuBarItemManager.diagLog.info("macOS 27 reset: pulsing restriction for layout-anchored system items")
+            MenuBarItemManager.diagLog.info("macOS 27 reset: pulsing restriction for Clock, Control Center and Siri")
             controller.refresh(forceRestrictionPulse: true)
             await cacheItemsRegardless(skipRecentMoveCheck: true)
         }
@@ -889,8 +886,7 @@ extension MenuBarItemManager {
             let fulfilled = try await move(
                 item: plannedMove.item,
                 to: plannedMove.destination,
-                skipInputPause: true,
-                allowParkedOffMenuBarSource: true
+                options: ItemMoveOptions(skipInputPause: true, allowParkedOffMenuBarSource: true)
             )
             guard fulfilled else {
                 // MenuBarAgent can store a position without resorting; the control has no synthetic-drag fallback.
@@ -904,8 +900,7 @@ extension MenuBarItemManager {
                     let retried = try await move(
                         item: plannedMove.item,
                         to: plannedMove.destination,
-                        skipInputPause: true,
-                        allowParkedOffMenuBarSource: true
+                        options: ItemMoveOptions(skipInputPause: true, allowParkedOffMenuBarSource: true)
                     )
                     guard retried else {
                         recordVisibleControlHostState(reason: "restore-unfulfilled")

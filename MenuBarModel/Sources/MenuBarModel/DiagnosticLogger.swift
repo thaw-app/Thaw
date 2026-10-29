@@ -260,7 +260,7 @@ public final class DiagnosticLogger: Sendable {
         guard isEnabled else { return }
 
         let timestamp = Self.timestampStyle.format(Date())
-        let line = "\(timestamp) [\(level.rawValue)] [\(category)] \(message)\n"
+        let line = Self.record(timestamp: timestamp, level: level, category: category, message: message)
 
         guard let data = line.data(using: .utf8) else { return }
 
@@ -269,6 +269,31 @@ public final class DiagnosticLogger: Sendable {
                 handle?.write(data)
             }
         }
+    }
+
+    /// One file record. Line breaks inside the text are escaped, so a message can't
+    /// forge a separate record, such as a path read from an imported profile.
+    static func record(timestamp: String, level: Level, category: String, message: String) -> String {
+        "\(timestamp) [\(level.rawValue)] [\(escapingLineBreaks(category))] \(escapingLineBreaks(message))\n"
+    }
+
+    static func escapingLineBreaks(_ text: String) -> String {
+        guard text.contains(where: \.isNewline) else { return text }
+        var escaped = ""
+        escaped.reserveCapacity(text.count)
+        for character in text {
+            switch character {
+            case "\n": escaped += "\\n"
+            case "\r": escaped += "\\r"
+            case "\r\n": escaped += "\\r\\n"
+            case _ where character.isNewline:
+                for scalar in character.unicodeScalars {
+                    escaped += "\\u{\(String(scalar.value, radix: 16))}"
+                }
+            default: escaped.append(character)
+            }
+        }
+        return escaped
     }
 }
 

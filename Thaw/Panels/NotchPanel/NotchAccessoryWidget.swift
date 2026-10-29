@@ -161,14 +161,14 @@ final class NotchAccessoryWidget: NotchWidget {
         }
     }
 
-    func refresh() {}
+    func refresh() { /* The readout is read once per hover in prepare(for:), so there is nothing to refresh. */ }
 
     // MARK: Presentation helpers
 
     /// A glyph for the condition the text describes, when it names one plainly
     /// enough to be sure. Keyword matching only holds for English, and an
     /// unrecognized string gets no glyph rather than a wrong one.
-    private static func symbol(for detail: String) -> String? {
+    static func symbol(for detail: String) -> String? {
         let conditions: [(keyword: String, symbol: String)] = [
             ("thunder", "cloud.bolt.fill"),
             ("snow", "cloud.snow.fill"),

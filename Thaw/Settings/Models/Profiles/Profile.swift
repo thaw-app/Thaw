@@ -326,40 +326,14 @@ nonisolated struct ProfileContent {
     var advancedSettings: AdvancedSettingsSnapshot
     var hotkeys: [String: Data]
     var displayConfigurations: [String: DisplayThawBarConfiguration]
-    var globalDisplayConfiguration: DisplayThawBarConfiguration
-    var confirmSpacingRelaunch: Bool
-    var unconfirmedSpacingProfileScope: SpacingProfileSaveScope
+    var globalDisplayConfiguration: DisplayThawBarConfiguration = Defaults.DefaultValue.globalDisplayConfiguration
+    var confirmSpacingRelaunch: Bool = Defaults.DefaultValue.confirmSpacingRelaunch
+    var unconfirmedSpacingProfileScope: SpacingProfileSaveScope = Defaults.DefaultValue.unconfirmedSpacingProfileScope
     /// Nil in older profiles, which leave the current mode alone when applied.
     var spacingApplyMode: SpacingApplyMode?
     var appearanceConfiguration: MenuBarAppearanceConfigurationV2
     var menuBarLayout: MenuBarLayoutSnapshot
     var automation: ProfileAutomation?
-
-    init(
-        generalSettings: GeneralSettingsSnapshot,
-        advancedSettings: AdvancedSettingsSnapshot,
-        hotkeys: [String: Data],
-        displayConfigurations: [String: DisplayThawBarConfiguration],
-        globalDisplayConfiguration: DisplayThawBarConfiguration = Defaults.DefaultValue.globalDisplayConfiguration,
-        confirmSpacingRelaunch: Bool = Defaults.DefaultValue.confirmSpacingRelaunch,
-        unconfirmedSpacingProfileScope: SpacingProfileSaveScope = Defaults.DefaultValue.unconfirmedSpacingProfileScope,
-        spacingApplyMode: SpacingApplyMode? = nil,
-        appearanceConfiguration: MenuBarAppearanceConfigurationV2,
-        menuBarLayout: MenuBarLayoutSnapshot,
-        automation: ProfileAutomation? = nil
-    ) {
-        self.generalSettings = generalSettings
-        self.advancedSettings = advancedSettings
-        self.hotkeys = hotkeys
-        self.displayConfigurations = displayConfigurations
-        self.globalDisplayConfiguration = globalDisplayConfiguration
-        self.confirmSpacingRelaunch = confirmSpacingRelaunch
-        self.unconfirmedSpacingProfileScope = unconfirmedSpacingProfileScope
-        self.spacingApplyMode = spacingApplyMode
-        self.appearanceConfiguration = appearanceConfiguration
-        self.menuBarLayout = menuBarLayout
-        self.automation = automation
-    }
 }
 
 // MARK: - Profile
@@ -374,9 +348,9 @@ nonisolated struct Profile: Codable, Identifiable {
     var advancedSettings: AdvancedSettingsSnapshot
     var hotkeys: [String: Data]
     var displayConfigurations: [String: DisplayThawBarConfiguration]
-    var globalDisplayConfiguration: DisplayThawBarConfiguration
-    var confirmSpacingRelaunch: Bool
-    var unconfirmedSpacingProfileScope: SpacingProfileSaveScope
+    var globalDisplayConfiguration: DisplayThawBarConfiguration = Defaults.DefaultValue.globalDisplayConfiguration
+    var confirmSpacingRelaunch: Bool = Defaults.DefaultValue.confirmSpacingRelaunch
+    var unconfirmedSpacingProfileScope: SpacingProfileSaveScope = Defaults.DefaultValue.unconfirmedSpacingProfileScope
     /// Nil in older profiles, which leave the current mode alone when applied.
     var spacingApplyMode: SpacingApplyMode?
     var appearanceConfiguration: MenuBarAppearanceConfigurationV2

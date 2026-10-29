@@ -29,6 +29,10 @@ struct NativeVisibilityRecoveryModelTests {
         var recordIsUnreadable = false
         var setAsideCalls = 0
         var failsSetAside = false
+        var bypassAvailable = false
+        var bypassCalls = 0
+        var failsBypass = false
+        let bypassedRecord = URL(fileURLWithPath: "/tmp/RecoverySkipped-test/NativeAppVisibilityJournal.json")
         let movedRecord = URL(fileURLWithPath: "/tmp/NativeAppVisibilityJournal.unreadable-1.json")
 
         func model() -> NativeVisibilityRecoveryModel {
@@ -64,7 +68,16 @@ struct NativeVisibilityRecoveryModelTests {
                     self.recordIsUnreadable = false
                     self.recorded = []
                     return [self.movedRecord]
-                }
+                },
+                bypassRecovery: bypassAvailable ? {
+                    self.bypassCalls += 1
+                    if self.failsBypass {
+                        throw CocoaError(.fileWriteNoPermission)
+                    }
+                    self.recordIsUnreadable = false
+                    self.recorded = []
+                    return [self.bypassedRecord]
+                } : nil
             ))
         }
     }
@@ -228,5 +241,102 @@ struct NativeVisibilityRecoveryModelTests {
         #expect(!model.hasLoaded)
         #expect(model.candidates.isEmpty)
         #expect(model.errorMessage == nil)
+    }
+
+    @Test func olderRuntimesDoNotOfferBypass() async {
+        let harness = Harness()
+        let model = harness.model()
+        await model.load()
+        #expect(!model.supportsRecoveryBypass)
+        model.bypassRecovery()
+        #expect(harness.bypassCalls == 0)
+        #expect(model.recordedBundleIDs == ["com.example.recorded"])
+    }
+
+    @Test func confirmedBypassKeepsBackupsAndLeavesNativeOff() async {
+        let harness = Harness()
+        harness.bypassAvailable = true
+        let model = harness.model()
+        await model.load()
+        #expect(model.supportsRecoveryBypass)
+        #expect(harness.bypassCalls == 0)
+        model.selectedBundleIDs = ["com.example.manual"]
+
+        model.bypassRecovery()
+
+        #expect(harness.bypassCalls == 1)
+        #expect(harness.nativeDisabled)
+        #expect(harness.restored == nil)
+        #expect(model.setAsideLocations == [harness.bypassedRecord])
+        #expect(model.recordedBundleIDs.isEmpty)
+        #expect(model.selectedBundleIDs.isEmpty)
+        #expect(model.candidates.isEmpty)
+        #expect(!model.hasLoaded)
+        #expect(!model.canRestore)
+        #expect(model.successMessage != nil)
+    }
+
+    @Test func bypassDoesNotRequireControlCenterAccess() async {
+        let harness = Harness()
+        harness.bypassAvailable = true
+        harness.grantsAccess = false
+        let model = harness.model()
+        await model.load()
+        #expect(model.errorMessage != nil)
+
+        model.bypassRecovery()
+
+        #expect(harness.bypassCalls == 1)
+        #expect(!harness.inspected)
+        #expect(model.successMessage != nil)
+        #expect(model.errorMessage == nil)
+    }
+
+    @Test func bypassAlsoWorksWhenTheRecordIsUnreadable() async {
+        let harness = Harness()
+        harness.bypassAvailable = true
+        harness.recordIsUnreadable = true
+        let model = harness.model()
+        await model.load()
+        #expect(model.recordIsUnreadable)
+
+        model.bypassRecovery()
+
+        #expect(!model.recordIsUnreadable)
+        #expect(model.successMessage != nil)
+        #expect(model.setAsideLocations == [harness.bypassedRecord])
+    }
+
+    @Test func failedBypassPreservesTheRecoveryChoices() async {
+        let harness = Harness()
+        harness.bypassAvailable = true
+        harness.failsBypass = true
+        let model = harness.model()
+        await model.load()
+        model.selectedBundleIDs = ["com.example.manual"]
+
+        model.bypassRecovery()
+
+        #expect(model.errorMessage != nil)
+        #expect(model.successMessage == nil)
+        #expect(model.recordedBundleIDs == ["com.example.recorded"])
+        #expect(model.selectedBundleIDs == ["com.example.manual"])
+        #expect(model.canRestore)
+        #expect(model.setAsideLocations.isEmpty)
+    }
+
+    @Test func bypassWaitsForOtherHidingManagersToQuit() async {
+        let harness = Harness()
+        harness.bypassAvailable = true
+        let model = harness.model()
+        await model.load()
+        harness.conflicts = ["Bartender"]
+
+        model.bypassRecovery()
+
+        #expect(harness.bypassCalls == 0)
+        #expect(model.errorMessage != nil)
+        #expect(model.successMessage == nil)
+        #expect(model.recordedBundleIDs == ["com.example.recorded"])
     }
 }

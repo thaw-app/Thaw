@@ -21,7 +21,14 @@ import AppKit
 /// Nil only before the app has finished launching. See LiveApp for why NSApp.delegate is not used.
 @MainActor
 func thawAppState() -> AppState? {
-    LiveApp.appState
+    IntentAppState.provider()
+}
+
+/// Where the intents find the app state. The app never changes it; tests point
+/// it at a scratch AppState so an intent's perform runs without the live one.
+@MainActor
+enum IntentAppState {
+    static var provider: () -> AppState? = { LiveApp.appState }
 }
 
 // MARK: - Actions

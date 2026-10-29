@@ -63,7 +63,7 @@ struct ToolsSettingsPane: View {
             Button(action.confirmationButtonTitle, role: .destructive) {
                 Task { await perform(action) }
             }
-            Button("Cancel", role: .cancel) {}
+            Button("Cancel", role: .cancel) { /* The dialog dismisses itself; cancelling needs no other work. */ }
         } message: { action in
             Text(action.confirmationMessage)
         }
@@ -80,7 +80,7 @@ struct ToolsSettingsPane: View {
                     }
                 }
             }
-            Button("Cancel", role: .cancel) {}
+            Button("Cancel", role: .cancel) { /* The dialog dismisses itself; cancelling needs no other work. */ }
         } message: {
             Text("Thaw will quit normal mode so neither hiding mechanism can interfere. Your saved layout is kept. Native hiding will remain off after recovery.")
         }

@@ -401,6 +401,24 @@ public struct MenuBarItemTag: Hashable, CustomStringConvertible, Sendable, Codab
         return false
     }
 
+    /// Siri in either macOS 27 spelling. It honours a written weight, so it is no layout anchor,
+    /// but Standard hiding still needs the restriction assertion to hide it.
+    public var isSiri: Bool {
+        switch namespace {
+        case .systemUIServer:
+            title == "Siri"
+        case .menuBarAgent:
+            title == "Siri" || title == "com.apple.menuextra.siri"
+        default:
+            false
+        }
+    }
+
+    /// Anchors and Siri: the items only Standard hiding can put in a hidden section.
+    public var needsRestrictionAssertionToHide: Bool {
+        isLayoutAnchoredSystemItem || isSiri
+    }
+
     public var isMovable: Bool {
         !isLayoutAnchoredSystemItem && !isAgentUngoverned && !isCaptureActivityIndicator && !isLiveActivityPill
     }
@@ -726,7 +744,7 @@ public extension MenuBarItemTag {
 
     /// macOS fixes these items at the trailing end and prevents hiding.
     static var immovableItems: [MenuBarItemTag] {
-        [clock, controlCenter, siri, ssMenuAgent]
+        [clock, controlCenter, ssMenuAgent]
     }
 
     /// An array of tags for items that can be moved, but cannot be hidden.
@@ -744,10 +762,8 @@ public extension MenuBarItemTag {
         "Clock",
         "ControlCenter",
         "BentoBox-0",
-        "Siri",
         "com.apple.menuextra.clock",
         "com.apple.menuextra.controlcenter",
-        "com.apple.menuextra.siri",
     ]
 
     /// Separate Apple/system agents that Thaw should display but not move.
@@ -763,13 +779,6 @@ public extension MenuBarItemTag {
             || tag.title == "com.apple.menuextra.controlcenter"
         {
             return 1
-        }
-        // macOS 27 Siri, including its MenuBarAgent spelling, precedes pinned Control Center and Clock.
-        if tag == .siri
-            || tag.title == "Siri"
-            || tag.title == "com.apple.menuextra.siri"
-        {
-            return 0
         }
         if tag.title == clock.title
             || tag.title == "com.apple.menuextra.clock"

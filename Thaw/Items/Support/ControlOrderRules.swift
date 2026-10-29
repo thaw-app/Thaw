@@ -45,18 +45,6 @@ enum ControlOrderRules {
         return alwaysHiddenX <= hiddenX && hiddenX <= visibleX
     }
 
-    static nonisolated func trailingSiriIsMisplaced(in items: [MenuBarItem], displays: [CGRect] = BarAxis.liveDisplayBounds()) -> Bool {
-        let onBar = items.filter {
-            $0.isOnScreen && $0.bounds.width >= MenuBarItemGeometry.phantomFramePeerMinimumWidth &&
-                !$0.bounds.isEmpty && !$0.bounds.isInfinite &&
-                !$0.isParkedOffMenuBarBand(among: items, screens: displays)
-        }
-        guard let siri = onBar.first(where: { $0.tag == .siri }) else { return false }
-        return onBar.contains {
-            !$0.tag.isLayoutAnchoredSystemItem && $0.bounds.midX > siri.bounds.midX
-        }
-    }
-
     /// The cached items with the dividers from the last walk put back, since the cache drops them.
     /// Nil without a known Hidden divider, as nothing can be put in order then.
     static nonisolated func withDividers(
@@ -89,6 +77,60 @@ enum ControlOrderRules {
     static func dividerIsOffTheBar(_ controlItems: ControlItemPair, among items: [MenuBarItem], displays: [CGRect] = BarAxis.liveDisplayBounds()) -> Bool {
         !CacheDividers.isStandIn(controlItems.hidden)
             && controlItems.hidden.isParkedOffMenuBarBand(among: items, screens: displays)
+    }
+
+    /// Why no item can be judged against the Hidden divider's frame, or nil when it can.
+    static func dividerMisplacement(
+        _ controlItems: ControlItemPair,
+        among items: [MenuBarItem],
+        displays: [CGRect] = BarAxis.liveDisplayBounds()
+    ) -> String? {
+        if dividerIsOffTheBar(controlItems, among: items, displays: displays) {
+            return "the Hidden divider is parked off the bar"
+        }
+        if dividerIsRightOfTrailingAnchors(controlItems, among: items, displays: displays) {
+            return "the Hidden divider reads right of Control Center or the Clock"
+        }
+        return nil
+    }
+
+    /// Whether the Hidden divider reads right of, or over, Control Center or the Clock on its own bar.
+    /// macOS keeps those two last, so this is a frame left over from a display change, and
+    /// every item would read as stranded on the hidden side of it.
+    static func dividerIsRightOfTrailingAnchors(
+        _ controlItems: ControlItemPair,
+        among items: [MenuBarItem],
+        displays: [CGRect] = BarAxis.liveDisplayBounds()
+    ) -> Bool {
+        let divider = controlItems.hidden.bounds
+        let center = CGPoint(x: divider.midX, y: divider.midY)
+        guard !CacheDividers.isStandIn(controlItems.hidden), !divider.isEmpty,
+              let bar = displays.first(where: { $0.contains(center) })
+        else {
+            return false
+        }
+        return items.contains { item in
+            let rank = MenuBarItemTag.anchoredSystemItemRank(item.tag)
+            // The rank reads titles only, so a third-party item with one of these titles must not count.
+            return (rank == 1 || rank == 2) && item.tag.isSystemItem && item.isOnScreen
+                && bar.contains(CGPoint(x: item.bounds.midX, y: item.bounds.midY))
+                // Past the anchor's left edge: right of it, or over it, which can't be judged either.
+                && divider.maxX > item.bounds.minX
+        }
+    }
+
+    /// The dividers as a refreshed walk reads them, or nil when the walk lost the Hidden divider.
+    static func refreshedControlItems(
+        in items: [MenuBarItem],
+        hiddenControlItemWindowID: CGWindowID?,
+        alwaysHiddenControlItemWindowID: CGWindowID?
+    ) -> ControlItemPair? {
+        var items = items
+        return ControlItemPair(
+            items: &items,
+            hiddenControlItemWindowID: hiddenControlItemWindowID,
+            alwaysHiddenControlItemWindowID: alwaysHiddenControlItemWindowID
+        )
     }
 
     /// Whether item frames are stated against more than one display's bar.
@@ -146,9 +188,21 @@ enum ControlOrderRules {
             using: savedOrder
         )
         // Forced-visible agent children have no authored slot; put them first
-        // so the trailing item (normally Thaw) stays trailing. Replaying an
-        // interleaved Siri slot would undo the anchor repair.
-        return RuntimeSectionController.anchoredSystemItemsTrail(in: newlyForcedVisible + authoredVisible)
+        // so the trailing item (normally Thaw) stays trailing.
+        let leading = newlyForcedVisible.filter { !$0.tag.isSiri }
+        guard leading.count < newlyForcedVisible.count else {
+            return RuntimeSectionController.anchoredSystemItemsTrail(in: newlyForcedVisible + authoredVisible)
+        }
+        // Siri is no anchor, so nothing else would move an unsaved one back; it keeps its live slot.
+        let byIdentifier = Dictionary(
+            liveSegment.map { ($0.uniqueIdentifier, $0) },
+            uniquingKeysWith: { first, _ in first }
+        )
+        let completed = LayoutEditorOrder.completingOrder(
+            (leading + authoredVisible).map(\.uniqueIdentifier),
+            withLive: liveSegment.map(\.uniqueIdentifier)
+        )
+        return RuntimeSectionController.anchoredSystemItemsTrail(in: completed.compactMap { byIdentifier[$0] })
     }
 
     /// Left-to-right structural sequence for the position store. The Always
@@ -185,7 +239,7 @@ enum ControlOrderRules {
         return mirroredOrder ?? controllerOrder ?? []
     }
 
-    /// Reject reversed Control Center/Clock ranks or non-anchors right of the trailing group; normalization repairs stable Siri stranding.
+    /// Reject reversed Control Center/Clock ranks or non-anchors right of the trailing group.
     /// Skip Thaw controls and sub-phantomFramePeerMinimumWidth slivers (including the intentionally zero-width icon); ranks also cover legacy spellings.
     static nonisolated func anchoredTrailingViolation(
         in sortedLeftToRight: [MenuBarItem],

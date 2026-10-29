@@ -5,6 +5,7 @@
 //  Copyright (Thaw) © 2026 Toni Förster
 //  Licensed under the GNU GPLv3
 
+import Algorithms
 import Cocoa
 import MenuBarModel
 import ThawCapture
@@ -82,8 +83,7 @@ nonisolated struct LiveMenuBarCaptureReader: MenuBarCaptureReading {
             }
             return app.processIdentifier
         }
-        var seen = Set<pid_t>()
-        let uniqueHostPIDs = hostPIDs.filter { seen.insert($0).inserted }
+        let uniqueHostPIDs = Array(hostPIDs.uniqued())
         guard !uniqueHostPIDs.isEmpty else { return ([:], []) }
 
         // The catalog's serial actor keeps bounded synchronous AX reads off

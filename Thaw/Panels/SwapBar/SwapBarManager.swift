@@ -47,7 +47,7 @@ final class SwapBarManager {
     // MARK: Observation
 
     private func observeSettingFlips() -> AnyCancellable {
-        guard let advanced = advancedSettings else { return AnyCancellable {} }
+        guard let advanced = advancedSettings else { return AnyCancellable { /* Nothing was observed, so there is nothing to cancel. */ } }
         return advanced.observe(\.enableSwapBar) { [weak self] _ in
             self?.refresh()
         }

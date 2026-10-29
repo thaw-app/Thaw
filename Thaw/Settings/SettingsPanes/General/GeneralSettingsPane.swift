@@ -49,6 +49,8 @@ struct GeneralSettingsPane: View {
             .annotation("Shows only the essential settings, with a preview of your sections. Everything else keeps working as you set it.")
         Toggle("Show setting descriptions", isOn: $settings.showSettingDescriptions)
             .annotation("Explains what a setting does directly beneath it, like this text.")
+        Toggle("Black background in dark mode", isOn: $settings.blackSettingsBackground)
+            .annotation("Draws this window on pure black for OLED displays. Light mode is unchanged.")
     }
 
     // MARK: Language

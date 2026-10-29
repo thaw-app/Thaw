@@ -81,7 +81,7 @@ struct ProfileSettingsPane: View {
         .errorAlert("Couldn’t complete the profile action", message: $errorMessage)
         .alert("Delete Profile?", item: $profileToDelete) { id in
             Button("Delete", role: .destructive) { deleteProfile(id: id) }
-            Button("Cancel", role: .cancel) {}
+            Button("Cancel", role: .cancel) { /* The alert dismisses itself; cancelling needs no other work. */ }
         } message: { id in
             if let profile = profileManager.profiles.first(where: { $0.id == id }) {
                 Text("“\(profile.name)” will be deleted. You can undo this with Command-Z.")
@@ -246,7 +246,7 @@ struct ProfileSettingsPane: View {
         }
     }
 
-    private func diff(for profile: Profile) -> ProfileLayoutDiff {
+    func diff(for profile: Profile) -> ProfileLayoutDiff {
         var diff = ProfileLayoutDiff.between(
             current: profileManager.currentLayoutSnapshot(from: appState),
             profile: profile.menuBarLayout
@@ -259,10 +259,10 @@ struct ProfileSettingsPane: View {
             return ProfileLayoutDiff.settingChanges(current: current, profile: profile.advancedSettings.merged(onto: current))
         }()
 
-        // Warn only if applying the profile's display spacing would relaunch apps.
-        let offset = Int(profile.globalDisplayConfiguration.itemSpacingOffset.rounded())
-        // The profile's own mode is the one in effect by the time its spacing is applied.
-        let applyMode = profile.spacingApplyMode ?? appState.settings.displaySettings.spacingApplyMode
+        // Warn only if the spacing the apply leaves on the menu bar's display would relaunch apps.
+        let offset = ProfileRelaunchSafety.spacingOffset(of: profile, activeDisplayUUID: appState.settings.displaySettings.activeMenuBarDisplayUUID)
+        // The mode in effect once the profile is applied, merged the way the apply merges it.
+        let applyMode = ProfileRelaunchSafety.merged(profile, onto: appState.settings.displaySettings).applyMode
         if applyMode == .relaunchApps, !appState.spacingManager.isOnDisk(offset: offset) {
             diff.relaunchingSpacingOffset = offset
         }
@@ -274,7 +274,7 @@ struct ProfileSettingsPane: View {
         Task {
             do {
                 // Waits for the layout task, so the Apply buttons stay off until it ends.
-                try await profileManager.applyProfileAwaitingLayout(id: id, to: appState)
+                try await profileManager.applyProfileAwaitingLayout(id: id, to: appState, spacingRelaunchApproved: approvesSpacingRelaunch(forProfileID: id))
                 refreshPreview()
                 if profileManager.layoutDidNotRun {
                     errorMessage = String(

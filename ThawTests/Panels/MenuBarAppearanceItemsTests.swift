@@ -155,7 +155,7 @@ struct MenuBarAppearanceItemsTests {
             itemBounds: result.itemBounds,
             in: CGRect(x: 0, y: 0, width: destination.width, height: 30),
             screenFrame: destination, leadingOutset: 6, trailingOutset: 6,
-            notchFrame: nil, notchMargin: 0
+            notch: .none
         )
         #expect(pill.width == 36)
         #expect(pill.minX == destination.width - 343)
@@ -258,7 +258,7 @@ struct MenuBarAppearanceItemsTests {
             itemBounds: snapshot.itemBounds,
             in: CGRect(x: 0, y: 5, width: destination.width, height: 30),
             screenFrame: destination, leadingOutset: 7, trailingOutset: 7,
-            notchFrame: nil, notchMargin: 0
+            notch: .none
         )
         let updated = MenuBarSplitPillGeometry.followingVisibleEdge(
             .init(x: 1583, screenFrame: primary), itemBounds: snapshot.itemBounds,

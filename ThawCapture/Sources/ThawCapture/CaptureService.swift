@@ -175,10 +175,9 @@ public extension CaptureServiceFrame {
 
     /// Reconstructs the captured image from wire form.
     func makeImage() -> CGImage? {
+        let byteCount = Self.wireByteCount(pixelWidth: pixelWidth, pixelHeight: pixelHeight, bytesPerRow: bytesPerRow)
         guard
-            pixelWidth > 0, pixelHeight > 0,
-            bytesPerRow >= pixelWidth * 4,
-            pixelData.count >= bytesPerRow * pixelHeight,
+            let byteCount, pixelData.count >= byteCount,
             let colorSpace = CGColorSpace(name: CGColorSpace.sRGB),
             let provider = CGDataProvider(data: pixelData as CFData)
         else {
@@ -197,6 +196,20 @@ public extension CaptureServiceFrame {
             shouldInterpolate: false,
             intent: .defaultIntent
         )
+    }
+
+    /// The bytes a frame with these dimensions needs, or nil when a dimension is
+    /// not positive, the stride is too short, or the size overflows Int.
+    internal static func wireByteCount(pixelWidth: Int, pixelHeight: Int, bytesPerRow: Int) -> Int? {
+        guard pixelWidth > 0, pixelHeight > 0 else {
+            return nil
+        }
+        let (minimumStride, strideOverflow) = pixelWidth.multipliedReportingOverflow(by: 4)
+        guard !strideOverflow, bytesPerRow >= minimumStride else {
+            return nil
+        }
+        let (byteCount, countOverflow) = bytesPerRow.multipliedReportingOverflow(by: pixelHeight)
+        return countOverflow ? nil : byteCount
     }
 
     /// The frame as the crop-geometry capture type the item pipeline

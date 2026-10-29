@@ -45,16 +45,16 @@ struct SyntheticMoveEngine {
     var postCommandDrag: @MainActor (CGPoint, CGPoint, CGEventSource, DragAddress, Duration) async throws -> Void =
         SyntheticMoveEngine.defaultCommandDrag
 
-    var prepareForAttempt: @MainActor (Int) async throws -> Void = { _ in }
+    var prepareForAttempt: @MainActor (Int) async throws -> Void = { _ in /* Most callers need no preparation before an attempt. */ }
 
     /// First-attempt geometry must come from this input-free window, never before a caller's wait.
     /// Retries always enumerate fresh after restored user input.
     var initialItems: [MenuBarItem]?
-    var validateHIDInput: @MainActor () throws -> Void = {}
+    var validateHIDInput: @MainActor () throws -> Void = { /* Without a validator, every HID input is accepted. */ }
     var cursorWatchdogTimeout: Duration = .seconds(10)
 
     /// Reports settled live-geometry outcomes to MovePipelineMonitor for per-channel privacy diagnostics; defaults to no-op.
-    var onAttemptResult: @MainActor (DragAddress, Bool) -> Void = { _, _ in }
+    var onAttemptResult: @MainActor (DragAddress, Bool) -> Void = { _, _ in /* Diagnostics are optional, so the default drops the result. */ }
 
     /// Selects held HID gestures instead of addressed gestures; see Defaults.Key.useHeldCommandDrag.
     static var usesHeldCommandDrag: Bool {
