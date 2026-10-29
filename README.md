@@ -23,7 +23,7 @@
   <a href="https://discord.gg/KDfWjWDnR4"><picture><source media="(prefers-color-scheme: dark)" srcset="https://shieldcn.dev/badge/DISCORD-JOIN.svg?variant=ghost&amp;font=geist-mono&amp;logo=discord&amp;mode=dark" /><img alt="Discord" src="https://shieldcn.dev/badge/DISCORD-JOIN.svg?variant=ghost&amp;font=geist-mono&amp;logo=discord&amp;mode=light" /></picture></a>
   <a href="https://scorecard.dev/viewer/?uri=github.com/thaw-app/Thaw"><picture><source media="(prefers-color-scheme: dark)" srcset="https://shieldcn.dev/github/scorecard/thaw-app/Thaw.svg?variant=ghost&amp;font=geist-mono&amp;label=SCORECARD&amp;mode=dark" /><img alt="OpenSSF Scorecard" src="https://shieldcn.dev/github/scorecard/thaw-app/Thaw.svg?variant=ghost&amp;font=geist-mono&amp;label=SCORECARD&amp;mode=light" /></picture></a>
   <a href="https://www.bestpractices.dev/projects/13303"><picture><source media="(prefers-color-scheme: dark)" srcset="https://shieldcn.dev/badge/OPENSSF-GOLD.svg?variant=ghost&amp;font=geist-mono&amp;logo=lu:ShieldCheck&amp;mode=dark" /><img alt="OpenSSF Best Practices Gold" src="https://shieldcn.dev/badge/OPENSSF-GOLD.svg?variant=ghost&amp;font=geist-mono&amp;logo=lu:ShieldCheck&amp;mode=light" /></picture></a>
-  <a href="docs/VERIFYING_RELEASES.md"><picture><source media="(prefers-color-scheme: dark)" srcset="https://shieldcn.dev/badge/SLSA-BUILD_L3.svg?variant=ghost&amp;font=geist-mono&amp;logo=ri:GoPackage&amp;mode=dark" /><img alt="SLSA Build Level 3" src="https://shieldcn.dev/badge/SLSA-BUILD_L3.svg?variant=ghost&amp;font=geist-mono&amp;logo=ri:GoPackage&amp;mode=light" /></picture></a>
+  <a href="docs/VERIFYING_RELEASES.md"><picture><source media="(prefers-color-scheme: dark)" srcset="https://shieldcn.dev/badge/SLSA-BUILD_L2.svg?variant=ghost&amp;font=geist-mono&amp;logo=ri:GoPackage&amp;mode=dark" /><img alt="SLSA Build Level 2" src="https://shieldcn.dev/badge/SLSA-BUILD_L2.svg?variant=ghost&amp;font=geist-mono&amp;logo=ri:GoPackage&amp;mode=light" /></picture></a>
 </p>
 
 <p align="center">
@@ -38,8 +38,8 @@ Thaw hides the menu bar items you don't need, brings them back on demand, and fi
 ## Install
 
 ```sh
-brew install thaw        # macOS 15 to 26
-brew install thaw@beta   # macOS 27
+brew install thaw
+brew install thaw@beta
 ```
 
 Or download the disk image from the [releases](https://github.com/thaw-app/Thaw/releases) and drag Thaw to Applications.
