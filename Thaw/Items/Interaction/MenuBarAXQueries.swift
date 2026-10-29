@@ -154,4 +154,37 @@ nonisolated enum MenuBarAXQueries {
         }
         return MenuBarItemAXProvider.pressHostedItem(sourcePID: sourcePID)
     }
+
+    // MARK: Revealed items
+
+    /// Waits until MenuBarAgent draws one of pid's items and pid has a status item a press can
+    /// reach, its own or one MenuBarAgent hosts for it, and returns whether both held before
+    /// timeout. A shown item can take a moment to be drawn and to reach Accessibility, and under
+    /// an auto-hidden bar that is out of sight it does not reach it at all.
+    @concurrent
+    static func waitForDrawnStatusItem(pid: pid_t, timeout: Duration) async -> Bool {
+        guard pid > 0 else { return false }
+        let start = ContinuousClock.now
+        while !isDrawn(pid: pid) || !hasPressableStatusItem(pid: pid) {
+            guard !Task.isCancelled, start.duration(to: .now) < timeout else {
+                diagLog.debug("pid \(pid) had no drawn, pressable status item within \(timeout)")
+                return false
+            }
+            try? await Task.sleep(for: .milliseconds(100))
+        }
+        diagLog.debug("pid \(pid) has a drawn, pressable status item after \(start.duration(to: .now))")
+        return true
+    }
+
+    private static func isDrawn(pid: pid_t) -> Bool {
+        AXPrimitives.menuBarAgentDrawnOwners()?.contains(pid) == true
+    }
+
+    private static func hasPressableStatusItem(pid: pid_t) -> Bool {
+        if let bar = AXPrimitives.extrasMenuBar(pid: pid), !AXPrimitives.children(of: bar).isEmpty {
+            return true
+        }
+        guard let host = AXPrimitives.menuBarAgentExtrasBar() else { return false }
+        return AXPrimitives.children(of: host).contains { AXPrimitives.pid(of: $0) == pid }
+    }
 }

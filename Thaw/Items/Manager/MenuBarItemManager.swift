@@ -378,9 +378,10 @@ final class MenuBarItemManager {
     /// The item inventory is supplied lazily so the monitor can be constructed
     /// without a self-capture in a stored-property initializer.
     @ObservationIgnored
-    lazy var menuOpenMonitor = MenuOpenMonitor { [weak self] in
-        self?.itemCache.managedItems.filter(\.isOnScreen) ?? []
-    }
+    lazy var menuOpenMonitor = MenuOpenMonitor(
+        onScreenItems: { [weak self] in self?.itemCache.managedItems.filter(\.isOnScreen) ?? [] },
+        measuredBarHeight: { NSScreen.screen(for: $0)?.getMenuBarHeight() }
+    )
 
     /// Timer for lightweight periodic cache checks.
     ///

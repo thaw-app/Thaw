@@ -77,7 +77,7 @@ extension MenuBarItemManager {
         for method in ConcealedItemOpenMethod.openMethodOrder(for: mouseButton, learned: learned, showInMenuBar: showInMenuBar) {
             let opened = switch method {
             case .pressInPlace, .showMenuInPlace:
-                await pressConcealedItemInPlace(item, method: method)
+                await revealAndPressConcealedItem(item, method: method, controller: controller)
             case .revealInPlace:
                 await revealInPlaceAndClick(item: item, with: mouseButton, on: displayID, controller: controller)
             }
@@ -113,6 +113,37 @@ extension MenuBarItemManager {
             pids.contains(window.ownerPID) && WindowLevelPredicates.isPopUpMenu(layer: window.layer)
         }
         return Set(windows.map(\.windowID))
+    }
+
+    /// Shows a concealed item where it sits, presses it once the bar draws it and returns whether
+    /// the owner reacted. A press on an item the bar does not draw leaves MenuBarAgent holding a
+    /// selection that keeps the bar on screen whenever it should hide, also later in a
+    /// full-screen app, until MenuBarAgent restarts. The reveal is handed back like
+    /// revealInPlaceAndClick's. A right click's menu is still opened where the item is parked.
+    private func revealAndPressConcealedItem(_ item: MenuBarItem, method: ConcealedItemOpenMethod, controller: any MenuBarSectionControlling) async -> Bool {
+        guard method == .pressInPlace else {
+            return await pressConcealedItemInPlace(item, method: method)
+        }
+        let identifier = item.uniqueIdentifier
+        // The menu-open check takes what it sees on its first look as already there; look before the menu opens.
+        _ = await menuOpenMonitor.isAnyMenuOpen()
+        controller.revealItemTemporarily(identifier)
+        // The runtime drops a reveal that undoes a recent conceal as a flap; this one answers a click.
+        controller.refresh(forceRestrictionPulse: false, forceReapply: true)
+        await eventSleep(for: Constants.MenuBarTuning.thawBarRevealSettle)
+        // No press until the bar draws it: an undrawn press is the one that strands the bar. With the
+        // bar slid away there is nothing to press; with it on screen an item still undrawn has no room
+        // on the bar, and the press it always had is the only way to open it.
+        let drawn = await MenuBarAXQueries.waitForDrawnStatusItem(pid: resolvedPID(for: item), timeout: Constants.MenuBarTuning.thawBarRevealAXWait)
+        let barDisplay = Bridging.getActiveMenuBarDisplayID() ?? CGMainDisplayID()
+        guard drawn || MenuBarItemImageCache.isMenuBarOnScreen(displayID: barDisplay), await pressConcealedItemInPlace(item) else {
+            controller.concealTemporarilyRevealedItem(identifier)
+            return false
+        }
+        // Let the menu open before the conceal starts waiting for it to close.
+        await eventSleep(for: Constants.MenuBarTuning.thawBarPostClickSettle)
+        controller.scheduleTemporaryItemConceal(identifier)
+        return true
     }
 
     /// Presses the item's AX element without revealing it. Returns whether the

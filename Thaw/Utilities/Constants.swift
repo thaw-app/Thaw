@@ -101,6 +101,9 @@ nonisolated enum Constants {
         /// How long to wait after relaxing the visibility assertion for
         /// MenuBarAgent to recomposite a revealed item before clicking it.
         static let thawBarRevealSettle: Duration = .milliseconds(400)
+        /// How long a revealed item may take, after the settle, to be drawn and to appear
+        /// to Accessibility before it is pressed. On macOS 27.2 one took up to 0.8 s with the bar on screen.
+        static let thawBarRevealAXWait: Duration = .milliseconds(1500)
         /// Grace after a click for the item's menu to open before the
         /// status-item glyph is re-concealed.
         static let thawBarPostClickSettle: Duration = .milliseconds(150)
