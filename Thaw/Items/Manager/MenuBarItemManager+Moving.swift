@@ -1498,9 +1498,10 @@ extension MenuBarItemManager {
         }
 
         // Every strand verdict and store write below is judged against the divider.
+        // Reported as remaining, so the bounded retry tries again once the divider has settled.
         if let misplaced = ControlOrderRules.dividerMisplacement(controlItems, among: liveItems) {
             MenuBarItemManager.diagLog.debug("boundary repair: \(misplaced); skipping the pass")
-            return (liveItems, false, false)
+            return (liveItems, false, true)
         }
 
         // When app menus wrap past the notch, evicted items leave stale frames

@@ -222,6 +222,21 @@ struct MultiBarFramesTests {
         #expect(!ControlOrderRules.dividerIsRightOfTrailingAnchors(Self.hiddenDivider(x: 1350), among: items, displays: Self.displays))
     }
 
+    @Test("A third-party item titled like the Clock says nothing about this divider")
+    func clockTitleFromAnotherApp() {
+        let impostor = MenuBarItem(
+            tag: MenuBarItemTag(namespace: .string("com.example.clock"), title: "com.apple.menuextra.clock"),
+            windowID: 30,
+            ownerPID: 600,
+            sourcePID: 600,
+            bounds: CGRect(x: 1700, y: 3.5, width: 56, height: 24),
+            title: "com.apple.menuextra.clock",
+            isOnScreen: true
+        )
+        let items = [Self.item(x: 1398, windowID: 1), impostor]
+        #expect(!ControlOrderRules.dividerIsRightOfTrailingAnchors(Self.hiddenDivider(x: 1800), among: items, displays: Self.displays))
+    }
+
     @Test("A Clock on another display's bar says nothing about this divider")
     func clockOnOtherBar() {
         let items = [Self.anchored("com.apple.menuextra.clock", x: 1500, width: 56)]

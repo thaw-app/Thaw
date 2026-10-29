@@ -111,7 +111,8 @@ enum ControlOrderRules {
         }
         return items.contains { item in
             let rank = MenuBarItemTag.anchoredSystemItemRank(item.tag)
-            return (rank == 1 || rank == 2) && item.isOnScreen
+            // The rank reads titles only, so a third-party item with one of these titles must not count.
+            return (rank == 1 || rank == 2) && item.tag.isSystemItem && item.isOnScreen
                 && bar.contains(CGPoint(x: item.bounds.midX, y: item.bounds.midY))
                 && divider.minX >= item.bounds.maxX
         }
