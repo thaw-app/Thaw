@@ -36,6 +36,7 @@ the items under New and Fixed.
 - **The Right margin works with the Split shape.** The right half now ends that far from the screen edge, like the left half does with the Left margin. Before, the slider did nothing, and the right half ended close to the Clock's text. Reported by @jaimefordham in [#1412](https://github.com/thaw-app/Thaw/issues/1412).
 - **⌘-dragging an item into Hidden or back keeps working when macOS renews the item between the press and the drop.** Thaw sometimes left the item you dragged in its old section.
 - **Thaw stays responsive when the app in front stops answering.** Reading where its menus end now gives up after a moment instead of waiting on the app.
+- **A large picture chosen as an item's icon is saved at icon size,** not at the picture's full size.
 - Updating all of a profile’s settings and layout now preserves its pre/post scripts.
 
 - Profiles whose saved files are missing can now be removed from the profile list.

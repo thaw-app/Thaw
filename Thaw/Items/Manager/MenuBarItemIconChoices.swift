@@ -75,14 +75,28 @@ final class MenuBarItemIconChoices {
         revision += 1
     }
 
-    /// PNG from the image's largest representation, so a 2x asset stays sharp.
+    /// PNG at the image's largest representation's scale, so a 2x asset stays sharp, but drawn
+    /// at no more than 3x: a picked file can be any size, and the PNG is kept in the defaults.
     private static func pngData(for image: NSImage) -> Data? {
         let pixelHeight = image.representations.map(\.pixelsHigh).max() ?? 0
-        let scale = max(CGFloat(pixelHeight) / max(image.size.height, 1), 1)
-        var rect = CGRect(x: 0, y: 0, width: image.size.width * scale, height: image.size.height * scale)
-        guard let cgImage = image.cgImage(forProposedRect: &rect, context: nil, hints: nil) else { return nil }
-        let rep = NSBitmapImageRep(cgImage: cgImage)
+        let scale = min(max(CGFloat(pixelHeight) / max(image.size.height, 1), 1), 3)
+        guard let rep = NSBitmapImageRep(
+            bitmapDataPlanes: nil,
+            pixelsWide: max(Int((image.size.width * scale).rounded()), 1),
+            pixelsHigh: max(Int((image.size.height * scale).rounded()), 1),
+            bitsPerSample: 8,
+            samplesPerPixel: 4,
+            hasAlpha: true,
+            isPlanar: false,
+            colorSpaceName: .deviceRGB,
+            bytesPerRow: 0,
+            bitsPerPixel: 0
+        ) else { return nil }
         rep.size = image.size
+        NSGraphicsContext.saveGraphicsState()
+        NSGraphicsContext.current = NSGraphicsContext(bitmapImageRep: rep)
+        image.draw(in: CGRect(origin: .zero, size: image.size))
+        NSGraphicsContext.restoreGraphicsState()
         return rep.representation(using: .png, properties: [:])
     }
 }
