@@ -36,9 +36,9 @@
   <img alt="Thaw settings" src="docs/images/readme-hero-light.jpeg">
 </picture>
 
-Thaw hides the menu bar items you don't need, brings them back on demand, and finds any of them in a keystroke. Free under GPL-3.0, with no tracking and no account.
+Thaw hides the menu bar items you don't need, brings them back on demand, and finds any of them in a keystroke. Free, and free to keep: there is no subscription, no account and no tracking, and a new macOS never costs an upgrade. The code is open source under GPL-3.0.
 
-Beyond hiding items, Thaw lets you organize them into groups, switch between profiles, customize your layout, and keep distractions away with Zen Mode.
+Beyond hiding items, Thaw lets you organize them into groups, switch between profiles, customize your layout, and keep distractions away with Zen Mode. Every action is also a thaw:// link, so Raycast, Floe, Shortcuts or a shell script can drive Thaw.
 
 [Explore all features →](https://www.getthaw.app/#features)
 
