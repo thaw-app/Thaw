@@ -60,21 +60,23 @@ Order matters: update assets are published **before** the Thaw DMG so a failed
 `updates` publish does not leave a public installer without matching Sparkle
 payloads.
 
-1. Build and notarize.
-2. Generate a CycloneDX SBOM of the resolved SwiftPM dependencies with Syft
-   (`Thaw_<tag>.cdx.json`), and checksum the DMG.
-3. Create Sparkle ZIP (and deltas when prior ZIPs exist).
-4. Publish ZIP + deltas to **`thaw-app/updates`** (same tag).
-5. Cosign-sign the installer DMG and SBOM; create the **`thaw-app/Thaw`** release
-   **as a draft** with DMG + SBOM + `*.sigstore.json` + `*.sha256`, and (during
-   cutover) the same Sparkle ZIP + deltas as a mirror.
-6. Push signed `appcast.xml` to **`thaw-app/updates`** `gh-pages` (new enclosure
+1. Build, notarize and attest in org-ci's reusable
+   [`build-macos-app.yml`](https://github.com/thaw-app/org-ci/blob/main/.github/workflows/build-macos-app.yml)
+   workflow. It also generates a CycloneDX SBOM of the resolved SwiftPM
+   dependencies with Syft (`Thaw_<tag>.cdx.json`), checksums the DMG and the
+   SBOM, and signs build provenance for both (`*.intoto.jsonl`). Because the
+   build runs there and not in this repository's workflow, the provenance is
+   SLSA v1.0 Build L3. The release job downloads the result and checks the
+   app's signature, the stapled ticket and the digests before going on.
+2. Create Sparkle ZIP (and deltas when prior ZIPs exist).
+3. Publish ZIP + deltas to **`thaw-app/updates`** (same tag).
+4. Cosign-sign the installer DMG and SBOM; create the **`thaw-app/Thaw`** release
+   **as a draft** with DMG + SBOM + `*.sigstore.json` + `*.sha256` +
+   `*.intoto.jsonl`, and (during cutover) the same Sparkle ZIP + deltas as a
+   mirror.
+5. Push signed `appcast.xml` to **`thaw-app/updates`** `gh-pages` (new enclosure
    URLs point at `updates`, not the Thaw mirror).
-7. Sign build provenance for the DMG and SBOM in the reusable
-   [`attest-build-provenance.yml`](../.github/workflows/attest-build-provenance.yml)
-   workflow (a signing identity separate from the macOS build job); attach
-   `*.intoto.jsonl` to the draft, then publish it when **Publish release** is
-   checked.
+6. Publish the draft when **Publish release** is checked.
 
 ### Cutover dual-publish
 
@@ -84,11 +86,9 @@ enclosure URL per file, pointing at `updates`. The Thaw copies are a safety net
 only. Remove the Thaw Sparkle attachments once a couple of updates-hosted
 releases have shipped cleanly.
 
-The release is drafted in step 5 and published in step 7 so that a failed
-attestation leaves an unpublished draft rather than a public release with no
-provenance. The appcast in step 6 goes out first, so an appcast entry's release
-link can 404 for the minute or two the attestation jobs take; in-app updates are
-unaffected, since Sparkle downloads from `thaw-app/updates`.
+The release is drafted in step 4 and published in step 6, after the appcast,
+so a failed appcast push leaves an unpublished draft. The provenance is attached
+when the draft is created, so a release is never public without it.
 
 Workflow: [`.github/workflows/release.yml`](../.github/workflows/release.yml).  
 Shared Sparkle action: [`thaw-app/org-ci` `sparkle-release`](https://github.com/thaw-app/org-ci/tree/main/actions/sparkle-release).
@@ -101,7 +101,10 @@ pass it as the action `token` input, because softprops v3 ignores `env: GITHUB_T
 
 Releases build an existing tag in `thaw-app/Thaw`, using that tag's project,
 deployment target, dependencies, and changelog. There is no separate source
-repository or private-package token to configure.
+repository or private-package token to configure. The run is dispatched **on
+the tag** (`--ref`), because the build attests the commit the run was
+dispatched from and refuses a tag that names another one; the workflow file
+that runs is the tag's.
 
 The workflow is `workflow_dispatch` only, and its **tag** input is free text:
 Actions `choice` inputs are a static list in the YAML, so they cannot be filled
@@ -115,8 +118,8 @@ scripts/release.sh          # override the target with REPO=owner/repo
 ```
 
 Anything the script does can be done by hand from the Actions tab or with
-`gh workflow run release.yml -f tag=3.0.0-beta.1 ...`; the script only removes the
-chance of dispatching a tag that does not exist. A `3.0.0-beta.1` tag selects the
+`gh workflow run release.yml --ref 3.0.0-beta.1 -f tag=3.0.0-beta.1 ...`; the
+script only removes the chance of dispatching a tag that does not exist. A `3.0.0-beta.1` tag selects the
 beta channel automatically.
 
 ### Xcode selection

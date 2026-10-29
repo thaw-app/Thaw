@@ -72,7 +72,9 @@ cat <<SUMMARY
 SUMMARY
 ask "Dispatch?" n || { echo "aborted"; exit 1; }
 
-gh workflow run "$WORKFLOW" --repo "$REPO" \
+# Run on the tag itself: the build in org-ci attests the commit the run was
+# dispatched from, and fails when the tag names another one.
+gh workflow run "$WORKFLOW" --repo "$REPO" --ref "$tag" \
     -f tag="$tag" \
     -f channel=auto \
     -f dry_run="$dry_run" \

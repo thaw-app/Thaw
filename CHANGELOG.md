@@ -24,6 +24,10 @@ the items under New and Fixed.
 
 ## [Unreleased]
 
+### Changed
+
+- **Releases carry SLSA Build L3 provenance.** Thaw is now built, notarized and attested in the shared thaw-app/org-ci build workflow, which Thaw's own release workflow can call but not alter. [Verifying releases](docs/VERIFYING_RELEASES.md) has the `gh attestation verify` command.
+
 ## [3.0.0-alpha.11] - 2026-10-28
 
 **macOS 27 only · Build 118**
