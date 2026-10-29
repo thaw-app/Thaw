@@ -1,7 +1,9 @@
 <p align="center">
   <a href="https://www.getthaw.app">
-    <img src="https://raw.githubusercontent.com/thaw-app/brand-assets/main/icons/app-macos27.png" alt="Thaw" height="96">
-    <h3 align="center">Thaw</h3>
+    <picture>
+      <source media="(prefers-color-scheme: dark)" srcset=".github/assets/header-dark.gif">
+      <img src=".github/assets/header-light.gif" alt="Thaw" width="830">
+    </picture>
   </a>
 </p>
 
