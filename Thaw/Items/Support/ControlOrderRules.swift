@@ -119,19 +119,18 @@ enum ControlOrderRules {
         }
     }
 
-    /// The dividers as a refreshed walk reads them, or the given ones when the walk lost them.
+    /// The dividers as a refreshed walk reads them, or nil when the walk lost the Hidden divider.
     static func refreshedControlItems(
-        _ previous: ControlItemPair,
         in items: [MenuBarItem],
         hiddenControlItemWindowID: CGWindowID?,
         alwaysHiddenControlItemWindowID: CGWindowID?
-    ) -> ControlItemPair {
+    ) -> ControlItemPair? {
         var items = items
         return ControlItemPair(
             items: &items,
             hiddenControlItemWindowID: hiddenControlItemWindowID,
             alwaysHiddenControlItemWindowID: alwaysHiddenControlItemWindowID
-        ) ?? previous
+        )
     }
 
     /// Whether item frames are stated against more than one display's bar.

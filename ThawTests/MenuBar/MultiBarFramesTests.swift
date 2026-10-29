@@ -229,18 +229,17 @@ struct MultiBarFramesTests {
         #expect(!ControlOrderRules.dividerIsRightOfTrailingAnchors(Self.hiddenDivider(x: 1830), among: items, displays: Self.displays))
     }
 
-    @Test("A refreshed walk's divider replaces the one the pass started with, and a lost one is kept")
+    @Test("A refreshed walk reads the divider where it now stands, and reads none once it lost it")
     func refreshedDividers() {
-        let started = Self.hiddenDivider(x: 2046.5)
         let moved = Self.hiddenDivider(x: 1350).hidden
         let refreshed = ControlOrderRules.refreshedControlItems(
-            started, in: [Self.item(x: 1398, windowID: 1), moved], hiddenControlItemWindowID: nil, alwaysHiddenControlItemWindowID: nil
+            in: [Self.item(x: 1398, windowID: 1), moved], hiddenControlItemWindowID: nil, alwaysHiddenControlItemWindowID: nil
         )
-        #expect(refreshed.hidden.bounds.minX == 1350)
-        let kept = ControlOrderRules.refreshedControlItems(
-            started, in: [Self.item(x: 1398, windowID: 1)], hiddenControlItemWindowID: nil, alwaysHiddenControlItemWindowID: nil
+        #expect(refreshed?.hidden.bounds.minX == 1350)
+        let lost = ControlOrderRules.refreshedControlItems(
+            in: [Self.item(x: 1398, windowID: 1)], hiddenControlItemWindowID: nil, alwaysHiddenControlItemWindowID: nil
         )
-        #expect(kept.hidden.bounds.minX == 2046.5)
+        #expect(lost == nil)
     }
 
     @Test("A third-party item titled like the Clock says nothing about this divider")

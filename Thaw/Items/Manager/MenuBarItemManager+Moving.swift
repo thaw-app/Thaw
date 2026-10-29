@@ -1594,11 +1594,33 @@ extension MenuBarItemManager {
             }
         }
 
+        // After an attempt, strands are picked and judged against the divider the refreshed walk read.
+        // False when that walk lost the divider or misreads it, which leaves the strands for the bounded retry.
+        func refreshDividers() -> Bool {
+            guard !pass.attempted.isEmpty else { return true }
+            guard let refreshed = ControlOrderRules.refreshedControlItems(
+                in: liveItems,
+                hiddenControlItemWindowID: hiddenControlItemWindowID,
+                alwaysHiddenControlItemWindowID: alwaysHiddenControlItemWindowID
+            ) else {
+                MenuBarItemManager.diagLog.debug("boundary repair: the refreshed walk lost the Hidden divider; stopping the pass")
+                return false
+            }
+            if let misplaced = ControlOrderRules.dividerMisplacement(refreshed, among: liveItems) {
+                MenuBarItemManager.diagLog.debug("boundary repair: \(misplaced); stopping the pass")
+                return false
+            }
+            controlItems = refreshed
+            return true
+        }
+
         // Re-read geometry after each attempt. Each strand gets one attempt
         // per pass, but remains eligible for a later pass until verified or
         // suppressed by the breaker.
         var iterations = 0
-        while let strand = pass.next(in: failingStrands()) {
+        while true {
+            guard refreshDividers() else { return (liveItems, false, true) }
+            guard let strand = pass.next(in: failingStrands()) else { break }
             guard !arrangementIsManual, !Task.isCancelled else { return (liveItems, true, false) }
             iterations += 1
             if iterations > 6 {
@@ -1606,19 +1628,6 @@ extension MenuBarItemManager {
                     "macOS 27 visible boundary repair gave up after \(iterations) strands for \(strand.logString)"
                 )
                 break
-            }
-            // A later strand is judged against the divider the refreshed walk read.
-            if iterations > 1 {
-                controlItems = ControlOrderRules.refreshedControlItems(
-                    controlItems,
-                    in: liveItems,
-                    hiddenControlItemWindowID: hiddenControlItemWindowID,
-                    alwaysHiddenControlItemWindowID: alwaysHiddenControlItemWindowID
-                )
-                if let misplaced = ControlOrderRules.dividerMisplacement(controlItems, among: liveItems) {
-                    MenuBarItemManager.diagLog.debug("boundary repair: \(misplaced); stopping the pass")
-                    return (liveItems, false, true)
-                }
             }
             if let reveal = revealedSection {
                 guard !Task.isCancelled,
@@ -1859,6 +1868,7 @@ extension MenuBarItemManager {
             }
         }
 
+        guard refreshDividers() else { return (liveItems, false, true) }
         recordBoundaryRepairOutcomes(
             attempted: pass.attempted,
             liveItems: liveItems,
