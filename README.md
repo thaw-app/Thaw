@@ -2,6 +2,13 @@
 
 The open source menu bar manager for macOS. Hide the items you don't need, bring them back on demand, and find any of them in a keystroke. Free under GPL-3.0, with no tracking and no account. [Try it in your browser](https://www.getthaw.app/#try).
 
+<p>
+  <a href="https://discord.gg/KDfWjWDnR4"><picture><source media="(prefers-color-scheme: dark)" srcset="https://shieldcn.dev/badge/Discord-join.svg?variant=ghost&amp;size=xs&amp;mode=dark&amp;font=geist&amp;logo=discord&amp;" /><img alt="Discord" src="https://shieldcn.dev/badge/Discord-join.svg?variant=ghost&amp;size=xs&amp;mode=light&amp;font=geist&amp;logo=discord&amp;" /></picture></a>
+  <a href="https://www.bestpractices.dev/projects/13303"><picture><source media="(prefers-color-scheme: dark)" srcset="https://shieldcn.dev/github/openssf/thaw-app/Thaw.svg?variant=ghost&amp;size=xs&amp;mode=dark&amp;font=geist" /><img alt="OpenSSF Best Practices" src="https://shieldcn.dev/github/openssf/thaw-app/Thaw.svg?variant=ghost&amp;size=xs&amp;mode=light&amp;font=geist" /></picture></a>
+  <a href="docs/VERIFYING_RELEASES.md"><picture><source media="(prefers-color-scheme: dark)" srcset="https://shieldcn.dev/badge/SLSA-Build_L3.svg?variant=ghost&amp;size=xs&amp;mode=dark&amp;font=geist&amp;logo=ri:GoPackage" /><img alt="SLSA 3" src="https://shieldcn.dev/badge/SLSA-3.svg?variant=ghost&amp;size=xs&amp;mode=light&amp;font=geist&amp;logo=ri:GoPackage" /></picture></a>
+  <a href="https://scorecard.dev/viewer/?uri=github.com/thaw-app/Thaw"><picture><source media="(prefers-color-scheme: dark)" srcset="https://shieldcn.dev/github/scorecard/thaw-app/Thaw.svg?variant=ghost&amp;size=xs&amp;mode=dark&amp;font=geist" /><img alt="OpenSSF Scorecard" src="https://shieldcn.dev/github/scorecard/thaw-app/Thaw.svg?variant=ghost&amp;size=xs&amp;mode=light&amp;font=geist" /></picture></a>
+</p>
+
 ![Thaw](https://www.getthaw.app/og/site/home/image.png)
 
 ## Install
