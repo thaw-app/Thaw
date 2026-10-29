@@ -38,6 +38,10 @@
 
 Thaw hides the menu bar items you don't need, brings them back on demand, and finds any of them in a keystroke. Free under GPL-3.0, with no tracking and no account.
 
+Beyond hiding items, Thaw lets you organize them into groups, switch between profiles, customize your layout, and keep distractions away with Zen Mode.
+
+[Explore all features →](https://www.getthaw.app/#features)
+
 ## Install
 
 <p>
