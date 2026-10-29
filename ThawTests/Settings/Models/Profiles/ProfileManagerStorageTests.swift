@@ -338,6 +338,8 @@ struct ProfileManagerStorageTests {
             let id = manager.profiles[0].id
             var profile = try manager.loadProfile(id: id)
             profile.menuBarLayout.customNames = ["com.example:item": "Example"]
+            let automation = ProfileAutomation(preHook: HookScript(path: "/test/pre.sh", timeoutSeconds: 12))
+            profile.automation = automation
             try manager.replaceProfile(profile)
             let appState = AppState()
             appState.settings.advanced.showOnHoverDelay = 1.75
@@ -349,6 +351,7 @@ struct ProfileManagerStorageTests {
             #expect(updated.advancedSettings.showOnHoverDelay == 1.75)
             #expect(updated.unconfirmedSpacingProfileScope == .allProfiles)
             #expect(updated.menuBarLayout.customNames == ["com.example:item": "Example"])
+            #expect(updated.automation == automation)
         }
     }
 
