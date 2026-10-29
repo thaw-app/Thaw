@@ -2,7 +2,7 @@
   <a href="https://www.getthaw.app">
     <picture>
       <source media="(prefers-color-scheme: dark)" srcset=".github/assets/header-dark.gif">
-      <img src=".github/assets/header-light.gif" alt="Thaw" width="830">
+      <img src=".github/assets/header-light.gif" alt="Thaw" width="415">
     </picture>
   </a>
 </p>
