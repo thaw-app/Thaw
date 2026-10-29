@@ -2,14 +2,14 @@
 
 Check here before [filing a bug](https://github.com/thaw-app/Thaw/issues/new/choose). Your problem may already be known, and many have a workaround.
 
-Thaw 3.0 runs on macOS 27 and Thaw 2.x runs on macOS 26. macOS 27 changed how menu bar items work, so the two have separate sections. Start with the one for your macOS version. [Versions and update channels](docs/VERSIONS.md) says which Thaw you have.
+Thaw 3.0 runs on macOS 27, and Thaw 2.x runs on macOS 26 and, from 2.2, on macOS 15. macOS 27 changed how menu bar items work, so the two have separate sections. Start with the one for your macOS version. [Versions and update channels](docs/VERSIONS.md) says which Thaw you have.
 
 - [macOS 27 (Thaw 3.0)](#macos-27-thaw-30)
   - [Known macOS 27 limitations](#known-macos-27-limitations)
   - [Little Snitch on macOS 27](#little-snitch-on-macos-27)
   - [Thaw's own icon is missing on macOS 27](#thaws-own-icon-is-missing-on-macos-27)
-- [macOS 26 (Thaw 2.x)](#macos-26-thaw-2x)
-  - [`brew upgrade` says thaw@beta does not run on this macOS](#brew-upgrade-says-thawbeta-does-not-run-on-this-macos)
+- [macOS 15 and 26 (Thaw 2.x)](#macos-15-and-26-thaw-2x)
+  - [`brew` says thaw@beta does not run on this macOS](#brew-says-thawbeta-does-not-run-on-this-macos)
   - [Items end up in the wrong section](#items-end-up-in-the-wrong-section)
   - [Thaw removed an item](#thaw-removed-an-item)
   - [Thaw's own icon is missing: how to open Settings](#thaws-own-icon-is-missing-how-to-open-settings)
@@ -37,8 +37,16 @@ macOS 27 changed how menu bar items are hidden and arranged, and Thaw 3.0 is bui
 These are known. You don't need to report them.
 
 - **Several items from one app:** some apps' menu bar items cannot be hidden independently with the current macOS 27 mechanism. An item in Hidden can stay visible when another item from the same app is in Visible. To hide them, put all of that app's items in the same section. [#1125](https://github.com/thaw-app/Thaw/issues/1125)
-- **Apple's own items:** macOS hides Focus, AirDrop, Now Playing and Fast User Switching whenever any other item is hidden, and never hides Time Machine or the Input menu. Turn on **Replace Control Center items** in **Settings → Menu Bar Layout** to put Thaw icons in their place, which you can move and hide.
-- **Clock, Control Center and Siri:** macOS pins these. Thaw cannot move them.
+- **Apple's own items:** with the Standard hiding method, macOS hides Focus, AirDrop, Now Playing, Fast User Switching, Live Activities and the camera indicator whenever any other item is hidden, and never hides Time Machine or the Input menu. Choose the Native hiding method to keep them on the menu bar, or turn on **Replace Control Center items** in **Settings → Menu Bar Layout** to put Thaw icons in their place, which you can move and hide.
+- **Clock and Control Center:** macOS keeps these at the right end of the menu bar, and Thaw leaves them where macOS puts them. With the Standard hiding method you can still hide them by putting them in a hidden section. Siri isn't pinned, so you can move items to its right.
+- **Home and other items pinned from Control Center** leave the menu bar while Hidden is closed if you use the Standard hiding method. Layout marks them. Thaw can't keep them on the bar.
+- **Game Mode:** its indicator stays on the menu bar whichever section you put it in.
+- **Zoom and some other apps with the Native hiding method:** they stay on the menu bar, because System Settings → Menu Bar has no entry for them.
+- **Recording and microphone indicators on macOS 27.0.1:** ⌘-dragging one makes macOS's menu bar process restart about a minute later, with or without Thaw. Afterwards some icons can come back out of order; dragging them into place on the menu bar fixes it. A Control Center control such as Timers can stay missing until you open Edit Controls. macOS 27.2 doesn't have this problem.
+- **Full screen on macOS 27.0.1:** videos in a browser can't go full screen, and the menu bar can stay on screen over full-screen apps. This is a macOS bug. Quitting MenuBarAgent in Activity Monitor fixes it until it comes back. [#1404](https://github.com/thaw-app/Thaw/issues/1404)
+- **Very many apps running:** with about 240 apps, Thaw can't read the whole menu bar in time, so icons can go missing from Layout for a moment or come back in a different order. [#1367](https://github.com/thaw-app/Thaw/issues/1367)
+- **Siri and voice:** Siri doesn't run Thaw's actions when you ask by voice. The same actions work from Shortcuts and Spotlight.
+- **Clicks in Settings:** on some Macs, clicks land below the control you aimed at. [#1244](https://github.com/thaw-app/Thaw/issues/1244), [#1265](https://github.com/thaw-app/Thaw/issues/1265)
 - **Shortcuts and Focus:** macOS 27 can hide the Shortcuts item at launch, and the Focus icon may not be visible to Thaw at all. Thaw cannot manage either one yet. [#1105](https://github.com/thaw-app/Thaw/issues/1105), [#1124](https://github.com/thaw-app/Thaw/issues/1124), [#1154](https://github.com/thaw-app/Thaw/issues/1154)
 - **Live Activities:** macOS 27 hides some Live Activity items and gives Thaw no way to bring them back on demand. [#1095](https://github.com/thaw-app/Thaw/issues/1095)
 - **Apps that need their own update:** an app built for the older menu bar can sit in the wrong place, refuse to hide, or show no icon. f.lux behaves this way today. The fix has to come from the app's developer, so check for an update to that app.
@@ -61,24 +69,25 @@ macOS 27 has its own switch for each app's menu bar items, separate from Thaw's 
 1. **System Settings → Menu Bar → Allow in Menu Bar → Thaw**.
 2. **General → Show Thaw icon** in Thaw's settings. To open them without the icon, see [Thaw's own icon is missing: how to open Settings](#thaws-own-icon-is-missing-how-to-open-settings).
 
-## macOS 26 (Thaw 2.x)
+## macOS 15 and 26 (Thaw 2.x)
 
-### `brew upgrade` says thaw@beta does not run on this macOS
+### `brew` says thaw@beta does not run on this macOS
 
 ```text
 Error: thaw@beta: This cask does not run on macOS versions older than Golden Gate.
 ```
 
-The `thaw@beta` cask follows the newest beta, and that is now Thaw 3, which needs macOS 27. On macOS 26, switch to the `thaw` cask:
+The `thaw@beta` cask installs Thaw 2 betas on macOS 15 and 26, and Thaw 3 betas on macOS 27. If you see this error, Homebrew is reading the wrong macOS version. Run these in a new Terminal window:
 
 ```sh
-brew uninstall thaw@beta
-brew install thaw
+brew update
+sw_vers
+brew config
 ```
 
-Your settings stay, because they are not stored in the app. To keep getting 2.x betas, set the update channel to **Beta** in **Settings → About**; Thaw then updates itself. See [Versions and update channels](docs/VERSIONS.md).
+`sw_vers` and the `macOS` line of `brew config` should show the same version. If they don't, add both outputs to [#1400](https://github.com/thaw-app/Thaw/issues/1400). Until it's sorted out, you can download Thaw from the [releases](https://github.com/thaw-app/Thaw/releases).
 
-Related: [#1221](https://github.com/thaw-app/Thaw/issues/1221).
+Your settings stay when you switch between casks, because they are not stored in the app. See [Versions and update channels](docs/VERSIONS.md).
 
 ### Items end up in the wrong section
 
@@ -306,7 +315,7 @@ Fix:
 
 ## Before you file a bug
 
-1. Confirm you are on the **latest Thaw release** for your macOS: 2.x on macOS 26, 3.0 on macOS 27 (see [Versions and update channels](docs/VERSIONS.md)). On macOS 27, check [Known macOS 27 limitations](#known-macos-27-limitations) first.
+1. Confirm you are on the **latest Thaw release** for your macOS: 2.x on macOS 15 and 26, 3.0 on macOS 27 (see [Versions and update channels](docs/VERSIONS.md)). On macOS 27, check [Known macOS 27 limitations](#known-macos-27-limitations) first.
 2. Search [open and closed issues](https://github.com/thaw-app/Thaw/issues?q=is%3Aissue) for duplicates.
 3. Note your **display setup** (single vs multiple monitors).
 4. Enable **Settings → Advanced → Diagnostics → Enable diagnostic logging**, reproduce the issue, and attach the log from **Reveal Logs in Finder**.
@@ -316,4 +325,4 @@ Fix:
 
 If a reset looks like the answer, [Reset or uninstall](docs/RESET_AND_UNINSTALL.md) lists the options from smallest to largest.
 
-**Support policy:** Thaw versions below **1.2.0** on macOS versions below **15.7.7** are no longer supported. macOS 26 and later are actively supported.
+**Support policy:** Thaw versions below **1.2.0** on macOS versions below **15.7.7** are no longer supported. macOS 15 and later are actively supported.

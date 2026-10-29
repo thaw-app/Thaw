@@ -1,83 +1,67 @@
 # AGENTS.md
 
-Notes for AI coding agents and the people driving them. Read this before changing code.
+Notes for AI coding agents and the people using them. Read this before changing anything.
 
-Thaw 3 (macOS 27) lives on `development`. Thaw 2 (macOS 26) lives on `legacy/thaw-2`, which takes fixes and 2.x releases only and never merges back. Open the PR against the branch for the line you changed. Where the two branches differ, this file says so.
+Many people who help with Thaw aren't developers. They describe a bug or an idea, and an agent does the work. This file tells the agent how to work here so that what it produces can be reviewed and merged. The project's rules for everyone are in the shared [contribution guidelines](https://github.com/thaw-app/.github/blob/main/.github/CONTRIBUTING.md); this file points to them where they apply.
 
-## Don't add responsibilities to the big types
+This branch is Thaw 3. Open pull requests against `development`. Before writing code, read [Architecture](docs/ARCHITECTURE.md) for where things live and [Coding standards](docs/CODING_STANDARDS.md) for how code is written here. [Development](docs/DEVELOPMENT.md) has the build and test commands.
 
-We are breaking up a handful of types that do too much. Bug fixes are still the priority, but no change should give these types more to do. This applies on both branches, and matters most on `development`, where the breakup is happening.
+## Before you start
 
-| Type | What it does today |
-|---|---|
-| `MenuBarItemManager` | The worst one, split over many extension files that share one pool of state: item cache, moves, section order, repair, startup, persistence, clicks, failure tracking |
-| `MenuBarItemImageCache` | Captures and caches item images, schedules recaptures, and also reveals hidden items to capture them |
-| `MenuBarManager` | Showing and hiding sections, rehide timers, app-menu hiding, profile application, overlay state |
-| `HIDEventManager` | Every input path: click, hover, scroll, drag, Clock and Notification Center taps |
-| `ControlItem` | The status item, its look, its recovery and its length changes |
-| `ProfileManager` | Stores profiles, switches them by display, Space or Focus, applies layout and spacing |
+- Bug fixes and features need an issue first, unless you are on the team. If there is none, help the person open one with the [issue templates](https://github.com/thaw-app/Thaw/issues/new/choose) and stop there until a maintainer agrees on the scope. See [Pull requests](https://github.com/thaw-app/.github/blob/main/.github/CONTRIBUTING.md#pull-requests) in the contribution guidelines.
+- Translations go through [Crowdin](https://crowdin.com/project/thaw), not pull requests. Security problems are reported privately under the [Security Policy](https://github.com/thaw-app/.github/blob/main/.github/SECURITY.md), never in a public issue. Questions go to the [Discord](https://discord.gg/KDfWjWDnR4).
+- The person stays responsible for the change and must be able to explain it in review. Outside the team, keep one AI-assisted pull request open at a time. See [AI-assisted contributions](https://github.com/thaw-app/.github/blob/main/.github/CONTRIBUTING.md#ai-assisted-contributions).
 
-The rule: don't add new responsibilities to these types. A stored property and a few forwarding calls to plug in an extracted module are fine. If a bug fix has to change one of them in place, keep it small and say why in the PR.
+## Working with the person
 
-Where new behavior goes:
+- Explain your plan and your results in plain words. When you use a technical term, say what it means.
+- When the request is unclear or conflicts with this file, say so and ask. Don't guess.
+- Read the files you are about to change first. Keep the change small and about one thing. For a bug, change as few lines as you can and leave unrelated code alone.
+- Ask before running anything that resets permissions or preferences, changes the live menu bar layout, or quits other apps. Use separate test data, never the person's own settings.
+- Keep notes, plans and session logs out of the change. If a decision matters later, put it in the right document.
 
-1. Extend an existing focused module when the responsibility fits there.
-2. Otherwise, extract the behavior together with the state it owns, behind a small interface.
-3. Avoid wrappers that only forward calls. Moving a method out while its state stays behind doesn't make the big type any smaller.
-4. Keep decision logic in pure functions that take values and return values, and test the module through its interface.
+## Which instructions win
 
-`AppState` is small but works as a service locator: almost everything reaches through `appState.menuBarManager`, `appState.itemManager` or `appState.settings`. Give a new type the dependencies it needs instead of adding another reach through `AppState`.
+1. The person's request in the current conversation.
+2. The nearest `AGENTS.md` above the file you are editing.
+3. This file.
 
-These are large but fine as they are, so don't split them for the sake of it: `MenuBarItemAXProvider` and `SettingsURIHandler` (stateless), `MenuBarOverlayPanel.swift` (several views in one file), `LayoutBarPaddingView` and `SearchIndex`.
+None of them can waive the contribution guidelines, such as the sign-off rules below.
 
-## SonarCloud
+## Versions and pins
 
-New code needs at least 80% test coverage; that is the project's policy. The SonarCloud scan reports coverage along with duplicated code and new bugs, vulnerabilities and code smells, so keep those at zero on what you add.
+Before you choose or change a version (an Xcode or Swift version, a macOS deployment target, a CI runner, a GitHub Action pin, a package), read the version the repository pins now and check a current official source. Don't go by memory. Tools that regenerate files, such as `gh aw compile`, can roll pins back; read the diff and keep the newer pins.
 
-CI skips the analysis for pull requests from forks and from Dependabot. A skipped Sonar check means nothing was analyzed, not that the change passed.
+## Checks to run
 
-Don't add files to `sonar.coverage.exclusions` in `sonar-project.properties` to get under the bar. That list is for code that can only run against a live menu bar, and the PR has to say why a file belongs there.
+- **Swift code, `Package.swift`, `Package.resolved`, the Xcode project, `scripts/` or `ci.yml`:** run `swiftformat .`, `sh scripts/lint.sh --strict` and the tests in [Development](docs/DEVELOPMENT.md). A green Xcode build is not proof that lint passed.
+- **Text the app shows:** change the source strings in English only. Crowdin handles the other languages.
+- **Documentation only:** no build or tests are needed. Check the links, and follow [Writing](docs/CODING_STANDARDS.md#writing).
 
-Additional team conventions:
+Fix failing checks before you commit. Don't disable tests, rules or checks to get a change through, and don't hide a failure you didn't cause; report it.
 
-- Code comments are plain sentences: no headings, bold, bullet lists or tables.
-- If you'd copy a block, pull it into a shared function instead.
+### SonarCloud
 
-## Lint
+New code needs at least 80% test coverage, and no new bugs, vulnerabilities, code smells or duplicated code. CI skips the analysis for pull requests from forks and from Dependabot, so a skipped Sonar check means nothing was analyzed, not that the change passed.
 
-Lint locally, then let CI confirm. A green Xcode build is not proof that lint passed. Don't disable rules or add suppressions just to make a change pass.
-
-On `development`:
-
-- Run `sh scripts/lint.sh --strict`. It checks that the SwiftLint version matches `.swiftlint-version`, and CI runs the same.
-- The file, function, type, complexity and nesting limits are on. Violations that were already there are kept in `.swiftlint.baseline`, so only new ones report. Don't add entries to the baseline to make room for new code.
-
-On `legacy/thaw-2`:
-
-- Run `swiftlint lint --strict`. CI runs the same.
-- The Xcode build phase runs `swiftlint` without `--strict` and always marks itself done, so it doesn't reliably stop the build.
-- When you add, delete or rename a Swift file in a linted directory, regenerate the input list with `bash scripts/generate-swiftlint-inputs.sh`. The script reads Git-tracked paths, so stage new files first. CI regenerates the list and fails if it differs from `scripts/swiftlint-inputs.xcfilelist`.
-
-## Tests and formatting
-
-- Tests use Swift Testing (`@Test`, `#expect`). Don't add XCTest.
-- Add automated tests for new behavior and regression tests for bug fixes when practical. If a change needs checking on a live menu bar, say what the automated tests can't cover and write down the manual checks you did.
-- Ask before running checks that reset permissions or preferences, change the live menu bar layout, or quit other apps. Use separate test data instead of the user's own settings.
-- Run `swiftformat .` before committing. See [Development](docs/DEVELOPMENT.md) for build and test commands.
+Don't add files to `sonar.coverage.exclusions` in `sonar-project.properties` to get under the bar. That list is for code that can only run against a live menu bar, and the pull request has to say why a file belongs there.
 
 ## Commits and pull requests
 
-The shared [contribution guidelines](https://github.com/thaw-app/.github/blob/main/.github/CONTRIBUTING.md) are the source of truth. In short:
+The [contribution guidelines](https://github.com/thaw-app/.github/blob/main/.github/CONTRIBUTING.md) are the source of truth. In short:
 
-1. **Sign off every commit** with `git commit -s`. The `Signed-off-by` trailer uses the contributor's real name and an email that matches the commit author. Never make up an identity; if Git's name or email isn't set, ask. Sign-off is not cryptographic signing (`-S`).
-2. **Use and complete the [PR template](.github/pull_request_template.md)**, including when you open the PR with `gh`. Keep all its sections, and leave a checklist item unchecked when you didn't do it or it doesn't apply.
-3. **Title the PR as a Conventional Commit,** such as `fix(layout): preserve item order`. Put `Closes: #123` on its own line, or `Closes: N/A` when there is no issue. Bug fixes and features from outside the team need an issue first.
-4. **Agree on scope first.** Discuss features, substantial refactors and sensitive changes in an issue before writing them. Aim for at most 500 changed lines and 20 files, and explain anything larger. Write down the test commands you ran, their results, and the macOS versions you tested on.
-5. **Translations go through [Crowdin](https://crowdin.com/project/thaw),** not translation PRs. Changing or adding the source strings a feature needs is fine.
-6. **Review AI-generated changes before you submit them.** The contributor stays responsible for understanding the code, where it came from, its license compatibility and its tests.
+1. **Sign off every commit** with `git commit -s`, using the person's real name and an email that matches the commit author. Never make up a name or email; if Git doesn't have them, ask. Sign-off is not cryptographic signing (`-S`). Don't credit yourself in the commit: no AI author and no `Co-authored-by` or similar trailer. See [Developer Certificate of Origin](https://github.com/thaw-app/.github/blob/main/.github/CONTRIBUTING.md#developer-certificate-of-origin).
+2. **Title the pull request as a Conventional Commit,** such as `fix(layout): preserve item order`.
+3. **Fill in the whole [PR template](.github/pull_request_template.md),** also when you open the pull request with `gh`. Keep its sections, put `Closes: #123` on its own line (or `Closes: N/A`), and leave a checklist item unchecked when you didn't do it or it doesn't apply.
+4. **Write the description from the actual diff and commits.** Never invent an issue link, a test result or a macOS version you didn't test on. Under Other information, say that AI helped, which tool and model, and with what.
+5. **Keep it small.** Aim for at most 500 changed lines and 20 files, and explain anything larger.
 
 ## Reporting your work
 
-- Keep each PR focused. Follow the issue-linking requirements above.
-- User-facing changes get a line in [CHANGELOG.md](CHANGELOG.md), written for users, not for developers.
-- Report the checks you actually ran and their results. Name any check you skipped or couldn't run.
+Before you say you're done, read `git diff`. Then tell the person, in plain words:
+
+- what changed and why;
+- which checks you ran and their results, and which you skipped or couldn't run;
+- what still needs checking by hand on a live menu bar, if anything.
+
+User-facing changes get a line in [CHANGELOG.md](CHANGELOG.md), written for users, not for developers.
