@@ -991,20 +991,13 @@ private final class MenuBarOverlayPanelContentView: NSView {
             // AX frames include button padding; use a small inner margin to clear the cap without an empty leading shelf.
             return Constants.MenuBarTuning.trailingPillLeadingInnerMargin
         }()
-        let trailingOutset: CGFloat = {
-            if shouldInset {
-                return 4
-            }
-            // macOS 27 needs enough outer margin for the rounded cap to clear the rightmost Clock item.
-            return Constants.MenuBarTuning.trailingPillTrailingOuterMargin
-        }()
 
         return MenuBarSplitPillGeometry.trailingBounds(
             itemBounds: displayItemBounds,
             in: rect,
             screenFrame: screenFrame,
             leadingOutset: leadingOutset,
-            trailingOutset: trailingOutset,
+            trailingMargin: fullConfiguration.rightMargin,
             notch: .init(frame: screen.frameOfNotch, margin: fullConfiguration.notchMargin)
         )
     }

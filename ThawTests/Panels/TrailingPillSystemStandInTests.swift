@@ -146,7 +146,7 @@ struct TrailingPillSystemStandInTests {
             in: CGRect(x: 0, y: 0, width: 2177, height: 38),
             screenFrame: screenFrame,
             leadingOutset: 6,
-            trailingOutset: 6,
+            trailingMargin: 6,
             notch: .none
         )
 

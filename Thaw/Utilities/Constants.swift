@@ -78,11 +78,6 @@ nonisolated enum Constants {
         /// glyph border, so without this the leftmost icons are clipped by the
         /// curve; it must clear the cap radius (~half the bar height).
         static let trailingPillLeadingInnerMargin: CGFloat = 7
-        /// Outer (trailing) breathing room for the split trailing pill on
-        /// macOS 27, the mirror of trailingPillLeadingInnerMargin: the right
-        /// rounded cap curves in over the rightmost item, so it must clear the
-        /// cap radius.
-        static let trailingPillTrailingOuterMargin: CGFloat = 10
 
         // MARK: Startup
 
