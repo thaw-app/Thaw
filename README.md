@@ -9,7 +9,7 @@ The open source menu bar manager for macOS. Hide the items you don't need, bring
   <a href="https://scorecard.dev/viewer/?uri=github.com/thaw-app/Thaw"><picture><source media="(prefers-color-scheme: dark)" srcset="https://shieldcn.dev/github/scorecard/thaw-app/Thaw.svg?variant=ghost&amp;size=xs&amp;mode=dark&amp;font=geist" /><img alt="OpenSSF Scorecard" src="https://shieldcn.dev/github/scorecard/thaw-app/Thaw.svg?variant=ghost&amp;size=xs&amp;mode=light&amp;font=geist" /></picture></a>
 </p>
 
-![Thaw settings on a Mac with a notch](docs/images/readme-hero.jpeg)
+![Thaw settings](docs/images/readme-hero.jpeg)
 
 ## Install
 
