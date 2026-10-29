@@ -148,21 +148,41 @@ nonisolated enum AXHelpers {
         element.value(kAXRoleAttribute) as? String
     }
 
-    /// Unions the frames of application menu titles in a menu bar element.
+    /// Unions the frames of application menu titles in a menu bar element, or null when the
+    /// foreground app answers too slowly or exposes too many children to read on the caller's actor.
     /// Only menu item roles count: on macOS 27 the children include
     /// status-item hosts, which would make the leading pill swallow them.
     static func applicationMenuChildFrameUnion(for menuBar: AXElement) -> CGRect {
-        children(for: menuBar).reduce(into: CGRect.null) { result, child in
-            guard isEnabled(child), let childFrame = frame(for: child) else {
-                return
-            }
+        boundedMenuFrameUnion(children(for: menuBar), budget: .milliseconds(300)) { child in
+            guard isEnabled(child), let childFrame = frame(for: child) else { return nil }
             switch roleString(for: child) {
-            case kAXMenuBarItemRole, kAXMenuItemRole:
-                result = result.union(childFrame)
-            default:
-                break
+            case kAXMenuBarItemRole, kAXMenuItemRole: return childFrame
+            default: return nil
+            }
+        } ?? .null
+    }
+
+    /// More children than any app's menu bar has; past it the read is not attempted.
+    static let applicationMenuChildLimit = 64
+
+    /// The union of the frames menuTitleFrame finds, or nil when children exceed the limit or the
+    /// reads outlast budget. Each read is a synchronous call into another app.
+    static func boundedMenuFrameUnion<Child>(
+        _ children: [Child],
+        budget: Duration,
+        now: () -> ContinuousClock.Instant = { .now },
+        menuTitleFrame: (Child) -> CGRect?
+    ) -> CGRect? {
+        guard children.count <= applicationMenuChildLimit else { return nil }
+        let deadline = now() + budget
+        var union = CGRect.null
+        for child in children {
+            guard now() < deadline else { return nil }
+            if let frame = menuTitleFrame(child) {
+                union = union.union(frame)
             }
         }
+        return now() < deadline ? union : nil
     }
 
     /// The element's AXTitle, when present. On macOS 27 most menu bar
