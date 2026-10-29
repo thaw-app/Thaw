@@ -4,7 +4,23 @@ Notes for AI coding agents and the people using them. Read this before changing 
 
 Many people who help with Thaw aren't developers. They describe a bug or an idea, and an agent does the work. This file tells the agent how to work here so that what it produces can be reviewed and merged. The project's rules for everyone are in the shared [contribution guidelines](https://github.com/thaw-app/.github/blob/main/.github/CONTRIBUTING.md); this file points to them where they apply.
 
-This branch is Thaw 3. Open pull requests against `development`. Before writing code, read [Architecture](docs/ARCHITECTURE.md) for where things live and [Coding standards](docs/CODING_STANDARDS.md) for how code is written here. [Development](docs/DEVELOPMENT.md) has the build and test commands.
+## What Thaw is
+
+Thaw is a free, open source menu bar manager for macOS. It hides the menu bar items a person doesn't need and brings them back on demand, and adds search, profiles and styling for the bar. It is a native app written in Swift with AppKit and SwiftUI.
+
+This branch is Thaw 3, built for macOS 27. There, Apple's MenuBarAgent draws the menu bar and items have no windows of their own, so Thaw hides and orders them through PlatformRuntimeKit, a closed component linked as the prebuilt `prk-bin` package. Thaw 2, for macOS 15 and 26, is on `legacy/thaw-2`.
+
+## Build and run
+
+You need macOS 27 and Xcode 27.
+
+Run `./scripts/devrun.sh`, or `./scripts/devrun.sh --debug` for the debugger. It builds Thaw and installs it as Thaw Debug in /Applications, with its own bundle identifier, so its settings and permissions stay apart from the person's own Thaw. Don't run Thaw from Xcode's build folder: macOS 27 only treats a status item as Thaw's when the app is in /Applications, and Thaw's own icon disappears when it hides items.
+
+Ask before you launch it. Thaw Debug moves items in the person's real menu bar, and its first launch asks for Accessibility and Menu Bar Layout Access. Explain what each one is for and let the person decide.
+
+## Where to read next
+
+Open pull requests against `development`. Before writing code, read [Architecture](docs/ARCHITECTURE.md) for where things live and [Coding standards](docs/CODING_STANDARDS.md) for how code is written here. [Development](docs/DEVELOPMENT.md) has the test commands and the rest.
 
 ## Before you start
 

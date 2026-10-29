@@ -12,8 +12,11 @@ This branch is Thaw 3, for macOS 27. Thaw 2, for macOS 15 and 26, is on `legacy/
 ## Build
 
 ```sh
-open Thaw.xcodeproj
+./scripts/devrun.sh          # Release, installed as /Applications/Thaw Debug.app
+./scripts/devrun.sh --debug  # Debug, for the debugger
 ```
+
+Thaw Debug has its own bundle identifier (`com.stonerl.Thaw.debug`), so it runs next to a released Thaw with separate settings and permissions. Run it from /Applications: macOS 27 only treats a status item as Thaw's when the app is there, so a build run straight from Xcode's build folder loses its own icon when it hides items. `open Thaw.xcodeproj` is still the way to edit and debug the code.
 
 ## Code style
 
