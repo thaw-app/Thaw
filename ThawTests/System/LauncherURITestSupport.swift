@@ -25,7 +25,7 @@ final class URIDeliveryCapture {
     func run<T>(_ body: () async throws -> T) async rethrows -> T {
         let previousOpen = SettingsURIHandler.openCallbackURL
         let previousPost = SettingsURIHandler.postBroadcastJSON
-        SettingsURIHandler.openCallbackURL = { [self] url in
+        SettingsURIHandler.openCallbackURL = { [self] url, _ in
             openedURLs.append(url)
             return openSucceeds
         }
@@ -133,7 +133,7 @@ final class FakeLauncherEnvironment {
         let request = try #require(LauncherURIRequest(url: url))
         let capture = URIDeliveryCapture()
         await capture.run {
-            await SettingsURIHandler.handleLauncherRequest(request, sender: "com.example.launcher", environment: environment)
+            await SettingsURIHandler.handleLauncherRequest(request, sender: SettingsURISender(bundleIdentifier: "com.example.launcher", teamIdentifier: nil, codeHash: nil), environment: environment)
         }
         return capture
     }

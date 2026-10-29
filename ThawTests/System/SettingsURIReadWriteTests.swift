@@ -32,7 +32,7 @@ struct SettingsURIReadWriteTests {
     private func get(_ key: String?, display: String? = nil) async throws -> [String: Any] {
         let capture = URIDeliveryCapture()
         let sent = await capture.run {
-            SettingsURIHandler.handleGet(key: key, displayUUID: display, callback: "floe://thaw-response", broadcast: false, requestId: "req")
+            SettingsURIHandler.handleGet(key: key, displayUUID: display, callback: "floe://thaw-response", broadcast: false, requestId: "req", recipient: nil)
         }
         #expect(sent)
         return try capture.callbackResponse()
@@ -178,14 +178,14 @@ struct SettingsURIReadWriteTests {
 
     @Test("A read needs somewhere to send the answer")
     func getNeedsAResponseRoute() {
-        #expect(!SettingsURIHandler.handleGet(key: "version", displayUUID: nil, callback: nil, broadcast: false, requestId: nil))
+        #expect(!SettingsURIHandler.handleGet(key: "version", displayUUID: nil, callback: nil, broadcast: false, requestId: nil, recipient: nil))
     }
 
     @Test("A broadcast read only acknowledges, so other listeners learn no settings")
     func broadcastOnlyAcknowledges() async throws {
         let capture = URIDeliveryCapture()
         let sent = await capture.run {
-            SettingsURIHandler.handleGet(key: "all", displayUUID: nil, callback: nil, broadcast: true, requestId: "b1")
+            SettingsURIHandler.handleGet(key: "all", displayUUID: nil, callback: nil, broadcast: true, requestId: "b1", recipient: nil)
         }
         #expect(sent)
         let response = try capture.broadcastResponse()
@@ -298,7 +298,7 @@ struct SettingsURIReadWriteTests {
     func refusedCallbacks(callback: String) async {
         let capture = URIDeliveryCapture()
         let sent = await capture.run {
-            SettingsURIHandler.sendCallbackResponse(response: ["status": "success"], callback: callback)
+            SettingsURIHandler.sendCallbackResponse(response: ["status": "success"], callback: callback, recipient: nil)
         }
         #expect(!sent)
         #expect(capture.openedURLs.isEmpty)
@@ -309,7 +309,7 @@ struct SettingsURIReadWriteTests {
         let capture = URIDeliveryCapture()
         capture.openSucceeds = false
         let sent = await capture.run {
-            SettingsURIHandler.sendCallbackResponse(response: ["status": "success"], callback: "floe://x?keep=1")
+            SettingsURIHandler.sendCallbackResponse(response: ["status": "success"], callback: "floe://x?keep=1", recipient: nil)
         }
         #expect(!sent)
         let query = capture.openedURLs.first.flatMap { URLComponents(url: $0, resolvingAgainstBaseURL: false)?.queryItems }

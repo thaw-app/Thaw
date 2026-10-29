@@ -20,7 +20,7 @@ extension SettingsURIResponseSuites {
         func callbackCarriesTheResponse() async throws {
             let capture = URIDeliveryCapture()
             let sent = await capture.run {
-                SettingsURIHandler.sendCallbackResponse(response: response, callback: "raycast://extensions/thaw?source=test")
+                SettingsURIHandler.sendCallbackResponse(response: response, callback: "raycast://extensions/thaw?source=test", recipient: nil)
             }
 
             #expect(sent)
@@ -38,7 +38,7 @@ extension SettingsURIResponseSuites {
             let capture = URIDeliveryCapture()
             capture.openSucceeds = false
             let sent = await capture.run {
-                SettingsURIHandler.sendCallbackResponse(response: response, callback: "floe://thaw-response")
+                SettingsURIHandler.sendCallbackResponse(response: response, callback: "floe://thaw-response", recipient: nil)
             }
 
             #expect(!sent)
@@ -59,7 +59,7 @@ extension SettingsURIResponseSuites {
         func unsafeCallbackIsRefused(callback: String) async {
             let capture = URIDeliveryCapture()
             let sent = await capture.run {
-                SettingsURIHandler.sendCallbackResponse(response: response, callback: callback)
+                SettingsURIHandler.sendCallbackResponse(response: response, callback: callback, recipient: nil)
             }
 
             #expect(!sent)

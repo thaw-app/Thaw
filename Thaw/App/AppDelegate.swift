@@ -287,17 +287,15 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     /// Writes the item dump for an approved sender and returns its path only to a callback that sender handles.
-    private func handleDumpItemsRequest(callback requested: String?, sender: String) {
-        let callback = ItemEnumerationDump.deliverableCallback(requested, senderBundleIdentifier: sender) { target in
-            NSWorkspace.shared.urlForApplication(toOpen: target).flatMap { Bundle(url: $0)?.bundleIdentifier }
-        }
+    private func handleDumpItemsRequest(callback requested: String?, sender: SettingsURISender) {
+        let callback = ItemEnumerationDump.deliverableCallback(requested) { CallbackRecipient.application(for: $0, sender: sender) }
         if requested != nil, callback == nil {
-            appState.diagLog.warning("dump-items: refusing callback that \(sender) does not handle")
+            appState.diagLog.warning("dump-items: refusing callback that \(sender.bundleIdentifier)'s own app does not handle")
         }
         guard let fileURL = ItemEnumerationDump.run(), let callback else {
             return
         }
-        ItemEnumerationDump.respond(fileURL: fileURL, callback: callback)
+        ItemEnumerationDump.respond(fileURL: fileURL, callback: callback.components, app: callback.app)
     }
 
     /// Runs a request that needs the Settings URI switch and an approved sender.
@@ -341,29 +339,29 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             appState.diagLog.warning("Settings URI \(host): missing required parameters in \(url.absoluteString)")
             return
         }
-        dispatchAuthorizedRoute(request.route, sender: identity.bundleIdentifier)
+        dispatchAuthorizedRoute(request.route, sender: identity)
     }
 
     /// Runs a route whose sender passed the whitelist check.
-    private func dispatchAuthorizedRoute(_ route: SettingsURIRoute, sender effectiveBundleId: String) {
+    private func dispatchAuthorizedRoute(_ route: SettingsURIRoute, sender identity: SettingsURISender) {
         switch route {
         case let .set(key, value, displayUUID):
-            handleSetRequest(key: key, value: value, displayUUID: displayUUID, sender: effectiveBundleId)
+            handleSetRequest(key: key, value: value, displayUUID: displayUUID, sender: identity.bundleIdentifier)
         case let .toggle(key, displayUUID):
-            handleToggleRequest(key: key, displayUUID: displayUUID, sender: effectiveBundleId)
+            handleToggleRequest(key: key, displayUUID: displayUUID, sender: identity.bundleIdentifier)
         case let .get(query):
-            handleGetRequest(query, sender: effectiveBundleId)
+            handleGetRequest(query, sender: identity)
         case let .revealItem(bundle, itemID):
-            handleRevealItemRequest(bundle: bundle, itemID: itemID, sender: effectiveBundleId)
+            handleRevealItemRequest(bundle: bundle, itemID: itemID, sender: identity.bundleIdentifier)
         case let .launcher(operation, query):
-            handleLauncherRequest(LauncherURIRequest(operation: operation, query: query), sender: effectiveBundleId)
+            handleLauncherRequest(LauncherURIRequest(operation: operation, query: query), sender: identity)
         case let .proxyPress(bundle):
-            handleProxyPressRequest(bundle: bundle, sender: effectiveBundleId)
+            handleProxyPressRequest(bundle: bundle, sender: identity.bundleIdentifier)
         case .toggleThawBar:
             // It saves the active display's Thaw Bar setting, so it answers to the same gate as set and toggle.
             HotkeyAction.enableThawBar.perform(appState: appState)
         case let .dumpItems(callback):
-            handleDumpItemsRequest(callback: callback, sender: effectiveBundleId)
+            handleDumpItemsRequest(callback: callback, sender: identity)
         case .authorize, .action, .malformed, .unrecognized:
             break
         }
@@ -461,7 +459,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     /// Handles the launcher operations, including get-appearance.
     /// The work is async because activation and profile layout report an outcome once they finish.
-    private func handleLauncherRequest(_ request: LauncherURIRequest, sender: String) {
+    private func handleLauncherRequest(_ request: LauncherURIRequest, sender: SettingsURISender) {
         let state = appState
         Task {
             await SettingsURIHandler.handleLauncherRequest(request, sender: sender, appState: state)
@@ -469,13 +467,15 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     /// Handles thaw://get?key=X&callback=Y.
-    private func handleGetRequest(_ query: SettingsURIGetQuery, sender _: String?) {
+    /// sender is nil only for the public version read.
+    private func handleGetRequest(_ query: SettingsURIGetQuery, sender: SettingsURISender?) {
         let success = SettingsURIHandler.handleGet(
             key: query.key,
             displayUUID: query.displayUUID,
             callback: query.callback,
             broadcast: query.broadcast,
-            requestId: query.requestId
+            requestId: query.requestId,
+            recipient: sender
         )
 
         if !success {

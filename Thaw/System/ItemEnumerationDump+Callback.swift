@@ -16,24 +16,22 @@ extension ItemEnumerationDump {
         "file", "javascript", "data", "about", "blob",
     ]
 
-    /// The callback a dump may be delivered to, or nil unless its scheme is handled by the approved sender itself.
-    /// handlerBundleIdentifier names the app that would open a URL, which tests supply directly.
+    /// The callback a dump may be delivered to and the app to open it with, or nil unless its scheme
+    /// is handled by the approved sender's own app. senderApp is CallbackRecipient's check, which tests supply directly.
     static func deliverableCallback(
         _ callback: String?,
-        senderBundleIdentifier: String,
-        handlerBundleIdentifier: (URL) -> String?
-    ) -> URLComponents? {
+        senderApp: (URL) -> URL?
+    ) -> (components: URLComponents, app: URL)? {
         guard let callback, !callback.isEmpty,
               let components = URLComponents(string: callback),
               let scheme = components.scheme?.lowercased(), !scheme.isEmpty,
               !refusedCallbackSchemes.contains(scheme), !scheme.hasPrefix("x-apple-"),
               let url = components.url,
-              let handler = handlerBundleIdentifier(url),
-              handler.caseInsensitiveCompare(senderBundleIdentifier) == .orderedSame
+              let app = senderApp(url)
         else {
             return nil
         }
-        return components
+        return (components, app)
     }
 
     /// The callback URL with only the file path and a URL-sized per-app summary appended.
