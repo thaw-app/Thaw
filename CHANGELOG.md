@@ -24,6 +24,10 @@ the items under New and Fixed.
 
 ## [Unreleased]
 
+### Fixed
+
+- Exporting a single profile now preserves its Space association, so importing it on the same Mac restores the association.
+
 ## [2.2.0-beta.1] - 2026-10-27
 
 **macOS 15 and 26 · Build 64**

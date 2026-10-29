@@ -415,14 +415,16 @@ final class ProfileManager {
         saveManifest()
     }
 
-    /// Exports a profile to a file, including display associations.
+    /// Exports a profile to a file, including display and Space associations.
     func exportProfile(id: UUID, to url: URL) throws {
         let profile = try loadProfile(id: id)
         let meta = profiles.first { $0.id == id }
         let entry = ProfileExportEntry(
             profile: profile,
             associatedDisplayUUID: meta?.associatedDisplayUUID,
-            associatedDisplayName: meta?.associatedDisplayName
+            associatedDisplayName: meta?.associatedDisplayName,
+            associatedSpaceKey: meta?.associatedSpaceKey,
+            associatedSpaceName: meta?.associatedSpaceName
         )
         let bundle = ProfileExportBundle(entries: [entry])
         let data = try encoder.encode(bundle)
