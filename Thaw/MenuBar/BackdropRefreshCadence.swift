@@ -19,8 +19,17 @@ nonisolated enum BackdropRefreshCadence {
 
     /// The wait before the next refresh, or nil to skip one. coverLikely: Thaw
     /// is frontmost or the Thaw Bar is open, when icon captures happen.
-    static func nextInterval(coverLikely: Bool, screenLocked: Bool, idleSeconds: TimeInterval) -> Duration? {
-        guard !screenLocked, idleSeconds < idleThreshold else { return nil }
+    /// barVisible: some display shows its bar; a full-screen app hides it, and
+    /// reading the windows below it then captures the app's own content.
+    static func nextInterval(coverLikely: Bool, barVisible: Bool, screenLocked: Bool, idleSeconds: TimeInterval) -> Duration? {
+        guard barVisible, !screenLocked, idleSeconds < idleThreshold else { return nil }
         return coverLikely ? fast : slow
+    }
+
+    /// Whether a timed refresh re-composites even when the windows under the
+    /// bar are unchanged, to catch a window repainting in place. Only while a
+    /// cover is likely; otherwise a tick captures only after a window moved.
+    static func forcesRecomposite(coverLikely: Bool) -> Bool {
+        coverLikely
     }
 }

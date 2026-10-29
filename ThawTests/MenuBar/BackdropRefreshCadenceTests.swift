@@ -13,14 +13,26 @@ import Testing
 struct BackdropRefreshCadenceTests {
     @Test("Fast while a cover is likely, slow otherwise")
     func fastAndSlow() {
-        #expect(BackdropRefreshCadence.nextInterval(coverLikely: true, screenLocked: false, idleSeconds: 1) == BackdropRefreshCadence.fast)
-        #expect(BackdropRefreshCadence.nextInterval(coverLikely: false, screenLocked: false, idleSeconds: 1) == BackdropRefreshCadence.slow)
+        #expect(BackdropRefreshCadence.nextInterval(coverLikely: true, barVisible: true, screenLocked: false, idleSeconds: 1) == BackdropRefreshCadence.fast)
+        #expect(BackdropRefreshCadence.nextInterval(coverLikely: false, barVisible: true, screenLocked: false, idleSeconds: 1) == BackdropRefreshCadence.slow)
     }
 
     @Test("Paused while the screen is locked or nobody has touched the Mac for a while")
     func paused() {
-        #expect(BackdropRefreshCadence.nextInterval(coverLikely: true, screenLocked: true, idleSeconds: 1) == nil)
-        #expect(BackdropRefreshCadence.nextInterval(coverLikely: true, screenLocked: false, idleSeconds: BackdropRefreshCadence.idleThreshold) == nil)
+        #expect(BackdropRefreshCadence.nextInterval(coverLikely: true, barVisible: true, screenLocked: true, idleSeconds: 1) == nil)
+        #expect(BackdropRefreshCadence.nextInterval(coverLikely: true, barVisible: true, screenLocked: false, idleSeconds: BackdropRefreshCadence.idleThreshold) == nil)
+    }
+
+    @Test("Paused while no display shows the bar, whatever else is true")
+    func pausedWithoutABar() {
+        #expect(BackdropRefreshCadence.nextInterval(coverLikely: true, barVisible: false, screenLocked: false, idleSeconds: 1) == nil)
+        #expect(BackdropRefreshCadence.nextInterval(coverLikely: false, barVisible: false, screenLocked: false, idleSeconds: 1) == nil)
+    }
+
+    @Test("Only the fast cadence forces a re-composite; the slow one waits for the windows to change")
+    func forcing() {
+        #expect(BackdropRefreshCadence.forcesRecomposite(coverLikely: true))
+        #expect(!BackdropRefreshCadence.forcesRecomposite(coverLikely: false))
     }
 
     @Test("A window that moves under the bar changes the key, and so do the same windows stacked in another order")
