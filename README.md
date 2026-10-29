@@ -1,8 +1,8 @@
 <p align="center">
   <a href="https://www.getthaw.app">
     <picture>
-      <source media="(prefers-color-scheme: dark)" srcset=".github/assets/header-dark.gif">
-      <img src=".github/assets/header-light.gif" alt="Thaw" height="128">
+      <source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/thaw-app/brand-assets/main/headers/thaw-dark.gif">
+      <img src="https://raw.githubusercontent.com/thaw-app/brand-assets/main/headers/thaw-light.gif" alt="Thaw" height="128">
     </picture>
   </a>
 </p>
