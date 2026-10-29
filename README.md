@@ -13,7 +13,7 @@
 
 <p align="center">
   <a href="https://www.getthaw.app/docs/thaw"><strong>Documentation</strong></a> ·
-  <a href="https://www.getthaw.app/changelog"><strong>Changelog</strong></a> ·
+  <a href="https://www.getthaw.app/faq"><strong>FAQ</strong></a> ·
   <a href="https://www.getthaw.app/roadmap"><strong>Roadmap</strong></a> ·
   <a href="https://www.getthaw.app/community"><strong>Community</strong></a> ·
   <a href="https://www.getthaw.app/#try"><strong>Try it in your browser</strong></a>
@@ -37,16 +37,17 @@ Thaw hides the menu bar items you don't need, brings them back on demand, and fi
 
 ## Install
 
+<p>
+  <picture><source media="(prefers-color-scheme: dark)" srcset="https://shieldcn.dev/badge/THAW_2-MACOS_15--26.svg?variant=ghost&amp;font=geist-mono&amp;logo=apple&amp;mode=dark" /><img alt="Thaw 2 for macOS 15 to 26" src="https://shieldcn.dev/badge/THAW_2-MACOS_15--26.svg?variant=ghost&amp;font=geist-mono&amp;logo=apple&amp;mode=light" /></picture>
+  <picture><source media="(prefers-color-scheme: dark)" srcset="https://shieldcn.dev/badge/THAW_3-MACOS_27.svg?variant=ghost&amp;font=geist-mono&amp;logo=apple&amp;mode=dark" /><img alt="Thaw 3 for macOS 27" src="https://shieldcn.dev/badge/THAW_3-MACOS_27.svg?variant=ghost&amp;font=geist-mono&amp;logo=apple&amp;mode=light" /></picture>
+</p>
+
 ```sh
 brew install thaw
 brew install thaw@beta
 ```
 
 Or download the disk image from the [releases](https://github.com/thaw-app/Thaw/releases) and drag Thaw to Applications.
-
-## Documentation
-
-Visit https://www.getthaw.app/docs/thaw to view the documentation. [What Verified means](https://www.getthaw.app/verified) covers how releases are built and checked.
 
 ## Contributing
 
