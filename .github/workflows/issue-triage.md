@@ -136,11 +136,12 @@ If all required fields are present, you MUST NOT post a clarifying-questions com
 
 ### 1. Support Policy Check (comment + label if unsupported)
 
-Thaw 2.x requires macOS 26, and systems on macOS 14 or 15 stay on the 1.x line.
+Thaw 2.x runs on macOS 26, and from 2.2.0 on macOS 15 too. Systems on macOS 14
+stay on the 1.x line, and a macOS 15 report can be against either 1.x or 2.2.
 This check therefore only concerns 1.x reports.
 
 Apply it only when the report is clearly against the 1.x line, meaning the
-reporter states a Thaw version below 2.0, or states macOS 14 or 15. Within that
+reporter states a Thaw version below 2.0, or states macOS 14. Within that
 scope, if the reporter indicates **Thaw version < 1.2.0** **and** **macOS
 version < 15.7.7**, then:
 
