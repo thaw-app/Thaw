@@ -183,6 +183,53 @@ struct SavedOrderMirrorGateTests {
         #expect(gate.mirrorIsBehind(userDragEndedAt: at(2)))
     }
 
+    @Test("A Hidden divider read right of the Clock holds the mirror, even after a ⌘-drag")
+    func dividerRightOfClockHoldsTheMirror() {
+        let key = "MenuBarItemManager.savedSectionOrder"
+        let previous = UserDefaults.standard.object(forKey: key)
+        defer { UserDefaults.standard.set(previous, forKey: key) }
+
+        let clock = MenuBarItem(
+            tag: MenuBarItemTag(namespace: .menuBarAgent, title: "com.apple.menuextra.clock"),
+            windowID: 20,
+            ownerPID: 400,
+            sourcePID: 400,
+            bounds: CGRect(x: 1840, y: 3.5, width: 56, height: 24),
+            title: "com.apple.menuextra.clock",
+            isOnScreen: true
+        )
+        let visible = [Self.item(x: 1600, windowID: 1), Self.item(x: 1700, windowID: 2), clock]
+        var cache = MenuBarItemCache(displayID: nil)
+        cache[.visible] = visible
+        let manager = MenuBarItemManager()
+        let visibleKey = MenuBarSectionName.visible.rawValue
+        let saved = [visibleKey: [visible[1], visible[0]].map(\.uniqueIdentifier)]
+        manager.savedSectionOrder = saved
+
+        manager.mirrorSavedSectionOrderIfSettled(
+            from: cache, controlItems: Self.hiddenDivider(x: 1900), placedByUser: true, displays: Self.displays
+        )
+        #expect(manager.savedSectionOrder == saved)
+
+        manager.mirrorSavedSectionOrderIfSettled(
+            from: cache, controlItems: Self.hiddenDivider(x: 1500), placedByUser: true, displays: Self.displays
+        )
+        #expect(manager.savedSectionOrder != saved)
+    }
+
+    private static func hiddenDivider(x: CGFloat) -> ControlItemPair {
+        let hidden = MenuBarItem(
+            tag: .hiddenControlItem,
+            windowID: 9,
+            ownerPID: 501,
+            sourcePID: 501,
+            bounds: CGRect(x: x, y: 4.5, width: 2, height: 24),
+            title: ControlItemIdentifier.hidden.rawValue,
+            isOnScreen: true
+        )
+        return ControlItemPair(hidden: hidden, alwaysHidden: nil)
+    }
+
     @Test("A ⌘-drag becomes the saved order while the hold is still on")
     func userDragSkipsTheHold() {
         let key = "MenuBarItemManager.savedSectionOrder"

@@ -76,6 +76,7 @@ Most of the fixes in this release harden security, and they come from findings i
 - **Moving an item no longer pushes its neighbours into Hidden or Always Hidden,** and no longer moves the item you dropped it next to when two items shared a position.
 - **Thaw can restore your Visible order after every item in front of the Hidden divider has moved across it.** Before, some items got no place and stayed where they were.
 - **The screen recording indicator no longer blinks on and off during full-screen video.** Thaw re-read the strip behind the menu bar every 20 seconds, which macOS counts as recording the video. It now skips that while the bar is hidden, and reads again only when a window under the bar moved. Reported by @edhinnig in [#1413](https://github.com/thaw-app/Thaw/issues/1413).
+- **After a display change, Thaw leaves your items alone while it reads the Hidden divider on the wrong side of the Clock.** It used to move them into Hidden, or save that order as yours. Fixed by @camguillory.
 
 ### Known issues
 

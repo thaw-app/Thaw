@@ -324,8 +324,8 @@ extension MenuBarItemManager {
             MenuBarItemManager.diagLog.debug("Skipping \(diagnosticContext): item frames span more than one bar")
             return false
         }
-        guard !ControlOrderRules.dividerIsOffTheBar(controlItems, among: items) else {
-            MenuBarItemManager.diagLog.debug("Skipping \(diagnosticContext): the Hidden divider is parked off the bar")
+        if let misplaced = ControlOrderRules.dividerMisplacement(controlItems, among: items) {
+            MenuBarItemManager.diagLog.debug("Skipping \(diagnosticContext): \(misplaced)")
             return false
         }
         // A batch weight write cannot fall back per item; when the agent

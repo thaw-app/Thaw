@@ -378,8 +378,10 @@ extension MenuBarItemManager {
             MenuBarItemManager.diagLog.debug("Not mirroring section order: item frames span more than one bar")
             return
         }
-        if let controlItems, ControlOrderRules.dividerIsOffTheBar(controlItems, among: cache[.visible], displays: displays) {
-            MenuBarItemManager.diagLog.debug("Not mirroring section order: the Hidden divider is parked off the bar")
+        if let controlItems,
+           let misplaced = ControlOrderRules.dividerMisplacement(controlItems, among: cache[.visible], displays: displays)
+        {
+            MenuBarItemManager.diagLog.debug("Not mirroring section order: \(misplaced)")
             return
         }
 
