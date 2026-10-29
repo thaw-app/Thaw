@@ -1,6 +1,8 @@
 name: Build DMG
 
-# Manual signed, notarized DMG as a short-lived artifact, never a release.
+# Manual signed, notarized DMG as a short-lived artifact, never a release. The
+# build runs in org-ci's build-macos-app.yml without an attestation, so any ref
+# builds; the `.build` PR command runs it on the pull request's branch.
 
 on:
   workflow_dispatch:
@@ -19,71 +21,29 @@ permissions:
   contents: read
 
 jobs:
+  # The artifact is build-dev-<short sha>: the DMG, its checksum, the SBOM and
+  # the exported app as a ZIP, kept for three days.
   build-dmg:
     if: github.repository == 'thaw-app/Thaw'
-    # GitHub-hosted Xcode 27 preview image (arm64); xcode-27-xlarge for more cores.
-    runs-on: xcode-27
-    env:
-      APP_NAME: "Thaw.app"
-      DMG_NAME: "Thaw-dev.dmg"
-    steps:
-      - name: Checkout source
-        id: source
-        uses: thaw-app/org-ci/actions/checkout-source@cfa52194f39013d6f54e6f5a14dc57cec3a20e9b
-        with:
-          project-name: Thaw.xcodeproj
-          target-name: Thaw
-          ref: ${{ inputs.ref }}
-          path: Thaw
-
-      - name: Select latest installed Xcode (including betas)
-        uses: maxim-lobanov/setup-xcode@ed7a3b1fda3918c0306d1b724322adc0b8cc0a90 # v1.7.0
-        with:
-          xcode-version: latest
-
+    permissions:
+      contents: read
+      id-token: write
+      attestations: write
+    uses: thaw-app/org-ci/.github/workflows/build-macos-app.yml@91ed528c0660233e44c9a8f179d4bff61d88b7ca
+    with:
+      ref: ${{ inputs.ref }}
+      project-name: Thaw.xcodeproj
+      target-name: Thaw
+      scheme-name: Thaw
+      app-name: Thaw.app
+      dmg-name: Thaw-dev.dmg
+      asset-prefix: Thaw
+      # Holds the signing secrets and has no approval rule.
+      environment: signing
+      # GitHub-hosted Xcode 27 preview image (arm64); xcode-27-xlarge for more cores.
+      runner: xcode-27
       # The Thaw target's lint build phase requires the pinned SwiftLint on PATH.
-      - name: Install pinned SwiftLint
-        run: |
-          sh Thaw/scripts/install-swiftlint.sh
-          echo "$HOME/.local/bin" >> "$GITHUB_PATH"
-
-      - name: Configure signing
-        uses: thaw-app/org-ci/actions/configure-signing@cfa52194f39013d6f54e6f5a14dc57cec3a20e9b
-        with:
-          apple-application-cert: ${{ secrets.APPLE_APPLICATION_CERT }}
-          apple-application-cert-password: ${{ secrets.APPLE_APPLICATION_CERT_PASSWORD }}
-          apple-id: ${{ secrets.APPLE_ID }}
-          apple-id-password: ${{ secrets.APPLE_ID_PASSWORD }}
-          apple-team-id: ${{ secrets.APPLE_TEAM_ID }}
-
-      - name: Build
-        uses: thaw-app/org-ci/actions/build@cfa52194f39013d6f54e6f5a14dc57cec3a20e9b
-        with:
-          apple-team-id: ${{ secrets.APPLE_TEAM_ID }}
-          project-name: ${{ steps.source.outputs.project-name }}
-          scheme-name: Thaw
-          deployment-target: ${{ steps.source.outputs.deployment-target }}
-
-      - name: Export Archive
-        uses: thaw-app/org-ci/actions/export-and-package@cfa52194f39013d6f54e6f5a14dc57cec3a20e9b
-        with:
-          apple-team-id: ${{ secrets.APPLE_TEAM_ID }}
-          app-name: ${{ env.APP_NAME }}
-          dmg-name: ${{ env.DMG_NAME }}
-
-      - name: Notarize
-        uses: thaw-app/org-ci/actions/notarize-and-validate@cfa52194f39013d6f54e6f5a14dc57cec3a20e9b
-        with:
-          dmg-name: ${{ env.DMG_NAME }}
-          app-name: ${{ env.APP_NAME }}
-
-      - name: Upload DMG
-        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
-        with:
-          name: Thaw-dmg-${{ steps.source.outputs.commit }}
-          path: build/${{ env.DMG_NAME }}
-          retention-days: 3
-
-      - name: Cleanup keychain
-        if: always()
-        run: security delete-keychain "$RUNNER_TEMP/buildagent.keychain" || true
+      prepare-script: scripts/install-swiftlint.sh
+      attest: false
+      retention-days: 3
+    secrets: inherit
