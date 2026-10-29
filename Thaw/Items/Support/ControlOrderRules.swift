@@ -94,7 +94,7 @@ enum ControlOrderRules {
         return nil
     }
 
-    /// Whether the Hidden divider reads right of Control Center or the Clock on its own bar.
+    /// Whether the Hidden divider reads right of, or over, Control Center or the Clock on its own bar.
     /// macOS keeps those two last, so this is a frame left over from a display change, and
     /// every item would read as stranded on the hidden side of it.
     static func dividerIsRightOfTrailingAnchors(
@@ -114,8 +114,24 @@ enum ControlOrderRules {
             // The rank reads titles only, so a third-party item with one of these titles must not count.
             return (rank == 1 || rank == 2) && item.tag.isSystemItem && item.isOnScreen
                 && bar.contains(CGPoint(x: item.bounds.midX, y: item.bounds.midY))
-                && divider.minX >= item.bounds.maxX
+                // Past the anchor's left edge: right of it, or over it, which can't be judged either.
+                && divider.maxX > item.bounds.minX
         }
+    }
+
+    /// The dividers as a refreshed walk reads them, or the given ones when the walk lost them.
+    static func refreshedControlItems(
+        _ previous: ControlItemPair,
+        in items: [MenuBarItem],
+        hiddenControlItemWindowID: CGWindowID?,
+        alwaysHiddenControlItemWindowID: CGWindowID?
+    ) -> ControlItemPair {
+        var items = items
+        return ControlItemPair(
+            items: &items,
+            hiddenControlItemWindowID: hiddenControlItemWindowID,
+            alwaysHiddenControlItemWindowID: alwaysHiddenControlItemWindowID
+        ) ?? previous
     }
 
     /// Whether item frames are stated against more than one display's bar.

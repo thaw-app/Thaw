@@ -222,6 +222,27 @@ struct MultiBarFramesTests {
         #expect(!ControlOrderRules.dividerIsRightOfTrailingAnchors(Self.hiddenDivider(x: 1350), among: items, displays: Self.displays))
     }
 
+    @Test("A Hidden divider read over the Clock's frame can't be judged either")
+    func dividerOverlappingClock() {
+        let items = [Self.item(x: 1398, windowID: 1), Self.anchored("com.apple.menuextra.clock", x: 1840, width: 56)]
+        #expect(ControlOrderRules.dividerIsRightOfTrailingAnchors(Self.hiddenDivider(x: 1860), among: items, displays: Self.displays))
+        #expect(!ControlOrderRules.dividerIsRightOfTrailingAnchors(Self.hiddenDivider(x: 1830), among: items, displays: Self.displays))
+    }
+
+    @Test("A refreshed walk's divider replaces the one the pass started with, and a lost one is kept")
+    func refreshedDividers() {
+        let started = Self.hiddenDivider(x: 2046.5)
+        let moved = Self.hiddenDivider(x: 1350).hidden
+        let refreshed = ControlOrderRules.refreshedControlItems(
+            started, in: [Self.item(x: 1398, windowID: 1), moved], hiddenControlItemWindowID: nil, alwaysHiddenControlItemWindowID: nil
+        )
+        #expect(refreshed.hidden.bounds.minX == 1350)
+        let kept = ControlOrderRules.refreshedControlItems(
+            started, in: [Self.item(x: 1398, windowID: 1)], hiddenControlItemWindowID: nil, alwaysHiddenControlItemWindowID: nil
+        )
+        #expect(kept.hidden.bounds.minX == 2046.5)
+    }
+
     @Test("A third-party item titled like the Clock says nothing about this divider")
     func clockTitleFromAnotherApp() {
         let impostor = MenuBarItem(

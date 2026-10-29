@@ -1489,7 +1489,7 @@ extension MenuBarItemManager {
         var pass = BoundaryRepairPass()
 
         var itemsForControlDiscovery = liveItems
-        guard let controlItems = ControlItemPair(
+        guard var controlItems = ControlItemPair(
             items: &itemsForControlDiscovery,
             hiddenControlItemWindowID: hiddenControlItemWindowID,
             alwaysHiddenControlItemWindowID: alwaysHiddenControlItemWindowID
@@ -1606,6 +1606,19 @@ extension MenuBarItemManager {
                     "macOS 27 visible boundary repair gave up after \(iterations) strands for \(strand.logString)"
                 )
                 break
+            }
+            // A later strand is judged against the divider the refreshed walk read.
+            if iterations > 1 {
+                controlItems = ControlOrderRules.refreshedControlItems(
+                    controlItems,
+                    in: liveItems,
+                    hiddenControlItemWindowID: hiddenControlItemWindowID,
+                    alwaysHiddenControlItemWindowID: alwaysHiddenControlItemWindowID
+                )
+                if let misplaced = ControlOrderRules.dividerMisplacement(controlItems, among: liveItems) {
+                    MenuBarItemManager.diagLog.debug("boundary repair: \(misplaced); stopping the pass")
+                    return (liveItems, false, true)
+                }
             }
             if let reveal = revealedSection {
                 guard !Task.isCancelled,
