@@ -10,7 +10,7 @@ https://github.com/thaw-app/Thaw/blob/development/docs/CODING_STANDARDS.md
 
 Tests use Swift Testing. Write new tests with @Test and #expect, not XCTest.
 
-External contributors: a bug fix or feature needs an issue in the tracker before the pull request. Pull requests for changes nobody reported or agreed on may be closed without review.
+External contributors: a new feature needs an issue that a maintainer agreed to before the pull request, or it may be closed without review. A bug fix can come straight in; link its issue if there is one.
 -->
 
 ## Linked issue (required)
