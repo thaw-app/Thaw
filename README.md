@@ -1,19 +1,36 @@
-# Thaw
+<p align="center">
+  <a href="https://www.getthaw.app">
+    <img src="https://raw.githubusercontent.com/thaw-app/brand-assets/main/icons/app-macos27.png" alt="Thaw" height="96">
+    <h3 align="center">Thaw</h3>
+  </a>
+</p>
 
-The open source menu bar manager for macOS. Hide the items you don't need, bring them back on demand, and find any of them in a keystroke. Free under GPL-3.0, with no tracking and no account. [Try it in your browser](https://www.getthaw.app/#try).
+<p align="center">
+  The open source menu bar manager for macOS.
+</p>
 
-<p>
+<p align="center">
+  <a href="https://www.getthaw.app/docs/thaw"><strong>Documentation</strong></a> ·
+  <a href="https://www.getthaw.app/changelog"><strong>Changelog</strong></a> ·
+  <a href="https://www.getthaw.app/roadmap"><strong>Roadmap</strong></a> ·
+  <a href="https://www.getthaw.app/community"><strong>Community</strong></a> ·
+  <a href="https://www.getthaw.app/#try"><strong>Try it in your browser</strong></a>
+</p>
+
+<p align="center">
   <a href="https://discord.gg/KDfWjWDnR4"><picture><source media="(prefers-color-scheme: dark)" srcset="https://shieldcn.dev/badge/DISCORD-JOIN.svg?variant=ghost&amp;font=geist-mono&amp;logo=discord&amp;mode=dark" /><img alt="Discord" src="https://shieldcn.dev/badge/DISCORD-JOIN.svg?variant=ghost&amp;font=geist-mono&amp;logo=discord&amp;mode=light" /></picture></a>
   <a href="https://scorecard.dev/viewer/?uri=github.com/thaw-app/Thaw"><picture><source media="(prefers-color-scheme: dark)" srcset="https://shieldcn.dev/github/scorecard/thaw-app/Thaw.svg?variant=ghost&amp;font=geist-mono&amp;label=SCORECARD&amp;mode=dark" /><img alt="OpenSSF Scorecard" src="https://shieldcn.dev/github/scorecard/thaw-app/Thaw.svg?variant=ghost&amp;font=geist-mono&amp;label=SCORECARD&amp;mode=light" /></picture></a>
   <a href="https://www.bestpractices.dev/projects/13303"><picture><source media="(prefers-color-scheme: dark)" srcset="https://shieldcn.dev/badge/OPENSSF-GOLD.svg?variant=ghost&amp;font=geist-mono&amp;logo=lu:ShieldCheck&amp;mode=dark" /><img alt="OpenSSF Best Practices Gold" src="https://shieldcn.dev/badge/OPENSSF-GOLD.svg?variant=ghost&amp;font=geist-mono&amp;logo=lu:ShieldCheck&amp;mode=light" /></picture></a>
   <a href="docs/VERIFYING_RELEASES.md"><picture><source media="(prefers-color-scheme: dark)" srcset="https://shieldcn.dev/badge/SLSA-BUILD_L3.svg?variant=ghost&amp;font=geist-mono&amp;logo=ri:GoPackage&amp;mode=dark" /><img alt="SLSA Build Level 3" src="https://shieldcn.dev/badge/SLSA-BUILD_L3.svg?variant=ghost&amp;font=geist-mono&amp;logo=ri:GoPackage&amp;mode=light" /></picture></a>
 </p>
 
-<p>
+<p align="center">
   <a href="https://vercel.com/open-source-program"><img alt="Vercel OSS Program" src="https://vercel.com/oss/program-badge-2026.svg" /></a>
 </p>
 
 ![Thaw settings](docs/images/readme-hero.jpeg)
+
+Thaw hides the menu bar items you don't need, brings them back on demand, and finds any of them in a keystroke. Free under GPL-3.0, with no tracking and no account.
 
 ## Install
 
