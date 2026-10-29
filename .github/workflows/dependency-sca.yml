@@ -17,8 +17,28 @@ permissions:
   contents: read
 
 jobs:
-  dependency-sca:
+  # The scan reads only the lockfiles, so a pull request that leaves them alone
+  # has nothing new to scan. A skipped job still satisfies the required check,
+  # and the weekly run catches advisories published since.
+  lockfiles:
     if: github.repository == 'thaw-app/Thaw'
+    runs-on: ubuntu-slim
+    outputs:
+      code: ${{ steps.filter.outputs.code }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Detect lockfile changes
+        id: filter
+        uses: thaw-app/org-ci/actions/detect-code-changes@cfa52194f39013d6f54e6f5a14dc57cec3a20e9b
+        with:
+          patterns: '((^|/)Package\.resolved$|^osv-scanner\.toml$|^\.github/workflows/dependency-sca\.yml$)'
+
+  dependency-sca:
+    needs: lockfiles
+    if: github.repository == 'thaw-app/Thaw' && (github.event_name != 'pull_request' || needs.lockfiles.outputs.code == 'true')
     name: dependency-sca
     runs-on: ubuntu-latest
     permissions:
