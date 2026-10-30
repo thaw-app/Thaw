@@ -239,10 +239,8 @@ struct SettingsURIWhitelistTests {
 
     @Test("A published double is clamped to its range, and non-finite values are refused", .scratchDefaults)
     func doubleWritesAreClampedAndFinite() async throws {
-        // tooltipDelay is published with a 0...5 range. The live settings
-        // models subscribe to the change notification this posts; the sleep
-        // lets the main-queue delivery land while the scratch suite is still
-        // current, so nothing a model persists reaches the real domain.
+        // Live settings models hear the change notification this posts. The sleep lets that delivery
+        // land while the scratch suite is current, so nothing they persist reaches the real domain.
         let originalValue = Defaults.double(forKey: .tooltipDelay)
         let sender = unclaimedBundleID("sender")
 

@@ -9,8 +9,7 @@ import MenuBarModel
 import Testing
 @testable import Thaw
 
-/// What a registry leaves with Carbon when it goes away. These claim a real
-/// combination, one no other test uses, for no longer than each check.
+/// What a registry leaves with Carbon when it goes away. These claim a real combination that no other test uses.
 @MainActor
 @Suite("Hotkey registry lifetime", .serialized)
 struct HotkeyRegistryLifetimeTests {
@@ -31,8 +30,7 @@ struct HotkeyRegistryLifetimeTests {
         next.unregister(id)
     }
 
-    /// Carbon refuses a second handler with the same callback and context, and the
-    /// context is the registry's address, which a new registry can reuse.
+    /// Carbon refuses a second handler with the same callback and context, here the registry's address.
     @Test("A new registry can install its handler at a freed registry's address")
     func removesItsHandler() throws {
         for _ in 0 ..< 50 {
