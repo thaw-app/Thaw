@@ -15,6 +15,8 @@ import Testing
 @MainActor
 struct WallpaperChangeMonitorTests {
     private func withWatchedFile(
+        debounce: Duration = .milliseconds(50),
+        restartRetryDelay: Duration = .milliseconds(500),
         _ body: @MainActor (URL, WallpaperChangeMonitor) async throws -> Void
     ) async throws {
         let directory = URL.temporaryDirectory
@@ -25,7 +27,7 @@ struct WallpaperChangeMonitorTests {
         let url = directory.appendingPathComponent("Index.plist")
         try Data("seed".utf8).write(to: url)
 
-        let monitor = WallpaperChangeMonitor(url: url, debounce: .milliseconds(50))
+        let monitor = WallpaperChangeMonitor(url: url, debounce: debounce, restartRetryDelay: restartRetryDelay)
         defer { monitor.stop() }
 
         try await body(url, monitor)
@@ -97,6 +99,29 @@ struct WallpaperChangeMonitorTests {
             // Let the debounce window close before reading the total.
             try? await Task.sleep(for: .milliseconds(300))
             #expect(changes() == 1)
+        }
+    }
+
+    @Test("A replacement that is not there yet when the monitor re-opens is picked up by the retry")
+    func lateReplacementIsPickedUpByTheRetry() async throws {
+        try await withWatchedFile(debounce: .milliseconds(20), restartRetryDelay: .seconds(1)) { url, monitor in
+            let (changes, stream) = watch(monitor)
+            var reports = stream.makeAsyncIterator()
+            monitor.start()
+
+            // The re-open after the delete finds no file, so only the retry can re-arm the watch.
+            // The delete's report comes after 20 ms, well before the retry a second later.
+            try FileManager.default.removeItem(at: url)
+            _ = await reports.next()
+            try Data("replaced".utf8).write(to: url)
+            try? await Task.sleep(for: .milliseconds(1500))
+            let beforeWrite = changes()
+
+            let handle = try FileHandle(forWritingTo: url)
+            try handle.write(contentsOf: Data("changed".utf8))
+            try handle.close()
+            while changes() == beforeWrite, await reports.next() != nil {}
+            #expect(changes() > beforeWrite)
         }
     }
 

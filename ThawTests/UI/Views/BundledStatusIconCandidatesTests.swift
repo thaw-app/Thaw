@@ -106,6 +106,34 @@ struct BundledStatusIconCandidatesTests {
         #expect(BundledStatusIcon.image(forBundleAt: bare) == nil)
     }
 
+    @Test("Images in the app's asset catalog are offered next to its loose files")
+    func assetCatalogImages() throws {
+        let bundle = try Self.makeBundle()
+        defer { try? FileManager.default.removeItem(at: bundle.deletingLastPathComponent()) }
+        let catalog = try #require(Bundle.main.url(forResource: "Assets", withExtension: "car"))
+        try FileManager.default.copyItem(at: catalog, to: bundle.appending(path: "Contents/Resources/Assets.car"))
+
+        let candidates = BundledStatusIcon.candidates(forBundleAt: bundle)
+        let fromCatalog = candidates.filter { !$0.isLoose }.map(\.name)
+        #expect(fromCatalog.contains("DotFill"))
+        #expect(!fromCatalog.contains("AppIcon"), "the app icon is never a status icon")
+        #expect(!fromCatalog.contains("DroppyIcon"), "a 128 point image is too tall for the bar")
+        #expect(candidates.first?.name == "StatusBarIcon.png")
+    }
+
+    @Test("Below the status item names, status-like names come first, then templates, then by name")
+    func sortOrder() throws {
+        let bundle = try Self.makeBundle()
+        defer { try? FileManager.default.removeItem(at: bundle.deletingLastPathComponent()) }
+        let resources = bundle.appending(path: "Contents/Resources")
+        try FileManager.default.removeItem(at: resources.appending(path: "StatusBarIcon.png"))
+        try Self.writePNG("statusDot.png", in: resources, width: 18, height: 18, color: .systemGreen)
+        try Self.writePNG("Bolt.png", in: resources, width: 18, height: 18, color: .darkGray)
+
+        let names = BundledStatusIcon.candidates(forBundleAt: bundle).map(\.name)
+        #expect(names == ["statusDot.png", "Bolt.png", "fluxicon.png", "Glyph.png"])
+    }
+
     @Test("No bundle, or a folder that is not one, offers nothing")
     func missingBundle() {
         #expect(BundledStatusIcon.candidates(forBundleAt: nil).isEmpty)

@@ -43,6 +43,13 @@ final class NotchAccessoryWidget: NotchWidget {
     private(set) var secondary: String?
     private(set) var symbolName: String?
 
+    /// Reads an item's accessibility strings, most promising first, or nil when nothing can be read.
+    private let readCandidates: @MainActor (MenuBarItem) -> [String?]?
+
+    init(readCandidates: @escaping @MainActor (MenuBarItem) -> [String?]? = NotchAccessoryWidget.accessibilityStrings(of:)) {
+        self.readCandidates = readCandidates
+    }
+
     /// Sized to its text rather than to a fixed card, so a two-word readout
     /// stays a short tab instead of padding itself out to a panel.
     var bodySize: CGSize {
@@ -85,24 +92,27 @@ final class NotchAccessoryWidget: NotchWidget {
         secondary = nil
         symbolName = nil
 
-        let bounds = Bridging.getWindowBounds(for: item.windowID) ?? item.bounds
-        guard bounds.width > 0, let element = AXHelpers.element(at: CGPoint(x: bounds.midX, y: bounds.midY)) else {
+        guard let candidates = readCandidates(item) else {
             return
         }
-
-        let readout = NotchReadoutResolver.resolve(
-            candidates: [
-                AXHelpers.description(for: element),
-                AXHelpers.help(for: element),
-                AXHelpers.valueDescription(for: element),
-                AXHelpers.stringValue(for: element),
-                AXHelpers.title(for: element),
-            ],
-            names: Self.names(of: item)
-        )
+        let readout = NotchReadoutResolver.resolve(candidates: candidates, names: Self.names(of: item))
         detail = readout?.primary
         secondary = readout?.secondary
         symbolName = detail.flatMap(Self.symbol(for:))
+    }
+
+    static func accessibilityStrings(of item: MenuBarItem) -> [String?]? {
+        let bounds = Bridging.getWindowBounds(for: item.windowID) ?? item.bounds
+        guard bounds.width > 0, let element = AXHelpers.element(at: CGPoint(x: bounds.midX, y: bounds.midY)) else {
+            return nil
+        }
+        return [
+            AXHelpers.description(for: element),
+            AXHelpers.help(for: element),
+            AXHelpers.valueDescription(for: element),
+            AXHelpers.stringValue(for: element),
+            AXHelpers.title(for: element),
+        ]
     }
 
     /// Every name this item is known by, so the resolver can recognize a

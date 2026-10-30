@@ -30,4 +30,12 @@ struct MissionControlProbeTests {
         #expect(!MissionControlShieldProbe.isDisplaced(isOnScreen: true, origin: CGPoint(x: rest.x + 1, y: rest.y - 1), atRest: rest))
         #expect(MissionControlShieldProbe.isDisplaced(isOnScreen: true, origin: CGPoint(x: rest.x + 1.5, y: rest.y - 1.5), atRest: rest))
     }
+
+    @Test("Only WindowManager's Exposé shield window counts as the shield")
+    func shieldWindow() {
+        #expect(MissionControlShieldProbe.isShieldWindow(ownerName: "WindowManager", title: "ExposeShieldWindow"))
+        #expect(!MissionControlShieldProbe.isShieldWindow(ownerName: "WindowManager", title: "Desktop"))
+        #expect(!MissionControlShieldProbe.isShieldWindow(ownerName: "Dock", title: "ExposeShieldWindow"))
+        #expect(!MissionControlShieldProbe.isShieldWindow(ownerName: nil, title: nil))
+    }
 }

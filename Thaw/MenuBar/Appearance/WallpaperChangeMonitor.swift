@@ -28,7 +28,7 @@ final class WallpaperChangeMonitor {
 
     /// How long to wait before retrying a re-open that lost the race with the
     /// system's replacement of the index.
-    private let restartRetryDelay: Duration = .milliseconds(500)
+    private let restartRetryDelay: Duration
 
     /// Called on the main actor after the wallpaper changes and the
     /// debounce interval elapses.
@@ -37,9 +37,15 @@ final class WallpaperChangeMonitor {
     /// - Parameters:
     ///   - url: The file to watch. Defaults to the system wallpaper index.
     ///   - debounce: Coalesces repeated index writes from one wallpaper change to avoid redundant captures.
-    init(url: URL = WallpaperChangeMonitor.indexURL, debounce: Duration = .milliseconds(500)) {
+    ///   - restartRetryDelay: How long to wait before the one retry of a failed re-open.
+    init(
+        url: URL = WallpaperChangeMonitor.indexURL,
+        debounce: Duration = .milliseconds(500),
+        restartRetryDelay: Duration = .milliseconds(500)
+    ) {
         self.url = url
         self.debounce = debounce
+        self.restartRetryDelay = restartRetryDelay
     }
 
     deinit {

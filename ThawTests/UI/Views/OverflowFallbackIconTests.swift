@@ -128,6 +128,31 @@ struct OverflowFallbackIconTests {
         #expect(OverflowFallbackIcon.image(for: Self.item(.menuBarAgent)) != nil, "the agent gets the generic glyph")
     }
 
+    @Test("A system host's item with a blank capture shows its host's icon rather than an empty tile")
+    func blankSystemCaptureFallsBackToTheHostIcon() throws {
+        let appState = AppState()
+        let image = try OverflowFallbackIcon.resolvedImage(
+            for: Self.item(.controlCenter),
+            section: .visible,
+            appState: appState,
+            capturedImage: Self.capture(width: 20, filled: false)
+        )
+        guard case let .appIcon(icon) = image else {
+            Issue.record("expected the host icon, got \(String(describing: image))")
+            return
+        }
+        #expect(icon === ControlCenterIcon.image)
+    }
+
+    @Test("Thaw's stand-in for a system extra shows its own template glyph, not Thaw's app icon")
+    func standInShowsItsGlyph() throws {
+        let standIn = try #require(SystemExtraStandIn.allCases.first)
+        let item = Self.item(.string("\(ThawMenuBarIdentity.bundleIdentifier).extra.\(standIn.rawValue)"))
+        let glyph = try #require(OverflowFallbackIcon.image(for: item))
+        #expect(glyph.isTemplate)
+        #expect(glyph !== OverflowFallbackIcon.image(for: Self.item(.string("com.example.app"))))
+    }
+
     // #1424: apps Native hiding switches off are never drawn and expose no process for their items.
     @Test("An item with no known process shows its app's icon, found by bundle identifier")
     func appIconByBundleIdentifier() throws {
@@ -251,6 +276,23 @@ struct MenuBarItemGlyphTests {
 
         let small = MenuBarItemDisplayImage.appIcon(NSImage(size: CGSize(width: 16, height: 16)))
         #expect(small.targetSize(fittingHeight: 37) == CGSize(width: 16, height: 16), "a smaller icon isn't scaled up")
+    }
+
+    @Test("Over the menu bar a single-ink capture keeps its own ink; on the Thaw Bar it takes the bar's")
+    func capturesAreReinkedOnlyWhenAsked() throws {
+        let context = try #require(CGContext(
+            data: nil, width: 20, height: 16, bitsPerComponent: 8, bytesPerRow: 20 * 4,
+            space: CGColorSpaceCreateDeviceRGB(), bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue
+        ))
+        context.setFillColor(CGColor(gray: 0.6, alpha: 1))
+        context.fill(CGRect(x: 2, y: 2, width: 16, height: 12))
+        let image = try MenuBarItemDisplayImage.capture(MenuBarItemGlyphCapture(cgImage: #require(context.makeImage()), scale: 1))
+        #expect(image.isReinkable)
+        let size = CGSize(width: 20, height: 16)
+        let kept = try OffscreenRender(MenuBarItemGlyph(image: image, fittingHeight: nil), size: size).pixels()
+        let reinked = try OffscreenRender(MenuBarItemGlyph(image: image, fittingHeight: nil, reinksCaptures: true), size: size).pixels()
+        #expect(kept.contains { $0 != 0 })
+        #expect(kept != reinked)
     }
 
     @Test("The glyph draws at its fitted size")
