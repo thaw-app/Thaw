@@ -32,7 +32,7 @@ jobs:
           persist-credentials: false
       - name: Detect lockfile changes
         id: filter
-        uses: thaw-app/org-ci/actions/detect-code-changes@cfa52194f39013d6f54e6f5a14dc57cec3a20e9b
+        uses: thaw-app/org-ci/actions/detect-code-changes@369e3b50e278dc7799513209c6ddc8ec758d884b
         with:
           patterns: '((^|/)Package\.resolved$|^osv-scanner\.toml$|^\.github/workflows/dependency-sca\.yml$)'
 
@@ -51,7 +51,7 @@ jobs:
         with:
           persist-credentials: false
 
-      - uses: thaw-app/org-ci/actions/dependency-sca@cfa52194f39013d6f54e6f5a14dc57cec3a20e9b
+      - uses: thaw-app/org-ci/actions/dependency-sca@369e3b50e278dc7799513209c6ddc8ec758d884b
         with:
           lockfiles: |
             Thaw.xcodeproj/project.xcworkspace/xcshareddata/swiftpm/Package.resolved
