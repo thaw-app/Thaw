@@ -81,9 +81,6 @@ nonisolated enum Constants {
 
         // MARK: Startup
 
-        /// Delay before the first post-launch menu bar scan. Gives status items
-        /// time to register before the cold-boot cache pass.
-        static let startupInitialScanDelay: Duration = .milliseconds(350)
         /// Longer settle for the menu bar hosting process (Control Center /
         /// MenuBarAgent and its BentoBox modules), which attach later than
         /// ordinary app status items.

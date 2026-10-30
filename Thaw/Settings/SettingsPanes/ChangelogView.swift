@@ -6,7 +6,6 @@
 //  Licensed under the GNU GPLv3
 
 import SwiftUI
-import ThawUI
 
 // MARK: - ChangelogDocument
 

@@ -8,7 +8,6 @@
 import Cocoa
 import MenuBarModel
 import PlatformRuntimeKit
-import ThawLayout
 
 /// What the live bar says about Thaw's own control items, and the order they belong in.
 ///

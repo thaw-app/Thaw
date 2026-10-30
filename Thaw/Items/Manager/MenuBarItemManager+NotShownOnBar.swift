@@ -33,10 +33,4 @@ extension MenuBarItemManager {
         }
         itemsNotShownOnBarTags = tags
     }
-
-    /// Visible items the bar is not showing, in their saved order.
-    var itemsNotShownOnBar: [MenuBarItem] {
-        guard !itemsNotShownOnBarTags.isEmpty else { return [] }
-        return itemCache.managedItems(for: .visible).filter { itemsNotShownOnBarTags.contains($0.tag) }
-    }
 }

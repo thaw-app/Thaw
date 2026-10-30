@@ -5,7 +5,6 @@
 //  Copyright (Thaw) © 2026 Toni Förster
 //  Licensed under the GNU GPLv3
 
-import MenuBarModel
 import SwiftUI
 import ThawCapture
 import ThawUI

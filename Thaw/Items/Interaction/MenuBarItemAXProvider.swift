@@ -666,15 +666,6 @@ nonisolated enum MenuBarItemAXProvider {
         return AXPrimitives.pressHostedItem(sourcePID: sourcePID)
     }
 
-    /// Presses the first of the resolved elements that takes a press. One AX
-    /// round trip per candidate, with no walk in front of it.
-    static func press(resolved elements: [AXElement]) -> Bool {
-        for element in elements where AXHelpers.press(element) {
-            return true
-        }
-        return false
-    }
-
     /// Frames occupied by the native overflow controls on a display. They are
     /// excluded from the managed item list, but capture needs their geometry so
     /// stale item bounds cannot crop the chevrons as item thumbnails.

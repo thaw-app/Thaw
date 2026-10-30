@@ -22,8 +22,6 @@ import Testing
 @MainActor
 @Suite("Layout bars loading plan")
 struct LayoutBarsLoadingPlanTests {
-    typealias Plan = LayoutBarsLoading.PreloadPlan
-
     static nonisolated let flags = [false, true]
 
     /// Every combination of the two inputs the plan is derived from.

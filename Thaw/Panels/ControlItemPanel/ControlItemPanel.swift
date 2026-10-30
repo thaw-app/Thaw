@@ -8,7 +8,6 @@
 import AppKit
 import MenuBarModel
 import SwiftUI
-import ThawUI
 
 // MARK: - ControlItemPanelController
 

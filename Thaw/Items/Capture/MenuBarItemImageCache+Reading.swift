@@ -62,11 +62,6 @@ extension MenuBarItemImageCache {
 
         /// The tags that rendered nothing.
         var blank = Set<MenuBarItemTag>()
-
-        mutating func formUnion(_ other: CaptureVerdict) {
-            seen.formUnion(other.seen)
-            blank.formUnion(other.blank)
-        }
     }
 
     /// Reads items out of capture, saying for each one whether it rendered.
@@ -116,21 +111,6 @@ extension MenuBarItemImageCache {
             }
         }
         return verdict
-    }
-
-    /// Whether a clamped crop still covers what was expected of it.
-    ///
-    /// Delegates so the pipeline and the capture inspector share one rule.
-    static nonisolated func isCompleteCrop(
-        expected: CGRect,
-        clamped: CGRect,
-        edgeTolerance: CGFloat = 1
-    ) -> Bool {
-        ScreenCapture.isCompleteCrop(
-            expected: expected,
-            clamped: clamped,
-            edgeTolerance: edgeTolerance
-        )
     }
 
     /// The item that already claimed these crop pixels in the current pass.

@@ -440,15 +440,6 @@ private struct MenuBarSearchContentView: View {
         model.selection = model.displayedItems.first(where: \.isSelectable)?.id
     }
 
-    /// Re-selects the first item when the current selection has been
-    /// filtered out of displayedItems (or was never set).
-    private func ensureValidSelection() {
-        if let selection = model.selection, model.displayedItems.contains(where: { $0.id == selection }) {
-            return
-        }
-        selectFirstSelectableRow()
-    }
-
     // MARK: Row building
 
     /// Rebuilds the rows the list renders, by whichever policy this

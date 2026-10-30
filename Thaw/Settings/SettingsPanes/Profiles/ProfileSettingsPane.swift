@@ -6,7 +6,6 @@
 //  Licensed under the GNU GPLv3
 
 import AppKit
-import MenuBarModel
 import SwiftUI
 import ThawUI
 import UniformTypeIdentifiers

@@ -6,7 +6,6 @@
 //  Licensed under the GNU GPLv3
 
 import Foundation
-import MenuBarModel
 import Observation
 
 /// Every setting the menu bar engine reads, as plain read-only data, so the

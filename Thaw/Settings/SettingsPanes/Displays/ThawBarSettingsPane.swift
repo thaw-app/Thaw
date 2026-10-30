@@ -87,13 +87,6 @@ struct ThawBarSettingsPane: View {
     private enum EditingContext: Hashable {
         case display(String)
         case template
-
-        private var id: String {
-            switch self {
-            case let .display(uuid): uuid
-            case .template: "__template__"
-            }
-        }
     }
 
     /// The scope picker: which display the controls below edit, or the
