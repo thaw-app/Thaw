@@ -70,7 +70,16 @@ final class HotkeyRegistry {
 
     private var cancellables = Set<AnyCancellable>()
 
-    /// Claims a hotkey, installing the Carbon handler lazily for the app's lifetime.
+    /// The handler's context is this object's address, so it can't outlive the registry;
+    /// Carbon would also refuse a later registry that reuses the address.
+    @MainActor deinit {
+        releaseAll()
+        if let eventHandlerRef {
+            RemoveEventHandler(eventHandlerRef)
+        }
+    }
+
+    /// Claims a hotkey, installing the Carbon handler lazily for the registry's lifetime.
     ///
     /// - Parameters:
     ///   - hotkey: Must have a key combination to claim.
