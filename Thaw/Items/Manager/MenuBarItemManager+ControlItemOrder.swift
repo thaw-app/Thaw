@@ -97,6 +97,7 @@ extension MenuBarItemManager {
             alwaysHiddenTags: alwaysHiddenTags,
             effectiveNewItemsSection: effectiveNewItemsSection,
             recoveredTags: recoveredTags,
+            lateOwners: MenuBarItemAXProvider.lateOwners(),
             supportsLegacySectionHiding: false
         )
 
@@ -241,6 +242,10 @@ extension MenuBarItemManager {
             case .alreadyInTarget:
                 MenuBarItemManager.diagLog.debug(
                     "relocateNewLeftmostItems: candidate already in \(effectiveNewItemsSection.logString), skipping"
+                )
+            case .ownerStillAnswering:
+                MenuBarItemManager.diagLog.info(
+                    "relocateNewLeftmostItems: holding new item(s) from an owner still answering Accessibility; its titles may not be final"
                 )
             case .noNewCandidate, .noLeftmostItems:
                 break

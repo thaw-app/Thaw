@@ -149,6 +149,12 @@ nonisolated enum MenuBarItemAXProvider {
         initialState: SlowResponderLedger()
     )
 
+    /// Owners whose Accessibility answer is late right now. New-item placement
+    /// holds their arrivals until they answer on time.
+    static func lateOwners() -> Set<pid_t> {
+        slowResponders.withLock { $0.lateOwners() }
+    }
+
     /// Owners whose empty extras-bar read has been logged, with the AX result
     /// it gave. The wrapper folds "no value" into nil, so without this a host
     /// the walk cannot see is indistinguishable from an app with no items.

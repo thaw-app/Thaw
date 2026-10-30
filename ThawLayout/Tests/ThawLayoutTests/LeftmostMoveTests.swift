@@ -20,7 +20,7 @@ struct LeftmostMoveTests {
         )
     }
 
-    private static func plan(_ items: [MenuBarItem]) -> LayoutSolver.LeftmostMove {
+    private static func plan(_ items: [MenuBarItem], lateOwners: Set<pid_t> = []) -> LayoutSolver.LeftmostMove {
         LayoutSolver.planLeftmostMove(
             items: items,
             observation: LayoutSolver.LeftmostObservation(hiddenBounds: CGRect(x: 500, y: 0, width: 0, height: 24)),
@@ -28,7 +28,8 @@ struct LeftmostMoveTests {
             knownItemIdentifiers: [],
             hiddenTags: [],
             alwaysHiddenTags: [],
-            effectiveNewItemsSection: .hidden
+            effectiveNewItemsSection: .hidden,
+            lateOwners: lateOwners
         )
     }
 
@@ -46,5 +47,38 @@ struct LeftmostMoveTests {
     @Test("A pass where no owner is resolved yet waits")
     func onlyUnresolvedWaits() {
         #expect(Self.plan([Self.item("com.example.pending", x: 100, sourcePID: nil)]) == .noop(reason: .unresolvedSourcePID))
+    }
+
+    @Test("A new item from an owner still answering Accessibility is held")
+    func lateOwnerArrivalWaits() {
+        let arrival = Self.item("com.microsoft.OneDrive-mac", x: 100, sourcePID: 77)
+        #expect(Self.plan([arrival], lateOwners: [77]) == .noop(reason: .ownerStillAnswering))
+    }
+
+    @Test("A held owner doesn't hold up a new item from an owner that answered")
+    func lateOwnerWaitsAlone() {
+        let late = Self.item("com.microsoft.OneDrive-mac", x: 100, sourcePID: 77)
+        let arrival = Self.item("dev.orca", x: 200, sourcePID: 42)
+        guard case let .newHideableItem(item, _) = Self.plan([late, arrival], lateOwners: [77]) else {
+            Issue.record("the arrival from the answering owner should be placed")
+            return
+        }
+        #expect(item.tag == arrival.tag)
+    }
+
+    @Test("A late owner's item that is already known is not reported as held")
+    func knownItemOfLateOwnerIsNotHeld() {
+        let known = Self.item("com.microsoft.OneDrive-mac", x: 100, sourcePID: 77)
+        let decision = LayoutSolver.planLeftmostMove(
+            items: [known],
+            observation: LayoutSolver.LeftmostObservation(hiddenBounds: CGRect(x: 500, y: 0, width: 0, height: 24)),
+            savedSectionOrder: [:],
+            knownItemIdentifiers: [known.uniqueIdentifier],
+            hiddenTags: [],
+            alwaysHiddenTags: [],
+            effectiveNewItemsSection: .hidden,
+            lateOwners: [77]
+        )
+        #expect(decision == .noop(reason: .noNewCandidate))
     }
 }

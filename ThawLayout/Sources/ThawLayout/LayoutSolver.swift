@@ -56,6 +56,9 @@ public nonisolated enum LayoutSolver {
             /// The chosen candidate is already in the configured new-items
             /// section; moving would be a no-op.
             case alreadyInTarget
+            /// Every new candidate belongs to an owner whose Accessibility
+            /// answer is still late, so its title may not be final yet.
+            case ownerStillAnswering
         }
     }
 
@@ -314,6 +317,7 @@ public nonisolated enum LayoutSolver {
         alwaysHiddenTags: Set<MenuBarItemTag>,
         effectiveNewItemsSection: MenuBarSectionName,
         recoveredTags: Set<MenuBarItemTag> = [],
+        lateOwners: Set<pid_t> = [],
         supportsLegacySectionHiding: Bool = true
     ) -> LeftmostMove {
         // Items sitting left of the hidden divider. This is a legacy reflow
@@ -386,7 +390,7 @@ public nonisolated enum LayoutSolver {
             }
         }
 
-        let candidate = resolvedLeftmost.first { item in
+        let isNew = { (item: MenuBarItem) -> Bool in
             let identifier = item.uniqueIdentifier
 
             // Items with a saved section belong to restoreItemsToSavedSections,
@@ -400,7 +404,23 @@ public nonisolated enum LayoutSolver {
             let notPlacedHidden = !hiddenTags.contains(item.tag) && !alwaysHiddenTags.contains(item.tag)
             return notPlacedHidden && isNewIdentity
         }
+
+        // An owner that missed its Accessibility deadline at login publishes
+        // its items before it has finished starting, so their titles can be
+        // placeholders that the identifier is built from. OneDrive's
+        // per-account items arrived as plain "OneDrive" ones that way and were
+        // seated in Visible as new, which under Native hiding shows the whole
+        // app. Hold such arrivals until the owner answers on time; the ledger
+        // bounds the wait.
+        let isLate = { (item: MenuBarItem) -> Bool in
+            lateOwners.contains(item.sourcePID ?? item.ownerPID)
+        }
+
+        let candidate = resolvedLeftmost.first { !isLate($0) && isNew($0) }
         guard let candidate else {
+            if resolvedLeftmost.contains(where: { isLate($0) && isNew($0) }) {
+                return .noop(reason: .ownerStillAnswering)
+            }
             return .noop(reason: .noNewCandidate)
         }
 

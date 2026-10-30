@@ -24,10 +24,16 @@ nonisolated struct SlowResponderLedger: Sendable {
     /// Caps suppression for AX calls that ignore their messaging timeout, so owners are not barred for the session.
     static let inFlightLimit: Duration = .seconds(60)
 
+    /// How long an owner's new items wait for it to answer on time before
+    /// they are placed anyway, so a hung app cannot park them for the session.
+    static let placementHoldLimit: Duration = .seconds(60)
+
     private struct Record: Sendable {
         var strikes = 0
         var retryAt: ContinuousClock.Instant
         var inFlightSince: ContinuousClock.Instant?
+        /// When the owner first missed a deadline without answering since.
+        var heldSince: ContinuousClock.Instant
     }
 
     private var records: [Int32: Record] = [:]
@@ -49,12 +55,20 @@ nonisolated struct SlowResponderLedger: Sendable {
         return .probeIfResponsive
     }
 
+    /// Owners that missed a deadline and have not answered on time since,
+    /// within ``placementHoldLimit``. Their items may carry titles from
+    /// before the app finished starting. A late answer and an expired
+    /// cooldown do not end the hold; only a timely answer does.
+    func lateOwners(now: ContinuousClock.Instant = .now) -> Set<Int32> {
+        Set(records.filter { now - $0.value.heldSince < Self.placementHoldLimit }.keys)
+    }
+
     /// Records a probe that missed its deadline and is still running.
     ///
     /// - Returns: the cooldown the owner now sits out.
     @discardableResult
     mutating func timedOut(_ owner: Int32, now: ContinuousClock.Instant = .now) -> Duration {
-        var record = records[owner] ?? Record(retryAt: now)
+        var record = records[owner] ?? Record(retryAt: now, heldSince: now)
         let cooldown = Self.strike(&record, now: now)
         record.inFlightSince = now
         records[owner] = record
@@ -65,7 +79,7 @@ nonisolated struct SlowResponderLedger: Sendable {
     /// It takes a strike without being probed.
     @discardableResult
     mutating func stillUnresponsive(_ owner: Int32, now: ContinuousClock.Instant = .now) -> Duration {
-        var record = records[owner] ?? Record(retryAt: now)
+        var record = records[owner] ?? Record(retryAt: now, heldSince: now)
         let cooldown = Self.strike(&record, now: now)
         records[owner] = record
         return cooldown
