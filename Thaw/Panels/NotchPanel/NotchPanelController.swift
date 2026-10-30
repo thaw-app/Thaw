@@ -40,8 +40,8 @@ final class NotchPanelController {
     private var hoverDebounce: Task<Void, Never>?
     private var transition: Task<Void, Never>?
 
-    private var isEnabled: Bool {
-        UserDefaults.standard.bool(forKey: Defaults.Key.enableMenuBarItemDescenders.rawValue)
+    var isEnabled: Bool {
+        Defaults.store.bool(forKey: Defaults.Key.enableMenuBarItemDescenders.rawValue)
     }
 
     init(model: NotchPanelModel = NotchPanelModel()) {

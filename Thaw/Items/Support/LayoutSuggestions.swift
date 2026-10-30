@@ -63,11 +63,11 @@ enum LayoutSuggestionDismissal {
     }
 
     static func isQuiet(_ kind: Kind, now: Date = .now) -> Bool {
-        guard let date = UserDefaults.standard.object(forKey: key(kind)) as? Date else { return false }
+        guard let date = Defaults.store.object(forKey: key(kind)) as? Date else { return false }
         return now.timeIntervalSince(date) < quietInterval
     }
 
     static func dismiss(_ kind: Kind) {
-        UserDefaults.standard.set(Date.now, forKey: key(kind))
+        Defaults.store.set(Date.now, forKey: key(kind))
     }
 }
