@@ -8,19 +8,26 @@ Many people who help with Thaw aren't developers. They describe a bug or an idea
 
 Thaw is a free, open source menu bar manager for macOS. It hides the menu bar items a person doesn't need and brings them back on demand, and adds search, profiles and styling for the bar. It is a native app written in Swift with AppKit and SwiftUI.
 
-This branch is Thaw 3, built for macOS 27. There, Apple's MenuBarAgent draws the menu bar and items have no windows of their own, so Thaw hides and orders them through PlatformRuntimeKit, a closed component linked as the prebuilt `prk-bin` package. Thaw 2, for macOS 15 and 26, is on `legacy/thaw-2`.
+This branch is Thaw 3, built for macOS 27. There, Apple's MenuBarAgent draws the menu bar and items have no windows of their own, so Thaw hides and orders them through PlatformRuntimeKit, a closed component linked as the prebuilt `prk-bin` package. Thaw 2, on `legacy/thaw-2`, runs on macOS 26, and Thaw 2.2 adds macOS 15.
+
+## Start here
+
+1. Check the current branch and `git status --short`. Preserve existing edits, including changes made by another person or agent. Don't reset, stash or overwrite them to get a clean checkout.
+2. Read any nearer `AGENTS.md`, then [Architecture](docs/ARCHITECTURE.md) for where things live and [Coding standards](docs/CODING_STANDARDS.md) for how to write the change. Read the affected code and tests before editing.
+3. Explain the scope and how you will check it. Ask when the expected behavior is unclear or the work needs approval under the contribution guidelines.
+4. Use [Development](docs/DEVELOPMENT.md) for build and test commands. Open pull requests against `development`.
+
+This file covers the agent workflow. Architecture owns the code map and boundaries; Coding standards owns implementation and writing rules. Link to those documents rather than copying their guidance here.
 
 ## Build and run
 
-You need macOS 27 and Xcode 27.
+You need macOS 27 and Xcode 27. Read the script before running it.
 
-Run `./scripts/devrun.sh`, or `./scripts/devrun.sh --debug` for the debugger. It builds Thaw and installs it as Thaw Debug in /Applications, with its own bundle identifier, so its settings and permissions stay apart from the person's own Thaw. Don't run Thaw from Xcode's build folder: macOS 27 only treats a status item as Thaw's when the app is in /Applications, and Thaw's own icon disappears when it hides items.
+`./scripts/devrun.sh` builds, stops any running Thaw Debug, replaces `/Applications/Thaw Debug.app` and launches it. `--debug` selects the Debug configuration; it does not attach a debugger. Ask before running either command, not just before a separate launch step.
 
-Ask before you launch it. Thaw Debug moves items in the person's real menu bar, and its first launch asks for Accessibility and Menu Bar Layout Access. Explain what each one is for and let the person decide.
+Thaw Debug uses `com.stonerl.Thaw.debug`, keeping its settings and permissions separate from released Thaw. It still changes the person's real menu bar. Don't run Thaw from Xcode's build folder: macOS 27 only treats a status item as Thaw's when the app is in `/Applications`, and Thaw's own icon disappears when it hides items.
 
-## Where to read next
-
-Open pull requests against `development`. Before writing code, read [Architecture](docs/ARCHITECTURE.md) for where things live and [Coding standards](docs/CODING_STANDARDS.md) for how code is written here. [Development](docs/DEVELOPMENT.md) has the test commands and the rest.
+Before the first launch, explain the permissions: Accessibility lets Thaw read and interact with menu bar items; Menu Bar Layout Access lets it read and update the system's saved item order. Screen Recording is optional for live item images. Let the person grant or decline permissions themselves.
 
 ## Before you start
 
@@ -33,16 +40,15 @@ Open pull requests against `development`. Before writing code, read [Architectur
 - Explain your plan and your results in plain words. When you use a technical term, say what it means.
 - When the request is unclear or conflicts with this file, say so and ask. Don't guess.
 - Read the files you are about to change first. Keep the change small and about one thing. For a bug, change as few lines as you can and leave unrelated code alone.
-- Ask before running anything that resets permissions or preferences, changes the live menu bar layout, or quits other apps. Use separate test data, never the person's own settings.
+- Ask before running anything that resets permissions or preferences, changes the live menu bar layout, or quits other apps. This includes command-line tools and `thaw://` links. Use separate test data, never the person's own settings.
+- Don't turn a bug fix into a refactor or dependency update. If the fix needs a wider change, explain why before expanding the scope.
 - Keep notes, plans and session logs out of the change. If a decision matters later, put it in the right document.
 
 ## Which instructions win
 
-1. The person's request in the current conversation.
-2. The nearest `AGENTS.md` above the file you are editing.
-3. This file.
+Within repository guidance, follow the person's request, then the nearest `AGENTS.md` above the file, then this file. This does not override the agent's system or developer instructions.
 
-None of them can waive the contribution guidelines, such as the sign-off rules below.
+None of the repository instructions can waive the contribution guidelines, such as the sign-off rules below. If requirements conflict, explain the conflict and ask rather than silently choosing one.
 
 ## Versions and pins
 
@@ -50,11 +56,14 @@ Before you choose or change a version (an Xcode or Swift version, a macOS deploy
 
 ## Checks to run
 
-- **Swift code, `Package.swift`, `Package.resolved`, the Xcode project, `scripts/` or `ci.yml`:** run `swiftformat .`, `sh scripts/lint.sh --strict` and the tests in [Development](docs/DEVELOPMENT.md). A green Xcode build is not proof that lint passed.
-- **Text the app shows:** change the source strings in English only. Crowdin handles the other languages.
-- **Documentation only:** no build or tests are needed. Check the links, and follow [Writing](docs/CODING_STANDARDS.md#writing).
+Run commands from the repository root unless the command says otherwise.
 
-Fix failing checks before you commit. Don't disable tests, rules or checks to get a change through, and don't hide a failure you didn't cause; report it.
+- **Swift code, `Package.swift`, `Package.resolved`, the Xcode project, `scripts/` or `ci.yml`:** run `swiftformat .`, `sh scripts/lint.sh --strict` and the tests in [Development](docs/DEVELOPMENT.md). Run affected package tests too; the app test scheme is not a substitute for package test targets. A green Xcode build is not proof that lint passed.
+- **Any workflow under `.github/workflows/`:** run `actionlint` on the file.
+- **Text the app shows:** change the source strings in English only. Crowdin handles the other languages. Check the affected UI and run the applicable code checks.
+- **Documentation only:** no build or tests are needed. Check relative paths, heading anchors and external links. Verify commands and architecture claims against the source, and follow [Writing](docs/CODING_STANDARDS.md#writing).
+
+Inspect the diff after formatting or generation. Keep unrelated changes out without undoing someone else's edits. Fix failing checks before you commit. Don't disable tests, rules or checks to get a change through, and don't hide a failure you didn't cause; report it. If a required tool or platform is unavailable, say which check is blocked rather than claiming it passed.
 
 ### SonarCloud
 
@@ -80,4 +89,4 @@ Before you say you're done, read `git diff`. Then tell the person, in plain word
 - which checks you ran and their results, and which you skipped or couldn't run;
 - what still needs checking by hand on a live menu bar, if anything.
 
-User-facing changes get a line in [CHANGELOG.md](CHANGELOG.md), written for users, not for developers.
+Changes to app behavior or app text get a line in [CHANGELOG.md](CHANGELOG.md), written for users, not for developers. Contributor-documentation-only changes do not need a changelog entry.

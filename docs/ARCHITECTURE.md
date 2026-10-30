@@ -14,7 +14,7 @@ switches layouts with profiles and changes how the menu bar looks.
 - Work only on the Mac: no accounts, no telemetry and no tracking server.
 - When a `thaw://` link asks to change settings and Thaw can't confirm it is
   allowed, refuse it.
-- Stay compatible with current macOS releases. Thaw 3, on this branch, targets macOS 27. Thaw 2, on `legacy/thaw-2`, targets macOS 15 and runs on 15 and 26.
+- Stay compatible with current macOS releases. Thaw 3, on this branch, targets macOS 27. Thaw 2, on `legacy/thaw-2`, runs on macOS 26. Thaw 2.2 adds macOS 15.
 
 ## How the code is organized
 
@@ -23,56 +23,68 @@ code is arranged like this:
 
 ```text
 SwiftUI / AppKit views
-  → managers owned by AppState (@Observable)
-    → pure planners and models (MenuBarModel, ThawLayout)
-      → backend adapters (Thaw/MenuBar/Backends)
-        → PlatformRuntimeKit, the helper processes, macOS
+  → managers owned by AppState
+      ├─ pure planners and models (MenuBarModel, ThawLayout, app-local rules)
+      └─ backend adapters and service clients
+          → PlatformRuntimeKit, helper processes, macOS
 ```
 
-- Views read state straight from `@Observable` managers. There are no view
-  models.
+The arrows show who calls whom. Managers gather observations, ask the pure
+code for decisions, and apply those decisions through adapters. Pure planners
+must not call the adapters or read app state.
+
+- Views generally read state straight from `@Observable` managers. There is
+  no required view-model layer.
 - `AppState` creates the long-lived managers (`MenuBarManager`,
   `MenuBarItemManager`, `ProfileManager`, `HIDEventManager` and others) and
   hands them to the rest of the app. Because almost everything reaches through
   it, new types should take the dependencies they need instead.
 - Decisions, such as which section an item belongs in or what order to write,
-  live in pure functions in `MenuBarModel` and `ThawLayout`, so they can be
-  tested without a live menu bar.
-- Calls into macOS go through protocols such as `MenuBarBackend`, implemented
-  in `Thaw/MenuBar/Backends`. That keeps PlatformRuntimeKit's concrete types
-  out of the managers.
+  live in pure functions in `MenuBarModel`, `ThawLayout` and app-local rule
+  types, so they can be tested without a live menu bar.
+- Protocols such as `MenuBarBackend` live in `MenuBarModel`.
+  `Thaw/MenuBar/Backends` selects runtime implementations and wraps operations
+  such as position-store writes. These boundaries limit coupling to
+  PlatformRuntimeKit, but the separation is incomplete: some managers and
+  system code still import it directly. Prefer the existing boundaries when
+  adding behavior.
 
-A few types still do too much and are being broken up.
+A few types still combine too many responsibilities.
 [Coding standards](CODING_STANDARDS.md#where-new-code-goes) lists them and says
 where new code goes instead.
 
 ## Repository layout
 
-| Path | What it holds | Depends on |
+| Path | What it holds | Package dependencies |
 | --- | --- | --- |
-| `Thaw/` | The app: menu bar logic, settings, panels, input, permissions | Everything below |
+| `Thaw/` | The app: menu bar logic, settings, panels, input, permissions | Local libraries and external runtime/UI packages |
 | `MenuBarModel/` | Menu bar items, sections, identity, move planning and the backend protocols | Nothing |
 | `ThawLayout/` | The layout solver: saved section order, where new items go | `MenuBarModel` |
 | `ThawCapture/` | Item image capture with ScreenCaptureKit, and the client for the capture service | `MenuBarModel`, `ThawConcurrency` |
 | `ThawConcurrency/` | Timeouts and one-shot continuations | Nothing |
-| `ThawAX/` | Accessibility reading: `ThawAXCore`, the `ThawAXHelper` process and its client | Nothing |
+| `ThawAX/` | Accessibility reading: `ThawAXCore`, `ThawAXClient` and the `ThawAXHelper` process | No other package; client and helper use `ThawAXCore` |
 | `ThawExtras/` | `ThawExtraHelper`, stand-ins for Apple items Thaw hides (Focus, AirDrop and others) | Nothing |
 | `ThawUI/` | Settings form and control components, with no knowledge of app state | CompactSlider |
 | `ThawControls/` | Control Center controls that show hidden items or toggle Zen Mode | |
 | `ThawCtl/` | A command-line tool that turns commands into `thaw://` URLs | |
 | `MenuBarCaptureService/` | The XPC service that hosts capture | `ThawCapture` |
 | `Shared/` | Accessibility helpers (`AXHelpers.swift`) | |
-| `ThawTests/` | The Swift Testing suite run in CI | |
+| `ThawTests/` | App-level Swift Testing tests; packages also have their own test targets | App and library modules |
 | `Fuzzing/` | libFuzzer targets; currently the `thaw://` settings URI parser | |
 | `scripts/` | Lint, coverage and release helpers used by CI | |
 | `docs/` | User and developer documentation | |
 | `.github/` | CI, release, issue and pull request templates | |
 
-The packages don't depend on the app, and only `ThawLayout` and `ThawCapture`
-depend on other packages. Keep it that way: a package that needs app state is a
-sign the code belongs in `Thaw/`. `ThawAX` and `ThawExtras` have no
-dependencies at all, because their executables run on their own without an
-rpath to load libraries from.
+The table lists package dependencies, not Apple frameworks or every Xcode
+target relationship. `Package.swift` files and the Xcode project are the source
+of truth for the build graph.
+
+Local packages do not depend on the app. `ThawLayout` and `ThawCapture` depend
+on other local packages; `ThawUI` uses the external CompactSlider package.
+Keep app state out of packages. `ThawAX` and `ThawExtras` have no external
+package dependencies. Helper packaging and library search paths matter:
+`ThawAX` declares a static core product and an Xcode helper rpath in its
+[manifest](../ThawAX/Package.swift).
 
 Outside packages are declared with Swift Package Manager and locked in
 `Thaw.xcodeproj/project.xcworkspace/xcshareddata/swiftpm/Package.resolved`:
@@ -95,25 +107,48 @@ swift-subprocess.
 | `RecordingWatch/` | Noticing when the camera, microphone or screen recording is in use |
 | `Onboarding/`, `UI/`, `Utilities/` | The first-run walkthrough, shared views and helpers |
 
+### Where to start a change
+
+| Concern | Entry points |
+| --- | --- |
+| Startup and subsystem lifetime | [`AppDelegate`](../Thaw/App/AppDelegate.swift), [`AppState`](../Thaw/App/AppState.swift) |
+| Item inventory and cache | [`Items/Manager`](../Thaw/Items/Manager), [`Items/Model`](../Thaw/Items/Model) |
+| Saved order and move planning | [`ThawLayout`](../ThawLayout/Sources/ThawLayout), [`LayoutMoveSequencePlanner`](../MenuBarModel/Sources/MenuBarModel/LayoutMoveSequencePlanner.swift) |
+| Layout writes and automatic repair | [`RepairOrchestrator`](../Thaw/Items/Manager/RepairOrchestrator.swift), [`MenuBarPositionStoreProvider`](../Thaw/MenuBar/Backends/MenuBarPositionStoreProvider.swift) |
+| Hide, reveal and section policy | [`MenuBarManager`](../Thaw/MenuBar/MenuBarManager.swift), [`RuntimeSectionContextAdapter`](../Thaw/MenuBar/RuntimeSectionContextAdapter.swift) |
+| Item images | [`Items/Capture`](../Thaw/Items/Capture), [`ThawCapture`](../ThawCapture), [`MenuBarCaptureService`](../MenuBarCaptureService) |
+| Display and Space changes | [`Environment`](../Thaw/Environment) |
+| Settings and profiles | [`Settings/Models`](../Thaw/Settings/Models), [`Defaults`](../Thaw/System/Defaults.swift) |
+| Automation and sender authorization | [`SettingsURIParser`](../Thaw/System/SettingsURIParser.swift), [`SettingsURIHandler`](../Thaw/System/SettingsURIHandler.swift), [`SettingsURISender`](../Thaw/System/SettingsURISender.swift) |
+
 ## Runtime components
 
-```text
-┌──────────────────────────────────────────────────────────────┐
-│                           Thaw.app                           │
-│  AppDelegate / AppState and the managers                     │
-│  PlatformRuntimeKit (linked in; hides items, reads the bar)  │
-│      │ stdin/stdout      │ XPC                 │ launches     │
-│      ▼                   ▼                     ▼              │
-│  ThawAXHelper     MenuBarCaptureService   ThawExtraHelper     │
-│  (Accessibility)  (capture; recycled)     (one app per        │
-│                                            stand-in)          │
-│  ThawControls (Control Center controls), ThawCtl (CLI)        │
-└──────────────────────────────────────────────────────────────┘
-          │                          │
-          ▼                          ▼
-   macOS MenuBarAgent,          HTTPS appcast
-   WindowServer, Accessibility  (Sparkle updates)
-```
+PlatformRuntimeKit is linked into the app process. The helpers below run in
+separate processes; being shipped inside the app bundle does not make them
+in-process services.
+
+| Component | Connection to the app | Responsibility |
+| --- | --- | --- |
+| `ThawAXHelper` | Standard input/output pipes through `ThawAXClient` | Accessibility observations |
+| `MenuBarCaptureService` | XPC | Image capture in a recyclable process |
+| `ThawExtraHelper` | Launched as separate stand-in apps | Apple-item replacements with separate owning bundles |
+| Settings child process | Standard input/output pipes | Optional `SettingsInOwnProcess` mode; exits when its last window closes |
+| `ThawControls` | Darwin notifications for commands, App Group snapshot for state | Control Center controls |
+| `ThawCtl` | `thaw://` URLs | Command-line entry into app automation |
+
+### Startup and ownership
+
+`AppDelegate` owns `AppState`. The normal menu bar stack starts only after the
+required permissions are available. `AppState.bootstrapTask` is a shared lazy
+task, so callers wait for the same setup rather than starting it twice.
+Settings and display state start before the menu bar stack, the item manager
+starts before image capture, and observers are installed after setup.
+
+Keep this ordering when changing startup. Creating a manager must not assume
+that permission checks have passed or that its sibling managers are ready.
+The reduced-permission mode and the optional settings child process have
+separate startup paths; don't start the full menu bar stack in either just to
+obtain a dependency.
 
 ### How Thaw works with macOS 27's menu bar
 
@@ -137,6 +172,28 @@ windows of their own to move. Thaw works with it in four ways.
 - Stand-ins: macOS hides by the bundle that owns an item, so each
   replacement for an Apple item comes from its own small app built from
   `ThawExtraHelper`.
+
+### Layout writes
+
+The position table is shared system state, not an ordinary app preference.
+App code uses [`MenuBarPositionStoreProvider`](../Thaw/MenuBar/Backends/MenuBarPositionStoreProvider.swift),
+which exposes a `PermittedPositionStore`. Its write methods require a
+[`StoreWritePermit`](../Thaw/MenuBar/Backends/StoreWritePermit.swift).
+
+- `RepairOrchestrator` schedules repair and layout work through `RepairLane`.
+  Item moves can obtain a permit while holding the move semaphore.
+- Manual arrangement selects `ReadOnlyPositionStore`. Explicit Layout edits
+  use the scoped `forLayoutEdit` path; automatic repair must remain read-only.
+- A permit records admission to a write path. It does not prove that an old
+  plan is still valid after waiting. Callers must honor cancellation and the
+  orchestrator's generation and interruption checks.
+- `StoreWritePermit.unsequenced` exists for remaining unsequenced writers and
+  does not serialize them. It is migration debt, not a shortcut for new code.
+
+These rules prevent automatic repair from undoing a person's newer edit or
+bypassing their choice of Manual arrangement. SwiftLint's
+`store_write_needs_permit` rule checks direct store access outside the allowed
+boundary.
 
 ### Capture: `MenuBarCaptureService`
 
@@ -163,7 +220,8 @@ backdrop requests return no image, never an in-process SkyLight fallback.
 | Interface | Direction | Notes |
 | --- | --- | --- |
 | `thaw://` URL scheme | Inbound | Automation and deep links. Only allowlisted settings can be changed, and Thaw checks the sending app's signature. See [URI schemes](URI_SCHEMES.md) |
-| Sparkle appcast HTTPS | Outbound | Update metadata and downloads over TLS |
+| Sparkle appcast HTTPS | Outbound | Update metadata and downloads over TLS, controlled by update consent and settings |
+| What's New HTTPS | Outbound | Release notes from `raw.githubusercontent.com`, controlled by the separate notes setting. See [Network access](NETWORK.md) |
 | Accessibility and Screen Recording | System | Accessibility is required to move items; Screen Recording is optional and used for captures |
 | Menu Bar Layout Access | System | The one file where macOS 27 keeps the menu bar's order, picked by the user |
 | Crowdin | Outside the app | Translations, never at runtime |
@@ -171,13 +229,14 @@ backdrop requests return no image, never an in-process SkyLight fallback.
 
 ## Data and persistence
 
-- Settings and profiles are kept in `UserDefaults` and in Thaw's Application Support folder, on the Mac only.
-- Diagnostic logs are local files, off unless turned on in Settings → Advanced → Diagnostics. Thaw never uploads them.
+- Settings use `UserDefaults`; profiles also use Thaw's Application Support folder. Both stay on the Mac. `Defaults.Key` raw values and encoded profile fields are compatibility contracts, not names to change during cleanup.
+- The system position table and Control Center's app visibility preferences are separate from Thaw's own settings. Access to one file does not grant access to the other.
+- Diagnostic logs are local files. Release builds follow the saved logging setting; Debug builds enable logging during bootstrap. Thaw never uploads them.
 - Thaw has no server of its own and no user accounts.
 
 ## Build and release
 
-- To work on Thaw, open `Thaw.xcodeproj` in Xcode 27 or later and run it. See [Development](DEVELOPMENT.md).
+- Use Xcode to edit the project, and `scripts/devrun.sh` to build, install and launch Thaw Debug from `/Applications`. The script also stops an existing Thaw Debug. Ask before running it: separate app settings do not isolate the live menu bar. See [Development](DEVELOPMENT.md).
 - CI: `.github/workflows/ci.yml` runs SwiftLint, the tests and SonarCloud. Actions shared across the organization live in [`thaw-app/org-ci`](https://github.com/thaw-app/org-ci).
 - Releases are signed with a Developer ID, notarized, packaged as ZIP and DMG, and added to the Sparkle appcast. See [VERIFYING_RELEASES.md](VERIFYING_RELEASES.md) and [RELEASES.md](RELEASES.md).
 - The source of record is [thaw-app/Thaw](https://github.com/thaw-app/Thaw).
@@ -197,6 +256,9 @@ supply chain:
 
 ## Related documents
 
+- [Agent workflow](../AGENTS.md): approvals, checks and reporting
+- [Coding standards](CODING_STANDARDS.md): implementation, tests and writing
+- [Development](DEVELOPMENT.md): build and test commands
 - [Assurance case](ASSURANCE_CASE.md): the threat model and the security argument
 - [URI schemes](URI_SCHEMES.md): every `thaw://` link
 - [Security Policy](https://github.com/thaw-app/.github/blob/main/.github/SECURITY.md), shared with Floe: reporting, support and dependency rules
