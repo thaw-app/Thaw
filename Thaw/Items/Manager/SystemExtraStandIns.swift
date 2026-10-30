@@ -70,7 +70,7 @@ enum SystemExtraStandIn: String, CaseIterable {
     /// Whether a bundle identifier belongs to one of this app's stand-ins.
     static nonisolated func owns(bundleIdentifier: String?, parent: String = ThawMenuBarIdentity.bundleIdentifier) -> Bool {
         guard let bundleIdentifier else { return false }
-        return allCases.contains { "\(parent).extra.\($0.rawValue)" == bundleIdentifier }
+        return allCases.contains { bundleIdentifier == "\(parent).extra.\($0.rawValue)" }
     }
 
     /// The processes left once this app's running stand-ins are taken out.
@@ -167,6 +167,35 @@ enum StandInSpacingRestart {
 
 // MARK: - Launcher
 
+/// The parts of a running stand-in the launcher uses: NSRunningApplication outside tests.
+protocol StandInProcess: AnyObject {
+    var isTerminated: Bool { get }
+    var processIdentifier: pid_t { get }
+    @discardableResult func terminate() -> Bool
+    @discardableResult func forceTerminate() -> Bool
+    /// Calls exited when the process ends; the returned closure stops watching.
+    func watchTermination(_ exited: @escaping @Sendable (pid_t) -> Void) -> () -> Void
+}
+
+extension NSRunningApplication: StandInProcess {
+    func watchTermination(_ exited: @escaping @Sendable (pid_t) -> Void) -> () -> Void {
+        let observation = observe(\.isTerminated, options: [.new]) { app, _ in
+            guard app.isTerminated else { return }
+            exited(app.processIdentifier)
+        }
+        return observation.invalidate
+    }
+}
+
+/// Where the launcher finds, lists and opens stand-in apps, so tests start and stop none.
+struct StandInSystem {
+    var bundleExists: (URL) -> Bool = { FileManager.default.fileExists(atPath: $0.path) }
+    var running: (String) -> [any StandInProcess] = { NSRunningApplication.runningApplications(withBundleIdentifier: $0) }
+    var open: (URL, NSWorkspace.OpenConfiguration) async throws -> any StandInProcess = {
+        try await NSWorkspace.shared.openApplication(at: $0, configuration: $1)
+    }
+}
+
 /// Starts and stops stand-in bundles, and gives each the original's place in
 /// the layout before it first appears.
 ///
@@ -174,7 +203,7 @@ enum StandInSpacingRestart {
 /// a new arrival.
 @MainActor
 final class SystemExtraStandInLauncher: SystemExtraReplacementProviding {
-    weak var controller: RuntimeSectionController?
+    weak var controller: (any StandInSectionControlling)?
     /// Records an identifier as seen, so the stand-in is not routed to the
     /// new-items section instead of the original's slot.
     var markKnown: ((String) -> Void)?
@@ -185,7 +214,7 @@ final class SystemExtraStandInLauncher: SystemExtraReplacementProviding {
     /// Stand-ins that should be running, each watched so one that exits on its
     /// own is started again. The app is held for as long as it is observed:
     /// KVO on a released NSRunningApplication crashes.
-    private var watched: [SystemExtraStandIn: (app: NSRunningApplication, observation: NSKeyValueObservation)] = [:]
+    private var watched: [SystemExtraStandIn: (app: any StandInProcess, stopWatching: () -> Void)] = [:]
     /// Stand-ins launched and not stopped since. An open still waiting on the system when its
     /// stand-in is turned off checks this afterwards and quits what it started.
     private(set) var wanted: Set<SystemExtraStandIn> = []
@@ -195,6 +224,11 @@ final class SystemExtraStandInLauncher: SystemExtraReplacementProviding {
     private static let restartLimit = 3
     private static let restartWindow: Duration = .seconds(30)
     private static let restartQuitTimeout: Duration = .seconds(3)
+    private let system: StandInSystem
+
+    init(system: StandInSystem = StandInSystem()) {
+        self.system = system
+    }
 
     func publish(item: SystemExtraItem, canonicalIdentifier: String, section: MenuBarSectionName) async throws {
         try await launch(SystemExtraStandIn(item), replacing: canonicalIdentifier, in: section)
@@ -209,7 +243,7 @@ final class SystemExtraStandInLauncher: SystemExtraReplacementProviding {
         replacing original: String,
         in section: MenuBarSectionName
     ) async throws {
-        guard FileManager.default.fileExists(atPath: standIn.bundleURL.path) else {
+        guard system.bundleExists(standIn.bundleURL) else {
             throw SystemExtraTakeoverError.replacementUnavailable
         }
         markKnown?(MenuBarItemTag.canonicalPersistentIdentifier(standIn.itemIdentifier))
@@ -222,9 +256,9 @@ final class SystemExtraStandInLauncher: SystemExtraReplacementProviding {
     func stop(_ standIn: SystemExtraStandIn) {
         wanted.remove(standIn)
         placed.remove(standIn)
-        watched[standIn]?.observation.invalidate()
+        watched[standIn]?.stopWatching()
         watched[standIn] = nil
-        for app in NSRunningApplication.runningApplications(withBundleIdentifier: standIn.bundleIdentifier) {
+        for app in system.running(standIn.bundleIdentifier) {
             app.terminate()
         }
     }
@@ -233,7 +267,7 @@ final class SystemExtraStandInLauncher: SystemExtraReplacementProviding {
     /// A plain reopen would drop the parent argument, so they restart from here.
     func restartRunning() async {
         for (standIn, entry) in watched {
-            entry.observation.invalidate()
+            entry.stopWatching()
             watched[standIn] = nil
             entry.app.terminate()
             let deadline = ContinuousClock.now + Self.restartQuitTimeout
@@ -259,10 +293,8 @@ final class SystemExtraStandInLauncher: SystemExtraReplacementProviding {
     /// the watch restarts it when it exits.
     private func open(_ standIn: SystemExtraStandIn) async throws {
         guard wanted.contains(standIn) else { return }
-        let app: NSRunningApplication
-        if let running = NSRunningApplication.runningApplications(withBundleIdentifier: standIn.bundleIdentifier)
-            .first(where: { !$0.isTerminated })
-        {
+        let app: any StandInProcess
+        if let running = system.running(standIn.bundleIdentifier).first(where: { !$0.isTerminated }) {
             app = running
         } else {
             let configuration = NSWorkspace.OpenConfiguration()
@@ -272,19 +304,17 @@ final class SystemExtraStandInLauncher: SystemExtraReplacementProviding {
             // The stand-in exits when this process does. Naming the process rather
             // than the bundle keeps it from latching onto an instance mid-quit.
             configuration.arguments = ["--parent-pid", String(ProcessInfo.processInfo.processIdentifier)]
-            app = try await NSWorkspace.shared.openApplication(at: standIn.bundleURL, configuration: configuration)
+            app = try await system.open(standIn.bundleURL, configuration)
         }
         guard wanted.contains(standIn) else {
             log.info("\(standIn.rawValue) stand-in was turned off while it started; quitting it")
             app.terminate()
             return
         }
-        let observation = app.observe(\.isTerminated, options: [.new]) { [weak self] app, _ in
-            guard app.isTerminated else { return }
-            let pid = app.processIdentifier
+        let stopWatching = app.watchTermination { [weak self] pid in
             Task { @MainActor in self?.standInExited(standIn, pid: pid) }
         }
-        watched[standIn] = (app, observation)
+        watched[standIn] = (app, stopWatching)
         if app.isTerminated {
             standInExited(standIn, pid: app.processIdentifier)
         }
@@ -292,7 +322,7 @@ final class SystemExtraStandInLauncher: SystemExtraReplacementProviding {
 
     private func standInExited(_ standIn: SystemExtraStandIn, pid: pid_t) {
         guard let entry = watched[standIn], entry.app.processIdentifier == pid else { return }
-        entry.observation.invalidate()
+        entry.stopWatching()
         watched[standIn] = nil
         let now = ContinuousClock.now
         let recent = (restarts[standIn] ?? []).filter { $0.duration(to: now) < Self.restartWindow }
