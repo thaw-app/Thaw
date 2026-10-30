@@ -6,6 +6,7 @@
 //  Licensed under the GNU GPLv3
 
 import CoreGraphics
+import Foundation
 import Testing
 @testable import Thaw
 
@@ -98,5 +99,26 @@ struct SystemNotificationCenterHotkeyTests {
                 flags: [.maskControl, .maskAlternate, .maskAlphaShift]
             )
         )
+    }
+
+    @Test("An enabled flag stored as a number other than one still counts as enabled")
+    func numericEnabledFlag() {
+        let flags = CGEventFlags([.maskControl, .maskAlternate]).rawValue
+        let table: [String: Any] = [
+            "163": ["enabled": NSNumber(value: 2), "value": ["parameters": [UInt64(110), 45, flags]]],
+        ]
+        #expect(SystemNotificationCenterHotkey.configured(from: table) == hotkey)
+    }
+
+    @Test("A key event matches by its key code and tracked flags")
+    func matchesKeyEvent() throws {
+        let event = try #require(CGEvent(keyboardEventSource: nil, virtualKey: 45, keyDown: true))
+        event.flags = [.maskControl, .maskAlternate, .maskAlphaShift]
+        #expect(hotkey.matches(event))
+        event.flags = [.maskControl]
+        #expect(!hotkey.matches(event))
+        let other = try #require(CGEvent(keyboardEventSource: nil, virtualKey: 46, keyDown: true))
+        other.flags = [.maskControl, .maskAlternate]
+        #expect(!hotkey.matches(other))
     }
 }

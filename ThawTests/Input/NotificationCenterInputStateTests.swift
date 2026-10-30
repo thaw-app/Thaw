@@ -64,4 +64,33 @@ struct NotificationCenterInputStateTests {
         #expect(state.endClockPress(at: bounds.center) == nil)
         #expect(!state.hasClockPress)
     }
+
+    @Test("Only a claimed press counts as a held key, until its release")
+    func heldKeys() {
+        var state = NotificationCenterInputState()
+        _ = state.key(type: .keyDown, code: 8, isRepeat: false, matches: false, shouldBridge: true)
+        #expect(!state.hasHeldKeys)
+        _ = state.key(type: .keyDown, code: 45, isRepeat: false, matches: true, shouldBridge: true)
+        #expect(state.hasHeldKeys)
+        _ = state.key(type: .keyUp, code: 45, isRepeat: false, matches: false, shouldBridge: false)
+        #expect(!state.hasHeldKeys)
+    }
+
+    @Test("Events other than key presses and releases pass through")
+    func otherEventTypes() {
+        var state = NotificationCenterInputState()
+        _ = state.key(type: .keyDown, code: 45, isRepeat: false, matches: true, shouldBridge: true)
+        #expect(state.key(type: .flagsChanged, code: 45, isRepeat: false, matches: true, shouldBridge: true) == .passThrough)
+        #expect(state.hasHeldKeys)
+    }
+
+    @Test("A discarded clock press no longer completes")
+    func discardedClockPress() {
+        var state = NotificationCenterInputState()
+        let bounds = CGRect(x: 0, y: 0, width: 80, height: 30)
+        state.beginClockPress(at: bounds.center, bounds: bounds)
+        state.discardClockPress()
+        #expect(!state.hasClockPress)
+        #expect(state.endClockPress(at: bounds.center) == nil)
+    }
 }

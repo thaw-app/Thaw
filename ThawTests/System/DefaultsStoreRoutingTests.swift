@@ -53,6 +53,15 @@ struct DefaultsStoreRoutingTests {
         #expect(LayoutSuggestionDismissal.isQuiet(.itemsBehindNotch))
     }
 
+    @Test("A dismissal quiets only its own suggestion, and only for the quiet interval")
+    func layoutSuggestionDismissalExpires() {
+        LayoutSuggestionDismissal.dismiss(.littleSnitchScriptingAccess)
+        let later = Date.now.addingTimeInterval(LayoutSuggestionDismissal.quietInterval + 60)
+        #expect(LayoutSuggestionDismissal.isQuiet(.littleSnitchScriptingAccess))
+        #expect(!LayoutSuggestionDismissal.isQuiet(.itemsBehindNotch))
+        #expect(!LayoutSuggestionDismissal.isQuiet(.littleSnitchScriptingAccess, now: later))
+    }
+
     @Test("The notch panel reads its switch from Defaults.store")
     func notchPanelSwitch() {
         let controller = NotchPanelController()

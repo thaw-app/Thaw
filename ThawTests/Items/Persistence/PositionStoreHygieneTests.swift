@@ -6,6 +6,7 @@
 //  Licensed under the GNU GPLv3
 
 import Foundation
+import MenuBarModel
 import Testing
 @testable import Thaw
 
@@ -45,7 +46,7 @@ struct PositionStoreHygieneTests {
         #expect(!removed)
     }
 
-    @Test("Apple, Thaw, display-name, running and installed owners are never pruned")
+    @Test("Apple, Thaw, display-name, module and malformed keys are never pruned")
     func protectedOwnersAreKept() throws {
         let defaults = try #require(suites.make())
         let ownBundle = Bundle.main.bundleIdentifier ?? "com.stonerl.Thaw"
@@ -66,4 +67,124 @@ struct PositionStoreHygieneTests {
         }
         #expect(!removed)
     }
+
+    @Test("A running or installed owner keeps its key, and the same owner gone is pruned")
+    func runningAndInstalledOwnersAreKept() throws {
+        let key = "status:com.example.thaw-tests.owner::Item-0"
+        var pruned: [[String]] = []
+        for (running, installed) in [(true, false), (false, true), (false, false)] {
+            let defaults = try #require(suites.make())
+            for _ in 0 ..< 2 {
+                pruned.append(PositionStoreHygiene.prune(
+                    positions: [key: 1],
+                    defaults: defaults,
+                    liveOwners: running ? ["com.example.thaw-tests.owner"] : [],
+                    isInstalled: { _ in installed }
+                ) { _ in })
+            }
+        }
+        #expect(pruned == [[], [], [], [], [], [key]])
+    }
+
+    @Test("Pruning the store removes doomed keys from a fresh read and keeps every other weight")
+    func pruneCurrentStoreWritesTheFreshRead() throws {
+        let defaults = try #require(suites.make())
+        let misspelled = "module:com.apple.menuextra.controlcenter-BentoBox-12"
+        let fake = FakeStore(reads: [
+            [misspelled: 1, "module:Clock": 2],
+            // The host moved Clock between the two reads.
+            [misspelled: 1, "module:Clock": 9],
+        ])
+
+        PositionStoreHygiene.pruneCurrentStore(
+            permit: .unsequenced("hygiene test"),
+            store: PermittedPositionStore(wrapping: fake),
+            defaults: defaults
+        )
+
+        #expect(fake.writes == [["module:Clock": 9]])
+    }
+
+    @Test("An empty re-read is treated as a failed read and nothing is written")
+    func emptyReReadWritesNothing() throws {
+        let defaults = try #require(suites.make())
+        let fake = FakeStore(reads: [["module:com.apple.menuextra.controlcenter-BentoBox-12": 1], [:]])
+
+        PositionStoreHygiene.pruneCurrentStore(
+            permit: .unsequenced("hygiene test"),
+            store: PermittedPositionStore(wrapping: fake),
+            defaults: defaults
+        )
+
+        #expect(fake.writes.isEmpty)
+    }
+}
+
+/// Answers each read with the next table in line and records every write.
+@MainActor
+private final class FakeStore: MenuBarPositionStoring {
+    private var reads: [[String: Int]]
+    private(set) var writes: [[String: Int]] = []
+
+    init(reads: [[String: Int]]) {
+        self.reads = reads
+    }
+
+    func readPositions() -> [String: Int] {
+        reads.isEmpty ? [:] : reads.removeFirst()
+    }
+
+    func currentPositions() -> [String: Int] {
+        [:]
+    }
+
+    func writePositions(_ positions: [String: Int]) {
+        writes.append(positions)
+    }
+
+    func resolveKey(
+        for _: MenuBarItem, existingKeys _: [String], positions _: [String: Int], liveItems _: [MenuBarItem]
+    ) -> String? {
+        nil
+    }
+
+    func parseStatusKey(_: String) -> PositionStatusKey? {
+        nil
+    }
+
+    func isParkedWeight(_: Int) -> Bool {
+        false
+    }
+
+    func isProvenAbsent(_: String) -> Bool {
+        false
+    }
+
+    func move(
+        item _: MenuBarItem, to _: MoveDestination, liveItems _: [MenuBarItem], experimentalSystemItemHiding _: Bool
+    ) -> Bool {
+        false
+    }
+
+    func applyOrder(desiredOrder _: [String], liveItems _: [MenuBarItem], experimentalSystemItemHiding _: Bool) -> [String] {
+        []
+    }
+
+    func respaceOrder(desiredOrder _: [String], liveItems _: [MenuBarItem], experimentalSystemItemHiding _: Bool) -> [String] {
+        []
+    }
+
+    func breakTiedSiblingWeights(liveItems _: [MenuBarItem]) -> [String] {
+        []
+    }
+
+    func applyControlItemOrder(desiredOrder _: [MenuBarItem], opaqueVisibleKeys _: [String], liveItems _: [MenuBarItem]) -> [String] {
+        []
+    }
+
+    func recordAbsenceEvidence(seen _: Set<String>, blank _: Set<String>) -> Set<String> {
+        []
+    }
+
+    func resetAbsenceEvidence() {}
 }

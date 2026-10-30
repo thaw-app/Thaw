@@ -25,6 +25,11 @@ enum BatteryLevelSource {
                   of: IOPSGetPowerSourceDescription(snapshot, handle as CFTypeRef)?.takeUnretainedValue()
               )
         else { return 0 }
+        return level(from: description)
+    }
+
+    /// The charge fraction a power source description reports.
+    static func level(from description: [String: Any]) -> Double {
         let capacity = description[kIOPSCurrentCapacityKey] as? Int ?? 0
         let max = description[kIOPSMaxCapacityKey] as? Int ?? 1
         guard max > 0 else { return 0 }

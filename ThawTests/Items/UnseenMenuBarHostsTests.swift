@@ -96,6 +96,22 @@ struct UnseenMenuBarHostsTests {
     }
 }
 
+@MainActor
+@Suite("Former menu bar hosts")
+struct FormerMenuBarHostsTests {
+    private let suites = ScratchSuites(prefix: "FormerMenuBarHostsTests")
+
+    @Test("The former hosts are the bundles saved at the last launch, whatever their strikes")
+    func formerHostsAreTheSavedKeys() throws {
+        let defaults = try #require(suites.make())
+        #expect(UnseenMenuBarHosts.formerHosts(in: defaults).isEmpty)
+
+        defaults.set(["com.example.a": 0, "com.example.b": 2], forKey: UnseenMenuBarHosts.defaultsKey)
+
+        #expect(UnseenMenuBarHosts.formerHosts(in: defaults) == ["com.example.a", "com.example.b"])
+    }
+}
+
 @Suite("Untrusted helper policy")
 struct UntrustedHelperPolicyTests {
     private let start = ContinuousClock.now

@@ -50,17 +50,21 @@ enum SettingsWindowDiagnostics {
         Task { @MainActor [weak window] in
             try? await Task.sleep(for: .milliseconds(500))
             guard let window, window.isVisible else { return }
-            let reading = Reading(
-                frame: window.frame,
-                contentLayout: window.contentLayoutRect,
-                contentView: window.contentView?.frame ?? .zero,
-                screen: window.screen?.frame ?? .zero,
-                backingScale: window.backingScaleFactor,
-                hasFullSizeContent: window.styleMask.contains(.fullSizeContentView),
-                zoomPercent: zoomPercent,
-                isSimpleMode: isSimpleMode
-            )
+            let reading = reading(of: window, zoomPercent: zoomPercent, isSimpleMode: isSimpleMode)
             diagLog.info("Settings window opened: \(reading.summary)")
         }
+    }
+
+    static func reading(of window: NSWindow, zoomPercent: Int, isSimpleMode: Bool) -> Reading {
+        Reading(
+            frame: window.frame,
+            contentLayout: window.contentLayoutRect,
+            contentView: window.contentView?.frame ?? .zero,
+            screen: window.screen?.frame ?? .zero,
+            backingScale: window.backingScaleFactor,
+            hasFullSizeContent: window.styleMask.contains(.fullSizeContentView),
+            zoomPercent: zoomPercent,
+            isSimpleMode: isSimpleMode
+        )
     }
 }

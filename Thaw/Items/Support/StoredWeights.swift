@@ -25,8 +25,7 @@ struct StoredWeights {
         }
 
         @MainActor
-        static func read() -> Table {
-            let store = MenuBarPositionStoreProvider.current
+        static func read(from store: PermittedPositionStore = MenuBarPositionStoreProvider.current) -> Table {
             let isAvailable = store.positionsDomainIsAccessible()
             let positions = isAvailable ? store.currentPositions() : [:]
             return Table(isAvailable: isAvailable, positions: positions)
