@@ -237,19 +237,13 @@ struct SettingsURIWhitelistTests {
         }
     }
 
-    @Test("A published double is clamped to its range, and non-finite values are refused")
+    @Test("A published double is clamped to its range, and non-finite values are refused", .scratchDefaults)
     func doubleWritesAreClampedAndFinite() async throws {
         // tooltipDelay is published with a 0...5 range. The live settings
-        // models subscribe to the change notification this posts, so the
-        // original value is read before the scratch suite is installed and
-        // written back through the same path at the end; the sleep lets the
-        // main-queue delivery land while the scratch suite is still current,
-        // so nothing a model persists in response reaches the real domain.
+        // models subscribe to the change notification this posts; the sleep
+        // lets the main-queue delivery land while the scratch suite is still
+        // current, so nothing a model persists reaches the real domain.
         let originalValue = Defaults.double(forKey: .tooltipDelay)
-        let suiteName = ScratchDefaults.name("SettingsURIWhitelistTests")
-        let scratch = try #require(UserDefaults(suiteName: suiteName))
-        let previousStore = Defaults.store
-        Defaults.store = scratch
         let sender = unclaimedBundleID("sender")
 
         #expect(SettingsURIHandler.handleSet(key: "tooltipDelay", value: "99", sender: sender))
@@ -269,8 +263,6 @@ struct SettingsURIWhitelistTests {
 
         _ = SettingsURIHandler.handleSet(key: "tooltipDelay", value: String(originalValue), sender: sender)
         try await Task.sleep(for: .milliseconds(100))
-        Defaults.store = previousStore
-        ScratchDefaults.remove(suiteName)
     }
 
     @Test("Ice-era key names still resolve to their current spelling")

@@ -11,20 +11,9 @@ import Testing
 @testable import Thaw
 
 /// What the app does for its settings process, with settings in a throwaway suite.
-@Suite("Settings process, app side", .serialized)
+@Suite("Settings process, app side", .serialized, .scratchDefaults)
 @MainActor
 final class SettingsProcessAppSideTests {
-    private let suites = ScratchSuites(prefix: "SettingsProcessAppSideTests")
-    private let previousStore = Defaults.store
-
-    init() throws {
-        Defaults.store = try #require(suites.make())
-    }
-
-    isolated deinit {
-        Defaults.store = previousStore
-    }
-
     @Test("Only Settings goes to the process, never while it is open here or the setting is off")
     func showsInSettingsProcess() {
         let appState = AppState()

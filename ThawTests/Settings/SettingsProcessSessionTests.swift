@@ -11,7 +11,7 @@ import Testing
 
 /// The settings process's end of the link, with the app's end played by pipes in this process
 /// and the pane saved to a throwaway defaults suite.
-@Suite("Settings process session", .serialized)
+@Suite("Settings process session", .serialized, .scratchDefaults)
 @MainActor
 final class SettingsProcessSessionTests {
     private final class Calls {
@@ -22,21 +22,14 @@ final class SettingsProcessSessionTests {
         var closes = 0
     }
 
-    private let suites = ScratchSuites(prefix: "SettingsProcessSessionTests")
-    private let previousStore = Defaults.store
     private let calls = Calls()
     private let toProcess = Pipe()
     private let fromProcess = Pipe()
     private var appReceived = [SettingsLinkMessage]()
     private var appEnd: SettingsLinkEndpoint?
 
-    init() throws {
-        Defaults.store = try #require(suites.make())
-    }
-
     isolated deinit {
         appEnd?.close()
-        Defaults.store = previousStore
     }
 
     /// What reached the app, leaving out the notices any defaults write in the test process sends.

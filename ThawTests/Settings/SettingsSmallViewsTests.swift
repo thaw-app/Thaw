@@ -11,21 +11,17 @@ import Testing
 @testable import Thaw
 
 /// Small Settings views, drawn off screen and measured, with settings in a throwaway suite.
-@Suite("Small Settings views", .serialized)
+@Suite("Small Settings views", .serialized, .scratchDefaults)
 @MainActor
 final class SettingsSmallViewsTests {
-    private let suites = ScratchSuites(prefix: "SettingsSmallViewsTests")
-    private let previousStore = Defaults.store
     private let previousCenter = SettingsURIHandler.settingsChangeNotificationCenter
 
-    init() throws {
-        Defaults.store = try #require(suites.make())
+    init() {
         SettingsURIHandler.settingsChangeNotificationCenter = NotificationCenter()
     }
 
     isolated deinit {
         SettingsURIHandler.settingsChangeNotificationCenter = previousCenter
-        Defaults.store = previousStore
     }
 
     /// The height the view asks for at a fixed width, after one layout pass.
