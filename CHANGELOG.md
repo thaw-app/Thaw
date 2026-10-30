@@ -30,6 +30,8 @@ the items under New and Fixed.
 
 ### Fixed
 
+- The menu bar shape now hides when Mission Control opens and returns when it closes.
+
 - Updating all of a profile’s settings and layout now preserves its pre/post scripts.
 
 - Profiles whose saved files are missing can now be removed from the profile list.

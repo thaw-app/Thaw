@@ -162,10 +162,10 @@ final class MenuBarOverlayPanel: NSPanel {
     }
 
     /// Transparent, nonactivating panel excluded from window menus and cycling; order it only when needsShow requests.
-    init(appState: AppState, owningScreen: NSScreen) {
+    init(appState: AppState, owningScreen: NSScreen, missionControlProbe: MissionControlShieldProbe? = nil) {
         self.appState = appState
         self.owningScreen = owningScreen
-        self.missionControlProbe = MissionControlShieldProbe(owningScreen: owningScreen)
+        self.missionControlProbe = missionControlProbe ?? MissionControlShieldProbe(owningScreen: owningScreen)
         super.init(
             contentRect: .zero,
             styleMask: [
@@ -191,10 +191,10 @@ final class MenuBarOverlayPanel: NSPanel {
             .fullScreenNone, .ignoresCycle, .stationary, .canJoinAllSpaces,
         ]
         self.contentView = MenuBarOverlayPanelContentView()
-        missionControlProbe.shouldRun = { [weak self] in self?.shouldPollMissionControlProbe ?? false }
+        self.missionControlProbe.shouldRun = { [weak self] in self?.shouldPollMissionControlProbe ?? false }
         configureCancellables()
 
-        missionControlProbe.start()
+        self.missionControlProbe.start()
     }
 
     private func configureCancellables() {
@@ -350,7 +350,7 @@ final class MenuBarOverlayPanel: NSPanel {
     }
 
     /// Fade when macOS hides the bar or Mission Control takes the screen.
-    /// Observe MenuBarManager and the Published probe separately; each update reads both current values.
+    /// Observe system visibility and committed probe changes separately so each update reads current values.
     private func observeMenuBarVisibility(menuBarManager: MenuBarManager) -> AnyCancellable {
         func applyVisibility(_ self: MenuBarOverlayPanel, menuBarManager _: MenuBarManager) {
             self.applyVisibility()
@@ -362,7 +362,7 @@ final class MenuBarOverlayPanel: NSPanel {
                 applyVisibility(self, menuBarManager: menuBarManager)
             }
         }
-        let missionControlCancellable = missionControlProbe.$isActive
+        let missionControlCancellable = missionControlProbe.activityChanges
             .sink { [weak self, weak menuBarManager] _ in
                 guard let self, let menuBarManager else { return }
                 applyVisibility(self, menuBarManager: menuBarManager)
