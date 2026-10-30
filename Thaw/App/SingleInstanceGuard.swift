@@ -129,7 +129,7 @@ enum SingleInstanceGuard {
         usleep(100_000)
     }
 
-    private static func runningProcesses() -> [SingleInstanceRule.RunningProcess] {
+    static func runningProcesses() -> [SingleInstanceRule.RunningProcess] {
         NSWorkspace.shared.runningApplications.map { app in
             let entry = ProcessTable.entry(for: app.processIdentifier)
             return SingleInstanceRule.RunningProcess(

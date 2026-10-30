@@ -160,4 +160,9 @@ struct NativeVisibilityRecoveryLaunchTests {
         #expect(!Launch.isUnreadableRecord(NativeAppVisibilityStoreError.anotherProcessOwnsNativeHiding))
         #expect(!Launch.isUnreadableRecord(CocoaError(.fileReadCorruptFile)))
     }
+
+    @Test("The live recovery screen offers the bypass the kit's recovery supports")
+    func liveModelOffersBypass() {
+        #expect(NativeVisibilityRecoveryModel.live().supportsRecoveryBypass)
+    }
 }
