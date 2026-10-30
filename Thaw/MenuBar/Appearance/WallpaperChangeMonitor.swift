@@ -89,6 +89,11 @@ final class WallpaperChangeMonitor {
         diagLog.debug("Watching wallpaper index at \(self.url.path)")
     }
 
+    /// Whether a watch is open on the index.
+    var isWatching: Bool {
+        source != nil
+    }
+
     /// Stops watching and releases the descriptor.
     func stop() {
         debounceTask?.cancel()

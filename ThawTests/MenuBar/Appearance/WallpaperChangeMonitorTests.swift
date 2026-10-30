@@ -114,7 +114,13 @@ struct WallpaperChangeMonitorTests {
             try FileManager.default.removeItem(at: url)
             _ = await reports.next()
             try Data("replaced".utf8).write(to: url)
-            try? await Task.sleep(for: .milliseconds(1500))
+            #expect(!monitor.isWatching)
+            // Wait for the retry itself rather than a fixed time, which a loaded run can outlast.
+            let deadline = ContinuousClock.now + .seconds(20)
+            while !monitor.isWatching, ContinuousClock.now < deadline {
+                try await Task.sleep(for: .milliseconds(20))
+            }
+            try #require(monitor.isWatching)
             let beforeWrite = changes()
 
             let handle = try FileHandle(forWritingTo: url)
