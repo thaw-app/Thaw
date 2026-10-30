@@ -45,7 +45,7 @@ final class ProfileManager {
     private let decoder: JSONDecoder
     private let profilesDirectory: URL
     private let manifestURL: URL
-    private(set) weak var appState: AppState?
+    weak var appState: AppState?
     private var cancellables = Set<AnyCancellable>()
     /// Tracks the last seen active Space key for auto-switch debouncing.
     private var lastActiveSpaceKey: String?

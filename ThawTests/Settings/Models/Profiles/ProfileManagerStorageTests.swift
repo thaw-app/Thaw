@@ -259,6 +259,9 @@ struct ProfileManagerStorageTests {
             var first = try manager.loadProfile(id: manager.profiles[0].id)
             first.displayConfigurations["DISPLAY"] = DisplayThawBarConfiguration.defaultConfiguration.withUseThawBar(true)
             try manager.replaceProfile(first)
+            var second = try manager.loadProfile(id: manager.profiles[1].id)
+            second.globalDisplayConfiguration = DisplayThawBarConfiguration.defaultConfiguration.withGridColumns(8)
+            try manager.replaceProfile(second)
 
             try manager.updateAllProfilesItemSpacingOffset(displayUUID: "DISPLAY", offset: 4)
 
@@ -267,7 +270,7 @@ struct ProfileManagerStorageTests {
             #expect(a.displayConfigurations["DISPLAY"]?.itemSpacingOffset == 4)
             #expect(a.displayConfigurations["DISPLAY"]?.useThawBar == true, "the existing entry keeps its other values")
             #expect(b.displayConfigurations["DISPLAY"]?.itemSpacingOffset == 4)
-            #expect(b.displayConfigurations["DISPLAY"]?.useThawBar == b.globalDisplayConfiguration.useThawBar)
+            #expect(b.displayConfigurations["DISPLAY"]?.gridColumns == 8, "a missing entry starts from the profile's own template")
         }
     }
 
@@ -415,14 +418,23 @@ struct ProfileManagerStorageTests {
         }
     }
 
-    @Test("Updating only the layout keeps the groups the profile already had")
+    @Test("Updating only the layout keeps the profile's groups unless fresh ones are given")
     func updateLayoutOnly() throws {
         try ProfileTestDirectory.withManager(seeding: ["A"]) { manager, _ in
             let id = manager.profiles[0].id
+            let groups = MenuBarItemGroupSet(suppressedAutomaticNamespaces: ["com.example"])
+            var profile = try manager.loadProfile(id: id)
+            profile.menuBarLayout.itemGroups = groups
+            try manager.replaceProfile(profile)
             let appState = AppState()
+            try #require(appState.itemGroupManager.snapshot() != groups)
+
+            try manager.updateProfileLayout(id: id, itemManager: appState.itemManager)
+            #expect(try manager.loadProfile(id: id).menuBarLayout.itemGroups == groups)
+
             try manager.updateProfile(id: id, scope: .layoutOnly, appState: appState)
             let updated = try manager.loadProfile(id: id)
-            #expect(updated.menuBarLayout.itemGroups != nil)
+            #expect(updated.menuBarLayout.itemGroups == appState.itemGroupManager.snapshot())
             #expect(updated.menuBarLayout.newItemsPlacement == appState.itemManager.newItemsPlacement)
         }
     }
@@ -441,7 +453,11 @@ struct ProfileManagerStorageTests {
     func currentLayoutSnapshot() throws {
         try ProfileTestDirectory.withManager(seeding: []) { manager, _ in
             let appState = AppState()
+            Defaults.set(["com.example:item": "Example"], forKey: .menuBarItemCustomNames)
+            Defaults.set(["com.example:item": Data([7])], forKey: .menuBarItemHotkeys)
             let snapshot = manager.currentLayoutSnapshot(from: appState)
+            #expect(snapshot.customNames == ["com.example:item": "Example"])
+            #expect(snapshot.itemHotkeys == ["com.example:item": Data([7])])
             #expect(snapshot.newItemsPlacement == appState.itemManager.newItemsPlacement)
             #expect(snapshot.itemGroups == appState.itemGroupManager.snapshot())
             for (section, uids) in snapshot.itemOrder ?? [:] {
@@ -455,8 +471,15 @@ struct ProfileManagerStorageTests {
     @Test("Reapplying with no app state or no active profile does nothing")
     func reapplyWithoutState() throws {
         try ProfileTestDirectory.withManager(seeding: ["A"]) { manager, _ in
+            manager.activeProfileID = manager.profiles[0].id
             manager.reapplyActiveProfile()
-            #expect(manager.layoutTask == nil)
+            #expect(manager.layoutTask == nil, "no app state")
+
+            let appState = AppState()
+            manager.appState = appState
+            manager.activeProfileID = nil
+            manager.reapplyActiveProfile()
+            #expect(manager.layoutTask == nil, "no active profile")
         }
     }
 
@@ -482,7 +505,8 @@ struct ProfileManagerStorageTests {
         let tmp = try ProfileTestDirectory.make(seeding: ["A"])
         defer { try? FileManager.default.removeItem(at: tmp) }
         let manager = ProfileManager(profilesDirectory: tmp)
-        await manager.applyFocusFilterProfile(requested: UUID().uuidString)
+        let id = try #require(manager.profiles.first?.id)
+        await manager.applyFocusFilterProfile(requested: id.uuidString)
         #expect(manager.activeProfileID == nil)
         #expect(!manager.focusFilterActive)
     }

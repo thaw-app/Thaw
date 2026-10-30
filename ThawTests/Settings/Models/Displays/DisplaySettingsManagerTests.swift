@@ -96,6 +96,29 @@ struct DisplaySettingsManagerTests {
         #expect(reloaded.unconfirmedSpacingProfileScope == .allProfiles)
     }
 
+    /// JSON has no spelling for NaN, so this is the one value the encoder refuses.
+    @Test("A configuration that cannot be encoded is reported and leaves the stored value")
+    func unencodableConfigurationIsReported() throws {
+        let good = DisplayThawBarConfiguration.defaultConfiguration.withGridColumns(6)
+        let manager = try makeManager(configurations: [Self.uuid: good])
+        let unencodable = DisplayThawBarConfiguration(
+            useThawBar: false,
+            thawBarLocation: .dynamic,
+            alwaysShowHiddenItems: false,
+            thawBarLayout: .horizontal,
+            gridColumns: 4,
+            itemSpacingOffset: .nan
+        )
+
+        manager.configurations = [Self.uuid: unencodable]
+
+        #expect(manager.lastPersistenceFailure != nil)
+        #expect(try stored([String: DisplayThawBarConfiguration].self, .displayThawBarConfigurations) == [Self.uuid: good])
+
+        manager.configurations = [Self.uuid: good.withUseThawBar(true)]
+        #expect(manager.lastPersistenceFailure == nil)
+    }
+
     @Test("A display with no entry of its own resolves to the template")
     func resolution() throws {
         let own = DisplayThawBarConfiguration.defaultConfiguration.withUseThawBar(true)
