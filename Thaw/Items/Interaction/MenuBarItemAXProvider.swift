@@ -74,7 +74,7 @@ nonisolated enum MenuBarItemAXProvider {
     /// resolves a positional name like Item-3 against an unrelated row.
     /// See MenuBarAgentIdentityReconciler.
     private static func restoredIdentities(_ items: [MenuBarItem]) -> [MenuBarItem] {
-        MenuBarAgentIdentityReconciler.reconciling(items).items
+        adoptingSavedIdentities(MenuBarAgentIdentityReconciler.reconciling(items).items)
     }
 
     private static func restoredIdentities(_ snapshot: InventorySnapshot) -> InventorySnapshot {

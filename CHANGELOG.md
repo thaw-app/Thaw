@@ -22,7 +22,7 @@ Anything else goes before the first section, or in its own section after
 these four. The website shows each section's name beside its list, and counts
 the items under New and Fixed.
 
-## [3.0.0-alpha.12] - 2026-10-29
+## [3.0.0-alpha.12] - 2026-10-30
 
 **macOS 27 only · Build 119**
 
@@ -38,9 +38,7 @@ Most of these fixes keep menu bar items where you put them when an app answers T
 ### Changed
 
 - **Thaw no longer moves your pointer to reorder menu bar items.** When macOS declines a move, the item stays where it is. Before, Thaw dragged it with a simulated mouse drag, which could leave the pointer or the item stuck. By @camguillory in [#1418](https://github.com/thaw-app/Thaw/pull/1418).
-- **A thaw:// sender's developer team counts only when Apple vouches for it.** An app signed some other way is approved by its own signature instead, so it can't claim a trusted team.
-- **Replies to thaw:// requests go only to the app that asked,** checked by its signature. Before, any app that handled the same link could receive them.
-- **In Reduced Mode, thaw://hide-app and thaw://show-app need an app you allowed,** since they change which apps stay hidden. thaw://toggle-hidden still works for anyone.
+- **thaw:// links are stricter about who they trust.** A sender's developer team counts only when Apple vouches for it. An app signed some other way is approved by its own signature, so it can't claim a trusted team. Replies go only to the app that asked, checked by its signature. Before, any app that handled the same link could receive them. In Reduced Mode, thaw://hide-app and thaw://show-app need an app you allowed, since they change which apps stay hidden. thaw://toggle-hidden still works for anyone.
 - **The known macOS 27 limitations are in the Hiding section now,** behind an info button next to the hiding method, instead of a card at the top of Layout.
 
 ### Fixed
@@ -48,7 +46,7 @@ Most of these fixes keep menu bar items where you put them when an app answers T
 #### Menu bar order
 
 - **Icons Thaw can't read in time stay where they are.** When an app answered Thaw too slowly, its icons were moved next to Thaw's icon, out of Hidden or Always Hidden, and sometimes past Thaw's icon.
-- **An app that is slow to start at login no longer gets its icons placed in Visible as new items.** Thaw waits until the app answers on time, so icons that arrive under a placeholder name keep the section you gave them. Reported by @michaeljauk in [#1416](https://github.com/thaw-app/Thaw/issues/1416).
+- **Icons from an app that is slow to start at login keep their section.** Until the app answers on time, its icons arrive under a placeholder name, and Thaw placed them in Visible as new items. OneDrive calls every icon "OneDrive" until its accounts load, so with Native hiding the whole app showed even when you had hidden it. Thaw now waits for a slow app to answer, and gives each OneDrive icon, left to right, the account you saved it under. Once OneDrive names its accounts, Thaw uses those names. Reported by @michaeljauk in [#1416](https://github.com/thaw-app/Thaw/issues/1416).
 - **An icon that publishes no name of its own, like Stats' Disk icon, can be moved again.** Thaw tied it to an old entry left behind by Thaw itself, so it stayed at the far end of the bar and pulled the app's other icons after it.
 - **Droppy's menu bar icon can be moved while its player is showing.** Thaw saved the move under an entry macOS doesn't use for that icon, so the icon snapped back.
 - **Dragging an item across the Hidden divider moves only that item.** The neighbours the drop pushed along used to change section too, and the item you dragged could stay behind when macOS renewed it during the drag. Fixed by @camguillory in [#1411](https://github.com/thaw-app/Thaw/pull/1411).
@@ -57,8 +55,7 @@ Most of these fixes keep menu bar items where you put them when an app answers T
 #### Menu bar and appearance
 
 - **Opening a hidden item no longer keeps an auto-hiding menu bar on screen.** Thaw shows the item before pressing it. Fixed by @cnicc in [#1409](https://github.com/thaw-app/Thaw/pull/1409).
-- **The Thaw Bar and Layout show an app's icon when Thaw has no picture of its item,** as for an app that Native hiding keeps off the menu bar. Before, they showed a generic window shape. Reported by @lucifercraig12345-create in [#1424](https://github.com/thaw-app/Thaw/issues/1424).
-- **Thaw no longer reveals a hidden item whose app has its icon turned off** just to take its picture. Fixed by @camguillory in [#1408](https://github.com/thaw-app/Thaw/pull/1408).
+- **An app that Native hiding keeps off the menu bar shows its app icon in the Thaw Bar and Layout.** Before, they showed a generic window shape, and Thaw revealed the hidden item to take its picture. Reported by @lucifercraig12345-create in [#1424](https://github.com/thaw-app/Thaw/issues/1424). Fixed by @camguillory in [#1408](https://github.com/thaw-app/Thaw/pull/1408).
 - **The Right margin works with the Split shape.** The right half now ends that far from the screen edge, like the left half does with the Left margin. Before, the slider did nothing, and the right half ended close to the Clock's text. Reported by @jaimefordham in [#1412](https://github.com/thaw-app/Thaw/issues/1412).
 - **Thaw stays responsive when the app in front stops answering.** When Thaw reads where that app's menus end, it now stops waiting after a moment.
 
