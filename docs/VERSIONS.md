@@ -8,9 +8,10 @@ Open the Apple menu, choose **About This Mac**, and read the macOS number. Then 
 |---|---|---|
 | macOS 27 | Thaw 3, in beta | `brew install thaw@beta` |
 | macOS 26 | Thaw 2, the stable release | `brew install thaw` |
-| macOS 14 or 15 | Thaw 1 | Download from the [releases](https://github.com/thaw-app/Thaw/releases) |
+| macOS 15 | Thaw 2.2, in beta | `brew install thaw@beta` |
+| macOS 14 | Thaw 1 | Download from the [releases](https://github.com/thaw-app/Thaw/releases) |
 
-Each major version is built for one macOS. Thaw 2 needs macOS 26, so a Mac on macOS 14 or 15 stays on Thaw 1.
+Thaw 3 is built for macOS 27 only. Thaw 2 runs on macOS 26, and from 2.2 on macOS 15 too; until 2.2 is stable, macOS 15 gets it from the Beta channel. A Mac on macOS 14 stays on Thaw 1.
 
 No Homebrew? Every version is on the [releases](https://github.com/thaw-app/Thaw/releases) page as a disk image.
 
@@ -33,7 +34,7 @@ Thaw updates itself. The channel decides which updates it offers you.
 |---|---|---|
 | Stable | Stable releases | Thaw 2 |
 | Beta | Stable releases, plus betas and release candidates | Thaw 2 and Thaw 3 |
-| Nightly | Stable releases, plus alphas and nightlies. Never betas. | Thaw 3. Thaw 2 calls it Alpha and shows it only on macOS 27. |
+| Nightly | Stable releases, plus alphas and nightlies. Never betas. | Thaw 3. Thaw 2 calls it Alpha and shows it only on macOS 27, so a Mac there can move to Thaw 3. |
 
 Thaw 3 has no Stable option yet, because it has no stable release. Pick Beta or Nightly.
 

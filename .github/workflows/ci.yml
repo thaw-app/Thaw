@@ -18,8 +18,13 @@ jobs:
   changes:
     if: github.repository == 'thaw-app/Thaw'
     runs-on: ubuntu-slim
+    permissions:
+      contents: read
+      actions: read
+    env:
+      CODE_PATTERNS: '(\.swift$|(^|/)Package\.swift$|(^|/)Package\.resolved$|^sonar-project\.properties$|^\.swiftlint|^\.swiftformat|^Thaw\.xcodeproj/|^scripts/|\.xcstrings$|^\.github/workflows/ci\.yml$)'
     outputs:
-      code: ${{ steps.filter.outputs.code }}
+      code: ${{ steps.since-last-run.outputs.code || steps.filter.outputs.code }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -29,7 +34,34 @@ jobs:
         id: filter
         uses: thaw-app/org-ci/actions/detect-code-changes@cfa52194f39013d6f54e6f5a14dc57cec3a20e9b
         with:
-          patterns: '(\.swift$|(^|/)Package\.swift$|(^|/)Package\.resolved$|^sonar-project\.properties$|^\.swiftlint|^\.swiftformat|^Thaw\.xcodeproj/|^scripts/|\.xcstrings$|^\.github/workflows/ci\.yml$)'
+          patterns: ${{ env.CODE_PATTERNS }}
+      # The filter compares the whole pull request with its base, so a push that only
+      # fixes the changelog would build and test again. When the files changed since
+      # the previous push are not code, and CI passed on that push, nothing new needs
+      # testing. Anything it cannot confirm (a force push, a cancelled or failed run,
+      # an API error) keeps the full run.
+      - name: Skip what the last passing run already tested
+        id: since-last-run
+        if: github.event_name == 'pull_request' && github.event.action == 'synchronize' && steps.filter.outputs.code == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+          BEFORE: ${{ github.event.before }}
+          AFTER: ${{ github.event.pull_request.head.sha }}
+        run: |
+          set -uo pipefail
+          code=true
+          if changed=$(git -c core.quotePath=false diff --name-only --no-renames "$BEFORE" "$AFTER" 2>/dev/null) \
+            && ! grep -Eq "$CODE_PATTERNS" <<<"$changed"; then
+            runs=$(curl -fsS -H "Authorization: Bearer $GH_TOKEN" -H "Accept: application/vnd.github+json" \
+              "https://api.github.com/repos/$REPO/actions/workflows/ci.yml/runs?head_sha=$BEFORE&event=pull_request&status=success&per_page=1" \
+              | grep -oE '"total_count": *[0-9]+' | grep -oE '[0-9]+$' || echo 0)
+            if [ "${runs:-0}" -gt 0 ]; then
+              code=false
+              echo "Only non-code files changed since $BEFORE, which passed CI; skipping the build and tests."
+            fi
+          fi
+          echo "code=$code" >> "$GITHUB_OUTPUT"
 
   static_analysis:
     needs: changes

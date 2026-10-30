@@ -2,15 +2,7 @@
 
 ## 1. Install
 
-Choose the option for your macOS: a Homebrew command to run in Terminal, or a download. To see which macOS you have, open the Apple menu and choose **About This Mac**.
-
-| Your Mac runs | Run this | You get |
-|---|---|---|
-| macOS 27 | `brew install thaw@beta` | Thaw 3, in beta |
-| macOS 26 | `brew install thaw` | Thaw 2, the stable release |
-| macOS 14 or 15 | Download from the [releases](https://github.com/thaw-app/Thaw/releases) | Thaw 1 |
-
-No Homebrew? Download the disk image for your macOS from the [releases](https://github.com/thaw-app/Thaw/releases) and drag Thaw to Applications.
+Which Thaw your Mac gets, and the command or download for it, is in [Versions and update channels](VERSIONS.md#find-your-version).
 
 Then open Thaw from Applications.
 

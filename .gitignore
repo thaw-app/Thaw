@@ -36,3 +36,6 @@ ThawUI/.build/
 plans/
 advisor-plans/
 anti-slop/
+
+# Python bytecode from scripts
+__pycache__/

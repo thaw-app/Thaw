@@ -1,8 +1,7 @@
-name: Bug in Thaw 2 (macOS 26)
+name: Bug in Thaw 2 (macOS 15 or 26)
 description: Report something broken or behaving wrong in Thaw 2.
 title: "[Bug] "
 type: bug
-labels: ["macos-26"]
 projects: ["thaw-app/1"]
 body:
   - type: markdown

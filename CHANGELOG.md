@@ -54,6 +54,7 @@ Most of these fixes keep menu bar items where you put them when an app answers T
 
 #### Menu bar and appearance
 
+- **The menu bar shape now hides when Mission Control opens** and returns when it closes.
 - **Opening a hidden item no longer keeps an auto-hiding menu bar on screen.** Thaw shows the item before pressing it. Fixed by @cnicc in [#1409](https://github.com/thaw-app/Thaw/pull/1409).
 - **An app that Native hiding keeps off the menu bar shows its app icon in the Thaw Bar and Layout.** Before, they showed a generic window shape, and Thaw revealed the hidden item to take its picture. Reported by @lucifercraig12345-create in [#1424](https://github.com/thaw-app/Thaw/issues/1424). Fixed by @camguillory in [#1408](https://github.com/thaw-app/Thaw/pull/1408).
 - **The Right margin works with the Split shape.** The right half now ends that far from the screen edge, like the left half does with the Left margin. Before, the slider did nothing, and the right half ended close to the Clock's text. Reported by @jaimefordham in [#1412](https://github.com/thaw-app/Thaw/issues/1412).

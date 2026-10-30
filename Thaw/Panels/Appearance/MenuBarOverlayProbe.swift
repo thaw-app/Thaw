@@ -67,6 +67,9 @@ final class MissionControlShieldProbe {
     /// The poll subscription, alive only while shouldRun holds.
     private var cancellable: AnyCancellable?
 
+    /// Whether the probe currently owns an active polling subscription.
+    var isPolling: Bool { cancellable != nil }
+
     /// The least time between two Exposé shield scans while the probe stays
     /// displaced.
     private static let shieldCheckInterval: Duration = .seconds(1)
@@ -85,6 +88,13 @@ final class MissionControlShieldProbe {
 
     init(owningScreen: NSScreen) {
         self.owningScreen = owningScreen
+    }
+
+    /// Defer notifications until Published has stored the value, so visibility and polling read committed activity.
+    var activityChanges: AnyPublisher<Bool, Never> {
+        $isActive
+            .receive(on: DispatchQueue.main)
+            .eraseToAnyPublisher()
     }
 
     /// Orders the probe window on screen so the window server can move it.

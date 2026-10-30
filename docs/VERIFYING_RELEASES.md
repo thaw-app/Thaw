@@ -10,9 +10,9 @@ them.
 | --- | --- | --- |
 | **Apple Developer ID + notarization** | Binary came from the Thaw developer team and passed Apple’s notarization checks | Release GitHub Actions (signing + `notarytool`) |
 | **Sparkle EdDSA** | Downloaded **update archives** (e.g. release ZIPs) match signatures produced with the project’s Sparkle private key; the app verifies them with `SUPublicEDKey` | Sparkle tools in the release pipeline sign update packages; public key embedded in the app (`Info.plist`). The appcast lists those updates over HTTPS; **feed-level** signing (`SURequireSignedFeed`) is not enabled |
-| **Sigstore (cosign)** | GitHub Release **DMG** (and **SBOM**) blobs match a keyless cosign signature bundle uploaded beside the asset | Release workflow runs `cosign sign-blob` and attaches `*.sigstore.json` |
-| **SLSA build provenance** | Subject was produced by this repository’s release pipeline; provenance is signed in a dedicated reusable workflow, so verification can be pinned to that signing identity (**SLSA v1.0 Build L2**) | `attest-build-provenance.yml` via `actions/attest`; stored in the GitHub Attestation Store and attached as `*.intoto.jsonl` |
-| **CycloneDX SBOM** | Machine-readable inventory of the SwiftPM dependencies linked into the shipped app | Syft (pinned by version and archive digest) over the tagged source tree in the release workflow; uploaded as `Thaw_<tag>.cdx.json` |
+| **Sigstore (cosign)** | GitHub Release **DMG** (and **SBOM**) blobs match a keyless cosign signature bundle uploaded beside the asset | org-ci's `release-macos-app.yml` runs `cosign sign-blob` and attaches `*.sigstore.json` |
+| **SLSA build provenance** | Subject was built by the shared `thaw-app/org-ci` build workflow, which this repository's release workflow can call but not alter, so verification can be pinned to that builder (**SLSA v1.0 Build L3**) | org-ci's `build-macos-app.yml` via `actions/attest-build-provenance`; stored in the GitHub Attestation Store and attached as `*.intoto.jsonl` |
+| **CycloneDX SBOM** | Machine-readable inventory of the SwiftPM dependencies linked into the shipped app | Syft (pinned by version and archive digest) over the tagged source tree in org-ci's `build-macos-app.yml`; uploaded as `Thaw_<tag>.cdx.json` |
 | **Git tag signatures** | Important version tags are GPG-signed by the releaser | `git tag -s` (or equivalent) on release tags |
 
 The Sparkle **private** key and Apple signing credentials are stored as CI
@@ -64,12 +64,18 @@ Release installers on `thaw-app/Thaw` include a companion
 `Thaw.dmg.sigstore.json` (or similarly named) asset produced by cosign keyless
 signing in CI, plus a `Thaw.dmg.sha256` checksum.
 
-The identity pattern below is anchored to the release workflow on purpose: a
-loose pattern such as `https://github.com/thaw-app/Thaw/` would also accept a
-bundle signed by **any other workflow** in this repository. The trailing
-`@refs/…` component records the ref the release was dispatched from; print the
-certificate with `cosign verify-blob … --output json` if you want to pin it
-exactly for a given release.
+Releases from 3.0.0-beta.1 on are signed by the shared release workflow in
+`thaw-app/org-ci`, so the certificate identity names that workflow and the
+certificate's repository extension names `thaw-app/Thaw`. Check both: the
+identity alone would also match another app released through the same
+workflow, and the repository alone would accept a bundle signed by **any other
+workflow** of this repository. The component after `@` records the org-ci ref
+the workflow ran at; print the certificate with
+`cosign verify-blob … --output json` if you want to pin it exactly for a given
+release. Releases up to 3.0.0-alpha.11 were signed by this repository's own
+`release.yml`; verify those with
+`--certificate-identity-regexp '^https://github\.com/thaw-app/Thaw/\.github/workflows/release\.yml@refs/'`
+and without the repository flag.
 
 ```sh
 # Download DMG + bundle + checksum from the GitHub Release, then:
@@ -77,25 +83,28 @@ shasum -a 256 -c Thaw.dmg.sha256
 
 cosign verify-blob \
   --bundle Thaw.dmg.sigstore.json \
-  --certificate-identity-regexp '^https://github\.com/thaw-app/Thaw/\.github/workflows/release\.yml@refs/' \
+  --certificate-identity-regexp '^https://github\.com/thaw-app/org-ci/\.github/workflows/release-macos-app\.yml@' \
   --certificate-oidc-issuer https://token.actions.githubusercontent.com \
+  --certificate-github-workflow-repository thaw-app/Thaw \
   Thaw.dmg
 ```
 
 ## Check SLSA build provenance
 
 Releases that went through the current release workflow also publish **GitHub
-Artifact Attestations** for the installer DMG and SBOM. Provenance is generated
-in [`.github/workflows/attest-build-provenance.yml`](../.github/workflows/attest-build-provenance.yml)
-(a reusable workflow called from the release job) so the signing identity is
-separate from the macOS build and its Apple/Sparkle credential boundary. That
-gives **SLSA v1.0 Build L2** plus a signer you can pin.
+Artifact Attestations** for the installer DMG and SBOM. The app is built,
+notarized and attested inside
+[`thaw-app/org-ci`'s `build-macos-app.yml`](https://github.com/thaw-app/org-ci/blob/main/.github/workflows/build-macos-app.yml),
+a reusable workflow that this repository's release workflow calls. The caller
+chooses what to build and cannot change the build steps or the signer, which is
+what **SLSA v1.0 Build L3** asks for. The provenance names that workflow as the
+builder and the tag's commit as the source: the release is dispatched on the
+tag, and the build fails if the tag names any other commit.
 
-It is not Build L3. L3 additionally requires the *build itself* to run inside the
-trusted reusable workflow, so that the caller cannot influence what gets
-attested. Here the macOS release job builds the DMG and passes the digest to the
-signer. Moving the build into [`thaw-app/org-ci`](https://github.com/thaw-app/org-ci)
-is the prerequisite for that claim.
+Releases before this change (3.0.0-alpha.11 and earlier) were attested at Build
+L2 by a signing-only workflow in this repository,
+`thaw-app/Thaw/.github/workflows/attest-build-provenance.yml`; verify those with
+that path as the signer workflow.
 
 The same attestation bundle is attached to the GitHub Release as
 `Thaw.dmg.intoto.jsonl` / `Thaw_<tag>.cdx.json.intoto.jsonl` (for offline copy
@@ -105,15 +114,15 @@ Store:
 ```sh
 # After downloading Thaw.dmg from the GitHub Release:
 gh attestation verify Thaw.dmg --repo thaw-app/Thaw \
-  --signer-workflow thaw-app/Thaw/.github/workflows/attest-build-provenance.yml
+  --signer-workflow thaw-app/org-ci/.github/workflows/build-macos-app.yml
 
 # Same for the SBOM:
-gh attestation verify Thaw_2.0.0.cdx.json --repo thaw-app/Thaw \
-  --signer-workflow thaw-app/Thaw/.github/workflows/attest-build-provenance.yml
+gh attestation verify Thaw_3.0.0.cdx.json --repo thaw-app/Thaw \
+  --signer-workflow thaw-app/org-ci/.github/workflows/build-macos-app.yml
 ```
 
-`--signer-workflow` pins verification to the reusable provenance workflow: the
-identity that actually signed, rather than any workflow in the repository.
+`--signer-workflow` pins verification to the shared build workflow: the
+identity that built and signed, rather than any workflow in this repository.
 Cosign `*.sigstore.json` bundles prove **blob integrity** from the release job;
 attestations prove **build provenance**. Check both for a full release review.
 
@@ -130,13 +139,14 @@ Each Thaw GitHub Release that went through the current release workflow includes
 
 ```sh
 # After downloading the three files from the GitHub Release:
-shasum -a 256 -c Thaw_2.0.0.cdx.json.sha256
+shasum -a 256 -c Thaw_3.0.0-beta.1.cdx.json.sha256
 
 cosign verify-blob \
-  --bundle Thaw_2.0.0.cdx.json.sigstore.json \
-  --certificate-identity-regexp '^https://github\.com/thaw-app/Thaw/\.github/workflows/release\.yml@refs/' \
+  --bundle Thaw_3.0.0-beta.1.cdx.json.sigstore.json \
+  --certificate-identity-regexp '^https://github\.com/thaw-app/org-ci/\.github/workflows/release-macos-app\.yml@' \
   --certificate-oidc-issuer https://token.actions.githubusercontent.com \
-  Thaw_2.0.0.cdx.json
+  --certificate-github-workflow-repository thaw-app/Thaw \
+  Thaw_3.0.0-beta.1.cdx.json
 ```
 
 The SBOM is generated by Syft from the tagged source tree, whose

@@ -56,25 +56,36 @@ GitHub (or similar).
 
 ## What the release job does
 
-Order matters: update assets are published **before** the Thaw DMG so a failed
-`updates` publish does not leave a public installer without matching Sparkle
-payloads.
+Both halves run in `thaw-app/org-ci` as reusable workflows; this repository's
+`release.yml` only validates the tag and passes Thaw's names, repositories and
+secrets. Order matters: update assets are published **before** the Thaw DMG so
+a failed `updates` publish does not leave a public installer without matching
+Sparkle payloads, and the appcast goes out last so no feed item names a file
+that is not public yet.
 
-1. Build and notarize.
-2. Generate a CycloneDX SBOM of the resolved SwiftPM dependencies with Syft
-   (`Thaw_<tag>.cdx.json`), and checksum the DMG.
-3. Create Sparkle ZIP (and deltas when prior ZIPs exist).
+1. Build, notarize and attest in org-ci's reusable
+   [`build-macos-app.yml`](https://github.com/thaw-app/org-ci/blob/main/.github/workflows/build-macos-app.yml)
+   workflow. It also generates a CycloneDX SBOM of the resolved SwiftPM
+   dependencies with Syft (`Thaw_<tag>.cdx.json`), checksums the DMG and the
+   SBOM, and signs build provenance for both (`*.intoto.jsonl`). Because the
+   build runs there and not in this repository's workflow, the provenance is
+   SLSA v1.0 Build L3.
+2. Publish in org-ci's reusable
+   [`release-macos-app.yml`](https://github.com/thaw-app/org-ci/blob/main/.github/workflows/release-macos-app.yml)
+   workflow. It refuses a tag whose release is already public, downloads the
+   build and checks the app's signature, the stapled ticket and the attested
+   digests before going on.
+3. Create Sparkle ZIP (and deltas when prior ZIPs exist), then run the
+   [appcast script](#appcast-preparation) on the generated feed.
 4. Publish ZIP + deltas to **`thaw-app/updates`** (same tag).
 5. Cosign-sign the installer DMG and SBOM; create the **`thaw-app/Thaw`** release
-   **as a draft** with DMG + SBOM + `*.sigstore.json` + `*.sha256`, and (during
-   cutover) the same Sparkle ZIP + deltas as a mirror.
-6. Push signed `appcast.xml` to **`thaw-app/updates`** `gh-pages` (new enclosure
-   URLs point at `updates`, not the Thaw mirror).
-7. Sign build provenance for the DMG and SBOM in the reusable
-   [`attest-build-provenance.yml`](../.github/workflows/attest-build-provenance.yml)
-   workflow (a signing identity separate from the macOS build job); attach
-   `*.intoto.jsonl` to the draft, then publish it when **Publish release** is
-   checked.
+   **as a draft** with DMG + SBOM + `*.sigstore.json` + `*.sha256` +
+   `*.intoto.jsonl`, and (during cutover) the same Sparkle ZIP + deltas as a
+   mirror.
+6. Publish the draft when **Publish release** is checked.
+7. Push signed `appcast.xml` to **`thaw-app/updates`** `gh-pages` (new enclosure
+   URLs point at `updates`, not the Thaw mirror), and the legacy feed to
+   `stonerl/Thaw` for a 2.x tag.
 
 ### Cutover dual-publish
 
@@ -84,24 +95,32 @@ enclosure URL per file, pointing at `updates`. The Thaw copies are a safety net
 only. Remove the Thaw Sparkle attachments once a couple of updates-hosted
 releases have shipped cleanly.
 
-The release is drafted in step 5 and published in step 7 so that a failed
-attestation leaves an unpublished draft rather than a public release with no
-provenance. The appcast in step 6 goes out first, so an appcast entry's release
-link can 404 for the minute or two the attestation jobs take; in-app updates are
-unaffected, since Sparkle downloads from `thaw-app/updates`.
+The release is drafted in step 5 and published in step 6. A failure before
+step 5 leaves no Thaw release, though after step 4 the `updates` release
+already exists under the tag; a failure in step 5 or 6 leaves an unpublished
+draft, and re-running the workflow finishes it. The provenance is attached when
+the draft is created, so a release is never public without it. A failed appcast
+push after step 6 leaves a public release without a feed item; re-running the
+workflow is refused for a published tag, so push the appcast by hand from the
+run's generated file in that case.
 
 Workflow: [`.github/workflows/release.yml`](../.github/workflows/release.yml).  
 Shared Sparkle action: [`thaw-app/org-ci` `sparkle-release`](https://github.com/thaw-app/org-ci/tree/main/actions/sparkle-release).
 
 Required **release-environment** secret on Thaw: `UPDATES_GITHUB_TOKEN`
-(`contents: write` on `thaw-app/updates`). The updates softprops step must
-pass it as the action `token` input, because softprops v3 ignores `env: GITHUB_TOKEN`.
+(`contents: write` on `thaw-app/updates`). The reusable workflows receive it,
+the Sparkle key and the Apple signing secrets through `secrets: inherit`, which
+matches them by name, so the names in this repository's settings must stay as
+org-ci documents them.
 
 ## Dispatching a release
 
 Releases build an existing tag in `thaw-app/Thaw`, using that tag's project,
 deployment target, dependencies, and changelog. There is no separate source
-repository or private-package token to configure.
+repository or private-package token to configure. The run is dispatched **on
+the tag** (`--ref`), because the build attests the commit the run was
+dispatched from and refuses a tag that names another one; the workflow file
+that runs is the tag's.
 
 The workflow is `workflow_dispatch` only, and its **tag** input is free text:
 Actions `choice` inputs are a static list in the YAML, so they cannot be filled
@@ -115,8 +134,8 @@ scripts/release.sh          # override the target with REPO=owner/repo
 ```
 
 Anything the script does can be done by hand from the Actions tab or with
-`gh workflow run release.yml -f tag=3.0.0-beta.1 ...`; the script only removes the
-chance of dispatching a tag that does not exist. A `3.0.0-beta.1` tag selects the
+`gh workflow run release.yml --ref 3.0.0-beta.1 -f tag=3.0.0-beta.1 ...`; the
+script only removes the chance of dispatching a tag that does not exist. A `3.0.0-beta.1` tag selects the
 beta channel automatically.
 
 ### Xcode selection
@@ -130,17 +149,21 @@ exact `xcode-version` instead if a release needs a fixed toolchain.
 ### Building a DMG without releasing
 
 [`.github/workflows/build-dmg.yml`](../.github/workflows/build-dmg.yml) builds a
-signed, notarized DMG as an artifact retained for three days. Select the workflow
-branch to build its triggering commit, or set **ref** to another branch, tag, or
-commit in this repository. Leaving **ref** empty does not switch to the default
-branch. The `.build` PR command uses this behavior to build the PR branch.
+signed, notarized DMG as an artifact retained for three days, with org-ci's
+`build-macos-app.yml` and no attestation. Select the workflow branch to build
+its triggering commit, or set **ref** to another branch, tag, or commit in this
+repository. Leaving **ref** empty does not switch to the default branch. The
+`.build` PR command uses this behavior to build the PR branch. The artifact is
+`build-dev-<short sha>` and holds `Thaw-dev.dmg`, its checksum, the SBOM and
+the exported app as a ZIP.
 
 ### Release discussions
 
 **Discussion category** opens a linked discussion in that category. It defaults
 to `none` and only takes effect when **Publish release** is checked, because
 GitHub creates the discussion on the draft-to-published transition, which is
-step 7. Setting it on the draft in step 5 would do nothing.
+step 6. Setting it on the draft in step 5 would do nothing. An unknown category
+fails the run while the release is still a draft.
 
 ## Dry runs
 
@@ -296,18 +319,24 @@ Only **new** items point at `thaw-app/updates` releases.
 
 ## Appcast preparation
 
-The local [`prepare-appcasts`](../.github/actions/prepare-appcasts/action.yml)
-action owns the appcast rules: reapply missing macOS 26 caps to 2.x entries,
+[`prepare_appcasts.py`](../.github/actions/prepare-appcasts/prepare_appcasts.py)
+owns the appcast rules: reapply missing macOS 26 caps to 2.x entries,
 keep the beta 1 recovery bridge untagged, show a channel item's tag as its
 version (`2.1.0-rc.1` for a build made as `2.1.0`), restore the notes
 `generate_appcast` drops from every earlier archive it re-reads for deltas
 (from a snapshot of the feed taken before the run), and generate a 1.x/2.x-only
-legacy feed when releasing a 2.x tag. It uses Python's
-standard-library XML parser without external dependencies. Its two output paths
-feed publishing, dry-run comparisons, and artifact uploads.
+legacy feed when releasing a 2.x tag. It uses Python's standard-library XML
+parser without external dependencies. Its two output paths feed publishing,
+dry-run comparisons, and artifact uploads.
 
-`checkout-source` preserves the workflow branch's local actions before checking
-out the release tag, so older tags do not need to contain these helpers.
+The release workflow passes the script to org-ci's `release-macos-app.yml` as
+`appcast-script`, which runs it on the generated feed with `APPCAST_PATH`,
+`PREVIOUS_APPCAST_PATH`, `RELEASE_TAG` and `CHANNEL` set and reads
+`appcast-path` and `legacy-appcast-path` back from `GITHUB_OUTPUT`.
+[`promote.yml`](../.github/workflows/promote.yml) still calls it through the
+local [`prepare-appcasts`](../.github/actions/prepare-appcasts/action.yml)
+action. The script comes from the tag being released, like the workflow itself,
+because a release is dispatched on its tag.
 
 Run the tests locally (no signing credentials or network access needed):
 
