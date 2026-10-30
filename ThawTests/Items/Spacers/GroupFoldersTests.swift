@@ -154,4 +154,23 @@ struct GroupFoldersTests {
         #expect(world.appState.itemManager.barBounds(ofThawItemNamed: name) == own.bounds)
         #expect(world.appState.itemManager.barBounds(ofThawItemNamed: GroupFolders.autosavePrefix + "missing") == nil)
     }
+
+    @Test("A folder is called by its group's name, or else by up to three of its members' names", .timeLimit(.minutes(1)))
+    func folderNames() throws {
+        let items = ["Alpha", "Beta", "Gamma", "Delta"].map(LayoutEditorWorld.item)
+        Defaults.set(Dictionary(uniqueKeysWithValues: items.map { ($0.uniqueIdentifier, $0.title ?? "") }), forKey: .menuBarItemCustomNames)
+        let world = LayoutEditorWorld()
+        world.seat(items)
+        let manager = world.appState.itemGroupManager
+        let named = try #require(manager.createGroup(name: "Chat apps", items: Array(items.prefix(2))))
+        let nameless = try #require(manager.createGroup(name: nil, items: items))
+        let folders = GroupFolders()
+        folders.performSetup(with: world.appState)
+
+        #expect(folders.folderName(for: named) == "Chat apps")
+        #expect(folders.folderName(for: nameless) == ListFormatter.localizedString(byJoining: ["Alpha", "Beta", "Gamma"]))
+
+        world.seat([])
+        #expect(folders.folderName(for: nameless) == String(localized: "Folder"), "no member is on the bar to name it after")
+    }
 }

@@ -141,4 +141,32 @@ struct MenuBarSearchItemActionsTests {
         let expected = LayoutBarFeedbackCenter.itemCannotMove(itemName: control.displayName, section: .hidden)
         #expect(refusal.message == expected.message)
     }
+
+    @Test("A grouped item crosses sections with every member of its group, in display order")
+    func groupTravelsTogether() throws {
+        let world = World()
+        let pair = ["One", "Two"].map {
+            World.item(MenuBarItemTag(namespace: .string("com.example.Pair"), title: $0, instanceIndex: 0))
+        }
+        let alpha = World.item("Alpha")
+        let beta = World.item("Beta")
+        world.seat([pair[0], pair[1], alpha, beta])
+        try #require(world.appState.itemGroupManager.createGroup(name: "Duo", items: [alpha, beta]) != nil)
+
+        let duo = MenuBarSearchItemActions.crossSectionGroupMembers(for: beta, in: .visible, appState: world.appState)
+        #expect(duo == [alpha, beta])
+        let app = MenuBarSearchItemActions.crossSectionGroupMembers(for: pair[1], in: .visible, appState: world.appState)
+        #expect(app == pair, "an app's own items group automatically")
+        #expect(MenuBarSearchItemActions.groupDisplayName(for: [alpha, beta], in: [alpha, beta], appState: world.appState) == "Duo")
+    }
+
+    @Test("A loose item crosses sections alone, and an item that is not in the section has no group there")
+    func looseItemTravelsAlone() {
+        let world = World()
+        let alpha = World.item("Alpha")
+        let beta = World.item("Beta")
+        world.seat([alpha, beta])
+        #expect(MenuBarSearchItemActions.crossSectionGroupMembers(for: alpha, in: .visible, appState: world.appState) == nil)
+        #expect(MenuBarSearchItemActions.crossSectionGroupMembers(for: alpha, in: .hidden, appState: world.appState) == nil)
+    }
 }

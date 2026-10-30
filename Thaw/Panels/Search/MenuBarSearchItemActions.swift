@@ -236,7 +236,7 @@ enum MenuBarSearchItemActions {
     /// members are not currently adjacent. Resolution goes through the shared
     /// resolver over display order, the same sequence the layout editor
     /// resolves against.
-    private static func crossSectionGroupMembers(
+    static func crossSectionGroupMembers(
         for item: MenuBarItem,
         in sourceSection: MenuBarSection.Name,
         appState: AppState
