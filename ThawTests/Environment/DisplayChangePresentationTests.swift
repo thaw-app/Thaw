@@ -9,7 +9,7 @@ import Combine
 import Testing
 @testable import Thaw
 
-@Suite("Always-show display change hold")
+@Suite("Always-show display change hold", .scratchDefaults)
 struct AlwaysShowDisplayChangeHoldTests {
     @Test("With no display change in flight a sync runs at once")
     func idleSyncsAtOnce() {
@@ -73,7 +73,7 @@ struct AlwaysShowDisplayChangeHoldTests {
 }
 
 @MainActor
-@Suite("Display change presentation step", .timeLimit(.minutes(1)))
+@Suite("Display change presentation step", .timeLimit(.minutes(1)), .scratchDefaults)
 struct DisplayChangePresentationTests {
     @MainActor
     final class Counter {

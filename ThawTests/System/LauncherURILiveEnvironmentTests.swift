@@ -13,7 +13,7 @@ import Testing
 /// How the launcher operations read a real AppState: which items they list and
 /// which stores each answer comes from.
 @MainActor
-@Suite("Launcher URI live environment", .serialized)
+@Suite("Launcher URI live environment", .serialized, .scratchDefaults)
 struct LauncherURILiveEnvironmentTests {
     private func item(_ tag: MenuBarItemTag, ownerPID: pid_t = pid_t.max, sourcePID: pid_t? = nil) -> MenuBarItem {
         MenuBarItem(
@@ -112,7 +112,7 @@ struct LauncherURILiveEnvironmentTests {
 
 extension SettingsURIResponseSuites {
     @MainActor
-    @Suite("Launcher URI through the app state")
+    @Suite("Launcher URI through the app state", .scratchDefaults)
     struct LauncherURIAppStateEntryTests {
         @Test("The app state entry point answers from that app state's profiles")
         func unknownProfileIsReportedThroughTheAppState() async throws {

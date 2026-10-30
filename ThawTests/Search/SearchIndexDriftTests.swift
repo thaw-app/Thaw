@@ -11,7 +11,7 @@ import Testing
 /// Every user-facing stored setting is linked from a SearchEntry or opted out
 /// in SearchIndex. Fix a failure there, never by editing these tests.
 @MainActor
-@Suite("SearchIndex drift guard")
+@Suite("SearchIndex drift guard", .scratchDefaults)
 struct SearchIndexDriftTests {
     /// The names of the @Observable-managed stored properties of a settings
     /// model instance.

@@ -13,7 +13,7 @@ import Testing
 /// Both ends of the Control Center bridge, against a scratch suite in place of the app group
 /// and a recorder in place of Control Center. The app state is never set up.
 @MainActor
-@Suite("Control Center bridge", .serialized)
+@Suite("Control Center bridge", .serialized, .scratchDefaults)
 struct ControlCenterBridgeTests {
     private final class Reloads {
         var kinds: [String] = []

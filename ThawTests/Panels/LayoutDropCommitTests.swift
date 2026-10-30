@@ -11,7 +11,7 @@ import Testing
 @testable import Thaw
 
 @MainActor
-@Suite(.serialized)
+@Suite(.serialized, .scratchDefaults)
 struct LayoutDropCommitTests {
     private typealias World = LayoutEditorWorld
 

@@ -12,7 +12,7 @@ import Testing
 
 /// The postings go to a private center, since the default one would reach the app hosting the tests.
 @MainActor
-@Suite("Display change readers", .serialized, .timeLimit(.minutes(1)))
+@Suite("Display change readers", .serialized, .timeLimit(.minutes(1)), .scratchDefaults)
 struct DisplayChangeReadersTests {
     private let center = NotificationCenter()
     private let gate = SettleGate()

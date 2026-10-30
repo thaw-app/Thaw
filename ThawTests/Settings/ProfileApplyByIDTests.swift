@@ -12,7 +12,7 @@ import Testing
 /// Applying a profile by identifier, as the Shortcuts intent and
 /// thaw://apply-profile do. Profiles live in a throwaway directory.
 @MainActor
-@Suite("Profile apply by identifier", .serialized)
+@Suite("Profile apply by identifier", .serialized, .scratchDefaults)
 struct ProfileApplyByIDTests {
     private func withManager(_ body: (ProfileManager, URL) async throws -> Void) async throws {
         let tmp = FileManager.default.temporaryDirectory

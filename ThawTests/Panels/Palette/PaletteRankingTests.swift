@@ -12,7 +12,7 @@ import Testing
 @testable import Thaw
 
 /// How the palette lists and orders items: inventory from the item cache, then prefix matches first.
-@Suite("Palette inventory and ranking", .serialized)
+@Suite("Palette inventory and ranking", .serialized, .scratchDefaults)
 @MainActor
 struct PaletteRankingTests {
     private static func candidate(_ name: String, owner: String = "", key: String = "") -> PaletteCandidate {

@@ -13,7 +13,7 @@ import Testing
 
 /// The layout bar's notch marker, opaque slots, new items badge, feedback and refusal copy, drawn off screen.
 @MainActor
-@Suite("Layout bar small views", .serialized)
+@Suite("Layout bar small views", .serialized, .scratchDefaults)
 struct LayoutBarSmallViewsTests {
     private typealias World = LayoutEditorWorld
 

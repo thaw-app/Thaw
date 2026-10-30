@@ -11,7 +11,7 @@ import Testing
 
 /// The display change's resolveProfile step, which replaced ProfileManager's own screen observer.
 @MainActor
-@Suite("Display profile switch", .serialized)
+@Suite("Display profile switch", .serialized, .scratchDefaults)
 struct DisplayProfileSwitchTests {
     private let suites = ScratchSuites(prefix: "DisplayProfileSwitchTests")
 

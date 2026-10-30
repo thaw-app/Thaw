@@ -136,7 +136,7 @@ struct CapturePublicationTests {
 }
 
 @MainActor
-@Suite("Capture failure ledger commit")
+@Suite("Capture failure ledger commit", .scratchDefaults)
 struct CaptureLedgerCommitTests {
     private func makeItem(title: String) -> MenuBarItem {
         MenuBarItem(

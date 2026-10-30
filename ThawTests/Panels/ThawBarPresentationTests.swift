@@ -11,7 +11,7 @@ import Testing
 @testable import Thaw
 
 @MainActor
-@Suite("Thaw Bar presentation", .serialized)
+@Suite("Thaw Bar presentation", .serialized, .scratchDefaults)
 struct ThawBarPresentationTests {
     @Test("A cold first show produces an onscreen panel without reopening")
     func coldFirstShow() async throws {
