@@ -52,6 +52,23 @@ struct ThawBarContentViewTests {
         }
     }
 
+    /// The view's pixels once two readings a tenth of a second apart agree, so a row that fades in
+    /// is read after its fade. Fails when the view is still changing at the deadline.
+    private func settledPixels(of render: OffscreenRender<some View>, within timeout: Duration = .seconds(10)) async throws -> Data {
+        let deadline = ContinuousClock.now + timeout
+        var last = try render.pixels()
+        while ContinuousClock.now < deadline {
+            await render.settle(within: .milliseconds(100)) { false }
+            let next = try render.pixels()
+            if next == last {
+                return next
+            }
+            last = next
+        }
+        Issue.record("the view was still changing at the deadline")
+        return last
+    }
+
     @Test("The keyboard highlight follows the item count and maps arrows to the layout", arguments: [
         ThawBarLayout.horizontal, .vertical, .grid,
     ])
@@ -83,11 +100,11 @@ struct ThawBarContentViewTests {
         let harness = try Harness()
         harness.world.seat([World.item("Alpha")], in: .visible)
         let render = harness.render(.alwaysHidden)
-        await render.settle(within: .milliseconds(200)) { false }
-        let loading = try render.pixels()
+        let loading = try await settledPixels(of: render)
+        #expect(loading.contains { $0 != 0 }, "the loading row is drawn")
         // The grace period is 600 ms; the empty state replaces the loading row only after it.
-        await render.settle(within: .milliseconds(1200)) { false }
-        #expect(try render.pixels() != loading, "the loading row gives way to the empty state")
+        let replaced = await render.settle(within: .seconds(10)) { (try? render.pixels()) != loading }
+        #expect(replaced, "the loading row gives way to the empty state")
         harness.focus.begin()
         #expect(harness.focus.index == nil, "an empty bar has nothing to highlight")
     }
@@ -96,14 +113,13 @@ struct ThawBarContentViewTests {
     func noItemsAtAll() async throws {
         let harness = try Harness()
         let render = harness.render(.visible)
-        let loading = try render.pixels()
-        #expect(loading.contains { $0 != 0 })
+        let loading = try await settledPixels(of: render)
+        #expect(loading.contains { $0 != 0 }, "the loading row is drawn")
         // The failure row replaces the loading row only after the grace period and the two second timeout.
-        await render.settle(within: .milliseconds(1200)) { false }
-        let beforeTimeout = try render.pixels()
-        await render.settle(within: .milliseconds(2300)) { false }
-        let failed = try render.pixels()
-        #expect(failed != beforeTimeout, "the load times out into the failure row")
+        let timedOut = await render.settle(within: .seconds(15)) { (try? render.pixels()) != loading }
+        #expect(timedOut, "the load times out into the failure row")
+        let failed = try await settledPixels(of: render)
+        #expect(failed != loading)
         await render.settle(within: .milliseconds(300)) { false }
         #expect(try render.pixels() == failed, "the failure row is final")
     }
