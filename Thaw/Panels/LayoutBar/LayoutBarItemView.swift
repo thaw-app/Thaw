@@ -956,14 +956,10 @@ final class LayoutBarItemView: LayoutBarArrangedView {
         )
     }
 
-    private static func makePlaceholderImage(for item: MenuBarItem, appState: AppState) -> NSImage? {
-        if let icon = OverflowFallbackIcon.selectedThawIcon(for: item, appState: appState) {
-            return icon
-        }
-        return NSImage(
-            systemSymbolName: "menubar.rectangle",
-            accessibilityDescription: item.displayName
-        )
+    /// The picture for a tile with no capture, such as an app Native hiding keeps off the bar:
+    /// Thaw's chosen icon for its own item, else the app's icon, else the generic menu bar glyph.
+    static func makePlaceholderImage(for item: MenuBarItem, appState: AppState) -> NSImage? {
+        OverflowFallbackIcon.selectedThawIcon(for: item, appState: appState) ?? OverflowFallbackIcon.image(for: item)
     }
 
     private func drawPlaceholder() {
