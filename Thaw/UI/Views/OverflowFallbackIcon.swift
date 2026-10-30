@@ -109,6 +109,21 @@ enum OverflowFallbackIcon {
         appIconsByPID.removeValue(forKey: pid)
     }
 
+    @MainActor
+    private static var appIconsByBundleIdentifier: [String: NSImage?] = [:]
+
+    /// The installed app's icon for an item with no known process, or nil when no app has that identifier.
+    @MainActor
+    static func cachedAppIcon(forBundleIdentifier bundleIdentifier: String) -> NSImage? {
+        if let cached = appIconsByBundleIdentifier[bundleIdentifier] {
+            return cached
+        }
+        let icon = NSWorkspace.shared.urlForApplication(withBundleIdentifier: bundleIdentifier)
+            .map { NSWorkspace.shared.icon(forFile: $0.path) }
+        appIconsByBundleIdentifier[bundleIdentifier] = icon
+        return icon
+    }
+
     /// Use this cache instead of sourceApplication?.icon to avoid allocations on every body evaluation.
     @MainActor
     static func cachedAppIcon(forPID pid: pid_t) -> NSImage? {
@@ -277,10 +292,12 @@ enum OverflowFallbackIcon {
             if let glyph = ThawExtraGlyph.image(for: item) {
                 return glyph
             }
-            guard let sourcePID = item.sourcePID else {
-                return nil
+            if let sourcePID = item.sourcePID {
+                return cachedAppIcon(forPID: sourcePID)
             }
-            return cachedAppIcon(forPID: sourcePID)
+            // An app Native hiding switched off is never drawn and names no process for its item.
+            guard case let .string(bundleIdentifier) = item.tag.namespace else { return nil }
+            return cachedAppIcon(forBundleIdentifier: bundleIdentifier)
         }
     }
 

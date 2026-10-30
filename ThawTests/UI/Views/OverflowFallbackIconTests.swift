@@ -128,6 +128,15 @@ struct OverflowFallbackIconTests {
         #expect(OverflowFallbackIcon.image(for: Self.item(.menuBarAgent)) != nil, "the agent gets the generic glyph")
     }
 
+    // #1424: apps Native hiding switches off are never drawn and expose no process for their items.
+    @Test("An item with no known process shows its app's icon, found by bundle identifier")
+    func appIconByBundleIdentifier() throws {
+        let finder = try #require(OverflowFallbackIcon.image(for: Self.item(.string("com.apple.finder"), sourcePID: nil)))
+        #expect(!finder.isTemplate, "Finder's own icon, not the generic glyph")
+        let gone = try #require(OverflowFallbackIcon.image(for: Self.item(.string("com.example.gone"), sourcePID: nil)))
+        #expect(gone.isTemplate, "an app that isn't installed still gets the generic glyph")
+    }
+
     @Test("The always-use-app-icon setting prefers the app icon over a good capture")
     func alwaysUseAppIcon() throws {
         let appState = AppState()
