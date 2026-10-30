@@ -32,7 +32,7 @@ jobs:
           persist-credentials: false
       - name: Detect code-related paths
         id: filter
-        uses: thaw-app/org-ci/actions/detect-code-changes@214298d1d187792fa31e638bf27b146f0de5565e
+        uses: thaw-app/org-ci/actions/detect-code-changes@369e3b50e278dc7799513209c6ddc8ec758d884b
         with:
           patterns: ${{ env.CODE_PATTERNS }}
       # The filter compares the whole pull request with its base, so a push that only
@@ -219,7 +219,7 @@ jobs:
       # skipped. With neither, it leaves the last analysis alone.
       - name: Scan with coverage
         if: env.SONAR_ENABLED == 'true'
-        uses: thaw-app/org-ci/actions/sonar-scan@214298d1d187792fa31e638bf27b146f0de5565e
+        uses: thaw-app/org-ci/actions/sonar-scan@369e3b50e278dc7799513209c6ddc8ec758d884b
         with:
           sonar-token: ${{ secrets.SONAR_TOKEN }}
           code-changed: ${{ needs.changes.outputs.code }}
