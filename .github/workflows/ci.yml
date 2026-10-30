@@ -32,7 +32,7 @@ jobs:
           persist-credentials: false
       - name: Detect code-related paths
         id: filter
-        uses: thaw-app/org-ci/actions/detect-code-changes@cfa52194f39013d6f54e6f5a14dc57cec3a20e9b
+        uses: thaw-app/org-ci/actions/detect-code-changes@214298d1d187792fa31e638bf27b146f0de5565e
         with:
           patterns: ${{ env.CODE_PATTERNS }}
       # The filter compares the whole pull request with its base, so a push that only
@@ -177,7 +177,7 @@ jobs:
           curl -fsSL -o xcresultparser.zip \
             "https://github.com/a7ex/xcresultparser/releases/download/${XCRESULTPARSER_VERSION}/xcresultparser.zip"
           unzip -oq xcresultparser.zip
-          NEWEST_BUNDLE=$(ls -td Build/Logs/Test/*.xcresult 2>/dev/null | head -n1)
+          NEWEST_BUNDLE=$(python3 -c 'import glob, os; print(max(glob.glob("Build/Logs/Test/*.xcresult"), key=os.path.getmtime))')
           ./product/xcresultparser -c -o xml "$NEWEST_BUNDLE" > coverage.xml
           # Sonar matches coverage by path on Linux, so rewrite this runner's absolute
           # paths; the script fails if nothing resolves rather than report 0%.
@@ -219,7 +219,7 @@ jobs:
       # skipped. With neither, it leaves the last analysis alone.
       - name: Scan with coverage
         if: env.SONAR_ENABLED == 'true'
-        uses: thaw-app/org-ci/actions/sonar-scan@cfa52194f39013d6f54e6f5a14dc57cec3a20e9b
+        uses: thaw-app/org-ci/actions/sonar-scan@214298d1d187792fa31e638bf27b146f0de5565e
         with:
           sonar-token: ${{ secrets.SONAR_TOKEN }}
           code-changed: ${{ needs.changes.outputs.code }}
