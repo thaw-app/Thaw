@@ -104,13 +104,13 @@ struct WallpaperChangeMonitorTests {
 
     @Test("A replacement that is not there yet when the monitor re-opens is picked up by the retry")
     func lateReplacementIsPickedUpByTheRetry() async throws {
-        try await withWatchedFile(debounce: .milliseconds(20), restartRetryDelay: .seconds(1)) { url, monitor in
+        try await withWatchedFile(debounce: .milliseconds(20), restartRetryDelay: .seconds(5)) { url, monitor in
             let (changes, stream) = watch(monitor)
             var reports = stream.makeAsyncIterator()
             monitor.start()
 
             // The re-open after the delete finds no file, so only the retry can re-arm the watch.
-            // The delete's report comes after 20 ms, well before the retry a second later.
+            // There is one retry, so its delay has to outlast a loaded run's wait for the delete's report.
             try FileManager.default.removeItem(at: url)
             _ = await reports.next()
             try Data("replaced".utf8).write(to: url)
