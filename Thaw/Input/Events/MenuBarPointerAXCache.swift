@@ -53,7 +53,7 @@ final class MenuBarPointerAXCache {
     private var applicationMenuTaskPID: pid_t?
 
     /// The bar is re-read this often while the pointer is in it.
-    private static let drawnBarRefreshAge: Duration = .milliseconds(300)
+    static let drawnBarRefreshAge: Duration = .milliseconds(300)
 
     /// A bar read mid-change answers nothing; this many tries cover a reveal's reflow.
     private static let drawnBarRetries = 5
@@ -64,11 +64,16 @@ final class MenuBarPointerAXCache {
     /// A read older than this describes a bar that has changed since.
     private var drawnBarChangedAt: ContinuousClock.Instant = .now
     private let readDrawnBar: @Sendable () async -> [MenuBarAgentWindow.Entry]?
+    private let hitTest: @Sendable (CGPoint) async -> Bool
 
-    init(readDrawnBar: @escaping @Sendable () async -> [MenuBarAgentWindow.Entry]? = {
-        await MenuBarItemAXProvider.drawnBarConcurrent()
-    }) {
+    init(
+        readDrawnBar: @escaping @Sendable () async -> [MenuBarAgentWindow.Entry]? = {
+            await MenuBarItemAXProvider.drawnBarConcurrent()
+        },
+        hitTest: @escaping @Sendable (CGPoint) async -> Bool = { await MenuBarAXQueries.isForeignWidget(at: $0) }
+    ) {
         self.readDrawnBar = readDrawnBar
+        self.hitTest = hitTest
     }
 
     /// Apps the bar draws but the walk cannot read, and the drawn-bar read last compared.
@@ -80,10 +85,7 @@ final class MenuBarPointerAXCache {
     /// The cached answer for location, or nil when there is none yet, in
     /// which case a refresh is started for it.
     func foreignWidget(at location: CGPoint) -> Bool? {
-        if let answer = foreignWidget,
-           answer.location.distance(to: location) <= Self.locationTolerance,
-           answer.answeredAt.duration(to: .now) < Self.foreignWidgetLifetime
-        {
+        if let answer = foreignWidget, answer.location.distance(to: location) <= Self.locationTolerance, answer.answeredAt.duration(to: .now) < Self.foreignWidgetLifetime {
             return answer.isForeign
         }
         refreshForeignWidget(at: location)
@@ -98,8 +100,8 @@ final class MenuBarPointerAXCache {
             queuedForeignWidgetLocation = location
             return
         }
-        foreignWidgetTask = Task { [weak self] in
-            let isForeign = await MenuBarAXQueries.isForeignWidget(at: location)
+        foreignWidgetTask = Task { [weak self, hitTest] in
+            let isForeign = await hitTest(location)
             guard let self else { return }
             foreignWidget = ForeignWidgetAnswer(location: location, isForeign: isForeign, answeredAt: .now)
             foreignWidgetTask = nil
@@ -112,7 +114,7 @@ final class MenuBarPointerAXCache {
 
     /// A fresh answer for location, for callers that can wait for it.
     func isForeignWidget(at location: CGPoint) async -> Bool {
-        let isForeign = await MenuBarAXQueries.isForeignWidget(at: location)
+        let isForeign = await hitTest(location)
         foreignWidget = ForeignWidgetAnswer(location: location, isForeign: isForeign, answeredAt: .now)
         return isForeign
     }
@@ -185,7 +187,9 @@ final class MenuBarPointerAXCache {
                 guard let self else { return }
                 drawnBar = (entries, askedAt)
                 // The bar changed while this read was out: read it again.
-                if askedAt > drawnBarChangedAt { break }
+                if askedAt > drawnBarChangedAt {
+                    break
+                }
             }
             self?.drawnBarTask = nil
         }

@@ -23,6 +23,11 @@ struct MenuBarPointerAXCacheTests {
         var reads = 0
     }
 
+    @MainActor
+    private final class HitTestRecorder {
+        var points: [CGPoint] = []
+    }
+
     private func cache(counting counter: ReadCounter) -> MenuBarPointerAXCache {
         MenuBarPointerAXCache(readDrawnBar: { @MainActor in
             counter.reads += 1
@@ -59,16 +64,22 @@ struct MenuBarPointerAXCacheTests {
     }
 
     @Test("A point asked for while a hit-test runs is answered after it")
-    func queuedHitTestRunsNext() async {
-        let cache = MenuBarPointerAXCache(readDrawnBar: { [] })
+    func queuedHitTestRunsNext() async throws {
+        let tested = HitTestRecorder()
+        let cache = MenuBarPointerAXCache(readDrawnBar: { [] }, hitTest: { @MainActor point in
+            tested.points.append(point)
+            return false
+        })
         let first = CGPoint(x: Self.offScreen.x + 100, y: Self.offScreen.y)
         let second = CGPoint(x: Self.offScreen.x + 200, y: Self.offScreen.y)
         cache.refreshForeignWidget(at: first)
         cache.refreshForeignWidget(at: second)
-        // Only the queued hit-test can leave an answer for the second point; asking
-        // before then would start a hit-test of its own.
-        try? await Task.sleep(for: .milliseconds(500))
-        #expect(cache.foreignWidget(at: second) == false)
+        // Reading the recorder starts nothing, so only the queue can test the second point.
+        let deadline = ContinuousClock.now + .seconds(5)
+        while tested.points.count < 2, ContinuousClock.now < deadline {
+            try await Task.sleep(for: .milliseconds(10))
+        }
+        #expect(tested.points == [first, second])
     }
 
     @Test("An answer older than its lifetime is not served")
@@ -93,24 +104,31 @@ struct MenuBarPointerAXCacheTests {
     func recentReadIsNotRepeated() async throws {
         let counter = ReadCounter()
         let cache = cache(counting: counter)
+        let askedAt = ContinuousClock.now
         cache.refreshDrawnBarIfStale()
-        for _ in 0 ..< 100 where counter.reads == 0 {
-            await Task.yield()
-        }
-        #expect(counter.reads == 1)
-        for _ in 0 ..< 20 {
-            await Task.yield()
-        }
+        try await waitUntil { counter.reads == 1 }
+        // Let that read's task finish, so the next ask meets the age hold, not the running read.
+        try await Task.sleep(for: .milliseconds(50))
+        let secondAskAge = askedAt.duration(to: .now)
         cache.refreshDrawnBarIfStale()
-        for _ in 0 ..< 20 {
-            await Task.yield()
+        // A read started by mistake would land by now.
+        try await Task.sleep(for: .milliseconds(50))
+        // On a loaded machine the second ask can come after the read has aged; only a quick one proves the hold.
+        if secondAskAge < MenuBarPointerAXCache.drawnBarRefreshAge {
+            #expect(counter.reads == 1)
         }
-        #expect(counter.reads == 1)
-        try await Task.sleep(for: .milliseconds(350))
+        try await Task.sleep(for: MenuBarPointerAXCache.drawnBarRefreshAge + .milliseconds(50))
+        let readsBeforeAgedAsk = counter.reads
         cache.refreshDrawnBarIfStale()
-        for _ in 0 ..< 100 where counter.reads == 1 {
-            await Task.yield()
+        try await waitUntil { counter.reads > readsBeforeAgedAsk }
+        #expect(counter.reads == readsBeforeAgedAsk + 1)
+    }
+
+    /// Polls condition, which must not start any work, for up to five seconds.
+    private func waitUntil(_ condition: () -> Bool) async throws {
+        let deadline = ContinuousClock.now + .seconds(5)
+        while !condition(), ContinuousClock.now < deadline {
+            try await Task.sleep(for: .milliseconds(10))
         }
-        #expect(counter.reads == 2)
     }
 }
