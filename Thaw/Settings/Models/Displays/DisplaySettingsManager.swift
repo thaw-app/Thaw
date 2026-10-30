@@ -26,8 +26,8 @@ final class DisplaySettingsManager {
     ///
     /// didSet persists the new value and re-derives the active display's
     /// spacing. It also fires for assignments in loadInitialState(): the
-    /// persist is a harmless round-trip and the spacing apply no-ops while
-    /// appState is nil.
+    /// persist is a harmless round-trip and the spacing apply no-ops until
+    /// performSetup sets spacingHost.
     var configurations: [String: DisplayThawBarConfiguration] = [:] {
         didSet {
             guard oldValue != configurations else { return }
@@ -111,7 +111,7 @@ final class DisplaySettingsManager {
         didSet {
             guard oldValue != spacingApplyMode else { return }
             Defaults.set(spacingApplyMode.rawValue, forKey: .spacingApplyMode)
-            appState?.spacingManager.spacingApplyMode = spacingApplyMode
+            spacingHost?.spacingManager.spacingApplyMode = spacingApplyMode
         }
     }
 
@@ -125,10 +125,10 @@ final class DisplaySettingsManager {
     @ObservationIgnored
     private let decoder = JSONDecoder()
 
-    /// Reference to AppState for driving spacingManager and itemManager from
-    /// active-display configuration changes. Held weakly to avoid retain cycles.
+    /// What active-display spacing changes drive: the spacing manager, settling
+    /// and the profile reapply. Set in performSetup; tests pass stand-ins.
     @ObservationIgnored
-    private weak var appState: AppState?
+    var spacingHost: DisplaySpacingApplyHost?
 
     /// UUID of the active menu bar display the last time spacing was applied.
     /// Used to skip display changes that only reflect a resolution or
@@ -152,7 +152,7 @@ final class DisplaySettingsManager {
     /// Loads persisted state at construction. didSet fires for assignments in
     /// loadInitialState() (only direct init assignments are exempt); that is a
     /// harmless round-trip, and applyActiveDisplaySpacing returns early until
-    /// performSetup(with:) wires appState. Loading here rather than in
+    /// performSetup(with:) sets spacingHost. Loading here rather than in
     /// performSetup(with:) keeps setup from persisting that round-trip.
     init() {
         loadInitialState()
@@ -160,7 +160,7 @@ final class DisplaySettingsManager {
 
     /// Performs the initial setup of the manager.
     func performSetup(with appState: AppState) {
-        self.appState = appState
+        spacingHost = DisplaySpacingApplyHost(appState: appState)
         // Capturing displays below can apply spacing, which must see the saved mode.
         appState.spacingManager.spacingApplyMode = spacingApplyMode
         configureObservers()
@@ -368,7 +368,7 @@ final class DisplaySettingsManager {
     /// Configures the Settings-URI notification subscription. Display changes
     /// reach this manager through the display-change coordinator, and
     /// persistence is driven by didSet on each property.
-    private func configureObservers() {
+    func configureObservers() {
         var c = Set<AnyCancellable>()
 
         // Re-deriving spacing on per-display configuration changes lives in
@@ -396,7 +396,7 @@ final class DisplaySettingsManager {
             applyMode: spacingApplyMode,
             confirmationsEnabled: confirmSpacingRelaunch
         )
-        if needsConfirmation, !presentSpacingRelaunchConfirmation() {
+        if needsConfirmation, !(spacingHost?.confirmRelaunch ?? presentSpacingRelaunchConfirmation)() {
             return
         }
         // The active display can change while the confirmation is on screen.
@@ -408,18 +408,18 @@ final class DisplaySettingsManager {
     }
 
     private func applyActiveDisplaySpacing(reason: String, forceRelaunch: Bool = false) {
-        guard let appState else { return }
+        guard let host = spacingHost else { return }
         let desired = Int(configurationForActiveDisplay().itemSpacingOffset.rounded())
         // Plugging or unplugging a display is not a spacing edit. Quitting
         // every menu bar app for it, Chrome included, was far worse than a
         // gap that is off until those apps next launch, so a display change
         // only writes the new display's value. Reapply Spacing applies it now.
         let relaunchApps = Self.spacingApplyRelaunchesApps(reason: reason)
-        if !relaunchApps, appState.spacingManager.willRelaunch(forOffset: desired) {
+        if !relaunchApps, host.spacingManager.willRelaunch(forOffset: desired) {
             diagLog.info("Active display changed; saving spacing \(desired) without relaunching menu bar apps")
         }
         lastAppliedActiveDisplayUUID = Bridging.getActiveMenuBarDisplayUUID()
-        appState.spacingManager.offset = desired
+        host.spacingManager.offset = desired
         if forceRelaunch {
             isReapplyingSpacing = true
         }
@@ -434,21 +434,21 @@ final class DisplaySettingsManager {
             // Preflight settling so intermediate restore logic is
             // suppressed while the wave runs. Cancelled
             // below if applyOffset turns out to be a no-op.
-            appState.itemManager.startSettlingPeriod(reason: "spacingRelaunch:\(reason):preflight")
+            host.startSettling("spacingRelaunch:\(reason):preflight", [])
             do {
                 // Read the captured request, not a later display's offset.
-                appState.spacingManager.offset = desired
-                let outcome = try await appState.spacingManager.applyOffset(
-                    forceRelaunch: forceRelaunch,
-                    relaunchApps: relaunchApps
+                host.spacingManager.offset = desired
+                let outcome = try await host.applyOffset(
+                    forceRelaunch,
+                    relaunchApps
                 )
                 if !outcome.failedAppNames.isEmpty {
                     lastSpacingApplyFailure = String(localized: "Could not relaunch: \(outcome.failedAppNames.formatted(.list(type: .and)))")
                 }
                 if outcome.didRelaunch {
-                    appState.itemManager.startSettlingPeriod(
-                        reason: "spacingRelaunch:\(reason)",
-                        expectedBundleIDs: outcome.recoveredBundleIDs
+                    host.startSettling(
+                        "spacingRelaunch:\(reason)",
+                        outcome.recoveredBundleIDs
                     )
                     // The relaunched apps reattach at OS-default positions.
                     // Drive the active profile's layout pass so they end up
@@ -456,15 +456,15 @@ final class DisplaySettingsManager {
                     // associated profile is unchanged, so without this call
                     // the post-settle path would only run cross-section
                     // restore and leave within-section ordering untouched.
-                    appState.profileManager.reapplyActiveProfile()
+                    host.reapplyActiveProfile()
                 } else {
-                    appState.itemManager.cancelSettlingPeriod(
-                        reason: "spacingRelaunch:\(reason):noOp"
+                    host.cancelSettling(
+                        "spacingRelaunch:\(reason):noOp"
                     )
                 }
             } catch {
-                appState.itemManager.cancelSettlingPeriod(
-                    reason: "spacingRelaunch:\(reason):error"
+                host.cancelSettling(
+                    "spacingRelaunch:\(reason):error"
                 )
                 diagLog.error("applyActiveDisplaySpacing(\(reason)) failed: \(error)")
                 lastSpacingApplyFailure = error.localizedDescription

@@ -102,7 +102,7 @@ final class ProfileManager {
         dec.dateDecodingStrategy = .iso8601
         decoder = dec
 
-        if let profilesDirectory {
+        if let profilesDirectory = profilesDirectory ?? Self.directoryOverride {
             self.profilesDirectory = profilesDirectory
         } else {
             // The search API is documented to return a URL but nothing

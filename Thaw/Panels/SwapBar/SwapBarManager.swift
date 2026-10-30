@@ -30,6 +30,11 @@ final class SwapBarManager {
     @ObservationIgnored private var pointerMonitor: EventMonitor?
     @ObservationIgnored private var currentDisplayID: CGDirectDisplayID?
 
+    /// Stand-ins for tests: the defaults order the bar on screen and watch
+    /// every pointer move.
+    @ObservationIgnored var orderFront: @MainActor (NSPanel) -> Void = { $0.orderFrontRegardless() }
+    @ObservationIgnored var startPointerMonitor: @MainActor (@escaping @MainActor () -> Void) -> EventMonitor = { handler in EventMonitor.startPassive(for: [.mouseMoved], scope: .universal) { _ in handler() } }
+
     /// Read live from settings so the bar tracks the switch.
     private var isEnabled: Bool {
         advancedSettings?.enableSwapBar ?? false
@@ -80,15 +85,10 @@ final class SwapBarManager {
         self.panel = panel
         panel.present(SwapBarView(appState: appState))
         reposition()
-        panel.orderFrontRegardless()
+        orderFront(panel)
 
         if pointerMonitor == nil {
-            pointerMonitor = EventMonitor.startPassive(
-                for: [.mouseMoved],
-                scope: .universal
-            ) { [weak self] _ in
-                self?.followPointerIfNeeded()
-            }
+            pointerMonitor = startPointerMonitor { [weak self] in self?.followPointerIfNeeded() }
         }
     }
 
@@ -385,7 +385,7 @@ struct SwapBarView: View {
 
     /// Switches profiles, answering a failed load through the HUD: the bar
     /// has no room for an error row and no window to put one in.
-    private func apply(_ metadata: ProfileMetadata) {
+    func apply(_ metadata: ProfileMetadata) {
         guard metadata.id != profileManager.activeProfileID else {
             return
         }
