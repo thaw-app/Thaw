@@ -90,9 +90,9 @@ final class ProfileManager {
     /// Observers for profile hotkey changes.
     private var profileHotkeyCancellables = Set<AnyCancellable>()
 
-    /// - Parameter profilesDirectory: Profile and manifest directory; defaults to Application Support. Tests use temporary directories to protect user profiles.
+    /// - Parameter profilesDirectory: Profile and manifest directory; defaults to directoryOverride, then Application Support. Tests use temporary directories to protect user profiles.
     init(profilesDirectory: URL? = nil, launchRecord: ProfileLaunchApply.Record? = nil) {
-        launchGate = ProfileLaunchGate(record: launchRecord ?? (profilesDirectory == nil ? ProfileLaunchApply.Record() : nil))
+        launchGate = ProfileLaunchGate(record: launchRecord ?? ((profilesDirectory ?? Self.directoryOverride) == nil ? ProfileLaunchApply.Record() : nil))
         let enc = JSONEncoder()
         enc.dateEncodingStrategy = .iso8601
         enc.outputFormatting = [.prettyPrinted, .sortedKeys]

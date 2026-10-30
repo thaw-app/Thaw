@@ -70,6 +70,17 @@ struct DefaultsStoreRoutingTests {
         #expect(controller.isEnabled)
     }
 
+    @Test("Each scratch test keeps profiles in its own temporary folder")
+    func scratchProfilesFolder() throws {
+        let folder = try #require(ProfileManager.directoryOverride)
+        #expect(folder.path.hasPrefix(FileManager.default.temporaryDirectory.path))
+    }
+
+    @Test("A profile manager on the scratch folder keeps no launch record")
+    func scratchProfilesHaveNoLaunchRecord() {
+        #expect(AppState().profileManager.launchGate.record == nil)
+    }
+
     @Test("Simulating a notch through Defaults.store gives every screen one")
     func simulatedNotch() throws {
         let screen = try #require(NSScreen.screens.first)

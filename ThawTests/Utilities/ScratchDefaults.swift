@@ -89,7 +89,8 @@ private actor ScratchDefaultsGate {
 
 /// Points Defaults at a throwaway suite for each test it covers, then puts the
 /// previous store back and deletes the suite. Defaults.store is one global, so
-/// tests using this trait run one at a time, across suites too.
+/// tests using this trait run one at a time, across suites too. Profile managers
+/// made during the test, including an AppState's, use a throwaway folder too.
 nonisolated struct ScratchDefaultsTrait: TestTrait, SuiteTrait, TestScoping {
     var isRecursive: Bool {
         true
@@ -109,8 +110,13 @@ nonisolated struct ScratchDefaultsTrait: TestTrait, SuiteTrait, TestScoping {
             await gate.release()
             throw error
         }
+        let profiles = FileManager.default.temporaryDirectory
+            .appending(path: "ThawTestProfiles/\(UUID().uuidString)", directoryHint: .isDirectory)
+        defer { try? FileManager.default.removeItem(at: profiles) }
         do {
-            try await function()
+            try await ProfileManager.$directoryOverride.withValue(profiles) {
+                try await function()
+            }
         } catch {
             await ScratchDefaults.restoreStore(removing: name)
             await gate.release()
