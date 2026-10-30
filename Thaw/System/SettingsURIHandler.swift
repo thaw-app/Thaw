@@ -1101,7 +1101,7 @@ enum SettingsURIHandler {
         return response
     }
 
-    /// Blocked schemes for callback URLs (security).
+    /// Schemes no callback opens with. A public read opens with whatever handles the scheme, so it also refuses the web and messaging schemes a dump refuses; a sender's response opens only with the sender's own app.
     private static let blockedCallbackSchemes: Set<String> = ["file", "javascript", "data", "about", "blob"]
 
     /// Sends response via callback URL.
@@ -1118,7 +1118,7 @@ enum SettingsURIHandler {
             return false
         }
 
-        if blockedCallbackSchemes.contains(scheme) || scheme.hasPrefix("x-apple-") {
+        if blockedCallbackSchemes.contains(scheme) || scheme.hasPrefix("x-apple-") || (recipient == nil && ItemEnumerationDump.refusedCallbackSchemes.contains(scheme)) {
             diagLog.error("Settings URI Get: Callback URL scheme not allowed: \(scheme)")
             return false
         }
