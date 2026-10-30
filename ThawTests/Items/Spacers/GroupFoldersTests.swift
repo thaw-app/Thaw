@@ -104,4 +104,54 @@ struct GroupFoldersTests {
         #expect(!folders.ownsWindowID(1))
         #expect(!folders.iconContainsPointer())
     }
+
+    @Test("Setup drops folders whose group is gone, with their styles and icon labels", .timeLimit(.minutes(1)))
+    func setupPrunesStaleFolders() async throws {
+        let stale = UUID()
+        Defaults.store.set([stale.uuidString], forKey: Self.foldersKey)
+        Defaults.store.set([stale.uuidString: ["symbol": "star"]], forKey: Self.stylesKey)
+        Defaults.store.set([GroupFolders.autosavePrefix + stale.uuidString: "Old"], forKey: GroupFolders.labelsKey)
+        let folders = GroupFolders()
+        try #require(folders.isFolder(.user(stale)))
+
+        // GroupFolders holds the app state weakly, so the test keeps it alive.
+        let appState = AppState()
+        folders.performSetup(with: appState)
+        await waitUntil {
+            !folders.isFolder(.user(stale))
+        } tracking: {
+            _ = folders.isFolder(.user(stale))
+        }
+
+        #expect(Defaults.store.stringArray(forKey: Self.foldersKey) == [])
+        #expect((Defaults.store.dictionary(forKey: Self.stylesKey) as? [String: [String: String]])?.isEmpty == true)
+        #expect((Defaults.store.dictionary(forKey: GroupFolders.labelsKey) as? [String: String])?.isEmpty == true)
+        withExtendedLifetime(appState) {}
+    }
+
+    @Test("Making a group that no longer exists a folder leaves no folder behind", .timeLimit(.minutes(1)))
+    func folderForMissingGroup() {
+        let folders = GroupFolders()
+        let appState = AppState()
+        folders.performSetup(with: appState)
+        let missing = UUID()
+
+        folders.setFolder(true, for: .user(missing), members: [])
+
+        #expect(!folders.isFolder(.user(missing)))
+        #expect(Defaults.store.stringArray(forKey: Self.foldersKey) == [])
+        withExtendedLifetime(appState) {}
+    }
+
+    @Test("A Thaw item's bar bounds are found by autosave name, ignoring other apps' items of that name")
+    func barBounds() {
+        let world = LayoutEditorWorld()
+        let name = GroupFolders.autosavePrefix + UUID().uuidString
+        let foreign = LayoutEditorWorld.item(MenuBarItemTag(namespace: .string("com.example.app"), title: name))
+        let own = LayoutEditorWorld.item(MenuBarItemTag(namespace: .thaw, title: name))
+        world.seat([foreign, own])
+
+        #expect(world.appState.itemManager.barBounds(ofThawItemNamed: name) == own.bounds)
+        #expect(world.appState.itemManager.barBounds(ofThawItemNamed: GroupFolders.autosavePrefix + "missing") == nil)
+    }
 }
