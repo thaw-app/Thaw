@@ -6,6 +6,7 @@
 //  Licensed under the GNU GPLv3
 
 import AppKit
+import MenuBarModel
 import Testing
 @testable import Thaw
 
@@ -90,5 +91,31 @@ struct ControlItemMenuTests {
         let hasAlwaysHiddenToggle = titles.contains(String(localized: "Show Always Hidden Items"))
             || titles.contains(String(localized: "Hide Always Hidden Items"))
         #expect(hasAlwaysHiddenToggle == alwaysHidden.isEnabled)
+    }
+
+    @Test("Once the app state is gone the menu is empty but titled")
+    func menuWithoutAppState() throws {
+        var appState: AppState? = AppState()
+        let controller = try ControlItemMenuController(appState: #require(appState))
+        weak var released = appState
+        appState = nil
+        try #require(released == nil)
+        let menu = controller.makeMenu()
+        #expect(menu.items.isEmpty)
+        #expect(menu.title == Bundle.main.displayName)
+    }
+
+    @Test("The Hidden toggle counts the section's items as a badge, leaving out control items")
+    func sectionToggleBadge() throws {
+        let appState = AppState()
+        appState.itemManager.itemCache[.hidden] = [
+            LayoutEditorWorld.item("Alpha"),
+            LayoutEditorWorld.item(.hiddenControlItem),
+            LayoutEditorWorld.item("Beta"),
+        ]
+        let menu = ControlItemMenuController(appState: appState).makeMenu()
+        let hidden = try #require(appState.menuBarManager.section(withName: .hidden))
+        let toggle = try #require(menu.items.first { $0.representedObject as? MenuBarSection === hidden })
+        #expect(toggle.badge?.itemCount == 2)
     }
 }

@@ -88,7 +88,8 @@ struct MenuBarSearchItemActionsTests {
         // Checked first, so a backend that would allow it never starts a real move here.
         try #require(!MenuBarBackendProvider.current.canAssign(control, to: .alwaysHidden, experimentalSystemItemHiding: false))
         MenuBarSearchItemActions.move(control, to: .alwaysHidden, appState: world.appState)
-        #expect(world.appState.layoutFeedback.refusal != nil)
+        let refusal = try #require(world.appState.layoutFeedback.refusal)
+        #expect(refusal.message == LayoutBarFeedbackCenter.itemCannotMove(itemName: control.displayName, section: .alwaysHidden).message)
     }
 
     @Test("A batch with nothing the section can take does nothing")
@@ -106,5 +107,38 @@ struct MenuBarSearchItemActionsTests {
         let alpha = World.item("Alpha")
         #expect(MenuBarSearchItemActions.groupDisplayName(for: [alpha], in: [alpha], appState: world.appState) == alpha.displayName)
         #expect(MenuBarSearchItemActions.groupDisplayName(for: [], in: [], appState: world.appState).isEmpty)
+    }
+
+    @Test("A refusal that system item hiding would lift names that setting")
+    func refusalNamesTheSetting() throws {
+        let world = World()
+        let clock = World.item(.clock)
+        try #require(!MenuBarBackendProvider.current.canAssign(clock, to: .hidden, experimentalSystemItemHiding: false))
+        try #require(MenuBarBackendProvider.current.canAssign(clock, to: .hidden, experimentalSystemItemHiding: true))
+        MenuBarSearchItemActions.postAssignmentRefusal(
+            for: clock,
+            to: .hidden,
+            experimentalSystemItemHiding: false,
+            appState: world.appState
+        )
+        let refusal = try #require(world.appState.layoutFeedback.refusal)
+        let expected = LayoutBarFeedbackCenter.systemItemHidingDisabled(itemName: clock.displayName, section: .hidden)
+        #expect(refusal.title == expected.title)
+        #expect(refusal.message == expected.message)
+    }
+
+    @Test("A refusal the setting would not lift says the item stays put, even with the setting off")
+    func refusalWithSettingOffForAFixedItem() throws {
+        let world = World()
+        let control = World.item(.visibleControlItem)
+        MenuBarSearchItemActions.postAssignmentRefusal(
+            for: control,
+            to: .hidden,
+            experimentalSystemItemHiding: false,
+            appState: world.appState
+        )
+        let refusal = try #require(world.appState.layoutFeedback.refusal)
+        let expected = LayoutBarFeedbackCenter.itemCannotMove(itemName: control.displayName, section: .hidden)
+        #expect(refusal.message == expected.message)
     }
 }

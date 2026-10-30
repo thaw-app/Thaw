@@ -83,8 +83,10 @@ struct ThawBarContentViewTests {
         let harness = try Harness()
         harness.world.seat([World.item("Alpha")], in: .visible)
         let render = harness.render(.alwaysHidden)
+        await render.settle(within: .milliseconds(200)) { false }
         let loading = try render.pixels()
-        await render.settle(within: .seconds(5)) { (try? render.pixels()) != loading }
+        // The grace period is 600 ms; the empty state replaces the loading row only after it.
+        await render.settle(within: .milliseconds(1200)) { false }
         #expect(try render.pixels() != loading, "the loading row gives way to the empty state")
         harness.focus.begin()
         #expect(harness.focus.index == nil, "an empty bar has nothing to highlight")
@@ -96,8 +98,50 @@ struct ThawBarContentViewTests {
         let render = harness.render(.visible)
         let loading = try render.pixels()
         #expect(loading.contains { $0 != 0 })
-        await render.settle(within: .seconds(8)) { (try? render.pixels()) != loading }
-        #expect(try render.pixels() != loading, "the load times out into the failure row")
+        // The failure row replaces the loading row only after the grace period and the two second timeout.
+        await render.settle(within: .milliseconds(1200)) { false }
+        let beforeTimeout = try render.pixels()
+        await render.settle(within: .milliseconds(2300)) { false }
+        let failed = try render.pixels()
+        #expect(failed != beforeTimeout, "the load times out into the failure row")
+        await render.settle(within: .milliseconds(300)) { false }
+        #expect(try render.pixels() == failed, "the failure row is final")
+    }
+
+    @Test("A bar whose appearance has a border draws it around the items")
+    func borderIsDrawn() async throws {
+        let harness = try Harness()
+        harness.world.seat(["Alpha", "Beta"].map(World.item), in: .visible)
+        var configuration = harness.world.appState.appearanceManager.configuration
+        configuration.thawBarAppearance.overridesMenuBar = true
+        configuration.thawBarAppearance.hasBorder = false
+        configuration.thawBarAppearance.borderWidth = 4
+        configuration.thawBarAppearance.borderColor = NSColor.systemRed.cgColor
+        harness.world.appState.appearanceManager.configuration = configuration
+        let render = harness.render(.visible)
+        await render.settle(within: .seconds(1)) { false }
+        let plain = try render.pixels()
+
+        configuration.thawBarAppearance.hasBorder = true
+        harness.world.appState.appearanceManager.configuration = configuration
+        await render.settle(within: .seconds(5)) { (try? render.pixels()) != plain }
+        #expect(try render.pixels() != plain, "the border stroke changes the drawing")
+    }
+
+    @Test("A grid with fewer items than columns lays out as one row as wide as its items")
+    func singleRowGrid() async throws {
+        let harness = try Harness()
+        try harness.use(.grid, columns: 4)
+        harness.world.seat(["Alpha", "Beta", "Gamma"].map(World.item), in: .visible)
+        let render = harness.render(.visible)
+        await render.settle(within: .seconds(5)) {
+            harness.focus.begin()
+            return harness.focus.index == 0
+        }
+        let threeWide = render.host.fittingSize.width
+        harness.world.seat([World.item("Delta")], in: .visible)
+        await render.settle(within: .seconds(5)) { render.host.fittingSize.width < threeWide }
+        #expect(render.host.fittingSize.width < threeWide, "the row is as wide as the items in it")
     }
 
     @Test("A folder lists only its members, in folder order")

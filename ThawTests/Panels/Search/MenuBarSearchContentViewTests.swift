@@ -96,7 +96,11 @@ struct MenuBarSearchContentViewTests {
         #expect(harness.ids.contains(Self.itemID(alpha)))
         #expect(!harness.ids.contains(Self.itemID(quit)), "the previews drop it, so Search does too")
         #expect(!harness.ids.contains { id in
-            if case let .item(tag, _) = id { tag.matchesVisibleControlItem } else { false }
+            if case let .item(tag, _) = id {
+                tag.matchesVisibleControlItem
+            } else {
+                false
+            }
         }, "control items stay out of Search")
     }
 
@@ -205,5 +209,22 @@ struct MenuBarSearchContentViewTests {
             drawn.append(pixels)
         }
         #expect(Set(drawn).count == drawn.count)
+    }
+
+    @Test("The hosting view hands the content the whole frame, with no safe area insets")
+    func hostingViewHasNoInsets() {
+        let harness = Harness(.inspector)
+        let root = MenuBarSearchRootView(
+            appState: harness.world.appState,
+            model: harness.model,
+            displayID: CGMainDisplayID(),
+            panel: harness.panel,
+            presentation: .inspector
+        )
+        let insets = MenuBarSearchHostingView(rootView: root).safeAreaInsets
+        #expect(insets.top == 0)
+        #expect(insets.left == 0)
+        #expect(insets.bottom == 0)
+        #expect(insets.right == 0)
     }
 }

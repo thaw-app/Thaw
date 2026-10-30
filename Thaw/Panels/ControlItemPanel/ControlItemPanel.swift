@@ -135,7 +135,7 @@ final class ControlItemPanelController: NSObject, NSPopoverDelegate {
     }
 
     /// AppKit coordinates under the bar at the icon's x make the fallback popover hang like a menu.
-    private func anchorFrame(fallbackPoint: CGPoint?) -> CGRect? {
+    func anchorFrame(fallbackPoint: CGPoint?) -> CGRect? {
         guard let screen = anchorScreen(fallbackPoint: fallbackPoint) else {
             return nil
         }
@@ -146,7 +146,7 @@ final class ControlItemPanelController: NSObject, NSPopoverDelegate {
 
     /// Where Thaw's visible control item sits. Mirrors
     /// ThawBarPanel.controlItemAnchorBounds.
-    private func anchorBounds() -> CGRect? {
+    func anchorBounds() -> CGRect? {
         guard let item = appState?.itemManager.managedItems.first(matching: .visibleControlItem) else {
             Self.diagLog.warning("no visible control item in the item list; cannot anchor to the icon")
             return nil
@@ -162,7 +162,7 @@ final class ControlItemPanelController: NSObject, NSPopoverDelegate {
         return item.bounds.isEmpty ? nil : item.bounds
     }
 
-    private func makePopover(appState: AppState) -> NSPopover {
+    func makePopover(appState: AppState) -> NSPopover {
         let popover = NSPopover()
         popover.behavior = .transient
         popover.animates = true
