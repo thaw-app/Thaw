@@ -24,7 +24,7 @@ protocol StandInSectionControlling: AnyObject {
 
 extension RuntimeSectionController: StandInSectionControlling {
     var layoutChanges: AnyPublisher<Void, Never> {
-        Publishers.CombineLatest($sectionAssignment, $sectionItemOrder).map { _ in }.eraseToAnyPublisher()
+        Publishers.CombineLatest($sectionAssignment, $sectionItemOrder).map { _ in () }.eraseToAnyPublisher()
     }
 }
 
