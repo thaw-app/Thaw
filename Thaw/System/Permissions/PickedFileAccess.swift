@@ -41,12 +41,22 @@ final class PickedFileAccess {
     private let message: String
     /// Where the bookmark is kept. Tests pass a scratch suite.
     private let defaults: UserDefaults
+    /// Shows the configured panel and returns what was picked. Tests answer in its place.
+    private let choose: @MainActor (NSOpenPanel) -> URL?
     private var scopedURL: URL?
     private let diagLog = DiagLog(category: "PickedFileAccess")
 
-    init(fileURL: URL, bookmarkKey: String, title: String, message: String, defaults: UserDefaults = .standard) {
+    init(
+        fileURL: URL,
+        bookmarkKey: String,
+        title: String,
+        message: String,
+        defaults: UserDefaults = .standard,
+        choose: @escaping @MainActor (NSOpenPanel) -> URL? = PickedFileAccess.runModal
+    ) {
         self.fileURL = fileURL
         self.defaults = defaults
+        self.choose = choose
         self.bookmarkKey = bookmarkKey
         self.title = title
         self.message = message
@@ -104,8 +114,7 @@ final class PickedFileAccess {
         panel.title = title
         panel.message = message
         panel.prompt = String(localized: "Grant Access")
-        NSApp.activate()
-        guard panel.runModal() == .OK, let picked = panel.url,
+        guard let picked = choose(panel),
               picked.standardizedFileURL.path == fileURL.standardizedFileURL.path
         else {
             diagLog.info("No access to \(fileURL.lastPathComponent): the panel closed without that file")
@@ -117,6 +126,12 @@ final class PickedFileAccess {
         activateIfNeeded()
         diagLog.info("Access granted to \(fileURL.lastPathComponent)")
         return true
+    }
+
+    /// The system panel, run modally in front of everything else.
+    static func runModal(_ panel: NSOpenPanel) -> URL? {
+        NSApp.activate()
+        return panel.runModal() == .OK ? panel.url : nil
     }
 
     private func store(_ url: URL) {

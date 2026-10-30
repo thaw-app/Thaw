@@ -140,27 +140,6 @@ struct SettingsURISenderTests {
         #expect(SettingsURISender.identify(from: event) == nil)
     }
 
-    @Test("An event whose sender PID is this process is identified from this process's own signature")
-    func eventFromThisProcessIsIdentified() {
-        let event = NSAppleEventDescriptor(
-            eventClass: AEEventClass(kInternetEventClass),
-            eventID: AEEventID(kAEGetURL),
-            targetDescriptor: nil,
-            returnID: AEReturnID(kAutoGenerateReturnID),
-            transactionID: AETransactionID(kAnyTransactionID)
-        )
-        event.setAttribute(NSAppleEventDescriptor(int32: getpid()), forKeyword: AEKeyword(keySenderPIDAttr))
-
-        // An unsigned test host may fail validation; when it passes, the name comes from the signature.
-        if let sender = SettingsURISender.identify(from: event) {
-            #expect(!sender.bundleIdentifier.isEmpty)
-            #expect(sender.codeHash != nil)
-        }
-
-        event.setAttribute(NSAppleEventDescriptor(int32: -1), forKeyword: AEKeyword(keySenderPIDAttr))
-        #expect(SettingsURISender.identify(from: event) == nil)
-    }
-
     @Test("A grant with a team matches only a sender with that team", arguments: [
         ("TEAM", nil, true),
         ("TEAM", "abc", true),

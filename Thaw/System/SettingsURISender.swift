@@ -73,7 +73,7 @@ nonisolated struct SettingsURISender: Equatable, Sendable {
         data.map { String(format: "%02x", $0) }.joined()
     }
 
-    private static func identify(guestAttributes: [CFString: Any]) -> SettingsURISender? {
+    static func identify(guestAttributes: [CFString: Any]) -> SettingsURISender? {
         var code: SecCode?
         guard SecCodeCopyGuestWithAttributes(nil, guestAttributes as CFDictionary, [], &code) == errSecSuccess, let code, SecCodeCheckValidity(code, [], nil) == errSecSuccess
         else {
@@ -118,7 +118,7 @@ nonisolated struct SettingsURISender: Equatable, Sendable {
         return #"anchor apple generic and certificate leaf[subject.OU] = "\#(team)""#
     }
 
-    private static func isAnchored(_ staticCode: SecStaticCode, toTeam team: String) -> Bool {
+    static func isAnchored(_ staticCode: SecStaticCode, toTeam team: String) -> Bool {
         var requirement: SecRequirement?
         guard let text = anchoredTeamRequirement(team),
               SecRequirementCreateWithString(text as CFString, [], &requirement) == errSecSuccess,
@@ -131,9 +131,11 @@ nonisolated struct SettingsURISender: Equatable, Sendable {
 
     /// macOS 26 stores the sender PID as a UInt32 on arm64, so any integer type is read raw.
     private static func senderPID(from event: NSAppleEventDescriptor) -> pid_t? {
-        guard let descriptor = event.attributeDescriptor(forKeyword: AEKeyword(keySenderPIDAttr)) else {
-            return nil
-        }
+        event.attributeDescriptor(forKeyword: AEKeyword(keySenderPIDAttr)).flatMap(pid(fromSenderDescriptor:))
+    }
+
+    /// The PID in a sender PID attribute, read raw from any integer type; nil when it isn't positive.
+    static func pid(fromSenderDescriptor descriptor: NSAppleEventDescriptor) -> pid_t? {
         let integerTypes: Set<OSType> = [typeSInt16, typeSInt32, typeSInt64, typeUInt16, typeUInt32, typeUInt64]
         var pid: pid_t = 0
         if integerTypes.contains(descriptor.descriptorType) {

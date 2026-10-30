@@ -27,9 +27,22 @@ nonisolated enum CallbackRecipient {
 
     /// Opens url with the sender's own app, or with whatever handles it when there is no sender
     /// to answer to. Returns false when the sender's app can't be confirmed.
-    static func open(_ url: URL, answering sender: SettingsURISender?) -> Bool {
-        guard let sender else { return NSWorkspace.shared.open(url) }
-        guard let app = application(for: url, sender: sender) else { return false }
+    /// Tests pass the lookups and launch, which gets the app to open with or nil for the default handler.
+    static func open(
+        _ url: URL,
+        answering sender: SettingsURISender?,
+        handler: (URL) -> URL? = { NSWorkspace.shared.urlForApplication(toOpen: $0) },
+        identify: (URL) -> SettingsURISender? = { SettingsURISender.identify(appAt: $0) },
+        launch: (URL, URL?) -> Bool = CallbackRecipient.launch(_:with:)
+    ) -> Bool {
+        guard let sender else { return launch(url, nil) }
+        guard let app = application(for: url, sender: sender, handler: handler, identify: identify) else { return false }
+        return launch(url, app)
+    }
+
+    /// Opens url with app, or with its default handler when app is nil.
+    static func launch(_ url: URL, with app: URL?) -> Bool {
+        guard let app else { return NSWorkspace.shared.open(url) }
         NSWorkspace.shared.open([url], withApplicationAt: app, configuration: NSWorkspace.OpenConfiguration())
         return true
     }

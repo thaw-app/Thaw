@@ -116,19 +116,24 @@ final class ControlCommandObserver {
     /// Static because the C callback above has no way to hand self back;
     /// unknown names are dropped rather than logged loudly, since the Darwin
     /// center is a global namespace and this process is not the only thing
-    /// posting into it.
+    /// posting into it. Tests pass the app state, the action and the HUD.
     @MainActor
-    private static func dispatch(_ rawName: String) {
+    static func dispatch(
+        _ rawName: String,
+        appState: AppState? = LiveApp.appState,
+        perform: (HotkeyAction, AppState) -> Void = { $0.perform(appState: $1) },
+        showHUD: (String, LocalizedStringKey) -> Void = { ThawHUD.show(symbol: $0, text: $1) }
+    ) {
         guard
             let command = Command(rawValue: rawName),
-            let appState = LiveApp.appState
+            let appState
         else {
             return
         }
         let confirmation = command.confirmation(appState: appState)
-        command.action.perform(appState: appState)
+        perform(command.action, appState)
         if let confirmation {
-            ThawHUD.show(symbol: confirmation.symbol, text: confirmation.text)
+            showHUD(confirmation.symbol, confirmation.text)
         }
     }
 

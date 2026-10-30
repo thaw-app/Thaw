@@ -5,6 +5,7 @@
 //  Copyright (Thaw) © 2026 Toni Förster
 //  Licensed under the GNU GPLv3
 
+import AppKit
 import Foundation
 import Testing
 @testable import Thaw
@@ -106,6 +107,64 @@ struct PickedFileAccessTests {
                 fileURL: file, bookmarkKey: other, title: "Title", message: "Message", defaults: defaults
             ).hasReadWriteAccess)
             #expect(UserDefaults.standard.data(forKey: other) == nil)
+        }
+    }
+
+    @Test("The panel opens on the file's folder, for property lists only, with this access's copy")
+    func panelIsConfiguredForTheFile() throws {
+        try withFixture { file, defaults in
+            var shown: NSOpenPanel?
+            let access = PickedFileAccess(
+                fileURL: file, bookmarkKey: bookmarkKey, title: "Title", message: "Message", defaults: defaults
+            ) { panel in
+                shown = panel
+                return nil
+            }
+
+            #expect(!access.requestAccessViaOpenPanel())
+
+            let panel = try #require(shown)
+            #expect(panel.canChooseFiles)
+            #expect(!panel.canChooseDirectories)
+            #expect(!panel.allowsMultipleSelection)
+            #expect(panel.allowedContentTypes == [.propertyList])
+            #expect(panel.directoryURL?.standardizedFileURL.path == file.deletingLastPathComponent().standardizedFileURL.path)
+            #expect(panel.title == "Title")
+            #expect(panel.message == "Message")
+            #expect(defaults.data(forKey: bookmarkKey) == nil, "a closed panel grants nothing")
+        }
+    }
+
+    @Test("Picking the file stores a bookmark that grants read/write access")
+    func pickingTheFileGrantsAccess() throws {
+        try withFixture { file, defaults in
+            let access = PickedFileAccess(
+                fileURL: file, bookmarkKey: bookmarkKey, title: "Title", message: "Message", defaults: defaults
+            ) { _ in file }
+
+            #expect(access.requestAccessViaOpenPanel())
+
+            let data = try #require(defaults.data(forKey: bookmarkKey))
+            var isStale = false
+            let resolved = try URL(resolvingBookmarkData: data, bookmarkDataIsStale: &isStale)
+            #expect(resolved.standardizedFileURL.path == file.standardizedFileURL.path)
+            #expect(access.hasReadWriteAccess)
+        }
+    }
+
+    @Test("Picking a different file grants nothing")
+    func pickingAnotherFileIsRefused() throws {
+        try withFixture { file, defaults in
+            let other = file.deletingLastPathComponent().appendingPathComponent("other.plist")
+            try #require(NSDictionary(dictionary: [:]).write(to: other, atomically: true))
+            let access = PickedFileAccess(
+                fileURL: file, bookmarkKey: bookmarkKey, title: "Title", message: "Message", defaults: defaults
+            ) { _ in other }
+
+            #expect(!access.requestAccessViaOpenPanel())
+
+            #expect(defaults.data(forKey: bookmarkKey) == nil)
+            #expect(!access.hasReadWriteAccess)
         }
     }
 }

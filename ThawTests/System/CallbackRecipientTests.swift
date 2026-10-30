@@ -54,4 +54,50 @@ struct CallbackRecipientTests {
             for: callback, sender: teamSender, handler: { _ in nil }, identify: { _ in teamSender }
         ) == nil)
     }
+
+    private final class Launches {
+        var opened: [(url: URL, app: URL?)] = []
+    }
+
+    private func open(answering sender: SettingsURISender?, handler: SettingsURISender?, launches: Launches) -> Bool {
+        CallbackRecipient.open(
+            callback, answering: sender,
+            handler: { _ in handlerApp }, identify: { _ in handler },
+            launch: { url, app in
+                launches.opened.append((url, app))
+                return true
+            }
+        )
+    }
+
+    @Test("A response is opened with the sender's own app once its signature is confirmed")
+    func confirmedSenderGetsItsApp() {
+        let launches = Launches()
+        #expect(open(answering: teamSender, handler: teamSender, launches: launches))
+        #expect(launches.opened.map(\.url) == [callback])
+        #expect(launches.opened.map(\.app) == [handlerApp])
+    }
+
+    @Test("A response for an app whose signature doesn't match is not opened at all")
+    func unconfirmedSenderOpensNothing() {
+        let launches = Launches()
+        let impostor = SettingsURISender(bundleIdentifier: "com.example.ctl", teamIdentifier: "OTHER12345", codeHash: "aa")
+        #expect(!open(answering: teamSender, handler: impostor, launches: launches))
+        #expect(launches.opened.isEmpty)
+    }
+
+    @Test("Without a sender to answer to, the response goes to whatever handles it")
+    func anonymousResponseUsesTheDefaultHandler() {
+        let launches = Launches()
+        #expect(open(answering: nil, handler: nil, launches: launches))
+        #expect(launches.opened.map(\.url) == [callback])
+        #expect(launches.opened.map(\.app) == [nil])
+    }
+
+    @Test("The system's own handler lookup never confirms a sender that no installed app is")
+    func systemLookupRefusesAnUnknownSender() throws {
+        let stranger = SettingsURISender(bundleIdentifier: "com.example.thaw-test-none", teamIdentifier: "TEAM123456", codeHash: nil)
+        let url = try #require(URL(string: "facetime:thaw-test"))
+        #expect(CallbackRecipient.application(for: url, sender: stranger) == nil)
+    }
 }

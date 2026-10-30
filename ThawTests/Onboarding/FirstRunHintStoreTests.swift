@@ -139,3 +139,26 @@ struct FirstRunHintStoreTests {
         #expect(recorder.writes.isEmpty)
     }
 }
+
+/// The production store, against a scratch settings store.
+@MainActor
+@Suite("First-run hint store in settings", .scratchDefaults)
+struct FirstRunHintSettingsStoreTests {
+    @Test("Dismissals are kept in settings and read back by the next launch's store")
+    func dismissalsPersistInSettings() {
+        Defaults.set(["fromANewerBuild"], forKey: .dismissedFirstRunHints)
+
+        FirstRunHintStore().dismiss(.hideByDrag)
+
+        #expect(Defaults.stringArray(forKey: .dismissedFirstRunHints) == [FirstRunHint.hideByDrag.rawValue, "fromANewerBuild"])
+        let relaunched = FirstRunHintStore()
+        #expect(!relaunched.isPending(.hideByDrag))
+        #expect(relaunched.isPending(.nativeAppHidingOffer))
+    }
+
+    @Test("Without stored dismissals every hint is pending")
+    func emptySettingsLeavesEveryHintPending() {
+        let store = FirstRunHintStore()
+        #expect(FirstRunHint.allCases.allSatisfy(store.isPending))
+    }
+}

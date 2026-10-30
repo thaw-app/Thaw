@@ -91,6 +91,9 @@ final class ControlStatePublisher {
     /// Asks Control Center to redraw one control kind. Tests record the requests instead.
     private let reloadControl: (String) -> Void
 
+    /// Where the app's quit is posted. Tests post to a private center.
+    private let terminationCenter: NotificationCenter
+
     /// The last snapshot actually written, so an unchanged recomputation costs
     /// nothing. ControlCenter.reloadControls is a cross-process nudge to
     /// controlcenter; the observation sources below fire far more often than
@@ -103,10 +106,12 @@ final class ControlStatePublisher {
 
     init(
         defaults: UserDefaults? = UserDefaults(suiteName: ControlStatePublisher.suiteName),
-        reloadControl: @escaping (String) -> Void = { ControlCenter.shared.reloadControls(ofKind: $0) }
+        reloadControl: @escaping (String) -> Void = { ControlCenter.shared.reloadControls(ofKind: $0) },
+        terminationCenter: NotificationCenter = .default
     ) {
         self.defaults = defaults
         self.reloadControl = reloadControl
+        self.terminationCenter = terminationCenter
     }
 
     func performSetup(with appState: AppState) {
@@ -152,7 +157,7 @@ final class ControlStatePublisher {
             .store(in: &cancellables)
 
         // A clean quit erases the snapshot: see the note on freshness above.
-        NotificationCenter.default
+        terminationCenter
             .publisher(for: NSApplication.willTerminateNotification)
             .receive(on: DispatchQueue.main)
             .sink { [weak self] _ in
