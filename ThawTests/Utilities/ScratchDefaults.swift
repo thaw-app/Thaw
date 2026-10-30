@@ -90,7 +90,7 @@ private actor ScratchDefaultsGate {
 /// Points Defaults at a throwaway suite for each test it covers, then puts the
 /// previous store back and deletes the suite. Defaults.store is one global, so
 /// tests using this trait run one at a time, across suites too. Profile managers
-/// made during the test, including an AppState's, use a throwaway folder too.
+/// made during the test, including an AppState's, keep profiles in a throwaway folder.
 nonisolated struct ScratchDefaultsTrait: TestTrait, SuiteTrait, TestScoping {
     var isRecursive: Bool {
         true

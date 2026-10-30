@@ -30,8 +30,8 @@ final class SwapBarManager {
     @ObservationIgnored private var pointerMonitor: EventMonitor?
     @ObservationIgnored private var currentDisplayID: CGDirectDisplayID?
 
-    /// Stand-ins for tests: the defaults order the bar on screen and watch
-    /// every pointer move.
+    /// The defaults order the bar on screen and watch every pointer move;
+    /// tests pass recorders.
     @ObservationIgnored var orderFront: @MainActor (NSPanel) -> Void = { $0.orderFrontRegardless() }
     @ObservationIgnored var startPointerMonitor: @MainActor (@escaping @MainActor () -> Void) -> EventMonitor = { handler in EventMonitor.startPassive(for: [.mouseMoved], scope: .universal) { _ in handler() } }
 

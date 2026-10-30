@@ -27,7 +27,7 @@ nonisolated enum CallbackRecipient {
 
     /// Opens url with the sender's own app, or with whatever handles it when there is no sender
     /// to answer to. Returns false when the sender's app can't be confirmed.
-    /// Tests pass the lookups and launch, which gets the app to open with or nil for the default handler.
+    /// Tests pass the lookups and the launch; launch gets the app, or nil for the default handler.
     static func open(
         _ url: URL,
         answering sender: SettingsURISender?,

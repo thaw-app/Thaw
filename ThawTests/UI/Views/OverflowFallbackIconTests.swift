@@ -153,7 +153,7 @@ struct OverflowFallbackIconTests {
         #expect(glyph !== OverflowFallbackIcon.image(for: Self.item(.string("com.example.app"))))
     }
 
-    // #1424: apps Native hiding switches off are never drawn and expose no process for their items.
+    // Apps Native hiding switches off are never drawn and expose no process for their items.
     @Test("An item with no known process shows its app's icon, found by bundle identifier")
     func appIconByBundleIdentifier() throws {
         let finder = try #require(OverflowFallbackIcon.image(for: Self.item(.string("com.apple.finder"), sourcePID: nil)))

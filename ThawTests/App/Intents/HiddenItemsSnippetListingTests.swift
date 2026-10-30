@@ -37,7 +37,7 @@ struct HiddenItemsSnippetListingTests {
         return try MenuBarItemGlyphCapture(cgImage: #require(context.makeImage()), scale: 1)
     }
 
-    /// The alpha at the middle of glyph drawn into a 40 by 18 point box: a solid capture fills it, the outline fallback symbol leaves it clear.
+    /// The centre alpha of glyph in a 40 by 18 point box: a capture fills it, the outline fallback leaves it clear.
     private func centerAlpha(of glyph: Image?) throws -> CGFloat {
         let renderer = try ImageRenderer(content: #require(glyph).frame(width: 40, height: 18))
         renderer.scale = 1

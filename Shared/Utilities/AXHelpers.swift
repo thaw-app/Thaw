@@ -148,7 +148,7 @@ nonisolated enum AXHelpers {
         element.value(kAXRoleAttribute) as? String
     }
 
-    /// Unions the frames of application menu titles in a menu bar element, or null when the
+    /// Unions the frames of application menu titles in a menu bar element, or nil when the
     /// foreground app answers too slowly or exposes too many children to read on the caller's actor.
     /// Only menu item roles count: on macOS 27 the children include
     /// status-item hosts, which would make the leading pill swallow them.

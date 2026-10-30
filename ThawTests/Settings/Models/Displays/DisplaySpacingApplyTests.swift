@@ -9,8 +9,8 @@ import Foundation
 import Testing
 @testable import Thaw
 
-/// Spacing applies driven through a stand-in host: nothing is written to disk, no app is
-/// relaunched, no settling starts and no alert is shown. Settings live in a throwaway suite.
+/// Spacing applies driven through a stand-in host, so nothing reaches the disk, other apps
+/// or the screen. Settings live in a throwaway suite.
 @MainActor
 @Suite("Display spacing apply", .serialized, .scratchDefaults)
 struct DisplaySpacingApplyTests {

@@ -6,8 +6,7 @@
 //  Licensed under the GNU GPLv3
 
 /// What a spacing apply drives outside the display settings: the spacing manager, the settling
-/// period around a relaunch wave and the active profile's layout pass. Tests pass stand-ins, so
-/// nothing is written to disk, no app relaunches and no alert is shown.
+/// period around a relaunch wave and the active profile's layout pass. Tests pass stand-ins.
 @MainActor
 struct DisplaySpacingApplyHost {
     let spacingManager: MenuBarItemSpacingManager

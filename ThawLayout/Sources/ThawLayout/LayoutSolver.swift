@@ -405,13 +405,8 @@ public nonisolated enum LayoutSolver {
             return notPlacedHidden && isNewIdentity
         }
 
-        // An owner that missed its Accessibility deadline at login publishes
-        // its items before it has finished starting, so their titles can be
-        // placeholders that the identifier is built from. OneDrive's
-        // per-account items arrived as plain "OneDrive" ones that way and were
-        // seated in Visible as new, which under Native hiding shows the whole
-        // app. Hold such arrivals until the owner answers on time; the ledger
-        // bounds the wait.
+        // A late owner's titles can still be placeholders, so its new items wait
+        // until it answers on time; the ledger bounds the wait.
         let isLate = { (item: MenuBarItem) -> Bool in
             lateOwners.contains(item.sourcePID ?? item.ownerPID)
         }
