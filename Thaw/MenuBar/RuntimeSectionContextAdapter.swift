@@ -297,7 +297,7 @@ final class RuntimeSectionContextAdapter: RuntimeSectionContext {
         }
     }
 
-    private func controlItem(
+    func controlItem(
         in items: [MenuBarItem],
         matching identifier: ControlItemIdentifier
     ) -> MenuBarItem? {
