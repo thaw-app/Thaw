@@ -22,47 +22,6 @@ nonisolated extension CGEventField {
     ]
 }
 
-// MARK: - MoveInputSuppression
-
-nonisolated enum MoveInputSuppression {
-    private static let syntheticMoveUserData: Int64 = 0x5468_6177_4D6F_7665
-
-    static let suppressedMouseEventTypes: [CGEventType] = [
-        .leftMouseDown, .leftMouseUp, .rightMouseDown, .rightMouseUp,
-        .mouseMoved, .leftMouseDragged, .rightMouseDragged, .scrollWheel,
-        .otherMouseDown, .otherMouseUp, .otherMouseDragged,
-    ]
-
-    static func markSyntheticMoveEvent(_ event: CGEvent) {
-        event.setIntegerValueField(.eventSourceUserData, value: syntheticMoveUserData)
-    }
-
-    static func shouldSuppress(_ event: CGEvent) -> Bool {
-        guard suppressedMouseEventTypes.contains(event.type) else { return false }
-        return event.getIntegerValueField(.eventSourceUserData) == 0
-    }
-
-    @MainActor
-    static func suppressUserMouseInput() throws -> @MainActor () -> Void {
-        let tap = EventTap(
-            label: "Move input suppression",
-            types: suppressedMouseEventTypes,
-            location: .hidEventTap,
-            placement: .headInsertEventTap,
-            option: .defaultTap
-        ) { _, event in
-            shouldSuppress(event) ? nil : event
-        }
-
-        guard tap.isValid else {
-            MenuBarItemManager.diagLog.warning("Move input suppression tap could not be created")
-            throw MenuBarItemManager.EventError.cannotComplete
-        }
-        tap.enable()
-        return { tap.invalidate() }
-    }
-}
-
 // MARK: - CGEventFilterMask Helpers
 
 nonisolated extension CGEventFilterMask {

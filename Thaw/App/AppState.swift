@@ -478,7 +478,7 @@ final class AppState {
                 previous = isDragging
                 isDraggingMenuBarItem = isDragging
                 if isDragging {
-                    itemManager.dragMembership.dragStarted()
+                    itemManager.dragMembership.dragStarted(pressing: hidEventManager.pressedItemTag)
                 } else if dragEnded {
                     itemManager.noteUserMenuBarDragEnded()
                 }

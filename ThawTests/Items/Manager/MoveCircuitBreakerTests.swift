@@ -19,20 +19,6 @@ struct MoveCircuitBreakerTests {
         #expect(breaker.stateDescription.contains("open=false"))
     }
 
-    @Test("Synthetic drags up to the limit pass and one more trips the breaker")
-    func dragLimitTrips() {
-        let breaker = MoveCircuitBreaker()
-        for _ in 0 ..< MoveCircuitBreaker.dragLimit {
-            #expect(!breaker.note(.syntheticDrag))
-        }
-        #expect(!breaker.isOpen)
-
-        #expect(breaker.note(.syntheticDrag))
-        #expect(breaker.isOpen)
-        #expect(breaker.stateDescription.contains("trips=1"))
-        #expect(breaker.stateDescription.contains("open=true"))
-    }
-
     @Test("Store writes trip only past their own, larger limit")
     func storeWriteLimitTrips() {
         let breaker = MoveCircuitBreaker()
@@ -57,8 +43,7 @@ struct MoveCircuitBreakerTests {
     @Test("Mixed signals are counted per kind, not together")
     func signalsCountSeparately() {
         let breaker = MoveCircuitBreaker()
-        for _ in 0 ..< MoveCircuitBreaker.dragLimit {
-            breaker.note(.syntheticDrag)
+        for _ in 0 ..< MoveCircuitBreaker.failureLimit {
             breaker.note(.failedVerification)
             breaker.note(.storeWrite)
         }
@@ -68,8 +53,8 @@ struct MoveCircuitBreakerTests {
     @Test("Any signal reports open while the breaker is open")
     func openBreakerAnswersOpen() {
         let breaker = MoveCircuitBreaker()
-        for _ in 0 ... MoveCircuitBreaker.dragLimit {
-            breaker.note(.syntheticDrag)
+        for _ in 0 ... MoveCircuitBreaker.failureLimit {
+            breaker.note(.failedVerification)
         }
         #expect(breaker.note(.storeWrite))
         #expect(breaker.stateDescription.contains("trips=1"))
@@ -78,8 +63,8 @@ struct MoveCircuitBreakerTests {
     @Test("A user move clears the breaker but keeps the escalated cooldown")
     func userOverrideClearsButKeepsBackoff() {
         let breaker = MoveCircuitBreaker()
-        for _ in 0 ... MoveCircuitBreaker.dragLimit {
-            breaker.note(.syntheticDrag)
+        for _ in 0 ... MoveCircuitBreaker.failureLimit {
+            breaker.note(.failedVerification)
         }
         #expect(breaker.isOpen)
         #expect(breaker.stateDescription.contains("cooldown=120"))
@@ -91,8 +76,8 @@ struct MoveCircuitBreakerTests {
         #expect(breaker.stateDescription.contains("cooldown=120"))
 
         // A second storm right away backs off longer than the first.
-        for _ in 0 ... MoveCircuitBreaker.dragLimit {
-            breaker.note(.syntheticDrag)
+        for _ in 0 ... MoveCircuitBreaker.failureLimit {
+            breaker.note(.failedVerification)
         }
         #expect(breaker.isOpen)
         #expect(breaker.stateDescription.contains("trips=2"))

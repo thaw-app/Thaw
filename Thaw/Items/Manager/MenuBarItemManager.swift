@@ -191,7 +191,7 @@ final class MenuBarItemManager {
     static nonisolated let diagLog = DiagLog(category: "MenuBarItemManager")
 
     /// Pauses reordering when activity runs away: icon dancing or repeated
-    /// synthetic drags. Consulted by every reorder entry point.
+    /// writes the bar did not honour. Consulted by every reorder entry point.
     let moveCircuitBreaker = MoveCircuitBreaker()
 
     /// Admits one synthetic event sequence at a time. Two overlapping sequences
@@ -201,9 +201,9 @@ final class MenuBarItemManager {
     /// Serializes moves and section transitions, including pre-seat writes,
     /// verification, and the assignment commit.
     ///
-    /// eventSemaphore only guards synthetic-drag posting, so two concurrent
+    /// eventSemaphore only guards synthetic event posting, so two concurrent
     /// moves (a layout-pane drop and a convergence pass, or two convergence
-    /// passes) would interleave their write, verify and drag phases and fight
+    /// passes) would interleave their write and verify phases and fight
     /// over one item, each attempt seeing the bar re-sorted by the other and
     /// never verifying. One move at a time makes each attempt judge a stable
     /// bar, and a superseded duplicate re-checks live position on entry and
@@ -378,9 +378,10 @@ final class MenuBarItemManager {
     /// The item inventory is supplied lazily so the monitor can be constructed
     /// without a self-capture in a stored-property initializer.
     @ObservationIgnored
-    lazy var menuOpenMonitor = MenuOpenMonitor { [weak self] in
-        self?.itemCache.managedItems.filter(\.isOnScreen) ?? []
-    }
+    lazy var menuOpenMonitor = MenuOpenMonitor(
+        onScreenItems: { [weak self] in self?.itemCache.managedItems.filter(\.isOnScreen) ?? [] },
+        measuredBarHeight: { NSScreen.screen(for: $0)?.getMenuBarHeight() }
+    )
 
     /// Timer for lightweight periodic cache checks.
     ///
@@ -554,10 +555,6 @@ final class MenuBarItemManager {
     /// session. In-memory only: a restart must re-earn the evidence rather
     /// than inherit a stale count.
     var preferredPositionsIgnoredEvidence = 0
-
-    /// Items whose own writes the agent keeps ignoring. Session-scoped; never
-    /// persisted.
-    var ignoredPreferredWrites = IgnoredPreferredWrites()
 
     /// Where work that rewrites the bar's order asks for its turn.
     let repairs = RepairOrchestrator()

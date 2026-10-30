@@ -10,7 +10,8 @@ import CoreGraphics
 /// Apps differ in which concealed-menu methods they answer.
 /// Moving beside Thaw is unsafe: the agent refuses the concealed move back, stranding the item.
 nonisolated enum ConcealedItemOpenMethod: String, CaseIterable, Sendable {
-    /// Accessibility press on the parked item. Nothing appears in the bar.
+    /// Accessibility press on the item, shown where it sits for the press: a press on an
+    /// item the bar does not draw leaves the bar stuck on screen whenever it should hide.
     case pressInPlace
     /// Reveal the item where it sits and click it there.
     case revealInPlace

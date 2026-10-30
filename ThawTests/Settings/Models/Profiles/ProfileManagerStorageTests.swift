@@ -71,6 +71,9 @@ struct ProfileManagerStorageTests {
     func deleteProfile() throws {
         try ProfileTestDirectory.withManager(seeding: ["A", "B"]) { manager, tmp in
             let first = try #require(manager.profiles.first)
+            let snapshot = try ProfileDeletion.snapshotForUndo { try manager.loadProfile(id: first.id) }
+            #expect(snapshot?.id == first.id)
+            #expect(snapshot?.name == "A")
             try manager.deleteProfile(id: first.id)
             #expect(manager.profiles.map(\.name) == ["B"])
             #expect(!Self.fileExists(first.id, in: tmp))
@@ -78,8 +81,45 @@ struct ProfileManagerStorageTests {
         }
     }
 
-    @Test("Deleting a profile with no file throws and keeps the manifest")
-    func deleteMissingProfile() throws {
+    /// A missing listed file must not make its stale manifest entry impossible to remove.
+    @Test("Deleting a listed profile whose file is gone removes its manifest entry")
+    func deleteMissingProfileFile() throws {
+        try ProfileTestDirectory.withManager(seeding: ["A", "B"]) { manager, tmp in
+            let first = try #require(manager.profiles.first)
+            try FileManager.default.removeItem(at: tmp.appendingPathComponent("\(first.id.uuidString).json"))
+
+            let snapshot = try ProfileDeletion.snapshotForUndo { try manager.loadProfile(id: first.id) }
+            try manager.deleteProfile(id: first.id)
+
+            #expect(snapshot == nil)
+            #expect(manager.profiles.map(\.name) == ["B"])
+            #expect(try Self.manifest(in: tmp).map(\.name) == ["B"])
+            #expect(ProfileManager(profilesDirectory: tmp).profiles.map(\.name) == ["B"])
+        }
+    }
+
+    /// Only missing files are ignored; invalid saved content must remain available for recovery.
+    @Test("Preparing deletion of an invalid profile throws and keeps its file and manifest")
+    func deleteInvalidProfile() throws {
+        try ProfileTestDirectory.withManager(seeding: ["A"]) { manager, tmp in
+            let first = try #require(manager.profiles.first)
+            let file = tmp.appendingPathComponent("\(first.id.uuidString).json")
+            let invalidContent = Data("invalid profile".utf8)
+            try invalidContent.write(to: file)
+
+            #expect(throws: (any Error).self) {
+                try ProfileDeletion.snapshotForUndo { try manager.loadProfile(id: first.id) }
+            }
+
+            #expect(try Data(contentsOf: file) == invalidContent)
+            #expect(manager.profiles.map(\.id) == [first.id])
+            #expect(try Self.manifest(in: tmp).map(\.id) == [first.id])
+        }
+    }
+
+    /// An unknown identifier must not alter any listed profile.
+    @Test("Deleting an unknown profile throws and keeps the manifest")
+    func deleteUnknownProfile() throws {
         try ProfileTestDirectory.withManager(seeding: ["A"]) { manager, _ in
             #expect(throws: (any Error).self) {
                 try manager.deleteProfile(id: UUID())
@@ -312,10 +352,18 @@ struct ProfileManagerStorageTests {
         }
     }
 
-    @Test("Updating everything keeps the name and identity and leaves no temporary profile")
-    func updateAll() throws {
+    /// Full captures must retain profile-specific automation, including disabled hooks.
+    @Test("Updating everything preserves identity and hooks without leaving a temporary profile", arguments: [false, true])
+    func updateAll(hasHooks: Bool) throws {
+        let automation = hasHooks ? ProfileAutomation(
+            preHook: HookScript(path: "/test/pre.scpt", timeoutSeconds: 23, isEnabled: false),
+            postHook: HookScript(path: "/test/post.sh", timeoutSeconds: 47)
+        ) : nil
         try ProfileTestDirectory.withManager(seeding: ["Keep"]) { manager, tmp in
             let meta = manager.profiles[0]
+            var original = try manager.loadProfile(id: meta.id)
+            original.automation = automation
+            try manager.replaceProfile(original)
             let appState = AppState()
             appState.settings.general.autoRehide = !Defaults.DefaultValue.autoRehide
 
@@ -326,9 +374,33 @@ struct ProfileManagerStorageTests {
             let updated = try manager.loadProfile(id: meta.id)
             #expect(updated.name == "Keep")
             #expect(updated.createdAt == meta.createdAt)
+            #expect(updated.automation == automation)
+            #expect(try ProfileManager(profilesDirectory: tmp).loadProfile(id: meta.id).automation == automation)
             #expect(updated.generalSettings.autoRehide == !Defaults.DefaultValue.autoRehide)
             let files = try FileManager.default.contentsOfDirectory(atPath: tmp.path).filter { $0.hasSuffix(".json") }
             #expect(files.count == 2, "the profile and the manifest, no leftover temporary file")
+        }
+    }
+
+    /// An unreadable original must fail before creating a temporary capture or replacing its file.
+    @Test("Updating an unreadable profile preserves its file and manifest")
+    func updateUnreadableProfile() throws {
+        try ProfileTestDirectory.withManager(seeding: ["Keep"]) { manager, tmp in
+            let id = manager.profiles[0].id
+            let url = tmp.appendingPathComponent("\(id.uuidString).json")
+            let invalidContent = Data("invalid profile".utf8)
+            try invalidContent.write(to: url)
+            let manifestURL = tmp.appendingPathComponent("profiles.json")
+            let manifest = try Data(contentsOf: manifestURL)
+
+            #expect(throws: DecodingError.self) {
+                try manager.updateProfile(id: id, scope: .all, appState: AppState())
+            }
+
+            #expect(try Data(contentsOf: url) == invalidContent)
+            #expect(try Data(contentsOf: manifestURL) == manifest)
+            #expect(manager.profiles.map(\.id) == [id])
+            #expect(try FileManager.default.contentsOfDirectory(atPath: tmp.path).count == 2)
         }
     }
 

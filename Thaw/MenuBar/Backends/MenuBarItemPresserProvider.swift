@@ -12,8 +12,3 @@ import PlatformRuntimeKit
 nonisolated enum MenuBarItemPresserProvider {
     static let current: any MenuBarItemPressing = RuntimeItemPresserAdapter()
 }
-
-/// Process-addressed Command-drags for reorders; see MenuBarItemDragging.
-nonisolated enum MenuBarItemDraggerProvider {
-    static let current: any MenuBarItemDragging = RuntimeItemDraggerAdapter()
-}

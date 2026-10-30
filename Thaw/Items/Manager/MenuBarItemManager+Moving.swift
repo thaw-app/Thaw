@@ -23,13 +23,6 @@ extension MenuBarItemManager {
         MenuBarItemManager.diagLog.debug("Updated click timeout for \(item.logString): \(Int(clamped.milliseconds))ms (measured: \(Int(duration.milliseconds))ms)")
     }
 
-    /// The live bar without position-store recoveries, whose inferred frames
-    /// have nothing under them for a drag to grab.
-    static func dragGeometry(from items: [MenuBarItem]) -> [MenuBarItem] {
-        let recovered = PositionStoreItemSource.recoveredTags
-        return items.filter { !recovered.contains($0.tag) }
-    }
-
     /// Whether the item is stuck at the x = -1 sentinel macOS uses for
     /// unplaced items. Unreadable bounds count as not blocked.
     private nonisolated func isItemBlocked(_ item: MenuBarItem) async -> Bool {
@@ -148,9 +141,8 @@ extension MenuBarItemManager {
     /// Puts item beside the destination item. Most of this is refusal: an
     /// unchanged bar is always a better failure than a wrong one.
     ///
-    /// The silent position-preference write goes first; the synthetic ⌘-drag,
-    /// which takes the cursor, only when the write cannot express the move.
-    /// A move neither can express is left undone and retried later.
+    /// The silent position-preference write moves it. A move the write cannot
+    /// express is left undone and retried later.
     ///
     /// - Parameters:
     ///   - item: The item to move.
@@ -301,7 +293,7 @@ extension MenuBarItemManager {
         }
 
         // An unresolved anchor is not a refusal yet: the store write names it
-        // by key. Only the drag path, which needs geometry, fails on it.
+        // by key.
         let liveDestination = MoveTargeting.resolvedDestination(
             for: destination,
             fallbacks: options.anchorFallbacks,
@@ -337,8 +329,7 @@ extension MenuBarItemManager {
             """
         )
 
-        // One walk serves the already-there check, the store write and the
-        // first drag. The check uses the drag's own relative-order predicate.
+        // One walk serves the already-there check and the store write.
         let liveItems = livePeers
         if MenuBarLayoutPlannerProvider.current.liveOrderSatisfiesDestination(
             items: liveItems,
@@ -369,62 +360,16 @@ extension MenuBarItemManager {
             return true
         }
 
-        // Drag only with live geometry at both ends; a concealed anchor would
-        // drop the icon blind, so that move waits for the reveal. Opted-in
-        // section transitions are exempt: the drag re-resolves the collapsed
-        // divider mid-gesture.
-        let targetIsUsable = options.allowSectionBoundaryTarget
+        // No anchor on the bar is a fact about the bar, not the item; the
+        // unpark path relies on this to avoid a persisted "won't move" verdict.
+        // Opted-in section transitions count their collapsed divider as live.
+        let targetIsLive = options.allowSectionBoundaryTarget
             || (destination.targetItem.isOnScreen && !destination.targetItem.bounds.isEmpty)
-        let canDragSynthetically = item.isOnScreen && !item.bounds.isEmpty
-            && targetIsUsable
-        guard canDragSynthetically else {
-            // No anchor on the bar is a fact about the bar, not the item; the
-            // unpark path relies on this to avoid a persisted "won't move" verdict.
-            if liveDestination == nil {
-                throw EventError.destinationAnchorLost(item)
-            }
-            MenuBarItemManager.diagLog.info(
-                "Position-only reorder could not fulfill \(item.logString) \(destination.logString)"
-            )
-            return false
-        }
-        // The conceal assertion completes a section-boundary move, so where
-        // the agent ignores preferred positions a drag would only take the cursor.
-        if destination.targetItem.tag.matchesSectionBoundaryControlItem,
-           menuBarAgentIgnoresPreferredPositions
-        {
-            MenuBarItemManager.diagLog.info(
-                "Section-boundary move of \(item.logString) left to the conceal assertion; " +
-                    "the agent ignores preferred positions, so the drag would only take the cursor"
-            )
-            return false
-        }
-
-        // A user move falls through to the Command-drag after a store decline.
-        // Background passes never take the cursor, and callers may refuse the drag.
-        guard options.allowSyntheticDrag else {
-            MenuBarItemManager.diagLog.debug(
-                "Position-only move of \(item.logString): the caller refused the synthetic drag"
-            )
-            return false
-        }
-        if options.isUserInitiated {
-            guard await waitForUserToPauseInput(timeout: .seconds(1.5)) else {
-                try Task.checkCancellation()
-                return false
-            }
-            Self.diagLog.info("preferred-position move declined; trying one Command-drag for \(item.logString)")
-            try await moveItemViaCommandDrag(
-                item: item,
-                to: destination,
-                maxAttempts: 1,
-                experimentalSystemItemHiding: experimentalSystemItemHiding
-            )
-            moveFulfilled = true
-            return true
+        if liveDestination == nil, !(item.isOnScreen && !item.bounds.isEmpty && targetIsLive) {
+            throw EventError.destinationAnchorLost(item)
         }
         MenuBarItemManager.diagLog.info(
-            "Position write declined \(item.logString) \(destination.logString); synthetic drag disabled"
+            "Position write could not fulfill \(item.logString) \(destination.logString)"
         )
         return false
     }
@@ -725,7 +670,7 @@ extension MenuBarItemManager {
         }
     }
 
-    // MARK: macOS 27 Command-drag move
+    // MARK: macOS 27 move helpers
 
     /// Whether the System Settings toggle hides this item (NSStatusItem
     /// VisibleCC <label> = false). Such items are never ordered: the host
@@ -1214,8 +1159,8 @@ extension MenuBarItemManager {
     /// group keeps its order instead of stacking into one slot.
     ///
     /// The weight is only a hint: an item leaving the visible bar is also
-    /// dragged across the divider here; one arriving from a concealed section
-    /// is dragged by the strand pass. The commit runs under the same permit,
+    /// moved across the divider here; one arriving from a concealed section
+    /// is moved by the strand pass. The commit runs under the same permit,
     /// so the next drop never starts from an uncommitted assignment.
     @MainActor
     func seatItemsForSectionTransition(
@@ -1295,14 +1240,13 @@ extension MenuBarItemManager {
             guard !Task.isCancelled else { return }
             let destination = sectionTransitionDestination(for: section, after: previousMoved)
             do {
-                // Position-only: the conceal assertion hides these items
-                // whether or not the write lands, so a synthetic drag would
-                // only move the user's cursor for nothing.
+                // The conceal assertion hides these items whether or not the
+                // write lands, so a declined move does not hold up the commit.
                 if try await moveWhileHoldingMutation(
                     item: item,
                     to: destination,
                     transitionSection: section,
-                    options: ItemMoveOptions(allowSectionBoundaryTarget: true, isUserInitiated: true, allowSyntheticDrag: false),
+                    options: ItemMoveOptions(allowSectionBoundaryTarget: true, isUserInitiated: true),
                     permit: permit
                 ) {
                     previousMoved = item
@@ -2552,24 +2496,24 @@ extension MenuBarItemManager {
             return SectionDragSkip(reason: .circuitBreaker, endsMoveLoop: !usesPlan)
         }
 
-        // Hiding-unsupported items rewrite their AX title too often to drag;
-        // only the store can move them, so back off.
+        // Hiding-unsupported items rewrite their AX title too often for a move
+        // to be verified, so back off.
         if plannedMove.item.tag.isHidingUnsupported ||
             plannedMove.destination.targetItem.tag.isHidingUnsupported
         {
             moveFailures.backOff(from: rememberedMove, desiredOrder: desiredOrder)
             MenuBarItemManager.diagLog.debug(
-                "Skipping synthetic drag for denylisted hiding-unsupported item in macOS 27 section order: " +
+                "Skipping move for denylisted hiding-unsupported item in macOS 27 section order: " +
                     "\(plannedMove.item.logString) → \(plannedMove.destination.logString)"
             )
             return SectionDragSkip(reason: .hidingUnsupported, endsMoveLoop: !usesPlan)
         }
 
-        // Agent-composited extras (such as the Live Activity pill) ignore
-        // Command-drags, so skip before the cursor warps.
+        // Agent-composited extras (such as the Live Activity pill) stay where
+        // macOS puts them.
         if plannedMove.item.tag.namespace == .menuBarAgent {
             MenuBarItemManager.diagLog.debug(
-                "Skipping synthetic drag for agent-owned item in macOS 27 section order: \(plannedMove.item.logString)"
+                "Skipping move for agent-owned item in macOS 27 section order: \(plannedMove.item.logString)"
             )
             return SectionDragSkip(reason: .agentOwned, endsMoveLoop: !usesPlan)
         }
@@ -2718,7 +2662,7 @@ extension MenuBarItemManager {
 
     /// The cursor-free move: rewrite the agent's preferred-position weight.
     /// True only when the live order then satisfies destination, since the
-    /// key spelling is uncertain; false falls back to the Command-drag.
+    /// key spelling is uncertain; false leaves the move undone.
     private func moveItemViaPreferredPositions(
         item: MenuBarItem,
         to destination: MoveDestination,
@@ -2732,13 +2676,6 @@ extension MenuBarItemManager {
             moveMonitor.recordStoreUnavailable()
             return false
         }
-        guard !ignoredPreferredWrites.skipsWrite(for: item.uniqueIdentifier) else {
-            MenuBarItemManager.diagLog.debug(
-                "MenuBarAgent ignored the last preferred-position writes for \(item.logString); dragging instead"
-            )
-            return false
-        }
-
         // The user's own move is the retry that clears the breaker, so it must
         // reach the store even during a cooldown; only automatic passes wait.
         if moveCircuitBreaker.note(.storeWrite) {
@@ -2835,18 +2772,7 @@ extension MenuBarItemManager {
         // captures mid-animation cache garbled slices. Verification re-stamps.
         moveActivity.noteMoveOperation()
 
-        // Feeds the per-item write record on exit, only for nudged writes.
-        var writeVerified = false
         var observationUnavailable = false
-        defer {
-            if nudgeRan, !observationUnavailable {
-                if writeVerified {
-                    ignoredPreferredWrites.noteVerified(item.uniqueIdentifier)
-                } else if !Task.isCancelled {
-                    ignoredPreferredWrites.noteUnverified(item.uniqueIdentifier)
-                }
-            }
-        }
 
         // Poll the live order until MenuBarAgent observes the synchronized write.
         let destinationSatisfied: ([MenuBarItem]) -> Bool = { items in
@@ -2883,7 +2809,6 @@ extension MenuBarItemManager {
         }
         let updated = firstWait.items
         if destinationSatisfied(updated) {
-            writeVerified = true
             moveActivity.noteMoveOperation()
             MenuBarItemManager.diagLog.info(
                 "Preferred-position move verified for \(item.logString) \(destination.logString)"
@@ -2960,7 +2885,6 @@ extension MenuBarItemManager {
                 return false
             }
             if destinationSatisfied(retried.items) {
-                writeVerified = true
                 moveActivity.noteMoveOperation()
                 MenuBarItemManager.diagLog.info(
                     "Preferred-position move verified after key-resolution retry for \(item.logString) \(destination.logString)"
@@ -2995,87 +2919,5 @@ extension MenuBarItemManager {
         // so the enumeration that follows sees Thaw's own write.
         PositionStoreItemSource.invalidateStoreSnapshot()
         return appState?.menuBarManager.requestMenuBarAgentPositionRefresh() ?? false
-    }
-
-    /// The fallback move: a synthetic ⌘-drag from the item's center to the
-    /// target edge. macOS 27 items share one compositor window, so only a
-    /// cursor-hit-tested drag works; .maskCommand on the mouse events suffices.
-    ///
-    /// Verified by relative AX order, since the bar repacks items after a drop.
-    private func moveItemViaCommandDrag(
-        item: MenuBarItem,
-        to destination: MoveDestination,
-        maxAttempts: Int = 2,
-        watchdogTimeout: Duration = .seconds(10),
-        experimentalSystemItemHiding: Bool
-    ) async throws {
-        _ = moveCircuitBreaker.note(.syntheticDrag)
-        var engine = SyntheticMoveEngine(
-            eventSemaphore: eventSemaphore,
-            makeEventSource: { try self.getEventSource() },
-            enumerateItems: {
-                // currentBounds matches on tag alone, so a recovery here would
-                // start the drag on empty menu bar.
-                await DragGeometrySource.items(moving: item, beside: destination.targetItem) { await Self.dragGeometry(from: MenuBarItem.getMenuBarItems(option: .activeSpace)) }
-            }
-        )
-        engine.cursorWatchdogTimeout = watchdogTimeout
-        engine.prepareForAttempt = { attempt in
-            // A retry follows a period of restored user input. Wait for idle
-            // again, boundedly, then let the engine resolve fresh geometry.
-            if attempt > 1 {
-                guard await self.waitForUserToPauseInput(timeout: .seconds(1.5)) else {
-                    try Task.checkCancellation()
-                    throw EventError.cannotComplete
-                }
-            }
-            try Task.checkCancellation()
-        }
-        engine.validateHIDInput = {
-            // Recheck after enumeration, which can await a slow AX owner.
-            guard self.appState?.isDraggingMenuBarItem != true,
-                  !MouseHelpers.isButtonPressed()
-            else { throw EventError.cannotComplete }
-        }
-        // This synthetic-drag path is the only mover, so without this stamp
-        // applySavedLayout's 5s re-apply cooldown never arms and divergence
-        // re-dispatches on every cache cycle instead.
-        defer { moveActivity.noteMoveOperation() }
-        // Total drag time against its budget. Each attempt costs about 1.4 s
-        // plus settle and a walk, so 4 to 6 s means both attempts ran.
-        let dragStarted = ContinuousClock.now
-        defer {
-            Self.diagLog.info(
-                "command-drag \(item.logString) finished in \(ContinuousClock.now - dragStarted) (budget \(maxAttempts) attempt(s))"
-            )
-        }
-        var attempts: [(address: SyntheticMoveEngine.DragAddress, landed: Bool)] = []
-        engine.onAttemptResult = { address, landed in
-            attempts.append((address, landed))
-        }
-        do {
-            try await engine.move(
-                item: item,
-                to: destination,
-                maxAttempts: maxAttempts,
-                experimentalSystemItemHiding: experimentalSystemItemHiding
-            )
-            moveMonitor.recordDragMove(
-                item: item.logString,
-                destination: destination.logString,
-                attempts: attempts,
-                duration: ContinuousClock.now - dragStarted,
-                succeeded: true
-            )
-        } catch {
-            moveMonitor.recordDragMove(
-                item: item.logString,
-                destination: destination.logString,
-                attempts: attempts,
-                duration: ContinuousClock.now - dragStarted,
-                succeeded: false
-            )
-            throw error
-        }
     }
 }

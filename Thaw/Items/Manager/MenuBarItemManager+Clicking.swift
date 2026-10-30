@@ -93,10 +93,9 @@ extension MenuBarItemManager {
             try await eventSemaphore.wait(timeout: .milliseconds(3500))
             acquiredSemaphore = true
         } catch is SimpleSemaphore.TimeoutError {
-            // The permit is still held, most likely by a synthetic drag that
-            // legitimately needs it for several seconds. Resetting the
+            // The permit is still held by another event sequence. Resetting the
             // semaphore here would cancel that holder's queued work and let
-            // this click interleave with the drag, so give up instead.
+            // this click interleave with it, so give up instead.
             MenuBarItemManager.diagLog.error("eventSemaphore timed out (3.5s) in postClickEvents for \(item.logString)")
             throw EventError.cannotComplete
         }

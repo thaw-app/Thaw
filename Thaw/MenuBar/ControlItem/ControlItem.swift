@@ -1176,7 +1176,7 @@ extension ControlItem {
     /// Skipped while a reveal or hide is still reflowing, because changing the
     /// icon's length then keeps invalidating its hit target and rehide clicks
     /// miss. A section merely left open is settled and allowed, otherwise every
-    /// hidden-section move would fall to the synthetic drag.
+    /// hidden-section move would go unverified.
     ///
     /// Returns whether a nudge was armed. After a skipped nudge the write was
     /// never observable, so callers must not count the following poll as

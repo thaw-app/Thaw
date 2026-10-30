@@ -484,7 +484,7 @@ final class ProfileManager {
 
     func deleteProfile(id: UUID) throws {
         let url = profileURL(for: id)
-        try FileManager.default.removeItem(at: url)
+        try ProfileDeletion.removeFile(at: url, isListed: profiles.contains { $0.id == id })
         profiles.removeAll { $0.id == id }
         try saveManifest()
     }
@@ -601,16 +601,16 @@ final class ProfileManager {
     }
 
     /// Overwrites an existing profile with the current app state,
-    /// keeping its id, name, display association, and creation date.
+    /// keeping its id, name, display association, creation date, and script hooks.
     func updateProfileWithCurrentState(id: UUID, appState: AppState) throws {
         guard let old = profiles.first(where: { $0.id == id }) else { return }
 
-        let tempName = "__temp_update__"
-        try saveProfile(name: tempName, from: appState)
-        guard let tempMeta = profiles.last, tempMeta.name == tempName else { return }
+        let automation = try loadProfile(id: id).automation
+        let tempID = try saveProfile(name: "__temp_update__", from: appState)
 
-        // Preserve the original identity when replacing captured content.
-        var updated = try loadProfile(id: tempMeta.id)
+        // Preserve profile-specific hooks alongside the original identity when replacing captured content.
+        var updated = try loadProfile(id: tempID)
+        updated.automation = automation
         updated = Profile(
             id: id,
             name: old.name,
@@ -622,8 +622,8 @@ final class ProfileManager {
         let data = try encoder.encode(updated)
         try data.write(to: profileURL(for: id), options: .atomic)
 
-        try? FileManager.default.removeItem(at: profileURL(for: tempMeta.id))
-        profiles.removeAll { $0.id == tempMeta.id }
+        try? FileManager.default.removeItem(at: profileURL(for: tempID))
+        profiles.removeAll { $0.id == tempID }
 
         if let index = profiles.firstIndex(where: { $0.id == id }) {
             profiles[index].modifiedAt = updated.modifiedAt

@@ -84,7 +84,7 @@ struct ProfileSettingsPane: View {
             Button("Cancel", role: .cancel) { /* The alert dismisses itself; cancelling needs no other work. */ }
         } message: { id in
             if let profile = profileManager.profiles.first(where: { $0.id == id }) {
-                Text("“\(profile.name)” will be deleted. You can undo this with Command-Z.")
+                Text("“\(profile.name)” will be deleted. If its saved content is available, you can undo this with Command-Z.")
             }
         }
     }
@@ -382,7 +382,7 @@ struct ProfileSettingsPane: View {
 
     private func deleteProfile(id: UUID) {
         do {
-            let profile = try profileManager.loadProfile(id: id)
+            let profile = try ProfileDeletion.snapshotForUndo { try profileManager.loadProfile(id: id) }
             let index = profileManager.profiles.firstIndex { $0.id == id }
             let metadata = index.map { profileManager.profiles[$0] }
             let wasActive = profileManager.activeProfileID == id
@@ -391,7 +391,7 @@ struct ProfileSettingsPane: View {
                 profileManager.activeProfileID = nil
                 appState.itemManager.clearActiveProfileLayout()
             }
-            if let index, let metadata {
+            if let profile, let index, let metadata {
                 registerProfileUndo(
                     .restore(profile: profile, metadata: metadata, at: index, wasActive: wasActive),
                     actionName: String(localized: "Delete Profile"),

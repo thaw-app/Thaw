@@ -26,7 +26,13 @@ the items under New and Fixed.
 
 ### Changed
 
-- **Releases carry SLSA Build L3 provenance.** Thaw is now built, notarized and attested in the shared thaw-app/org-ci build workflow, which Thaw's own release workflow can call but not alter. [Verifying releases](docs/VERIFYING_RELEASES.md) has the `gh attestation verify` command.
+- **Thaw no longer moves your pointer to reorder menu bar items.** When macOS declines a move, the item stays where it is. Before, Thaw dragged it with a simulated mouse drag, which could leave the pointer or the item stuck.
+
+### Fixed
+
+- Updating all of a profile’s settings and layout now preserves its pre/post scripts.
+
+- Profiles whose saved files are missing can now be removed from the profile list.
 
 ## [3.0.0-alpha.11] - 2026-10-28
 

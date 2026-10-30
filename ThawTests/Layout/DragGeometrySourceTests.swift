@@ -32,8 +32,7 @@ struct DragGeometrySourceTests {
         var asked = Set<pid_t>()
         var fullReads = 0
         let items = await DragGeometrySource.items(
-            moving: moved,
-            beside: anchor,
+            owners: [10, 11, 20, 21],
             fresh: { owners in
                 asked = owners
                 return [anchor, moved]
@@ -51,10 +50,8 @@ struct DragGeometrySourceTests {
     @Test
     func aFullReadIsTheFallbackWhenTheKnownOwnersCannotAnswer() async {
         let moved = Self.item("Moved", owner: 10, source: 11)
-        let anchor = Self.item("Anchor", owner: 20, source: 21)
         let items = await DragGeometrySource.items(
-            moving: moved,
-            beside: anchor,
+            owners: [10, 11, 20, 21],
             fresh: { _ in nil },
             full: { [moved] }
         )

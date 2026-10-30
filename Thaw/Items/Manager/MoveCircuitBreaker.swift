@@ -9,13 +9,11 @@ import Foundation
 
 /// Trips when reordering activity runs away, and pauses it.
 ///
-/// Two failure modes it stops. Icon dancing: a convergence pass disagrees with
+/// The failure mode it stops is icon dancing: a convergence pass disagrees with
 /// the bar, writes, the bar flaps, the next pass writes again, and dozens of
-/// moves land in a few seconds with the icons visibly shuffling. Cursor
-/// kidnapping: repeated synthetic drags hold the pointer, so the mouse stops
-/// responding. A handful of drags in a row is already too many.
+/// moves land in a few seconds with the icons visibly shuffling.
 ///
-/// Both are counted in a sliding window. Past a limit the breaker opens and
+/// Writes and failed verifications are counted in a sliding window. Past a limit the breaker opens and
 /// every reorder path refuses for a cooldown, which lengthens with each
 /// successive trip so a bar that flaps cannot retry forever. Reordering resumes
 /// on its own after the cooldown, so an explicit user move is never lost, and a
@@ -27,8 +25,6 @@ final class MoveCircuitBreaker {
         /// Any write to the position table: a single move, a section apply, a
         /// structural respace. The "dancing" signal.
         case storeWrite
-        /// A synthetic Command-drag, which holds the cursor. The "kidnap" signal.
-        case syntheticDrag
         /// A write the bar did not honour.
         case failedVerification
     }
@@ -37,9 +33,6 @@ final class MoveCircuitBreaker {
     static nonisolated let window: Duration = .seconds(10)
     /// Store writes allowed in the window before tripping.
     static nonisolated let storeWriteLimit = 30
-    /// Synthetic drags allowed in the window before tripping. Deliberately low:
-    /// each one takes the pointer.
-    static nonisolated let dragLimit = 6
     /// Failed verifications allowed in the window before tripping.
     static nonisolated let failureLimit = 8
     /// First cooldown after a trip.
@@ -85,15 +78,11 @@ final class MoveCircuitBreaker {
         }
 
         let storeWrites = events.count { $0.signal == .storeWrite }
-        let drags = events.count { $0.signal == .syntheticDrag }
         let failures = events.count { $0.signal == .failedVerification }
 
         var reasons = [String]()
         if storeWrites > Self.storeWriteLimit {
             reasons.append("\(storeWrites) store writes")
-        }
-        if drags > Self.dragLimit {
-            reasons.append("\(drags) synthetic drags")
         }
         if failures > Self.failureLimit {
             reasons.append("\(failures) failed verifications")

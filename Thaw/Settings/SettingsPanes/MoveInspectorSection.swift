@@ -16,7 +16,7 @@ import ThawUI
 /// on, because it reads as the log's live view. The framing still mirrors the
 /// capture inspector: moves are recorded when they happen (never on a timer),
 /// the records are memory-only, and the copy states the physical scope
-/// exactly, which attempts move the real pointer and which never touch it.
+/// exactly.
 struct MoveInspectorSection: View {
     @Environment(AppState.self) var appState
 
@@ -50,24 +50,14 @@ struct MoveInspectorSection: View {
         .foregroundStyle(ThawInk.supporting)
     }
 
-    /// Which channel moves items right now, and the honest reason why.
-    @ViewBuilder
+    /// How items are moved, and whether macOS let Thaw do it this session.
     private var channelMode: some View {
-        let storeInert = appState.itemManager.menuBarAgentIgnoresPreferredPositions
         Label {
             VStack(alignment: .leading, spacing: ThawSpacing.hairline) {
-                Text(
-                    storeInert
-                        ? "Items are moved with the pointer"
-                        : "Items are moved by updating macOS's saved menu bar layout"
-                )
-                Text(
-                    storeInert
-                        ? "While an item is dragged into place, the pointer is hidden and your mouse input is held, then both come back."
-                        : "Your pointer never moves: the saved layout is updated and the menu bar re-sorts itself."
-                )
-                .font(ThawType.caption)
-                .foregroundStyle(ThawInk.supporting)
+                Text("Items are moved by updating macOS's saved menu bar layout")
+                Text("Your pointer never moves: the saved layout is updated and the menu bar re-sorts itself.")
+                    .font(ThawType.caption)
+                    .foregroundStyle(ThawInk.supporting)
                 if moveMonitor.sawStoreUnavailable {
                     Text("macOS refused access to its saved menu bar layout this session. Grant Menu Bar Layout Access on the Privacy page.")
                         .font(ThawType.micro)
@@ -75,7 +65,7 @@ struct MoveInspectorSection: View {
                 }
             }
         } icon: {
-            Image(systemName: storeInert ? "hand.draw" : "tablecells")
+            Image(systemName: "tablecells")
                 .foregroundStyle(.secondary)
         }
     }
@@ -83,23 +73,9 @@ struct MoveInspectorSection: View {
     /// The glanceable answer to "is the cursor-free path working?"
     private var counters: some View {
         LabeledContent("This session") {
-            VStack(alignment: .trailing, spacing: ThawSpacing.hairline) {
-                Text("\(moveMonitor.storeMoveCount) layout updates")
-                Text("\(moveMonitor.dragMoveCount) pointer moves")
-                Text(cursorFreeSummary)
-                    .font(ThawType.caption)
-                    .foregroundStyle(ThawInk.supporting)
-            }
-            .monospacedDigit()
+            Text("\(moveMonitor.storeMoveCount) layout updates")
+                .monospacedDigit()
         }
-    }
-
-    private var cursorFreeSummary: String {
-        let total = moveMonitor.eventRecordAttemptCount
-        guard total > 0 else {
-            return String(localized: "Moves without the pointer: none yet")
-        }
-        return String(localized: "Moves without the pointer: \(moveMonitor.eventRecordLandCount) of \(total) worked")
     }
 
     private var moveList: some View {
@@ -123,36 +99,9 @@ struct MoveInspectorSection: View {
                     .font(ThawType.caption)
                     .foregroundStyle(ThawInk.supporting)
                     .lineLimit(1)
-                if !record.attempts.isEmpty {
-                    Text(attemptSummary(for: record))
-                        .font(ThawType.micro)
-                        .foregroundStyle(ThawInk.supporting)
-                }
-                if let duration = record.duration {
-                    Text("Took \(milliseconds(duration)) ms")
-                        .font(ThawType.micro)
-                        .foregroundStyle(ThawInk.supporting)
-                }
             }
             .padding(.vertical, ThawSpacing.hairline)
         }
-    }
-
-    private func attemptSummary(for record: MovePipelineMonitor.MoveRecord) -> String {
-        record.attempts
-            .map { attempt in
-                let outcome = attempt.landed
-                    ? String(localized: "moved")
-                    : String(localized: "no effect")
-                return "\(attempt.addressDescription): \(outcome)"
-            }
-            .joined(separator: " · ")
-    }
-
-    private func milliseconds(_ duration: Duration) -> Int {
-        let components = duration.components
-        return Int(components.seconds) * 1000
-            + Int(components.attoseconds / 1_000_000_000_000_000)
     }
 }
 

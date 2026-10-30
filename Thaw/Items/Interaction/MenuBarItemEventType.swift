@@ -16,9 +16,6 @@ import CoreGraphics
 /// Graphics event type, the button it is attributed to, and whether it opens
 /// or closes a click. CGEvent.menuBarItemEvent(item:source:type:location:)
 /// reads all of them back out.
-///
-/// Rearranging an item does not go through here. That path is a command-drag
-/// owned by SyntheticMoveEngine, which builds its own events.
 nonisolated enum MenuBarItemEventType {
     case leftMouseDown
     case leftMouseUp

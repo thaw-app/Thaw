@@ -83,8 +83,6 @@ nonisolated enum Constants {
         /// rounded cap curves in over the rightmost item, so it must clear the
         /// cap radius.
         static let trailingPillTrailingOuterMargin: CGFloat = 10
-        static let syntheticDragDropInset: CGFloat = 2
-        static let syntheticDragSettleDelay: Duration = .milliseconds(250)
 
         // MARK: Startup
 
@@ -103,6 +101,9 @@ nonisolated enum Constants {
         /// How long to wait after relaxing the visibility assertion for
         /// MenuBarAgent to recomposite a revealed item before clicking it.
         static let thawBarRevealSettle: Duration = .milliseconds(400)
+        /// How long a revealed item may take, after the settle, to be drawn and to appear
+        /// to Accessibility before it is pressed. On macOS 27.2 one took up to 0.8 s with the bar on screen.
+        static let thawBarRevealAXWait: Duration = .milliseconds(1500)
         /// Grace after a click for the item's menu to open before the
         /// status-item glyph is re-concealed.
         static let thawBarPostClickSettle: Duration = .milliseconds(150)
@@ -135,7 +136,7 @@ nonisolated enum Constants {
         static let menuBarAgentResortPollInterval: Duration = .milliseconds(250)
 
         /// How long a nudged preferred-position write is given to move the bar
-        /// before the wait hands the move to the synthetic drag. MenuBarAgent
+        /// before the wait gives up on it. MenuBarAgent
         /// silently drops most writes, and an honored write starts shifting the
         /// bar within a poll or two. Only the "bar never moved" case bails
         /// early; once it moves, the wait runs to the full deadline.
