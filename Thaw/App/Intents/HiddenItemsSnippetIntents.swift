@@ -136,31 +136,36 @@ struct HiddenMenuBarItemsSnippet: SnippetIntent {
         guard let appState = thawAppState() else {
             throw ThawIntentError.appNotReady
         }
+        let listing = Self.listing(in: appState)
+        return .result(
+            view: HiddenMenuBarItemsSnippetView(
+                rows: listing.rows,
+                overflowCount: listing.overflowCount,
+                canRevealIndividually: appState.menuBarManager.sectionController.isOperational
+            )
+        )
+    }
 
+    /// The rows for the hidden section, capped at rowLimit, and how many items did not fit.
+    @MainActor
+    static func listing(in appState: AppState) -> (rows: [HiddenMenuBarItemRow], overflowCount: Int) {
         // Exclude chevrons, spacers, system clones, and transient Item-N entries from the user-facing count.
         let items = appState.itemManager
             .managedItems(for: .hidden)
             .filter(\.isUserActionable)
 
-        let listed = items.prefix(Self.rowLimit)
+        let listed = items.prefix(rowLimit)
         let rows = listed.map { item in
             HiddenMenuBarItemRow(
                 id: item.uniqueIdentifier,
                 name: MenuBarItemDisplayName.displayName(for: item),
-                glyph: Self.glyph(for: item, appState: appState),
+                glyph: glyph(for: item, appState: appState),
                 glyphWidth: HiddenMenuBarItemsSnippetView.clampedGlyphWidth(
                     appState.imageCache.image(for: item.tag)?.pointSize.width ?? 18
                 )
             )
         }
-
-        return .result(
-            view: HiddenMenuBarItemsSnippetView(
-                rows: Array(rows),
-                overflowCount: max(0, items.count - listed.count),
-                canRevealIndividually: appState.menuBarManager.sectionController.isOperational
-            )
-        )
+        return (Array(rows), max(0, items.count - listed.count))
     }
 
     /// Prefer a capture, then the owner's app icon to identify concealed items that were never captured.
