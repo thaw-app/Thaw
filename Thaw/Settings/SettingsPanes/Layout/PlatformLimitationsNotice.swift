@@ -8,64 +8,31 @@
 import SwiftUI
 import ThawUI
 
-/// The Layout pane's standing note about what macOS 27 does not let Thaw do.
-/// Opens on the first visit and leaves only its info button behind.
+/// What macOS 27 does not let Thaw do, behind an info button in the Hiding section,
+/// next to the choice it mostly bears on.
 struct PlatformLimitationsNotice: View {
-    /// Whether the user has already dismissed the open presentation. The
-    /// caller persists it; the notice holds only its popover state.
-    let isAcknowledged: Bool
-    let onAcknowledge: () -> Void
-
     @State private var isShowingList = false
 
     var body: some View {
-        if isAcknowledged {
-            infoRow
-        } else {
-            firstVisitSection
-        }
-    }
-
-    /// The card the pane opens with, once. The list is too long for a pill,
-    /// so it takes a section of its own.
-    private var firstVisitSection: some View {
-        ThawSection {
-            PlatformLimitationsList()
-
-            HStack {
-                Button("Got it") {
-                    onAcknowledge()
-                }
-                .buttonStyle(.settingsGlass)
-                Spacer()
+        HStack {
+            Button {
+                isShowingList = true
+            } label: {
+                Label("Known macOS 27 limitations", systemImage: "info.circle")
             }
-        }
-    }
-
-    /// What is left after the dismissal: the same list behind the info
-    /// button, for anyone who needs to check it again.
-    private var infoRow: some View {
-        ThawSection(isBordered: false) {
-            HStack {
-                Button {
-                    isShowingList = true
-                } label: {
-                    Label("Known macOS 27 limitations", systemImage: "info.circle")
-                }
-                .buttonStyle(.plain)
-                .help("What macOS 27 does not let \(Constants.displayName) do yet")
-                .popover(isPresented: $isShowingList, arrowEdge: .bottom) {
-                    PlatformLimitationsList()
-                        .frame(width: 420)
-                        .padding(ThawSpacing.gutter)
-                }
-                Spacer()
+            .buttonStyle(.plain)
+            .help("What macOS 27 does not let \(Constants.displayName) do yet")
+            .popover(isPresented: $isShowingList, arrowEdge: .bottom) {
+                PlatformLimitationsList()
+                    .frame(width: 420)
+                    .padding(ThawSpacing.gutter)
             }
+            Spacer()
         }
     }
 }
 
-/// The list itself, shared by the first-visit card and the later popover.
+/// The list the info button opens.
 private struct PlatformLimitationsList: View {
     var body: some View {
         VStack(alignment: .leading, spacing: ThawSpacing.row) {
@@ -81,7 +48,7 @@ private struct PlatformLimitationsList: View {
 
             limitation("**Several items from one app:** some apps’ menu bar items cannot be hidden independently with the current macOS 27 mechanism. An item assigned to Hidden can remain visible when another item from the same app is assigned to Visible. To hide them, put all of that app’s items in the same section.")
 
-            limitation("**Apple’s own items:** with the Standard hiding method, macOS hides Focus, AirDrop, Now Playing, Fast User Switching, Live Activities and the camera indicator whenever any other item is hidden, and never hides Time Machine or the Input menu. Choose the Native hiding method to keep them on the menu bar, or turn on Replace Control Center items further down this page to put \(Constants.displayName) icons in their place, which you can move and hide.")
+            limitation("**Apple’s own items:** with the Standard hiding method, macOS hides Focus, AirDrop, Now Playing, Fast User Switching, Live Activities and the camera indicator whenever any other item is hidden, and never hides Time Machine or the Input menu. Choose the Native hiding method to keep them on the menu bar, or turn on Replace Control Center items in the Apple’s Items tab to put \(Constants.displayName) icons in their place, which you can move and hide.")
         }
         .font(ThawType.body)
         .foregroundStyle(.primary)

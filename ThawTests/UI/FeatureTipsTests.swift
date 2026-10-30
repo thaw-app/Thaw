@@ -125,7 +125,7 @@ struct FeatureTipsTests {
         #expect(recorder.retirements == 1)
     }
 
-    @Test("The tip says what it announces, has no display limit and waits on two rules")
+    @Test("The tip says what it announces, has no display limit and waits only for an upgrade")
     func tipContent() {
         let tip = LayoutMultiSelectTip()
         #expect(String(localized: LayoutMultiSelectTip.titleResource) == "New: select several items")
@@ -133,7 +133,7 @@ struct FeatureTipsTests {
         #expect(tip.message != nil)
         #expect(tip.image != nil)
         #expect(tip.options.isEmpty)
-        #expect(tip.rules.count == 2)
+        #expect(tip.rules.count == 1)
         _ = tip.title
     }
 }

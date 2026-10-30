@@ -23,10 +23,6 @@ struct MenuBarLayoutSettingsPane: View {
     /// Refresh hidden occupancy from tags, not geometry, to avoid jitter; see MenuBarLayoutGroupsSection.
     @State private var isNothingHidden = false
 
-    /// The macOS 27 limitations list opens on the first visit to this pane and
-    /// leaves only its info button once acknowledged.
-    @State private var isLimitationsAcknowledged = Defaults.bool(forKey: .platformLimitationsAcknowledged)
-
     private var menuBarManager: MenuBarManager {
         appState.menuBarManager
     }
@@ -77,13 +73,6 @@ struct MenuBarLayoutSettingsPane: View {
             if !canArrangeLayout {
                 CannotArrangeLayoutView()
             } else {
-                PlatformLimitationsNotice(
-                    isAcknowledged: isLimitationsAcknowledged,
-                    onAcknowledge: {
-                        Defaults.set(true, forKey: .platformLimitationsAcknowledged)
-                        isLimitationsAcknowledged = true
-                    }
-                )
                 let banner = LayoutBanner.mostSerious(
                     isDeniedBySystem: isDeniedBySystem,
                     hasItemsOutOfReach: !itemManager.unseenHostBundleIDs.isEmpty,
@@ -129,7 +118,7 @@ struct MenuBarLayoutSettingsPane: View {
                         }
                     }
                 }
-                LayoutBarsSection(itemManager: itemManager).holdsMultiSelectTip(whileLimitationsCardShows: !isLimitationsAcknowledged)
+                LayoutBarsSection(itemManager: itemManager)
             }
 
             LayoutDetailTabs(
