@@ -108,6 +108,28 @@ struct MenuBarItemEventSupportTests {
         #expect(CGMouseButton.center.logString == "center mouse button")
     }
 
+    @Test(
+        "Event types have readable names for the log",
+        arguments: [
+            (CGEventType.null, "null"), (.leftMouseDown, "leftMouseDown"), (.leftMouseUp, "leftMouseUp"),
+            (.rightMouseDown, "rightMouseDown"), (.rightMouseUp, "rightMouseUp"), (.mouseMoved, "mouseMoved"),
+            (.leftMouseDragged, "leftMouseDragged"), (.rightMouseDragged, "rightMouseDragged"), (.keyDown, "keyDown"),
+            (.keyUp, "keyUp"), (.flagsChanged, "flagsChanged"), (.scrollWheel, "scrollWheel"),
+            (.tabletPointer, "tabletPointer"), (.tabletProximity, "tabletProximity"), (.otherMouseDown, "otherMouseDown"),
+            (.otherMouseUp, "otherMouseUp"), (.otherMouseDragged, "otherMouseDragged"),
+            (.tapDisabledByTimeout, "tapDisabledByTimeout"), (.tapDisabledByUserInput, "tapDisabledByUserInput"),
+        ]
+    )
+    func eventTypeLogStrings(type: CGEventType, name: String) {
+        #expect(type.logString == "\(name) event")
+    }
+
+    @Test("An event type the log does not know is named as unknown")
+    func unknownEventTypeLogString() throws {
+        let unknown = try #require(CGEventType(rawValue: 0x7FFF_FFF0))
+        #expect(unknown.logString == "unknown event")
+    }
+
     @Test("The permit-all mask allows mouse, keyboard and system events")
     func permitAllMask() {
         #expect(CGEventFilterMask.permitAllEvents.contains(.permitLocalMouseEvents))

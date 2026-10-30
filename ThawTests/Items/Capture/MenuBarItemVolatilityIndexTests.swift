@@ -180,4 +180,28 @@ struct MenuBarItemVolatilityIndexTests {
 
         #expect(Array(index.classificationsByKey().keys) == ["fresh"])
     }
+
+    @Test("Logging with moving items still persists them, and they reload with their class")
+    func movingItemsPersist() {
+        let index = Index()
+        let live = tag("Live")
+        let occasional = tag("Occasional")
+        observe(index, live, changes: Array(repeating: true, count: Thresholds.minimumObservations))
+        observe(index, occasional, changes: [true] + Array(repeating: false, count: Thresholds.minimumObservations))
+        index.logDistributionIfChanged()
+
+        let classes = Index().classificationsByKey()
+        #expect(classes[live.tagIdentifier] == .live)
+        #expect(classes[occasional.tagIdentifier] == .occasional)
+    }
+
+    @Test("A counter at its limit is halved with its changes, keeping the change rate")
+    func saturatedCounterIsHalved() throws {
+        let json = #"{"observations":\#(Int.max),"changes":\#(Int.max - 1),"unchangedStreak":0,"lastObserved":0}"#
+        var record = try JSONDecoder().decode(Index.Record.self, from: Data(json.utf8))
+        record.record(changed: true, width: nil)
+        #expect(record.observations == Int.max / 2 + 1)
+        #expect(record.changes == (Int.max - 1) / 2 + 1)
+        #expect(record.volatility == .live)
+    }
 }

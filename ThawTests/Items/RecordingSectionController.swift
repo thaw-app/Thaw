@@ -22,6 +22,8 @@ final class RecordingSectionController: MenuBarSectionControlling, ObservedOrder
     private(set) var observedCommits = 0
     private(set) var sectionAssignments = [(MenuBarSectionName, String)]()
     private(set) var sectionOrderCalls = [(MenuBarSectionName, [String])]()
+    private(set) var temporaryReveals = [String]()
+    private(set) var scheduledConceals = [String]()
 
     init(order: [MenuBarSectionName: [String]] = [:]) {
         sectionItemOrder = order
@@ -66,9 +68,7 @@ final class RecordingSectionController: MenuBarSectionControlling, ObservedOrder
         sectionItemOrder = sectionItemOrder.filter { $0.key == .visible }
     }
 
-    var sectionAssignment: [String: MenuBarSectionName] {
-        [:]
-    }
+    var sectionAssignment: [String: MenuBarSectionName] = [:]
 
     var isOperational: Bool {
         true
@@ -153,16 +153,24 @@ final class RecordingSectionController: MenuBarSectionControlling, ObservedOrder
 
     func show(_: MenuBarSectionName, reconcileBoundary _: Bool, synchronizeOrder _: Bool) {}
     func hideRevealedSections() {}
-    func revealItemTemporarily(_: String) {}
-    func scheduleTemporaryItemConceal(_: String) {}
+    func revealItemTemporarily(_ identifier: String) {
+        temporaryReveals.append(identifier)
+    }
+
+    func scheduleTemporaryItemConceal(_ identifier: String) {
+        scheduledConceals.append(identifier)
+    }
+
     func setSectionOrder(_: [String], for _: MenuBarSectionName) {}
     func setSectionOrder(from items: [MenuBarItem], for section: MenuBarSectionName) {
         sectionOrderCalls.append((section, items.map(\.uniqueIdentifier)))
     }
+
     func setSection(_: MenuBarSectionName, identifier _: String) {}
     func setSection(_ section: MenuBarSectionName, item: MenuBarItem) {
         sectionAssignments.append((section, item.uniqueIdentifier))
     }
+
     func concealTemporarilyRevealedItem(_: String) {}
     func concealItemTemporarily(_: String) {}
     func revealTransientlyConcealedItem(_: String) {}

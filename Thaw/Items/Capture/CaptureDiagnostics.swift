@@ -29,14 +29,24 @@ nonisolated enum CaptureDiagnostics {
     private static let frameSamples = OSAllocatedUnfairLock(initialState: SamplingBudget())
     private static let log = DiagLog(category: "CaptureDiagnostics")
 
+    /// Where sampled crops are written: a folder per process in the temporary folder.
+    static var sampleDirectory: URL {
+        FileManager.default.temporaryDirectory
+            .appendingPathComponent("ThawCaptureDiagnostics-\(ProcessInfo.processInfo.processIdentifier)")
+    }
+
     /// Records the cached crop after background removal to distinguish separation failures from other pixel pollution.
-    static func recordCleaned(_ image: CGImage, item: MenuBarItem, source: String) {
-        guard DiagnosticLogger.shared.isEnabled,
+    static func recordCleaned(
+        _ image: CGImage,
+        item: MenuBarItem,
+        source: String,
+        isEnabled: Bool = DiagnosticLogger.shared.isEnabled,
+        directory: URL = sampleDirectory
+    ) {
+        guard isEnabled,
               image.width <= 512, image.height <= 128,
               let sample = cleanedSamples.withLock({ $0.reserve(for: "\(item.ownerPID):\(item.uniqueIdentifier)") })
         else { return }
-        let directory = FileManager.default.temporaryDirectory
-            .appendingPathComponent("ThawCaptureDiagnostics-\(ProcessInfo.processInfo.processIdentifier)")
         do {
             try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
             let url = directory.appendingPathComponent("cleaned-\(sample).png")
@@ -55,22 +65,31 @@ nonisolated enum CaptureDiagnostics {
         }
     }
 
-    static func shouldCompareFrame(ownerPID: pid_t, identity: String) -> Bool {
-        guard DiagnosticLogger.shared.isEnabled else { return false }
+    static func shouldCompareFrame(
+        ownerPID: pid_t,
+        identity: String,
+        isEnabled: Bool = DiagnosticLogger.shared.isEnabled
+    ) -> Bool {
+        guard isEnabled else { return false }
         return frameSamples.withLock { $0.reserve(for: "\(ownerPID):\(identity)") != nil }
     }
 
     /// Keep a few raw item crops so geometry failures can be distinguished
     /// from background-removal failures without recording the whole display.
-    static func record(_ image: CGImage, item: MenuBarItem, bounds: CGRect, source: String) {
-        guard DiagnosticLogger.shared.isEnabled,
+    static func record(
+        _ image: CGImage,
+        item: MenuBarItem,
+        bounds: CGRect,
+        source: String,
+        isEnabled: Bool = DiagnosticLogger.shared.isEnabled,
+        directory: URL = sampleDirectory
+    ) {
+        guard isEnabled,
               image.width <= 512, image.height <= 128
         else { return }
         let key = "\(item.ownerPID):\(item.uniqueIdentifier)"
         let sample = pixelSamples.withLock { $0.reserve(for: key) }
         guard let sample else { return }
-        let directory = FileManager.default.temporaryDirectory
-            .appendingPathComponent("ThawCaptureDiagnostics-\(ProcessInfo.processInfo.processIdentifier)")
         do {
             try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
             let url = directory.appendingPathComponent("crop-\(sample).png")

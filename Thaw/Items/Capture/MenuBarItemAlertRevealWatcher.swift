@@ -91,17 +91,26 @@ final class MenuBarItemAlertRevealWatcher {
     }
 
     private func process(_ images: [MenuBarItemTag: MenuBarItemGlyphCapture]) {
+        // Before setup this is an InertSectionController, whose reveal calls
+        // are no-ops, so no extra guard is needed here.
+        process(images, sectionController: appState?.menuBarManager.sectionController)
+    }
+
+    /// Compares images against the baselines and reveals what changed, through
+    /// sectionController; nil, as when the app state is gone, reveals nothing.
+    func process(
+        _ images: [MenuBarItemTag: MenuBarItemGlyphCapture],
+        sectionController: (any MenuBarSectionControlling)?,
+        now: ContinuousClock.Instant = .now
+    ) {
         let enabled = MenuBarItemAlertReveals.identifiers()
         guard !enabled.isEmpty else {
             baselines.removeAll()
             return
         }
-        guard let appState else {
+        guard let sectionController else {
             return
         }
-        // Non-optional: before setup this is an InertSectionController, whose
-        // reveal calls are no-ops, so no extra guard is needed here.
-        let sectionController = appState.menuBarManager.sectionController
         for (tag, image) in images {
             let identifier = tag.tagIdentifier
             guard enabled.contains(identifier) else {
@@ -120,7 +129,7 @@ final class MenuBarItemAlertRevealWatcher {
             guard let section = sectionController.sectionAssignment[identifier], section != .visible else {
                 continue
             }
-            guard policy.shouldReveal(identifier, now: .now) else {
+            guard policy.shouldReveal(identifier, now: now) else {
                 continue
             }
             diagLog.info("Icon change detected for \(identifier); revealing temporarily")
