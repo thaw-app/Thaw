@@ -19,14 +19,17 @@ enum SettingsURIResponseSuites {}
 @MainActor
 final class URIDeliveryCapture {
     private(set) var openedURLs = [URL]()
+    /// The sender each opened callback answers, nil for a public read, in the order of openedURLs.
+    private(set) var openedRecipients = [SettingsURISender?]()
     private(set) var broadcasts = [String]()
     var openSucceeds = true
 
     func run<T>(_ body: () async throws -> T) async rethrows -> T {
         let previousOpen = SettingsURIHandler.openCallbackURL
         let previousPost = SettingsURIHandler.postBroadcastJSON
-        SettingsURIHandler.openCallbackURL = { [self] url, _ in
+        SettingsURIHandler.openCallbackURL = { [self] url, recipient in
             openedURLs.append(url)
+            openedRecipients.append(recipient)
             return openSucceeds
         }
         SettingsURIHandler.postBroadcastJSON = { [self] json in

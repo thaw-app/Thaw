@@ -83,7 +83,7 @@ extension SettingsURIResponseSuites {
         }
 
         @Test("An approved sender's web callback is still handed to its own app")
-        func senderCallbackKeepsItsScheme() async throws {
+        func senderCallbackKeepsItsScheme() async {
             let capture = URIDeliveryCapture()
             let sender = SettingsURISender(bundleIdentifier: "com.example.launcher", teamIdentifier: "TEAM123456", codeHash: nil)
             let sent = await capture.run {
@@ -91,7 +91,9 @@ extension SettingsURIResponseSuites {
             }
 
             #expect(sent)
-            #expect(try capture.openedURLs.first.map { try #require(URLComponents(url: $0, resolvingAgainstBaseURL: false)).scheme } == "https")
+            let scheme = capture.openedURLs.first.flatMap { URLComponents(url: $0, resolvingAgainstBaseURL: false)?.scheme }
+            #expect(scheme == "https")
+            #expect(capture.openedRecipients == [sender], "the callback opens for the sender, not with the default handler")
         }
 
         @Test("A broadcast posts the response once, as key-sorted JSON")
