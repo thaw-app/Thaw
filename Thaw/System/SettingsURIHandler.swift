@@ -19,7 +19,8 @@ enum SettingsURIHandler {
     static var settingsChangeNotificationCenter = NotificationCenter.default
 
     /// Tests swap these so a response never opens a URL or reaches another process.
-    static var openCallbackURL: (URL) -> Bool = { NSWorkspace.shared.open($0) }
+    /// A response for a sender opens only with that sender's own app; see CallbackRecipient.
+    static var openCallbackURL: (URL, SettingsURISender?) -> Bool = { CallbackRecipient.open($0, answering: $1) }
     static var postBroadcastJSON: (String) -> Void = { json in
         DistributedNotificationCenter.default().postNotificationName(
             .settingsURIGetResponse,
@@ -784,7 +785,8 @@ enum SettingsURIHandler {
         displayUUID: String?,
         callback: String?,
         broadcast: Bool,
-        requestId: String?
+        requestId: String?,
+        recipient: SettingsURISender?
     ) -> Bool {
         let responseId = requestId ?? UUID().uuidString
 
@@ -801,7 +803,7 @@ enum SettingsURIHandler {
 
         if let callbackURL = callback {
             // Send full settings data directly to the requesting app.
-            return sendCallbackResponse(response: response, callback: callbackURL)
+            return sendCallbackResponse(response: response, callback: callbackURL, recipient: recipient)
         } else if broadcast {
             // Broadcast acknowledgments only to avoid exposing settings data to other listeners.
             let ackResponse: [String: Any] = [
@@ -1099,11 +1101,12 @@ enum SettingsURIHandler {
         return response
     }
 
-    /// Blocked schemes for callback URLs (security).
+    /// Schemes no callback opens with. A public read opens with whatever handles the scheme, so it also refuses the web and messaging schemes a dump refuses; a sender's response opens only with the sender's own app.
     private static let blockedCallbackSchemes: Set<String> = ["file", "javascript", "data", "about", "blob"]
 
     /// Sends response via callback URL.
-    static func sendCallbackResponse(response: [String: Any], callback: String) -> Bool {
+    /// recipient is the approved sender the response answers, or nil for a public read.
+    static func sendCallbackResponse(response: [String: Any], callback: String, recipient: SettingsURISender?) -> Bool {
         // Use URLComponents to compose callbacks safely.
         guard var components = URLComponents(string: callback) else {
             diagLog.error("Settings URI Get: Invalid callback URL format: \(callback)")
@@ -1115,7 +1118,7 @@ enum SettingsURIHandler {
             return false
         }
 
-        if blockedCallbackSchemes.contains(scheme) || scheme.hasPrefix("x-apple-") {
+        if blockedCallbackSchemes.contains(scheme) || scheme.hasPrefix("x-apple-") || (recipient == nil && ItemEnumerationDump.refusedCallbackSchemes.contains(scheme)) {
             diagLog.error("Settings URI Get: Callback URL scheme not allowed: \(scheme)")
             return false
         }
@@ -1136,7 +1139,7 @@ enum SettingsURIHandler {
             return false
         }
 
-        let success = openCallbackURL(callbackURL)
+        let success = openCallbackURL(callbackURL, recipient)
         if success {
             diagLog.info("Settings URI Get: Sent callback via scheme: \(scheme)")
         } else {

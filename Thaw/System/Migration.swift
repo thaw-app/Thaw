@@ -62,7 +62,7 @@ extension MigrationManager {
 
 extension MigrationManager {
     /// Migrates legacy global Thaw Bar settings to per-display configurations.
-    private func migratePerDisplayThawBar() -> MigrationResult {
+    func migratePerDisplayThawBar() -> MigrationResult {
         guard !Defaults.bool(forKey: .hasMigratedPerDisplayThawBar) else {
             return .success
         }

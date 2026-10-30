@@ -5,6 +5,7 @@
 //  Copyright (Thaw) © 2026 Toni Förster
 //  Licensed under the GNU GPLv3
 
+import AppKit
 import CoreGraphics
 import Testing
 @testable import Thaw
@@ -32,5 +33,31 @@ struct SettingsWindowDiagnosticsTests {
     func summaryNamesEverything() {
         #expect(reading.summary == "window=900x640 at (120, 80) contentLayout=900x588 contentView=900x640"
             + " chromeHeight=52 fullSizeContent=true screen=3008x1692 backingScale=2.0 uiZoom=110% layout=full")
+    }
+
+    @Test("A reading takes the window's own frames, style and scale, and the settings passed in")
+    func readingOfAWindow() {
+        // Never shown, so it has no screen.
+        let window = NSWindow(
+            contentRect: CGRect(x: 40, y: 60, width: 500, height: 300),
+            styleMask: [.titled, .fullSizeContentView],
+            backing: .buffered,
+            defer: true
+        )
+        let reading = SettingsWindowDiagnostics.reading(of: window, zoomPercent: 125, isSimpleMode: true)
+
+        #expect(reading.frame == window.frame)
+        #expect(reading.contentLayout == window.contentLayoutRect)
+        #expect(reading.contentView == window.contentView?.frame)
+        #expect(reading.screen == (window.screen?.frame ?? .zero))
+        #expect(reading.backingScale == window.backingScaleFactor)
+        #expect(reading.hasFullSizeContent)
+        #expect(reading.zoomPercent == 125)
+        #expect(reading.isSimpleMode)
+        #expect(!SettingsWindowDiagnostics.reading(
+            of: NSWindow(contentRect: .zero, styleMask: [.titled], backing: .buffered, defer: true),
+            zoomPercent: 100,
+            isSimpleMode: false
+        ).hasFullSizeContent)
     }
 }

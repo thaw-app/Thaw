@@ -40,7 +40,7 @@ final class RecordingWatchManager {
     /// The most recent reading, or an empty one while the experiment is off.
     ///
     /// Empty when off, so the menu never consults the flag separately.
-    private(set) var activity = RecordingActivity()
+    var activity = RecordingActivity()
 
     private var pollTask: Task<Void, Never>?
 

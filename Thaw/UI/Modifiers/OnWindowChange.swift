@@ -46,14 +46,4 @@ extension View {
             WindowReaderView(action: action)
         }
     }
-
-    /// Updates the given binding when the view's window changes.
-    ///
-    /// - Parameter binding: The binding to update when the view's window
-    ///   changes. The new window can be nil.
-    func onWindowChange(update binding: Binding<NSWindow?>) -> some View {
-        onWindowChange { window in
-            binding.wrappedValue = window
-        }
-    }
 }

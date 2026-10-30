@@ -29,6 +29,12 @@ struct ProfileEntity: AppEntity {
 /// Queries the on-disk profile manifest so the system can list
 /// available profiles without requiring the full app state.
 struct ProfileEntityQuery: EntityQuery {
+    /// The profile manifest to read; tests point it at a temporary file.
+    var manifestURL: URL? = FileManager.default.urls(
+        for: .applicationSupportDirectory,
+        in: .userDomainMask
+    ).first?.appendingPathComponent("Thaw/Profiles/profiles.json")
+
     func entities(for identifiers: [String]) async throws -> [ProfileEntity] {
         allProfiles().filter { identifiers.contains($0.id) }
     }
@@ -38,16 +44,7 @@ struct ProfileEntityQuery: EntityQuery {
     }
 
     private func allProfiles() -> [ProfileEntity] {
-        guard let appSupport = FileManager.default.urls(
-            for: .applicationSupportDirectory,
-            in: .userDomainMask
-        ).first else {
-            return []
-        }
-        let manifestURL = appSupport
-            .appendingPathComponent("Thaw/Profiles/profiles.json")
-
-        guard let data = try? Data(contentsOf: manifestURL) else { return [] }
+        guard let manifestURL, let data = try? Data(contentsOf: manifestURL) else { return [] }
 
         let decoder = JSONDecoder()
         decoder.dateDecodingStrategy = .iso8601

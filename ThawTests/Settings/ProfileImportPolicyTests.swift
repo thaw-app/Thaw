@@ -39,6 +39,48 @@ struct ProfileImportPolicyTests {
         }
     }
 
+    @Test("The refusal names the file's count and the limit")
+    func refusalDescription() throws {
+        let count = ProfileImportPolicy.maxEntries + 1
+        let description = try #require(ProfileImportPolicy.ImportError.tooManyProfiles(count).errorDescription)
+        #expect(description.contains("\(count)"))
+        #expect(description.contains("\(ProfileImportPolicy.maxEntries)"))
+    }
+
+    @Test("A profile rebuilt from its content and metadata is the same profile")
+    func metadataAndContentRoundTrip() throws {
+        let source = try Self.makeProfile(named: "Desk")
+        let created = Date(timeIntervalSince1970: 1000)
+        let modified = Date(timeIntervalSince1970: 2000)
+        let profile = Profile(id: source.id, name: "Desk", createdAt: created, modifiedAt: modified, content: source.content)
+
+        let metadata = profile.metadata
+        #expect(metadata.id == source.id)
+        #expect(metadata.name == "Desk")
+        #expect(metadata.createdAt == created)
+        #expect(metadata.modifiedAt == modified)
+        #expect(profile.hotkeys == source.hotkeys)
+        #expect(profile.confirmSpacingRelaunch == source.confirmSpacingRelaunch)
+    }
+
+    @Test("Content built without the spacing fields takes their defaults")
+    func contentDefaults() throws {
+        let source = try Self.makeProfile(named: "Desk").content
+        let content = ProfileContent(
+            generalSettings: source.generalSettings,
+            advancedSettings: source.advancedSettings,
+            hotkeys: [:],
+            displayConfigurations: [:],
+            appearanceConfiguration: source.appearanceConfiguration,
+            menuBarLayout: source.menuBarLayout
+        )
+        #expect(content.globalDisplayConfiguration == Defaults.DefaultValue.globalDisplayConfiguration)
+        #expect(content.confirmSpacingRelaunch == Defaults.DefaultValue.confirmSpacingRelaunch)
+        #expect(content.unconfirmedSpacingProfileScope == Defaults.DefaultValue.unconfirmedSpacingProfileScope)
+        #expect(content.spacingApplyMode == nil)
+        #expect(content.automation == nil)
+    }
+
     @Test("A file at the limit is accepted")
     func limitIsAccepted() throws {
         try ProfileImportPolicy.validate(Self.bundle(count: ProfileImportPolicy.maxEntries))

@@ -5,7 +5,6 @@
 //  Copyright (Thaw) © 2026 Toni Förster
 //  Licensed under the GNU GPLv3
 
-import Combine
 import Foundation
 import MenuBarModel
 
@@ -41,14 +40,6 @@ final class HotkeysSettings {
     /// Decoder for properties.
     @ObservationIgnored
     private let decoder = JSONDecoder()
-
-    /// Storage for internal observers.
-    ///
-    /// Hotkey is still a Combine ObservableObject, so the persistence
-    /// pipeline over each hotkey's $keyCombination stays Combine-based
-    /// even though this model itself is @Observable.
-    @ObservationIgnored
-    private var cancellables = Set<AnyCancellable>()
 
     /// The shared app state.
     @ObservationIgnored

@@ -29,7 +29,7 @@ extension SettingsURIHandler {
     /// Lists need a response mechanism. The two actions run without one, as other thaw:// actions do.
     static func handleLauncherRequest(
         _ request: LauncherURIRequest,
-        sender: String?,
+        sender: SettingsURISender?,
         appState: AppState
     ) async {
         await handleLauncherRequest(request, sender: sender, environment: LauncherEnvironment(appState: appState))
@@ -37,12 +37,12 @@ extension SettingsURIHandler {
 
     static func handleLauncherRequest(
         _ request: LauncherURIRequest,
-        sender: String?,
+        sender: SettingsURISender?,
         environment: LauncherEnvironment
     ) async {
         let requestId = request.requestId ?? UUID().uuidString
         let operation = request.operation
-        diagLog.debug("Launcher URI: \(operation.rawValue) from \(sender ?? "unknown")")
+        diagLog.debug("Launcher URI: \(operation.rawValue) from \(sender?.bundleIdentifier ?? "unknown")")
 
         let response: [String: Any]
         switch operation {
@@ -71,7 +71,7 @@ extension SettingsURIHandler {
             response = await moveItemResponse(request.move, environment: environment, requestId: requestId)
         }
 
-        deliverLauncherResponse(response, for: request, requestId: requestId)
+        deliverLauncherResponse(response, for: request, requestId: requestId, recipient: sender)
     }
 
     /// The answer to an operation that only reads state.
@@ -192,10 +192,11 @@ extension SettingsURIHandler {
     private static func deliverLauncherResponse(
         _ response: [String: Any],
         for request: LauncherURIRequest,
-        requestId: String
+        requestId: String,
+        recipient: SettingsURISender?
     ) {
         if let callback = request.callback {
-            _ = sendCallbackResponse(response: response, callback: callback)
+            _ = sendCallbackResponse(response: response, callback: callback, recipient: recipient)
         } else if request.broadcast {
             _ = sendBroadcastResponse(response: [
                 "requestId": requestId,

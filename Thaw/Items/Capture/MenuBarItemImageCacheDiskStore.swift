@@ -22,8 +22,14 @@ final class MenuBarItemImageCacheDiskStore: @unchecked Sendable {
     /// The directory the cache file lives under; the user's Caches unless a test gives another.
     private let cachesDirectory: URL?
 
-    init(cachesDirectory: URL? = FileManager.default.urls(for: .cachesDirectory, in: .userDomainMask).first) {
+    /// The save's wall clock, and its serial disk queue (background QoS: nothing on screen waits for a save).
+    private let now: @Sendable () -> Date
+    private let queue: DispatchQueue
+
+    init(cachesDirectory: URL? = FileManager.default.urls(for: .cachesDirectory, in: .userDomainMask).first, now: @escaping @Sendable () -> Date = Date.init, queue: DispatchQueue = DispatchQueue(label: "MenuBarItemImageCacheDiskStore", qos: .background)) {
         self.cachesDirectory = cachesDirectory
+        self.now = now
+        self.queue = queue
     }
 
     // MARK: File Location
@@ -164,12 +170,6 @@ final class MenuBarItemImageCacheDiskStore: @unchecked Sendable {
 
     private let diskSaveState = OSAllocatedUnfairLock(initialState: DiskSaveState())
 
-    /// Serial queue for disk I/O. Background QoS: nothing on screen waits for a save.
-    private let queue = DispatchQueue(
-        label: "MenuBarItemImageCacheDiskStore",
-        qos: .background
-    )
-
     // MARK: Saving
 
     /// Parks the newest snapshot and schedules the one drain that writes it.
@@ -219,7 +219,7 @@ final class MenuBarItemImageCacheDiskStore: @unchecked Sendable {
         guard let snapshot, !snapshot.isEmpty else { return }
 
         let digest = DiskCacheDigest(snapshot)
-        let now = Date()
+        let now = self.now()
         let unchangedSince = diskSaveState.withLock { state -> Date? in
             guard let last = state.lastWritten, last.digest == digest, last.concealed == concealed else {
                 return nil
@@ -277,7 +277,7 @@ final class MenuBarItemImageCacheDiskStore: @unchecked Sendable {
                 },
                 uniquingKeysWith: { _, latest in latest }
             )
-            let writtenAt = Date()
+            let writtenAt = self.now()
             var plist: [String: Any] = [
                 "version": Self.cacheVersion,
                 "timestamp": writtenAt.timeIntervalSince1970,

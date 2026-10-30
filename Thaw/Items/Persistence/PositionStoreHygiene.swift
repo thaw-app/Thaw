@@ -19,9 +19,12 @@ enum PositionStoreHygiene {
     private static let candidatesKey = "MenuBarItemManager.positionStoreHygieneCandidates"
 
     /// The live store requires macOS 27, but the pruning rules can be tested independently.
-    static func pruneCurrentStore(permit: borrowing StoreWritePermit) {
-        let store = MenuBarPositionStoreProvider.current
-        prune(positions: store.readPositions()) { doomed in
+    static func pruneCurrentStore(
+        permit: borrowing StoreWritePermit,
+        store: PermittedPositionStore = MenuBarPositionStoreProvider.current,
+        defaults: UserDefaults = .standard
+    ) {
+        prune(positions: store.readPositions(), defaults: defaults) { doomed in
             // Re-read before replacing the dictionary to preserve weights changed by the host in another process.
             var positions = store.readPositions()
             // An empty re-read may be a read failure; writing it back could erase live positions.
@@ -43,11 +46,13 @@ enum PositionStoreHygiene {
     static func prune(
         positions: [String: Int],
         defaults: UserDefaults = .standard,
+        liveOwners: Set<String>? = nil,
+        isInstalled: (String) -> Bool = { NSWorkspace.shared.urlForApplication(withBundleIdentifier: $0) != nil },
         remove: (Set<String>) -> Void
     ) -> [String] {
         let previousCandidates = Set(defaults.stringArray(forKey: candidatesKey) ?? [])
-        let liveOwners = currentOwnerNames()
-        let candidates = Set(positions.keys.filter { isDead($0, liveOwners: liveOwners) })
+        let liveOwners = liveOwners ?? currentOwnerNames()
+        let candidates = Set(positions.keys.filter { isDead($0, liveOwners: liveOwners, isInstalled: isInstalled) })
 
         // A misspelled pinned-module key names nothing the agent sorts, so it needs no second opinion.
         let misspelled = positions.keys.filter(isMisspelledPinnedModuleKey)
@@ -93,7 +98,7 @@ enum PositionStoreHygiene {
         return key.hasSuffix("com.apple.menuextra.controlcenter-\(name)")
     }
 
-    private static func isDead(_ key: String, liveOwners: Set<String>) -> Bool {
+    private static func isDead(_ key: String, liveOwners: Set<String>, isInstalled: (String) -> Bool) -> Bool {
         // Never prune module keys: a disabled Apple module's weight is indistinguishable from an idle one's.
         guard let parsed = MenuBarPositionStoreProvider.current.parseStatusKey(key) else {
             return false
@@ -118,7 +123,7 @@ enum PositionStoreHygiene {
         }
 
         // Preserve installed apps' positions for their next launch.
-        if NSWorkspace.shared.urlForApplication(withBundleIdentifier: owner) != nil {
+        if isInstalled(owner) {
             return false
         }
 

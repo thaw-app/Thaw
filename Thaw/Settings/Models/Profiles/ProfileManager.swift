@@ -45,7 +45,7 @@ final class ProfileManager {
     private let decoder: JSONDecoder
     private let profilesDirectory: URL
     private let manifestURL: URL
-    private(set) weak var appState: AppState?
+    weak var appState: AppState?
     private var cancellables = Set<AnyCancellable>()
     /// Tracks the last seen active Space key for auto-switch debouncing.
     private var lastActiveSpaceKey: String?
@@ -90,9 +90,9 @@ final class ProfileManager {
     /// Observers for profile hotkey changes.
     private var profileHotkeyCancellables = Set<AnyCancellable>()
 
-    /// - Parameter profilesDirectory: Profile and manifest directory; defaults to Application Support. Tests use temporary directories to protect user profiles.
+    /// - Parameter profilesDirectory: Profile and manifest directory; defaults to directoryOverride, then Application Support. Tests use temporary directories to protect user profiles.
     init(profilesDirectory: URL? = nil, launchRecord: ProfileLaunchApply.Record? = nil) {
-        launchGate = ProfileLaunchGate(record: launchRecord ?? (profilesDirectory == nil ? ProfileLaunchApply.Record() : nil))
+        launchGate = ProfileLaunchGate(record: launchRecord ?? ((profilesDirectory ?? Self.directoryOverride) == nil ? ProfileLaunchApply.Record() : nil))
         let enc = JSONEncoder()
         enc.dateEncodingStrategy = .iso8601
         enc.outputFormatting = [.prettyPrinted, .sortedKeys]
@@ -102,7 +102,7 @@ final class ProfileManager {
         dec.dateDecodingStrategy = .iso8601
         decoder = dec
 
-        if let profilesDirectory {
+        if let profilesDirectory = profilesDirectory ?? Self.directoryOverride {
             self.profilesDirectory = profilesDirectory
         } else {
             // The search API is documented to return a URL but nothing
@@ -235,24 +235,7 @@ final class ProfileManager {
     /// - Returns: The identifier of the newly created profile.
     @discardableResult
     func saveProfile(name: String, from appState: AppState) throws -> UUID {
-        let profile = Profile(
-            name: name,
-            content: ProfileContent(
-                generalSettings: GeneralSettingsSnapshot.capture(from: appState.settings.general),
-                advancedSettings: AdvancedSettingsSnapshot.capture(from: appState.settings.advanced),
-                hotkeys: Defaults.dictionary(forKey: .hotkeys) as? [String: Data] ?? [:],
-                displayConfigurations: appState.settings.displaySettings.configurations,
-                globalDisplayConfiguration: appState.settings.displaySettings.globalConfiguration,
-                confirmSpacingRelaunch: appState.settings.displaySettings.confirmSpacingRelaunch,
-                unconfirmedSpacingProfileScope: appState.settings.displaySettings.unconfirmedSpacingProfileScope,
-                spacingApplyMode: appState.settings.displaySettings.spacingApplyMode,
-                appearanceConfiguration: appState.appearanceManager.configuration,
-                menuBarLayout: captureCurrentLayout(
-                    from: appState.itemManager,
-                    groups: appState.itemGroupManager.snapshot()
-                )
-            )
-        )
+        let profile = Profile(name: name, content: capturedContent(from: appState))
 
         let data = try encoder.encode(profile)
         try data.write(to: profileURL(for: profile.id), options: .atomic)
@@ -605,25 +588,13 @@ final class ProfileManager {
     func updateProfileWithCurrentState(id: UUID, appState: AppState) throws {
         guard let old = profiles.first(where: { $0.id == id }) else { return }
 
-        let automation = try loadProfile(id: id).automation
-        let tempID = try saveProfile(name: "__temp_update__", from: appState)
-
-        // Preserve profile-specific hooks alongside the original identity when replacing captured content.
-        var updated = try loadProfile(id: tempID)
-        updated.automation = automation
-        updated = Profile(
-            id: id,
-            name: old.name,
-            createdAt: old.createdAt,
-            modifiedAt: Date(),
-            content: updated.content
-        )
+        // Script hooks are the profile's own, not part of the app state being captured.
+        var content = capturedContent(from: appState)
+        content.automation = try loadProfile(id: id).automation
+        let updated = Profile(id: id, name: old.name, createdAt: old.createdAt, modifiedAt: Date(), content: content)
 
         let data = try encoder.encode(updated)
         try data.write(to: profileURL(for: id), options: .atomic)
-
-        try? FileManager.default.removeItem(at: profileURL(for: tempID))
-        profiles.removeAll { $0.id == tempID }
 
         if let index = profiles.firstIndex(where: { $0.id == id }) {
             profiles[index].modifiedAt = updated.modifiedAt
@@ -634,15 +605,32 @@ final class ProfileManager {
         rearmActiveLayoutIfNeeded(
             updatedID: id,
             scope: .all,
-            layout: captureCurrentLayout(
-                from: appState.itemManager,
-                groups: appState.itemGroupManager.snapshot()
-            ),
+            layout: content.menuBarLayout,
             itemManager: appState.itemManager
         )
     }
 
     // MARK: - Capture Helpers
+
+    /// Everything a profile captures from the running app, with menuBarLayout in place of the live
+    /// layout when given. The one list of captured fields, so every kind of update saves the same ones.
+    private func capturedContent(from appState: AppState, menuBarLayout: MenuBarLayoutSnapshot? = nil) -> ProfileContent {
+        ProfileContent(
+            generalSettings: GeneralSettingsSnapshot.capture(from: appState.settings.general),
+            advancedSettings: AdvancedSettingsSnapshot.capture(from: appState.settings.advanced),
+            hotkeys: Defaults.dictionary(forKey: .hotkeys) as? [String: Data] ?? [:],
+            displayConfigurations: appState.settings.displaySettings.configurations,
+            globalDisplayConfiguration: appState.settings.displaySettings.globalConfiguration,
+            confirmSpacingRelaunch: appState.settings.displaySettings.confirmSpacingRelaunch,
+            unconfirmedSpacingProfileScope: appState.settings.displaySettings.unconfirmedSpacingProfileScope,
+            spacingApplyMode: appState.settings.displaySettings.spacingApplyMode,
+            appearanceConfiguration: appState.appearanceManager.configuration,
+            menuBarLayout: menuBarLayout ?? captureCurrentLayout(
+                from: appState.itemManager,
+                groups: appState.itemGroupManager.snapshot()
+            )
+        )
+    }
 
     /// Share profile capture with preview diffs so closed apps and transient widgets do not produce promised but unapplied moves.
     func currentLayoutSnapshot(from appState: AppState) -> MenuBarLayoutSnapshot {
@@ -710,21 +698,11 @@ final class ProfileManager {
         )
     }
 
-    /// Applies the current configuration (settings, hotkeys, appearance) to a profile.
+    /// Applies the current configuration (settings, hotkeys, appearance) to a profile, keeping its layout and script hooks.
     private func applyCurrentConfiguration(to profile: inout Profile, from appState: AppState) {
-        profile.generalSettings = GeneralSettingsSnapshot.capture(
-            from: appState.settings.general
-        )
-        profile.advancedSettings = AdvancedSettingsSnapshot.capture(
-            from: appState.settings.advanced
-        )
-        profile.hotkeys = Defaults.dictionary(forKey: .hotkeys) as? [String: Data] ?? [:]
-        profile.displayConfigurations = appState.settings.displaySettings.configurations
-        profile.globalDisplayConfiguration = appState.settings.displaySettings.globalConfiguration
-        profile.confirmSpacingRelaunch = appState.settings.displaySettings.confirmSpacingRelaunch
-        profile.unconfirmedSpacingProfileScope = appState.settings.displaySettings.unconfirmedSpacingProfileScope
-        profile.spacingApplyMode = appState.settings.displaySettings.spacingApplyMode
-        profile.appearanceConfiguration = appState.appearanceManager.configuration
+        var content = capturedContent(from: appState, menuBarLayout: profile.menuBarLayout)
+        content.automation = profile.automation
+        profile = Profile(id: profile.id, name: profile.name, createdAt: profile.createdAt, modifiedAt: profile.modifiedAt, content: content)
     }
 
     // MARK: - Scoped Updates

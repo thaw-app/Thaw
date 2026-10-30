@@ -72,12 +72,4 @@ enum SystemAppearance: Hashable {
     static var current: SystemAppearance {
         systemAppearance(for: NSApp.effectiveAppearance)
     }
-
-    /// The title key to display in the interface.
-    var titleKey: LocalizedStringKey {
-        switch self {
-        case .light: "Light Appearance"
-        case .dark: "Dark Appearance"
-        }
-    }
 }

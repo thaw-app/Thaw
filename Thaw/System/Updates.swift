@@ -62,6 +62,10 @@ final class UpdatesManager: NSObject {
 
     private var hasStartedUpdater = false
 
+    /// The channel this process last saw, so a change made in the settings process can be noticed.
+    @ObservationIgnored
+    private var knownChannel = storedUpdateChannel()
+
     /// The channel the user is subscribed to.
     var updateChannel: UpdateChannel {
         get {
@@ -74,6 +78,7 @@ final class UpdatesManager: NSObject {
             withMutation(keyPath: \.updateChannel) {
                 UserDefaults.standard.set(newValue.rawValue, forKey: UpdateChannel.defaultsKey)
             }
+            knownChannel = newValue
             guard hasStartedUpdater else { return }
             updater.checkForUpdatesInBackground()
         }
@@ -182,9 +187,18 @@ final class UpdatesManager: NSObject {
     @ObservationIgnored
     var forwardCheck: (() -> Void)?
 
+    /// Whether preferences the settings process saved call for a check now: a new channel does,
+    /// as picking one in the app's own Settings window does.
+    static nonisolated func checksAfterStoredPreferencesChange(knownChannel: UpdateChannel, storedChannel: UpdateChannel) -> Bool {
+        knownChannel != storedChannel
+    }
+
     /// The settings process may have changed Sparkle's stored preferences. Sparkle reads
     /// them from the defaults, and a reset schedules the next check by them.
     func storedPreferencesChanged() {
+        let storedChannel = Self.storedUpdateChannel()
+        let checksNow = Self.checksAfterStoredPreferencesChange(knownChannel: knownChannel, storedChannel: storedChannel)
+        knownChannel = storedChannel
         guard hasStartedUpdater else { return }
         withMutation(keyPath: \.automaticallyChecksForUpdates) {
             // Sparkle already holds the new value; observers only need to hear that it changed.
@@ -192,7 +206,14 @@ final class UpdatesManager: NSObject {
         withMutation(keyPath: \.automaticallyDownloadsUpdates) {
             // Sparkle already holds the new value; observers only need to hear that it changed.
         }
-        updater.resetUpdateCycleAfterShortDelay()
+        if checksNow {
+            withMutation(keyPath: \.updateChannel) {
+                // The channel is read from the defaults; observers only need to hear that it changed.
+            }
+            updater.checkForUpdatesInBackground()
+        } else {
+            updater.resetUpdateCycleAfterShortDelay()
+        }
     }
 
     @objc func checkForUpdates() {

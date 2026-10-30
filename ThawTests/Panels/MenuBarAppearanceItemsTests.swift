@@ -154,10 +154,10 @@ struct MenuBarAppearanceItemsTests {
         let pill = MenuBarSplitPillGeometry.trailingBounds(
             itemBounds: result.itemBounds,
             in: CGRect(x: 0, y: 0, width: destination.width, height: 30),
-            screenFrame: destination, leadingOutset: 6, trailingOutset: 6,
+            screenFrame: destination, leadingOutset: 6, trailingMargin: 6,
             notch: .none
         )
-        #expect(pill.width == 36)
+        #expect(pill.maxX == destination.width - 6)
         #expect(pill.minX == destination.width - 343)
     }
 
@@ -257,7 +257,7 @@ struct MenuBarAppearanceItemsTests {
         let stable = MenuBarSplitPillGeometry.trailingBounds(
             itemBounds: snapshot.itemBounds,
             in: CGRect(x: 0, y: 5, width: destination.width, height: 30),
-            screenFrame: destination, leadingOutset: 7, trailingOutset: 7,
+            screenFrame: destination, leadingOutset: 7, trailingMargin: 7,
             notch: .none
         )
         let updated = MenuBarSplitPillGeometry.followingVisibleEdge(

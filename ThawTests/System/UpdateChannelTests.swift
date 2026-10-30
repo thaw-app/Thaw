@@ -30,6 +30,13 @@ struct UpdateChannelTests {
         #expect(!UpdatesManager.startsAtLaunch(supportsSparkle: false, hasSeenConsent: true, isSettingsProcess: false))
     }
 
+    @Test("A channel changed in the settings process checks right away; other preference changes reschedule")
+    func channelChangeFromSettingsProcessChecks() {
+        #expect(UpdatesManager.checksAfterStoredPreferencesChange(knownChannel: .beta, storedChannel: .alpha))
+        #expect(UpdatesManager.checksAfterStoredPreferencesChange(knownChannel: .alpha, storedChannel: .beta))
+        #expect(!UpdatesManager.checksAfterStoredPreferencesChange(knownChannel: .alpha, storedChannel: .alpha))
+    }
+
     @Test("A scheduled update shows its window when Thaw is in front, or when notifications can't alert")
     func scheduledUpdateWindow() {
         #expect(UpdatesManager.showsScheduledUpdateWindow(appIsActive: true, immediateFocus: true, notificationsCanAlert: true))

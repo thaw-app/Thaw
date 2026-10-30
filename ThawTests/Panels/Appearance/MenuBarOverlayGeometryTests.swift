@@ -66,7 +66,7 @@ struct MenuBarOverlayGeometryTests {
         #expect(collapsed.width == 0)
     }
 
-    @Test("The trailing pill wraps the items on this display, clear of the notch")
+    @Test("The trailing pill starts at the first item on this display, clear of the notch")
     func trailingBounds() {
         let items = [
             CGRect(x: 1200, y: 0, width: 30, height: 37),
@@ -75,21 +75,37 @@ struct MenuBarOverlayGeometryTests {
         ]
         let pill = MenuBarSplitPillGeometry.trailingBounds(
             itemBounds: items, in: bar, screenFrame: screen,
-            leadingOutset: 6, trailingOutset: 4, notch: .init(frame: nil, margin: 6)
+            leadingOutset: 6, trailingMargin: 4, notch: .init(frame: nil, margin: 6)
         )
-        #expect(pill == CGRect(x: 1194, y: 0, width: 240, height: 37))
+        #expect(pill == CGRect(x: 1194, y: 0, width: 314, height: 37))
 
         let clearOfNotch = MenuBarSplitPillGeometry.trailingBounds(
             itemBounds: [CGRect(x: 800, y: 0, width: 30, height: 37), CGRect(x: 1400, y: 0, width: 30, height: 37)],
-            in: bar, screenFrame: screen, leadingOutset: 6, trailingOutset: 4,
+            in: bar, screenFrame: screen, leadingOutset: 6, trailingMargin: 4,
             notch: .init(frame: CGRect(x: 656, y: 945, width: 200, height: 37), margin: 6)
         )
         #expect(clearOfNotch.minX == 862)
 
         #expect(MenuBarSplitPillGeometry.trailingBounds(
             itemBounds: [CGRect(x: 3000, y: 0, width: 30, height: 37)], in: bar, screenFrame: screen,
-            leadingOutset: 6, trailingOutset: 4, notch: .init(frame: nil, margin: 6)
+            leadingOutset: 6, trailingMargin: 4, notch: .init(frame: nil, margin: 6)
         ) == .zero)
+    }
+
+    @Test("The right margin places the trailing pill's end from the screen edge, like the left margin")
+    func trailingMarginFromScreenEdge() {
+        // The Clock ends 22 pt short of the edge, as on macOS 27.2.
+        let items = [CGRect(x: 1200, y: 0, width: 30, height: 37), CGRect(x: 1434, y: 0, width: 56, height: 37)]
+        func pill(margin: CGFloat) -> CGRect {
+            MenuBarSplitPillGeometry.trailingBounds(
+                itemBounds: items, in: bar, screenFrame: screen,
+                leadingOutset: 6, trailingMargin: margin, notch: .init(frame: nil, margin: 6)
+            )
+        }
+        #expect(pill(margin: 0).maxX == bar.maxX)
+        #expect(pill(margin: 15).maxX == bar.maxX - 15)
+        #expect(pill(margin: 15).minX == 1194, "the margin moves only the outer end")
+        #expect(pill(margin: 40).maxX == 1490, "never ends inside the last item")
     }
 
     @Test("Frozen geometry keeps the last stable pair")

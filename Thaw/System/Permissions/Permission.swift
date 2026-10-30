@@ -95,6 +95,14 @@ class Permission: Identifiable {
     @ObservationIgnored
     private var ungrantedTickCount = 0
 
+    /// Where the return from System Settings is heard; tests post to a private center.
+    @ObservationIgnored
+    private let activationCenter: NotificationCenter
+
+    /// Opens a settings pane; tests record the URL instead.
+    @ObservationIgnored
+    private let openURL: (URL) -> Void
+
     /// Creates a permission.
     ///
     /// - Parameters:
@@ -109,6 +117,8 @@ class Permission: Identifiable {
     ///   - pollInterval: Seconds between ungranted re-checks. Defaults to 3.
     ///   - ungrantedPollBudget: Consecutive ungranted re-checks before the
     ///     poll stops itself. At the default interval, three minutes.
+    ///   - activationCenter: Where the app's return to the foreground is posted.
+    ///   - openURL: Opens the settings pane.
     init(
         title: String,
         iconName: String,
@@ -121,7 +131,9 @@ class Permission: Identifiable {
         asyncCheck: (() async -> Bool)? = nil,
         request: @escaping (@escaping @MainActor @Sendable (Bool, Bool) -> Void) -> Void,
         pollInterval: TimeInterval = 3,
-        ungrantedPollBudget: Int = 60
+        ungrantedPollBudget: Int = 60,
+        activationCenter: NotificationCenter = .default,
+        openURL: @escaping (URL) -> Void = { NSWorkspace.shared.open($0) }
     ) {
         self.title = title
         self.iconName = iconName
@@ -135,6 +147,8 @@ class Permission: Identifiable {
         self.request = request
         self.pollInterval = pollInterval
         self.ungrantedPollBudget = ungrantedPollBudget
+        self.activationCenter = activationCenter
+        self.openURL = openURL
         self.hasPermission = check()
         configureCancellables()
     }
@@ -221,14 +235,14 @@ class Permission: Identifiable {
     /// Never open Settings alongside a prompt or automatically after decline.
     func openSettingsPane() {
         guard let settingsURL else { return }
-        NSWorkspace.shared.open(settingsURL)
+        openURL(settingsURL)
     }
 
     /// Re-checks (preflight only) whenever the app becomes active again, so
     /// a grant made in System Settings is recognized on return.
     private func armSettingsReturnObserver() {
         settingsReturnCancellable?.cancel()
-        settingsReturnCancellable = NotificationCenter.default
+        settingsReturnCancellable = activationCenter
             .publisher(for: NSApplication.didBecomeActiveNotification)
             .receive(on: RunLoop.main)
             .sink { [weak self] _ in

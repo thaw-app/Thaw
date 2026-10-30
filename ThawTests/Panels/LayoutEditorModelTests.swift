@@ -39,7 +39,7 @@ struct LayoutEditorWorld {
 }
 
 @MainActor
-@Suite(.serialized)
+@Suite(.serialized, .scratchDefaults)
 struct LayoutEditorModelTests {
     private typealias World = LayoutEditorWorld
 

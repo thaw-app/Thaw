@@ -46,7 +46,7 @@ private final class SelectionDrag: NSObject, NSDraggingInfo {
 }
 
 @MainActor
-@Suite(.serialized)
+@Suite(.serialized, .scratchDefaults)
 struct LayoutBarSelectionTests {
     private typealias World = LayoutEditorWorld
 

@@ -78,17 +78,9 @@ nonisolated enum Constants {
         /// glyph border, so without this the leftmost icons are clipped by the
         /// curve; it must clear the cap radius (~half the bar height).
         static let trailingPillLeadingInnerMargin: CGFloat = 7
-        /// Outer (trailing) breathing room for the split trailing pill on
-        /// macOS 27, the mirror of trailingPillLeadingInnerMargin: the right
-        /// rounded cap curves in over the rightmost item, so it must clear the
-        /// cap radius.
-        static let trailingPillTrailingOuterMargin: CGFloat = 10
 
         // MARK: Startup
 
-        /// Delay before the first post-launch menu bar scan. Gives status items
-        /// time to register before the cold-boot cache pass.
-        static let startupInitialScanDelay: Duration = .milliseconds(350)
         /// Longer settle for the menu bar hosting process (Control Center /
         /// MenuBarAgent and its BentoBox modules), which attach later than
         /// ordinary app status items.

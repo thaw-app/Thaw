@@ -34,7 +34,7 @@ private final class MovePath {
 }
 
 @MainActor
-@Suite("Move item URL executor")
+@Suite("Move item URL executor", .scratchDefaults)
 struct LayoutBatchMoveExecutorTests {
     private func command(_ string: String) throws -> LayoutBatchMove {
         try LayoutBatchMove.parse(#require(URL(string: string))).get()

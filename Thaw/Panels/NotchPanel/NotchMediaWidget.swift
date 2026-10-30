@@ -42,6 +42,13 @@ final class NotchMediaWidget: NotchWidget {
     /// The player the current descender is about.
     private var player: NotchMediaScript.Player?
 
+    /// Runs a script and returns its result as text.
+    private let execute: @MainActor (NSAppleScript) -> String?
+
+    init(execute: @escaping @MainActor (NSAppleScript) -> String? = NotchMediaWidget.runAppleScript) {
+        self.execute = execute
+    }
+
     /// The player's display name, shown when no track is playing.
     private var appName: String? {
         player?.rawValue
@@ -143,9 +150,9 @@ final class NotchMediaWidget: NotchWidget {
             return
         }
 
-        if let parts = runAppleScript({
-            NotchMediaScript.script(for: .currentTrack, of: player)
-        })?.stringValue?.split(separator: "\", \"").map(String.init), parts.count == 2 {
+        if let parts = NotchMediaScript.script(for: .currentTrack, of: player).flatMap(execute)?
+            .split(separator: "\", \"").map(String.init), parts.count == 2
+        {
             trackTitle = parts[0].trimmingCharacters(in: CharacterSet(charactersIn: "\""))
             trackArtist = parts[1].trimmingCharacters(in: CharacterSet(charactersIn: "\""))
         } else {
@@ -153,28 +160,21 @@ final class NotchMediaWidget: NotchWidget {
             trackArtist = nil
         }
 
-        isPlaying = runAppleScript({
-            NotchMediaScript.script(for: .playerState, of: player)
-        })?.stringValue == "playing"
+        isPlaying = NotchMediaScript.script(for: .playerState, of: player).flatMap(execute) == "playing"
     }
 
     /// Runs one playback command against the player this descender is about,
     /// then refreshes so the view reflects the new state immediately.
-    private func command(_ command: NotchMediaScript.Command) {
+    func command(_ command: NotchMediaScript.Command) {
         guard let player else { return }
-        _ = runAppleScript { NotchMediaScript.script(for: command, of: player) }
+        _ = NotchMediaScript.script(for: command, of: player).flatMap(execute)
         refresh()
     }
 
-    /// Makes and executes an AppleScript on the main thread, where NSAppleScript must be used.
+    /// Executes an AppleScript on the main thread, where NSAppleScript must be used.
     /// First use triggers macOS's standard Automation consent dialog for the target app.
-    private nonisolated func runAppleScript(_ makeScript: @Sendable () -> NSAppleScript?) -> NSAppleEventDescriptor? {
-        guard Thread.isMainThread else {
-            return DispatchQueue.main.sync {
-                self.runAppleScript(makeScript)
-            }
-        }
+    private static func runAppleScript(_ script: NSAppleScript) -> String? {
         var error: NSDictionary?
-        return makeScript()?.executeAndReturnError(&error)
+        return script.executeAndReturnError(&error).stringValue
     }
 }

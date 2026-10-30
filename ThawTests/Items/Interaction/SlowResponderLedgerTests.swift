@@ -70,4 +70,31 @@ struct SlowResponderLedgerTests {
         #expect(ledger.strikes(for: 1) == 0)
         #expect(ledger.strikes(for: 2) == 1)
     }
+
+    @Test("An owner stays late until it answers on time, not just until its cooldown ends")
+    func lateOwnersOutlastTheCooldown() {
+        var ledger = SlowResponderLedger()
+        #expect(ledger.lateOwners(now: start).isEmpty)
+
+        ledger.timedOut(42, now: start)
+        #expect(ledger.lateOwners(now: start + .seconds(1)) == [42])
+
+        // The late answer and the expired cooldown leave the hold in place.
+        ledger.lateAnswerArrived(42)
+        #expect(ledger.decision(for: 42, now: start + .seconds(6)) == .probeIfResponsive)
+        #expect(ledger.lateOwners(now: start + .seconds(6)) == [42])
+
+        ledger.answered(42)
+        #expect(ledger.lateOwners(now: start + .seconds(6)).isEmpty)
+    }
+
+    @Test("The placement hold ends after its limit even without an answer")
+    func placementHoldIsBounded() {
+        var ledger = SlowResponderLedger()
+        ledger.timedOut(42, now: start)
+        ledger.stillUnresponsive(42, now: start + .seconds(30))
+        let limit = SlowResponderLedger.placementHoldLimit
+        #expect(ledger.lateOwners(now: start + limit - .seconds(1)) == [42])
+        #expect(ledger.lateOwners(now: start + limit).isEmpty)
+    }
 }

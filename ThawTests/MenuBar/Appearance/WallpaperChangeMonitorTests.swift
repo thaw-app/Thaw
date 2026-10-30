@@ -15,6 +15,8 @@ import Testing
 @MainActor
 struct WallpaperChangeMonitorTests {
     private func withWatchedFile(
+        debounce: Duration = .milliseconds(50),
+        restartRetryDelay: Duration = .milliseconds(500),
         _ body: @MainActor (URL, WallpaperChangeMonitor) async throws -> Void
     ) async throws {
         let directory = URL.temporaryDirectory
@@ -25,7 +27,7 @@ struct WallpaperChangeMonitorTests {
         let url = directory.appendingPathComponent("Index.plist")
         try Data("seed".utf8).write(to: url)
 
-        let monitor = WallpaperChangeMonitor(url: url, debounce: .milliseconds(50))
+        let monitor = WallpaperChangeMonitor(url: url, debounce: debounce, restartRetryDelay: restartRetryDelay)
         defer { monitor.stop() }
 
         try await body(url, monitor)
@@ -97,6 +99,35 @@ struct WallpaperChangeMonitorTests {
             // Let the debounce window close before reading the total.
             try? await Task.sleep(for: .milliseconds(300))
             #expect(changes() == 1)
+        }
+    }
+
+    @Test("A replacement that is not there yet when the monitor re-opens is picked up by the retry")
+    func lateReplacementIsPickedUpByTheRetry() async throws {
+        try await withWatchedFile(debounce: .milliseconds(20), restartRetryDelay: .seconds(5)) { url, monitor in
+            let (changes, stream) = watch(monitor)
+            var reports = stream.makeAsyncIterator()
+            monitor.start()
+
+            // The re-open after the delete finds no file, so only the retry can re-arm the watch.
+            // There is one retry, so its delay has to outlast a loaded run's wait for the delete's report.
+            try FileManager.default.removeItem(at: url)
+            _ = await reports.next()
+            try Data("replaced".utf8).write(to: url)
+            #expect(!monitor.isWatching)
+            // Wait for the retry itself rather than a fixed time, which a loaded run can outlast.
+            let deadline = ContinuousClock.now + .seconds(20)
+            while !monitor.isWatching, ContinuousClock.now < deadline {
+                try await Task.sleep(for: .milliseconds(20))
+            }
+            try #require(monitor.isWatching)
+            let beforeWrite = changes()
+
+            let handle = try FileHandle(forWritingTo: url)
+            try handle.write(contentsOf: Data("changed".utf8))
+            try handle.close()
+            while changes() == beforeWrite, await reports.next() != nil {}
+            #expect(changes() > beforeWrite)
         }
     }
 

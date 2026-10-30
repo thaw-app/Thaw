@@ -33,7 +33,7 @@ nonisolated extension CGEventFilterMask {
 
 // MARK: - CGEventType Helpers
 
-private nonisolated extension CGEventType {
+nonisolated extension CGEventType {
     var logString: String {
         switch self {
         case .null: "null event"

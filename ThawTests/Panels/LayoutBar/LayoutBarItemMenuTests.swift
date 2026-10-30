@@ -124,4 +124,19 @@ struct LayoutBarItemMenuTests {
         let addTo = try #require(menu.items.first { $0.title == String(localized: "Add to Group") })
         #expect(addTo.submenu?.items.count == 1)
     }
+
+    @Test("Choosing the reveal switch flips the stored state each time")
+    func revealSwitchToggles() throws {
+        let world = World()
+        let alpha = World.item("Alpha")
+        func choose() throws {
+            let menu = try #require(LayoutBarItemMenu.menu(subject: .item(alpha), section: .visible, orderedItems: [alpha], appState: world.appState))
+            let entry = try #require(menu.items.last as? ClosureMenuItem)
+            _ = entry.target?.perform(entry.action)
+        }
+        try choose()
+        #expect(MenuBarItemAlertReveals.contains(alpha.tag.tagIdentifier))
+        try choose()
+        #expect(!MenuBarItemAlertReveals.contains(alpha.tag.tagIdentifier))
+    }
 }

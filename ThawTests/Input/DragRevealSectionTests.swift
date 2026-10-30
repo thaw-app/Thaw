@@ -27,7 +27,7 @@ struct DragRevealSectionTests {
     }
 }
 
-@Suite("A ⌘-drag opens sections only for an item that can go into one")
+@Suite("A ⌘-drag opens sections only for an item that can go into one", .scratchDefaults)
 struct DragRevealDecisionTests {
     private let appItem = MenuBarItemTag(namespace: .string("com.example.app"), title: "Item-0")
 

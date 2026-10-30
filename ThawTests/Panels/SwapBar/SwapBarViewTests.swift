@@ -11,7 +11,7 @@ import SwiftUI
 import Testing
 @testable import Thaw
 
-/// The Swap Bar's panel and contents, built off screen against a fresh app state and throwaway settings.
+/// The Swap Bar's panel and contents, built off screen against a fresh app state, throwaway profiles and throwaway settings.
 @Suite("Swap Bar view and panel", .serialized, .scratchDefaults)
 @MainActor
 struct SwapBarViewTests {
@@ -31,7 +31,9 @@ struct SwapBarViewTests {
 
     @Test("Presenting twice reuses the hosting view and sizes the panel to the bar")
     func presentReusesHost() throws {
-        let appState = AppState()
+        let profiles = try ProfileTestDirectory.make(seeding: [])
+        defer { try? FileManager.default.removeItem(at: profiles) }
+        let appState = ProfileManager.$directoryOverride.withValue(profiles) { AppState() }
         let panel = SwapBarPanel()
         panel.present(SwapBarView(appState: appState))
         let host = try #require(panel.contentView)
@@ -54,7 +56,9 @@ struct SwapBarViewTests {
 
     @Test("The bar draws, and redraws when the swap state's label changes")
     func barDraws() throws {
-        let appState = AppState()
+        let profiles = try ProfileTestDirectory.make(seeding: [])
+        defer { try? FileManager.default.removeItem(at: profiles) }
+        let appState = ProfileManager.$directoryOverride.withValue(profiles) { AppState() }
         let view = SwapBarView(appState: appState)
         let host = NSHostingView(rootView: view)
         let size = host.fittingSize
@@ -64,8 +68,10 @@ struct SwapBarViewTests {
     }
 
     @Test("A section state change reaches the view's stored publisher")
-    func sectionChangesPublisher() async {
-        let appState = AppState()
+    func sectionChangesPublisher() async throws {
+        let profiles = try ProfileTestDirectory.make(seeding: [])
+        defer { try? FileManager.default.removeItem(at: profiles) }
+        let appState = ProfileManager.$directoryOverride.withValue(profiles) { AppState() }
         let view = SwapBarView(appState: appState)
         var received = 0
         let cancellable = view.sectionStateChanges.sink { received += 1 }
@@ -79,8 +85,10 @@ struct SwapBarViewTests {
     }
 
     @Test("Setting up without the switch on shows nothing")
-    func setupWithSwitchOff() {
-        let appState = AppState()
+    func setupWithSwitchOff() throws {
+        let profiles = try ProfileTestDirectory.make(seeding: [])
+        defer { try? FileManager.default.removeItem(at: profiles) }
+        let appState = ProfileManager.$directoryOverride.withValue(profiles) { AppState() }
         appState.settings.advanced.enableSwapBar = false
         let manager = SwapBarManager()
         manager.performSetup(with: appState, displaySettlements: PassthroughSubject<EnvironmentChange, Never>())

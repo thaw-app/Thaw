@@ -153,7 +153,11 @@ struct SingleInstanceGuardTests {
         var forced: [pid_t] = []
         let stopped = Guard.stop(
             [1, 2],
-            terminate: { if $0 == 1 { running.remove($0) } },
+            terminate: {
+                if $0 == 1 {
+                    running.remove($0)
+                }
+            },
             forceTerminate: { forced.append($0); running.remove($0) },
             isRunning: { running.contains($0) },
             pause: { pauses += 1 }
@@ -181,5 +185,18 @@ struct SingleInstanceGuardTests {
     func liveEnforceInTestHost() {
         #expect(Guard.enforce())
         #expect(!Guard.holdsInstanceLock)
+    }
+
+    @Test("The live stop reports success at once when there is no copy to stop")
+    func liveStopWithNothingToStop() {
+        #expect(Guard.Actions.live.stop([]))
+    }
+
+    @Test("The running apps include this process, alive, under its own bundle and parent")
+    func runningProcessesIncludeThisProcess() throws {
+        let own = try #require(Guard.runningProcesses().first { $0.processIdentifier == getpid() })
+        #expect(own.bundleIdentifier == Bundle.main.bundleIdentifier)
+        #expect(own.parentProcessIdentifier == getppid())
+        #expect(!own.isTerminated)
     }
 }

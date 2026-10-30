@@ -147,12 +147,14 @@ nonisolated enum MenuBarSplitPillGeometry {
         )
     }
 
+    /// The outer end sits trailingMargin in from the bar's end, as leadingBounds does with its
+    /// margin, but never inside the last item.
     static func trailingBounds(
         itemBounds: [CGRect],
         in rect: CGRect,
         screenFrame: CGRect,
         leadingOutset: CGFloat,
-        trailingOutset: CGFloat,
+        trailingMargin: CGFloat,
         notch: Notch
     ) -> CGRect {
         let displayItemBounds = itemBounds.filter { bounds in
@@ -165,7 +167,7 @@ nonisolated enum MenuBarSplitPillGeometry {
 
         let screenOriginX = screenFrame.minX
         var leftX = contentMinX - leadingOutset - screenOriginX
-        var rightX = contentMaxX + trailingOutset - screenOriginX
+        var rightX = max(rect.maxX - trailingMargin, contentMaxX - screenOriginX)
 
         if let notchFrame = notch.frame {
             leftX = max(leftX, notchFrame.maxX - screenOriginX + notch.margin)

@@ -20,7 +20,7 @@ extension SettingsURIResponseSuites {
         func callbackCarriesTheResponse() async throws {
             let capture = URIDeliveryCapture()
             let sent = await capture.run {
-                SettingsURIHandler.sendCallbackResponse(response: response, callback: "raycast://extensions/thaw?source=test")
+                SettingsURIHandler.sendCallbackResponse(response: response, callback: "raycast://extensions/thaw?source=test", recipient: nil)
             }
 
             #expect(sent)
@@ -38,7 +38,7 @@ extension SettingsURIResponseSuites {
             let capture = URIDeliveryCapture()
             capture.openSucceeds = false
             let sent = await capture.run {
-                SettingsURIHandler.sendCallbackResponse(response: response, callback: "floe://thaw-response")
+                SettingsURIHandler.sendCallbackResponse(response: response, callback: "floe://thaw-response", recipient: nil)
             }
 
             #expect(!sent)
@@ -59,11 +59,41 @@ extension SettingsURIResponseSuites {
         func unsafeCallbackIsRefused(callback: String) async {
             let capture = URIDeliveryCapture()
             let sent = await capture.run {
-                SettingsURIHandler.sendCallbackResponse(response: response, callback: callback)
+                SettingsURIHandler.sendCallbackResponse(response: response, callback: callback, recipient: nil)
             }
 
             #expect(!sent)
             #expect(capture.openedURLs.isEmpty)
+        }
+
+        @Test("A public read's callback cannot carry the response off the machine", arguments: [
+            "https://example.com/collect",
+            "HTTP://example.com/collect",
+            "mailto:someone@example.com",
+            "sms:12345",
+        ])
+        func publicCallbackStaysOnTheMachine(callback: String) async {
+            let capture = URIDeliveryCapture()
+            let sent = await capture.run {
+                SettingsURIHandler.sendCallbackResponse(response: response, callback: callback, recipient: nil)
+            }
+
+            #expect(!sent)
+            #expect(capture.openedURLs.isEmpty)
+        }
+
+        @Test("An approved sender's web callback is still handed to its own app")
+        func senderCallbackKeepsItsScheme() async {
+            let capture = URIDeliveryCapture()
+            let sender = SettingsURISender(bundleIdentifier: "com.example.launcher", teamIdentifier: "TEAM123456", codeHash: nil)
+            let sent = await capture.run {
+                SettingsURIHandler.sendCallbackResponse(response: response, callback: "https://example.com/collect", recipient: sender)
+            }
+
+            #expect(sent)
+            let scheme = capture.openedURLs.first.flatMap { URLComponents(url: $0, resolvingAgainstBaseURL: false)?.scheme }
+            #expect(scheme == "https")
+            #expect(capture.openedRecipients == [sender], "the callback opens for the sender, not with the default handler")
         }
 
         @Test("A broadcast posts the response once, as key-sorted JSON")

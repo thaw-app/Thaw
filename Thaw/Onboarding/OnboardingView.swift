@@ -25,13 +25,13 @@ nonisolated struct OnboardingOutcome: Equatable, Sendable {
 struct ThawOnboardingView: View {
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
-    private enum Step {
+    enum Step {
         case welcome
         case bento
         case access
     }
 
-    @State private var step = Step.welcome
+    @State private var step: Step
     /// Hold bento choices until access completes to avoid abandoned, partially applied settings.
     @State private var pendingOutcome: OnboardingOutcome?
     @State private var pendingPane: SettingsNavigationIdentifier?
@@ -41,9 +41,15 @@ struct ThawOnboardingView: View {
 
     /// - Parameters:
     ///   - skipsAccessStep: Ends at the bento when permissions are already granted, avoiding a redundant request.
+    ///   - startingStep: The screen the flow opens on, welcome for every real launch.
     ///   - onFinish: Called once at completion with choices and an optional Settings destination; the host applies them.
-    init(skipsAccessStep: Bool, onFinish: @escaping (OnboardingOutcome, SettingsNavigationIdentifier?) -> Void) {
+    init(
+        skipsAccessStep: Bool,
+        startingStep: Step = .welcome,
+        onFinish: @escaping (OnboardingOutcome, SettingsNavigationIdentifier?) -> Void
+    ) {
         self.skipsAccessStep = skipsAccessStep
+        _step = State(initialValue: startingStep)
         self.onFinish = onFinish
     }
 

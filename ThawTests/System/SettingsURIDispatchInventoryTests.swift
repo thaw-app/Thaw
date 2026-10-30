@@ -119,7 +119,7 @@ struct SettingsURIDispatchInventoryTests {
             "handleSettingsURL no longer consults the whitelist"
         )
         let dispatchIndex = try #require(
-            gate.firstIndex { $0.contains("dispatchAuthorizedRoute(request.route, sender: identity.bundleIdentifier)") },
+            gate.firstIndex { $0.contains("dispatchAuthorizedRoute(request.route, sender: identity)") },
             "handleSettingsURL no longer dispatches with the identified sender"
         )
         #expect(gateIndex < dispatchIndex, "The whitelist check must run before the action is dispatched")
@@ -128,7 +128,7 @@ struct SettingsURIDispatchInventoryTests {
         let dispatchCalls = lines.filter { $0.contains("dispatchAuthorizedRoute(") && !$0.contains("func dispatchAuthorizedRoute(") }
         #expect(dispatchCalls.count == 1, "Expected one dispatchAuthorizedRoute call, found \(dispatchCalls.count)")
 
-        // Each mutating action must be handed the bundle id the gate approved.
+        // Each mutating action must be handed the identity the gate approved, or its bundle id.
         // A call passing anything else is a route around the check.
         let actions = [
             "handleSetRequest", "handleToggleRequest", "handleRevealItemRequest",
@@ -139,7 +139,7 @@ struct SettingsURIDispatchInventoryTests {
             #expect(calls.count == 1, "Expected exactly one \(action) call in dispatchAuthorizedRoute, found \(calls.count)")
             for call in calls {
                 #expect(
-                    call.contains("sender: effectiveBundleId"),
+                    call.contains("sender: identity"),
                     "\(action) is dispatched with an unverified sender: \(call.trimmingCharacters(in: .whitespaces))"
                 )
             }

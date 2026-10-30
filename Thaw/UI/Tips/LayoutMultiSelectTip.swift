@@ -21,10 +21,6 @@ struct LayoutMultiSelectTip: Tip {
     /// and the Settings process still see it.
     @Parameter static var isUpgrade: Bool = false
 
-    /// Mirrors the pane's limitations card, which each pane sets as it appears. It starts from the stored
-    /// dismissal so the tip is already in place when the pane first draws, instead of popping in a moment later.
-    @Parameter(.transient) static var isLimitationsCardShowing: Bool = !Defaults.bool(forKey: .platformLimitationsAcknowledged)
-
     nonisolated static let titleResource = LocalizedStringResource(
         "New: select several items",
         comment: "Title of the Layout tip that announces selecting several menu bar items at once"
@@ -52,7 +48,6 @@ struct LayoutMultiSelectTip: Tip {
     var rules: [Rule] {
         [
             #Rule(Self.$isUpgrade) { $0 == true },
-            #Rule(Self.$isLimitationsCardShowing) { $0 == false },
         ]
     }
 

@@ -11,7 +11,7 @@ import Testing
 @testable import Thaw
 
 @MainActor
-@Suite("Display change recapture", .timeLimit(.minutes(1)))
+@Suite("Display change recapture", .timeLimit(.minutes(1)), .scratchDefaults)
 struct DisplayChangeRecaptureTests {
     private let imageCache = RecordingImageCache()
     private let effects: MenuBarDisplayChangeEffects
@@ -54,7 +54,7 @@ struct DisplayChangeRecaptureTests {
 
 /// The postings go to a private center, since the default one would reach the app hosting the tests.
 @MainActor
-@Suite("Image recapture triggers")
+@Suite("Image recapture triggers", .scratchDefaults)
 struct ImageRecaptureTriggersTests {
     @Test("A screen-parameters posting no longer asks the image cache for a recapture")
     func ignoresScreenParameters() {

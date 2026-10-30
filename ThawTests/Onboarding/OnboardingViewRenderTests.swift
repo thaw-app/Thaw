@@ -40,6 +40,38 @@ struct OnboardingViewRenderTests {
         #expect(!finished)
     }
 
+    @Test("The bento is numbered as step one of two, and not numbered when it is the only step")
+    func bentoStepNumbering() throws {
+        func bento(skipsAccess: Bool) throws -> Data {
+            try render(ThawOnboardingView(skipsAccessStep: skipsAccess, startingStep: .bento) { _, _ in }).1
+        }
+        let numbered = try bento(skipsAccess: false)
+        let unnumbered = try bento(skipsAccess: true)
+        #expect(numbered.contains { $0 != 0 })
+        // The indicator sits along the top edge, above anything the bento changes for the last step.
+        let top = numbered.count / 14
+        #expect(numbered.prefix(top) != unnumbered.prefix(top), "only the two-step flow draws the indicator")
+    }
+
+    @Test("The access step opens numbered without finishing the flow")
+    func accessStepDraws() throws {
+        let appState = AppState()
+        let permissions = appState.permissions
+        defer { permissions.stopAllChecks() }
+        var finished = false
+        let flow = ThawOnboardingView(skipsAccessStep: false, startingStep: .access) { _, _ in finished = true }
+        let alone = try render(
+            ThawPermissionsView(mode: .onboarding, finishesFlow: true) {}.environment(permissions).environment(appState)
+        ).1
+        let (access, pixels) = try render(flow.environment(permissions).environment(appState))
+        #expect(pixels.contains { $0 != 0 })
+        // Below the step indicator, the flow draws exactly the permissions screen.
+        let top = pixels.count / 8
+        #expect(pixels.dropFirst(top) == alone.dropFirst(top))
+        #expect(access.host.fittingSize.height <= 700)
+        #expect(!finished)
+    }
+
     @Test("The step indicator grows with the number of steps")
     func stepIndicator() {
         let one = OffscreenRender(OnboardingStepIndicator(step: 1, total: 1), size: CGSize(width: 200, height: 40))

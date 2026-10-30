@@ -19,14 +19,18 @@ struct RuntimeSectionContextAdapterTests {
         RuntimeSectionContextAdapter(appState: appState, revealAttribution: RevealAttribution())
     }
 
-    @Test("The settings it forwards come from the app's settings")
-    func forwardsSettings() {
+    @Test("The settings it forwards follow the app's settings both ways", arguments: [true, false])
+    func forwardsSettings(enabled: Bool) {
         let appState = AppState()
         let adapter = makeAdapter(appState)
-        #expect(adapter.isAlwaysHiddenSectionEnabled == appState.settings.isAlwaysHiddenSectionEnabled)
-        #expect(adapter.tempShowInterval == appState.settings.tempShowInterval)
-        #expect(adapter.experimentalSystemItemHiding == appState.settings.enableExperimentalSystemItemHiding)
-        #expect(adapter.enableExperimentalOverflowPrevention == appState.settings.enableExperimentalOverflowPrevention)
+        appState.settings.advanced.enableAlwaysHiddenSection = enabled
+        appState.settings.advanced.enableNativeAppHiding = !enabled
+        appState.settings.advanced.enableExperimentalOverflowPrevention = enabled
+        appState.settings.general.tempShowInterval = enabled ? 7 : 3
+        #expect(adapter.isAlwaysHiddenSectionEnabled == enabled)
+        #expect(adapter.experimentalSystemItemHiding == enabled)
+        #expect(adapter.enableExperimentalOverflowPrevention == enabled)
+        #expect(adapter.tempShowInterval == (enabled ? 7 : 3))
     }
 
     @Test("Debug switches are read from the settings store")

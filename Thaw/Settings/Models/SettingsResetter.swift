@@ -8,8 +8,9 @@
 import Foundation
 
 extension AppSettings {
-    func resetAllSettingsToDefaults() {
-        resetGeneral()
+    /// zoomDefaults holds the UI zoom, which @AppStorage keeps in the standard domain.
+    func resetAllSettingsToDefaults(zoomDefaults: UserDefaults = .standard) {
+        resetGeneral(zoomDefaults: zoomDefaults)
         resetAdvanced()
         resetHotkeys()
         resetDisplay()
@@ -26,8 +27,8 @@ extension AppSettings {
         appState?.appearanceManager.configuration = Defaults.DefaultValue.menuBarAppearanceConfigurationV2
     }
 
-    func resetGeneral() {
-        UserDefaults.standard.removeObject(forKey: AppUIZoom.defaultsKey)
+    func resetGeneral(zoomDefaults: UserDefaults = .standard) {
+        zoomDefaults.removeObject(forKey: AppUIZoom.defaultsKey)
         general.showThawIcon = Defaults.DefaultValue.showThawIcon
         general.thawIcon = Defaults.DefaultValue.thawIcon
         general.lastCustomThawIcon = nil

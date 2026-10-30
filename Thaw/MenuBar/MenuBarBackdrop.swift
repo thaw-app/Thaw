@@ -39,19 +39,6 @@ final class MenuBarBackdrop {
                 height: cgRect.height / rect.height
             )
         }
-
-        /// The part of the strip under cgRect, cropped out as an image.
-        func image(of cgRect: CGRect) -> CGImage? {
-            let scaleX = CGFloat(image.width) / rect.width
-            let scaleY = CGFloat(image.height) / rect.height
-            let crop = CGRect(
-                x: (cgRect.minX - rect.minX) * scaleX,
-                y: (cgRect.minY - rect.minY) * scaleY,
-                width: cgRect.width * scaleX,
-                height: cgRect.height * scaleY
-            ).integral
-            return image.cropping(to: crop)
-        }
     }
 
     private(set) var strips: [CGDirectDisplayID: Strip] = [:]

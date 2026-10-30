@@ -74,7 +74,7 @@ nonisolated enum MenuBarItemAXProvider {
     /// resolves a positional name like Item-3 against an unrelated row.
     /// See MenuBarAgentIdentityReconciler.
     private static func restoredIdentities(_ items: [MenuBarItem]) -> [MenuBarItem] {
-        MenuBarAgentIdentityReconciler.reconciling(items).items
+        adoptingSavedIdentities(MenuBarAgentIdentityReconciler.reconciling(items).items)
     }
 
     private static func restoredIdentities(_ snapshot: InventorySnapshot) -> InventorySnapshot {
@@ -148,6 +148,12 @@ nonisolated enum MenuBarItemAXProvider {
     private static let slowResponders = OSAllocatedUnfairLock(
         initialState: SlowResponderLedger()
     )
+
+    /// Owners whose Accessibility answer is late right now. New-item placement
+    /// holds their arrivals until they answer on time.
+    static func lateOwners() -> Set<pid_t> {
+        slowResponders.withLock { $0.lateOwners() }
+    }
 
     /// Owners whose empty extras-bar read has been logged, with the AX result
     /// it gave. The wrapper folds "no value" into nil, so without this a host
@@ -664,15 +670,6 @@ nonisolated enum MenuBarItemAXProvider {
     static func pressHostedItem(sourcePID: pid_t) -> Bool {
         guard AXHelpers.isProcessTrusted() else { return false }
         return AXPrimitives.pressHostedItem(sourcePID: sourcePID)
-    }
-
-    /// Presses the first of the resolved elements that takes a press. One AX
-    /// round trip per candidate, with no walk in front of it.
-    static func press(resolved elements: [AXElement]) -> Bool {
-        for element in elements where AXHelpers.press(element) {
-            return true
-        }
-        return false
     }
 
     /// Frames occupied by the native overflow controls on a display. They are

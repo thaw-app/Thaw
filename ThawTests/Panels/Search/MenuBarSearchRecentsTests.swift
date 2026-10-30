@@ -12,7 +12,7 @@ import Testing
 
 /// The search panel's recents, stored in a throwaway suite.
 @MainActor
-@Suite("Search recents", .serialized)
+@Suite("Search recents", .serialized, .scratchDefaults)
 struct MenuBarSearchRecentsTests {
     private typealias World = LayoutEditorWorld
 

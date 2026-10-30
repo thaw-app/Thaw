@@ -15,8 +15,13 @@ import Testing
 struct ItemEnumerationDumpCallbackTests {
     private let sender = "com.stonerl.Thaw.ctl"
 
+    private let senderApp = URL(fileURLWithPath: "/Applications/ThawCtl.app")
+
+    /// handler stands in for the app CallbackRecipient finds: the sender's own app, or another one.
     private func deliverable(_ callback: String?, handler: String? = "com.stonerl.Thaw.ctl") -> URLComponents? {
-        ItemEnumerationDump.deliverableCallback(callback, senderBundleIdentifier: sender) { _ in handler }
+        ItemEnumerationDump.deliverableCallback(callback) { _ in
+            handler?.caseInsensitiveCompare(sender) == .orderedSame ? senderApp : nil
+        }?.components
     }
 
     @Test("A callback the approved sender handles is accepted")

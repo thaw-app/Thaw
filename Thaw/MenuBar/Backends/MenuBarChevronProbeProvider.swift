@@ -5,7 +5,6 @@
 //  Copyright (Thaw) © 2026 Toni Förster
 //  Licensed under the GNU GPLv3
 
-import MenuBarModel
 import PlatformRuntimeKit
 
 /// The overflow-chevron hit-test the item provider and the cover both use.

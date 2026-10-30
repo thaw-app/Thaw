@@ -21,13 +21,3 @@ struct LayoutMultiSelectTipView: View {
             .listRowBackground(Color.clear)
     }
 }
-
-extension View {
-    /// Tells the multi-select tip whether the limitations card is up. It goes on the pane, because a TipView
-    /// that draws nothing never runs its own modifiers, and the tip draws nothing until this is false.
-    func holdsMultiSelectTip(whileLimitationsCardShows isShowing: Bool) -> some View {
-        onChange(of: isShowing, initial: true) { _, isShowing in
-            LayoutMultiSelectTip.isLimitationsCardShowing = isShowing
-        }
-    }
-}

@@ -52,7 +52,6 @@ enum ItemIconPicker {
 
 /// Internal rather than private so tests can render the picker without opening its window.
 struct ItemIconPickerView: View {
-    @Environment(AppState.self) private var appState
     let item: MenuBarItem
     let candidates: [BundledStatusIcon.Candidate]
     let onDone: () -> Void
@@ -140,7 +139,7 @@ struct ItemIconPickerView: View {
     }
 
     /// A picked file is drawn at menu bar height whatever its pixel size.
-    private static func menuBarSize(for size: CGSize) -> CGSize {
+    static func menuBarSize(for size: CGSize) -> CGSize {
         guard size.height > 0 else { return CGSize(width: 18, height: 18) }
         let height: CGFloat = 18
         return CGSize(width: size.width * height / size.height, height: height)

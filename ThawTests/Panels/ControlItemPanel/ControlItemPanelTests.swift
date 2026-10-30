@@ -6,6 +6,7 @@
 //  Licensed under the GNU GPLv3
 
 import AppKit
+import MenuBarModel
 import SwiftUI
 import Testing
 @testable import Thaw
@@ -69,5 +70,90 @@ struct ControlItemPanelTests {
         }
         #expect(received > 0)
         cancellable.cancel()
+    }
+
+    /// A visible control item whose window ID the window server has never issued, so the bounds lookup fails.
+    private static func controlItem(bounds: CGRect) -> MenuBarItem {
+        MenuBarItem(
+            tag: .visibleControlItem,
+            windowID: CGWindowID(UInt32.max - 7),
+            ownerPID: ProcessInfo.processInfo.processIdentifier,
+            sourcePID: ProcessInfo.processInfo.processIdentifier,
+            bounds: bounds,
+            title: MenuBarItemTag.visibleControlItem.title,
+            isOnScreen: true
+        )
+    }
+
+    @Test("The popover is transient, reports back to the controller and sizes itself from its contents")
+    func popoverConfiguration() throws {
+        let appState = AppState()
+        let controller = ControlItemPanelController()
+        let popover = controller.makePopover(appState: appState)
+        #expect(popover.behavior == .transient)
+        #expect(popover.animates)
+        #expect(popover.delegate === controller)
+        let hosting = try #require(popover.contentViewController as? NSHostingController<ControlItemPanelView>)
+        #expect(hosting.sizingOptions == [.preferredContentSize])
+        #expect(!controller.isShown, "building the popover does not show it")
+    }
+
+    @Test("Without Thaw's icon in the item list there are no icon bounds to anchor to")
+    func noControlItemNoBounds() {
+        let appState = AppState()
+        let controller = ControlItemPanelController()
+        controller.performSetup(with: appState)
+        appState.itemManager.itemCache[.visible] = [LayoutEditorWorld.item("Alpha")]
+        #expect(controller.anchorBounds() == nil)
+    }
+
+    @Test("When the window server cannot place the icon, its cached bounds stand in, also on the next lookup")
+    func cachedBoundsFallback() {
+        let appState = AppState()
+        let controller = ControlItemPanelController()
+        controller.performSetup(with: appState)
+        let bounds = CGRect(x: 700, y: 0, width: 30, height: 24)
+        appState.itemManager.itemCache[.visible] = [Self.controlItem(bounds: bounds)]
+        #expect(controller.anchorBounds() == bounds)
+        #expect(controller.anchorBounds() == bounds, "the failed lookup is remembered, not repeated")
+    }
+
+    @Test("An icon with no cached bounds gives no anchor bounds", arguments: [false, true])
+    func emptyBoundsGiveNothing(lookedUpBefore: Bool) {
+        let appState = AppState()
+        let controller = ControlItemPanelController()
+        controller.performSetup(with: appState)
+        if lookedUpBefore {
+            appState.itemManager.itemCache[.visible] = [Self.controlItem(bounds: CGRect(x: 1, y: 0, width: 1, height: 1))]
+            _ = controller.anchorBounds()
+        }
+        appState.itemManager.itemCache[.visible] = [Self.controlItem(bounds: .zero)]
+        #expect(controller.anchorBounds() == nil)
+    }
+
+    @Test("The fallback anchor hangs under the menu bar at the icon's x, or the click's x without an icon")
+    func fallbackAnchorFrame() throws {
+        let screen = try #require(NSScreen.main)
+        let appState = AppState()
+        let controller = ControlItemPanelController()
+        controller.performSetup(with: appState)
+        let point = CGPoint(x: screen.frame.minX + 40, y: screen.frame.maxY - 5)
+        let underBar = screen.frame.maxY - screen.getMenuBarHeightEstimate()
+
+        let atClick = try #require(controller.anchorFrame(fallbackPoint: point))
+        #expect(atClick == CGRect(x: point.x, y: underBar, width: 1, height: 1))
+
+        let bounds = CGRect(x: 700, y: 0, width: 30, height: 24)
+        appState.itemManager.itemCache[.visible] = [Self.controlItem(bounds: bounds)]
+        let atIcon = try #require(controller.anchorFrame(fallbackPoint: point))
+        #expect(atIcon.origin == CGPoint(x: bounds.midX, y: underBar))
+    }
+
+    @Test("With neither an icon nor a click the anchor sits at the middle of a screen")
+    func anchorWithoutAPoint() throws {
+        let controller = ControlItemPanelController()
+        let frame = try #require(controller.anchorFrame(fallbackPoint: nil))
+        let screen = try #require(NSScreen.screenWithMouse ?? NSScreen.main)
+        #expect(frame == CGRect(x: screen.frame.midX, y: screen.frame.maxY - screen.getMenuBarHeightEstimate(), width: 1, height: 1))
     }
 }

@@ -56,6 +56,9 @@ public nonisolated enum LayoutSolver {
             /// The chosen candidate is already in the configured new-items
             /// section; moving would be a no-op.
             case alreadyInTarget
+            /// Every new candidate belongs to an owner whose Accessibility
+            /// answer is still late, so its title may not be final yet.
+            case ownerStillAnswering
         }
     }
 
@@ -314,6 +317,7 @@ public nonisolated enum LayoutSolver {
         alwaysHiddenTags: Set<MenuBarItemTag>,
         effectiveNewItemsSection: MenuBarSectionName,
         recoveredTags: Set<MenuBarItemTag> = [],
+        lateOwners: Set<pid_t> = [],
         supportsLegacySectionHiding: Bool = true
     ) -> LeftmostMove {
         // Items sitting left of the hidden divider. This is a legacy reflow
@@ -386,7 +390,7 @@ public nonisolated enum LayoutSolver {
             }
         }
 
-        let candidate = resolvedLeftmost.first { item in
+        let isNew = { (item: MenuBarItem) -> Bool in
             let identifier = item.uniqueIdentifier
 
             // Items with a saved section belong to restoreItemsToSavedSections,
@@ -400,7 +404,18 @@ public nonisolated enum LayoutSolver {
             let notPlacedHidden = !hiddenTags.contains(item.tag) && !alwaysHiddenTags.contains(item.tag)
             return notPlacedHidden && isNewIdentity
         }
+
+        // A late owner's titles can still be placeholders, so its new items wait
+        // until it answers on time; the ledger bounds the wait.
+        let isLate = { (item: MenuBarItem) -> Bool in
+            lateOwners.contains(item.sourcePID ?? item.ownerPID)
+        }
+
+        let candidate = resolvedLeftmost.first { !isLate($0) && isNew($0) }
         guard let candidate else {
+            if resolvedLeftmost.contains(where: { isLate($0) && isNew($0) }) {
+                return .noop(reason: .ownerStillAnswering)
+            }
             return .noop(reason: .noNewCandidate)
         }
 
@@ -534,6 +549,14 @@ public nonisolated enum LayoutSolver {
             .map { $0 + 1 } ?? desiredFiltered.endIndex
         let hiddenEnd = controlUIDs.alwaysHidden.flatMap { desiredFiltered.firstIndex(of: $0) }
             ?? desiredFiltered.endIndex
+        // Always Hidden ahead of Hidden is no layout this can rebuild; slicing it would trap.
+        guard hiddenStart <= hiddenEnd else {
+            return NotchOverflowResult(
+                overflowUIDs: [],
+                updatedDesiredFiltered: desiredFiltered,
+                updatedSectionMap: sectionMap
+            )
+        }
         let existingHidden = desiredFiltered[hiddenStart ..< hiddenEnd]
             .filter { !controlSet.contains($0) }
 

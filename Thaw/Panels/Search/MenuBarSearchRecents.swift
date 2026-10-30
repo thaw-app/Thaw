@@ -28,7 +28,7 @@ final class MenuBarSearchRecents {
 
     private let defaults: UserDefaults
 
-    init(defaults: UserDefaults = .standard) {
+    init(defaults: UserDefaults = Defaults.store) {
         self.defaults = defaults
     }
 

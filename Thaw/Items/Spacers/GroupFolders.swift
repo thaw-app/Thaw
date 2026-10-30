@@ -176,7 +176,7 @@ final class GroupFolders {
         Defaults.store.set(labels, forKey: Self.labelsKey)
     }
 
-    private func folderName(for group: MenuBarItemGroup) -> String {
+    func folderName(for group: MenuBarItemGroup) -> String {
         if let name = group.name {
             return name
         }

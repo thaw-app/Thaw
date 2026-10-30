@@ -137,10 +137,15 @@ final class ReducedModeController: NSObject, NSMenuDelegate {
         return item
     }
 
-    /// Runs a thaw:// request, so the mode can be driven without the mouse.
-    func handle(_ url: URL) {
+    /// Runs a thaw:// request, so the mode can be driven without the mouse. Changing which apps
+    /// are saved as hidden needs a sender the Settings URI approved; showing them needs none.
+    func handle(_ url: URL, senderIsApproved: Bool) {
         guard let command = ReducedModeURLCommand(url) else {
             Self.diagLog.warning("reduced mode: no such request: \(url.absoluteString, privacy: .public)")
+            return
+        }
+        if command.changesSavedApps, !senderIsApproved {
+            Self.diagLog.warning("reduced mode: refusing \(url.host ?? "?", privacy: .public) from an app that isn't approved")
             return
         }
         switch command {

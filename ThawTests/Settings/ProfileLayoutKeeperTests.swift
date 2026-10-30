@@ -10,7 +10,7 @@ import Testing
 @testable import Thaw
 
 @MainActor
-@Suite("Layout changes are saved into the active profile", .timeLimit(.minutes(1)))
+@Suite("Layout changes are saved into the active profile", .timeLimit(.minutes(1)), .scratchDefaults)
 struct ProfileLayoutKeeperTests {
     private struct SaveFailure: Error {}
 

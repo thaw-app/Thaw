@@ -71,7 +71,7 @@ extension NSScreen {
 
     /// Whether this screen has a notch cut into its menu bar.
     var hasNotch: Bool {
-        guard !UserDefaults.standard.bool(forKey: Defaults.Key.debugSimulateNotch.rawValue) else {
+        guard !Defaults.store.bool(forKey: Defaults.Key.debugSimulateNotch.rawValue) else {
             return true
         }
         return auxiliaryTopLeftArea != nil
@@ -80,7 +80,7 @@ extension NSScreen {
     /// The rectangle the screen's notch occupies, or nil when it has none.
     var frameOfNotch: CGRect? {
         guard let leftOfNotch = auxiliaryTopLeftArea, let rightOfNotch = auxiliaryTopRightArea else {
-            guard UserDefaults.standard.bool(forKey: Defaults.Key.debugSimulateNotch.rawValue) else {
+            guard Defaults.store.bool(forKey: Defaults.Key.debugSimulateNotch.rawValue) else {
                 return nil
             }
             let notchWidth: CGFloat = 120

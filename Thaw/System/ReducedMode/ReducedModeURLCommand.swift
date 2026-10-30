@@ -19,6 +19,14 @@ enum ReducedModeURLCommand: Equatable {
     case showApp(String)
     case listApps
 
+    /// Whether the request changes the saved list of hidden apps.
+    var changesSavedApps: Bool {
+        switch self {
+        case .hideApp, .showApp: true
+        case .toggleHidden, .listApps: false
+        }
+    }
+
     init?(_ url: URL) {
         let bundle = URLComponents(url: url, resolvingAgainstBaseURL: false)?
             .queryItems?.first { $0.name == "bundle" }?.value

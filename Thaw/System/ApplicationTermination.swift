@@ -27,7 +27,7 @@ enum ApplicationTermination {
         schedule(terminate)
     }
 
-    private static func scheduleOnDefaultRunLoop(
+    static func scheduleOnDefaultRunLoop(
         _ action: @escaping @MainActor () -> Void
     ) {
         RunLoop.main.perform(inModes: [.default]) {

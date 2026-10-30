@@ -140,4 +140,13 @@ struct MenuBarCaptureReadingTests {
         #expect(window.frame.width > 0)
         #expect(window.frame.width <= display.width + 1)
     }
+
+    @Test("An item of a running app that no live frame places gets no bounds")
+    func runningOwnerWithoutLiveFrame() async {
+        let own = ProcessInfo.processInfo.processIdentifier
+        let item = Self.item("Nowhere", owner: own)
+        let read = await LiveMenuBarCaptureReader().liveBounds(for: [(item, CGRect(x: -90000, y: -90000, width: 22, height: 24))])
+        #expect(read.bounds.isEmpty)
+        #expect(read.ambiguous.isEmpty)
+    }
 }

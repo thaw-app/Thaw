@@ -172,13 +172,13 @@ enum ItemEnumerationDump {
         return fileURL
     }
 
-    /// Sends the dump's path and summary to a callback that deliverableCallback accepted.
-    static func respond(fileURL: URL, callback: URLComponents) {
+    /// Sends the dump's path and summary to a callback that deliverableCallback accepted, with the app it confirmed.
+    static func respond(fileURL: URL, callback: URLComponents, app: URL) {
         guard let url = callbackURL(callback, fileURL: fileURL, apps: readApps(from: fileURL)) else {
             diagLog.warning("dump: failed to compose callback URL")
             return
         }
-        NSWorkspace.shared.open(url)
+        NSWorkspace.shared.open([url], withApplicationAt: app, configuration: NSWorkspace.OpenConfiguration())
     }
 
     private static func readApps(from fileURL: URL) -> [DumpedApp] {

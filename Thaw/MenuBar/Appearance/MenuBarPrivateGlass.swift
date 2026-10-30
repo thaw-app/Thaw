@@ -7,7 +7,6 @@
 
 import AppKit
 import MenuBarModel
-import ThawUI
 
 /// The private glass finishes on NSGlassEffectView, set only when the setter
 /// exists and the value is one probed safe, then read back.

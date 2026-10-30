@@ -193,7 +193,6 @@ nonisolated enum Defaults {
             .axMessagingTimeout: DefaultValue.axMessagingTimeout,
             .useLCSSectionOrderPlanner: DefaultValue.useLCSSectionOrderPlanner,
             .inputPauseThresholdMs: DefaultValue.inputPauseThresholdMs,
-            .platformLimitationsAcknowledged: DefaultValue.platformLimitationsAcknowledged,
             .useReorderLayoutEditor: DefaultValue.useReorderLayoutEditor,
         ]
     }
@@ -252,7 +251,6 @@ extension Defaults {
         static let enableAlwaysHiddenSection = false
         static let showAllSectionsOnUserDrag = true
         static let newItemsSection = "hidden"
-        static let newItemsPlacementData: Data? = nil
         static let sectionDividerStyle: SectionDividerStyle = .noDivider
         static let customSectionDividerIsTemplate = true
         static let hideApplicationMenus = true
@@ -343,10 +341,6 @@ extension Defaults {
         /// Input-idle window (ms) before a synthetic move warps the cursor, so
         /// it never lands between the user's own movements. Default: 50.
         static let inputPauseThresholdMs = 50
-
-        /// The user has seen the Layout pane's macOS 27 limitations notice; only
-        /// its info button stays after that. Default: false.
-        static let platformLimitationsAcknowledged = false
 
         /// Edit Layout opens the SwiftUI reorder editor, in its own window, in place of the Layout pane pop-out. Default: false.
         static let useReorderLayoutEditor = false
@@ -568,10 +562,6 @@ extension Defaults {
         ///
         /// Hidden escape hatch; not exposed in Settings. Default: 50.
         case inputPauseThresholdMs
-
-        /// Whether the Layout pane's macOS 27 limitations notice was acknowledged.
-        /// Hidden; not exposed in Settings. Default: false.
-        case platformLimitationsAcknowledged = "macOS27LimitationsAcknowledged"
 
         /// Whether Edit Layout opens the SwiftUI reorder editor (see DefaultValue.useReorderLayoutEditor).
         /// Hidden; not exposed in Settings. Default: false.

@@ -11,7 +11,7 @@ import Testing
 
 /// Manual arrangement moves an item only for an edit the user made in Layout.
 /// These pin the decision and the task scoping that keeps automatic passes out.
-@Suite("Explicit Layout edits")
+@Suite("Explicit Layout edits", .scratchDefaults)
 struct ExplicitLayoutEditTests {
     private static let allReasons: [LayoutChangeReason] = [
         .externalChange, .userReorder, .profileApply, .revealRestore, .settingChange, .arrivalRestore,

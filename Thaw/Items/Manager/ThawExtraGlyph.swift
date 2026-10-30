@@ -15,10 +15,11 @@ import MenuBarModel
 /// symbol its helper draws, read from the helper's own bundle.
 @MainActor
 enum ThawExtraGlyph {
-    static func image(for item: MenuBarItem) -> NSImage? {
+    /// slotFolder is where Thaw writes the icons it hands its slots.
+    static func image(for item: MenuBarItem, slotFolder: URL = ItemStandInSlot.folder) -> NSImage? {
         guard case let .string(bundleID) = item.tag.namespace else { return nil }
         if let slot = ItemStandInSlot(bundleIdentifier: bundleID) {
-            return slotImage(slot)
+            return slotImage(slot, in: slotFolder)
         }
         let prefix = "\(ThawMenuBarIdentity.bundleIdentifier).extra."
         guard bundleID.hasPrefix(prefix),
@@ -40,8 +41,7 @@ enum ThawExtraGlyph {
     /// Slot images are capped at the height the menu bar draws them.
     private static let slotImageMaxHeight: CGFloat = 18
 
-    private static func slotImage(_ slot: ItemStandInSlot) -> NSImage? {
-        let folder = ItemStandInSlot.folder
+    private static func slotImage(_ slot: ItemStandInSlot, in folder: URL) -> NSImage? {
         guard let image = NSImage(contentsOf: folder.appending(path: "slot\(slot.number).png")) else { return nil }
         if image.size.height > slotImageMaxHeight {
             image.size = NSSize(width: image.size.width * slotImageMaxHeight / image.size.height, height: slotImageMaxHeight)

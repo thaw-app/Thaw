@@ -62,6 +62,8 @@ struct HidingMethodSection: View {
                     }
                 }
 
+            PlatformLimitationsNotice()
+
             if method.hidesAppleItems, offersAppleItems {
                 // Blue denotes a limitation, not a failure.
                 SettingsWarningPill(

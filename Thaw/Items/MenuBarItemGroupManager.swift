@@ -29,7 +29,7 @@ final class MenuBarItemGroupManager {
     /// - Parameter defaults: injectable so tests can use an isolated suite
     ///   instead of the app's real preferences. Mirrors
     ///   RuntimeSectionController.loadOrder(defaults:).
-    init(defaults: UserDefaults = .standard) {
+    init(defaults: UserDefaults = Defaults.store) {
         self.defaults = defaults
         load()
     }

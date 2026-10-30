@@ -7,7 +7,6 @@
 
 import Combine
 import Foundation
-import MenuBarModel
 import Testing
 @testable import Thaw
 

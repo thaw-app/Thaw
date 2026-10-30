@@ -96,7 +96,11 @@ struct MenuBarSearchContentViewTests {
         #expect(harness.ids.contains(Self.itemID(alpha)))
         #expect(!harness.ids.contains(Self.itemID(quit)), "the previews drop it, so Search does too")
         #expect(!harness.ids.contains { id in
-            if case let .item(tag, _) = id { tag.matchesVisibleControlItem } else { false }
+            if case let .item(tag, _) = id {
+                tag.matchesVisibleControlItem
+            } else {
+                false
+            }
         }, "control items stay out of Search")
     }
 
@@ -205,5 +209,69 @@ struct MenuBarSearchContentViewTests {
             drawn.append(pixels)
         }
         #expect(Set(drawn).count == drawn.count)
+    }
+
+    @Test("The hosting view hands the content the whole frame, with no safe area insets")
+    func hostingViewHasNoInsets() {
+        let harness = Harness(.inspector)
+        let root = MenuBarSearchRootView(
+            appState: harness.world.appState,
+            model: harness.model,
+            displayID: CGMainDisplayID(),
+            panel: harness.panel,
+            presentation: .inspector
+        )
+        let insets = MenuBarSearchHostingView(rootView: root).safeAreaInsets
+        #expect(insets.top == 0)
+        #expect(insets.left == 0)
+        #expect(insets.bottom == 0)
+        #expect(insets.right == 0)
+    }
+
+    @Test("The inspector puts recently opened items on top of the full list until the user types")
+    func inspectorShowsRecents() async {
+        let alpha = World.item("Alpha")
+        let beta = World.item("Beta")
+        MenuBarSearchRecents().record(beta)
+        let harness = Harness(.inspector, visible: [alpha, beta])
+        await harness.settle { harness.ids.first == .recentsHeader }
+
+        #expect(Array(harness.ids.prefix(3)) == [.recentsHeader, Self.itemID(beta), .header(.visible)])
+        #expect(harness.model.selection == Self.itemID(beta), "the heading is skipped for the recent item")
+        #expect(harness.model.displayedItems.first?.isSelectable == false)
+
+        harness.model.searchText = "Alpha"
+        await harness.settle { !harness.ids.contains(.recentsHeader) }
+        #expect(!harness.ids.contains(.recentsHeader))
+    }
+
+    @Test("The launcher opens on the recently opened items only")
+    func launcherShowsRecents() async {
+        let alpha = World.item("Alpha")
+        let beta = World.item("Beta")
+        MenuBarSearchRecents().record(alpha)
+        let harness = Harness(.launcher, visible: [alpha, beta])
+        await harness.settle { !harness.model.displayedItems.isEmpty }
+        #expect(harness.ids == [.recentsHeader, Self.itemID(alpha)])
+    }
+
+    @Test("The assisted face lists recents above the whole inventory")
+    func assistedShowsRecentsAboveEverything() async {
+        let alpha = World.item("Alpha")
+        let beta = World.item("Beta")
+        MenuBarSearchRecents().record(beta)
+        let harness = Harness(.assisted, visible: [alpha, beta])
+        await harness.settle { harness.model.displayedItems.count == 4 }
+        #expect(Array(harness.ids.prefix(2)) == [.recentsHeader, Self.itemID(beta)])
+        #expect(Set(harness.ids.dropFirst(2)) == [Self.itemID(alpha), Self.itemID(beta)])
+    }
+
+    @Test("A recent item that is no longer on the bar leaves no recents heading behind")
+    func staleRecentsAreSkipped() async {
+        let alpha = World.item("Alpha")
+        MenuBarSearchRecents().record(World.item("Gone"))
+        let harness = Harness(.launcher, visible: [alpha])
+        await harness.settle(within: .milliseconds(200)) { false }
+        #expect(harness.model.displayedItems.isEmpty)
     }
 }

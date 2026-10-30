@@ -24,8 +24,9 @@ final class ControlItemMenuController: NSObject {
     }
 
     /// Per the macOS 27 HIG, only common actions and devices get symbols:
-    /// Search Items, the section toggles and the recording readouts.
-    func makeMenu() -> NSMenu {
+    /// Search Items, the section toggles and the recording readouts. Tests pass
+    /// profileManager to list profiles from a throwaway directory.
+    func makeMenu(profileManager: ProfileManager? = nil) -> NSMenu {
         let menu = NSMenu(title: Bundle.main.displayName)
         guard let appState else {
             return menu
@@ -52,7 +53,7 @@ final class ControlItemMenuController: NSObject {
             menu.addItem(item)
         }
 
-        if let profilesItem = profilesItem(appState: appState) {
+        if let profilesItem = profilesItem(appState: appState, profileManager: profileManager) {
             menu.addItem(.separator())
             menu.addItem(profilesItem)
         }
@@ -165,7 +166,7 @@ final class ControlItemMenuController: NSObject {
                 return nil
             }
 
-            let title = Self.sectionToggleTitle(for: section, name: name)
+            let title = Self.sectionToggleTitle(isHidden: section.isHidden, name: name)
             let item = NSMenuItem(
                 title: title,
                 action: section.isToggleEnabled ? #selector(toggleMenuBarSection) : nil,
@@ -186,8 +187,8 @@ final class ControlItemMenuController: NSObject {
     }
 
     /// Spelled out rather than composed so each title is a fixed key for translators.
-    private static func sectionToggleTitle(for section: MenuBarSection, name: MenuBarSection.Name) -> String {
-        switch (section.isHidden, name) {
+    static func sectionToggleTitle(isHidden: Bool, name: MenuBarSection.Name) -> String {
+        switch (isHidden, name) {
         case (true, .hidden):
             String(localized: "Show Hidden Items")
         case (false, .hidden):
@@ -197,12 +198,12 @@ final class ControlItemMenuController: NSObject {
         case (false, .alwaysHidden):
             String(localized: "Hide Always Hidden Items")
         default:
-            String(localized: "\(section.isHidden ? "Show" : "Hide") \(name.localizedName) Items")
+            String(localized: "\(isHidden ? "Show" : "Hide") \(name.localizedName) Items")
         }
     }
 
-    private func profilesItem(appState: AppState) -> NSMenuItem? {
-        let profileManager = appState.profileManager
+    private func profilesItem(appState: AppState, profileManager: ProfileManager?) -> NSMenuItem? {
+        let profileManager = profileManager ?? appState.profileManager
         guard !profileManager.profiles.isEmpty else {
             return nil
         }

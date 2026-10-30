@@ -85,6 +85,15 @@ final class SettingsProcessHost {
         onEnd: @escaping @Sendable (Int32) -> Void
     ) throws -> Child {
         guard let executable = Bundle.main.executableURL else { throw CocoaError(.fileNoSuchFile) }
+        return try launch(executable, arguments: arguments, onEnd: onEnd)
+    }
+
+    /// Starts executable with its standard input and output piped. Tests start a harmless tool.
+    nonisolated static func launch(
+        _ executable: URL,
+        arguments: [String],
+        onEnd: @escaping @Sendable (Int32) -> Void
+    ) throws -> Child {
         let process = Process()
         process.executableURL = executable
         process.arguments = arguments

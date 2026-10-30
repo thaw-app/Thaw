@@ -5,6 +5,7 @@
 //  Copyright (Thaw) © 2026 Toni Förster
 //  Licensed under the GNU GPLv3
 
+import AppKit
 import Foundation
 import Testing
 @testable import Thaw
@@ -12,7 +13,7 @@ import Testing
 /// Both ends of the Control Center bridge, against a scratch suite in place of the app group
 /// and a recorder in place of Control Center. The app state is never set up.
 @MainActor
-@Suite("Control Center bridge", .serialized)
+@Suite("Control Center bridge", .serialized, .scratchDefaults)
 struct ControlCenterBridgeTests {
     private final class Reloads {
         var kinds: [String] = []
@@ -71,6 +72,26 @@ struct ControlCenterBridgeTests {
             #expect(snapshot == nil)
             #expect(reloads.kinds == ControlStatePublisher.controlKinds)
         }
+    }
+
+    @Test("The app's quit notification erases the snapshot")
+    func quitNotificationErases() async throws {
+        let name = ScratchDefaults.name("ControlState")
+        defer { ScratchDefaults.remove(name) }
+        let suite = try #require(UserDefaults(suiteName: name))
+        let center = NotificationCenter()
+        let publisher = ControlStatePublisher(defaults: suite, reloadControl: { _ in }, terminationCenter: center)
+        publisher.performSetup(with: AppState())
+        #expect(try stored(in: suite) != nil)
+
+        center.post(name: NSApplication.willTerminateNotification, object: nil)
+        // The quit is received on the main queue, so wait for it rather than reading at once.
+        let deadline = ContinuousClock.now + .seconds(10)
+        while try stored(in: suite) != nil, ContinuousClock.now < deadline {
+            try await Task.sleep(for: .milliseconds(10))
+        }
+
+        #expect(try stored(in: suite) == nil)
     }
 
     @Test("Without the app group nothing is written or reloaded")

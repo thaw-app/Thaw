@@ -171,4 +171,20 @@ struct RepairLaneTests {
         let userHold = try #require(await user.value)
         lane.leave(userHold)
     }
+
+    @Test("A pass cancelled in the same turn it is admitted hands the lane straight back")
+    func cancelledAsAdmitted() async throws {
+        let lane = RepairLane()
+        let first = try #require(await lane.enter(.postRestrictionRepair))
+        let waiter = await startedTask { await lane.enter(.overflowRebalance) }
+
+        // The cancellation handler's hop lands after leave() has already admitted the waiter.
+        waiter.cancel()
+        lane.leave(first)
+
+        #expect(await waiter.value == nil)
+        await mainActorQueueDrained()
+        #expect(lane.current == nil)
+        #expect(lane.queued.isEmpty)
+    }
 }

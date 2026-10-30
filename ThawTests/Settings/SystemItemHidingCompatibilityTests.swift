@@ -121,7 +121,8 @@ struct SystemItemHidingCompatibilityTests {
                 displayUUID: nil,
                 callback: "floe://thaw-response",
                 broadcast: false,
-                requestId: "r1"
+                requestId: "r1",
+                recipient: nil
             )
         }
 

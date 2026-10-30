@@ -11,6 +11,23 @@ import MenuBarModel
 import Observation
 import PlatformRuntimeKit
 
+/// The section controller calls the stand-ins make, so tests can drive them without the live bar.
+protocol StandInSectionControlling: AnyObject {
+    var sectionAssignment: [String: MenuBarSectionName] { get }
+    var sectionItemOrder: [MenuBarSectionName: [String]] { get }
+    /// Fires whenever the assignment or the order changes.
+    var layoutChanges: AnyPublisher<Void, Never> { get }
+    func authoredSection(for identifier: String) -> MenuBarSectionName
+    func setSection(_ section: MenuBarSectionName, identifier: String)
+    func setSectionOrder(_ identifiers: [String], for section: MenuBarSectionName)
+}
+
+extension RuntimeSectionController: StandInSectionControlling {
+    var layoutChanges: AnyPublisher<Void, Never> {
+        Publishers.CombineLatest($sectionAssignment, $sectionItemOrder).map { _ in () }.eraseToAnyPublisher()
+    }
+}
+
 /// Feed SystemExtraTakeoverEngine from settings and authored layout, never geometry; Time Machine uses SystemUIServer.menuExtras and Timer remains unavailable without a verified switch.
 /// Focus, AirDrop, Now Playing, and Fast User Switching bypass the engine: macOS hides them when any third-party item is hidden, even in Visible; enabled stand-ins assign originals Hidden, and disabling restores their stand-in sections.
 @MainActor
@@ -19,11 +36,12 @@ final class SystemExtraTakeoverCoordinator {
     let engine: SystemExtraTakeoverEngine
 
     @ObservationIgnored private weak var settings: AdvancedSettings?
-    @ObservationIgnored private weak var controller: RuntimeSectionController?
+    @ObservationIgnored private weak var controller: (any StandInSectionControlling)?
     @ObservationIgnored private var observationTasks: [Task<Void, Never>] = []
     @ObservationIgnored private var layoutSubscription: AnyCancellable?
     @ObservationIgnored private let launcher: SystemExtraStandInLauncher
     @ObservationIgnored private var activeModuleStandIns: Set<SystemExtraStandIn> = []
+    @ObservationIgnored private let isShownInMenuBar: @MainActor (String) -> Bool
 
     /// The Control Center modules the runtime removes while hidden, keyed to
     /// their stand-ins, with the identifier the runtime gives each on macOS 27.
@@ -34,11 +52,17 @@ final class SystemExtraTakeoverCoordinator {
         .userSwitcher: "com.apple.menuextra.user",
     ].mapValues { MenuBarItemTag(namespace: .menuBarAgent, title: $0).tagIdentifier }
 
-    init(journal: any SystemExtraOriginalJournaling = FileSystemExtraOriginalJournal()) {
-        let launcher = SystemExtraStandInLauncher()
+    /// Adapters, launcher and the Control Center read are parameters so tests reach no system setting or app.
+    init(
+        journal: any SystemExtraOriginalJournaling = FileSystemExtraOriginalJournal(),
+        adapters: [SystemExtraItem: any SystemExtraNativeControlling]? = nil,
+        launcher: SystemExtraStandInLauncher = SystemExtraStandInLauncher(),
+        isShownInMenuBar: @escaping @MainActor (String) -> Bool = SystemExtraTakeoverCoordinator.isShownInMenuBar
+    ) {
         self.launcher = launcher
+        self.isShownInMenuBar = isShownInMenuBar
         engine = SystemExtraTakeoverEngine(
-            adapters: Self.productionAdapters(),
+            adapters: adapters ?? Self.productionAdapters(),
             replacementProvider: launcher,
             journal: journal
         )
@@ -56,7 +80,7 @@ final class SystemExtraTakeoverCoordinator {
     }
 
     func start(
-        controller: RuntimeSectionController,
+        controller: any StandInSectionControlling,
         settings: AdvancedSettings,
         markKnown: @escaping (String) -> Void
     ) {
@@ -77,15 +101,12 @@ final class SystemExtraTakeoverCoordinator {
             })
         }
 
-        layoutSubscription = Publishers.CombineLatest(
-            controller.$sectionAssignment,
-            controller.$sectionItemOrder
-        )
-        .receive(on: DispatchQueue.main)
-        .sink { [weak self] _ in
-            self?.mirrorStandInSections()
-            self?.reconcileAll()
-        }
+        layoutSubscription = controller.layoutChanges
+            .receive(on: DispatchQueue.main)
+            .sink { [weak self] _ in
+                self?.mirrorStandInSections()
+                self?.reconcileAll()
+            }
 
         observationTasks.append(Task { @MainActor [weak self] in
             let enabled = Observations { [weak self] in
@@ -125,7 +146,7 @@ final class SystemExtraTakeoverCoordinator {
             let originalSection = controller.authoredSection(for: originalID)
             // Once the original is assigned Hidden its preference reads as off,
             // so the assignment is what says the module is still wanted.
-            let isWanted = originalSection != .visible || Self.isShownInMenuBar(original)
+            let isWanted = originalSection != .visible || isShownInMenuBar(original)
             let isChosen = Self.isChosen(standIn, enabled: settings.enableModuleStandIns, skipped: settings.skippedModuleStandIns)
             guard isChosen, isWanted else {
                 if activeModuleStandIns.remove(standIn) != nil {
@@ -183,10 +204,9 @@ final class SystemExtraTakeoverCoordinator {
     }
 
     /// Control Center's bit 2 means shown (2 always, 18 while active); missing keys mean not shown.
-    private static func isShownInMenuBar(_ original: String) -> Bool {
+    static func isShownInMenuBar(_ original: String) -> Bool {
         let identifier = MenuBarItemTag.canonicalPersistentIdentifier(original)
-        guard let title = RuntimeModuleController.governableMenuExtraTitle(forItemIdentifier: identifier),
-              let key = RuntimeModuleController.moduleKeysByMenuExtraTitle[title]
+        guard let title = RuntimeModuleController.governableMenuExtraTitle(forItemIdentifier: identifier), let key = RuntimeModuleController.moduleKeysByMenuExtraTitle[title]
         else { return false }
         let value = CFPreferencesCopyValue(
             key as CFString,

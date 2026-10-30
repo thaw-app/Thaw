@@ -340,4 +340,22 @@ struct AXGeometryCatalogTests {
         let target = CGRect(x: 20, y: 0, width: 30, height: 24)
         #expect(AXGeometryCatalog.frame(overlapping: target, in: [a, b]) == b)
     }
+
+    @Test("An identity two roots of one process share is ambiguous")
+    func identitySharedByTwoRoots() {
+        let rect = CGRect(x: 100, y: 0, width: 24, height: 24)
+        let snapshot = [
+            AXGeometryCatalog.Entry(ownerPID: 1, itemIndex: 0, identityTitle: "Clock", frame: rect),
+            AXGeometryCatalog.Entry(ownerPID: 1, itemIndex: 1, identityTitle: "Clock", frame: rect.offsetBy(dx: 40, dy: 0)),
+        ]
+        #expect(AXGeometryCatalog.match(ownerPID: 1, identityTitle: "Clock", bounds: rect, in: snapshot) == .ambiguous)
+    }
+
+    @Test("A later frame that overlaps the crop more replaces an earlier confident one")
+    func largerLaterOverlapWins() {
+        let target = CGRect(x: 0, y: 0, width: 30, height: 24)
+        let weaker = CGRect(x: 10, y: 0, width: 30, height: 24)
+        let stronger = CGRect(x: 5, y: 0, width: 30, height: 24)
+        #expect(AXGeometryCatalog.frame(overlapping: target, in: [weaker, stronger]) == stronger)
+    }
 }

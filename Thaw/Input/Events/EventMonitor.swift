@@ -139,16 +139,6 @@ nonisolated struct EventMonitor {
 
     private let installation: OSAllocatedUnfairLock<Installation>
 
-    /// Where this monitor watches for events.
-    var scope: Scope {
-        installation.withLock { $0.scope }
-    }
-
-    /// A Boolean value indicating whether the monitor is currently installed and running.
-    var isRunning: Bool {
-        installation.withLock { $0.isRunning }
-    }
-
     private init(
         mask: NSEvent.EventTypeMask,
         localHandler: ((NSEvent) -> NSEvent?)?,
@@ -171,21 +161,6 @@ nonisolated struct EventMonitor {
     /// Removes the underlying AppKit monitors, if any are up.
     func stop() {
         installation.withLock { $0.stop() }
-    }
-
-    /// Stops and restarts the monitor. Use this to recover from a potentially
-    /// broken state where the underlying NSEvent monitor may have become invalid.
-    func restart() {
-        installation.withLock { installation in
-            let scope = installation.scope
-            EventMonitor.diagLog.info("Restarting \(scope) event monitor")
-            installation.restart()
-            if installation.isRunning {
-                EventMonitor.diagLog.info("Successfully restarted \(scope) event monitor")
-            } else {
-                EventMonitor.diagLog.error("Failed to restart \(scope) event monitor")
-            }
-        }
     }
 
     /// Checks whether the monitor is running and restarts it if not.

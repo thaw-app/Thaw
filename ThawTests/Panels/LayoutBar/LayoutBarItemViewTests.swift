@@ -79,6 +79,23 @@ struct LayoutBarItemViewTests {
         #expect(LayoutBarItemView.overflowFallbackDrawRect(for: icon, imageSize: CGSize(width: 10, height: 10), bounds: .zero) == .zero)
     }
 
+    @Test("A tile with no picture shows its app's icon, and the generic glyph only when the app can't be found")
+    func placeholderUsesTheAppIcon() throws {
+        let appState = World().appState
+        func item(sourcePID: pid_t?) -> MenuBarItem {
+            MenuBarItem(
+                tag: MenuBarItemTag(namespace: .string("com.example.placeholder"), title: "Item-0", windowID: 7),
+                windowID: 7, ownerPID: getpid(), sourcePID: sourcePID,
+                bounds: CGRect(x: 0, y: 0, width: 24, height: 24), title: "Item-0", isOnScreen: false
+            )
+        }
+        // A running app hidden by Native hiding is never drawn, so it never has a picture.
+        let appIcon = try #require(LayoutBarItemView.makePlaceholderImage(for: item(sourcePID: getpid()), appState: appState))
+        #expect(!appIcon.isTemplate, "the app's own icon, not a symbol")
+        let glyph = try #require(LayoutBarItemView.makePlaceholderImage(for: item(sourcePID: nil), appState: appState))
+        #expect(glyph.isTemplate, "the generic menu bar glyph")
+    }
+
     @Test("Padding is added only for a captured system preview")
     func systemPadding() {
         #expect(LayoutBarItemView.systemItemHorizontalPadding(for: World.item("Alpha"), image: nil, desiredPadding: 16) == 0)

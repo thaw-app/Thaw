@@ -8,7 +8,7 @@
 import Testing
 @testable import Thaw
 
-@Suite("A prewarm reveals hidden items only when it can photograph them")
+@Suite("A prewarm reveals hidden items only when it can photograph them", .scratchDefaults)
 struct PrewarmRevealGateTests {
     @Test func revealsWithScreenRecordingAndAController() {
         #expect(ConcealedPrewarmGate.mayReveal(

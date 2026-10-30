@@ -87,6 +87,25 @@ struct MenuBarItemIconChoicesTests {
         #expect(reloaded.image(for: item)?.isTemplate == true)
     }
 
+    @Test("A huge picture is stored at no more than three times the icon's size")
+    func hugePictureIsScaledDown() throws {
+        let rep = try #require(NSBitmapImageRep(
+            bitmapDataPlanes: nil, pixelsWide: 2000, pixelsHigh: 2000, bitsPerSample: 8, samplesPerPixel: 4,
+            hasAlpha: true, isPlanar: false, colorSpaceName: .deviceRGB, bytesPerRow: 0, bitsPerPixel: 0
+        ))
+        // The picker sizes a picked picture to the menu bar's 18 pt before storing it.
+        rep.size = NSSize(width: 18, height: 18)
+        let picture = NSImage(size: rep.size)
+        picture.addRepresentation(rep)
+        let choices = try MenuBarItemIconChoices(defaults: #require(suites.make()))
+
+        choices.setImage(picture, for: item)
+
+        let stored = try #require(choices.image(for: item))
+        #expect(stored.representations.map(\.pixelsHigh).max() == 54)
+        #expect(stored.size == NSSize(width: 18, height: 18))
+    }
+
     @Test("Clearing a choice removes it and bumps the revision")
     func clearChoice() throws {
         let defaults = try #require(suites.make())

@@ -12,8 +12,6 @@ import Testing
 /// Pointer-centered placement must stay on-screen and avoid covering the pointer when geometry allows.
 @Suite("Assisted panel placement")
 struct AssistedPanelPlacementTests {
-    /// Large-screen fixture permits below-pointer placement without flipping or clamping.
-    private static let screen = CGRect(x: 0, y: 0, width: 1512, height: 982)
     private static let visibleFrame = CGRect(x: 0, y: 0, width: 1512, height: 957)
     private static let size = CGSize(width: 680, height: 560)
 

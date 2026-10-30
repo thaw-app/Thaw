@@ -8,7 +8,6 @@
 import CoreGraphics
 import Foundation
 import MenuBarModel
-import PlatformRuntimeKit
 import Synchronization
 
 /// A namespace for mouse helper operations.
@@ -87,35 +86,6 @@ nonisolated enum MouseHelpers {
     /// of the screen.
     static var locationCoreGraphics: CGPoint? {
         CGEvent(source: nil)?.location
-    }
-
-    /// Opts this process into hiding the cursor while it is not frontmost.
-    ///
-    /// CGDisplayHideCursor is foreground-gated, and the drag's first click
-    /// hands frontmost to the item's owner. Resolved once.
-    static func enableBackgroundCursorHiding() {
-        _ = backgroundCursorHidingEnabled
-    }
-
-    private static let backgroundCursorHidingEnabled: Bool = {
-        let enabled = RuntimeBackgroundCursorHiding.enable()
-        if enabled {
-            diagLog.info("Background cursor hiding enabled for this connection")
-        } else {
-            diagLog.warning("Background cursor hiding refused; the pointer will show while Thaw posts mouse events")
-        }
-        return enabled
-    }()
-
-    /// Re-issues the hide while an outer hideCursor(watchdogTimeout:) is
-    /// in force, since a frontmost change resets cursor visibility. Each call
-    /// adds a hide that showCursor() balances.
-    static func reassertHiddenCursor() {
-        let hidden = cursorHideCountLock.withLock { $0 > 0 }
-        guard hidden else { return }
-        if CGDisplayHideCursor(CGMainDisplayID()) == .success {
-            reassertedHides.withLock { $0 += 1 }
-        }
     }
 
     private static func drainReassertedHides() {
@@ -202,17 +172,6 @@ nonisolated enum MouseHelpers {
                 return
             }
             event.post(tap: .cghidEventTap)
-        }
-    }
-
-    /// Connects or disconnects the positions of the mouse and cursor.
-    ///
-    /// - Parameter connected: A Boolean value that determines whether
-    ///   to connect or disconnect the positions.
-    static func associateMouseAndCursor(_ connected: Bool) {
-        let result = CGAssociateMouseAndMouseCursorPosition(connected ? 1 : 0)
-        if result != .success {
-            diagLog.error("CGAssociateMouseAndMouseCursorPosition failed with error code \(result.rawValue)")
         }
     }
 

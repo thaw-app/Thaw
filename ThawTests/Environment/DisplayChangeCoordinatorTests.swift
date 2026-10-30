@@ -10,7 +10,7 @@ import Combine
 import Testing
 @testable import Thaw
 
-@Suite("Display change plan")
+@Suite("Display change plan", .scratchDefaults)
 struct DisplayChangePlanTests {
     @Test(
         "A change that keeps every display waits for the settle, then applies the presentation and recaptures",
@@ -70,7 +70,7 @@ struct DisplayChangePlanTests {
 }
 
 @MainActor
-@Suite("Display change coordinator", .timeLimit(.minutes(1)))
+@Suite("Display change coordinator", .timeLimit(.minutes(1)), .scratchDefaults)
 struct DisplayChangeCoordinatorTests {
     private static let single = DisplayArrangement(frames: [1: CGRect(x: 0, y: 0, width: 1512, height: 982)], mainDisplayID: 1)
     private static let docked = DisplayArrangement(
@@ -202,7 +202,7 @@ struct DisplayChangeCoordinatorTests {
 }
 
 @MainActor
-@Suite("Menu bar display change effects", .timeLimit(.minutes(1)))
+@Suite("Menu bar display change effects", .timeLimit(.minutes(1)), .scratchDefaults)
 struct MenuBarDisplayChangeEffectsTests {
     @Test("The stamp calls off the automatic passes planned before the change")
     func stampCallsOffPlannedWork() {

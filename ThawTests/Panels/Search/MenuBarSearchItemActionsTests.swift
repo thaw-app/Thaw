@@ -88,7 +88,8 @@ struct MenuBarSearchItemActionsTests {
         // Checked first, so a backend that would allow it never starts a real move here.
         try #require(!MenuBarBackendProvider.current.canAssign(control, to: .alwaysHidden, experimentalSystemItemHiding: false))
         MenuBarSearchItemActions.move(control, to: .alwaysHidden, appState: world.appState)
-        #expect(world.appState.layoutFeedback.refusal != nil)
+        let refusal = try #require(world.appState.layoutFeedback.refusal)
+        #expect(refusal.message == LayoutBarFeedbackCenter.itemCannotMove(itemName: control.displayName, section: .alwaysHidden).message)
     }
 
     @Test("A batch with nothing the section can take does nothing")
@@ -106,5 +107,66 @@ struct MenuBarSearchItemActionsTests {
         let alpha = World.item("Alpha")
         #expect(MenuBarSearchItemActions.groupDisplayName(for: [alpha], in: [alpha], appState: world.appState) == alpha.displayName)
         #expect(MenuBarSearchItemActions.groupDisplayName(for: [], in: [], appState: world.appState).isEmpty)
+    }
+
+    @Test("A refusal that system item hiding would lift names that setting")
+    func refusalNamesTheSetting() throws {
+        let world = World()
+        let clock = World.item(.clock)
+        try #require(!MenuBarBackendProvider.current.canAssign(clock, to: .hidden, experimentalSystemItemHiding: false))
+        try #require(MenuBarBackendProvider.current.canAssign(clock, to: .hidden, experimentalSystemItemHiding: true))
+        MenuBarSearchItemActions.postAssignmentRefusal(
+            for: clock,
+            to: .hidden,
+            experimentalSystemItemHiding: false,
+            appState: world.appState
+        )
+        let refusal = try #require(world.appState.layoutFeedback.refusal)
+        let expected = LayoutBarFeedbackCenter.systemItemHidingDisabled(itemName: clock.displayName, section: .hidden)
+        #expect(refusal.title == expected.title)
+        #expect(refusal.message == expected.message)
+    }
+
+    @Test("A refusal the setting would not lift says the item stays put, even with the setting off")
+    func refusalWithSettingOffForAFixedItem() throws {
+        let world = World()
+        let control = World.item(.visibleControlItem)
+        MenuBarSearchItemActions.postAssignmentRefusal(
+            for: control,
+            to: .hidden,
+            experimentalSystemItemHiding: false,
+            appState: world.appState
+        )
+        let refusal = try #require(world.appState.layoutFeedback.refusal)
+        let expected = LayoutBarFeedbackCenter.itemCannotMove(itemName: control.displayName, section: .hidden)
+        #expect(refusal.message == expected.message)
+    }
+
+    @Test("A grouped item crosses sections with every member of its group, in display order")
+    func groupTravelsTogether() throws {
+        let world = World()
+        let pair = ["One", "Two"].map {
+            World.item(MenuBarItemTag(namespace: .string("com.example.Pair"), title: $0, instanceIndex: 0))
+        }
+        let alpha = World.item("Alpha")
+        let beta = World.item("Beta")
+        world.seat([pair[0], pair[1], alpha, beta])
+        try #require(world.appState.itemGroupManager.createGroup(name: "Duo", items: [alpha, beta]) != nil)
+
+        let duo = MenuBarSearchItemActions.crossSectionGroupMembers(for: beta, in: .visible, appState: world.appState)
+        #expect(duo == [alpha, beta])
+        let app = MenuBarSearchItemActions.crossSectionGroupMembers(for: pair[1], in: .visible, appState: world.appState)
+        #expect(app == pair, "an app's own items group automatically")
+        #expect(MenuBarSearchItemActions.groupDisplayName(for: [alpha, beta], in: [alpha, beta], appState: world.appState) == "Duo")
+    }
+
+    @Test("A loose item crosses sections alone, and an item that is not in the section has no group there")
+    func looseItemTravelsAlone() {
+        let world = World()
+        let alpha = World.item("Alpha")
+        let beta = World.item("Beta")
+        world.seat([alpha, beta])
+        #expect(MenuBarSearchItemActions.crossSectionGroupMembers(for: alpha, in: .visible, appState: world.appState) == nil)
+        #expect(MenuBarSearchItemActions.crossSectionGroupMembers(for: alpha, in: .hidden, appState: world.appState) == nil)
     }
 }

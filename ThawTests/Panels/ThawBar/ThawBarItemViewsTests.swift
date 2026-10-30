@@ -13,7 +13,7 @@ import Testing
 
 /// A Thaw Bar item's click surface and glyph, driven with synthetic events and never clicking a real item.
 @MainActor
-@Suite("Thaw Bar item views", .serialized)
+@Suite("Thaw Bar item views", .serialized, .scratchDefaults)
 struct ThawBarItemViewsTests {
     private typealias World = LayoutEditorWorld
 
