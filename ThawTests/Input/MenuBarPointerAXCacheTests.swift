@@ -6,6 +6,7 @@
 //  Licensed under the GNU GPLv3
 
 import CoreGraphics
+import Synchronization
 import Testing
 @testable import Thaw
 import ThawAXCore
@@ -28,11 +29,24 @@ struct MenuBarPointerAXCacheTests {
         var points: [CGPoint] = []
     }
 
-    private func cache(counting counter: ReadCounter) -> MenuBarPointerAXCache {
+    /// A clock the test moves by hand, so an age is a fact of the test and not of the machine's speed.
+    private final class TestClock: Sendable {
+        private let instant = Mutex(ContinuousClock.now)
+
+        var now: ContinuousClock.Instant {
+            instant.withLock { $0 }
+        }
+
+        func advance(by duration: Duration) {
+            instant.withLock { $0 = $0.advanced(by: duration) }
+        }
+    }
+
+    private func cache(counting counter: ReadCounter, clock: TestClock) -> MenuBarPointerAXCache {
         MenuBarPointerAXCache(readDrawnBar: { @MainActor in
             counter.reads += 1
             return []
-        })
+        }, now: { clock.now })
     }
 
     /// Asks until the cache has an answer for location, giving the background hit-test time to land.
@@ -82,12 +96,15 @@ struct MenuBarPointerAXCacheTests {
         #expect(tested.points == [first, second])
     }
 
-    @Test("An answer older than its lifetime is not served")
-    func oldAnswerExpires() async throws {
-        let cache = MenuBarPointerAXCache(readDrawnBar: { [] })
+    @Test("An answer is served until its lifetime ends, and not after")
+    func oldAnswerExpires() async {
+        let clock = TestClock()
+        let cache = MenuBarPointerAXCache(readDrawnBar: { [] }, now: { clock.now })
         _ = await cache.isForeignWidget(at: Self.offScreen)
-        try await Task.sleep(for: .milliseconds(800))
-        #expect(cache.foreignWidget(at: Self.offScreen) == nil)
+        clock.advance(by: MenuBarPointerAXCache.foreignWidgetLifetime - .milliseconds(1))
+        #expect(cache.foreignWidget(at: Self.offScreen) == false, "an answer a moment short of its lifetime is still served")
+        clock.advance(by: .milliseconds(1))
+        #expect(cache.foreignWidget(at: Self.offScreen) == nil, "an answer as old as its lifetime is not")
     }
 
     @Test("An app that is not running has no menu title frames, before or after its read lands")
@@ -103,25 +120,25 @@ struct MenuBarPointerAXCacheTests {
     @Test("The bar is not read again moments after the last read, only once that read has aged")
     func recentReadIsNotRepeated() async throws {
         let counter = ReadCounter()
-        let cache = cache(counting: counter)
-        let askedAt = ContinuousClock.now
+        let clock = TestClock()
+        let cache = cache(counting: counter, clock: clock)
+        // A read counts only when it is later than the bar's last change, which the cache dates at its creation.
+        clock.advance(by: .milliseconds(1))
         cache.refreshDrawnBarIfStale()
         try await waitUntil { counter.reads == 1 }
-        // Let that read's task finish, so the next ask meets the age hold, not the running read.
-        try await Task.sleep(for: .milliseconds(50))
-        let secondAskAge = askedAt.duration(to: .now)
+        // The clock has not moved, so this ask meets the age hold whether or not the read's task has finished.
         cache.refreshDrawnBarIfStale()
-        // A read started by mistake would land by now.
+        // A read started by mistake would land within this fixed wait.
         try await Task.sleep(for: .milliseconds(50))
-        // On a loaded machine the second ask can come after the read has aged; only a quick one proves the hold.
-        if secondAskAge < MenuBarPointerAXCache.drawnBarRefreshAge {
-            #expect(counter.reads == 1)
+        #expect(counter.reads == 1, "an ask moments after a read starts no read")
+        clock.advance(by: MenuBarPointerAXCache.drawnBarRefreshAge)
+        // The aged ask reads again once the first read's task is gone; an ask that meets the task is ignored, so ask until one takes.
+        let deadline = ContinuousClock.now + .seconds(5)
+        while counter.reads < 2, ContinuousClock.now < deadline {
+            cache.refreshDrawnBarIfStale()
+            try await Task.sleep(for: .milliseconds(10))
         }
-        try await Task.sleep(for: MenuBarPointerAXCache.drawnBarRefreshAge + .milliseconds(50))
-        let readsBeforeAgedAsk = counter.reads
-        cache.refreshDrawnBarIfStale()
-        try await waitUntil { counter.reads > readsBeforeAgedAsk }
-        #expect(counter.reads == readsBeforeAgedAsk + 1)
+        #expect(counter.reads == 2, "an ask after the read has aged reads the bar once more")
     }
 
     /// Polls condition, which must not start any work, for up to five seconds.
