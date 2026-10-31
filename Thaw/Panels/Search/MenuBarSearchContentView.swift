@@ -347,8 +347,8 @@ private struct MenuBarSearchContentView: View {
     private var refusalNotice: some View {
         if let refusal = appState.layoutFeedback.refusal {
             SettingsWarningPill(
-                title: LocalizedStringKey(refusal.title),
-                message: LocalizedStringKey(refusal.message),
+                title: LocalizedStringResource(String.LocalizationValue(refusal.title)),
+                message: LocalizedStringResource(String.LocalizationValue(refusal.message)),
                 systemImage: "exclamationmark.triangle.fill",
                 tint: .orange,
                 actionTitle: "Dismiss"
@@ -642,22 +642,6 @@ private struct MenuBarSearchContentView: View {
 
 /// A bottom bar action labeled with the key combination that also
 /// triggers it.
-private struct ShortcutHintButton<Hint: View>: View {
-    let title: String
-    let action: () -> Void
-    @ViewBuilder let hint: () -> Hint
-
-    var body: some View {
-        Button(action: action) {
-            HStack(spacing: 5) {
-                Text(title)
-                    .padding(.leading, 5)
-                hint()
-            }
-        }
-    }
-}
-
 /// An empty AppKit view behind the actions button, there so the panel has
 /// something to position the actions menu against.
 ///
@@ -678,16 +662,5 @@ private struct ItemActionsMenuAnchor: NSViewRepresentable {
         // subtree whenever the selection comes and goes, and the panel would
         // otherwise keep a reference to a view that is no longer on screen.
         panel.itemActionsAnchor = nsView
-    }
-}
-
-/// Compact, uniformly sized styling shared by every bottom bar button.
-private struct SearchPanelButtonStyle: ButtonStyle {
-    func makeBody(configuration: Configuration) -> some View {
-        configuration.label
-            .frame(height: 22)
-            .frame(minWidth: 22)
-            .padding(3)
-            .opacity(configuration.isPressed ? 0.7 : 1.0)
     }
 }

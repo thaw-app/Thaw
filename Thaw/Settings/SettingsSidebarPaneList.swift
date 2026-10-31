@@ -77,21 +77,10 @@ enum SettingsSidebarPanes {
         return rows
     }
 
-    /// The selected row. None while search results show, so a click on any row ends the search,
-    /// and none for a page outside the sidebar.
-    static func selectedRow(current: SettingsNavigationIdentifier, isSearching: Bool) -> SettingsNavigationIdentifier? {
-        guard !isSearching, all.contains(current) else { return nil }
-        return current
-    }
-
-    /// The page above or below the current one among the rows shown, past
-    /// the headings, or nil at either end or for left and right.
-    static func page(
-        moving direction: MoveCommandDirection,
-        from current: SettingsNavigationIdentifier,
-        in rows: [SettingsSidebarRow] = rows
-    ) -> SettingsNavigationIdentifier? {
-        rows.compactMap(\.page).neighbor(of: current, moving: direction)
+    /// Whether the open page shows as selected. Not while search results show, so a click on any
+    /// row ends the search, and not for a page outside the sidebar.
+    static func showsSelection(current: SettingsNavigationIdentifier, isSearching: Bool) -> Bool {
+        !isSearching && all.contains(current)
     }
 
     /// Opens a page from the sidebar. The search is cleared first: the page
@@ -101,53 +90,20 @@ enum SettingsSidebarPanes {
         searchModel.searchText = ""
         SettingsSearchNavigation.selectSidebarPane(pane, navigationState: navigationState)
     }
-
-    /// Opens the page above or below the current one, when there is one.
-    static func move(
-        _ direction: MoveCommandDirection,
-        in rows: [SettingsSidebarRow] = rows,
-        searchModel: SearchModel,
-        navigationState: AppNavigationState
-    ) {
-        guard let pane = page(moving: direction, from: navigationState.settingsNavigationIdentifier, in: rows) else { return }
-        open(pane, searchModel: searchModel, navigationState: navigationState)
-    }
 }
 
 /// One row of the sidebar: a page to select, the heading over a group, or
 /// the space before a group without one.
-enum SettingsSidebarRow: Identifiable, Equatable {
-    case heading(String)
-    case gap
-    case page(SettingsNavigationIdentifier)
-
-    var id: String {
-        switch self {
-        case let .heading(title): "heading:" + title
-        case .gap: "gap"
-        case let .page(pane): pane.rawValue
-        }
-    }
-
-    /// The page a click selects; nil for a heading or a gap, which nothing selects.
-    var page: SettingsNavigationIdentifier? {
-        if case let .page(pane) = self {
-            return pane
-        }
-        return nil
-    }
-}
+typealias SettingsSidebarRow = ThawSidebarRow<SettingsNavigationIdentifier>
 
 // MARK: - SettingsSidebarPaneList
 
-/// Rows of its own, not a List: a List draws its own selection, and its Sections crash AppKit
-/// on macOS 27.0 and 27.2 (a freed row view in sizeLastColumnToFit).
+/// The shared sidebar with Thaw's pages, on the default gold selection.
 struct SettingsSidebarPaneList: View {
     @Environment(SearchModel.self) private var searchModel
     let navigationState: AppNavigationState
     /// Pages whose module is off, left out of the list.
     var turnedOff: Set<SettingsNavigationIdentifier> = []
-    @FocusState private var isFocused: Bool
 
     static let listWidth: CGFloat = 220
 
@@ -159,90 +115,15 @@ struct SettingsSidebarPaneList: View {
         SettingsSidebarPanes.rows(turnedOff: turnedOff)
     }
 
-    private var selectedRow: SettingsNavigationIdentifier? {
-        SettingsSidebarPanes.selectedRow(current: navigationState.settingsNavigationIdentifier, isSearching: isSearching)
-    }
-
     var body: some View {
-        ScrollViewReader { proxy in
-            ScrollView {
-                VStack(alignment: .leading, spacing: ThawSpacing.hairline) {
-                    ForEach(rows) { row in
-                        switch row {
-                        case let .heading(title):
-                            SettingsSidebarHeading(title: title)
-                        case .gap:
-                            // The same room a heading leaves above its group.
-                            Spacer(minLength: ThawSpacing.gutter)
-                                .frame(height: ThawSpacing.gutter)
-                        case let .page(pane):
-                            SettingsSidebarPageRow(pane: pane, isSelected: pane == selectedRow, showsFocus: isFocused) {
-                                SettingsSidebarPanes.open(pane, searchModel: searchModel, navigationState: navigationState)
-                            }
-                            .id(pane.rawValue)
-                        }
-                    }
-                }
-                .padding(.horizontal, ThawSpacing.row)
-                .padding(.vertical, ThawSpacing.base)
-            }
-            // A page chosen by the arrow keys, a search result or a link stays in sight.
-            .onChange(of: navigationState.settingsNavigationIdentifier) { _, pane in
-                proxy.scrollTo(pane.rawValue)
-            }
-        }
-        .scrollEdgeEffectStyle(.soft, for: .top)
-        .thawKeyboardList(isFocused: $isFocused) { direction in
-            SettingsSidebarPanes.move(direction, in: rows, searchModel: searchModel, navigationState: navigationState)
-        }
-    }
-}
-
-/// The small uppercase name over a group of pages.
-private struct SettingsSidebarHeading: View {
-    let title: String
-
-    var body: some View {
-        ThawListHeading(Text(verbatim: title))
-            // Room above each group, so the groups read apart.
-            .padding(.top, ThawSpacing.gutter)
-            .padding(.bottom, ThawSpacing.tight)
-            .padding(.leading, ThawSpacing.row)
-    }
-}
-
-/// A page's row on the shared selection fill, with the focus ring while the sidebar has focus.
-private struct SettingsSidebarPageRow: View {
-    let pane: SettingsNavigationIdentifier
-    let isSelected: Bool
-    let showsFocus: Bool
-    let select: () -> Void
-
-    /// The box the symbols share, so the names line up.
-    private static let iconBox: CGFloat = 18
-    private static let height: CGFloat = 32
-    private static let shape = RoundedRectangle(cornerRadius: ThawRadius.row, style: .continuous)
-
-    var body: some View {
-        Button(action: select) {
-            Label {
-                Text(pane.localized)
-                    .font(ThawType.body)
-                    .foregroundStyle(Color.primary)
-                    .lineLimit(1)
-            } icon: {
-                pane.iconResource.view
-                    .font(.system(size: 15, weight: .regular))
-                    .foregroundStyle(.secondary)
-                    .frame(width: Self.iconBox, height: Self.iconBox)
-            }
-            .padding(.horizontal, ThawSpacing.row)
-            .frame(maxWidth: .infinity, minHeight: Self.height, alignment: .leading)
-            .thawSelectedFill(isSelected, in: Self.shape)
-            .contentShape(Self.shape)
-        }
-        .buttonStyle(.plain)
-        .thawSelectionCue(isSelected: isSelected, in: Self.shape)
-        .thawFocusRing(isSelected && showsFocus, in: Self.shape)
+        let current = navigationState.settingsNavigationIdentifier
+        ThawSidebar(
+            rows: rows,
+            current: current,
+            showsSelection: SettingsSidebarPanes.showsSelection(current: current, isSearching: isSearching),
+            select: { SettingsSidebarPanes.open($0, searchModel: searchModel, navigationState: navigationState) },
+            title: { Text($0.localized) },
+            icon: { $0.iconResource.view }
+        )
     }
 }

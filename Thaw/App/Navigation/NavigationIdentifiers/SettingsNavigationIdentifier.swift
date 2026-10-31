@@ -41,7 +41,7 @@ enum SettingsNavigationIdentifier: String, @MainActor NavigationIdentifier {
         }
     }
 
-    var localized: LocalizedStringKey {
+    var localized: LocalizedStringResource {
         switch self {
         case .general: "General"
         case .menuBarLayout: "Layout"
@@ -68,7 +68,7 @@ enum SettingsNavigationIdentifier: String, @MainActor NavigationIdentifier {
 
     /// One line under the pane's title in the toolbar saying what the pane
     /// is for, so the pane needs no description of its own.
-    var subtitle: LocalizedStringKey {
+    var subtitle: LocalizedStringResource {
         switch self {
         case .general: "Startup, language and icon"
         case .menuBarLayout: "Shown, hidden and always hidden"
