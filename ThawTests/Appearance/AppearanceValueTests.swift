@@ -94,8 +94,8 @@ struct AppearanceValueTests {
 
     @Test("A string navigation identifier is labelled and identified by its raw value")
     func navigationIdentifierDefaults() {
-        #expect(ProbeDestination.alpha.localized == LocalizedStringKey("Alpha"))
-        #expect(ProbeDestination.beta.localized == LocalizedStringKey("Beta"))
+        #expect(String(localized: ProbeDestination.alpha.localized) == "Alpha")
+        #expect(String(localized: ProbeDestination.beta.localized) == "Beta")
         #expect(ProbeDestination.alpha.id == ProbeDestination.alpha.hashValue)
         #expect(ProbeDestination.alpha.id != ProbeDestination.beta.id)
     }
