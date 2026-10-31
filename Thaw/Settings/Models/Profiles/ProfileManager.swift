@@ -11,6 +11,7 @@ import Combine
 import Foundation
 import MenuBarModel
 import ThawModuleKit
+import ThawUI
 
 @MainActor
 @Observable

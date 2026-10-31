@@ -7,6 +7,7 @@
 
 import Algorithms
 import AppKit
+import ThawUI
 
 /// Selection input for one Layout bar, seen ahead of the item views, which keep everything it passes on.
 @MainActor
