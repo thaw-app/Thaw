@@ -8,6 +8,7 @@
 import SwiftUI
 import Testing
 @testable import Thaw
+import ThawUI
 
 /// How a permission handles a request, a refresh and its copy, with the system checks replaced by stubs.
 @MainActor

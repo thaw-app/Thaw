@@ -6,6 +6,7 @@
 //  Licensed under the GNU GPLv3
 
 import SwiftUI
+import ThawUI
 
 /// Resolve the stage once per opening in onAppear; init cannot read the environment and would retain launch-time state.
 /// Holding it in state prevents the "seen" write from switching to recovery before dismissal.
