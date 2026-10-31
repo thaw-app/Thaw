@@ -24,7 +24,7 @@ the items under New and Fixed.
 
 ## [3.0.0-beta.5] - 2026-10-30
 
-**macOS 27 only · Build 120**
+**macOS 27 only · Build 121**
 
 > [!NOTE]
 > **Contributing is easier now**
@@ -33,7 +33,7 @@ the items under New and Fixed.
 >
 > If an AI helps with your change, see the [AI-assisted contributions](https://github.com/thaw-app/.github/blob/main/.github/CONTRIBUTING.md#ai-assisted-contributions) section of our contribution guidelines first: you stay responsible for the change and must be able to explain it, and the tool's terms have to let you contribute its output.
 
-This beta has every fix from alpha.11 and alpha.12. Most of them keep menu bar items where you put them, or tighten which apps can use thaw:// links.
+This beta has every fix from alpha.11, alpha.12 and the alpha.12.1 hotfix. Most of them keep menu bar items where you put them, or tighten which apps can use thaw:// links.
 
 ### New
 
