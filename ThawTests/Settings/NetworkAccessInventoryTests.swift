@@ -44,7 +44,7 @@ struct NetworkAccessInventoryTests {
     private static let allowedFiles: Set<String> = [
         "Thaw/System/Updates.swift",
         // The What's New fetch, listed on the Privacy pane with its switch.
-        "Thaw/Settings/SettingsPanes/ChangelogView.swift",
+        "ThawUI/Sources/ThawUI/ChangelogDocument.swift",
     ]
 
     /// Passive route observation, documented separately from outbound requests.

@@ -119,7 +119,7 @@ struct SettingsPaneRenderTests {
         let appState = AppState()
         let settings = appState.settings
         _ = try await drawnPixels(render(PrivacySettingsPane(updatesManager: appState.updatesManager, advancedSettings: settings.advanced), appState: appState))
-        _ = try await drawnPixels(render(AboutSettingsPane(updatesManager: appState.updatesManager), appState: appState))
+        _ = try await drawnPixels(render(ThawAboutPane(updatesManager: appState.updatesManager), appState: appState))
         _ = try await drawnPixels(render(MenuBarAppearanceSettingsPane(appearanceManager: appState.appearanceManager), appState: appState))
         _ = try await drawnPixels(render(WidgetsSettingsPane(settings: settings.advanced), appState: appState))
         _ = try await drawnPixels(render(ScriptsSettingsPane(), appState: appState))

@@ -8,48 +8,7 @@
 import Combine
 import Sparkle
 import SwiftUI
-
-/// Sparkle appcast channels Thaw publishes to.
-nonisolated enum UpdateChannel: String, CaseIterable, Identifiable {
-    /// Default channel (no sparkle:channel in the appcast).
-    case stable
-    /// Development / RC builds (sparkle:channel = beta).
-    case beta
-    /// Alpha builds for macOS 27 (sparkle:channel = alpha).
-    case alpha
-
-    /// Stable carries incompatible builds, so offering it would stop updates.
-    static let selectable: [UpdateChannel] = [.beta, .alpha]
-
-    /// Preserve the persisted key so existing channel choices carry over.
-    static let defaultsKey = "UpdateChannel"
-
-    var id: String {
-        rawValue
-    }
-
-    var localized: LocalizedStringKey {
-        switch self {
-        case .stable: "Stable"
-        case .beta: "Beta"
-        case .alpha: "Alpha"
-        }
-    }
-
-    /// Sparkle channel names to allow in addition to the default channel.
-    /// Alpha also takes betas: a beta is a later build than the alphas before
-    /// it, and releases are tagged with one channel each.
-    var allowedSparkleChannels: Set<String> {
-        switch self {
-        case .stable:
-            []
-        case .beta:
-            ["beta"]
-        case .alpha:
-            ["alpha", "beta"]
-        }
-    }
-}
+import ThawUI
 
 @MainActor
 @Observable
@@ -335,5 +294,13 @@ extension UpdatesManager: @MainActor SPUStandardUserDriverDelegate {
         guard let appState else { return }
         appState.pendingUpdateVersion = update.displayVersionString
         appState.openWindow(.whatsNew)
+    }
+}
+
+extension UpdatesManager: AutomaticUpdateSwitches {}
+
+extension UpdatesManager: AboutUpdatesModel {
+    var canCheckNow: Bool {
+        canCheckForUpdates
     }
 }
