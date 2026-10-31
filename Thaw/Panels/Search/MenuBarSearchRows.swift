@@ -201,7 +201,7 @@ private struct MenuBarItemRow: View {
 
     /// The item as it appears in the menu bar, over the same backdrop.
     private var itemPreview: some View {
-        let previewShape = RoundedRectangle(cornerRadius: 7, style: .continuous)
+        let previewShape = RoundedRectangle(cornerRadius: ThawRadius.row, style: .continuous)
 
         return Group {
             if let capture = imageCache.capturesByTag[item.tag],
