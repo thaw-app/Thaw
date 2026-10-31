@@ -9,6 +9,7 @@ import AppKit
 import MenuBarModel
 import Testing
 @testable import Thaw
+import ThawUI
 
 /// The organising verbs the search panel offers, built without running any move.
 @MainActor

@@ -7,30 +7,7 @@
 
 import AppKit
 import MenuBarModel
-
-/// Closure actions keep menu construction together; nonisolated permits overriding NSMenuItem initializers.
-/// Actions run on the main thread, so run asserts MainActor isolation rather than hopping.
-final nonisolated class ClosureMenuItem: NSMenuItem {
-    private let handler: @MainActor () -> Void
-
-    init(title: String, isEnabled: Bool = true, handler: @escaping @MainActor () -> Void) {
-        self.handler = handler
-        super.init(title: title, action: #selector(run), keyEquivalent: "")
-        target = self
-        self.isEnabled = isEnabled
-    }
-
-    @available(*, unavailable)
-    required init(coder _: NSCoder) {
-        fatalError("init(coder:) has not been implemented")
-    }
-
-    @objc private func run() {
-        // Copy the closure to avoid sending non-Sendable self into the isolated region.
-        let handler = handler
-        MainActor.assumeIsolated { handler() }
-    }
-}
+import ThawUI
 
 /// Actions live here, properties in LayoutBarItemInspector; alert-reveal state is shared for direct right-click access.
 /// Item views use mouse input for dragging, so groups use right-click; the settings list provides keyboard access.

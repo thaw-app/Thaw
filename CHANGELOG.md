@@ -50,6 +50,7 @@ the items under New and Fixed.
 
 ### Fixed
 
+- **A note in the layout editor's right-click menu looks like a note.** The line that says an item can't be grouped, and the one about an app's split items, are dimmed instead of looking like commands.
 - **Links in the release notes open only over https.** Any other link in them stays as plain text.
 - **A page that isn't the changelog can't replace your saved release notes.** A Wi-Fi sign-in page, for example, now counts as a failed fetch, so What's New keeps the last good copy.
 - **Recording a shortcut stops when its page goes away,** and Shift-Escape cancels it. While the warning about a shortcut macOS already uses is up, the keyboard works in the warning.
