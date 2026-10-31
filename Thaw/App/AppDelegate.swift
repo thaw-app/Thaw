@@ -9,6 +9,7 @@ import MenuBarModel
 import PlatformRuntimeKit
 import SwiftUI
 import ThawAXCore
+import ThawUI
 
 @MainActor
 final class AppDelegate: NSObject, NSApplicationDelegate {
@@ -43,6 +44,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     func applicationWillFinishLaunching(_: Notification) {
         LiveApp.register(self)
+        ThawHUD.menuBarHeight = { $0.getMenuBarHeightEstimate() }
         #if DEBUG
             // Don't perform setup if running as a preview.
             if isRunningForPreviews {
