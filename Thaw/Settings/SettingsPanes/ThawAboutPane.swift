@@ -8,8 +8,7 @@
 import SwiftUI
 import ThawUI
 
-/// The shared About page with Thaw's build, links and menu. Floe and the
-/// community links sit in the actions' menu.
+/// The shared About page. Floe and the community links sit in the actions' menu.
 struct ThawAboutPane: View {
     let updatesManager: UpdatesManager
     @Environment(AppState.self) private var appState

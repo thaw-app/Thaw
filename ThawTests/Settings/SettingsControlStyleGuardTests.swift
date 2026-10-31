@@ -8,11 +8,8 @@
 import Foundation
 import Testing
 
-/// Keeps every button and picker on a Settings page in one visual style.
-///
-/// A button with no style is drawn by macOS, bordered in one row and a flat
-/// pill in the next, and a picker outside a Form turns into a bordered popup.
-/// Neither shows up in review, so the rule is asserted over the source.
+/// An unstyled button is drawn by macOS, bordered in one row and a flat pill in the next, and a picker outside a Form
+/// turns into a bordered popup. Neither shows up in review, so the rule is asserted over the source.
 @Suite("Settings control style guard")
 struct SettingsControlStyleGuardTests {
     private static let scannedDirectory = "Thaw/Settings/SettingsPanes"
@@ -123,7 +120,7 @@ struct SettingsControlStyleGuardTests {
         return result.sorted { $0.path < $1.path }
     }
 
-    /// Walks up from this file: <root>/ThawUI/Tests/ThawUITests/<self>.
+    /// Walks up from this file: <root>/ThawTests/Settings/<self>.
     private static func repositoryRoot() -> URL? {
         let root = URL(filePath: #filePath)
             .deletingLastPathComponent() // Settings
@@ -134,9 +131,8 @@ struct SettingsControlStyleGuardTests {
     }
 }
 
-/// A line scanner that knows which call or closure each control sits in and
-/// which modifiers follow it, enough to answer "is this button styled" without
-/// a Swift parser. Strings and comments are blanked before brackets are counted.
+/// A line scanner for which call or closure each control sits in and which modifiers follow it, without a Swift parser.
+/// Strings and comments are blanked before brackets are counted.
 struct SwiftScopeScanner {
     struct Control {
         let line: Int
@@ -222,9 +218,7 @@ struct SwiftScopeScanner {
         }
     }
 
-    /// The last line of a control's own expression: the line that brings the
-    /// bracket depth back to where the control started, past any trailing
-    /// label: closure.
+    /// The line that brings the bracket depth back to where the control started, past any trailing label: closure.
     private func lastLine(ofControlAt start: Int) -> Int {
         var depth = 0
         var index = start
@@ -246,9 +240,8 @@ struct SwiftScopeScanner {
         return start
     }
 
-    /// Modifier lines directly after end. The chain's indentation is the
-    /// first modifier's: level with a multi-line expression's closing brace,
-    /// one step in under a single-line one.
+    /// Modifier lines directly after end. The chain's indentation is the first modifier's: level with a multi-line
+    /// expression's closing brace, one step in under a single-line one.
     private func chain(after end: Int, indent: Int) -> [String] {
         var modifiers = [String]()
         var chainIndent: Int?

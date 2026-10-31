@@ -28,8 +28,7 @@ struct WhatsNewWindow: Scene {
     }
 }
 
-/// A view of its own so the page follows the Privacy switch and a pending
-/// update while the window is open.
+/// A view of its own so the page follows the Privacy switch and a pending update while the window is open.
 private struct WhatsNewPage: View {
     let appState: AppState
 

@@ -68,8 +68,7 @@ final class ControlCommandObserver {
                 guard let section = appState.menuBarManager.section(withName: .hidden) else {
                     return nil
                 }
-                // Two returns, not a ternary: string extraction misses the second
-                // branch of a ternary of tuples.
+                // Two returns, since string extraction misses the second branch of a ternary of tuples.
                 if section.isHidden {
                     return (symbol: "eye", text: "Items shown")
                 }

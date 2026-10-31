@@ -114,9 +114,8 @@ struct SettingsView: View {
 
     private var fullSettingsScreen: some View {
         @Bindable var searchModel = searchModel
-        // The system toolbar is the pane header: it names the pane, stays put
-        // while the form scrolls under it and blurs what passes beneath, and
-        // carries the search field and the overflow menu on its trailing edge.
+        // The system toolbar is the pane header. It stays put while the form scrolls and blurs under it, and carries
+        // the search field and the overflow menu on its trailing edge.
         return ThawSettingsShell(title: Text(toolbarTitle), subtitle: toolbarSubtitle, sidebarMaxWidth: 250) {
             sidebar
         } detail: {

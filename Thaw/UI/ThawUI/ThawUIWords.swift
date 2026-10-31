@@ -9,17 +9,14 @@ import SwiftUI
 import ThawUI
 import TipKit
 
-// ThawUI holds no text of its own. These supply Thaw's words to its controls
-// once, as literals here in the app, so Xcode extracts them into Thaw's catalog
-// and call sites don't repeat them.
+// ThawUI holds no text of its own. These supply Thaw's words once, as literals in the app, so Xcode extracts them
+// into Thaw's catalog and call sites don't repeat them.
 
 extension ThawBadge {
-    /// A tag for a feature still in alpha.
     static var alpha: ThawBadge {
         .alpha("ALPHA")
     }
 
-    /// A tag for a feature still in beta.
     static var beta: ThawBadge {
         .beta("BETA")
     }
