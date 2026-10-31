@@ -1516,11 +1516,11 @@ extension MenuBarItemManager {
                 !item.isControlItem &&
                     !item.isSystemClone &&
                     !item.isNativeOverflowControl &&
+                    !isPhantomStrand(item) &&
+                    !boundaryRepairBreaker.isSuppressed(PostRestrictionRepairItemID(item)) &&
                     item.isPhysicallyOrderable(
                         experimentalSystemItemHiding: experimentalSystemItemHiding
                     ) &&
-                    !isPhantomStrand(item) &&
-                    !boundaryRepairBreaker.isSuppressed(PostRestrictionRepairItemID(item)) &&
                     controller.authoredSection(for: item.uniqueIdentifier) == .visible &&
                     (
                         // A pane transition owes a drag whatever the check
