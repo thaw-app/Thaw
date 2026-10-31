@@ -39,7 +39,7 @@ nonisolated enum MenuBarShapeKind: Int, CaseIterable, Identifiable {
     }
 
     /// The name shown for this kind in the settings UI.
-    var localized: LocalizedStringKey {
+    var localized: LocalizedStringResource {
         switch self {
         case .noShape: "None"
         case .full: "Full"
@@ -183,7 +183,7 @@ nonisolated enum MenuBarBackgroundKind: Int, CaseIterable, Codable, Hashable {
 }
 
 nonisolated extension MenuBarBackgroundKind {
-    var localized: LocalizedStringKey {
+    var localized: LocalizedStringResource {
         switch self {
         case .none: "None"
         case .solid: "Solid"
@@ -273,7 +273,7 @@ nonisolated enum MenuBarGlassStyle: Int, CaseIterable, Codable, Hashable {
         }
     }
 
-    var localized: LocalizedStringKey {
+    var localized: LocalizedStringResource {
         switch self {
         case .regular: "Regular"
         case .clear: "Clear"
@@ -304,7 +304,7 @@ nonisolated enum MenuBarBorderStyle: Int, CaseIterable, Codable, Hashable {
     case dashed = 1
     case dotted = 2
 
-    var localized: LocalizedStringKey {
+    var localized: LocalizedStringResource {
         switch self {
         case .solid: "Solid"
         case .dashed: "Dashed"

@@ -46,7 +46,7 @@ struct ShowThawIconRow: View {
 
     /// Names only the gestures that currently do something: double-click needs
     /// Always Hidden, and the swap option changes what a click does.
-    private var gestureSummary: LocalizedStringKey {
+    private var gestureSummary: LocalizedStringResource {
         let advanced = appState.settings.advanced
         let doubleClickOpensAlwaysHidden = advanced.isAlwaysHiddenSectionEnabled
         switch (advanced.swapOnThawIconClick, doubleClickOpensAlwaysHidden) {
@@ -92,11 +92,11 @@ struct ThawPlacementWarning: View {
     let block: ControlItem.PlacementBlock
 
     var body: some View {
-        let title: LocalizedStringKey = switch block {
+        let title: LocalizedStringResource = switch block {
         case .deniedBySystem: "macOS isn't allowing \(Constants.displayName) in the menu bar"
         case .unknown: "The \(Constants.displayName) icon isn't in the menu bar"
         }
-        let message: LocalizedStringKey = switch block {
+        let message: LocalizedStringResource = switch block {
         case .deniedBySystem: "\(Constants.displayName) can't hide or arrange anything until it is switched back on in System Settings > Menu Bar."
         case .unknown: "macOS may be blocking it. Check that \(Constants.displayName) is switched on in System Settings > Menu Bar."
         }

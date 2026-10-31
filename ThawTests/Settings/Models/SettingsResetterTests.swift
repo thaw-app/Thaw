@@ -8,6 +8,7 @@
 import Foundation
 import Testing
 @testable import Thaw
+import ThawUI
 
 @MainActor
 @Suite("Resetting every setting", .serialized, .scratchDefaults)

@@ -271,7 +271,7 @@ nonisolated enum ThawBarTab: CaseIterable, ThawTab {
         self = .allDisplays
     }
 
-    var title: LocalizedStringKey {
+    var title: LocalizedStringResource {
         switch self {
         case .display: "Display"
         case .look: "Look"

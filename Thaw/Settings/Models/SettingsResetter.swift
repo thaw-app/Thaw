@@ -6,6 +6,7 @@
 //  Licensed under the GNU GPLv3
 
 import Foundation
+import ThawUI
 
 extension AppSettings {
     /// zoomDefaults holds the UI zoom, which @AppStorage keeps in the standard domain.

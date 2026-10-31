@@ -193,9 +193,9 @@ struct ToolsSettingsPane: View {
     }
 
     private func toolRow(
-        title: LocalizedStringKey,
-        detail: LocalizedStringKey,
-        buttonTitle: LocalizedStringKey,
+        title: LocalizedStringResource,
+        detail: LocalizedStringResource,
+        buttonTitle: LocalizedStringResource,
         role: ButtonRole? = nil,
         statusFor tool: MaintenanceToolAction? = nil,
         action: @escaping () -> Void
@@ -295,7 +295,7 @@ private enum MaintenanceToolAction: Identifiable {
         }
     }
 
-    var errorTitle: LocalizedStringKey {
+    var errorTitle: LocalizedStringResource {
         switch self {
         case .resetSettings: "Couldn’t reset settings"
         case .resetMenuBarLayoutPositions: "Couldn’t reset saved item positions"
@@ -304,7 +304,7 @@ private enum MaintenanceToolAction: Identifiable {
         }
     }
 
-    var confirmationButtonTitle: LocalizedStringKey {
+    var confirmationButtonTitle: LocalizedStringResource {
         switch self {
         case .resetSettings: "Reset"
         case .resetMenuBarLayoutPositions: "Reset Positions"
@@ -313,7 +313,7 @@ private enum MaintenanceToolAction: Identifiable {
         }
     }
 
-    var confirmationMessage: LocalizedStringKey {
+    var confirmationMessage: LocalizedStringResource {
         switch self {
         case .resetSettings:
             "This will reset app settings to their default values. Saved profiles, allowed apps, and user data will not be deleted. This action cannot be undone."
@@ -342,7 +342,7 @@ nonisolated enum TroubleshootingTab: CaseIterable, ThawTab {
         }
     }
 
-    var title: LocalizedStringKey {
+    var title: LocalizedStringResource {
         switch self {
         case .diagnostics: "Diagnostics"
         case .repair: "Repair"

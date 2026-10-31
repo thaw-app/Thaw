@@ -34,7 +34,7 @@ nonisolated enum HidingMethod: Int, CaseIterable, Identifiable {
         self == .standard
     }
 
-    var localized: LocalizedStringKey {
+    var localized: LocalizedStringResource {
         switch self {
         case .native: "Native"
         case .standard: "Standard"
@@ -42,7 +42,7 @@ nonisolated enum HidingMethod: Int, CaseIterable, Identifiable {
     }
 
     /// What the method keeps or hides, then what it costs. One short line each.
-    var explanation: LocalizedStringKey {
+    var explanation: LocalizedStringResource {
         switch self {
         case .native:
             "Keeps Live Activities, the camera indicator and Apple’s own items on the menu bar.\nCan’t hide Clock, Control Center or Siri. macOS may show the screen recording indicator."

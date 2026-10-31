@@ -28,7 +28,7 @@ struct MenuBarLayoutSettingsPane: View {
     }
 
     /// Format warning names as a localized list with singular/plural sentences for subject agreement.
-    private static func outOfReachMessage(for bundleIDs: Set<String>) -> LocalizedStringKey {
+    private static func outOfReachMessage(for bundleIDs: Set<String>) -> LocalizedStringResource {
         let names = appNames(for: bundleIDs)
         return bundleIDs.count == 1
             ? "\(names) is running, but \(Constants.displayName) can't see its menu bar items, so it can't hide or arrange them. If its icon is missing from the menu bar too, quit and reopen \(names). Otherwise, relaunch \(Constants.displayName)."
@@ -393,8 +393,8 @@ struct LayoutBarsSection: View {
                     .foregroundStyle(ThawInk.supporting)
                     .fixedSize(horizontal: false, vertical: true)
                 SettingsWarningPill(
-                    title: LocalizedStringKey(refusal.title),
-                    message: LocalizedStringKey(refusal.message),
+                    title: LocalizedStringResource(String.LocalizationValue(refusal.title)),
+                    message: LocalizedStringResource(String.LocalizationValue(refusal.message)),
                     systemImage: "exclamationmark.triangle.fill",
                     tint: .orange,
                     actionTitle: "Dismiss"

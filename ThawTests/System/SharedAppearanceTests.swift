@@ -9,6 +9,7 @@ import CoreGraphics
 import Foundation
 import Testing
 @testable import Thaw
+import ThawUI
 
 @Suite("Shared appearance payload")
 struct SharedAppearanceTests {

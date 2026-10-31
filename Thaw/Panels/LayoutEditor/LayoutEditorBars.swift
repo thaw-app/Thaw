@@ -44,8 +44,8 @@ struct LayoutEditorBars: View {
             }
             if let refusal = appState.layoutFeedback.refusal {
                 SettingsWarningPill(
-                    title: LocalizedStringKey(refusal.title),
-                    message: LocalizedStringKey(refusal.message),
+                    title: LocalizedStringResource(String.LocalizationValue(refusal.title)),
+                    message: LocalizedStringResource(String.LocalizationValue(refusal.message)),
                     systemImage: "exclamationmark.triangle.fill",
                     tint: .orange,
                     actionTitle: "Dismiss"

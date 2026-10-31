@@ -70,7 +70,7 @@ private struct ThisSpaceSection: View {
     /// debounce task below would push the default height at the agent the
     /// first time the pane appears, an override nobody asked for.
     @State private var hasAdjustedRevealStrip = false
-    @State private var failure: LocalizedStringKey?
+    @State private var failure: LocalizedStringResource?
 
     /// A plausible neutral starting point for the slider, not a reading of the
     /// system's current value, the seam has no getter. Labeled as such in the
@@ -227,7 +227,7 @@ private struct ThisSpaceSection: View {
 /// everywhere at once.
 private struct AllSpacesSection: View {
     @State private var usesFullScreenAppearance = false
-    @State private var failure: LocalizedStringKey?
+    @State private var failure: LocalizedStringResource?
 
     private var presentation: any MenuBarPresentationControlling {
         MenuBarPresentationProvider.current
