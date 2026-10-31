@@ -367,7 +367,7 @@ private struct CaptureFrameView: View {
         // A checkerboard would be noise; a plain backing makes a transparent
         // composite legible without implying its background is a colour.
         .background(.quaternary)
-        .clipShape(RoundedRectangle(cornerRadius: 5))
+        .clipShape(RoundedRectangle(cornerRadius: ThawRadius.small))
         .frame(maxWidth: .infinity)
     }
 }

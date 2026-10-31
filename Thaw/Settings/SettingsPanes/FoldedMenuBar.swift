@@ -124,7 +124,7 @@ struct FoldedMenuBar: View {
             .foregroundStyle(.primary)
             .background(
                 Color.accentColor.opacity(dragTargetSection == section ? 0.22 : 0),
-                in: RoundedRectangle(cornerRadius: 4)
+                in: RoundedRectangle(cornerRadius: ThawRadius.small)
             )
             .fixedSize()
             .accessibilityAddTraits(.isHeader)
