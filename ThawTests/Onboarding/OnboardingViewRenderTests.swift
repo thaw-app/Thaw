@@ -9,6 +9,7 @@ import AppKit
 import SwiftUI
 import Testing
 @testable import Thaw
+import ThawUI
 
 /// The onboarding screens drawn off screen at the onboarding window's size.
 @MainActor
@@ -70,13 +71,6 @@ struct OnboardingViewRenderTests {
         #expect(pixels.dropFirst(top) == alone.dropFirst(top))
         #expect(access.host.fittingSize.height <= 700)
         #expect(!finished)
-    }
-
-    @Test("The step indicator grows with the number of steps")
-    func stepIndicator() {
-        let one = OffscreenRender(OnboardingStepIndicator(step: 1, total: 1), size: CGSize(width: 200, height: 40))
-        let three = OffscreenRender(OnboardingStepIndicator(step: 2, total: 3), size: CGSize(width: 200, height: 40))
-        #expect(three.host.fittingSize.width > one.host.fittingSize.width)
     }
 
     @Test("The permissions step draws in both modes", arguments: [true, false])

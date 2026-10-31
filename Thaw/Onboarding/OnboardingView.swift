@@ -103,7 +103,7 @@ struct ThawOnboardingView: View {
         }
         .overlay(alignment: .top) {
             if let indicatorStep {
-                OnboardingStepIndicator(step: indicatorStep, total: indicatorTotal)
+                OnboardingStepIndicator(step: indicatorStep, total: indicatorTotal, label: "Step \(indicatorStep) of \(indicatorTotal)")
                     .padding(.top, ThawSpacing.inset)
                     .transition(.opacity)
             }
