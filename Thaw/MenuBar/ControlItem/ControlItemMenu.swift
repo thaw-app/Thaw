@@ -7,6 +7,7 @@
 
 import AppKit
 import MenuBarModel
+import ThawUI
 
 // MARK: - ControlItemMenuController
 

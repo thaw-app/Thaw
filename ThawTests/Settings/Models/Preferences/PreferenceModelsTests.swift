@@ -9,6 +9,7 @@ import Combine
 import Foundation
 import Testing
 @testable import Thaw
+import ThawUI
 
 /// The General and Advanced settings models on their own, with settings in a
 /// throwaway suite. None is wired to an AppState, so no change reaches the menu bar.

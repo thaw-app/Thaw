@@ -9,6 +9,7 @@ import AppKit
 import MenuBarModel
 import Testing
 @testable import Thaw
+import ThawUI
 
 /// Keyboard focus and the guarded edges of keyboard moves, in two offscreen bars.
 /// No test here reaches a move that would be committed to the menu bar.

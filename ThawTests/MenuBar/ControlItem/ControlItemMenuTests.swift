@@ -9,6 +9,7 @@ import AppKit
 import MenuBarModel
 import Testing
 @testable import Thaw
+import ThawUI
 
 /// The control items' context menu, built from an AppState that was never set up.
 @MainActor

@@ -5,6 +5,8 @@
 //  Copyright (Thaw) © 2026 Toni Förster
 //  Licensed under the GNU GPLv3
 
+import ThawUI
+
 nonisolated enum HotkeyAction: String, Codable, CaseIterable {
     // MARK: Menu Bar Sections
 

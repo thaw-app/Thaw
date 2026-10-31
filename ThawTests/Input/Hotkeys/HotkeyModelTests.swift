@@ -9,127 +9,12 @@ import AppKit
 import Carbon.HIToolbox
 import Testing
 @testable import Thaw
+import ThawUI
 
-/// The modifier conversions between Thaw's own mask and the Cocoa, CoreGraphics and Carbon flag sets.
-@Suite("Hotkey modifiers")
-struct ModifiersTests {
-    private static let combinations: [Modifiers] = [
-        [], .control, .option, .shift, .command,
-        [.control, .option], [.shift, .command], [.control, .option, .shift, .command],
-    ]
-
-    @Test("The symbols follow Apple's display order whatever order they were added in")
-    func symbolicOrder() {
-        let modifiers: Modifiers = [.command, .shift, .option, .control]
-        #expect(modifiers.symbolicValue == "⌃⌥⇧⌘")
-        #expect(Modifiers.command.symbolicValue == "⌘")
-        #expect(Modifiers().symbolicValue.isEmpty)
-        #expect(Modifiers.canonicalOrder == [.control, .option, .shift, .command])
-    }
-
-    @Test("Cocoa flags round-trip", arguments: combinations)
-    func cocoaRoundTrip(_ modifiers: Modifiers) {
-        #expect(Modifiers(nsEventFlags: modifiers.nsEventFlags) == modifiers)
-    }
-
-    @Test("CoreGraphics flags round-trip", arguments: combinations)
-    func coreGraphicsRoundTrip(_ modifiers: Modifiers) {
-        #expect(Modifiers(cgEventFlags: modifiers.cgEventFlags) == modifiers)
-    }
-
-    @Test("Carbon flags round-trip", arguments: combinations)
-    func carbonRoundTrip(_ modifiers: Modifiers) {
-        #expect(Modifiers(carbonFlags: modifiers.carbonFlags) == modifiers)
-    }
-
-    @Test("Each modifier maps to the matching system flag")
-    func individualFlags() {
-        #expect(Modifiers.control.nsEventFlags == .control)
-        #expect(Modifiers.option.cgEventFlags == .maskAlternate)
-        #expect(Modifiers.shift.carbonFlags == shiftKey)
-        #expect(Modifiers.command.carbonFlags == cmdKey)
-        #expect(Modifiers.control.carbonFlags == controlKey)
-        #expect(Modifiers.option.carbonFlags == optionKey)
-    }
-
-    @Test("Flags Thaw does not track are ignored")
-    func untrackedFlagsIgnored() {
-        #expect(Modifiers(nsEventFlags: [.capsLock, .function, .command]) == .command)
-        #expect(Modifiers(cgEventFlags: [.maskAlphaShift, .maskSecondaryFn]).isEmpty)
-        #expect(Modifiers(carbonFlags: alphaLock).isEmpty)
-    }
-}
-
-/// How keys are labelled for display.
-@MainActor
-@Suite("Key code labels")
-struct KeyCodeLabelTests {
-    @Test("Keys with an engraved glyph show that glyph")
-    func engravedLabels() {
-        #expect(KeyCode.space.stringValue == "Space")
-        #expect(KeyCode.returnKey.stringValue == "⏎")
-        #expect(KeyCode.escape.stringValue == "⎋")
-        #expect(KeyCode.leftArrow.stringValue == "←")
-        #expect(KeyCode.command.stringValue == KeyCode.rightCommand.stringValue)
-    }
-
-    @Test("Function keys are numbered by their place in the row")
-    func functionRow() {
-        #expect(KeyCode.f1.stringValue == "F1")
-        #expect(KeyCode.f12.stringValue == "F12")
-        #expect(KeyCode.f20.stringValue == "F20")
-    }
-
-    @Test("Keypad keys are enclosed so they differ from the main block")
-    func keypadKeys() {
-        #expect(KeyCode.keypad5.stringValue == "5\u{20E3}")
-        #expect(KeyCode.keypadPlus.stringValue == "+\u{20E3}")
-        #expect(KeyCode.keypad5.stringValue != KeyCode.five.stringValue)
-    }
-
-    @Test("A letter falls back to what it types on the current layout")
-    func letterUsesLayout() {
-        // The label is whatever the ASCII-capable layout types, never a fixed glyph.
-        #expect(KeyCode.a.stringValue == KeyCode.a.keyEquivalent)
-    }
-}
-
-/// The hotkey model: display, codable form and equality.
+/// The hotkey model: its enabling, its owner callback and equality. ThawUI's tests cover keys and combinations.
 @MainActor
 @Suite("Hotkey model")
 struct HotkeyTests {
-    @Test("The display value joins the modifiers and the key")
-    func displayValue() {
-        let combination = KeyCombination(key: .space, modifiers: [.command, .shift])
-        #expect(combination.displayValue == "⇧⌘ Space")
-    }
-
-    @Test("A combination made from a key event keeps its key and modifiers")
-    func fromEvent() throws {
-        let event = try #require(NSEvent.keyEvent(
-            with: .keyDown,
-            location: .zero,
-            modifierFlags: [.option, .command],
-            timestamp: 0,
-            windowNumber: 0,
-            context: nil,
-            characters: "b",
-            charactersIgnoringModifiers: "b",
-            isARepeat: false,
-            keyCode: UInt16(kVK_ANSI_B)
-        ))
-        let combination = KeyCombination(event: event)
-        #expect(combination.key == .b)
-        #expect(combination.modifiers == [.option, .command])
-    }
-
-    @Test("A combination with the wrong number of values fails to decode")
-    func wrongArity() {
-        #expect(throws: DecodingError.self) {
-            try JSONDecoder().decode(KeyCombination.self, from: Data("[0]".utf8))
-        }
-    }
-
     @Test("A hotkey with no app state stays disabled")
     func disabledWithoutAppState() {
         let hotkey = Hotkey(action: .toggleHiddenSection, keyCombination: KeyCombination(key: .h, modifiers: .command))
