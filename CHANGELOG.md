@@ -24,7 +24,7 @@ the items under New and Fixed.
 
 ## [3.0.0-beta.5] - 2026-10-30
 
-**macOS 27 only · Build 121**
+**macOS 27 only · Build 122**
 
 > [!NOTE]
 > **Contributing is easier now**
