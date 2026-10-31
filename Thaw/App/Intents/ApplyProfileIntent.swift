@@ -29,7 +29,7 @@ enum ThawIntentError: Swift.Error, CustomLocalizedStringResourceConvertible {
         case .profileNotFound:
             "That menu bar profile no longer exists."
         case .profilesOff:
-            "Profiles are off. Turn them on in Thaw's Settings › Modules."
+            "Profiles are off. Turn them on in Thaw's Settings › Extras."
         }
     }
 }

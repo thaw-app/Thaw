@@ -26,11 +26,11 @@ enum SettingsSidebarPanes {
     static let groups: [Group] = [
         Group(heading: nil, panes: [.general, .menuBarLayout, .visibility, .menuBarAppearance, .thawBar, .displays, .hotkeys]),
         Group(
-            heading: String(localized: "On", comment: "A heading in the settings sidebar, over the pages of the parts switched on in Modules."),
+            heading: String(localized: "Modules", comment: "A heading in the settings sidebar, over the pages of the parts switched on in Extras."),
             panes: [.profiles, .scripts, .triggers, .widgets]
         ),
         Group(
-            heading: String(localized: "Manage", comment: "A heading in the settings sidebar, over the Modules, Privacy and Troubleshooting pages, which look after Thaw itself."),
+            heading: String(localized: "Manage", comment: "A heading in the settings sidebar, over the Extras, Privacy and Troubleshooting pages, which look after Thaw itself."),
             panes: [.modules, .privacy, .tools]
         ),
         Group(heading: nil, panes: [.about]),
@@ -40,14 +40,14 @@ enum SettingsSidebarPanes {
     static let all: [SettingsNavigationIdentifier] = groups.flatMap(\.panes)
 
     /// Pages that belong to a module, by the module. Each one leaves the
-    /// sidebar while its module is off; Modules turns it back on.
+    /// sidebar while its module is off; Extras turns it back on.
     static let modulePanes: [SettingsNavigationIdentifier: ModuleIdentifier] = [
         .scripts: .scripts,
         .triggers: .triggers,
         .widgets: .widgets,
     ]
 
-    /// The pages whose part is switched off in Modules, Profiles included.
+    /// The pages whose part is switched off in Extras, Profiles included.
     static func panesTurnedOff(isEnabled: (ModuleIdentifier) -> Bool, profilesOn: Bool = true) -> Set<SettingsNavigationIdentifier> {
         var off = Set(modulePanes.filter { !isEnabled($0.value) }.map(\.key))
         if !profilesOn {
