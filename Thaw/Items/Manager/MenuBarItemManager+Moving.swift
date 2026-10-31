@@ -988,9 +988,9 @@ extension MenuBarItemManager {
                 return
             }
 
-            guard let liveItem = liveItems.first(where: {
-                $0.uniqueIdentifier == identifier
-            }) else {
+            guard let liveItem = liveItems.first(where: { $0.uniqueIdentifier == identifier }),
+                  liveItem.isPhysicallyOrderable(experimentalSystemItemHiding: experimentalSystemItemHiding)
+            else {
                 continue
             }
 

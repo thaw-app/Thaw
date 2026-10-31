@@ -102,7 +102,9 @@ nonisolated enum MoveTargeting {
         isRepairSuppressed: (MenuBarItem) -> Bool = { _ in false }
     ) -> [MenuBarItem] {
         items.filter { item in
-            guard !item.isControlItem, !item.isSystemClone, !item.isNativeOverflowControl else { return false }
+            guard !item.isControlItem, !item.isSystemClone, !item.isNativeOverflowControl,
+                  item.isPhysicallyOrderable(experimentalSystemItemHiding: experimentalSystemItemHiding)
+            else { return false }
             // An item the repair ladder has given up on cannot be moved by any
             // weight, so repairing it here only re-seats its neighbours, and it
             // strands again on the next reveal.
