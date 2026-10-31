@@ -7,24 +7,21 @@
 
 import SwiftUI
 
-/// Glass alert banner for settings form rows.
-///
-/// Uses the same Liquid Glass chrome as ThawSlider, tinted with
-/// tint (defaults to Color.accentColor) so notices pick up the
-/// app/system accent, or an explicit info/warning color.
+/// Glass alert banner for settings form rows, in the same Liquid Glass chrome as ThawSlider.
+/// tint defaults to Color.accentColor, so notices pick up the accent or an explicit info/warning color.
 public struct SettingsWarningPill: View {
-    private let title: LocalizedStringKey?
-    private let message: LocalizedStringKey
+    private let title: LocalizedStringResource?
+    private let message: LocalizedStringResource
     private let systemImage: String
     private let tint: Color
-    private let actionTitle: LocalizedStringKey?
+    private let actionTitle: LocalizedStringResource?
     private let action: (() -> Void)?
-    private let secondaryActionTitle: LocalizedStringKey?
+    private let secondaryActionTitle: LocalizedStringResource?
     private let secondaryAction: (() -> Void)?
 
     /// Single-message banner (title omitted).
     public init(
-        message: LocalizedStringKey,
+        message: LocalizedStringResource,
         systemImage: String = "exclamationmark.circle.fill",
         tint: Color = .accentColor
     ) {
@@ -38,18 +35,16 @@ public struct SettingsWarningPill: View {
         secondaryAction = nil
     }
 
-    /// Title + supporting message, with up to two trailing actions.
-    ///
-    /// The second action is an alternative route to the same outcome, drawn
-    /// as tinted text so there is still one obvious thing to press.
+    /// Title + supporting message, with up to two trailing actions. The second is an alternative
+    /// route to the same outcome, drawn as tinted text so there is still one obvious thing to press.
     public init(
-        title: LocalizedStringKey,
-        message: LocalizedStringKey,
+        title: LocalizedStringResource,
+        message: LocalizedStringResource,
         systemImage: String = "exclamationmark.circle.fill",
         tint: Color = .accentColor,
-        actionTitle: LocalizedStringKey? = nil,
+        actionTitle: LocalizedStringResource? = nil,
         action: (() -> Void)? = nil,
-        secondaryActionTitle: LocalizedStringKey? = nil,
+        secondaryActionTitle: LocalizedStringResource? = nil,
         secondaryAction: (() -> Void)? = nil
     ) {
         self.title = title
@@ -63,17 +58,16 @@ public struct SettingsWarningPill: View {
     }
 
     public var body: some View {
-        HStack(alignment: .center, spacing: 12) {
+        HStack(alignment: .center, spacing: ThawSpacing.inset) {
             Image(systemName: systemImage)
-                // Hierarchical, not a white glyph on a tinted disc: white
-                // disappears on the light tints warnings use (yellow,
-                // orange), and the tint itself carries the meaning.
+                // Hierarchical: white disappears on the light tints warnings use
+                // (yellow, orange), and the tint itself carries the meaning.
                 .symbolRenderingMode(.hierarchical)
                 .foregroundStyle(tint)
                 .font(.title2)
                 .accessibilityHidden(true)
 
-            VStack(alignment: .leading, spacing: 2) {
+            VStack(alignment: .leading, spacing: ThawSpacing.hairline) {
                 if let title {
                     Text(title)
                         .font(.callout.weight(.semibold))
@@ -93,7 +87,7 @@ public struct SettingsWarningPill: View {
             .frame(maxWidth: .infinity, alignment: .leading)
 
             if actionTitle != nil || secondaryActionTitle != nil {
-                VStack(alignment: .trailing, spacing: 6) {
+                VStack(alignment: .trailing, spacing: ThawSpacing.compact) {
                     if let actionTitle, let action {
                         Button(actionTitle, action: action)
                             .buttonStyle(.thawProminent(tint: tint))
@@ -112,7 +106,7 @@ public struct SettingsWarningPill: View {
             }
         }
         .padding(.horizontal, 14)
-        .padding(.vertical, 12)
+        .padding(.vertical, ThawSpacing.inset)
         .thawGlass(.accent(tint), in: shape)
         .frame(maxWidth: .infinity, alignment: .leading)
         .accessibilityElement(children: .combine)

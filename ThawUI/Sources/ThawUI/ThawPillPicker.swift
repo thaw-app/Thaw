@@ -14,13 +14,13 @@ public struct ThawPillPicker<Value: Hashable>: View {
 
     @Binding private var selection: Value
     let options: [Option]
-    let label: LocalizedStringKey?
+    let label: LocalizedStringResource?
     private let showsTitles: Bool
 
     /// A label, when given, sits beside the pills in a LabeledContent and is the
     /// pills' VoiceOver label.
     public init(
-        _ label: LocalizedStringKey? = nil,
+        _ label: LocalizedStringResource? = nil,
         selection: Binding<Value>,
         options: [Option],
         showsTitles: Bool = true
@@ -33,10 +33,10 @@ public struct ThawPillPicker<Value: Hashable>: View {
 
     /// A labelled row with one pill per value, in order, each named by title.
     public init(
-        _ label: LocalizedStringKey,
+        _ label: LocalizedStringResource,
         selection: Binding<Value>,
         values: some Sequence<Value>,
-        title: (Value) -> LocalizedStringKey
+        title: (Value) -> LocalizedStringResource
     ) {
         self.init(label, selection: selection, options: values.map { Option($0, title: title($0)) })
     }

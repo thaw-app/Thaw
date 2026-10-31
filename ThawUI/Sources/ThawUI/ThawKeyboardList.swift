@@ -9,9 +9,8 @@ import AppKit
 import SwiftUI
 
 public extension View {
-    /// Makes a block of hand-drawn rows one keyboard stop that the arrow
-    /// keys step through. The system ring around the whole block is off, so
-    /// the selected row shows focus with thawFocusRing instead.
+    /// Makes hand-drawn rows one keyboard stop that the arrow keys step through. The block's system
+    /// ring is off, so the selected row shows focus with thawFocusRing.
     func thawKeyboardList(
         isFocused: FocusState<Bool>.Binding,
         onMove: @escaping (MoveCommandDirection) -> Void

@@ -72,7 +72,7 @@ public struct ThawGroupedButtonStyle: ButtonStyle {
                         shape.fill(.primary.opacity(opacity))
                     }
                 }
-                .contentShape(shape)
+                .contentShape([.interaction, .focusEffect], shape)
                 .opacity(isEnabled ? 1 : ThawInk.disabledOpacity)
                 .onHover { isHovered = $0 }
         }

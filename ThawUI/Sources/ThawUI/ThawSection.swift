@@ -67,7 +67,7 @@ public struct ThawSection<Header: View, Content: View, Footer: View>: View {
     }
 
     public init(
-        _ title: LocalizedStringKey,
+        _ title: LocalizedStringResource,
         isBordered: Bool = true,
         @ViewBuilder content: () -> Content
     ) where Header == Text, Footer == EmptyView {

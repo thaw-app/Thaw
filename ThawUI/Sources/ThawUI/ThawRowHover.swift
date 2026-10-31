@@ -30,14 +30,12 @@ struct ThawRowHover<S: InsettableShape>: ViewModifier {
 }
 
 public extension View {
-    /// Applies the shared row and plain-button hover treatment, a flat accent
-    /// wash in shape plus the hover lift.
+    /// A flat accent wash in shape plus the hover lift, for rows and plain buttons.
     func thawRowHover(in shape: some InsettableShape) -> some View {
         modifier(ThawRowHover(shape: shape))
     }
 
-    /// Applies the shared row and plain-button hover treatment in a rounded
-    /// rectangle at the control radius.
+    /// thawRowHover(in:) in a rounded rectangle at the control radius.
     func thawRowHover() -> some View {
         thawRowHover(in: RoundedRectangle(cornerRadius: ThawRadius.control, style: .continuous))
     }

@@ -24,7 +24,7 @@ public struct ThawPicker<Label: View, SelectionValue: Hashable, Content: View>: 
     }
 
     public init(
-        _ titleKey: LocalizedStringKey,
+        _ titleKey: LocalizedStringResource,
         selection: Binding<SelectionValue>,
         @ViewBuilder content: () -> Content
     ) where Label == Text {

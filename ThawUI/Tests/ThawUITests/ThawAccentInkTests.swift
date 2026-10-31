@@ -10,7 +10,7 @@ import Testing
 
 @Suite("Accent ink")
 struct ThawAccentInkTests {
-    /// Thaw's gold, light and dark, and its Increase Contrast variants, as the
+    /// The gold, light and dark, and its Increase Contrast variants, as the
     /// asset catalog defines them (Display P3, read here as sRGB).
     private static let golds: [ThawAccentInk.RGB] = [
         .init(red: 1, green: 0.76, blue: 0.2),

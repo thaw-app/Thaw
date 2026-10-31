@@ -7,15 +7,7 @@
 
 import CoreGraphics
 
-/// The spacing steps Thaw's views share.
-///
-/// Read off what the code already did: paddings and stack spacings clustered
-/// on 4, 6, 8, 10, 12 and 16 with 24 between sections, so the scale names
-/// those steps and nothing else.
-///
-/// New code takes its spacing from here; existing literals move over when
-/// their file is touched for another reason, never in a sweep. A literal
-/// between two steps rounds to the nearer one rather than earning a rung.
+/// Shared spacing steps. New code uses these, and a literal between two steps rounds to the nearer one.
 public enum ThawSpacing {
     /// A hairline gap: badge insets, the space between a glyph and its frame.
     public static let hairline: CGFloat = 2

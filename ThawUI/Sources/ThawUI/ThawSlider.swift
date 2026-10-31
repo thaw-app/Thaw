@@ -40,7 +40,7 @@ public struct ThawSlider<Value: BinaryFloatingPoint, ValueLabel: View>: View {
     }
 
     public init(
-        _ valueLabelKey: LocalizedStringKey,
+        _ valueLabelKey: LocalizedStringResource,
         value: Binding<Value>,
         in bounds: ClosedRange<Value>,
         step: Value? = nil,
@@ -83,7 +83,7 @@ public struct ThawSlider<Value: BinaryFloatingPoint, ValueLabel: View>: View {
                 }
             }
             .overlay {
-                HStack(spacing: 4) {
+                HStack(spacing: ThawSpacing.tight) {
                     valueLabel
                         .scaleEffect(x: reversed ? -1 : 1, y: 1)
                     if showsValue {
@@ -105,7 +105,7 @@ public struct ThawSlider<Value: BinaryFloatingPoint, ValueLabel: View>: View {
                         }
                     }
                 }
-                .padding(.horizontal, 8)
+                .padding(.horizontal, ThawSpacing.base)
                 .frame(height: height)
                 // Match ThawInk.supporting at idle; the slider's only label must clear 4.5:1 contrast.
                 .opacity(isLabelActive ? 0.85 : 0.7)

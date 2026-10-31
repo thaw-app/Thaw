@@ -7,23 +7,15 @@
 
 import SwiftUI
 
-/// The depths Thaw's surfaces float at.
-///
-/// A small closed set, not one shadow per view: the same role carrying
-/// slightly different shadows reads as several kinds of object. Nothing
-/// should reach for a bare .shadow, whose default is black at full strength,
-/// a different physics from every tokenised drop in the app.
+/// The depths surfaces float at. Use these over a bare .shadow, whose default is black at full strength.
 public enum ThawElevation {
-    /// A small control lying on a pane (a gradient track, a swatch): just
-    /// enough edge to lift it off the surface it sits on.
+    /// A small control lying on a pane, such as a gradient track or a swatch.
     case control
-    /// Cards and strips that sit on a pane: the layout bar, the folded bar,
-    /// the notch descender.
+    /// Cards and strips that sit on a pane.
     case raised
     /// Panels over arbitrary desktops; what ThawGlass.panel uses.
     case floating
-    /// The one large object on a page (the onboarding mockups), lifted
-    /// further than anything that is merely a control.
+    /// The one large object on a page, such as an onboarding mockup.
     case hero
 
     var opacity: CGFloat {
@@ -56,9 +48,7 @@ public enum ThawElevation {
 
 public extension View {
     /// Drops the shared shadow for elevation under this view.
-    ///
-    /// isVisible lets a surface fade its shadow in with itself (the notch
-    /// descender while it reveals) without leaving the token for a literal.
+    /// isVisible lets a surface fade its shadow in with itself without leaving the token for a literal.
     func thawShadow(_ elevation: ThawElevation, isVisible: Bool = true) -> some View {
         shadow(
             color: .black.opacity(isVisible ? elevation.opacity : 0),

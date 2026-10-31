@@ -8,14 +8,14 @@
 import SwiftUI
 
 /// The main action of a sheet, step or notice, in the sidebar's selected-row fill and label colour,
-/// so the gold never sits under text it makes hard to read.
+/// so the accent never sits under text it makes hard to read.
 public struct ThawProminentButtonStyle: ButtonStyle {
     @Environment(\.isEnabled) private var isEnabled
     @Environment(\.controlSize) private var controlSize
 
     private let tint: Color
 
-    /// - Parameter tint: The fill's colour, the accent unless a notice brings its own.
+    /// The tint is the fill's colour, the accent unless a notice brings its own.
     public init(tint: Color = .accentColor) {
         self.tint = tint
     }
@@ -49,12 +49,10 @@ public struct ThawProminentButtonStyle: ButtonStyle {
 }
 
 public extension ButtonStyle where Self == ThawProminentButtonStyle {
-    /// The button that stands out, see ThawProminentButtonStyle.
     static var thawProminent: ThawProminentButtonStyle {
         ThawProminentButtonStyle()
     }
 
-    /// The prominent button tinted with tint instead of the accent.
     static func thawProminent(tint: Color) -> ThawProminentButtonStyle {
         ThawProminentButtonStyle(tint: tint)
     }
