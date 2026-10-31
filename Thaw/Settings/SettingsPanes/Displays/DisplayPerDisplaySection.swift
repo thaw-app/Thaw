@@ -169,7 +169,7 @@ extension DisplaySettingsPane {
     }
 
     /// Write-only mode restarts nothing, so the copy must not promise a relaunch.
-    private var spacingRowAnnotation: LocalizedStringKey {
+    private var spacingRowAnnotation: LocalizedStringResource {
         if displaySettings.spacingApplyMode == .writeOnly {
             "Takes effect when this display is the active menu bar display. Applying it writes the new value without restarting apps; each app picks it up the next time it starts, and each app can add its own padding, so gaps are not always identical."
         } else {

@@ -48,7 +48,7 @@ enum HiddenItemsPresentation: CaseIterable, Identifiable {
         }
     }
 
-    var localized: LocalizedStringKey {
+    var localized: LocalizedStringResource {
         switch self {
         case .onClick: "On click"
         case .thawBar: "\(Constants.displayName) Bar"

@@ -15,7 +15,7 @@ nonisolated enum LayoutDetailTab: CaseIterable, ThawTab {
     case spacers
     case appleItems
 
-    var title: LocalizedStringKey {
+    var title: LocalizedStringResource {
         switch self {
         case .groups: "Groups"
         case .spacers: "Spacers"

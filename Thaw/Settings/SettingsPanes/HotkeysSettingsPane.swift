@@ -312,7 +312,7 @@ enum ShortcutsTab: CaseIterable, @MainActor ThawTab {
         }
     }
 
-    var title: LocalizedStringKey {
+    var title: LocalizedStringResource {
         switch self {
         case .visibility: SettingsNavigationIdentifier.visibility.localized
         case .menuBarItems: "Menu Bar Items"

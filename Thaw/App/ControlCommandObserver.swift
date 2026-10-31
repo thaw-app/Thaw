@@ -9,8 +9,9 @@ import AppKit
 import Foundation
 import MenuBarModel
 
-// For LocalizedStringKey in the HUD confirmations below; no view code here.
+// For LocalizedStringResource in the HUD confirmations below; no view code here.
 import SwiftUI
+import ThawUI
 
 /// Receiving end of the ThawControls Control Center bridge.
 ///
@@ -61,15 +62,18 @@ final class ControlCommandObserver {
         /// .toggleZen returns nil because HotkeyAction shows its own zen HUD,
         /// so every entry path gets one capsule, not two.
         @MainActor
-        func confirmation(appState: AppState) -> (symbol: String, text: LocalizedStringKey)? {
+        func confirmation(appState: AppState) -> (symbol: String, text: LocalizedStringResource)? {
             switch self {
             case .toggleHidden:
                 guard let section = appState.menuBarManager.section(withName: .hidden) else {
                     return nil
                 }
-                return section.isHidden
-                    ? (symbol: "eye", text: "Items shown")
-                    : (symbol: "eye.slash", text: "Items hidden")
+                // Two returns, not a ternary: string extraction misses the second
+                // branch of a ternary of tuples.
+                if section.isHidden {
+                    return (symbol: "eye", text: "Items shown")
+                }
+                return (symbol: "eye.slash", text: "Items hidden")
             case .toggleZen:
                 return nil
             }
@@ -122,7 +126,7 @@ final class ControlCommandObserver {
         _ rawName: String,
         appState: AppState? = LiveApp.appState,
         perform: (HotkeyAction, AppState) -> Void = { $0.perform(appState: $1) },
-        showHUD: (String, LocalizedStringKey) -> Void = { ThawHUD.show(symbol: $0, text: $1) }
+        showHUD: (String, LocalizedStringResource) -> Void = { ThawHUD.show(symbol: $0, text: $1) }
     ) {
         guard
             let command = Command(rawValue: rawName),

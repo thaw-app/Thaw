@@ -9,6 +9,7 @@ import AppKit
 import Combine
 import MenuBarModel
 import Observation
+import ThawUI
 
 /// Reads the camera and microphone while Zen Mode or the alerts need them.
 ///

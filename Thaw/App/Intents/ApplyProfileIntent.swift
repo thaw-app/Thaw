@@ -10,6 +10,7 @@
 
 import AppIntents
 import AppKit
+import ThawUI
 
 /// Failure modes worth naming to the user. Anything else (a corrupt profile
 /// file, a disk error) surfaces as the underlying ProfileManager error.

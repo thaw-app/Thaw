@@ -9,6 +9,7 @@ import AppKit
 import SwiftUI
 import Testing
 @testable import Thaw
+import ThawUI
 
 /// Small Settings views, drawn off screen and measured, with settings in a throwaway suite.
 @Suite("Small Settings views", .serialized, .scratchDefaults)

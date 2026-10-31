@@ -7,6 +7,7 @@
 
 import Foundation
 import SwiftUI
+import ThawUI
 
 /// Typed access to the app's UserDefaults domain.
 ///
