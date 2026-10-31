@@ -97,3 +97,15 @@ public struct ChronoControlIdentity: Hashable, Sendable {
         ChronoControlIdentity(axIdentifier: identifier)?.stableIdentity
     }
 }
+
+public extension MenuBarItemTag {
+    /// A Control Center control pinned to the menu bar.
+    ///
+    /// MenuBarAgent sorts it by a chrono:<instance UUID> row in the position
+    /// table, and the tag drops that UUID on purpose, so a weight Thaw writes
+    /// under the tag never reaches the control. Thaw shows it in Visible and
+    /// leaves its place to macOS.
+    var isPinnedControlCenterControl: Bool {
+        namespace == .menuBarAgent && ChronoControlIdentity(axIdentifier: title) != nil
+    }
+}

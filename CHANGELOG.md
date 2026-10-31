@@ -56,6 +56,7 @@ This beta has every fix from alpha.11 and alpha.12. Most of them keep menu bar i
 
 #### Menu bar order
 
+- **Control Center controls you pinned to the menu bar stay where macOS puts them.** Thaw counted a pinned control such as Screenshot, Timer or Calculator as a Visible item it could move. macOS places those controls itself, so each time you showed your hidden items Thaw shuffled the icons around them for a few seconds and then gave up. Thaw now leaves them to macOS, and Layout says so if you try to move one.
 - **Icons Thaw can't read in time stay where they are.** When an app answered Thaw too slowly, its icons were moved next to Thaw's icon, out of Hidden or Always Hidden, and sometimes past Thaw's icon.
 - **Icons from an app that is slow to start at login keep their section.** Until the app answers on time, its icons arrive under a placeholder name, and Thaw placed them in Visible as new items. OneDrive calls every icon "OneDrive" until its accounts load, so with Native hiding the whole app showed even when you had hidden it. Thaw now waits for a slow app to answer, and gives each OneDrive icon, left to right, the account you saved it under. Once OneDrive names its accounts, Thaw uses those names. Reported by @michaeljauk in [#1416](https://github.com/thaw-app/Thaw/issues/1416).
 - **An icon that publishes no name of its own, like Stats' Disk icon, can be moved again.** Thaw tied it to an old entry left behind by Thaw itself, so it stayed at the far end of the bar and pulled the app's other icons after it.
