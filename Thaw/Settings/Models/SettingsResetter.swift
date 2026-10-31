@@ -6,6 +6,7 @@
 //  Licensed under the GNU GPLv3
 
 import Foundation
+import ThawUI
 
 extension AppSettings {
     /// zoomDefaults holds the UI zoom, which @AppStorage keeps in the standard domain.
@@ -15,7 +16,6 @@ extension AppSettings {
         resetHotkeys()
         resetDisplay()
         resetAppearance()
-        appState?.appRunningTriggers.reset()
         // Not a setting, but a learned verdict about the user's other apps.
         // A reset is the one moment they explicitly ask for a clean slate,
         // and it is the only way to clear a record from the UI.

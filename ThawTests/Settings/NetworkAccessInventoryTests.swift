@@ -25,6 +25,7 @@ struct NetworkAccessInventoryTests {
     ]
 
     /// Includes local packages and bundled extensions; excludes standalone ThawCtl, which has no shipping Xcode target.
+    /// ThawUI is outside this repository now: its one fetch, What's New, stays listed on the Privacy pane.
     private static let shippingSourceRoots = [
         "Thaw",
         "Shared",
@@ -32,20 +33,22 @@ struct NetworkAccessInventoryTests {
         "ThawControls",
         "MenuBarModel/Sources",
         "ThawCapture/Sources",
-        "ThawUI/Sources",
+        // The modules ship inside Thaw too.
+        "ThawModuleKit/Sources",
+        "ThawAutomation/Sources",
+        "ThawTriggers/Sources",
+        "ThawWidgets/Sources",
     ]
 
     /// Repository-relative allowances; the updater wrapper uses Sparkle, but is listed in case it needs a network client.
     private static let allowedFiles: Set<String> = [
         "Thaw/System/Updates.swift",
-        // The What's New fetch, listed on the Privacy pane with its switch.
-        "Thaw/Settings/SettingsPanes/ChangelogView.swift",
     ]
 
     /// Passive route observation, documented separately from outbound requests.
     /// Allow only this token; adding a network client to the sampler still fails.
     private static let localPathMonitors: Set<String> = [
-        "Thaw/Settings/Models/Widgets/StatusIconLiveSampler.swift",
+        "ThawWidgets/Sources/WidgetsCore/StatusIconLiveSampler.swift",
     ]
 
     private static var repositoryRoot: URL {

@@ -105,10 +105,10 @@ struct FoldedMenuBar: View {
         HStack(spacing: 0) {
             sectionName(section)
                 .frame(minWidth: gutterWidth, alignment: .leading)
-                .padding(.leading, 12)
+                .padding(.leading, ThawSpacing.inset)
             LayoutBar(imageCache: appState.imageCache, section: section, chrome: .bare, selection: selection)
             sortMenu(section)
-                .padding(.horizontal, 10)
+                .padding(.horizontal, ThawSpacing.row)
         }
         .onReceive(
             NotificationCenter.default.publisher(for: .layoutBarDragTargetChanged)
@@ -124,7 +124,7 @@ struct FoldedMenuBar: View {
             .foregroundStyle(.primary)
             .background(
                 Color.accentColor.opacity(dragTargetSection == section ? 0.22 : 0),
-                in: RoundedRectangle(cornerRadius: 4)
+                in: RoundedRectangle(cornerRadius: ThawRadius.small)
             )
             .fixedSize()
             .accessibilityAddTraits(.isHeader)

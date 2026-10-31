@@ -45,7 +45,7 @@ extension DisplaySettingsPane {
 
     /// Always name the thumbnail selection and attach its Customized badge to that display.
     private func displayHeader(for display: DisplaySettingsManager.DisplayInfo) -> some View {
-        HStack(spacing: 6) {
+        HStack(spacing: ThawSpacing.compact) {
             Text(display.name)
 
             if display.hasNotch {
@@ -169,7 +169,7 @@ extension DisplaySettingsPane {
     }
 
     /// Write-only mode restarts nothing, so the copy must not promise a relaunch.
-    private var spacingRowAnnotation: LocalizedStringKey {
+    private var spacingRowAnnotation: LocalizedStringResource {
         if displaySettings.spacingApplyMode == .writeOnly {
             "Takes effect when this display is the active menu bar display. Applying it writes the new value without restarting apps; each app picks it up the next time it starts, and each app can add its own padding, so gaps are not always identical."
         } else {
@@ -207,7 +207,7 @@ extension DisplaySettingsPane {
     ) -> some View {
         let shape = RoundedRectangle(cornerRadius: ThawRadius.control, style: .continuous)
 
-        return HStack(spacing: 10) {
+        return HStack(spacing: ThawSpacing.row) {
             Image(systemName: "exclamationmark.circle.fill")
                 .foregroundStyle(Color.accentColor)
                 .accessibilityHidden(true)
@@ -234,8 +234,8 @@ extension DisplaySettingsPane {
             .controlSize(.small)
             .help(Text("Apply the spacing for this display"))
         }
-        .padding(.horizontal, 12)
-        .padding(.vertical, 8)
+        .padding(.horizontal, ThawSpacing.inset)
+        .padding(.vertical, ThawSpacing.base)
         // Match ThawBadge's flat tinted wash.
         .background(Color.accentColor.opacity(0.16), in: shape)
         .overlay(shape.strokeBorder(Color.accentColor.opacity(0.28), lineWidth: 1))

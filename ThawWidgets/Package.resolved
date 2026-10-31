@@ -1,0 +1,24 @@
+{
+  "originHash" : "75656bb0a615c4c82a25172d38c5e97c51e19d0b65532945e2b2b7ca153d8324",
+  "pins" : [
+    {
+      "identity" : "compactslider",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/buh/CompactSlider",
+      "state" : {
+        "revision" : "52a01bd09156152881c53ba235c862e3bf5690b1",
+        "version" : "2.1.0"
+      }
+    },
+    {
+      "identity" : "thawui",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/thaw-app/ThawUI",
+      "state" : {
+        "revision" : "17a40431820c179b3e42d8e3223bd10af270f8fd",
+        "version" : "1.1.0"
+      }
+    }
+  ],
+  "version" : 3
+}

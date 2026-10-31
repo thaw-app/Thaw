@@ -784,6 +784,22 @@ final class DisplaySettingsManager {
         wideDisplayRule.isEnabled || connectedDisplays().contains { configuration(forUUID: $0.id).alwaysShowHiddenItems }
     }
 
+    /// What decides where hidden items are always shown, read as one value so
+    /// a single observation sees a change to any part of it.
+    struct AlwaysShowInputs: Equatable, Sendable {
+        let configurations: [String: DisplayThawBarConfiguration]
+        let isWideRuleEnabled: Bool
+        let wideRuleMinimumWidth: Double
+    }
+
+    var alwaysShowInputs: AlwaysShowInputs {
+        AlwaysShowInputs(
+            configurations: configurations,
+            isWideRuleEnabled: wideDisplayRule.isEnabled,
+            wideRuleMinimumWidth: wideDisplayRule.minimumWidth
+        )
+    }
+
     // MARK: - Mutation (Immutable Pattern)
 
     /// Updates the configuration for a display by applying a transform,

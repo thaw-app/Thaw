@@ -9,6 +9,7 @@ import Combine
 import MenuBarModel
 import Observation
 import SwiftUI
+import ThawUI
 
 /// Model for the app's Advanced settings.
 @MainActor

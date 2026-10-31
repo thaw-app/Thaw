@@ -1,0 +1,214 @@
+//
+//  HookRunner.swift
+//  Project: Thaw
+//
+//  Copyright (Thaw) © 2026 Toni Förster
+//  Licensed under the GNU GPLv3
+
+import Foundation
+import os
+import Subprocess
+import ThawConcurrency
+import ThawModuleKit
+#if canImport(System)
+    import System
+#else
+    import SystemPackage
+#endif
+
+/// Executes user-supplied profile-apply hooks with a wall-clock timeout
+/// and pipes their output to the module's log.
+///
+/// AppleScript files (.scpt / .applescript / .scptd) are routed through
+/// /usr/bin/osascript so the user does not need to chmod +x them. All
+/// other paths are launched directly and must carry the executable bit.
+public enum HookRunner {
+    private static let log = Logger(subsystem: Bundle.main.bundleIdentifier ?? "Thaw Scripts", category: "HookRunner")
+
+    /// Default path to the AppleScript interpreter on macOS. Overridable
+    /// per call via the osascriptPath parameter on run / runIfEnabled
+    /// (used in tests; production callers take the default).
+    public static let defaultOSAScriptPath = "/usr/bin/osascript"
+
+    /// Maximum bytes collected from either stream before Subprocess aborts
+    /// the run. Generous enough that no reasonable hook trips it.
+    private static let outputByteLimit = 1 << 20
+
+    public enum HookError: Error, CustomStringConvertible {
+        case fileMissing(path: String)
+        case notExecutable(path: String)
+        case runFailed(path: String, error: Error)
+        case timedOut(after: Double)
+        case nonZeroExit(Int32)
+
+        public var description: String {
+            switch self {
+            case let .fileMissing(p): return "hook file missing: \(p)"
+            case let .notExecutable(p): return "hook file not executable (run chmod +x): \(p)"
+            case let .runFailed(p, e): return "hook failed to run for \(p): \(e)"
+            case let .timedOut(s): return "hook timed out after \(s)s"
+            case let .nonZeroExit(s): return "hook exited with status \(s)"
+            }
+        }
+    }
+
+    /// Result of a successful hook run.
+    public struct RunOutcome: Sendable {
+        public let exitStatus: Int32
+        public let stdout: String
+        public let stderr: String
+    }
+
+    /// Context passed into the hook as environment variables.
+    public struct Context: Equatable, Sendable {
+        public let phase: HookPhase
+        public let scope: HookScope
+        public let profileID: UUID
+        public let profileName: String
+        public let previousProfileID: UUID?
+        public let previousProfileName: String?
+
+        public init(phase: HookPhase, scope: HookScope, profileID: UUID, profileName: String, previousProfileID: UUID?, previousProfileName: String?) {
+            self.phase = phase
+            self.scope = scope
+            self.profileID = profileID
+            self.profileName = profileName
+            self.previousProfileID = previousProfileID
+            self.previousProfileName = previousProfileName
+        }
+    }
+
+    /// What the hook left behind, copied out of Subprocess's result, which
+    /// is noncopyable and so cannot be carried out of the timeout.
+    private struct Completion: Sendable {
+        let terminationStatus: TerminationStatus
+        let standardOutput: String?
+        let standardError: String?
+    }
+
+    /// Runs a hook when it is on and logs how it went. Errors are logged, not
+    /// thrown, since nothing waits on a script's result.
+    public static func runIfEnabled(
+        _ hook: HookScript?,
+        context: Context,
+        osascriptPath: String = defaultOSAScriptPath
+    ) async {
+        guard let hook else { return }
+        let name = "\(context.scope.rawValue) \(context.phase.rawValue)-hook"
+        guard hook.isEnabled else {
+            log.debug("\(name) disabled, skipping: \(hook.path)")
+            return
+        }
+        do {
+            let outcome = try await run(hook, context: context, osascriptPath: osascriptPath)
+            log.debug(
+                "\(name) ok (exit=\(outcome.exitStatus)): \(hook.path)"
+            )
+            if !outcome.stdout.isEmpty {
+                log.debug("\(name) stdout: \(outcome.stdout)")
+            }
+            if !outcome.stderr.isEmpty {
+                log.debug("\(name) stderr: \(outcome.stderr)")
+            }
+        } catch is CancellationError {
+            log.debug("\(name) cancelled: \(hook.path)")
+        } catch {
+            log.error(
+                "\(name) failed (\(hook.path)): \(String(describing: error))"
+            )
+        }
+    }
+
+    /// Runs one hook and returns its outcome; throws on failure.
+    public static func run(
+        _ hook: HookScript,
+        context: Context,
+        osascriptPath: String = defaultOSAScriptPath
+    ) async throws -> RunOutcome {
+        let fm = FileManager.default
+        let url = URL(fileURLWithPath: hook.path)
+        guard fm.fileExists(atPath: url.path) else {
+            throw HookError.fileMissing(path: hook.path)
+        }
+
+        let useOSAScript = hook.usesOSAScript
+
+        // Verify the executable bit for direct-launch scripts. AppleScript
+        // files are read by osascript, so they need read but not execute.
+        if !useOSAScript, !fm.isExecutableFile(atPath: url.path) {
+            throw HookError.notExecutable(path: hook.path)
+        }
+
+        let executablePath: FilePath
+        let arguments: [String]
+        if useOSAScript {
+            executablePath = FilePath(osascriptPath)
+            arguments = [url.path]
+        } else {
+            executablePath = FilePath(url.path)
+            arguments = []
+        }
+
+        let environment = Environment.inherit.updating([
+            "THAW_HOOK_PHASE": context.phase.rawValue.capitalized,
+            "THAW_HOOK_SCOPE": context.scope.rawValue.capitalized,
+            "THAW_PROFILE_ID": context.profileID.uuidString,
+            "THAW_PROFILE_NAME": context.profileName,
+            "THAW_PREVIOUS_PROFILE_ID": context.previousProfileID?.uuidString ?? "",
+            "THAW_PREVIOUS_PROFILE_NAME": context.previousProfileName ?? "",
+        ])
+
+        let clamped = hook.clampedTimeout
+
+        // On timeout or outer-task cancellation, Subprocess runs this
+        // teardown sequence against the child before this call returns,
+        // so there is no need to poll isRunning or manually escalate
+        // signals here.
+        let platformOptions: PlatformOptions = {
+            var options = PlatformOptions()
+            options.teardownSequence = [
+                .send(signal: .interrupt, allowedDurationToNextStep: .seconds(1)),
+            ]
+            return options
+        }()
+
+        // The structured timeout: when the deadline wins it cancels the
+        // subprocess, which runs the teardown sequence above, and only then
+        // returns.
+        let result: Completion
+        do {
+            result = try await Task<Completion, any Error>.withTimeout(.seconds(clamped)) {
+                let result = try await Subprocess.run(
+                    .path(executablePath),
+                    arguments: Arguments(arguments),
+                    environment: environment,
+                    platformOptions: platformOptions,
+                    output: .string(limit: outputByteLimit),
+                    error: .string(limit: outputByteLimit)
+                )
+                return Completion(
+                    terminationStatus: result.terminationStatus,
+                    standardOutput: result.standardOutput,
+                    standardError: result.standardError
+                )
+            }
+        } catch is TaskTimeoutError {
+            throw HookError.timedOut(after: clamped)
+        } catch is CancellationError {
+            throw CancellationError()
+        } catch {
+            throw HookError.runFailed(path: hook.path, error: error)
+        }
+
+        let stdout = (result.standardOutput ?? "").trimmingCharacters(in: .whitespacesAndNewlines)
+        let stderr = (result.standardError ?? "").trimmingCharacters(in: .whitespacesAndNewlines)
+        let exitStatus: Int32 = switch result.terminationStatus {
+        case let .exited(code): code
+        case let .signaled(code): code
+        }
+        guard result.terminationStatus.isSuccess else {
+            throw HookError.nonZeroExit(exitStatus)
+        }
+        return RunOutcome(exitStatus: exitStatus, stdout: stdout, stderr: stderr)
+    }
+}

@@ -29,16 +29,6 @@ struct AutomationSummaryTests {
         #expect(AutomationSummary.profileSwitching(assignments, locale: english) == "A on X, B on X, and 3 more.")
     }
 
-    @Test("A script path shortens the home folder")
-    func scriptPath() {
-        let home = NSHomeDirectory()
-        #expect(AutomationSummary.script(path: nil) == "None")
-        #expect(AutomationSummary.script(path: "") == "None")
-        #expect(AutomationSummary.script(path: home + "/bin/a.sh") == "~/bin/a.sh")
-        #expect(AutomationSummary.script(path: home + "g/a.sh") == home + "g/a.sh")
-        #expect(AutomationSummary.script(path: "/opt/a.sh") == "/opt/a.sh")
-    }
-
     private func profile(_ name: String, display: String? = nil, space: String? = nil) -> ProfileMetadata {
         ProfileMetadata(
             id: UUID(), name: name, createdAt: .now, modifiedAt: .now,

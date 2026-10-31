@@ -22,7 +22,7 @@ enum ThawBarLayout: Int, CaseIterable, Codable, Identifiable {
         rawValue
     }
 
-    var localized: LocalizedStringKey {
+    var localized: LocalizedStringResource {
         switch self {
         case .horizontal: "Horizontal"
         case .vertical: "Vertical"

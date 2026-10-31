@@ -7,6 +7,7 @@
 
 import Foundation
 import MenuBarModel
+import ThawUI
 
 /// Model for the app's Hotkeys settings.
 @MainActor

@@ -114,35 +114,16 @@ struct SettingsView: View {
 
     private var fullSettingsScreen: some View {
         @Bindable var searchModel = searchModel
-        return NavigationSplitView {
+        // The system toolbar is the pane header. It stays put while the form scrolls and blurs under it, and carries
+        // the search field and the overflow menu on its trailing edge.
+        return ThawSettingsShell(title: Text(toolbarTitle), subtitle: toolbarSubtitle, sidebarMaxWidth: 250) {
             sidebar
         } detail: {
             detailContent
-                // The system toolbar is the pane header: it names the pane,
-                // stays put while the form scrolls under it and blurs what
-                // passes beneath, and carries the search field and the
-                // overflow menu on its trailing edge.
-                .navigationTitle(toolbarTitle)
-                .navigationSubtitle(toolbarSubtitle)
-                .toolbar {
-                    // History on the leading edge, the overflow menu beside search.
-                    ToolbarItemGroup(placement: .navigation) {
-                        SettingsHistoryButtons(history: paneHistory, navigationState: navigationState)
-                    }
-                    ToolbarItem(placement: .primaryAction) {
-                        SettingsOverflowMenu(appState: appState, generalSettings: generalSettings)
-                    }
-                }
                 .onChange(of: navigationState.settingsNavigationIdentifier) { previous, _ in
                     paneHistory.record(leaving: previous)
                 }
                 .background {
-                    // ⌘F from anywhere in the window lands in the field.
-                    Button("Find") {
-                        isSearchPresented = true
-                    }
-                    .keyboardShortcut("f", modifiers: .command)
-                    .hidden()
                     // History's shortcuts live in the content, not on the
                     // toolbar buttons: a toolbar item that carries a
                     // keyboardShortcut is vended with focused values every
@@ -160,26 +141,24 @@ struct SettingsView: View {
                     .disabled(paneHistory.forward.isEmpty)
                     .hidden()
                 }
-                // Fill the detail column so the Form's scrollbar sits on the
-                // window/detail trailing edge, not on a 680pt content column.
-                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
-                // Content fades under the glass toolbar instead of stopping at
-                // a hard band.
-                .scrollEdgeEffectStyle(.soft, for: .top)
+        } toolbar: {
+            // History on the leading edge, the overflow menu beside search.
+            ToolbarItemGroup(placement: .navigation) {
+                SettingsHistoryButtons(history: paneHistory, navigationState: navigationState)
+            }
+            ToolbarItem(placement: .primaryAction) {
+                SettingsOverflowMenu(appState: appState, generalSettings: generalSettings)
+            }
         }
-        .searchable(
+        .settingsSearchField(
             text: $searchModel.searchText,
-            isPresented: $isSearchPresented,
             placement: .toolbar,
-            prompt: "Search"
+            prompt: "Search",
+            findLabel: "Find"
         )
     }
 
-    /// Whether the toolbar search field has focus. Driven by ⌘F; the
-    /// system clears it on Escape or when the field loses focus.
-    @State private var isSearchPresented = false
-
-    private var toolbarTitle: LocalizedStringKey {
+    private var toolbarTitle: LocalizedStringResource {
         isSearching ? "Search" : navigationState.settingsNavigationIdentifier.localized
     }
 
@@ -282,20 +261,16 @@ struct SettingsView: View {
         case .menuBarAppearance:
             MenuBarAppearanceSettingsPane(appearanceManager: appState.appearanceManager)
         case .widgets:
-            WidgetsSettingsPane()
+            WidgetsSettingsPane(settings: appState.settings.advanced)
         case .profiles:
             ProfileSettingsPane(profileManager: appState.profileManager)
         case .hotkeys:
             HotkeysSettingsPane(settings: appState.settings.hotkeys)
         case .automation, .triggers:
-            AutomationSettingsPane(
-                settings: appState.settings.automation,
-                hookSettings: appState.settings.automationHook,
-                advancedSettings: appState.settings.advanced
-            )
+            TriggersSettingsPane()
         case .displays, .spaces:
             DisplaySettingsPane(displaySettings: appState.settings.displaySettings)
-        case .general:
+        case .general, .theLab:
             GeneralSettingsPane(
                 settings: appState.settings.general,
                 advancedSettings: appState.settings.advanced
@@ -305,73 +280,18 @@ struct SettingsView: View {
                 updatesManager: appState.updatesManager,
                 advancedSettings: appState.settings.advanced
             )
-        case .theLab:
-            TheLabSettingsPane(settings: appState.settings.advanced)
         case .tools:
             ToolsSettingsPane(settings: appState.settings.advanced)
+        case .modules:
+            ModulesSettingsPane(moduleHost: appState.moduleHost, profiles: appState.profilesFeature)
         case .about:
-            AboutSettingsPane(updatesManager: appState.updatesManager)
+            ThawAboutPane(updatesManager: appState.updatesManager)
         case .scripts:
             ScriptsSettingsPane()
         case .advanced:
-            // Advanced was dissolved; its controls live on General, Layout, and
-            // Automation. A stale identifier (saved last pane) lands on Layout.
+            // Advanced was dissolved, so a saved pane that names it opens Layout.
             MenuBarLayoutSettingsPane(itemManager: appState.itemManager)
         }
-    }
-}
-
-// MARK: - SettingsDetailLayout
-
-enum SettingsDetailLayout {
-    /// Comfortable reading width for settings groups. Title and form share this
-    /// column so they stay aligned when the window grows.
-    static let columnMaxWidth: CGFloat = 748
-    /// Offset from the window top under the transparent unified toolbar.
-    /// Intentionally well below the ~60pt safe-area push.
-    static let titleTopInset: CGFloat = 28
-
-    /// Leading inset aligned with grouped form section cards / headers.
-    static let titleHorizontalInset: CGFloat = 28
-}
-
-extension EnvironmentValues {
-    @Entry var settingsPaneTitle: LocalizedStringKey?
-}
-
-// MARK: - BehindWindowMaterialBackground
-
-/// Behind-window vibrancy so surfaces sample the desktop rather than the
-/// system-owned NavigationSplitView backdrop beneath the SwiftUI layer.
-/// The behind-window material every Thaw window surface is built on. Shared
-/// with the What's New reader so it sits on the same glass as the panes.
-struct BehindWindowMaterialBackground: NSViewRepresentable {
-    let material: NSVisualEffectView.Material
-
-    func makeNSView(context _: Context) -> NSVisualEffectView {
-        let view = NSVisualEffectView()
-        configure(view)
-        return view
-    }
-
-    func updateNSView(_ view: NSVisualEffectView, context _: Context) {
-        configure(view)
-    }
-
-    private func configure(_ view: NSVisualEffectView) {
-        view.material = material
-        view.blendingMode = .behindWindow
-        view.state = .active
-        view.isEmphasized = false
-    }
-}
-
-/// The system glass button, unmodified: its own padding and shape, so a
-/// Settings button looks like one in System Settings and follows macOS as the
-/// style changes. Kept as a name so call sites say what they mean.
-extension PrimitiveButtonStyle where Self == GlassButtonStyle {
-    static var settingsGlass: GlassButtonStyle {
-        .glass
     }
 }
 
@@ -395,7 +315,7 @@ private struct SettingsOverflowMenu: View {
             }
             Divider()
             Menu {
-                AppUIZoomControls(showsShortcuts: false)
+                AppUIZoomControls(strings: .thaw, showsShortcuts: false)
             } label: {
                 Text("Zoom")
             }
@@ -429,12 +349,9 @@ private struct SettingsSearchResults: View {
             VStack(alignment: .leading, spacing: 0) {
                 // A count makes a long list read as bounded, and tells the
                 // reader whether narrowing the query is worth it.
-                Text("^[\(resultCount) result](inflect: true)")
-                    .font(ThawType.detail.weight(.medium))
-                    .foregroundStyle(ThawInk.supporting)
+                SettingsSearchResultCount(Text("^[\(resultCount) result](inflect: true)"))
                     .padding(.horizontal, SettingsDetailLayout.titleHorizontalInset + 6)
-                    .padding(.bottom, 6)
-                    .accessibilityAddTraits(.updatesFrequently)
+                    .padding(.bottom, ThawSpacing.compact)
 
                 SearchResultsList(groups: searchModel.displayedGroups) { entry in
                     SettingsSearchNavigation.selectSearchResult(
@@ -463,11 +380,16 @@ private struct SettingsSidebar: View {
     let generalSettings: GeneralSettings
 
     var body: some View {
-        SettingsSidebarPaneList(navigationState: navigationState)
-            .navigationSplitViewColumnWidth(min: SettingsSidebarPaneList.listWidth, ideal: SettingsSidebarPaneList.listWidth, max: 250)
-            .onChange(of: generalSettings.simpleMode) { _, _ in
-                searchModel.updateDisplayedItems()
-            }
+        SettingsSidebarPaneList(
+            navigationState: navigationState,
+            turnedOff: SettingsSidebarPanes.panesTurnedOff(
+                isEnabled: appState.moduleHost.isEnabled,
+                profilesOn: appState.profilesFeature.isOn
+            )
+        )
+        .onChange(of: generalSettings.simpleMode) { _, _ in
+            searchModel.updateDisplayedItems()
+        }
     }
 }
 

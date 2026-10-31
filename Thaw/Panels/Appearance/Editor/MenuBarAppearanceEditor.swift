@@ -244,7 +244,7 @@ struct MenuBarAppearanceEditor: View {
     private var appearanceModePicker: some View {
         ThawSection {
             LabeledContent("Editing") {
-                HStack(spacing: 8) {
+                HStack(spacing: ThawSpacing.base) {
                     ThawPillPicker(selection: $editingAppearance, options: [
                         ThawPillPicker.Option(.light, title: "Light", systemImage: "sun.max"),
                         ThawPillPicker.Option(.dark, title: "Dark", systemImage: "moon"),
@@ -351,7 +351,7 @@ private nonisolated enum AppearanceFillKind: ThawTab {
     case background
     case shapeFill
 
-    var title: LocalizedStringKey {
+    var title: LocalizedStringResource {
         switch self {
         case .shapeFill: "Inside the Shape"
         case .background: "Behind the Shape"
@@ -380,7 +380,7 @@ private struct FillSurfaceFields {
     typealias Configuration = MenuBarAppearancePartialConfiguration
 
     /// Accessibility label, hidden visually because the surrounding section already names the surface.
-    let colorLabel: LocalizedStringKey
+    let colorLabel: LocalizedStringResource
 
     let opacity: WritableKeyPath<Configuration, Double>
     let glassStyle: WritableKeyPath<Configuration, MenuBarGlassStyle>
@@ -551,7 +551,7 @@ private struct UnlabeledAppearanceFillEditor: View {
     }
 
     /// Hide the color well when following the accent, since System Settings supplies the color.
-    private func accentAwareColorPicker(_ label: LocalizedStringKey) -> some View {
+    private func accentAwareColorPicker(_ label: LocalizedStringResource) -> some View {
         HStack(spacing: ThawSpacing.base) {
             Toggle("Accent", isOn: binding(fields.usesAccentColor))
                 .toggleStyle(.thawCheckbox)
@@ -707,8 +707,8 @@ private struct PressReportingButtonStyle: ButtonStyle {
 
     func makeBody(configuration: Configuration) -> some View {
         configuration.label
-            .padding(.horizontal, 10)
-            .padding(.vertical, 3)
+            .padding(.horizontal, ThawSpacing.row)
+            .padding(.vertical, ThawSpacing.capsuleInset)
             .thawGlass(.control, in: Capsule(style: .continuous))
             .opacity(configuration.isPressed ? 0.7 : 1.0)
             .onChange(of: configuration.isPressed) { _, isPressed in

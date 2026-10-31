@@ -2,20 +2,33 @@ included:
   - MenuBarModel
   - Shared
   - Thaw
+  - ThawAutomation
   - ThawCapture
   - ThawCtl
-  - ThawUI
+  - ThawModuleKit
+  - ThawTriggers
+  - ThawWidgets
 
 excluded:
   - MenuBarModel/.build
+  - ThawAutomation/.build
+  - ThawModuleKit/.build
+  - ThawTriggers/.build
+  - ThawWidgets/.build
   - ThawCapture/.build
   - ThawCtl/.build
-  - ThawUI/.build
   - ThawTests
+  - ThawAutomation/Tests
+  - ThawModuleKit/Tests
+  - ThawTriggers/Tests
+  - ThawWidgets/Tests
   - MenuBarModel/Package.swift
+  - ThawAutomation/Package.swift
+  - ThawModuleKit/Package.swift
+  - ThawTriggers/Package.swift
+  - ThawWidgets/Package.swift
   - ThawCapture/Package.swift
   - ThawCtl/Package.swift
-  - ThawUI/Package.swift
 
 disabled_rules:
   - function_parameter_count
@@ -87,7 +100,7 @@ file_header:
     //  SWIFTLINT_CURRENT_FILENAME
     //  Project: Thaw
     //
-    //  Copyright \(Thaw\) © 2026 Toni Förster
+    //  Copyright \(Thaw\) © 2026 (Toni Förster|René Jiménez|Thaw)
     //  Licensed under the GNU GPLv3
 
 modifier_order:

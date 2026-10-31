@@ -15,28 +15,19 @@ nonisolated extension SearchIndex {
             id: "lab.enableMenuBarItemDescenders",
             title: "Show item details on hover",
             descriptionText: String(localized: "Hangs a small readout below a menu bar item while the pointer rests on it."),
-            pane: .theLab,
-            section: "Experiments",
+            pane: .visibility,
+            section: "On hover",
             keywords: ["hover", "details", "readout", "descender", "notch", "tooltip", "weather"],
             property: .advanced("enableMenuBarItemDescenders")
         ),
         SearchEntry(
             id: "lab.zenModeWhileRecording",
-            title: "Collapse the menu bar while recording",
-            descriptionText: String(localized: "Enters Zen Mode while the camera or microphone is in use, then restores the bar when recording stops."),
-            pane: .theLab,
-            section: "Experiments",
+            title: "Zen Mode while the camera or microphone is on",
+            descriptionText: String(localized: "Turns on Zen Mode while any app uses the camera or microphone, then turns it off when they go idle."),
+            pane: .visibility,
+            section: "Zen Mode",
             keywords: ["presenter", "presentation", "recording", "screen", "capture", "zen", "collapse", "hide", "camera", "microphone", "call", "meeting", "clean"],
             property: .advanced("zenModeWhileRecording")
-        ),
-        SearchEntry(
-            id: "lab.enableRecordingWatch",
-            title: "Camera and microphone watch",
-            descriptionText: String(localized: "Names the app that just took the microphone, and says when a camera turns on."),
-            pane: .theLab,
-            section: "Experiments",
-            keywords: ["camera", "microphone", "mic", "privacy", "indicator", "recording", "watch", "dot", "spy", "webcam"],
-            property: .advanced("enableRecordingWatch")
         ),
         SearchEntry(
             id: "layout.replaceControlCenterItems",
@@ -52,29 +43,11 @@ nonisolated extension SearchIndex {
             property: .advanced("enableModuleStandIns")
         ),
         SearchEntry(
-            id: "lab.recordingWatchScreen",
-            title: "Recording announcement screen",
-            descriptionText: String(localized: "Chooses which display shows the banner when an app takes the microphone or the camera."),
-            pane: .theLab,
-            section: "Experiments",
-            keywords: ["camera", "microphone", "recording", "announcement", "screen", "display", "banner", "hud", "where", "monitor", "privacy"],
-            property: .advanced("recordingWatchScreen")
-        ),
-        SearchEntry(
-            id: "lab.recordingWatchPlacement",
-            title: "Place announcements",
-            descriptionText: String(localized: "Chooses where along the top of the display the recording banners sit."),
-            pane: .theLab,
-            section: "Experiments",
-            keywords: ["camera", "microphone", "recording", "announcement", "banner", "placement", "corner", "center", "hud", "where"],
-            property: .advanced("recordingWatchPlacement")
-        ),
-        SearchEntry(
             id: "lab.enableDesktopMenuHiding",
-            title: "Hide Finder menus on the desktop",
+            title: "Hide app menus on the desktop",
             descriptionText: String(localized: "Covers the Finder's menu titles while the desktop is frontmost. The Apple menu stays."),
-            pane: .theLab,
-            section: "Experiments",
+            pane: .general,
+            section: "Menu bar behavior",
             keywords: ["finder", "desktop", "menus", "menu titles", "hide", "app menus", "cover", "clean"],
             property: .advanced("enableDesktopMenuHiding")
         ),
@@ -82,8 +55,8 @@ nonisolated extension SearchIndex {
             id: "lab.enableControlItemPanel",
             title: "Panel instead of the status menu",
             descriptionText: String(localized: "Right-click \(Constants.displayName)’s icon to get a panel of controls instead of a menu of text."),
-            pane: .theLab,
-            section: "Experiments",
+            pane: .widgets,
+            section: "\(Constants.displayName)'s menu and icon",
             keywords: ["panel", "status menu", "menu", "right-click", "icon", "controls", "sections", "zen", "profile", "swap"],
             property: .advanced("enableControlItemPanel")
         ),
@@ -102,18 +75,19 @@ nonisolated extension SearchIndex {
         ),
         SearchEntry(
             id: "general.showMenuBarTooltips",
-            title: "Show tooltips in the menu bar",
+            title: "Show item names on hover",
             descriptionText: String(localized: "Show a tooltip when hovering over menu bar items in the actual menu bar."),
             pane: .visibility,
-            section: "Tooltips",
+            section: "On hover",
             keywords: ["tooltip", "hover", "menu bar"],
             property: .advanced("showMenuBarTooltips")
         ),
         SearchEntry(
             id: "advanced.autoZenWhileSharingScreen",
-            title: "Hide items while presenting",
-            descriptionText: String(localized: "Hidden items stay hidden while you share your screen or mirror a display."),
-            pane: .automation,
+            title: "Zen Mode while sharing your screen",
+            descriptionText: String(localized: "Turns on Zen Mode while you share your screen or mirror a display."),
+            pane: .visibility,
+            section: "Zen Mode",
             keywords: ["zen", "presenting", "present", "share", "sharing", "mirror", "screen", "projector", "meeting"],
             property: .advanced("autoZenWhileSharingScreen")
         ),
@@ -121,7 +95,7 @@ nonisolated extension SearchIndex {
             id: "automation.menuBarItemAlertReveals",
             title: "Show an item when its icon changes",
             descriptionText: String(localized: "Briefly shows a hidden item in the menu bar when its icon changes, so you see its alert."),
-            pane: .visibility,
+            pane: .triggers,
             section: "When an icon changes",
             keywords: ["reveal", "alert", "icon", "change", "badge", "notification", "hidden", "temporarily"],
             property: nil
@@ -137,7 +111,7 @@ nonisolated extension SearchIndex {
         ),
         SearchEntry(
             id: "advanced.hideApplicationMenus",
-            title: "Hide app menus when showing menu bar items",
+            title: "Hide app menus when showing items",
             descriptionText: String(localized: "Make more room in the menu bar by hiding the current app menus if needed."),
             pane: .general,
             section: "Menu bar behavior",

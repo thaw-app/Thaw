@@ -9,6 +9,7 @@ import AppKit
 import SwiftUI
 import Testing
 @testable import Thaw
+import ThawUI
 
 @MainActor
 @Suite("Thaw Bar foreground over gradient, palette and dimmed fills")

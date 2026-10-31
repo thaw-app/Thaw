@@ -64,7 +64,7 @@ struct ControlCenterReplacementsTests {
     @Test("Leaving every module out turns the modules off and forgets the list")
     func leavingAllModulesOut() {
         var replacements = ControlCenterReplacements(modules: true, timeMachine: true, textInput: false)
-        for module in ControlCenterReplacements.modules {
+        for module in ControlCenterReplacements.moduleItems {
             replacements.setReplaced(module, false)
         }
         #expect(replacements == ControlCenterReplacements(modules: false, timeMachine: true, textInput: false))

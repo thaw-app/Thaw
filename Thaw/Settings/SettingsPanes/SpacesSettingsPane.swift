@@ -11,18 +11,38 @@ import ThawUI
 
 // MARK: - SpacesControlsContent
 
-/// The Spaces controls shown in Displays & Spaces. They are commands, not preferences:
+/// The Spaces controls shown on Displays. They are commands, not preferences:
 /// the menu bar agent keeps the state for this session and puts it back when Thaw quits.
 struct SpacesControlsContent: View {
     let activeSpaceID: UInt64
+
+    /// What the hiding picker last asked for. Held here because This Space's
+    /// reset clears the per-Space override too.
+    @State private var isHiddenInSpace = false
+    @State private var isHiddenEverywhere = false
 
     private var presentation: any MenuBarPresentationControlling {
         MenuBarPresentationProvider.current
     }
 
     var body: some View {
+        controls
+            // A different Space has its own override, which can't be read,
+            // so the picker starts from neutral there.
+            .onChange(of: activeSpaceID) { _, _ in
+                isHiddenInSpace = false
+            }
+    }
+
+    @ViewBuilder
+    private var controls: some View {
         if presentation.isSupported {
-            ThisSpaceSection(spaceID: activeSpaceID)
+            MenuBarHidingSection(
+                spaceID: activeSpaceID,
+                isHiddenInSpace: $isHiddenInSpace,
+                isHiddenEverywhere: $isHiddenEverywhere
+            )
+            ThisSpaceSection(spaceID: activeSpaceID, isHidden: $isHiddenInSpace)
             AllSpacesSection()
             SessionScopeNotice()
         } else {
@@ -40,15 +60,17 @@ private struct ThisSpaceSection: View {
     /// The Space these controls act on. A change to this value means the user
     /// switched Spaces, which invalidates every mirror below.
     let spaceID: UInt64
+    /// The per-Space hiding override, chosen in MenuBarHidingSection and
+    /// cleared by this section's reset.
+    @Binding var isHidden: Bool
 
-    @State private var isHidden = false
     @State private var isAutoShowDisabled = false
     @State private var revealStripHeight = Self.defaultRevealStripHeight
     /// Set once the user has actually moved the slider. Without it the
     /// debounce task below would push the default height at the agent the
     /// first time the pane appears, an override nobody asked for.
     @State private var hasAdjustedRevealStrip = false
-    @State private var failure: LocalizedStringKey?
+    @State private var failure: LocalizedStringResource?
 
     /// A plausible neutral starting point for the slider, not a reading of the
     /// system's current value, the seam has no getter. Labeled as such in the
@@ -76,9 +98,6 @@ private struct ThisSpaceSection: View {
                     .foregroundStyle(ThawInk.supporting)
                     .fixedSize(horizontal: false, vertical: true)
             }
-
-            Toggle("Hide the menu bar in this Space", isOn: hiddenBinding)
-                .annotation("Hides the system menu bar only while this Space is showing. Other Spaces keep their current behavior.")
 
             Toggle("Disable hover reveal in this Space", isOn: autoShowDisabledBinding)
                 .annotation("Stops a hidden menu bar from sliding down when the pointer reaches the top edge of the screen in this Space.")
@@ -125,7 +144,6 @@ private struct ThisSpaceSection: View {
             // A different Space has different overrides, and we cannot read
             // them. Reset to neutral rather than show the previous Space's
             // settings as if they applied here.
-            isHidden = false
             isAutoShowDisabled = false
             revealStripHeight = Self.defaultRevealStripHeight
             hasAdjustedRevealStrip = false
@@ -168,22 +186,6 @@ private struct ThisSpaceSection: View {
     /// Optimistic-then-corrected: the switch moves immediately (anything else
     /// feels broken), and reverts if the agent declines. The mirror is only
     /// ever a claim about what we asked for.
-    private var hiddenBinding: Binding<Bool> {
-        Binding {
-            isHidden
-        } set: { newValue in
-            isHidden = newValue
-            failure = nil
-            Task {
-                let succeeded = await presentation.setSystemMenuBarHidden(newValue, spaceID: spaceID)
-                if !succeeded {
-                    isHidden = !newValue
-                    failure = "Hiding the menu bar in this Space is not available right now."
-                }
-            }
-        }
-    }
-
     private var autoShowDisabledBinding: Binding<Bool> {
         Binding {
             isAutoShowDisabled
@@ -224,9 +226,8 @@ private struct ThisSpaceSection: View {
 /// Overrides that are not scoped to a Space, they change the menu bar
 /// everywhere at once.
 private struct AllSpacesSection: View {
-    @State private var isHiddenEverywhere = false
     @State private var usesFullScreenAppearance = false
-    @State private var failure: LocalizedStringKey?
+    @State private var failure: LocalizedStringResource?
 
     private var presentation: any MenuBarPresentationControlling {
         MenuBarPresentationProvider.current
@@ -238,12 +239,6 @@ private struct AllSpacesSection: View {
         } content: {
             Toggle("Use the full-screen menu bar appearance everywhere", isOn: fullScreenAppearanceBinding)
                 .annotation("Gives ordinary desktop Spaces the menu bar appearance macOS normally reserves for full-screen apps.")
-
-            Toggle("Hide the menu bar in every Space", isOn: hiddenEverywhereBinding)
-                .annotation(
-                    "Hides the system menu bar in every context, full screen included.",
-                    more: "Prefer the per-Space control above when only one Space needs it."
-                )
         } footer: {
             if let failure {
                 SettingsWarningPill(
@@ -252,22 +247,6 @@ private struct AllSpacesSection: View {
                     systemImage: "exclamationmark.triangle.fill",
                     tint: .orange
                 )
-            }
-        }
-    }
-
-    private var hiddenEverywhereBinding: Binding<Bool> {
-        Binding {
-            isHiddenEverywhere
-        } set: { newValue in
-            isHiddenEverywhere = newValue
-            failure = nil
-            Task {
-                let succeeded = await presentation.setSystemMenuBarHidden(newValue)
-                if !succeeded {
-                    isHiddenEverywhere = !newValue
-                    failure = "The menu bar could not be hidden across all Spaces."
-                }
             }
         }
     }
@@ -298,7 +277,7 @@ private struct AllSpacesSection: View {
 private struct SessionScopeNotice: View {
     var body: some View {
         // Footer-only section: the one placement where a pill renders without
-        // the grouped form's section card around it (see TheLabSettingsPane).
+        // the grouped form’s section card around it.
         ThawSection {
             EmptyView()
         } footer: {

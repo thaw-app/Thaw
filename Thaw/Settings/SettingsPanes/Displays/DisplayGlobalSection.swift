@@ -99,7 +99,7 @@ extension DisplaySettingsPane {
         }
     }
 
-    private var globalSpacingAnnotation: LocalizedStringKey {
+    private var globalSpacingAnnotation: LocalizedStringResource {
         if displaySettings.spacingApplyMode == .writeOnly {
             "Applying writes the new spacing without restarting apps; the new spacing appears the next time each menu bar app starts."
         } else {

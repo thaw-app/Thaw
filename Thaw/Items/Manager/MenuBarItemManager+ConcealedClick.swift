@@ -101,7 +101,7 @@ extension MenuBarItemManager {
             "clickConcealedItem: no method opened \(item.logString); leaving it shown in the menu bar"
         )
         controller.revealItemTemporarily(item.uniqueIdentifier)
-        controller.scheduleTemporaryItemConceal(item.uniqueIdentifier)
+        controller.scheduleTemporaryItemConcealUnlessHeld(item.uniqueIdentifier)
         return .activationFailed
     }
 

@@ -146,11 +146,8 @@ extension MenuBarItemManager {
             guard case let .itemNotMovable(_, refusal) = self else {
                 return "Try again. If this keeps happening, please file a bug report."
             }
-            // For every reason but one there is nothing to retry: the item is pinned by the
-            // system, and trying again will land in exactly the same place. The gate-dependent
-            // refusal is the exception, the user can lift it in Settings, but the suggestion
-            // deliberately stops short of promising the move will then succeed, because the
-            // assertion path behind the gate is experimental.
+            // Any other refusal means the system pinned the item, so a retry changes nothing. Settings can lift this one, but
+            // the suggestion doesn't promise the move: the assertion path behind the gate is experimental.
             guard refusal == .requiresExperimentalHiding else { return nil }
             return String(localized: "Turning on “Allow hiding macOS system items” in Layout settings may let this item move; macOS may still refuse it.")
         }

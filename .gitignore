@@ -27,7 +27,6 @@ default.profraw
 .attic/
 *.xcuserstate
 .swiftpm/
-ThawUI/.build/
 *.profraw
 .dd/
 .local-logs/

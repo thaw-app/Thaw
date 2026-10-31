@@ -68,7 +68,7 @@ final class SystemExtraTakeoverCoordinator {
         )
     }
 
-    /// Reading the engine's observable dictionary makes Lab rows update live.
+    /// Reading the engine's observable dictionary makes the Layout rows update live.
     func status(for item: SystemExtraItem) -> SystemExtraTakeoverStatus {
         engine.status(for: item)
     }

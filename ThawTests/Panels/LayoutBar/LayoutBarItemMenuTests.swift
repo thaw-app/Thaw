@@ -9,6 +9,7 @@ import AppKit
 import MenuBarModel
 import Testing
 @testable import Thaw
+import ThawUI
 
 /// The layout editor's right-click menu, built and read without running its actions.
 @MainActor
@@ -85,6 +86,10 @@ struct LayoutBarItemMenuTests {
         let control = World.item(.visibleControlItem)
         let menu = try #require(LayoutBarItemMenu.menu(subject: .item(control), section: .visible, orderedItems: [control], appState: world.appState))
         let explanation = try #require(menu.items.first)
+        #expect(!explanation.isEnabled)
+        // A menu enables every item it can on opening, unless the item itself says no.
+        _ = NSApplication.shared
+        menu.update()
         #expect(!explanation.isEnabled)
         #expect(!menu.items.contains { $0.title == String(localized: "Move to") })
     }

@@ -9,6 +9,7 @@ import Foundation
 import MenuBarModel
 import Testing
 @testable import Thaw
+import ThawUI
 
 /// Applying profiles to an AppState that was never set up, so no layout engine
 /// runs and no item moves. Profiles live in a throwaway directory and settings

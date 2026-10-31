@@ -732,7 +732,7 @@ extension MenuBarItemImageCache {
             }
             defer {
                 for item in batch {
-                    controller.concealTemporarilyRevealedItem(item.uniqueIdentifier)
+                    controller.concealTemporarilyRevealedItemUnlessHeld(item.uniqueIdentifier)
                 }
                 sources.uncover()
             }

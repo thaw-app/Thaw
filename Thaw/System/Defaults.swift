@@ -7,6 +7,7 @@
 
 import Foundation
 import SwiftUI
+import ThawUI
 
 /// Typed access to the app's UserDefaults domain.
 ///
@@ -355,6 +356,7 @@ extension Defaults {
         case thawIcon = "IceIcon"
         case customThawIconIsTemplate = "CustomIceIconIsTemplate"
         case simpleMode = "SimpleMode"
+        case profilesEnabled = "ProfilesEnabled"
         case showSettingDescriptions = "ShowSettingDescriptions"
         case blackSettingsBackground = "BlackSettingsBackground"
         case simpleModeShowsPreview = "SimpleModeShowsPreview"
@@ -393,6 +395,8 @@ extension Defaults {
 
         case hotkeys = "Hotkeys"
         case profileHotkeys = "ProfileHotkeys"
+        /// Triggers saved before they moved to the Triggers module. Thaw only
+        /// checks whether any exist, to start that module switched on.
         case appRunningTriggers = "AppRunningTriggersV1"
         case menuBarItemHotkeys = "MenuBarItemHotkeys"
 
@@ -626,11 +630,18 @@ extension Defaults {
         case settingsURISigningIdentities = "SettingsURISigningIdentities"
         case settingsURICodeHashes = "SettingsURICodeHashes"
 
-        // MARK: Profile Hooks
+        // MARK: Profiles
 
+        case lastSettledProfileID = "LastSettledProfileID"
+
+        // MARK: Modules
+
+        case enabledModules = "EnabledModules"
+        /// Settings left from before their features became modules. Thaw only
+        /// checks whether they exist, to start each module switched on.
         case globalPreProfileHook = "GlobalPreProfileHook"
         case globalPostProfileHook = "GlobalPostProfileHook"
-        case lastSettledProfileID = "LastSettledProfileID"
         case lastActiveProfileID = "LastActiveProfileID"
+        case widgetIconPublished = "StatusIconPrototype.published"
     }
 }

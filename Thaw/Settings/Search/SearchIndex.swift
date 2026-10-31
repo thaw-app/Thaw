@@ -115,15 +115,14 @@ nonisolated enum SearchIndex {
             keywords: ["app icon", "live preview", "screenshot", "capture", "overflow", "notch", "advanced layout controls"],
             property: .advanced("alwaysUseAppIconForMenuBarItems")
         ),
-        // Spaces pane rows: agent-backed session state with no persisted
+        // Displays › Spaces rows: agent-backed session state with no persisted
         // settings property, indexed so the pane's controls are findable.
         SearchEntry(
             id: "spaces.hideInThisSpace",
-            title: "Hide the menu bar in this Space",
-            descriptionText: String(localized: "Hides the system menu bar only while this Space is showing. Other Spaces keep their current behavior."),
+            title: "Hide the menu bar",
+            descriptionText: String(localized: "Hides the system menu bar while this Space is showing, or in every Space."),
             pane: .displays,
-            section: "This Space",
-            keywords: ["hide", "space", "menu bar", "per-space", "desktop"],
+            keywords: ["hide", "space", "menu bar", "per-space", "desktop", "global", "every space", "everywhere"],
             property: nil
         ),
         SearchEntry(
@@ -151,15 +150,6 @@ nonisolated enum SearchIndex {
             pane: .displays,
             section: "All Spaces",
             keywords: ["fullscreen", "appearance", "everywhere", "spaces"],
-            property: nil
-        ),
-        SearchEntry(
-            id: "spaces.hideEverywhere",
-            title: "Hide the menu bar in every Space",
-            descriptionText: String(localized: "Hides the system menu bar in every context, full screen included."),
-            pane: .displays,
-            section: "All Spaces",
-            keywords: ["hide", "global", "every space", "menu bar"],
             property: nil
         ),
     ]
@@ -203,6 +193,10 @@ nonisolated enum SearchIndex {
         .advanced("showOnHoverDelay"),
         .advanced("tooltipDelay"),
         .advanced("iconRefreshInterval"),
+        // The camera and microphone alerts, hidden for now with no Settings UI.
+        .advanced("enableRecordingWatch"),
+        .advanced("recordingWatchScreen"),
+        .advanced("recordingWatchPlacement"),
     ]
 
     static var nonSearchableProperties: Set<SettingsProperty> {

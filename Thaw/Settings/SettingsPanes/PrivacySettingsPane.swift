@@ -6,11 +6,13 @@
 //  Licensed under the GNU GPLv3
 
 import SwiftUI
+import ThawModuleKit
 import ThawUI
 
 /// What the app may see and where anything goes: the permissions it holds,
-/// the pixels it reads, and the network calls it makes. The move record
-/// lives on Tools, beside the diagnostic log it mirrors.
+/// the apps it lets change its settings, the pixels it reads, and the
+/// network calls it makes. The move record lives on Troubleshooting, beside
+/// the diagnostic log it mirrors.
 struct PrivacySettingsPane: View {
     @Environment(AppState.self) private var appState
     @Bindable var updatesManager: UpdatesManager
@@ -18,18 +20,10 @@ struct PrivacySettingsPane: View {
 
     var body: some View {
         ThawForm {
-            // Footer-only section: the one placement where a pill renders
-            // without the grouped form's section card around it.
-            ThawSection {
-                EmptyView()
-            } footer: {
-                SettingsWarningPill(
-                    title: "Nothing leaves this Mac",
-                    message: "\(Constants.displayName) collects no analytics or usage data. Permission checks stay on your Mac. The only network calls are the ones listed below, and each has a switch.",
-                    systemImage: "hand.raised.fill",
-                    tint: .green
-                )
-            }
+            SettingsPrivacyNotice(
+                title: "Nothing leaves this Mac",
+                message: "\(Constants.displayName) collects no analytics or usage data. Permission checks stay on your Mac. The only network calls are the ones listed below, and each has a switch."
+            )
 
             ThawSection("Questions about privacy?") {
                 PrivacyQuestionsDisclaimer()
@@ -41,13 +35,15 @@ struct PrivacySettingsPane: View {
                 }
             }
 
+            OtherAppsSection(settings: appState.settings.automation)
+
             CaptureInspectorSection()
 
             // Only while the status icon is on: with it off nothing reads the
             // connection, so there is nothing to account for.
-            if StatusIconWidgetController.shared.isEnabled {
+            if appState.moduleHost.isEnabled(.widgets) {
                 ThawSection("Local connection status") {
-                    Text("The custom status icon reads the connection type from macOS on this Mac. It does not contact a server or send network details, and it stops reading when you turn the custom status icon off.")
+                    Text("The widget icon reads the connection type from macOS on this Mac. It does not contact a server or send network details, and it stops reading when you turn Widgets off in Extras.")
                         .foregroundStyle(ThawInk.supporting)
                 }
             }

@@ -6,19 +6,10 @@
 //  Licensed under the GNU GPLv3
 
 import SwiftUI
+import ThawUI
 
 extension CGImage {
     // MARK: Average Color
-
-    /// Adjustments to how averageColor(using:alphaThreshold:option:) treats
-    /// the pixels it reads.
-    nonisolated struct ColorAveragingOption: OptionSet {
-        let rawValue: Int
-
-        /// Report the average as fully opaque rather than averaging the alpha
-        /// component alongside the color components.
-        static let ignoreAlpha = ColorAveragingOption(rawValue: 1)
-    }
 
     /// Returns roughly the average color of the image.
     ///

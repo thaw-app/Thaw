@@ -22,6 +22,39 @@ Anything else goes before the first section, or in its own section after
 these four. The website shows each section's name beside its list, and counts
 the items under New and Fixed.
 
+## [Unreleased]
+
+### New
+
+- **Modules in Settings.** A new Extras page switches optional parts of Thaw on and off, and a module that's off doesn't run at all. Scripts, Triggers and Widgets are the first ones, and each starts switched on if you already used what it does. Each module also has its switch on its own page, such as Settings › Widgets. A module that's off leaves the sidebar. By @diazdesandi.
+
+### Changed
+
+#### Modules
+
+- **App triggers run in their own app.** Triggers that show items while an app runs moved to the Triggers module, a small app that comes with Thaw and runs next to it. Your triggers move over by themselves. Open them from Settings › Triggers. By @diazdesandi.
+- **Profile scripts run in their own app.** The scripts that run when a profile switches moved to the Scripts module, a small app that comes with Thaw and runs next to it. Your scripts move over by themselves. Open them from Settings › Scripts. Thaw no longer waits for a "before switching" script to finish before it changes the layout. By @diazdesandi.
+- **The widget icon runs in its own app.** The icon that combines battery, Wi-Fi and other readings left Experiments and is now the Widgets module. Turn it on in Settings › Extras and design it from Settings › Widgets. Your design moves over by itself. By @diazdesandi.
+
+#### Settings
+
+- **Extras is a grid of cards with a search field,** like the extension store in Floe. Each card has the part's icon, what it does and its switch. By @diazdesandi.
+- **The sidebar is laid out like Floe's.** Thaw's everyday pages come first, from General to Shortcuts, then the modules you have on under a small Modules heading, then Extras, Privacy and Tools under Manage, and About last. The selected page has a see-through gold fill, and the arrow keys move between pages. A part that's off leaves the sidebar until you switch it on in Extras. While search results show, no page is selected, so clicking any page, the one you were on included, ends the search. By @diazdesandi.
+- **Profiles can be turned off.** Profiles has a switch in Extras. Off, no profile switches on its own, the profile shortcuts do nothing, and profiles leave the Thaw menu, the panel and the Swap Bar. Your saved profiles are kept. By @diazdesandi.
+- **Show an item when its icon changes is on Triggers.** It sits with the app triggers, the other way an item shows on its own, and it works while Triggers is on in Extras. By @diazdesandi.
+- **Displays & Spaces is now called Displays.** It holds menu bar item spacing for each display, the wide displays rule and the Spaces controls. By @diazdesandi.
+- **Automation is now two pages, Triggers and Scripts.** The apps allowed to change settings with thaw:// links are on Privacy, and switching profiles by display or Space is on Profiles. Saved links to Automation open Triggers. By @diazdesandi.
+- **Experiments is gone.** The panel that can replace Thaw's menu is on Widgets, and the other experiments joined the rows below. They keep their Alpha and Beta badges. The camera and microphone alerts are put away for now and stay off. Saved links to Experiments open General. By @diazdesandi.
+- **The left and right arrow keys step through What's New and Acknowledgements,** and the text fades under the title bar as it does on the settings pages.
+- **Permission icons line up.** Each permission's icon sits in the same box as the sidebar's, so the names start in the same place.
+
+### Fixed
+
+- **A note in the layout editor's right-click menu looks like a note.** The line that says an item can't be grouped, and the one about an app's split items, are now dimmed so they don't look like commands.
+- **Links in the release notes open only over https.** Any other link stays plain text.
+- **A page that isn't the changelog can't replace your saved release notes.** A Wi-Fi sign-in page, for example, now counts as a failed fetch, so What's New keeps the last good copy.
+- **Recording a shortcut stops when its page goes away,** and Shift-Escape cancels it. The keyboard also works in the warning about a shortcut macOS already uses.
+
 ## [3.0.0-beta.5] - 2026-10-30
 
 **macOS 27 only · Build 122**
@@ -517,6 +550,7 @@ After you update:
 - **Thaw Bar Only is gone.** Items you kept there are now ordinary Hidden items. By @diazdesandi.
 - **Troubleshooting no longer has Reset Control Center or Quit and Clear Cache.** On macOS 27, Reset Control Center also erased your choices in System Settings > Menu Bar. Restore Missing Items brings items back without deleting anything. Thaw now clears its saved item pictures after every update, which is what Quit and Clear Cache did. By @diazdesandi.
 
+
 ### Changed
 
 - **The last welcome screen shows its cards two to a row,** so each demo and caption has room. By @diazdesandi.
@@ -591,6 +625,7 @@ After you update:
 - **Home and other items pinned from Control Center leave the menu bar while Hidden is closed**, if you use Standard or Everything. Layout marks them. Thaw can't keep them on the bar.
 - **Siri doesn't run Thaw's actions when you ask by voice.** The same actions work from Shortcuts and Spotlight.
 - **On some Macs, clicks in Settings land below the control.** Reported in [#1265](https://github.com/thaw-app/Thaw/issues/1265) and [#1244](https://github.com/thaw-app/Thaw/issues/1244). If it happens to you, [send us a log](https://www.getthaw.app/docs/thaw/frequent-issues#before-you-file-a-bug).
+
 
 ## [3.0.0-alpha.10] - 2026-10-18
 

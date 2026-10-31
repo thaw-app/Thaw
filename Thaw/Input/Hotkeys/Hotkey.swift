@@ -8,6 +8,7 @@
 import AppKit
 import MenuBarModel
 import Observation
+import ThawUI
 
 // MARK: - Hotkey
 

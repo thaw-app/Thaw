@@ -159,7 +159,7 @@ nonisolated enum DisplaysTab: CaseIterable, ThawTab {
         }
     }
 
-    var title: LocalizedStringKey {
+    var title: LocalizedStringResource {
         switch self {
         case .spacing: "Spacing"
         case .spaces: "Spaces"

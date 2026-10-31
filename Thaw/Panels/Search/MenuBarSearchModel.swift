@@ -10,6 +10,7 @@ import Combine
 import Ifrit
 import MenuBarModel
 import Observation
+import ThawUI
 
 /// Observable state behind MenuBarSearchPanel: the query, the rows it
 /// renders, the highlighted row, the inline rename in progress, and the

@@ -8,6 +8,7 @@
 import MenuBarModel
 import Testing
 @testable import Thaw
+import ThawUI
 
 /// What a registry leaves with Carbon when it goes away. These claim a real combination that no other test uses.
 @MainActor

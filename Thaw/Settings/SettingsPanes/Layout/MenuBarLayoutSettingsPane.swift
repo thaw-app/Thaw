@@ -28,7 +28,7 @@ struct MenuBarLayoutSettingsPane: View {
     }
 
     /// Format warning names as a localized list with singular/plural sentences for subject agreement.
-    private static func outOfReachMessage(for bundleIDs: Set<String>) -> LocalizedStringKey {
+    private static func outOfReachMessage(for bundleIDs: Set<String>) -> LocalizedStringResource {
         let names = appNames(for: bundleIDs)
         return bundleIDs.count == 1
             ? "\(names) is running, but \(Constants.displayName) can't see its menu bar items, so it can't hide or arrange them. If its icon is missing from the menu bar too, quit and reopen \(names). Otherwise, relaunch \(Constants.displayName)."
@@ -284,7 +284,7 @@ private struct LayoutSpacersRows: View {
 
         ForEach(spacerManager.spacers) { spacer in
             LabeledContent {
-                HStack(spacing: 12) {
+                HStack(spacing: ThawSpacing.inset) {
                     ColorPicker(
                         "Spacer color",
                         selection: Binding(
@@ -387,14 +387,14 @@ struct LayoutBarsSection: View {
     @ViewBuilder
     private var layoutRefusalNotice: some View {
         if let refusal = appState.layoutFeedback.refusal {
-            VStack(alignment: .leading, spacing: 12) {
+            VStack(alignment: .leading, spacing: ThawSpacing.inset) {
                 Text("macOS 27 does not let \(Constants.displayName) hide some system items.")
                     .font(ThawType.footnote)
                     .foregroundStyle(ThawInk.supporting)
                     .fixedSize(horizontal: false, vertical: true)
                 SettingsWarningPill(
-                    title: LocalizedStringKey(refusal.title),
-                    message: LocalizedStringKey(refusal.message),
+                    title: LocalizedStringResource(String.LocalizationValue(refusal.title)),
+                    message: LocalizedStringResource(String.LocalizationValue(refusal.message)),
                     systemImage: "exclamationmark.triangle.fill",
                     tint: .orange,
                     actionTitle: "Dismiss"
@@ -438,8 +438,8 @@ struct LayoutResetFlow: View {
     @State private var status: ResetStatus?
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            HStack(alignment: .top, spacing: 12) {
+        VStack(alignment: .leading, spacing: ThawSpacing.inset) {
+            HStack(alignment: .top, spacing: ThawSpacing.inset) {
                 Text("Moves every movable item except the \(Constants.displayName) icon to the selected section, just like a fresh install.")
                     .font(ThawType.footnote)
                     .foregroundStyle(ThawInk.supporting)
@@ -449,7 +449,7 @@ struct LayoutResetFlow: View {
             }
 
             if let status {
-                HStack(alignment: .firstTextBaseline, spacing: 6) {
+                HStack(alignment: .firstTextBaseline, spacing: ThawSpacing.compact) {
                     if status.isError {
                         Image(systemName: "exclamationmark.triangle")
                             .foregroundStyle(.orange)

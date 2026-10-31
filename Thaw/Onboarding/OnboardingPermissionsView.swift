@@ -29,8 +29,6 @@ struct ThawPermissionsView: View {
     private let finishesFlow: Bool
     private let onContinue: () -> Void
 
-    @State private var appeared = false
-
     /// Whether Grant Access was pressed on this visit; gates the waiting row.
     @State private var hasRequested = false
 
@@ -80,10 +78,6 @@ struct ThawPermissionsView: View {
             // Preflight only: appearing must never raise a Screen Recording
             // prompt. The async probe is for the continue button.
             permissions.refreshPermissionsState()
-            // A local curve because ThawMotion has no bouncy one.
-            withThawAnimation(.spring(duration: 0.6, bounce: 0.3)) {
-                appeared = true
-            }
         }
     }
 
@@ -91,9 +85,9 @@ struct ThawPermissionsView: View {
 
     private var recoveryLayout: some View {
         VStack(spacing: ThawSpacing.gutter) {
-            header(
-                title: "Enable Permissions",
-                body: "\(Constants.displayName) uses the permissions below to manage your menu bar. Permission checks happen on your Mac."
+            OnboardingHeader(
+                title: Text("Enable Permissions"),
+                message: Text("\(Constants.displayName) uses the permissions below to manage your menu bar. Permission checks happen on your Mac.")
             )
 
             // Two cards a row, as the bento lays out its cards: four across
@@ -103,7 +97,7 @@ struct ThawPermissionsView: View {
                 spacing: ThawSpacing.inset
             ) {
                 ForEach(permissions.allPermissions) { permission in
-                    OnboardingPermissionCard(permission: permission)
+                    PermissionCard(permission: permission)
                 }
             }
             .frame(maxWidth: 620)
@@ -135,13 +129,10 @@ struct ThawPermissionsView: View {
 
     private var onboardingLayout: some View {
         VStack(spacing: ThawSpacing.gutter) {
-            header(
-                title: "Allow access",
-                body: onboardingHeaderBody
-            )
+            OnboardingHeader(title: Text("Allow access"), message: Text(onboardingHeaderBody))
 
             // The page's primary action is below, so no second Grant button.
-            OnboardingPermissionCard(permission: focusPermission, showsRequestButton: false)
+            PermissionCard(permission: focusPermission, showsRequestButton: false)
                 .fixedSize(horizontal: false, vertical: true)
                 .frame(maxWidth: 420)
 
@@ -164,7 +155,7 @@ struct ThawPermissionsView: View {
         focusPermission === permissions.accessibility
     }
 
-    private var onboardingHeaderBody: LocalizedStringKey {
+    private var onboardingHeaderBody: LocalizedStringResource {
         if focusIsAccessibility {
             return finishesFlow
                 ? "One last thing: \(Constants.displayName) needs Accessibility to see and move your menu bar items. Permission checks stay on your Mac."
@@ -224,7 +215,7 @@ struct ThawPermissionsView: View {
         .thawAnimation(ThawMotion.settle, value: permission.hasPermission)
     }
 
-    private func onboardingActionTitle(for permission: Permission) -> LocalizedStringKey {
+    private func onboardingActionTitle(for permission: Permission) -> LocalizedStringResource {
         if !permission.hasPermission {
             return "Grant Access"
         }
@@ -232,43 +223,20 @@ struct ThawPermissionsView: View {
     }
 
     private var quitButton: some View {
-        Button {
+        OnboardingQuietButton(
+            title: Text("Quit \(Constants.displayName)"),
+            help: Text("Quit \(Constants.displayName) without granting access"),
+            shortcut: KeyboardShortcut("q")
+        ) {
             NSApp.terminate(nil)
-        } label: {
-            Text("Quit \(Constants.displayName)")
-                .font(ThawType.caption)
-                .foregroundStyle(.secondary)
         }
-        .buttonStyle(.plain)
-        .keyboardShortcut("q")
-        .help("Quit \(Constants.displayName) without granting access")
-        .accessibilityLabel(Text("Quit \(Constants.displayName)"))
-        .padding(.trailing, ThawSpacing.gutter)
-        .padding(.bottom, ThawSpacing.inset)
     }
 
     // MARK: - Shared
 
-    private func header(title: LocalizedStringKey, body: LocalizedStringKey) -> some View {
-        VStack(spacing: ThawSpacing.compact) {
-            Text(title)
-                .font(ThawType.display)
-                .multilineTextAlignment(.center)
-
-            Text(body)
-                .font(ThawType.body)
-                .foregroundStyle(.secondary)
-                .multilineTextAlignment(.center)
-                .fixedSize(horizontal: false, vertical: true)
-                .frame(maxWidth: 460)
-        }
-        .scaleEffect(appeared ? 1 : 0.96)
-        .opacity(appeared ? 1 : 0)
-    }
-
     /// The privacy facts as the welcome screen's capsules, in one row.
     private var privacyRow: some View {
-        HStack(spacing: ThawSpacing.base) {
+        OnboardingFactRow {
             OnboardingFactCapsule(
                 symbol: "hand.raised",
                 label: Text("No analytics or tracking"),
@@ -285,27 +253,26 @@ struct ThawPermissionsView: View {
                 spoken: Text("Open source under GPL; inspect how it works")
             )
         }
-        .frame(maxWidth: 560)
     }
 }
 
-private struct OnboardingPermissionCard: View {
+private struct PermissionCard: View {
     let permission: Permission
 
     /// Off in onboarding, where the page's primary action grants instead.
     var showsRequestButton = true
 
     var body: some View {
-        VStack(alignment: .leading, spacing: ThawSpacing.inset) {
+        OnboardingPermissionCard(surface: .glass, isGranted: permission.hasPermission) {
             PermissionLabel(
                 permission: permission,
                 titleFont: ThawType.heading,
                 badgePlacement: .below
             )
-
+        } details: {
             VStack(alignment: .leading, spacing: 5) {
                 ForEach(permission.onboardingDetails, id: \.self) { detail in
-                    HStack(alignment: .top, spacing: 6) {
+                    HStack(alignment: .top, spacing: ThawSpacing.compact) {
                         // A 3pt bullet, not type: no text style is this small.
                         Image(systemName: "circle.fill")
                             .font(.system(size: 3))
@@ -319,17 +286,10 @@ private struct OnboardingPermissionCard: View {
                     }
                 }
             }
-            .frame(maxWidth: .infinity, alignment: .leading)
-
-            Spacer(minLength: 0)
-
+        } control: {
             if showsRequestButton || permission.hasPermission {
                 PermissionStatusControl(permission: permission, layout: .filled)
             }
         }
-        .padding(ThawSpacing.inset)
-        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
-        .thawGlass(.panel, in: RoundedRectangle(cornerRadius: ThawRadius.card, style: .continuous))
-        .thawAnimation(ThawMotion.settle, value: permission.hasPermission)
     }
 }

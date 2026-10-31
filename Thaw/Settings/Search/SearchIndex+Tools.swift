@@ -10,7 +10,7 @@ import SwiftUI
 nonisolated extension SearchIndex {
     // MARK: Tools
 
-    /// Rows in the Tools pane, in the pane's own order. Mostly one-shot
+    /// Rows in the Troubleshooting pane, in the pane's own order. Mostly one-shot
     /// maintenance actions with no persisted settings property; the diagnostic
     /// logging toggle is the exception and keeps its property link so the
     /// drift guard covers it.

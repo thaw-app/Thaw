@@ -7,6 +7,7 @@
 
 import Foundation
 import Observation
+import ThawUI
 
 /// The things Thaw teaches once, in place, and never again.
 ///

@@ -23,8 +23,6 @@ final class AppSettings {
 
     let automation = AutomationSettings()
 
-    let automationHook = AutomationHookSettings()
-
     @ObservationIgnored
     private(set) weak var appState: AppState?
 

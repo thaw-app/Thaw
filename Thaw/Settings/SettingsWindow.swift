@@ -6,6 +6,7 @@
 //  Licensed under the GNU GPLv3
 
 import SwiftUI
+import ThawUI
 
 // MARK: - SettingsWindowMetrics
 
@@ -50,7 +51,7 @@ struct SettingsWindow: Scene {
                 generalSettings: appState.settings.general
             )
             .sheet(isPresented: $appState.isUpdateConsentPresented) {
-                UpdateConsentSheet { autoDownload in
+                UpdateConsentSheet(strings: .thaw) { autoDownload in
                     appState.isUpdateConsentPresented = false
                     Defaults.set(true, forKey: .hasSeenUpdateConsent)
                     appState.updatesManager.automaticallyChecksForUpdates = true
@@ -79,7 +80,7 @@ struct SettingsWindow: Scene {
         )
         .windowStyle(.titleBar)
         .windowToolbarStyle(.unified)
-        .commands { AppUIZoomCommands() }
+        .commands { AppUIZoomCommands(strings: .thaw) }
         .environment(appState)
         .environment(appState.permissions)
     }

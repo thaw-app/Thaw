@@ -52,14 +52,6 @@ nonisolated enum AutomationSummary {
         return list(parts, locale: locale) + "."
     }
 
-    /// The script's path with the home folder shortened to ~, or None.
-    static func script(path: String?) -> String {
-        guard let path, !path.isEmpty else {
-            return String(localized: "None")
-        }
-        return (path as NSString).abbreviatingWithTildeInPath
-    }
-
     private static func list(_ items: [String], locale: Locale) -> String {
         var shown = items
         if items.count > namedLimit {
