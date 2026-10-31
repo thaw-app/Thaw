@@ -244,7 +244,7 @@ struct MenuBarAppearanceEditor: View {
     private var appearanceModePicker: some View {
         ThawSection {
             LabeledContent("Editing") {
-                HStack(spacing: 8) {
+                HStack(spacing: ThawSpacing.base) {
                     ThawPillPicker(selection: $editingAppearance, options: [
                         ThawPillPicker.Option(.light, title: "Light", systemImage: "sun.max"),
                         ThawPillPicker.Option(.dark, title: "Dark", systemImage: "moon"),
@@ -707,8 +707,8 @@ private struct PressReportingButtonStyle: ButtonStyle {
 
     func makeBody(configuration: Configuration) -> some View {
         configuration.label
-            .padding(.horizontal, 10)
-            .padding(.vertical, 3)
+            .padding(.horizontal, ThawSpacing.row)
+            .padding(.vertical, ThawSpacing.capsuleInset)
             .thawGlass(.control, in: Capsule(style: .continuous))
             .opacity(configuration.isPressed ? 0.7 : 1.0)
             .onChange(of: configuration.isPressed) { _, isPressed in

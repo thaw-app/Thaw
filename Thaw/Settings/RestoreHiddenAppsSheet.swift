@@ -15,7 +15,7 @@ struct RestoreHiddenAppsSheet: View {
     @Bindable var offer: HiddenAppsRestoreOffer
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 16) {
+        VStack(alignment: .leading, spacing: ThawSpacing.gutter) {
             Text("Restore apps \(Constants.displayName) hid")
                 .font(.title2.bold())
 

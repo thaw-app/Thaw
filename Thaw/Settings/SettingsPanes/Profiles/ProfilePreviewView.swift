@@ -211,7 +211,7 @@ struct ProfilePreviewView: View {
                             .font(.caption2.weight(.medium).monospacedDigit())
                             .foregroundStyle(ThawInk.supporting)
                             .padding(.horizontal, 5)
-                            .padding(.vertical, 2)
+                            .padding(.vertical, ThawSpacing.hairline)
                             .background(Capsule().fill(.quaternary))
                     }
                 }
@@ -274,7 +274,7 @@ private struct ItemIcon: View {
                 Image(systemName: "app.dashed")
                     .resizable()
                     .foregroundStyle(ThawInk.supporting)
-                    .padding(2)
+                    .padding(ThawSpacing.hairline)
             }
         }
         .frame(width: 18, height: 18)

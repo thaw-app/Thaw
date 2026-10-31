@@ -341,7 +341,7 @@ struct ThawBarContentView: View {
                 }
             }
             .thawAnimation(ThawMotion.quick, value: cacheGracePeriodActive)
-            .padding(.horizontal, 10)
+            .padding(.horizontal, ThawSpacing.row)
             .onChange(of: cacheGracePeriodActive) {
                 Self.diagLog.debug("ThawBar content: grace period changed to \(self.cacheGracePeriodActive) for section \(self.section.logString), items still empty: \(items.isEmpty)")
             }
@@ -361,7 +361,7 @@ struct ThawBarContentView: View {
                 }
             }
             .thawAnimation(ThawMotion.quick, value: loadingTimedOut)
-            .padding(.horizontal, 10)
+            .padding(.horizontal, ThawSpacing.row)
             .onChange(of: loadingTimedOut) {
                 Self.diagLog.warning("ThawBar content: loading timeout changed to \(self.loadingTimedOut), itemCache.managedItems is still EMPTY")
             }
@@ -379,7 +379,7 @@ struct ThawBarContentView: View {
             }
             .thawAnimation(ThawMotion.quick, value: cacheGracePeriodActive)
             .thawAnimation(ThawMotion.quick, value: loadingTimedOut)
-            .padding(.horizontal, 10)
+            .padding(.horizontal, ThawSpacing.row)
             .onChange(of: loadingTimedOut) {
                 Self.diagLog.warning("ThawBar content: hasNoRenderableItems timeout changed to \(self.loadingTimedOut) for section \(self.section.logString)")
             }

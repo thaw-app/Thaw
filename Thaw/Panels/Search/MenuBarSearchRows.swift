@@ -124,7 +124,7 @@ private struct MenuBarItemPlaceholderIcon: View {
                     .resizable()
                     .scaledToFit()
                     .foregroundStyle(glyphColor)
-                    .padding(3)
+                    .padding(ThawSpacing.capsuleInset)
             }
             .padding(2.5)
             .frame(width: length, height: length)

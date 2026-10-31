@@ -354,7 +354,7 @@ private struct SettingsSearchResults: View {
                     .font(ThawType.detail.weight(.medium))
                     .foregroundStyle(ThawInk.supporting)
                     .padding(.horizontal, SettingsDetailLayout.titleHorizontalInset + 6)
-                    .padding(.bottom, 6)
+                    .padding(.bottom, ThawSpacing.compact)
                     .accessibilityAddTraits(.updatesFrequently)
 
                 SearchResultsList(groups: searchModel.displayedGroups) { entry in

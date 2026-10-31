@@ -97,7 +97,7 @@ final class NotchMediaWidget: NotchWidget {
         let widget: NotchMediaWidget
 
         var body: some View {
-            VStack(spacing: 8) {
+            VStack(spacing: ThawSpacing.base) {
                 VStack(spacing: 1) {
                     Text(widget.trackTitle ?? "Nothing Playing")
                         .font(ThawType.body.weight(.semibold))
@@ -118,7 +118,7 @@ final class NotchMediaWidget: NotchWidget {
                     transportButton("forward.fill", label: "Next Track") { widget.command(.nextTrack) }
                 }
             }
-            .padding(.horizontal, 16)
+            .padding(.horizontal, ThawSpacing.gutter)
             .frame(maxWidth: .infinity, maxHeight: .infinity)
         }
 
