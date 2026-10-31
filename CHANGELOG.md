@@ -26,7 +26,7 @@ the items under New and Fixed.
 
 ### New
 
-- **Modules in Settings.** A new Modules page switches optional parts of Thaw on and off, and a module that's off doesn't run at all. Scripts, Triggers and Widgets are the first ones, and each starts switched on if you already used what it does. Each module also has its switch on its own page, such as Settings › Widgets. A module that's off leaves the sidebar. By @diazdesandi.
+- **Modules in Settings.** A new Extras page switches optional parts of Thaw on and off, and a module that's off doesn't run at all. Scripts, Triggers and Widgets are the first ones, and each starts switched on if you already used what it does. Each module also has its switch on its own page, such as Settings › Widgets. A module that's off leaves the sidebar. By @diazdesandi.
 
 ### Changed
 
@@ -34,14 +34,14 @@ the items under New and Fixed.
 
 - **App triggers run in their own app.** Triggers that show items while an app runs moved to the Triggers module, a small app that comes with Thaw and runs next to it. Your triggers move over by themselves. Open them from Settings › Triggers. By @diazdesandi.
 - **Profile scripts run in their own app.** The scripts that run when a profile switches moved to the Scripts module, a small app that comes with Thaw and runs next to it. Your scripts move over by themselves. Open them from Settings › Scripts. Thaw no longer waits for a "before switching" script to finish before it changes the layout. By @diazdesandi.
-- **The widget icon runs in its own app.** The icon that combines battery, Wi-Fi and other readings left Experiments and is now the Widgets module. Turn it on in Settings › Modules and design it from Settings › Widgets. Your design moves over by itself. By @diazdesandi.
+- **The widget icon runs in its own app.** The icon that combines battery, Wi-Fi and other readings left Experiments and is now the Widgets module. Turn it on in Settings › Extras and design it from Settings › Widgets. Your design moves over by itself. By @diazdesandi.
 
 #### Settings
 
-- **Modules is a grid of cards with a search field,** like the extension store in Floe. Each card has the part's icon, what it does and its switch. By @diazdesandi.
-- **The sidebar is laid out like Floe's.** Thaw's everyday pages come first, from General to Shortcuts, then the modules you have on under a small On heading, then Modules, Privacy and Tools under Manage, and About last. The selected page has a see-through gold fill, and the arrow keys move between pages. A part that's off leaves the sidebar until you switch it on in Modules. While search results show, no page is selected, so clicking any page, the one you were on included, ends the search. By @diazdesandi.
-- **Profiles can be turned off.** Profiles has a switch in Modules. Off, no profile switches on its own, the profile shortcuts do nothing, and profiles leave the Thaw menu, the panel and the Swap Bar. Your saved profiles are kept. By @diazdesandi.
-- **Show an item when its icon changes is on Triggers.** It sits with the app triggers, the other way an item shows on its own, and it works while Triggers is on in Modules. By @diazdesandi.
+- **Extras is a grid of cards with a search field,** like the extension store in Floe. Each card has the part's icon, what it does and its switch. By @diazdesandi.
+- **The sidebar is laid out like Floe's.** Thaw's everyday pages come first, from General to Shortcuts, then the modules you have on under a small Modules heading, then Extras, Privacy and Tools under Manage, and About last. The selected page has a see-through gold fill, and the arrow keys move between pages. A part that's off leaves the sidebar until you switch it on in Extras. While search results show, no page is selected, so clicking any page, the one you were on included, ends the search. By @diazdesandi.
+- **Profiles can be turned off.** Profiles has a switch in Extras. Off, no profile switches on its own, the profile shortcuts do nothing, and profiles leave the Thaw menu, the panel and the Swap Bar. Your saved profiles are kept. By @diazdesandi.
+- **Show an item when its icon changes is on Triggers.** It sits with the app triggers, the other way an item shows on its own, and it works while Triggers is on in Extras. By @diazdesandi.
 - **Displays & Spaces is now called Displays.** It holds menu bar item spacing for each display, the wide displays rule and the Spaces controls. By @diazdesandi.
 - **Automation is now two pages, Triggers and Scripts.** The apps allowed to change settings with thaw:// links are on Privacy, and switching profiles by display or Space is on Profiles. Saved links to Automation open Triggers. By @diazdesandi.
 - **Experiments is gone.** The panel that can replace Thaw's menu is on Widgets, and the other experiments joined the rows below. They keep their Alpha and Beta badges. The camera and microphone alerts are put away for now and stay off. Saved links to Experiments open General. By @diazdesandi.

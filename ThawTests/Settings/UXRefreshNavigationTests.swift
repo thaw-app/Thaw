@@ -20,7 +20,7 @@ struct UXRefreshNavigationTests {
 
     @Test("The sidebar puts Thaw's everyday pages first, then the modules that are on, then Manage, About alone last")
     func sidebarGroups() {
-        #expect(SettingsSidebarPanes.groups.map(\.heading) == [nil, "On", "Manage", nil])
+        #expect(SettingsSidebarPanes.groups.map(\.heading) == [nil, "Modules", "Manage", nil])
         #expect(SettingsSidebarPanes.all == [
             .general, .menuBarLayout, .visibility, .menuBarAppearance, .thawBar, .displays, .hotkeys,
             .profiles, .scripts, .triggers, .widgets,
@@ -29,10 +29,10 @@ struct UXRefreshNavigationTests {
         ], "Got: \(SettingsSidebarPanes.all)")
     }
 
-    @Test("On and Manage have their headings, and About opens with a gap")
+    @Test("Modules and Manage have their headings, and About opens with a gap")
     func headingsAndGaps() {
         let rows = SettingsSidebarPanes.rows
-        let on = String(localized: "On")
+        let on = String(localized: "Modules")
         let manage = String(localized: "Manage")
         #expect(rows.filter { $0.page == nil } == [.heading(on), .heading(manage), .gap])
         #expect(rows[7] == .heading(on))
@@ -48,7 +48,7 @@ struct UXRefreshNavigationTests {
         #expect(SettingsSidebarPanes.panesTurnedOff { _ in true }.isEmpty)
         #expect(
             SettingsSidebarPanes.panesTurnedOff(isEnabled: { _ in true }, profilesOn: false) == [.profiles],
-            "Profiles leaves the sidebar while its switch in Modules is off"
+            "Profiles leaves the sidebar while its switch in Extras is off"
         )
 
         let pages = SettingsSidebarPanes.rows(turnedOff: allOff).compactMap(\.page)
@@ -61,7 +61,7 @@ struct UXRefreshNavigationTests {
     @Test("A group whose pages are all off loses its heading, and the arrow keys skip what's off")
     func turnedOffGroupsAndArrows() {
         let rows = SettingsSidebarPanes.rows(turnedOff: [.profiles, .scripts, .triggers, .widgets])
-        #expect(!rows.contains(.heading(String(localized: "On"))))
+        #expect(!rows.contains(.heading(String(localized: "Modules"))))
         #expect(SettingsSidebarRow.page(moving: .down, from: .hotkeys, in: rows) == .modules)
         let scriptsOff = SettingsSidebarPanes.rows(turnedOff: [.scripts])
         #expect(SettingsSidebarRow.page(moving: .up, from: .triggers, in: scriptsOff) == .profiles)

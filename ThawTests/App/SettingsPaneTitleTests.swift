@@ -16,12 +16,17 @@ struct SettingsPaneTitleTests {
         String(localized: pane.localized)
     }
 
+    @Test("The Extras page keeps its stored identifier, so saved settings and links still find it")
+    func extrasKeepsItsIdentifier() {
+        #expect(SettingsNavigationIdentifier.modules.rawValue == "Modules")
+    }
+
     @Test("A page is named by its label, not its stored identifier", arguments: [
         (SettingsNavigationIdentifier.menuBarLayout, "Layout"),
         (.menuBarAppearance, "Appearance"),
         (.hotkeys, "Shortcuts"),
         (.displays, "Displays"),
-        (.modules, "Modules"),
+        (.modules, "Extras"),
         (.triggers, "Triggers"),
         (.scripts, "Scripts"),
         (.widgets, "Widgets"),
