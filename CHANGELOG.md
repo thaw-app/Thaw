@@ -45,6 +45,14 @@ the items under New and Fixed.
 - **Displays & Spaces is now called Displays.** It holds menu bar item spacing for each display, the wide displays rule and the Spaces controls. By @diazdesandi.
 - **Automation is now two pages, Triggers and Scripts.** The apps allowed to change settings with thaw:// links are on Privacy, and switching profiles by display or Space is on Profiles. Saved links to Automation open Triggers. By @diazdesandi.
 - **Experiments is gone.** The panel that can replace Thaw's menu is on Widgets, and the other experiments joined the rows below. They keep their Alpha and Beta badges. The camera and microphone alerts are put away for now and stay off. Saved links to Experiments open General. By @diazdesandi.
+- **The left and right arrow keys step through What's New and Acknowledgements,** and the text fades under the title bar as it does on the settings pages.
+- **Permission icons line up.** Each permission's icon sits in the same box as the sidebar's, so the names start in the same place.
+
+### Fixed
+
+- **Links in the release notes open only over https.** Any other link in them stays as plain text.
+- **A page that isn't the changelog can't replace your saved release notes.** A Wi-Fi sign-in page, for example, now counts as a failed fetch, so What's New keeps the last good copy.
+- **Recording a shortcut stops when its page goes away,** and Shift-Escape cancels it. While the warning about a shortcut macOS already uses is up, the keyboard works in the warning.
 
 ## [3.0.0-beta.5] - 2026-10-30
 

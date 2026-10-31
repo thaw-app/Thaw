@@ -64,7 +64,7 @@ where new code goes instead.
 | `ThawConcurrency/` | Timeouts and one-shot continuations | Nothing |
 | `ThawAX/` | Accessibility reading: `ThawAXCore`, `ThawAXClient` and the `ThawAXHelper` process | No other package; client and helper use `ThawAXCore` |
 | `ThawExtras/` | `ThawExtraHelper`, stand-ins for Apple items Thaw hides (Focus, AirDrop and others) | Nothing |
-| `ThawUI/` | Settings form and control components, with no knowledge of app state | CompactSlider |
+| `ThawUI/` | Controls, settings pages and onboarding pieces shared with Floe, with no knowledge of app state or text of their own. A temporary copy of the ThawUI package | CompactSlider |
 | `ThawControls/` | Control Center controls that show hidden items or toggle Zen Mode | |
 | `ThawCtl/` | A command-line tool that turns commands into `thaw://` URLs | |
 | `MenuBarCaptureService/` | The XPC service that hosts capture | `ThawCapture` |
