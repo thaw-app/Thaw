@@ -164,4 +164,35 @@ struct RevealStrandDetectionTests {
 
         #expect(stranded.isEmpty)
     }
+
+    @Test
+    func aPinnedControlCenterControlIsNeverStranded() {
+        // The reported bar: Screenshot, Timer and Calculator controls pinned to
+        // the menu bar, assigned Visible, standing in the hidden band. The
+        // agent sorts them by a row Thaw cannot address, so a repair only
+        // re-seats their neighbours. A third-party item beside them still counts.
+        let screenshot = MenuBarItem(
+            tag: MenuBarItemTag(
+                namespace: .menuBarAgent,
+                title: ":com.apple.screenshot.launcher:com.apple.controls.screenshot:com.apple.controls.screenshot.capture-custom"
+            ),
+            windowID: 40,
+            ownerPID: 500,
+            sourcePID: 500,
+            bounds: CGRect(x: 200, y: 0, width: 21, height: 30),
+            title: nil,
+            isOnScreen: true
+        )
+        let bitwarden = Self.app("com.bitwarden.desktop", "Item-0", x: 250, windowID: 41)
+        let items = [screenshot, bitwarden, Self.hiddenDivider, Self.visibleControl]
+
+        let stranded = MoveTargeting.membersStrandedAcrossDivider(
+            items: items,
+            controlItems: Self.controlItems,
+            sectionFor: { _ in .visible },
+            experimentalSystemItemHiding: false
+        )
+
+        #expect(stranded.map(\.uniqueIdentifier) == [bitwarden.uniqueIdentifier])
+    }
 }

@@ -420,7 +420,7 @@ public struct MenuBarItemTag: Hashable, CustomStringConvertible, Sendable, Codab
     }
 
     public var isMovable: Bool {
-        !isLayoutAnchoredSystemItem && !isAgentUngoverned && !isCaptureActivityIndicator && !isLiveActivityPill
+        !isLayoutAnchoredSystemItem && !isAgentUngoverned && !isCaptureActivityIndicator && !isLiveActivityPill && !isPinnedControlCenterControl
     }
 
     /// A Live Activity, drawn by MenuBarAgent for whichever app started it.

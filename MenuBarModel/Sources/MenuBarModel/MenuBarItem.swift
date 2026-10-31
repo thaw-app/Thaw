@@ -38,7 +38,7 @@ public struct MenuBarItem: CustomStringConvertible, Sendable, Codable {
                 experimentalSystemItemHiding &&
                     sectionManagementPolicy.isForcedVisible &&
                     !tag.isAgentUngoverned &&
-                    !tag.isLiveActivityPill
+                    !tag.isLiveActivityPill && !tag.isPinnedControlCenterControl
             )
     }
 
@@ -50,7 +50,7 @@ public struct MenuBarItem: CustomStringConvertible, Sendable, Codable {
         /// macOS 27's overflow chevron, vended through AX like an extra but
         /// with nothing to grab and no weight to write.
         case nativeOverflowControl
-        /// Clock, Control Center, Siri.
+        /// Clock, Control Center, Siri, and a Control Center control pinned to the menu bar.
         case systemAnchored
         /// A forced-visible MenuBarAgent module, movable once experimental
         /// hiding is on.
@@ -76,8 +76,8 @@ public struct MenuBarItem: CustomStringConvertible, Sendable, Codable {
         if isMovable {
             return nil
         }
-        // Forced-visible like the modules below, but no assertion makes macOS move it.
-        if tag.isLiveActivityPill {
+        // Forced-visible like the modules below, but no assertion makes macOS move them: a pinned control's chrono row is one Thaw cannot address.
+        if tag.isLiveActivityPill || tag.isPinnedControlCenterControl {
             return .systemAnchored
         }
 
