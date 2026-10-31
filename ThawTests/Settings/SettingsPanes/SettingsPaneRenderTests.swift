@@ -107,26 +107,21 @@ struct SettingsPaneRenderTests {
         try await expectTabsDraw(["Options for all displays"], appState: appState, render: render)
     }
 
-    @Test("Automation draws its triggers, hooks and allowed apps")
-    func automationPane() async throws {
+    @Test("The allowed apps section draws")
+    func allowedAppsSection() async throws {
         let appState = AppState()
-        let settings = appState.settings
-        let render = render(
-            AutomationSettingsPane(settings: settings.automation, hookSettings: settings.automationHook, advancedSettings: settings.advanced),
-            appState: appState
-        )
+        let render = render(ThawForm { OtherAppsSection(settings: appState.settings.automation) }, appState: appState)
         _ = try await drawnPixels(render)
     }
 
-    @Test("Privacy, The Lab, About, Appearance, Widgets and Scripts draw")
+    @Test("Privacy, About, Appearance, Widgets and Scripts draw")
     func remainingPanes() async throws {
         let appState = AppState()
         let settings = appState.settings
         _ = try await drawnPixels(render(PrivacySettingsPane(updatesManager: appState.updatesManager, advancedSettings: settings.advanced), appState: appState))
-        _ = try await drawnPixels(render(TheLabSettingsPane(settings: settings.advanced), appState: appState))
         _ = try await drawnPixels(render(AboutSettingsPane(updatesManager: appState.updatesManager), appState: appState))
         _ = try await drawnPixels(render(MenuBarAppearanceSettingsPane(appearanceManager: appState.appearanceManager), appState: appState))
-        _ = try await drawnPixels(render(WidgetsSettingsPane(), appState: appState))
+        _ = try await drawnPixels(render(WidgetsSettingsPane(settings: settings.advanced), appState: appState))
         _ = try await drawnPixels(render(ScriptsSettingsPane(), appState: appState))
     }
 

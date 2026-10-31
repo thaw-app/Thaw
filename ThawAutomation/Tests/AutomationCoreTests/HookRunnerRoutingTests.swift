@@ -7,7 +7,8 @@
 
 import Foundation
 import Testing
-@testable import Thaw
+import ThawModuleKit
+@testable import AutomationCore
 
 /// Which hooks run and through what, with scripts that only write inside their own temporary folder.
 @MainActor

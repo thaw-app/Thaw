@@ -7,6 +7,7 @@
 
 import Foundation
 import Testing
+import ThawModuleKit
 @testable import Thaw
 
 /// A profile file can come from anyone, so importing it must stay bounded and switch nothing risky on.

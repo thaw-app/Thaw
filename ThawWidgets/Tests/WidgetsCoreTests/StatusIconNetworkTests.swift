@@ -6,8 +6,21 @@
 //  Licensed under the GNU GPLv3
 
 import AppKit
+import Combine
 import Testing
 @testable import WidgetsCore
+
+/// Returns once condition holds, checking it again at each change rather than polling against a deadline.
+@MainActor
+private func waitUntil<Changes: Publisher>(_ condition: () -> Bool, wakingOn changes: Changes) async where Changes.Failure == Never {
+    var wake: AnyCancellable?
+    while !condition() {
+        await withCheckedContinuation { woken in
+            wake = changes.first().sink { _ in woken.resume() }
+        }
+    }
+    wake?.cancel()
+}
 
 @MainActor
 @Suite("Status icon network")

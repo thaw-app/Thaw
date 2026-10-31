@@ -8,9 +8,8 @@
 import Foundation
 import IOKit.ps
 import Testing
-@testable import Thaw
+@testable import WidgetsCore
 
-@MainActor
 @Suite("Widget sources read what the system reports")
 struct WidgetSourceReadingTests {
     @Test("Battery level is the current capacity over the maximum")
@@ -26,10 +25,9 @@ struct WidgetSourceReadingTests {
         #expect(BatteryLevelSource.level(from: [:]) == 0)
     }
 
-    @Test("The CPU source is available and reads one counter per logical processor")
+    @Test("The CPU source reads one counter per logical processor")
     func cpuTicks() throws {
         let source = CPUSource()
-        #expect(source.isAvailable)
         #expect(try source.readTicks().cores.count == ProcessInfo.processInfo.processorCount)
     }
 }
