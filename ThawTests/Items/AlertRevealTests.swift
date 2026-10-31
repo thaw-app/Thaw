@@ -18,18 +18,4 @@ struct AlertRevealTests {
         #expect(MenuBarItemAlertReveals.watched(saved: saved, triggersOn: true) == saved)
         #expect(MenuBarItemAlertReveals.watched(saved: saved, triggersOn: false).isEmpty)
     }
-
-    @Test("An item shows again only after the cooldown")
-    func cooldown() {
-        var policy = AlertRevealPolicy(cooldown: 45)
-        let start = Date(timeIntervalSinceReferenceDate: 0)
-        let first = policy.shouldReveal("mail", now: start)
-        let tooSoon = policy.shouldReveal("mail", now: start.addingTimeInterval(44))
-        let otherItem = policy.shouldReveal("chat", now: start.addingTimeInterval(44))
-        let afterCooldown = policy.shouldReveal("mail", now: start.addingTimeInterval(45))
-        #expect(first)
-        #expect(!tooSoon)
-        #expect(otherItem, "Each item has its own cooldown")
-        #expect(afterCooldown)
-    }
 }

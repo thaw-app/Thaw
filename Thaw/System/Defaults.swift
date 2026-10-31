@@ -640,7 +640,6 @@ extension Defaults {
         /// checks whether they exist, to start each module switched on.
         case globalPreProfileHook = "GlobalPreProfileHook"
         case globalPostProfileHook = "GlobalPostProfileHook"
-        case lastSettledProfileID = "LastSettledProfileID"
         case lastActiveProfileID = "LastActiveProfileID"
         case widgetIconPublished = "StatusIconPrototype.published"
     }

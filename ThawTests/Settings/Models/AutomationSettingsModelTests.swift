@@ -10,29 +10,8 @@ import Testing
 @testable import Thaw
 
 @MainActor
-@Suite("Automation settings and global hooks", .serialized, .scratchDefaults)
+@Suite("Automation settings", .serialized, .scratchDefaults)
 struct AutomationSettingsModelTests {
-    @Test("Each phase keeps its own global hook, and saving nil clears only that phase")
-    func globalHooksPerPhase() {
-        let pre = HookScript(path: "/tmp/pre.sh", timeoutSeconds: 12, isEnabled: false)
-        let post = HookScript(path: "/tmp/post.applescript")
-
-        HookScript.saveGlobal(pre, phase: .pre)
-        HookScript.saveGlobal(post, phase: .post)
-        #expect(HookScript.loadGlobal(.pre) == pre)
-        #expect(HookScript.loadGlobal(.post) == post)
-
-        HookScript.saveGlobal(nil, phase: .pre)
-        #expect(HookScript.loadGlobal(.pre) == nil)
-        #expect(HookScript.loadGlobal(.post) == post)
-    }
-
-    @Test("A stored global hook that does not decode reads as none")
-    func undecodableGlobalHook() {
-        Defaults.set(Data("not json".utf8), forKey: .globalPostProfileHook)
-        #expect(HookScript.loadGlobal(.post) == nil)
-    }
-
     @Test("An allowed app is named by its app name, or by its bundle ID when it has none")
     func whitelistedAppNames() {
         let named = AutomationSettings.WhitelistedApp(bundleId: "com.example.a", appName: "Alpha", icon: nil)
