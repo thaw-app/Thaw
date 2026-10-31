@@ -50,6 +50,7 @@ the items under New and Fixed.
 
 ### Fixed
 
+- **Screenshots no longer show the Finder menus you hid.** With the option to hide them on the desktop, a screenshot showed the menus under the cover.
 - **A note in the layout editor's right-click menu looks like a note.** The line that says an item can't be grouped, and the one about an app's split items, are now dimmed so they don't look like commands.
 - **Links in the release notes open only over https.** Any other link stays plain text.
 - **A page that isn't the changelog can't replace your saved release notes.** A Wi-Fi sign-in page, for example, now counts as a failed fetch, so What's New keeps the last good copy.
