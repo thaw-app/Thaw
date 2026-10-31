@@ -1,0 +1,45 @@
+//
+//  ErrorAlert.swift
+//  Project: Thaw
+//
+//  Copyright (Thaw) © 2026 Toni Förster
+//  Licensed under the GNU GPLv3
+
+import Foundation
+import SwiftUI
+
+extension View {
+    /// OK clears the binding; caller-supplied titles describe failures sharing a catch block better than generic error names.
+    /// The optional role preserves Escape dismissal where needed.
+    public func errorAlert(
+        _ title: LocalizedStringResource,
+        message: Binding<String?>,
+        okLabel: LocalizedStringResource,
+        role: ButtonRole? = nil
+    ) -> some View {
+        alert(title, item: message) { _ in
+            Button(okLabel, role: role) { /* The alert dismisses itself, and its binding clears the message. */ }
+        } message: { message in
+            Text(message)
+        }
+    }
+
+    /// Uses the error's own wording without duplication or a replacement title; clearing the binding dismisses the alert.
+    public func errorAlert(_ error: Binding<(some LocalizedError)?>, okLabel: LocalizedStringResource) -> some View {
+        alert(
+            isPresented: Binding(
+                get: { error.wrappedValue != nil },
+                set: { isPresented in
+                    if !isPresented {
+                        error.wrappedValue = nil
+                    }
+                }
+            ),
+            error: error.wrappedValue
+        ) {
+            Button(okLabel) {
+                error.wrappedValue = nil
+            }
+        }
+    }
+}

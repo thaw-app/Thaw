@@ -9,7 +9,7 @@ import SwiftUI
 
 /// A tab that names itself, for ThawTabStrip(selection:tabs:).
 public nonisolated protocol ThawTab: Hashable {
-    var title: LocalizedStringKey { get }
+    var title: LocalizedStringResource { get }
     var systemImage: String { get }
 }
 

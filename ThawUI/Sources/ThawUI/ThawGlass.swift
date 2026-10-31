@@ -9,42 +9,27 @@ import SwiftUI
 
 // MARK: - Glass tiers
 
-/// Thaw's shared Liquid Glass treatments.
-///
-/// Calibrated against Apple's visionOS apps (Music on visionOS being the
-/// reference): their windows are thick, tinted glass, never clear. Clear
-/// glass is the wrong material for .panel: it reads as a grey film over the
-/// desktop and washes out entirely in light mode.
-///
-/// Every tier pairs its material with the same border discipline. Nothing in
-/// Thaw should apply bare .glassEffect without going through here, so a
-/// future re-skin is a change to this file, not to twenty call sites.
+/// Shared Liquid Glass tiers; use these instead of a bare .glassEffect.
+/// Clear glass is wrong for .panel: a grey film over the desktop that washes out in light mode.
 public enum ThawGlass {
-    /// Containers that float over arbitrary desktops (search panel, palettes,
-    /// popover chrome, notch descender). Regular glass.
+    /// Containers that float over arbitrary desktops. Regular glass.
     case panel
-    /// Interactive elements inside a panel: fields, pickers, key caps, slider
-    /// tracks. Interactive glass so controls respond as surfaces.
+    /// A .panel with no edge, even under Reduce Transparency or Increase Contrast, for glass
+    /// that already draws its rim; a hairline would read as a broken dark border.
+    case borderlessPanel
+    /// Elements inside a panel: fields, pickers, key caps, slider tracks. Interactive glass.
     case control
-    /// A control that takes keyboard focus, like the search capsule or a
-    /// gradient handle. Same glass as .control, with a border that brightens
-    /// while focused so the focused field reads one step more solid.
+    /// A control that takes keyboard focus. Same glass as .control, with a tinted border while focused.
     case field(isFocused: Bool)
-    /// Emphasis surfaces (warnings, the selected sidebar row): clear glass
-    /// washed with the accent, the one place thin glass is correct, because
-    /// it carries a tint of its own.
+    /// Emphasis surfaces such as warnings: clear glass washed with the
+    /// accent. Thin glass is correct only here, because it carries its own tint.
     case accent(Color)
-    /// The accent wash, graded: .selected is a flat neutral-and-accent fill
-    /// for rows inside a list that already floats, .hover is the lighter,
-    /// strokeless step the pointer leaves behind. Every "this one" in the app
-    /// is one of these two.
+    /// The accent wash, graded: .selected is a flat neutral-and-accent fill for rows in a list
+    /// that already floats, .hover the lighter, strokeless step.
     case selection(Color, strength: SelectionStrength)
 
-    /// How strongly a selection surface reads.
     public enum SelectionStrength {
-        /// The pointer is over it.
         case hover
-        /// It is the chosen one.
         case selected
     }
 }
@@ -52,25 +37,14 @@ public enum ThawGlass {
 // MARK: - Modifiers
 
 public extension View {
-    /// Applies the shared glass treatment for level, clipped to shape.
-    ///
-    /// The radius belongs to the caller via shape, tiers govern material,
-    /// border, and depth, while geometry stays contextual.
+    /// Applies the glass tier, clipped to shape. The caller's shape sets the radius.
     func thawGlass(_ level: ThawGlass, in shape: some InsettableShape) -> some View {
         modifier(ThawGlassModifier(level: level, shape: shape))
     }
 }
 
-/// The one place the accessibility display preferences meet the glass.
-///
-/// Reduce Transparency swaps every tier's glass for the system's regular
-/// material, flat, opaque enough to read on, still appearance-aware, and
-/// brightens the hairline so the edge is not lost with the depth. Increase
-/// Contrast thickens the hairline to a full point and draws it in the label
-/// colour rather than the separator, which is too faint to count as a
-/// boundary at 3:1. Handling both here means no surface in the app needs
-/// its own branch, and a surface that goes through the tiers is correct
-/// under those settings by construction.
+/// Reduce Transparency swaps every tier's glass for the regular material and brightens the hairline.
+/// Increase Contrast makes it a full point in the label colour; the separator is too faint for 3:1.
 private struct ThawGlassModifier<S: InsettableShape>: ViewModifier {
     @Environment(\.accessibilityReduceTransparency) private var reduceTransparency
     @Environment(\.colorSchemeContrast) private var contrast
@@ -86,9 +60,7 @@ private struct ThawGlassModifier<S: InsettableShape>: ViewModifier {
         increasedContrast ? 1 : 0.5
     }
 
-    /// The tier's separator hairline at opacity, adjusted for the display
-    /// preferences: one and a half times as strong once the glass is gone,
-    /// and in the label colour when contrast is increased.
+    /// Separator hairline at opacity: 1.5x once the glass is gone, label colour under increased contrast.
     private func hairline(_ opacity: Double) -> AnyShapeStyle {
         let strength = reduceTransparency ? min(opacity * 1.5, 1) : opacity
         if increasedContrast {
@@ -99,14 +71,13 @@ private struct ThawGlassModifier<S: InsettableShape>: ViewModifier {
 
     func body(content: Content) -> some View {
         switch level {
-        // Liquid Glass draws its own rim, specular edge and depth. An extra
-        // hairline and drop shadow would make every surface read as a bordered
-        // card sitting on glass rather than as glass. The strokes stay only
-        // where the system has no glass to draw: Reduce Transparency, and
-        // Increase Contrast, where an edge must be visible.
+        // Liquid Glass draws its own rim and depth; an extra hairline and shadow read as a bordered card.
+        // Strokes stay only for Reduce Transparency and Increase Contrast.
         case .panel:
             surface(content, interactive: false)
                 .overlay(fallbackEdge(0.5))
+        case .borderlessPanel:
+            surface(content, interactive: false)
         case .control:
             surface(content, interactive: true)
                 .overlay(fallbackEdge(0.65))
@@ -114,15 +85,12 @@ private struct ThawGlassModifier<S: InsettableShape>: ViewModifier {
             surface(content, interactive: true)
                 .overlay(isFocused ? AnyView(shape.strokeBorder(.tint, lineWidth: 1)) : AnyView(fallbackEdge(0.35)))
         case let .accent(tint):
-            // Kept custom on purpose: the system's tinted glass fills the whole
-            // surface with the tint, which turns a warning into a solid slab.
+            // Custom: the system's tinted glass fills the whole surface, turning a warning into a solid slab.
             accentSurface(content, tint: tint)
                 .overlay(shape.strokeBorder(tint.opacity(reduceTransparency ? 0.42 : 0.28), lineWidth: max(hairlineWidth, 1)))
         case let .selection(tint, .selected):
-            // Flat, like hover. A clear glass lens over a list that already
-            // floats refracts the row it marks, and an 18% tint through it is
-            // too faint to read as the chosen one, which is what the search
-            // results showed. The neutral floor keeps it legible over glass.
+            // Flat: a clear glass lens over a floating list refracts the row, and an 18% tint through it
+            // is too faint to read as selected. The neutral floor keeps it legible over glass.
             content
                 .background(
                     shape
@@ -131,9 +99,7 @@ private struct ThawGlassModifier<S: InsettableShape>: ViewModifier {
                 )
                 .overlay(shape.strokeBorder(tint.opacity(reduceTransparency ? 0.42 : 0.28), lineWidth: max(hairlineWidth, 1)))
         case let .selection(tint, .hover):
-            // Flat, not glass: a hover fill comes and goes with the pointer,
-            // and standing up a glass layer for each pass is cost without
-            // depth anyone reads.
+            // Flat: a glass layer for each hover pass costs more than the depth is worth.
             content.background(shape.fill(tint.opacity(reduceTransparency ? 0.2 : 0.1)))
         }
     }
@@ -156,8 +122,7 @@ private struct ThawGlassModifier<S: InsettableShape>: ViewModifier {
         }
     }
 
-    /// Clear glass washed with the tint, or, without transparency, a flat
-    /// wash twice as strong, since there is no glass left to carry it.
+    /// Clear glass washed with the tint; without transparency, a flat wash twice as strong.
     @ViewBuilder
     private func accentSurface(_ content: Content, tint: Color) -> some View {
         if reduceTransparency {
@@ -170,17 +135,14 @@ private struct ThawGlassModifier<S: InsettableShape>: ViewModifier {
 
 // MARK: - Hover lift
 
-/// A slight scale-up on hover for interactive rows and buttons, settling back
-/// on exit. Reduce Motion turns off both the scale and its animation.
+/// A slight scale-up on hover for rows and buttons. Reduce Motion turns it off.
 struct ThawHoverLift: ViewModifier {
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var isHovered = false
 
     func body(content: Content) -> some View {
-        // Scale only. A brightness filter installs an offscreen render pass
-        // on every view it touches, hovered or not, and a window with a few
-        // dozen lifted rows pays that in memory and in pane-switch time. The
-        // transform is free; the lift is the part people notice.
+        // Scale only: a brightness filter installs an offscreen render pass on every view it touches,
+        // which a window of lifted rows pays for in memory and pane-switch time.
         content
             .scaleEffect(isHovered && !reduceMotion ? 1.02 : 1)
             .thawAnimation(ThawMotion.interactive, value: isHovered)
@@ -189,8 +151,7 @@ struct ThawHoverLift: ViewModifier {
 }
 
 public extension View {
-    /// Applies the shared hover-lift focus response. No-op under
-    /// Reduce Motion.
+    /// Applies the hover lift. No-op under Reduce Motion.
     func thawHoverLift() -> some View {
         modifier(ThawHoverLift())
     }
@@ -198,12 +159,7 @@ public extension View {
 
 // MARK: - Radius scale
 
-/// The corner radii Thaw's glass surfaces share, so a control, a card and a
-/// floating panel read as one family instead of each picking its own.
-///
-/// Larger than the platform defaults on purpose: glass wants generous
-/// rounding, and the difference between a 10pt and a 16pt card is most of
-/// what makes a surface feel like it floats rather than sits.
+/// Corner radii for glass surfaces, larger than the platform defaults: glass wants generous rounding.
 public enum ThawRadius {
     /// A small mark inside a control, such as a checkbox.
     public static let small: CGFloat = 4

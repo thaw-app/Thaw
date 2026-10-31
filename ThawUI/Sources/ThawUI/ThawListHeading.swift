@@ -15,13 +15,13 @@ public struct ThawListHeading: View {
         self.title = title
     }
 
-    public init(_ title: LocalizedStringKey) {
+    public init(_ title: LocalizedStringResource) {
         self.title = Text(title)
     }
 
     public var body: some View {
         title
-            .font(.system(size: 11, weight: .semibold))
+            .font(ThawType.sublabel.weight(.semibold))
             .textCase(.uppercase)
             .foregroundStyle(.secondary)
             .lineLimit(1)

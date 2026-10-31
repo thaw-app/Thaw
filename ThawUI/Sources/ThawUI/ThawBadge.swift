@@ -7,40 +7,31 @@
 
 import SwiftUI
 
-/// A small capsule status badge: "Notch", "Disconnected", "Customized".
-///
-/// The shared vocabulary for the pattern: quaternary fill, 6×2 padding,
-/// capsule clip. Badges annotate a row, they don't act, anything clickable
-/// belongs in a Button.
-///
-/// Two tones only, on purpose. alpha and beta are conveniences over the
-/// tinted tone, not a third one: an experiment's maturity is a state the user
-/// opted into, and red and green are the Lab's two readings of "how far along
-/// is this".
+/// A small capsule status badge: "Notch", "Disconnected", "Customized". Anything clickable belongs in a Button.
+/// Two tones only: alpha and beta are conveniences over the tinted one.
 public struct ThawBadge: View {
     public enum Tone {
         /// Facts about the thing (hardware, connection state).
         case neutral
-        /// States the user caused and can undo (an override, a pending edit),
-        /// washed with the tint like the accent glass tier but flat: badges
-        /// sit inside rows, and glass inside glass reads as noise at this size.
+        /// States the user caused and can undo (an override, a pending edit). A flat tint:
+        /// badges sit inside rows, and glass inside glass reads as noise at this size.
         case tinted(Color)
     }
 
     /// Marks a feature that may not survive: red, uppercase.
-    public static var alpha: ThawBadge {
-        ThawBadge("ALPHA", tone: .tinted(.red))
+    public static func alpha(_ title: LocalizedStringResource) -> ThawBadge {
+        ThawBadge(title, tone: .tinted(.red))
     }
 
     /// Marks a feature that works but is still settling: green, uppercase.
-    public static var beta: ThawBadge {
-        ThawBadge("BETA", tone: .tinted(.green))
+    public static func beta(_ title: LocalizedStringResource) -> ThawBadge {
+        ThawBadge(title, tone: .tinted(.green))
     }
 
-    private let title: LocalizedStringKey
+    let title: LocalizedStringResource
     private let tone: Tone
 
-    public init(_ title: LocalizedStringKey, tone: Tone = .neutral) {
+    public init(_ title: LocalizedStringResource, tone: Tone = .neutral) {
         self.title = title
         self.tone = tone
     }
@@ -49,8 +40,8 @@ public struct ThawBadge: View {
         Text(title)
             .font(ThawType.caption.weight(.medium))
             .foregroundStyle(foreground)
-            .padding(.horizontal, 6)
-            .padding(.vertical, 2)
+            .padding(.horizontal, ThawSpacing.compact)
+            .padding(.vertical, ThawSpacing.hairline)
             .background(background, in: Capsule(style: .continuous))
             .overlay {
                 if case let .tinted(tint) = tone {

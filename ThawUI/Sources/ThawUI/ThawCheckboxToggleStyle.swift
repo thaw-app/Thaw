@@ -15,7 +15,14 @@ public struct ThawCheckboxToggleStyle: ToggleStyle {
     private static let side: CGFloat = 14
     private static let shape = RoundedRectangle(cornerRadius: ThawRadius.small, style: .continuous)
 
-    public init() {}
+    let onValue: LocalizedStringResource
+    let offValue: LocalizedStringResource
+
+    /// The two values name the state for VoiceOver.
+    public init(onValue: LocalizedStringResource, offValue: LocalizedStringResource) {
+        self.onValue = onValue
+        self.offValue = offValue
+    }
 
     public func makeBody(configuration: Configuration) -> some View {
         Button {
@@ -29,7 +36,7 @@ public struct ThawCheckboxToggleStyle: ToggleStyle {
         }
         .buttonStyle(.plain)
         .opacity(isEnabled ? 1 : ThawInk.disabledOpacity)
-        .accessibilityValue(Text(configuration.isOn ? LocalizedStringKey("On") : LocalizedStringKey("Off")))
+        .accessibilityValue(Text(configuration.isOn ? onValue : offValue))
         .accessibilityAddTraits(.isToggle)
     }
 
@@ -51,7 +58,7 @@ public struct ThawCheckboxToggleStyle: ToggleStyle {
 
 public extension ToggleStyle where Self == ThawCheckboxToggleStyle {
     /// A checkbox in the sidebar's selection style, see ThawCheckboxToggleStyle.
-    static var thawCheckbox: ThawCheckboxToggleStyle {
-        ThawCheckboxToggleStyle()
+    static func thawCheckbox(onValue: LocalizedStringResource, offValue: LocalizedStringResource) -> ThawCheckboxToggleStyle {
+        ThawCheckboxToggleStyle(onValue: onValue, offValue: offValue)
     }
 }

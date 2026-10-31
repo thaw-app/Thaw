@@ -10,11 +10,11 @@ import SwiftUI
 /// One choice in a ThawPillPicker or one tab in a ThawTabStrip.
 public struct ThawSegment<Value: Hashable> {
     let value: Value
-    let title: LocalizedStringKey
+    let title: LocalizedStringResource
     let systemImage: String?
-    let help: LocalizedStringKey?
+    let help: LocalizedStringResource?
 
-    public init(_ value: Value, title: LocalizedStringKey, systemImage: String? = nil, help: LocalizedStringKey? = nil) {
+    public init(_ value: Value, title: LocalizedStringResource, systemImage: String? = nil, help: LocalizedStringResource? = nil) {
         self.value = value
         self.title = title
         self.systemImage = systemImage
@@ -92,7 +92,7 @@ struct ThawCapsuleSegments<Value: Hashable>: View {
         let isSelected = segment.value == selection
         let shape = Capsule(style: .continuous)
         // Styled on each part: a section header sets its own text colour over the label's.
-        let style = isSelected ? AnyShapeStyle(.primary) : AnyShapeStyle(.secondary)
+        let style = isSelected ? AnyShapeStyle(.primary) : AnyShapeStyle(ThawInk.supporting)
         let weight: Font.Weight = isSelected ? .semibold : .regular
         return Button {
             selection = segment.value
@@ -100,7 +100,7 @@ struct ThawCapsuleSegments<Value: Hashable>: View {
             HStack(spacing: ThawSpacing.tight) {
                 if let systemImage = segment.systemImage {
                     Image(systemName: systemImage)
-                        .font(.system(size: 13, weight: weight))
+                        .font(ThawType.symbol.weight(weight))
                         .foregroundStyle(style)
                 }
                 if sizing.showsTitles {
@@ -119,7 +119,7 @@ struct ThawCapsuleSegments<Value: Hashable>: View {
                 maxHeight: sizing.maxHeight
             )
             .thawSelectedFill(isSelected, in: shape)
-            .contentShape(shape)
+            .contentShape([.interaction, .focusEffect], shape)
         }
         .buttonStyle(.plain)
         .thawSelectionCue(isSelected: isSelected, in: shape)
@@ -131,7 +131,7 @@ struct ThawCapsuleSegments<Value: Hashable>: View {
 /// A segment's tooltip, left off entirely when it has none, so an empty one
 /// never covers a tooltip set further out.
 private struct SegmentHelp: ViewModifier {
-    let text: LocalizedStringKey?
+    let text: LocalizedStringResource?
 
     func body(content: Content) -> some View {
         if let text {

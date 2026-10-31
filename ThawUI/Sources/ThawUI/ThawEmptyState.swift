@@ -7,35 +7,24 @@
 
 import SwiftUI
 
-/// Shared empty / loading / error placeholder for a pane, list, or panel with
-/// nothing to show.
-///
-/// A centered symbol or spinner, a title, and an optional caption. No glass,
-/// background or border: empty states sit on a surface.
+/// Empty, loading or error placeholder for a pane, list or panel: a symbol or spinner, a title and
+/// an optional caption. No glass, background or border: empty states sit on a surface.
 public struct ThawEmptyState: View {
     private let systemImage: String
-    private let title: LocalizedStringKey
-    private let caption: LocalizedStringKey?
+    private let title: LocalizedStringResource
+    private let caption: LocalizedStringResource?
     private let isLoading: Bool
-    private let actionTitle: LocalizedStringKey?
+    private let actionTitle: LocalizedStringResource?
     private let action: (() -> Void)?
 
-    /// - Parameters:
-    ///   - systemImage: SF Symbol shown above the title. Ignored while
-    ///     isLoading is true, when a ProgressView takes its place.
-    ///   - title: Primary message, e.g. "No settings found".
-    ///   - caption: Optional supporting detail shown under the title.
-    ///   - isLoading: When true, shows a spinner instead of systemImage,
-    ///     use for "waiting on data" states rather than "nothing here" states.
-    ///   - actionTitle: The one step that fixes the state, when there is one.
-    ///     An empty state that names a problem should say what to do next.
-    ///   - action: Runs when the step is chosen.
+    /// isLoading swaps the symbol for a spinner, for "waiting on data" states rather than "nothing here" states. The action
+    /// title is the one step that fixes the state, when there is one: an empty state naming a problem should say what to do next.
     public init(
         systemImage: String,
-        title: LocalizedStringKey,
-        caption: LocalizedStringKey? = nil,
+        title: LocalizedStringResource,
+        caption: LocalizedStringResource? = nil,
         isLoading: Bool = false,
-        actionTitle: LocalizedStringKey? = nil,
+        actionTitle: LocalizedStringResource? = nil,
         action: (() -> Void)? = nil
     ) {
         self.systemImage = systemImage
@@ -47,7 +36,7 @@ public struct ThawEmptyState: View {
     }
 
     public var body: some View {
-        VStack(spacing: 10) {
+        VStack(spacing: ThawSpacing.row) {
             symbol
 
             Text(title)
@@ -69,8 +58,8 @@ public struct ThawEmptyState: View {
             }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .padding(.horizontal, 16)
-        .padding(.vertical, 24)
+        .padding(.horizontal, ThawSpacing.gutter)
+        .padding(.vertical, ThawSpacing.section)
         // Combined only when there is nothing to press: a combined element
         // would swallow the button.
         .accessibilityElement(children: actionTitle == nil ? .combine : .contain)
