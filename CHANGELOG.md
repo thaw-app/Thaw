@@ -22,6 +22,16 @@ Anything else goes before the first section, or in its own section after
 these four. The website shows each section's name beside its list, and counts
 the items under New and Fixed.
 
+## [3.0.0-alpha.12.1] - 2026-10-30
+
+**macOS 27 only · Build 120**
+
+A hotfix for alpha.12. Nothing else changed.
+
+### Fixed
+
+- **Control Center controls you pinned to the menu bar stay where macOS puts them.** Thaw counted a pinned control such as Screenshot, Timer or Calculator as a Visible item it could move. macOS places those controls itself, so each time you showed your hidden items Thaw shuffled the icons around them for a few seconds and then gave up. Thaw now leaves them to macOS, and Layout says so if you try to move one.
+
 ## [3.0.0-alpha.12] - 2026-10-30
 
 **macOS 27 only · Build 119**
