@@ -105,8 +105,6 @@ struct SettingsSidebarPaneList: View {
     /// Pages whose module is off, left out of the list.
     var turnedOff: Set<SettingsNavigationIdentifier> = []
 
-    static let listWidth: CGFloat = 220
-
     private var isSearching: Bool {
         !searchModel.searchText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
     }

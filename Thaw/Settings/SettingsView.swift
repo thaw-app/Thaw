@@ -114,25 +114,13 @@ struct SettingsView: View {
 
     private var fullSettingsScreen: some View {
         @Bindable var searchModel = searchModel
-        return NavigationSplitView {
+        // The system toolbar is the pane header: it names the pane, stays put
+        // while the form scrolls under it and blurs what passes beneath, and
+        // carries the search field and the overflow menu on its trailing edge.
+        return ThawSettingsShell(title: Text(toolbarTitle), subtitle: toolbarSubtitle, sidebarMaxWidth: 250) {
             sidebar
         } detail: {
             detailContent
-                // The system toolbar is the pane header: it names the pane,
-                // stays put while the form scrolls under it and blurs what
-                // passes beneath, and carries the search field and the
-                // overflow menu on its trailing edge.
-                .navigationTitle(toolbarTitle)
-                .navigationSubtitle(toolbarSubtitle)
-                .toolbar {
-                    // History on the leading edge, the overflow menu beside search.
-                    ToolbarItemGroup(placement: .navigation) {
-                        SettingsHistoryButtons(history: paneHistory, navigationState: navigationState)
-                    }
-                    ToolbarItem(placement: .primaryAction) {
-                        SettingsOverflowMenu(appState: appState, generalSettings: generalSettings)
-                    }
-                }
                 .onChange(of: navigationState.settingsNavigationIdentifier) { previous, _ in
                     paneHistory.record(leaving: previous)
                 }
@@ -154,12 +142,14 @@ struct SettingsView: View {
                     .disabled(paneHistory.forward.isEmpty)
                     .hidden()
                 }
-                // Fill the detail column so the Form's scrollbar sits on the
-                // window/detail trailing edge, not on a 680pt content column.
-                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
-                // Content fades under the glass toolbar instead of stopping at
-                // a hard band.
-                .scrollEdgeEffectStyle(.soft, for: .top)
+        } toolbar: {
+            // History on the leading edge, the overflow menu beside search.
+            ToolbarItemGroup(placement: .navigation) {
+                SettingsHistoryButtons(history: paneHistory, navigationState: navigationState)
+            }
+            ToolbarItem(placement: .primaryAction) {
+                SettingsOverflowMenu(appState: appState, generalSettings: generalSettings)
+            }
         }
         .settingsSearchField(
             text: $searchModel.searchText,
@@ -401,7 +391,6 @@ private struct SettingsSidebar: View {
                 profilesOn: appState.profilesFeature.isOn
             )
         )
-            .navigationSplitViewColumnWidth(min: SettingsSidebarPaneList.listWidth, ideal: SettingsSidebarPaneList.listWidth, max: 250)
             .onChange(of: generalSettings.simpleMode) { _, _ in
                 searchModel.updateDisplayedItems()
             }
