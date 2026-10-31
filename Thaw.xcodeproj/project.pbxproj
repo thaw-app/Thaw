@@ -800,7 +800,7 @@
 				"CODE_SIGN_IDENTITY[sdk=macosx*]" = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
 				COMBINE_HIDPI_IMAGES = YES;
-				CURRENT_PROJECT_VERSION = 122;
+				CURRENT_PROJECT_VERSION = 123;
 				DEAD_CODE_STRIPPING = YES;
 				DEVELOPMENT_ASSET_PATHS = "";
 				DEVELOPMENT_TEAM = A7CKWF99ML;
@@ -819,7 +819,7 @@
 					"@executable_path/../Frameworks",
 				);
 				MACOSX_DEPLOYMENT_TARGET = 27.0;
-				MARKETING_VERSION = "3.0.0-beta.5";
+				MARKETING_VERSION = "3.0.0-alpha.13";
 				PRODUCT_BUNDLE_IDENTIFIER = "com.stonerl.Thaw$(THAW_BUNDLE_ID_SUFFIX)";
 				INFOPLIST_KEY_CFBundleDisplayName = "Thaw$(THAW_PRODUCT_NAME_SUFFIX)";
 				PRODUCT_MODULE_NAME = Thaw;
@@ -846,7 +846,7 @@
 				"CODE_SIGN_IDENTITY[sdk=macosx*]" = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
 				COMBINE_HIDPI_IMAGES = YES;
-				CURRENT_PROJECT_VERSION = 122;
+				CURRENT_PROJECT_VERSION = 123;
 				DEAD_CODE_STRIPPING = YES;
 				DEVELOPMENT_ASSET_PATHS = "";
 				DEVELOPMENT_TEAM = A7CKWF99ML;
@@ -865,7 +865,7 @@
 					"@executable_path/../Frameworks",
 				);
 				MACOSX_DEPLOYMENT_TARGET = 27.0;
-				MARKETING_VERSION = "3.0.0-beta.5";
+				MARKETING_VERSION = "3.0.0-alpha.13";
 				PRODUCT_BUNDLE_IDENTIFIER = "com.stonerl.Thaw$(THAW_BUNDLE_ID_SUFFIX)";
 				INFOPLIST_KEY_CFBundleDisplayName = "Thaw$(THAW_PRODUCT_NAME_SUFFIX)";
 				PRODUCT_MODULE_NAME = Thaw;
@@ -886,7 +886,7 @@
 			buildSettings = {
 				"CODE_SIGN_IDENTITY[sdk=macosx*]" = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 122;
+				CURRENT_PROJECT_VERSION = 123;
 				DEAD_CODE_STRIPPING = YES;
 				DEVELOPMENT_TEAM = A7CKWF99ML;
 				ENABLE_HARDENED_RUNTIME = YES;
@@ -898,7 +898,7 @@
 					"@executable_path/../Frameworks",
 				);
 				MACOSX_DEPLOYMENT_TARGET = 27.0;
-				MARKETING_VERSION = "3.0.0-beta.5";
+				MARKETING_VERSION = "3.0.0-alpha.13";
 				PRODUCT_BUNDLE_IDENTIFIER = "com.stonerl.Thaw$(THAW_BUNDLE_ID_SUFFIX).MenuBarCaptureService";
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SKIP_INSTALL = YES;
@@ -914,7 +914,7 @@
 			buildSettings = {
 				"CODE_SIGN_IDENTITY[sdk=macosx*]" = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 122;
+				CURRENT_PROJECT_VERSION = 123;
 				DEAD_CODE_STRIPPING = YES;
 				DEVELOPMENT_TEAM = A7CKWF99ML;
 				ENABLE_HARDENED_RUNTIME = YES;
@@ -926,7 +926,7 @@
 					"@executable_path/../Frameworks",
 				);
 				MACOSX_DEPLOYMENT_TARGET = 27.0;
-				MARKETING_VERSION = "3.0.0-beta.5";
+				MARKETING_VERSION = "3.0.0-alpha.13";
 				PRODUCT_BUNDLE_IDENTIFIER = "com.stonerl.Thaw$(THAW_BUNDLE_ID_SUFFIX).MenuBarCaptureService";
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SKIP_INSTALL = YES;
@@ -942,12 +942,12 @@
 			buildSettings = {
 				BUNDLE_LOADER = "$(TEST_HOST)";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 122;
+				CURRENT_PROJECT_VERSION = 123;
 				DEAD_CODE_STRIPPING = YES;
 				DEVELOPMENT_TEAM = A7CKWF99ML;
 				GENERATE_INFOPLIST_FILE = YES;
 				MACOSX_DEPLOYMENT_TARGET = 27.0;
-				MARKETING_VERSION = "3.0.0-beta.5";
+				MARKETING_VERSION = "3.0.0-alpha.13";
 				PRODUCT_BUNDLE_IDENTIFIER = com.stonerl.Thaw.tests;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_APPROACHABLE_CONCURRENCY = YES;
@@ -963,12 +963,12 @@
 			buildSettings = {
 				BUNDLE_LOADER = "$(TEST_HOST)";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 122;
+				CURRENT_PROJECT_VERSION = 123;
 				DEAD_CODE_STRIPPING = YES;
 				DEVELOPMENT_TEAM = A7CKWF99ML;
 				GENERATE_INFOPLIST_FILE = YES;
 				MACOSX_DEPLOYMENT_TARGET = 27.0;
-				MARKETING_VERSION = "3.0.0-beta.5";
+				MARKETING_VERSION = "3.0.0-alpha.13";
 				PRODUCT_BUNDLE_IDENTIFIER = com.stonerl.Thaw.tests;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_APPROACHABLE_CONCURRENCY = YES;
@@ -985,7 +985,7 @@
 				CODE_SIGN_ENTITLEMENTS = ThawControls/ThawControls.entitlements;
 				"CODE_SIGN_IDENTITY[sdk=macosx*]" = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 122;
+				CURRENT_PROJECT_VERSION = 123;
 				DEAD_CODE_STRIPPING = YES;
 				DEVELOPMENT_TEAM = A7CKWF99ML;
 				ENABLE_APP_SANDBOX = YES;
@@ -999,7 +999,7 @@
 					"@executable_path/../../../../Frameworks",
 				);
 				MACOSX_DEPLOYMENT_TARGET = 27.0;
-				MARKETING_VERSION = "3.0.0-beta.5";
+				MARKETING_VERSION = "3.0.0-alpha.13";
 				PRODUCT_BUNDLE_IDENTIFIER = "com.stonerl.Thaw$(THAW_BUNDLE_ID_SUFFIX).ThawControls";
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SKIP_INSTALL = YES;
@@ -1017,7 +1017,7 @@
 				CODE_SIGN_ENTITLEMENTS = ThawControls/ThawControls.entitlements;
 				"CODE_SIGN_IDENTITY[sdk=macosx*]" = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 122;
+				CURRENT_PROJECT_VERSION = 123;
 				DEAD_CODE_STRIPPING = YES;
 				DEVELOPMENT_TEAM = A7CKWF99ML;
 				ENABLE_APP_SANDBOX = YES;
@@ -1031,7 +1031,7 @@
 					"@executable_path/../../../../Frameworks",
 				);
 				MACOSX_DEPLOYMENT_TARGET = 27.0;
-				MARKETING_VERSION = "3.0.0-beta.5";
+				MARKETING_VERSION = "3.0.0-alpha.13";
 				PRODUCT_BUNDLE_IDENTIFIER = "com.stonerl.Thaw$(THAW_BUNDLE_ID_SUFFIX).ThawControls";
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SKIP_INSTALL = YES;
