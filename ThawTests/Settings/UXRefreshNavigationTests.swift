@@ -5,9 +5,11 @@
 //  Copyright (Thaw) © 2026 Toni Förster
 //  Licensed under the GNU GPLv3
 
+import SwiftUI
 import Testing
 @testable import Thaw
 import ThawModuleKit
+import ThawUI
 
 /// The sidebar lists direct destinations in groups, ending with About.
 /// Scripts is an unbuilt placeholder with no route from the window.
@@ -60,10 +62,10 @@ struct UXRefreshNavigationTests {
     func turnedOffGroupsAndArrows() {
         let rows = SettingsSidebarPanes.rows(turnedOff: [.profiles, .scripts, .triggers, .widgets])
         #expect(!rows.contains(.heading(String(localized: "On"))))
-        #expect(SettingsSidebarPanes.page(moving: .down, from: .hotkeys, in: rows) == .modules)
+        #expect(SettingsSidebarRow.page(moving: .down, from: .hotkeys, in: rows) == .modules)
         let scriptsOff = SettingsSidebarPanes.rows(turnedOff: [.scripts])
-        #expect(SettingsSidebarPanes.page(moving: .up, from: .triggers, in: scriptsOff) == .profiles)
-        #expect(SettingsSidebarPanes.page(moving: .down, from: .profiles, in: scriptsOff) == .triggers)
+        #expect(SettingsSidebarRow.page(moving: .up, from: .triggers, in: scriptsOff) == .profiles)
+        #expect(SettingsSidebarRow.page(moving: .down, from: .profiles, in: scriptsOff) == .triggers)
     }
 
     @Test("Settings that left Experiments and Triggers are found on their new panes")
@@ -89,19 +91,22 @@ struct UXRefreshNavigationTests {
 
     @Test("The arrow keys step over headings and stop at the ends")
     func arrowKeysSkipHeadings() {
-        #expect(SettingsSidebarPanes.page(moving: .down, from: .hotkeys) == .profiles)
-        #expect(SettingsSidebarPanes.page(moving: .up, from: .profiles) == .hotkeys)
-        #expect(SettingsSidebarPanes.page(moving: .up, from: .general) == nil)
-        #expect(SettingsSidebarPanes.page(moving: .down, from: .about) == nil)
-        #expect(SettingsSidebarPanes.page(moving: .down, from: .spaces) == nil)
-        #expect(SettingsSidebarPanes.page(moving: .left, from: .hotkeys) == nil)
+        func page(moving direction: MoveCommandDirection, from current: SettingsNavigationIdentifier) -> SettingsNavigationIdentifier? {
+            SettingsSidebarRow.page(moving: direction, from: current, in: SettingsSidebarPanes.rows)
+        }
+        #expect(page(moving: .down, from: .hotkeys) == .profiles)
+        #expect(page(moving: .up, from: .profiles) == .hotkeys)
+        #expect(page(moving: .up, from: .general) == nil)
+        #expect(page(moving: .down, from: .about) == nil)
+        #expect(page(moving: .down, from: .spaces) == nil)
+        #expect(page(moving: .left, from: .hotkeys) == nil)
     }
 
     @Test("No sidebar row is selected while search results show, so any row ends the search")
     func searchDeselectsTheSidebar() {
-        #expect(SettingsSidebarPanes.selectedRow(current: .visibility, isSearching: false) == .visibility)
-        #expect(SettingsSidebarPanes.selectedRow(current: .visibility, isSearching: true) == nil)
-        #expect(SettingsSidebarPanes.selectedRow(current: .spaces, isSearching: false) == nil)
+        #expect(SettingsSidebarPanes.showsSelection(current: .visibility, isSearching: false))
+        #expect(!SettingsSidebarPanes.showsSelection(current: .visibility, isSearching: true))
+        #expect(!SettingsSidebarPanes.showsSelection(current: .spaces, isSearching: false))
     }
 
     @Test("About is last")

@@ -137,12 +137,6 @@ struct SettingsView: View {
                     paneHistory.record(leaving: previous)
                 }
                 .background {
-                    // ⌘F from anywhere in the window lands in the field.
-                    Button("Find") {
-                        isSearchPresented = true
-                    }
-                    .keyboardShortcut("f", modifiers: .command)
-                    .hidden()
                     // History's shortcuts live in the content, not on the
                     // toolbar buttons: a toolbar item that carries a
                     // keyboardShortcut is vended with focused values every
@@ -167,19 +161,15 @@ struct SettingsView: View {
                 // a hard band.
                 .scrollEdgeEffectStyle(.soft, for: .top)
         }
-        .searchable(
+        .settingsSearchField(
             text: $searchModel.searchText,
-            isPresented: $isSearchPresented,
             placement: .toolbar,
-            prompt: "Search"
+            prompt: "Search",
+            findLabel: "Find"
         )
     }
 
-    /// Whether the toolbar search field has focus. Driven by ⌘F; the
-    /// system clears it on Escape or when the field loses focus.
-    @State private var isSearchPresented = false
-
-    private var toolbarTitle: LocalizedStringKey {
+    private var toolbarTitle: LocalizedStringResource {
         isSearching ? "Search" : navigationState.settingsNavigationIdentifier.localized
     }
 
@@ -306,67 +296,13 @@ struct SettingsView: View {
         case .modules:
             ModulesSettingsPane(moduleHost: appState.moduleHost, profiles: appState.profilesFeature)
         case .about:
-            AboutSettingsPane(updatesManager: appState.updatesManager)
+            ThawAboutPane(updatesManager: appState.updatesManager)
         case .scripts:
             ScriptsSettingsPane()
         case .advanced:
             // Advanced was dissolved, so a saved pane that names it opens Layout.
             MenuBarLayoutSettingsPane(itemManager: appState.itemManager)
         }
-    }
-}
-
-// MARK: - SettingsDetailLayout
-
-enum SettingsDetailLayout {
-    /// Comfortable reading width for settings groups. Title and form share this
-    /// column so they stay aligned when the window grows.
-    static let columnMaxWidth: CGFloat = 748
-    /// Offset from the window top under the transparent unified toolbar.
-    /// Intentionally well below the ~60pt safe-area push.
-    static let titleTopInset: CGFloat = 28
-
-    /// Leading inset aligned with grouped form section cards / headers.
-    static let titleHorizontalInset: CGFloat = 28
-}
-
-extension EnvironmentValues {
-    @Entry var settingsPaneTitle: LocalizedStringKey?
-}
-
-// MARK: - BehindWindowMaterialBackground
-
-/// Behind-window vibrancy so surfaces sample the desktop rather than the
-/// system-owned NavigationSplitView backdrop beneath the SwiftUI layer.
-/// The behind-window material every Thaw window surface is built on. Shared
-/// with the What's New reader so it sits on the same glass as the panes.
-struct BehindWindowMaterialBackground: NSViewRepresentable {
-    let material: NSVisualEffectView.Material
-
-    func makeNSView(context _: Context) -> NSVisualEffectView {
-        let view = NSVisualEffectView()
-        configure(view)
-        return view
-    }
-
-    func updateNSView(_ view: NSVisualEffectView, context _: Context) {
-        configure(view)
-    }
-
-    private func configure(_ view: NSVisualEffectView) {
-        view.material = material
-        view.blendingMode = .behindWindow
-        view.state = .active
-        view.isEmphasized = false
-    }
-}
-
-/// The system glass button, unmodified: its own padding and shape, so a
-/// Settings button looks like one in System Settings and follows macOS as the
-/// style changes. Kept as a name so call sites say what they mean.
-extension PrimitiveButtonStyle where Self == GlassButtonStyle {
-    static var settingsGlass: GlassButtonStyle {
-        .glass
     }
 }
 
@@ -390,7 +326,7 @@ private struct SettingsOverflowMenu: View {
             }
             Divider()
             Menu {
-                AppUIZoomControls(showsShortcuts: false)
+                AppUIZoomControls(strings: .thaw, showsShortcuts: false)
             } label: {
                 Text("Zoom")
             }

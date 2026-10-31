@@ -20,18 +20,10 @@ struct PrivacySettingsPane: View {
 
     var body: some View {
         ThawForm {
-            // Footer-only section: the one placement where a pill renders
-            // without the grouped form's section card around it.
-            ThawSection {
-                EmptyView()
-            } footer: {
-                SettingsWarningPill(
-                    title: "Nothing leaves this Mac",
-                    message: "\(Constants.displayName) collects no analytics or usage data. Permission checks stay on your Mac. The only network calls are the ones listed below, and each has a switch.",
-                    systemImage: "hand.raised.fill",
-                    tint: .green
-                )
-            }
+            SettingsPrivacyNotice(
+                title: "Nothing leaves this Mac",
+                message: "\(Constants.displayName) collects no analytics or usage data. Permission checks stay on your Mac. The only network calls are the ones listed below, and each has a switch."
+            )
 
             ThawSection("Questions about privacy?") {
                 PrivacyQuestionsDisclaimer()
