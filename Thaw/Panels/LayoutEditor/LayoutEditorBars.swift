@@ -122,7 +122,7 @@ private struct LayoutEditorTile: View {
                     }
                 }
                 .frame(height: Metrics.glyphHeight)
-                .padding(.horizontal, 3)
+                .padding(.horizontal, ThawSpacing.capsuleInset)
             }
         }
         .padding(.horizontal, unit.isGroup ? 4 : 0)

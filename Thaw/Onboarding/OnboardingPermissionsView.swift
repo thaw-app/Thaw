@@ -272,7 +272,7 @@ private struct PermissionCard: View {
         } details: {
             VStack(alignment: .leading, spacing: 5) {
                 ForEach(permission.onboardingDetails, id: \.self) { detail in
-                    HStack(alignment: .top, spacing: 6) {
+                    HStack(alignment: .top, spacing: ThawSpacing.compact) {
                         // A 3pt bullet, not type: no text style is this small.
                         Image(systemName: "circle.fill")
                             .font(.system(size: 3))

@@ -84,7 +84,7 @@ struct ThawBarPreview: View {
     }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 8) {
+        VStack(alignment: .leading, spacing: ThawSpacing.base) {
             ThawBarPreviewStage(displayID: displayID) {
                 previewBar
             }
@@ -129,7 +129,7 @@ struct ThawBarPreview: View {
                     .buttonStyle(.settingsGlass)
                     .controlSize(.small)
                 }
-                .padding(.vertical, 12)
+                .padding(.vertical, ThawSpacing.inset)
                 .frame(maxWidth: 320)
             } else if layout == .horizontal {
                 // Match the real panel: menu-bar-height row, base end gaps, and vertical padding only at a notch.

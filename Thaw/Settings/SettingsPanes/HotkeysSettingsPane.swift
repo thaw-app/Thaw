@@ -151,7 +151,7 @@ private struct MenuBarItemHotkeyList: View {
                 Text("No menu bar items available")
                     .foregroundStyle(.secondary)
                     .frame(maxWidth: .infinity, alignment: .leading)
-                    .padding(.top, 6)
+                    .padding(.top, ThawSpacing.compact)
             } else {
                 Grid(alignment: .leading, horizontalSpacing: 16, verticalSpacing: 10) {
                     ForEach(rows, id: \.id) { row in
@@ -177,7 +177,7 @@ private struct MenuBarItemHotkeyList: View {
                         }
                     }
                 }
-                .padding(.top, 6)
+                .padding(.top, ThawSpacing.compact)
             }
         } label: {
             Text("Open menu bar items")
