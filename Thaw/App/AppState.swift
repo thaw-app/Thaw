@@ -13,6 +13,7 @@ import Observation
 import PlatformRuntimeKit
 import SwiftUI
 import ThawCapture
+import ThawUI
 
 /// AppDelegate creates the single environment object owning long-lived subsystems; allocation is safe before permissions are granted.
 /// Subsystems start at most once through bootstrapTask, whose setup order follows dependencies.
@@ -361,7 +362,7 @@ final class AppState {
 
         Task {
             let allowFetch = settings.advanced.fetchReleaseNotes
-            guard await ChangelogDocument.load(allowFetch: allowFetch).document?.newestRelease != nil else { return }
+            guard await ChangelogDocument.load(allowFetch: allowFetch, info: .thaw).document?.newestRelease != nil else { return }
             activate(withPolicy: .regular)
             openWindow(.whatsNew)
         }

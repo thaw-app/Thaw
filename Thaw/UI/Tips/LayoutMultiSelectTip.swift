@@ -6,6 +6,7 @@
 //  Licensed under the GNU GPLv3
 
 import SwiftUI
+import ThawUI
 import TipKit
 
 /// Tells upgraders that Layout can now select and move several items, never over the limitations card.
