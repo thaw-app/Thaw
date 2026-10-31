@@ -26,8 +26,7 @@ struct SearchResultsList: View {
                     detail: entry.descriptionText.map { Text($0) }
                 )
             },
-            // The same glyph the sidebar row shows, so a result group names
-            // its pane the way the sidebar does.
+            // The same glyph the sidebar row shows, so a result group names its pane the way the sidebar does.
             groupIcon: { $0.pane.iconResource.image }
         )
     }

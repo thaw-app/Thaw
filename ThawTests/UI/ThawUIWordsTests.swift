@@ -10,8 +10,7 @@ import Testing
 @testable import Thaw
 import ThawUI
 
-/// What Thaw hands the shared package: its identity, its wiring, and the words
-/// that must keep today's catalog keys.
+/// What Thaw hands the shared package: its identity, its wiring, and the words that must keep today's catalog keys.
 @MainActor
 @Suite("ThawUI wiring")
 struct ThawUIWordsTests {

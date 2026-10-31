@@ -25,8 +25,7 @@ extension HotkeyRecorderStrings {
 }
 
 extension HotkeyRecorder {
-    /// A recorder for one of Thaw's hotkeys. The hotkey stands down while a
-    /// recording runs, so the combination being replaced can't fire.
+    /// The hotkey stands down while a recording runs, so the combination being replaced can't fire.
     init(hotkey: Hotkey, @ViewBuilder label: () -> Label) {
         self.init(
             keyCombination: Binding {

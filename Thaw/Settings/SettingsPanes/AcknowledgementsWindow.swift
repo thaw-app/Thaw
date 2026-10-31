@@ -8,9 +8,7 @@
 import SwiftUI
 import ThawUI
 
-/// The standalone acknowledgements window, a ReadingPage like What's
-/// New. A window rather than a sheet so it can carry the same glass and the
-/// same path along the top.
+/// A ReadingPage like What's New. A window, so it can carry the same glass and the same path along the top.
 struct AcknowledgementsWindow: Scene {
     @Bindable var appState: AppState
 
