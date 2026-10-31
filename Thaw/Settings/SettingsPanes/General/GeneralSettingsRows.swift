@@ -135,10 +135,10 @@ struct ShowHiddenItemsOnRow: View {
 /// One setting that can apply at several times, as a row of buttons that
 /// switch on separately, such as Show hidden items on Click, Hover and Scroll.
 struct ToggleButtonRow<Toggles: View>: View {
-    private let label: LocalizedStringKey
+    private let label: LocalizedStringResource
     private let toggles: Toggles
 
-    init(_ label: LocalizedStringKey, @ViewBuilder toggles: () -> Toggles) {
+    init(_ label: LocalizedStringResource, @ViewBuilder toggles: () -> Toggles) {
         self.label = label
         self.toggles = toggles()
     }

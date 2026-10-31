@@ -22,8 +22,7 @@ struct ModulesSettingsPane: View {
     var body: some View {
         let shown = Self.matching(cards, query: query)
         VStack(spacing: 0) {
-            TextField("Search modules", text: $query)
-                .textFieldStyle(.roundedBorder)
+            SettingsFilterField(prompt: "Search modules", clearLabel: "Clear search", text: $query)
                 .padding(ThawSpacing.inset)
             ScrollView {
                 LazyVGrid(columns: columns, spacing: ThawSpacing.gutter) {
@@ -36,7 +35,11 @@ struct ModulesSettingsPane: View {
             }
             .overlay {
                 if shown.isEmpty, !query.isEmpty {
-                    ContentUnavailableView.search(text: query)
+                    NoMatchesState(
+                        query: query,
+                        title: { "No modules match “\($0)”" },
+                        caption: "Try a shorter or broader term."
+                    )
                 }
             }
         }

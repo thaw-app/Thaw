@@ -9,6 +9,7 @@ import AppKit
 import SwiftUI
 import Testing
 @testable import Thaw
+import ThawUI
 
 /// Settings pages drawn off screen against an AppState that is never started.
 /// Layout and Simple Mode are left out because they preload captures from the live bar.

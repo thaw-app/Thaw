@@ -45,8 +45,8 @@ struct ModuleControls: View {
 struct ModuleOpenRow: View {
     @Environment(AppState.self) private var appState
     let module: ModuleIdentifier
-    let title: LocalizedStringKey
-    let detail: LocalizedStringKey
+    let title: LocalizedStringResource
+    let detail: LocalizedStringResource
 
     var body: some View {
         LabeledContent {
