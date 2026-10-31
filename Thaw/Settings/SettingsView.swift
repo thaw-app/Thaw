@@ -349,12 +349,9 @@ private struct SettingsSearchResults: View {
             VStack(alignment: .leading, spacing: 0) {
                 // A count makes a long list read as bounded, and tells the
                 // reader whether narrowing the query is worth it.
-                Text("^[\(resultCount) result](inflect: true)")
-                    .font(ThawType.detail.weight(.medium))
-                    .foregroundStyle(ThawInk.supporting)
+                SettingsSearchResultCount(Text("^[\(resultCount) result](inflect: true)"))
                     .padding(.horizontal, SettingsDetailLayout.titleHorizontalInset + 6)
                     .padding(.bottom, ThawSpacing.compact)
-                    .accessibilityAddTraits(.updatesFrequently)
 
                 SearchResultsList(groups: searchModel.displayedGroups) { entry in
                     SettingsSearchNavigation.selectSearchResult(
