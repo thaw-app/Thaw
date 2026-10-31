@@ -101,13 +101,13 @@ struct WidgetsView: View {
 
     /// Both states of the readings toggle need explaining, so the description
     /// switches with the toggle.
-    private var readingsSummary: LocalizedStringKey {
+    private var readingsSummary: LocalizedStringResource {
         liveData
             ? "Connection type follows the system's default route, not whether Wi-Fi is switched on."
             : "Choose a connection and move the sliders to test your icon."
     }
 
-    private var readingsDetail: LocalizedStringKey {
+    private var readingsDetail: LocalizedStringResource {
         liveData
             ? "Battery, Wi-Fi strength, and CPU refresh every 2 seconds. Volume is manual."
             : "Move the sliders to try other values."
@@ -142,7 +142,7 @@ struct WidgetsView: View {
         }
     }
 
-    private func sourcePicker(_ title: LocalizedStringKey, selection: Binding<StatusIconComposition.Source>) -> some View {
+    private func sourcePicker(_ title: LocalizedStringResource, selection: Binding<StatusIconComposition.Source>) -> some View {
         ThawPicker(title, selection: selection) {
             ForEach(StatusIconComposition.Source.allCases, id: \.self) { source in
                 Text(source.title).tag(source)
@@ -177,7 +177,7 @@ private struct StatusIconPreview: View {
         .accessibilityLabel(state.accessibilityDescription)
     }
 
-    private func preview(size: CGFloat, title: LocalizedStringKey) -> some View {
+    private func preview(size: CGFloat, title: LocalizedStringResource) -> some View {
         VStack(spacing: ThawSpacing.base) {
             CompositeStatusIcon(composition: state.composition, samples: state.samples)
                 .frame(width: size, height: size)

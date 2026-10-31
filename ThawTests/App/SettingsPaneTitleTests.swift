@@ -20,6 +20,11 @@ struct SettingsPaneTitleTests {
         (SettingsNavigationIdentifier.menuBarLayout, "Layout"),
         (.menuBarAppearance, "Appearance"),
         (.hotkeys, "Shortcuts"),
+        (.displays, "Displays"),
+        (.modules, "Modules"),
+        (.triggers, "Triggers"),
+        (.scripts, "Scripts"),
+        (.widgets, "Widgets"),
     ])
     func labelNotIdentifier(pane: SettingsNavigationIdentifier, label: String) {
         #expect(String(localized: pane.localized) == label)

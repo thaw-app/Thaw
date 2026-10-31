@@ -66,7 +66,7 @@ struct MenuBarHidingSection: View {
     let spaceID: UInt64
     @Binding var isHiddenInSpace: Bool
     @Binding var isHiddenEverywhere: Bool
-    @State private var failure: LocalizedStringKey?
+    @State private var failure: LocalizedStringResource?
 
     private var presentation: any MenuBarPresentationControlling {
         MenuBarPresentationProvider.current

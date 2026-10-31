@@ -12,7 +12,7 @@ import UniformTypeIdentifiers
 
 /// One script slot: choose a file, switch it off, set its timeout or remove it.
 struct HookRow: View {
-    let label: LocalizedStringKey
+    let label: LocalizedStringResource
     @Binding var hook: HookScript?
 
     /// Timeouts offered in the menu; a stored value outside them is added.

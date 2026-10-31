@@ -390,9 +390,9 @@ private struct SettingsSidebar: View {
                 profilesOn: appState.profilesFeature.isOn
             )
         )
-            .onChange(of: generalSettings.simpleMode) { _, _ in
-                searchModel.updateDisplayedItems()
-            }
+        .onChange(of: generalSettings.simpleMode) { _, _ in
+            searchModel.updateDisplayedItems()
+        }
     }
 }
 
