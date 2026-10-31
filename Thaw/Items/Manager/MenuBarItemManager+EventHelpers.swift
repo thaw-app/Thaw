@@ -75,6 +75,8 @@ extension MenuBarItemManager {
                 let sentence = switch refusal {
                 case .hiddenControlItem:
                     String(localized: "“\(item.displayName)” is one of Thaw’s own control items and cannot be moved")
+                case .systemAnchored where item.tag.isPinnedControlCenterControl:
+                    String(localized: "“\(item.displayName)” is a Control Center control, so macOS places it and Thaw cannot. Hold ⌘ and drag it in the menu bar to move it")
                 case .systemAnchored:
                     String(localized: "“\(item.displayName)” is anchored by macOS and cannot be moved")
                 case .requiresExperimentalHiding:
@@ -144,13 +146,11 @@ extension MenuBarItemManager {
             guard case let .itemNotMovable(_, refusal) = self else {
                 return "Try again. If this keeps happening, please file a bug report."
             }
-            // For every reason but one there is nothing to retry: the item
-            // is pinned by the system, and trying again will land in
-            // exactly the same place. The gate-dependent refusal is the
-            // exception, the user can lift it in Settings, but the
-            // suggestion deliberately stops short of promising the move
-            // will then succeed, because the assertion path behind the
-            // gate is experimental.
+            // For every reason but one there is nothing to retry: the item is pinned by the
+            // system, and trying again will land in exactly the same place. The gate-dependent
+            // refusal is the exception, the user can lift it in Settings, but the suggestion
+            // deliberately stops short of promising the move will then succeed, because the
+            // assertion path behind the gate is experimental.
             guard refusal == .requiresExperimentalHiding else { return nil }
             return String(localized: "Turning on “Allow hiding macOS system items” in Layout settings may let this item move; macOS may still refuse it.")
         }

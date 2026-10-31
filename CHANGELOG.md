@@ -122,6 +122,16 @@ This beta has every fix from alpha.11, alpha.12 and the alpha.12.1 hotfix. Most 
 
 - **On macOS 27.0.1, videos in a browser can't go full screen, and the menu bar can stay on screen over full-screen apps.** This is a macOS 27 bug, not one in Thaw. Quitting MenuBarAgent in Activity Monitor fixes it until it comes back. Reported by @deadcoder0904 in [#1404](https://github.com/thaw-app/Thaw/issues/1404).
 
+## [3.0.0-alpha.12.1] - 2026-10-30
+
+**macOS 27 only · Build 120**
+
+A hotfix for alpha.12. Nothing else changed.
+
+### Fixed
+
+- **Control Center controls you pinned to the menu bar stay where macOS puts them.** Thaw counted a pinned control such as Screenshot, Timer or Calculator as a Visible item it could move. macOS places those controls itself, so each time you showed your hidden items Thaw shuffled the icons around them for a few seconds and then gave up. Thaw now leaves them alone, and Layout tells you to hold ⌘ and drag the control in the menu bar instead.
+
 ## [3.0.0-alpha.12] - 2026-10-30
 
 **macOS 27 only · Build 119**
