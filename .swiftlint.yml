@@ -7,7 +7,6 @@ included:
   - ThawCtl
   - ThawModuleKit
   - ThawTriggers
-  - ThawUI
   - ThawWidgets
 
 excluded:
@@ -18,7 +17,6 @@ excluded:
   - ThawWidgets/.build
   - ThawCapture/.build
   - ThawCtl/.build
-  - ThawUI/.build
   - ThawTests
   - ThawAutomation/Tests
   - ThawModuleKit/Tests
@@ -31,7 +29,6 @@ excluded:
   - ThawWidgets/Package.swift
   - ThawCapture/Package.swift
   - ThawCtl/Package.swift
-  - ThawUI/Package.swift
 
 disabled_rules:
   - function_parameter_count

@@ -463,9 +463,9 @@
 				6299E164B288ACBB011AC6B1 /* XCRemoteSwiftPackageReference "swift-algorithms" */,
 				7A0DF10D46BE41C9B7301DBB /* XCRemoteSwiftPackageReference "swift-subprocess" */,
 				D27A00002F40000000000000 /* XCRemoteSwiftPackageReference "prk-bin" */,
+				A9E1F0012F70000000000001 /* XCRemoteSwiftPackageReference "ThawUI" */,
 				A4E38A6A423944089D70B9BB /* XCLocalSwiftPackageReference "MenuBarModel" */,
 				A7C4F0052F60000000000005 /* XCLocalSwiftPackageReference "ThawCapture" */,
-				A9E1F0012F70000000000001 /* XCLocalSwiftPackageReference "ThawUI" */,
 				A1A1A1A1A1A1A1A1A1A1A101 /* XCLocalSwiftPackageReference "ThawAX" */,
 				B1B1B1B1B1B1B1B1B1B1B101 /* XCLocalSwiftPackageReference "ThawLayout" */,
 				C3C3C3C3C3C3C3C3C3C3C301 /* XCLocalSwiftPackageReference "ThawModuleKit" */,
@@ -1097,10 +1097,6 @@
 			isa = XCLocalSwiftPackageReference;
 			relativePath = ThawCapture;
 		};
-		A9E1F0012F70000000000001 /* XCLocalSwiftPackageReference "ThawUI" */ = {
-			isa = XCLocalSwiftPackageReference;
-			relativePath = ThawUI;
-		};
 		A1A1A1A1A1A1A1A1A1A1A101 /* XCLocalSwiftPackageReference "ThawAX" */ = {
 			isa = XCLocalSwiftPackageReference;
 			relativePath = ThawAX;
@@ -1132,6 +1128,14 @@
 /* End XCLocalSwiftPackageReference section */
 
 /* Begin XCRemoteSwiftPackageReference section */
+		A9E1F0012F70000000000001 /* XCRemoteSwiftPackageReference "ThawUI" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/thaw-app/ThawUI";
+			requirement = {
+				kind = exactVersion;
+				version = 1.1.0;
+			};
+		};
 		170423D72B56DE78004A2549 /* XCRemoteSwiftPackageReference "Sparkle" */ = {
 			isa = XCRemoteSwiftPackageReference;
 			repositoryURL = "https://github.com/sparkle-project/Sparkle";
@@ -1228,7 +1232,7 @@
 		};
 		A9E1F0022F70000000000002 /* ThawUI */ = {
 			isa = XCSwiftPackageProductDependency;
-			package = A9E1F0012F70000000000001 /* XCLocalSwiftPackageReference "ThawUI" */;
+			package = A9E1F0012F70000000000001 /* XCRemoteSwiftPackageReference "ThawUI" */;
 			productName = ThawUI;
 		};
 		C2D4E6A8B0C2D4E6A8B0C2D4 /* MenuBarModel */ = {
