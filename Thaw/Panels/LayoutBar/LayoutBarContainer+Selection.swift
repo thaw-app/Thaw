@@ -7,6 +7,7 @@
 
 import AppKit
 import MenuBarModel
+import ThawUI
 
 /// The bar's side of the pane's selection: what it can select, and the moves it starts.
 extension LayoutBarContainer {
