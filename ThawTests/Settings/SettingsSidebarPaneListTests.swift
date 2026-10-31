@@ -15,7 +15,7 @@ import ThawUI
 @Suite("Settings sidebar list", .serialized, .scratchDefaults)
 @MainActor
 struct SettingsSidebarPaneListTests {
-    private let size = CGSize(width: SettingsSidebarPaneList.listWidth, height: 900)
+    private let size = CGSize(width: ThawSidebar<SettingsNavigationIdentifier, EmptyView>.width, height: 900)
 
     private func render(
         _ navigation: AppNavigationState,
