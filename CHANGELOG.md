@@ -22,7 +22,7 @@ Anything else goes before the first section, or in its own section after
 these four. The website shows each section's name beside its list, and counts
 the items under New and Fixed.
 
-## [3.0.0-beta.5] - 2026-10-30
+## [3.0.0-beta.5] - 2026-11-01
 
 **macOS 27 only · Build 122**
 
@@ -32,6 +32,13 @@ the items under New and Fixed.
 > [AGENTS.md](https://github.com/thaw-app/Thaw/blob/development/AGENTS.md) tells AI coding agents, and the people using them, how to contribute to Thaw. [CODING_STANDARDS.md](https://github.com/thaw-app/Thaw/blob/development/docs/CODING_STANDARDS.md) says how code and text are written here. Read both before you open a pull request, whether you write the change yourself or with an agent.
 >
 > If an AI helps with your change, see the [AI-assisted contributions](https://github.com/thaw-app/.github/blob/main/.github/CONTRIBUTING.md#ai-assisted-contributions) section of our contribution guidelines first: you stay responsible for the change and must be able to explain it, and the tool's terms have to let you contribute its output.
+
+> [!IMPORTANT]
+> **On the Alpha channel? Read this before the next update.**
+>
+> Alpha 13 reworks a lot of Thaw, including Settings zoom and the new modules for scripts, triggers and widgets, and it's likely to crash more than usual.
+>
+> To skip it for now, go to Settings › About and set Update channel to Beta. You'll stay on beta 5 and can switch back when you're ready. If you'd like to help test, stay on Alpha, and please send logs from any crashes.
 
 This beta has every fix from alpha.11, alpha.12 and the alpha.12.1 hotfix. Most of them keep menu bar items where you put them, or tighten which apps can use thaw:// links.
 
