@@ -389,8 +389,8 @@ public extension ScreenCapture {
     /// Captures the on-screen menu-bar band of a display (menu-bar-level windows
     /// composited, foreign overlays above the bar excluded).
     ///
-    /// Third-party Liquid Glass shreds in the hosting window under SCK. The
-    /// strip matches the screen; callers knock out the bar fill after cropping.
+    /// Only for a hosting window that can't be read: a display stream can black
+    /// out DRM video. The strip matches the screen; callers knock out the bar fill.
     ///
     /// - Parameter displayID: The display whose menu bar band to capture.
     /// - Returns: The strip capture, or nil on failure.
@@ -399,17 +399,14 @@ public extension ScreenCapture {
         preferInProcess: Bool = false
     ) async -> MenuBarHostingCapture? {
         guard let visibilityGeneration = captureUITicket(), !Task.isCancelled else { return nil }
-        // Fall through to in-process when the helper cannot answer.
+        // No in-process retry: a stream here would outlive the helper's recycling.
         // preferInProcess is for the reveal mask, which must answer in
         // milliseconds; the helper's round trip shows as a slow Notification Center.
-        if routesThroughCaptureService,
-           !preferInProcess,
-           let viaService = await MenuBarCaptureServiceClient.shared.captureMenuBarDisplayStrip(
-               displayID: displayID,
-               visibilityGeneration: visibilityGeneration
-           )
-        {
-            return viaService
+        if routesThroughCaptureService, !preferInProcess {
+            return await MenuBarCaptureServiceClient.shared.captureMenuBarDisplayStrip(
+                displayID: displayID,
+                visibilityGeneration: visibilityGeneration
+            )
         }
         let content: SCShareableContent
         do {
@@ -525,13 +522,12 @@ public extension ScreenCapture {
             )
             return nil
         }
-        if routesThroughCaptureService,
-           let viaService = await MenuBarCaptureServiceClient.shared.captureMenuBarHostingWindow(
-               displayID: displayID,
-               visibilityGeneration: visibilityGeneration
-           )
-        {
-            return viaService
+        // No in-process retry: SkyLight's per-call leak must stay in the helper.
+        if routesThroughCaptureService {
+            return await MenuBarCaptureServiceClient.shared.captureMenuBarHostingWindow(
+                displayID: displayID,
+                visibilityGeneration: visibilityGeneration
+            )
         }
         let content: SCShareableContent
         do {

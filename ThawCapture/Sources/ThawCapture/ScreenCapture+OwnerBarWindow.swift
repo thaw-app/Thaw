@@ -16,13 +16,12 @@ public extension ScreenCapture {
         frame: CGRect
     ) async -> MenuBarHostingCapture? {
         guard let ticket = captureUITicket(), !Task.isCancelled, frame.width > 0 else { return nil }
-        if routesThroughCaptureService,
-           let viaService = await MenuBarCaptureServiceClient.shared.captureOwnerBarWindow(
-               windowID: windowID,
-               visibilityGeneration: ticket
-           )
-        {
-            return viaService
+        // No in-process retry: SkyLight's per-call leak must stay in the helper.
+        if routesThroughCaptureService {
+            return await MenuBarCaptureServiceClient.shared.captureOwnerBarWindow(
+                windowID: windowID,
+                visibilityGeneration: ticket
+            )
         }
         guard let capture = ownerBarWindowCapture(windowID: windowID, frame: frame) else { return nil }
         return isCaptureUITicketCurrent(ticket) ? capture : nil
