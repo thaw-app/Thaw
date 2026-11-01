@@ -934,7 +934,7 @@ extension MenuBarItemImageCache {
                 // Native notch overflow remains in force when Thaw removes an item from its own
                 // concealment assertion. A prewarm in that state can only capture the system
                 // overflow chevron, never the item's real glyph.
-                guard !isNativeOverflowActive, !Self.isBlankItem(item.bounds) else {
+                guard !isNativeOverflowActive, !skipsAsBlank(item) else {
                     return false
                 }
                 return !onlyMissingImages || Self.prewarmNeedsCapture(

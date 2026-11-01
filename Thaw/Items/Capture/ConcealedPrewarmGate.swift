@@ -13,12 +13,12 @@ nonisolated enum ConcealedPrewarmGate {
         mayReveal(
             hasSectionController: appState?.menuBarManager.sectionController != nil,
             screenRecordingGranted: appState?.isPermissionGranted(.screenRecording) == true,
-            nativeHidingActive: appState?.menuBarManager.nativeAppHidingExperiment.isActive == true
+            nativeHidingActive: appState?.menuBarManager.nativeAppHidingExperiment.blocksCaptureReveal == true
         )
     }
 
     /// No reveal without Screen Recording (nothing to photograph) or under Native hiding
-    /// (the reveal rebuilds the bar and the picture is refused).
+    /// (the reveal rebuilds the bar), unless the user asked for this capture.
     static func mayReveal(
         hasSectionController: Bool,
         screenRecordingGranted: Bool,

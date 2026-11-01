@@ -36,10 +36,15 @@ final class RevealCover {
 
     // MARK: Holding
 
+    /// A capture from the button gets no cover: the user asked for it, so items may appear.
+    private var isUserRequestedCapture: Bool {
+        appState?.menuBarManager.nativeAppHidingExperiment.allowsCaptureReveal == true
+    }
+
     /// Pictures what's behind each visible bar for the coming cover, since a reveal
     /// shows on every display. Skipped while a cover is up, which has its picture.
     func prepare() async {
-        guard !isShowing, let appState, ConcealedPrewarmGate.mayReveal(for: appState) else { return }
+        guard !isShowing, !isUserRequestedCapture, let appState, ConcealedPrewarmGate.mayReveal(for: appState) else { return }
         pictures.removeAll()
         for screen in NSScreen.screens where screen.isSystemMenuBarVisible() {
             let rect = CGRect(
@@ -57,6 +62,7 @@ final class RevealCover {
     /// Covers the band concealed items appear in. Counted: the last hide() takes
     /// it down. It never outlives lifetime, since a stuck cover freezes a strip of bar.
     func show(lifetime: Duration) {
+        guard !isUserRequestedCapture else { return }
         hideTask?.cancel()
         holders += 1
         armWatchdog(lifetime)

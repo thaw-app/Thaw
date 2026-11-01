@@ -37,6 +37,7 @@ This beta has every fix from alpha.11, alpha.12 and the alpha.12.1 hotfix. Most 
 
 ### New
 
+- **Capture hidden items on request.** Settings › Layout has a button, next to Pop Out Editor, that takes new pictures of your Hidden and Always Hidden items and says which ones it couldn't get. It also works with the Native hiding method, where icons can move while it runs. By @diazdesandi.
 - You can skip menu bar visibility recovery when a removed app blocks it. Thaw keeps the recovery records as backups and leaves Native hiding off.
 - **Settings can use a pure black background in dark mode.** Turn on "Black background in dark mode" in General if you have an OLED display. Light mode looks the same as before, and the sidebar, toolbar and rows keep their glass.
 
