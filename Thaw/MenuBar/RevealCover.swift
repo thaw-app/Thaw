@@ -9,10 +9,11 @@ import AppKit
 import MenuBarModel
 
 /// Covers the band where concealed items flash during an icon capture's reveal
-/// with MenuBarBackdrop's strip, so the bar looks unchanged and no recording
-/// indicator lights. The band ends at the leading edge read at show(), so it
-/// never sits over visible items. Clock and Notification Center get no cover:
-/// the bar restyles itself as they open.
+/// with a picture of what's behind the bar, so the bar looks unchanged. The picture
+/// is taken by prepare() and dropped with the cover; a display without one gets no
+/// cover. The band ends at the leading edge read at show(), so it never sits over
+/// visible items. Clock and Notification Center get no cover: the bar restyles
+/// itself as they open.
 @MainActor
 final class RevealCover {
     private weak var appState: AppState?
@@ -21,6 +22,8 @@ final class RevealCover {
     private var watchdog: Task<Void, Never>?
     private var watchdogDeadline: ContinuousClock.Instant?
     private var holders = 0
+    /// What's behind each bar, dropped when the cover goes down.
+    private var pictures: [CGDirectDisplayID: MenuBarBackdrop.Strip] = [:]
     private let diagLog = DiagLog(category: "RevealCover")
 
     /// Held after the assertion is back: the host keeps drawing the revealed
@@ -32,6 +35,24 @@ final class RevealCover {
     }
 
     // MARK: Holding
+
+    /// Pictures what's behind each visible bar for the coming cover, since a reveal
+    /// shows on every display. Skipped while a cover is up, which has its picture.
+    func prepare() async {
+        guard !isShowing, let appState, ConcealedPrewarmGate.mayReveal(for: appState) else { return }
+        pictures.removeAll()
+        for screen in NSScreen.screens where screen.isSystemMenuBarVisible() {
+            let rect = CGRect(
+                x: screen.cgFrame.minX,
+                y: screen.cgFrame.minY,
+                width: screen.cgFrame.width,
+                height: screen.getMenuBarHeight() ?? screen.getMenuBarHeightEstimate()
+            )
+            guard let image = await appState.menuBarManager.backdrop.capture(rect) else { continue }
+            guard !isShowing else { return }
+            pictures[screen.displayID] = MenuBarBackdrop.Strip(rect: rect, image: image)
+        }
+    }
 
     /// Covers the band concealed items appear in. Counted: the last hide() takes
     /// it down. It never outlives lifetime, since a stuck cover freezes a strip of bar.
@@ -53,9 +74,9 @@ final class RevealCover {
                 diagLog.warning("no cover on display \(displayID): no band (\(layout.bands.isEmpty ? "no seated visible item to anchor on" : "band empty on this display"))")
                 continue
             }
-            guard let backdrop = appState.menuBarManager.backdrop.strip(for: displayID) else {
-                diagLog.warning("no cover on display \(displayID): no backdrop strip; refreshing it for next time")
-                appState.menuBarManager.backdrop.refresh(force: true)
+            guard let backdrop = pictures[displayID] else {
+                // Usual on a display with no menu bar of its own, where nothing can flash.
+                diagLog.debug("no cover on display \(displayID): no picture of the bar")
                 continue
             }
             present(band, backdrop: backdrop, on: displayID)
@@ -90,9 +111,6 @@ final class RevealCover {
             try? await Task.sleep(for: Self.settleAfterRestore)
             guard !Task.isCancelled else { return }
             self?.orderOutAll()
-            // Cheap and capture-indicator free, so take the chance to pick up
-            // anything that moved behind the bar while the cover was up.
-            self?.appState?.menuBarManager.backdrop.refresh()
         }
     }
 
@@ -165,8 +183,8 @@ final class RevealCover {
         panel.registerAsMenuBarOverlay()
     }
 
-    /// Lays Thaw's own look over the wallpaper, so the covered band matches
-    /// the styled bar beside it instead of showing bare wallpaper. See
+    /// Lays Thaw's own look over the picture, so the covered band matches
+    /// the styled bar beside it. See
     /// RevealCoverStyle for why this is painted, not captured.
     private func applyStyle(to layer: CALayer, on displayID: CGDirectDisplayID) {
         layer.sublayers?.removeAll()
@@ -204,7 +222,10 @@ final class RevealCover {
         if isShowing {
             RevealCoverActivity.noteHidden()
         }
-        for panel in panels.values where panel.isVisible {
+        pictures.removeAll()
+        for panel in panels.values {
+            panel.contentView?.layer?.contents = nil
+            guard panel.isVisible else { continue }
             panel.unregisterAsMenuBarOverlay()
             panel.orderOut(nil)
         }

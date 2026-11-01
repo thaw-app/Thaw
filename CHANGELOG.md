@@ -54,6 +54,9 @@ This beta has every fix from alpha.11, alpha.12 and the alpha.12.1 hotfix. Most 
 
 ### Fixed
 
+- **No darker strip beside the notch while Thaw takes pictures of hidden icons.** The cover over that part of the bar painted Thaw's tint even with no menu bar shape, where the bar itself doesn't show it. Reported by @ztm-njau in [#1438](https://github.com/thaw-app/Thaw/issues/1438).
+- **Thaw no longer keeps a picture of what's behind the menu bar.** Instead of refreshing one on a timer, it takes one only when it's about to show hidden items to photograph them, and drops it when the cover goes away.
+
 #### Menu bar order
 
 - **Control Center controls you pinned to the menu bar stay where macOS puts them.** Thaw counted a pinned control such as Screenshot, Timer or Calculator as a Visible item it could move. macOS places those controls itself, so each time you showed your hidden items Thaw shuffled the icons around them for a few seconds and then gave up. Thaw now leaves them to macOS, and Layout says so if you try to move one.

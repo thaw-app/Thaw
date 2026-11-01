@@ -9,8 +9,8 @@ import CoreGraphics
 
 /// How RevealCover paints Thaw's menu bar look over the wallpaper.
 ///
-/// The overlay's glass captures as flat grey, so the cover draws the wallpaper
-/// strip, blurred for glass, under flat washes of the configured fills.
+/// The overlay's glass captures as flat grey, so the cover draws its picture of
+/// what's behind the bar, blurred for glass, under flat washes of the configured fills.
 @MainActor
 enum RevealCoverStyle {
     /// One flat color laid over the wallpaper.
@@ -31,8 +31,8 @@ enum RevealCoverStyle {
 
     /// The look over the cover's band, left of the visible items.
     ///
-    /// The shape fill applies only with no shape or a Full shape; Split and
-    /// Notch draw their trailing part around the visible items, not the band.
+    /// The shape fill applies with a Full shape; Split and Notch draw theirs around the
+    /// visible items, not the band. With no shape the overlay paints only a glass fill.
     static func style(
         for configuration: MenuBarAppearancePartialConfiguration,
         shapeKind: MenuBarShapeKind,
@@ -51,7 +51,7 @@ enum RevealCoverStyle {
             adaptiveColor: adaptiveColor,
             to: &style
         )
-        if shapeKind == .noShape || shapeKind == .full {
+        if shapeKind == .full || (shapeKind == .noShape && configuration.tintKind == .glass) {
             add(
                 Layer(
                     kind: fill(configuration.tintKind),

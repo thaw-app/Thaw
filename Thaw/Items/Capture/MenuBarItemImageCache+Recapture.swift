@@ -684,6 +684,7 @@ extension MenuBarItemImageCache {
             }
         }
 
+        await appState.menuBarManager.revealCover.prepare()
         let batchSize = Self.revealBatchSize(
             hasNotch: NSScreen.screen(for: displayID)?.hasNotch ?? false
         )

@@ -46,13 +46,25 @@ struct RevealCoverStyleTests {
         #expect(style.washes == [.init(color: red, opacity: 0.5)])
     }
 
-    @Test("The shape fill applies with no shape or a Full shape, not beside a Split or Notch shape")
+    @Test("The shape fill applies with a Full shape, not with no shape or beside a Split or Notch shape")
     func shapeFillWhereItCoversTheBand() {
         let config = configuration(tint: .solid)
-        #expect(RevealCoverStyle.style(for: config, shapeKind: .noShape, adaptiveColor: nil).washes.count == 1)
+        #expect(RevealCoverStyle.style(for: config, shapeKind: .noShape, adaptiveColor: nil).washes.isEmpty)
         #expect(RevealCoverStyle.style(for: config, shapeKind: .full, adaptiveColor: nil).washes.count == 1)
         #expect(RevealCoverStyle.style(for: config, shapeKind: .split, adaptiveColor: nil).washes.isEmpty)
         #expect(RevealCoverStyle.style(for: config, shapeKind: .notch, adaptiveColor: nil).washes.isEmpty)
+    }
+
+    @Test("With no shape only a glass fill applies, as only that one is on the bar")
+    func noShapeKeepsGlassFill() {
+        let glass = configuration(tint: .glass)
+        #expect(RevealCoverStyle.style(for: glass, shapeKind: .noShape, adaptiveColor: nil).blursWallpaper)
+        for tint in [MenuBarTintKind.solid, .gradient] {
+            let style = RevealCoverStyle.style(for: configuration(tint: tint), shapeKind: .noShape, adaptiveColor: nil)
+            #expect(style.washes.isEmpty)
+        }
+        let adaptive = RevealCoverStyle.style(for: configuration(tint: .adaptive), shapeKind: .noShape, adaptiveColor: red)
+        #expect(adaptive.washes.isEmpty)
     }
 
     @Test("Colored liquid glass frosts the wallpaper and adds its tint at the glass strength")
