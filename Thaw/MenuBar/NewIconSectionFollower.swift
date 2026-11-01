@@ -47,7 +47,9 @@ nonisolated struct NewIconArrivals {
         let known = Set(current).union(MenuBarItemTag.canonicalPersistentIdentifiers(saved)).subtracting(arrivals)
         seen.formUnion(arrivals)
         return arrivals.compactMap { arrival in
-            guard let app = Self.app(of: arrival), !app.hasPrefix("com.apple.") else { return nil }
+            // A stand-in is placed by its launcher, in the slot of the original it replaces.
+            guard let app = Self.app(of: arrival), !app.hasPrefix("com.apple."), !SystemExtraStandIn.owns(bundleIdentifier: app)
+            else { return nil }
             let appIcons = known.filter { Self.app(of: $0) == app }
             // A new app's icon goes where Layout's New Items placeholder says. On macOS 27
             // the cache's own check for new items reads divider frames that are zero-width.

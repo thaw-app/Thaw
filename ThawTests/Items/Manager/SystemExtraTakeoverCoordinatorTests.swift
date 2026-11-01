@@ -317,6 +317,24 @@ struct ModuleStandInCoordinatorTests {
         #expect(rig.sections.writes.suffix(2) == [.section(.hidden, original), .order([original], .hidden)])
     }
 
+    @Test("Turning off a stand-in that never joined a saved order returns its original to Visible")
+    func disablingUnorderedStandInReturnsOriginal() async throws {
+        let rig = rig()
+        rig.shownInControlCenter = [TakeoverRig.moduleTag(TakeoverRig.focus)]
+        let original = TakeoverRig.moduleID(TakeoverRig.focus)
+        rig.start()
+        await settle { rig.sections.sectionAssignment[original] == .hidden }
+        await rig.drain()
+        let process = try #require(rig.fake.startedProcesses.only)
+        #expect(rig.sections.sectionItemOrder.values.joined().isEmpty)
+
+        rig.settings.enableModuleStandIns = false
+        await settle { process.terminateCalls > 0 }
+        await rig.drain()
+
+        #expect(rig.sections.authoredSection(for: original) == .visible)
+    }
+
     @Test("A stand-in that failed to launch is tried again on the next layout change")
     func failedLaunchIsRetried() async {
         let rig = rig()

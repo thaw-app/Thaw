@@ -54,6 +54,17 @@ struct NewIconArrivalsTests {
         #expect(placements(seen: [main], current: [main, player], sections: [:]).isEmpty)
     }
 
+    @Test("A stand-in for an Apple item is not filed as new, even when New Items is Hidden")
+    @MainActor
+    func standInStaysWhereItsLauncherPutIt() {
+        var arrivals = NewIconArrivals(seen: [main])
+        let standIns = SystemExtraStandIn.allCases.map { MenuBarItemTag.canonicalPersistentIdentifier($0.itemIdentifier) }
+
+        let placed = arrivals.placements(current: [main] + standIns, saved: [main], authored: { _ in .visible }, newItemsSection: .hidden)
+
+        #expect(placed.isEmpty)
+    }
+
     @Test("An app's first icon has nothing to follow")
     func firstIconStays() {
         #expect(placements(seen: [], current: [player], sections: [:]).isEmpty)

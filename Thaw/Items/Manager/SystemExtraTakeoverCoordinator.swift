@@ -149,10 +149,13 @@ final class SystemExtraTakeoverCoordinator {
             let isWanted = originalSection != .visible || isShownInMenuBar(original)
             let isChosen = Self.isChosen(standIn, enabled: settings.enableModuleStandIns, skipped: settings.skippedModuleStandIns)
             guard isChosen, isWanted else {
-                if activeModuleStandIns.remove(standIn) != nil {
+                let wasActive = activeModuleStandIns.remove(standIn) != nil
+                if wasActive {
                     launcher.stop(standIn)
                 }
-                if saved.contains(standInID) {
+                // A stand-in whose original was not in the saved order never joined one,
+                // but it still took the original's place.
+                if wasActive || saved.contains(standInID) {
                     retire(standInID, returningTo: originalID)
                 }
                 continue
