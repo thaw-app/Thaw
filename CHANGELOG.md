@@ -55,7 +55,9 @@ This beta has every fix from alpha.11, alpha.12 and the alpha.12.1 hotfix. Most 
 
 ### Fixed
 
+- **Opening the Thaw Bar or Layout no longer keeps revealing an item that failed to capture.** It gets another try after a short wait, or when you click Capture Hidden Items.
 - **No darker strip beside the notch while Thaw takes pictures of hidden icons.** The cover over that part of the bar painted Thaw's tint even with no menu bar shape, where the bar itself doesn't show it. Reported by @ztm-njau in [#1438](https://github.com/thaw-app/Thaw/issues/1438).
+- **Two Live Activities from one app keep their pictures.** They share a name, so Thaw couldn't tell them apart and erased the picture on every refresh. It now tells them apart by position.
 - **Taking pictures of menu bar items no longer captures your whole display.** Thaw now reads only the menu bar's own window, which should stop protected video from blacking out while Settings or the Thaw Bar is open. It captures the display only if it can't read that window, and these captures run only in Thaw's separate capture helper.
 - **Thaw no longer keeps a picture of what's behind the menu bar.** Instead of refreshing one on a timer, it takes one only when it's about to show hidden items to photograph them, and drops it when the cover goes away.
 

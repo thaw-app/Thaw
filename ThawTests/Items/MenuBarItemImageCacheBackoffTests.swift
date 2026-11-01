@@ -30,18 +30,18 @@ struct MenuBarItemImageCacheBackoffTests {
             MenuBarItemImageCache.backedOffTickMilliseconds(baseMilliseconds: 33, changelessStreak: 5) == 99
         )
         #expect(
-            MenuBarItemImageCache.backedOffTickMilliseconds(baseMilliseconds: 50, changelessStreak: 30) == 150
+            MenuBarItemImageCache.backedOffTickMilliseconds(baseMilliseconds: 50, changelessStreak: 10) == 150
         )
         // 200 ms × 3 exceeds the 333 ms clamp.
         #expect(
-            MenuBarItemImageCache.backedOffTickMilliseconds(baseMilliseconds: 200, changelessStreak: 59) == 333
+            MenuBarItemImageCache.backedOffTickMilliseconds(baseMilliseconds: 200, changelessStreak: 14) == 333
         )
     }
 
     @Test("floor tier settles at 1 Hz and never speeds a slow slider up")
     func floorTopsOutAtOneHertz() {
         #expect(
-            MenuBarItemImageCache.backedOffTickMilliseconds(baseMilliseconds: 33, changelessStreak: 60) == 1000
+            MenuBarItemImageCache.backedOffTickMilliseconds(baseMilliseconds: 33, changelessStreak: 15) == 1000
         )
         #expect(
             MenuBarItemImageCache.backedOffTickMilliseconds(baseMilliseconds: 1000, changelessStreak: 500) == 1000

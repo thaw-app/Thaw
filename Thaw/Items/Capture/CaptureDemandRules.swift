@@ -93,7 +93,7 @@ extension MenuBarItemImageCache {
     /// Consecutive changeless passes before the tick interval starts backing
     /// off, and the streak at which it reaches the 1 Hz floor.
     private static let backoffGraceTicks = 5
-    static let backoffFloorStreak = 60
+    static let backoffFloorStreak = 15
 
     /// Sleep for one live-refresh tick.
     ///

@@ -100,7 +100,7 @@ nonisolated enum AXGeometryCatalog {
         let roots = Set(owned.map(\.itemIndex))
         let selected: [Entry]
         if !identified.isEmpty {
-            selected = identified
+            selected = rootAt(bounds, among: identified) ?? identified
         } else if roots.count == 1, owned.allSatisfy({ $0.identityTitle == nil }) {
             selected = owned
         } else {
@@ -372,4 +372,14 @@ private nonisolated struct AXGeometryWalkScope {
     let itemIndex: Int
     let identityTitle: String?
     let deadline: ContinuousClock.Instant
+}
+
+nonisolated extension AXGeometryCatalog {
+    /// An app's items can share a name, as two Live Activity pills do. The entries of
+    /// the one root sitting exactly at bounds, or nil when none or several do.
+    fileprivate static func rootAt(_ bounds: CGRect, among entries: [Entry]) -> [Entry]? {
+        let rootsAtBounds = Set(entries.filter { matches(bounds, $0.frame) }.map(\.itemIndex))
+        guard rootsAtBounds.count == 1, let root = rootsAtBounds.first else { return nil }
+        return entries.filter { $0.itemIndex == root }
+    }
 }
