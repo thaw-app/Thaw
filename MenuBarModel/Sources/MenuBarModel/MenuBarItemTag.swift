@@ -290,9 +290,9 @@ public struct MenuBarItemTag: Hashable, CustomStringConvertible, Sendable, Codab
     ]
 
     /// These leading-edge items ignore weights and lack draggable elements; classify separately to avoid false concealment and trailing-anchor moves.
-    /// Match process names because bundle-less accessories have no bundle identifier.
+    /// Match process names because bundle-less accessories have no bundle identifier. explorer.exe hosts Windows tray icons under CrossOver, which starts it through a symlink.
     public static let agentUngovernedOwners: Set<String> = [
-        "sideloadly-daemon",
+        "sideloadly-daemon", "explorer.exe",
     ]
 
     private static let nativeOverflowChevronGlyphs: Set<Character> = [

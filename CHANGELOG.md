@@ -55,6 +55,7 @@ This beta has every fix from alpha.11, alpha.12 and the alpha.12.1 hotfix. Most 
 
 ### Fixed
 
+- **Thaw no longer tries to move or hide tray icons listed as `explorer.exe`,** which come from Windows apps in CrossOver and Wine. macOS reports no app identity for them, and hiding depends on one, so Layout keeps them in Visible. With the Standard hiding method, macOS may not draw them at all. Reported by @promarcel in [#1310](https://github.com/thaw-app/Thaw/issues/1310).
 - **Opening the Thaw Bar or Layout no longer keeps revealing an item that failed to capture.** It gets another try after a short wait, or when you click Capture Hidden Items.
 - **Turning off Replace Control Center items gives Focus and the other Control Center items back.** With New Items set to Hidden, Thaw filed each replacement there as a new icon. Turning the option off then left the original in Hidden too, so while Thaw ran, Focus stayed off the bar and its System Settings switch stayed off. A replacement now stays where the original was, and turning the option off puts the original back. Reported by @RonenMars in [#1435](https://github.com/thaw-app/Thaw/issues/1435).
 - **No darker strip beside the notch while Thaw takes pictures of hidden icons.** The cover over that part of the bar painted Thaw's tint even with no menu bar shape, where the bar itself doesn't show it. Reported by @ztm-njau in [#1438](https://github.com/thaw-app/Thaw/issues/1438).

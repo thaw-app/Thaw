@@ -38,6 +38,16 @@ struct AgentUngovernedItemTests {
         #expect(sideloadly.tag.isAgentUngoverned)
     }
 
+    @Test("A Wine or CrossOver tray icon is left to macOS")
+    func wineTrayIconIsUngoverned() {
+        // CrossOver hosts tray icons in explorer.exe, with no bundle ID for the restriction to name.
+        let trayIcon = item(namespace: .string("explorer.exe"))
+        #expect(trayIcon.tag.isAgentUngoverned)
+        #expect(trayIcon.sectionManagementPolicy == .forcedVisible)
+        #expect(trayIcon.sectionManagementPolicy.isVisibleInLayout)
+        #expect(!trayIcon.isMovable)
+    }
+
     @Test("An ordinary owner is not")
     func ordinaryOwnerIsGoverned() {
         #expect(!item(namespace: .string("com.raycast.macos")).tag.isAgentUngoverned)
