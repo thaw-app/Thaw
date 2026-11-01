@@ -102,7 +102,7 @@ Siri doesn't run Thaw's actions when you ask by voice. The same actions work fro
 
 #### Clicks in Settings
 
-On some Macs, clicks land below the control you aimed at. [#1244](https://github.com/thaw-app/Thaw/issues/1244), [#1265](https://github.com/thaw-app/Thaw/issues/1265)
+If switches in Settings stop responding, the window may be zoomed. Press ⌘0 to return to actual size. [#1244](https://github.com/thaw-app/Thaw/issues/1244), [#1265](https://github.com/thaw-app/Thaw/issues/1265)
 
 #### Shortcuts and Focus
 
