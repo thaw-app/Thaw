@@ -192,6 +192,7 @@ struct MenuBarAppearanceEditor: View {
                 }
             }
         }
+        .buttonStyle(.settingsGlass)
     }
 
     private var perSpaceControls: some View {
@@ -210,7 +211,6 @@ struct MenuBarAppearanceEditor: View {
                     Button("Remove from All \(appearanceManager.spaceOverrides.count) Spaces") {
                         appearanceManager.removeAllSpaceOverrides()
                     }
-                    .buttonStyle(.link)
                 }
             }
         }

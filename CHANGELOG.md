@@ -37,12 +37,13 @@ This beta has every fix from alpha.11, alpha.12 and the alpha.12.1 hotfix. Most 
 
 ### New
 
-- **Capture hidden items on request.** Settings › Layout has a button, next to Pop Out Editor, that takes new pictures of your Hidden and Always Hidden items and says which ones it couldn't get. It also works with the Native hiding method, where icons can move while it runs. By @diazdesandi.
+- **Capture hidden items on request.** Settings › Layout has a button, next to Pop Out Editor, that takes new pictures of your Hidden and Always Hidden items and says which ones it couldn't get. It also works with the Native hiding method, where icons can move while it runs. By @diazdesandi. Related: [#1437](https://github.com/thaw-app/Thaw/issues/1437).
 - You can skip menu bar visibility recovery when a removed app blocks it. Thaw keeps the recovery records as backups and leaves Native hiding off.
 - **Settings can use a pure black background in dark mode.** Turn on "Black background in dark mode" in General if you have an OLED display. Light mode looks the same as before, and the sidebar, toolbar and rows keep their glass.
 
 ### Changed
 
+- **The buttons in Appearance > Advanced and the Click, Hover and Scroll switches in Visibility match the rest of Settings.** In [#1429](https://github.com/thaw-app/Thaw/pull/1429).
 - **Thaw no longer moves your pointer to reorder menu bar items.** When macOS declines a move, the item stays where it is. Before, Thaw dragged it with a simulated mouse drag, which could leave the pointer or the item stuck. By @camguillory in [#1418](https://github.com/thaw-app/Thaw/pull/1418).
 - **thaw:// links are stricter about who they trust.** A sender's developer team counts only when Apple vouches for it. An app signed some other way is approved by its own signature, so it can't claim a trusted team. Replies go only to the app that asked, checked by its signature. Before, any app that handled the same link could receive them. In Reduced Mode, thaw://hide-app and thaw://show-app need an app you allowed, since they change which apps stay hidden. thaw://toggle-hidden still works for anyone.
 - **The known macOS 27 limitations are in the Hiding section now,** behind an info button next to the hiding method, instead of a card at the top of Layout.
@@ -56,12 +57,12 @@ This beta has every fix from alpha.11, alpha.12 and the alpha.12.1 hotfix. Most 
 ### Fixed
 
 - **Thaw no longer tries to move or hide tray icons listed as `explorer.exe`,** which come from Windows apps in CrossOver and Wine. macOS reports no app identity for them, and hiding depends on one, so Layout keeps them in Visible. With the Standard hiding method, macOS may not draw them at all. Reported by @promarcel in [#1310](https://github.com/thaw-app/Thaw/issues/1310).
-- **Opening the Thaw Bar or Layout no longer keeps revealing an item that failed to capture.** It gets another try after a short wait, or when you click Capture Hidden Items.
+- **Opening the Thaw Bar or Layout no longer keeps revealing an item that failed to capture.** It gets another try after a short wait, or when you click Capture Hidden Items. In [#1429](https://github.com/thaw-app/Thaw/pull/1429).
 - **Turning off Replace Control Center items gives Focus and the other Control Center items back.** With New Items set to Hidden, Thaw filed each replacement there as a new icon. Turning the option off then left the original in Hidden too, so while Thaw ran, Focus stayed off the bar and its System Settings switch stayed off. A replacement now stays where the original was, and turning the option off puts the original back. Reported by @RonenMars in [#1435](https://github.com/thaw-app/Thaw/issues/1435).
 - **No darker strip beside the notch while Thaw takes pictures of hidden icons.** The cover over that part of the bar painted Thaw's tint even with no menu bar shape, where the bar itself doesn't show it. Reported by @ztm-njau in [#1438](https://github.com/thaw-app/Thaw/issues/1438).
-- **Two Live Activities from one app keep their pictures.** They share a name, so Thaw couldn't tell them apart and erased the picture on every refresh. It now tells them apart by position.
-- **Taking pictures of menu bar items no longer captures your whole display.** Thaw now reads only the menu bar's own window, which should stop protected video from blacking out while Settings or the Thaw Bar is open. It captures the display only if it can't read that window, and these captures run only in Thaw's separate capture helper.
-- **Thaw no longer keeps a picture of what's behind the menu bar.** Instead of refreshing one on a timer, it takes one only when it's about to show hidden items to photograph them, and drops it when the cover goes away.
+- **Two Live Activities from one app keep their pictures.** They share a name, so Thaw couldn't tell them apart and erased the picture on every refresh. It now tells them apart by position. In [#1429](https://github.com/thaw-app/Thaw/pull/1429).
+- **Taking pictures of menu bar items no longer captures your whole display.** Thaw now reads only the menu bar's own window, which should stop protected video from blacking out while Settings or the Thaw Bar is open. It captures the display only if it can't read that window, and these captures run only in Thaw's separate capture helper. Related: [#1413](https://github.com/thaw-app/Thaw/issues/1413). In [#1429](https://github.com/thaw-app/Thaw/pull/1429).
+- **Thaw no longer keeps a picture of what's behind the menu bar.** Instead of refreshing one on a timer, it takes one only when it's about to show hidden items to photograph them, and drops it when the cover goes away. Related: [#1413](https://github.com/thaw-app/Thaw/issues/1413). In [#1429](https://github.com/thaw-app/Thaw/pull/1429).
 
 #### Menu bar order
 

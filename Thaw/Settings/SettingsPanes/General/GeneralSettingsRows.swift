@@ -119,7 +119,7 @@ struct ShowHiddenItemsOnRow: View {
 
     var body: some View {
         LabeledContent("Show hidden items on") {
-            ControlGroup {
+            ThawTogglePills {
                 Toggle("Click", isOn: $settings.showOnClick)
                     .help("Click an empty area of the menu bar to show hidden menu bar items.")
                 Toggle("Hover", isOn: $settings.showOnHover)
@@ -127,7 +127,6 @@ struct ShowHiddenItemsOnRow: View {
                 Toggle("Scroll", isOn: $settings.showOnScroll)
                     .help("Scroll or swipe in the menu bar to show hidden menu bar items.")
             }
-            .toggleStyle(.button)
             .fixedSize()
         }
         .annotation("Show hidden menu bar items by clicking, hovering, or scrolling in an empty area of the menu bar.")
