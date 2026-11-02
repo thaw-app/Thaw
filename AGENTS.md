@@ -33,7 +33,7 @@ Before the first launch, explain the permissions: Accessibility lets Thaw read a
 
 ## Before you start
 
-- New features need an issue that a maintainer has agreed to before you write code, unless you are on the team. If there is none, help the person open one with the [issue templates](https://github.com/thaw-app/Thaw/issues/new/choose). Bug fixes don't need to wait: fix the bug and link its issue if there is one. See [Pull requests](https://github.com/thaw-app/.github/blob/main/.github/CONTRIBUTING.md#pull-requests) in the contribution guidelines.
+- Ideas go to [Discussions](https://github.com/orgs/thaw-app/discussions), not issues. A new feature needs an issue that a maintainer has agreed to before you write code, unless you are on the team. If there is none, help the person post the idea in Discussions. Bug fixes don't need to wait: fix the bug and link its issue if there is one. See [Pull requests](https://github.com/thaw-app/.github/blob/main/.github/CONTRIBUTING.md#pull-requests) in the contribution guidelines.
 - Translations go through [Crowdin](https://crowdin.com/project/thaw), not pull requests. Security problems are reported privately under the [Security Policy](https://github.com/thaw-app/.github/blob/main/.github/SECURITY.md), never in a public issue. Questions go to the [Discord](https://discord.gg/KDfWjWDnR4).
 - The person stays responsible for the change and must be able to [explain it in review](#explaining-it-in-review). Outside the team, keep one AI-assisted pull request open at a time. See [AI-assisted contributions](https://github.com/thaw-app/.github/blob/main/.github/CONTRIBUTING.md#ai-assisted-contributions).
 
