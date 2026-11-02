@@ -36,6 +36,8 @@ the items under New and Fixed.
 
 ### Fixed
 
+- **Pictures of hidden items are no longer cut off.** Thaw took the picture while the revealed icons could still be sliding into place. It now waits until they stop moving, for up to a second more.
+- **Capture Hidden Items reports what it really captured.** The count included older pictures it had kept after a failed try. It now counts only new pictures, leaves out items that have nothing to capture, and lists the rest as having no new picture.
 - **One click on empty menu bar space now opens or closes the Thaw Bar once.** A single click could open the bar and close it straight away, or close it and open it again, so it looked as if the click had done nothing. Double-clicking for Always Hidden items works as before. Reported by @RonenMars in [#1440](https://github.com/thaw-app/Thaw/issues/1440).
 
 ## [3.0.0-beta.5] - 2026-11-01

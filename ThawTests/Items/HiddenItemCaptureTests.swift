@@ -20,15 +20,16 @@ struct HiddenItemCaptureTests {
             (name: "Tailscale", hasImage: false),
         ])
         #expect(result.captured == 1)
+        #expect(result.total == 4)
         #expect(result.missing == ["OneDrive", "Tailscale"])
     }
 
     @Test("Each outcome gets a message, naming what's missing")
     func messages() {
         #expect(HiddenItemCaptureButton.message(for: nil).contains("Screen Recording"))
-        let complete = HiddenItemCaptureResult(captured: 2, missing: [])
-        #expect(!HiddenItemCaptureButton.message(for: complete).contains("No picture"))
-        let partial = HiddenItemCaptureResult(captured: 1, missing: ["Tailscale"])
+        let complete = HiddenItemCaptureResult(captured: 2, total: 2, missing: [])
+        #expect(!HiddenItemCaptureButton.message(for: complete).contains("No new picture"))
+        let partial = HiddenItemCaptureResult(captured: 1, total: 2, missing: ["Tailscale"])
         #expect(HiddenItemCaptureButton.message(for: partial).contains("Tailscale"))
     }
 }

@@ -10,21 +10,18 @@ import MenuBarModel
 /// How a capture the user asked for went.
 nonisolated struct HiddenItemCaptureResult: Equatable {
     let captured: Int
-    /// The items still without a picture, by name.
+    let total: Int
+    /// The items this capture got no new picture of, by name.
     let missing: [String]
 
-    var total: Int {
-        captured + missing.count
-    }
-
-    /// Tallies items as (name, has a picture). The same name lists once, since an
+    /// Tallies items as (name, got a new picture). The same name lists once, since an
     /// app's items can share one.
     static func tally(_ items: [(name: String, hasImage: Bool)]) -> HiddenItemCaptureResult {
         var missing: [String] = []
         for item in items where !item.hasImage && !missing.contains(item.name) {
             missing.append(item.name)
         }
-        return HiddenItemCaptureResult(captured: items.count(where: \.hasImage), missing: missing)
+        return HiddenItemCaptureResult(captured: items.count(where: \.hasImage), total: items.count, missing: missing)
     }
 }
 
@@ -48,9 +45,19 @@ extension MenuBarItemImageCache {
         guard ConcealedPrewarmGate.mayReveal(for: appState) else { return nil }
 
         let sections: [MenuBarSection.Name] = [.hidden, .alwaysHidden]
+        Self.requestedCaptureTally = []
+        defer { Self.requestedCaptureTally = nil }
         await prewarmConcealedImages(sections: sections, onlyMissingImages: false)
+        let newlyCaptured = Self.requestedCaptureTally ?? []
 
         let items = sections.flatMap { appState.itemManager.itemCache[$0] }
-        return .tally(items.map { (name: $0.displayName, hasImage: image(for: $0.tag) != nil) })
+            .filter { Self.isCapturable($0) && !Self.isBlankItem($0.bounds) }
+        return .tally(items.map { (name: $0.displayName, hasImage: Self.isTag($0.tag, in: newlyCaptured)) })
+    }
+
+    /// Whether a pass captured tag. A reveal can rebuild the bar, so a window ID
+    /// that changed during the pass doesn't count against a non-system item.
+    static nonisolated func isTag(_ tag: MenuBarItemTag, in captured: Set<MenuBarItemTag>) -> Bool {
+        captured.contains(tag) || (!tag.isSystemItem && captured.contains { $0.matchesIgnoringWindowID(tag) })
     }
 }

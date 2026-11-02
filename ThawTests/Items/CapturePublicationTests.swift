@@ -514,7 +514,7 @@ struct GroupedRevealPublicationTests {
                     whileSettling()
                     return batch.map { (requested: $0, live: $0) }
                 },
-                renderSettle: {},
+                renderSettle: { _ in },
                 reader: world.reader
             )
         )
@@ -539,7 +539,7 @@ struct GroupedRevealPublicationTests {
             appState: world.appState,
             sources: .init(
                 settledItems: { batch in batch.map { (requested: $0, live: $0) } },
-                renderSettle: {},
+                renderSettle: { _ in },
                 reader: world.reader,
                 cover: { events.append("cover revealed=\(controller.revealed.count)") },
                 uncover: { events.append("uncover concealed=\(controller.concealed.count)") }
@@ -562,7 +562,7 @@ struct GroupedRevealPublicationTests {
             appState: world.appState,
             sources: .init(
                 settledItems: { batch in batch.map { (requested: $0, live: $0) } },
-                renderSettle: {},
+                renderSettle: { _ in },
                 reader: world.reader,
                 mayReveal: {
                     asked += 1

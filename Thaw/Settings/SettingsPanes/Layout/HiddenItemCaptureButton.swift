@@ -55,6 +55,6 @@ struct HiddenItemCaptureButton: View {
             return String(localized: "Captured \(result.captured) of \(result.total) items.")
         }
         let names = result.missing.formatted(.list(type: .and))
-        return String(localized: "Captured \(result.captured) of \(result.total) items. No picture for: \(names).")
+        return String(localized: "Captured \(result.captured) of \(result.total) items. No new picture for: \(names).")
     }
 }

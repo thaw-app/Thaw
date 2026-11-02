@@ -620,8 +620,8 @@ extension MenuBarItemImageCache {
         /// The revealed members that reached stable bounds, paired with the
         /// request they answer. See waitForRevealedItems(matching:displayID:).
         let settledItems: @MainActor ([MenuBarItem]) async -> [(requested: MenuBarItem, live: MenuBarItem)]
-        /// The pause between stable AX bounds and a fully rendered glyph.
-        let renderSettle: @MainActor () async -> Void
+        /// The wait between stable AX bounds and fully rendered glyphs at those bounds.
+        let renderSettle: @MainActor ([MenuBarItem]) async -> Void
         let reader: any MenuBarCaptureReading
         /// Raised before a batch is revealed and lowered after it is concealed,
         /// so the user sees the bar as it was while the capture sees the reveal.
@@ -697,7 +697,7 @@ extension MenuBarItemImageCache {
             appState: appState,
             sources: RevealCaptureSources(
                 settledItems: { await self.waitForRevealedItems(matching: $0, displayID: displayID) },
-                renderSettle: { try? await Task.sleep(for: Constants.MenuBarTuning.layoutPrewarmRenderSettle) },
+                renderSettle: { await self.settleRevealedPixels($0, displayID: displayID) },
                 reader: LiveMenuBarCaptureReader(),
                 // Captures never see Thaw's own windows, so the cover hides the reveal from the user only.
                 cover: { appState.menuBarManager.revealCover.show(lifetime: Constants.MenuBarTuning.revealCaptureCoverLifetime) },
@@ -744,10 +744,10 @@ extension MenuBarItemImageCache {
             guard !revealed.isEmpty else { continue }
 
             // AX bounds stabilize before MenuBarAgent finishes recompositing
-            // the revealed glyphs; wait one render settle so the screenshot
+            // the revealed glyphs; wait for them to settle so the screenshot
             // captures fully-rendered icons. One settle for the group, since
             // they were revealed together.
-            await sources.renderSettle()
+            await sources.renderSettle(revealed.map(\.live))
             guard !Task.isCancelled, !skipCaptureWhileScreenLocked("settled capture batch") else { return }
 
             // Admitted here, after the reveal and its settle, with nothing
@@ -820,7 +820,7 @@ extension MenuBarItemImageCache {
             )
             return false
         }
-        commitCaptureLedger(of: captureResult)
+        commitCaptureLedger(of: captureResult, notingRevealed: revealed)
 
         // A cancel, usually the Thaw Bar closing, also drops the strip's capture
         // ticket, so the misses after it say nothing about the items.
