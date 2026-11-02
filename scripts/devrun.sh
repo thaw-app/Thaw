@@ -8,9 +8,12 @@
 # Full output is saved in a temporary directory outside the checkout.
 # Diagnostic logging uses the saved preference, or the build's default.
 #
+# Without the team's signing setup, the build retries with a local signature.
+#
 # Usage:
 #   ./scripts/devrun.sh                  # Release
 #   ./scripts/devrun.sh --debug          # Debug, for the debugger
+#   ./scripts/devrun.sh --ad-hoc         # sign locally without trying the team first
 #   ./scripts/devrun.sh --skip-packages  # skip explicit package resolution
 #   ./scripts/devrun.sh --verbose        # stream raw command output too
 set -euo pipefail
@@ -25,6 +28,7 @@ APP_NAME="Thaw Debug"
 DEST="/Applications/$APP_NAME.app"
 BUNDLE_ID="com.stonerl.Thaw.debug"
 PROCESS_PATTERN="^${DEST//./\\.}/Contents/MacOS/$APP_NAME( |$)"
+AD_HOC=0
 SKIP_PACKAGES=0
 VERBOSE=0
 
@@ -32,6 +36,7 @@ while [[ $# -gt 0 ]]; do
     case "$1" in
         --debug) CONFIG="Debug" ;;
         --release) CONFIG="Release" ;;
+        --ad-hoc) AD_HOC=1 ;;
         --skip-packages) SKIP_PACKAGES=1 ;;
         --verbose) VERBOSE=1 ;;
         -h | --help)
@@ -50,6 +55,7 @@ LOG_ROOT=${TMPDIR:-/tmp}
 LOG_DIR=$(mktemp -d "${LOG_ROOT%/}/devrun.XXXXXX")
 LOG="$LOG_DIR/build.log"
 BUILD_SETTINGS="$LOG_DIR/build-settings.txt"
+BUILD_ATTEMPT="$LOG_DIR/build-attempt.log"
 PID_FILE="$LOG_DIR/app.pid"
 : > "$LOG"
 # Keep warnings visible while stage output is redirected to the log.
@@ -69,6 +75,12 @@ BUILD_ARGS=(
     THAW_BUNDLE_ID_SUFFIX=.debug
     "THAW_PRODUCT_NAME_SUFFIX= Debug"
 )
+# Library validation can reject an embedded framework that has no Team ID.
+AD_HOC_ARGS=(DEVELOPMENT_TEAM= CODE_SIGN_STYLE=Manual CODE_SIGN_IDENTITY=- PROVISIONING_PROFILE_SPECIFIER= RUNTIME_EXCEPTION_DISABLE_LIBRARY_VALIDATION=YES)
+SIGNING_FAILURE='requires a development team|No signing certificate|No Account for Team|No profiles for'
+if [[ "$AD_HOC" -eq 1 ]]; then
+    BUILD_ARGS+=("${AD_HOC_ARGS[@]}")
+fi
 
 show_failure() {
     local label=$1 status=$2 elapsed=$3 first_line=$4
@@ -126,7 +138,17 @@ check_prerequisites() {
 build_app() {
     local status=0 products_dir
     # run_stage checks this function's status, so errexit is disabled inside it.
-    xcodebuild "${BUILD_ARGS[@]}" build || return $?
+    xcodebuild "${BUILD_ARGS[@]}" build 2>&1 | tee "$BUILD_ATTEMPT"
+    status=${PIPESTATUS[0]}
+    if [[ "$status" -ne 0 ]]; then
+        [[ "$AD_HOC" -eq 0 ]] && grep -Eq "$SIGNING_FAILURE" "$BUILD_ATTEMPT" || return "$status"
+        local notice="This Mac can't sign for the Thaw team, so it's building with a local signature. macOS may ask for permissions again after each rebuild, and some features may not work."
+        printf '%s\n' "$notice" >&3
+        printf '%s\n' "$notice" >> "$LOG"
+        BUILD_ARGS+=("${AD_HOC_ARGS[@]}")
+        status=0
+        xcodebuild "${BUILD_ARGS[@]}" build || return $?
+    fi
     xcodebuild "${BUILD_ARGS[@]}" -showBuildSettings > "$BUILD_SETTINGS" 2>&1 || status=$?
     cat "$BUILD_SETTINGS" || return $?
     [[ "$status" -eq 0 ]] || return "$status"

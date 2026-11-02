@@ -7,6 +7,10 @@ from xml.dom import Node, minidom
 
 SPARKLE_NS = "http://www.andymatuschak.org/xml-namespaces/sparkle"
 
+# Sparkle splits Macs into 7 groups and opens one per interval from pubDate,
+# so 4 hours lets every group in 24 hours after publishing.
+PHASED_ROLLOUT_INTERVAL_SECONDS = "14400"
+
 
 def sparkle_elements(item, name):
     return [
@@ -51,6 +55,17 @@ def enclosure_tag(item):
         return None
     match = ENCLOSURE_TAG.search(enclosures[0].getAttribute("url").rsplit("/", 1)[-1])
     return match.group(1) if match else None
+
+
+def insert_sparkle_element_after(document, anchor, name, value):
+    qualified_name = f"{anchor.prefix}:{name}" if anchor.prefix else name
+    element = document.createElementNS(SPARKLE_NS, qualified_name)
+    element.appendChild(document.createTextNode(value))
+    item = anchor.parentNode
+    spacing = anchor.nextSibling
+    item.insertBefore(element, spacing)
+    if spacing and spacing.nodeType == Node.TEXT_NODE and not spacing.data.strip():
+        item.insertBefore(spacing.cloneNode(True), element)
 
 
 def previous_descriptions(xml: bytes | None):
@@ -115,14 +130,16 @@ def prepare_appcasts(
                 minimums = sparkle_elements(item, "minimumSystemVersion")
                 if len(minimums) != 1:
                     raise ValueError(f"{version} must have one minimumSystemVersion to anchor the cap on")
-                minimum = minimums[0]
-                name = f"{minimum.prefix}:maximumSystemVersion" if minimum.prefix else "maximumSystemVersion"
-                maximum = document.createElementNS(SPARKLE_NS, name)
-                maximum.appendChild(document.createTextNode("26.99"))
-                spacing = minimum.nextSibling
-                item.insertBefore(maximum, spacing)
-                if spacing and spacing.nodeType == Node.TEXT_NODE and not spacing.data.strip():
-                    item.insertBefore(spacing.cloneNode(True), maximum)
+                insert_sparkle_element_after(document, minimums[0], "maximumSystemVersion", "26.99")
+
+            # Stage everything but alpha. Older items are past their last group, so the tag changes nothing for them.
+            channels = [text(channel) for channel in sparkle_elements(item, "channel")]
+            # A channel on the item wins, because Release can override the one a tag implies.
+            is_alpha = "alpha" in channels if channels else re.search(r"-(alpha|nightly)(\.|$)", version, re.IGNORECASE)
+            if not is_alpha and not sparkle_elements(item, "phasedRolloutInterval"):
+                insert_sparkle_element_after(
+                    document, versions[0], "phasedRolloutInterval", PHASED_ROLLOUT_INTERVAL_SECONDS
+                )
 
             if not version.startswith(("1.", "2.")):
                 legacy_exclusions.append(item)

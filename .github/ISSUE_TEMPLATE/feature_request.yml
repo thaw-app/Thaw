@@ -1,5 +1,5 @@
 name: Feature Request
-description: Suggest a feature or improvement.
+description: Propose a specific feature or improvement.
 title: "[Feature Request] "
 type: feature
 projects: ["thaw-app/1"]
@@ -8,6 +8,8 @@ body:
     attributes:
       value: |
         **Before you suggest something:**
+
+        Still an idea? Post it in [Discussions](https://github.com/orgs/thaw-app/discussions) first.
 
         1. Search [existing suggestions](https://github.com/thaw-app/Thaw/issues?q=is%3Aissue+-type%3ABug) for duplicates.
         2. Describe the problem you want solved, then how you'd like it to work.

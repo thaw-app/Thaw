@@ -10,7 +10,7 @@ https://github.com/thaw-app/Thaw/blob/development/docs/CODING_STANDARDS.md
 
 Tests use Swift Testing. Write new tests with @Test and #expect, not XCTest.
 
-External contributors: a new feature needs an issue that a maintainer agreed to before writing code, or it may be closed without review. A bug fix can come straight in; link its issue if there is one.
+External contributors: ideas start in Discussions (https://github.com/orgs/thaw-app/discussions). A new feature needs an issue that a maintainer agreed to before writing code, or it may be closed without review. A bug fix can come straight in; link its issue if there is one.
 -->
 
 ## Linked issue (required)

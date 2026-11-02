@@ -266,8 +266,9 @@ the tag as its version, so testers still see `2.1.0-rc.1`.
 1. Add a `## [2.1.0]` section to `CHANGELOG.md` on `development`.
 2. Run **Promote** from `development` with **tag** `2.1.0-rc.1` (dry run first).
 
-It removes the item's channel, renames it `2.1.0` and gives it the stable notes;
-uploads the same ZIP as `Thaw_2.1.0.zip` to a `2.1.0` release on
+It removes the item's channel, renames it `2.1.0`, gives it the stable notes and
+sets its date to now, so the [staged rollout](#staged-rollout) starts from the
+promotion; uploads the same ZIP as `Thaw_2.1.0.zip` to a `2.1.0` release on
 `thaw-app/updates`, so later stable releases can build deltas from it; tags
 `2.1.0` on the candidate's commit; and publishes a `2.1.0` release with the
 candidate's DMG, SBOM, Sigstore bundles and provenance, which still verify
@@ -300,6 +301,55 @@ change their saved preference. Any future update that migrates that preference
 must also reach Alpha/Nightly subscribers; an update published only on Beta
 would leave them stuck again.
 
+## Staged rollout
+
+Stable and beta updates reach Macs in stages, and the last ones can take up to
+two days. Thaw 3 has no stable release yet, so Beta is its default channel.
+Nightly items aren't staged.
+
+Sparkle puts each Mac in one of 7 random groups and opens one group per
+interval, counted from the item's `pubDate`. Thaw's interval is 4 hours
+(`sparkle:phasedRolloutInterval` = `14400`):
+
+| Hours after `pubDate` | 0 | 4 | 8 | 12 | 16 | 20 | 24 |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| Groups allowed | 1 | 2 | 3 | 4 | 5 | 6 | 7 |
+
+A Mac sees the update at its next automatic check, once a day by default, so
+the last Macs get it up to about 48 hours after `pubDate`.
+
+A manual update check or an item marked as critical skips the stages. So does
+anything that doesn't update through Sparkle, such as the DMG.
+
+[`prepare_appcasts.py`](../.github/actions/prepare-appcasts/prepare_appcasts.py)
+adds the interval to stable and beta items that don't have one. Later runs keep
+a different value you add to an item by hand. **Promote** runs that script from
+`development`, but **Release** runs the copy on the tag, so a tag built from a
+branch without this rule isn't staged.
+
+Thaw has no analytics, so people decide when to stop a rollout, using GitHub
+issues and Discord. Publish at the start of a maintainer's day, and have them
+watch both for the first 24 hours.
+
+### Halting a rollout
+
+Any maintainer can halt a rollout for a crash at launch, lost settings, or menu
+bar items people can't reach.
+
+1. Remove the item from `appcast.xml` on the `gh-pages` branch of
+   `thaw-app/updates`, and for a 2.x item from `main` on `stonerl/Thaw`. The feed
+   isn't signed, so a hand edit is safe. Sparkle then stops offering the update.
+2. Set the release back to draft on both `thaw-app/updates` and `thaw-app/Thaw`,
+   for its tag, and for a promoted release the candidate's tag too. Later release
+   runs re-read the ZIPs of published releases, and `generate_appcast` would add
+   the update back. This also takes down the DMG.
+3. Ship the fix with a higher build number, and read the feed diff from a dry run
+   first to confirm the pulled item stays out.
+
+Halting can't undo an install. Macs that already updated stay on that build until
+the fix ships, and Sparkle doesn't move a Mac to an older version. A Mac that
+already downloaded the update can still install it, so warn people on Discord.
+
 ## Legacy installs
 
 Older builds may still poll `https://stonerl.github.io/Thaw/appcast.xml`
@@ -322,7 +372,8 @@ Only **new** items point at `thaw-app/updates` releases.
 [`prepare_appcasts.py`](../.github/actions/prepare-appcasts/prepare_appcasts.py)
 owns the appcast rules: reapply missing macOS 26 caps to 2.x entries,
 keep the beta 1 recovery bridge untagged, show a channel item's tag as its
-version (`2.1.0-rc.1` for a build made as `2.1.0`), restore the notes
+version (`2.1.0-rc.1` for a build made as `2.1.0`), add the
+[rollout interval](#staged-rollout) to stable and beta items, restore the notes
 `generate_appcast` drops from every earlier archive it re-reads for deltas
 (from a snapshot of the feed taken before the run), and generate a 1.x/2.x-only
 legacy feed when releasing a 2.x tag. It uses Python's standard-library XML

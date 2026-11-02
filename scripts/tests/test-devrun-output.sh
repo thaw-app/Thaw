@@ -27,6 +27,14 @@ case "$name" in
                 ;;
             *' build '*)
                 echo 'RAW: compiler output'
+                if [[ "$SCENARIO" == signing-* && "$*" != *'CODE_SIGN_IDENTITY=-'* ]]; then
+                    echo 'error: No signing certificate "Mac Development" found'
+                    exit 65
+                fi
+                if [[ "$SCENARIO" == signing-retry-failure ]]; then
+                    echo 'example.swift:9: error: local build failed'
+                    exit 66
+                fi
                 if [[ "$SCENARIO" == build-failure ]]; then
                     echo 'example.swift:7: error: missing argument'
                     # Put the diagnostic beyond a simple last-N-lines fallback.
@@ -183,6 +191,27 @@ run_case 65 --verbose
 contains "$OUTPUT" 'RAW: compiler output'
 contains "$OUTPUT" 'Build: failed'
 excludes "$COMMANDS" 'mv '
+
+excludes "$COMMANDS" 'CODE_SIGN_IDENTITY=-'
+
+SCENARIO=signing-fallback
+run_case 0
+once "$OUTPUT" 'building with a local signature'
+once "$LOG" 'building with a local signature'
+contains "$COMMANDS" 'CODE_SIGN_IDENTITY=-'
+contains "$COMMANDS" 'RUNTIME_EXCEPTION_DISABLE_LIBRARY_VALIDATION=YES'
+contains "$OUTPUT" 'Running Thaw Debug'
+run_case 0 --verbose
+once "$OUTPUT" 'building with a local signature'
+contains "$OUTPUT" 'Running Thaw Debug'
+SCENARIO=signing-retry-failure
+run_case 66
+contains "$OUTPUT" 'example.swift:9: error: local build failed'
+excludes "$COMMANDS" 'open '
+SCENARIO=logging-default
+run_case 0 --ad-hoc
+contains "$COMMANDS" 'CODE_SIGN_IDENTITY=-'
+excludes "$OUTPUT" 'building with a local signature'
 
 SCENARIO=resolve-failure
 run_case 67

@@ -6,6 +6,26 @@ Thaw 3.0 runs on macOS 27, and Thaw 2.x runs on macOS 26 and, from 2.2, on macOS
 
 - [macOS 27 (Thaw 3.0)](#macos-27-thaw-30)
   - [Known macOS 27 limitations](#known-macos-27-limitations)
+    - [Several items from one app](#several-items-from-one-app)
+    - [Apple's own items](#apples-own-items)
+    - [Clock and Control Center](#clock-and-control-center)
+    - [Items pinned from Control Center](#items-pinned-from-control-center)
+    - [Game Mode](#game-mode)
+    - [Zoom and the Native hiding method](#zoom-and-the-native-hiding-method)
+    - [Tray icons listed as `explorer.exe`](#tray-icons-listed-as-explorerexe)
+    - [Recording and microphone indicators](#recording-and-microphone-indicators)
+    - [Full screen](#full-screen)
+    - [Very many apps running](#very-many-apps-running)
+    - [Siri and voice](#siri-and-voice)
+    - [Clicks in Settings](#clicks-in-settings)
+    - [Shortcuts and Focus](#shortcuts-and-focus)
+    - [Live Activities](#live-activities)
+    - [Apps that need their own update](#apps-that-need-their-own-update)
+    - [Apps running outside `/Applications`](#apps-running-outside-applications)
+    - [Items that show changing text](#items-that-show-changing-text)
+    - [Uneven spacing](#uneven-spacing)
+    - [App icons instead of previews](#app-icons-instead-of-previews)
+    - [iStat Menus](#istat-menus)
   - [Little Snitch on macOS 27](#little-snitch-on-macos-27)
   - [Thaw's own icon is missing on macOS 27](#thaws-own-icon-is-missing-on-macos-27)
 - [macOS 15 and 26 (Thaw 2.x)](#macos-15-and-26-thaw-2x)
@@ -36,23 +56,83 @@ macOS 27 changed how menu bar items are hidden and arranged, and Thaw 3.0 is bui
 
 These are known. You don't need to report them.
 
-- **Several items from one app:** some apps' menu bar items cannot be hidden independently with the current macOS 27 mechanism. An item in Hidden can stay visible when another item from the same app is in Visible. To hide them, put all of that app's items in the same section. [#1125](https://github.com/thaw-app/Thaw/issues/1125)
-- **Apple's own items:** with the Standard hiding method, macOS hides Focus, AirDrop, Now Playing, Fast User Switching, Live Activities and the camera indicator whenever any other item is hidden, and never hides Time Machine or the Input menu. Choose the Native hiding method to keep them on the menu bar, or turn on **Replace Control Center items** in **Settings → Menu Bar Layout** to put Thaw icons in their place, which you can move and hide.
-- **Clock and Control Center:** macOS keeps these at the right end of the menu bar, and Thaw leaves them where macOS puts them. With the Standard hiding method you can still hide them by putting them in a hidden section. Siri isn't pinned, so you can move items to its right.
-- **Home and other items pinned from Control Center** leave the menu bar while Hidden is closed if you use the Standard hiding method. Layout marks them. Thaw can't keep them on the bar.
-- **Game Mode:** its indicator stays on the menu bar whichever section you put it in.
-- **Zoom and some other apps with the Native hiding method:** they stay on the menu bar, because System Settings → Menu Bar has no entry for them.
-- **Recording and microphone indicators on macOS 27.0.1:** ⌘-dragging one makes macOS's menu bar process restart about a minute later, with or without Thaw. Afterwards some icons can come back out of order; dragging them into place on the menu bar fixes it. A Control Center control such as Timers can stay missing until you open Edit Controls. macOS 27.2 doesn't have this problem.
-- **Full screen on macOS 27.0.1:** videos in a browser can't go full screen, and the menu bar can stay on screen over full-screen apps. This is a macOS bug. Quitting MenuBarAgent in Activity Monitor fixes it until it comes back. [#1404](https://github.com/thaw-app/Thaw/issues/1404)
-- **Very many apps running:** with about 240 apps, Thaw can't read the whole menu bar in time, so icons can go missing from Layout for a moment or come back in a different order. [#1367](https://github.com/thaw-app/Thaw/issues/1367)
-- **Siri and voice:** Siri doesn't run Thaw's actions when you ask by voice. The same actions work from Shortcuts and Spotlight.
-- **Clicks in Settings:** on some Macs, clicks land below the control you aimed at. [#1244](https://github.com/thaw-app/Thaw/issues/1244), [#1265](https://github.com/thaw-app/Thaw/issues/1265)
-- **Shortcuts and Focus:** macOS 27 can hide the Shortcuts item at launch, and the Focus icon may not be visible to Thaw at all. Thaw cannot manage either one yet. [#1105](https://github.com/thaw-app/Thaw/issues/1105), [#1124](https://github.com/thaw-app/Thaw/issues/1124), [#1154](https://github.com/thaw-app/Thaw/issues/1154)
-- **Live Activities:** macOS 27 hides some Live Activity items and gives Thaw no way to bring them back on demand. [#1095](https://github.com/thaw-app/Thaw/issues/1095)
-- **Apps that need their own update:** an app built for the older menu bar can sit in the wrong place, refuse to hide, or show no icon. f.lux behaves this way today. The fix has to come from the app's developer, so check for an update to that app.
-- **Items that show changing text** (a temperature, a clock, a transfer rate): these can land next to where you put them rather than exactly there. macOS places them from memory, not from Thaw's layout.
-- **Uneven spacing:** each app adds its own padding around its items, so the same spacing setting can still leave uneven gaps. Applying spacing can also restart menu bar apps so they pick up the new value. [#1126](https://github.com/thaw-app/Thaw/issues/1126)
-- **App icons instead of previews:** when Thaw has no usable capture of an item, including when Screen Recording is off, it shows the app's icon instead. That is on purpose. If an item disappears completely, report it. [#1119](https://github.com/thaw-app/Thaw/issues/1119)
+#### Several items from one app
+
+Some apps' menu bar items cannot be hidden independently with the current macOS 27 mechanism. An item in Hidden can stay visible when another item from the same app is in Visible. To hide them, put all of that app's items in the same section. [#1125](https://github.com/thaw-app/Thaw/issues/1125)
+
+#### Apple's own items
+
+With the Standard hiding method, macOS hides Focus, AirDrop, Now Playing, Fast User Switching, Live Activities and the camera indicator whenever any other item is hidden, and never hides Time Machine or the Input menu. Choose the Native hiding method to keep them on the menu bar, or turn on **Replace Control Center items** in **Settings → Menu Bar Layout** to put Thaw icons in their place, which you can move and hide.
+
+#### Clock and Control Center
+
+macOS keeps these at the right end of the menu bar, and Thaw leaves them where macOS puts them. With the Standard hiding method you can still hide them by putting them in a hidden section. Siri isn't pinned, so you can move items to its right.
+
+#### Items pinned from Control Center
+
+Home and other items pinned from Control Center leave the menu bar while Hidden is closed if you use the Standard hiding method. Layout marks them. Thaw can't keep them on the bar.
+
+#### Game Mode
+
+Its indicator stays on the menu bar whichever section you put it in.
+
+#### Zoom and the Native hiding method
+
+With the Native hiding method, Zoom and some other apps stay on the menu bar, because System Settings → Menu Bar has no entry for them.
+
+#### Tray icons listed as `explorer.exe`
+
+These come from Windows apps in CrossOver and Wine. Thaw can't move or hide them, because macOS reports no app identity for them and hiding depends on one. Layout lists them in Visible, but with the Standard hiding method macOS may not draw them. [#1310](https://github.com/thaw-app/Thaw/issues/1310)
+
+#### Recording and microphone indicators
+
+On macOS 27.0.1, ⌘-dragging one makes macOS's menu bar process restart about a minute later, with or without Thaw. Afterwards some icons can come back out of order; dragging them into place on the menu bar fixes it. A Control Center control such as Timers can stay missing until you open Edit Controls. macOS 27.2 doesn't have this problem.
+
+#### Full screen
+
+On macOS 27.0.1, videos in a browser can't go full screen, and the menu bar can stay on screen over full-screen apps. This is a macOS bug. Quitting MenuBarAgent in Activity Monitor fixes it until it comes back. [#1404](https://github.com/thaw-app/Thaw/issues/1404)
+
+#### Very many apps running
+
+With about 240 apps, Thaw can't read the whole menu bar in time, so icons can go missing from Layout for a moment or come back in a different order. [#1367](https://github.com/thaw-app/Thaw/issues/1367)
+
+#### Siri and voice
+
+Siri doesn't run Thaw's actions when you ask by voice. The same actions work from Shortcuts and Spotlight.
+
+#### Clicks in Settings
+
+If switches in Settings stop responding, the window may be zoomed. Press ⌘0 to return to actual size. [#1244](https://github.com/thaw-app/Thaw/issues/1244), [#1265](https://github.com/thaw-app/Thaw/issues/1265)
+
+#### Shortcuts and Focus
+
+macOS 27 can hide the Shortcuts item at launch, and the Focus icon may not be visible to Thaw at all. Thaw cannot manage either one yet. [#1105](https://github.com/thaw-app/Thaw/issues/1105), [#1124](https://github.com/thaw-app/Thaw/issues/1124), [#1154](https://github.com/thaw-app/Thaw/issues/1154)
+
+#### Live Activities
+
+macOS 27 hides some Live Activity items and gives Thaw no way to bring them back on demand. [#1095](https://github.com/thaw-app/Thaw/issues/1095)
+
+#### Apps that need their own update
+
+An app built for the older menu bar can sit in the wrong place, refuse to hide, or show no icon. f.lux behaves this way today. The fix has to come from the app's developer, so check for an update to that app.
+
+#### Apps running outside `/Applications`
+
+While Thaw is running, the menu bar item of an app started from another folder, such as a build folder or a folder in your home directory, may not appear in the menu bar or the Thaw Bar. It comes back when you quit Thaw. To keep it while Thaw runs, move the app to `/Applications` and open it again. The item can take from a few seconds to a few minutes to appear. [#1374](https://github.com/thaw-app/Thaw/issues/1374)
+
+#### Items that show changing text
+
+A temperature, a clock or a transfer rate can land next to where you put it rather than exactly there. macOS places these from memory, not from Thaw's layout.
+
+#### Uneven spacing
+
+Each app adds its own padding around its items, so the same spacing setting can still leave uneven gaps. Applying spacing can also restart menu bar apps so they pick up the new value. [#1126](https://github.com/thaw-app/Thaw/issues/1126)
+
+#### App icons instead of previews
+
+When Thaw has no usable capture of an item, including when Screen Recording is off, it shows the app's icon instead. That is on purpose. If an item disappears completely, report it. [#1119](https://github.com/thaw-app/Thaw/issues/1119)
+
+#### iStat Menus
 
 Thaw and iStat Menus work well together since iStat Menus 7.5.1. If iStat items misbehave, update iStat Menus first.
 

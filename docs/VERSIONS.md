@@ -40,10 +40,12 @@ Thaw 3 has no Stable option yet, because it has no stable release. Pick Beta or 
 
 Beta always includes stable releases. That is how the updater works, and it cannot be switched off.
 
+Thaw 3 beta and stable releases reach Macs in stages, so yours can get one up to two days after it comes out. Checking for updates yourself finds it right away.
+
 Nightly carries Thaw built for the next macOS, which is a different app line and not a rougher build of the one you have.
 
 ## What is only in the beta
 
-The [feature list](../README.md#features) on the home page is Thaw 3's. Thaw 2 has most of it, and some features are only in Thaw 3.
+The [feature list](https://www.getthaw.app/#features) on the home page is Thaw 3's. Thaw 2 has most of it, and some features are only in Thaw 3.
 
 The [changelog](../CHANGELOG.md) lists what each release changed, and [Releases and updates](RELEASES.md) explains how updates reach your Mac.

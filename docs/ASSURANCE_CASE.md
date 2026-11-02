@@ -176,11 +176,13 @@ defect classes before merge.
 | Test coverage (`test_statement_coverage80` Met) | SonarCloud `coverage` measure; CI `coverage.xml`; **84%** per the criterion justification on bestpractices.dev; exclusion set and its governing rule in `sonar-project.properties` |
 | Badge level | [bestpractices.dev/projects/13303](https://www.bestpractices.dev/projects/13303): Gold, with passing, silver, and gold each at 100% |
 | Dependency monitoring | `.github/dependabot.yml` |
+| Pull request security review | Strix, an AI security testing tool, reviews each pull request when it opens. Later commits get a review only on request. It runs alongside the checks above, and maintainers decide what to fix. |
 
 ## Revision
 
 | Date | Note |
 | --- | --- |
+| 2026-11-01 | Listed the Strix pull request security review as evidence |
 | 2026-08-15 | Documented `MenuBarCaptureService`: same-team XPC, menu-bar-only window IDs, BGRA size limits, and helper recycle to contain the SkyLight dictionary leak |
 | 2026-07-27 | Initial version from `development` for OpenSSF docs |
 | 2026-07-27 | Deferred Silver coverage claim; measured ~44% |

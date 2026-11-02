@@ -1,0 +1,40 @@
+name: Clear needs-info
+
+# Removes needs-info when the person who opened an issue replies, so the label
+# means the issue is still waiting on them.
+
+on:
+  issue_comment:
+    types: [created]
+
+permissions:
+  contents: read
+
+jobs:
+  clear:
+    if: >-
+      github.repository == 'thaw-app/Thaw'
+      && !github.event.issue.pull_request
+      && github.event.issue.state == 'open'
+      && contains(github.event.issue.labels.*.name, 'needs-info')
+      && github.event.comment.user.type != 'Bot'
+      && github.event.comment.user.id == github.event.issue.user.id
+    runs-on: ubuntu-slim
+    permissions:
+      issues: write
+    steps:
+      - name: Remove needs-info
+        uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9.0.0
+        with:
+          script: |
+            try {
+              await github.rest.issues.removeLabel({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: context.payload.issue.number,
+                name: 'needs-info',
+              });
+            } catch (error) {
+              // Someone else removed it first.
+              if (error.status !== 404) throw error;
+            }

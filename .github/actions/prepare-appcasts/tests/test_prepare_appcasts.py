@@ -148,6 +148,36 @@ class PrepareAppcastsTests(unittest.TestCase):
         self.assertEqual(versions(legacy), versions(canonical))
         self.assertEqual(prepare_appcasts(canonical, "2.1.1-rc.1"), (canonical, legacy))
 
+    def test_stable_and_beta_items_get_the_four_hour_rollout_and_alpha_does_not(self):
+        def intervals(xml):
+            with minidom.parseString(xml) as document:
+                return {
+                    item.getElementsByTagNameNS(SPARKLE_NS, "shortVersionString")[0].firstChild.data:
+                        [node.firstChild.data for node in item.getElementsByTagNameNS(SPARKLE_NS, "phasedRolloutInterval")]
+                    for item in document.getElementsByTagName("item")
+                }
+
+        beta = feed("2.2.0-rc.1").replace(b"</item>", b"<sparkle:channel>beta</sparkle:channel></item>")
+        alpha = feed("3.0.0-alpha.13").replace(b"</item>", b"<sparkle:channel>alpha</sparkle:channel></item>")
+        untagged_alpha = feed("3.0.0-alpha.7")
+        canonical, legacy = prepare_appcasts(feed("2.2.0", "2.1.0"), "2.2.0")
+        self.assertEqual(intervals(canonical), {"2.2.0": ["14400"], "2.1.0": ["14400"]})
+        self.assertEqual(intervals(legacy), intervals(canonical))
+        self.assertEqual(prepare_appcasts(canonical, "2.2.0"), (canonical, legacy))
+        self.assertEqual(intervals(prepare_appcasts(beta, "2.2.0-rc.1")[0]), {"2.2.0-rc.1": ["14400"]})
+        self.assertEqual(intervals(prepare_appcasts(alpha, "3.0.0-alpha.13")[0]), {"3.0.0-alpha.13": []})
+        self.assertEqual(intervals(prepare_appcasts(untagged_alpha, "3.0.0-alpha.7")[0]), {"3.0.0-alpha.7": []})
+        overridden = feed("3.0.0-nightly.2").replace(b"</item>", b"<sparkle:channel>beta</sparkle:channel></item>")
+        self.assertEqual(intervals(prepare_appcasts(overridden, "3.0.0-nightly.2")[0]), {"3.0.0-nightly.2": ["14400"]})
+
+    def test_a_rollout_interval_already_in_the_feed_is_kept(self):
+        xml = feed("2.2.0").replace(
+            b"</item>", b"<sparkle:phasedRolloutInterval>86400</sparkle:phasedRolloutInterval></item>"
+        )
+        canonical, _ = prepare_appcasts(xml, "2.2.0")
+        self.assertIn(b">86400<", canonical)
+        self.assertNotIn(b">14400<", canonical)
+
     def test_notes_generate_appcast_dropped_come_back_from_the_previous_feed(self):
         def item(build, notes):
             description = f"<description><![CDATA[{notes}]]></description>" if notes is not None else ""

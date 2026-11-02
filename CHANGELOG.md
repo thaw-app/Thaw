@@ -22,6 +22,13 @@ Anything else goes before the first section, or in its own section after
 these four. The website shows each section's name beside its list, and counts
 the items under New and Fixed.
 
+## [Unreleased]
+
+### Changed
+
+- **Stable and beta updates reach Macs in stages.** Thaw offers a new version to a few Macs at a time, so a bad update can be stopped before it reaches everyone. Your Mac can get it up to two days after it comes out, and checking for updates yourself finds it right away.
+- **Pull requests get a security review from Strix,** an AI security testing tool, when they open. It adds to the checks we already run, and maintainers decide what to fix. The [security assurance case](docs/ASSURANCE_CASE.md#7-evidence-pointers) lists it with the rest.
+
 ## [3.0.0-beta.5] - 2026-11-01
 
 **macOS 27 only · Build 122**
