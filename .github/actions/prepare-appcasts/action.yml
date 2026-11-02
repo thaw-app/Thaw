@@ -1,8 +1,8 @@
 name: Prepare Thaw appcasts
 description: >-
   Apply the macOS 26 cap to 2.x entries, show prerelease tags as their version,
-  restore notes generate_appcast dropped, and prepare the legacy feed for 2.x
-  releases.
+  stage stable items' rollout, restore notes generate_appcast dropped, and
+  prepare the legacy feed for 2.x releases.
 
 inputs:
   appcast-path:

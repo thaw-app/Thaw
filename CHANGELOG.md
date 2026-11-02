@@ -22,6 +22,12 @@ Anything else goes before the first section, or in its own section after
 these four. The website shows each section's name beside its list, and counts
 the items under New and Fixed.
 
+## [Unreleased]
+
+### Changed
+
+- **Stable updates reach Macs in stages.** Thaw offers a new stable version to a few Macs at a time, so a bad update can be stopped before it reaches everyone. Your Mac can get it up to two days after it comes out, and checking for updates yourself finds it right away.
+
 ## [3.0.0-beta.5] - 2026-11-01
 
 **macOS 27 only · Build 122**

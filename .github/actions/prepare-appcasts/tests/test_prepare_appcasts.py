@@ -148,6 +148,32 @@ class PrepareAppcastsTests(unittest.TestCase):
         self.assertEqual(versions(legacy), versions(canonical))
         self.assertEqual(prepare_appcasts(canonical, "2.1.1-rc.1"), (canonical, legacy))
 
+    def test_only_stable_items_get_the_four_hour_rollout(self):
+        def intervals(xml):
+            with minidom.parseString(xml) as document:
+                return {
+                    item.getElementsByTagNameNS(SPARKLE_NS, "shortVersionString")[0].firstChild.data:
+                        [node.firstChild.data for node in item.getElementsByTagNameNS(SPARKLE_NS, "phasedRolloutInterval")]
+                    for item in document.getElementsByTagName("item")
+                }
+
+        beta = feed("2.2.0-rc.1").replace(b"</item>", b"<sparkle:channel>beta</sparkle:channel></item>")
+        untagged_prerelease = feed("3.0.0-beta.1")
+        canonical, legacy = prepare_appcasts(feed("2.2.0", "2.1.0"), "2.2.0")
+        self.assertEqual(intervals(canonical), {"2.2.0": ["14400"], "2.1.0": ["14400"]})
+        self.assertEqual(intervals(legacy), intervals(canonical))
+        self.assertEqual(prepare_appcasts(canonical, "2.2.0"), (canonical, legacy))
+        self.assertEqual(intervals(prepare_appcasts(beta, "2.2.0-rc.1")[0]), {"2.2.0-rc.1": []})
+        self.assertEqual(intervals(prepare_appcasts(untagged_prerelease, "3.0.0-beta.1")[0]), {"3.0.0-beta.1": []})
+
+    def test_a_rollout_interval_already_in_the_feed_is_kept(self):
+        xml = feed("2.2.0").replace(
+            b"</item>", b"<sparkle:phasedRolloutInterval>86400</sparkle:phasedRolloutInterval></item>"
+        )
+        canonical, _ = prepare_appcasts(xml, "2.2.0")
+        self.assertIn(b">86400<", canonical)
+        self.assertNotIn(b">14400<", canonical)
+
     def test_notes_generate_appcast_dropped_come_back_from_the_previous_feed(self):
         def item(build, notes):
             description = f"<description><![CDATA[{notes}]]></description>" if notes is not None else ""

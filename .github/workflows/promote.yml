@@ -174,6 +174,8 @@ jobs:
           import plistlib
           import sys
           import zipfile
+          from datetime import datetime, timezone
+          from email.utils import format_datetime
           from xml.dom import Node, minidom
 
           sys.path.insert(0, ".github/actions/prepare-appcasts")
@@ -217,6 +219,15 @@ jobs:
                   if spacing and spacing.nodeType == Node.TEXT_NODE and not spacing.data.strip():
                       item.removeChild(spacing)
               replace(versions[0], document.createTextNode(stable))
+
+              # Sparkle counts the staged rollout from pubDate, and a candidate's
+              # date is old enough to open every group at once. A rerun keeps the
+              # date, so it doesn't restart a rollout already under way.
+              if not already:
+                  dates = item.getElementsByTagName("pubDate")
+                  if len(dates) != 1:
+                      raise SystemExit(f"::error::Build {build}'s feed item needs one pubDate, found {len(dates)}")
+                  replace(dates[0], document.createTextNode(format_datetime(datetime.now(timezone.utc))))
 
               html = open(os.environ["NOTES_HTML"], encoding="utf-8").read()
               descriptions = item.getElementsByTagName("description")
