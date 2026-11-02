@@ -89,7 +89,8 @@ struct MenuBarPointerAXCacheTests {
         cache.refreshForeignWidget(at: first)
         cache.refreshForeignWidget(at: second)
         // Reading the recorder starts nothing, so only the queue can test the second point.
-        let deadline = ContinuousClock.now + .seconds(5)
+        // Generous for a busy CI machine: the loop leaves as soon as the second point arrives.
+        let deadline = ContinuousClock.now + .seconds(30)
         while tested.points.count < 2, ContinuousClock.now < deadline {
             try await Task.sleep(for: .milliseconds(10))
         }

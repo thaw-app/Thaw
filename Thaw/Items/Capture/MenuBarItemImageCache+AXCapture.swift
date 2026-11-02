@@ -21,7 +21,7 @@ extension MenuBarItemImageCache {
         var postCaptureBounds: [String: CGRect] = [:]
         var overflowBounds: [CGRect]
         var ambiguousIdentifiers: Set<String> = []
-        var hasStripGeometry = false
+        var hasHostingCapture = false
     }
 
     @concurrent
@@ -65,22 +65,17 @@ extension MenuBarItemImageCache {
             ),
             overflowBounds: overflowBounds
         )
-        await captureAXStrip(candidates, context: &context, using: reader, into: &result)
+        // Windows first: capturing the display can black out DRM video while the
+        // stream runs, and reads other apps' windows this crop doesn't need.
+        await captureAXWindowSources(candidates, context: &context, using: reader, into: &result)
         guard !screenIsLocked() else { return CapturePass() }
         // A superseded pass keeps the crops it has and starts no further source.
         guard !Task.isCancelled else { return result }
-        let unresolved = candidates.filter { candidate in
-            guard !result.captured.keys.contains(candidate.item.tag) else { return false }
-            // A different pixel source cannot repair an unidentified or moved item.
-            guard context.hasStripGeometry else { return true }
-            let identifier = candidate.item.uniqueIdentifier
-            guard !context.ambiguousIdentifiers.contains(identifier),
-                  let bounds = context.postCaptureBounds[identifier]
-            else { return false }
-            return Self.hasStableCaptureBounds(before: candidate.bounds, after: bounds)
-        }
-        if !unresolved.isEmpty {
-            await captureAXWindowSources(unresolved, context: &context, using: reader, into: &result)
+        // The strip is only for a bar window that couldn't be read at all. An item
+        // that window didn't yield is not worth a display capture on every pass.
+        let unresolved = candidates.filter { !result.captured.keys.contains($0.item.tag) }
+        if !context.hasHostingCapture, !unresolved.isEmpty {
+            await captureAXStrip(unresolved, context: &context, using: reader, into: &result)
         }
         return screenIsLocked() ? CapturePass() : result
     }
@@ -125,20 +120,24 @@ extension MenuBarItemImageCache {
         guard !screenIsLocked(), !Task.isCancelled else { return }
         var hostingOwners = [CGRect: MenuBarItemTag]()
         if let hosting {
-            guard let sourceContext = await contextAfterSource(context, using: reader) else { return }
-            context.overflowBounds = sourceContext.overflowBounds
+            context.hasHostingCapture = true
+            // Positions read after the pixels, whatever the caller asked for: a
+            // crop by a stale rectangle would hand one item another's picture.
+            guard await readLiveGeometry(of: candidates, into: &context, using: reader) else { return }
             appendAXSourceCrops(
                 candidates,
                 capture: hosting,
                 source: .hosting,
-                context: sourceContext,
+                context: context,
                 cropRectOwners: &hostingOwners,
                 into: &result
             )
         }
         // Some apps draw in an owner window rather than MenuBarAgent's window.
         // A missing hosting capture must still reach this stage.
-        let unresolved = candidates.filter { !result.captured.keys.contains($0.item.tag) }
+        let unresolved = candidates.filter { candidate in
+            !result.captured.keys.contains(candidate.item.tag) && Self.mayTryAnotherSource(candidate, context: context)
+        }
         var windowOwners = [CGRect: MenuBarItemTag]()
         for ownerPID in Set(unresolved.map(\.item.ownerPID)).sorted() {
             guard !screenIsLocked(), !Task.isCancelled else { return }
@@ -158,6 +157,33 @@ extension MenuBarItemImageCache {
                 into: &result
             )
         }
+    }
+
+    /// Reads positions and overflow after a source's pixels. False when the screen locked meanwhile.
+    private nonisolated func readLiveGeometry(
+        of candidates: [(item: MenuBarItem, bounds: CGRect)],
+        into context: inout AXCropContext,
+        using reader: any MenuBarCaptureReading
+    ) async -> Bool {
+        let live = await reader.liveBounds(for: candidates)
+        guard !screenIsLocked() else { return false }
+        context.postCaptureBounds = live.bounds
+        context.ambiguousIdentifiers = live.ambiguous
+        context.overflowBounds += await reader.overflowBounds(displayID: context.displayID)
+        return !screenIsLocked()
+    }
+
+    /// False for an item the hosting read couldn't identify, or that moved.
+    private static nonisolated func mayTryAnotherSource(
+        _ candidate: (item: MenuBarItem, bounds: CGRect),
+        context: AXCropContext
+    ) -> Bool {
+        guard context.hasHostingCapture else { return true }
+        let identifier = candidate.item.uniqueIdentifier
+        guard !context.ambiguousIdentifiers.contains(identifier),
+              let bounds = context.postCaptureBounds[identifier]
+        else { return false }
+        return hasStableCaptureBounds(before: candidate.bounds, after: bounds)
     }
 
     /// Geometry and overflow evidence read after one source's pixels arrived.
@@ -234,13 +260,7 @@ extension MenuBarItemImageCache {
             return
         }
         // A hosting enumeration cannot establish ownership of on-screen pixels.
-        let live = await reader.liveBounds(for: candidates)
-        guard !screenIsLocked() else { return }
-        context.hasStripGeometry = true
-        context.postCaptureBounds = live.bounds
-        context.ambiguousIdentifiers = live.ambiguous
-        context.overflowBounds += await reader.overflowBounds(displayID: context.displayID)
-        guard !screenIsLocked() else { return }
+        guard await readLiveGeometry(of: candidates, into: &context, using: reader) else { return }
         var stripOwners = [CGRect: MenuBarItemTag]()
         appendAXSourceCrops(
             candidates,
@@ -270,10 +290,11 @@ extension MenuBarItemImageCache {
             "axBoundsCapture: \(sourceLabel) \(capture.image.width)×\(capture.image.height)px, cropping \(candidates.count) item(s)"
         )
         let isStrip = source == .displayStrip
+        let readLivePositions = isStrip || source == .hosting
         let rules = AXCropRules(
             knockOutBackground: isStrip,
-            validateFreshBounds: isStrip || context.validateFreshBounds,
-            absenceMeansMoved: isStrip || !context.validateFreshBounds,
+            validateFreshBounds: readLivePositions || context.validateFreshBounds,
+            absenceMeansMoved: readLivePositions || !context.validateFreshBounds,
             postCaptureBoundsByID: context.postCaptureBounds,
             captureTimeBoundsByID: context.captureTimeBounds,
             overflowBounds: context.overflowBounds,

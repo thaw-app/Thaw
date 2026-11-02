@@ -88,6 +88,14 @@ final class NativeAppHidingExperiment {
         controller.journalNeedsAttention
     }
 
+    /// True during a capture the user asked for. Native hiding otherwise allows no
+    /// reveal for a picture, since each one makes macOS rebuild the bar.
+    @ObservationIgnored var allowsCaptureReveal = false
+
+    var blocksCaptureReveal: Bool {
+        isActive && !allowsCaptureReveal
+    }
+
     @ObservationIgnored private let controller: NativeAppHidingController
 
     /// Offers apps an older version may have left switched off.

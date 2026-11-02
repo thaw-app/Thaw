@@ -317,7 +317,6 @@ final class MenuBarManager {
         newIconFollower.start(appState: appState)
         MenuBarPresentationProvider.startDiagnosticSessionIfGated()
         leadingEdgeWatcher.performSetup(with: appState)
-        backdrop.performSetup(with: appState)
         revealCover.performSetup(with: appState)
         synchronizeAlwaysShowHiddenItems()
         rebuildItemHotkeys()

@@ -115,6 +115,15 @@ nonisolated enum SearchIndex {
             keywords: ["app icon", "live preview", "screenshot", "capture", "overflow", "notch", "advanced layout controls"],
             property: .advanced("alwaysUseAppIconForMenuBarItems")
         ),
+        SearchEntry(
+            id: "layout.captureHiddenItems",
+            title: "Capture hidden items",
+            descriptionText: String(localized: "Takes new pictures of your Hidden and Always Hidden items, for example when they show app icons instead."),
+            pane: .menuBarLayout,
+            section: "Layout",
+            keywords: ["capture", "screenshot", "picture", "sync", "images", "hidden", "always hidden", "icons", "app icon"],
+            property: nil
+        ),
         // Spaces pane rows: agent-backed session state with no persisted
         // settings property, indexed so the pane's controls are findable.
         SearchEntry(

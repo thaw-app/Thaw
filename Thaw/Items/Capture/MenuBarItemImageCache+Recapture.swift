@@ -684,6 +684,8 @@ extension MenuBarItemImageCache {
             }
         }
 
+        await appState.menuBarManager.revealCover.prepare()
+        defer { appState.menuBarManager.revealCover.dropUnusedPictures() }
         let batchSize = Self.revealBatchSize(
             hasNotch: NSScreen.screen(for: displayID)?.hasNotch ?? false
         )
@@ -893,12 +895,9 @@ extension MenuBarItemImageCache {
             result.append(section)
         }
 
-        // A visible consumer is asking: the Thaw bar or the layout pane is open
-        // and these rows have no image to draw. The failure ledger exists to
-        // stop background passes hammering an item that keeps failing; left in
-        // force here it would keep a blacklisted item out of this reveal, so it
-        // could only ever be captured by the user clicking it.
-        if let itemManager = appState?.itemManager {
+        // Only a pass the user asked for (onlyMissingImages false) retries failed items at
+        // once. Automatic passes wait out the cooldown, so they don't rewrite the bar on every open.
+        if let itemManager = appState?.itemManager, !onlyMissingImages {
             let tags = sections.reduce(into: Set<MenuBarItemTag>()) { result, section in
                 result.formUnion(itemManager.itemCache[section].map(\.tag))
             }
@@ -933,7 +932,7 @@ extension MenuBarItemImageCache {
                 // Native notch overflow remains in force when Thaw removes an item from its own
                 // concealment assertion. A prewarm in that state can only capture the system
                 // overflow chevron, never the item's real glyph.
-                guard !isNativeOverflowActive, !Self.isBlankItem(item.bounds) else {
+                guard !isNativeOverflowActive, !skipsAsBlank(item) else {
                     return false
                 }
                 return !onlyMissingImages || Self.prewarmNeedsCapture(

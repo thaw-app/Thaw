@@ -214,7 +214,6 @@ private struct LayoutOverflowSection: View {
                 "When the menu bar is full, move the Visible items that don’t fit into Hidden and open them from the \(Constants.displayName) Bar.",
                 more: "Leave this off if you prefer macOS’s » button: macOS keeps the items that don’t fit there, and your layout stays exactly as you arranged it."
             )
-
             Toggle(
                 "Use app icons instead of live previews",
                 isOn: $settings.alwaysUseAppIconForMenuBarItems
@@ -356,6 +355,7 @@ struct LayoutBarsSection: View {
                     .foregroundStyle(ThawInk.supporting)
                     .fixedSize(horizontal: false, vertical: true)
                 Spacer(minLength: ThawSpacing.base)
+                HiddenItemCaptureButton()
                 if showsPopOutButton {
                     popOutButton
                 }

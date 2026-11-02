@@ -132,6 +132,36 @@ struct AXGeometryCatalogTests {
         #expect(AXGeometryCatalog.match(ownerPID: 1, identityTitle: "DroppyMenuBar", bounds: rect, in: snapshot) == .ambiguous)
     }
 
+    @Test("Items sharing a name are told apart by the one sitting exactly at the bounds")
+    func sharedNameResolvesByFrame() {
+        let first = CGRect(x: 1443, y: 3, width: 65.5, height: 24)
+        let second = CGRect(x: 1520, y: 3, width: 65.5, height: 24)
+        let pill = "live-activity-pill"
+        let snapshot = [
+            AXGeometryCatalog.Entry(ownerPID: 1, itemIndex: 0, identityTitle: pill, frame: first),
+            AXGeometryCatalog.Entry(ownerPID: 1, itemIndex: 0, identityTitle: pill, frame: CGRect(x: 1446, y: 3, width: 28.5, height: 24)),
+            AXGeometryCatalog.Entry(ownerPID: 1, itemIndex: 1, identityTitle: pill, frame: second),
+        ]
+        #expect(AXGeometryCatalog.match(ownerPID: 1, identityTitle: pill, bounds: first, in: snapshot) == .frame(first))
+        #expect(AXGeometryCatalog.match(ownerPID: 1, identityTitle: pill, bounds: second, in: snapshot) == .frame(second))
+    }
+
+    @Test("Items sharing a name stay ambiguous when neither, or both, sit at the bounds")
+    func sharedNameWithoutOneFrameIsAmbiguous() {
+        let rect = CGRect(x: 1443, y: 3, width: 65, height: 24)
+        let elsewhere = CGRect(x: 1520, y: 3, width: 65, height: 24)
+        let both = [
+            AXGeometryCatalog.Entry(ownerPID: 1, itemIndex: 0, identityTitle: "Pill", frame: rect),
+            AXGeometryCatalog.Entry(ownerPID: 1, itemIndex: 1, identityTitle: "Pill", frame: rect),
+        ]
+        #expect(AXGeometryCatalog.match(ownerPID: 1, identityTitle: "Pill", bounds: rect, in: both) == .ambiguous)
+        let neither = [
+            AXGeometryCatalog.Entry(ownerPID: 1, itemIndex: 0, identityTitle: "Pill", frame: elsewhere),
+            AXGeometryCatalog.Entry(ownerPID: 1, itemIndex: 1, identityTitle: "Pill", frame: CGRect(x: 1600, y: 3, width: 65, height: 24)),
+        ]
+        #expect(AXGeometryCatalog.match(ownerPID: 1, identityTitle: "Pill", bounds: rect, in: neither) == .ambiguous)
+    }
+
     @Test("Separate anonymous items sharing a frame remain ambiguous")
     func sameOwnerAnonymousItemsAreNotDescendants() {
         let rect = CGRect(x: 862, y: 4.5, width: 33, height: 24)
@@ -339,16 +369,6 @@ struct AXGeometryCatalogTests {
         let b = CGRect(x: 30, y: 0, width: 30, height: 24)
         let target = CGRect(x: 20, y: 0, width: 30, height: 24)
         #expect(AXGeometryCatalog.frame(overlapping: target, in: [a, b]) == b)
-    }
-
-    @Test("An identity two roots of one process share is ambiguous")
-    func identitySharedByTwoRoots() {
-        let rect = CGRect(x: 100, y: 0, width: 24, height: 24)
-        let snapshot = [
-            AXGeometryCatalog.Entry(ownerPID: 1, itemIndex: 0, identityTitle: "Clock", frame: rect),
-            AXGeometryCatalog.Entry(ownerPID: 1, itemIndex: 1, identityTitle: "Clock", frame: rect.offsetBy(dx: 40, dy: 0)),
-        ]
-        #expect(AXGeometryCatalog.match(ownerPID: 1, identityTitle: "Clock", bounds: rect, in: snapshot) == .ambiguous)
     }
 
     @Test("A later frame that overlaps the crop more replaces an earlier confident one")

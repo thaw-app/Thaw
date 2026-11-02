@@ -56,8 +56,8 @@ struct MenuBarItemCaptureFallbackTests {
             let glyph = try #require(result.captured[stale.tag])
             #expect(!glyph.isEffectivelyBlank)
             #expect(result.unconditionallyInvalidatedTags.isEmpty)
-            #expect(await reader.captures == [.strip])
-            #expect(await reader.inventoryReadsAtCapture == [1])
+            #expect(await reader.captures == [.hosting, .barWindow, .strip])
+            #expect(await reader.inventoryReadsAtCapture == [1, 1])
         }
     }
 
@@ -100,7 +100,7 @@ struct MenuBarItemCaptureFallbackTests {
         )
 
         #expect(result.captured.isEmpty)
-        #expect(await reader.captures == [.strip])
+        #expect(await reader.captures == [.hosting])
         #expect(await reader.inventoryReadsAtCapture == [1])
     }
 
@@ -148,7 +148,7 @@ struct MenuBarItemCaptureFallbackTests {
             )
         }.value
         #expect(result.captured.isEmpty)
-        if source == .strip {
+        if source == .hosting {
             #expect(result.invalidatedTags.isEmpty)
             #expect(result.unreadable.isEmpty)
         }
@@ -169,13 +169,13 @@ struct MenuBarItemCaptureFallbackTests {
         #expect(result.invalidatedTags.isEmpty)
     }
 
-    @Test("A valid display-strip glyph avoids window capture", arguments: [false, true])
-    func validStripAvoidsWindows(validateFreshBounds: Bool) async throws {
+    @Test("A valid hosting glyph never starts a display capture", arguments: [false, true])
+    func validHostingAvoidsTheDisplay(validateFreshBounds: Bool) async throws {
         let item = makeItem()
         let reader = try CaptureFixture(
-            hosting: makeCapture(opaque: true, glyph: false),
+            hosting: makeCapture(opaque: false),
             barWindow: makeCapture(opaque: true, glyph: false),
-            strip: makeCapture(opaque: true)
+            strip: makeCapture(opaque: true, glyph: false)
         )
         let cache = MenuBarItemImageCache(screenIsLocked: { false })
 
@@ -190,42 +190,41 @@ struct MenuBarItemCaptureFallbackTests {
 
         let glyph = try #require(result.captured[item.tag])
         #expect(!glyph.cgImage.isTransparent())
-        #expect(!glyph.cgImage.hasOpaquePerimeter())
-        #expect(await reader.captures == [.strip])
-        #expect(await reader.sourcesAtValidation == [.strip])
+        #expect(await reader.captures == [.hosting])
+        #expect(await reader.sourcesAtValidation == [.hosting])
         #expect(await reader.validatedTags == [item.tag])
     }
 
-    @Test("A missing strip falls back to a valid hosting glyph")
-    func missingStripUsesHosting() async throws {
+    @Test("The display strip is the last resort when no window can be read")
+    func missingWindowsUseStrip() async throws {
         let item = makeItem()
-        let reader = try CaptureFixture(hosting: makeCapture(opaque: false), strip: nil)
+        let reader = try CaptureFixture(hosting: nil, strip: makeCapture(opaque: true))
         let result = await capture(item, using: reader)
 
         #expect(result.captured[item.tag] != nil)
-        #expect(await reader.captures == [.strip, .hosting])
-        #expect(await reader.validatedTags.isEmpty)
+        #expect(await reader.captures == [.hosting, .barWindow, .strip])
+        #expect(await reader.validatedTags == [item.tag])
     }
 
-    @Test("An owner-window glyph recovers failed strip and hosting captures", arguments: [false, true])
-    func failedStripAndHostingUseOwnerWindow(missingHosting: Bool) async throws {
+    @Test("An owner-window glyph recovers a missing or blank hosting capture without the display", arguments: [false, true])
+    func failedHostingUsesOwnerWindow(missingHosting: Bool) async throws {
         let item = makeItem()
         let reader = try CaptureFixture(
             hosting: missingHosting ? nil : makeCapture(opaque: true, glyph: false),
             barWindow: makeCapture(opaque: true),
-            strip: nil
+            strip: makeCapture(opaque: true)
         )
         let result = await capture(item, using: reader)
 
         let glyph = try #require(result.captured[item.tag])
         #expect(!glyph.cgImage.hasOpaquePerimeter())
-        #expect(await reader.captures == [.strip, .hosting, .barWindow])
+        #expect(await reader.captures == [.hosting, .barWindow])
     }
 
-    @Test("A strip cannot use missing, moved or ambiguous owner geometry", arguments: [
+    @Test("A hosting capture cannot use missing, moved or ambiguous owner geometry, and no other source repairs it", arguments: [
         CaptureFixture.Geometry.unavailable, .moved, .ambiguous,
     ])
-    private func unsafeStripGeometryIsRejected(geometry: CaptureFixture.Geometry) async throws {
+    private func unsafeHostingGeometryIsRejected(geometry: CaptureFixture.Geometry) async throws {
         let item = makeItem()
         let reader = try CaptureFixture(
             hosting: makeCapture(opaque: false),
@@ -237,7 +236,7 @@ struct MenuBarItemCaptureFallbackTests {
         let result = await capture(item, using: reader, validateFreshBounds: true)
 
         #expect(result.captured.isEmpty)
-        #expect(await reader.captures == [.strip])
+        #expect(await reader.captures == [.hosting])
         #expect(await reader.validatedTags == [item.tag])
     }
 
@@ -258,7 +257,7 @@ struct MenuBarItemCaptureFallbackTests {
         #expect(result.captured.isEmpty)
         #expect(result.unreadable.contains { $0.tag == item.tag })
         #expect(cache.wouldAttemptCapture(of: item))
-        #expect(await reader.captures == [.strip, .hosting, .barWindow])
+        #expect(await reader.captures == [.hosting, .barWindow, .strip])
         #expect(await reader.validatedTags.isEmpty)
     }
 
@@ -280,17 +279,17 @@ struct MenuBarItemCaptureFallbackTests {
         #expect(cache.failedCapturesLock.withLock { $0[item.tag] } == nil)
     }
 
-    @Test("A mixed batch keeps the strip glyph and recovers only the unresolved item")
-    func mixedBatchKeepsStripGlyph() async throws {
+    @Test("A mixed batch keeps the hosting glyph and spends no display capture on the other item")
+    func mixedBatchKeepsHostingGlyph() async throws {
         let hosted = makeItem()
-        let fallback = makeItem(title: "Second", x: 1200, windowID: 102)
+        let other = makeItem(title: "Second", x: 1200, windowID: 102)
         let reader = try CaptureFixture(
             hosting: makeCapture(opaque: false),
             strip: makeCapture(opaque: true, glyphX: 1208)
         )
         let cache = MenuBarItemImageCache(screenIsLocked: { false })
         let result = await cache.axBoundsCapture(
-            [(hosted, hosted.bounds), (fallback, fallback.bounds)],
+            [(hosted, hosted.bounds), (other, other.bounds)],
             scale: 2,
             displayID: 42,
             validateFreshBounds: false,
@@ -298,9 +297,9 @@ struct MenuBarItemCaptureFallbackTests {
             using: reader
         )
 
-        #expect(Set(result.captured.keys) == [hosted.tag, fallback.tag])
-        #expect(await reader.captures == [.strip, .hosting])
-        #expect(await reader.validatedTags == [hosted.tag, fallback.tag])
+        #expect(Set(result.captured.keys) == [hosted.tag])
+        #expect(await reader.captures == [.hosting, .barWindow])
+        #expect(await reader.validatedTags == [hosted.tag, other.tag])
     }
 
     @Test("Concealed items cannot acquire pixels from any source")
@@ -317,12 +316,11 @@ struct MenuBarItemCaptureFallbackTests {
         #expect(result.unconditionallyInvalidatedTags.isEmpty)
     }
 
-    @Test("Overflow appearing during strip capture remains rejected by window fallbacks")
+    @Test("Overflow appearing during strip capture rejects it")
     func stripOverflowIsRejected() async throws {
         let item = makeItem()
         let reader = try CaptureFixture(
-            hosting: makeCapture(opaque: false),
-            barWindow: makeCapture(opaque: false),
+            hosting: nil,
             strip: makeCapture(opaque: true),
             stripOverflowBounds: [item.bounds]
         )
@@ -344,23 +342,21 @@ struct MenuBarItemCaptureFallbackTests {
         #expect(await reader.validatedTags.isEmpty)
     }
 
-    @Test("Unusable strip pixels fall back to a clean hosting glyph")
-    func blankStripUsesHosting() async throws {
+    @Test("A hosting window read without the item's pixels spends no display capture")
+    func blankHostingSkipsTheDisplay() async throws {
         let item = makeItem()
         let reader = try CaptureFixture(
-            hosting: makeCapture(opaque: false),
-            strip: makeCapture(opaque: true, glyph: false)
+            hosting: makeCapture(opaque: false, glyph: false),
+            strip: makeCapture(opaque: true)
         )
         let result = await capture(item, using: reader)
 
-        let glyph = try #require(result.captured[item.tag])
-        #expect(!glyph.cgImage.isTransparent())
-        #expect(!glyph.cgImage.hasOpaquePerimeter())
-        #expect(await reader.captures == [.strip, .hosting])
+        #expect(result.captured.isEmpty)
+        #expect(await reader.captures == [.hosting, .barWindow])
     }
 
-    @Test("Busy wallpaper is rejected; only a clean window fallback can supply the glyph", arguments: [false, true])
-    func busyWallpaperUsesWindowFallback(hasWindow: Bool) async throws {
+    @Test("Busy wallpaper is rejected from the strip, and a hosting glyph never meets it", arguments: [false, true])
+    func busyWallpaperNeedsWindow(hasWindow: Bool) async throws {
         let item = makeItem()
         let reader = try CaptureFixture(
             hosting: hasWindow ? makeCapture(opaque: false) : nil,
@@ -369,10 +365,7 @@ struct MenuBarItemCaptureFallbackTests {
         let result = await capture(item, using: reader)
 
         #expect((result.captured[item.tag] != nil) == hasWindow)
-        #expect(await reader.captures == (hasWindow ? [.strip, .hosting] : [.strip, .hosting, .barWindow]))
-        if let glyph = result.captured[item.tag] {
-            #expect(!glyph.cgImage.hasOpaquePerimeter())
-        }
+        #expect(await reader.captures == (hasWindow ? [.hosting] : [.hosting, .barWindow, .strip]))
     }
 
     @Test("An owner-window crop is rejected when icons move while that screenshot is acquired", arguments: [false, true])
@@ -406,8 +399,8 @@ struct MenuBarItemCaptureFallbackTests {
 
         #expect(result.captured.isEmpty)
         #expect(result.unconditionallyInvalidatedTags.isEmpty)
-        #expect(await reader.captures.last == .barWindow)
-        #expect(await reader.sourcesAtInventoryRead.last == .barWindow, "The owner-window crop needs a read taken after it")
+        #expect(await reader.captures.contains(.barWindow))
+        #expect(await reader.sourcesAtInventoryRead.contains(.barWindow), "The owner-window crop needs a read taken after it")
     }
 
     @Test("Overflow appearing during the owner-window screenshot rejects that source", arguments: [false, true])
@@ -438,7 +431,7 @@ struct MenuBarItemCaptureFallbackTests {
         let result = await capture(item, using: reader, validateFreshBounds: true)
 
         #expect(result.captured[item.tag] != nil)
-        #expect(await reader.captures == [.strip, .hosting, .barWindow])
+        #expect(await reader.captures == [.hosting, .barWindow])
         #expect(await reader.sourcesAtInventoryRead == [.barWindow], "Only the owner window produced pixels, and its read follows it")
     }
 
@@ -615,6 +608,7 @@ actor CaptureFixture {
 
     func hostingCapture(displayID _: CGDirectDisplayID) async -> ScreenCapture.MenuBarHostingCapture? {
         captures.append(.hosting)
+        inventoryReadsAtCapture.append(inventoryReadCount)
         onCapture(.hosting)
         return hosting
     }
