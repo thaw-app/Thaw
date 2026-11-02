@@ -66,5 +66,6 @@ After that:
 
 - [Permissions](PERMISSIONS.md) says what each one is for.
 - [Versions and update channels](VERSIONS.md) covers betas.
+- [Where Thaw keeps its files](FILE_LOCATIONS.md) says what to copy to another Mac.
 - [Frequent issues](../FREQUENT_ISSUES.md) has fixes for the problems people hit most often.
 - [Verifying releases](VERIFYING_RELEASES.md) shows how to check that a download came from the Thaw team.

@@ -36,9 +36,8 @@ This puts every setting back to its default. Your saved profiles are kept. It ca
 | Problem | Tool | What it does |
 |---|---|---|
 | An app's item is gone | Restore Missing Items… | Brings items back without touching your layout |
-| Apple's own items misbehave | Reset Control Center… | Quits Control Center and deletes its preference files so they rebuild |
+| The menu bar is stuck, for example on top of full-screen apps | Restart Menu Bar… | Restarts the menu bar and keeps your layout |
 | Items will not stay where you put them | Reset Positions… | Deletes the layout macOS saved and restarts the menu bar. A backup is saved first. |
-| Icons look stale | Quit and Clear Cache… | Deletes Thaw's cache folder, then quits |
 | A permission is stuck | Reset Permissions… | Clears Accessibility and Screen Recording for Thaw, then quits so you can grant them again |
 
 ## Uninstall
@@ -57,7 +56,7 @@ This puts every setting back to its default. Your saved profiles are kept. It ca
 
 ## Remove what is left
 
-Thaw keeps its settings, profiles, cache and logs in your Library folder. Removing them is optional, and it deletes your saved profiles for good.
+Thaw keeps its settings, profiles, cache and logs in your Library folder. Removing them is optional, and it deletes your saved profiles for good. [Where Thaw keeps its files](FILE_LOCATIONS.md) lists each one.
 
 ```sh
 rm ~/Library/Preferences/com.stonerl.Thaw.plist
@@ -65,6 +64,9 @@ rm -rf ~/Library/Application\ Support/Thaw
 rm -rf ~/Library/Application\ Support/com.stonerl.Thaw
 rm -rf ~/Library/Caches/com.stonerl.Thaw
 rm -rf ~/Library/Logs/Thaw
+rm ~/Library/Caches/release-notes.md
+rm ~/Library/Preferences/com.stonerl.Thaw.extra.*.plist
+rm -rf ~/Library/Group\ Containers/A7CKWF99ML.com.stonerl.Thaw
 ```
 
 To clear the permissions you gave it:
