@@ -12,6 +12,8 @@ on:
   issues:
     types: [opened]
   roles: all
+  # Maintainers file issues with what they need, so don't triage them.
+  skip-roles: [admin, maintainer, write]
   skip-bots: [dependabot, renovate, github-actions]
 # A fork that turns Actions on has no business triaging its own issues with this.
 if: github.repository == 'thaw-app/Thaw'
