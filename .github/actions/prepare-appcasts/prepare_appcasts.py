@@ -134,7 +134,8 @@ def prepare_appcasts(
 
             # Stage everything but alpha. Older items are past their last group, so the tag changes nothing for them.
             channels = [text(channel) for channel in sparkle_elements(item, "channel")]
-            is_alpha = "alpha" in channels or re.search(r"-(alpha|nightly)(\.|$)", version, re.IGNORECASE)
+            # A channel on the item wins, because Release can override the one a tag implies.
+            is_alpha = "alpha" in channels if channels else re.search(r"-(alpha|nightly)(\.|$)", version, re.IGNORECASE)
             if not is_alpha and not sparkle_elements(item, "phasedRolloutInterval"):
                 insert_sparkle_element_after(
                     document, versions[0], "phasedRolloutInterval", PHASED_ROLLOUT_INTERVAL_SECONDS

@@ -167,6 +167,8 @@ class PrepareAppcastsTests(unittest.TestCase):
         self.assertEqual(intervals(prepare_appcasts(beta, "2.2.0-rc.1")[0]), {"2.2.0-rc.1": ["14400"]})
         self.assertEqual(intervals(prepare_appcasts(alpha, "3.0.0-alpha.13")[0]), {"3.0.0-alpha.13": []})
         self.assertEqual(intervals(prepare_appcasts(untagged_alpha, "3.0.0-alpha.7")[0]), {"3.0.0-alpha.7": []})
+        overridden = feed("3.0.0-nightly.2").replace(b"</item>", b"<sparkle:channel>beta</sparkle:channel></item>")
+        self.assertEqual(intervals(prepare_appcasts(overridden, "3.0.0-nightly.2")[0]), {"3.0.0-nightly.2": ["14400"]})
 
     def test_a_rollout_interval_already_in_the_feed_is_kept(self):
         xml = feed("2.2.0").replace(
