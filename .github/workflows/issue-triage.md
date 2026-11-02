@@ -51,7 +51,7 @@ safe-outputs:
   # reports. Do not open a tracker issue for each one (they spam the repo).
   report-incomplete:
     create-issue: false
-  missing-tool:
+  report-missing-tool:
     create-issue: false
   report-failure-as-issue: false
 ---
