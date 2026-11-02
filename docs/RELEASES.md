@@ -303,7 +303,7 @@ would leave them stuck again.
 
 ## Staged rollout
 
-Stable updates reach Macs in stages over about a day. Beta and Nightly items
+Stable updates reach Macs in stages over up to two days. Beta and Nightly items
 aren't staged, because their subscribers opted in to get them first.
 
 Sparkle puts each Mac in one of 7 random groups and opens one group per
@@ -317,9 +317,8 @@ interval, counted from the item's `pubDate`. Thaw's interval is 4 hours
 A Mac sees the update at its next automatic check, once a day by default, so
 the last Macs get it up to about 48 hours after `pubDate`.
 
-Not everyone waits for their group. A manual update check, or an item marked as
-critical, skips the stages. So do the DMG and anything else that doesn't update
-through Sparkle.
+A manual update check or an item marked as critical skips the stages, and so does
+anything that doesn't update through Sparkle, such as the DMG.
 
 [`prepare_appcasts.py`](../.github/actions/prepare-appcasts/prepare_appcasts.py)
 adds the interval to stable items that don't have one. Add a different value to

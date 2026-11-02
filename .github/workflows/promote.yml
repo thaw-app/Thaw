@@ -220,9 +220,8 @@ jobs:
                       item.removeChild(spacing)
               replace(versions[0], document.createTextNode(stable))
 
-              # Sparkle counts the staged rollout from pubDate, and a candidate's
-              # date is old enough to open every group at once. A rerun keeps the
-              # date, so it doesn't restart a rollout already under way.
+              # Sparkle counts the rollout from pubDate, so a candidate's old date opens every group at once.
+              # A rerun keeps the date, so it doesn't restart the rollout.
               if not already:
                   dates = item.getElementsByTagName("pubDate")
                   if len(dates) != 1:

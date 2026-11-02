@@ -132,8 +132,7 @@ def prepare_appcasts(
                     raise ValueError(f"{version} must have one minimumSystemVersion to anchor the cap on")
                 insert_sparkle_element_after(document, minimums[0], "maximumSystemVersion", "26.99")
 
-            # Stage stable items only. Older ones are past their last group, so
-            # the tag changes nothing for them, and a value already there stays.
+            # Older stable items are past their last group, so the tag changes nothing for them.
             if (
                 "-" not in version
                 and not sparkle_elements(item, "channel")

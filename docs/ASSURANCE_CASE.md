@@ -176,7 +176,7 @@ defect classes before merge.
 | Test coverage (`test_statement_coverage80` Met) | SonarCloud `coverage` measure; CI `coverage.xml`; **84%** per the criterion justification on bestpractices.dev; exclusion set and its governing rule in `sonar-project.properties` |
 | Badge level | [bestpractices.dev/projects/13303](https://www.bestpractices.dev/projects/13303): Gold, with passing, silver, and gold each at 100% |
 | Dependency monitoring | `.github/dependabot.yml` |
-| Pull request security review | Strix, an AI security testing tool, reviews each pull request when it opens. Later commits get a review only on request. It adds to the checks above and doesn't replace them, and maintainers decide what to fix. |
+| Pull request security review | Strix, an AI security testing tool, reviews each pull request when it opens. Later commits get a review only on request. It runs alongside the checks above, and maintainers decide what to fix. |
 
 ## Revision
 
