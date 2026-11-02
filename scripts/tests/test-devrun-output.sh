@@ -199,6 +199,7 @@ run_case 0
 once "$OUTPUT" 'building with a local signature'
 once "$LOG" 'building with a local signature'
 contains "$COMMANDS" 'CODE_SIGN_IDENTITY=-'
+contains "$COMMANDS" 'RUNTIME_EXCEPTION_DISABLE_LIBRARY_VALIDATION=YES'
 contains "$OUTPUT" 'Running Thaw Debug'
 run_case 0 --verbose
 once "$OUTPUT" 'building with a local signature'

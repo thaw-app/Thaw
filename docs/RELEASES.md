@@ -303,9 +303,9 @@ would leave them stuck again.
 
 ## Staged rollout
 
-Stable and beta updates reach Macs in stages over up to two days. Thaw 3 has no
-stable release yet, so beta is what most macOS 27 Macs run. Nightly items aren't
-staged.
+Stable and beta updates reach Macs in stages, and the last ones can take up to
+two days. Thaw 3 has no stable release yet, so Beta is its default channel.
+Nightly items aren't staged.
 
 Sparkle puts each Mac in one of 7 random groups and opens one group per
 interval, counted from the item's `pubDate`. Thaw's interval is 4 hours
@@ -318,12 +318,12 @@ interval, counted from the item's `pubDate`. Thaw's interval is 4 hours
 A Mac sees the update at its next automatic check, once a day by default, so
 the last Macs get it up to about 48 hours after `pubDate`.
 
-A manual update check or an item marked as critical skips the stages, and so does
+A manual update check or an item marked as critical skips the stages. So does
 anything that doesn't update through Sparkle, such as the DMG.
 
 [`prepare_appcasts.py`](../.github/actions/prepare-appcasts/prepare_appcasts.py)
-adds the interval to stable and beta items that don't have one. Add a different value to
-an item by hand and later runs keep it. **Promote** runs that script from
+adds the interval to stable and beta items that don't have one. Later runs keep
+a different value you add to an item by hand. **Promote** runs that script from
 `development`, but **Release** runs the copy on the tag, so a tag built from a
 branch without this rule isn't staged.
 
@@ -347,7 +347,8 @@ bar items people can't reach.
    first to confirm the pulled item stays out.
 
 Halting can't undo an install. Macs that already updated stay on that build until
-the fix ships, and Sparkle doesn't move a Mac to an older version.
+the fix ships, and Sparkle doesn't move a Mac to an older version. A Mac that
+already downloaded the update can still install it, so warn people on Discord.
 
 ## Legacy installs
 

@@ -75,7 +75,8 @@ BUILD_ARGS=(
     THAW_BUNDLE_ID_SUFFIX=.debug
     "THAW_PRODUCT_NAME_SUFFIX= Debug"
 )
-AD_HOC_ARGS=(DEVELOPMENT_TEAM= CODE_SIGN_STYLE=Manual CODE_SIGN_IDENTITY=- PROVISIONING_PROFILE_SPECIFIER=)
+# Library validation can reject an embedded framework that has no Team ID.
+AD_HOC_ARGS=(DEVELOPMENT_TEAM= CODE_SIGN_STYLE=Manual CODE_SIGN_IDENTITY=- PROVISIONING_PROFILE_SPECIFIER= RUNTIME_EXCEPTION_DISABLE_LIBRARY_VALIDATION=YES)
 SIGNING_FAILURE='requires a development team|No signing certificate|No Account for Team|No profiles for'
 if [[ "$AD_HOC" -eq 1 ]]; then
     BUILD_ARGS+=("${AD_HOC_ARGS[@]}")
@@ -141,7 +142,7 @@ build_app() {
     status=${PIPESTATUS[0]}
     if [[ "$status" -ne 0 ]]; then
         [[ "$AD_HOC" -eq 0 ]] && grep -Eq "$SIGNING_FAILURE" "$BUILD_ATTEMPT" || return "$status"
-        local notice="No Thaw team signing here, so building with a local signature. macOS may ask for permissions again after each rebuild, and some features may not work."
+        local notice="This Mac can't sign for the Thaw team, so it's building with a local signature. macOS may ask for permissions again after each rebuild, and some features may not work."
         printf '%s\n' "$notice" >&3
         printf '%s\n' "$notice" >> "$LOG"
         BUILD_ARGS+=("${AD_HOC_ARGS[@]}")
