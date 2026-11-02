@@ -1050,11 +1050,11 @@
 /* Begin XCLocalSwiftPackageReference section */
 		A4E38A6A423944089D70B9BB /* XCLocalSwiftPackageReference "MenuBarModel" */ = {
 			isa = XCLocalSwiftPackageReference;
-			relativePath = MenuBarModel;
+			relativePath = packages/MenuBarModel;
 		};
 		A7C4F0052F60000000000005 /* XCLocalSwiftPackageReference "ThawCapture" */ = {
 			isa = XCLocalSwiftPackageReference;
-			relativePath = ThawCapture;
+			relativePath = packages/ThawCapture;
 		};
 		A9E1F0012F70000000000001 /* XCLocalSwiftPackageReference "ThawUI" */ = {
 			isa = XCLocalSwiftPackageReference;
@@ -1062,15 +1062,15 @@
 		};
 		A1A1A1A1A1A1A1A1A1A1A101 /* XCLocalSwiftPackageReference "ThawAX" */ = {
 			isa = XCLocalSwiftPackageReference;
-			relativePath = ThawAX;
+			relativePath = packages/ThawAX;
 		};
 		E1E1E1E1E1E1E1E1E1E1E101 /* XCLocalSwiftPackageReference "ThawExtras" */ = {
 			isa = XCLocalSwiftPackageReference;
-			relativePath = ThawExtras;
+			relativePath = packages/ThawExtras;
 		};
 		B1B1B1B1B1B1B1B1B1B1B101 /* XCLocalSwiftPackageReference "ThawLayout" */ = {
 			isa = XCLocalSwiftPackageReference;
-			relativePath = ThawLayout;
+			relativePath = packages/ThawLayout;
 		};
 /* End XCLocalSwiftPackageReference section */
 

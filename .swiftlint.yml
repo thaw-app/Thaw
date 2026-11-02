@@ -1,20 +1,20 @@
 included:
-  - MenuBarModel
+  - packages/MenuBarModel
   - Shared
   - Thaw
-  - ThawCapture
-  - ThawCtl
+  - packages/ThawCapture
+  - packages/ThawCtl
   - ThawUI
 
 excluded:
-  - MenuBarModel/.build
-  - ThawCapture/.build
-  - ThawCtl/.build
+  - packages/MenuBarModel/.build
+  - packages/ThawCapture/.build
+  - packages/ThawCtl/.build
   - ThawUI/.build
   - ThawTests
-  - MenuBarModel/Package.swift
-  - ThawCapture/Package.swift
-  - ThawCtl/Package.swift
+  - packages/MenuBarModel/Package.swift
+  - packages/ThawCapture/Package.swift
+  - packages/ThawCtl/Package.swift
   - ThawUI/Package.swift
 
 disabled_rules:

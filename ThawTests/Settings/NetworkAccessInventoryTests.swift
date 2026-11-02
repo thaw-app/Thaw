@@ -30,8 +30,8 @@ struct NetworkAccessInventoryTests {
         "Shared",
         "MenuBarCaptureService",
         "ThawControls",
-        "MenuBarModel/Sources",
-        "ThawCapture/Sources",
+        "packages/MenuBarModel/Sources",
+        "packages/ThawCapture/Sources",
         "ThawUI/Sources",
     ]
 

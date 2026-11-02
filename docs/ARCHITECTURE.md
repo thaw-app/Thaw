@@ -58,19 +58,19 @@ where new code goes instead.
 | Path | What it holds | Package dependencies |
 | --- | --- | --- |
 | `Thaw/` | The app: menu bar logic, settings, panels, input, permissions | Local libraries and external runtime/UI packages |
-| `MenuBarModel/` | Menu bar items, sections, identity, move planning and the backend protocols | Nothing |
-| `ThawLayout/` | The layout solver: saved section order, where new items go | `MenuBarModel` |
-| `ThawCapture/` | Item image capture with ScreenCaptureKit, and the client for the capture service | `MenuBarModel`, `ThawConcurrency` |
-| `ThawConcurrency/` | Timeouts and one-shot continuations | Nothing |
-| `ThawAX/` | Accessibility reading: `ThawAXCore`, `ThawAXClient` and the `ThawAXHelper` process | No other package; client and helper use `ThawAXCore` |
-| `ThawExtras/` | `ThawExtraHelper`, stand-ins for Apple items Thaw hides (Focus, AirDrop and others) | Nothing |
+| `packages/MenuBarModel/` | Menu bar items, sections, identity, move planning and the backend protocols | Nothing |
+| `packages/ThawLayout/` | The layout solver: saved section order, where new items go | `MenuBarModel` |
+| `packages/ThawCapture/` | Item image capture with ScreenCaptureKit, and the client for the capture service | `MenuBarModel`, `ThawConcurrency` |
+| `packages/ThawConcurrency/` | Timeouts and one-shot continuations | Nothing |
+| `packages/ThawAX/` | Accessibility reading: `ThawAXCore`, `ThawAXClient` and the `ThawAXHelper` process | No other package; client and helper use `ThawAXCore` |
+| `packages/ThawExtras/` | `ThawExtraHelper`, stand-ins for Apple items Thaw hides (Focus, AirDrop and others) | Nothing |
 | `ThawUI/` | Settings form and control components, with no knowledge of app state | CompactSlider |
 | `ThawControls/` | Control Center controls that show hidden items or toggle Zen Mode | |
-| `ThawCtl/` | A command-line tool that turns commands into `thaw://` URLs | |
+| `packages/ThawCtl/` | A command-line tool that turns commands into `thaw://` URLs | |
 | `MenuBarCaptureService/` | The XPC service that hosts capture | `ThawCapture` |
 | `Shared/` | Accessibility helpers (`AXHelpers.swift`) | |
 | `ThawTests/` | App-level Swift Testing tests; packages also have their own test targets | App and library modules |
-| `Fuzzing/` | libFuzzer targets; currently the `thaw://` settings URI parser | |
+| `packages/Fuzzing/` | libFuzzer targets; currently the `thaw://` settings URI parser | |
 | `scripts/` | Lint, coverage and release helpers used by CI | |
 | `docs/` | User and developer documentation | |
 | `.github/` | CI, release, issue and pull request templates | |
@@ -84,7 +84,7 @@ on other local packages; `ThawUI` uses the external CompactSlider package.
 Keep app state out of packages. `ThawAX` and `ThawExtras` have no external
 package dependencies. Helper packaging and library search paths matter:
 `ThawAX` declares a static core product and an Xcode helper rpath in its
-[manifest](../ThawAX/Package.swift).
+[manifest](../packages/ThawAX/Package.swift).
 
 Outside packages are declared with Swift Package Manager and locked in
 `Thaw.xcodeproj/project.xcworkspace/xcshareddata/swiftpm/Package.resolved`:
@@ -113,10 +113,10 @@ swift-subprocess.
 | --- | --- |
 | Startup and subsystem lifetime | [`AppDelegate`](../Thaw/App/AppDelegate.swift), [`AppState`](../Thaw/App/AppState.swift) |
 | Item inventory and cache | [`Items/Manager`](../Thaw/Items/Manager), [`Items/Model`](../Thaw/Items/Model) |
-| Saved order and move planning | [`ThawLayout`](../ThawLayout/Sources/ThawLayout), [`LayoutMoveSequencePlanner`](../MenuBarModel/Sources/MenuBarModel/LayoutMoveSequencePlanner.swift) |
+| Saved order and move planning | [`ThawLayout`](../packages/ThawLayout/Sources/ThawLayout), [`LayoutMoveSequencePlanner`](../packages/MenuBarModel/Sources/MenuBarModel/LayoutMoveSequencePlanner.swift) |
 | Layout writes and automatic repair | [`RepairOrchestrator`](../Thaw/Items/Manager/RepairOrchestrator.swift), [`MenuBarPositionStoreProvider`](../Thaw/MenuBar/Backends/MenuBarPositionStoreProvider.swift) |
 | Hide, reveal and section policy | [`MenuBarManager`](../Thaw/MenuBar/MenuBarManager.swift), [`RuntimeSectionContextAdapter`](../Thaw/MenuBar/RuntimeSectionContextAdapter.swift) |
-| Item images | [`Items/Capture`](../Thaw/Items/Capture), [`ThawCapture`](../ThawCapture), [`MenuBarCaptureService`](../MenuBarCaptureService) |
+| Item images | [`Items/Capture`](../Thaw/Items/Capture), [`ThawCapture`](../packages/ThawCapture), [`MenuBarCaptureService`](../MenuBarCaptureService) |
 | Display and Space changes | [`Environment`](../Thaw/Environment) |
 | Settings and profiles | [`Settings/Models`](../Thaw/Settings/Models), [`Defaults`](../Thaw/System/Defaults.swift) |
 | Automation and sender authorization | [`SettingsURIParser`](../Thaw/System/SettingsURIParser.swift), [`SettingsURIHandler`](../Thaw/System/SettingsURIHandler.swift), [`SettingsURISender`](../Thaw/System/SettingsURISender.swift) |

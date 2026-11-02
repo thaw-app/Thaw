@@ -10,7 +10,7 @@ import SwiftUI
 /// The developer harness for the thaw:// control plane.
 ///
 /// Not product UI and not localized: ThawCtl has no target in
-/// Thaw.xcodeproj, is built only by ThawCtl/build.sh, and never reaches a
+/// Thaw.xcodeproj, is built only by packages/ThawCtl/build.sh, and never reaches a
 /// user's machine. The labels here are deliberately terse and speak in the
 /// URL scheme's own vocabulary, because the only reader is someone holding
 /// SettingsURIHandler.swift open next to it.

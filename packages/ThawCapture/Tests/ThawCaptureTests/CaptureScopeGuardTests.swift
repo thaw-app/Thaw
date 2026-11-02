@@ -20,12 +20,12 @@ struct CaptureScopeGuardTests {
         let rationale: String
     }
 
-    private static let captureSources = "ThawCapture/Sources/"
+    private static let captureSources = "packages/ThawCapture/Sources/"
 
     /// Bridging defines but does not call private capture primitives; leave the SkyLight loader there and enforce call-site boundaries.
     private static let bridgingDefinitions = [
-        "MenuBarModel/Sources/MenuBarModel/Bridging.swift",
-        "MenuBarModel/Sources/MenuBarModel/Shims.swift",
+        "packages/MenuBarModel/Sources/MenuBarModel/Bridging.swift",
+        "packages/MenuBarModel/Sources/MenuBarModel/Shims.swift",
     ]
 
     private static let rules: [Rule] = [
@@ -33,7 +33,7 @@ struct CaptureScopeGuardTests {
             symbol: "captureBackdropForService(",
             allowedPrefixes: [
                 "MenuBarCaptureService/main.swift",
-                "ThawCapture/Sources/ThawCapture/ScreenCapture+BackdropService.swift",
+                "packages/ThawCapture/Sources/ThawCapture/ScreenCapture+BackdropService.swift",
             ],
             rationale: "the leaking backdrop primitive must only run in the recyclable helper"
         ),
@@ -101,7 +101,7 @@ struct CaptureScopeGuardTests {
 
     @Test func backdropCompositingCannotCallSkyLightInTheApp() throws {
         let root = try #require(Self.repositoryRoot())
-        let path = root.appending(path: "ThawCapture/Sources/ThawCapture/ScreenCapture+Composite.swift")
+        let path = root.appending(path: "packages/ThawCapture/Sources/ThawCapture/ScreenCapture+Composite.swift")
         let source = try String(contentsOf: path, encoding: .utf8)
         #expect(!Self.mentions("Bridging.captureWindowsImage", inCodeOf: source))
         #expect(Self.mentions("MenuBarCaptureServiceClient.shared", inCodeOf: source))
@@ -150,15 +150,16 @@ struct CaptureScopeGuardTests {
         return paths
     }
 
-    /// Walks up from this file: <root>/ThawCapture/Tests/ThawCaptureTests/<self>.
+    /// Walks up from this file: <root>/packages/ThawCapture/Tests/ThawCaptureTests/<self>.
     private static func repositoryRoot() -> URL? {
         let root = URL(filePath: #filePath)
             .deletingLastPathComponent() // ThawCaptureTests
             .deletingLastPathComponent() // Tests
             .deletingLastPathComponent() // ThawCapture
+            .deletingLastPathComponent() // packages
             .deletingLastPathComponent() // <root>
         // A moved test file would otherwise scan nothing and pass silently.
-        let marker = root.appending(path: "ThawCapture/Package.swift")
+        let marker = root.appending(path: "packages/ThawCapture/Package.swift")
         return FileManager.default.fileExists(atPath: marker.path()) ? root : nil
     }
 }
