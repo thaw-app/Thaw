@@ -6,7 +6,7 @@
 //  Licensed under the GNU GPLv3
 
 // Keep names in sync with Thaw/App/ControlCommandObserver.swift; Darwin mismatches fail silently without delivery receipts.
-// Duplication avoids linking Shared/ AppKit helpers into the sandboxed extension; notifications wake the app, while group defaults only carry state.
+// Duplication avoids linking the app's AppKit helpers into the sandboxed extension; notifications wake the app, while group defaults only carry state.
 
 import Foundation
 

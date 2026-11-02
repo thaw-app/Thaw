@@ -27,7 +27,6 @@ struct NetworkAccessInventoryTests {
     /// Includes local packages and bundled extensions; excludes standalone ThawCtl, which has no shipping Xcode target.
     private static let shippingSourceRoots = [
         "Thaw",
-        "Shared",
         "MenuBarCaptureService",
         "ThawControls",
         "packages/MenuBarModel/Sources",

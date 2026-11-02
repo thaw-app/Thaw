@@ -68,7 +68,6 @@ where new code goes instead.
 | `ThawControls/` | Control Center controls that show hidden items or toggle Zen Mode | |
 | `packages/ThawCtl/` | A command-line tool that turns commands into `thaw://` URLs | |
 | `MenuBarCaptureService/` | The XPC service that hosts capture | `ThawCapture` |
-| `Shared/` | Accessibility helpers (`AXHelpers.swift`) | |
 | `ThawTests/` | App-level Swift Testing tests; packages also have their own test targets | App and library modules |
 | `packages/Fuzzing/` | libFuzzer targets; currently the `thaw://` settings URI parser | |
 | `scripts/` | Lint, coverage and release helpers used by CI | |

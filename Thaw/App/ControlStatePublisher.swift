@@ -31,8 +31,8 @@ final class ControlStatePublisher {
     // are duplicated in ThawControls/ControlCommandNames.swift and must stay in
     // sync. A mismatch on any of them is a silent no-op: the reader finds
     // nothing and falls back to false, with no error anywhere. That file also
-    // records why the duplication is deliberate rather than shared through
-    // Shared/.
+    // records why the duplication is deliberate rather than one constant both
+    // targets compile.
 
     /// The application group both targets are entitled to.
     ///

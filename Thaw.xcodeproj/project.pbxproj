@@ -158,11 +158,6 @@
 			path = MenuBarCaptureService;
 			sourceTree = "<group>";
 		};
-		7188A69E2E280BB4008F131D /* Shared */ = {
-			isa = PBXFileSystemSynchronizedRootGroup;
-			path = Shared;
-			sourceTree = "<group>";
-		};
 		71BDFBE12C978E2A00EF145F /* Thaw */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
 			exceptions = (
@@ -233,7 +228,6 @@
 		716683212A767E6A006ABF84 = {
 			isa = PBXGroup;
 			children = (
-				7188A69E2E280BB4008F131D /* Shared */,
 				71BDFBE12C978E2A00EF145F /* Thaw */,
 				7188A6832E27F9ED008F131D /* MenuBarCaptureService */,
 				CC01A0002F80000000000001 /* ThawControls */,
@@ -279,7 +273,6 @@
 				CC01A0002F8000000000000B /* PBXTargetDependency */,
 			);
 			fileSystemSynchronizedGroups = (
-				7188A69E2E280BB4008F131D /* Shared */,
 				71BDFBE12C978E2A00EF145F /* Thaw */,
 			);
 			name = Thaw;

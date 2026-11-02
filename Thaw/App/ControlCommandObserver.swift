@@ -32,7 +32,7 @@ final class ControlCommandObserver {
     /// in sync. A typo on either side is a silent no-op: Darwin notifications
     /// have no delivery receipt and no subscriber count, so a mismatched name
     /// just vanishes. That file also records why the duplication is deliberate
-    /// rather than a constant shared through Shared/.
+    /// rather than one constant both targets compile.
     enum Command: String, CaseIterable {
         case toggleHidden = "com.stonerl.Thaw.control.toggle-hidden"
         case toggleZen = "com.stonerl.Thaw.control.toggle-zen"

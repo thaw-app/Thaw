@@ -1,6 +1,5 @@
 included:
   - packages/MenuBarModel
-  - Shared
   - Thaw
   - packages/ThawCapture
   - packages/ThawCtl
