@@ -70,6 +70,7 @@ struct HiddenItemsPresentationTests {
             location: .constant(.dynamic),
             layout: .constant(.horizontal),
             gridColumns: .constant(4),
+            itemScale: .constant(1),
             context: .display
         )
         #expect(controls.presentation.wrappedValue == .thawBar)
@@ -94,6 +95,7 @@ struct HiddenItemsPresentationTests {
                     location: .constant(.dynamic),
                     layout: .constant(.horizontal),
                     gridColumns: .constant(4),
+                    itemScale: .constant(1),
                     context: context
                 )
             }

@@ -82,8 +82,12 @@ struct MenuBarItemGlyph: View {
     /// Keep original ink over the menu bar, where it already matches.
     var reinksCaptures = false
 
+    /// Draws at this size instead of the fitted one, for a surface that scales
+    /// its glyphs, such as the Thaw Bar's item size.
+    var drawnSize: CGSize?
+
     var body: some View {
-        let size = image.targetSize(fittingHeight: fittingHeight)
+        let size = drawnSize ?? image.targetSize(fittingHeight: fittingHeight)
         // Templating opaque app icons makes blank blocks; preserve their colors.
         image.swiftUIImage
             .renderingMode(image.isTemplate || (reinksCaptures && image.isReinkable) ? .template : .original)

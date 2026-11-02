@@ -120,6 +120,7 @@ struct UXRefreshNavigationTests {
             "displays.hiddenItemsPresentation",
             "displays.thawBarLocation",
             "displays.thawBarLayout",
+            "displays.thawBarItemSize",
             "general.lockThawBarPosition",
             "general.thawBarLocationOnHotkey",
         ]

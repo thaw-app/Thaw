@@ -21,6 +21,7 @@ struct ThawBarConfigurationControls<ExtraControls: View>: View {
     @Binding var location: ThawBarLocation
     @Binding var layout: ThawBarLayout
     @Binding var gridColumns: Int
+    @Binding var itemScale: Double
 
     private let context: Context
     private let extraControls: () -> ExtraControls
@@ -31,6 +32,7 @@ struct ThawBarConfigurationControls<ExtraControls: View>: View {
         location: Binding<ThawBarLocation>,
         layout: Binding<ThawBarLayout>,
         gridColumns: Binding<Int>,
+        itemScale: Binding<Double>,
         context: Context,
         @ViewBuilder extraControls: @escaping () -> ExtraControls
     ) {
@@ -39,6 +41,7 @@ struct ThawBarConfigurationControls<ExtraControls: View>: View {
         _location = location
         _layout = layout
         _gridColumns = gridColumns
+        _itemScale = itemScale
         self.context = context
         self.extraControls = extraControls
     }
@@ -80,6 +83,8 @@ struct ThawBarConfigurationControls<ExtraControls: View>: View {
                 }
                 .annotation("Maximum number of items per row in the grid arrangement.")
             }
+
+            ThawBarItemSizeRow(scale: $itemScale)
         }
     }
 
@@ -149,6 +154,7 @@ extension ThawBarConfigurationControls where ExtraControls == EmptyView {
         location: Binding<ThawBarLocation>,
         layout: Binding<ThawBarLayout>,
         gridColumns: Binding<Int>,
+        itemScale: Binding<Double>,
         context: Context
     ) {
         self.init(
@@ -157,6 +163,7 @@ extension ThawBarConfigurationControls where ExtraControls == EmptyView {
             location: location,
             layout: layout,
             gridColumns: gridColumns,
+            itemScale: itemScale,
             context: context
         ) {
             EmptyView()

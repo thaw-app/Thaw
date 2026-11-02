@@ -49,6 +49,17 @@ nonisolated extension SearchIndex {
             property: nil
         ),
         SearchEntry(
+            id: "displays.thawBarItemSize",
+            titleKey: "Item size",
+            titleText: "\(Constants.displayName) Bar item size",
+            descriptionText: String(localized: "How large items are in the \(Constants.displayName) Bar. At 100% they match the menu bar; smaller sizes fit more items in a row."),
+            pane: .thawBar,
+            sectionKey: nil,
+            sectionText: nil,
+            keywords: ["ice bar", "thaw bar", "item size", "icon size", "scale", "smaller", "compact", "zoom"],
+            property: nil
+        ),
+        SearchEntry(
             id: "displays.itemSpacing",
             title: "Menu bar item spacing",
             descriptionText: String(localized: "Applying briefly relaunches apps with menu bar items so they pick up the new spacing."),

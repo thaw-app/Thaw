@@ -27,6 +27,7 @@ the items under New and Fixed.
 ### New
 
 - **Show on hover works on Thaw's icon too.** Rest the pointer on Thaw's icon and your hidden items appear, the same as on an empty part of the menu bar. If you click the icon right after they appear, they stay open instead of closing again. Suggested by @daniilsys in [#1431](https://github.com/thaw-app/Thaw/issues/1431).
+- **Choose how large items are in the Thaw Bar** (alpha). Settings › Thaw Bar has an Item size slider for each display, from 60% to 100% of the items' size in the menu bar. Smaller sizes fit more items in a row. The menu bar, Layout and search keep their sizes, and 100%, the default, looks as before. Requested by @mannycastaneda in [#1388](https://github.com/thaw-app/Thaw/issues/1388).
 
 ### Changed
 

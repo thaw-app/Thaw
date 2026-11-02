@@ -59,7 +59,8 @@ struct PersistenceFailureReportingTests {
             alwaysShowHiddenItems: base.alwaysShowHiddenItems,
             thawBarLayout: base.thawBarLayout,
             gridColumns: base.gridColumns,
-            itemSpacingOffset: .infinity
+            itemSpacingOffset: .infinity,
+            thawBarItemScale: base.thawBarItemScale
         )
     }
 

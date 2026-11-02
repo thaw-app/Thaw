@@ -142,6 +142,16 @@ struct ThawBarItemViewsTests {
         #expect(view.item.title == "Beta")
     }
 
+    @Test("The item size scales an app icon after the menu bar fit, and leaves it alone at full size")
+    func itemSizeScalesGlyphs() {
+        let icon = NSImage(size: NSSize(width: 32, height: 32))
+        let full = ThawBarItemSize(fittingHeight: 37)
+        #expect(full.glyphSize(for: .appIcon(icon)) == MenuBarItemDisplayImage.appIcon(icon).targetSize(fittingHeight: 37))
+        let small = ThawBarItemSize(fittingHeight: 37, scale: 0.6, displayScale: 2)
+        // The icon first fits the 18 pt app-icon cap, then takes 60%: 10.8 pt, rounded to 11.
+        #expect(small.glyphSize(for: .appIcon(icon)) == CGSize(width: 11, height: 11))
+    }
+
     @Test("The glyph view draws an item with an image and nothing without one")
     func glyphDraws() throws {
         let world = World()
@@ -158,7 +168,7 @@ struct ThawBarItemViewsTests {
                 item: alpha,
                 section: .hidden,
                 displayID: CGMainDisplayID(),
-                maxHeight: 22,
+                sizing: ThawBarItemSize(fittingHeight: 22),
                 tooltipDelay: 60,
                 displayImage: displayImage,
                 isKeyboardFocused: focused

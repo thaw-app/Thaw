@@ -107,7 +107,8 @@ struct DisplaySettingsManagerTests {
             alwaysShowHiddenItems: false,
             thawBarLayout: .horizontal,
             gridColumns: 4,
-            itemSpacingOffset: .nan
+            itemSpacingOffset: .nan,
+            thawBarItemScale: 1
         )
 
         manager.configurations = [Self.uuid: unencodable]
@@ -232,25 +233,30 @@ struct DisplayThawBarConfigurationTests {
             .withThawBarLayout(.vertical)
             .withGridColumns(6)
             .withItemSpacingOffset(-3)
+            .withThawBarItemScale(0.8)
         #expect(changed.useThawBar)
         #expect(changed.thawBarLocation == .leftAligned)
         #expect(changed.alwaysShowHiddenItems)
         #expect(changed.thawBarLayout == .vertical)
         #expect(changed.gridColumns == 6)
         #expect(changed.itemSpacingOffset == -3)
+        #expect(changed.thawBarItemScale == 0.8)
         #expect(base.withUseThawBar(false) == base)
     }
 
-    @Test("Columns and spacing are clamped to their ranges")
+    @Test("Columns, spacing and item size are clamped to their ranges")
     func clamping() {
         let base = DisplayThawBarConfiguration.defaultConfiguration
         #expect(base.withGridColumns(0).gridColumns == 2)
         #expect(base.withGridColumns(50).gridColumns == 10)
         #expect(base.withItemSpacingOffset(40).itemSpacingOffset == 16)
         #expect(base.withItemSpacingOffset(-40).itemSpacingOffset == -16)
+        #expect(base.withThawBarItemScale(0.1).thawBarItemScale == ThawBarItemSize.minimumScale)
+        #expect(base.withThawBarItemScale(3).thawBarItemScale == ThawBarItemSize.maximumScale)
+        #expect(base.withThawBarItemScale(.nan).thawBarItemScale == ThawBarItemSize.defaultScale)
     }
 
-    @Test("Older entries without layout, columns or spacing decode with defaults and clamps")
+    @Test("Older entries without layout, columns, spacing or item size decode with defaults and clamps")
     func decodesOlderEntries() throws {
         let old = try JSONDecoder().decode(
             DisplayThawBarConfiguration.self,
@@ -261,20 +267,22 @@ struct DisplayThawBarConfigurationTests {
         #expect(old.thawBarLayout == .horizontal)
         #expect(old.gridColumns == 4)
         #expect(old.itemSpacingOffset == 0)
+        #expect(old.thawBarItemScale == 1, "a bar saved before the setting keeps the menu bar's size")
 
         let wild = try JSONDecoder().decode(
             DisplayThawBarConfiguration.self,
-            from: Data(#"{"useIceBar": false, "iceBarLocation": 0, "alwaysShowHiddenItems": true, "gridColumns": 99, "itemSpacingOffset": -99}"#.utf8)
+            from: Data(#"{"useIceBar": false, "iceBarLocation": 0, "alwaysShowHiddenItems": true, "gridColumns": 99, "itemSpacingOffset": -99, "thawBarItemScale": 0.2}"#.utf8)
         )
         #expect(wild.gridColumns == 10)
         #expect(wild.itemSpacingOffset == -16)
+        #expect(wild.thawBarItemScale == ThawBarItemSize.minimumScale)
     }
 
     @Test("Encoding keeps the Ice-era keys")
     func encodedKeys() throws {
         let data = try JSONEncoder().encode(DisplayThawBarConfiguration.defaultConfiguration)
         let object = try #require(JSONSerialization.jsonObject(with: data) as? [String: Any])
-        #expect(Set(object.keys) == ["useIceBar", "iceBarLocation", "alwaysShowHiddenItems", "iceBarLayout", "gridColumns", "itemSpacingOffset"])
+        #expect(Set(object.keys) == ["useIceBar", "iceBarLocation", "alwaysShowHiddenItems", "iceBarLayout", "gridColumns", "itemSpacingOffset", "thawBarItemScale"])
     }
 
     @Test("Configurations built for connected screens cover each one with the chosen location")
