@@ -132,12 +132,10 @@ def prepare_appcasts(
                     raise ValueError(f"{version} must have one minimumSystemVersion to anchor the cap on")
                 insert_sparkle_element_after(document, minimums[0], "maximumSystemVersion", "26.99")
 
-            # Older stable items are past their last group, so the tag changes nothing for them.
-            if (
-                "-" not in version
-                and not sparkle_elements(item, "channel")
-                and not sparkle_elements(item, "phasedRolloutInterval")
-            ):
+            # Stage everything but alpha. Older items are past their last group, so the tag changes nothing for them.
+            channels = [text(channel) for channel in sparkle_elements(item, "channel")]
+            is_alpha = "alpha" in channels or re.search(r"-(alpha|nightly)(\.|$)", version, re.IGNORECASE)
+            if not is_alpha and not sparkle_elements(item, "phasedRolloutInterval"):
                 insert_sparkle_element_after(
                     document, versions[0], "phasedRolloutInterval", PHASED_ROLLOUT_INTERVAL_SECONDS
                 )
