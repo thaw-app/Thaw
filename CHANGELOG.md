@@ -24,6 +24,10 @@ the items under New and Fixed.
 
 ## [Unreleased]
 
+### New
+
+- **Show on hover works on Thaw's icon too.** Rest the pointer on Thaw's icon and your hidden items appear, the same as on an empty part of the menu bar. If you click the icon right after they appear, they stay open instead of closing again. Suggested by @daniilsys in [#1431](https://github.com/thaw-app/Thaw/issues/1431).
+
 ### Changed
 
 - **Stable and beta updates reach Macs in stages.** Thaw offers a new version to a few Macs at a time, so a bad update can be stopped before it reaches everyone. Your Mac can get it up to two days after it comes out, and checking for updates yourself finds it right away.

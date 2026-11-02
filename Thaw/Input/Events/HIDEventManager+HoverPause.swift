@@ -22,12 +22,15 @@ extension HIDEventManager {
     }
 
     /// Suppresses show-on-hover after a press in the menu bar, until the
-    /// pointer leaves the hover band and hovering is allowed again.
+    /// pointer leaves the hover band and hovering is allowed again. A press
+    /// on Thaw's icon also holds the icon's own hover reveal until the pointer
+    /// leaves the icon, with or without the Thaw Bar.
     func handlePreventShowOnHover(
         with event: NSEvent,
         appState: AppState,
         screen: NSScreen
     ) {
+        noteThawIconPress(appState: appState)
         guard
             configuration.showOnHover,
             !appState.menuBarManager.shouldUseThawBar(for: screen.displayID)

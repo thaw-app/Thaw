@@ -123,7 +123,7 @@ struct ShowHiddenItemsOnRow: View {
                 Toggle("Click", isOn: $settings.showOnClick)
                     .help("Click an empty area of the menu bar to show hidden menu bar items.")
                 Toggle("Hover", isOn: $settings.showOnHover)
-                    .help("Hover over an empty area of the menu bar to show hidden menu bar items.")
+                    .help("Hover over an empty area of the menu bar or the \(Constants.displayName) icon to show hidden menu bar items.")
                 Toggle("Scroll", isOn: $settings.showOnScroll)
                     .help("Scroll or swipe in the menu bar to show hidden menu bar items.")
             }
