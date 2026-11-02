@@ -11,6 +11,7 @@
 # Usage:
 #   ./scripts/devrun.sh                  # Release
 #   ./scripts/devrun.sh --debug          # Debug, for the debugger
+#   ./scripts/devrun.sh --ad-hoc         # sign locally, with no team or certificate
 #   ./scripts/devrun.sh --skip-packages  # skip explicit package resolution
 #   ./scripts/devrun.sh --verbose        # stream raw command output too
 set -euo pipefail
@@ -25,6 +26,7 @@ APP_NAME="Thaw Debug"
 DEST="/Applications/$APP_NAME.app"
 BUNDLE_ID="com.stonerl.Thaw.debug"
 PROCESS_PATTERN="^${DEST//./\\.}/Contents/MacOS/$APP_NAME( |$)"
+AD_HOC=0
 SKIP_PACKAGES=0
 VERBOSE=0
 
@@ -32,6 +34,7 @@ while [[ $# -gt 0 ]]; do
     case "$1" in
         --debug) CONFIG="Debug" ;;
         --release) CONFIG="Release" ;;
+        --ad-hoc) AD_HOC=1 ;;
         --skip-packages) SKIP_PACKAGES=1 ;;
         --verbose) VERBOSE=1 ;;
         -h | --help)
@@ -69,6 +72,9 @@ BUILD_ARGS=(
     THAW_BUNDLE_ID_SUFFIX=.debug
     "THAW_PRODUCT_NAME_SUFFIX= Debug"
 )
+if [[ "$AD_HOC" -eq 1 ]]; then
+    BUILD_ARGS+=(DEVELOPMENT_TEAM= CODE_SIGN_STYLE=Manual CODE_SIGN_IDENTITY=- PROVISIONING_PROFILE_SPECIFIER=)
+fi
 
 show_failure() {
     local label=$1 status=$2 elapsed=$3 first_line=$4
