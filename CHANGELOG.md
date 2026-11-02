@@ -29,6 +29,10 @@ the items under New and Fixed.
 - **Stable and beta updates reach Macs in stages.** Thaw offers a new version to a few Macs at a time, so a bad update can be stopped before it reaches everyone. Your Mac can get it up to two days after it comes out, and checking for updates yourself finds it right away.
 - **Pull requests get a security review from Strix,** an AI security testing tool, when they open. It adds to the checks we already run, and maintainers decide what to fix. The [security assurance case](docs/ASSURANCE_CASE.md#7-evidence-pointers) lists it with the rest.
 
+### Fixed
+
+- **One click on empty menu bar space now opens or closes the Thaw Bar once.** A single click could open the bar and close it straight away, or close it and open it again, so it looked as if the click had done nothing. Double-clicking for Always Hidden items works as before. Reported by @RonenMars in [#1440](https://github.com/thaw-app/Thaw/issues/1440).
+
 ## [3.0.0-beta.5] - 2026-11-01
 
 **macOS 27 only · Build 122**
