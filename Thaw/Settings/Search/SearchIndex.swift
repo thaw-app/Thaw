@@ -44,7 +44,7 @@ nonisolated struct SearchEntry: Identifiable, @unchecked Sendable {
         // Layout's Options tab.
         case "advanced.menuBarArrangementMode", "advanced.enableAlwaysHiddenSection", "advanced.sectionDividerStyle",
              "advanced.enableNativeAppHiding", "advanced.enableMenuBarItemOverflow",
-             "advanced.alwaysUseAppIconForMenuBarItems", "layout.resetMenuBarLayout", "layout.captureHiddenItems":
+             "advanced.alwaysUseAppIconForMenuBarItems", "layout.resetMenuBarLayout":
             .layoutOptions
         case "layout.replaceControlCenterItems":
             .layoutAppleItems

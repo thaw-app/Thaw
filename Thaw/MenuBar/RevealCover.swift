@@ -23,7 +23,7 @@ final class RevealCover {
     private var watchdogDeadline: ContinuousClock.Instant?
     private var holders = 0
     /// What's behind each bar, dropped when the cover goes down.
-    private var pictures: [CGDirectDisplayID: MenuBarBackdrop.Strip] = [:]
+    var pictures: [CGDirectDisplayID: MenuBarBackdrop.Strip] = [:]
     private let diagLog = DiagLog(category: "RevealCover")
 
     /// Held after the assertion is back: the host keeps drawing the revealed
@@ -57,6 +57,12 @@ final class RevealCover {
             guard !isShowing else { return }
             pictures[screen.displayID] = MenuBarBackdrop.Strip(rect: rect, image: image)
         }
+    }
+
+    /// For a run that may end without raising a cover. A cover still up keeps its picture.
+    func dropUnusedPictures() {
+        guard !isShowing else { return }
+        pictures.removeAll()
     }
 
     /// Covers the band concealed items appear in. Counted: the last hide() takes

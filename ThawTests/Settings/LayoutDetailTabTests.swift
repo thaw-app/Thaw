@@ -13,7 +13,9 @@ import Testing
 struct LayoutDetailTabTests {
     @Test("A search result for a Layout setting opens the tab that holds it")
     func searchOpensTheRightTab() {
-        let layoutEntries = SearchIndex.entries.filter { $0.pane == .menuBarLayout && $0.id != "pane.menuBarLayout" }
+        // The capture button sits above the tabs, so it shows on any of them.
+        let outsideTabs = ["pane.menuBarLayout", "layout.captureHiddenItems"]
+        let layoutEntries = SearchIndex.entries.filter { $0.pane == .menuBarLayout && !outsideTabs.contains($0.id) }
         #expect(!layoutEntries.isEmpty)
         for entry in layoutEntries {
             #expect(LayoutDetailTab.tab(for: entry.disclosure) != nil, "\(entry.id) has no tab, so search would land on the wrong one")
