@@ -2,7 +2,7 @@
 set -eu
 
 # Installs the SwiftLint version pinned in .swiftlint-version from the
-# official release artifact bundle, for CI runners that run xcodebuild
+# official release artifact bundle, for anything that runs xcodebuild
 # and therefore the project's lint build phase.
 
 ROOT=$(CDPATH='' cd -- "$(dirname -- "$0")/.." && pwd)

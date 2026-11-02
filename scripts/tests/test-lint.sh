@@ -15,7 +15,7 @@ IFS= read -r VERSION < "$ROOT/.swiftlint-version"
 run_lint() {
     local expected_status=$1 actual_status=0
     shift
-    (cd "$TEMP_DIR" && PATH="$BIN" /bin/sh "$CHECKOUT/scripts/lint.sh" "$@") \
+    (cd "$TEMP_DIR" && HOME="$TEMP_DIR/home" PATH="$BIN" /bin/sh "$CHECKOUT/scripts/lint.sh" "$@") \
         > "$TEMP_DIR/output" 2>&1 || actual_status=$?
     if [[ "$actual_status" != "$expected_status" ]]; then
         printf 'Expected exit %s, got %s\n' "$expected_status" "$actual_status" >&2
@@ -50,5 +50,21 @@ cmp "$TEMP_DIR/expected" "$FAKE_SWIFTLINT_LOG"
 
 export FAKE_SWIFTLINT_STATUS=2
 run_lint 2
+export FAKE_SWIFTLINT_STATUS=0
 
-printf 'lint wrapper: missing/mismatched versions, arguments, working directory, and exit status passed\n'
+# The pinned copy from install-swiftlint.sh wins over an older one on PATH.
+mkdir -p "$TEMP_DIR/home/.local/bin"
+cat > "$TEMP_DIR/home/.local/bin/swiftlint" <<STUB
+#!/bin/sh
+if [ "\$1" = version ]; then
+    printf '%s\n' "$VERSION"
+    exit 0
+fi
+printf 'pinned\n' > "$FAKE_SWIFTLINT_LOG"
+STUB
+chmod +x "$TEMP_DIR/home/.local/bin/swiftlint"
+export FAKE_SWIFTLINT_VERSION=0.0.0
+run_lint 0
+grep -q pinned "$FAKE_SWIFTLINT_LOG"
+
+printf 'lint wrapper: missing/mismatched versions, pinned copy, arguments, working directory, and exit status passed\n'
