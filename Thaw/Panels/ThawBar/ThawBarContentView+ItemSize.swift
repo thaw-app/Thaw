@@ -8,14 +8,14 @@
 import SwiftUI
 
 extension ThawBarItemSize {
-    /// The size the Thaw Bar draws an item's capture or app icon at: fitted to
-    /// the menu bar's height as before, then scaled by the item size.
+    /// The size the Thaw Bar draws an item's glyph at: fitted to the menu bar's
+    /// height, then scaled.
     func glyphSize(for image: MenuBarItemDisplayImage) -> CGSize {
         scaledGlyphSize(image.targetSize(fittingHeight: fittingHeight))
     }
 }
 
-/// The bar's item size. Kept out of ThawBarContentView.swift, which is at SwiftLint's grandfathered size.
+/// Kept out of ThawBarContentView.swift, which is at its SwiftLint baseline length.
 extension ThawBarContentView {
     /// The item size saved for this bar's display.
     var itemSizing: ThawBarItemSize {
@@ -26,8 +26,8 @@ extension ThawBarContentView {
         )
     }
 
-    /// One row in the vertical and grid arrangements. The horizontal bar stays
-    /// the menu bar's height, so it still lines up under the menu bar.
+    /// One row's height in the vertical and grid arrangements. The horizontal bar
+    /// keeps the menu bar's height so it lines up under it.
     var itemRowHeight: CGFloat {
         itemSizing.rowHeight(fitting: contentHeight)
     }

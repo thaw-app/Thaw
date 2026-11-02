@@ -7,24 +7,19 @@
 
 import CoreGraphics
 
-/// Decides when resting the pointer on Thaw's icon may reveal the hidden
-/// section, and what a click on the icon does to a section hover just revealed.
+/// Decides when resting on Thaw's icon may reveal the hidden section, and what
+/// a click on the icon does to a section hover just revealed.
 ///
-/// The icon is a click target too, so hover and click meet there:
-/// - A click on the icon soon after a hover reveal keeps the section open and
-///   takes it over, as a click reveal would. Without this, the click the
-///   person was already making would close what hover had just opened.
-/// - After any press on the icon, the icon cannot start a hover reveal again
-///   until the pointer has left it. Otherwise a click that closes the section
-///   would see it reopen while the pointer rests where it clicked.
+/// - A click soon after a hover reveal takes the section over and keeps it open.
+/// - After a press on the icon, it can't start a hover reveal until the pointer
+///   leaves, so a click that closes the section doesn't reopen it.
 nonisolated struct ThawIconHoverGate {
-    /// How soon after a hover reveal a press on the icon still counts as the
-    /// click the person was already making, and how long that click's
-    /// forwarded activation, which lands after the mouse-up, may take to arrive.
+    /// How soon after a hover reveal a press on the icon still takes it over, and
+    /// how long that click's activation, forwarded after the mouse-up, may take.
     static let clickAdoptionWindow: Duration = .seconds(1)
 
     /// Narrower than this, the icon is the collapsed stand-in left when Show
-    /// Thaw icon is off, not something a person can rest the pointer on.
+    /// Thaw icon is off.
     static let minimumIconWidth: CGFloat = 4
 
     /// Whether a press on the icon holds its hover reveal until the pointer leaves it.
@@ -54,9 +49,8 @@ nonisolated struct ThawIconHoverGate {
         hoverRevealedAt = instant
     }
 
-    /// Records a press. Returns true when the press lands on the icon soon
-    /// enough after a hover reveal that is still out, meaning its click should
-    /// keep that reveal open rather than toggle it closed.
+    /// Records a press. Returns true when it lands on the icon soon after a hover
+    /// reveal that is still out, so its click should keep the section open.
     mutating func notePress(
         onIcon: Bool,
         isHoverReveal: Bool,
@@ -81,7 +75,7 @@ nonisolated struct ThawIconHoverGate {
     }
 
     /// Consumes the decision notePress(onIcon:isHoverReveal:at:) made for the
-    /// icon's next click. Returns true when that click should leave the section open.
+    /// icon's next click: true leaves the section open.
     mutating func claimClick(at instant: ContinuousClock.Instant) -> Bool {
         defer { adoptsClickUntil = nil }
         guard let adoptsClickUntil else {

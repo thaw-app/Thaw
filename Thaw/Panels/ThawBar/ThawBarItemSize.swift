@@ -9,22 +9,17 @@ import CoreGraphics
 
 /// How large the Thaw Bar draws its items, as a share of their size in the menu bar.
 ///
-/// A scale of 1 is the menu bar's own size and the default, so a bar looks as it
-/// did before the setting existed. Smaller scales fit more items in a row. Only
-/// the Thaw Bar reads this; Layout, search and the menu bar overlays keep their sizes.
+/// Only the Thaw Bar reads this; Layout, search and the menu bar overlays keep their sizes.
 nonisolated struct ThawBarItemSize: Equatable {
-    /// The smallest scale offered. Below it a capture's glyph drops under about
-    /// ten points on a notched menu bar.
+    /// Below this, a capture's glyph drops under about ten points on a notched menu bar.
     static let minimumScale = 0.6
 
-    /// The menu bar's own size. Captures are never drawn larger, since
-    /// upscaling a bitmap blurs it.
+    /// The menu bar's own size. Larger would blur the upscaled captures.
     static let maximumScale = 1.0
 
-    /// The slider moves in tenths: 60, 70, 80, 90 and 100 percent.
     static let scaleStep = 0.1
 
-    /// The size every bar had before the setting existed.
+    /// Full size, so existing bars look unchanged.
     static let defaultScale = maximumScale
 
     static let scaleRange: ClosedRange<Double> = minimumScale ... maximumScale
@@ -45,13 +40,13 @@ nonisolated struct ThawBarItemSize: Equatable {
         self.displayScale = displayScale > 0 ? displayScale : 1
     }
 
-    /// Keeps a stored or typed value in range. Anything that isn't a number is the default.
+    /// Clamps to scaleRange; a non-finite value becomes the default.
     static func clampedScale(_ value: Double) -> Double {
         guard value.isFinite else { return defaultScale }
-        return Swift.min(Swift.max(value, minimumScale), maximumScale)
+        return value.clamped(to: scaleRange)
     }
 
-    /// Whether items are drawn at the menu bar's size, exactly as before the setting.
+    /// Whether items are drawn at the menu bar's size, unscaled.
     var isFullSize: Bool {
         scale >= 1
     }
@@ -62,9 +57,8 @@ nonisolated struct ThawBarItemSize: Equatable {
         return pixels / displayScale
     }
 
-    /// A glyph's size after fitting, scaled. The height lands on whole pixels
-    /// and the width follows it, so captures and app icons shrink by the same
-    /// share and keep their shape. Full size returns the fitted size untouched.
+    /// A fitted glyph's size, scaled. The height lands on whole pixels and the
+    /// width follows it to keep the shape. Full size returns fitted untouched.
     func scaledGlyphSize(_ fitted: CGSize) -> CGSize {
         guard !isFullSize, fitted.width > 0, fitted.height > 0 else { return fitted }
         let height = Self.pixelAligned(fitted.height * scale, displayScale: displayScale)

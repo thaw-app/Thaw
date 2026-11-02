@@ -228,10 +228,8 @@ extension EventMonitor {
         )
     }
 
-    /// A universal monitor that hands each physical press to handler once.
-    ///
-    /// One press can reach a universal monitor twice. The pass-through of a
-    /// repeat is honored locally like any other event.
+    /// A universal monitor that calls handler once per physical press, which can
+    /// reach a universal monitor twice. A repeat passes through unchanged.
     @MainActor
     static func universalOncePerPress(
         for mask: NSEvent.EventTypeMask,

@@ -36,8 +36,8 @@ nonisolated struct DisplayThawBarConfiguration: Codable, Equatable {
     /// (or remains) the active menu bar display.
     let itemSpacingOffset: Double
 
-    /// How large the Thaw Bar draws items on this display, as a share of their
-    /// menu bar size. See ThawBarItemSize for the range; 1 is the menu bar's size.
+    /// How large the Thaw Bar draws items on this display; 1 is the menu bar's
+    /// size. See ThawBarItemSize for the range.
     let thawBarItemScale: Double
 
     /// Default configuration (disabled, dynamic location, horizontal layout).

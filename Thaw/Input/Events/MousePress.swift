@@ -7,13 +7,11 @@
 
 import AppKit
 
-/// A mouse-down identified by when it happened, not by when Thaw got round to
-/// handling it. The handling time is no use for this: opening the Thaw Bar keeps
-/// the main thread busy for tens of milliseconds, so a repeat arrives that late.
+/// A mouse-down identified by its event timestamp. Handling time can't identify
+/// it: opening the Thaw Bar can hold back a repeat by tens of milliseconds.
 nonisolated struct MousePress: Equatable {
-    /// Sightings of one press closer together than this are the same press.
-    /// Well under the fastest double-click a person can make, so it cannot eat
-    /// the second click of the always-hidden gesture.
+    /// Sightings closer than this are one press. Well under the fastest
+    /// double-click, so the always-hidden gesture keeps its second click.
     static let sameness: TimeInterval = 0.02
 
     let type: NSEvent.EventType
@@ -37,9 +35,8 @@ nonisolated struct MousePress: Equatable {
     }
 }
 
-/// What the app has done with the most recent press, shared by the two monitors
-/// that see each one: the Thaw Bar's outside-click monitor and the mouse-down
-/// monitor behind show-on-click.
+/// The latest press, shared by the Thaw Bar's outside-click monitor and the
+/// show-on-click mouse-down monitor, which both see each one.
 @MainActor
 final class MousePressLedger {
     static let shared = MousePressLedger()
@@ -47,7 +44,7 @@ final class MousePressLedger {
     private var currentPress: MousePress?
     private var dismissingPress: MousePress?
 
-    /// Records press and returns whether it is new, false for a repeat sighting.
+    /// Records press and returns false for a repeat sighting.
     func admit(_ press: MousePress) -> Bool {
         guard !press.isSamePress(as: currentPress) else {
             return false

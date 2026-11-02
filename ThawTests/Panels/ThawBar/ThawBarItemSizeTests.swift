@@ -9,7 +9,6 @@ import CoreGraphics
 import Testing
 @testable import Thaw
 
-/// The Thaw Bar item size's range and the sizes it scales glyphs, rows and gaps to.
 @Suite("Thaw Bar item size")
 struct ThawBarItemSizeTests {
     @Test("The default is the menu bar's own size")

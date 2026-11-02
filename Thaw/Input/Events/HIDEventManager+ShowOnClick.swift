@@ -149,8 +149,8 @@ extension HIDEventManager {
             return
         }
 
-        // Already out, or the Thaw Bar's outside-click monitor just closed it on
-        // this same press: this click puts it away and must not reveal it again.
+        // Already out, or the Thaw Bar's outside-click monitor closed it on this
+        // press: put it away and don't reveal it again.
         if !hiddenSection.isHidden || MousePressLedger.shared.currentPressDismissedBar {
             cancelPendingMenuBarClick()
             disarmShowOnClickGuard()

@@ -8,8 +8,8 @@
 import SwiftUI
 import ThawUI
 
-/// The Thaw Bar's item size: a percentage of the items' size in the menu bar,
-/// in steps of ten. Alpha while the scaled captures are checked on more displays.
+/// The Thaw Bar's item size slider. Alpha until scaled captures are checked on
+/// more displays.
 struct ThawBarItemSizeRow: View {
     @Binding var scale: Double
 

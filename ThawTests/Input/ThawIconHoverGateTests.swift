@@ -47,7 +47,7 @@ struct ThawIconHoverGateTests {
         let elsewhere = gate.notePress(onIcon: false, isHoverReveal: true, at: at(100))
         #expect(!elsewhere)
         #expect(gate.mayArmFromIcon)
-        // The reveal is still recent, so a press on the icon that follows still keeps it.
+        // The reveal is still recent, so a following press on the icon keeps it.
         let onIcon = gate.notePress(onIcon: true, isHoverReveal: true, at: at(200))
         #expect(onIcon)
     }

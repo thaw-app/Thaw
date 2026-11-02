@@ -11,8 +11,8 @@ import MenuBarModel
 import ThawCapture
 
 extension MenuBarItemImageCache {
-    /// The tags a capture the person asked for got a new picture of. Nil when no
-    /// such capture is running, so automatic passes record nothing.
+    /// The tags a requested capture got a new picture of. Nil outside one, so
+    /// automatic passes record nothing.
     static var requestedCaptureTally: Set<MenuBarItemTag>?
 
     /// Waits for a revealed batch to stop moving before its screenshot. See
@@ -28,8 +28,8 @@ extension MenuBarItemImageCache {
         }
     }
 
-    /// Commits the ledger, first noting which revealed items this batch gives a
-    /// new picture: a crop the cache will keep over the picture it has.
+    /// Commits the ledger after noting which revealed items got a new picture: a
+    /// crop the cache keeps over the one it has.
     func commitCaptureLedger(
         of captureResult: CapturePass,
         notingRevealed revealed: [(requested: MenuBarItem, live: MenuBarItem)]

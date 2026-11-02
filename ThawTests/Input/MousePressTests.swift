@@ -13,7 +13,6 @@ private func press(_ type: NSEvent.EventType = .leftMouseDown, at timestamp: Tim
     MousePress(type: type, timestamp: timestamp)
 }
 
-/// Telling one physical press seen twice from two presses.
 @Suite("Mouse press identity")
 struct MousePressTests {
     @Test("The same event seen twice is one press")
@@ -50,7 +49,7 @@ struct MousePressTests {
     }
 }
 
-/// The two monitors that see each press, in the order the issue 1440 log shows.
+/// Calls follow the order the monitors see a press: outside-click first, then show-on-click.
 @Suite("Mouse press ledger")
 @MainActor
 struct MousePressLedgerTests {

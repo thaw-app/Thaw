@@ -82,8 +82,7 @@ struct MenuBarItemGlyph: View {
     /// Keep original ink over the menu bar, where it already matches.
     var reinksCaptures = false
 
-    /// Draws at this size instead of the fitted one, for a surface that scales
-    /// its glyphs, such as the Thaw Bar's item size.
+    /// Overrides the fitted size, for a surface that scales its glyphs like the Thaw Bar.
     var drawnSize: CGSize?
 
     var body: some View {

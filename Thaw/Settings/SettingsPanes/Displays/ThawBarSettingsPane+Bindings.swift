@@ -7,8 +7,7 @@
 
 import SwiftUI
 
-/// The pane's per-context bindings, moved here from ThawBarSettingsPane.swift so
-/// that file stays under SwiftLint's type body limit.
+/// Kept out of ThawBarSettingsPane.swift to stay under SwiftLint's type body limit.
 extension ThawBarSettingsPane {
     func useThawBarBinding(for context: EditingContext) -> Binding<Bool> {
         switch context {
