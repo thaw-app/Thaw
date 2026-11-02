@@ -24,10 +24,17 @@ the items under New and Fixed.
 
 ## [Unreleased]
 
+## [3.0.0-beta.5.1] - 2026-11-02
+
+**macOS 27 only · Build 123**
+
+A fix release for beta 5, with two small additions and an alpha setting for the Thaw Bar.
+
 ### New
 
-- **Show on hover works on Thaw's icon too.** Rest the pointer on Thaw's icon and your hidden items appear, the same as on an empty part of the menu bar. If you click the icon right after they appear, they stay open instead of closing again. Suggested by @daniilsys in [#1431](https://github.com/thaw-app/Thaw/issues/1431).
+- **Show on hover works on Thaw's icon too.** Rest the pointer on Thaw's icon and your hidden items appear, as they do over an empty part of the menu bar. A click on the icon right after they appear keeps them open. Suggested by @daniilsys in [#1431](https://github.com/thaw-app/Thaw/issues/1431).
 - **Choose how large items are in the Thaw Bar** (alpha). Settings › Thaw Bar has an Item size slider for each display, from 60% to 100% of the items' size in the menu bar. Smaller sizes fit more items in a row. The menu bar, Layout and search keep their sizes, and 100%, the default, looks as before. Requested by @mannycastaneda in [#1388](https://github.com/thaw-app/Thaw/issues/1388).
+- **A list of every file Thaw keeps.** [Where Thaw keeps its files](docs/FILE_LOCATIONS.md) says what each one holds and which you can copy to another Mac or keep in a dotfiles repo. Requested by @pikeas in [#1363](https://github.com/thaw-app/Thaw/issues/1363).
 
 ### Changed
 
@@ -36,9 +43,9 @@ the items under New and Fixed.
 
 ### Fixed
 
-- **Pictures of hidden items are no longer cut off.** Thaw took the picture while the revealed icons could still be sliding into place. It now waits until they stop moving, for up to a second more.
-- **Capture Hidden Items reports what it really captured.** The count included older pictures it had kept after a failed try. It now counts only new pictures, leaves out items that have nothing to capture, and lists the rest as having no new picture.
-- **One click on empty menu bar space now opens or closes the Thaw Bar once.** A single click could open the bar and close it straight away, or close it and open it again, so it looked as if the click had done nothing. Double-clicking for Always Hidden items works as before. Reported by @RonenMars in [#1440](https://github.com/thaw-app/Thaw/issues/1440).
+- **One click on empty menu bar space opens or closes the Thaw Bar once.** A single click could open the bar and close it straight away, or close it and open it again, so the click seemed to do nothing. Double-clicking for Always Hidden items works as before. Reported by @RonenMars in [#1440](https://github.com/thaw-app/Thaw/issues/1440).
+- **Pictures of hidden items are no longer cut off.** Thaw took the picture while revealed icons could still be sliding into place. It now waits until they stop moving, for up to a second more.
+- **Capture Hidden Items counts only what it captured.** The count included older pictures kept after a failed try. It now counts new pictures only, leaves out items with nothing to capture, and names the rest as having no new picture.
 
 ## [3.0.0-beta.5] - 2026-11-01
 
