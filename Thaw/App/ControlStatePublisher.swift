@@ -28,7 +28,7 @@ import WidgetKit
 @MainActor
 final class ControlStatePublisher {
     // The suite name, defaults key, JSON field names and control kinds below
-    // are duplicated in ThawControls/ControlCommandNames.swift and must stay in
+    // are duplicated in targets/ThawControls/ControlCommandNames.swift and must stay in
     // sync. A mismatch on any of them is a silent no-op: the reader finds
     // nothing and falls back to false, with no error anywhere. That file also
     // records why the duplication is deliberate rather than one constant both

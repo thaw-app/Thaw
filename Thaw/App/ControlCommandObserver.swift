@@ -28,7 +28,7 @@ final class ControlCommandObserver {
     /// The commands the controls can send, and what each one runs.
     ///
     /// These strings are duplicated in
-    /// ThawControls/ControlCommandNames.swift and the two lists have to stay
+    /// targets/ThawControls/ControlCommandNames.swift and the two lists have to stay
     /// in sync. A typo on either side is a silent no-op: Darwin notifications
     /// have no delivery receipt and no subscriber count, so a mismatched name
     /// just vanishes. That file also records why the duplication is deliberate

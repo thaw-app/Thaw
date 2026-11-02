@@ -155,7 +155,7 @@
 			exceptions = (
 				7188A6862E27F9ED008F131D /* Exceptions for "MenuBarCaptureService" folder in "MenuBarCaptureService" target */,
 			);
-			path = MenuBarCaptureService;
+			path = targets/MenuBarCaptureService;
 			sourceTree = "<group>";
 		};
 		71BDFBE12C978E2A00EF145F /* Thaw */ = {
@@ -176,7 +176,7 @@
 			exceptions = (
 				CC01A0002F8000000000000E /* Exceptions for "ThawControls" folder in "ThawControls" target */,
 			);
-			path = ThawControls;
+			path = targets/ThawControls;
 			sourceTree = "<group>";
 		};
 /* End PBXFileSystemSynchronizedRootGroup section */
@@ -843,7 +843,7 @@
 				DEVELOPMENT_TEAM = A7CKWF99ML;
 				ENABLE_HARDENED_RUNTIME = YES;
 				GENERATE_INFOPLIST_FILE = YES;
-				INFOPLIST_FILE = MenuBarCaptureService/Info.plist;
+				INFOPLIST_FILE = targets/MenuBarCaptureService/Info.plist;
 				INFOPLIST_KEY_NSHumanReadableCopyright = "Copyright © 2026 Toni Förster et al.";
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
@@ -871,7 +871,7 @@
 				DEVELOPMENT_TEAM = A7CKWF99ML;
 				ENABLE_HARDENED_RUNTIME = YES;
 				GENERATE_INFOPLIST_FILE = YES;
-				INFOPLIST_FILE = MenuBarCaptureService/Info.plist;
+				INFOPLIST_FILE = targets/MenuBarCaptureService/Info.plist;
 				INFOPLIST_KEY_NSHumanReadableCopyright = "Copyright © 2026 Toni Förster et al.";
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
@@ -934,7 +934,7 @@
 		CC01A0002F80000000000007 /* Debug configuration for PBXNativeTarget "ThawControls" */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
-				CODE_SIGN_ENTITLEMENTS = ThawControls/ThawControls.entitlements;
+				CODE_SIGN_ENTITLEMENTS = targets/ThawControls/ThawControls.entitlements;
 				"CODE_SIGN_IDENTITY[sdk=macosx*]" = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 123;
@@ -943,7 +943,7 @@
 				ENABLE_APP_SANDBOX = YES;
 				ENABLE_HARDENED_RUNTIME = YES;
 				GENERATE_INFOPLIST_FILE = YES;
-				INFOPLIST_FILE = ThawControls/Info.plist;
+				INFOPLIST_FILE = targets/ThawControls/Info.plist;
 				INFOPLIST_KEY_CFBundleDisplayName = "Thaw Controls";
 				INFOPLIST_KEY_NSHumanReadableCopyright = "Copyright © 2026 Toni Förster et al.";
 				LD_RUNPATH_SEARCH_PATHS = (
@@ -966,7 +966,7 @@
 		CC01A0002F80000000000008 /* Release configuration for PBXNativeTarget "ThawControls" */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
-				CODE_SIGN_ENTITLEMENTS = ThawControls/ThawControls.entitlements;
+				CODE_SIGN_ENTITLEMENTS = targets/ThawControls/ThawControls.entitlements;
 				"CODE_SIGN_IDENTITY[sdk=macosx*]" = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 123;
@@ -975,7 +975,7 @@
 				ENABLE_APP_SANDBOX = YES;
 				ENABLE_HARDENED_RUNTIME = YES;
 				GENERATE_INFOPLIST_FILE = YES;
-				INFOPLIST_FILE = ThawControls/Info.plist;
+				INFOPLIST_FILE = targets/ThawControls/Info.plist;
 				INFOPLIST_KEY_CFBundleDisplayName = "Thaw Controls";
 				INFOPLIST_KEY_NSHumanReadableCopyright = "Copyright © 2026 Toni Förster et al.";
 				LD_RUNPATH_SEARCH_PATHS = (

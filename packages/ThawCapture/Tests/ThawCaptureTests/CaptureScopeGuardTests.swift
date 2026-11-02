@@ -32,7 +32,7 @@ struct CaptureScopeGuardTests {
         Rule(
             symbol: "captureBackdropForService(",
             allowedPrefixes: [
-                "MenuBarCaptureService/main.swift",
+                "targets/MenuBarCaptureService/main.swift",
                 "packages/ThawCapture/Sources/ThawCapture/ScreenCapture+BackdropService.swift",
             ],
             rationale: "the leaking backdrop primitive must only run in the recyclable helper"

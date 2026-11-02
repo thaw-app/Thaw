@@ -65,9 +65,9 @@ where new code goes instead.
 | `packages/ThawAX/` | Accessibility reading: `ThawAXCore`, `ThawAXClient` and the `ThawAXHelper` process | No other package; client and helper use `ThawAXCore` |
 | `packages/ThawExtras/` | `ThawExtraHelper`, stand-ins for Apple items Thaw hides (Focus, AirDrop and others) | Nothing |
 | `ThawUI/` | Settings form and control components, with no knowledge of app state | CompactSlider |
-| `ThawControls/` | Control Center controls that show hidden items or toggle Zen Mode | |
+| `targets/ThawControls/` | Control Center controls that show hidden items or toggle Zen Mode | |
 | `packages/ThawCtl/` | A command-line tool that turns commands into `thaw://` URLs | |
-| `MenuBarCaptureService/` | The XPC service that hosts capture | `ThawCapture` |
+| `targets/MenuBarCaptureService/` | The XPC service that hosts capture | `ThawCapture` |
 | `ThawTests/` | App-level Swift Testing tests; packages also have their own test targets | App and library modules |
 | `packages/Fuzzing/` | libFuzzer targets; currently the `thaw://` settings URI parser | |
 | `scripts/` | Lint, coverage and release helpers used by CI | |
