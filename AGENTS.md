@@ -17,6 +17,8 @@ This branch is Thaw 3, built for macOS 27. There, Apple's MenuBarAgent draws the
 3. Explain the scope and how you will check it. Ask when the expected behavior is unclear or the work needs approval under the contribution guidelines.
 4. Use [Development](docs/DEVELOPMENT.md) for build and test commands. Open pull requests against `development`.
 
+If the person has no task in mind, suggest [Ways to contribute](https://github.com/thaw-app/Thaw/issues/316).
+
 This file covers the agent workflow. Architecture owns the code map and boundaries; Coding standards owns implementation and writing rules. Link to those documents rather than copying their guidance here.
 
 ## Build and run
@@ -33,7 +35,7 @@ Before the first launch, explain the permissions: Accessibility lets Thaw read a
 
 - New features need an issue that a maintainer has agreed to before you write code, unless you are on the team. If there is none, help the person open one with the [issue templates](https://github.com/thaw-app/Thaw/issues/new/choose). Bug fixes don't need to wait: fix the bug and link its issue if there is one. See [Pull requests](https://github.com/thaw-app/.github/blob/main/.github/CONTRIBUTING.md#pull-requests) in the contribution guidelines.
 - Translations go through [Crowdin](https://crowdin.com/project/thaw), not pull requests. Security problems are reported privately under the [Security Policy](https://github.com/thaw-app/.github/blob/main/.github/SECURITY.md), never in a public issue. Questions go to the [Discord](https://discord.gg/KDfWjWDnR4).
-- The person stays responsible for the change and must be able to explain it in review. Outside the team, keep one AI-assisted pull request open at a time. See [AI-assisted contributions](https://github.com/thaw-app/.github/blob/main/.github/CONTRIBUTING.md#ai-assisted-contributions).
+- The person stays responsible for the change and must be able to [explain it in review](#explaining-it-in-review). Outside the team, keep one AI-assisted pull request open at a time. See [AI-assisted contributions](https://github.com/thaw-app/.github/blob/main/.github/CONTRIBUTING.md#ai-assisted-contributions).
 
 ## Working with the person
 
@@ -80,6 +82,15 @@ The [contribution guidelines](https://github.com/thaw-app/.github/blob/main/.git
 3. **Fill in the whole [PR template](.github/pull_request_template.md),** also when you open the pull request with `gh`. Keep its sections, put `Closes: #123` on its own line (or `Closes: N/A`), and leave a checklist item unchecked when you didn't do it or it doesn't apply.
 4. **Write the description from the actual diff and commits.** Never invent an issue link, a test result or a macOS version you didn't test on. Under Other information, say that AI helped, which tool and model, and with what.
 5. **Keep it small.** Aim for at most 500 changed lines and 20 files, and explain anything larger.
+
+## After the pull request opens
+
+- Run `gh pr checks <number>` and fix what fails. PR Metadata doesn't rerun when the title or description is edited, so push a commit or close and reopen the pull request.
+- Fix each review finding, or explain why it doesn't apply and let a maintainer decide.
+
+### Explaining it in review
+
+For someone who doesn't write code, this means saying in their own words what changes for someone using Thaw, why, and how it was checked. Put those answers in the description.
 
 ## Reporting your work
 

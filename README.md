@@ -57,7 +57,7 @@ Or download the disk image from the [releases](https://github.com/thaw-app/Thaw/
 
 ## Contributing
 
-Please read the [contributing guide](https://github.com/thaw-app/.github/blob/main/.github/CONTRIBUTING.md). Pull requests go against the `development` branch. Translations go through [Crowdin](https://crowdin.com/project/thaw), and everyone who has helped is on the [community page](https://www.getthaw.app/community).
+Please read the [contributing guide](https://github.com/thaw-app/.github/blob/main/.github/CONTRIBUTING.md). [Ways to contribute](https://github.com/thaw-app/Thaw/issues/316) lists work to pick from. Pull requests go against the `development` branch. Translations go through [Crowdin](https://crowdin.com/project/thaw), and everyone who has helped is on the [community page](https://www.getthaw.app/community).
 
 ## License
 

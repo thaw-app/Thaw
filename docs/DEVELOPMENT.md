@@ -9,11 +9,23 @@ Contribution requirements, review expectations, and security reporting are in th
 
 This branch is Thaw 3, for macOS 27. Thaw 2, for macOS 15 and 26, is on `legacy/thaw-2`.
 
+## Setup
+
+```sh
+brew install swiftformat actionlint
+sh scripts/install-swiftlint.sh  # pinned version, in ~/.local/bin; keep it on your PATH
+```
+
+The Xcode build runs SwiftLint, so its version must match `.swiftlint-version`.
+
+Outside the Thaw team, build with `--ad-hoc`. Without it, the build stops with `Signing for "Thaw" requires a development team`. We've confirmed that build compiles, but not how the running app behaves, including its permissions.
+
 ## Build
 
 ```sh
-./scripts/devrun.sh          # Release, installed as /Applications/Thaw Debug.app
-./scripts/devrun.sh --debug  # Debug, for the debugger
+./scripts/devrun.sh           # Release, installed as /Applications/Thaw Debug.app
+./scripts/devrun.sh --debug   # Debug, for the debugger
+./scripts/devrun.sh --ad-hoc  # No team or certificate needed
 ```
 
 Thaw Debug has its own bundle identifier (`com.stonerl.Thaw.debug`), so it runs next to a released Thaw with separate settings and permissions. Run it from /Applications: macOS 27 only treats a status item as Thaw's when the app is there, so a build run straight from Xcode's build folder loses its own icon when it hides items. `open Thaw.xcodeproj` is still the way to edit and debug the code.
@@ -34,6 +46,12 @@ Use Swift Testing (`@Test` and `#expect`), not XCTest. Tests live in `ThawTests`
 ```sh
 xcodebuild test -project Thaw.xcodeproj -scheme Thaw -destination 'platform=macOS' \
   CODE_SIGN_IDENTITY="" CODE_SIGNING_REQUIRED=NO CODE_SIGNING_ALLOWED=NO
+```
+
+The app tests don't run a package's own test targets. To test a package you changed, name its folder:
+
+```sh
+swift test --package-path ThawConcurrency
 ```
 
 ## Project documentation

@@ -46,6 +46,6 @@ Nightly carries Thaw built for the next macOS, which is a different app line and
 
 ## What is only in the beta
 
-The [feature list](../README.md#features) on the home page is Thaw 3's. Thaw 2 has most of it, and some features are only in Thaw 3.
+The [feature list](https://www.getthaw.app/#features) on the home page is Thaw 3's. Thaw 2 has most of it, and some features are only in Thaw 3.
 
 The [changelog](../CHANGELOG.md) lists what each release changed, and [Releases and updates](RELEASES.md) explains how updates reach your Mac.
