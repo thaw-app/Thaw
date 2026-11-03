@@ -34,12 +34,12 @@ A fix release for beta 5, with two small additions and an alpha setting for the 
 
 - **Show on hover works on Thaw's icon too.** Rest the pointer on Thaw's icon and your hidden items appear, as they do over an empty part of the menu bar. A click on the icon right after they appear keeps them open. Suggested by @daniilsys in [#1431](https://github.com/thaw-app/Thaw/issues/1431).
 - **Choose how large items are in the Thaw Bar** (alpha). Settings › Thaw Bar has an Item size slider for each display, from 60% to 100% of the items' size in the menu bar. Smaller sizes fit more items in a row. The menu bar, Layout and search keep their sizes, and 100%, the default, looks as before. Requested by @mannycastaneda in [#1388](https://github.com/thaw-app/Thaw/issues/1388).
-- **A list of every file Thaw keeps.** [Where Thaw keeps its files](docs/FILE_LOCATIONS.md) says what each one holds and which you can copy to another Mac or keep in a dotfiles repo. Requested by @pikeas in [#1363](https://github.com/thaw-app/Thaw/issues/1363).
+- **A list of every file Thaw keeps.** [Where Thaw keeps its files](https://github.com/thaw-app/Thaw/blob/development/docs/FILE_LOCATIONS.md) says what each one holds and which you can copy to another Mac or keep in a dotfiles repo. Requested by @pikeas in [#1363](https://github.com/thaw-app/Thaw/issues/1363).
 
 ### Changed
 
 - **Stable and beta updates reach Macs in stages.** Thaw offers a new version to a few Macs at a time, so a bad update can be stopped before it reaches everyone. Your Mac can get it up to two days after it comes out, and checking for updates yourself finds it right away.
-- **Pull requests get a security review from Strix,** an AI security testing tool, when they open. It adds to the checks we already run, and maintainers decide what to fix. The [security assurance case](docs/ASSURANCE_CASE.md#7-evidence-pointers) lists it with the rest.
+- **Pull requests get a security review from Strix,** an AI security testing tool, when they open. It adds to the checks we already run, and maintainers decide what to fix. The [security assurance case](https://github.com/thaw-app/Thaw/blob/development/docs/ASSURANCE_CASE.md#7-evidence-pointers) lists it with the rest.
 
 ### Fixed
 

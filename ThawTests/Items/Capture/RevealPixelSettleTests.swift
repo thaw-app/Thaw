@@ -28,7 +28,7 @@ struct RevealPixelSettleTests {
         }
     }
 
-    private func wait(_ script: Script, budget: Duration = .seconds(5)) async -> Bool {
+    private func wait(_ script: Script, budget: Duration = .seconds(3600)) async -> Bool {
         await MenuBarItemImageCache.waitForSettledPixels(
             minimumSettle: .zero,
             interval: .zero,

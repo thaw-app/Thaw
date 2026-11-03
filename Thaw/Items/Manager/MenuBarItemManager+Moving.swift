@@ -2831,11 +2831,11 @@ extension MenuBarItemManager {
             MenuBarItemManager.diagLog.warning(
                 "Preferred-position write ignored by MenuBarAgent (bar never moved) for \(item.logString)"
             )
-            noteIgnoredPreferredWrite(for: item)
             // An unnudged write was never given a chance to be observed,
             // the nudge is skipped while a section is revealed, which is
             // exactly when reveal-ordering writes are issued.
             if nudgeRan {
+                noteIgnoredPreferredWrite(for: item)
                 noteMenuBarAgentIgnoredPreferredPositions()
             } else {
                 MenuBarItemManager.diagLog.debug(

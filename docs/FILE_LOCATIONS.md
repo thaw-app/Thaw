@@ -6,12 +6,13 @@ The paths are for Thaw 3 on macOS 27. Thaw 2 uses the same preferences file, pro
 
 ## Move your settings to another Mac
 
-Profiles are the supported way. A profile holds your layout, appearance, shortcuts and most settings, and Thaw can save profiles to a file and read them back.
+Profiles are the supported way. A profile holds your layout, appearance, shortcuts and most settings, and Thaw can save profiles to a file and read them back. Export writes saved profiles only, so save your current settings as a profile first.
 
-1. On the first Mac, right-click Thaw's icon in the menu bar and choose **Settings…**.
-2. Choose **Profiles** and click **Export Profiles…**. To save one profile, use **Export…** in that profile's menu.
-3. On the other Mac, open the same page, click **Import Profiles…** and pick the file.
-4. Click **Apply** on the profile you want.
+1. On the first Mac, right-click Thaw's icon in the menu bar and choose **Settings…**. If Settings shows a single page, click **All Settings**.
+2. Choose **Profiles**. To keep your current settings, type a name and click **Save Current**.
+3. Click **Export Profiles…**. To save one profile, use **Export…** in that profile's menu.
+4. On the other Mac, open the same page, click **Import Profiles…** and pick the file.
+5. Click **Apply** on the profile you want.
 
 An imported profile comes with its scripts switched off. Switch each one on yourself after you have checked it. A profile linked to a display or a Space on the first Mac keeps that link, but a Space from another Mac never matches.
 
