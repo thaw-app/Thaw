@@ -1104,19 +1104,19 @@
 		};
 		C3C3C3C3C3C3C3C3C3C3C301 /* XCLocalSwiftPackageReference "ThawModuleKit" */ = {
 			isa = XCLocalSwiftPackageReference;
-			relativePath = ThawModuleKit;
+			relativePath = packages/ThawModuleKit;
 		};
 		D4D4D4D4D4D4D4D4D4D4D401 /* XCLocalSwiftPackageReference "ThawAutomation" */ = {
 			isa = XCLocalSwiftPackageReference;
-			relativePath = ThawAutomation;
+			relativePath = packages/ThawAutomation;
 		};
 		D5D5D5D5D5D5D5D5D5D5D501 /* XCLocalSwiftPackageReference "ThawTriggers" */ = {
 			isa = XCLocalSwiftPackageReference;
-			relativePath = ThawTriggers;
+			relativePath = packages/ThawTriggers;
 		};
 		D6D6D6D6D6D6D6D6D6D6D601 /* XCLocalSwiftPackageReference "ThawWidgets" */ = {
 			isa = XCLocalSwiftPackageReference;
-			relativePath = ThawWidgets;
+			relativePath = packages/ThawWidgets;
 		};
 /* End XCLocalSwiftPackageReference section */
 

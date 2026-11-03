@@ -3,31 +3,31 @@ included:
   - Thaw
   - packages/ThawCapture
   - packages/ThawCtl
-  - ThawAutomation
-  - ThawModuleKit
-  - ThawTriggers
-  - ThawWidgets
+  - packages/ThawAutomation
+  - packages/ThawModuleKit
+  - packages/ThawTriggers
+  - packages/ThawWidgets
 
 excluded:
   - packages/MenuBarModel/.build
   - packages/ThawCapture/.build
   - packages/ThawCtl/.build
-  - ThawAutomation/.build
-  - ThawModuleKit/.build
-  - ThawTriggers/.build
-  - ThawWidgets/.build
+  - packages/ThawAutomation/.build
+  - packages/ThawModuleKit/.build
+  - packages/ThawTriggers/.build
+  - packages/ThawWidgets/.build
   - ThawTests
-  - ThawAutomation/Tests
-  - ThawModuleKit/Tests
-  - ThawTriggers/Tests
-  - ThawWidgets/Tests
+  - packages/ThawAutomation/Tests
+  - packages/ThawModuleKit/Tests
+  - packages/ThawTriggers/Tests
+  - packages/ThawWidgets/Tests
   - packages/MenuBarModel/Package.swift
   - packages/ThawCapture/Package.swift
   - packages/ThawCtl/Package.swift
-  - ThawAutomation/Package.swift
-  - ThawModuleKit/Package.swift
-  - ThawTriggers/Package.swift
-  - ThawWidgets/Package.swift
+  - packages/ThawAutomation/Package.swift
+  - packages/ThawModuleKit/Package.swift
+  - packages/ThawTriggers/Package.swift
+  - packages/ThawWidgets/Package.swift
 
 disabled_rules:
   - function_parameter_count
