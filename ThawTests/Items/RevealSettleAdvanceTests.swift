@@ -131,6 +131,25 @@ struct RevealSettleAdvanceTests {
         #expect(result.previous[moverAfter.uniqueIdentifier] == moverAfter)
     }
 
+    @Test("A member that settled where it sat while hidden settles again where the reveal puts it")
+    func settledMemberThatMovesSettlesAgain() {
+        // A Native-hidden app reports its old place until macOS shows it again,
+        // so two polls can agree on a place the item is about to leave.
+        let polls = [1621, 1621, 1434, 1434].map { Self.item("cc.ffitch.shottr", "Item-0", x: CGFloat($0)) }
+        var settled: [String: MenuBarItem] = [:]
+        var previous: [String: MenuBarItem] = [:]
+        for poll in polls {
+            (settled, previous) = MenuBarItemImageCache.advanceRevealSettle(
+                settled: settled,
+                previous: previous,
+                current: [poll.uniqueIdentifier: poll],
+                hasStable: Self.stable
+            )
+        }
+
+        #expect(settled[polls[0].uniqueIdentifier]?.bounds.minX == 1434)
+    }
+
     @Test("An item missing from the current poll clears its previous sighting")
     func missingItemClearsPrevious() {
         let a = Self.item("com.example.a", "Item-0", x: 100)

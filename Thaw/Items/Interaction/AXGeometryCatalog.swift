@@ -152,7 +152,7 @@ nonisolated enum AXGeometryCatalog {
         } else if Set(identified.map(\.itemIndex)).count > 1 {
             "identity-shared-by-roots"
         } else {
-            "overlapping-other-root"
+            ownFrameReason(identified.isEmpty ? owned : identified, bounds: bounds)
         }
         // Prioritize occupied geometry, then include owned metadata if the
         // requested identity was absent. Never print an entire AX snapshot.
@@ -375,6 +375,15 @@ private nonisolated struct AXGeometryWalkScope {
 }
 
 nonisolated extension AXGeometryCatalog {
+    /// Why one root's entries do not vouch for bounds: no frame of its own, a frame elsewhere, or another root on top.
+    fileprivate static func ownFrameReason(_ rootEntries: [Entry], bounds: CGRect) -> String {
+        let frames = rootEntries.map(\.frame).filter { !$0.isEmpty }
+        if frames.isEmpty {
+            return "own-frame-unreadable"
+        }
+        return frames.contains(where: { matches(bounds, $0) }) ? "overlapping-other-root" : "own-frame-elsewhere"
+    }
+
     /// An app's items can share a name, as two Live Activity pills do. The entries of
     /// the one root sitting exactly at bounds, or nil when none or several do.
     fileprivate static func rootAt(_ bounds: CGRect, among entries: [Entry]) -> [Entry]? {

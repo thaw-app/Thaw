@@ -6,6 +6,7 @@
 //  Licensed under the GNU GPLv3
 
 import Foundation
+import MenuBarModel
 import Testing
 @testable import Thaw
 
@@ -66,6 +67,49 @@ struct AXGeometryCatalogDiagnosticsTests {
         )
         #expect(summary.hasPrefix("reason=overlapping-other-root"))
         #expect(summary.contains("identity=nil"))
+    }
+
+    @Test("An item whose own frame is somewhere else is named as elsewhere")
+    func ownFrameElsewhere() {
+        let summary = AXGeometryCatalog.diagnosticSummary(
+            ownerPID: 10,
+            identityTitle: "Item-0",
+            bounds: rect,
+            in: [entry(10, 0, "Item-0", rect.offsetBy(dx: -187, dy: 0))]
+        )
+        #expect(summary.hasPrefix("reason=own-frame-elsewhere"))
+        #expect(summary.contains("frame=(813.0, 3.0, 22.0, 22.0)"))
+    }
+
+    @Test("An item with no readable frame of its own is named as unreadable")
+    func ownFrameUnreadable() {
+        let summary = AXGeometryCatalog.diagnosticSummary(
+            ownerPID: 10,
+            identityTitle: "Item-0",
+            bounds: rect,
+            in: [entry(10, 0, "Item-0", .zero)]
+        )
+        #expect(summary.hasPrefix("reason=own-frame-unreadable"))
+    }
+
+    @Test("A capture's ownership trace names the answer, the item and where it was cut")
+    func ownershipTraceNamesTheAnswer() {
+        let item = MenuBarItem(
+            tag: MenuBarItemTag(namespace: .string("cc.ffitch.shottr"), title: "Item-0", windowID: 7, instanceIndex: 0),
+            windowID: 7,
+            ownerPID: 10,
+            sourcePID: 10,
+            bounds: rect,
+            title: "Item-0",
+            isOnScreen: true
+        )
+        let trace = LiveMenuBarCaptureReader.ownershipTrace(
+            of: (item: item, bounds: rect),
+            match: .unavailable,
+            in: [entry(10, 0, "Item-0", rect.offsetBy(dx: -187, dy: 0))]
+        )
+        #expect(trace.hasPrefix("CaptureOwnershipTrace: unavailable cc.ffitch.shottr:Item-0"))
+        #expect(trace.contains("at (1000.0, 3.0, 22.0, 22.0) reason=own-frame-elsewhere"))
     }
 
     @Test("Long titles are cut and at most six entries are listed")
