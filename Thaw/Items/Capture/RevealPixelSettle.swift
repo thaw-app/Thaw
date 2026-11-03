@@ -11,9 +11,15 @@ import MenuBarModel
 import ThawCapture
 
 extension MenuBarItemImageCache {
-    /// The tags a requested capture got a new picture of. Nil outside one, so
-    /// automatic passes record nothing.
-    static var requestedCaptureTally: Set<MenuBarItemTag>?
+    /// The tags one requested capture got a new picture of. Each request owns one.
+    @MainActor
+    final class RequestedCaptureTally {
+        var tags: Set<MenuBarItemTag> = []
+    }
+
+    /// The tally of the pass holding the prewarm slot. Nil for an automatic pass,
+    /// so it records nothing. Set and cleared only by the slot.
+    static var requestedCaptureTally: RequestedCaptureTally?
 
     /// Waits for a revealed batch to stop moving before its screenshot. See
     /// waitForSettledPixels(minimumSettle:interval:budget:sleep:read:).
@@ -34,12 +40,12 @@ extension MenuBarItemImageCache {
         of captureResult: CapturePass,
         notingRevealed revealed: [(requested: MenuBarItem, live: MenuBarItem)]
     ) {
-        if Self.requestedCaptureTally != nil {
+        if let tally = Self.requestedCaptureTally {
             for pair in revealed {
                 guard let image = captureResult.captured[pair.live.tag] else { continue }
                 let kept = capturesByTag[pair.requested.tag].map { Self.preferredCachedImage(existing: $0, candidate: image) }
                 if kept == nil || kept == image {
-                    Self.requestedCaptureTally?.insert(pair.requested.tag)
+                    tally.tags.insert(pair.requested.tag)
                 }
             }
         }
@@ -51,6 +57,7 @@ extension MenuBarItemImageCache {
     /// AX reports an item's final frame while MenuBarAgent is still sliding its
     /// glyph there, so a crop by that frame can cut the glyph off. Ends at the
     /// budget for an icon that keeps changing, or when the bar can't be read.
+    /// Each read gets only the time left, so a slow screenshot can't hold the reveal.
     ///
     /// - Returns: False when the budget ran out first.
     @MainActor
@@ -60,20 +67,50 @@ extension MenuBarItemImageCache {
         interval: Duration = .milliseconds(100),
         budget: Duration = Constants.MenuBarTuning.revealCapturePixelSettleBudget,
         sleep: @MainActor (Duration) async -> Void = { try? await Task.sleep(for: $0) },
-        read: @MainActor () async -> [Data]?
+        read: @escaping @MainActor () async -> [Data]?
     ) async -> Bool {
         await sleep(minimumSettle)
         let deadline = ContinuousClock.now + budget
-        guard var previous = await read() else { return true }
+        guard case let .read(first) = await readBefore(deadline, read) else { return false }
+        guard var previous = first else { return true }
         while !Task.isCancelled, ContinuousClock.now < deadline {
             await sleep(interval)
-            guard let current = await read() else { return true }
+            guard case let .read(next) = await readBefore(deadline, read) else { return false }
+            guard let current = next else { return true }
             if current == previous {
                 return true
             }
             previous = current
         }
         return Task.isCancelled
+    }
+
+    nonisolated enum BoundedRead: Sendable {
+        case read([Data]?)
+        case pastDeadline
+    }
+
+    /// Runs read against the deadline. A result that arrives at or after it doesn't count.
+    @MainActor
+    static func readBefore(_ deadline: ContinuousClock.Instant, _ read: @escaping @MainActor () async -> [Data]?) async -> BoundedRead {
+        guard ContinuousClock.now < deadline else { return .pastDeadline }
+        let (outcomes, sink) = AsyncStream.makeStream(of: BoundedRead.self)
+        let timer = Task {
+            try? await Task.sleep(until: deadline)
+            sink.yield(.pastDeadline)
+        }
+        Task { @MainActor in await sink.yield(.read(read())) }
+        var outcome = BoundedRead.pastDeadline
+        for await first in outcomes {
+            outcome = first
+            break
+        }
+        timer.cancel()
+        sink.finish()
+        if case .read = outcome, ContinuousClock.now >= deadline {
+            return .pastDeadline
+        }
+        return outcome
     }
 
     /// The pixels each frame covers in a capture, for comparing two reads.

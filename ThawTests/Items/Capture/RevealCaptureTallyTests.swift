@@ -46,11 +46,12 @@ struct RevealCaptureTallyTests {
         _ pass: Cache.CapturePass,
         revealed: [(requested: MenuBarItem, live: MenuBarItem)],
         in cache: Cache
-    ) -> Set<MenuBarItemTag>? {
-        Cache.requestedCaptureTally = []
+    ) -> Set<MenuBarItemTag> {
+        let tally = Cache.RequestedCaptureTally()
+        Cache.requestedCaptureTally = tally
         defer { Cache.requestedCaptureTally = nil }
         cache.commitCaptureLedger(of: pass, notingRevealed: revealed)
-        return Cache.requestedCaptureTally
+        return tally.tags
     }
 
     @Test("A new picture of an item with none is tallied")
@@ -118,5 +119,28 @@ struct RevealCaptureTallyTests {
 
         #expect(Cache.requestedCaptureTally == nil)
         #expect(cache.failedCapturesLock.withLock { $0[failed.tag]?.failureCount } == 1)
+    }
+
+    @Test("A queued request's tally opens only when it holds the prewarm slot, and leaves the running one's alone")
+    func tallyFollowsTheSlot() async {
+        let cache = Cache(screenIsLocked: { false })
+        let running = Cache.RequestedCaptureTally()
+        let queued = Cache.RequestedCaptureTally()
+        await cache.beginConcealedPrewarm(tally: running)
+        #expect(Cache.requestedCaptureTally === running)
+
+        let waiter = Task { @MainActor in
+            await cache.beginConcealedPrewarm(tally: queued)
+            return Cache.requestedCaptureTally === queued
+        }
+        for _ in 0 ..< 5 {
+            await Task.yield()
+        }
+        #expect(Cache.requestedCaptureTally === running)
+
+        cache.endConcealedPrewarm()
+        #expect(await waiter.value)
+        cache.endConcealedPrewarm()
+        #expect(Cache.requestedCaptureTally == nil)
     }
 }

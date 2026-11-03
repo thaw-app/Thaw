@@ -84,6 +84,23 @@ struct RevealPixelSettleTests {
         #expect(!settled)
     }
 
+    @Test("A read slower than the budget doesn't count, and the wait ends near the budget")
+    func slowReadEndsAtTheBudget() async {
+        let start = ContinuousClock.now
+        let settled = await MenuBarItemImageCache.waitForSettledPixels(
+            minimumSettle: .zero,
+            interval: .zero,
+            budget: .milliseconds(20),
+            sleep: { _ in await Task.yield() },
+            read: {
+                try? await Task.sleep(for: .seconds(2))
+                return [Data([1])]
+            }
+        )
+        #expect(!settled)
+        #expect(ContinuousClock.now - start < .seconds(1))
+    }
+
     @Test("The fingerprint sees a glyph move inside its frame, and ignores the rest of the bar")
     func fingerprintFollowsTheFrame() throws {
         let frame = CGRect(x: 10, y: 0, width: 10, height: 10)

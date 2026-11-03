@@ -45,10 +45,9 @@ extension MenuBarItemImageCache {
         guard ConcealedPrewarmGate.mayReveal(for: appState) else { return nil }
 
         let sections: [MenuBarSection.Name] = [.hidden, .alwaysHidden]
-        Self.requestedCaptureTally = []
-        defer { Self.requestedCaptureTally = nil }
-        await prewarmConcealedImages(sections: sections, onlyMissingImages: false)
-        let newlyCaptured = Self.requestedCaptureTally ?? []
+        let tally = RequestedCaptureTally()
+        await prewarmConcealedImages(sections: sections, onlyMissingImages: false, tally: tally)
+        let newlyCaptured = tally.tags
 
         let items = sections.flatMap { appState.itemManager.itemCache[$0] }
             .filter { Self.isCapturable($0) && !Self.isBlankItem($0.bounds) }
