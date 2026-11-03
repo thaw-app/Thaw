@@ -29,6 +29,7 @@ final class WallpaperChangeMonitor {
     /// How long to wait before retrying a re-open that lost the race with the
     /// system's replacement of the index.
     private let restartRetryDelay: Duration
+    private let retrySleep: @MainActor (Duration) async -> Void
 
     /// Called on the main actor after the wallpaper changes and the
     /// debounce interval elapses.
@@ -38,14 +39,17 @@ final class WallpaperChangeMonitor {
     ///   - url: The file to watch. Defaults to the system wallpaper index.
     ///   - debounce: Coalesces repeated index writes from one wallpaper change to avoid redundant captures.
     ///   - restartRetryDelay: How long to wait before the one retry of a failed re-open.
+    ///   - retrySleep: Waits out that delay. A test passes its own to decide when the retry runs.
     init(
         url: URL = WallpaperChangeMonitor.indexURL,
         debounce: Duration = .milliseconds(500),
-        restartRetryDelay: Duration = .milliseconds(500)
+        restartRetryDelay: Duration = .milliseconds(500),
+        retrySleep: @escaping @MainActor (Duration) async -> Void = { try? await Task.sleep(for: $0) }
     ) {
         self.url = url
         self.debounce = debounce
         self.restartRetryDelay = restartRetryDelay
+        self.retrySleep = retrySleep
     }
 
     deinit {
@@ -114,8 +118,8 @@ final class WallpaperChangeMonitor {
         descriptor = -1
         start()
         guard source == nil else { return }
-        restartRetryTask = Task { [weak self, restartRetryDelay] in
-            try? await Task.sleep(for: restartRetryDelay)
+        restartRetryTask = Task { [weak self, restartRetryDelay, retrySleep] in
+            await retrySleep(restartRetryDelay)
             guard !Task.isCancelled, let self else { return }
             start()
         }

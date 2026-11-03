@@ -330,10 +330,10 @@ extension MenuBarItemManager {
     /// events and Accessibility queries have to be addressed to.
     ///
     /// Items handed over by a host process report an owner that is not the
-    /// process listening for them, so a known source PID wins. During startup
-    /// the source has not been resolved yet and the owner is all there is.
+    /// process listening for them, so a known source PID wins, then the owner.
+    /// An item listed with neither is found by bundle ID; see ItemOwnerLookup.
     nonisolated func resolvedPID(for item: MenuBarItem) -> pid_t {
-        item.sourcePID ?? item.ownerPID
+        ItemOwnerLookup.pid(for: item)
     }
 
     /// The event source for stateID, built once and then reused.
