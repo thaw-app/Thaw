@@ -53,6 +53,21 @@ struct RevealPixelSettleTests {
         #expect(script.count == 1)
     }
 
+    @Test("With the default sleep, an icon that keeps changing still runs out the budget")
+    func realClockBudget() async {
+        var value: UInt8 = 0
+        let settled = await MenuBarItemImageCache.waitForSettledPixels(
+            minimumSettle: .zero,
+            interval: .milliseconds(1),
+            budget: .milliseconds(5),
+            read: {
+                value &+= 1
+                return [Data([value])]
+            }
+        )
+        #expect(!settled)
+    }
+
     @Test("An icon that never stops changing runs out the budget")
     func constantChangeHitsTheBudget() async {
         var value: UInt8 = 0
