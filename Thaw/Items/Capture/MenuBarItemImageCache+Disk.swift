@@ -62,6 +62,14 @@ extension MenuBarItemImageCache {
         )
     }
 
+    /// Volatility for a disk load, with every item hidden now aged as stable.
+    func diskLoadClassifications() -> [String: MenuBarItemVolatilityIndex.Volatility] {
+        ConcealedCapturePersistence.loadClassifications(
+            volatilityIndex.classificationsByKey(),
+            hiddenIdentifiers: appState.map(concealedIdentifiers(in:)) ?? []
+        )
+    }
+
     /// Collapses the live cache to one capture per tagIdentifier, the key the
     /// disk format is written under.
     ///
@@ -158,7 +166,7 @@ extension MenuBarItemImageCache {
 
             let (classifications, occupiedIdentifiers) = await MainActor.run {
                 (
-                    self.volatilityIndex.classificationsByKey(),
+                    self.diskLoadClassifications(),
                     Set(self.capturesByTag.keys.map(\.tagIdentifier))
                 )
             }

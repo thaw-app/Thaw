@@ -19,4 +19,13 @@ nonisolated enum ConcealedCapturePersistence {
         guard !concealedIdentifiers.isEmpty else { return false }
         return capturedTags.contains { concealedIdentifiers.contains($0.tagIdentifier) && imageChanged($0) }
     }
+
+    /// An item hidden now ages like a stable one at load, since a picture saved while it was visible lacks the hidden flag
+    /// and an item hidden by turning off its Control Center module is never drawn again to be photographed.
+    static func loadClassifications(
+        _ classifications: [String: MenuBarItemVolatilityIndex.Volatility],
+        hiddenIdentifiers: Set<String>
+    ) -> [String: MenuBarItemVolatilityIndex.Volatility] {
+        hiddenIdentifiers.reduce(into: classifications) { $0[$1] = .stable }
+    }
 }
