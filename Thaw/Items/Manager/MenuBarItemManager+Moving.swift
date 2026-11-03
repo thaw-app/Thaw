@@ -1190,7 +1190,7 @@ extension MenuBarItemManager {
                     await seatItemsWhileHoldingMutation(items, to: section, orderedAs: order, permit: permit)
                 }
                 try Task.checkCancellation()
-                commit()
+                commitKeepingAppsTogether(items, to: section, commit)
             }
         } catch is CancellationError {
             MenuBarItemManager.diagLog.debug("Section transition cancelled before assignment commit")
