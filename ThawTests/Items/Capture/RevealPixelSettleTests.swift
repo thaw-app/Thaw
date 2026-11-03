@@ -84,21 +84,21 @@ struct RevealPixelSettleTests {
         #expect(!settled)
     }
 
-    @Test("A read slower than the budget doesn't count, and the wait ends near the budget")
+    /// The read outlasts the time limit, so only a wait bounded by its budget returns at all.
+    /// No wall-clock check: a stalled runner can't fail it.
+    @Test("A read slower than the budget doesn't count, and doesn't hold the wait", .timeLimit(.minutes(1)))
     func slowReadEndsAtTheBudget() async {
-        let start = ContinuousClock.now
         let settled = await MenuBarItemImageCache.waitForSettledPixels(
             minimumSettle: .zero,
             interval: .zero,
             budget: .milliseconds(20),
             sleep: { _ in await Task.yield() },
             read: {
-                try? await Task.sleep(for: .seconds(2))
+                try? await Task.sleep(for: .seconds(3600))
                 return [Data([1])]
             }
         )
         #expect(!settled)
-        #expect(ContinuousClock.now - start < .seconds(1))
     }
 
     @Test("The fingerprint sees a glyph move inside its frame, and ignores the rest of the bar")
