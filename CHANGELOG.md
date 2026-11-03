@@ -46,6 +46,7 @@ A fix release for beta 5, with two small additions and an alpha setting for the 
 - **One click on empty menu bar space opens or closes the Thaw Bar once.** A single click could open the bar and close it straight away, or close it and open it again, so the click seemed to do nothing. Double-clicking for Always Hidden items works as before. Reported by @RonenMars in [#1440](https://github.com/thaw-app/Thaw/issues/1440).
 - **Pictures of hidden items are no longer cut off.** Thaw took the picture while revealed icons could still be sliding into place. It now waits until they stop moving, for up to a second more.
 - **Capture Hidden Items counts only what it captured.** The count included older pictures kept after a failed try. It now counts new pictures only, leaves out items with nothing to capture, and names the rest as having no new picture.
+- **Hidden icons no longer shuffle each time you show them with Native hiding.** macOS puts the apps back where it remembers them, and Thaw tried to move each one, which macOS ignored. Thaw now leaves them where macOS puts them. It also stops retrying any icon macOS refused to move until something changes, such as your layout or display.
 
 ## [3.0.0-beta.5] - 2026-11-01
 

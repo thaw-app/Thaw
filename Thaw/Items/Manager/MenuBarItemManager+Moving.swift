@@ -829,7 +829,7 @@ extension MenuBarItemManager {
                 sectionFor: { controller.section(for: $0) },
                 experimentalSystemItemHiding: experimentalSystemItemHiding,
                 isRepairSuppressed: {
-                    self.boundaryRepairBreaker.isSuppressed(PostRestrictionRepairItemID($0))
+                    self.boundaryRepairBreaker.isSuppressed(PostRestrictionRepairItemID($0)) || !self.revealRepairMoves($0, isMisplaced: true, logging: false)
                 }
             )
         }
@@ -877,7 +877,7 @@ extension MenuBarItemManager {
         for attempt in 1 ... Self.authoredVisibleOrderApplyAttempts {
             let disagreeing = sections.filter { section in
                 let authored = controller.sectionItemOrder[section] ?? []
-                return authored.count > 1 &&
+                return authored.count > 1 && !revealLeavesOrderToMacOS(section, items: liveItems) &&
                     !liveOrderMatches(authored, section: section, controller: controller, items: liveItems)
             }
             guard !disagreeing.isEmpty else { return }
@@ -1000,13 +1000,13 @@ extension MenuBarItemManager {
                 hiddenControlItemWindowID: controlItemWindowIDs.hidden,
                 alwaysHiddenControlItemWindowID: controlItemWindowIDs.alwaysHidden
             ),
-                !MenuBarLayoutPlannerProvider.current.liveOrderSatisfiesSectionBoundary(
+                revealRepairMoves(liveItem, isMisplaced: !MenuBarLayoutPlannerProvider.current.liveOrderSatisfiesSectionBoundary(
                     items: liveItems,
                     item: liveItem,
                     section: section,
                     controlItems: ControlOrderRules.boundaryControls(controlItems, revealedSection: revealedSection),
                     experimentalSystemItemHiding: experimentalSystemItemHiding
-                ),
+                )),
                 let destination = MenuBarLayoutPlannerProvider.current.sectionBoundaryDestination(
                     for: section,
                     controlItems: controlItems
@@ -1119,7 +1119,7 @@ extension MenuBarItemManager {
             sectionsToOrder.append(.visible)
         }
         await applySectionItemOrder(
-            sections: sectionsToOrder,
+            sections: sectionsToOrder.filter { !revealLeavesOrderToMacOS($0, items: liveItems) },
             controller: controller,
             whileRevealing: revealedSection,
             // nil uses the controller's authored order: with an edit pending,
@@ -2831,7 +2831,7 @@ extension MenuBarItemManager {
             MenuBarItemManager.diagLog.warning(
                 "Preferred-position write ignored by MenuBarAgent (bar never moved) for \(item.logString)"
             )
-            _ = moveCircuitBreaker.note(.failedVerification)
+            noteIgnoredPreferredWrite(for: item)
             // An unnudged write was never given a chance to be observed,
             // the nudge is skipped while a section is revealed, which is
             // exactly when reveal-ordering writes are issued.

@@ -76,6 +76,16 @@ final class NativeAppHidingExperiment {
         }
     }
 
+    /// Apps Native hiding had switched off when the current reveal began. The reveal switches them
+    /// back on, and macOS decides where they appear.
+    @ObservationIgnored private(set) var switchedOnForReveal: Set<String> = []
+
+    /// Read before the reveal switches the apps back on, after which none read as hidden. A reveal
+    /// that widens one already on screen keeps the apps the first one switched on.
+    func noteRevealStarting(hiddenBundleIDs: Set<String>, alreadyRevealed: Bool) {
+        switchedOnForReveal = alreadyRevealed ? switchedOnForReveal.union(hiddenBundleIDs) : hiddenBundleIDs
+    }
+
     /// True while apps hidden in an earlier session could not be shown again at launch.
     var previousSessionRecoveryFailed: Bool {
         controller.previousSessionRecoveryFailed

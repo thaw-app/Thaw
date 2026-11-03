@@ -53,6 +53,9 @@ final class MenuBarItemFailureLedger {
     /// When each key last tripped the visible-boundary repair's breaker.
     private var strandedDates: [String: Date]
 
+    /// Items whose preferred-position write MenuBarAgent ignored. Kept for this session only.
+    var ignoredPreferredWrites = IgnoredPreferredWrites()
+
     /// Require two same-kind failures per session; a lone timeout may be event-semaphore contention, not a hung owner.
     /// Provisional failures are not persisted or counted across kinds.
     private var provisionalMarks = Set<String>()
@@ -235,6 +238,7 @@ final class MenuBarItemFailureLedger {
     }
 
     func removeAll() {
+        ignoredPreferredWrites.removeAll()
         provisionalMarks.removeAll()
         provisionalCannotComplete.removeAll()
         guard !markDates.isEmpty || !cannotCompleteDates.isEmpty || !strandedDates.isEmpty else {
