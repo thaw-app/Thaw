@@ -164,6 +164,36 @@ struct DynamicMetricTitleTests {
         )
     }
 
+    @Test("A weather item keeps one identity when the conditions change")
+    func weatherConditionChurnCollapses() {
+        let bundle = MenuBarItemTag.iStatMenusStatusBundleID
+        let cloudy = "\(bundle):Currently 18° and Partly cloudy. High of 21°. Low of 12°. 10% chance of rain"
+        let clear = "\(bundle):Currently 15° and Clear. High of 20°. Low of 9°. 0% chance of rain"
+        let snow = "\(bundle):Currently -2° and Snow. High of 1°. Low of -6°. 80% chance of snow"
+
+        #expect(MenuBarItemTag.canonicalPersistentIdentifier(cloudy) == "\(bundle):Currently")
+        #expect(MenuBarItemTag.canonicalPersistentIdentifier(clear) == "\(bundle):Currently")
+        #expect(MenuBarItemTag.canonicalPersistentIdentifier(snow) == "\(bundle):Currently")
+    }
+
+    @Test("A date and time item keeps one identity across AM and PM and a new month")
+    func dateTimeChurnCollapses() {
+        let bundle = MenuBarItemTag.iStatMenusStatusBundleID
+        let identifiers = Set(
+            ["Nov 3, 2026 at 9:41 AM", "Nov 3, 2026 at 9:41 PM", "Dec 1, 2026 at 12:00 AM", "September 30, 2026 at 11:59 PM"]
+                .map { MenuBarItemTag.canonicalPersistentIdentifier("\(bundle):\($0)") }
+        )
+        #expect(identifiers == ["\(bundle):# #, # at #:#"])
+    }
+
+    @Test("A date and time item stays apart from a bare clock and from gauges")
+    func dateTimeStaysDistinct() {
+        let bundle = MenuBarItemTag.iStatMenusStatusBundleID
+        let dateTime = MenuBarItemTag.canonicalPersistentIdentifier("\(bundle):Nov 3, 2026 at 9:41 AM")
+        #expect(dateTime != MenuBarItemTag.canonicalPersistentIdentifier("\(bundle):9:41 AM"))
+        #expect(MenuBarItemTag.canonicalPersistentIdentifier("\(bundle):MEM 42%") == "\(bundle):MEM #%")
+    }
+
     @Test("An instance suffix survives canonicalization")
     func instanceSuffixPreserved() {
         let bundle = "com.bjango.istatmenus-setapp.status"

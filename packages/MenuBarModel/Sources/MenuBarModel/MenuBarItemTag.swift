@@ -697,10 +697,10 @@ public struct MenuBarItemTag: Hashable, CustomStringConvertible, Sendable, Codab
                 return module
             }
         }
-        return raw
+        return collapsingReadingWords(raw
             .replacing(/[-+]?\d+(?:[.,]\d+)?/, with: "#")
             .replacing(/#\s*[KMGTPE]?[Bb]\/s/, with: "# B/s")
-            .replacing(/#\s*[KMGTPE]?[Bb]/, with: "# B")
+            .replacing(/#\s*[KMGTPE]?[Bb]/, with: "# B"))
     }
 
     /// Keeps the name after ": " without matching localized countdown words; identity changes only when the meeting changes.
