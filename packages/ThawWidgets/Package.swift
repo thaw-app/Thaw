@@ -15,7 +15,7 @@ let package = Package(
     dependencies: [
         .package(path: "../MenuBarModel"),
         .package(path: "../ThawModuleKit"),
-        .package(url: "https://github.com/thaw-app/ThawUI", exact: "1.1.0"),
+        .package(url: "https://github.com/thaw-app/ThawUI", exact: "1.2.0"),
     ],
     targets: [
         .target(

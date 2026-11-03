@@ -1126,7 +1126,7 @@
 			repositoryURL = "https://github.com/thaw-app/ThawUI";
 			requirement = {
 				kind = exactVersion;
-				version = 1.1.0;
+				version = 1.2.0;
 			};
 		};
 		170423D72B56DE78004A2549 /* XCRemoteSwiftPackageReference "Sparkle" */ = {
