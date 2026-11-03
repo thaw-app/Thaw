@@ -72,17 +72,19 @@ extension ModuleHost.Environment {
             .compactMap { try? Data(contentsOf: $0) }
     }
 
-    /// The team ID of a module, read only after its whole signature checks out.
-    /// A module is downloaded code, so reading the team ID alone, as the
-    /// Settings URI check does for installed apps, isn't enough.
+    /// The team ID of a module, read only after its whole signature checks out
+    /// and an Apple-issued certificate vouches for that team. Any signer can
+    /// write a team into a signature, so the team string alone proves nothing.
     private static func validTeamID(ofAppAt url: URL) -> String? {
         var staticCode: SecStaticCode?
         guard SecStaticCodeCreateWithPath(url as CFURL, [], &staticCode) == errSecSuccess,
               let staticCode,
-              SecStaticCodeCheckValidity(staticCode, SecCSFlags(rawValue: kSecCSCheckAllArchitectures | kSecCSStrictValidate), nil) == errSecSuccess
+              SecStaticCodeCheckValidity(staticCode, SecCSFlags(rawValue: kSecCSCheckAllArchitectures | kSecCSStrictValidate), nil) == errSecSuccess,
+              let team = SettingsURIHandler.teamIdentifier(ofAppAt: url, logName: url.lastPathComponent),
+              SettingsURISender.isAnchored(staticCode, toTeam: team)
         else {
             return nil
         }
-        return SettingsURIHandler.teamIdentifier(ofAppAt: url, logName: url.lastPathComponent)
+        return team
     }
 }
