@@ -38,6 +38,7 @@ A fix release for beta 5, with two small additions and an alpha setting for the 
 
 ### Changed
 
+- **Turning the Thaw Bar on or off is clearer.** Settings › Thaw Bar asks where to show hidden items: In the menu bar, In the Thaw Bar, or Always in the menu bar. The text below it says whether the Thaw Bar is on, and the preview's button reads Turn On & Open.
 - **Stable and beta updates reach Macs in stages.** Thaw offers a new version to a few Macs at a time, so a bad update can be stopped before it reaches everyone. Your Mac can get it up to two days after it comes out, and checking for updates yourself finds it right away.
 - **Pull requests get a security review from Strix,** an AI security testing tool, when they open. It adds to the checks we already run, and maintainers decide what to fix. The [security assurance case](https://github.com/thaw-app/Thaw/blob/development/docs/ASSURANCE_CASE.md#7-evidence-pointers) lists it with the rest.
 

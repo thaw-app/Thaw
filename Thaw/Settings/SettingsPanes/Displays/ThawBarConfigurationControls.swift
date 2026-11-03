@@ -48,7 +48,7 @@ struct ThawBarConfigurationControls<ExtraControls: View>: View {
 
     var body: some View {
         ThawPillPicker(
-            "Hidden items",
+            "Show hidden items",
             selection: presentation,
             options: HiddenItemsPresentation.allCases.map {
                 ThawPillPicker.Option($0, title: $0.localized, systemImage: $0.systemImage)
@@ -106,15 +106,15 @@ struct ThawBarConfigurationControls<ExtraControls: View>: View {
     private var presentationAnnotation: some View {
         switch (presentation.wrappedValue, context) {
         case (.onClick, .display):
-            Text("Hidden items appear in the menu bar when you reveal them on this display.")
+            Text("Hidden items appear in the menu bar when you reveal them on this display. The \(Constants.displayName) Bar is off.")
         case (.onClick, .globalTemplate):
-            Text("Hidden items appear in the menu bar when you reveal them.")
+            Text("Hidden items appear in the menu bar when you reveal them. The \(Constants.displayName) Bar is off.")
         case (.thawBar, _):
-            Text("Hidden items appear in a separate bar below the menu bar.")
+            Text("The \(Constants.displayName) Bar is on. Hidden items appear in it, below the menu bar, when you reveal them.")
         case (.alwaysShown, .display):
-            Text("Hidden items stay in the menu bar on this display.")
+            Text("Hidden items stay in the menu bar on this display. The \(Constants.displayName) Bar is off.")
         case (.alwaysShown, .globalTemplate):
-            Text("Hidden items stay in the menu bar.")
+            Text("Hidden items stay in the menu bar. The \(Constants.displayName) Bar is off.")
         }
     }
 

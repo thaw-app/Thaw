@@ -113,7 +113,7 @@ struct ThawBarPreviewFooter: View {
                 .buttonStyle(.settingsGlass)
                 .controlSize(.small)
             } else {
-                Button("Enable & Open") {
+                Button("Turn On & Open") {
                     enableAndOpen(on: displayID)
                 }
                 .buttonStyle(.settingsGlass)

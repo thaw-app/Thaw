@@ -50,9 +50,9 @@ enum HiddenItemsPresentation: CaseIterable, Identifiable {
 
     var localized: LocalizedStringKey {
         switch self {
-        case .onClick: "On click"
-        case .thawBar: "\(Constants.displayName) Bar"
-        case .alwaysShown: "Always shown"
+        case .onClick: "In the menu bar"
+        case .thawBar: "In the \(Constants.displayName) Bar"
+        case .alwaysShown: "Always in the menu bar"
         }
     }
 
