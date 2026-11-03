@@ -44,7 +44,8 @@ struct ThawBarSettingsPane: View {
                     gridColumns: gridColumnsBindingValue,
                     useThawBar: useThawBarValue,
                     displayID: displayIDValue,
-                    itemSpacingOffset: itemSpacingOffsetValue
+                    itemSpacingOffset: itemSpacingOffsetValue,
+                    itemScale: itemScaleValue
                 )
             }
 
@@ -84,7 +85,7 @@ struct ThawBarSettingsPane: View {
     // MARK: - Editing context
 
     /// Either a specific display's configuration, or the new-display template.
-    private enum EditingContext: Hashable {
+    enum EditingContext: Hashable {
         case display(String)
         case template
     }
@@ -200,6 +201,14 @@ struct ThawBarSettingsPane: View {
         }
     }
 
+    /// The Thaw Bar item size saved for the context being previewed.
+    private var itemScaleValue: Double {
+        switch editingContext {
+        case let .display(uuid): displaySettings.configuration(forUUID: uuid).thawBarItemScale
+        case .template: displaySettings.globalConfiguration.thawBarItemScale
+        }
+    }
+
     private func configurationControls(for context: EditingContext) -> some View {
         ThawSection {
             Text("Behavior")
@@ -210,102 +219,8 @@ struct ThawBarSettingsPane: View {
                 location: locationBinding(for: context),
                 layout: layoutBinding(for: context),
                 gridColumns: gridColumnsBinding(for: context),
+                itemScale: itemScaleBinding(for: context),
                 context: context == .template ? .globalTemplate : .display
-            )
-        }
-    }
-
-    private func useThawBarBinding(for context: EditingContext) -> Binding<Bool> {
-        switch context {
-        case let .display(uuid):
-            return Binding(
-                get: { displaySettings.configuration(forUUID: uuid).useThawBar },
-                set: { newValue in
-                    displaySettings.updateConfiguration(forDisplayUUID: uuid) { $0.withUseThawBar(newValue) }
-                }
-            )
-        case .template:
-            return Binding(
-                get: { displaySettings.globalConfiguration.useThawBar },
-                set: { newValue in
-                    displaySettings.globalConfiguration = displaySettings.globalConfiguration.withUseThawBar(newValue)
-                }
-            )
-        }
-    }
-
-    private func locationBinding(for context: EditingContext) -> Binding<ThawBarLocation> {
-        switch context {
-        case let .display(uuid):
-            return Binding(
-                get: { displaySettings.configuration(forUUID: uuid).thawBarLocation },
-                set: { newValue in
-                    displaySettings.updateConfiguration(forDisplayUUID: uuid) { $0.withThawBarLocation(newValue) }
-                }
-            )
-        case .template:
-            return Binding(
-                get: { displaySettings.globalConfiguration.thawBarLocation },
-                set: { newValue in
-                    displaySettings.globalConfiguration = displaySettings.globalConfiguration.withThawBarLocation(newValue)
-                }
-            )
-        }
-    }
-
-    private func layoutBinding(for context: EditingContext) -> Binding<ThawBarLayout> {
-        switch context {
-        case let .display(uuid):
-            return Binding(
-                get: { displaySettings.configuration(forUUID: uuid).thawBarLayout },
-                set: { newValue in
-                    displaySettings.updateConfiguration(forDisplayUUID: uuid) { $0.withThawBarLayout(newValue) }
-                }
-            )
-        case .template:
-            return Binding(
-                get: { displaySettings.globalConfiguration.thawBarLayout },
-                set: { newValue in
-                    displaySettings.globalConfiguration = displaySettings.globalConfiguration.withThawBarLayout(newValue)
-                }
-            )
-        }
-    }
-
-    private func gridColumnsBinding(for context: EditingContext) -> Binding<Int> {
-        switch context {
-        case let .display(uuid):
-            return Binding(
-                get: { displaySettings.configuration(forUUID: uuid).gridColumns },
-                set: { newValue in
-                    displaySettings.updateConfiguration(forDisplayUUID: uuid) { $0.withGridColumns(newValue) }
-                }
-            )
-        case .template:
-            return Binding(
-                get: { displaySettings.globalConfiguration.gridColumns },
-                set: { newValue in
-                    displaySettings.globalConfiguration = displaySettings.globalConfiguration.withGridColumns(newValue)
-                }
-            )
-        }
-    }
-
-    private func alwaysShowHiddenItemsBinding(for context: EditingContext) -> Binding<Bool> {
-        switch context {
-        case let .display(uuid):
-            return Binding(
-                get: { displaySettings.configuration(forUUID: uuid).alwaysShowHiddenItems },
-                set: { newValue in
-                    displaySettings.updateConfiguration(forDisplayUUID: uuid) { $0.withAlwaysShowHiddenItems(newValue) }
-                }
-            )
-        case .template:
-            return Binding(
-                get: { displaySettings.globalConfiguration.alwaysShowHiddenItems },
-                set: { newValue in
-                    displaySettings.globalConfiguration = displaySettings.globalConfiguration.withAlwaysShowHiddenItems(newValue)
-                }
             )
         }
     }

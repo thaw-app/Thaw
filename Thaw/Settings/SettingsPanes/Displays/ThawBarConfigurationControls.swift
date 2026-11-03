@@ -21,6 +21,7 @@ struct ThawBarConfigurationControls<ExtraControls: View>: View {
     @Binding var location: ThawBarLocation
     @Binding var layout: ThawBarLayout
     @Binding var gridColumns: Int
+    @Binding var itemScale: Double
 
     private let context: Context
     private let extraControls: () -> ExtraControls
@@ -31,6 +32,7 @@ struct ThawBarConfigurationControls<ExtraControls: View>: View {
         location: Binding<ThawBarLocation>,
         layout: Binding<ThawBarLayout>,
         gridColumns: Binding<Int>,
+        itemScale: Binding<Double>,
         context: Context,
         @ViewBuilder extraControls: @escaping () -> ExtraControls
     ) {
@@ -39,13 +41,14 @@ struct ThawBarConfigurationControls<ExtraControls: View>: View {
         _location = location
         _layout = layout
         _gridColumns = gridColumns
+        _itemScale = itemScale
         self.context = context
         self.extraControls = extraControls
     }
 
     var body: some View {
         ThawPillPicker(
-            "Hidden items",
+            "Show hidden items",
             selection: presentation,
             options: HiddenItemsPresentation.allCases.map {
                 ThawPillPicker.Option($0, title: $0.localized, systemImage: $0.systemImage)
@@ -80,6 +83,8 @@ struct ThawBarConfigurationControls<ExtraControls: View>: View {
                 }
                 .annotation("Maximum number of items per row in the grid arrangement.")
             }
+
+            ThawBarItemSizeRow(scale: $itemScale)
         }
     }
 
@@ -101,15 +106,15 @@ struct ThawBarConfigurationControls<ExtraControls: View>: View {
     private var presentationAnnotation: some View {
         switch (presentation.wrappedValue, context) {
         case (.onClick, .display):
-            Text("Hidden items appear in the menu bar when you reveal them on this display.")
+            Text("Hidden items appear in the menu bar when you reveal them on this display. The \(Constants.displayName) Bar is off.")
         case (.onClick, .globalTemplate):
-            Text("Hidden items appear in the menu bar when you reveal them.")
+            Text("Hidden items appear in the menu bar when you reveal them. The \(Constants.displayName) Bar is off.")
         case (.thawBar, _):
-            Text("Hidden items appear in a separate bar below the menu bar.")
+            Text("The \(Constants.displayName) Bar is on. Hidden items appear in it, below the menu bar, when you reveal them.")
         case (.alwaysShown, .display):
-            Text("Hidden items stay in the menu bar on this display.")
+            Text("Hidden items stay in the menu bar on this display. The \(Constants.displayName) Bar is off.")
         case (.alwaysShown, .globalTemplate):
-            Text("Hidden items stay in the menu bar.")
+            Text("Hidden items stay in the menu bar. The \(Constants.displayName) Bar is off.")
         }
     }
 
@@ -149,6 +154,7 @@ extension ThawBarConfigurationControls where ExtraControls == EmptyView {
         location: Binding<ThawBarLocation>,
         layout: Binding<ThawBarLayout>,
         gridColumns: Binding<Int>,
+        itemScale: Binding<Double>,
         context: Context
     ) {
         self.init(
@@ -157,6 +163,7 @@ extension ThawBarConfigurationControls where ExtraControls == EmptyView {
             location: location,
             layout: layout,
             gridColumns: gridColumns,
+            itemScale: itemScale,
             context: context
         ) {
             EmptyView()

@@ -17,12 +17,12 @@ nonisolated extension SearchIndex {
     static let displayEntries: [SearchEntry] = [
         SearchEntry(
             id: "displays.hiddenItemsPresentation",
-            title: "Hidden items",
-            descriptionText: String(localized: "Choose whether hidden items appear on click, in the \(Constants.displayName) Bar below the menu bar, or stay in the menu bar."),
+            title: "Show hidden items",
+            descriptionText: String(localized: "Choose whether hidden items appear in the menu bar, in the \(Constants.displayName) Bar below it, or stay in the menu bar. Picking the \(Constants.displayName) Bar turns it on."),
             pane: .thawBar,
             keywords: [
                 "ice bar", "thaw bar", "use thaw bar", "separate bar", "hidden",
-                "always show hidden items", "always shown", "always", "show", "visible", "on click",
+                "always show hidden items", "always shown", "always", "show", "visible", "on click", "turn off thaw bar",
             ],
             property: nil
         ),
@@ -46,6 +46,17 @@ nonisolated extension SearchIndex {
             sectionKey: nil,
             sectionText: nil,
             keywords: ["ice bar", "thaw bar", "layout", "arrangement", "horizontal", "vertical", "grid", "columns"],
+            property: nil
+        ),
+        SearchEntry(
+            id: "displays.thawBarItemSize",
+            titleKey: "Item size",
+            titleText: "\(Constants.displayName) Bar item size",
+            descriptionText: String(localized: "How large items are in the \(Constants.displayName) Bar. At 100% they match the menu bar; smaller sizes fit more items in a row."),
+            pane: .thawBar,
+            sectionKey: nil,
+            sectionText: nil,
+            keywords: ["ice bar", "thaw bar", "item size", "icon size", "scale", "smaller", "compact", "zoom"],
             property: nil
         ),
         SearchEntry(

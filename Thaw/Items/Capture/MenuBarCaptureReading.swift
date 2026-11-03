@@ -89,32 +89,46 @@ nonisolated struct LiveMenuBarCaptureReader: MenuBarCaptureReading {
         // The catalog's serial actor keeps bounded synchronous AX reads off
         // MainActor, including under Approachable Concurrency.
         let snapshot = await AXGeometryCatalog.snapshot(hostProcessIdentifiers: uniqueHostPIDs)
-        guard !snapshot.isEmpty else { return ([:], []) }
+        guard !snapshot.isEmpty else {
+            MenuBarItemImageCache.diagLog.debug("CaptureOwnershipTrace: no owner geometry read for \(candidates.count) item(s)")
+            return ([:], [])
+        }
         var bounds = [String: CGRect]()
         var ambiguous = Set<String>()
         for candidate in candidates {
-            switch AXGeometryCatalog.match(
+            let match = AXGeometryCatalog.match(
                 ownerPID: candidate.item.sourcePID ?? candidate.item.ownerPID,
                 identityTitle: candidate.item.tag.title,
                 bounds: candidate.bounds,
                 in: snapshot
-            ) {
+            )
+            switch match {
             case let .frame(liveFrame):
                 bounds[candidate.item.uniqueIdentifier] = liveFrame
             case .ambiguous:
                 ambiguous.insert(candidate.item.uniqueIdentifier)
-                let details = AXGeometryCatalog.diagnosticSummary(
-                    ownerPID: candidate.item.sourcePID ?? candidate.item.ownerPID,
-                    identityTitle: candidate.item.tag.title,
-                    bounds: candidate.bounds,
-                    in: snapshot
-                )
-                MenuBarItemImageCache.diagLog.debug("CaptureOwnershipTrace: \(candidate.item.uniqueIdentifier) \(details)")
+                MenuBarItemImageCache.diagLog.debug(Self.ownershipTrace(of: candidate, match: match, in: snapshot))
             case .unavailable:
-                break
+                MenuBarItemImageCache.diagLog.debug(Self.ownershipTrace(of: candidate, match: match, in: snapshot))
             }
         }
         return (bounds, ambiguous)
+    }
+
+    /// Says why the catalog could not vouch for a candidate's frame.
+    static func ownershipTrace(
+        of candidate: (item: MenuBarItem, bounds: CGRect),
+        match: AXGeometryCatalog.Match,
+        in snapshot: [AXGeometryCatalog.Entry]
+    ) -> String {
+        let details = AXGeometryCatalog.diagnosticSummary(
+            ownerPID: candidate.item.sourcePID ?? candidate.item.ownerPID,
+            identityTitle: candidate.item.tag.title,
+            bounds: candidate.bounds,
+            in: snapshot
+        )
+        return "CaptureOwnershipTrace: \(match == .ambiguous ? "ambiguous" : "unavailable") " +
+            "\(candidate.item.uniqueIdentifier) at \(candidate.bounds) \(details)"
     }
 }
 

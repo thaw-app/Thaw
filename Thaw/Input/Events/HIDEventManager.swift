@@ -223,7 +223,7 @@ final class HIDEventManager {
     /// Watches every left and right press, wherever it lands. Purely an
     /// observer, the press always continues on to whoever it was aimed at.
     @ObservationIgnored
-    private(set) lazy var mouseDownMonitor = EventMonitor.universal(
+    private(set) lazy var mouseDownMonitor = EventMonitor.universalOncePerPress(
         for: [.leftMouseDown, .rightMouseDown]
     ) { [weak self] event in
         self?.receiveMouseDown(event)

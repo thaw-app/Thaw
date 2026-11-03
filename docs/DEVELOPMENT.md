@@ -51,7 +51,7 @@ xcodebuild test -project Thaw.xcodeproj -scheme Thaw -destination 'platform=macO
 The app tests don't run a package's own test targets. To test a package you changed, name its folder:
 
 ```sh
-swift test --package-path ThawConcurrency
+swift test --package-path packages/ThawConcurrency
 ```
 
 ## Project documentation

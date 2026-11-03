@@ -1366,7 +1366,7 @@ extension ControlItem {
     }
 
     private func toggleOwnSection(menuBarManager: MenuBarManager) {
-        if let section = menuBarManager.section(withName: sectionName), section.isEnabled {
+        if let section = menuBarManager.section(withName: sectionName), section.isEnabled, !keepsHoverRevealOpen(section) {
             section.toggle()
         }
     }

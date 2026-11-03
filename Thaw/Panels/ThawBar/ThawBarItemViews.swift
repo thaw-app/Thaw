@@ -21,7 +21,8 @@ struct ThawBarItemView: View {
     let item: MenuBarItem
     let section: MenuBarSection.Name
     let displayID: CGDirectDisplayID
-    let maxHeight: CGFloat?
+    /// The menu bar height glyphs fit to, and the Thaw Bar's item size.
+    let sizing: ThawBarItemSize
     let tooltipDelay: TimeInterval
     let displayImage: MenuBarItemDisplayImage?
     /// Whether the keyboard has highlighted this item.
@@ -93,8 +94,9 @@ struct ThawBarItemView: View {
             // cropped from can be the opposite brightness of this one.
             MenuBarItemGlyph(
                 image: image,
-                fittingHeight: maxHeight,
-                reinksCaptures: true
+                fittingHeight: sizing.fittingHeight,
+                reinksCaptures: true,
+                drawnSize: sizing.glyphSize(for: image)
             )
             .contentShape(Rectangle())
             .background {

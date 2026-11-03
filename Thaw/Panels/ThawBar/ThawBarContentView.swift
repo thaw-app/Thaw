@@ -93,7 +93,7 @@ struct ThawBarContentView: View {
 
     private var itemSpacing: CGFloat {
         let offset = CGFloat(displaySettings.configuration(for: screen.displayID).itemSpacingOffset).rounded()
-        return max(0, ThawSpacing.base + offset)
+        return itemSizing.spacing(max(0, ThawSpacing.base + offset))
     }
 
     private var horizontalPadding: CGFloat {
@@ -104,7 +104,7 @@ struct ThawBarContentView: View {
         screen.hasNotch && thawBarAppearance.hasRoundedShape ? 2 : 0
     }
 
-    private var contentHeight: CGFloat {
+    var contentHeight: CGFloat {
         let menuBarHeight = screen.getMenuBarHeightEstimate()
         if configuration.shapeKind != .noShape, configuration.isInset, screen.hasNotch {
             return menuBarHeight - appState.appearanceManager.menuBarInsetAmount * 2
@@ -112,7 +112,7 @@ struct ThawBarContentView: View {
         return menuBarHeight
     }
 
-    private var itemMaxHeight: CGFloat? {
+    var itemMaxHeight: CGFloat? {
         // Preserve native icon height regardless of shape insets; the clip trims overflow.
         let menuBarHeight = screen.getMenuBarHeightEstimate()
         return menuBarHeight > 0 ? menuBarHeight : nil
@@ -128,7 +128,7 @@ struct ThawBarContentView: View {
         return (0 ..< gridColumns).map { col in
             rows.compactMap { row in
                 guard let item = row.dropFirst(col).first, let image = images[item.tag] else { return nil }
-                return image.targetSize(fittingHeight: maxHeight).width
+                return itemSizing.glyphSize(for: image).width
             }.max() ?? 0
         }
     }
@@ -146,10 +146,10 @@ struct ThawBarContentView: View {
         case .horizontal:
             return contentHeight
         case .vertical:
-            return CGFloat(items.count) * contentHeight
+            return CGFloat(items.count) * itemRowHeight
         case .grid:
             let rowCount = Int(ceil(Double(items.count) / Double(gridColumns)))
-            return CGFloat(rowCount) * contentHeight
+            return CGFloat(rowCount) * itemRowHeight
         }
     }
 
@@ -164,7 +164,7 @@ struct ThawBarContentView: View {
             item: item,
             section: section,
             displayID: screen.displayID,
-            maxHeight: itemMaxHeight,
+            sizing: itemSizing,
             tooltipDelay: appState.settings.advanced.tooltipDelay,
             displayImage: image,
             isKeyboardFocused: keyboardFocus.index == index,
@@ -256,7 +256,7 @@ struct ThawBarContentView: View {
             backingScaleFactor=\(Double(screen.backingScaleFactor)) \
             hasNotch=\(screen.hasNotch) \
             contentHeight=\(Double(contentHeight)) \
-            itemMaxHeight=\(Double(itemMaxHeight ?? 0)) \
+            itemMaxHeight=\(Double(itemMaxHeight ?? 0)) itemScale=\(Double(itemSizing.scale)) \
             menuBarHeight=\(Double(screen.getMenuBarHeightEstimate())) \
             layout=\(String(describing: layout)) \
             items=\(items.count) \
@@ -430,11 +430,11 @@ struct ThawBarContentView: View {
                                     if rows.count > 1, rowItems.count < gridColumns {
                                         ForEach(rowItems.count ..< gridColumns, id: \.self) { colIndex in
                                             Color.clear
-                                                .frame(width: columnWidths[colIndex], height: contentHeight)
+                                                .frame(width: columnWidths[colIndex], height: itemRowHeight)
                                         }
                                     }
                                 }
-                                .frame(height: contentHeight)
+                                .frame(height: itemRowHeight)
                             }
                         }
                     }

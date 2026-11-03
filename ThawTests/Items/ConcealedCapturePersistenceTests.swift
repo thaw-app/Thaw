@@ -72,4 +72,20 @@ struct ConcealedCapturePersistenceTests {
         #expect(!saves)
         #expect(comparisons == 0)
     }
+
+    @Test("An item hidden now keeps its saved picture for the stable age, though it was saved while visible")
+    func hiddenNowAgesAsStable() {
+        let loaded = ConcealedCapturePersistence.loadClassifications(
+            [hidden.tagIdentifier: .occasional, visible.tagIdentifier: .occasional],
+            hiddenIdentifiers: [hidden.tagIdentifier]
+        )
+        #expect(loaded[hidden.tagIdentifier] == .stable)
+        #expect(loaded[visible.tagIdentifier] == .occasional)
+    }
+
+    @Test("An item hidden now with no volatility record still ages as stable")
+    func hiddenNowWithoutRecordAgesAsStable() {
+        let loaded = ConcealedCapturePersistence.loadClassifications([:], hiddenIdentifiers: [hidden.tagIdentifier])
+        #expect(loaded[hidden.tagIdentifier] == .stable)
+    }
 }

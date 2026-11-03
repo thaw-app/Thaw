@@ -121,8 +121,9 @@ extension MenuBarItemImageCache {
     /// current current (identifier → live item) matched in this poll.
     ///
     /// An identifier becomes settled when it already has a previous
-    /// sighting and its bounds are stable against the current sighting; once
-    /// settled it keeps its claim and is not re-measured. An identifier that is
+    /// sighting and its bounds are stable against the current sighting. A
+    /// settled identifier whose current sighting moved loses its settlement
+    /// and records that sighting as its new previous. An identifier that is
     /// present this poll but not yet settled (or was settled earlier but is
     /// missing this poll) records the current sighting as its new previous,
     /// except a settled identifier that goes missing, which keeps its settled
@@ -145,9 +146,13 @@ extension MenuBarItemImageCache {
         var nextPrevious = previous
 
         for (identifier, liveItem) in current {
-            // A settled member keeps its claim; it is not re-measured against
-            // a later sighting even if that sighting moved.
-            if nextSettled[identifier] != nil {
+            // A settled member that moves starts over: with Native hiding, an
+            // app reports where it sat while hidden until macOS shows it again.
+            if let settledItem = nextSettled[identifier] {
+                if !hasStable(settledItem.bounds, liveItem.bounds) {
+                    nextSettled[identifier] = nil
+                    nextPrevious[identifier] = liveItem
+                }
                 continue
             }
             if let prior = nextPrevious[identifier],

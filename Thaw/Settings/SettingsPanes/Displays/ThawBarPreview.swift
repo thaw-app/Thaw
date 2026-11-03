@@ -25,6 +25,8 @@ struct ThawBarPreview: View {
     let displayID: CGDirectDisplayID?
     /// The menu-bar item spacing offset saved for the display being edited.
     let itemSpacingOffset: Double
+    /// The Thaw Bar item size saved for the display being edited.
+    let itemScale: Double
 
     private let maxBarHeight: CGFloat = 180
 
@@ -53,7 +55,12 @@ struct ThawBarPreview: View {
     /// The real panel's item spacing: the base gap plus the clamped offset.
     private var itemSpacing: CGFloat {
         let offset = CGFloat(itemSpacingOffset).rounded()
-        return max(0, ThawSpacing.base + offset)
+        return itemSizing.spacing(max(0, ThawSpacing.base + offset))
+    }
+
+    /// Scales the tiles the way the real panel scales its glyphs.
+    private var itemSizing: ThawBarItemSize {
+        ThawBarItemSize(fittingHeight: nil, scale: itemScale, displayScale: previewScreen?.backingScaleFactor ?? 2)
     }
 
     /// The real panel's vertical padding: a sliver on notched screens so a
@@ -166,6 +173,7 @@ struct ThawBarPreview: View {
         .thawShadow(.raised, isVisible: appearance.hasShadow || appearance.backgroundHasShadow)
         .thawAnimation(ThawMotion.settle, value: layout)
         .thawAnimation(ThawMotion.settle, value: gridColumns)
+        .thawAnimation(ThawMotion.settle, value: itemScale)
         .thawAnimation(ThawMotion.settle, value: appearance.hasRoundedShape)
         .thawAnimation(ThawMotion.settle, value: appearance.hasBorder)
     }
@@ -222,16 +230,19 @@ struct ThawBarPreview: View {
     @ViewBuilder
     private func icon(for image: NSImage?) -> some View {
         if let image {
-            // Preserve the editor tile's size and colors by drawing pixel for pixel, without resizing.
+            // Preserve the editor tile's colors and, at 100%, its exact pixels.
+            let size = itemSizing.scaledGlyphSize(image.size)
             Image(nsImage: image)
                 .renderingMode(.original)
                 .interpolation(.high)
                 .antialiased(true)
+                .resizable()
+                .frame(width: size.width, height: size.height)
         } else {
             Image(systemName: "app.dashed")
                 .resizable()
                 .scaledToFit()
-                .frame(height: itemMaxHeight ?? fallbackMenuBarHeight)
+                .frame(height: itemSizing.rowHeight(fitting: itemMaxHeight ?? fallbackMenuBarHeight))
                 .foregroundStyle(.secondary)
         }
     }

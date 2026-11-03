@@ -408,7 +408,7 @@ extension MenuBarItemManager {
             opaqueVisibleKeys: opaqueKeys,
             liveItems: items,
             permit: permit
-        )
+        ) + StrandedAlwaysHiddenDivider.reseat(controlItems.alwaysHidden, rightOf: alwaysHiddenItems, leftOf: hiddenItems + [controlItems.hidden], liveItems: items, permit: permit)
         trace?.finish(result: String(describing: reordered))
         guard !reordered.isEmpty else { return false }
 

@@ -34,7 +34,7 @@ nonisolated extension SearchIndex {
         SearchEntry(
             id: "general.showOnHover",
             title: "Show on hover",
-            descriptionText: String(localized: "Hover over an empty area of the menu bar to show hidden menu bar items."),
+            descriptionText: String(localized: "Hover over an empty area of the menu bar or the \(Constants.displayName) icon to show hidden menu bar items."),
             pane: .visibility,
             section: "Reveal hidden items",
             keywords: ["hover", "show", "hidden", "mouse"],

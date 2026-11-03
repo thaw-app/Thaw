@@ -24,10 +24,33 @@ the items under New and Fixed.
 
 ## [Unreleased]
 
+## [3.0.0-beta.6] - 2026-11-02
+
+**macOS 27 only · Build 123**
+
+Fixes for beta 5, two small additions and an alpha setting for the Thaw Bar.
+
+### New
+
+- **Show on hover works on Thaw's icon too.** Rest the pointer on Thaw's icon and your hidden items appear, as they do over an empty part of the menu bar. A click on the icon right after they appear keeps them open. Suggested by @daniilsys in [#1431](https://github.com/thaw-app/Thaw/issues/1431).
+- **Choose how large items are in the Thaw Bar** (alpha). Settings › Thaw Bar has an Item size slider for each display, from 60% to 100% of the items' size in the menu bar. Smaller sizes fit more items in a row. The menu bar, Layout and search keep their sizes, and 100%, the default, looks as before. Requested by @mannycastaneda in [#1388](https://github.com/thaw-app/Thaw/issues/1388).
+- **A list of every file Thaw keeps.** [Where Thaw keeps its files](https://github.com/thaw-app/Thaw/blob/development/docs/FILE_LOCATIONS.md) says what each one holds and which you can copy to another Mac or keep in a dotfiles repo. Requested by @pikeas in [#1363](https://github.com/thaw-app/Thaw/issues/1363).
+
 ### Changed
 
+- **Turning the Thaw Bar on or off is clearer.** Settings › Thaw Bar asks where to show hidden items: In the menu bar, In the Thaw Bar, or Always in the menu bar. The text below it says whether the Thaw Bar is on, and the preview's button reads Turn On & Open.
 - **Stable and beta updates reach Macs in stages.** Thaw offers a new version to a few Macs at a time, so a bad update can be stopped before it reaches everyone. Your Mac can get it up to two days after it comes out, and checking for updates yourself finds it right away.
-- **Pull requests get a security review from Strix,** an AI security testing tool, when they open. It adds to the checks we already run, and maintainers decide what to fix. The [security assurance case](docs/ASSURANCE_CASE.md#7-evidence-pointers) lists it with the rest.
+- **Pull requests get a security review from Strix,** an AI security testing tool, when they open. It adds to the checks we already run, and maintainers decide what to fix. The [security assurance case](https://github.com/thaw-app/Thaw/blob/development/docs/ASSURANCE_CASE.md#7-evidence-pointers) lists it with the rest.
+
+### Fixed
+
+- **One click on empty menu bar space opens or closes the Thaw Bar once.** A single click could open the bar and close it straight away, or close it and open it again, so the click seemed to do nothing. Double-clicking for Always Hidden items works as before. Reported by @RonenMars in [#1440](https://github.com/thaw-app/Thaw/issues/1440).
+- **Pictures of hidden items are no longer cut off.** Thaw took the picture while revealed icons could still be sliding into place. It now waits until they stop moving, for up to a second more.
+- **Capture Hidden Items counts only what it captured.** The count included older pictures kept after a failed try. It now counts new pictures only, leaves out items with nothing to capture, and names the rest as having no new picture.
+- **Capture Hidden Items gets pictures of apps hidden with Native hiding.** Thaw measured such an icon where it sat while hidden, then turned the picture down because the icon had moved. If an icon moves after Thaw measured it, Thaw now measures it again in its new place. The Thaw Bar and Layout take their pictures the same way and get the fix too.
+- **Hidden items keep their pictures.** Thaw hides Bluetooth, Wi-Fi and Sound by turning off their Control Center modules, so it can't show them again to take a new picture. A picture taken before you hid one was thrown away after 10 minutes, and the item showed a placeholder. Pictures of hidden items now last until Thaw has been closed for a week.
+- **Hidden icons no longer shuffle each time you show them with Native hiding.** macOS puts the apps back where it remembers them, and Thaw tried to move each one, which macOS ignored. Thaw now leaves them where macOS puts them. It also stops retrying any icon macOS refused to move until something changes, such as your layout or display.
+- **Visible icons, Thaw's own included, no longer disappear after you put something in Hidden.** The Always Hidden divider could end up among your visible icons, and everything left of it was hidden. Thaw now moves the divider back left of your Hidden items. Reported by @DoNotResuscitate in [#1329](https://github.com/thaw-app/Thaw/issues/1329).
 
 ## [3.0.0-beta.5] - 2026-11-01
 

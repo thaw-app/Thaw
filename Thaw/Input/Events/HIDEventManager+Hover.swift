@@ -162,6 +162,7 @@ extension HIDEventManager {
             return
         }
         releaseHoverPauseIfPointerLeft(appState: appState, screen: screen)
+        releaseThawIconHoverLatchIfPointerLeft(appState: appState)
 
         guard Self.shouldProcessHover(
             showOnHover: configuration.showOnHover,
@@ -188,8 +189,8 @@ extension HIDEventManager {
         armHoverShow(hiddenSection, appState: appState, screen: screen)
     }
 
-    /// Arms a reveal while the pointer rests on empty menu bar space that no
-    /// foreign widget has claimed, and cancels one otherwise.
+    /// Arms a reveal while the pointer rests on empty menu bar space or Thaw's
+    /// icon, and no foreign widget has claimed the spot; cancels one otherwise.
     private func armHoverShow(
         _ hiddenSection: MenuBarSection,
         appState: AppState,
@@ -208,10 +209,7 @@ extension HIDEventManager {
             return
         }
         guard
-            isMouseInsideEmptyMenuBarSpace(
-                appState: appState,
-                screen: screen
-            ),
+            isMouseOnHoverRevealSpot(appState: appState, screen: screen),
             !isCursorOverForeignWidgetUIElement()
         else {
             return
@@ -222,29 +220,29 @@ extension HIDEventManager {
                 Self.diagLog.debug("hover show: skipped, ⌘ is down or an item is dragged")
                 return
             }
-            // Recheck empty space and enabled state, skipped while the reveal was pending.
+            // Recheck the spot and enabled state, skipped while the reveal was pending.
             guard
                 self.isEnabled,
-                self.isMouseInsideEmptyMenuBarSpace(
-                    appState: appState,
-                    screen: screen
-                )
+                self.isMouseOnHoverRevealSpot(appState: appState, screen: screen)
             else {
-                Self.diagLog.debug("hover show: skipped, the pointer is no longer over empty menu bar space")
+                Self.diagLog.debug("hover show: skipped, the pointer is no longer over empty menu bar space or the Thaw icon")
                 return
             }
             // A fresh read after the cached arm keeps hung-widget delays off the event taps.
+            // A press on the Thaw icon during the read latches it; revealing then would race the click.
             guard await !(self.isCursorOverForeignWidgetUIElementFresh()),
                   !Task.isCancelled,
-                  self.isEnabled
+                  self.isEnabled,
+                  self.isMouseOnHoverRevealSpot(appState: appState, screen: screen)
             else {
-                Self.diagLog.debug("hover show: skipped, the pointer is over another app's widget")
+                Self.diagLog.debug("hover show: skipped, the pointer is over another app's widget or moved")
                 return
             }
             self.cancelSmartRehide()
             Self.diagLog.debug("hover show: revealing")
             hiddenSection.show()
             self.isHoverReveal = true
+            Self.thawIconHoverGate.noteHoverReveal(at: .now)
         }
     }
 

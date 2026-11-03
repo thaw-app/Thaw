@@ -27,12 +27,8 @@ import WidgetKit
 /// AppState; the publisher's lifetime is the app's.
 @MainActor
 final class ControlStatePublisher {
-    // The suite name, defaults key, JSON field names and control kinds below
-    // are duplicated in ThawControls/ControlCommandNames.swift and must stay in
-    // sync. A mismatch on any of them is a silent no-op: the reader finds
-    // nothing and falls back to false, with no error anywhere. That file also
-    // records why the duplication is deliberate rather than shared through
-    // Shared/.
+    // Suite, key and field names are duplicated in ControlCommandNames.swift and control kinds in
+    // ThawControlWidgets.swift (targets/ThawControls). A mismatch fails silently: the reader sees false.
 
     /// The application group both targets are entitled to.
     ///

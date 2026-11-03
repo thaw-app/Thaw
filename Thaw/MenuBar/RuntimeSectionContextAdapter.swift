@@ -362,7 +362,7 @@ extension RuntimeSectionContextAdapter {
     }
 
     func prepareRevealedOrder() {
-        appState?.itemManager.applySavedOrderBeforeReveal(cause: revealAttribution.preRevealCause)
+        appState?.itemManager.prepareReveal(cause: revealAttribution.preRevealCause)
     }
 
     /// The cache pass that publishes the on-screen items also records whether

@@ -17,7 +17,13 @@ func settingsLinkWait(timeout: Duration = .seconds(15), until condition: () -> B
     let clock = ContinuousClock()
     let deadline = clock.now + timeout
     while !condition() {
-        guard clock.now < deadline else { return false }
+        guard clock.now < deadline else {
+            // A main actor stalled past the deadline wakes this ahead of the delivery queued behind it.
+            for _ in 0 ..< 3 {
+                await mainActorQueueDrained()
+            }
+            return condition()
+        }
         try? await Task.sleep(for: .milliseconds(10))
     }
     return true

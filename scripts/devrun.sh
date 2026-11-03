@@ -62,7 +62,7 @@ PID_FILE="$LOG_DIR/app.pid"
 exec 3>&2
 
 printf '%s · %s\nLog: %s\n\n' "$APP_NAME" "$CONFIG" "$LOG"
-export MENU_BAR_MODEL_PATH="$PWD/MenuBarModel"
+export MENU_BAR_MODEL_PATH="$PWD/packages/MenuBarModel"
 
 # The suffixes rename the app, its XPC service and the controls extension.
 BUILD_ARGS=(

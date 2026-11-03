@@ -122,9 +122,8 @@ def main(argv: list[str]) -> int:
     if not sources:
         sys.exit("error: sonar.sources missing from sonar-project.properties")
 
-    # Files under Shared/ are compiled into both the app and the XPC service, so
-    # xccov reports them once per target. Sonar counts each source file once, so
-    # keep the best result per path -- a line covered by either target is covered.
+    # A file compiled into more than one target is reported once per target.
+    # Sonar counts each source file once, so keep the best result per path.
     best: dict[str, dict] = {}
     excluded_files = 0
     for target in report.get("targets", []):

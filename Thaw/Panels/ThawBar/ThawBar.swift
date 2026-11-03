@@ -449,10 +449,10 @@ final class ThawBarPanel: NSPanel {
             )
         }
         guard dismissesOnOutsideClick, outsideClickMonitor == nil else { return }
-        outsideClickMonitor = EventMonitor.startGlobal(for: [.leftMouseDown, .rightMouseDown]) { [weak self] _ in
+        outsideClickMonitor = EventMonitor.startGlobal(for: [.leftMouseDown, .rightMouseDown]) { [weak self] event in
             // Global event monitors deliver on the main run loop; an actor hop would delay dismissal.
             MainActor.assumeIsolated {
-                self?.hideIfClickIsOutside()
+                self?.hideIfClickIsOutside(MousePress(event))
             }
         }
     }
@@ -482,7 +482,7 @@ final class ThawBarPanel: NSPanel {
     }
 
     /// Exclude the Thaw icon from outside-click dismissal because its click toggles the panel.
-    private func hideIfClickIsOutside() {
+    private func hideIfClickIsOutside(_ press: MousePress) {
         // Test AppKit panel and Core Graphics anchor in their own coordinate spaces or the icon never matches.
         if frame.contains(NSEvent.mouseLocation) {
             return
@@ -506,7 +506,7 @@ final class ThawBarPanel: NSPanel {
         if presentation == .folder, appState?.groupFolders.iconContainsPointer() == true {
             return
         }
-        hide()
+        hide(dismissedBy: press)
     }
 
     func hide() {

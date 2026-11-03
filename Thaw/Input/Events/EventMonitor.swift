@@ -228,6 +228,26 @@ extension EventMonitor {
         )
     }
 
+    /// A universal monitor that calls handler once per physical press, which can
+    /// reach a universal monitor twice. A repeat passes through unchanged.
+    @MainActor
+    static func universalOncePerPress(
+        for mask: NSEvent.EventTypeMask,
+        handler: @escaping (NSEvent) -> NSEvent?
+    ) -> EventMonitor {
+        universal(for: mask) { event in
+            let isNew = MousePressLedger.shared.admit(MousePress(event))
+            diagLog.debug(
+                """
+                mouse-down: time=\(event.timestamp) number=\(event.eventNumber) clickCount=\(event.clickCount) \
+                window=\(event.windowNumber) targetPID=\(event.cgEvent?.getIntegerValueField(.eventTargetUnixProcessID) ?? -1) \
+                sourcePID=\(event.cgEvent?.getIntegerValueField(.eventSourceUnixProcessID) ?? -1) repeat=\(!isNew)
+                """
+            )
+            return isNew ? handler(event) : event
+        }
+    }
+
     /// A monitor that only watches, in whichever scope is asked for. Local
     /// events are always forwarded unchanged.
     static func passive(
