@@ -771,7 +771,7 @@
 					"@executable_path/../Frameworks",
 				);
 				MACOSX_DEPLOYMENT_TARGET = 27.0;
-				MARKETING_VERSION = "3.0.0-beta.5.1";
+				MARKETING_VERSION = "3.0.0-beta.6";
 				PRODUCT_BUNDLE_IDENTIFIER = "com.stonerl.Thaw$(THAW_BUNDLE_ID_SUFFIX)";
 				INFOPLIST_KEY_CFBundleDisplayName = "Thaw$(THAW_PRODUCT_NAME_SUFFIX)";
 				PRODUCT_MODULE_NAME = Thaw;
@@ -817,7 +817,7 @@
 					"@executable_path/../Frameworks",
 				);
 				MACOSX_DEPLOYMENT_TARGET = 27.0;
-				MARKETING_VERSION = "3.0.0-beta.5.1";
+				MARKETING_VERSION = "3.0.0-beta.6";
 				PRODUCT_BUNDLE_IDENTIFIER = "com.stonerl.Thaw$(THAW_BUNDLE_ID_SUFFIX)";
 				INFOPLIST_KEY_CFBundleDisplayName = "Thaw$(THAW_PRODUCT_NAME_SUFFIX)";
 				PRODUCT_MODULE_NAME = Thaw;
@@ -850,7 +850,7 @@
 					"@executable_path/../Frameworks",
 				);
 				MACOSX_DEPLOYMENT_TARGET = 27.0;
-				MARKETING_VERSION = "3.0.0-beta.5.1";
+				MARKETING_VERSION = "3.0.0-beta.6";
 				PRODUCT_BUNDLE_IDENTIFIER = "com.stonerl.Thaw$(THAW_BUNDLE_ID_SUFFIX).MenuBarCaptureService";
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SKIP_INSTALL = YES;
@@ -878,7 +878,7 @@
 					"@executable_path/../Frameworks",
 				);
 				MACOSX_DEPLOYMENT_TARGET = 27.0;
-				MARKETING_VERSION = "3.0.0-beta.5.1";
+				MARKETING_VERSION = "3.0.0-beta.6";
 				PRODUCT_BUNDLE_IDENTIFIER = "com.stonerl.Thaw$(THAW_BUNDLE_ID_SUFFIX).MenuBarCaptureService";
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SKIP_INSTALL = YES;
@@ -899,7 +899,7 @@
 				DEVELOPMENT_TEAM = A7CKWF99ML;
 				GENERATE_INFOPLIST_FILE = YES;
 				MACOSX_DEPLOYMENT_TARGET = 27.0;
-				MARKETING_VERSION = "3.0.0-beta.5.1";
+				MARKETING_VERSION = "3.0.0-beta.6";
 				PRODUCT_BUNDLE_IDENTIFIER = com.stonerl.Thaw.tests;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_APPROACHABLE_CONCURRENCY = YES;
@@ -920,7 +920,7 @@
 				DEVELOPMENT_TEAM = A7CKWF99ML;
 				GENERATE_INFOPLIST_FILE = YES;
 				MACOSX_DEPLOYMENT_TARGET = 27.0;
-				MARKETING_VERSION = "3.0.0-beta.5.1";
+				MARKETING_VERSION = "3.0.0-beta.6";
 				PRODUCT_BUNDLE_IDENTIFIER = com.stonerl.Thaw.tests;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_APPROACHABLE_CONCURRENCY = YES;
@@ -951,7 +951,7 @@
 					"@executable_path/../../../../Frameworks",
 				);
 				MACOSX_DEPLOYMENT_TARGET = 27.0;
-				MARKETING_VERSION = "3.0.0-beta.5.1";
+				MARKETING_VERSION = "3.0.0-beta.6";
 				PRODUCT_BUNDLE_IDENTIFIER = "com.stonerl.Thaw$(THAW_BUNDLE_ID_SUFFIX).ThawControls";
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SKIP_INSTALL = YES;
@@ -983,7 +983,7 @@
 					"@executable_path/../../../../Frameworks",
 				);
 				MACOSX_DEPLOYMENT_TARGET = 27.0;
-				MARKETING_VERSION = "3.0.0-beta.5.1";
+				MARKETING_VERSION = "3.0.0-beta.6";
 				PRODUCT_BUNDLE_IDENTIFIER = "com.stonerl.Thaw$(THAW_BUNDLE_ID_SUFFIX).ThawControls";
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SKIP_INSTALL = YES;
