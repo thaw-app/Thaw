@@ -25,8 +25,10 @@ public final class ThawItemSource {
         request?(requestID)
     }
 
+    /// Only a reply to the request in flight counts. Any app can open the module's URL
+    /// scheme, so a reply with no request ID never matches, even before the first request.
     public func receive(_ reply: ThawItemList.Reply) {
-        guard reply.requestID == pendingRequestID else { return }
+        guard let pendingRequestID, reply.requestID == pendingRequestID else { return }
         switch reply.items {
         case let .success(items):
             self.items = items

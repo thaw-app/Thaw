@@ -47,6 +47,17 @@ struct ThawItemSourceTests {
         #expect(source.items.isEmpty)
     }
 
+    @Test("A reply before any request is ignored, even one with no request ID")
+    func ignoresRepliesWithNoRequestPending() {
+        let (source, _) = makeSource()
+
+        source.receive(ThawItemList.Reply(requestID: nil, items: .success([item])))
+        source.receive(ThawItemList.Reply(requestID: nil, items: .failure(.thaw(code: "x", details: "Forged"))))
+
+        #expect(source.items.isEmpty)
+        #expect(source.problem == nil)
+    }
+
     @Test("Thaw's error keeps the last list and says what went wrong")
     func reportsThawErrors() throws {
         let (source, lastRequest) = makeSource()
