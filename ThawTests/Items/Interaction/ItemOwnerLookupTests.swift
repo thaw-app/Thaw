@@ -6,6 +6,7 @@
 //  Licensed under the GNU GPLv3
 
 import CoreGraphics
+import Foundation
 import MenuBarModel
 import Testing
 @testable import Thaw
@@ -53,6 +54,13 @@ struct ItemOwnerLookupTests {
     func noSingleAppLeavesItUnowned() {
         #expect(ItemOwnerLookup.pid(for: item(lulu, owner: 0)) { _ in [] } == 0)
         #expect(ItemOwnerLookup.pid(for: item(lulu, owner: 0)) { _ in [812, 813] } == 0)
+    }
+
+    @Test("The running apps are found by bundle ID, this one among them, and an owned item keeps its owner")
+    func realLookupFindsThisProcess() throws {
+        let bundleID = try #require(Bundle.main.bundleIdentifier)
+        #expect(ItemOwnerLookup.runningPIDs(forBundleID: bundleID).contains(ProcessInfo.processInfo.processIdentifier))
+        #expect(ItemOwnerLookup.pid(for: item(.string(bundleID), owner: 300)) == 300)
     }
 
     @Test("An item whose identity names no bundle ID stays without an owner")
