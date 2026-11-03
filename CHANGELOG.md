@@ -48,6 +48,7 @@ Fixes for beta 5, two small additions and an alpha setting for the Thaw Bar.
 - **Pictures of hidden items are no longer cut off.** Thaw took the picture while revealed icons could still be sliding into place. It now waits until they stop moving, for up to a second more.
 - **Capture Hidden Items counts only what it captured.** The count included older pictures kept after a failed try. It now counts new pictures only, leaves out items with nothing to capture, and names the rest as having no new picture.
 - **Hidden icons no longer shuffle each time you show them with Native hiding.** macOS puts the apps back where it remembers them, and Thaw tried to move each one, which macOS ignored. Thaw now leaves them where macOS puts them. It also stops retrying any icon macOS refused to move until something changes, such as your layout or display.
+- **Visible icons, Thaw's own included, no longer disappear after you put something in Hidden.** The Always Hidden divider could end up among your visible icons, and everything left of it was hidden. Thaw now moves the divider back left of your Hidden items. Reported by @DoNotResuscitate in [#1329](https://github.com/thaw-app/Thaw/issues/1329).
 
 ## [3.0.0-beta.5] - 2026-11-01
 
