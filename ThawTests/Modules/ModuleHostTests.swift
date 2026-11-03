@@ -28,6 +28,8 @@ struct ModuleHostTests {
         var failLaunch = false
         /// Launches that return no process, like an app that quits as it starts.
         var quitsAtLaunch = false
+        /// When set, a launch waits for it to finish, so a test can act while the launch is in flight.
+        var launchGate: AsyncStream<Void>?
         var nextPID: pid_t = 100
         var clock = Date(timeIntervalSinceReferenceDate: 0)
         /// Nil until the host saves a choice, like a fresh install.
@@ -60,6 +62,9 @@ struct ModuleHostTests {
                     launched.append(url)
                     if showWindow {
                         windowsShown.append(url)
+                    }
+                    if let launchGate {
+                        for await _ in launchGate {}
                     }
                     if quitsAtLaunch {
                         return -1
@@ -357,6 +362,26 @@ struct ModuleHostTests {
         #expect(system.terminated == [101])
         #expect(system.savedEnabled == [])
         #expect(host.modules[url]?.state == .stopped)
+    }
+
+    @Test("Switching a module off while it launches ends the launched process and leaves it stopped")
+    func switchingOffDuringLaunch() async {
+        let system = FakeSystem()
+        let url = system.addModule("automation")
+        let (gate, finishLaunch) = AsyncStream<Void>.makeStream()
+        system.launchGate = gate
+        let host = makeHost(system)
+        let launching = Task { await host.start(url) }
+        while system.launched.isEmpty {
+            await Task.yield()
+        }
+
+        await host.setEnabled(false, identifier: "automation")
+        finishLaunch.finish()
+        await launching.value
+
+        #expect(host.modules[url]?.state == .stopped)
+        #expect(system.terminated == [101])
     }
 
     @Test("Start all leaves a running module alone")

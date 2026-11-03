@@ -68,6 +68,8 @@ final class ModuleHost {
     @ObservationIgnored private let environment: Environment
     @ObservationIgnored private let restartPolicy: ModuleRestartPolicy
     @ObservationIgnored private var crashes: [URL: [Date]] = [:]
+    /// Counts stop(_:) calls per module, so a launch that was in flight when its module stopped knows it lost.
+    @ObservationIgnored private var stopCounts: [URL: Int] = [:]
     @ObservationIgnored private var terminationObserver: (any NSObjectProtocol)?
     @ObservationIgnored private var hasLoadedEnabled = false
 
@@ -195,8 +197,16 @@ final class ModuleHost {
             modules[url]?.state = .refused(module.verdict)
             return
         }
+        let stopCount = stopCounts[url, default: 0]
         do {
             let pid = try await environment.launch(url, showingWindow)
+            guard stopCounts[url, default: 0] == stopCount else {
+                Self.diagLog.info("Module at \(url.lastPathComponent) was stopped while it launched")
+                if pid > 0 {
+                    environment.terminate(pid)
+                }
+                return
+            }
             // A module that quits while it starts, such as one dyld can't
             // load, comes back with no process, so it never ran.
             guard pid > 0 else {
@@ -208,12 +218,15 @@ final class ModuleHost {
             modules[url]?.state = .running(pid)
         } catch {
             Self.diagLog.error("Module at \(url.path) failed to launch: \(error)")
-            modules[url]?.state = .launchFailed
+            if stopCounts[url, default: 0] == stopCount {
+                modules[url]?.state = .launchFailed
+            }
         }
     }
 
     func stop(_ url: URL) {
         guard let state = modules[url]?.state else { return }
+        stopCounts[url, default: 0] += 1
         modules[url]?.state = .stopped
         if case let .running(pid) = state {
             Self.diagLog.info("Stopping module at \(url.lastPathComponent), pid \(pid)")
