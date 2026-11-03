@@ -88,8 +88,9 @@ nonisolated enum ModuleDefaults {
     }
 
     /// Each module's check for work Thaw had before it became a module: scripts
-    /// for Scripts, saved triggers for Triggers, the widget icon in
-    /// the menu bar for Widgets. Profile files are read only when asked.
+    /// for Scripts, saved app triggers or items shown when their icon changes
+    /// for Triggers, the widget icon in the menu bar for Widgets. Profile files
+    /// are read only when asked.
     static func priorWorkInThawSettings(profileFiles: @escaping () -> [Data]) -> [String: () -> Bool] {
         [
             ModuleIdentifier.scripts.rawValue: {
@@ -98,7 +99,10 @@ nonisolated enum ModuleDefaults {
                     profileFiles: profileFiles()
                 )
             },
-            ModuleIdentifier.triggers.rawValue: { Defaults.data(forKey: .appRunningTriggers) != nil },
+            ModuleIdentifier.triggers.rawValue: {
+                Defaults.data(forKey: .appRunningTriggers) != nil
+                    || !(Defaults.stringArray(forKey: .menuBarItemAlertReveals) ?? []).isEmpty
+            },
             ModuleIdentifier.widgets.rawValue: { Defaults.bool(forKey: .widgetIconPublished) },
         ]
     }

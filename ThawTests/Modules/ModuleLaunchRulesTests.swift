@@ -216,6 +216,18 @@ struct ModuleStartDefaultsTests {
         }
     }
 
+    @Test("Saved icon-change reveals alone turn Triggers on, and an empty list doesn't")
+    func iconChangeRevealsTurnTriggersOn() throws {
+        try ScratchDefaults.withStore(named: "ModuleStartDefaultsTests.iconChange") { store in
+            let checks = ModuleDefaults.priorWorkInThawSettings { [] }
+            store.set([String](), forKey: "MenuBarItemAlertReveals")
+            #expect(checks["triggers"]?() == false)
+
+            store.set(["com.example:Item-0"], forKey: "MenuBarItemAlertReveals")
+            #expect(checks["triggers"]?() == true)
+        }
+    }
+
     @Test("Each module starts on only when Thaw had its own kind of work before")
     func startsOnForPriorWork() {
         var asked: [String] = []
