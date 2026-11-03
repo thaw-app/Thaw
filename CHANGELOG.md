@@ -24,7 +24,7 @@ the items under New and Fixed.
 
 ## [Unreleased]
 
-## [3.0.0-beta.6] - 2026-11-02
+## [3.0.0-beta.6] - 2026-11-03
 
 **macOS 27 only · Build 123**
 
