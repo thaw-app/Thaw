@@ -137,13 +137,28 @@ extension MenuBarItemManager {
         let drawn = await MenuBarAXQueries.waitForDrawnStatusItem(pid: resolvedPID(for: item), timeout: Constants.MenuBarTuning.thawBarRevealAXWait)
         let barDisplay = Bridging.getActiveMenuBarDisplayID() ?? CGMainDisplayID()
         guard drawn || MenuBarItemImageCache.isMenuBarOnScreen(displayID: barDisplay), await pressConcealedItemInPlace(item) else {
-            controller.concealTemporarilyRevealedItem(identifier)
+            Self.handBackPressReveal(identifier, pressed: false, controller: controller)
             return false
         }
         // Let the menu open before the conceal starts waiting for it to close.
         await eventSleep(for: Constants.MenuBarTuning.thawBarPostClickSettle)
-        controller.scheduleTemporaryItemConceal(identifier)
+        Self.handBackPressReveal(identifier, pressed: true, controller: controller)
         return true
+    }
+
+    /// Hands back the reveal a press made: after the menu it opened, or at once when it opened
+    /// nothing. An item a module holds shown with thaw://reveal-item?hold=true stays shown.
+    static func handBackPressReveal(
+        _ identifier: String,
+        pressed: Bool,
+        controller: any MenuBarSectionControlling,
+        holds: HeldItemReveals? = .current
+    ) {
+        if pressed {
+            controller.scheduleTemporaryItemConcealUnlessHeld(identifier, holds: holds)
+        } else {
+            controller.concealTemporarilyRevealedItemUnlessHeld(identifier, holds: holds)
+        }
     }
 
     /// Presses the item's AX element without revealing it. Returns whether the
