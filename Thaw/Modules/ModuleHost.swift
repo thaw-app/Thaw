@@ -68,7 +68,7 @@ final class ModuleHost {
     @ObservationIgnored private let environment: Environment
     @ObservationIgnored private let restartPolicy: ModuleRestartPolicy
     @ObservationIgnored private var crashes: [URL: [Date]] = [:]
-    /// Counts stop(_:) calls per module, so a launch that was in flight when its module stopped knows it lost.
+    /// Counts stop(_:) calls per module, so a launch can tell its module was stopped while it ran.
     @ObservationIgnored private var stopCounts: [URL: Int] = [:]
     @ObservationIgnored private var terminationObserver: (any NSObjectProtocol)?
     @ObservationIgnored private var hasLoadedEnabled = false

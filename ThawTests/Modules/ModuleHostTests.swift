@@ -30,6 +30,8 @@ struct ModuleHostTests {
         var quitsAtLaunch = false
         /// When set, a launch waits for it to finish, so a test can act while the launch is in flight.
         var launchGate: AsyncStream<Void>?
+        /// Launches begun, counted before the gate.
+        var launchesBegun = 0
         var nextPID: pid_t = 100
         var clock = Date(timeIntervalSinceReferenceDate: 0)
         /// Nil until the host saves a choice, like a fresh install.
@@ -56,15 +58,16 @@ struct ModuleHostTests {
                 teamID: { [unowned self] in teams[$0] },
                 ownTeamID: { "TEAM" },
                 launch: { [unowned self] url, showWindow in
+                    launchesBegun += 1
+                    if let launchGate {
+                        for await _ in launchGate {}
+                    }
                     if failLaunch {
                         throw CocoaError(.executableNotLoadable)
                     }
                     launched.append(url)
                     if showWindow {
                         windowsShown.append(url)
-                    }
-                    if let launchGate {
-                        for await _ in launchGate {}
                     }
                     if quitsAtLaunch {
                         return -1
@@ -372,7 +375,7 @@ struct ModuleHostTests {
         system.launchGate = gate
         let host = makeHost(system)
         let launching = Task { await host.start(url) }
-        while system.launched.isEmpty {
+        while system.launchesBegun == 0 {
             await Task.yield()
         }
 
@@ -382,6 +385,27 @@ struct ModuleHostTests {
 
         #expect(host.modules[url]?.state == .stopped)
         #expect(system.terminated == [101])
+    }
+
+    @Test("A launch that fails after its module was switched off leaves it stopped, not failed")
+    func failedLaunchAfterSwitchOffStaysStopped() async {
+        let system = FakeSystem()
+        let url = system.addModule("automation")
+        let (gate, finishLaunch) = AsyncStream<Void>.makeStream()
+        system.launchGate = gate
+        system.failLaunch = true
+        let host = makeHost(system)
+        let launching = Task { await host.start(url) }
+        while system.launchesBegun == 0 {
+            await Task.yield()
+        }
+
+        await host.setEnabled(false, identifier: "automation")
+        finishLaunch.finish()
+        await launching.value
+
+        #expect(host.modules[url]?.state == .stopped)
+        #expect(system.terminated.isEmpty)
     }
 
     @Test("Start all leaves a running module alone")
