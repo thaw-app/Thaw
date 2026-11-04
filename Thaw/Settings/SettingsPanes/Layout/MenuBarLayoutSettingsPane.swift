@@ -403,7 +403,7 @@ struct LayoutBarsSection: View {
                 }
             }
             .frame(maxWidth: .infinity, alignment: .leading)
-            .transition(reduceMotion ? .identity : .opacity)
+            .transition(.fade(reduceMotion: reduceMotion))
         }
     }
 }
@@ -491,7 +491,7 @@ struct LayoutResetFlow: View {
     }
 
     private var resetTransition: AnyTransition {
-        reduceMotion ? .identity : .opacity.animation(ThawMotion.settle)
+        .fade(reduceMotion: reduceMotion, animation: ThawMotion.settle)
     }
 
     private func reset(to target: ResetTarget) {

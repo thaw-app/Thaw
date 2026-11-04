@@ -43,11 +43,8 @@ public enum PlaceholderIdentityAdoption {
         var titles: [String: [String]] = [:]
         for section in barOrder {
             for identifier in (order[section.rawValue] ?? []).map(MenuBarItemTag.canonicalPersistentIdentifier) {
-                // A bundle ID never contains a colon, so the first one ends it.
-                guard let separator = identifier.firstIndex(of: ":") else { continue }
-                let bundleID = String(identifier[..<separator])
-                let title = String(identifier[identifier.index(after: separator)...])
-                guard MenuBarItemTag.hasMultilineStatusTitles(bundleID), !title.isEmpty, title.wholeMatch(of: /.+:\d+/) == nil, !isPlaceholderTitle(title, bundleID: bundleID), !(titles[bundleID] ?? []).contains(title)
+                guard let (bundleID, title) = MenuBarItemTag.persistentIdentifierParts(identifier) else { continue }
+                guard MenuBarItemTag.hasMultilineStatusTitles(bundleID), !title.isEmpty, !MenuBarItemTag.hasInstanceSuffix(title), !isPlaceholderTitle(title, bundleID: bundleID), !(titles[bundleID] ?? []).contains(title)
                 else { continue }
                 titles[bundleID, default: []].append(title)
             }

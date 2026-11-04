@@ -16,15 +16,12 @@ nonisolated extension DrawnOnlyItems {
     static func savedIdentityTitles(in order: [String: [String]]) -> [String: String] {
         var titles: [String: Set<String>] = [:]
         for identifier in order.values.joined().map(MenuBarItemTag.canonicalPersistentIdentifier) {
-            // A bundle ID never contains a colon, so the first one ends it.
-            guard let separator = identifier.firstIndex(of: ":") else { continue }
-            let title = identifier[identifier.index(after: separator)...]
-            guard !title.isEmpty else { continue }
-            titles[String(identifier[..<separator]), default: []].insert(String(title))
+            guard let (bundleID, title) = MenuBarItemTag.persistentIdentifierParts(identifier), !title.isEmpty else { continue }
+            titles[bundleID, default: []].insert(title)
         }
         // A trailing :<number> may name a second instance, whose window ID and store key a stand-in cannot give.
         return titles.compactMapValues { candidates in
-            guard candidates.count == 1, let title = candidates.first, title.wholeMatch(of: /.+:\d+/) == nil else { return nil }
+            guard candidates.count == 1, let title = candidates.first, !MenuBarItemTag.hasInstanceSuffix(title) else { return nil }
             return title
         }
     }

@@ -327,7 +327,7 @@ final class RuntimeSectionContextAdapter: RuntimeSectionContext {
 
     private func controlAXElement(matching identifier: ControlItemIdentifier) -> AXElement? {
         guard let runningApp = NSWorkspace.shared.runningApplications.first(where: {
-            Constants.isThawOwnedBundleIdentifier($0.bundleIdentifier)
+            ThawMenuBarIdentity.owns(bundleIdentifier: $0.bundleIdentifier)
         }),
             let app = AXHelpers.application(for: runningApp),
             let extrasMenuBar = AXHelpers.extrasMenuBar(for: app)

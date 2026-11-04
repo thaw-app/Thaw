@@ -202,10 +202,7 @@ public enum HookRunner {
 
         let stdout = (result.standardOutput ?? "").trimmingCharacters(in: .whitespacesAndNewlines)
         let stderr = (result.standardError ?? "").trimmingCharacters(in: .whitespacesAndNewlines)
-        let exitStatus: Int32 = switch result.terminationStatus {
-        case let .exited(code): code
-        case let .signaled(code): code
-        }
+        let exitStatus = result.terminationStatus.code
         guard result.terminationStatus.isSuccess else {
             throw HookError.nonZeroExit(exitStatus)
         }

@@ -71,12 +71,7 @@ struct SettingsView: View {
             // whether capture is on.
             navigationState.isSimpleModeSettings = isSimpleMode
         }
-        .transaction { transaction in
-            if reduceMotion {
-                transaction.animation = nil
-                transaction.disablesAnimations = true
-            }
-        }
+        .disablesAnimations(when: reduceMotion)
     }
 
     private var zoomScale: CGFloat {

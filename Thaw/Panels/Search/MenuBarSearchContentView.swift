@@ -89,12 +89,7 @@ private struct MenuBarSearchContentView: View {
     var body: some View {
         chrome
             .environment(\.menuBarSearchPanel, panel)
-            .transaction { transaction in
-                if reduceMotion {
-                    transaction.animation = nil
-                    transaction.disablesAnimations = true
-                }
-            }
+            .disablesAnimations(when: reduceMotion)
             .onChange(of: appState.navigationState.isSearchPresented, initial: true) { _, isPresented in
                 // The panel keeps this view between showings, so onAppear runs once.
                 guard isPresented else { return }
@@ -348,7 +343,7 @@ private struct MenuBarSearchContentView: View {
             ) {
                 appState.layoutFeedback.clear()
             }
-            .transition(reduceMotion ? .identity : .opacity)
+            .transition(.fade(reduceMotion: reduceMotion))
         }
     }
 

@@ -177,8 +177,8 @@ public final class DiagnosticLogger: Sendable {
         // Each process writes its own header into the shared file. The
         // Process line distinguishes them; the per-line timestamps keep
         // chronological order.
-        let version = Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "unknown"
-        let build = Bundle.main.infoDictionary?["CFBundleVersion"] as? String ?? "unknown"
+        let version = Bundle.main.versionString ?? "unknown"
+        let build = Bundle.main.buildString ?? "unknown"
         // GitCommitSHA is stamped into Info.plist by a build phase and reads
         // "unknown" when that phase is not wired up.
         let sha = Bundle.main.infoDictionary?["GitCommitSHA"] as? String ?? "unknown"

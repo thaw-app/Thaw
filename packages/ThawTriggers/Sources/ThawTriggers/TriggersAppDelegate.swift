@@ -19,7 +19,7 @@ final class TriggersAppDelegate: NSObject, NSApplicationDelegate {
 
     private var manager: AppRunningTriggersManager?
     private let itemSource = ThawItemSource()
-    private var window: NSWindow?
+    private var window: ModuleWindowController?
 
     private let hostBundleIdentifier = ModuleLaunchEnvironment.hostBundleIdentifier()
 
@@ -34,11 +34,17 @@ final class TriggersAppDelegate: NSObject, NSApplicationDelegate {
             release: { [weak self] in self?.send(ThawCommands.release(itemID: $0)) }
         )
         self.manager = manager
+        window = ModuleWindowController(
+            title: String(localized: "Triggers"),
+            styleMask: [.titled, .closable, .miniaturizable, .resizable]
+        ) { [itemSource] in
+            TriggersView(manager: manager, itemSource: itemSource)
+        }
         itemSource.request = { [weak self] requestID in
             guard let scheme = Bundle.main.bundleIdentifier?.lowercased() else { return }
             self?.send(ThawCommands.listItems(callbackScheme: scheme, requestID: requestID))
         }
-        if CommandLine.arguments.contains(ModuleLaunchEnvironment.showWindowArgument) {
+        if ModuleWindowController.isRequestedAtLaunch {
             showWindow()
         }
     }
@@ -82,19 +88,8 @@ final class TriggersAppDelegate: NSObject, NSApplicationDelegate {
     }
 
     private func showWindow() {
-        guard let manager else { return }
-        if window == nil {
-            let window = NSWindow(contentViewController: NSHostingController(
-                rootView: TriggersView(manager: manager, itemSource: itemSource)
-            ))
-            window.title = String(localized: "Triggers")
-            window.styleMask = [.titled, .closable, .miniaturizable, .resizable]
-            window.isReleasedWhenClosed = false
-            window.center()
-            self.window = window
-        }
+        guard let window else { return }
         itemSource.refresh()
-        NSApp.activate()
-        window?.makeKeyAndOrderFront(nil)
+        window.show()
     }
 }

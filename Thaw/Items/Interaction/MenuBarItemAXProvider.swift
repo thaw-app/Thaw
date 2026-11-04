@@ -1192,7 +1192,7 @@ nonisolated enum MenuBarItemAXProvider {
         switch bundleID {
         case SharedConstants.menuBarHostingBundleID:
             return .menuBarAgent
-        case _ where Constants.isThawOwnedBundleIdentifier(bundleID):
+        case _ where ThawMenuBarIdentity.owns(bundleIdentifier: bundleID):
             return .thaw
         default:
             return .string(bundleID)
@@ -1201,8 +1201,8 @@ nonisolated enum MenuBarItemAXProvider {
 
     /// The identifier and description an item publishes one level down, on
     /// its button or menu, for an item that did not publish them on itself.
-    /// Eager on purpose: a lazy compactMap runs its transform twice for the
-    /// first match, and a live read can change between the two and trap.
+    /// The descendants are read into values first: a lazy chain would repeat
+    /// live reads, which can change between two passes and trap.
     static func descendantIdentity(
         of attributes: AXHelpers.MenuBarChildAttributes,
         directIdentifier: String?,

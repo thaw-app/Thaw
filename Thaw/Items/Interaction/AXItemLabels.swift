@@ -5,6 +5,8 @@
 //  Copyright (Thaw) © 2026 Toni Förster
 //  Licensed under the GNU GPLv3
 
+import Algorithms
+
 /// The accessibility strings one extras-bar child published, from which
 /// MenuBarItemAXProvider derives its identity.
 ///
@@ -36,8 +38,8 @@ nonisolated extension AXItemLabels {
         in descendants: [AXHelpers.MenuBarChildAttributes]
     ) -> (identifier: String?, description: String?) {
         (
-            descendants.compactMap { MenuBarItemAXProvider.stableAXIdentifier($0.identifier?.nonEmpty) }.first,
-            descendants.compactMap { $0.accessibilityDescription?.nonEmpty }.first
+            descendants.firstNonNil { MenuBarItemAXProvider.stableAXIdentifier($0.identifier?.nonEmpty) },
+            descendants.firstNonNil { $0.accessibilityDescription?.nonEmpty }
         )
     }
 

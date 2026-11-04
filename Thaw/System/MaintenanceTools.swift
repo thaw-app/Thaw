@@ -147,10 +147,7 @@ nonisolated enum MaintenanceTools {
             output: .string(limit: 64 * 1024),
             error: .string(limit: 64 * 1024)
         )
-        let exitStatus: Int32 = switch result.terminationStatus {
-        case let .exited(code): code
-        case let .signaled(code): code
-        }
+        let exitStatus = result.terminationStatus.code
         guard result.terminationStatus.isSuccess else {
             let detail = [result.standardOutput, result.standardError]
                 .compactMap(\.self)

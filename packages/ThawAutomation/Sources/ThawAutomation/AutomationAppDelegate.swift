@@ -17,7 +17,9 @@ final class AutomationAppDelegate: NSObject, NSApplicationDelegate {
     private let store = HookStore(defaults: .standard)
     private let catalog = ProfileCatalog.thaw
     private var runner: ProfileSwitchRunner?
-    private var window: NSWindow?
+    private lazy var window = ModuleWindowController(title: String(localized: "Scripts")) { [store, catalog] in
+        ScriptsView(store: store, catalog: catalog)
+    }
 
     private let hostBundleIdentifier = ModuleLaunchEnvironment.hostBundleIdentifier()
 
@@ -29,7 +31,7 @@ final class AutomationAppDelegate: NSObject, NSApplicationDelegate {
             run: { hook, context in await HookRunner.runIfEnabled(hook, context: context) }
         )
         observeProfileSwitches()
-        if CommandLine.arguments.contains(ModuleLaunchEnvironment.showWindowArgument) {
+        if ModuleWindowController.isRequestedAtLaunch {
             showWindow()
         }
     }
@@ -65,17 +67,6 @@ final class AutomationAppDelegate: NSObject, NSApplicationDelegate {
     }
 
     private func showWindow() {
-        if window == nil {
-            let window = NSWindow(contentViewController: NSHostingController(
-                rootView: ScriptsView(store: store, catalog: catalog)
-            ))
-            window.title = String(localized: "Scripts")
-            window.styleMask = [.titled, .closable, .miniaturizable]
-            window.isReleasedWhenClosed = false
-            window.center()
-            self.window = window
-        }
-        NSApp.activate()
-        window?.makeKeyAndOrderFront(nil)
+        window.show()
     }
 }

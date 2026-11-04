@@ -194,12 +194,7 @@ extension MenuBarItemManager {
     }
 
     /// Waits until the user stops touching the pointer, polling every 20 ms.
-    ///
-    /// Paths that must proceed even when the user never goes idle pass a
-    /// bound: a pane-edit pass the user is actively waiting on cannot stall
-    /// behind a hand that never stops moving. Past the bound the warp happens
-    /// anyway: briefly taking a moving cursor is better than hanging the
-    /// user's edit.
+    /// A bound lets an edit the user is waiting on proceed past a hand that never stops moving.
     ///
     /// - Parameter timeout: How long to wait for the pause before giving up;
     ///   nil waits unboundedly (cancellation ends the wait).
@@ -601,10 +596,7 @@ extension MenuBarItemManager {
                     )
                 } onCancel: {
                     state.innerTaskHolder.withLock { $0 }?.cancel()
-                    // Settle here as well. Cancellation routinely arrives after the
-                    // inner task has already finished, and cancelling a task that
-                    // is already done wakes nobody. Settling before the body has
-                    // registered is fine: the result waits for it.
+                    // Settle here too: cancelling an inner task that already finished wakes nobody.
                     state.outcome.settle(.failure(CancellationError()))
                 }
             }

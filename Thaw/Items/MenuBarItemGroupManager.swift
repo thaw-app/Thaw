@@ -5,6 +5,7 @@
 //  Copyright (Thaw) © 2026 Toni Förster
 //  Licensed under the GNU GPLv3
 
+import Algorithms
 import AppKit
 import Foundation
 import MenuBarModel
@@ -126,7 +127,7 @@ final class MenuBarItemGroupManager {
             return name
         }
         let members = group.memberIndices.compactMap { items.indices.contains($0) ? items[$0] : nil }
-        if let owner = members.compactMap({ $0.sourceApplication?.localizedName }).first {
+        if let owner = members.firstNonNil({ $0.sourceApplication?.localizedName }) {
             return owner
         }
         if let detected = members.first?.autoDetectedName {

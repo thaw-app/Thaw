@@ -41,7 +41,7 @@ enum WidgetSettingsImport {
 
 @MainActor
 final class WidgetsAppDelegate: NSObject, NSApplicationDelegate {
-    private var window: NSWindow?
+    private let window = ModuleWindowController(title: String(localized: "Widgets")) { WidgetsView() }
 
     private let hostBundleIdentifier = ModuleLaunchEnvironment.hostBundleIdentifier()
 
@@ -51,7 +51,7 @@ final class WidgetsAppDelegate: NSObject, NSApplicationDelegate {
             hostDefaults: hostBundleIdentifier.flatMap(UserDefaults.init(suiteName:))
         )
         StatusIconWidgetController.shared.start()
-        if CommandLine.arguments.contains(ModuleLaunchEnvironment.showWindowArgument) {
+        if ModuleWindowController.isRequestedAtLaunch {
             showWindow()
         }
     }
@@ -62,15 +62,6 @@ final class WidgetsAppDelegate: NSObject, NSApplicationDelegate {
     }
 
     private func showWindow() {
-        if window == nil {
-            let window = NSWindow(contentViewController: NSHostingController(rootView: WidgetsView()))
-            window.title = String(localized: "Widgets")
-            window.styleMask = [.titled, .closable, .miniaturizable]
-            window.isReleasedWhenClosed = false
-            window.center()
-            self.window = window
-        }
-        NSApp.activate()
-        window?.makeKeyAndOrderFront(nil)
+        window.show()
     }
 }

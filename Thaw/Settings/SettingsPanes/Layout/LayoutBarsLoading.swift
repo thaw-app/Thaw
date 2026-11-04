@@ -96,7 +96,7 @@ struct LayoutBarsLoading: ViewModifier {
     }
 
     private var layoutTransition: AnyTransition {
-        reduceMotion ? .identity : .opacity.animation(ThawMotion.settle)
+        .fade(reduceMotion: reduceMotion, animation: ThawMotion.settle)
     }
 
     /// What the overlay does before a preload is attempted.

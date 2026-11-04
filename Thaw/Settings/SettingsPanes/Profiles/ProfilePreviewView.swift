@@ -5,6 +5,7 @@
 //  Copyright (Thaw) © 2026 Toni Förster
 //  Licensed under the GNU GPLv3
 
+import MenuBarModel
 import SwiftUI
 import ThawUI
 
@@ -34,13 +35,7 @@ nonisolated enum ProfilePreviewModel {
     /// savedSectionOrder (older profiles) are bare bundle IDs without a
     /// colon; those parse as namespace-only with the bundle ID as title.
     static func split(_ uniqueIdentifier: String) -> (namespace: String, title: String) {
-        guard let colon = uniqueIdentifier.firstIndex(of: ":") else {
-            return (uniqueIdentifier, uniqueIdentifier)
-        }
-        return (
-            String(uniqueIdentifier[..<colon]),
-            String(uniqueIdentifier[uniqueIdentifier.index(after: colon)...])
-        )
+        MenuBarItemTag.persistentIdentifierParts(uniqueIdentifier) ?? (uniqueIdentifier, uniqueIdentifier)
     }
 
     /// Assembles the preview sections from a layout snapshot, preferring the

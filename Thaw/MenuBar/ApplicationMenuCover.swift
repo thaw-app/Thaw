@@ -86,26 +86,12 @@ final class ApplicationMenuCover {
     }
 
     private func observeActivation() -> AnyCancellable {
-        let (stream, continuation) = AsyncStream<Void>.makeStream()
-        let center = NSWorkspace.shared.notificationCenter
-        let observer = center.addObserver(
-            forName: NSWorkspace.didActivateApplicationNotification,
-            object: nil,
-            queue: .main
-        ) { _ in
-            continuation.yield()
+        let task = NSWorkspace.shared.notificationCenter.eventsTask(
+            named: NSWorkspace.didActivateApplicationNotification
+        ) { [weak self] in
+            self?.update()
         }
-
-        let task = Task { @MainActor [weak self] in
-            defer { center.removeObserver(observer) }
-            for await _ in stream {
-                self?.update()
-            }
-        }
-        return AnyCancellable {
-            continuation.finish()
-            task.cancel()
-        }
+        return AnyCancellable { task.cancel() }
     }
 
     // MARK: Reconciliation
