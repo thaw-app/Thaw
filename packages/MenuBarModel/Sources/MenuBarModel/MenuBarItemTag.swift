@@ -152,7 +152,7 @@ public struct MenuBarItemTag: Hashable, CustomStringConvertible, Sendable, Codab
 
     /// Live metric titles need stable identities; prefix/suffix matching covers multiple builds, including iStat Menus Setapp.
     /// - Important: Add only apps with live values; digit replacement would collapse ordinal titles such as "Fan 1" and "Fan 2".
-    private static let dynamicMetricTitleBundleMatchers: [(prefix: String, suffix: String)] = [
+    private static let dynamicMetricTitleBundleMatchers: [(prefix: String, suffix: String)] = countdownSuffixTitleBundleMatchers + [
         (prefix: "com.bjango.istatmenus", suffix: ".status"),
         (prefix: "eu.exelban.Stats", suffix: ""),
         // OpenUsage service names contain letters, so neutralizing quota digits keeps items distinct.

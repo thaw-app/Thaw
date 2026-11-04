@@ -6,6 +6,12 @@
 //  Licensed under the GNU GPLv3
 
 extension MenuBarItemTag {
+    /// Apps whose title ends in a countdown, such as Cron's "Standup · 13 m left". The
+    /// number rule keeps one identity per event, so only a new event changes it.
+    static let countdownSuffixTitleBundleMatchers: [(prefix: String, suffix: String)] = [
+        (prefix: "com.cron.electron", suffix: ""),
+    ]
+
     /// Drops the words that still change once a reading's numbers are #: the weather
     /// conditions after "Currently #°", and a date's month and AM/PM.
     static func collapsingReadingWords(_ neutralized: String) -> String {
