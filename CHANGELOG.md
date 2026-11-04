@@ -44,7 +44,7 @@ Scripts, Triggers and Widgets become modules you can switch on and off, and Sett
 
 #### Settings
 
-- **Extras is a grid of cards with a search field,** like the extension store in Floe. Each card has the part's icon, what it does and its switch. By @diazdesandi.
+- **Extras is a grid of cards,** like the extension store in Floe. Each card has the part's icon, what it does and its switch. By @diazdesandi.
 - **The sidebar is laid out like Floe's.** Thaw's everyday pages come first, from General to Shortcuts, then the modules you have on under a small Modules heading, then Extras, Privacy and Tools under Manage, and About last. The selected page has a see-through gold fill, and the arrow keys move between pages. A part that's off leaves the sidebar until you switch it on in Extras. While search results show, no page is selected, so clicking any page, the one you were on included, ends the search. By @diazdesandi.
 - **Profiles can be turned off.** Profiles has a switch in Extras. Off, no profile switches on its own, the profile shortcuts do nothing, and profiles leave the Thaw menu, the panel and the Swap Bar. Your saved profiles are kept. By @diazdesandi.
 - **Show an item when its icon changes is on Triggers.** It sits with the app triggers, the other way an item shows on its own, and it works while Triggers is on in Extras. By @diazdesandi.
@@ -56,6 +56,7 @@ Scripts, Triggers and Widgets become modules you can switch on and off, and Sett
 - **The Thaw Bar's own look has a Corners slider,** from square to round, like the menu bar's shape. It replaces the Rounded corners switch, and a look saved with the switch opens fully round or square. When it follows the menu bar, the Thaw Bar now matches the menu bar's Corners setting instead of only round or square.
 - **Choose System, Light, Dark or Black for Thaw's settings.** Theme, in the new Language and theme section of General, replaces "Black background in dark mode" and also sets the look of onboarding. Black is dark on pure black, which suits OLED displays. After the update, settings look as they did before: Black if you had the black background on, otherwise System, which follows macOS. The Thaw Bar, Search and menus still match your menu bar.
 - **Settings and menus use one name for each thing.** The sidebar heading over your modules is now Extras, like the page that turns them on, and shortcuts, Search, onboarding and the item menu now use the names found elsewhere in Thaw. Alpha and Beta features have a badge instead of a note in their description. In Troubleshooting, Reset Positions is now Rebuild Saved Layout, so it no longer reads like Reset Layout on the Layout page.
+- **Every Search style can rename and move items.** Search's styles are now called Detailed, Compact (centered) and Large (at the pointer), and all three have the bar along the bottom: rename an item with ⌘E, open its actions with ⌘K, move it to another section with ⌘1 to ⌘3, and keep your last search between openings. The search field asks for the same thing in each style. Only Detailed shows a picture of each item and highlights it in the menu bar, and the setting in Visibility now says so.
 
 ### Fixed
 

@@ -62,14 +62,14 @@ nonisolated extension SearchIndex {
         ),
         SearchEntry(
             id: "general.menuBarSearchPresentation",
-            title: "Where the search panel opens",
-            descriptionText: String(localized: "Open the search panel where you left it, centered like Spotlight, or at the pointer in large type."),
+            title: "Search panel style",
+            descriptionText: String(localized: "Choose how the search panel looks and where it opens. You can rename and move items in every style."),
             pane: .visibility,
             section: "Menu bar search",
             keywords: [
                 "search", "panel", "open", "position", "placement", "centered", "center", "spotlight",
                 "launcher", "palette", "pointer", "cursor", "large text", "accessibility", "low vision",
-                "big", "reach",
+                "big", "reach", "style", "detailed", "compact", "large", "where", "rename", "move",
             ],
             property: .advanced("menuBarSearchPresentation")
         ),

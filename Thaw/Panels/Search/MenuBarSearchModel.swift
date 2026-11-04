@@ -16,9 +16,7 @@ import ThawUI
 /// renders, the highlighted row, the inline rename in progress, and the
 /// average menu bar color those rows are previewed against.
 ///
-/// One model for all three modes. The launcher modes never rename or preview,
-/// so renameSession and averageColorInfo stay nil there; they add only the
-/// inventory they rank against.
+/// One model for all three modes. Only Detailed previews, so averageColorInfo stays nil in the others.
 @MainActor
 @Observable
 final class MenuBarSearchModel {

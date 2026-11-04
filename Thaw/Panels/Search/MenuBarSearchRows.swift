@@ -96,15 +96,14 @@ private struct MenuBarItemSourceIcon: View {
 // MARK: - Inspector row
 
 /// One menu bar item in the inspector list: owning app, name, and a preview of
-/// how the item is drawn in the menu bar. Renames happen inline here.
+/// how the item is drawn in the menu bar. Renames happen inline here, as in
+/// the launcher rows.
 private struct MenuBarItemRow: View {
     private static let iconLength: CGFloat = 26
 
-    @Environment(\.menuBarSearchPanel) private var panel
     @Environment(AppState.self) private var appState
     @Environment(MenuBarItemImageCache.self) private var imageCache
     @Environment(MenuBarSearchModel.self) private var model
-    @FocusState private var isEditing: Bool
 
     let item: MenuBarItem
 
@@ -131,34 +130,8 @@ private struct MenuBarItemRow: View {
     private var renameField: some View {
         HStack(spacing: ThawSpacing.base) {
             MenuBarItemSourceIcon(item: item, length: Self.iconLength)
-            TextField(item.autoDetectedName, text: renameDraft)
-                .textFieldStyle(.plain)
-                .foregroundStyle(.primary)
-                .focused($isEditing)
-                .textContentType(.none)
-                .autocorrectionDisabled(true)
-                .onSubmit {
-                    panel?.commitRename()
-                }
-                .onExitCommand {
-                    model.renameSession = nil
-                }
-                .onAppear {
-                    isEditing = true
-                }
-                .onDisappear {
-                    isEditing = false
-                }
+            MenuBarItemRenameField(item: item)
         }
-    }
-
-    /// Binding into the draft of the active rename. Writes that arrive after
-    /// the session has ended are dropped.
-    private var renameDraft: Binding<String> {
-        Binding(
-            get: { model.renameSession?.draft ?? "" },
-            set: { model.renameSession?.draft = $0 }
-        )
     }
 
     /// The item as it appears in the menu bar, over the same backdrop.
@@ -184,6 +157,47 @@ private struct MenuBarItemRow: View {
     }
 }
 
+// MARK: - Rename field
+
+/// The field a row shows in place of its name while renaming, shared by every mode so Return and Escape behave the same.
+private struct MenuBarItemRenameField: View {
+    @Environment(\.menuBarSearchPanel) private var panel
+    @Environment(MenuBarSearchModel.self) private var model
+    @FocusState private var isEditing: Bool
+
+    let item: MenuBarItem
+
+    var body: some View {
+        TextField(item.autoDetectedName, text: renameDraft)
+            .textFieldStyle(.plain)
+            .foregroundStyle(.primary)
+            .focused($isEditing)
+            .textContentType(.none)
+            .autocorrectionDisabled(true)
+            .onSubmit {
+                panel?.commitRename()
+            }
+            .onExitCommand {
+                model.renameSession = nil
+            }
+            .onAppear {
+                isEditing = true
+            }
+            .onDisappear {
+                isEditing = false
+            }
+    }
+
+    /// Binding into the draft of the active rename. Writes that arrive after
+    /// the session has ended are dropped.
+    private var renameDraft: Binding<String> {
+        Binding(
+            get: { model.renameSession?.draft ?? "" },
+            set: { model.renameSession?.draft = $0 }
+        )
+    }
+}
+
 // MARK: - Launcher row
 
 /// One menu bar item in a launcher list: owning app icon, display name, and
@@ -192,12 +206,19 @@ private struct MenuBarItemRow: View {
 /// No preview: the launchers never run the capture pass. Sized by
 /// SearchPresentation.rowMetrics.
 private struct PaletteItemRow: View {
+    @Environment(MenuBarSearchModel.self) private var model
+
     let item: MenuBarItem
     let ownerName: String?
     let metrics: SearchPresentation.RowMetrics
 
+    private var isRenaming: Bool {
+        model.renameSession?.targets(item) == true
+    }
+
     var body: some View {
-        if metrics.combinesAccessibilityChildren {
+        // A row being renamed stays apart, so VoiceOver can reach the field.
+        if metrics.combinesAccessibilityChildren, !isRenaming {
             // VoiceOver reads one label instead of walking the icon, the name,
             // and the owner name as separate elements.
             row.accessibilityElement(children: .combine)
@@ -210,10 +231,15 @@ private struct PaletteItemRow: View {
         HStack(spacing: metrics.iconSpacing) {
             MenuBarItemSourceIcon(item: item, length: metrics.iconLength)
             VStack(alignment: .leading, spacing: metrics.textSpacing) {
-                // Memoized: avoids an NSRunningApplication per row per keystroke.
-                Text(MenuBarItemDisplayName.displayName(for: item))
-                    .font(metrics.nameFont)
-                    .lineLimit(metrics.nameLineLimit)
+                if isRenaming {
+                    MenuBarItemRenameField(item: item)
+                        .font(metrics.nameFont)
+                } else {
+                    // Memoized: avoids an NSRunningApplication per row per keystroke.
+                    Text(MenuBarItemDisplayName.displayName(for: item))
+                        .font(metrics.nameFont)
+                        .lineLimit(metrics.nameLineLimit)
+                }
                 if let ownerName {
                     Text(ownerName)
                         .font(metrics.ownerFont)

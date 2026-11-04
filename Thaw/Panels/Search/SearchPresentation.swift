@@ -14,23 +14,22 @@ import ThawUI
 /// panel opens.
 ///
 /// There is one search panel and one shortcut; this is the user's choice of
-/// how it arrives: where they last dragged it, centered like Spotlight, or
-/// under the pointer in large type.
+/// how it arrives: a detailed panel where they last dragged it, a compact one
+/// centered like Spotlight, or a large one under the pointer.
 ///
-/// The properties below are the whole contract between the three. Behaviour
-/// not listed here is shared and follows inspector, which is the default.
+/// Every mode can open, rename and move the selected item and has the action bar.
+/// The properties below are the only differences.
 ///
 /// The raw values are storage, not display: they are written to
 /// UserDefaults under Defaults.Key.menuBarSearchPresentation and must
 /// not be renamed. localized is what the picker shows.
 nonisolated enum SearchPresentation: String, CaseIterable, Identifiable {
-    /// Opens where the user left it: the full inventory by section, inline
-    /// rename, per-display frame memory, an action bar along the bottom, and
-    /// a spotlight that follows the selection into the real menu bar.
+    /// Opens where it was left on each display, lists items by section with previews,
+    /// and highlights the selection in the menu bar.
     case inspector
 
     /// Opens centered, Spotlight-fashion, listing recents until the user
-    /// types and then the ranked matches. No chrome, no memory, no editing.
+    /// types and then the ranked matches. Rows show the owning app's icon.
     case launcher
 
     /// Opens at the pointer, listing the whole inventory in large type so
@@ -43,13 +42,37 @@ nonisolated enum SearchPresentation: String, CaseIterable, Identifiable {
         rawValue
     }
 
-    /// How the picker names this mode: where the panel appears, since that is
-    /// the choice being made and the row sizes follow from it.
+    /// How the picker names this mode: what kind of panel it is. Where it
+    /// opens is in summary, beside what it leaves out.
     var localized: LocalizedStringKey {
         switch self {
-        case .inspector: "Where you left it"
-        case .launcher: "Centered"
-        case .assisted: "At the pointer"
+        case .inspector: "Detailed"
+        case .launcher: "Compact (centered)"
+        case .assisted: "Large (at the pointer)"
+        }
+    }
+
+    /// The picker's note: where the mode opens and which Detailed features it leaves out.
+    var summary: LocalizedStringKey {
+        switch self {
+        case .inspector:
+            """
+            Opens where you last left it on each display and lists every item by section. \
+            Only this style shows a picture of each item and highlights the selected one \
+            in the menu bar.
+            """
+        case .launcher:
+            """
+            Opens in the middle of the screen, like Spotlight, and shows your recent items \
+            until you type. Rows show the app's icon, and the selected item isn't \
+            highlighted in the menu bar.
+            """
+        case .assisted:
+            """
+            Opens next to the pointer and lists every item in large rows and text, so you \
+            can pick one by reading and clicking. Rows show the app's icon, and the \
+            selected item isn't highlighted in the menu bar.
+            """
         }
     }
 }
@@ -119,41 +142,9 @@ extension SearchPresentation {
     }
 
     /// Whether the selection lights its item up in the real menu bar.
+    ///
+    /// Detailed only: each selection change calls MenuBarAgent, which the other modes skip to keep arrowing fast.
     var spotlightsSelection: Bool {
-        switch self {
-        case .inspector: true
-        case .launcher, .assisted: false
-        }
-    }
-
-    /// Whether ⌘E starts an inline rename of the highlighted row.
-    var allowsRename: Bool {
-        switch self {
-        case .inspector: true
-        case .launcher, .assisted: false
-        }
-    }
-
-    /// Whether the highlighted row can be organised from here: moved between
-    /// sections, put into a group, taken to the pane it is arranged in.
-    ///
-    /// Tied to the same face as the rename, and for the same reason. The
-    /// launchers exist to open something and get out of the way, and an action
-    /// that leaves the menu bar rearranged after the panel is gone belongs to
-    /// the surface the user opened in order to look at their menu bar.
-    var allowsItemManagement: Bool {
-        switch self {
-        case .inspector: true
-        case .launcher, .assisted: false
-        }
-    }
-
-    /// Whether the "Remember last search" toggle applies.
-    ///
-    /// The toggle lives in the inspector's action bar, and the launcher has no
-    /// action bar. It also has no use for the setting: a launcher that reopens
-    /// mid-word is one the user has to clear before it is usable.
-    var honorsKeepSearchToggle: Bool {
         switch self {
         case .inspector: true
         case .launcher, .assisted: false

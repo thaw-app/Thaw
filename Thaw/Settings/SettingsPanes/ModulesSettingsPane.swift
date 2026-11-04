@@ -9,39 +9,23 @@ import SwiftUI
 import ThawModuleKit
 import ThawUI
 
-/// The optional parts of Thaw as searchable cards, like Floe's extension store.
+/// The optional parts of Thaw as cards, like Floe's extension store.
 /// Profiles is built in; the others are their own apps, and one that's off doesn't run.
 struct ModulesSettingsPane: View {
     @Bindable var moduleHost: ModuleHost
     @Bindable var profiles: ProfilesFeature
-    @State private var query = ""
 
     /// Cards about as wide as Floe's store cards, as many to a row as fit.
     private let columns = [GridItem(.adaptive(minimum: 160, maximum: 220), spacing: ThawSpacing.gutter, alignment: .top)]
 
     var body: some View {
-        let shown = Self.matching(cards, query: query)
-        VStack(spacing: 0) {
-            SettingsFilterField(prompt: "Search extras", clearLabel: "Clear search", text: $query)
-                .padding(ThawSpacing.inset)
-            ScrollView {
-                LazyVGrid(columns: columns, spacing: ThawSpacing.gutter) {
-                    ForEach(shown) { card in
-                        ModuleCardView(card: card, moduleHost: moduleHost, profiles: profiles)
-                    }
-                }
-                .padding(.horizontal, ThawSpacing.inset)
-                .padding(.bottom, ThawSpacing.inset)
-            }
-            .overlay {
-                if shown.isEmpty, !query.isEmpty {
-                    NoMatchesState(
-                        query: query,
-                        title: { "No extras match “\($0)”" },
-                        caption: "Try a shorter or broader term."
-                    )
+        ScrollView {
+            LazyVGrid(columns: columns, spacing: ThawSpacing.gutter) {
+                ForEach(cards) { card in
+                    ModuleCardView(card: card, moduleHost: moduleHost, profiles: profiles)
                 }
             }
+            .padding(ThawSpacing.inset)
         }
         .onAppear { moduleHost.refresh() }
     }
@@ -68,17 +52,6 @@ struct ModulesSettingsPane: View {
             pane: .profiles
         )
         return [profilesCard] + modules
-    }
-
-    /// The cards whose name or description contains every word of the query.
-    static func matching(_ cards: [ModuleCard], query: String) -> [ModuleCard] {
-        let words = query.split(whereSeparator: \.isWhitespace)
-        guard !words.isEmpty else { return cards }
-        return cards.filter { card in
-            words.allSatisfy { word in
-                card.name.localizedStandardContains(word) || card.summary.localizedStandardContains(word)
-            }
-        }
     }
 
     static func pane(for identifier: String) -> SettingsNavigationIdentifier {

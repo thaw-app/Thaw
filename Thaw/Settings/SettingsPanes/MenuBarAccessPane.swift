@@ -101,34 +101,13 @@ struct MenuBarAccessPane: View {
     // MARK: - Search
 
     private var searchPresentationPicker: some View {
-        ThawPicker("Where the panel opens", selection: $advancedSettings.menuBarSearchPresentation) {
+        ThawPicker("Panel style", selection: $advancedSettings.menuBarSearchPresentation) {
             ForEach(SearchPresentation.allCases) { presentation in
                 Text(presentation.localized).tag(presentation)
             }
         }
         .annotation {
-            Text(searchPresentationExplanation)
-        }
-    }
-
-    private var searchPresentationExplanation: LocalizedStringKey {
-        switch advancedSettings.menuBarSearchPresentation {
-        case .inspector:
-            """
-            The panel opens in the spot you last dragged it to, one per display, \
-            listing every item by section.
-            """
-        case .launcher:
-            """
-            The panel opens in the middle of the screen, the way Spotlight does, \
-            showing the items you used recently until you start typing.
-            """
-        case .assisted:
-            """
-            The panel opens next to the pointer with large rows and large type, \
-            listing every item, so you can pick one by reading and clicking \
-            instead of aiming at the menu bar.
-            """
+            Text(advancedSettings.menuBarSearchPresentation.summary)
         }
     }
 }
