@@ -287,7 +287,7 @@ enum OverflowFallbackIcon {
     private static func appIcon(for item: MenuBarItem) -> NSImage? {
         switch item.tag.namespace {
         case .menuBarAgent:
-            return nil
+            return SystemModuleGlyph.image(forItemTitle: item.tag.title)
         case .controlCenter, .systemUIServer, .textInputMenuAgent:
             return ControlCenterIcon.image
         default:
