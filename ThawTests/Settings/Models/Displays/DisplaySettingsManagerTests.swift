@@ -51,6 +51,21 @@ struct DisplaySettingsManagerTests {
         #expect(manager.lastPersistenceFailure == nil)
     }
 
+    @Test("Always-show inputs report the saved configurations and the wide-display rule, and follow the rule")
+    func alwaysShowInputsFollowTheRule() throws {
+        let config = DisplayThawBarConfiguration.defaultConfiguration.withUseThawBar(true)
+        let manager = try makeManager(configurations: [Self.uuid: config])
+        manager.wideDisplayRule.isEnabled = true
+        manager.wideDisplayRule.minimumWidth = 3000
+
+        #expect(manager.alwaysShowInputs == .init(
+            configurations: [Self.uuid: config], isWideRuleEnabled: true, wideRuleMinimumWidth: 3000
+        ))
+
+        manager.wideDisplayRule.minimumWidth = 2560
+        #expect(manager.alwaysShowInputs.wideRuleMinimumWidth == 2560)
+    }
+
     @Test("Stored values that cannot be decoded are ignored")
     func ignoresGarbage() {
         Defaults.set(Data("x".utf8), forKey: .displayThawBarConfigurations)

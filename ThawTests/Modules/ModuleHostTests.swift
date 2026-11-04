@@ -394,6 +394,35 @@ struct ModuleHostTests {
         #expect(system.terminated == [101])
     }
 
+    @Test("A saved choice wins over each module's default")
+    func savedChoiceWinsOverDefaults() async {
+        let system = FakeSystem()
+        _ = system.addModule("automation")
+        _ = system.addModule("widgets")
+        system.onByDefault = ["automation"]
+        system.savedEnabled = ["widgets"]
+        let host = ModuleHost(environment: system.environment())
+
+        await host.startAll()
+
+        #expect(host.enabledIdentifiers == ["widgets"])
+        #expect(system.launched.map(\.lastPathComponent) == ["widgets.app"])
+        #expect(system.savedEnabled == ["widgets"], "Reading the choice doesn't rewrite it")
+    }
+
+    @Test("Switching on a module that isn't installed keeps the choice and launches nothing")
+    func switchingOnMissingModule() async {
+        let system = FakeSystem()
+        _ = system.addModule("automation")
+        let host = makeHost(system)
+
+        await host.setEnabled(true, identifier: "widgets")
+
+        #expect(host.isEnabled("widgets"))
+        #expect(system.savedEnabled?.contains("widgets") == true)
+        #expect(system.launched.isEmpty)
+    }
+
     @Test("Quitting while a module launches ends the launched process")
     func stopAllDuringLaunch() async {
         let system = FakeSystem()
